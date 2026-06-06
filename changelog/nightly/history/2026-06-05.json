@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-05T20:36:13.689Z",
+  "generatedAt": "2026-06-06T03:29:02.045Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.627.1",
+  "version": "0.1.0-nightly.628.1",
   "date": "2026-06-05",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.627.1",
-  "lastIncludedSha": "5fabdccee90a06ab753adbcc2b70b853ad35cf6c",
-  "previousProcessedSha": "3de45c12aa813ac52d695395c54246358cbae998",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.628.1",
+  "lastIncludedSha": "7e4626ef5d9bdf5b1c0e1b74cd20804be3829dc9",
+  "previousProcessedSha": "5fabdccee90a06ab753adbcc2b70b853ad35cf6c",
   "commitShas": [
     "8bc84fd31132f676ad7072607980d4b1b2858f9c",
     "6be27e0f89c76ac9ced7e52cad0c781d103cc82a",
@@ -32,10 +32,11 @@
     "a25dd796ae0e8a2d812355d2cd15abfe05669522",
     "776f003c310267244529fdaaa400b358f9bb61e4",
     "3de45c12aa813ac52d695395c54246358cbae998",
-    "5fabdccee90a06ab753adbcc2b70b853ad35cf6c"
+    "5fabdccee90a06ab753adbcc2b70b853ad35cf6c",
+    "7e4626ef5d9bdf5b1c0e1b74cd20804be3829dc9"
   ],
-  "rawCommitCount": 21,
-  "filteredCommitCount": 21,
+  "rawCommitCount": 22,
+  "filteredCommitCount": 22,
   "rawCommits": [
     {
       "sha": "8bc84fd31132f676ad7072607980d4b1b2858f9c",
@@ -975,6 +976,93 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "7e4626ef5d9bdf5b1c0e1b74cd20804be3829dc9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-05T23:22:08-04:00",
+      "subject": "Add standardized eval gates (#37)",
+      "body": "* Add standardized eval gates\n\n* Trim PR CodeQL and desktop validation\n\n* Add targeted mobile CodeQL coverage\n\n* Fix mobile CodeQL Java extraction\n\n* Switch CodeQL coverage to advanced workflows\n\n* Keep heavy Swift CodeQL off PR gates\n\n* Pin Rust CodeQL to no-build mode\n\n* Add chat command forwarding eval coverage",
+      "parents": [
+        "5fabdccee90a06ab753adbcc2b70b853ad35cf6c"
+      ],
+      "files": [
+        ".github/workflows/aura-evals.yml",
+        ".github/workflows/codeql-core.yml",
+        ".github/workflows/codeql-mobile.yml",
+        ".github/workflows/codeql-rust.yml",
+        ".github/workflows/desktop-validate.yml",
+        ".gitignore",
+        "README.md",
+        "docs/aura-evals.md",
+        "docs/release-build-strategy.md",
+        "infra/evals/lanes.json",
+        "infra/evals/reports/baselines/chat-core-summary.json",
+        "interface/package.json",
+        "interface/playwright.config.ts",
+        "interface/scripts/compare-evals.mjs",
+        "interface/scripts/refresh-evals-baseline.mjs",
+        "interface/scripts/summarize-evals.mjs",
+        "interface/src/api/streams.test.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.test.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-stream-core.ts",
+        "interface/tests/e2e/evals/chat-core.spec.ts",
+        "interface/tests/e2e/evals/chatCoreMockApp.ts",
+        "interface/tests/e2e/evals/helpers.ts",
+        "interface/tests/e2e/evals/scenarios/chat-core.json",
+        "package.json",
+        "scripts/ci/lib/eval-lanes.mjs",
+        "scripts/ci/validate-evals-registry.mjs",
+        "scripts/ci/verify-evals.mjs"
+      ],
+      "stats": {
+        "fileCount": 28,
+        "insertions": 2994,
+        "deletions": 137
+      },
+      "committedAtMs": 1780716128000,
+      "cleanSubject": "Add standardized eval gates (#37)",
+      "keywords": [
+        "standardized",
+        "eval",
+        "gates"
+      ],
+      "fileGroups": [
+        ".github/workflows/aura-evals.yml",
+        ".github/workflows/codeql-core.yml",
+        ".github/workflows/codeql-mobile.yml",
+        ".github/workflows/codeql-rust.yml",
+        ".github/workflows/desktop-validate.yml",
+        ".gitignore",
+        "README.md",
+        "docs/aura-evals.md",
+        "docs/release-build-strategy.md",
+        "infra/evals/lanes.json",
+        "infra/evals/reports",
+        "interface/package.json",
+        "interface/playwright.config.ts",
+        "interface/scripts/compare-evals.mjs",
+        "interface/scripts/refresh-evals-baseline.mjs",
+        "interface/scripts/summarize-evals.mjs",
+        "interface/src/api",
+        "interface/src/hooks",
+        "interface/tests/e2e",
+        "package.json",
+        "scripts/ci/lib",
+        "scripts/ci/validate-evals-registry.mjs",
+        "scripts/ci/verify-evals.mjs"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface",
+        "Release Infrastructure",
+        "Docs"
+      ]
     }
   ],
   "batchCount": 6,
@@ -982,29 +1070,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.627.1",
+      "version": "0.1.0-nightly.628.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 50027850
+          "sizeBytes": 50033106
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 116922872
+          "sizeBytes": 116926968
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1014,29 +1102,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.627.1",
+      "version": "0.1.0-nightly.628.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.627.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.628.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45927346
+          "sizeBytes": 45927074
         },
         {
-          "name": "AURA_0.1.0-nightly.627.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.628.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44991394
+          "sizeBytes": 44990691
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1046,29 +1134,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.627.1",
+      "version": "0.1.0-nightly.628.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.627.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.628.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 47902751
+          "sizeBytes": 47904859
         },
         {
-          "name": "AURA_0.1.0-nightly.627.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.628.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 47070710
+          "sizeBytes": 47070555
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1078,17 +1166,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.627.1",
+      "version": "0.1.0-nightly.628.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 33734577
+          "sizeBytes": 33738912
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.627.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.628.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1097,26 +1185,26 @@
     }
   ],
   "rendered": {
-    "title": "Marketing site rebuild, Telegram hardening, and a faster notarized release pipeline",
-    "intro": "Today's nightly is dominated by a ground-up rework of the marketing first screen on /code and /agents, paired with a security and reliability pass on Telegram-linked agents and a substantial speedup and hardening of the desktop release pipeline — now with macOS notarization gated before publish.",
+    "title": "Marketing site refresh, Telegram channel fixes, and a faster, hardened release pipeline",
+    "intro": "A heavy day of marketing-site work landed a new /code mock desktop and a shared first-screen layout across /code and /agents, while the Telegram channel bridge picked up an IDOR fix and clearer error surfacing. On the platform side, desktop release CI got materially faster and more resilient, macOS DMGs are now notarization-checked before shipping, and a standardized eval-gate framework joined CI to guard chat behavior.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "10:07 PM",
         "started_at": "2026-06-05T05:07:59.000Z",
         "ended_at": "2026-06-05T05:27:24.000Z",
-        "title": "/code page leads with a mock Projects desktop",
-        "summary": "The marketing /code page was restructured around a centered hero and a static mock of the Projects workspace, and the public blog archive got a polish pass.",
+        "title": "New /code page leads with a mock Projects desktop",
+        "summary": "The marketing /code page was restructured around an Agents-style centered hero with a full mock of the Projects workspace below it, and the public blog archive got a visual polish pass.",
         "items": [
           {
-            "text": "Rebuilt /code to lead with an Agents-style centered PageHero followed by a full mock desktop that reuses the shared MockAuraApp chrome and frames a new MockProjectsWorkspace (explorer, agent status, task feed, terminal, and sidekick) in place of the landing's scripted DM windows.",
+            "text": "Rebuilt /code to lead with a centered PageHero and a mock desktop below that reuses the shared MockAuraApp chrome, swapping the landing's scripted DM windows for a static MockProjectsWorkspace mocking the explorer, agent status, task feed, terminal, and sidekick.",
             "commit_shas": [
               "6be27e0f89c76ac9ced7e52cad0c781d103cc82a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished the public blog archive view with refreshed styles and markup.",
+            "text": "Polished the public blog archive view with refreshed styling and markup.",
             "commit_shas": [
               "8bc84fd31132f676ad7072607980d4b1b2858f9c"
             ],
@@ -1129,18 +1217,18 @@
         "time_label": "10:47 PM",
         "started_at": "2026-06-05T05:47:01.000Z",
         "ended_at": "2026-06-05T05:47:01.000Z",
-        "title": "Telegram-linked agents stop failing silently",
-        "summary": "Channel turns from Telegram now pin a working model, surface real agent errors, and greet users by the agent's actual name.",
+        "title": "Telegram-linked agents now answer with a real model and surface true errors",
+        "summary": "Fixed a regression where Telegram turns posted with a null model and collapsed every failure into a generic apology, and made the connection greeting use the agent's real name.",
         "items": [
           {
-            "text": "Telegram turns now pin the latest frontier model at medium reasoning effort instead of POSTing model: null, fixing the \"model name must not be empty\" failure for agents without a default_model.",
+            "text": "Picker-less Telegram chat now pins the latest frontier model at medium reasoning effort per turn, so agents without a default_model no longer fail with \"model name must not be empty\".",
             "commit_shas": [
               "55cb5f9fe3bf643cd27d35bf2207565dfe23f609"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a ChannelError::Agent variant so agent-reported errors flow back to the chat instead of collapsing into a generic apology, and threaded the agent's real name through pending and durable link records so users see \"Connected to <name>\".",
+            "text": "Agent-reported errors are threaded back to the chat via a new ChannelError::Agent variant instead of being swallowed by a generic apology, and the initial greeting now reads \"Connected to <agent name>\" by carrying the name through pending and durable link records.",
             "commit_shas": [
               "55cb5f9fe3bf643cd27d35bf2207565dfe23f609"
             ],
@@ -1152,39 +1240,46 @@
         "batch_id": "entry-3",
         "time_label": "10:49 PM",
         "started_at": "2026-06-05T05:49:45.000Z",
-        "ended_at": "2026-06-05T06:28:00.000Z",
-        "title": "Shared first-screen layout, readable purple accent, and Telegram from desktop",
-        "summary": "Iterated the /code mock desktop into a shared first-screen layout with /agents, fixed an unreadable purple accent across the app, and unblocked Telegram linking from the desktop build while closing an IDOR.",
+        "ended_at": "2026-06-05T06:46:34.000Z",
+        "title": "Shared /code and /agents first screen, accent-text legibility, and Telegram link routing from Desktop",
+        "summary": "A long iteration pass unified the /code and /agents first screen into a shared layout, made the purple accent legible as text across the app, fixed Desktop's Telegram Connect flow against the prod control plane, and closed an IDOR on channel listing.",
         "items": [
           {
-            "text": "Iterated the /code first screen so the mock desktop is visible and correctly sized — giving the stage a definite viewport-derived height so container-query units resolve, enlarging the frame to roughly a real maximized window, tuning its start position, and updating the hero copy to \"Ship software while you sleep.\"",
+            "text": "Extracted a shared MarketingFirstScreen so /code and /agents align their hero band and stage; the /code mock desktop is now visible above the fold at near-maximized size, while /agents anchors its orb video and agent marquee to the bottom of the first screen with a symmetric top/bottom fade and full-bleed edges.",
             "commit_shas": [
               "90e8d1e56b30331445179ab41ebaf95e5b718423",
+              "7b1ced2a458accbcefd5483e2cbcee1a663d194c",
               "08d93d0760a5e4bd7381132d9e14e25468b67f2b",
               "ebcac06fbeeddeda584d189229bfe04ee9a83fd5",
+              "b5d35251733927db2bc1c1f937c2101ee30df9b4",
+              "2101b4305b08770eb0257fd2fffbe9832369f6f9",
+              "28a9da8ac4a31bf2f044e30f930e7ce7623de6fb",
+              "08db22318fbf666c052058f8d44367137a06145c",
+              "bd9dfd6c114e1bf39219e13daad7705833113860",
+              "a25dd796ae0e8a2d812355d2cd15abfe05669522",
               "9266f8ff026e3e3f7503afc240776d4f112936d0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Extracted a shared MarketingFirstScreen component used by both /code and /agents so hero text and stage content align across the two pages, and rebuilt the /agents hero as a body-height flex column that anchors the orb video and agent marquee to the bottom of the first screen instead of relying on a negative-margin peek.",
-            "commit_shas": [
-              "7b1ced2a458accbcefd5483e2cbcee1a663d194c",
-              "b5d35251733927db2bc1c1f937c2101ee30df9b4"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Introduced a dedicated --color-accent-text token (brightened to #a855f7 for dark-mode purple) and repointed accent text usages across chat, agents, browser, feedback, notes, billing, and shared zui components so accent text becomes legible while fills, chips, and borders stay unchanged.",
+            "text": "Introduced a dedicated --color-accent-text token (brightened to #a855f7 in dark-mode purple) and repointed every accent text usage to it, so links, chips, and status text are readable while accent fills and borders stay unchanged.",
             "commit_shas": [
               "68a3147b01a7ac10dec6afcabc67402ca8773121"
             ],
             "confidence": "high"
           },
           {
-            "text": "Routed desktop Telegram channel link/list/disconnect calls to the prod control-plane via a new useControlPlane fetch option and baked VITE_NATIVE_DEFAULT_HOST into the desktop build, fixing the 503 Connect failures, and closed an IDOR by scoping list_channels and disconnect_channel to the caller's agent ownership.",
+            "text": "Desktop's Telegram Connect now routes channel link/list/disconnect calls to the prod control plane (api.aura.ai) instead of the bundled local server that has no bot configured, and closed an IDOR where any verified user could enumerate or delete another agent's linked chats — both endpoints now scope by JWT-resolved agent ownership.",
             "commit_shas": [
               "3a3b927d9b553e60bc68f55fa79e98685e0da510"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Local dev /blog now fetches from the prod blog API by default so real posts render against storage-less dev servers, while prod and native builds keep same-origin behavior.",
+            "commit_shas": [
+              "2c3b0fe1177555056f2a7054a821f5ef27bda764",
+              "ce8be539388508404e09497622ff22901002b7f0"
             ],
             "confidence": "high"
           }
@@ -1192,34 +1287,23 @@
       },
       {
         "batch_id": "entry-4",
-        "time_label": "11:33 PM",
-        "started_at": "2026-06-05T06:33:36.000Z",
-        "ended_at": "2026-06-05T06:46:34.000Z",
-        "title": "/agents orb video fade and full-bleed marquee, plus prod blog in dev",
-        "summary": "Finished the /agents hero treatment with a symmetric video fade and a full-bleed marquee, and pointed the dev blog at production so local builds show real posts.",
+        "time_label": "9:41 AM",
+        "started_at": "2026-06-05T16:41:21.000Z",
+        "ended_at": "2026-06-05T16:41:21.000Z",
+        "title": "Desktop release CI is faster and survives flaky Node setup",
+        "summary": "A large overhaul of the release pipeline cut redundant work, added a CI performance benchmark, and hardened Node installation against transient network and tool-cache failures.",
         "items": [
           {
-            "text": "Reworked the /agents orb video so its gradient mask fades symmetrically at the top and bottom — opening the clip box vertically, letting the hero band background go transparent inside the shared first-screen so the top fade isn't hard-cut, then tightening the visible band from 30–70% down to 48–52%.",
+            "text": "Reworked the nightly and stable release workflows alongside a new CI performance benchmark workflow, added preflight, packager-config, and desktop-release-binary verification scripts, and centralized release artifact validation and upload/prune retries.",
             "commit_shas": [
-              "2101b4305b08770eb0257fd2fffbe9832369f6f9",
-              "28a9da8ac4a31bf2f044e30f930e7ce7623de6fb",
-              "08db22318fbf666c052058f8d44367137a06145c",
-              "bd9dfd6c114e1bf39219e13daad7705833113860"
+              "776f003c310267244529fdaaa400b358f9bb61e4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Broke the /agents orb stage out of the shared first-screen gutter so the background video and agent marquee extend edge-to-edge while the hero band keeps its gutter and /code is unaffected.",
+            "text": "Hardened the shared setup-node action with up to three retries plus an explicit version verification step, keeping the Windows-only DNS reachability gate but skipping it on Linux/macOS to avoid pointless latency.",
             "commit_shas": [
-              "a25dd796ae0e8a2d812355d2cd15abfe05669522"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Pointed the /blog endpoints at the prod blog origin in dev builds so local shells render real posts instead of the empty state from a storage-less local server, while prod and native builds keep same-origin behavior.",
-            "commit_shas": [
-              "ce8be539388508404e09497622ff22901002b7f0",
-              "2c3b0fe1177555056f2a7054a821f5ef27bda764"
+              "776f003c310267244529fdaaa400b358f9bb61e4"
             ],
             "confidence": "high"
           }
@@ -1227,23 +1311,30 @@
       },
       {
         "batch_id": "entry-5",
-        "time_label": "9:41 AM",
-        "started_at": "2026-06-05T16:41:21.000Z",
-        "ended_at": "2026-06-05T16:41:21.000Z",
-        "title": "Desktop release CI overhaul with retryable Node setup",
-        "summary": "A large pass on release workflows shortens the desktop release path and makes it tolerant of transient runner failures.",
+        "time_label": "12:11 PM",
+        "started_at": "2026-06-05T19:11:25.000Z",
+        "ended_at": "2026-06-05T20:29:02.000Z",
+        "title": "Cached nightly desktop binaries and notarized macOS DMGs",
+        "summary": "The nightly desktop release path now reuses prebuilt binaries when inputs match and gates macOS releases on real notarization and Gatekeeper checks.",
         "items": [
           {
-            "text": "Rebuilt the nightly and stable desktop release workflows for speed, added a new CI performance benchmark workflow, and introduced helper scripts for run-timing summaries, perf timing, packager config patching, release binary verification, and preflight checks.",
+            "text": "Added a fingerprint-keyed cache of the desktop release binary keyed on Rust sources, Cargo metadata, and release-relevant env/secrets, so unchanged nightly builds skip the Rust toolchain, sccache, and rebuild steps; also replaced the in-place Cargo.toml version sed with a dedicated write-desktop-release-metadata.mjs script and a new release_version module on the desktop app.",
             "commit_shas": [
-              "776f003c310267244529fdaaa400b358f9bb61e4"
+              "3de45c12aa813ac52d695395c54246358cbae998"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened the shared setup-node action with up to three retries and a post-install version check, plus the existing Windows-only registry-reachability gate, so transient TLS or DNS failures no longer leave runners on a wrong Node version.",
+            "text": "Added a macos-dmg-notarize-validate.sh step that submits each DMG to Apple's notary service and verifies codesign, stapler, and Gatekeeper acceptance across desktop-validate, nightly, and stable release workflows.",
             "commit_shas": [
-              "776f003c310267244529fdaaa400b358f9bb61e4"
+              "5fabdccee90a06ab753adbcc2b70b853ad35cf6c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Made sccache more resilient in desktop CI by setting SCCACHE_IGNORE_SERVER_IO_ERROR=1 so transient cache backend hiccups no longer fail the build.",
+            "commit_shas": [
+              "5fabdccee90a06ab753adbcc2b70b853ad35cf6c"
             ],
             "confidence": "high"
           }
@@ -1251,43 +1342,35 @@
       },
       {
         "batch_id": "entry-6",
-        "time_label": "12:11 PM",
-        "started_at": "2026-06-05T19:11:25.000Z",
-        "ended_at": "2026-06-05T20:29:02.000Z",
-        "title": "Cached desktop binaries and gated macOS DMG notarization",
-        "summary": "Nightly desktop builds skip rebuilding when inputs are unchanged, and macOS DMGs are now notarized and validated before any release is published.",
+        "time_label": "8:22 PM",
+        "started_at": "2026-06-06T03:22:08.000Z",
+        "ended_at": "2026-06-06T03:22:08.000Z",
+        "title": "Standardized eval gates and tuned CodeQL coverage",
+        "summary": "Landed a chat-core eval lane with a checked-in baseline and reorganized CodeQL so PR gates stay fast while platform coverage stays broad.",
         "items": [
           {
-            "text": "Cached the built desktop release binary in nightly CI keyed on Rust sources and bundle env fingerprint, skipping the Rust toolchain, sccache, and full rebuild on cache hits, and replaced the in-place Cargo.toml version sed with a dedicated write-desktop-release-metadata script plus a new release_version module in the desktop app.",
+            "text": "Added an aura-evals workflow with registry validation, a chat-core Playwright eval suite (mock app, 700+ line scenario set, baseline summary), and bench-smoke entrypoints, plus supporting compare/refresh/summarize scripts and a streams test for the chat stream handler.",
             "commit_shas": [
-              "3de45c12aa813ac52d695395c54246358cbae998"
+              "7e4626ef5d9bdf5b1c0e1b74cd20804be3829dc9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a macos-dmg-notarize-validate.sh step wired into desktop-validate, release-nightly, and release-stable that submits each macOS DMG to Apple's notary service and re-checks codesign, stapler, and Gatekeeper before artifacts are collected.",
+            "text": "Restructured CodeQL into core, mobile, and Rust workflows: trimmed PR gates, kept heavy Swift analysis off PRs, pinned Rust to no-build mode, and fixed the mobile Java extraction so Android coverage runs cleanly.",
             "commit_shas": [
-              "5fabdccee90a06ab753adbcc2b70b853ad35cf6c"
+              "7e4626ef5d9bdf5b1c0e1b74cd20804be3829dc9"
             ],
             "confidence": "high"
-          },
-          {
-            "text": "Set SCCACHE_IGNORE_SERVER_IO_ERROR across desktop CI so transient sccache backend hiccups fall back gracefully instead of failing the build.",
-            "commit_shas": [
-              "5fabdccee90a06ab753adbcc2b70b853ad35cf6c"
-            ],
-            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "New mock Projects desktop on /code",
-      "Shared first-screen layout across /code and /agents",
-      "Telegram agent turns no longer fail silently",
-      "Desktop channel IDOR closed",
-      "Nightly desktop builds cache binaries and validate DMG notarization"
+      "New /code mock Projects desktop and shared marketing first-screen layout",
+      "Telegram channel: IDOR fix, real agent errors, and prod control-plane routing from Desktop",
+      "Faster, retry-hardened desktop release CI with macOS DMG notarization validation",
+      "Standardized chat-core eval gates and CodeQL coverage added to CI"
     ],
-    "raw_commit_count": 21
+    "raw_commit_count": 22
   }
 }

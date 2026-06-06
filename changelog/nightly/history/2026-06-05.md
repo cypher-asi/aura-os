@@ -1,63 +1,61 @@
-# Marketing site rebuild, Telegram hardening, and a faster notarized release pipeline
+# Marketing site refresh, Telegram channel fixes, and a faster, hardened release pipeline
 
 - Date: `2026-06-05`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.627.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.627.1
+- Version: `0.1.0-nightly.628.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.628.1
 
-Today's nightly is dominated by a ground-up rework of the marketing first screen on /code and /agents, paired with a security and reliability pass on Telegram-linked agents and a substantial speedup and hardening of the desktop release pipeline — now with macOS notarization gated before publish.
+A heavy day of marketing-site work landed a new /code mock desktop and a shared first-screen layout across /code and /agents, while the Telegram channel bridge picked up an IDOR fix and clearer error surfacing. On the platform side, desktop release CI got materially faster and more resilient, macOS DMGs are now notarization-checked before shipping, and a standardized eval-gate framework joined CI to guard chat behavior.
 
-## 10:07 PM — /code page leads with a mock Projects desktop
+## 10:07 PM — New /code page leads with a mock Projects desktop
 
-The marketing /code page was restructured around a centered hero and a static mock of the Projects workspace, and the public blog archive got a polish pass.
+The marketing /code page was restructured around an Agents-style centered hero with a full mock of the Projects workspace below it, and the public blog archive got a visual polish pass.
 
-- Rebuilt /code to lead with an Agents-style centered PageHero followed by a full mock desktop that reuses the shared MockAuraApp chrome and frames a new MockProjectsWorkspace (explorer, agent status, task feed, terminal, and sidekick) in place of the landing's scripted DM windows. (`6be27e0`)
-- Polished the public blog archive view with refreshed styles and markup. (`8bc84fd`)
+- Rebuilt /code to lead with a centered PageHero and a mock desktop below that reuses the shared MockAuraApp chrome, swapping the landing's scripted DM windows for a static MockProjectsWorkspace mocking the explorer, agent status, task feed, terminal, and sidekick. (`6be27e0`)
+- Polished the public blog archive view with refreshed styling and markup. (`8bc84fd`)
 
-## 10:47 PM — Telegram-linked agents stop failing silently
+## 10:47 PM — Telegram-linked agents now answer with a real model and surface true errors
 
-Channel turns from Telegram now pin a working model, surface real agent errors, and greet users by the agent's actual name.
+Fixed a regression where Telegram turns posted with a null model and collapsed every failure into a generic apology, and made the connection greeting use the agent's real name.
 
-- Telegram turns now pin the latest frontier model at medium reasoning effort instead of POSTing model: null, fixing the "model name must not be empty" failure for agents without a default_model. (`55cb5f9`)
-- Added a ChannelError::Agent variant so agent-reported errors flow back to the chat instead of collapsing into a generic apology, and threaded the agent's real name through pending and durable link records so users see "Connected to <name>". (`55cb5f9`)
+- Picker-less Telegram chat now pins the latest frontier model at medium reasoning effort per turn, so agents without a default_model no longer fail with "model name must not be empty". (`55cb5f9`)
+- Agent-reported errors are threaded back to the chat via a new ChannelError::Agent variant instead of being swallowed by a generic apology, and the initial greeting now reads "Connected to <agent name>" by carrying the name through pending and durable link records. (`55cb5f9`)
 
-## 10:49 PM — Shared first-screen layout, readable purple accent, and Telegram from desktop
+## 10:49 PM — Shared /code and /agents first screen, accent-text legibility, and Telegram link routing from Desktop
 
-Iterated the /code mock desktop into a shared first-screen layout with /agents, fixed an unreadable purple accent across the app, and unblocked Telegram linking from the desktop build while closing an IDOR.
+A long iteration pass unified the /code and /agents first screen into a shared layout, made the purple accent legible as text across the app, fixed Desktop's Telegram Connect flow against the prod control plane, and closed an IDOR on channel listing.
 
-- Iterated the /code first screen so the mock desktop is visible and correctly sized — giving the stage a definite viewport-derived height so container-query units resolve, enlarging the frame to roughly a real maximized window, tuning its start position, and updating the hero copy to "Ship software while you sleep." (`90e8d1e`, `08d93d0`, `ebcac06`, `9266f8f`)
-- Extracted a shared MarketingFirstScreen component used by both /code and /agents so hero text and stage content align across the two pages, and rebuilt the /agents hero as a body-height flex column that anchors the orb video and agent marquee to the bottom of the first screen instead of relying on a negative-margin peek. (`7b1ced2`, `b5d3525`)
-- Introduced a dedicated --color-accent-text token (brightened to #a855f7 for dark-mode purple) and repointed accent text usages across chat, agents, browser, feedback, notes, billing, and shared zui components so accent text becomes legible while fills, chips, and borders stay unchanged. (`68a3147`)
-- Routed desktop Telegram channel link/list/disconnect calls to the prod control-plane via a new useControlPlane fetch option and baked VITE_NATIVE_DEFAULT_HOST into the desktop build, fixing the 503 Connect failures, and closed an IDOR by scoping list_channels and disconnect_channel to the caller's agent ownership. (`3a3b927`)
+- Extracted a shared MarketingFirstScreen so /code and /agents align their hero band and stage; the /code mock desktop is now visible above the fold at near-maximized size, while /agents anchors its orb video and agent marquee to the bottom of the first screen with a symmetric top/bottom fade and full-bleed edges. (`90e8d1e`, `7b1ced2`, `08d93d0`, `ebcac06`, `b5d3525`, `2101b43`, `28a9da8`, `08db223`, `bd9dfd6`, `a25dd79`, `9266f8f`)
+- Introduced a dedicated --color-accent-text token (brightened to #a855f7 in dark-mode purple) and repointed every accent text usage to it, so links, chips, and status text are readable while accent fills and borders stay unchanged. (`68a3147`)
+- Desktop's Telegram Connect now routes channel link/list/disconnect calls to the prod control plane (api.aura.ai) instead of the bundled local server that has no bot configured, and closed an IDOR where any verified user could enumerate or delete another agent's linked chats — both endpoints now scope by JWT-resolved agent ownership. (`3a3b927`)
+- Local dev /blog now fetches from the prod blog API by default so real posts render against storage-less dev servers, while prod and native builds keep same-origin behavior. (`2c3b0fe`, `ce8be53`)
 
-## 11:33 PM — /agents orb video fade and full-bleed marquee, plus prod blog in dev
+## 9:41 AM — Desktop release CI is faster and survives flaky Node setup
 
-Finished the /agents hero treatment with a symmetric video fade and a full-bleed marquee, and pointed the dev blog at production so local builds show real posts.
+A large overhaul of the release pipeline cut redundant work, added a CI performance benchmark, and hardened Node installation against transient network and tool-cache failures.
 
-- Reworked the /agents orb video so its gradient mask fades symmetrically at the top and bottom — opening the clip box vertically, letting the hero band background go transparent inside the shared first-screen so the top fade isn't hard-cut, then tightening the visible band from 30–70% down to 48–52%. (`2101b43`, `28a9da8`, `08db223`, `bd9dfd6`)
-- Broke the /agents orb stage out of the shared first-screen gutter so the background video and agent marquee extend edge-to-edge while the hero band keeps its gutter and /code is unaffected. (`a25dd79`)
-- Pointed the /blog endpoints at the prod blog origin in dev builds so local shells render real posts instead of the empty state from a storage-less local server, while prod and native builds keep same-origin behavior. (`ce8be53`, `2c3b0fe`)
+- Reworked the nightly and stable release workflows alongside a new CI performance benchmark workflow, added preflight, packager-config, and desktop-release-binary verification scripts, and centralized release artifact validation and upload/prune retries. (`776f003`)
+- Hardened the shared setup-node action with up to three retries plus an explicit version verification step, keeping the Windows-only DNS reachability gate but skipping it on Linux/macOS to avoid pointless latency. (`776f003`)
 
-## 9:41 AM — Desktop release CI overhaul with retryable Node setup
+## 12:11 PM — Cached nightly desktop binaries and notarized macOS DMGs
 
-A large pass on release workflows shortens the desktop release path and makes it tolerant of transient runner failures.
+The nightly desktop release path now reuses prebuilt binaries when inputs match and gates macOS releases on real notarization and Gatekeeper checks.
 
-- Rebuilt the nightly and stable desktop release workflows for speed, added a new CI performance benchmark workflow, and introduced helper scripts for run-timing summaries, perf timing, packager config patching, release binary verification, and preflight checks. (`776f003`)
-- Hardened the shared setup-node action with up to three retries and a post-install version check, plus the existing Windows-only registry-reachability gate, so transient TLS or DNS failures no longer leave runners on a wrong Node version. (`776f003`)
+- Added a fingerprint-keyed cache of the desktop release binary keyed on Rust sources, Cargo metadata, and release-relevant env/secrets, so unchanged nightly builds skip the Rust toolchain, sccache, and rebuild steps; also replaced the in-place Cargo.toml version sed with a dedicated write-desktop-release-metadata.mjs script and a new release_version module on the desktop app. (`3de45c1`)
+- Added a macos-dmg-notarize-validate.sh step that submits each DMG to Apple's notary service and verifies codesign, stapler, and Gatekeeper acceptance across desktop-validate, nightly, and stable release workflows. (`5fabdcc`)
+- Made sccache more resilient in desktop CI by setting SCCACHE_IGNORE_SERVER_IO_ERROR=1 so transient cache backend hiccups no longer fail the build. (`5fabdcc`)
 
-## 12:11 PM — Cached desktop binaries and gated macOS DMG notarization
+## 8:22 PM — Standardized eval gates and tuned CodeQL coverage
 
-Nightly desktop builds skip rebuilding when inputs are unchanged, and macOS DMGs are now notarized and validated before any release is published.
+Landed a chat-core eval lane with a checked-in baseline and reorganized CodeQL so PR gates stay fast while platform coverage stays broad.
 
-- Cached the built desktop release binary in nightly CI keyed on Rust sources and bundle env fingerprint, skipping the Rust toolchain, sccache, and full rebuild on cache hits, and replaced the in-place Cargo.toml version sed with a dedicated write-desktop-release-metadata script plus a new release_version module in the desktop app. (`3de45c1`)
-- Added a macos-dmg-notarize-validate.sh step wired into desktop-validate, release-nightly, and release-stable that submits each macOS DMG to Apple's notary service and re-checks codesign, stapler, and Gatekeeper before artifacts are collected. (`5fabdcc`)
-- Set SCCACHE_IGNORE_SERVER_IO_ERROR across desktop CI so transient sccache backend hiccups fall back gracefully instead of failing the build. (`5fabdcc`)
+- Added an aura-evals workflow with registry validation, a chat-core Playwright eval suite (mock app, 700+ line scenario set, baseline summary), and bench-smoke entrypoints, plus supporting compare/refresh/summarize scripts and a streams test for the chat stream handler. (`7e4626e`)
+- Restructured CodeQL into core, mobile, and Rust workflows: trimmed PR gates, kept heavy Swift analysis off PRs, pinned Rust to no-build mode, and fixed the mobile Java extraction so Android coverage runs cleanly. (`7e4626e`)
 
 ## Highlights
 
-- New mock Projects desktop on /code
-- Shared first-screen layout across /code and /agents
-- Telegram agent turns no longer fail silently
-- Desktop channel IDOR closed
-- Nightly desktop builds cache binaries and validate DMG notarization
+- New /code mock Projects desktop and shared marketing first-screen layout
+- Telegram channel: IDOR fix, real agent errors, and prod control-plane routing from Desktop
+- Faster, retry-hardened desktop release CI with macOS DMG notarization validation
+- Standardized chat-core eval gates and CodeQL coverage added to CI
 

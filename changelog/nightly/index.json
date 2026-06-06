@@ -2,20 +2,19 @@
   {
     "date": "2026-06-05",
     "channel": "nightly",
-    "version": "0.1.0-nightly.627.1",
-    "title": "Marketing site rebuild, Telegram hardening, and a faster notarized release pipeline",
-    "intro": "Today's nightly is dominated by a ground-up rework of the marketing first screen on /code and /agents, paired with a security and reliability pass on Telegram-linked agents and a substantial speedup and hardening of the desktop release pipeline — now with macOS notarization gated before publish.",
+    "version": "0.1.0-nightly.628.1",
+    "title": "Marketing site refresh, Telegram channel fixes, and a faster, hardened release pipeline",
+    "intro": "A heavy day of marketing-site work landed a new /code mock desktop and a shared first-screen layout across /code and /agents, while the Telegram channel bridge picked up an IDOR fix and clearer error surfacing. On the platform side, desktop release CI got materially faster and more resilient, macOS DMGs are now notarization-checked before shipping, and a standardized eval-gate framework joined CI to guard chat behavior.",
     "entryCount": 6,
     "highlights": [
-      "New mock Projects desktop on /code",
-      "Shared first-screen layout across /code and /agents",
-      "Telegram agent turns no longer fail silently",
-      "Desktop channel IDOR closed",
-      "Nightly desktop builds cache binaries and validate DMG notarization"
+      "New /code mock Projects desktop and shared marketing first-screen layout",
+      "Telegram channel: IDOR fix, real agent errors, and prod control-plane routing from Desktop",
+      "Faster, retry-hardened desktop release CI with macOS DMG notarization validation",
+      "Standardized chat-core eval gates and CodeQL coverage added to CI"
     ],
-    "rawCommitCount": 21,
-    "generatedAt": "2026-06-05T20:36:13.689Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.627.1",
+    "rawCommitCount": 22,
+    "generatedAt": "2026-06-06T03:29:02.045Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.628.1",
     "path": "history/2026-06-05.json"
   },
   {
