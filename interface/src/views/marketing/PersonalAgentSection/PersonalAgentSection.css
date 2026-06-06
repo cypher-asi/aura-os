@@ -307,18 +307,19 @@
     color 140ms ease;
 }
 
-/* Recessed pill carved into the keycap: a centered stadium-shaped well
-   that shares the button's surface tone but is darkened at the top (the
+/* Recessed circle carved into the keycap: a centered round well that
+   shares the button's surface tone but is darkened at the top (the
    shadowed upper wall) and catches a thin light lip along the bottom, so
-   it reads as part of the button rather than a separate dark screen. */
+   it reads as part of the button rather than a separate dark screen.
+   `aspect-ratio: 1` keeps it a true circle regardless of keycap size. */
 .personalAgentSkillBtn::before {
   content: "";
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 76%;
-  height: 48%;
-  border-radius: 999px;
+  width: 64%;
+  aspect-ratio: 1;
+  border-radius: 50%;
   transform: translate(-50%, -50%);
   background: linear-gradient(180deg, #15171b 0%, #1f2228 100%);
   box-shadow:
