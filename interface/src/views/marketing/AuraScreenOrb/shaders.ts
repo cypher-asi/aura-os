@@ -1,13 +1,13 @@
 /*
  * GLSL ES 3.00 source for the WebGL2 "agent screen" orb that lives on the
- * AgentConsole device's top circular readout. Unlike the large AuraOrb,
- * this is a tight, contained energy field meant to feel alive — like an
- * AGI thinking behind glass: a hot near-white core that breathes, a warm
- * orange/coral body, drifting plasma noise, and a couple of slowly
- * wandering bright nuclei, all fading out into a soft lavender/periwinkle
- * halo. Palette sampled from the reference gradient (warm orange ->
- * soft lavender). The whole field fades to transparent at the rim so it
- * blends into the black glass well of the screen.
+ * AgentConsole device's top circular readout. Rather than a centered
+ * radial "eye", this is a flowing, domain-warped noise field — liquid
+ * marbled plasma that drifts and folds across the whole disc, so it reads
+ * as a restless moving pattern (an AGI thinking) instead of a glowing
+ * pupil. Color is driven by the flow value, not distance from center,
+ * cycling through the reference palette (warm orange -> coral -> mauve ->
+ * soft lavender/periwinkle). The disc fades to transparent at the rim so
+ * it blends into the black glass well of the screen.
  */
 
 // Full-screen triangle generated from `gl_VertexID` alone — no vertex
@@ -56,74 +56,69 @@ float fbm(vec2 p) {
   return v;
 }
 
-// A wandering bright nucleus: a soft radial blob whose center drifts on
-// its own slow elliptical path. Returns an intensity falloff so several
-// can be summed to make the field's energy roam restlessly.
-float nucleus(vec2 p, vec2 center, float radius) {
-  float d = length(p - center);
-  return exp(-pow(d / radius, 2.0));
+// Map a 0..1 flow value to the reference palette: warm orange -> coral
+// -> dusty mauve -> soft lavender/periwinkle, with a near-white hot
+// crest at the very top so bright folds read as glowing.
+vec3 palette(float v) {
+  vec3 cA = vec3(0.98, 0.46, 0.14);  // warm orange
+  vec3 cB = vec3(1.00, 0.50, 0.40);  // coral / salmon
+  vec3 cC = vec3(0.80, 0.56, 0.66);  // dusty mauve
+  vec3 cD = vec3(0.66, 0.71, 0.94);  // soft lavender / periwinkle
+  vec3 cHot = vec3(1.00, 0.93, 0.82); // near-white crest
+
+  vec3 col = mix(cA, cB, smoothstep(0.0, 0.35, v));
+  col = mix(col, cC, smoothstep(0.30, 0.62, v));
+  col = mix(col, cD, smoothstep(0.58, 0.86, v));
+  col = mix(col, cHot, smoothstep(0.86, 1.0, v));
+  return col;
 }
 
 void main() {
   // Aspect-correct, y-normalized coordinates centered on the screen.
   vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
   float t = u_time;
+  float r = length(uv);
 
-  // Whole-field breathing: a slow pulse that scales the coordinates so
-  // the orb visibly swells and contracts, like a held breath.
-  float breath = 0.5 + 0.5 * sin(t * 0.8);
-  float scale = 1.0 - 0.10 * breath;
-  vec2 p = uv * scale;
+  // Domain warping: fold the coordinate space through layers of flowing
+  // noise so the pattern marbles and churns across the whole disc rather
+  // than radiating from the center. Each layer is offset by the previous
+  // one and pushed along its own drift direction.
+  vec2 p = uv * 2.3;
 
-  float r = length(p);
+  vec2 q = vec2(
+    fbm(p + vec2(0.0, 0.0) + vec2(t * 0.12, t * 0.05)),
+    fbm(p + vec2(5.2, 1.3) + vec2(-t * 0.10, t * 0.08))
+  );
 
-  // Drifting plasma so the body never sits still — two octaves of fbm
-  // sliding in different directions warp the radial field.
-  float plasma = fbm(p * 2.6 + vec2(t * 0.18, -t * 0.12));
-  plasma += 0.5 * fbm(p * 5.0 - vec2(t * 0.09, t * 0.15));
-  float warped = r - 0.10 * plasma;
+  vec2 s = vec2(
+    fbm(p + 3.5 * q + vec2(1.7, 9.2) + vec2(t * 0.06, -t * 0.09)),
+    fbm(p + 3.5 * q + vec2(8.3, 2.8) - vec2(t * 0.07, t * 0.04))
+  );
 
-  // Palette sampled from the reference gradient.
-  vec3 colHot = vec3(1.00, 0.92, 0.80);   // near-white hot spot
-  vec3 colCore = vec3(1.00, 0.55, 0.18);  // warm orange core
-  vec3 colBody = vec3(1.00, 0.45, 0.36);  // coral / salmon
-  vec3 colMid = vec3(0.78, 0.55, 0.62);   // dusty mauve transition
-  vec3 colHalo = vec3(0.68, 0.71, 0.92);  // soft lavender / periwinkle
+  float flow = fbm(p + 4.0 * s + vec2(-t * 0.05, t * 0.03));
 
-  // Radial color ramp from the hot core out to the cool lavender halo.
-  vec3 col = colHot;
-  col = mix(col, colCore, smoothstep(0.0, 0.18, warped));
-  col = mix(col, colBody, smoothstep(0.12, 0.34, warped));
-  col = mix(col, colMid, smoothstep(0.30, 0.55, warped));
-  col = mix(col, colHalo, smoothstep(0.48, 0.85, warped));
+  // Spread the flow value across the full 0..1 palette range and give it
+  // a slow global breathing shift so the whole pattern drifts in hue.
+  float v = clamp(flow * 1.35 + 0.12 * sin(t * 0.4), 0.0, 1.0);
+  vec3 col = palette(v);
 
-  // Two slowly wandering nuclei keep the energy roaming so it reads as
-  // "thinking" rather than a static gradient. Their paths are slow,
-  // irrational-ratio ellipses so they never repeat in an obvious loop.
-  vec2 c1 = 0.20 * vec2(cos(t * 0.41), sin(t * 0.33));
-  vec2 c2 = 0.26 * vec2(cos(-t * 0.27 + 1.7), sin(t * 0.37 + 0.5));
-  float nuclei = nucleus(p, c1, 0.30) * (0.6 + 0.4 * sin(t * 1.3));
-  nuclei += nucleus(p, c2, 0.24) * (0.6 + 0.4 * sin(t * 0.9 + 2.0));
+  // Glowing ridges: bright filaments where the warped layers stack up,
+  // pulsing on their own slow beat so highlights travel through the
+  // pattern like thought moving through it.
+  float ridge = pow(clamp(dot(q, s) + 0.5, 0.0, 1.0), 1.8);
+  float pulse = 0.6 + 0.4 * sin(t * 1.2 + flow * 6.2831);
+  col += vec3(1.0, 0.85, 0.7) * ridge * 0.45 * pulse;
 
-  // Brightness: a tight breathing core plus a broad soft glow, lifted by
-  // the wandering nuclei and modulated by the plasma shimmer.
-  float core = exp(-warped * warped * 7.0);
-  float glow = exp(-r * 2.4);
-  float intensity = core * (1.1 + 0.5 * breath) + glow * 0.55 + nuclei * 0.7;
-  intensity *= 0.82 + 0.30 * plasma;
+  // Gentle overall luminance lift so the pattern reads as emissive on the
+  // black glass, modulated by the flow so it shimmers as it moves.
+  col *= 0.78 + 0.55 * flow + 0.18 * pulse;
 
-  col *= intensity;
-
-  // Soft pulsing rim light in lavender — a thin breathing halo that
-  // catches the edge of the field.
-  float rimPulse = 1.0 + 0.18 * sin(t * 1.1);
-  float rim = smoothstep(0.06, 0.0, abs(r - 0.62 * rimPulse));
-  col += colHalo * rim * 0.35 * (0.5 + 0.5 * breath);
-
-  // Fade the whole field to transparent toward the rim so it melts into
-  // the black glass well instead of showing a hard canvas square.
-  float alpha = smoothstep(0.95, 0.20, r) * clamp(intensity, 0.0, 1.0);
-  alpha = clamp(alpha + core * 0.6 + nuclei * 0.4, 0.0, 1.0);
+  // Circular disc mask: fully opaque across the interior, feathering to
+  // transparent at the rim so it melts into the black glass well instead
+  // of showing a hard canvas square. A faint inner brightening keeps the
+  // edge from looking flat.
+  float alpha = smoothstep(0.98, 0.74, r);
+  col *= mix(0.85, 1.0, smoothstep(0.95, 0.55, r));
 
   fragColor = vec4(col, alpha);
 }
