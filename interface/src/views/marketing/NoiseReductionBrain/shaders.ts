@@ -220,16 +220,22 @@ void main() {
   vec3 neonOrange = vec3(1.0, 0.46, 0.12);
   vec3 matterPurple = vec3(0.46, 0.20, 0.80);
 
+  // Sharpened vessel term: threshold the soft angiography luminance so the
+  // orange glow and the travelling signals hug the ACTUAL neuronal structure
+  // (the bright lines) instead of bleeding into the surrounding tissue.
+  float vessel = smoothstep(0.12, 0.42, mask);
+
   // Purple matter: broad soft tissue from the aura/halo fields so the regions
   // glow even away from the vessels.
   float matter = clamp(aura * 1.3 + outerGlow * 0.9 + bloom * 0.35, 0.0, 1.0);
   vec3 rightCol = matterPurple * matter * basePulse;
 
-  // Orange neon inner structure: emissive vessels, plus a hot core on the
+  // Orange neon inner structure: emissive vessels tied tightly to the masked
+  // lines (only a thin bloom for the neon edge), plus a hot core on the
   // densest junctions so they read as bright soma nodes.
-  float structure = (mask * 1.25 + bloom * 0.85) * basePulse;
+  float structure = (vessel * 1.35 + bloom * 0.25) * basePulse;
   rightCol += neonOrange * structure;
-  rightCol += vec3(1.0, 0.72, 0.30) * pow(mask, 3.0) * basePulse * 0.9;
+  rightCol += vec3(1.0, 0.72, 0.30) * pow(vessel, 2.0) * basePulse * 0.9;
 
   // ----- Pulsating communication signals --------------------------------
   // Discrete bright "items" travelling region-to-region along several axes.
@@ -248,7 +254,9 @@ void main() {
     float ph = fract(proj * freq - t * speed);
     comm += exp(-pow(ph - 0.5, 2.0) * 320.0);
   }
-  comm *= clamp(mask + bloom * 0.5, 0.0, 1.0);
+  // Tightly gate to the sharpened vessel so signals only run along the actual
+  // structure, with just a sliver of bloom for a soft edge.
+  comm *= clamp(vessel + bloom * 0.12, 0.0, 1.0);
 
   // Signals flash a hot near-white orange so they pop along the lines.
   rightCol += vec3(1.0, 0.80, 0.45) * comm * 1.9;
