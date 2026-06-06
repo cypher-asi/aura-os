@@ -1,0 +1,285 @@
+/*
+ * Scoped styling for the spec bento's `NoiseReductionCard` mini-UI (the
+ * static "DELE" deep-learning noise-reduction plugin) and the inset on the
+ * wide `MetalCard` that hosts it. Follows the same token vocabulary as the
+ * personal-agent device (radial black wells, inset shadows, hairline rims)
+ * so the two read as one hardware family.
+ */
+
+/* Pull the plugin back into a centered, capped column inside the wide cell
+   (mirrors `.paCardWide`) so it doesn't stretch full-bleed. Desktop-only;
+   two-class specificity overrides `.metalCard`. */
+@media (min-width: 769px) {
+  .metalCard.specQuadCard {
+    padding-inline: calc(10.16vw + 43px);
+  }
+}
+
+/* Plate wrapper — capped width, centered, matching the device footprint. */
+.nrCard {
+  --nr-accent: #5b86c9;
+  --nr-knob-size: 200px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.nrContent {
+  display: flex;
+  flex-direction: column;
+  padding: 7px;
+}
+
+/* ----- Top screen --------------------------------------------------- */
+
+/* Inset glossy black screen, recessed below the bezel. */
+.nrScreen {
+  position: relative;
+  height: 150px;
+  border-radius: 14px 14px 4px 4px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.95),
+    inset 0 3px 5px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.nrScreenGloss {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 46%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* ----- Bezel panel -------------------------------------------------- */
+
+.nrPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 22px;
+}
+
+/* ----- Header ------------------------------------------------------- */
+
+.nrHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nrBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+}
+
+.nrMic {
+  opacity: 0.85;
+}
+
+.nrWordmark {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: var(--color-text-primary);
+}
+
+.nrLogo {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+}
+
+.nrLogo sup {
+  font-size: 0.6em;
+  margin-left: 1px;
+}
+
+/* ----- Wavelength / spectrum strip ---------------------------------- */
+
+.nrWave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 30px;
+  margin: 18px 0 14px;
+}
+
+.nrWaveBar {
+  flex: 0 0 2px;
+  min-height: 8%;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.nrWaveBarAccent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--nr-accent) 90%, #fff 10%) 0%,
+    var(--nr-accent) 100%
+  );
+  box-shadow: 0 0 6px color-mix(in srgb, var(--nr-accent) 45%, transparent);
+}
+
+/* ----- Status row --------------------------------------------------- */
+
+.nrStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nrReduction {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.nrReductionLabel {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--color-text-secondary);
+}
+
+.nrReductionValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.nrActive {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--color-text-secondary);
+}
+
+.nrActiveDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2fd07a;
+  box-shadow: 0 0 8px rgba(47, 208, 122, 0.7);
+}
+
+/* ----- Knob --------------------------------------------------------- */
+
+.nrKnobWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: var(--nr-knob-size);
+  margin: 26px 0 18px;
+}
+
+/* Arc of tick dots; each dot is centered then rotated + pushed outward
+   via its inline transform (origin is the knob center). */
+.nrKnobTicks {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+.nrKnobTick {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  transform-origin: center;
+}
+
+/* Raised neomorphic dial sunk into the bezel. */
+.nrKnob {
+  position: relative;
+  width: var(--nr-knob-size);
+  height: var(--nr-knob-size);
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      ellipse 90% 90% at 50% 30%,
+      #2a2a2a 0%,
+      #1c1c1c 55%,
+      #121212 100%
+    );
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.08),
+    inset 0 -10px 24px rgba(0, 0, 0, 0.7),
+    0 12px 26px rgba(0, 0, 0, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+/* White pointer line at top-center. */
+.nrKnobPointer {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 2px;
+  height: 22px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+}
+
+/* ----- Captions ----------------------------------------------------- */
+
+.nrCaptions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.nrTitle {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--color-text-primary);
+}
+
+.nrSubtitle {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .nrCard {
+    --nr-knob-size: 168px;
+    max-width: 340px;
+  }
+
+  .nrScreen {
+    height: 120px;
+  }
+
+  .nrPanel {
+    padding: 14px 14px 18px;
+  }
+}
