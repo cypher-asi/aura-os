@@ -1,4 +1,4 @@
-import { type PointerEvent, type ReactNode, useCallback, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Plate } from "../../../components/Plate";
 import { NoiseReductionBrain } from "../NoiseReductionBrain";
 
@@ -16,11 +16,10 @@ import { NoiseReductionBrain } from "../NoiseReductionBrain";
  * (INTELLIGENCE / WITHOUT LIMITS). Everything is decorative
  * (`aria-hidden`); nothing here is a real control.
  *
- * Moving the cursor anywhere across the device panel is interactive: the
- * horizontal position sweeps the knob pointer through its dial arc, fills
- * the tick ring up to that point like a level meter, and steers the
- * underlying brain animation (`<NoiseReductionBrain />`). The last position
- * is held when the cursor leaves.
+ * Moving the cursor anywhere in the viewport is interactive: the cursor's
+ * horizontal position across the window sweeps the knob pointer through its
+ * dial arc, fills the tick ring up to that point like a level meter, and
+ * steers the underlying brain animation (`<NoiseReductionBrain />`).
  */
 
 /** Tick-dot count for the full circular ring around the knob. */
@@ -40,22 +39,36 @@ export function NoiseReductionCard(): ReactNode {
   const knobPointerRef = useRef<HTMLSpanElement>(null);
   const tickRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
-  const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-    const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
-    pointerRef.current = { x, y };
-    // Sweep the pointer through the dial's arc: left = min, right = max.
-    const angle = (x - 0.5) * TICK_ARC_DEG;
-    knobPointerRef.current?.style.setProperty("--nr-knob-angle", `${angle}deg`);
-    // Light every tick from the start of the arc up to the pointer, like a
-    // level meter filling in real time. Tick `i` sits at `i/(N-1)` of the
-    // arc, so it's lit once that fraction is <= the cursor's x position.
-    const litThreshold = x * (KNOB_TICKS - 1);
-    for (let i = 0; i < tickRefs.current.length; i++) {
-      tickRefs.current[i]?.classList.toggle("nrKnobTickLit", i <= litThreshold);
-    }
+  // React to the cursor anywhere in the viewport (not just over the device):
+  // the window-wide horizontal position drives the knob, the tick meter, and
+  // the brain animation. A window listener keeps this live regardless of
+  // which element the pointer is actually over.
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const w = window.innerWidth || 1;
+      const h = window.innerHeight || 1;
+      const x = Math.min(1, Math.max(0, e.clientX / w));
+      const y = Math.min(1, Math.max(0, e.clientY / h));
+      pointerRef.current = { x, y };
+      // Sweep the pointer through the dial's arc: left = min, right = max.
+      const angle = (x - 0.5) * TICK_ARC_DEG;
+      knobPointerRef.current?.style.setProperty(
+        "--nr-knob-angle",
+        `${angle}deg`,
+      );
+      // Light every tick from the start of the arc up to the pointer, like a
+      // level meter filling in real time. Tick `i` sits at `i/(N-1)` of the
+      // arc, so it's lit once that fraction is <= the cursor's x position.
+      const litThreshold = x * (KNOB_TICKS - 1);
+      for (let i = 0; i < tickRefs.current.length; i++) {
+        tickRefs.current[i]?.classList.toggle(
+          "nrKnobTickLit",
+          i <= litThreshold,
+        );
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    return () => window.removeEventListener("pointermove", onMove);
   }, []);
 
   // Default fill matches the rest pointer (straight up = cursor centered):
@@ -64,7 +77,7 @@ export function NoiseReductionCard(): ReactNode {
 
   return (
     <Plate className="nrCard" aria-hidden="true">
-      <div className="nrContent" onPointerMove={handlePointerMove}>
+      <div className="nrContent">
         <div className="nrScreen">
           <img
             className="nrScreenImage"
