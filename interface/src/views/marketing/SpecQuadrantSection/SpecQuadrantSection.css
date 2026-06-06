@@ -325,7 +325,11 @@
     0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
-/* White pointer line at top-center. */
+/* White pointer line at top-center. Rotates about the knob center via
+   `--nr-knob-angle` (set imperatively as the cursor sweeps the screen), so it
+   reads as a real dial turning. The origin is token-based so it stays
+   centered at both desktop (100px) and mobile (84px) knob sizes; the pointer's
+   own top sits 16px below the knob top, hence the `- 16px`. */
 .nrKnobPointer {
   position: absolute;
   top: 16px;
@@ -336,6 +340,9 @@
   border-radius: 1px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+  transform: rotate(var(--nr-knob-angle, 0deg));
+  transform-origin: 50% calc(var(--nr-knob-size) / 2 - 16px);
+  transition: transform 0.12s ease-out;
 }
 
 @media (max-width: 768px) {
