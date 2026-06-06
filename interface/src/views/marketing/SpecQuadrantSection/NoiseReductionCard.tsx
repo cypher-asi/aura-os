@@ -21,8 +21,9 @@ import { NoiseReductionBrain } from "../NoiseReductionBrain";
  * Everything is decorative (`aria-hidden`); nothing here is a real control.
  *
  * Moving the cursor anywhere in the viewport is interactive: the cursor's
- * position drives the knob pointer through its dial arc, fills the tick ring
- * up to that point like a level meter, and steers the brain animation.
+ * position drives the knob pointer through its dial arc and fills the tick
+ * ring up to that point like a level meter. The brain animation is ambient
+ * and not affected by the cursor.
  */
 
 /** Tick-dot count for the full circular ring around the knob. */
@@ -144,9 +145,8 @@ function randomizeBox(box: HTMLDivElement, img: HTMLImageElement): void {
 }
 
 export function NoiseReductionCard(): ReactNode {
-  // Shared, normalized (0..1) cursor position. The brain reads this every
-  // frame to steer its animation; the knob pointer rotates to match. Kept in
-  // a ref so pointer moves don't re-render the card.
+  // Shared, normalized (0..1) cursor position driving the knob pointer and
+  // tick meter. Kept in a ref so pointer moves don't re-render the card.
   const pointerRef = useRef({ x: 0.5, y: 0.5 });
   const knobPointerRef = useRef<HTMLSpanElement>(null);
   const tickRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -286,9 +286,9 @@ export function NoiseReductionCard(): ReactNode {
   }, []);
 
   // React to the cursor anywhere in the viewport (not just over the device):
-  // the window-wide position drives the knob, the tick meter, and the brain
-  // animation. A window listener keeps this live regardless of which element
-  // the pointer is actually over.
+  // the window-wide position drives the knob and the tick meter. A window
+  // listener keeps this live regardless of which element the pointer is
+  // actually over.
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       const w = window.innerWidth || 1;
@@ -364,7 +364,7 @@ export function NoiseReductionCard(): ReactNode {
               </div>
             ))}
           </div>
-          <NoiseReductionBrain className="nrScreenBrain" pointerRef={pointerRef} />
+          <NoiseReductionBrain className="nrScreenBrain" />
           <div className="nrScreenGloss" />
         </div>
 

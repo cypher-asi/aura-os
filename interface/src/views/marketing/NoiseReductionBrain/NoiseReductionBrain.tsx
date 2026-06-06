@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./shaders";
 
 interface NoiseReductionBrainProps {
@@ -8,13 +8,6 @@ interface NoiseReductionBrainProps {
    * `.nrScreenImage` it overlays.
    */
   className?: string;
-  /**
-   * Normalized (0..1) cursor position over the host panel, updated by the
-   * card on `pointermove`. Read every frame (never triggers a re-render) and
-   * eased into the `u_mouse` uniform so the cursor steers the animation. When
-   * omitted, the brain animates around screen center (0.5, 0.5).
-   */
-  pointerRef?: RefObject<{ x: number; y: number }>;
 }
 
 /** Source angiography used as the vessel luminance mask. */
@@ -130,13 +123,8 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
  */
 export function NoiseReductionBrain({
   className,
-  pointerRef,
 }: NoiseReductionBrainProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Stable ref to the latest pointer prop so the one-shot render loop can read
-  // the current cursor position without re-subscribing each move.
-  const pointerSource = useRef(pointerRef);
-  pointerSource.current = pointerRef;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -165,7 +153,6 @@ export function NoiseReductionBrain({
     const resolutionLoc = gl.getUniformLocation(program, "u_resolution");
     const texResolutionLoc = gl.getUniformLocation(program, "u_texResolution");
     const timeLoc = gl.getUniformLocation(program, "u_time");
-    const mouseLoc = gl.getUniformLocation(program, "u_mouse");
     const texLoc = gl.getUniformLocation(program, "u_tex");
     const codeLoc = gl.getUniformLocation(program, "u_code");
     const codeResolutionLoc = gl.getUniformLocation(
@@ -279,13 +266,6 @@ export function NoiseReductionBrain({
     const start = performance.now();
     let rafId: number | null = null;
 
-    // Eased cursor position fed to the shader. We lerp toward the host's
-    // pointer ref each frame so the animation tracks the mouse smoothly
-    // rather than snapping. Y is flipped at upload time to match the
-    // shader's bottom-origin screen UVs.
-    let mouseX = 0.5;
-    let mouseY = 0.5;
-
     const draw = (timeSeconds: number) => {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
@@ -300,16 +280,10 @@ export function NoiseReductionBrain({
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, codeTexture);
       gl.uniform1i(codeLoc, 1);
-      const target = pointerSource.current?.current;
-      const tx = target ? target.x : 0.5;
-      const ty = target ? target.y : 0.5;
-      mouseX += (tx - mouseX) * 0.12;
-      mouseY += (ty - mouseY) * 0.12;
       gl.uniform2f(resolutionLoc, width, height);
       gl.uniform2f(texResolutionLoc, texWidth, texHeight);
       gl.uniform2f(codeResolutionLoc, codeWidth, codeHeight);
       gl.uniform1f(timeLoc, timeSeconds);
-      gl.uniform2f(mouseLoc, mouseX, 1.0 - mouseY);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 

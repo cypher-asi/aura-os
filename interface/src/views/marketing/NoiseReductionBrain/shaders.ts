@@ -40,7 +40,6 @@ out vec4 fragColor;
 uniform vec2 u_resolution;     // canvas size in device px
 uniform vec2 u_texResolution;  // brain image natural size
 uniform float u_time;
-uniform vec2 u_mouse;          // cursor over the screen, 0..1 (bottom-origin)
 uniform sampler2D u_tex;       // brain angiography (vessel mask)
 uniform sampler2D u_code;      // generated code/math glyph texture (left bg)
 uniform vec2 u_codeResolution; // code texture natural size
@@ -111,12 +110,6 @@ void main() {
 
   float t = u_time;
 
-  // Cursor steering: direction from screen center toward the mouse, and a
-  // soft focal disc centered on the cursor (in screen space) that the
-  // animation brightens and energizes as you sweep across the well.
-  vec2 mouseDir = u_mouse - 0.5;
-  float focus = smoothstep(0.5, 0.0, distance(uvScreen, u_mouse));
-
   // Vessel mask from the source angiography.
   float mask = maskAt(uv);
 
@@ -151,8 +144,7 @@ void main() {
   aura *= 0.8 + 0.7 * (0.5 + 0.5 * sin(t * 1.7));
 
   // Fast, churning flow field so the vasculature looks busy and restless.
-  // The cursor pushes the flow so the churn drifts toward the mouse.
-  vec2 flowP = uv * 7.0 + mouseDir * 4.0;
+  vec2 flowP = uv * 7.0;
   float flow = fbm(flowP + vec2(-t * 0.7, t * 0.42));
   flow = fbm(flowP + 3.5 * vec2(flow, fbm(flowP - t * 0.34)));
 
@@ -180,8 +172,6 @@ void main() {
   energy += mask * spark * 2.2;       // firing sparkles
   energy += bloom * 0.6;              // emissive vessels
   energy *= breathe;
-  // Cursor focus ignites the vessels it passes over (both hemispheres).
-  energy += (mask + bloom * 0.5) * focus * 1.6;
 
   // ----- RIGHT hemisphere: color, abstract paint, creativity -----------
   // Drive the palette by a faster drift + the local pulse so hue races,
