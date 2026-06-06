@@ -96,7 +96,6 @@ export function ProductView(): ReactNode {
             description:
               "AURA does not view or train on your personal or corporate data. Data sent to frontier model providers is not directly identifiable.",
             tag: "PRIVACY",
-            accent: true,
           },
           {
             illustration: <SecureScene />,

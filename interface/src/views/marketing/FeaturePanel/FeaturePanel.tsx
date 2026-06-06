@@ -11,8 +11,6 @@ export interface FeaturePanelFeature {
   readonly description: ReactNode;
   /** Static uppercase label shown in the bottom-left pill. */
   readonly tag: ReactNode;
-  /** Highlights this card with the brand orange surface. */
-  readonly accent?: boolean;
 }
 
 interface FeaturePanelProps {
@@ -38,14 +36,7 @@ export function FeaturePanel({
         </header>
         <ul className="featurePanelGrid" role="list">
           {features.map((feature, index) => (
-            <li
-              key={index}
-              className={
-                feature.accent
-                  ? "featurePanelItem featurePanelItemAccent"
-                  : "featurePanelItem"
-              }
-            >
+            <li key={index} className="featurePanelItem">
               <div className="featurePanelScene" aria-hidden="true">
                 <div className="featurePanelSceneArt">{feature.illustration}</div>
               </div>
@@ -70,33 +61,19 @@ export function FeaturePanel({
 export function PrivacyScene(): ReactNode {
   return (
     <svg
-      viewBox="0 0 200 120"
+      viewBox="0 0 120 120"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       role="img"
       aria-hidden="true"
     >
-      <g opacity="0.45">
-        <line x1="26" y1="34" x2="78" y2="34" />
-        <line x1="26" y1="50" x2="64" y2="50" />
-        <line x1="26" y1="66" x2="82" y2="66" />
-        <line x1="26" y1="82" x2="58" y2="82" />
-      </g>
-      <g opacity="0.45">
-        <line x1="120" y1="34" x2="174" y2="34" strokeDasharray="4 5" />
-        <line x1="134" y1="50" x2="174" y2="50" strokeDasharray="4 5" />
-        <line x1="120" y1="82" x2="174" y2="82" strokeDasharray="4 5" />
-      </g>
-      <g transform="translate(82 36)">
-        <rect x="0" y="20" width="36" height="28" rx="5" fill="currentColor" fillOpacity="0.14" />
-        <rect x="0" y="20" width="36" height="28" rx="5" />
-        <path d="M7 20v-7a11 11 0 0 1 22 0v7" />
-        <circle cx="18" cy="32" r="3" fill="currentColor" />
-        <line x1="18" y1="35" x2="18" y2="41" />
-      </g>
+      <rect x="32" y="54" width="56" height="46" rx="10" />
+      <path d="M45 54V41a15 15 0 0 1 30 0v13" />
+      <circle cx="60" cy="73" r="5.5" />
+      <path d="M60 78.5v9" />
     </svg>
   );
 }
@@ -108,31 +85,17 @@ export function PrivacyScene(): ReactNode {
 export function SecureScene(): ReactNode {
   return (
     <svg
-      viewBox="0 0 200 120"
+      viewBox="0 0 120 120"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       role="img"
       aria-hidden="true"
     >
-      <g opacity="0.32">
-        <line x1="20" y1="24" x2="180" y2="24" />
-        <line x1="20" y1="60" x2="180" y2="60" />
-        <line x1="20" y1="96" x2="180" y2="96" />
-        <line x1="56" y1="14" x2="56" y2="106" />
-        <line x1="144" y1="14" x2="144" y2="106" />
-      </g>
-      <g transform="translate(76 22)">
-        <path
-          d="M24 2 4 9v22c0 16 11.5 30 20 33 8.5-3 20-17 20-33V9L24 2Z"
-          fill="currentColor"
-          fillOpacity="0.14"
-        />
-        <path d="M24 2 4 9v22c0 16 11.5 30 20 33 8.5-3 20-17 20-33V9L24 2Z" />
-        <path d="M15 33l7 7 12-15" strokeWidth="2" />
-      </g>
+      <path d="M60 22 90 33v23c0 20-12 34-30 41-18-7-30-21-30-41V33L60 22Z" />
+      <path d="M48 61l9 9 16-19" strokeWidth="2.4" />
     </svg>
   );
 }
@@ -144,30 +107,21 @@ export function SecureScene(): ReactNode {
 export function OpenSourceScene(): ReactNode {
   return (
     <svg
-      viewBox="0 0 200 120"
+      viewBox="0 0 120 120"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       role="img"
       aria-hidden="true"
     >
-      <g strokeWidth="2.5" opacity="0.9">
-        <path d="M58 36 36 60l22 24" />
-        <path d="M104 36l22 24-22 24" />
-      </g>
-      <line x1="78" y1="34" x2="90" y2="86" opacity="0.5" />
-      <g transform="translate(140 22)">
-        <circle cx="0" cy="6" r="5" fill="currentColor" fillOpacity="0.18" />
-        <circle cx="0" cy="6" r="5" />
-        <circle cx="0" cy="70" r="5" fill="currentColor" fillOpacity="0.18" />
-        <circle cx="0" cy="70" r="5" />
-        <circle cx="34" cy="38" r="5" fill="currentColor" fillOpacity="0.18" />
-        <circle cx="34" cy="38" r="5" />
-        <path d="M0 11v54" />
-        <path d="M0 38h29" />
-      </g>
+      <path d="M60 34v17" />
+      <path d="M60 51c0 16-13 20-22 35" />
+      <path d="M60 51c0 16 13 20 22 35" />
+      <circle cx="60" cy="28" r="6" />
+      <circle cx="36" cy="92" r="6" />
+      <circle cx="84" cy="92" r="6" />
     </svg>
   );
 }

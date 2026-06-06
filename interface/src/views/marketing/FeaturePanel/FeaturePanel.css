@@ -84,6 +84,18 @@
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.04) inset,
     0 24px 48px -24px rgba(0, 0, 0, 0.9);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.featurePanelSceneArt,
+.featurePanelItemTitle,
+.featurePanelItemDesc,
+.featurePanelItemTag {
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease;
 }
 
 /* Illustration scene region at the top of each card. Grows to fill the
@@ -152,23 +164,23 @@
   color: #f7f8fb;
 }
 
-/* Highlighted card: brand orange surface with inverted near-black art,
-   text and pill, matching the reference's featured card. */
-.featurePanelItemAccent {
+/* Hover: brand orange surface with inverted near-black art, text and pill,
+   matching the reference's featured card. */
+.featurePanelItem:hover {
   background: #f45500;
   border-color: rgba(0, 0, 0, 0.18);
 }
 
-.featurePanelItemAccent .featurePanelSceneArt,
-.featurePanelItemAccent .featurePanelItemTitle {
+.featurePanelItem:hover .featurePanelSceneArt,
+.featurePanelItem:hover .featurePanelItemTitle {
   color: #160a04;
 }
 
-.featurePanelItemAccent .featurePanelItemDesc {
+.featurePanelItem:hover .featurePanelItemDesc {
   color: rgba(22, 10, 4, 0.78);
 }
 
-.featurePanelItemAccent .featurePanelItemTag {
+.featurePanelItem:hover .featurePanelItemTag {
   border-color: rgba(22, 10, 4, 0.45);
   color: #160a04;
 }
