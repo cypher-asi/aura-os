@@ -1,55 +1,64 @@
 import { type ReactNode } from "react";
+import { Headphones, Mic, Shuffle } from "lucide-react";
 import { Plate } from "../../../components/Plate";
 import { DeviceScreen } from "../../../components/DeviceScreen";
 import { DeviceLabelStrip } from "../../../components/DeviceLabelStrip";
 import { DotMatrixGrille } from "../../../components/DotMatrixGrille";
 import { HardwareKey } from "../../../components/HardwareKey";
+import { Knob } from "../../../components/Knob";
 import styles from "./AgentConsole.module.css";
 
 /**
- * Decorative "agent console" rendered as the `/agents` hero stage: a
- * black hardware configurator panel recreated from the shared marketing
+ * Decorative "agent composer" rendered as the `/agents` hero stage: a
+ * tall black sampler-style device recreated from the shared marketing
  * device kit so it reads as the same hardware family as the "An agent
- * designed for you" quadrant below. The chassis is a `<Plate />`, the
- * CRT a `<DeviceScreen />`, the control banks `<HardwareKey />`s, and
- * the speaker a `<DotMatrixGrille />`.
+ * designed for you" quadrant below. Top to bottom: a recessed
+ * `<DeviceScreen />`, a `<DeviceLabelStrip />`, a `<DotMatrixGrille />`
+ * speaker, then a two-column control deck (a fader + square `HardwareKey`
+ * grid on the left; `Knob`s + labeled `HardwareKey` button rows on the
+ * right) and a pair of partial dials at the foot.
  *
  * Everything here is decorative: the whole stage is `aria-hidden` by the
- * consuming view, and the keys carry hover/press affordances only.
+ * consuming view, and the controls carry hover/press affordances only.
  */
 
-interface ConsoleKey {
+interface DeckKey {
   readonly text: string;
   readonly lit?: boolean;
 }
 
-interface ControlGroup {
-  readonly label: string;
-  readonly keys: readonly [ConsoleKey, ConsoleKey];
+const GRID_KEYS: readonly DeckKey[] = [
+  { text: "A" },
+  { text: "TEMPO" },
+  { text: "B", lit: true },
+  { text: "C" },
+  { text: "D" },
+  { text: "E" },
+];
+
+interface DeckButton {
+  readonly text: string;
+  readonly sub: string;
+  readonly lit?: boolean;
 }
 
-const LEFT_GROUPS: readonly ControlGroup[] = [
-  { label: "Model", keys: [{ text: "PIN" }, { text: "CYCLE", lit: true }] },
-  { label: "Persona", keys: [{ text: "EDIT" }, { text: "SHUFFLE", lit: true }] },
-  { label: "Tools", keys: [{ text: "CLEAR" }, { text: "ADD", lit: true }] },
-  { label: "Memory", keys: [{ text: "WIPE" }, { text: "SYNC", lit: true }] },
+const BUTTON_ROW_ONE: readonly DeckButton[] = [
+  { text: "FX", sub: "OUTPUT" },
+  { text: "SAMPLE", sub: "CHOP", lit: true },
+  { text: "TIMING", sub: "CORRECT" },
 ];
 
-const RIGHT_GROUPS: readonly ControlGroup[] = [
-  { label: "Voice", keys: [{ text: "MUTE" }, { text: "CYCLE", lit: true }] },
-  { label: "Privacy", keys: [{ text: "AUDIT" }, { text: "LOCK", lit: true }] },
-  { label: "Compute", keys: [{ text: "RESET" }, { text: "SCALE", lit: true }] },
+const BUTTON_ROW_TWO: readonly DeckButton[] = [
+  { text: "ERASE", sub: "SYSTEM" },
+  { text: "RECORD", sub: "TAKE", lit: true },
+  { text: "PLAY", sub: "LOOP" },
 ];
 
-function ControlGroupView({ group }: { group: ControlGroup }): ReactNode {
+function DeckButtonView({ button }: { button: DeckButton }): ReactNode {
   return (
-    <div className={styles.group}>
-      <span className={styles.groupLabel}>{group.label}</span>
-      <div className={styles.keys}>
-        {group.keys.map((key) => (
-          <HardwareKey key={key.text} label={key.text} lit={key.lit} />
-        ))}
-      </div>
+    <div className={styles.btnCol}>
+      <HardwareKey label={button.text} lit={button.lit} className={styles.deckKey} />
+      <span className={styles.btnSub}>{button.sub}</span>
     </div>
   );
 }
@@ -57,63 +66,70 @@ function ControlGroupView({ group }: { group: ControlGroup }): ReactNode {
 export function AgentConsole(): ReactNode {
   return (
     <div className={styles.console} aria-hidden="true">
-      <Plate radius="24px" className={styles.chassis}>
+      <Plate radius="28px" className={styles.chassis}>
         <div className={styles.content}>
-          <header className={styles.header}>
-            <span className={styles.rule} />
-            <div className={styles.wordmark}>
-              <span className={styles.wordmarkText}>AURA</span>
-              <span className={styles.wordmarkSub}>AGENT CONSOLE 5000</span>
+          <DeviceScreen className={styles.screen}>
+            <div className={styles.screenStatus}>
+              <Shuffle size={15} strokeWidth={2} />
+              <Mic size={15} strokeWidth={2} />
+              <Headphones size={15} strokeWidth={2} />
             </div>
-            <span className={styles.rule} />
-            <div className={styles.knob}>
-              <div className={styles.knobDial} />
-              <span className={styles.knobLabel}>ON / OFF</span>
-            </div>
-          </header>
-
-          <div className={styles.body}>
-            <div className={styles.column}>
-              {LEFT_GROUPS.map((group) => (
-                <ControlGroupView key={group.label} group={group} />
-              ))}
-            </div>
-
-            <div className={styles.screenWrap}>
-              <DeviceScreen className={styles.screen}>
-                <div className={styles.screenGlow} />
-                <div className={styles.scanlines} />
-              </DeviceScreen>
-              <div className={styles.transport}>
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-
-            <div className={styles.column}>
-              {RIGHT_GROUPS.map((group) => (
-                <ControlGroupView key={group.label} group={group} />
-              ))}
-            </div>
-          </div>
+          </DeviceScreen>
 
           <DeviceLabelStrip
-            label="PRIVATE BY DESIGN"
+            label="AURA AGENT COMPOSER"
             className={styles.labelStrip}
           />
 
-          <footer className={styles.footer}>
-            <div className={styles.brands}>
-              <span className={styles.brandMark}>AURA</span>
-              <span className={styles.brandMarkAlt}>v1.0</span>
+          <DotMatrixGrille height="118px" className={styles.speaker} />
+
+          <div className={styles.deck}>
+            <div className={styles.deckLeft}>
+              <div className={styles.fader}>
+                <div className={styles.faderTrack}>
+                  <div className={styles.faderKnob} />
+                </div>
+                <HardwareKey label="SHIFT" className={styles.shiftKey} />
+              </div>
+              <div className={styles.keyGrid}>
+                {GRID_KEYS.map((key) => (
+                  <HardwareKey
+                    key={key.text}
+                    label={key.text}
+                    lit={key.lit}
+                    className={styles.gridKey}
+                  />
+                ))}
+              </div>
             </div>
-            <div className={styles.slider}>
-              <div className={styles.sliderKnob} />
-              <span className={styles.sliderLabel}>SLIDE TO DEPLOY</span>
+
+            <span className={styles.deckDivider} />
+
+            <div className={styles.deckRight}>
+              <div className={styles.knobs}>
+                <Knob label="VOLUME" variant="light" angle={-38} size="52px" />
+                <Knob label="BPM" variant="accent" angle={22} size="52px" />
+                <Knob label="METRONOME" variant="dark" angle={-12} size="52px" />
+              </div>
+              <div className={styles.btnRow}>
+                {BUTTON_ROW_ONE.map((button) => (
+                  <DeckButtonView key={button.text} button={button} />
+                ))}
+              </div>
+              <div className={styles.btnRow}>
+                {BUTTON_ROW_TWO.map((button) => (
+                  <DeckButtonView key={button.text} button={button} />
+                ))}
+              </div>
             </div>
-            <DotMatrixGrille height="46px" className={styles.speaker} />
-          </footer>
+          </div>
+
+          <div className={styles.bottomDials}>
+            <span className={styles.bottomMark}>&#10033;</span>
+            <Knob variant="dark" angle={-30} size="74px" ticks={false} />
+            <Knob variant="dark" angle={40} size="74px" ticks={false} />
+            <span className={styles.bottomMark}>&#10033;</span>
+          </div>
         </div>
       </Plate>
     </div>

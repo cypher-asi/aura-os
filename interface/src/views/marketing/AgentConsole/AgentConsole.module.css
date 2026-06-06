@@ -1,16 +1,19 @@
 /*
- * AgentConsole — `/agents` hero device. The chassis (`<Plate />`), CRT
- * (`<DeviceScreen />`), control banks (`<HardwareKey />`), label strip,
- * and speaker (`<DotMatrixGrille />`) come from the shared marketing
- * device kit, so this file owns ONLY the console-specific layout (header
- * grid, three-column body, knob, slider) and the accent that ties the
- * device to the "An agent designed for you" quadrant palette.
+ * AgentConsole — `/agents` hero device, a tall sampler-style composer.
+ * The chassis (`<Plate />`), screen (`<DeviceScreen />`), control banks
+ * (`<HardwareKey />`), label strip (`<DeviceLabelStrip />`), speaker
+ * (`<DotMatrixGrille />`), and dials (`<Knob />`) all come from the
+ * shared marketing device kit, so this file owns ONLY the console-
+ * specific layout (portrait stack, two-column deck, fader) and the
+ * accent that ties the device to the "An agent designed for you"
+ * quadrant palette.
  */
 
 .console {
   --console-accent: #e5613a;
+  --console-status: #e5484d;
   width: 100%;
-  max-width: 760px;
+  max-width: 400px;
   margin-inline: auto;
 }
 
@@ -22,308 +25,203 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 22px 26px 20px;
+  gap: 14px;
+  padding: 14px;
   color: var(--color-text-secondary, #a3a3a8);
   font-family: "Inter Variable", "Inter", system-ui, -apple-system, sans-serif;
 }
 
-/* ----------------------------------------------------------------- *
- * Header: flanking rules + wordmark + ON/OFF knob
- * ----------------------------------------------------------------- */
-.header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto;
-  align-items: center;
-  gap: 18px;
-}
-
-.rule {
-  height: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 3px 0 rgba(255, 255, 255, 0.04);
-}
-
-.wordmark {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1;
-}
-
-.wordmarkText {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
-  color: rgba(240, 245, 248, 0.9);
-}
-
-.wordmarkSub {
-  margin-top: 6px;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.5em;
-  text-indent: 0.5em;
-  color: var(--color-text-muted, rgba(255, 255, 255, 0.52));
-}
-
-.knob {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-.knobDial {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background:
-    radial-gradient(
-      circle at 38% 34%,
-      rgba(255, 255, 255, 0.12),
-      transparent 55%
-    ),
-    #1b1c21;
-  box-shadow:
-    3px 3px 7px rgba(0, 0, 0, 0.8),
-    -2px -2px 5px rgba(255, 255, 255, 0.05),
-    inset 0 0 7px rgba(0, 0, 0, 0.5);
-}
-
-.knobDial::after {
-  content: "";
-  position: absolute;
-  top: 5px;
-  left: 50%;
-  width: 2px;
-  height: 9px;
-  border-radius: 2px;
-  background: var(--console-accent);
-  transform: translateX(-50%);
-  box-shadow: 0 0 5px var(--console-accent);
-}
-
-.knobLabel {
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  color: var(--color-text-muted, rgba(255, 255, 255, 0.52));
-}
-
-/* ----------------------------------------------------------------- *
- * Body: left bank | screen | right bank
- * ----------------------------------------------------------------- */
-.body {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 22px;
-  align-items: stretch;
-}
-
-.column {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.groupLabel {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  text-indent: 0.3em;
-  color: var(--color-text-secondary, #a3a3a8);
-}
-
-.keys {
-  display: flex;
-  gap: 8px;
-}
-
-/* ----- Center screen ------------------------------------------------ */
-.screenWrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-/* DeviceScreen owns the recessed glass; this only sizes it + adds the
-   console's accent glow + scanlines on top. */
+/* ----- Screen ------------------------------------------------------- */
 .screen {
-  flex: 1;
-  width: 100%;
-  min-height: 168px;
+  min-height: 300px;
   padding: 0;
 }
 
-.screenGlow {
+/* Red status glyph row, pinned to the bottom-left of the screen glass. */
+.screenStatus {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at 50% 38%,
-    rgba(150, 190, 255, 0.16),
-    transparent 58%
-  );
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
-
-.scanlines {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0) 2px,
-    rgba(0, 0, 0, 0.22) 2px,
-    rgba(0, 0, 0, 0.22) 3px
-  );
-  mask-image: radial-gradient(ellipse at center, #000 60%, transparent 100%);
-  pointer-events: none;
-}
-
-/* Pause-style transport glyph below the screen. */
-.transport {
+  left: 18px;
+  bottom: 16px;
   display: flex;
-  gap: 3px;
   align-items: center;
+  gap: 9px;
+  color: var(--console-status);
+  filter: drop-shadow(0 0 5px rgba(229, 72, 77, 0.5));
 }
 
-.transport span {
-  width: 2px;
-  height: 9px;
-  border-radius: 1px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.transport span:nth-child(2) {
-  height: 12px;
-  background: color-mix(in srgb, var(--console-accent) 70%, transparent);
-}
-
-/* ----- Label strip -------------------------------------------------- */
 .labelStrip {
   margin-top: 0;
 }
 
-/* ----------------------------------------------------------------- *
- * Footer: brand marks | slider | speaker grille
- * ----------------------------------------------------------------- */
-.footer {
+.speaker {
+  width: 100%;
+}
+
+/* ----- Control deck: fader + keys | knobs + buttons ----------------- */
+.deck {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 16px;
+  grid-template-columns: auto 1px 1fr;
+  gap: 14px;
+  align-items: stretch;
+  padding-top: 4px;
 }
 
-.brands {
+.deckDivider {
+  align-self: stretch;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 16%,
+    rgba(255, 255, 255, 0.08) 84%,
+    transparent 100%
+  );
+}
+
+/* ----- Left: fader column + square key grid ------------------------- */
+.deckLeft {
   display: flex;
+  gap: 10px;
+}
+
+.fader {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.brandMark,
-.brandMarkAlt {
-  display: inline-flex;
-  align-items: center;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  padding: 6px 11px;
-  border-radius: 8px;
-  background: #1b1c21;
-  box-shadow:
-    2px 2px 5px rgba(0, 0, 0, 0.5),
-    -1px -1px 4px rgba(255, 255, 255, 0.05);
-  color: var(--color-text-secondary, #a3a3a8);
-}
-
-.brandMarkAlt {
-  color: var(--color-text-muted, rgba(255, 255, 255, 0.52));
-}
-
-/* Recessed track with a raised thumb pinned to the left. */
-.slider {
+.faderTrack {
   position: relative;
-  display: flex;
-  align-items: center;
-  width: 230px;
-  height: 28px;
-  border-radius: 999px;
+  flex: 1;
+  width: 12px;
+  min-height: 120px;
+  border-radius: 8px;
   background: #070707;
   box-shadow:
-    inset 2px 3px 7px rgba(0, 0, 0, 0.9),
-    inset -1px -1px 4px rgba(255, 255, 255, 0.03);
+    inset 2px 2px 6px rgba(0, 0, 0, 0.9),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.03);
 }
 
-.sliderKnob {
+/* Raised fader cap pinned to roughly the track mid-point. */
+.faderKnob {
   position: absolute;
-  left: 3px;
-  width: 50px;
-  height: 21px;
-  border-radius: 999px;
-  background: linear-gradient(150deg, #3a3d44, #1c1e23);
+  left: 50%;
+  top: 46%;
+  width: 30px;
+  height: 17px;
+  border-radius: 6px;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, #3a3d44, #1c1e23);
   box-shadow:
     2px 2px 5px rgba(0, 0, 0, 0.7),
     -1px -1px 3px rgba(255, 255, 255, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  transition: transform 140ms ease;
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-.slider:hover .sliderKnob {
-  transform: translateX(10px);
+.shiftKey {
+  width: 100%;
 }
 
-.sliderLabel {
-  margin-left: auto;
-  padding-right: 14px;
+.shiftKey button {
+  font-size: 11px;
+}
+
+.keyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* Make the grid keys read square-ish like the reference pads. */
+.gridKey button {
+  min-height: 46px;
+  font-size: 12px;
+}
+
+/* ----- Right: knob row + labeled button rows ------------------------ */
+.deckRight {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.knobs {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.btnRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.btnCol {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  min-width: 0;
+}
+
+.deckKey button {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-indent: 0.22em;
-  color: var(--color-text-secondary, #a3a3a8);
+  letter-spacing: 0;
+  padding-inline: 3px;
 }
 
-.speaker {
-  width: 64px;
-  justify-self: end;
+.btnSub {
+  text-align: center;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.52));
+}
+
+/* ----- Bottom: two partial dials peeking from the foot -------------- */
+.bottomDials {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 36px;
+  height: 44px;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.bottomMark {
+  position: absolute;
+  top: 10px;
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(180, 184, 190, 0.6);
+}
+
+.bottomMark:first-child {
+  left: 6px;
+}
+
+.bottomMark:last-child {
+  right: 6px;
 }
 
 @media (max-width: 768px) {
-  .content {
-    gap: 14px;
-    padding: 18px 16px 16px;
-  }
-
-  .body {
-    gap: 14px;
-  }
-
-  .wordmarkText {
-    font-size: 15px;
+  .console {
+    max-width: 340px;
   }
 
   .screen {
-    min-height: 130px;
+    min-height: 240px;
   }
 
-  .slider {
-    width: 150px;
-  }
-
-  .sliderLabel {
-    font-size: 8px;
+  .gridKey button {
+    min-height: 40px;
+    font-size: 11px;
   }
 }

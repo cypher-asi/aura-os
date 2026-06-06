@@ -1,0 +1,99 @@
+/*
+ * Knob — hardware control dial: a recessed tick-mark scale ring behind a
+ * raised dial with a pointer indicator. Decorative marketing kit
+ * primitive; the dial fill is variant-driven and the pointer rotation is
+ * supplied inline by the consumer.
+ */
+.knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.52));
+}
+
+.dialWrap {
+  position: relative;
+  width: var(--knob-size, 58px);
+  height: var(--knob-size, 58px);
+}
+
+/* Tick-mark scale: a ring of radial ticks masked to a thin annulus so
+   only the outer scale reads. */
+.ticks {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 210deg,
+    rgba(255, 255, 255, 0.22) 0deg 1.5deg,
+    transparent 1.5deg 18deg
+  );
+  -webkit-mask: radial-gradient(
+    circle,
+    transparent 60%,
+    #000 61%,
+    #000 72%,
+    transparent 73%
+  );
+  mask: radial-gradient(
+    circle,
+    transparent 60%,
+    #000 61%,
+    #000 72%,
+    transparent 73%
+  );
+}
+
+/* Raised dial: top highlight + bottom shadow read as an extruded cap. */
+.dial {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow:
+    2px 3px 6px rgba(0, 0, 0, 0.7),
+    -2px -2px 5px rgba(255, 255, 255, 0.05),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.dialLight {
+  --knob-pointer: #2a2d33;
+  background: radial-gradient(circle at 38% 32%, #ffffff 0%, #c9ccd2 70%);
+}
+
+.dialAccent {
+  --knob-pointer: #2a1206;
+  background: radial-gradient(circle at 38% 32%, #ff9a5e 0%, #e5613a 72%);
+}
+
+.dialDark {
+  --knob-pointer: rgba(255, 255, 255, 0.85);
+  background: radial-gradient(circle at 38% 32%, #2f323a 0%, #15171b 72%);
+}
+
+/* Pointer indicator: a short bar from near the top edge toward center,
+   rotated by the consumer-supplied angle. */
+.pointer {
+  position: absolute;
+  inset: 0;
+}
+
+.pointer::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 3px;
+  height: 32%;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  background: var(--knob-pointer, #fff);
+}

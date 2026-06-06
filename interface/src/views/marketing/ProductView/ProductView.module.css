@@ -154,9 +154,20 @@
  * `--marketing-section-bg`) rather than pure black so the seam into the
  * section below is invisible.
  */
-.consoleStage {
+/*
+ * The console is a tall portrait device, so the band must grow with it
+ * rather than inherit the shared stage's fixed first-screen height +
+ * `container-type: size` (both would clip the device / collapse the
+ * band). The doubled `.consoleStage.consoleStage` selector raises
+ * specificity above the cross-module `.stage` rule regardless of stylesheet
+ * order; `container-type: normal` lets the device's height drive the band.
+ */
+.consoleStage.consoleStage {
   width: 100vw;
   margin-inline: calc(50% - 50vw);
   padding-inline: var(--space-4, 16px);
+  padding-block: clamp(28px, 6vh, 80px);
   background: linear-gradient(135deg, #141414 0%, #0f0f0f 55%, #090909 100%);
+  container-type: normal;
+  height: auto;
 }

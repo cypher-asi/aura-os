@@ -6,18 +6,24 @@ vi.mock("./AgentConsole.module.css", () => ({
 }));
 
 describe("AgentConsole", () => {
-  it("renders the wordmark", () => {
-    const { getAllByText, getByText } = render(<AgentConsole />);
-    // "AURA" appears twice (the wordmark + the footer brand chip).
-    expect(getAllByText("AURA").length).toBeGreaterThanOrEqual(1);
-    expect(getByText("AGENT CONSOLE 5000")).toBeInTheDocument();
+  it("renders the device label strip caption", () => {
+    const { getByText } = render(<AgentConsole />);
+    expect(getByText("AURA AGENT COMPOSER")).toBeInTheDocument();
   });
 
-  it("renders the control-bank keys from both columns", () => {
+  it("renders deck controls (keys + labeled buttons)", () => {
     const { getByText } = render(<AgentConsole />);
     // Role queries skip the aria-hidden stage, so assert on label text.
-    expect(getByText("PIN")).toBeInTheDocument();
-    expect(getByText("LOCK")).toBeInTheDocument();
+    expect(getByText("TEMPO")).toBeInTheDocument();
+    expect(getByText("RECORD")).toBeInTheDocument();
+    expect(getByText("PLAY")).toBeInTheDocument();
+  });
+
+  it("renders the knob captions", () => {
+    const { getByText } = render(<AgentConsole />);
+    expect(getByText("VOLUME")).toBeInTheDocument();
+    expect(getByText("BPM")).toBeInTheDocument();
+    expect(getByText("METRONOME")).toBeInTheDocument();
   });
 
   it("marks the whole stage decorative via aria-hidden", () => {
