@@ -5,11 +5,19 @@
  * and the centered headline + subhead band is owned by `<TextCard />`.
  * This file only tweaks the section's bottom padding.
  *
- * Tighten the gap to the spec bento below: mirror the hero's small
- * `heroBand -> stage` gap (`clamp(8px, 1.5vh, 20px)`) instead of the
- * shell's default 80px bottom padding, so the cards begin right where
- * the hero's stage begins. Two-class specificity overrides `.section`.
+ * Center the TextCard band's text in the gap between the hero section
+ * above and the spec bento below. Because the card centers its text
+ * within a fixed-height band, the text lands at the gap's midpoint only
+ * when the space above the band equals the space below it:
+ *
+ *   padding-top  ==  padding-bottom  +  spec bento's padding-top
+ *
+ * The bento keeps a tightened `clamp(8px, 1.5vh, 20px)` top padding (see
+ * SpecQuadrantSection.css) and this section mirrors it on the bottom, so
+ * the top padding is twice that value. Two-class specificity overrides
+ * the shell's default 80px.
  */
 .section.expertiseSection {
+  padding-top: clamp(16px, 3vh, 40px);
   padding-bottom: clamp(8px, 1.5vh, 20px);
 }
