@@ -1034,19 +1034,25 @@ button.attachRing::after {
 }
 
 /* Marketing-only variant of the bottom-left "+" attach button: instead of
-   the chrome `attachRing` disc, the button becomes a circular, inset glass
-   well carrying the same WebGL energy field as the AgentConsole hero pill
-   (`AuraScreenOrb`), with the "+" glyph centered on top. Opt-in via the
-   `attachAccent` prop so only the `/agents` mock LLM input mounts a canvas. */
+   the chrome `attachRing` disc, the button becomes a small recessed well
+   carrying the same WebGL energy field as the AgentConsole hero pill
+   (`AuraScreenOrb`), with a dark "+" glyph centered on top. The well echoes
+   the ModeSelector outer capsule (a dark->light gradient ring drawn with the
+   double-background border-box technique + top-heavy inset shadow) but at a
+   lighter weight, so the live field reads as set INTO the page rather than
+   framed by a heavy chrome bezel. Opt-in via `attachAccent` so only the
+   `/agents` mock LLM input mounts a canvas. */
 button.attachOrb {
   border-radius: 50%;
   overflow: hidden;
-  /* Dark glass behind the field so its transparent rim reads as a screen
-     sunk into the pill (matches AgentConsole `.screen`). */
-  background: #0c0c0d;
-  /* Glyph reads white over the bright field rather than the muted chrome
-     secondary used by the default disc. */
-  color: #fff;
+  border: 1px solid transparent;
+  /* Dark panel behind the field (padding-box) + a subtle dark->light ring
+     (border-box) — same recipe as `.outerCapsule`, lighter values. */
+  background:
+    linear-gradient(to bottom, #16181c, #2a2e36) padding-box,
+    linear-gradient(to bottom, #14161a, #3a3f48) border-box;
+  /* Dark glyph so the "+" stays legible over the bright field. */
+  color: #0b0c0e;
 }
 
 /* Keep the shared hover plate circular so it matches the well. */
@@ -1072,14 +1078,14 @@ button.attachOrb::before {
   height: 100%;
 }
 
-/* Keep the "+" legible over the animated field. */
+/* Subtle light halo keeps the dark "+" crisp against the field. */
 .attachOrb > svg {
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.4));
 }
 
-/* Recessed bezel drawn over the field (mirrors AgentConsole `.screen::after`)
-   so the well reads as glass sunk below the pill surface. Shadow-only, so it
-   sits above the "+" without obscuring it. */
+/* Light-weight recessed shadow over the field (mirrors `.outerCapsule`'s
+   top-heavy inset shadow, softened) so the well reads as sunk into the
+   surface. Shadow-only, so it sits above the "+" without obscuring it. */
 button.attachOrb::after {
   content: "";
   position: absolute;
@@ -1088,10 +1094,9 @@ button.attachOrb::after {
   border-radius: 50%;
   pointer-events: none;
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
-    inset 0 4px 12px rgba(0, 0, 0, 0.8),
-    inset 0 -3px 8px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(0, 0, 0, 0.18);
 }
 
 .modeSelectorFlex {
