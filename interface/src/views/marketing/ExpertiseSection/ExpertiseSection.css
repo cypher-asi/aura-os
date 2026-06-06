@@ -7,6 +7,16 @@
  * `.personalAgentSubhead` so the marketing rows on `/agents` stay
  * typographically aligned.
  */
+/*
+ * Tighten the gap to the spec bento below: mirror the hero's small
+ * `heroBand -> stage` gap (`clamp(8px, 1.5vh, 20px)`) instead of the
+ * shell's default 80px bottom padding, so the cards begin right where
+ * the hero's stage begins. Two-class specificity overrides `.section`.
+ */
+.section.expertiseSection {
+  padding-bottom: clamp(8px, 1.5vh, 20px);
+}
+
 .expertiseInner {
   display: flex;
   flex-direction: column;
@@ -14,10 +24,10 @@
   justify-content: center;
   gap: 20px;
   text-align: center;
-  /* Match the hero text band height (`MarketingFirstScreen.heroBand`)
-     so this intro's text area is the same height as the top hero text
-     area rather than a full reserved viewport. */
-  min-height: clamp(280px, 50vh, 560px);
+  /* A comfortable intro band (echoing the hero text band) without the
+     full hero height, so the spec bento below follows closely rather
+     than sitting far beneath a tall centered void. */
+  min-height: clamp(220px, 34vh, 380px);
 }
 
 .expertiseHeadline {

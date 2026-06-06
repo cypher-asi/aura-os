@@ -12,10 +12,18 @@ import "./SpecQuadrantSection.css";
  * `PersonalAgentSection` (the bento directly below). Each cell carries a
  * bottom-left corner label + title; the media wells are intentionally
  * empty placeholders for now (copy is placeholder too, to be filled in).
+ *
+ * Opts out of the shell's full-viewport reservation (`fullHeight={false}`)
+ * so the bento sits directly beneath the compact `ExpertiseSection` intro
+ * instead of floating centered in its own empty screen.
  */
 export function SpecQuadrantSection(): ReactNode {
   return (
-    <Section ariaLabel="Feature highlights">
+    <Section
+      ariaLabel="Feature highlights"
+      fullHeight={false}
+      className="specQuadrantSection"
+    >
       <div className="specQuadrantGrid">
         <article className="specQuadrantCell specQuadrantCellA">
           <div className="specQuadrantMedia" aria-hidden="true" />

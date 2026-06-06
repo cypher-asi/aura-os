@@ -9,6 +9,17 @@
  * and rounded clipped band reuse the values from `.personalAgentGrid` /
  * `.personalAgentQuadrant*` so the two bentos read as the same family.
  */
+
+/*
+ * Sit the bento right under the compact `ExpertiseSection` intro: drop
+ * the shell's default 80px top padding to the hero's small
+ * `heroBand -> stage` gap so the cards follow the intro closely. Two-class
+ * specificity overrides `.section`.
+ */
+.section.specQuadrantSection {
+  padding-top: clamp(8px, 1.5vh, 20px);
+}
+
 .specQuadrantGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

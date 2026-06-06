@@ -17,7 +17,11 @@ const HEADLINE_ID = "expertiseSectionHeadline";
  */
 export function ExpertiseSection(): ReactNode {
   return (
-    <Section ariaLabelledBy={HEADLINE_ID} fullHeight={false}>
+    <Section
+      ariaLabelledBy={HEADLINE_ID}
+      fullHeight={false}
+      className="expertiseSection"
+    >
       <div className="expertiseInner">
         <h2 id={HEADLINE_ID} className="expertiseHeadline">
           Expertise without ego.
