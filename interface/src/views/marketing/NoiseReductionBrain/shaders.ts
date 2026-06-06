@@ -73,15 +73,15 @@ float fbm(vec2 p) {
   return v;
 }
 
-// Reference palette: warm orange -> coral -> dusty mauve -> soft
-// lavender/periwinkle, with a near-white hot crest so the brightest
-// pulses read as glowing.
+// Reference palette: warm orange -> hot coral -> magenta-pink -> vivid
+// periwinkle, topped by a saturated hot gold (NOT near-white) so even the
+// brightest pulses stay colorful instead of washing out to white.
 vec3 palette(float v) {
-  vec3 cA = vec3(0.98, 0.46, 0.14);  // warm orange
-  vec3 cB = vec3(1.00, 0.50, 0.40);  // coral / salmon
-  vec3 cC = vec3(0.80, 0.56, 0.66);  // dusty mauve
-  vec3 cD = vec3(0.66, 0.71, 0.94);  // soft lavender / periwinkle
-  vec3 cHot = vec3(1.00, 0.93, 0.82); // near-white crest
+  vec3 cA = vec3(0.98, 0.42, 0.10);  // warm orange
+  vec3 cB = vec3(1.00, 0.32, 0.34);  // hot coral
+  vec3 cC = vec3(0.86, 0.24, 0.64);  // magenta / pink
+  vec3 cD = vec3(0.40, 0.42, 0.98);  // vivid periwinkle
+  vec3 cHot = vec3(1.00, 0.68, 0.22); // saturated hot gold crest
 
   vec3 col = mix(cA, cB, smoothstep(0.0, 0.35, v));
   col = mix(col, cC, smoothstep(0.30, 0.62, v));
@@ -193,28 +193,35 @@ void main() {
   vec3 rightCol = palette(v);
   // Push saturation so the right reads vivid against the mono left.
   float rLum = dot(rightCol, vec3(0.299, 0.587, 0.114));
-  rightCol = clamp(mix(vec3(rLum), rightCol, 1.35), 0.0, 1.0);
+  rightCol = clamp(mix(vec3(rLum), rightCol, 1.4), 0.0, 1.0);
   // Hue floor: a small, pulse-independent palette term so the right vessels
   // always carry color even between pulses (they never collapse to grey/black).
   vec3 rightBase = rightCol;
   rightCol *= energy;
   rightCol += rightBase * mask * 0.5;
 
-  // Crest on the brightest pulse fronts + spark flashes. Tinted with a
-  // saturated hot hue (not near-white) so peaks read as glowing color
-  // instead of washing the right hemisphere out to black & white.
-  vec3 crestCol = palette(clamp(v + 0.25, 0.0, 1.0));
-  rightCol += crestCol * pow(mask * pulse * travel, 2.0) * 1.7;
-  rightCol += crestCol * mask * spark * 1.3;
+  // Crest on the brightest pulse fronts + spark flashes. A saturated hot hue
+  // (NOT near-white) so peaks read as glowing color instead of washing the
+  // right hemisphere out to white.
+  vec3 crestCol = vec3(1.0, 0.55, 0.15);
+  rightCol += crestCol * pow(mask * pulse * travel, 2.0) * 1.3;
+  rightCol += crestCol * mask * spark * 1.0;
 
   // Wide multi-hue aura: drifting paint blooming into the black glass.
   vec3 auraCol = palette(clamp(0.55 + 0.28 * sin(t * 0.45) + 0.4 * (splat - 0.5), 0.0, 1.0));
   rightCol += auraCol * aura * 1.4;
 
   // Final re-saturation: after all additions, pull the right firmly back
-  // toward saturated color so bright peaks can never desaturate to white/grey.
+  // toward saturated color so bright peaks can't desaturate toward grey.
   float rLum2 = dot(rightCol, vec3(0.299, 0.587, 0.114));
-  rightCol = max(mix(vec3(rLum2), rightCol, 1.4), 0.0);
+  rightCol = max(mix(vec3(rLum2), rightCol, 1.5), 0.0);
+
+  // Hue-preserving tone cap: when a vessel is over-bright (energy > 1 pushes
+  // channels past 1), scale ALL channels down together so the brightest tops
+  // out at 1.0. This keeps the color saturated at peak intensity instead of
+  // each channel clamping independently to white.
+  float rMax = max(rightCol.r, max(rightCol.g, rightCol.b));
+  rightCol = rMax > 1.0 ? rightCol / rMax : rightCol;
 
   float rightAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.95, 0.0, 1.0);
 
