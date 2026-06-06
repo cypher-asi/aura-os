@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect } from "react";
 import { AgentChatSection } from "../AgentChatSection";
+import { AgentConsole } from "../AgentConsole";
 import { AgentOrbSection } from "../AgentOrbSection";
 import { ChangelogPreview } from "../ChangelogPreview";
 import {
@@ -9,7 +10,6 @@ import {
   ShieldIcon,
 } from "../FeaturePanel/FeaturePanel";
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
-import { MockAuraApp } from "../../public-chat/MockAuraApp";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
@@ -79,14 +79,9 @@ export function ProductView(): ReactNode {
             headlineCta={<CreateAgentButton source="product_hero" />}
           />
         }
-        stageClassName={styles.desktopStage}
         stageHidden
-        stage={
-          <MockAuraApp
-            desktopBackgroundUrl="/personas/vibecoder/desktop.png"
-            centerContent={<></>}
-          />
-        }
+        stageClassName={styles.consoleStage}
+        stage={<AgentConsole />}
       />
       <PersonalAgentSection />
       <OneComputerOneAgentSection />

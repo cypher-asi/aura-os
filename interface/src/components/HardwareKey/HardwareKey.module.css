@@ -1,0 +1,123 @@
+/*
+ * HardwareKey — a raised neomorphic key inside a black socket. Lifted
+ * from the marketing skill panel (`.personalAgentSkillSocket` +
+ * `.personalAgentSkillBtn` + `.personalAgentSkillLed`) so the console
+ * control banks and the skill quadrant share one key recipe.
+ */
+
+/* Per-key black "hole": a near-black recess sunk into the surrounding
+   surface via top-heavy inset shadows + a hairline rim. The raised key
+   sits inside it, revealed through the socket's padding. */
+.socket {
+  --hardware-key-accent: #e5613a;
+  border-radius: 13px;
+  padding: 4px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #070707 60%,
+    #090909 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.85);
+}
+
+/* Raised skeuomorphic key: top light highlight + bottom dark edge + an
+   outer drop shadow so it extrudes up out of its black socket. */
+.key {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #2c2f36 0%, #1c1e23 100%);
+  color: var(--color-text-secondary, #a3a3a8);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: default;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.55);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease;
+}
+
+.key[data-interactive="true"] {
+  cursor: pointer;
+}
+
+.icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--color-text-primary, #f7f8fb);
+  opacity: 0.8;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.key:hover {
+  color: var(--color-text-primary, #f7f8fb);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.6);
+}
+
+.key:hover .icon {
+  opacity: 1;
+}
+
+.key:active {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.6),
+    inset 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Lit / active key: warm accent fill + soft glow. */
+.key[data-lit="true"] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--hardware-key-accent) 92%, #fff 8%) 0%,
+    var(--hardware-key-accent) 100%
+  );
+  color: #1a0e08;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 2px 5px rgba(0, 0, 0, 0.5),
+    0 0 12px color-mix(in srgb, var(--hardware-key-accent) 45%, transparent);
+}
+
+.key[data-lit="true"] .icon {
+  color: #1a0e08;
+  opacity: 0.95;
+}
+
+/* LED indicator dot, pinned to the top-right of a lit key. */
+.led {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #ffd9c7;
+  box-shadow:
+    0 0 4px rgba(255, 255, 255, 0.8),
+    0 0 7px var(--hardware-key-accent);
+}

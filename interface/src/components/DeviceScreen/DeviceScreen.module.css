@@ -1,0 +1,44 @@
+/*
+ * DeviceScreen — recessed glossy black screen surface shared across the
+ * marketing device mock-ups. The radial off-black fill + stacked inset
+ * shadows read as glass sunk below a bezel; the `.gloss` child paints a
+ * soft top reflection. Lifted from the original
+ * `.personalAgentDeviceScreen` recipe so every on-device screen reads as
+ * the same hardware family.
+ */
+.screen {
+  position: relative;
+  border-radius: 14px;
+  /* Off-black radial fill: brightest at the top-center light source,
+     falling to the page off-black floor rather than pure black. */
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0d0d0d 0%,
+    #0a0a0a 60%,
+    #090909 100%
+  );
+  /* Deep recess: strong dark top inset + secondary blur read as the
+     glass sinking below the bezel, with a faint bottom-edge highlight
+     catching light on the lip. */
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.95),
+    inset 0 3px 5px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(0, 0, 0, 0.9),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+/* Top gloss reflection across the screen glass. */
+.gloss {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 42%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+}

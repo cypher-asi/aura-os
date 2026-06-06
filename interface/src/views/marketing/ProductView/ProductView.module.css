@@ -138,15 +138,25 @@
  */
 
 /*
- * Mock-desktop stage for the `/agents` hero. Mirrors `/code`'s
- * `.desktopStage` (see `CodeView.module.css`): enlarges the shared
- * `MockAuraApp` window beyond its default 75% footprint so the
- * full-bleed screen dominates the first screen at roughly a maximized
- * window size. The orb + agent marquee that used to live here moved to
- * the standalone `<AgentOrbSection />` below the agent-chat section.
+ * The `/agents` hero stage hosts the decorative `<AgentConsole />` (a
+ * black hardware device built from the shared marketing device kit).
+ * `.consoleStage` turns the stage into a full-bleed band: it breaks out
+ * of the capped marketing column to span the full viewport width and
+ * paints the same diagonal off-black gradient as the
+ * `PersonalAgentSection` quadrants below, so the hero reads as one
+ * continuous surface flowing into that section. The console centers
+ * itself inside via its own `max-width` + `margin-inline: auto`.
+ *
+ * `width: 100vw` + `margin-inline: calc(50% - 50vw)` is the standard
+ * full-bleed trick: `50%` is half the stage's (column) width, so
+ * `50% - 50vw` pulls each edge out to the viewport edge while the band
+ * stays centered. The diagonal terminates at `#090909` (the page's
+ * `--marketing-section-bg`) rather than pure black so the seam into the
+ * section below is invisible.
  */
-.desktopStage > div {
-  width: min(96cqw, calc(96cqh * 16 / 10));
-  max-width: 96cqw;
-  max-height: 96cqh;
+.consoleStage {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: var(--space-4, 16px);
+  background: linear-gradient(135deg, #141414 0%, #0f0f0f 55%, #090909 100%);
 }
