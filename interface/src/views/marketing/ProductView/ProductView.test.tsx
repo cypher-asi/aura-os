@@ -56,19 +56,18 @@ afterEach(() => {
 });
 
 describe("ProductView", () => {
-  it("streams the 'Your Private Agent.' hero headline via the typewriter", () => {
+  it("streams the 'Delegate everything.' hero headline via the typewriter", () => {
     // The hero headline now renders through `<TypewriterText />`,
     // which reveals characters on a 45ms interval. The full literal
     // string only appears in the DOM after the interval has run for
-    // every character (20 chars × 45ms = 900ms). Advancing fake
-    // timers past that threshold flushes the whole stream in a
-    // single `act()` tick.
+    // every character. Advancing fake timers past that threshold
+    // flushes the whole stream in a single `act()` tick.
     vi.useFakeTimers();
     renderProductView();
     act(() => {
       vi.advanceTimersByTime(2000);
     });
-    expect(screen.getByText("Your Private Agent.")).toBeInTheDocument();
+    expect(screen.getByText("Delegate everything.")).toBeInTheDocument();
   });
 
   it("keeps the AgentChatSection and moves the product-screen rows to the Code page", () => {

@@ -37,7 +37,7 @@ import styles from "./ProductView.module.css";
  * Pulling the literal into a constant means a future copy change
  * cannot drift the ghost and the streamed text out of sync.
  */
-const HERO_HEADLINE = "Your Private Agent.";
+const HERO_HEADLINE = "Delegate everything.";
 
 /**
  * Marketing `/agents` page (formerly `/product`). A pure JSX
@@ -73,7 +73,7 @@ export function ProductView(): ReactNode {
                 <TypewriterText text={HERO_HEADLINE} speedMs={45} />
               </span>
             }
-            description="AURA agents run on a secure virtual machine that is yours, keeping your data completely secure."
+            description="AURA agents are experts in every field and work while you sleep."
             preview={null}
             centered
             headlineCta={<CreateAgentButton source="product_hero" />}
