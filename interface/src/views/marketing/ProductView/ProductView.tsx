@@ -16,6 +16,7 @@ import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
 import { OneComputerOneAgentSection } from "../OneComputerOneAgentSection";
 import { PersonalAgentSection } from "../PersonalAgentSection";
+import { SpecQuadrantSection } from "../SpecQuadrantSection";
 import { PageHero } from "../PageHero";
 import { ProductCallToAction } from "../ProductCallToAction";
 import styles from "./ProductView.module.css";
@@ -85,6 +86,7 @@ export function ProductView(): ReactNode {
         stage={<AgentConsole />}
       />
       <ExpertiseSection />
+      <SpecQuadrantSection />
       <PersonalAgentSection />
       <OneComputerOneAgentSection />
       <AgentChatSection />
