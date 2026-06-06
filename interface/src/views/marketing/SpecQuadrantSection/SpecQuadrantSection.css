@@ -108,20 +108,13 @@
   );
 }
 
-/* One snippet card: a faint framed block whose `<pre>` types out asm then
-   binary. Position/size set per-slot inline; opacity/transform drive the
-   pop in (entering) and pop out (leaving) via the transition. */
+/* One snippet card: a borderless block of code whose `<pre>` types out asm
+   then binary. Pinned to its row inline; opacity/transform drive the pop in
+   (entering) and pop out (leaving) via the transition. */
 .nrCodeSnippet {
   position: absolute;
   box-sizing: border-box;
-  padding: 6px 9px;
   overflow: hidden;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
   opacity: 0;
   transform: translateY(6px) scale(0.96);
   transition:
@@ -511,10 +504,6 @@
 
   .nrCodeField {
     width: 44%;
-  }
-
-  .nrCodeSnippet {
-    padding: 5px 7px;
   }
 
   .nrBinaryText {

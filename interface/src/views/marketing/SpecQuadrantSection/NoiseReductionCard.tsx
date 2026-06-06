@@ -90,30 +90,25 @@ function makeSnippet(): string {
 }
 
 /**
- * Candidate positions (percent of the left flank) the snippet cards hop
- * between as they pop in and out. More slots than cards so re-entry can pick a
- * fresh, currently-unoccupied spot.
+ * Fixed, evenly spaced rows (percent of the left flank) — one per snippet
+ * card. Each card stays in its own row so snippets never overlap and the flank
+ * reads as a structured, aligned listing.
  */
 const CODE_SLOTS = [
-  { top: "5%", left: "8%", width: "82%" },
-  { top: "24%", left: "3%", width: "74%" },
-  { top: "33%", left: "22%", width: "70%" },
-  { top: "47%", left: "10%", width: "80%" },
-  { top: "63%", left: "2%", width: "72%" },
-  { top: "79%", left: "16%", width: "76%" },
+  { top: "6%", left: "10%", width: "80%" },
+  { top: "31%", left: "10%", width: "80%" },
+  { top: "56%", left: "10%", width: "80%" },
+  { top: "80%", left: "10%", width: "80%" },
 ];
 
 /** How many snippet cards live (and pop in/out) on the left flank at once. */
-const SNIPPET_COUNT = 4;
+const SNIPPET_COUNT = CODE_SLOTS.length;
 
-/** Assorted images that pop in/out on the creative right flank. */
-const GALLERY_IMAGES = [
-  "/noise-reduction-paint.png",
-  "/noise-reduction-brain.png",
-  "/noise-reduction-code.png",
-  "/personas/researcher/site.png",
-  "/personas/vibecoder/site.png",
-];
+/**
+ * Images that pop in/out on the creative right flank. Just the painting photo
+ * as a placeholder for now (different crops per box keep it varied).
+ */
+const GALLERY_IMAGES = ["/noise-reduction-paint.png"];
 
 /** How many image boxes pop in/out on the right flank. */
 const GALLERY_COUNT = 7;
@@ -181,28 +176,23 @@ export function NoiseReductionCard(): ReactNode {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Left flank: many small snippet cards, each running an independent
-  // enter -> type (asm then binary) -> hold -> exit -> wait loop. Slots and
-  // start offsets are randomized so they desync, reading like lots of separate
-  // instances working at once. Driven imperatively (no re-render); animates
-  // unconditionally to match the always-on brain + ACTIVATION readout.
+  // Left flank: one snippet card per fixed row, each running an independent
+  // enter -> type (asm then binary) -> hold -> exit -> wait loop. Cards stay in
+  // their own row (no overlap) but start offsets are randomized so they desync,
+  // reading like several instances working in parallel. Driven imperatively (no
+  // re-render); animates unconditionally to match the always-on brain readout.
   useEffect(() => {
     const cards = snippetCardRefs.current;
     const pres = snippetPreRefs.current;
     if (!cards.length) return;
 
-    const occupied = new Set<number>();
-    const pickSlot = (): number => {
-      const free = CODE_SLOTS.map((_, i) => i).filter((i) => !occupied.has(i));
-      const pool = free.length ? free : CODE_SLOTS.map((_, i) => i);
-      const idx = pool[Math.floor(Math.random() * pool.length)];
-      occupied.add(idx);
-      return idx;
-    };
+    cards.forEach((card, i) => {
+      if (card) applySlot(card, CODE_SLOTS[i]);
+    });
 
-    const states: SnippetState[] = cards.map(() => ({
+    const states: SnippetState[] = cards.map((_, i) => ({
       phase: "wait",
-      slot: -1,
+      slot: i,
       text: "",
       typed: 0,
       ticks: Math.floor(Math.random() * 36),
@@ -222,8 +212,6 @@ export function NoiseReductionCard(): ReactNode {
             if (--s.ticks <= 0) s.phase = "enter";
             break;
           case "enter": {
-            s.slot = pickSlot();
-            applySlot(card, CODE_SLOTS[s.slot]);
             s.text = makeSnippet();
             s.typed = 0;
             pre.textContent = caret;
@@ -259,7 +247,6 @@ export function NoiseReductionCard(): ReactNode {
           }
           case "exit": {
             if (--s.ticks <= 0) {
-              occupied.delete(s.slot);
               s.phase = "wait";
               s.ticks = Math.floor(Math.random() * 28);
             }
