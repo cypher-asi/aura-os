@@ -4,7 +4,7 @@ import "./PageHero.css";
 interface PageHeroProps {
   readonly label?: string;
   readonly headline: ReactNode;
-  readonly description: string;
+  readonly description: ReactNode;
   readonly ctaText?: string;
   readonly ctaIcon?: ReactNode;
   readonly ctaHref?: string;

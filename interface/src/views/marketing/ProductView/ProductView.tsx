@@ -84,7 +84,13 @@ export function ProductView(): ReactNode {
                 />
               </span>
             }
-            description="AURA agents are experts in every field and work while you sleep."
+            description={
+              <>
+                AURA agents are experts in every field
+                <br />
+                and work while you sleep.
+              </>
+            }
             preview={null}
             centered
             headlineCta={<CreateAgentButton source="product_hero" />}
