@@ -73,6 +73,82 @@ async fn installed_workspace_app_tools_include_saved_provider_tools() {
 }
 
 #[tokio::test]
+async fn installed_workspace_app_tools_include_google_gmail_and_calendar_tools() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            None,
+            "Google".to_string(),
+            "google".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            Some(serde_json::json!({
+                "accountEmail": "owner@example.com",
+                "ownerUserId": "user-1",
+            })),
+            Some(true),
+            IntegrationSecretUpdate::Set(
+                serde_json::json!({
+                    "access_token": "access-token",
+                    "refresh_token": "refresh-token",
+                    "expires_at": 4_102_444_800_i64,
+                    "scope": "openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events",
+                })
+                .to_string(),
+            ),
+        )
+        .expect("save google integration");
+
+    let tools = installed_workspace_app_tools(&state, &org_id, "jwt-123").await;
+    let expected = [
+        "gmail_search_messages",
+        "gmail_get_message",
+        "gmail_send_email",
+        "gmail_create_draft",
+        "gmail_send_draft",
+        "google_calendar_list_calendars",
+        "google_calendar_list_events",
+        "google_calendar_create_event",
+        "google_calendar_update_event",
+        "google_calendar_delete_event",
+    ];
+
+    for name in expected {
+        let tool = tools
+            .iter()
+            .find(|tool| tool.name == name)
+            .unwrap_or_else(|| panic!("{name} installed"));
+        assert!(tool.endpoint.contains("/api/orgs/"));
+        assert!(tool.endpoint.ends_with(&format!("/tool-actions/{name}")));
+        assert!(matches!(tool.auth, ToolAuth::Bearer { .. }));
+        assert!(matches!(
+            tool.runtime_execution,
+            Some(aura_os_harness::InstalledToolRuntimeExecution::AppProvider(
+                _
+            ))
+        ));
+        assert_eq!(
+            tool.required_integration
+                .as_ref()
+                .and_then(|requirement| requirement.provider.as_deref()),
+            Some("google")
+        );
+        assert_eq!(
+            tool.required_integration
+                .as_ref()
+                .and_then(|requirement| requirement.kind.as_deref()),
+            Some("workspace_integration")
+        );
+    }
+}
+
+#[tokio::test]
 async fn installed_workspace_integrations_include_enabled_runtime_capabilities() {
     let store_dir = tempfile::tempdir().unwrap();
     let store_path = store_dir.path().join("store");
