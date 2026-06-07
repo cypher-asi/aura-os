@@ -29,7 +29,7 @@
 }
 
 .madeForYouDevice .personalAgentDevice {
-  max-width: 760px;
+  max-width: 912px;
 }
 
 /*
@@ -44,7 +44,7 @@
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
-  padding: 0 108px 3px;
+  padding: 0 130px 4px;
 }
 
 .madeForYouDevice .personalAgentDeviceContent::before,
@@ -63,8 +63,8 @@
    straight top to bottom. */
 .madeForYouDevice .personalAgentDeviceContent::before {
   left: 3px;
-  width: 105px;
-  border-radius: 22px 0 0 22px;
+  width: 126px;
+  border-radius: 26px 0 0 26px;
   background:
     linear-gradient(
       to bottom,
@@ -85,8 +85,8 @@
    line on its left (screen-facing) edge. */
 .madeForYouDevice .personalAgentDeviceContent::after {
   right: 3px;
-  width: 105px;
-  border-radius: 0 22px 22px 0;
+  width: 126px;
+  border-radius: 0 26px 26px 0;
   background:
     linear-gradient(
       to bottom,
@@ -104,8 +104,8 @@
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
-  min-height: 286px;
-  padding: 44px 36px;
+  min-height: 343px;
+  padding: 53px 43px;
   /* Square corners so the screen's left/right edges sit flush against the
      vertical divider lines top-to-bottom (the quadrant keeps its 14px). */
   border-radius: 0;
@@ -275,13 +275,24 @@
 }
 
 .madeForYouDevice .personalAgentDeviceLabel {
-  font-size: 13px;
+  font-size: 16px;
 }
 
 /* Pull the label strip up so its top border (the horizontal divider) sits
-   flush against the screen's bottom edge instead of leaving a gap. */
+   flush against the screen's bottom edge instead of leaving a gap; the
+   strip's own padding/marks are scaled up 20% with the rest of the panel. */
 .madeForYouDevice .personalAgentDeviceLabelStrip {
   margin-top: 0;
+  gap: 14px;
+  padding: 14px 7px 17px;
+}
+
+.madeForYouDevice .personalAgentDeviceMarks {
+  gap: 8px;
+}
+
+.madeForYouDevice .personalAgentDeviceAsterisk {
+  font-size: 14px;
 }
 
 /*
@@ -291,7 +302,7 @@
  * the rim and the mesh.
  */
 .madeForYouDevice .personalAgentDeviceGrilleInset {
-  margin: 4px 10px 10px;
+  margin: 5px 12px 12px;
 }
 
 /*
@@ -301,12 +312,12 @@
  *   1.1547 = 2 / sqrt(3); the half-cell / 0.577 offset hex-packs the rows.
  */
 .madeForYouDevice .personalAgentDeviceHexMesh {
-  --hole: 4px;
-  --cell: 13px;
-  height: 66px;
+  --hole: 5px;
+  --cell: 16px;
+  height: 79px;
   /* Padding step: margin reveals the Plate surface around the mesh. */
-  margin: 10px;
-  border-radius: 8px;
+  margin: 12px;
+  border-radius: 10px;
   background-color: #2a2c31;
   background-image:
     radial-gradient(
@@ -335,34 +346,34 @@
 
 @media (max-width: 768px) {
   .madeForYouDevice .personalAgentDevice {
-    max-width: 360px;
+    max-width: 432px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent {
-    padding: 0 70px 3px;
+    padding: 0 84px 4px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::before {
-    width: 65px;
+    width: 78px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::after {
-    width: 65px;
+    width: 78px;
   }
 
   .madeForYouDevice .personalAgentDeviceScreen {
-    min-height: 205px;
-    padding: 28px 20px;
+    min-height: 246px;
+    padding: 34px 24px;
   }
 
   .madeForYouDevice .personalAgentDeviceGrilleInset {
-    margin: 3px 7px 7px;
+    margin: 4px 8px 8px;
   }
 
   .madeForYouDevice .personalAgentDeviceHexMesh {
-    --cell: 11px;
-    height: 45px;
-    margin: 8px;
+    --cell: 13px;
+    height: 54px;
+    margin: 10px;
   }
 
   /* Shrink the control column to fit the narrower 65px mobile panel. */
