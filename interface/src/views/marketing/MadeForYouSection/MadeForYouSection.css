@@ -44,7 +44,7 @@
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
-  padding: 3px 108px;
+  padding: 0 108px 3px;
 }
 
 .madeForYouDevice .personalAgentDeviceContent::before,
@@ -323,7 +323,7 @@
   }
 
   .madeForYouDevice .personalAgentDeviceContent {
-    padding: 3px 70px;
+    padding: 0 70px 3px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::before {
