@@ -32,6 +32,28 @@
 }
 
 /*
+ * Surface gradient behind the mock desktop. The shared `.stage` paints
+ * no background of its own, so it normally shows the flat
+ * `--marketing-section-bg` from `.firstScreen`. Layering a gradient
+ * here (scoped to the `/code` stage via this page class) turns that
+ * flat band into a lit surface: the linear base starts at the exact
+ * `--marketing-section-bg` (`#090909`) at the top so the join with the
+ * hero band above is seamless, then lightens toward a gray "floor" at
+ * the bottom. The low, wide radial highlight reads as light pooling on
+ * the surface beneath the window, so the frame appears to sit on it.
+ */
+.desktopStage {
+  background:
+    radial-gradient(
+      120% 70% at 50% 118%,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 35%,
+      transparent 65%
+    ),
+    linear-gradient(180deg, #090909 0%, #0e0e11 42%, #1c1c20 100%);
+}
+
+/*
  * Enlarge the mock window beyond MockAuraApp's default 75% footprint
  * so it dominates the first screen at roughly the size of a real
  * maximized window. Re-declares the same `min(Ncqw, calc(Ncqh*16/10))`
@@ -39,9 +61,91 @@
  * `container-type: size`). Targets the appFrame as the stage's direct
  * child; specificity (0,1,1) beats the component's own `.appFrame`
  * rule (0,1,0).
+ *
+ * The box-shadow overrides the frame's own modest shadow
+ * (`MockAuraDesktop.module.css`) with a deeper, lower, more diffuse
+ * cast plus a tight contact shadow, grounding the window on the
+ * surface gradient above.
  */
 .desktopStage > div {
   width: min(96cqw, calc(96cqh * 16 / 10));
   max-width: 96cqw;
   max-height: 96cqh;
+  box-shadow:
+    0 2px 6px -2px rgba(0, 0, 0, 0.5),
+    0 28px 50px -16px rgba(0, 0, 0, 0.65),
+    0 70px 110px -40px rgba(0, 0, 0, 0.7);
+}
+
+/*
+ * Hero headline wrapper that pre-reserves the FINAL headline's
+ * width and height before the typewriter has streamed any
+ * characters into it. Without this reservation the centered hero
+ * stack reads as broken on load: the `<h1>` starts at ~0 width,
+ * the description / `headlineCta` / mock desktop underneath
+ * snap upward into the empty slot, then everything jerks
+ * downward one character at a time as the typewriter pushes the
+ * `<h1>` toward its eventual size and the `clamp(26px, 4.3vw,
+ * 48px)` type ramp triggers fresh line wraps at the natural
+ * break points. Mounting a hidden ghost of the completed
+ * headline reserves the exact pixel box the streamed text will
+ * eventually fill, so the rest of the centered stack lands at
+ * its final position from frame one.
+ *
+ * Implementation:
+ *   - `display: inline-block; position: relative` makes the
+ *     wrapper its own positioning context AND lets it size to
+ *     its widest in-flow child (the `::before` ghost). It must
+ *     NOT be `display: block` — `.pageHeroHeadline` (the parent
+ *     `<h1>`) is already a block-level flex/text container, so
+ *     a block wrapper would stretch to the full headline column
+ *     width and the absolutely positioned streaming span would
+ *     be left-aligned inside that wide box instead of tracking
+ *     the centered ghost on viewports where the headline wraps
+ *     to fewer lines than the column can hold.
+ *   - `::before { content: attr(data-text) }` mirrors the JSX
+ *     `data-text` attribute (kept byte-identical to the
+ *     `TypewriterText` `text` prop via the shared
+ *     `HERO_HEADLINE` constant in `CodeView.tsx`) into a
+ *     hidden but laid-out ghost. The ghost inherits the
+ *     headline's `font-size`, `line-height`, `letter-spacing`,
+ *     and `text-wrap: balance` from `.pageHeroHeadline`, so the
+ *     reserved box matches the final headline's line breaks
+ *     pixel-for-pixel.
+ *   - `visibility: hidden` keeps the ghost in flow (so it
+ *     contributes to layout) without painting. `pointer-events:
+ *     none` is belt-and-braces in case a future test selects by
+ *     visible text and somehow walks into the ghost.
+ *   - The streaming span (the root `<span>` rendered by
+ *     `TypewriterText`) is pulled out of flow with `position:
+ *     absolute; inset: 0` and stacked on top of the ghost. It
+ *     is selected via the descendant `> span` because the
+ *     `TypewriterText.module.css` class names are hashed by
+ *     Vite at build time, so we can't reference them from this
+ *     file. The wrapper has exactly one child element in JSX
+ *     (the `TypewriterText` root), so the structural selector
+ *     is unambiguous.
+ *   - `text-align: inherit` on the streaming span lets it
+ *     re-pick the centered-hero's text alignment cascaded from
+ *     `.pageHeroContentCentered` (`text-align: center`) so the
+ *     streamed prefix + trailing caret sit centered inside the
+ *     reserved box on every line, matching where the final
+ *     headline will eventually land.
+ */
+.headlineReserve {
+  display: inline-block;
+  position: relative;
+}
+
+.headlineReserve::before {
+  content: attr(data-text);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.headlineReserve > span {
+  position: absolute;
+  inset: 0;
+  display: block;
+  text-align: inherit;
 }
