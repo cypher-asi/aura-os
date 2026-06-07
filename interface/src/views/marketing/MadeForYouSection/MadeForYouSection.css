@@ -37,17 +37,15 @@
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
+  min-height: 220px;
   padding: 44px 36px;
   border-radius: 18px;
 }
 
+/* This enlarged device shows a bare screen — drop the service logo grid
+   (the shared `ServiceDeviceCard` keeps them for its own quadrant). */
 .madeForYouDevice .personalAgentDeviceLogoGrid {
-  gap: 34px 28px;
-}
-
-.madeForYouDevice .personalAgentDeviceLogo svg {
-  width: 40px;
-  height: 40px;
+  display: none;
 }
 
 .madeForYouDevice .personalAgentDeviceLabel {
@@ -64,16 +62,8 @@
   }
 
   .madeForYouDevice .personalAgentDeviceScreen {
+    min-height: 160px;
     padding: 28px 20px;
-  }
-
-  .madeForYouDevice .personalAgentDeviceLogoGrid {
-    gap: 22px 16px;
-  }
-
-  .madeForYouDevice .personalAgentDeviceLogo svg {
-    width: 30px;
-    height: 30px;
   }
 
   .madeForYouDevice .personalAgentDeviceGrille {
