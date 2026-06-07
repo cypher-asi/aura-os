@@ -12,3 +12,71 @@
   padding-top: 0;
   padding-bottom: clamp(8px, 1.5vh, 20px);
 }
+
+/*
+ * Reuses the "Connected to everything" panel + screen
+ * (`ServiceDeviceCard`) inside the full-width card below the "Agents made
+ * for you." intro, scaled UP from the 400px quadrant footprint to a wide
+ * hero size. We override the device width and proportionally enlarge the
+ * screen padding, the on-screen logo glyphs + grid gaps, the label strip,
+ * and the speaker grille so the whole device reads bigger rather than just
+ * a wider 4-column grid.
+ */
+.madeForYouDevice {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.madeForYouDevice .personalAgentDevice {
+  max-width: 760px;
+}
+
+.madeForYouDevice .personalAgentDeviceContent {
+  padding: 12px;
+}
+
+.madeForYouDevice .personalAgentDeviceScreen {
+  padding: 44px 36px;
+  border-radius: 18px;
+}
+
+.madeForYouDevice .personalAgentDeviceLogoGrid {
+  gap: 34px 28px;
+}
+
+.madeForYouDevice .personalAgentDeviceLogo svg {
+  width: 40px;
+  height: 40px;
+}
+
+.madeForYouDevice .personalAgentDeviceLabel {
+  font-size: 13px;
+}
+
+.madeForYouDevice .personalAgentDeviceGrille {
+  height: 132px;
+}
+
+@media (max-width: 768px) {
+  .madeForYouDevice .personalAgentDevice {
+    max-width: 360px;
+  }
+
+  .madeForYouDevice .personalAgentDeviceScreen {
+    padding: 28px 20px;
+  }
+
+  .madeForYouDevice .personalAgentDeviceLogoGrid {
+    gap: 22px 16px;
+  }
+
+  .madeForYouDevice .personalAgentDeviceLogo svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .madeForYouDevice .personalAgentDeviceGrille {
+    height: 90px;
+  }
+}

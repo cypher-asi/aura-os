@@ -18,6 +18,7 @@ import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
 import { CardSection, MetalCard } from "../CardSection";
 import { MadeForYouSection } from "../MadeForYouSection";
+import { ServiceDeviceCard } from "../PersonalAgentSection/ServiceDeviceCard";
 import { PersonalAgentSection } from "../PersonalAgentSection";
 import { BuiltForTrustSection } from "../BuiltForTrustSection";
 import { SpecQuadrantSection } from "../SpecQuadrantSection";
@@ -91,7 +92,16 @@ export function ProductView(): ReactNode {
       />
       <MadeForYouSection />
       <CardSection ariaLabel="Build your agent">
-        <MetalCard wide gradient={135} align="center" />
+        <MetalCard
+          wide
+          gradient={135}
+          align="center"
+          media={
+            <div className="madeForYouDevice">
+              <ServiceDeviceCard />
+            </div>
+          }
+        />
       </CardSection>
       <ExpertiseSection />
       <SpecQuadrantSection />
