@@ -1,0 +1,668 @@
+/*
+ * MockAuraDesktop — a faithful, static mock of the authenticated AURA
+ * desktop shell (`AuraShell`), rendered as the decorative stage of the
+ * `/code` marketing page. It reproduces the real shell's structure:
+ *   titlebar (ShellTitlebar) / floating .body { sidebar | main | sidekick }
+ *   / bottom taskbar
+ * reusing the app's real presentational components fed hardcoded data.
+ *
+ * Layout + chrome rules are ported from `AuraShell.module.css`,
+ * `BottomTaskbar.module.css`, and `AuraSidebar.module.css`. The shell's
+ * dark surface + chrome tokens are pinned locally on `.frame` so the
+ * mock always reads as a dark authed desktop — matching the dark
+ * marketing page around it — regardless of the visitor's app theme.
+ */
+
+.frame {
+  /* Dark shell surface tokens, pinned so the mock is theme-independent
+     (the surrounding `/code` page is dark in every theme). Values mirror
+     the dark-theme defaults in `index.css` / `styles/tokens.css`. */
+  --color-bg: #0c0c0e;
+  --color-sidebar-bg: #0e0e10;
+  --color-surface: #141416;
+  --color-bg-secondary: #1a1a1d;
+  --color-bg-tertiary: #202024;
+  --color-bg-subtle: rgba(255, 255, 255, 0.04);
+  --color-bg-hover: rgba(255, 255, 255, 0.06);
+  --color-overlay-subtle: rgba(255, 255, 255, 0.06);
+  --color-overlay-light: rgba(255, 255, 255, 0.08);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-main-panel: rgba(255, 255, 255, 0.08);
+  --color-border-chrome: rgba(255, 255, 255, 0.1);
+  --color-titlebar-bg: #141416;
+  --color-text-primary: #f2f4f8;
+  --color-text-secondary: #a8acb8;
+  --color-text-muted: rgba(255, 255, 255, 0.5);
+  --color-text: #f2f4f8;
+  --color-accent: #6c7bff;
+  --color-accent-text: #9aa6ff;
+  --color-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-success: #4ade80;
+  --status-failed: #f87171;
+  --icon-hover-bg: rgba(255, 255, 255, 0.08);
+
+  --desktop-shell-backdrop: linear-gradient(to bottom right, #0c0c0e 0%, #1b1b1d 100%);
+  --shell-pill-grad-top: #0e0e10;
+  --shell-pill-grad-bottom: #050507;
+  --shell-stroke-top: #424242;
+  --shell-stroke-side: #262626;
+  --shell-stroke-bottom: #121212;
+  --nav-plate-fill: linear-gradient(180deg, #373739, #272729);
+  --nav-plate-stroke: linear-gradient(180deg, #666668, #262628);
+  --nav-plate-shadow: rgba(0, 0, 0, 0.65);
+  --nav-plate-glyph: #fff;
+  --taskbar-icon-color: #acacac;
+  --taskbar-frame: linear-gradient(135deg, #090909, #131313);
+  --shell-chrome-background: color-mix(in srgb, var(--color-titlebar-bg) 90%, transparent);
+  --shell-chrome-backdrop-filter: blur(40px) saturate(1.4);
+  --shell-chrome-height: 32px;
+  --shell-chrome-inset: 5px;
+  --shell-chrome-outer-height: 42px;
+  --shell-chrome-radius: 20px;
+
+  position: relative;
+  /* 16:10 like the real maximized window. The `/code` stage re-sizes
+     the direct child (this frame) to ~96% of the stage via a container
+     query in `CodeView.module.css`; this formula is the standalone /
+     test fallback. */
+  aspect-ratio: 16 / 10;
+  width: min(96cqw, calc(96cqh * 16 / 10));
+  max-width: 96cqw;
+  max-height: 96cqh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--desktop-shell-backdrop);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow:
+    0 30px 60px -20px rgba(0, 0, 0, 0.55),
+    0 8px 18px -8px rgba(0, 0, 0, 0.45);
+}
+
+/* Re-bind the nested ShellTitlebar so it floats transparently on the
+   gradient backdrop the way the real authed dark titlebar does. */
+.titlebar :global(.titlebar-drag) {
+  background: transparent !important;
+  border-color: transparent;
+}
+
+.titleLeading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+}
+
+.titleLogo {
+  height: 11px;
+  width: auto;
+  display: block;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.titleActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 4px;
+  color: var(--color-text-secondary);
+}
+
+.titleIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: inherit;
+}
+
+/* ---- Body: floating rounded "screen" with the 1px gradient frame ---- */
+.body {
+  position: relative;
+  isolation: isolate;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  margin: 0 5px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: linear-gradient(
+      to bottom,
+      var(--shell-stroke-top) 0%,
+      var(--shell-stroke-side) 50%,
+      var(--shell-stroke-bottom) 100%
+    )
+    border-box;
+}
+
+.wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* ---- Left sidebar ---- */
+.sidebar {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-border-main-panel);
+  overflow: hidden;
+}
+
+.sidebarHeader {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.appSwitchRow {
+  display: flex;
+  justify-content: center;
+  padding: 4px var(--space-2, 8px) 8px;
+}
+
+.tree {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 6px;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.treeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding-right: 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.treeRowActive {
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-primary);
+}
+
+.treeIcon {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text-secondary));
+}
+
+.treeLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Main panel ---- */
+.main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.execution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  padding: var(--space-4, 16px);
+  height: 100%;
+  min-height: 0;
+}
+
+/* Mock AgentStatusBar */
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 16px);
+  flex-wrap: wrap;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-surface);
+}
+
+.statusInlineRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  font-size: 13px;
+}
+
+.statusMutedText {
+  color: var(--color-text-muted);
+}
+
+.statusAutoRight {
+  margin-left: auto;
+  font-size: 13px;
+}
+
+/* Mock TaskFeed + LogPanel side-by-side panels */
+.panels {
+  display: flex;
+  gap: var(--space-4, 16px);
+  flex: 1;
+  min-height: 0;
+}
+
+.panels > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.panelColumn {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.feedList {
+  flex: 1;
+  overflow: hidden;
+  padding: var(--space-1, 4px) 0;
+}
+
+.taskTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logContent {
+  flex: 1;
+  overflow: hidden;
+  padding: var(--space-3, 12px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--text-xs, 12px);
+  line-height: 1.6;
+}
+
+.logRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2, 8px);
+  padding: 2px 0;
+}
+
+.logTimestamp {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.logBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 5px;
+  border-radius: var(--radius-sm, 3px);
+  line-height: 18px;
+  display: inline-block;
+  min-width: 42px;
+  text-align: center;
+}
+
+.logBadge_loop {
+  background: color-mix(in srgb, #8b9cff 18%, transparent);
+  color: #aeb8ff;
+}
+.logBadge_task {
+  background: color-mix(in srgb, #4aeaa8 16%, transparent);
+  color: #6ee7a8;
+}
+.logBadge_output {
+  background: color-mix(in srgb, #f5c451 16%, transparent);
+  color: #f5d27a;
+}
+.logBadge_files {
+  background: color-mix(in srgb, #7fd3ff 16%, transparent);
+  color: #9ad9ff;
+}
+.logBadge_session {
+  background: color-mix(in srgb, #c69bff 18%, transparent);
+  color: #d3b3ff;
+}
+.logBadge_spec {
+  background: color-mix(in srgb, #ff9bb8 18%, transparent);
+  color: #ffb3c8;
+}
+
+.logSummary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+.controlRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+/* ---- Right sidekick ---- */
+.sidekick {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-border-main-panel);
+  overflow: hidden;
+}
+
+.sidekickTabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidekickTab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.sidekickTabActive {
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-primary);
+  opacity: 1;
+}
+
+.sidekickBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 10px;
+  gap: 8px;
+}
+
+.terminalTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.terminal {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 6px);
+  background: #060608;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #9be6b4;
+  overflow: hidden;
+}
+
+.terminalDim {
+  color: rgba(155, 230, 180, 0.55);
+}
+
+.terminalCursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: #9be6b4;
+  animation: mockDesktopBlink 1.1s steps(2, start) infinite;
+}
+
+@keyframes mockDesktopBlink {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---- Bottom taskbar (ported from BottomTaskbar.module.css, authed) ---- */
+.taskbar {
+  --taskbar-item-size: 34px;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: var(--shell-chrome-outer-height);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 1px var(--shell-chrome-inset);
+}
+
+.taskbar svg {
+  width: 17px;
+  height: 17px;
+}
+
+.taskbarContainer {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  padding: 1.75px;
+  border-radius: calc(var(--shell-chrome-radius) + 1.75px);
+  background: var(--taskbar-frame);
+}
+
+.leadCluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-width: 0;
+}
+
+.left,
+.center,
+.right,
+.desktopBubble {
+  height: var(--shell-chrome-height);
+  min-height: var(--shell-chrome-height);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, #fff 2%, var(--shell-pill-grad-top)) 0,
+    var(--shell-pill-grad-top) 40%,
+    var(--shell-pill-grad-bottom) 100%
+  );
+  border: 1px solid transparent;
+  border-radius: var(--shell-chrome-radius);
+  box-sizing: border-box;
+  position: relative;
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in srgb, #fff 10%, transparent),
+    inset 0 2px 3px -1px color-mix(in srgb, #000 65%, transparent),
+    0 6px 14px -4px color-mix(in srgb, #000 65%, transparent),
+    0 0 8px 0 color-mix(in srgb, var(--shell-stroke-top) 50%, transparent);
+  padding: 0 var(--space-2, 8px);
+}
+
+.left::after,
+.center::after,
+.right::after,
+.desktopBubble::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    to bottom,
+    var(--shell-stroke-top) 0%,
+    var(--shell-stroke-side) 50%,
+    var(--shell-stroke-bottom) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.desktopBubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--shell-chrome-height);
+  padding: 0;
+  border-radius: 50%;
+  color: var(--taskbar-icon-color);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.favorites {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 21px;
+  margin: 0 3px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--taskbar-icon-color) 25%, transparent);
+}
+
+.taskbarCenterSlot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.taskbarCenterSlot > * {
+  pointer-events: auto;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-width: 0;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--taskbar-icon-color);
+}
+
+.rightPrimary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clock {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-2xs, 11px);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  user-select: none;
+  padding: 0 4px;
+}
+
+/*
+ * Drop the right sidekick when the mock window is too narrow to host
+ * three columns comfortably (small viewports / tall aspect ratios where
+ * the 16:10 frame becomes width-bound).
+ */
+@container (max-width: 720px) {
+  .sidekick {
+    display: none;
+  }
+}
+
+@container (max-width: 560px) {
+  .sidebar {
+    width: 168px;
+  }
+}

@@ -49,13 +49,12 @@ describe("CodeView", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the mock desktop with the projects workspace as its center content", () => {
+  it("renders the authenticated desktop-shell mock as its stage", () => {
     renderCodeView();
-    // The shared `MockAuraApp` chrome (titlebar + taskbar + wallpaper)
-    // frames the static projects-workspace mock instead of the
-    // landing's scripted DM windows.
-    expect(screen.getByTestId("mock-aura-app")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-projects-workspace")).toBeInTheDocument();
+    // The `/code` stage is a faithful static mock of the authenticated
+    // AURA desktop shell (titlebar + project sidebar + work surface +
+    // sidekick + taskbar), not the landing's scripted DM windows.
+    expect(screen.getByTestId("mock-aura-desktop")).toBeInTheDocument();
     expect(screen.queryByTestId("dm-window-manager")).not.toBeInTheDocument();
   });
 
