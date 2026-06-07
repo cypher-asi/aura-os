@@ -34,13 +34,18 @@
 
 /*
  * Tight bevel top/bottom, but reserve horizontal room for a full-height
- * inset "metal" rail flanking the screen on the left and right. The rails
- * are painted as the content container's ::before/::after so they span the
- * whole device height (screen + label strip + grille) inside the Plate rim.
+ * inset "metal" panel flanking the screen on the left and a wider one
+ * (2.5x) on the right. The panels are painted as the content container's
+ * ::before/::after so they span the whole device height (screen + label
+ * strip + grille) inside the Plate rim. Rather than floating as separate
+ * recessed sections, they butt flush against the screen and are split off
+ * by a top-to-bottom divider line that reuses the Plate's 3-ring border
+ * cross-section (gradient line / 2px black / gradient line) on each
+ * panel's screen-facing edge.
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
-  padding: 3px 52px;
+  padding: 3px 108px 3px 45px;
 }
 
 .madeForYouDevice .personalAgentDeviceContent::before,
@@ -49,23 +54,52 @@
   position: absolute;
   top: 3px;
   bottom: 3px;
-  width: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #242424 0%, #1a1a1a 55%, #0e0e0e 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
     inset 0 6px 14px rgba(0, 0, 0, 0.55),
     inset 0 -8px 18px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }
 
+/* Left panel: metal fill with the 3-border divider line on its right
+   (screen-facing) edge; outer corners rounded to hug the Plate rim, inner
+   edge kept square so the divider runs straight top to bottom. */
 .madeForYouDevice .personalAgentDeviceContent::before {
   left: 3px;
+  width: 42px;
+  border-radius: 12px 0 0 12px;
+  background:
+    linear-gradient(
+      to left,
+      rgba(102, 106, 114, 0.75) 0,
+      rgba(102, 106, 114, 0.75) 1px,
+      #000 1px,
+      #000 3px,
+      rgba(102, 106, 114, 0.75) 3px,
+      rgba(102, 106, 114, 0.75) 4px,
+      transparent 4px
+    ),
+    linear-gradient(135deg, #242424 0%, #1a1a1a 55%, #0e0e0e 100%);
 }
 
+/* Right panel: 2.5x the left panel's width, with the same 3-border divider
+   line on its left (screen-facing) edge. */
 .madeForYouDevice .personalAgentDeviceContent::after {
   right: 3px;
+  width: 105px;
+  border-radius: 0 12px 12px 0;
+  background:
+    linear-gradient(
+      to right,
+      rgba(102, 106, 114, 0.75) 0,
+      rgba(102, 106, 114, 0.75) 1px,
+      #000 1px,
+      #000 3px,
+      rgba(102, 106, 114, 0.75) 3px,
+      rgba(102, 106, 114, 0.75) 4px,
+      transparent 4px
+    ),
+    linear-gradient(135deg, #242424 0%, #1a1a1a 55%, #0e0e0e 100%);
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
@@ -94,12 +128,15 @@
   }
 
   .madeForYouDevice .personalAgentDeviceContent {
-    padding: 3px 34px;
+    padding: 3px 70px 3px 32px;
   }
 
-  .madeForYouDevice .personalAgentDeviceContent::before,
-  .madeForYouDevice .personalAgentDeviceContent::after {
+  .madeForYouDevice .personalAgentDeviceContent::before {
     width: 26px;
+  }
+
+  .madeForYouDevice .personalAgentDeviceContent::after {
+    width: 65px;
   }
 
   .madeForYouDevice .personalAgentDeviceScreen {
