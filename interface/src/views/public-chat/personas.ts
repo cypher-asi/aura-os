@@ -38,6 +38,15 @@ export interface PersonaTheme {
    */
   readonly desktopBackgroundUrl: string | null;
   /**
+   * Optional looping video URL painted as the wallpaper inside the
+   * `MockAuraApp` frame INSTEAD of the static `desktopBackgroundUrl`
+   * image. When set, `MockAuraApp` renders an autoplaying, muted,
+   * looped `<video>` (using the same fit/position/scale/offset
+   * controls as the image). `desktopBackgroundUrl` is still used as
+   * the dock avatar source, so keep both pointed at the same figure.
+   */
+  readonly desktopBackgroundVideoUrl?: string | null;
+  /**
    * Optional `object-position` override for the wallpaper `<img>`
    * inside the `MockAuraApp` frame. Only meaningful when
    * `desktopBackgroundFit` resolves to `"cover"` (the default) —
@@ -253,6 +262,9 @@ export const PERSONAS: ReadonlyArray<Persona> = [
       // near-white `desktopBackgroundColor` below fills so the studio
       // backdrop appears to extend seamlessly to the window edges.
       desktopBackgroundUrl: "/personas/creator/desktop.png",
+      // Looping clip of the same red-haired figure (keeps the static
+      // PNG above as the dock avatar source + video poster fallback).
+      desktopBackgroundVideoUrl: "/personas/creator/desktop.mp4",
       desktopBackgroundPosition: null,
       desktopBackgroundFit: "contain",
       // Sampled near-white of the source's studio backdrop so the

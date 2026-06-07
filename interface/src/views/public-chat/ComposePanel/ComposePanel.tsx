@@ -12,6 +12,12 @@ export interface ComposePanelProps {
    */
   readonly desktopBackgroundUrl?: string | null;
   /**
+   * Forwarded straight through to `MockAuraApp`. Optional looping
+   * wallpaper video that replaces the static image when the active
+   * persona theme supplies one (`PersonaTheme.desktopBackgroundVideoUrl`).
+   */
+  readonly desktopBackgroundVideoUrl?: string | null;
+  /**
    * Forwarded straight through to `MockAuraApp`. Optional
    * `object-position` for the wallpaper `<img>` (only meaningful
    * when `desktopBackgroundUrl` is set). The parent picks the
@@ -99,6 +105,7 @@ export interface ComposePanelProps {
  */
 export function ComposePanel({
   desktopBackgroundUrl = null,
+  desktopBackgroundVideoUrl = null,
   desktopBackgroundPosition = null,
   desktopBackgroundFit = null,
   desktopBackgroundColor = null,
@@ -117,6 +124,7 @@ export function ComposePanel({
     >
       <MockAuraApp
         desktopBackgroundUrl={desktopBackgroundUrl}
+        desktopBackgroundVideoUrl={desktopBackgroundVideoUrl}
         desktopBackgroundPosition={desktopBackgroundPosition}
         desktopBackgroundFit={desktopBackgroundFit}
         desktopBackgroundColor={desktopBackgroundColor}

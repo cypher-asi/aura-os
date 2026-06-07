@@ -614,6 +614,9 @@ export function PublicChatView(): React.ReactElement {
             </div>
             <ComposePanel
               desktopBackgroundUrl={committedPersona.theme.desktopBackgroundUrl}
+            desktopBackgroundVideoUrl={
+              committedPersona.theme.desktopBackgroundVideoUrl ?? null
+            }
             desktopBackgroundPosition={
               committedPersona.theme.desktopBackgroundPosition
             }
@@ -627,6 +630,8 @@ export function PublicChatView(): React.ReactElement {
               outgoingPersona && swap.outgoing
                 ? {
                     url: outgoingPersona.theme.desktopBackgroundUrl,
+                    videoUrl:
+                      outgoingPersona.theme.desktopBackgroundVideoUrl ?? null,
                     position: outgoingPersona.theme.desktopBackgroundPosition,
                     fit: outgoingPersona.theme.desktopBackgroundFit,
                     color: outgoingPersona.theme.desktopBackgroundColor,

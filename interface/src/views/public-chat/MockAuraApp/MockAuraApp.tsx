@@ -146,6 +146,8 @@ function wallpaperImgStyle(
  */
 export interface OutgoingDesktopBackground {
   readonly url: string | null;
+  /** Looping wallpaper video for the outgoing persona, if any. */
+  readonly videoUrl?: string | null;
   readonly position: string | null;
   readonly fit: "cover" | "contain" | null;
   readonly color: string | null;
@@ -162,6 +164,13 @@ export interface MockAuraAppProps {
    * personas).
    */
   readonly desktopBackgroundUrl?: string | null;
+  /**
+   * Optional looping video URL painted as the wallpaper INSTEAD of
+   * `desktopBackgroundUrl`. When set, an autoplaying, muted, looped
+   * `<video>` replaces the wallpaper `<img>` (same fit/position/
+   * scale/offset). The static image is still used by the dock avatar.
+   */
+  readonly desktopBackgroundVideoUrl?: string | null;
   /**
    * Optional CSS `object-position` for the wallpaper `<img>`.
    * Only meaningful in `"cover"` fit mode.
@@ -246,6 +255,7 @@ export interface MockAuraAppProps {
 
 export function MockAuraApp({
   desktopBackgroundUrl = null,
+  desktopBackgroundVideoUrl = null,
   desktopBackgroundPosition = null,
   desktopBackgroundFit = null,
   desktopBackgroundColor = null,
@@ -386,7 +396,25 @@ export function MockAuraApp({
           aria-hidden="true"
           data-testid="mock-aura-desktop-bg"
         >
-          {desktopBackgroundUrl ? (
+          {desktopBackgroundVideoUrl ? (
+            <video
+              className={styles.wallpaperImage}
+              src={desktopBackgroundVideoUrl}
+              poster={desktopBackgroundUrl ?? undefined}
+              autoPlay
+              loop
+              muted
+              playsInline
+              aria-hidden="true"
+              data-testid="mock-aura-wallpaper-video"
+              style={wallpaperImgStyle(
+                desktopBackgroundPosition,
+                desktopBackgroundFit,
+                desktopBackgroundScale,
+                desktopBackgroundOffsetY,
+              )}
+            />
+          ) : desktopBackgroundUrl ? (
             <img
               className={styles.wallpaperImage}
               src={desktopBackgroundUrl}
@@ -424,7 +452,24 @@ export function MockAuraApp({
           aria-hidden="true"
           data-testid="mock-aura-desktop-bg-outgoing"
         >
-          {outgoingDesktopBackground.url ? (
+          {outgoingDesktopBackground.videoUrl ? (
+            <video
+              className={styles.wallpaperImage}
+              src={outgoingDesktopBackground.videoUrl}
+              poster={outgoingDesktopBackground.url ?? undefined}
+              autoPlay
+              loop
+              muted
+              playsInline
+              aria-hidden="true"
+              style={wallpaperImgStyle(
+                outgoingDesktopBackground.position,
+                outgoingDesktopBackground.fit,
+                outgoingDesktopBackground.scale,
+                outgoingDesktopBackground.offsetY,
+              )}
+            />
+          ) : outgoingDesktopBackground.url ? (
             <img
               className={styles.wallpaperImage}
               src={outgoingDesktopBackground.url}
