@@ -29,7 +29,7 @@
 }
 
 .madeForYouDevice .personalAgentDevice {
-  max-width: 912px;
+  max-width: 1200px;
 }
 
 /*
@@ -44,7 +44,7 @@
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
-  padding: 0 130px 4px;
+  padding: 0 252px 4px;
 }
 
 .madeForYouDevice .personalAgentDeviceContent::before,
@@ -63,7 +63,7 @@
    straight top to bottom. */
 .madeForYouDevice .personalAgentDeviceContent::before {
   left: 3px;
-  width: 126px;
+  width: 248px;
   border-radius: 26px 0 0 26px;
   background:
     linear-gradient(
@@ -85,7 +85,7 @@
    line on its left (screen-facing) edge. */
 .madeForYouDevice .personalAgentDeviceContent::after {
   right: 3px;
-  width: 126px;
+  width: 248px;
   border-radius: 0 26px 26px 0;
   background:
     linear-gradient(
@@ -115,6 +115,159 @@
   border-radius: 0;
 }
 
+/*
+ * Right side-panel terminal LCD: a tall recessed green-on-black screen inset
+ * into the enlarged right metal panel (the region reserved by the content's
+ * right padding, in front of the ::after divider). Absolutely positioned and
+ * spanning nearly the full device height; the metal slab reads as its bezel.
+ * Rendering a looping mock feed of an agent built + deployed to AURA.
+ */
+.madeForYouDevice .madeForYouTerminalScreen {
+  position: absolute;
+  z-index: 2;
+  top: 22px;
+  bottom: 22px;
+  right: 22px;
+  width: 204px;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 16px 16px 40px;
+  border-radius: 12px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0c0a 0%,
+    #050605 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.22);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    monospace
+  );
+  font-size: 12px;
+  line-height: 1.8;
+  color: rgba(120, 230, 150, 0.92);
+  text-shadow: 0 0 6px rgba(80, 230, 130, 0.35);
+}
+
+/* Soft top gloss + faint scanlines for the LCD read. */
+.madeForYouDevice .madeForYouTerminalGloss {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0) 38%
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0.18) 3px
+    );
+}
+
+/* Scrolling viewport: a duplicated line stack translated upward on a loop so
+   the feed reads as a continuous live log. */
+.madeForYouDevice .madeForYouTerminalScroll {
+  position: absolute;
+  inset: 16px 16px 36px;
+  overflow: hidden;
+}
+
+.madeForYouDevice .madeForYouTerminalTrack {
+  /* Two stacked copies of the line list; translating up by 50% lands the
+     second copy exactly where the first started, so the loop is seamless. */
+  animation: madeForYouTerminalScroll 14s linear infinite;
+}
+
+.madeForYouDevice .madeForYouTerminalLines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.madeForYouDevice .madeForYouTerminalLine {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 2px;
+  word-break: break-word;
+  color: rgba(150, 235, 175, 0.78);
+}
+
+.madeForYouDevice .madeForYouTerminalLine--prompt {
+  color: rgba(190, 245, 205, 0.95);
+}
+
+.madeForYouDevice .madeForYouTerminalLine--ok {
+  color: rgba(120, 230, 150, 0.95);
+}
+
+.madeForYouDevice .madeForYouTerminalPrompt {
+  color: #f45500;
+  text-shadow: 0 0 6px rgba(244, 85, 0, 0.5);
+}
+
+/* Fixed prompt + blinking caret pinned to the bottom of the LCD. */
+.madeForYouDevice .madeForYouTerminalCaret {
+  position: absolute;
+  z-index: 2;
+  left: 16px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.madeForYouDevice .madeForYouTerminalCursor {
+  display: inline-block;
+  width: 9px;
+  height: 16px;
+  background: rgba(150, 235, 175, 0.9);
+  box-shadow: 0 0 6px rgba(120, 230, 150, 0.6);
+  animation: madeForYouTerminalBlink 1s steps(1) infinite;
+}
+
+@keyframes madeForYouTerminalScroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes madeForYouTerminalBlink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .madeForYouDevice .madeForYouTerminalTrack {
+    animation: none;
+  }
+
+  .madeForYouDevice .madeForYouTerminalCursor {
+    animation: none;
+  }
+}
+
 /* Looping character video filling the hero screen, behind the gloss. */
 .madeForYouDevice .personalAgentDeviceVideo {
   position: absolute;
@@ -138,13 +291,13 @@
   top: 0;
   bottom: 0;
   left: 3px;
-  width: 103px;
+  width: 206px;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 18px 10px;
+  gap: 28px;
+  padding: 36px 20px;
   pointer-events: none;
 }
 
@@ -153,8 +306,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 58px;
-  height: 58px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
@@ -170,8 +323,8 @@
 
 .madeForYouDevice .madeForYouKnobDial {
   position: relative;
-  width: 46px;
-  height: 46px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background:
     radial-gradient(
@@ -197,11 +350,11 @@
 /* Orange position indicator notched into the dial's upper-right. */
 .madeForYouDevice .madeForYouKnobIndicator {
   position: absolute;
-  top: 5px;
-  right: 9px;
-  width: 4px;
-  height: 11px;
-  border-radius: 2px;
+  top: 9px;
+  right: 16px;
+  width: 7px;
+  height: 19px;
+  border-radius: 3px;
   background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
   box-shadow: 0 0 6px rgba(244, 85, 0, 0.7);
   transform: rotate(32deg);
@@ -212,7 +365,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 16px;
   width: 100%;
 }
 
@@ -224,7 +377,7 @@
     Menlo,
     monospace
   );
-  font-size: 9px;
+  font-size: 14px;
   letter-spacing: 0.14em;
   color: rgba(60, 62, 66, 0.85);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
@@ -237,12 +390,17 @@
   color: rgba(70, 72, 76, 0.8);
 }
 
+.madeForYouDevice .madeForYouSideGlyph svg {
+  width: 24px;
+  height: 24px;
+}
+
 /* Round push-button: raised dark cap nested in a black recessed socket. */
 .madeForYouDevice .madeForYouSideBtn {
   position: relative;
   flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
@@ -261,8 +419,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 18px;
-  height: 18px;
+  width: 31px;
+  height: 31px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   background: linear-gradient(180deg, #2a2d33 0%, #0d0e11 100%);
@@ -350,11 +508,13 @@
 
 @media (max-width: 768px) {
   .madeForYouDevice .personalAgentDevice {
-    max-width: 432px;
+    max-width: 480px;
   }
 
+  /* Asymmetric on mobile: a narrow left control panel and a wider right panel
+     so the side-menu terminal stays legible. */
   .madeForYouDevice .personalAgentDeviceContent {
-    padding: 0 84px 4px;
+    padding: 0 150px 4px 84px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::before {
@@ -362,7 +522,31 @@
   }
 
   .madeForYouDevice .personalAgentDeviceContent::after {
-    width: 78px;
+    width: 144px;
+  }
+
+  .madeForYouDevice .madeForYouTerminalScreen {
+    top: 12px;
+    bottom: 12px;
+    right: 12px;
+    width: 128px;
+    padding: 10px 10px 28px;
+    font-size: 9px;
+    line-height: 1.7;
+  }
+
+  .madeForYouDevice .madeForYouTerminalScroll {
+    inset: 10px 10px 26px;
+  }
+
+  .madeForYouDevice .madeForYouTerminalCaret {
+    left: 10px;
+    bottom: 9px;
+  }
+
+  .madeForYouDevice .madeForYouTerminalCursor {
+    width: 6px;
+    height: 11px;
   }
 
   .madeForYouDevice .personalAgentDeviceScreen {

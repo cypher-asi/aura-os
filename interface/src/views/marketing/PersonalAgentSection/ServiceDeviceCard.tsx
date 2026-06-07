@@ -2,6 +2,28 @@ import { type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { SERVICE_LOGOS } from "./brand-logos";
 
+/**
+ * Mock terminal feed for the hero's right-hand LCD: an agent being
+ * scaffolded, built, and deployed to the AURA network. Purely decorative
+ * (the screen is `aria-hidden`); a `prompt` line renders a `$` glyph, an
+ * `ok` line gets a success tint, and the rest read as plain log output.
+ */
+const TERMINAL_LINES: ReadonlyArray<{
+  readonly text: string;
+  readonly kind?: "prompt" | "ok";
+}> = [
+  { text: 'aura agent init --name "Atlas"', kind: "prompt" },
+  { text: "scaffolding workspace ... ok", kind: "ok" },
+  { text: "wiring 100+ integrations ... ok", kind: "ok" },
+  { text: "aura build", kind: "prompt" },
+  { text: "compiling skills ... done" },
+  { text: "bundling model context ... done" },
+  { text: "aura deploy --network aura", kind: "prompt" },
+  { text: "uploading bundle (4.2 MB)" },
+  { text: "registered on AURA network ... ok", kind: "ok" },
+  { text: "agent live - node us-west-2", kind: "ok" },
+];
+
 interface ServiceDeviceCardProps {
   /**
    * When true, the bottom grille renders as a recessed three-ring `Plate`
@@ -88,6 +110,8 @@ export function ServiceDeviceCard({
           </div>
         ) : null}
 
+        {hexGrille ? <TerminalScreen /> : null}
+
         <div className="personalAgentDeviceScreen">
           {hexGrille ? (
             <video
@@ -143,5 +167,47 @@ export function ServiceDeviceCard({
         )}
       </div>
     </Plate>
+  );
+}
+
+/**
+ * Right-hand side-panel LCD of the hero device: a tall recessed terminal that
+ * fills the enlarged right metal panel, rendering a looping mock feed of an
+ * agent being created and deployed to the AURA network. The line stack is
+ * duplicated so the upward scroll reads as a continuous live log; everything
+ * is decorative (`aria-hidden` via the device root).
+ */
+function TerminalScreen(): ReactNode {
+  return (
+    <div className="madeForYouTerminalScreen">
+      <div className="madeForYouTerminalGloss" />
+      <div className="madeForYouTerminalScroll">
+        <div className="madeForYouTerminalTrack">
+          {[0, 1].map((copy) => (
+            <ul key={copy} className="madeForYouTerminalLines">
+              {TERMINAL_LINES.map((line, index) => (
+                <li
+                  key={`${copy}-${index}`}
+                  className={
+                    line.kind
+                      ? `madeForYouTerminalLine madeForYouTerminalLine--${line.kind}`
+                      : "madeForYouTerminalLine"
+                  }
+                >
+                  {line.kind === "prompt" ? (
+                    <span className="madeForYouTerminalPrompt">$</span>
+                  ) : null}
+                  {line.text}
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      </div>
+      <div className="madeForYouTerminalCaret">
+        <span className="madeForYouTerminalPrompt">$</span>
+        <span className="madeForYouTerminalCursor" />
+      </div>
+    </div>
   );
 }
