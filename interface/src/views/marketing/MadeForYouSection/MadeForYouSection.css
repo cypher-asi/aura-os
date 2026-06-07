@@ -474,8 +474,8 @@
  *   1.1547 = 2 / sqrt(3); the half-cell / 0.577 offset hex-packs the rows.
  */
 .madeForYouDevice .personalAgentDeviceHexMesh {
-  --hole: 2.45px;
-  --cell: 16px;
+  --hole: 2.6px;
+  --cell: 9.5px;
   height: 79px;
   /* Padding step: margin reveals the Plate surface around the mesh. */
   margin: 12px;
@@ -572,7 +572,7 @@
   }
 
   .madeForYouDevice .personalAgentDeviceHexMesh {
-    --cell: 13px;
+    --cell: 7.5px;
     height: 54px;
     margin: 10px;
   }
