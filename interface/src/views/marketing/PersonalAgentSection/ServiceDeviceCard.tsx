@@ -116,7 +116,7 @@ export function ServiceDeviceCard({
           {hexGrille ? (
             <video
               className="personalAgentDeviceVideo"
-              src="/agent-character-loop.mp4"
+              src="/agent-character-rotate.mp4"
               autoPlay
               loop
               muted
