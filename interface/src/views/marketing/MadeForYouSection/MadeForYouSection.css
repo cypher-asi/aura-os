@@ -57,25 +57,24 @@
   pointer-events: none;
 }
 
-/* Left panel: metal fill with the 3-border divider line on its right
-   (screen-facing) edge; outer corners rounded to hug the Plate rim, inner
-   edge kept square so the divider runs straight top to bottom. */
+/* Left panel: no fill (the main Plate surface shows through) with just the
+   3-border divider line on its right (screen-facing) edge; outer corners
+   rounded to hug the Plate rim, inner edge kept square so the divider runs
+   straight top to bottom. */
 .madeForYouDevice .personalAgentDeviceContent::before {
   left: 3px;
   width: 105px;
   border-radius: 22px 0 0 22px;
-  background:
-    linear-gradient(
-      to left,
-      rgba(102, 106, 114, 0.75) 0,
-      rgba(102, 106, 114, 0.75) 1px,
-      #000 1px,
-      #000 3px,
-      rgba(102, 106, 114, 0.75) 3px,
-      rgba(102, 106, 114, 0.75) 4px,
-      transparent 4px
-    ),
-    linear-gradient(135deg, #242424 0%, #1a1a1a 55%, #0e0e0e 100%);
+  background: linear-gradient(
+    to left,
+    rgba(102, 106, 114, 0.75) 0,
+    rgba(102, 106, 114, 0.75) 1px,
+    #000 1px,
+    #000 3px,
+    rgba(102, 106, 114, 0.75) 3px,
+    rgba(102, 106, 114, 0.75) 4px,
+    transparent 4px
+  );
 }
 
 /* Right panel: same width as the left, with the same 3-border divider
@@ -84,18 +83,16 @@
   right: 3px;
   width: 105px;
   border-radius: 0 22px 22px 0;
-  background:
-    linear-gradient(
-      to right,
-      rgba(102, 106, 114, 0.75) 0,
-      rgba(102, 106, 114, 0.75) 1px,
-      #000 1px,
-      #000 3px,
-      rgba(102, 106, 114, 0.75) 3px,
-      rgba(102, 106, 114, 0.75) 4px,
-      transparent 4px
-    ),
-    linear-gradient(135deg, #242424 0%, #1a1a1a 55%, #0e0e0e 100%);
+  background: linear-gradient(
+    to right,
+    rgba(102, 106, 114, 0.75) 0,
+    rgba(102, 106, 114, 0.75) 1px,
+    #000 1px,
+    #000 3px,
+    rgba(102, 106, 114, 0.75) 3px,
+    rgba(102, 106, 114, 0.75) 4px,
+    transparent 4px
+  );
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
