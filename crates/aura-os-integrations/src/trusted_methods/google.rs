@@ -138,7 +138,7 @@ pub(crate) fn methods() -> Vec<TrustedIntegrationMethodDefinition> {
             provider: "google".to_string(),
             description: "Send an email through a saved Gmail org integration.".to_string(),
             prompt_signature:
-                "gmail_send_email(from, to, subject, text?, html?, cc?, bcc?, integration_id?)"
+                "gmail_send_email(from, to, subject, text?, html?, cc?, bcc?, thread_id?, integration_id?)"
                     .to_string(),
             input_schema: json!({
                 "type": "object",
@@ -155,6 +155,7 @@ pub(crate) fn methods() -> Vec<TrustedIntegrationMethodDefinition> {
                     "subject": { "type": "string", "description": "Email subject." },
                     "text": { "type": "string", "description": "Optional plain text body." },
                     "html": { "type": "string", "description": "Optional HTML body." },
+                    "thread_id": { "type": "string", "description": "Optional Gmail thread id for replies." },
                     "cc": {
                         "oneOf": [
                             { "type": "string", "description": "Single cc email address." },
@@ -171,6 +172,84 @@ pub(crate) fn methods() -> Vec<TrustedIntegrationMethodDefinition> {
                 "required": ["from", "to", "subject"]
             }),
             runtime: TrustedIntegrationRuntimeSpec::GmailSendEmail,
+        },
+        TrustedIntegrationMethodDefinition {
+            name: "gmail_create_draft".to_string(),
+            provider: "google".to_string(),
+            description: "Create a Gmail draft through a saved Gmail org integration.".to_string(),
+            prompt_signature:
+                "gmail_create_draft(from, to, subject, text?, html?, cc?, bcc?, thread_id?, integration_id?)"
+                    .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "integration_id": { "type": "string" },
+                    "from": { "type": "string", "description": "Sender email, optionally with a display name." },
+                    "to": {
+                        "oneOf": [
+                            { "type": "string", "description": "Single recipient email address." },
+                            { "type": "array", "items": { "type": "string" }, "description": "List of recipient email addresses." }
+                        ]
+                    },
+                    "subject": { "type": "string", "description": "Email subject." },
+                    "text": { "type": "string", "description": "Optional plain text body." },
+                    "html": { "type": "string", "description": "Optional HTML body." },
+                    "thread_id": { "type": "string", "description": "Optional Gmail thread id for replies." },
+                    "cc": {
+                        "oneOf": [
+                            { "type": "string", "description": "Single cc email address." },
+                            { "type": "array", "items": { "type": "string" }, "description": "List of cc email addresses." }
+                        ]
+                    },
+                    "bcc": {
+                        "oneOf": [
+                            { "type": "string", "description": "Single bcc email address." },
+                            { "type": "array", "items": { "type": "string" }, "description": "List of bcc email addresses." }
+                        ]
+                    }
+                },
+                "required": ["from", "to", "subject"]
+            }),
+            runtime: TrustedIntegrationRuntimeSpec::GmailCreateDraft,
+        },
+        TrustedIntegrationMethodDefinition {
+            name: "gmail_send_draft".to_string(),
+            provider: "google".to_string(),
+            description: "Send an existing Gmail draft through a saved Gmail org integration."
+                .to_string(),
+            prompt_signature: "gmail_send_draft(draft_id, integration_id?)".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "integration_id": { "type": "string" },
+                    "draft_id": { "type": "string", "description": "Gmail draft id from gmail_create_draft." }
+                },
+                "required": ["draft_id"]
+            }),
+            runtime: TrustedIntegrationRuntimeSpec::RestJson {
+                method: TrustedIntegrationHttpMethod::Post,
+                path: "/gmail/v1/users/me/drafts/send".to_string(),
+                query: vec![],
+                body: vec![arg_binding(
+                    &["draft_id", "draftId"],
+                    "id",
+                    TrustedIntegrationArgValueType::String,
+                    true,
+                    None,
+                )],
+                success_guard: TrustedIntegrationSuccessGuard::None,
+                result: TrustedIntegrationResultTransform::ProjectObject {
+                    key: "message".to_string(),
+                    pointer: None,
+                    fields: vec![
+                        result_field("id", "/id"),
+                        result_field("thread_id", "/threadId"),
+                        result_field("label_ids", "/labelIds"),
+                    ],
+                },
+            },
         },
         TrustedIntegrationMethodDefinition {
             name: "google_calendar_list_calendars".to_string(),
@@ -310,7 +389,7 @@ pub(crate) fn methods() -> Vec<TrustedIntegrationMethodDefinition> {
                 "Create a Google Calendar event through a saved Google org integration."
                     .to_string(),
             prompt_signature:
-                "google_calendar_create_event(calendar_id, summary, start, end, time_zone?, description?, location?, attendees?, integration_id?)"
+                "google_calendar_create_event(calendar_id, summary, start, end, time_zone?, description?, location?, attendees?, send_updates?, create_google_meet?, integration_id?)"
                     .to_string(),
             input_schema: json!({
                 "type": "object",
@@ -324,6 +403,7 @@ pub(crate) fn methods() -> Vec<TrustedIntegrationMethodDefinition> {
                     "time_zone": { "type": "string", "description": "Optional IANA time zone, such as America/New_York." },
                     "description": { "type": "string", "description": "Optional event description." },
                     "location": { "type": "string", "description": "Optional event location." },
+                    "create_google_meet": { "type": "boolean", "description": "Set true to request Google Meet conference data." },
                     "attendees": {
                         "oneOf": [
                             { "type": "string", "description": "Single attendee email address." },
@@ -335,6 +415,67 @@ pub(crate) fn methods() -> Vec<TrustedIntegrationMethodDefinition> {
                 "required": ["calendar_id", "summary", "start", "end"]
             }),
             runtime: TrustedIntegrationRuntimeSpec::GoogleCalendarCreateEvent,
+        },
+        TrustedIntegrationMethodDefinition {
+            name: "google_calendar_update_event".to_string(),
+            provider: "google".to_string(),
+            description:
+                "Update a Google Calendar event through a saved Google org integration."
+                    .to_string(),
+            prompt_signature:
+                "google_calendar_update_event(calendar_id, event_id, summary?, start?, end?, time_zone?, description?, location?, attendees?, status?, send_updates?, create_google_meet?, integration_id?)"
+                    .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "integration_id": { "type": "string" },
+                    "calendar_id": { "type": "string", "description": "Calendar id, or primary for the authenticated user's primary calendar." },
+                    "event_id": { "type": "string", "description": "Google Calendar event id." },
+                    "summary": { "type": "string", "description": "Updated event title." },
+                    "start": { "type": "string", "description": "Updated event start as an RFC3339 date-time." },
+                    "end": { "type": "string", "description": "Updated event end as an RFC3339 date-time." },
+                    "time_zone": { "type": "string", "description": "Optional IANA time zone, such as America/New_York." },
+                    "description": { "type": "string", "description": "Updated event description." },
+                    "location": { "type": "string", "description": "Updated event location." },
+                    "status": { "type": "string", "description": "Optional event status, such as confirmed, tentative, or cancelled." },
+                    "color_id": { "type": "string", "description": "Optional Google Calendar event color id." },
+                    "transparency": { "type": "string", "description": "Optional transparency value, such as opaque or transparent." },
+                    "visibility": { "type": "string", "description": "Optional visibility value, such as default, public, private, or confidential." },
+                    "create_google_meet": { "type": "boolean", "description": "Set true to request Google Meet conference data." },
+                    "attendees": {
+                        "oneOf": [
+                            { "type": "string", "description": "Single attendee email address." },
+                            { "type": "array", "items": { "type": "string" }, "description": "Replacement attendee email list." }
+                        ]
+                    },
+                    "send_updates": { "type": "string", "description": "Optional sendUpdates value: all, externalOnly, or none." }
+                },
+                "required": ["calendar_id", "event_id"]
+            }),
+            runtime: TrustedIntegrationRuntimeSpec::GoogleCalendarUpdateEvent,
+        },
+        TrustedIntegrationMethodDefinition {
+            name: "google_calendar_delete_event".to_string(),
+            provider: "google".to_string(),
+            description:
+                "Delete a Google Calendar event through a saved Google org integration."
+                    .to_string(),
+            prompt_signature:
+                "google_calendar_delete_event(calendar_id, event_id, send_updates?, integration_id?)"
+                    .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "integration_id": { "type": "string" },
+                    "calendar_id": { "type": "string", "description": "Calendar id, or primary for the authenticated user's primary calendar." },
+                    "event_id": { "type": "string", "description": "Google Calendar event id." },
+                    "send_updates": { "type": "string", "description": "Optional sendUpdates value: all, externalOnly, or none." }
+                },
+                "required": ["calendar_id", "event_id"]
+            }),
+            runtime: TrustedIntegrationRuntimeSpec::GoogleCalendarDeleteEvent,
         },
     ]
 }

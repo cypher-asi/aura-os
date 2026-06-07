@@ -321,12 +321,16 @@ describe("summarizeInput", () => {
     expect(summarizeInput("gmail_search_messages", { newer_than: "7d" })).toBe("newer than 7d");
     expect(summarizeInput("gmail_get_message", { message_id: "abcdef1234567890" })).toBe("abcdef123456");
     expect(summarizeInput("gmail_send_email", { subject: "Weekly update" })).toBe("Weekly update");
+    expect(summarizeInput("gmail_create_draft", { subject: "Draft update" })).toBe("Draft update");
+    expect(summarizeInput("gmail_send_draft", { draft_id: "draft1234567890" })).toBe("draft1234567");
     expect(summarizeInput("google_calendar_list_events", { calendar_id: "primary" })).toBe("primary");
     expect(summarizeInput("google_calendar_list_events", {
       calendar_id: "work",
       time_min: "2026-06-06T00:00:00Z",
     })).toBe("work from 2026-06-06T00:00:00Z");
     expect(summarizeInput("google_calendar_create_event", { summary: "Planning" })).toBe("Planning");
+    expect(summarizeInput("google_calendar_update_event", { summary: "Moved planning" })).toBe("Moved planning");
+    expect(summarizeInput("google_calendar_delete_event", { event_id: "event1234567890" })).toBe("event1234567");
   });
 
   it("returns empty string for unknown tools", () => {

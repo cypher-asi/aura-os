@@ -194,7 +194,10 @@ export function summarizeInput(name: string, input: Record<string, unknown>): st
     case "gmail_get_message":
       return ((input.message_id as string) || "").slice(0, 12);
     case "gmail_send_email":
+    case "gmail_create_draft":
       return ((input.subject as string) || (input.to as string) || "").slice(0, 80);
+    case "gmail_send_draft":
+      return ((input.draft_id as string) || "").slice(0, 12);
     case "google_calendar_list_calendars":
       return "";
     case "google_calendar_list_events": {
@@ -203,7 +206,10 @@ export function summarizeInput(name: string, input: Record<string, unknown>): st
       return timeMin ? `${calendar} from ${timeMin}` : calendar;
     }
     case "google_calendar_create_event":
+    case "google_calendar_update_event":
       return ((input.summary as string) || (input.title as string) || "").slice(0, 80);
+    case "google_calendar_delete_event":
+      return ((input.event_id as string) || "").slice(0, 12);
     default:
       return "";
   }

@@ -14,6 +14,8 @@ import {
 import { isSettingsProviderSelectionEnabled } from "../../shared/lib/featureFlags";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 
+type IntegrationKind = OrgIntegration["kind"];
+
 interface Props {
   integrations: OrgIntegration[];
   busyId: string | null;
@@ -86,14 +88,34 @@ function normalizeProviderConfig(provider: string, values: Record<string, string
 }
 
 function normalizeDraftPayload(draft: IntegrationDraft) {
-  return {
+  const payload: {
+    name: string;
+    provider: string;
+    kind: IntegrationKind;
+    default_model: string | null;
+    provider_config?: Record<string, unknown> | null;
+    api_key?: string | null;
+  } = {
     name: draft.name.trim(),
     provider: draft.provider,
     kind: draft.kind,
     default_model: providerSupportsModel(draft.provider) ? (draft.defaultModel.trim() || null) : null,
-    provider_config: normalizeProviderConfig(draft.provider, draft.providerConfig),
-    api_key: draft.apiKey.trim() || null,
   };
+  payload.provider_config = normalizeProviderConfig(draft.provider, draft.providerConfig);
+  const apiKey = draft.apiKey.trim();
+  if (apiKey) {
+    payload.api_key = apiKey;
+  }
+  return payload;
+}
+
+function normalizeDraftUpdatePayload(draft: IntegrationDraft) {
+  const payload = normalizeDraftPayload(draft);
+  const hasConfigFields = getIntegrationConfigFields(draft.provider).length > 0;
+  if (payload.provider_config == null && !hasConfigFields) {
+    delete payload.provider_config;
+  }
+  return payload;
 }
 
 function providerDescription(provider: string): string {
@@ -227,7 +249,7 @@ export function OrgSettingsIntegrations({
                 {newIsGoogle ? (
                   <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
                     <Text size="xs" variant="muted">
-                      Connect your Google account to use Gmail and Calendar tools in Aura.
+                      Connect your Google account to use Gmail draft, send, and Calendar event tools in Aura.
                     </Text>
                   </div>
                 ) : (
@@ -454,7 +476,7 @@ export function OrgSettingsIntegrations({
                         {isGoogle ? (
                           <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
                             <Text size="xs" variant="muted">
-                              Reconnect your Google account to refresh Gmail and Calendar access for your Aura user.
+                              Reconnect your Google account to refresh Gmail draft, send, and Calendar event access for your Aura user.
                             </Text>
                             <div className={styles.integrationActions}>
                               <Button
@@ -564,7 +586,7 @@ export function OrgSettingsIntegrations({
                               try {
                                 await onUpdate(
                                   integration.integration_id,
-                                  normalizeDraftPayload(draft),
+                                  normalizeDraftUpdatePayload(draft),
                                 );
                               } catch (error) {
                                 setErrorMessage(

@@ -45,9 +45,9 @@ test("Google integration setup screen has a focused OAuth flow", async ({ page }
   await expect(page.getByText("Your Google account", { exact: true })).toBeVisible();
   await expect(page.getByText("Not connected")).toBeVisible();
   await expect(page.getByText("Gmail", { exact: true })).toBeVisible();
-  await expect(page.getByText("Search, read, and send mail from your account")).toBeVisible();
+  await expect(page.getByText("Search, read, draft, and send mail from your account")).toBeVisible();
   await expect(page.getByText("Calendar", { exact: true })).toBeVisible();
-  await expect(page.getByText("List calendars and manage events on your account")).toBeVisible();
+  await expect(page.getByText("List calendars, schedule meetings, and manage events")).toBeVisible();
   await expect(page.getByLabel("Integration name for Google")).toHaveCount(0);
 
   const popupPromise = page.waitForEvent("popup");
