@@ -104,7 +104,11 @@
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
-  min-height: 343px;
+  /* 16:9 video section — height follows the screen width. `border-box` so
+     the ratio (and the inset:0 video) covers the full padded box. */
+  box-sizing: border-box;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
   padding: 53px 43px;
   /* Square corners so the screen's left/right edges sit flush against the
      vertical divider lines top-to-bottom (the quadrant keeps its 14px). */
@@ -362,7 +366,7 @@
   }
 
   .madeForYouDevice .personalAgentDeviceScreen {
-    min-height: 246px;
+    min-height: 0;
     padding: 34px 24px;
   }
 
