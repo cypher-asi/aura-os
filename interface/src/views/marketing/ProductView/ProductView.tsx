@@ -86,7 +86,7 @@ export function ProductView(): ReactNode {
             }
             description={
               <>
-                AURA agents are experts in every field and
+                AURA agents are experts in every field that
                 <br />
                 work while you sleep.
               </>
