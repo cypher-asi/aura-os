@@ -39,7 +39,7 @@
  * ::before/::after so they span the whole device height (screen + label
  * strip + grille) inside the Plate rim. Rather than floating as separate
  * recessed sections, they butt flush against the screen and are split off
- * by a single 1px black top-to-bottom divider line on each panel's
+ * by a single 2px black top-to-bottom divider line on each panel's
  * screen-facing edge.
  */
 .madeForYouDevice .personalAgentDeviceContent {
@@ -52,28 +52,28 @@
   content: "";
   position: absolute;
   top: 0;
-  bottom: 3px;
+  bottom: 0;
   pointer-events: none;
 }
 
 /* Left panel: no fill (the main Plate surface shows through) with just a
-   1px black divider line on its right (screen-facing) edge; outer corners
+   2px black divider line on its right (screen-facing) edge; outer corners
    rounded to hug the Plate rim, inner edge kept square so the divider runs
    straight top to bottom. */
 .madeForYouDevice .personalAgentDeviceContent::before {
   left: 3px;
   width: 105px;
   border-radius: 22px 0 0 22px;
-  background: linear-gradient(to left, #000 0, #000 1px, transparent 1px);
+  background: linear-gradient(to left, #000 0, #000 2px, transparent 2px);
 }
 
-/* Right panel: same width as the left, with the same 1px black divider
+/* Right panel: same width as the left, with the same 2px black divider
    line on its left (screen-facing) edge. */
 .madeForYouDevice .personalAgentDeviceContent::after {
   right: 3px;
   width: 105px;
   border-radius: 0 22px 22px 0;
-  background: linear-gradient(to right, #000 0, #000 1px, transparent 1px);
+  background: linear-gradient(to right, #000 0, #000 2px, transparent 2px);
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
