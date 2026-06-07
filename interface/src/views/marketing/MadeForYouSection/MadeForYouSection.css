@@ -176,18 +176,16 @@
     );
 }
 
-/* Scrolling viewport: a duplicated line stack translated upward on a loop so
-   the feed reads as a continuous live log. */
+/* Typewriter viewport: lines type in from the top and bottom-anchor so the
+   newest output sits near the prompt while older lines scroll off the top as
+   the log grows past the screen height. */
 .madeForYouDevice .madeForYouTerminalScroll {
   position: absolute;
   inset: 16px 16px 36px;
   overflow: hidden;
-}
-
-.madeForYouDevice .madeForYouTerminalTrack {
-  /* Two stacked copies of the line list; translating up by 50% lands the
-     second copy exactly where the first started, so the loop is seamless. */
-  animation: madeForYouTerminalScroll 14s linear infinite;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .madeForYouDevice .madeForYouTerminalLines {
@@ -238,15 +236,6 @@
   animation: madeForYouTerminalBlink 1s steps(1) infinite;
 }
 
-@keyframes madeForYouTerminalScroll {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-50%);
-  }
-}
-
 @keyframes madeForYouTerminalBlink {
   0%,
   50% {
@@ -259,16 +248,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .madeForYouDevice .madeForYouTerminalTrack {
-    animation: none;
-  }
-
   .madeForYouDevice .madeForYouTerminalCursor {
     animation: none;
   }
 }
 
-/* Looping character video filling the hero screen, behind the gloss. */
+/* Scroll-triggered character video filling the hero screen, behind the gloss.
+   Playback is driven by the card's IntersectionObserver (play once on entry,
+   replay on re-entry) rather than a CSS/HTML loop. */
 .madeForYouDevice .personalAgentDeviceVideo {
   position: absolute;
   inset: 0;
