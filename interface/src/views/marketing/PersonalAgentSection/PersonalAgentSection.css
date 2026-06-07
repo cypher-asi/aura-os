@@ -91,6 +91,11 @@
     height 95ms cubic-bezier(0.2, 0, 0, 1);
 }
 
+.personalAgentChatMock textarea {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 .personalAgentChatMockContent {
   padding: 61px 39px;
 }

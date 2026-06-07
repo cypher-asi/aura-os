@@ -57,11 +57,11 @@ afterEach(() => {
 
 describe("ProductView", () => {
   it("streams the 'Delegate everything.' hero headline via the typewriter", () => {
-    // The hero headline now renders through `<TypewriterText />`,
-    // which reveals characters on a 45ms interval. The full literal
-    // string only appears in the DOM after the interval has run for
-    // every character. Advancing fake timers past that threshold
-    // flushes the whole stream in a single `act()` tick.
+    // The hero headline renders through `<TypewriterText />`, which
+    // reveals characters on a 45ms interval. The full literal string
+    // only appears in the DOM after the interval has run for every
+    // character. Advancing fake timers past that threshold flushes the
+    // whole stream in a single `act()` tick.
     vi.useFakeTimers();
     renderProductView();
     act(() => {
@@ -85,40 +85,27 @@ describe("ProductView", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders the '1 COMPUTER = 1 AGENT' section with its artwork", () => {
-    // The section sits between the agents hero and the agent-chat
-    // section. It is a single headline with the neon terminal artwork
-    // stacked underneath.
-    renderProductView();
-    expect(
-      screen.getByRole("heading", { name: /1 COMPUTER = 1 AGENT/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", {
-        name: /A neon outline of a personal computer/i,
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it("renders the personal-agent section between the agents hero and the '1 COMPUTER = 1 AGENT' section", () => {
+  it("renders the personal-agent section after the agents hero", () => {
     // The "An agent for work, love, play." section is inserted after
-    // the agents hero/card row and before the neon-terminal section, so
-    // its headline must precede the "1 COMPUTER = 1 AGENT" headline in
-    // DOM order.
+    // the agents hero/card row, so its headline must precede the
+    // agent-chat section's headline in DOM order.
     renderProductView();
     const personalAgent = screen.getByRole("heading", {
       name: /An agent for work, love, play\./i,
     });
-    const oneComputer = screen.getByRole("heading", {
-      name: /1 COMPUTER = 1 AGENT/i,
+    const agentChat = screen.getByRole("heading", {
+      name: /Chat with your agents/i,
     });
     expect(
-      personalAgent.compareDocumentPosition(oneComputer) &
+      personalAgent.compareDocumentPosition(agentChat) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
-  it("mounts the agent marquee in the orb section with one card per persona", () => {
+  // Temporarily skipped: the `<AgentOrbSection />` (orb + agent marquee)
+  // is commented out of `ProductView` for now, so the marquee no longer
+  // renders here. Re-enable this test when the section is restored.
+  it.skip("mounts the agent marquee in the orb section with one card per persona", () => {
     // The orb + agent marquee moved out of the hero into the
     // standalone `<AgentOrbSection />` (below the agent-chat section),
     // so the strip should still be present on the rendered ProductView.

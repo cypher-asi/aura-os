@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { PhoneShell } from "../PhoneShell";
 import { Section } from "../Section";
+import { CardSection, MetalCard } from "../CardSection";
 import { MockMobileChat, MOBILE_CONVERSATIONS } from "../MockMobileChat";
 import { AGENTS } from "../MockMobileChat/mobile-chat-script";
 import { TextCard } from "../TextCard";
@@ -9,11 +10,17 @@ import "./AgentChatSection.css";
 const HEADLINE_ID = "agentChatSectionHeadline";
 
 /**
- * First themed section built on the shared marketing `<Section />`
- * shell. Mirrors the Apple iPhone 17 hero layout: a centered
- * headline at the top, three phones below it (the middle one
- * larger and lifted forward so it visually overlaps the two side
- * phones), and a writing block at the bottom.
+ * Mirrors the `ExpertiseSection` + `SpecQuadrantSection` and
+ * `PersonalAgentSection` pairing: a compact H2 `<TextCard />` intro
+ * section, then a separate bento section holding the content card.
+ * Splitting them (rather than stacking both in one full-height
+ * section) keeps the H2 block the exact same height as the other H2
+ * intros and lets it center card-to-card between the bento above and
+ * the bento below.
+ *
+ * The bento is a single wide `<MetalCard />` (like the spec content
+ * quadrant) whose media well hosts the three phones and whose copy
+ * block carries the "always on, from anywhere" writing block.
  *
  * Each `PhoneShell` hosts a `MockMobileChat` — a live, looping
  * mobile chat mockup showing the visitor texting one of their AURA
@@ -21,7 +28,9 @@ const HEADLINE_ID = "agentChatSectionHeadline";
  * streamed tool cards on the left). The three phones run three
  * distinct conversation flows from `MOBILE_CONVERSATIONS`, each
  * looping independently, mirroring the desktop landing hero but in
- * a phone-shaped messaging layout.
+ * a phone-shaped messaging layout. The middle (hero) phone is
+ * larger and lifted forward so it visually overlaps the two side
+ * phones.
  *
  * On narrow viewports (<= 768px) `AgentChatSection.css` hides the
  * two side phones so only the centered hero phone remains, which
@@ -32,12 +41,15 @@ export function AgentChatSection(): ReactNode {
   const [leftChat, centerChat, rightChat] = MOBILE_CONVERSATIONS;
 
   return (
-    <Section ariaLabelledBy={HEADLINE_ID} className="agentChatSection">
-      <div className="agentChatSectionInner">
+    <>
+      <Section
+        ariaLabelledBy={HEADLINE_ID}
+        fullHeight={false}
+        className="agentChatIntro"
+      >
         <TextCard
           level="h2"
           id={HEADLINE_ID}
-          className="agentChatSectionHeadlineCard"
           headline={
             <>
               Chat with your agents.
@@ -46,33 +58,39 @@ export function AgentChatSection(): ReactNode {
             </>
           }
         />
-        <div className="agentChatSectionPhones">
-          <PhoneShell
-            size="md"
-            ariaLabel={`Mobile chat with the ${AGENTS[leftChat.agentId].name} agent`}
-          >
-            <MockMobileChat conversation={leftChat} />
-          </PhoneShell>
-          <PhoneShell
-            size="lg"
-            ariaLabel={`Mobile chat with the ${AGENTS[centerChat.agentId].name} agent`}
-          >
-            <MockMobileChat conversation={centerChat} />
-          </PhoneShell>
-          <PhoneShell
-            size="md"
-            ariaLabel={`Mobile chat with the ${AGENTS[rightChat.agentId].name} agent`}
-          >
-            <MockMobileChat conversation={rightChat} />
-          </PhoneShell>
-        </div>
-        <p className="agentChatSectionDescription">
-          Your AURA agents are always on. Pick up a conversation on
-          your phone, your laptop, or your desktop — they remember
-          everything and bring the same tools with them, wherever
-          you are.
-        </p>
-      </div>
-    </Section>
+      </Section>
+
+      <CardSection ariaLabel="Chat with your agents from anywhere">
+        <MetalCard
+          wide
+          transparent
+          align="center"
+          className="agentChatCard"
+          description="Your AURA agents are always on. Pick up a conversation on your phone, your laptop, or your desktop. They remember everything and bring the same tools with them."
+          media={
+            <div className="agentChatSectionPhones">
+              <PhoneShell
+                size="md"
+                ariaLabel={`Mobile chat with the ${AGENTS[leftChat.agentId].name} agent`}
+              >
+                <MockMobileChat conversation={leftChat} />
+              </PhoneShell>
+              <PhoneShell
+                size="lg"
+                ariaLabel={`Mobile chat with the ${AGENTS[centerChat.agentId].name} agent`}
+              >
+                <MockMobileChat conversation={centerChat} />
+              </PhoneShell>
+              <PhoneShell
+                size="md"
+                ariaLabel={`Mobile chat with the ${AGENTS[rightChat.agentId].name} agent`}
+              >
+                <MockMobileChat conversation={rightChat} />
+              </PhoneShell>
+            </div>
+          }
+        />
+      </CardSection>
+    </>
   );
 }

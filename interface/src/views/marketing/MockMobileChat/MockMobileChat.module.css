@@ -16,7 +16,11 @@
   flex-direction: column;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.92);
-  background: linear-gradient(180deg, #16161c 0%, #0c0c10 100%);
+  /* Transparent: the elements (avatar, bubbles, input field, send
+     button) sit directly on the phone render's screen. The header and
+     input bars carry no surface of their own either (no bg / border),
+     so the whole chat reads as floating on the device screen. */
+  background: transparent;
 }
 
 /*
@@ -30,8 +34,6 @@
   align-items: center;
   gap: 8px;
   padding: 16px 12px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.02);
   flex-shrink: 0;
 }
 
@@ -205,18 +207,23 @@
 }
 
 .inputBar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.02);
   flex-shrink: 0;
 }
 
 .inputField {
   flex: 1;
-  padding: 6px 10px;
+  /* `margin-right` reserves the footprint the send button used to
+     occupy as a flex sibling (button + gap), so the field keeps the
+     exact same width now that the button is absolutely positioned.
+     The extra right padding keeps the text clear of the button, which
+     sits inside the field's right end (below). */
+  margin-right: 32px;
+  padding: 6px 36px 6px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.38);
@@ -243,13 +250,24 @@
 }
 
 .sendButton {
+  /* Embedded at the far-right edge inside the input pill. Anchored to
+     `.inputBar` (not `.inputField`) so the field's `overflow: hidden`
+     doesn't clip the round button. The field reserves space for it via
+     its right padding, so the field keeps its full width. */
+  position: absolute;
+  right: 46px;
+  /* Center within the bar's CONTENT box (between its 8px top / 14px
+     bottom padding), so the button lines up with the input field
+     rather than the bar's full height — which sat it ~3px low. */
+  top: 8px;
+  bottom: 14px;
+  margin-block: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  flex-shrink: 0;
   color: #0a0a0c;
   background: var(--agent-color, #6366f1);
   transition: transform 120ms ease-out;

@@ -41,6 +41,14 @@
   padding: 50px;
 }
 
+/* Transparent variant: no metal gradient fill, so the section surface
+   shows through. The inline gradient is already omitted by `MetalCard`
+   when `transparent`; this keeps the cell explicitly background-free in
+   case any shared default lands on `.metalCard` later. */
+.metalCardTransparent {
+  background: transparent;
+}
+
 /* Span both columns; height is unchanged (stays the regular 626px). */
 .metalCardWide {
   grid-column: 1 / -1;

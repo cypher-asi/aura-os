@@ -50,6 +50,19 @@ describe("TypewriterText", () => {
     expect(settledCaret?.getAttribute("data-state")).toBe("hidden");
   });
 
+  it("omits the caret entirely when showCaret is false", () => {
+    vi.useFakeTimers();
+    render(<TypewriterText text="hi" speedMs={10} showCaret={false} />);
+    // No trailing caret span is rendered at the start of the stream...
+    expect(document.querySelector("span > span")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(40);
+    });
+    // ...nor after the stream completes (the marketing hero look).
+    expect(screen.getByText("hi")).toBeInTheDocument();
+    expect(document.querySelector("span > span")).toBeNull();
+  });
+
   it("streams characters even when prefers-reduced-motion matches", () => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,

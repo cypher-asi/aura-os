@@ -6,7 +6,28 @@ import { MockAuraDesktop } from "../MockAuraDesktop";
 import { PageHero } from "../PageHero";
 import { ProductCallToAction } from "../ProductCallToAction";
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
+import { TypewriterText } from "../../public-chat/TypewriterText";
 import styles from "./CodeView.module.css";
+
+/*
+ * The hero copy is hoisted into a module-level constant because it
+ * is referenced in TWO places that must stay byte-identical:
+ *
+ *   1. The `text` prop on `<TypewriterText />`, which drives the
+ *      per-character reveal.
+ *   2. The `data-text` attribute on the `.headlineReserve` wrapper,
+ *      which the CSS rule mirrors into a `::before` ghost via
+ *      `content: attr(data-text)` so the parent flex column reserves
+ *      the FINAL headline's width/height from frame one. Without
+ *      that reservation the description + headlineCta + mock desktop
+ *      below the headline would shift downward each time a
+ *      newly-typed character forces an extra line wrap under the
+ *      `clamp(26px, 4.3vw, 48px)` type ramp.
+ *
+ * Pulling the literal into a constant means a future copy change
+ * cannot drift the ghost and the streamed text out of sync.
+ */
+const HERO_HEADLINE = "Code while you sleep.";
 
 /**
  * Marketing `/code` page. Mirrors the public landing's "hero text on
@@ -37,7 +58,18 @@ export function CodeView(): ReactNode {
       <MarketingFirstScreen
         hero={
           <PageHero
-            headline="Code while you sleep."
+            headline={
+              <span
+                className={styles.headlineReserve}
+                data-text={HERO_HEADLINE}
+              >
+                <TypewriterText
+                  text={HERO_HEADLINE}
+                  speedMs={45}
+                  showCaret={false}
+                />
+              </span>
+            }
             description="A frontier coding harness designed for security, automation and verifiability that is 100% open source."
             preview={null}
             centered

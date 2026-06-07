@@ -1,7 +1,6 @@
 import { type ReactNode } from "react";
 import { Section } from "../Section";
 import { TextCard } from "../TextCard";
-import { ExpertiseTabs } from "./ExpertiseTabs";
 import "./ExpertiseSection.css";
 
 const HEADLINE_ID = "expertiseSectionHeadline";
@@ -28,12 +27,12 @@ export function ExpertiseSection(): ReactNode {
         headline="Expertise without ego."
         subhead={
           <>
-            AURA agents are experts in every discipline&mdash;from coding to
-            science to creativity.
+            AURA agents are experts in every discipline.
+            <br />
+            From coding to science to creativity.
           </>
         }
       />
-      <ExpertiseTabs />
     </Section>
   );
 }

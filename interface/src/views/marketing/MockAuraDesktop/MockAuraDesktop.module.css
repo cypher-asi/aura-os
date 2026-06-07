@@ -178,7 +178,10 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: var(--color-sidebar-bg);
+  /* Match the right sidekick exactly: same surface fill and a mirrored
+     1px seam border on the inner edge, so the left and right flanking
+     panels read as the same kind of panel. */
+  background: var(--color-bg);
   border-right: 1px solid var(--color-border-main-panel);
   overflow: hidden;
 }

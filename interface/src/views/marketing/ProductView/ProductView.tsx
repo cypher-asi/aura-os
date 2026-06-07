@@ -77,7 +77,11 @@ export function ProductView(): ReactNode {
                 className={styles.headlineReserve}
                 data-text={HERO_HEADLINE}
               >
-                <TypewriterText text={HERO_HEADLINE} speedMs={45} />
+                <TypewriterText
+                  text={HERO_HEADLINE}
+                  speedMs={45}
+                  showCaret={false}
+                />
               </span>
             }
             description="AURA agents are experts in every field and work while you sleep."

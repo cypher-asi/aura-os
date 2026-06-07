@@ -397,8 +397,18 @@ function ComposeInput({ prompt, active, onSent }: ComposeInputProps): ReactNode 
         className={`${styles.sendButton} ${isSending ? styles.sendButtonActive : ""}`}
         aria-hidden="true"
       >
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none">
-          <path d="M4 12l16-8-6 16-3-7-7-1z" fill="currentColor" />
+        <svg
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 19V5" />
+          <path d="M6 11l6-6 6 6" />
         </svg>
       </span>
     </div>

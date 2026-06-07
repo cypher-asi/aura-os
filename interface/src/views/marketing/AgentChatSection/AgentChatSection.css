@@ -1,37 +1,63 @@
 /*
  * Internal layout for the agent-chat section. The outer chrome
  * (background tint, padding, viewport-height reservation, column
- * cap) is owned by the shared `<Section />` shell — this file only
- * controls how the headline / phones / description stack inside
- * that shell.
+ * cap) is owned by the shared `<Section />` / `<CardSection />`
+ * shells — this file only controls the H2 intro spacing and how the
+ * three phones compose inside the bento card's media well.
  */
+
 /*
- * Anchor this section's content to the TOP of its full-height band
- * instead of vertically centering it (the shared `<Section />` shell
- * centers full-height content by default). This puts the h2 headline
- * at the top of the section rather than floating mid-viewport.
+ * H2 intro band. Both this intro and the bento below it (and the
+ * `PersonalAgentSection` bento above) carry the SAME symmetric, tight
+ * padding (`clamp(8px, 1.5vh, 20px)`), so the intro's `.textCardH2`
+ * band — and thus its centered text — lands exactly midway between the
+ * bento above and the bento below, regardless of viewport. Two-class
+ * specificity overrides the shell's default 80px.
  */
-.agentChatSection[data-full-height="true"] {
+.section.agentChatIntro {
+  padding-top: clamp(8px, 1.5vh, 20px);
+  padding-bottom: clamp(8px, 1.5vh, 20px);
+}
+
+/* Pin the phones to the TOP of the card's media well (the shared well
+   centers vertically) and let it spill: the hero phone is lifted with
+   `translateY(-24px)` (see `PhoneShell.css`) so its top edge pokes above
+   its layout box, and the shared `.metalCardMedia` would otherwise clip
+   that with `overflow: hidden`. Pinning to the top makes the phone-top a
+   fixed reference (independent of the card's overall height) so the H2
+   above can be centered against it. */
+.agentChatCard .metalCardMedia {
   align-items: flex-start;
+  overflow: visible;
 }
 
-.agentChatSectionInner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 48px;
-  text-align: center;
+/* Center the H2 intro between the previous section card and the top of
+   the (hero) phone, while keeping the H2 band height.
+ *
+ * The intro and BOTH bentos (the one above and this phone card) are
+ * `CardSection`s carrying the same symmetric `clamp(8px, 1.5vh, 20px)`
+ * padding, so the whitespace above the H2 band (prev-card bottom + intro
+ * top) already mirrors the whitespace below it (intro bottom + this
+ * card's section top). The only asymmetry is the hero phone's
+ * `translateY(-24px)` lift, so we set this card's TOP padding to 24px to
+ * cancel it exactly: the lifted hero top then lands flush with the card's
+ * top edge, making the phone-top sit at the same offset below the intro
+ * that the previous card sits above it. The H2 is centered between the
+ * two. Desktop-only; two-class specificity. */
+@media (min-width: 769px) {
+  .metalCard.agentChatCard {
+    min-height: 975px;
+    padding-top: 30px;
+    padding-inline: calc(10.16vw + 43px);
+  }
 }
 
-/*
- * The headline is rendered via the shared `<TextCard level="h2" />`
- * component (typography lives in `TextCard.css`). Here we only neutralize
- * the TextCard's tall band: this title sits inside the section stack above
- * the phones, so it should read as a tight title rather than reserving the
- * full standalone h2 band height.
- */
-.agentChatSectionHeadlineCard {
-  min-height: auto;
+/* Mobile shows only the (solo) hero phone, which drops its lift but is
+   still ~500px tall — give the card enough room so it isn't cramped. */
+@media (max-width: 768px) {
+  .metalCard.agentChatCard {
+    min-height: 775px;
+  }
 }
 
 /*
@@ -74,38 +100,14 @@
 }
 
 .agentChatSectionPhones > :first-child {
-  margin-right: clamp(-80px, -6vw, -40px);
+  margin-right: clamp(-100px, -7.5vw, -50px);
 }
 
 .agentChatSectionPhones > :last-child {
-  margin-left: clamp(-80px, -6vw, -40px);
-}
-
-/*
- * Match the hero description's larger type ramp. The PageHero
- * centered-mode description (`.pageHeroDescription.pageHeroDescriptionInline`
- * in `interface/src/views/marketing/PageHero/PageHero.css`) renders
- * the "AURA agents run on a secure virtual machine..." copy at
- * `calc(var(--text-lg) * 1.5)` — the larger paragraph size that
- * the marketing surface uses immediately under the hero headline.
- * We mirror it here so the agent-chat section's writing block
- * reads at the same scale, with the same `#a3a3a8` secondary text
- * tone the hero already publishes via `.productView`.
- */
-.agentChatSectionDescription {
-  margin: 0;
-  font-size: calc(var(--text-lg) * 1.5);
-  line-height: var(--leading-relaxed, 1.6);
-  color: var(--color-text-secondary);
-  max-width: min(720px, 100%);
-  text-wrap: balance;
+  margin-left: clamp(-100px, -7.5vw, -50px);
 }
 
 @media (max-width: 768px) {
-  .agentChatSectionInner {
-    gap: 32px;
-  }
-
   /*
    * Hide the two side phones on narrow viewports. The desktop
    * 3-phone composition crushes at phone widths — each device

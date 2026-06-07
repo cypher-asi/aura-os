@@ -20,48 +20,39 @@ interface ExpertiseTab {
 const EXPERTISE_TABS: readonly ExpertiseTab[] = [
   {
     label: "General",
-    blurb:
-      "Reason across any domain, break ambiguous goals into steps, and adapt to whatever you throw at it.",
+    blurb: "Reason through any task and turn ambiguity into action.",
   },
   {
     label: "Coding",
-    blurb:
-      "Ship production features end to end — read the repo, write the code, run the tests, open the PR.",
+    blurb: "Ship features from repo context to tested PRs.",
   },
   {
     label: "Design",
-    blurb:
-      "Move from rough idea to polished interface with a sharp eye for layout, type, and hierarchy.",
+    blurb: "Turn rough ideas into polished interfaces.",
   },
   {
     label: "Creative",
-    blurb:
-      "Brainstorm campaigns, draft copy, and explore concepts that actually sound like you.",
+    blurb: "Brainstorm sharper campaigns, concepts, and copy.",
   },
   {
     label: "Video",
-    blurb:
-      "Plan, cut, and caption footage into finished clips ready for any platform.",
+    blurb: "Plan, edit, and caption clips for every platform.",
   },
   {
     label: "Social",
-    blurb:
-      "Plan calendars, draft posts, and keep every channel on-voice and on-schedule.",
+    blurb: "Draft posts and calendars that stay on voice.",
   },
   {
     label: "Accounting",
-    blurb:
-      "Reconcile the books, categorize transactions, and surface the numbers that matter.",
+    blurb: "Reconcile books and surface the numbers that matter.",
   },
   {
     label: "Legal",
-    blurb:
-      "Review contracts, flag risky clauses, and summarize obligations in plain language.",
+    blurb: "Review contracts and explain obligations clearly.",
   },
   {
     label: "More",
-    blurb:
-      "Plus dozens more disciplines — whatever the work demands, there's an expert agent for it.",
+    blurb: "Dozens more expert agents for whatever work demands.",
   },
 ];
 

@@ -211,30 +211,37 @@ void main() {
 
   // Polar domain: low frequency along the angle (broad lobes) and along
   // the radius (a few concentric bands), so the whole pattern is built
-  // from big shapes rather than tiny speckle.
-  vec2 polar = vec2(angle * 1.4, r * 2.2);
+  // from big shapes rather than tiny speckle. The angle is swept by time
+  // (the lobes rotate around the disc) and the radius scrolls inward, so
+  // the whole field is in constant, visible motion rather than a static
+  // gradient that only shimmers at the rim.
+  vec2 polar = vec2(angle * 1.5 + t * 0.45, r * 2.4 - t * 0.6);
 
   // Two cheap warp layers that swirl the bands and drift them outward
   // from the center, so the field flows radially.
   vec2 q = vec2(
-    fbm(polar + vec2(0.0, -t * 0.30)),
-    fbm(polar + vec2(3.7, 1.2) + vec2(t * 0.12, -t * 0.22))
+    fbm(polar + vec2(0.0, t * 0.5)),
+    fbm(polar + vec2(3.7, 1.2) - vec2(t * 0.4, 0.0))
   );
-  float flow = fbm(polar + 2.0 * q + vec2(0.6 * sin(t * 0.25), -t * 0.18));
+  float flow = fbm(polar + 2.5 * q);
 
-  float v = clamp(flow * 1.35 + 0.12 * sin(t * 0.4 + r * 3.0), 0.0, 1.0);
+  float v = clamp(flow * 1.4 + 0.12 * sin(t * 0.6 + r * 3.0), 0.0, 1.0);
   vec3 col = palette(v);
 
   // Glowing rim: a bright ring that peaks near the disc edge so the
-  // circle reads as an emissive, edge-lit well.
-  float rim = smoothstep(0.55, 0.98, r) * (0.7 + 0.3 * sin(t * 1.1 + angle * 2.0));
-  col += vec3(1.0, 0.86, 0.72) * rim * 0.55;
+  // circle reads as an emissive, edge-lit well. Modulated by the moving
+  // flow (not just a clock) so the ring brightness travels as the bands
+  // sweep past, reinforcing the sense of motion.
+  float rim =
+    smoothstep(0.55, 0.98, r) * (0.55 + 0.45 * flow);
+  col += vec3(1.0, 0.86, 0.72) * rim * 0.5;
 
   // Radial vignette: darken toward the core and lift toward the rim so
-  // the well looks sunk into the surface (inset), then a soft emissive
-  // breathing so the whole field shimmers as it flows.
-  col *= mix(0.42, 1.05, smoothstep(0.0, 0.85, r));
-  col *= 0.85 + 0.4 * flow;
+  // the well looks sunk into the surface (inset). Keep the core lift high
+  // enough that the moving bands stay clearly visible all the way in
+  // rather than fading to a static dark center.
+  col *= mix(0.6, 1.05, smoothstep(0.0, 0.9, r));
+  col *= 0.78 + 0.55 * flow;
 
   // Feather alpha to 0 at the disc edge; CSS also clips to the circle.
   float alpha = smoothstep(1.0, 0.86, r);

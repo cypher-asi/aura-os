@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { beforeAll, describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CodeView } from "./CodeView";
@@ -41,9 +41,23 @@ function renderCodeView() {
   );
 }
 
+afterEach(() => {
+  // Restore real timers in case a test installed `vi.useFakeTimers()`.
+  vi.useRealTimers();
+});
+
 describe("CodeView", () => {
-  it("leads with the hero headline above the mock desktop", () => {
+  it("streams the 'Code while you sleep.' hero headline via the typewriter", () => {
+    // The hero headline renders through `<TypewriterText />`, which
+    // reveals characters on a 45ms interval. The full literal string
+    // only appears in the DOM after the interval has run for every
+    // character. Advancing fake timers past that threshold flushes the
+    // whole stream in a single `act()` tick.
+    vi.useFakeTimers();
     renderCodeView();
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
     expect(
       screen.getByRole("heading", { name: /code while you sleep/i }),
     ).toBeInTheDocument();

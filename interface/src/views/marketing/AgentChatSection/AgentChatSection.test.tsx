@@ -42,11 +42,9 @@ describe("AgentChatSection", () => {
     expect(phones[2]?.classList.contains("phoneShellHero")).toBe(false);
   });
 
-  it("renders a description paragraph below the phones", () => {
+  it("renders the description copy inside the content card", () => {
     const { container } = render(<AgentChatSection />);
-    const description = container.querySelector(
-      ".agentChatSectionDescription",
-    );
+    const description = container.querySelector(".metalCardDesc");
     expect(description).not.toBeNull();
     expect(description?.textContent ?? "").toMatch(/AURA agents/i);
   });

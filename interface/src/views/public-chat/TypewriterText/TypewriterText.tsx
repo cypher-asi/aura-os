@@ -35,6 +35,13 @@ interface TypewriterTextProps {
    * the rewind reads as a quick backspace rather than a second reveal.
    */
   readonly eraseMs?: number;
+  /**
+   * Whether to render the trailing block caret while the text streams.
+   * Defaults to `true` (the chat-bubble / DM-window look). The marketing
+   * hero headlines (`/agents`, `/code`) pass `false` so the copy types
+   * in cleanly with no blinking square trailing it.
+   */
+  readonly showCaret?: boolean;
 }
 
 /**
@@ -70,6 +77,7 @@ export function TypewriterText({
   phrases,
   holdMs = 1200,
   eraseMs = 25,
+  showCaret = true,
 }: TypewriterTextProps): ReactNode {
   const isLoop = Boolean(phrases && phrases.length > 0);
   // In loop mode the visible string is driven entirely by the loop
@@ -165,11 +173,13 @@ export function TypewriterText({
   return (
     <span className={styles.typewriter}>
       {visibleText}
-      <span
-        className={`${styles.caret} ${isComplete ? styles.caretHidden : ""}`}
-        data-state={isComplete ? "hidden" : "blinking"}
-        aria-hidden="true"
-      />
+      {showCaret ? (
+        <span
+          className={`${styles.caret} ${isComplete ? styles.caretHidden : ""}`}
+          data-state={isComplete ? "hidden" : "blinking"}
+          aria-hidden="true"
+        />
+      ) : null}
     </span>
   );
 }

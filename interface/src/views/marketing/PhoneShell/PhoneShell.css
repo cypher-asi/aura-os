@@ -17,8 +17,8 @@
 .phoneShell {
   position: relative;
   flex-shrink: 0;
-  width: clamp(180px, 22vw, 240px);
-  aspect-ratio: 492 / 876;
+  width: clamp(225px, 27.5vw, 300px);
+  aspect-ratio: 501 / 881;
   /* Establish a stacking context per phone (z-index:0) so the side
      phones' image/screen layers stay contained below them. Without an
      explicit z-index here the shell would be `position: relative;
@@ -29,11 +29,11 @@
 }
 
 .phoneShellHero {
-  width: clamp(220px, 26vw, 280px);
+  width: clamp(275px, 32.5vw, 350px);
   /* Lift the centered phone forward so it visually overlaps the two
      side phones, and raise it above their stacking contexts so it
      paints IN FRONT — the side phones tuck behind it. */
-  transform: translateY(-24px);
+  transform: translateY(-30px);
   z-index: 2;
 }
 
@@ -53,24 +53,26 @@
   pointer-events: none;
   user-select: none;
   z-index: 1;
-  filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.6))
-    drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 23px 33px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 8px 13px rgba(0, 0, 0, 0.45));
 }
 
 /*
- * Screen overlay — positioned to the render's matte screen rectangle
- * (measured against the cropped image). `overflow: hidden` clips the
- * mock UI to the slightly-rounded screen corners. The right inset is
- * larger than the left because the render's side button extends the
- * crop's right edge. No background here: the `MockMobileChat` mock
- * paints its own (`position: absolute; inset: 0`).
+ * Screen overlay — positioned to the render's matte screen rectangle.
+ * The screen glass (measured on the 501x881 cropped render) runs from
+ * x22 to x480 and y20 to y840, and is horizontally centered on the
+ * image, so the left/right insets are SYMMETRIC (~4.3% each): the mock
+ * UI both centers on the glass and spans it edge-to-edge. `overflow:
+ * hidden` clips the mock UI to the slightly-rounded screen corners. No
+ * background here: the `MockMobileChat` mock paints its own
+ * (`position: absolute; inset: 0`).
  */
 .phoneShellScreen {
   position: absolute;
-  top: 5.3%;
-  bottom: 3.4%;
-  left: 4.1%;
-  right: 9.8%;
+  top: 2.6%;
+  bottom: 4.6%;
+  left: 4.3%;
+  right: 4.3%;
   overflow: hidden;
   border-radius: 6%;
   z-index: 2;
@@ -128,6 +130,6 @@
    */
   .phoneShellHero {
     transform: none;
-    width: clamp(220px, 60vw, 280px);
+    width: clamp(275px, 75vw, 350px);
   }
 }

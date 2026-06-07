@@ -132,11 +132,13 @@
 .expertiseTabsPanelItem {
   grid-area: 1 / 1;
   margin: 0;
+  overflow: hidden;
   font-size: 15px;
   line-height: var(--leading-relaxed, 1.6);
   color: var(--color-text-secondary);
   text-align: center;
-  text-wrap: balance;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Inactive blurbs stay in flow (so the grid cell keeps the tallest
