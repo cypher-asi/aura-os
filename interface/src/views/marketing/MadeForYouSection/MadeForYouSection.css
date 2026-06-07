@@ -474,12 +474,13 @@
  *   1.1547 = 2 / sqrt(3); the half-cell / 0.577 offset hex-packs the rows.
  */
 .madeForYouDevice .personalAgentDeviceHexMesh {
-  --hole: 5px;
+  --hole: 3.5px;
   --cell: 16px;
   height: 79px;
   /* Padding step: margin reveals the Plate surface around the mesh. */
   margin: 12px;
   border-radius: 10px;
+  border: 2px solid transparent;
   background-color: #2a2c31;
   background-image:
     radial-gradient(
@@ -492,17 +493,27 @@
       #050505 var(--hole),
       transparent calc(var(--hole) + 0.7px)
     ),
-    linear-gradient(180deg, #6a6e76 0%, #44474d 55%, #2a2c31 100%);
+    radial-gradient(ellipse at center, #6a6e76 0%, #44474d 55%, #2a2c31 100%),
+    linear-gradient(180deg, #8a8e96 0%, #4a4d53 50%, #26282d 100%);
   background-size:
     var(--cell) calc(var(--cell) * 1.1547),
     var(--cell) calc(var(--cell) * 1.1547),
+    100% 100%,
     100% 100%;
   background-position:
     0 0,
     calc(var(--cell) / 2) calc(var(--cell) * 0.577),
+    0 0,
     0 0;
+  /* Mesh layers fill the padding box; the final linear gradient paints the
+     border box so it reads as a metallic gradient border around the mesh. */
+  background-origin: padding-box, padding-box, padding-box, border-box;
+  background-clip: padding-box, padding-box, padding-box, border-box;
   box-shadow:
+    inset 0 0 6px rgba(0, 0, 0, 0.55),
     inset 0 1px 2px rgba(0, 0, 0, 0.6),
+    inset 1px 0 2px rgba(0, 0, 0, 0.45),
+    inset -1px 0 2px rgba(0, 0, 0, 0.45),
     inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
