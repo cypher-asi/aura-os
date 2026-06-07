@@ -39,9 +39,8 @@
  * ::before/::after so they span the whole device height (screen + label
  * strip + grille) inside the Plate rim. Rather than floating as separate
  * recessed sections, they butt flush against the screen and are split off
- * by a top-to-bottom divider line that reuses the Plate's 3-ring border
- * cross-section (gradient line / 2px black / gradient line) on each
- * panel's screen-facing edge.
+ * by a single 1px black top-to-bottom divider line on each panel's
+ * screen-facing edge.
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
@@ -57,42 +56,24 @@
   pointer-events: none;
 }
 
-/* Left panel: no fill (the main Plate surface shows through) with just the
-   3-border divider line on its right (screen-facing) edge; outer corners
+/* Left panel: no fill (the main Plate surface shows through) with just a
+   1px black divider line on its right (screen-facing) edge; outer corners
    rounded to hug the Plate rim, inner edge kept square so the divider runs
    straight top to bottom. */
 .madeForYouDevice .personalAgentDeviceContent::before {
   left: 3px;
   width: 105px;
   border-radius: 22px 0 0 22px;
-  background: linear-gradient(
-    to left,
-    rgba(102, 106, 114, 0.75) 0,
-    rgba(102, 106, 114, 0.75) 1px,
-    #000 1px,
-    #000 3px,
-    rgba(102, 106, 114, 0.75) 3px,
-    rgba(102, 106, 114, 0.75) 4px,
-    transparent 4px
-  );
+  background: linear-gradient(to left, #000 0, #000 1px, transparent 1px);
 }
 
-/* Right panel: same width as the left, with the same 3-border divider
+/* Right panel: same width as the left, with the same 1px black divider
    line on its left (screen-facing) edge. */
 .madeForYouDevice .personalAgentDeviceContent::after {
   right: 3px;
   width: 105px;
   border-radius: 0 22px 22px 0;
-  background: linear-gradient(
-    to right,
-    rgba(102, 106, 114, 0.75) 0,
-    rgba(102, 106, 114, 0.75) 1px,
-    #000 1px,
-    #000 3px,
-    rgba(102, 106, 114, 0.75) 3px,
-    rgba(102, 106, 114, 0.75) 4px,
-    transparent 4px
-  );
+  background: linear-gradient(to right, #000 0, #000 1px, transparent 1px);
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
