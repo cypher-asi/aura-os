@@ -89,6 +89,49 @@ test("connected Google integration clearly shows account, capabilities, and reco
   });
 });
 
+test("saving a connected Google integration preserves OAuth fields", async ({
+  page,
+}) => {
+  await mockAuthenticatedApp(page, {
+    integrations: [googleIntegration],
+    lastAppId: "integrations",
+  });
+
+  let updateBody: Record<string, unknown> | null = null;
+  await page.route("**/api/orgs/org-1/integrations/int-google-1", async (route) => {
+    if (route.request().method() !== "PUT") {
+      await route.fallback();
+      return;
+    }
+
+    updateBody = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...googleIntegration,
+        name: String(updateBody?.name ?? googleIntegration.name),
+        updated_at: "2026-06-06T02:00:00.000Z",
+      }),
+    });
+  });
+
+  await page.goto("/integrations/google");
+
+  await page.getByLabel("Integration name for Google").fill("My Google");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await expect
+    .poll(() => updateBody)
+    .toEqual({
+      name: "My Google",
+      provider: "google",
+      kind: "workspace_integration",
+      default_model: null,
+    });
+  await expect(page.getByText("google-user@example.com").first()).toBeVisible();
+});
+
 test("chat renders Google Gmail and Calendar tool usage with readable labels", async ({
   page,
 }, testInfo) => {
