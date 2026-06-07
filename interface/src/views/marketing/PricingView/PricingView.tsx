@@ -2,9 +2,20 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
+import { TypewriterText } from "../../public-chat/TypewriterText";
+import { PageHero } from "../PageHero";
 import "./PricingView.css";
 
 type BillingCycle = "monthly" | "yearly";
+
+/*
+ * Hoisted so the streamed `text` and the `data-text` layout-reservation
+ * ghost stay byte-identical (mirrors the `/agents` + `/code` heroes). The
+ * `.pricingHeadlineReserve` ::before mirrors this string so the description +
+ * CTA below the headline don't shift as characters type in.
+ */
+const HERO_HEADLINE = "Starting at free.";
 
 interface Plan {
   readonly name: string;
@@ -78,36 +89,52 @@ export function PricingView(): ReactNode {
   return (
     <section className="pricingPage">
       <div className="pricingPageContent">
-        <header className="pricingPageHeader">
-          <h1 className="pricingPageTitle">Pricing</h1>
-          <div
-            className="pricingToggle"
-            role="tablist"
-            aria-label="Billing cycle"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={billingCycle === "monthly"}
-              className={`pricingToggleButton${billingCycle === "monthly" ? " pricingToggleButtonActive" : ""}`}
-              onClick={() => setBillingCycle("monthly")}
-            >
-              Monthly
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={billingCycle === "yearly"}
-              className={`pricingToggleButton${billingCycle === "yearly" ? " pricingToggleButtonActive" : ""}`}
-              onClick={() => setBillingCycle("yearly")}
-            >
-              Yearly
-            </button>
-          </div>
-        </header>
+        <div className="pricingHeroBand">
+          <PageHero
+            centered
+            preview={null}
+            headline={
+              <span className="pricingHeadlineReserve" data-text={HERO_HEADLINE}>
+                <TypewriterText
+                  text={HERO_HEADLINE}
+                  speedMs={45}
+                  showCaret={false}
+                />
+              </span>
+            }
+            description="Start with local open source models for free, then pay only for the frontier models you use."
+            headlineCta={<CreateAgentButton source="pricing_hero" />}
+          />
+        </div>
 
         <div className="pricingPlansSection">
-          <p className="pricingPlansLabel">Individual Plans</p>
+          <div className="pricingPlansSectionHeader">
+            <p className="pricingPlansLabel">Individual Plans</p>
+            <div
+              className="pricingToggle"
+              role="tablist"
+              aria-label="Billing cycle"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={billingCycle === "monthly"}
+                className={`pricingToggleButton${billingCycle === "monthly" ? " pricingToggleButtonActive" : ""}`}
+                onClick={() => setBillingCycle("monthly")}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={billingCycle === "yearly"}
+                className={`pricingToggleButton${billingCycle === "yearly" ? " pricingToggleButtonActive" : ""}`}
+                onClick={() => setBillingCycle("yearly")}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
           <div className="pricingPlansGrid">
             {PLANS.map((plan) => {
               const price =

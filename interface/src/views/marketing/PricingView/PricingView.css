@@ -2,7 +2,16 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /*
+   * Top-anchored (not vertically centered) so the hero headline starts
+   * at the SAME top vertical position as the `/code` + `/agents` first
+   * screens. Those pages put their `PageHero` inside
+   * `MarketingFirstScreen`, whose `.firstScreen` wrapper uses this exact
+   * `clamp(12px, 2vh, 32px)` top padding above a 50vh hero band; matching
+   * the padding + band (see `.pricingHeroBand` below) lands the pricing
+   * headline on the same line as the Code/Agents headlines.
+   */
+  justify-content: flex-start;
   min-height: 100%;
   /*
    * Horizontal padding tracks the sibling public marketing pages
@@ -11,7 +20,7 @@
    * `clamp(32px, 5vw, 72px)` grew the gutter to ~51px at ~1024px, which
    * squeezed the column ~38px narrower than /feedback at the same size.
    */
-  padding: clamp(48px, 8vh, 88px) 32px;
+  padding: clamp(12px, 2vh, 32px) 32px clamp(48px, 8vh, 88px);
   box-sizing: border-box;
   background:
     radial-gradient(
@@ -36,22 +45,66 @@
   gap: 36px;
 }
 
-.pricingPageHeader {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 18px;
-  text-align: center;
+/*
+ * Hero text band, ported from `MarketingFirstScreen.module.css`'s
+ * `.heroBand` so the pricing headline sits in the same vertically-
+ * centered ~50vh band the `/code` + `/agents` first screens use. This
+ * is what makes the pricing `<h1>` (rendered through the shared
+ * `PageHero` component, with identical text sizing) land at the same
+ * on-screen vertical position as those pages.
+ */
+.pricingHeroBand {
+  display: grid;
+  place-items: center;
+  min-height: clamp(280px, 50vh, 560px);
+  position: relative;
+  z-index: 1;
 }
 
-.pricingPageTitle {
-  margin: 0;
-  font-size: clamp(44px, 6vw, 66px);
-  font-weight: 400;
-  line-height: 0.95;
-  letter-spacing: -0.05em;
-  color: #f4f3ef;
+/*
+ * Neutralize `PageHero`'s `centered` full-body-height layout so it sits
+ * compactly inside `.pricingHeroBand` (mirrors the equivalent overrides
+ * in `MarketingFirstScreen.module.css`). Without this the centered hero
+ * reserves a whole viewport height and pushes the plans grid far below
+ * the fold. The background is made transparent so the page's blue
+ * gradient shows through instead of `PageHero`'s own opaque fill.
+ */
+.pricingHeroBand .pageHero.pageHeroCentered {
+  min-height: 0;
+  width: 100%;
+  background: transparent;
+}
+
+.pricingHeroBand .pageHeroContentCentered {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding-block: 0;
+}
+
+/*
+ * Layout reservation for the typewriter headline (mirrors `.headlineReserve`
+ * on the /agents + /code heroes). The hidden `::before` ghost paints the
+ * final headline via `content: attr(data-text)` so the headline box reserves
+ * its full size from frame one; the streamed `<TypewriterText>` span is laid
+ * over it absolutely, so the description + CTA below never shift as characters
+ * type in.
+ */
+.pricingHeadlineReserve {
+  display: inline-block;
+  position: relative;
+}
+
+.pricingHeadlineReserve::before {
+  content: attr(data-text);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.pricingHeadlineReserve > span {
+  position: absolute;
+  inset: 0;
+  display: block;
+  text-align: inherit;
 }
 
 .pricingToggle {
@@ -95,6 +148,21 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+/*
+ * Row that pairs the "Individual Plans" label with the monthly /
+ * yearly billing toggle. The toggle used to live in the page header
+ * next to the title; it moved here so the header reads as a clean
+ * hero intro (title -> description -> CTA), keeping the billing
+ * control adjacent to the plan grid it actually drives.
+ */
+.pricingPlansSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .pricingPlansLabel {
@@ -262,15 +330,12 @@
 
 @media (max-width: 768px) {
   .pricingPage {
-    padding: 40px 20px calc(var(--marketing-taskbar-safe-offset) + 96px);
+    padding: clamp(12px, 2vh, 32px) 20px
+      calc(var(--marketing-taskbar-safe-offset) + 96px);
   }
 
   .pricingPageContent {
     gap: 28px;
-  }
-
-  .pricingPageTitle {
-    font-size: clamp(36px, 12vw, 52px);
   }
 
   .pricingPlansGrid {
@@ -299,6 +364,7 @@
 
 @media (max-width: 480px) {
   .pricingPage {
-    padding: 32px 16px calc(var(--marketing-taskbar-safe-offset) + 88px);
+    padding: clamp(12px, 2vh, 32px) 16px
+      calc(var(--marketing-taskbar-safe-offset) + 88px);
   }
 }
