@@ -463,13 +463,17 @@ export function PublicChatView(): React.ReactElement {
     };
     apply("--public-nav-fg-color", siteForegroundColor);
     apply("--public-nav-fg-color-muted", siteForegroundColorMuted);
-    // Hero tagline color: pure white when the nav foreground reads light
-    // (or is unset → dark site bg), else the persona's dark foreground so
-    // the tagline matches the nav's light/dark polarity at full contrast.
+    // Hero tagline color: an explicit per-persona `heroHeadlineColor`
+    // wins (e.g. a dark tagline over a dark-bg persona whose nav stays
+    // light); otherwise derive polarity from the nav foreground — pure
+    // white when it reads light (or is unset → dark site bg), else the
+    // persona's dark foreground so the tagline matches the nav at full
+    // contrast.
     const headlineColor =
-      !siteForegroundColor || isLightColor(siteForegroundColor)
+      activePersona.theme.heroHeadlineColor ??
+      (!siteForegroundColor || isLightColor(siteForegroundColor)
         ? "#ffffff"
-        : siteForegroundColor;
+        : siteForegroundColor);
     apply("--hero-headline-color", headlineColor);
     return () => {
       root.style.removeProperty("--public-nav-fg-color");

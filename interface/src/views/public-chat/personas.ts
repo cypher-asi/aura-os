@@ -171,6 +171,18 @@ export interface PersonaTheme {
    */
   readonly siteForegroundColorMuted: string | null;
   /**
+   * Explicit override for the landing hero tagline ("Your Private
+   * Agent." etc.) color, published as `--hero-headline-color`. By
+   * default the tagline polarity is derived from `siteForegroundColor`
+   * (light/unset nav fg -> white tagline; dark nav fg -> that dark
+   * color). Set this when the tagline needs a DIFFERENT polarity than
+   * the nav — e.g. a persona whose page bg is dark (so the nav stays
+   * light) but whose hero band sits over a bright patch where a dark
+   * tagline reads better. Optional — omit (or leave `null`) to keep the
+   * derived behavior.
+   */
+  readonly heroHeadlineColor?: string | null;
+  /**
    * Neon accent color used for the public CTA's glowing border and
    * bloom shadow (the "Create your agent" pill in `PublicChatView`).
    * Published as `--public-cta-glow-color` on `.chatView` while this
@@ -262,6 +274,11 @@ export const PERSONAS: ReadonlyArray<Persona> = [
       // luminous orb.
       siteForegroundColor: "#e6e8eb",
       siteForegroundColorMuted: "#c9c9cf",
+      // Dark hero tagline variant: the "Your Private Agent." headline
+      // sits over the brightest part of the warm plasma, where pure
+      // white washes out — a near-black tagline reads with full
+      // contrast while the nav/tick chrome stays light.
+      heroHeadlineColor: "#0a0a0a",
       // Default neon-violet CTA bloom reads cleanly against the dark
       // plasma page bg.
       siteCtaGlowColor: null,
