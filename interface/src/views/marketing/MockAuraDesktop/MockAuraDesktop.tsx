@@ -185,17 +185,15 @@ function MockSidebar({
           value=""
           onChange={noop}
         />
-        <div className={styles.appSwitchRow}>
-          <AppSwitchToggle
-            options={[
-              { id: "agents", label: "Agents" },
-              { id: "projects", label: "Projects" },
-            ]}
-            active={appView}
-            onChange={(id) => onAppViewChange(id === "projects" ? "projects" : "agents")}
-            ariaLabel="Switch between Agents and Projects"
-          />
-        </div>
+        <AppSwitchToggle
+          options={[
+            { id: "agents", label: "Agents" },
+            { id: "projects", label: "Projects" },
+          ]}
+          active={appView}
+          onChange={(id) => onAppViewChange(id === "projects" ? "projects" : "agents")}
+          ariaLabel="Switch between Agents and Projects"
+        />
       </div>
       {appView === "agents" ? (
         <div className={styles.agentList}>

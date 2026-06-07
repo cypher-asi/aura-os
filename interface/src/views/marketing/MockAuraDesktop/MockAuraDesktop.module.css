@@ -178,12 +178,6 @@
   flex-shrink: 0;
 }
 
-.appSwitchRow {
-  display: flex;
-  justify-content: center;
-  padding: 4px var(--space-2, 8px) 8px;
-}
-
 /* ---- Agents pane: agent conversation rows ---- */
 .agentList {
   flex: 1;
