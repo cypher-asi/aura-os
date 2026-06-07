@@ -11,12 +11,12 @@ import styles from "./CodeView.module.css";
 /**
  * Marketing `/code` page. Mirrors the public landing's "hero text on
  * top, mock desktop below" structure (and the Agents page's centered
- * `PageHero`), but the desktop is a faithful, static mock of the
+ * `PageHero`), but the desktop is a faithful, interactive mock of the
  * authenticated AURA desktop shell (`MockAuraDesktop`) — titlebar,
- * project sidebar, Projects/Execution work surface, sidekick rail, and
- * bottom taskbar — built by reusing the app's real presentational
- * components fed hardcoded data, so the page previews the real
- * logged-in experience.
+ * agents/projects nav, a center LLM chat, a half-width sidekick that
+ * scripts a Terminal-to-Tasks loop, and the bottom taskbar — built by
+ * reusing the app's real presentational components fed hardcoded data,
+ * so the page previews the real logged-in experience.
  *
  * Page chrome (titlebar / sidebar / scrollable column) is owned by the
  * public-mode `AuraShell` + `PublicMarketingPanel`, so this component

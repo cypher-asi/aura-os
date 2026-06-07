@@ -1,31 +1,33 @@
-import { useState, type ReactNode } from "react";
 import {
-  Badge,
-  Button,
-  Heading,
-  Item,
-  Panel,
-  Text,
-} from "@cypher-asi/zui";
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { Badge, Text } from "@cypher-asi/zui";
 import {
-  Bot,
+  ArrowUp,
+  Brain,
+  ChartNoAxesColumnIncreasing,
+  Check,
   ChevronRight,
-  ClipboardClock,
+  Cpu,
   CreditCard,
+  File,
   FileCode2,
   Folder,
+  FolderClosed,
   FolderOpen,
+  Globe,
   LayoutGrid,
-  ListChecks,
   MessageSquare,
   Minus,
-  Pause,
   PanelLeft,
   PanelRight,
   Settings,
   Square,
   SquareTerminal,
-  Workflow,
   X,
 } from "lucide-react";
 import { ShellTitlebar } from "../../../components/ShellTitlebar";
@@ -35,55 +37,71 @@ import { ProfilePill } from "../../../components/BottomTaskbar/ProfilePill";
 import { TaskbarIconButton } from "../../../components/AppNavRail/TaskbarIconButton";
 import { Avatar } from "../../../components/Avatar";
 import { TaskStatusIcon } from "../../../components/TaskStatusIcon";
+import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
+import { PlayLoopGlyph } from "../../../components/PlayLoopGlyph";
+import { CheckLoopGlyph } from "../../../components/CheckLoopGlyph";
+import { TypewriterText } from "../../public-chat/TypewriterText";
+import { TypingIndicator } from "../../public-chat/TypingIndicator";
+import { TerminalStream } from "../../public-chat/TerminalStream";
 import {
   EXPLORER_ROWS,
   FAVORITE_AGENTS,
-  LOG_ROWS,
+  MOCK_AGENTS,
+  MOCK_PROJECTS,
   TASK_ROWS,
-  type MockLogCategory,
+  TERMINAL_LINES,
+  type MockAgent,
+  type MockChatFrame,
 } from "./mock-data";
 import styles from "./MockAuraDesktop.module.css";
 
 /*
- * MockAuraDesktop — a static, non-interactive mock of the authenticated
- * AURA desktop shell (`AuraShell`), used as the decorative stage on the
- * `/code` marketing page. It reproduces the real shell's full chrome —
- * titlebar, left project sidebar, the Projects/Execution main panel, the
- * right sidekick rail, and the bottom taskbar — by REUSING the app's real
- * presentational components (`ShellTitlebar`, `PanelSearch`,
+ * MockAuraDesktop — an interactive, app-faithful mock of the
+ * authenticated AURA desktop shell (`AuraShell`), used as the stage on
+ * the `/code` marketing page. It reproduces the real shell's structure
+ * — titlebar, left agents/projects nav, a center LLM chat, a
+ * half-width right sidekick, and the bottom taskbar — by REUSING the
+ * app's real presentational components (`ShellTitlebar`, `PanelSearch`,
  * `AppSwitchToggle`, `ProfilePill`, `TaskbarIconButton`, `Avatar`,
- * `TaskStatusIcon`, and the zui design-system primitives) wired to
- * hardcoded mock data. Nothing here touches a store, socket, router, or
- * API; every handler is a no-op.
+ * `TaskStatusIcon`, `SidekickTabBar`, the loop glyphs, and the
+ * marketing chat primitives) wired to hardcoded mock data and local
+ * React state. Nothing here touches a store, socket, router, or API.
+ *
+ * Pointer-interactive: the visitor can flip the Agents/Projects toggle
+ * and pick an agent (which re-plays the center chat). The right
+ * sidekick runs on its own scripted loop — the Terminal tab streams
+ * mock output, then auto-switches to the Tasks (automation) tab.
  *
  * The whole subtree is `aria-hidden` by its host (`MarketingFirstScreen
- * stageHidden`) — it is atmosphere, not interactive content, and the
- * page's accessible name is carried by the `PageHero` above it.
+ * stageHidden`), so controls stay pointer-only (`tabIndex={-1}` where
+ * authored here) and never expose focusable chrome to assistive tech —
+ * the page's accessible name is carried by the `PageHero` above it.
  */
 
-const SIDEKICK_TABS: ReadonlyArray<{ id: string; title: string; icon: ReactNode }> = [
-  { id: "chats", title: "Chats", icon: <MessageSquare size={16} /> },
-  { id: "terminal", title: "Terminal", icon: <SquareTerminal size={16} /> },
-  { id: "plans", title: "Plans", icon: <ClipboardClock size={16} /> },
-  { id: "tasks", title: "Tasks", icon: <ListChecks size={16} /> },
-  { id: "files", title: "Files", icon: <Folder size={16} /> },
-];
+const noop = () => undefined;
 
-const APP_RAIL: ReadonlyArray<{ id: string; title: string; icon: ReactNode; active?: boolean }> = [
-  { id: "agents", title: "Agents", icon: <Bot size={17} /> },
-  { id: "projects", title: "Projects", icon: <FolderOpen size={17} />, active: true },
-  { id: "tasks", title: "Tasks", icon: <ListChecks size={17} /> },
-  { id: "process", title: "Process", icon: <Workflow size={17} /> },
-];
+function readReducedMotion(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
-const TERMINAL_LINES: ReadonlyArray<{ text: string; dim?: boolean }> = [
-  { text: "$ aura run --loop" },
-  { text: "› planning next task", dim: true },
-  { text: "› editing src/components/Dashboard.tsx", dim: true },
-  { text: "› running test suite", dim: true },
-  { text: "✓ 42 passing · build verified" },
-  { text: "› committing changes", dim: true },
-];
+function usePrefersReducedMotion(): boolean {
+  // Read synchronously on first render so reduced-motion consumers
+  // (chat playback, the scripted sidekick) pick the right initial
+  // state without a post-mount flip. The effect only subscribes to
+  // later changes — no synchronous setState in the effect body.
+  const [reduced, setReduced] = useState(readReducedMotion);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+  return reduced;
+}
 
 function formatClock(date: Date): string {
   const hours24 = date.getHours();
@@ -93,11 +111,9 @@ function formatClock(date: Date): string {
   return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
 }
 
-function logBadgeClass(category: MockLogCategory): string {
-  return `${styles.logBadge} ${styles[`logBadge_${category}`] ?? ""}`;
-}
-
-const noop = () => undefined;
+/* ---------------------------------------------------------------- */
+/* Titlebar                                                         */
+/* ---------------------------------------------------------------- */
 
 function MockTitlebar(): ReactNode {
   return (
@@ -144,170 +160,364 @@ function MockTitlebar(): ReactNode {
   );
 }
 
-function MockSidebar(): ReactNode {
+/* ---------------------------------------------------------------- */
+/* Left nav — Agents / Projects                                     */
+/* ---------------------------------------------------------------- */
+
+interface MockSidebarProps {
+  appView: "agents" | "projects";
+  onAppViewChange: (view: "agents" | "projects") => void;
+  selectedAgentId: string;
+  onSelectAgent: (agentId: string) => void;
+}
+
+function MockSidebar({
+  appView,
+  onAppViewChange,
+  selectedAgentId,
+  onSelectAgent,
+}: MockSidebarProps): ReactNode {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
-        <PanelSearch placeholder="Search projects" value="" onChange={noop} />
+        <PanelSearch
+          placeholder={appView === "agents" ? "Search agents" : "Search projects"}
+          value=""
+          onChange={noop}
+        />
         <div className={styles.appSwitchRow}>
           <AppSwitchToggle
             options={[
               { id: "agents", label: "Agents" },
               { id: "projects", label: "Projects" },
             ]}
-            active="projects"
-            onChange={noop}
-            ariaLabel="Switch app"
+            active={appView}
+            onChange={(id) => onAppViewChange(id === "projects" ? "projects" : "agents")}
+            ariaLabel="Switch between Agents and Projects"
           />
         </div>
       </div>
-      <div className={styles.tree}>
-        {EXPLORER_ROWS.map((row, index) => (
-          <div
-            key={`${row.label}-${index}`}
-            className={`${styles.treeRow} ${row.active ? styles.treeRowActive : ""}`}
-            style={{ paddingLeft: `${8 + row.depth * 13}px` }}
-          >
-            {row.kind === "folder-open" ? (
-              <FolderOpen size={14} className={styles.treeIcon} />
-            ) : row.kind === "folder" ? (
-              <Folder size={14} className={styles.treeIcon} />
-            ) : (
-              <FileCode2 size={14} className={styles.treeIcon} />
-            )}
-            <span className={styles.treeLabel}>{row.label}</span>
+      {appView === "agents" ? (
+        <div className={styles.agentList}>
+          {MOCK_AGENTS.map((agent) => (
+            <button
+              key={agent.id}
+              type="button"
+              tabIndex={-1}
+              className={`${styles.agentRow} ${
+                agent.id === selectedAgentId ? styles.agentRowActive : ""
+              }`}
+              onClick={() => onSelectAgent(agent.id)}
+            >
+              <Avatar
+                type="agent"
+                size={34}
+                name={agent.name}
+                status={agent.status}
+                busy={agent.busy}
+                className={styles.agentAvatar}
+              />
+              <span className={styles.agentBody}>
+                <span className={styles.agentTop}>
+                  <span className={styles.agentName}>{agent.name}</span>
+                  <span className={styles.agentRole}>{agent.role}</span>
+                </span>
+                <span className={styles.agentPreview}>{agent.preview}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className={styles.projectsPane}>
+          <div className={styles.projectList}>
+            {MOCK_PROJECTS.map((project) => (
+              <button
+                key={project.id}
+                type="button"
+                tabIndex={-1}
+                className={`${styles.projectRow} ${
+                  project.active ? styles.projectRowActive : ""
+                }`}
+              >
+                <FolderOpen size={15} className={styles.treeIcon} />
+                <span className={styles.projectBody}>
+                  <span className={styles.projectName}>{project.name}</span>
+                  <span className={styles.projectSubtitle}>{project.subtitle}</span>
+                </span>
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
+          <div className={styles.tree}>
+            {EXPLORER_ROWS.map((row, index) => (
+              <div
+                key={`${row.label}-${index}`}
+                className={`${styles.treeRow} ${row.active ? styles.treeRowActive : ""}`}
+                style={{ paddingLeft: `${8 + row.depth * 12}px` }}
+              >
+                {row.kind === "folder-open" ? (
+                  <FolderOpen size={14} className={styles.treeIcon} />
+                ) : row.kind === "folder" ? (
+                  <Folder size={14} className={styles.treeIcon} />
+                ) : (
+                  <FileCode2 size={14} className={styles.treeIcon} />
+                )}
+                <span className={styles.treeLabel}>{row.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
 
-function MockExecution(): ReactNode {
+/* ---------------------------------------------------------------- */
+/* Center — LLM chat                                                */
+/* ---------------------------------------------------------------- */
+
+/** Drives the progressive reveal of an agent's transcript: walks the
+ *  frames on a timer, holding the typing indicator for each agent
+ *  frame's `typingMs` before revealing it. Mounted keyed per agent so
+ *  state resets on selection. Reduced motion reveals everything at
+ *  once (the timer effect is skipped entirely). */
+function useTranscriptPlayback(
+  frames: readonly MockChatFrame[],
+  reducedMotion: boolean,
+): { revealed: number; typingNext: boolean } {
+  const [revealed, setRevealed] = useState(0);
+  const [typingNext, setTypingNext] = useState(false);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let index = 0;
+
+    const step = (): void => {
+      const frame = frames[index];
+      if (!frame) return;
+      const reveal = (): void => {
+        setTypingNext(false);
+        setRevealed(index + 1);
+        index += 1;
+        if (index < frames.length) {
+          timers.push(setTimeout(step, 1100));
+        }
+      };
+      if (frame.from === "agent" && frame.typingMs) {
+        setTypingNext(true);
+        timers.push(setTimeout(reveal, frame.typingMs));
+      } else {
+        reveal();
+      }
+    };
+
+    timers.push(setTimeout(step, 450));
+    return () => timers.forEach(clearTimeout);
+  }, [frames, reducedMotion]);
+
+  return {
+    revealed: reducedMotion ? frames.length : revealed,
+    typingNext: reducedMotion ? false : typingNext,
+  };
+}
+
+function MockChatMessageRow({ frame }: { frame: MockChatFrame }): ReactNode {
+  if (frame.from === "user") {
+    return (
+      <div className={`${styles.msgRow} ${styles.msgRowUser}`}>
+        <div className={`${styles.bubble} ${styles.bubbleUser}`}>
+          {frame.kind === "message" ? frame.text : null}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={`${styles.msgRow} ${styles.msgRowAgent}`}>
+      {frame.kind === "message" ? (
+        <div className={`${styles.bubble} ${styles.bubbleAgent}`}>
+          <TypewriterText text={frame.text} />
+        </div>
+      ) : (
+        <div className={styles.toolCard}>
+          <div className={styles.toolHeader}>
+            <span className={styles.toolName}>{frame.toolName}</span>
+            {frame.target ? (
+              <span className={styles.toolTarget}>{frame.target}</span>
+            ) : null}
+          </div>
+          <TerminalStream lines={[...frame.preview]} language={frame.language} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MockChat({
+  agent,
+  reducedMotion,
+}: {
+  agent: MockAgent;
+  reducedMotion: boolean;
+}): ReactNode {
+  const { revealed, typingNext } = useTranscriptPlayback(
+    agent.transcript,
+    reducedMotion,
+  );
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [revealed, typingNext]);
+
   return (
     <main className={styles.main}>
-      <div className={styles.execution}>
-        <div className={styles.statusBar}>
-          <div className={styles.statusInlineRow}>
-            <Badge variant="running" pulse>
-              Connected
-            </Badge>
-          </div>
-          <div className={styles.statusInlineRow}>
-            <span className={styles.statusMutedText}>Agent:</span>
+      <div className={styles.chat} style={{ "--agent-accent": agent.accent } as React.CSSProperties}>
+        <div className={styles.chatHeader}>
+          <Avatar
+            type="agent"
+            size={28}
+            name={agent.name}
+            status={agent.status}
+            busy={agent.busy}
+          />
+          <span className={styles.chatHeaderText}>
             <Text size="sm" as="span" weight="medium">
-              Builder
+              {agent.name}
             </Text>
-            <Badge variant="running">working</Badge>
-          </div>
-          <div className={styles.statusInlineRow}>
-            <span className={styles.statusMutedText}>Session:</span>
-            <Text size="sm" as="span" weight="medium">
-              #18
-            </Text>
-          </div>
-          <div className={styles.statusAutoRight}>
-            <span className={styles.statusMutedText}>Working on: </span>
-            <Text size="sm" as="span">
-              the dashboard layout
-            </Text>
-          </div>
+            <span className={styles.chatHeaderRole}>{agent.role}</span>
+          </span>
+          <Badge variant={agent.busy ? "running" : "stopped"} pulse={agent.busy}>
+            {agent.busy ? "working" : "idle"}
+          </Badge>
         </div>
 
-        <div className={styles.panels}>
-          <Panel variant="solid" border="solid" className={styles.panelColumn}>
-            <div className={styles.panelHeader}>
-              <Heading level={5}>Task Feed ({TASK_ROWS.length})</Heading>
+        <div className={styles.transcript} ref={scrollRef}>
+          {agent.transcript.slice(0, revealed).map((frame, index) => (
+            <MockChatMessageRow key={`${agent.id}-${index}`} frame={frame} />
+          ))}
+          {typingNext ? (
+            <div className={`${styles.msgRow} ${styles.msgRowAgent}`}>
+              <div className={`${styles.bubble} ${styles.bubbleAgent} ${styles.bubbleTyping}`}>
+                <TypingIndicator color={agent.accent} />
+              </div>
             </div>
-            <div className={styles.feedList}>
-              {TASK_ROWS.map((task) => (
-                <Item
-                  key={task.title}
-                  selected={task.status === "in_progress" && !task.child}
-                  style={task.child ? { paddingLeft: "var(--space-6, 24px)" } : undefined}
-                >
-                  <Item.Icon>
-                    <TaskStatusIcon status={task.status} />
-                  </Item.Icon>
-                  <Item.Label>
-                    <span className={styles.taskTitle}>
-                      {task.child ? `↳ ${task.title}` : task.title}
-                    </span>
-                  </Item.Label>
-                </Item>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel variant="solid" border="solid" className={styles.panelColumn}>
-            <div className={styles.panelHeader}>
-              <Heading level={5}>Log Output</Heading>
-            </div>
-            <div className={styles.logContent}>
-              {LOG_ROWS.map((entry, index) => (
-                <div key={index} className={styles.logRow}>
-                  <span className={styles.logTimestamp}>{entry.timestamp}</span>
-                  <span className={logBadgeClass(entry.category)}>{entry.label}</span>
-                  <span className={styles.logSummary}>{entry.summary}</span>
-                </div>
-              ))}
-            </div>
-          </Panel>
+          ) : null}
         </div>
 
-        <div className={styles.controlRow}>
-          <Button variant="secondary" size="sm" icon={<Pause size={14} />} onClick={noop}>
-            Pause
-          </Button>
-          <Button variant="danger" size="sm" icon={<Square size={14} />} onClick={noop}>
-            Stop
-          </Button>
+        <div className={styles.composer}>
+          <span className={styles.composerInput}>Message {agent.name}…</span>
+          <span className={styles.composerSend}>
+            <ArrowUp size={15} strokeWidth={2.25} />
+          </span>
         </div>
       </div>
     </main>
   );
 }
 
-function MockSidekick(): ReactNode {
+/* ---------------------------------------------------------------- */
+/* Right sidekick — scripted Terminal -> Tasks loop                 */
+/* ---------------------------------------------------------------- */
+
+const SIDEKICK_TABS: readonly TabItem[] = [
+  { id: "sessions", icon: <MessageSquare size={16} />, title: "Chats" },
+  { id: "terminal", icon: <SquareTerminal size={16} />, title: "Terminal" },
+  { id: "browser", icon: <Globe size={16} />, title: "Browser" },
+  { id: "specs", icon: <File size={16} />, title: "Plans" },
+  { id: "run", icon: <PlayLoopGlyph active={false} size={16} />, title: "Run" },
+  { id: "tasks", icon: <CheckLoopGlyph active size={16} />, title: "Tasks" },
+  { id: "stats", icon: <ChartNoAxesColumnIncreasing size={16} />, title: "Stats" },
+  { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
+];
+
+function MockSidekick({ reducedMotion }: { reducedMotion: boolean }): ReactNode {
+  // Scripted loop: open on the Terminal tab streaming mock output, then
+  // auto-switch to the Tasks (automation) tab, hold, and repeat. Under
+  // reduced motion we settle straight onto the Tasks tab.
+  const [activeTab, setActiveTab] = useState<string>(
+    reducedMotion ? "tasks" : "terminal",
+  );
+  const [streamNonce, setStreamNonce] = useState(0);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const cycle = (): void => {
+      setActiveTab("terminal");
+      setStreamNonce((n) => n + 1);
+      timers.push(
+        setTimeout(() => setActiveTab("tasks"), 5500),
+        setTimeout(cycle, 11000),
+      );
+    };
+    timers.push(setTimeout(cycle, 0));
+    return () => timers.forEach(clearTimeout);
+  }, [reducedMotion]);
+
   return (
     <aside className={styles.sidekick}>
       <div className={styles.sidekickTabs}>
-        {SIDEKICK_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            tabIndex={-1}
-            title={tab.title}
-            aria-label={tab.title}
-            aria-pressed={tab.id === "terminal"}
-            className={`${styles.sidekickTab} ${tab.id === "terminal" ? styles.sidekickTabActive : ""}`}
-          >
-            {tab.icon}
-          </button>
-        ))}
+        <SidekickTabBar
+          tabs={SIDEKICK_TABS}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
       </div>
       <div className={styles.sidekickBody}>
-        <span className={styles.terminalTitle}>Terminal · agent vm</span>
-        <div className={styles.terminal}>
-          {TERMINAL_LINES.map((line, index) => (
-            <span
-              key={index}
-              className={line.dim ? styles.terminalDim : undefined}
-            >
-              {line.text}
-            </span>
-          ))}
-          <span>
-            <span className={styles.terminalDim}>$</span>
-            <span className={styles.terminalCursor} />
-          </span>
-        </div>
+        {activeTab === "terminal" ? (
+          <>
+            <span className={styles.sidekickTitle}>Terminal · agent vm</span>
+            <div className={styles.terminal}>
+              <TerminalStream key={streamNonce} lines={[...TERMINAL_LINES]} />
+            </div>
+          </>
+        ) : activeTab === "tasks" ? (
+          <>
+            <span className={styles.sidekickTitle}>Task automation</span>
+            <div className={styles.taskList}>
+              {TASK_ROWS.map((task) => (
+                <div
+                  key={task.title}
+                  className={`${styles.taskRow} ${
+                    task.status === "in_progress" && !task.child ? styles.taskRowActive : ""
+                  }`}
+                  style={task.child ? { paddingLeft: 28 } : undefined}
+                >
+                  <TaskStatusIcon status={task.status} />
+                  <span className={styles.taskTitle}>
+                    {task.child ? `↳ ${task.title}` : task.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className={styles.sidekickPlaceholder}>
+            <span className={styles.sidekickTitle}>{tabTitle(activeTab)}</span>
+          </div>
+        )}
       </div>
     </aside>
   );
 }
 
-function MockTaskbar(): ReactNode {
+function tabTitle(id: string): string {
+  return SIDEKICK_TABS.find((tab) => tab.id === id)?.title ?? "";
+}
+
+/* ---------------------------------------------------------------- */
+/* Bottom taskbar                                                   */
+/* ---------------------------------------------------------------- */
+
+const APP_RAIL: ReadonlyArray<{ id: string; title: string; icon: ReactNode }> = [
+  { id: "agents", title: "Agents", icon: <Brain size={17} strokeWidth={1.5} /> },
+  { id: "projects", title: "Projects", icon: <FolderOpen size={17} strokeWidth={1.5} /> },
+  { id: "tasks", title: "Tasks", icon: <Check size={17} strokeWidth={1.5} /> },
+  { id: "process", title: "Process", icon: <Cpu size={17} strokeWidth={1.5} /> },
+];
+
+function MockTaskbar({ appView }: { appView: "agents" | "projects" }): ReactNode {
   const [clockLabel] = useState(() => formatClock(new Date()));
   return (
     <div className={styles.taskbar}>
@@ -350,7 +560,7 @@ function MockTaskbar(): ReactNode {
                 key={app.id}
                 icon={app.icon}
                 aria-label={app.title}
-                selected={app.active}
+                selected={app.id === appView}
                 tabIndex={-1}
               />
             ))}
@@ -390,7 +600,20 @@ function MockTaskbar(): ReactNode {
   );
 }
 
+/* ---------------------------------------------------------------- */
+/* Shell                                                            */
+/* ---------------------------------------------------------------- */
+
 export function MockAuraDesktop(): ReactNode {
+  const reducedMotion = usePrefersReducedMotion();
+  const [appView, setAppView] = useState<"agents" | "projects">("agents");
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(MOCK_AGENTS[0].id);
+
+  const selectedAgent = useMemo(
+    () => MOCK_AGENTS.find((agent) => agent.id === selectedAgentId) ?? MOCK_AGENTS[0],
+    [selectedAgentId],
+  );
+
   return (
     <div className={styles.frame} data-testid="mock-aura-desktop">
       <MockTitlebar />
@@ -403,11 +626,16 @@ export function MockAuraDesktop(): ReactNode {
           draggable={false}
           decoding="async"
         />
-        <MockSidebar />
-        <MockExecution />
-        <MockSidekick />
+        <MockSidebar
+          appView={appView}
+          onAppViewChange={setAppView}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={setSelectedAgentId}
+        />
+        <MockChat key={selectedAgent.id} agent={selectedAgent} reducedMotion={reducedMotion} />
+        <MockSidekick reducedMotion={reducedMotion} />
       </div>
-      <MockTaskbar />
+      <MockTaskbar appView={appView} />
     </div>
   );
 }
