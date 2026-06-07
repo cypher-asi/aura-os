@@ -45,7 +45,6 @@ import { TypingIndicator } from "../../public-chat/TypingIndicator";
 import { TerminalStream } from "../../public-chat/TerminalStream";
 import {
   EXPLORER_ROWS,
-  FAVORITE_AGENTS,
   MOCK_AGENTS,
   MOCK_PROJECTS,
   TASK_ROWS,
@@ -552,20 +551,6 @@ function MockTaskbar({ appView }: { appView: "agents" | "projects" }): ReactNode
         <div className={styles.taskbarContainer}>
           <div className={styles.left}>
             <ProfilePill name="Ada Lovelace" plan="pro" onOpenSettings={noop} />
-            <Avatar type="team" size={20} name="The Grid" />
-            <span className={styles.divider} />
-            <span className={styles.favorites}>
-              {FAVORITE_AGENTS.map((agent) => (
-                <Avatar
-                  key={agent.id}
-                  type="agent"
-                  size={20}
-                  name={agent.name}
-                  status={agent.status}
-                  busy={agent.status === "running"}
-                />
-              ))}
-            </span>
           </div>
         </div>
       </div>

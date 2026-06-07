@@ -261,19 +261,3 @@ export const TASK_ROWS: readonly MockTaskRow[] = [
   { title: "Write end-to-end tests", status: "ready" },
   { title: "Resolve flaky CI run", status: "blocked" },
 ];
-
-/* ---------------------------------------------------------------- */
-/* Bottom taskbar — favorite agents strip                           */
-/* ---------------------------------------------------------------- */
-
-export interface MockAgentAvatar {
-  readonly id: string;
-  readonly name: string;
-  readonly status: string;
-}
-
-export const FAVORITE_AGENTS: readonly MockAgentAvatar[] = [
-  { id: "frontend", name: "Frontend", status: "running" },
-  { id: "backend", name: "Backend", status: "idle" },
-  { id: "reviewer", name: "Reviewer", status: "idle" },
-];

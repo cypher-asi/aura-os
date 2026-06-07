@@ -735,12 +735,6 @@
   min-width: 0;
 }
 
-.favorites {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .divider {
   flex-shrink: 0;
   width: 1px;
