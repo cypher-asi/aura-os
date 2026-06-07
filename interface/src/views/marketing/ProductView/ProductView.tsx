@@ -16,6 +16,7 @@ import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
+import { CardSection, MetalCard } from "../CardSection";
 import { MadeForYouSection } from "../MadeForYouSection";
 import { PersonalAgentSection } from "../PersonalAgentSection";
 import { BuiltForTrustSection } from "../BuiltForTrustSection";
@@ -89,6 +90,9 @@ export function ProductView(): ReactNode {
         stage={<AgentConsole />}
       />
       <MadeForYouSection />
+      <CardSection ariaLabel="Build your agent">
+        <MetalCard wide gradient={135} align="center" />
+      </CardSection>
       <ExpertiseSection />
       <SpecQuadrantSection />
       <Section
