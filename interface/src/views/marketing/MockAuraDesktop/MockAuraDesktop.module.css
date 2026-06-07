@@ -514,6 +514,23 @@
   padding: 4px 14px 14px;
 }
 
+/*
+ * The real input bar's mode selector hardcodes a neon-blue selected
+ * label (ModeSelector.module.css `.modeSegment[aria-checked="true"]`,
+ * not a token). Re-tint the selected mode to the cyan-green accent
+ * inside the mock so it matches the rest of the accented UI. Scoped to
+ * the mode-selector surface so it only touches the active pill.
+ */
+.inputDock :global([data-agent-surface="mode-selector"]) :global([aria-checked="true"]) {
+  color: var(--color-accent);
+  -webkit-text-fill-color: var(--color-accent);
+  text-shadow:
+    0 0 4px color-mix(in srgb, var(--color-accent) 90%, transparent),
+    0 0 9px color-mix(in srgb, var(--color-accent) 70%, transparent),
+    0 0 16px color-mix(in srgb, var(--color-accent) 50%, transparent),
+    0 0 26px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
 /* ---- Right sidekick (half width, scripted) ---- */
 .sidekick {
   position: relative;
