@@ -80,6 +80,12 @@ import styles from "./MockAuraDesktop.module.css";
 
 const noop = () => undefined;
 
+// Single cyan-green accent for the whole mock UI. Mirrors the CSS
+// `--color-accent` pinned on `.frame`; used for the JS-driven accents
+// (typing dots, the per-chat `--agent-accent` var) so every agent reads
+// with the same accent rather than the palette's per-agent hues.
+const MOCK_ACCENT = "#01f4cb";
+
 function readReducedMotion(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
     return false;
@@ -370,7 +376,7 @@ function MockChat({
 
   return (
     <main className={styles.main}>
-      <div className={styles.chat} style={{ "--agent-accent": agent.accent } as React.CSSProperties}>
+      <div className={styles.chat} style={{ "--agent-accent": MOCK_ACCENT } as React.CSSProperties}>
         <div className={styles.chatHeader}>
           <Avatar
             type="agent"
@@ -397,7 +403,7 @@ function MockChat({
           {typingNext ? (
             <div className={`${styles.msgRow} ${styles.msgRowAgent}`}>
               <div className={`${styles.bubble} ${styles.bubbleAgent} ${styles.bubbleTyping}`}>
-                <TypingIndicator color={agent.accent} />
+                <TypingIndicator color={MOCK_ACCENT} />
               </div>
             </div>
           ) : null}
