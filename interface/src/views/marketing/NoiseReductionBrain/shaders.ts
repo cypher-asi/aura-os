@@ -287,16 +287,20 @@ void main() {
 
   float leftAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.5 + backdrop * 0.4 + outerGlow * 0.6, 0.0, 1.0);
 
-  // ----- Split + feathered seam ----------------------------------------
-  // 0 = left hemisphere, 1 = right hemisphere, blended across the midline.
-  float side = smoothstep(0.46, 0.54, uv.x);
+  // ----- Split + wide cross-fade ---------------------------------------
+  // 0 = left hemisphere, 1 = right hemisphere, blended across a broad band
+  // centered on the midline so the colored and monochrome worlds melt into
+  // each other through the middle rather than meeting at a tight seam.
+  float side = smoothstep(0.30, 0.70, uv.x);
   vec3 col = mix(leftCol, rightCol, side);
   float alpha = mix(leftAlpha, rightAlpha, side);
 
-  // Soft luminous divider down the midline where the two worlds meet.
-  float seamGlow = smoothstep(0.03, 0.0, abs(uv.x - 0.5)) * (mask * 1.2 + aura);
-  col += vec3(0.9, 0.92, 1.0) * seamGlow * 0.5;
-  alpha = clamp(alpha + seamGlow * 0.4, 0.0, 1.0);
+  // Faint, broad luminous wash where the two worlds overlap. Widened and
+  // dimmed (vs. a hard divider line) so it reads as a soft glow through the
+  // blend zone instead of a crisp line down the center.
+  float seamGlow = smoothstep(0.16, 0.0, abs(uv.x - 0.5)) * (mask * 1.2 + aura);
+  col += vec3(0.9, 0.92, 1.0) * seamGlow * 0.22;
+  alpha = clamp(alpha + seamGlow * 0.18, 0.0, 1.0);
 
   fragColor = vec4(col, alpha);
 }
