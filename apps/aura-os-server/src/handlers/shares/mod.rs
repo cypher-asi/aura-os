@@ -8,6 +8,7 @@
 //! [`crate::handlers::public`].
 
 use axum::extract::{Path, State};
+use axum::http::HeaderMap;
 use axum::Json;
 use serde::Serialize;
 use serde_json::json;
@@ -52,12 +53,17 @@ pub(crate) async fn create_session_share(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
     AuthSession(session): AuthSession,
+    headers: HeaderMap,
     Path((project_id, agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
         SessionId,
     )>,
 ) -> ApiResult<Json<CreateShareResponse>> {
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
     let storage = state.require_storage_client()?;
     let sid = session_id.to_string();
 
@@ -82,6 +88,7 @@ pub(crate) async fn create_session_share(
                 &project_id,
                 &agent_instance_id,
                 true,
+                user_agent.as_deref(),
             );
             return Ok(Json(build_response(token)));
         }
@@ -110,11 +117,13 @@ pub(crate) async fn create_session_share(
         &project_id,
         &agent_instance_id,
         false,
+        user_agent.as_deref(),
     );
 
     Ok(Json(build_response(token)))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn track_share_link_generated(
     state: &AppState,
     owner_user_id: &str,
@@ -122,18 +131,23 @@ fn track_share_link_generated(
     project_id: &ProjectId,
     agent_instance_id: &AgentInstanceId,
     reused: bool,
+    user_agent: Option<&str>,
 ) {
     if let Some(mixpanel) = &state.mixpanel {
-        mixpanel.track_event(
-            "share_link_generated",
-            owner_user_id,
-            json!({
-                "session_id": session_id.to_string(),
-                "project_id": project_id.to_string(),
-                "agent_instance_id": agent_instance_id.to_string(),
-                "reused": reused,
-            }),
-        );
+        let mut properties = json!({
+            "session_id": session_id.to_string(),
+            "project_id": project_id.to_string(),
+            "agent_instance_id": agent_instance_id.to_string(),
+            "reused": reused,
+        });
+        // Derive the same `$os` the client SDK reports so this
+        // server-emitted event isn't bucketed as `$os = "(not set)"`.
+        if let Some(os) = crate::mixpanel::os_from_user_agent(user_agent) {
+            if let Some(map) = properties.as_object_mut() {
+                map.insert("$os".to_string(), json!(os));
+            }
+        }
+        mixpanel.track_event("share_link_generated", owner_user_id, properties);
     }
 }
 

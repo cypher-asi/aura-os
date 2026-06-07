@@ -9,6 +9,7 @@
 //! (`validate_share_token`) and only a short prefix is ever logged.
 
 use axum::extract::{Path, State};
+use axum::http::HeaderMap;
 use axum::Json;
 use tracing::info;
 
@@ -30,6 +31,7 @@ const TOKEN_LOG_PREFIX_LEN: usize = 6;
 /// private session must never leak through this anonymous path.
 pub(crate) async fn get_public_share(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(token): Path<String>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let storage = state.require_storage_client()?;
@@ -77,7 +79,14 @@ pub(crate) async fn get_public_share(
         .event_count
         .or_else(|| u32::try_from(events.len()).ok());
     if let Some(mixpanel) = &state.mixpanel {
-        mixpanel.track_share_link_opened(&token, &session.id, !messages.is_empty(), event_count);
+        let user_agent = headers.get("user-agent").and_then(|v| v.to_str().ok());
+        mixpanel.track_share_link_opened(
+            &token,
+            &session.id,
+            !messages.is_empty(),
+            event_count,
+            user_agent,
+        );
     }
 
     Ok(Json(messages))

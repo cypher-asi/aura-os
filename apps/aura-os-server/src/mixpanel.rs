@@ -53,12 +53,18 @@ impl MixpanelTracker {
     /// IP. The IP is used transiently by Mixpanel for geo lookup and is
     /// not persisted as an event property (matching the client SDK's
     /// `ip: true` behavior).
+    ///
+    /// `user_agent` is the request `User-Agent`. We derive Mixpanel's
+    /// reserved `$os` from it so server-emitted events bucket into the
+    /// same OS slices the browser SDK reports — otherwise they show up as
+    /// `$os = "(not set)"`.
     pub(crate) fn track_session_active(
         &self,
         user_id: &str,
         app_version: Option<&str>,
         platform: Option<&str>,
         client_ip: Option<&str>,
+        user_agent: Option<&str>,
     ) {
         let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
         let key = format!("{user_id}:{today}");
@@ -82,6 +88,9 @@ impl MixpanelTracker {
         }
         if let Some(ip) = sanitize_client_header(client_ip) {
             properties.insert("ip".to_string(), json!(ip));
+        }
+        if let Some(os) = os_from_user_agent(user_agent) {
+            properties.insert("$os".to_string(), json!(os));
         }
 
         self.enqueue_event("session_active", user_id.to_string(), properties);
@@ -113,6 +122,7 @@ impl MixpanelTracker {
         session_id: &str,
         has_content: bool,
         event_count: Option<u32>,
+        user_agent: Option<&str>,
     ) {
         let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
         let Some(fingerprint) = self.mark_share_opened_for_day(token, &today) else {
@@ -124,6 +134,9 @@ impl MixpanelTracker {
         properties.insert("has_content".to_string(), json!(has_content));
         if let Some(event_count) = event_count {
             properties.insert("event_count".to_string(), json!(event_count));
+        }
+        if let Some(os) = os_from_user_agent(user_agent) {
+            properties.insert("$os".to_string(), json!(os));
         }
 
         self.enqueue_event(
@@ -178,6 +191,45 @@ fn sanitize_client_header(value: Option<&str>) -> Option<String> {
         return None;
     }
     Some(trimmed.chars().take(MAX_LEN).collect())
+}
+
+/// Derive Mixpanel's reserved `$os` property from a request `User-Agent`.
+///
+/// Mirrors the `os()` detection in the `mixpanel-browser` SDK (the same
+/// regex ladder, with case-insensitive matching where the SDK uses `/i`)
+/// so server-emitted events bucket into the exact same OS slices as
+/// client SDK events. Returns `None` when the UA is missing/empty or the
+/// OS is unrecognized, so we never record a misleading value.
+pub(crate) fn os_from_user_agent(user_agent: Option<&str>) -> Option<String> {
+    let ua = user_agent?.trim();
+    if ua.is_empty() {
+        return None;
+    }
+    let lower = ua.to_lowercase();
+
+    let os = if lower.contains("windows") {
+        if ua.contains("Phone") || ua.contains("WPDesktop") {
+            "Windows Phone"
+        } else {
+            "Windows"
+        }
+    } else if ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") {
+        "iOS"
+    } else if ua.contains("Android") {
+        "Android"
+    } else if lower.contains("blackberry") || ua.contains("PlayBook") || ua.contains("BB10") {
+        "BlackBerry"
+    } else if lower.contains("mac") {
+        "Mac OS X"
+    } else if ua.contains("Linux") {
+        "Linux"
+    } else if ua.contains("CrOS") {
+        "Chrome OS"
+    } else {
+        return None;
+    };
+
+    Some(os.to_string())
 }
 
 fn value_to_properties(properties: Value) -> Map<String, Value> {
@@ -284,6 +336,50 @@ mod tests {
             absent.insert("ip".to_string(), json!(ip));
         }
         assert!(absent.get("ip").is_none());
+    }
+
+    #[test]
+    fn os_from_user_agent_matches_browser_sdk_buckets() {
+        // Electron desktop on macOS -> "Mac OS X" (same value the client
+        // SDK reports), so server + client events merge in the $os report.
+        assert_eq!(
+            os_from_user_agent(Some(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 \
+                 (KHTML, like Gecko) aura-os/1.0.0 Chrome/120.0.0.0 Electron/28.0.0 Safari/537.36"
+            )),
+            Some("Mac OS X".to_string())
+        );
+        assert_eq!(
+            os_from_user_agent(Some(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
+                 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )),
+            Some("Windows".to_string())
+        );
+        assert_eq!(
+            os_from_user_agent(Some(
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
+            )),
+            Some("iOS".to_string())
+        );
+        assert_eq!(
+            os_from_user_agent(Some(
+                "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36"
+            )),
+            Some("Android".to_string())
+        );
+        assert_eq!(
+            os_from_user_agent(Some(
+                "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0"
+            )),
+            Some("Linux".to_string())
+        );
+
+        // Missing / empty / unrecognized UAs record no $os rather than a
+        // misleading bucket.
+        assert_eq!(os_from_user_agent(None), None);
+        assert_eq!(os_from_user_agent(Some("   ")), None);
+        assert_eq!(os_from_user_agent(Some("curl/8.4.0")), None);
     }
 
     #[test]
