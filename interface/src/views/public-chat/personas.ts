@@ -255,20 +255,19 @@ export const PERSONAS: ReadonlyArray<Persona> = [
     name: "Creator",
     role: "Creator",
     theme: {
-      // Landscape portrait of the red-haired figure on a near-white
-      // studio field. Shown in full (`contain`) inside the 16:10 mock
-      // window; the source is wider than the frame so it fits to width
-      // and leaves thin top/bottom letterbox bars, which the matching
-      // near-white `desktopBackgroundColor` below fills so the studio
-      // backdrop appears to extend seamlessly to the window edges.
+      // Portrait of the red-haired figure on a near-white studio field.
+      // Painted `cover` so the looping clip fills the whole 16:10 mock
+      // window edge-to-edge (down to the taskbar) with no letterbox gap;
+      // the source is wider than the frame, so cover crops the sides and
+      // keeps the full figure height visible top-to-bottom.
       desktopBackgroundUrl: "/personas/creator/desktop.png",
       // Looping clip of the same red-haired figure (keeps the static
       // PNG above as the dock avatar source + video poster fallback).
       desktopBackgroundVideoUrl: "/personas/creator/desktop.mp4",
       desktopBackgroundPosition: null,
-      desktopBackgroundFit: "contain",
-      // Sampled near-white of the source's studio backdrop so the
-      // letterbox bars blend with the photo's own background.
+      desktopBackgroundFit: "cover",
+      // Sampled near-white of the source's studio backdrop — shows only
+      // briefly under the video before it paints.
       desktopBackgroundColor: "#f3f3f3",
       desktopBackgroundScale: null,
       desktopBackgroundOffsetY: null,
