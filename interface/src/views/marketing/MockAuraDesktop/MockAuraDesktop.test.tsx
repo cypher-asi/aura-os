@@ -1,5 +1,17 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+
+// The mock chat reuses the REAL authenticated chat input
+// (`DesktopChatInputBar`); it pulls in store/desktop-API modules that
+// are awkward to mount in jsdom (the marketing `MockChatInputCard` test
+// mocks it for the same reason). Stub it to a lightweight stand-in so
+// these tests stay focused on the mock shell's own behavior.
+vi.mock("../../../features/chat-ui/ChatInputBar", () => ({
+  DesktopChatInputBar: (props: { agentName?: string }) => (
+    <div data-testid="mock-chat-input">{props.agentName}</div>
+  ),
+}));
+
 import { MockAuraDesktop } from "./MockAuraDesktop";
 
 // Force the reduced-motion path so the scripted chat/sidekick timers
@@ -26,20 +38,19 @@ describe("MockAuraDesktop", () => {
   it("opens on the first agent's chat", () => {
     render(<MockAuraDesktop />);
     expect(screen.getByTestId("mock-aura-desktop")).toBeInTheDocument();
-    // Frontend is the default selected agent — the composer addresses it.
-    expect(screen.getByText(/Message Frontend/)).toBeInTheDocument();
+    // Frontend is the default selected agent — its name shows in the chat header.
+    expect(screen.getByTestId("mock-chat-agent")).toHaveTextContent("Frontend");
   });
 
   it("switches the chat when another agent is picked", () => {
     render(<MockAuraDesktop />);
-    expect(screen.queryByText(/Message Backend/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("mock-chat-agent")).toHaveTextContent("Frontend");
 
     const backendRow = screen.getByText("Backend").closest("button");
     expect(backendRow).not.toBeNull();
     fireEvent.click(backendRow as HTMLButtonElement);
 
-    expect(screen.getByText(/Message Backend/)).toBeInTheDocument();
-    expect(screen.queryByText(/Message Frontend/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("mock-chat-agent")).toHaveTextContent("Backend");
   });
 
   it("toggles the left nav between Agents and Projects", () => {

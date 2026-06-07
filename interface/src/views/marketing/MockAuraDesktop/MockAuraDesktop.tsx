@@ -7,7 +7,6 @@ import {
 } from "react";
 import { Badge, Text } from "@cypher-asi/zui";
 import {
-  ArrowUp,
   Brain,
   ChartNoAxesColumnIncreasing,
   Check,
@@ -40,6 +39,7 @@ import { TaskStatusIcon } from "../../../components/TaskStatusIcon";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
 import { PlayLoopGlyph } from "../../../components/PlayLoopGlyph";
 import { CheckLoopGlyph } from "../../../components/CheckLoopGlyph";
+import { DesktopChatInputBar } from "../../../features/chat-ui/ChatInputBar";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { TypingIndicator } from "../../public-chat/TypingIndicator";
 import { TerminalStream } from "../../public-chat/TerminalStream";
@@ -381,7 +381,7 @@ function MockChat({
           />
           <span className={styles.chatHeaderText}>
             <Text size="sm" as="span" weight="medium">
-              {agent.name}
+              <span data-testid="mock-chat-agent">{agent.name}</span>
             </Text>
             <span className={styles.chatHeaderRole}>{agent.role}</span>
           </span>
@@ -403,11 +403,25 @@ function MockChat({
           ) : null}
         </div>
 
-        <div className={styles.composer}>
-          <span className={styles.composerInput}>Message {agent.name}…</span>
-          <span className={styles.composerSend}>
-            <ArrowUp size={15} strokeWidth={2.25} />
-          </span>
+        {/*
+         * The real authenticated chat input (mode bar + attach +
+         * model picker + send pill), rendered statically/read-only so
+         * the mock shows the exact in-app LLM input area without any
+         * store/socket/network side effects — mirrors how
+         * `MockChatInputCard` reuses it on the marketing pages.
+         */}
+        <div className={styles.inputDock}>
+          <DesktopChatInputBar
+            input=""
+            onInputChange={noop}
+            onSend={noop}
+            onStop={noop}
+            streamKey={`mock-code-${agent.id}`}
+            machineType="local"
+            agentName={agent.name}
+            isStatic
+            inputReadOnly
+          />
         </div>
       </div>
     </main>
