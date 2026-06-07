@@ -25,6 +25,8 @@ interface UpdateIntegrationPayload {
   enabled?: boolean | null;
 }
 
+export const GOOGLE_OAUTH_POPUP_TIMEOUT_MS = 120_000;
+
 /**
  * Self-contained hook that manages workspace integrations without depending on
  * the Team Settings modal. Ensures `integrations` are loaded for the active
@@ -140,6 +142,7 @@ export function useIntegrationsManager() {
           settled = true;
           window.removeEventListener("message", onMessage);
           window.clearInterval(timer);
+          window.clearTimeout(timeout);
           resolve();
         };
         const onMessage = (event: MessageEvent) => {
@@ -153,6 +156,7 @@ export function useIntegrationsManager() {
         const timer = window.setInterval(() => {
           if (popup.closed) finish();
         }, 750);
+        const timeout = window.setTimeout(finish, GOOGLE_OAUTH_POPUP_TIMEOUT_MS);
         window.addEventListener("message", onMessage);
       });
       await refreshIntegrations();
