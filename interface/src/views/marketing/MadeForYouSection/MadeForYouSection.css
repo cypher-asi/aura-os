@@ -68,8 +68,8 @@
   background:
     linear-gradient(
       to bottom,
-      rgba(160, 165, 175, 0.55) 0%,
-      rgba(110, 115, 125, 0.35) 100%
+      rgba(120, 125, 135, 0.75) 0%,
+      rgba(95, 100, 110, 0.45) 100%
     ),
     linear-gradient(to left, #000 0, #000 2px, transparent 2px);
   background-repeat: no-repeat;
@@ -90,8 +90,8 @@
   background:
     linear-gradient(
       to bottom,
-      rgba(160, 165, 175, 0.55) 0%,
-      rgba(110, 115, 125, 0.35) 100%
+      rgba(120, 125, 135, 0.75) 0%,
+      rgba(95, 100, 110, 0.45) 100%
     ),
     linear-gradient(to right, #000 0, #000 2px, transparent 2px);
   background-repeat: no-repeat;
@@ -109,6 +109,153 @@
   /* Square corners so the screen's left/right edges sit flush against the
      vertical divider lines top-to-bottom (the quadrant keeps its 14px). */
   border-radius: 0;
+}
+
+/*
+ * Left "control" panel: a vertical column of hardware controls sitting in
+ * the left metal panel (the region reserved by the content's 108px left
+ * padding, behind the ::before divider). A large rotary knob crowns a
+ * stack of round push-buttons, each with a screen-printed mono label or
+ * glyph to its left. Absolutely positioned within the (relative) content
+ * box, inset 3px..106px so it stays clear of the 2px black divider line.
+ */
+.madeForYouDevice .madeForYouSidePanel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 103px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 10px;
+  pointer-events: none;
+}
+
+/* Rotary knob: a raised brushed-metal dial in a shallow recessed ring. */
+.madeForYouDevice .madeForYouKnob {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.madeForYouDevice .madeForYouKnobDial {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 50% 32%,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    conic-gradient(
+      from 210deg,
+      #d7dade 0deg,
+      #9a9ea4 70deg,
+      #f1f2f4 140deg,
+      #a8acb2 210deg,
+      #e6e8ea 290deg,
+      #b2b6bc 360deg
+    );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+/* Orange position indicator notched into the dial's upper-right. */
+.madeForYouDevice .madeForYouKnobIndicator {
+  position: absolute;
+  top: 5px;
+  right: 9px;
+  width: 4px;
+  height: 11px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
+  box-shadow: 0 0 6px rgba(244, 85, 0, 0.7);
+  transform: rotate(32deg);
+}
+
+/* Label/glyph + button row. */
+.madeForYouDevice .madeForYouSideRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.madeForYouDevice .madeForYouSideLabel {
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    monospace
+  );
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: rgba(60, 62, 66, 0.85);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.madeForYouDevice .madeForYouSideGlyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(70, 72, 76, 0.8);
+}
+
+/* Round push-button: raised dark cap nested in a black recessed socket. */
+.madeForYouDevice .madeForYouSideBtn {
+  position: relative;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.madeForYouDevice .madeForYouSideBtn::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, #2a2d33 0%, #0d0e11 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 /* This enlarged device shows a bare screen — drop the service logo grid
@@ -200,5 +347,53 @@
     --cell: 11px;
     height: 90px;
     margin: 8px;
+  }
+
+  /* Shrink the control column to fit the narrower 65px mobile panel. */
+  .madeForYouDevice .madeForYouSidePanel {
+    width: 64px;
+    gap: 9px;
+    padding: 10px 6px;
+  }
+
+  .madeForYouDevice .madeForYouKnob {
+    width: 40px;
+    height: 40px;
+  }
+
+  .madeForYouDevice .madeForYouKnobDial {
+    width: 31px;
+    height: 31px;
+  }
+
+  .madeForYouDevice .madeForYouKnobIndicator {
+    top: 3px;
+    right: 6px;
+    width: 3px;
+    height: 8px;
+  }
+
+  .madeForYouDevice .madeForYouSideRow {
+    gap: 5px;
+  }
+
+  .madeForYouDevice .madeForYouSideLabel {
+    font-size: 7px;
+    letter-spacing: 0.1em;
+  }
+
+  .madeForYouDevice .madeForYouSideGlyph svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .madeForYouDevice .madeForYouSideBtn {
+    width: 20px;
+    height: 20px;
+  }
+
+  .madeForYouDevice .madeForYouSideBtn::before {
+    width: 13px;
+    height: 13px;
   }
 }
