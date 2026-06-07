@@ -111,6 +111,16 @@
   border-radius: 0;
 }
 
+/* Looping character video filling the hero screen, behind the gloss. */
+.madeForYouDevice .personalAgentDeviceVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
 /*
  * Left "control" panel: a vertical column of hardware controls sitting in
  * the left metal panel (the region reserved by the content's 108px left

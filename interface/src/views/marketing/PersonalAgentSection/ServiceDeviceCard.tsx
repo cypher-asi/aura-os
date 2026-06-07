@@ -32,7 +32,73 @@ export function ServiceDeviceCard({
   return (
     <Plate className="personalAgentDevice" aria-hidden="true">
       <div className="personalAgentDeviceContent">
+        {hexGrille ? (
+          <div className="madeForYouSidePanel" aria-hidden="true">
+            <div className="madeForYouKnob">
+              <div className="madeForYouKnobDial">
+                <span className="madeForYouKnobIndicator" />
+              </div>
+            </div>
+
+            <div className="madeForYouSideRow">
+              <span className="madeForYouSideLabel">PAGES</span>
+              <span className="madeForYouSideBtn" />
+            </div>
+
+            <div className="madeForYouSideRow">
+              <span className="madeForYouSideLabel">LOC</span>
+              <span className="madeForYouSideBtn" />
+            </div>
+
+            <div className="madeForYouSideRow">
+              <span className="madeForYouSideGlyph" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 9v6h4l5 4V5L8 9H4z"
+                    fill="currentColor"
+                  />
+                  <path
+                    d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <span className="madeForYouSideBtn" />
+            </div>
+
+            <div className="madeForYouSideRow">
+              <span className="madeForYouSideGlyph" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11 6 4 12l7 6V6zm9 0-7 6 7 6V6z" />
+                </svg>
+              </span>
+              <span className="madeForYouSideBtn" />
+            </div>
+
+            <div className="madeForYouSideRow">
+              <span className="madeForYouSideGlyph" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13 6 20 12l-7 6V6zM4 6l7 6-7 6V6z" />
+                </svg>
+              </span>
+              <span className="madeForYouSideBtn" />
+            </div>
+          </div>
+        ) : null}
+
         <div className="personalAgentDeviceScreen">
+          {hexGrille ? (
+            <video
+              className="personalAgentDeviceVideo"
+              src="/agent-character-loop.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          ) : null}
           <div className="personalAgentDeviceGloss" />
           <div className="personalAgentDeviceLogoGrid">
             {SERVICE_LOGOS.map((logo) => (
