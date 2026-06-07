@@ -176,16 +176,12 @@
     );
 }
 
-/* Typewriter viewport: lines type in from the top and bottom-anchor so the
-   newest output sits near the prompt while older lines scroll off the top as
-   the log grows past the screen height. */
+/* Typewriter viewport: lines type in from the TOP of the LCD downward, the
+   way a real console fills, with the trailing prompt following the last line. */
 .madeForYouDevice .madeForYouTerminalScroll {
   position: absolute;
-  inset: 16px 16px 36px;
+  inset: 16px 16px 16px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
 }
 
 .madeForYouDevice .madeForYouTerminalLines {
@@ -214,17 +210,6 @@
 .madeForYouDevice .madeForYouTerminalPrompt {
   color: #f45500;
   text-shadow: 0 0 6px rgba(244, 85, 0, 0.5);
-}
-
-/* Fixed prompt + blinking caret pinned to the bottom of the LCD. */
-.madeForYouDevice .madeForYouTerminalCaret {
-  position: absolute;
-  z-index: 2;
-  left: 16px;
-  bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .madeForYouDevice .madeForYouTerminalCursor {
@@ -536,12 +521,7 @@
   }
 
   .madeForYouDevice .madeForYouTerminalScroll {
-    inset: 10px 10px 26px;
-  }
-
-  .madeForYouDevice .madeForYouTerminalCaret {
-    left: 10px;
-    bottom: 9px;
+    inset: 10px 10px 10px;
   }
 
   .madeForYouDevice .madeForYouTerminalCursor {

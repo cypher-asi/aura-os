@@ -255,13 +255,14 @@ interface TerminalScreenProps {
  * being created and deployed to the AURA network. Driven by the parent's
  * scroll-activation: each time the card enters view the feed types from the
  * top, one character at a time, with a trailing block caret that follows the
- * active line and settles on a final prompt once the run completes. Older
- * lines bottom-anchor and scroll off the top as the log grows. Everything is
- * decorative (`aria-hidden` via the device root).
+ * active line and settles on a final prompt once the run completes. The feed
+ * is top-anchored so output reads top-to-bottom like a real console.
+ * Everything is decorative (`aria-hidden` via the device root).
  *
- * `prefers-reduced-motion: reduce` short-circuits the per-character reveal and
- * renders the full log immediately — this LCD is incidental chrome, so motion-
- * sensitive users get the same content without the animation.
+ * Like the shared `TypewriterText`, the reveal runs regardless of
+ * `prefers-reduced-motion`: this LCD is incidental chrome whose whole point is
+ * the "agent being built live" motion, so pinning it to instant text would
+ * read as a broken, already-finished log.
  */
 function TerminalScreen({ active, replayKey }: TerminalScreenProps): ReactNode {
   // `lineIndex` is the line currently typing; `charIndex` is how many of its
@@ -273,11 +274,6 @@ function TerminalScreen({ active, replayKey }: TerminalScreenProps): ReactNode {
     if (!active) {
       return;
     }
-
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let line = 0;
     let char = 0;
@@ -301,22 +297,15 @@ function TerminalScreen({ active, replayKey }: TerminalScreenProps): ReactNode {
       // Line complete: advance to the next one after a short pause.
       line += 1;
       char = 0;
-      if (line >= TERMINAL_LINES.length) {
-        return;
-      }
       setLineIndex(line);
       setCharIndex(0);
+      if (line >= TERMINAL_LINES.length) {
+        // Whole feed typed: `lineIndex` past the end flips `isComplete` so the
+        // trailing prompt + blinking caret render below the last line.
+        return;
+      }
       timer = setTimeout(tick, TERMINAL_LINE_PAUSE_MS);
     };
-
-    if (prefersReducedMotion) {
-      // Reduced motion: skip the reveal and show the whole feed at once.
-      timer = setTimeout(() => {
-        setLineIndex(TERMINAL_LINES.length);
-        setCharIndex(0);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
 
     timer = setTimeout(tick, TERMINAL_CHAR_MS);
     return () => clearTimeout(timer);
@@ -356,14 +345,14 @@ function TerminalScreen({ active, replayKey }: TerminalScreenProps): ReactNode {
               </li>
             );
           })}
+          {isComplete ? (
+            <li className="madeForYouTerminalLine madeForYouTerminalLine--prompt">
+              <span className="madeForYouTerminalPrompt">$</span>
+              <span className="madeForYouTerminalCursor" />
+            </li>
+          ) : null}
         </ul>
       </div>
-      {isComplete ? (
-        <div className="madeForYouTerminalCaret">
-          <span className="madeForYouTerminalPrompt">$</span>
-          <span className="madeForYouTerminalCursor" />
-        </div>
-      ) : null}
     </div>
   );
 }
