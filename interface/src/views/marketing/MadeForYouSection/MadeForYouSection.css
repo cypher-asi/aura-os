@@ -481,20 +481,20 @@
   margin: 12px;
   border-radius: 10px;
   border: 2px solid transparent;
-  background-color: #16181c;
+  background-color: #0d0e11;
   background-image:
     radial-gradient(
       circle,
-      #050505 var(--hole),
+      #040404 var(--hole),
       transparent calc(var(--hole) + 0.7px)
     ),
     radial-gradient(
       circle,
-      #050505 var(--hole),
+      #040404 var(--hole),
       transparent calc(var(--hole) + 0.7px)
     ),
-    radial-gradient(ellipse at center, #42444a 0%, #2a2c30 55%, #16181c 100%),
-    linear-gradient(180deg, #56585d 0%, #2e3034 50%, #141519 100%);
+    radial-gradient(ellipse at center, #26282c 0%, #181a1e 55%, #0d0e11 100%),
+    linear-gradient(180deg, #34363a 0%, #1c1e22 50%, #0b0c0f 100%);
   background-size:
     var(--cell) calc(var(--cell) * 1.1547),
     var(--cell) calc(var(--cell) * 1.1547),
