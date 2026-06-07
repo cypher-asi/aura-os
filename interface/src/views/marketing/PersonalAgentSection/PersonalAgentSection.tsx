@@ -10,11 +10,11 @@ import "./PersonalAgentSection.css";
 const HEADLINE_ID = "personalAgentHeadline";
 
 /**
- * Marketing section that sits between the agents hero
+ * Marketing section that sits after the agents hero
  * (`MarketingFirstScreen`, which hosts the `AgentMarquee` card row) and
- * the "1 COMPUTER = 1 AGENT" section (`OneComputerOneAgentSection`) on
- * the `/agents` page. Built on the shared `<Section />` shell so its
- * outer rhythm matches every other themed marketing section.
+ * before the agent-chat section (`AgentChatSection`) on the `/agents`
+ * page. Built on the shared `<Section />` shell so its outer rhythm
+ * matches every other themed marketing section.
  *
  * Mirrors the `ExpertiseSection` + `SpecQuadrantSection` pairing: a
  * compact H2 `<TextCard />` intro section, then a separate bento section
@@ -40,7 +40,7 @@ export function PersonalAgentSection(): ReactNode {
         <TextCard
           level="h2"
           id={HEADLINE_ID}
-          headline="An agent designed for you."
+          headline="Multi-modal. Highly skilled."
           subhead="AURA is your own personal agent that supports you with everything from light tasks to deep work."
         />
       </Section>
