@@ -33,9 +33,9 @@
 }
 
 /*
- * Tight bevel top/bottom, but reserve horizontal room for a full-height
- * inset "metal" panel flanking the screen on the left and a wider one
- * (2.5x) on the right. The panels are painted as the content container's
+ * Tight bevel top/bottom, but reserve symmetric horizontal room for two
+ * equal-width full-height inset "metal" panels flanking the screen on the
+ * left and right. The panels are painted as the content container's
  * ::before/::after so they span the whole device height (screen + label
  * strip + grille) inside the Plate rim. Rather than floating as separate
  * recessed sections, they butt flush against the screen and are split off
@@ -45,7 +45,7 @@
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
-  padding: 3px 108px 3px 45px;
+  padding: 3px 108px;
 }
 
 .madeForYouDevice .personalAgentDeviceContent::before,
@@ -66,7 +66,7 @@
    edge kept square so the divider runs straight top to bottom. */
 .madeForYouDevice .personalAgentDeviceContent::before {
   left: 3px;
-  width: 42px;
+  width: 105px;
   border-radius: 12px 0 0 12px;
   background:
     linear-gradient(
@@ -82,7 +82,7 @@
     linear-gradient(135deg, #242424 0%, #1a1a1a 55%, #0e0e0e 100%);
 }
 
-/* Right panel: 2.5x the left panel's width, with the same 3-border divider
+/* Right panel: same width as the left, with the same 3-border divider
    line on its left (screen-facing) edge. */
 .madeForYouDevice .personalAgentDeviceContent::after {
   right: 3px;
@@ -175,11 +175,11 @@
   }
 
   .madeForYouDevice .personalAgentDeviceContent {
-    padding: 3px 70px 3px 32px;
+    padding: 3px 70px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::before {
-    width: 26px;
+    width: 65px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::after {
