@@ -263,7 +263,9 @@
   top: 0;
   bottom: 0;
   left: 3px;
-  width: 206px;
+  /* Span the full left panel (matches the `::before` divider width) so the
+     centered knob lands on the panel's true center rather than ~20px left. */
+  width: 248px;
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -546,7 +548,7 @@
 
   /* Shrink the control column to fit the narrower 65px mobile panel. */
   .madeForYouDevice .madeForYouSidePanel {
-    width: 64px;
+    width: 78px;
     gap: 9px;
     padding: 10px 6px;
   }
