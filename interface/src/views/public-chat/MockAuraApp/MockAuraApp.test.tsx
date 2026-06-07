@@ -419,7 +419,7 @@ describe("MockAuraApp", () => {
       }
     });
 
-    it("defaults activePersonaIndex to 0 (Vibecoder) when omitted", () => {
+    it("defaults activePersonaIndex to 0 (Creator) when omitted", () => {
       render(<MockAuraApp />);
       expect(
         screen.getByTestId(`mock-aura-avatar-${PERSONAS[0].id}`),
@@ -433,13 +433,13 @@ describe("MockAuraApp", () => {
       const onPersonaSelect = vi.fn();
       render(<MockAuraApp onPersonaSelect={onPersonaSelect} />);
 
-      // Pick the Solo Builder slot (index 1) — distinct from the
+      // Pick the Solo Builder slot (index 2) — distinct from the
       // default active index (0) so the click registers a real
       // change and the assertion isn't a no-op.
       fireEvent.click(screen.getByTestId("mock-aura-avatar-solo-builder"));
 
       expect(onPersonaSelect).toHaveBeenCalledTimes(1);
-      expect(onPersonaSelect).toHaveBeenCalledWith(1);
+      expect(onPersonaSelect).toHaveBeenCalledWith(2);
     });
 
     it("paints themed persona portraits via background-image in the avatar dock", () => {

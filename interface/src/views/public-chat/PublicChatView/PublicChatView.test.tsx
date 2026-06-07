@@ -72,12 +72,12 @@ vi.mock("../MockAuraApp", () => ({
     >
       <button
         type="button"
-        data-testid="mock-aura-app-dock-select-solo-builder"
+        data-testid="mock-aura-app-dock-select-vibecoder"
         onClick={() => onPersonaSelect?.(1)}
       />
       <button
         type="button"
-        data-testid="mock-aura-app-dock-select-giga-brain"
+        data-testid="mock-aura-app-dock-select-solo-builder"
         onClick={() => onPersonaSelect?.(2)}
       />
     </div>
@@ -367,9 +367,10 @@ describe("PublicChatView", () => {
     expect(usePublicChatStore.getState().guestToken).toBe("fresh-token");
   });
 
-  it("renders 6 persona ticks AND 6 panel rows including the Solo Builder slot", () => {
+  it("renders 7 persona ticks AND 7 panel rows including the Creator slot", () => {
     renderView();
     const personas = [
+      "Creator",
       "Vibecoder",
       "Solo Builder",
       "Giga Brain",
@@ -387,12 +388,12 @@ describe("PublicChatView", () => {
     expect(screen.getByTestId("persona-tick-rail-panel")).toBeInTheDocument();
   });
 
-  it("starts closed with Vibecoder marked active and opens the menu on rail hover", () => {
+  it("starts closed with Creator marked active and opens the menu on rail hover", () => {
     renderView();
     const rail = screen.getByTestId("persona-tick-rail");
     expect(rail).toHaveAttribute("data-panel-open", "false");
 
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
     expect(tickFor("Researcher")).not.toHaveAttribute("aria-current");
 
     fireEvent.mouseEnter(rail);
@@ -464,7 +465,7 @@ describe("PublicChatView", () => {
     // minimal tick column with the new selection painted.
     expect(rail).toHaveAttribute("data-panel-open", "false");
     expect(tickFor("Researcher")).toHaveAttribute("aria-current", "true");
-    expect(tickFor("Vibecoder")).not.toHaveAttribute("aria-current");
+    expect(tickFor("Creator")).not.toHaveAttribute("aria-current");
     expect(panelFor("Researcher")).toHaveAttribute("data-active", "true");
   });
 
@@ -480,19 +481,21 @@ describe("PublicChatView", () => {
       renderView();
       const heroStub = screen.getByTestId("mock-aura-app-stub");
 
-      // Vibecoder is the default landing theme: the mock window's
-      // wallpaper is the curated cyberpunk portrait. No outgoing
-      // snapshot yet — nothing to dissolve out.
+      // Creator is the default landing theme: the mock window shows
+      // the curated portrait and the PAGE bg is the full-screen WebGL
+      // plasma (no `site.png` <img>), so the orb canvas — not a site
+      // image — is present. No outgoing snapshot yet.
       expect(heroStub).toHaveAttribute(
         "data-desktop-bg",
-        "/personas/vibecoder/desktop.png",
+        "/personas/creator/desktop.png",
       );
       expect(heroStub).toHaveAttribute("data-outgoing-desktop-bg", "");
-      const initialSiteBgImg = screen.getByTestId("public-chat-site-bg-image");
-      expect(initialSiteBgImg).toHaveAttribute(
-        "src",
-        "/personas/vibecoder/site.png",
-      );
+      expect(
+        screen.getByTestId("public-chat-site-bg-orb"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("public-chat-site-bg-image"),
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByTestId("public-chat-site-bg-outgoing"),
       ).not.toBeInTheDocument();
@@ -501,31 +504,33 @@ describe("PublicChatView", () => {
       fireEvent.click(panelFor("Solo Builder"));
 
       // Click immediately commits the new persona's wallpaper +
-      // site bg. The OLD persona (vibecoder) is now the outgoing
-      // snapshot mounted on top, so during the fade window BOTH
-      // images coexist in the DOM and the test stub exposes them
-      // via separate attributes.
+      // site bg. The OLD persona (Creator) is now the outgoing
+      // snapshot mounted on top, so during the fade window BOTH the
+      // new and outgoing wallpapers coexist in the DOM and the stub
+      // exposes them via separate attributes. Creator's page bg was
+      // the orb (no site image), so its outgoing overlay carries only
+      // the dark base color — no <img> inside it.
       expect(heroStub).toHaveAttribute(
         "data-desktop-bg",
         "/personas/solo-builder/desktop.png",
       );
       expect(heroStub).toHaveAttribute(
         "data-outgoing-desktop-bg",
-        "/personas/vibecoder/desktop.png",
+        "/personas/creator/desktop.png",
       );
       expect(heroStub.getAttribute("data-outgoing-fade-key")).not.toBe("");
+      // Committed persona is now image-backed, so the orb is gone and
+      // the Solo Builder site image paints.
+      expect(
+        screen.queryByTestId("public-chat-site-bg-orb"),
+      ).not.toBeInTheDocument();
       expect(
         screen.getByTestId("public-chat-site-bg-image"),
       ).toHaveAttribute("src", "/personas/solo-builder/site.png");
       const outgoingSiteBg = screen.getByTestId(
         "public-chat-site-bg-outgoing",
       );
-      const outgoingSiteBgImg = outgoingSiteBg.querySelector("img");
-      expect(outgoingSiteBgImg).not.toBeNull();
-      expect(outgoingSiteBgImg).toHaveAttribute(
-        "src",
-        "/personas/vibecoder/site.png",
-      );
+      expect(outgoingSiteBg.querySelector("img")).toBeNull();
 
       // Advance past the 550ms fade-out window + 50ms teardown
       // grace. The outgoing layer unmounts and only the new
@@ -563,7 +568,7 @@ describe("PublicChatView", () => {
     const heroStub = screen.getByTestId("mock-aura-app-stub");
     expect(heroStub).toHaveAttribute(
       "data-desktop-bg",
-      "/personas/vibecoder/desktop.png",
+      "/personas/creator/desktop.png",
     );
 
     fireEvent.mouseEnter(screen.getByTestId("persona-tick-rail"));
@@ -581,7 +586,7 @@ describe("PublicChatView", () => {
     );
     expect(heroStub).toHaveAttribute(
       "data-outgoing-desktop-bg",
-      "/personas/vibecoder/desktop.png",
+      "/personas/creator/desktop.png",
     );
     expect(
       document.querySelector('[data-persona-id="solo-builder"]'),
@@ -612,26 +617,26 @@ describe("PublicChatView", () => {
     renderView();
     const heroStub = screen.getByTestId("mock-aura-app-stub");
 
-    // Initial state: Vibecoder (index 0) is active in both
+    // Initial state: Creator (index 0) is active in both
     // surfaces.
     expect(heroStub).toHaveAttribute("data-active-persona-index", "0");
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
 
-    // Click the dock's Solo Builder avatar — the rail's
+    // Click the dock's Solo Builder avatar (index 2) — the rail's
     // aria-current jumps to Solo Builder in the same render.
     fireEvent.click(
       screen.getByTestId("mock-aura-app-dock-select-solo-builder"),
     );
-    expect(heroStub).toHaveAttribute("data-active-persona-index", "1");
+    expect(heroStub).toHaveAttribute("data-active-persona-index", "2");
     expect(tickFor("Solo Builder")).toHaveAttribute("aria-current", "true");
-    expect(tickFor("Vibecoder")).not.toHaveAttribute("aria-current");
+    expect(tickFor("Creator")).not.toHaveAttribute("aria-current");
 
     // Click a rail row — the dock's `activePersonaIndex` jumps to
-    // Researcher (index 4) in the same render, proving the wiring
+    // Researcher (index 5) in the same render, proving the wiring
     // works in both directions.
     fireEvent.mouseEnter(screen.getByTestId("persona-tick-rail"));
     fireEvent.click(panelFor("Researcher"));
-    expect(heroStub).toHaveAttribute("data-active-persona-index", "4");
+    expect(heroStub).toHaveAttribute("data-active-persona-index", "5");
     expect(tickFor("Researcher")).toHaveAttribute("aria-current", "true");
   });
 
@@ -639,11 +644,11 @@ describe("PublicChatView", () => {
     const { unmount } = renderView();
     const root = document.documentElement;
 
-    // Vibecoder is the default and pins the dark-mode text token
-    // pair (`#e6e8eb` / `#c9c9cf`) because its `siteBackgroundColor`
-    // (`#2a0258`) is theme-invariant — the foreground must be theme-
-    // invariant too, otherwise the public nav collapses to near-
-    // black on the deep-purple bg in light mode.
+    // Creator is the default and pins the dark-mode text token
+    // pair (`#e6e8eb` / `#c9c9cf`) because its dark plasma page bg
+    // is theme-invariant — the foreground must be theme-invariant
+    // too, otherwise the public nav collapses to near-black on the
+    // dark bg in light mode.
     expect(root.style.getPropertyValue("--public-nav-fg-color")).toBe(
       "#e6e8eb",
     );
@@ -714,12 +719,12 @@ describe("PublicChatView wheel cycling", () => {
 
   it("advances to the next persona on a wheel-down gesture", () => {
     renderView();
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
 
     wheel(120);
 
-    expect(tickFor("Solo Builder")).toHaveAttribute("aria-current", "true");
-    expect(tickFor("Vibecoder")).not.toHaveAttribute("aria-current");
+    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).not.toHaveAttribute("aria-current");
     expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
       "data-active-persona-index",
       "1",
@@ -727,18 +732,18 @@ describe("PublicChatView wheel cycling", () => {
   });
 
   it("wraps from the first persona to the last on a wheel-up gesture", () => {
-    // Vibecoder (index 0) + wheel-up should land on Cypher Punk
-    // (index PERSONAS.length - 1 = 5) rather than clamping at the
+    // Creator (index 0) + wheel-up should land on Cypher Punk
+    // (index PERSONAS.length - 1 = 6) rather than clamping at the
     // top — the user explicitly asked for cycling, not clamping.
     renderView();
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
 
     wheel(-120);
 
     expect(tickFor("Cypher Punk")).toHaveAttribute("aria-current", "true");
     expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
       "data-active-persona-index",
-      "5",
+      "6",
     );
   });
 
@@ -754,7 +759,7 @@ describe("PublicChatView wheel cycling", () => {
 
     wheel(120);
 
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
     expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
       "data-active-persona-index",
       "0",
@@ -765,19 +770,19 @@ describe("PublicChatView wheel cycling", () => {
     // The original implementation debounced consecutive wheel events
     // behind a 350ms cooldown. The current "feels fast" contract
     // intentionally has no cooldown: three wheel-downs in immediate
-    // succession advance three personas (Vibecoder → Solo Builder →
-    // Giga Brain → Coordinator), proving that nothing in the
-    // handler swallows events that arrive on the same tick as a
-    // prior accepted event.
+    // succession advance three personas (Creator → Vibecoder → Solo
+    // Builder → Giga Brain), proving that nothing in the handler
+    // swallows events that arrive on the same tick as a prior
+    // accepted event.
     renderView();
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
 
     wheel(120);
     wheel(120);
     wheel(120);
 
-    expect(tickFor("Coordinator")).toHaveAttribute("aria-current", "true");
-    expect(tickFor("Solo Builder")).not.toHaveAttribute("aria-current");
+    expect(tickFor("Giga Brain")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Vibecoder")).not.toHaveAttribute("aria-current");
     expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
       "data-active-persona-index",
       "3",
@@ -787,15 +792,15 @@ describe("PublicChatView wheel cycling", () => {
   it("a wheel-down stream past the end wraps cleanly through the carousel boundary", () => {
     // The wrap arithmetic (`((prev + dir) % n + n) % n`) must hold
     // up across consecutive same-tick events, not just a single
-    // boundary crossing. PERSONAS.length is 6, so seven wheel-down
-    // events from index 0 land on index 1 (= 7 mod 6) — Solo
-    // Builder — having passed through every persona exactly once
-    // plus a re-entry into Vibecoder mid-stream.
+    // boundary crossing. PERSONAS.length is 7, so eight wheel-down
+    // events from index 0 land on index 1 (= 8 mod 7) — Vibecoder —
+    // having passed through every persona exactly once plus a
+    // re-entry into Creator mid-stream.
     renderView();
 
-    for (let i = 0; i < 7; i += 1) wheel(120);
+    for (let i = 0; i < 8; i += 1) wheel(120);
 
-    expect(tickFor("Solo Builder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
     expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
       "data-active-persona-index",
       "1",
@@ -826,15 +831,15 @@ describe("PublicChatView wheel cycling", () => {
     renderView("/chat");
 
     const view = screen.getByTestId("public-chat-view");
-    expect(view).toHaveAttribute("data-persona-id", "vibecoder");
+    expect(view).toHaveAttribute("data-persona-id", "creator");
 
     fireEvent.wheel(view, { deltaY: 120 });
     fireEvent.wheel(view, { deltaY: 120 });
     fireEvent.wheel(view, { deltaY: -120 });
 
-    // Persona stays pinned to Vibecoder — none of the three wheel
+    // Persona stays pinned to Creator — none of the three wheel
     // gestures advanced the active index.
-    expect(view).toHaveAttribute("data-persona-id", "vibecoder");
+    expect(view).toHaveAttribute("data-persona-id", "creator");
   });
 
   it("ignores near-zero deltaY events (horizontal trackpad jitter)", () => {
@@ -843,13 +848,13 @@ describe("PublicChatView wheel cycling", () => {
     // sideways two-finger swipe would occasionally flip the
     // persona. WHEEL_DELTA_THRESHOLD = 4 keeps those out.
     renderView();
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
 
     wheel(1);
     wheel(-2);
     wheel(3);
 
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
     expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
       "data-active-persona-index",
       "0",

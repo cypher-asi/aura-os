@@ -131,6 +131,19 @@ export interface PersonaTheme {
    */
   readonly siteBackgroundFlow?: boolean;
   /**
+   * When `true`, the page background for this persona is painted full-
+   * bleed by `ScreenOrbBackground` — the same flowing plasma animation
+   * (palette + domain-warped marble + travelling ridges) used in the
+   * `/agents` "Delegate everything" hero orb, but rendered opaque and
+   * edge-to-edge across the whole viewport (no pill mask), exactly like
+   * the Vibecoder `FlowFieldBackground` purple field. `siteBackgroundColor`
+   * paints underneath as the pre-GL base tint (and the WebGL-unavailable
+   * fallback), so pair this with a dark base. Optional — omit (or leave
+   * `false`) to keep the default static-image / flow behavior. Takes
+   * precedence over `siteBackgroundFlow` when both are set.
+   */
+  readonly siteBackgroundOrb?: boolean;
+  /**
    * Strong foreground color (active / hover) for chrome that floats
    * over the persona's site background — currently the active tick
    * in `PersonaTickRail` and the hovered link in
@@ -214,6 +227,50 @@ export interface Persona {
 }
 
 export const PERSONAS: ReadonlyArray<Persona> = [
+  {
+    // The default landing persona — first tick, `activeIndex` starts
+    // at 0 so this is what a logged-out visitor sees on first paint.
+    id: "creator",
+    name: "Creator",
+    role: "Creator",
+    theme: {
+      // Landscape portrait of the red-haired figure on a near-white
+      // studio field. Shown in full (`contain`) inside the 16:10 mock
+      // window; the source is wider than the frame so it fits to width
+      // and leaves thin top/bottom letterbox bars, which the matching
+      // near-white `desktopBackgroundColor` below fills so the studio
+      // backdrop appears to extend seamlessly to the window edges.
+      desktopBackgroundUrl: "/personas/creator/desktop.png",
+      desktopBackgroundPosition: null,
+      desktopBackgroundFit: "contain",
+      // Sampled near-white of the source's studio backdrop so the
+      // letterbox bars blend with the photo's own background.
+      desktopBackgroundColor: "#f3f3f3",
+      desktopBackgroundScale: null,
+      desktopBackgroundOffsetY: null,
+      // Page background is the live full-screen WebGL plasma — the
+      // same animation as the `/agents` "Delegate everything" hero,
+      // rendered edge-to-edge like the Vibecoder purple field.
+      siteBackgroundUrl: null,
+      // Dark base painted under the orb before the GL paints (and the
+      // WebGL-unavailable fallback); also feeds `deriveChatPalette` for
+      // a dark chat bubble palette. Matches the AgentConsole stage's
+      // deepest gradient stop so the surround reads as one dark field.
+      siteBackgroundColor: "#0c0c0c",
+      siteBackgroundOrb: true,
+      // Light nav / tick foreground floats legibly over the dark,
+      // luminous orb.
+      siteForegroundColor: "#e6e8eb",
+      siteForegroundColorMuted: "#c9c9cf",
+      // Default neon-violet CTA bloom reads cleanly against the dark
+      // plasma page bg.
+      siteCtaGlowColor: null,
+      // Nudge the 2x-zoomed avatar dock crop down from the shared
+      // `50% 18%` so the face (sitting around the upper-middle of this
+      // landscape source) lands centered in the 18px circle.
+      avatarObjectPosition: "50% 28%",
+    },
+  },
   {
     id: "vibecoder",
     name: "Vibecoder",

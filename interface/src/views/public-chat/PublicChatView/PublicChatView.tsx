@@ -25,6 +25,7 @@ import {
 import { usePublicGateShown, usePublicPageViewed } from "../use-public-shell-analytics";
 import { track } from "../../../lib/analytics";
 import { ComposePanel } from "../ComposePanel";
+import { ScreenOrbBackground } from "./ScreenOrbBackground";
 import { FlowFieldBackground } from "./FlowFieldBackground";
 import { CreateAgentButton } from "../CreateAgentButton";
 import { PersonaTickRail } from "../PersonaTickRail";
@@ -542,7 +543,9 @@ export function PublicChatView(): React.ReactElement {
         data-testid="public-chat-site-bg"
         aria-hidden="true"
       >
-        {committedPersona.theme.siteBackgroundFlow ? (
+        {committedPersona.theme.siteBackgroundOrb ? (
+          <ScreenOrbBackground key={committedPersona.id} />
+        ) : committedPersona.theme.siteBackgroundFlow ? (
           <FlowFieldBackground
             key={committedPersona.id}
             baseColor={committedPersona.theme.siteBackgroundColor ?? "#2a0258"}
