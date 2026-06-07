@@ -93,18 +93,27 @@ function normalizeDraftPayload(draft: IntegrationDraft) {
     provider: string;
     kind: IntegrationKind;
     default_model: string | null;
-    provider_config: Record<string, unknown> | null;
+    provider_config?: Record<string, unknown> | null;
     api_key?: string | null;
   } = {
     name: draft.name.trim(),
     provider: draft.provider,
     kind: draft.kind,
     default_model: providerSupportsModel(draft.provider) ? (draft.defaultModel.trim() || null) : null,
-    provider_config: normalizeProviderConfig(draft.provider, draft.providerConfig),
   };
+  payload.provider_config = normalizeProviderConfig(draft.provider, draft.providerConfig);
   const apiKey = draft.apiKey.trim();
   if (apiKey) {
     payload.api_key = apiKey;
+  }
+  return payload;
+}
+
+function normalizeDraftUpdatePayload(draft: IntegrationDraft) {
+  const payload = normalizeDraftPayload(draft);
+  const hasConfigFields = getIntegrationConfigFields(draft.provider).length > 0;
+  if (payload.provider_config == null && !hasConfigFields) {
+    delete payload.provider_config;
   }
   return payload;
 }
@@ -577,7 +586,7 @@ export function OrgSettingsIntegrations({
                               try {
                                 await onUpdate(
                                   integration.integration_id,
-                                  normalizeDraftPayload(draft),
+                                  normalizeDraftUpdatePayload(draft),
                                 );
                               } catch (error) {
                                 setErrorMessage(

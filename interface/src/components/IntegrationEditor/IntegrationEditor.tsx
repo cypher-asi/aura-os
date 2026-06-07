@@ -19,7 +19,7 @@ export interface IntegrationEditorPayload {
   provider: string;
   kind: IntegrationKind;
   default_model: string | null;
-  provider_config: Record<string, unknown> | null;
+  provider_config?: Record<string, unknown> | null;
   api_key?: string | null;
 }
 
@@ -191,8 +191,11 @@ export function IntegrationEditor({
       provider,
       kind,
       default_model: showModel ? draft.defaultModel.trim() || null : null,
-      provider_config: normalizeProviderConfig(provider, draft.providerConfig),
     };
+    const providerConfig = normalizeProviderConfig(provider, draft.providerConfig);
+    if (providerConfig != null || isNew || configFields.length > 0) {
+      payload.provider_config = providerConfig;
+    }
     const apiKey = draft.apiKey.trim();
     if (apiKey) {
       payload.api_key = apiKey;
