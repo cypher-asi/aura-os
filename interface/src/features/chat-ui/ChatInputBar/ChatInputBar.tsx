@@ -1008,12 +1008,35 @@ export const DesktopChatInputBar = memo(
       </>
     );
 
+    const attachButton = (
+      <button
+        type="button"
+        className={`${inputBarShellStyles.attachButton} ${
+          attachAccent ? styles.attachOrb : styles.attachRing
+        }`}
+        onClick={() => fileInputRef.current?.click()}
+        disabled={!canAddMore || sendDisabled}
+        aria-label="Attach file"
+      >
+        {attachAccent ? (
+          <span className={styles.attachOrbField} aria-hidden="true">
+            {attachAccent}
+          </span>
+        ) : null}
+        <Plus size={23} strokeWidth={1} />
+      </button>
+    );
+
+    const keepStaticAttachAccentInThreeD = isStatic && attachAccent != null;
+
     // In 3D mode the attach affordance is replaced by the auto-derived
     // "Source for 3D" thumb (rendered inline at the start of the input
     // row when an image is pinned). Keeping it inline — instead of
     // stacking it above the textarea — preserves the input row's
     // height so the pinned `ChatStreamingIndicator` ("Generating 3D
-    // model...") remains visible.
+    // model...") remains visible. Static marketing mocks keep their
+    // decorative attach-accent well in every mode so the left-side "+"
+    // area does not jump while the demo cycles.
     const inputRowStart =
       generationMode === "3d" ? (
         has3DSource && pinnedSourceImage ? (
@@ -1037,25 +1060,10 @@ export const DesktopChatInputBar = memo(
               <X size={9} />
             </button>
           </div>
+        ) : keepStaticAttachAccentInThreeD ? (
+          attachButton
         ) : null
-      ) : (
-        <button
-          type="button"
-          className={`${inputBarShellStyles.attachButton} ${
-            attachAccent ? styles.attachOrb : styles.attachRing
-          }`}
-          onClick={() => fileInputRef.current?.click()}
-          disabled={!canAddMore || sendDisabled}
-          aria-label="Attach file"
-        >
-          {attachAccent ? (
-            <span className={styles.attachOrbField} aria-hidden="true">
-              {attachAccent}
-            </span>
-          ) : null}
-          <Plus size={23} strokeWidth={1} />
-        </button>
-      );
+      ) : attachButton;
 
     // The model picker has two homes depending on the textarea's
     // visual height:

@@ -846,6 +846,21 @@ describe("ChatInputBar", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("keeps the decorative attach well in static 3D mode", () => {
+    render(
+      <ChatInputBar
+        {...makeProps({
+          isStatic: true,
+          selectedModeOverride: "3d",
+          attachAccent: <span data-testid="mock-attach-accent" />,
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Attach file" })).toBeInTheDocument();
+    expect(screen.getByTestId("mock-attach-accent")).toBeInTheDocument();
+  });
+
   it("3D model step (with thumb): renders the pinned source thumb and Send is enabled even with empty text", async () => {
     const user = userEvent.setup();
     mockSelectedMode = "3d";
