@@ -1,5 +1,5 @@
 use axum::http::StatusCode;
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::Json;
 use axum::Router;
 
@@ -470,6 +470,38 @@ pub fn build_provider_mock() -> Router {
             }),
         )
         .route(
+            "/google/gmail/v1/users/me/messages/send",
+            post(|| async {
+                Json(serde_json::json!({
+                    "id": "sent-msg-1",
+                    "threadId": "thread-1",
+                    "labelIds": ["SENT"]
+                }))
+            }),
+        )
+        .route(
+            "/google/gmail/v1/users/me/drafts",
+            post(|| async {
+                Json(serde_json::json!({
+                    "id": "draft-1",
+                    "message": {
+                        "id": "draft-msg-1",
+                        "threadId": "thread-1"
+                    }
+                }))
+            }),
+        )
+        .route(
+            "/google/gmail/v1/users/me/drafts/send",
+            post(|| async {
+                Json(serde_json::json!({
+                    "id": "sent-draft-msg-1",
+                    "threadId": "thread-1",
+                    "labelIds": ["SENT"]
+                }))
+            }),
+        )
+        .route(
             "/google/gmail/v1/users/me/messages/msg-1",
             get(|| async {
                 Json(serde_json::json!({
@@ -513,6 +545,32 @@ pub fn build_provider_mock() -> Router {
                         "end": { "dateTime": "2026-06-06T09:30:00-04:00" }
                     }]
                 }))
+            })
+            .post(|| async {
+                Json(serde_json::json!({
+                    "id": "event-created-1",
+                    "summary": "Aura planning",
+                    "htmlLink": "https://calendar.google.com/event?eid=event-created-1",
+                    "status": "confirmed",
+                    "start": { "dateTime": "2026-06-06T10:00:00-04:00" },
+                    "end": { "dateTime": "2026-06-06T10:30:00-04:00" },
+                    "attendees": [{ "email": "guest@example.com" }]
+                }))
             }),
+        )
+        .route(
+            "/google/calendar/v3/calendars/primary/events/event-1",
+            patch(|| async {
+                Json(serde_json::json!({
+                    "id": "event-1",
+                    "summary": "Moved planning",
+                    "htmlLink": "https://calendar.google.com/event?eid=event-1",
+                    "status": "confirmed",
+                    "start": { "dateTime": "2026-06-06T11:00:00-04:00" },
+                    "end": { "dateTime": "2026-06-06T11:30:00-04:00" },
+                    "attendees": [{ "email": "guest@example.com" }]
+                }))
+            })
+            .delete(|| async { StatusCode::NO_CONTENT }),
         )
 }

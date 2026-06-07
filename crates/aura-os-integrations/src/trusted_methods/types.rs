@@ -28,6 +28,8 @@ pub struct TrustedIntegrationMethodDefinition {
 pub enum TrustedIntegrationHttpMethod {
     Get,
     Post,
+    Patch,
+    Delete,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -151,5 +153,8 @@ pub enum TrustedIntegrationRuntimeSpec {
     },
     ResendSendEmail,
     GmailSendEmail,
+    GmailCreateDraft,
     GoogleCalendarCreateEvent,
+    GoogleCalendarUpdateEvent,
+    GoogleCalendarDeleteEvent,
 }

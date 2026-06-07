@@ -221,7 +221,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     label: "Google",
     kind: "workspace_integration",
     description:
-      "Gmail and Google Calendar workflows through your connected Google account.",
+      "Gmail search, drafts, sending, and Google Calendar event workflows through your connected Google account.",
     secretLabel: "Google Account",
     secretPlaceholder: "Connect your Google account",
     authHint:

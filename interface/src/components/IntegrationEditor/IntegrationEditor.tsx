@@ -20,7 +20,7 @@ export interface IntegrationEditorPayload {
   kind: IntegrationKind;
   default_model: string | null;
   provider_config: Record<string, unknown> | null;
-  api_key: string | null;
+  api_key?: string | null;
 }
 
 export interface IntegrationEditorProps {
@@ -192,8 +192,11 @@ export function IntegrationEditor({
       kind,
       default_model: showModel ? draft.defaultModel.trim() || null : null,
       provider_config: normalizeProviderConfig(provider, draft.providerConfig),
-      api_key: draft.apiKey.trim() || null,
     };
+    const apiKey = draft.apiKey.trim();
+    if (apiKey) {
+      payload.api_key = apiKey;
+    }
     try {
       if (isNew) {
         await onCreate(payload);
@@ -347,7 +350,7 @@ export function IntegrationEditor({
                       <div>
                         <div className={styles.googleCapabilityTitle}>Gmail</div>
                         <div className={styles.googleCapabilityBody}>
-                          Search, read, and send mail from your account
+                          Search, read, draft, and send mail from your account
                         </div>
                       </div>
                     </div>
@@ -356,7 +359,7 @@ export function IntegrationEditor({
                       <div>
                         <div className={styles.googleCapabilityTitle}>Calendar</div>
                         <div className={styles.googleCapabilityBody}>
-                          List calendars and manage events on your account
+                          List calendars, schedule meetings, and manage events
                         </div>
                       </div>
                     </div>

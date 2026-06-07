@@ -180,6 +180,10 @@ pub(crate) async fn execute_trusted_integration_tool(
                 text.as_deref(),
                 html.as_deref(),
             )?;
+            let message = build_gmail_message_resource(
+                raw,
+                optional_string(args, &["thread_id", "threadId"]),
+            );
             let url = format!(
                 "{}/gmail/v1/users/me/messages/send",
                 app_provider_base_url(kind)
@@ -190,7 +194,7 @@ pub(crate) async fn execute_trusted_integration_tool(
                 reqwest::Method::POST,
                 &url,
                 app_provider_headers(kind, secret).map_err(ApiError::bad_request)?,
-                Some(json!({ "raw": raw })),
+                Some(message),
             )
             .await?;
             Ok(json!({
@@ -201,35 +205,57 @@ pub(crate) async fn execute_trusted_integration_tool(
                 }
             }))
         }
+        TrustedIntegrationRuntimeSpec::GmailCreateDraft => {
+            let from = required_string(args, &["from"])?;
+            let to = required_string_list(args, &["to"])?;
+            let subject = required_string(args, &["subject"])?;
+            let text = optional_string(args, &["text"]);
+            let html = optional_string(args, &["html"]);
+            if text.is_none() && html.is_none() {
+                return Err(ApiError::bad_request(
+                    "gmail_create_draft requires at least one of `text` or `html`",
+                ));
+            }
+
+            let raw = build_gmail_raw_message(
+                &from,
+                &to,
+                optional_string_list(args, &["cc"]).as_deref(),
+                optional_string_list(args, &["bcc"]).as_deref(),
+                &subject,
+                text.as_deref(),
+                html.as_deref(),
+            )?;
+            let message = build_gmail_message_resource(
+                raw,
+                optional_string(args, &["thread_id", "threadId"]),
+            );
+            let url = format!(
+                "{}/gmail/v1/users/me/drafts",
+                app_provider_base_url(kind)
+                    .ok_or_else(|| ApiError::internal("trusted provider base url missing"))?
+            );
+            let response = provider_json_request(
+                client,
+                reqwest::Method::POST,
+                &url,
+                app_provider_headers(kind, secret).map_err(ApiError::bad_request)?,
+                Some(json!({ "message": message })),
+            )
+            .await?;
+            Ok(json!({
+                "draft": {
+                    "id": response.get("id").and_then(Value::as_str).unwrap_or_default(),
+                    "message": {
+                        "id": response.pointer("/message/id").and_then(Value::as_str).unwrap_or_default(),
+                        "thread_id": response.pointer("/message/threadId").and_then(Value::as_str).unwrap_or_default(),
+                    }
+                }
+            }))
+        }
         TrustedIntegrationRuntimeSpec::GoogleCalendarCreateEvent => {
             let calendar_id = required_string(args, &["calendar_id", "calendarId"])?;
-            let summary = required_string(args, &["summary"])?;
-            let start = required_string(args, &["start"])?;
-            let end = required_string(args, &["end"])?;
-            let time_zone = optional_string(args, &["time_zone", "timeZone"]);
-            let mut event = json!({
-                "summary": summary,
-                "start": { "dateTime": start },
-                "end": { "dateTime": end },
-            });
-            if let Some(time_zone) = time_zone {
-                event["start"]["timeZone"] = Value::String(time_zone.clone());
-                event["end"]["timeZone"] = Value::String(time_zone);
-            }
-            if let Some(description) = optional_string(args, &["description"]) {
-                event["description"] = Value::String(description);
-            }
-            if let Some(location) = optional_string(args, &["location"]) {
-                event["location"] = Value::String(location);
-            }
-            if let Some(attendees) = optional_string_list(args, &["attendees"]) {
-                event["attendees"] = Value::Array(
-                    attendees
-                        .into_iter()
-                        .map(|email| json!({ "email": email }))
-                        .collect(),
-                );
-            }
+            let event = build_google_calendar_event_resource(args, true)?;
 
             let mut url = app_provider_authenticated_url_with_config(
                 kind,
@@ -241,6 +267,10 @@ pub(crate) async fn execute_trusted_integration_tool(
             if let Some(send_updates) = optional_string(args, &["send_updates", "sendUpdates"]) {
                 url.query_pairs_mut()
                     .append_pair("sendUpdates", &send_updates);
+            }
+            if optional_bool(args, &["create_google_meet", "createGoogleMeet"]).unwrap_or(false) {
+                url.query_pairs_mut()
+                    .append_pair("conferenceDataVersion", "1");
             }
             let response = provider_json_request(
                 client,
@@ -259,6 +289,75 @@ pub(crate) async fn execute_trusted_integration_tool(
                     "start": response.get("start").cloned().unwrap_or(Value::Null),
                     "end": response.get("end").cloned().unwrap_or(Value::Null),
                     "attendees": response.get("attendees").cloned().unwrap_or_else(|| json!([])),
+                }
+            }))
+        }
+        TrustedIntegrationRuntimeSpec::GoogleCalendarUpdateEvent => {
+            let calendar_id = required_string(args, &["calendar_id", "calendarId"])?;
+            let event_id = required_string(args, &["event_id", "eventId"])?;
+            let event = build_google_calendar_event_resource(args, false)?;
+            let mut url = app_provider_authenticated_url_with_config(
+                kind,
+                &format!("/calendar/v3/calendars/{calendar_id}/events/{event_id}"),
+                secret,
+                provider_config,
+            )
+            .map_err(ApiError::bad_request)?;
+            if let Some(send_updates) = optional_string(args, &["send_updates", "sendUpdates"]) {
+                url.query_pairs_mut()
+                    .append_pair("sendUpdates", &send_updates);
+            }
+            if optional_bool(args, &["create_google_meet", "createGoogleMeet"]).unwrap_or(false) {
+                url.query_pairs_mut()
+                    .append_pair("conferenceDataVersion", "1");
+            }
+            let response = provider_json_request(
+                client,
+                reqwest::Method::PATCH,
+                url.as_str(),
+                app_provider_headers(kind, secret).map_err(ApiError::bad_request)?,
+                Some(event),
+            )
+            .await?;
+            Ok(json!({
+                "event": {
+                    "id": response.get("id").and_then(Value::as_str).unwrap_or_default(),
+                    "summary": response.get("summary").and_then(Value::as_str).unwrap_or_default(),
+                    "html_link": response.get("htmlLink").and_then(Value::as_str),
+                    "status": response.get("status").and_then(Value::as_str),
+                    "start": response.get("start").cloned().unwrap_or(Value::Null),
+                    "end": response.get("end").cloned().unwrap_or(Value::Null),
+                    "attendees": response.get("attendees").cloned().unwrap_or_else(|| json!([])),
+                    "conference_data": response.get("conferenceData").cloned().unwrap_or(Value::Null),
+                }
+            }))
+        }
+        TrustedIntegrationRuntimeSpec::GoogleCalendarDeleteEvent => {
+            let calendar_id = required_string(args, &["calendar_id", "calendarId"])?;
+            let event_id = required_string(args, &["event_id", "eventId"])?;
+            let mut url = app_provider_authenticated_url_with_config(
+                kind,
+                &format!("/calendar/v3/calendars/{calendar_id}/events/{event_id}"),
+                secret,
+                provider_config,
+            )
+            .map_err(ApiError::bad_request)?;
+            if let Some(send_updates) = optional_string(args, &["send_updates", "sendUpdates"]) {
+                url.query_pairs_mut()
+                    .append_pair("sendUpdates", &send_updates);
+            }
+            let _response = provider_json_request(
+                client,
+                reqwest::Method::DELETE,
+                url.as_str(),
+                app_provider_headers(kind, secret).map_err(ApiError::bad_request)?,
+                None,
+            )
+            .await?;
+            Ok(json!({
+                "event": {
+                    "id": event_id,
+                    "deleted": true,
                 }
             }))
         }

@@ -286,6 +286,48 @@ describe("OrgSettingsIntegrations", () => {
     expect(onUpdate).toHaveBeenCalledWith("int-github", { enabled: true });
   });
 
+  it("preserves existing secrets when saving with a blank key field", async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn().mockResolvedValue(null);
+
+    render(
+      <OrgSettingsIntegrations
+        integrations={[{
+          integration_id: "int-github",
+          org_id: "org-1",
+          name: "GitHub Ops",
+          provider: "github",
+          kind: "workspace_integration",
+          default_model: null,
+          has_secret: true,
+          enabled: true,
+          secret_last4: "1234",
+          provider_config: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }]}
+        busyId={null}
+        canManage
+        onCreate={vi.fn().mockResolvedValue(null)}
+        onUpdate={onUpdate}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.clear(screen.getByLabelText(/Integration name for GitHub Ops/i));
+    await user.type(screen.getByLabelText(/Integration name for GitHub Ops/i), "GitHub Renamed");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onUpdate).toHaveBeenCalledWith("int-github", {
+      name: "GitHub Renamed",
+      provider: "github",
+      kind: "workspace_integration",
+      default_model: null,
+      provider_config: null,
+    });
+  });
+
   it("shows integrations as read-only for non-admin members", () => {
     render(
       <OrgSettingsIntegrations
