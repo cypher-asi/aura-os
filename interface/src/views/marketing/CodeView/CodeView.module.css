@@ -51,6 +51,25 @@
       transparent 65%
     ),
     linear-gradient(180deg, #090909 0%, #0e0e11 42%, #1c1c20 100%);
+  /*
+   * Extend the surface well below the window so it reads as a desk the
+   * UI sits on. The shared `.stage` centers its content in a
+   * `~71vh` box; here we grow the box, pin the window toward the TOP
+   * (`align-items: start`, overriding the shared `place-items: center`
+   * while leaving its horizontal centering intact), and let the extra
+   * height plus the bottom padding become open surface beneath it. The
+   * window itself is kept at its original size by the viewport-based
+   * cap on `.desktopStage > div` below, so this only adds space rather
+   * than scaling the UI up.
+   */
+  height: clamp(560px, 96vh, 1120px);
+  align-items: start;
+  padding-top: clamp(4px, 1.5vh, 20px);
+  padding-bottom: clamp(140px, 24vh, 300px);
+  /* Round the bottom of the surface so the gradient section ends in a
+     soft slab rather than hard square corners. */
+  border-bottom-left-radius: clamp(16px, 1.8vw, 26px);
+  border-bottom-right-radius: clamp(16px, 1.8vw, 26px);
 }
 
 /*
@@ -66,11 +85,17 @@
  * (`MockAuraDesktop.module.css`) with a deeper, lower, more diffuse
  * cast plus a tight contact shadow, grounding the window on the
  * surface gradient above.
+ *
+ * Sizing is pinned to the VIEWPORT (`68vh`) rather than the stage's
+ * container-query height (`cqh`) so that growing `.desktopStage` (to
+ * add surface below) does not also scale the window up — the window
+ * keeps roughly the same footprint it had at the old `~71vh` stage,
+ * and the added stage height becomes open surface beneath it.
  */
 .desktopStage > div {
-  width: min(96cqw, calc(96cqh * 16 / 10));
+  width: min(96cqw, calc(68vh * 16 / 10));
   max-width: 96cqw;
-  max-height: 96cqh;
+  max-height: 68vh;
   box-shadow:
     0 2px 6px -2px rgba(0, 0, 0, 0.5),
     0 28px 50px -16px rgba(0, 0, 0, 0.65),
