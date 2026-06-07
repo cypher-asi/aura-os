@@ -20,10 +20,11 @@ import { NoiseReductionBrain } from "../NoiseReductionBrain";
  * single pointer, and a caption panel (INTELLIGENCE / WITHOUT LIMITS).
  * Everything is decorative (`aria-hidden`); nothing here is a real control.
  *
- * Moving the cursor anywhere in the viewport is interactive: the cursor's
- * position drives the knob pointer through its dial arc and fills the tick
- * ring up to that point like a level meter. The brain animation is ambient
- * and not affected by the cursor.
+ * The knob is driven by the cursor's vertical position in the viewport: the
+ * top reads 0 (pointer hard left), the center reads 50% (pointer straight up),
+ * the bottom reads max (pointer hard right), and the tick ring fills up to that
+ * point like a level meter. The brain animation is ambient and not affected by
+ * the cursor.
  */
 
 /** Tick-dot count for the full circular ring around the knob. */
@@ -145,9 +146,6 @@ function randomizeBox(box: HTMLDivElement, img: HTMLImageElement): void {
 }
 
 export function NoiseReductionCard(): ReactNode {
-  // Shared, normalized (0..1) cursor position driving the knob pointer and
-  // tick meter. Kept in a ref so pointer moves don't re-render the card.
-  const pointerRef = useRef({ x: 0.5, y: 0.5 });
   const knobPointerRef = useRef<HTMLSpanElement>(null);
   const tickRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const activationRef = useRef<HTMLSpanElement>(null);
@@ -285,27 +283,25 @@ export function NoiseReductionCard(): ReactNode {
     return () => cleanups.forEach((fn) => fn());
   }, []);
 
-  // React to the cursor anywhere in the viewport (not just over the device):
-  // the window-wide position drives the knob and the tick meter. A window
-  // listener keeps this live regardless of which element the pointer is
-  // actually over.
+  // Drive the knob from the cursor's vertical position anywhere in the
+  // viewport: top of the viewport reads 0 (pointer hard left), the vertical
+  // center reads 50% (pointer straight up), the bottom reads max (pointer hard
+  // right). The tick ring fills like a level meter to match. A window listener
+  // keeps this live regardless of which element the pointer is over; written
+  // imperatively so it never re-renders the card.
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
-      const w = window.innerWidth || 1;
       const h = window.innerHeight || 1;
-      const x = Math.min(1, Math.max(0, e.clientX / w));
-      const y = Math.min(1, Math.max(0, e.clientY / h));
-      pointerRef.current = { x, y };
-      // Sweep the pointer through the dial's arc: left = min, right = max.
-      const angle = (x - 0.5) * TICK_ARC_DEG;
+      // 0 at the top of the viewport, 1 at the bottom, 0.5 at the center.
+      const v = Math.min(1, Math.max(0, e.clientY / h));
+      const angle = (v - 0.5) * TICK_ARC_DEG;
       knobPointerRef.current?.style.setProperty(
         "--nr-knob-angle",
         `${angle}deg`,
       );
-      // Light every tick from the start of the arc up to the pointer, like a
-      // level meter filling in real time. Tick `i` sits at `i/(N-1)` of the
-      // arc, so it's lit once that fraction is <= the cursor's x position.
-      const litThreshold = x * (KNOB_TICKS - 1);
+      // Tick `i` sits at `i/(N-1)` of the arc, so it's lit once that fraction
+      // is <= the cursor's vertical position.
+      const litThreshold = v * (KNOB_TICKS - 1);
       for (let i = 0; i < tickRefs.current.length; i++) {
         tickRefs.current[i]?.classList.toggle(
           "nrKnobTickLit",
@@ -317,8 +313,8 @@ export function NoiseReductionCard(): ReactNode {
     return () => window.removeEventListener("pointermove", onMove);
   }, []);
 
-  // Default fill matches the rest pointer (straight up = cursor centered):
-  // ticks in the left half plus the top tick start lit.
+  // First-paint fill before the cursor moves: assume the 50% midpoint (ticks
+  // in the left half plus the top tick start lit).
   const defaultLitMax = (KNOB_TICKS - 1) / 2;
 
   return (
@@ -386,6 +382,11 @@ export function NoiseReductionCard(): ReactNode {
             <div className="nrKnobWrap">
               <div className="nrKnobTicks">
                 {Array.from({ length: KNOB_TICKS }).map((_, i) => {
+                  // Drop the two arc endpoints (the bottom-left and
+                  // bottom-right dots) while keeping every other dot in place.
+                  if (i === 0 || i === KNOB_TICKS - 1) {
+                    return null;
+                  }
                   const angle =
                     -TICK_ARC_DEG / 2 +
                     (i / (KNOB_TICKS - 1)) * TICK_ARC_DEG;
