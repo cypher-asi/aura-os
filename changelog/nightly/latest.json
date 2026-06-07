@@ -3,20 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-07T04:12:58.678Z",
+  "generatedAt": "2026-06-07T05:07:35.459Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.630.1",
+  "version": "0.1.0-nightly.631.1",
   "date": "2026-06-06",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.630.1",
-  "lastIncludedSha": "3d606cdc94c42702555b43c51216a77dfdf70eb0",
-  "previousProcessedSha": "0f3fce7a931bb01eae7d522dca1d2bdc4aa8f0f9",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.631.1",
+  "lastIncludedSha": "4af39468016782965bbc307d2967d4a596a11237",
+  "previousProcessedSha": "3d606cdc94c42702555b43c51216a77dfdf70eb0",
   "commitShas": [
     "0f3fce7a931bb01eae7d522dca1d2bdc4aa8f0f9",
-    "3d606cdc94c42702555b43c51216a77dfdf70eb0"
+    "3d606cdc94c42702555b43c51216a77dfdf70eb0",
+    "4af39468016782965bbc307d2967d4a596a11237"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "0f3fce7a931bb01eae7d522dca1d2bdc4aa8f0f9",
@@ -185,6 +186,49 @@
         "Other",
         "Core Rust"
       ]
+    },
+    {
+      "sha": "4af39468016782965bbc307d2967d4a596a11237",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-07T00:57:35-04:00",
+      "subject": "Preserve Google OAuth fields on integration updates (#42)",
+      "body": "",
+      "parents": [
+        "3d606cdc94c42702555b43c51216a77dfdf70eb0"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "interface/src/components/IntegrationEditor/IntegrationEditor.test.tsx",
+        "interface/tests/e2e/google-integration-ui.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 209,
+        "deletions": 5
+      },
+      "committedAtMs": 1780808255000,
+      "cleanSubject": "Preserve Google OAuth fields on integration updates (#42)",
+      "keywords": [
+        "preserve",
+        "google",
+        "oauth",
+        "fields",
+        "integration",
+        "updates"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/components",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
   "batchCount": 2,
@@ -192,29 +236,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.630.1",
+      "version": "0.1.0-nightly.631.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 50051662
+          "sizeBytes": 50044080
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 116963832
+          "sizeBytes": 116967928
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -224,29 +268,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.630.1",
+      "version": "0.1.0-nightly.631.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.630.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.631.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45952896
+          "sizeBytes": 45952858
         },
         {
-          "name": "AURA_0.1.0-nightly.630.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.631.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 45058997
+          "sizeBytes": 45054840
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -256,29 +300,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.630.1",
+      "version": "0.1.0-nightly.631.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.630.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.631.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 47919511
+          "sizeBytes": 47917764
         },
         {
-          "name": "AURA_0.1.0-nightly.630.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.631.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 47077670
+          "sizeBytes": 47074292
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -288,17 +332,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.630.1",
+      "version": "0.1.0-nightly.631.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 33705609
+          "sizeBytes": 33710494
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.630.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.631.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -307,40 +351,40 @@
     }
   ],
   "rendered": {
-    "title": "Google Gmail and Calendar land in Aura integrations",
-    "intro": "Today's nightly brings first-class Google connectivity to Aura. An afternoon change introduced Gmail and Calendar as connectable org integrations end-to-end, and a late-night follow-up hardened the tool surface and the integration save flow so connections behave predictably across edits and renames.",
+    "title": "Google Workspace integration lands for Aura organizations",
+    "intro": "Today's nightly brings first-class Google Workspace support to Aura. Organizations can now connect Gmail and Google Calendar through an OAuth-backed flow, and follow-up work hardened the trusted runtime, the integration editor UI, and the save path so existing connections survive edits cleanly.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:54 PM",
         "started_at": "2026-06-06T21:54:55.000Z",
         "ended_at": "2026-06-06T21:54:55.000Z",
-        "title": "Gmail and Calendar arrive as a connectable Google integration",
-        "summary": "Aura gains a full Google integration covering Gmail and Calendar, with OAuth proxied through aura-integrations and a refreshed connect-and-manage UI in org settings.",
+        "title": "Gmail and Google Calendar connect to Aura organizations",
+        "summary": "A new Google Workspace integration lets orgs connect Gmail and Calendar via OAuth, proxied through aura-integrations, with a dedicated trusted-runtime path and updated settings UI.",
         "items": [
           {
-            "text": "Added Google as a first-class org integration with Gmail and Calendar trusted methods, a new provider catalog entry, and ~340 lines of dedicated Google tool plumbing in aura-os-integrations.",
+            "text": "Organizations can now connect Google to send Gmail and manage Calendar events, with OAuth handled by aura-integrations and `/oauth/google/start` proxied from Aura OS; setup is documented via new `AURA_INTEGRATIONS_URL` and `AURA_INTEGRATIONS_INTERNAL_TOKEN` env vars in the README and `.env.example`.",
             "commit_shas": [
               "0f3fce7a931bb01eae7d522dca1d2bdc4aa8f0f9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wired Google OAuth through the aura-integrations service: `/oauth/google/start` is now proxied, with `AURA_INTEGRATIONS_URL` and `AURA_INTEGRATIONS_INTERNAL_TOKEN` documented in the env example and README as the requirement for users to connect Google.",
+            "text": "Added a Google-specific trusted-methods module (~340 lines) and trusted_runtime helpers that dispatch Gmail and Calendar tool calls, alongside an expanded org-integration tool catalog covering the new provider.",
             "commit_shas": [
               "0f3fce7a931bb01eae7d522dca1d2bdc4aa8f0f9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Rebuilt the org settings integrations UI and editor (~470 lines of TSX changes plus a new 290-line Playwright suite) so admins can connect, view, and manage the Google integration alongside existing providers.",
+            "text": "Reworked the Integration Editor and Org Settings Integrations panels with Google-aware ownership, connection state, and styling, backed by a new Playwright suite (`google-integration-ui.spec.ts`) covering the connect flow end-to-end.",
             "commit_shas": [
               "0f3fce7a931bb01eae7d522dca1d2bdc4aa8f0f9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tightened integration ownership by threading the authenticated user's identity into org tool dispatch, so Google (and other app-provider) tool calls now run with proper user context.",
+            "text": "Tool dispatch now threads the calling user's session into provider calls, so Google actions are attributed to the acting user rather than just the org.",
             "commit_shas": [
               "0f3fce7a931bb01eae7d522dca1d2bdc4aa8f0f9"
             ],
@@ -352,28 +396,35 @@
         "batch_id": "entry-2",
         "time_label": "8:59 PM",
         "started_at": "2026-06-07T03:59:36.000Z",
-        "ended_at": "2026-06-07T03:59:36.000Z",
-        "title": "Hardening pass on the Google tools and integration save flow",
-        "summary": "A late-night follow-up sharpened the freshly shipped Google integration: richer Calendar event handling, more forgiving HTTP plumbing, and a save flow that no longer loses Google metadata when an integration is renamed.",
+        "ended_at": "2026-06-07T04:57:35.000Z",
+        "title": "Google integration save flow preserves OAuth credentials on edit",
+        "summary": "Follow-up hardening expands the trusted runtime's HTTP surface, fleshes out Calendar event building, and ensures editing or renaming a Google integration no longer drops its stored OAuth metadata.",
         "items": [
           {
-            "text": "Expanded the trusted runtime for Google: added PATCH and DELETE method support, tolerated empty-body provider responses, and introduced a full Google Calendar event resource builder covering attendees, time zones, visibility, transparency, and on-the-fly Google Meet conference creation.",
+            "text": "Trusted runtime now supports PATCH and DELETE methods and tolerates empty provider responses, unlocking Gmail/Calendar update and delete operations without spurious JSON errors.",
             "commit_shas": [
               "3d606cdc94c42702555b43c51216a77dfdf70eb0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Preserved Google integration metadata across renames in the save flow, so editing an integration's name in org settings no longer drops its connection state.",
+            "text": "Calendar event creation and updates accept a richer field set — summary, start/end with time zones, description, location, attendees, visibility, transparency, color, and optional Google Meet conferencing — through a shared `build_google_calendar_event_resource` helper.",
             "commit_shas": [
               "3d606cdc94c42702555b43c51216a77dfdf70eb0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened the Integration Editor and OrgSettingsIntegrations components with additional UI handling and ~90 lines of new test coverage, plus extended API tests for integration actions and provider mocks to lock in the new Google behaviors.",
+            "text": "Renaming a Google integration in Org Settings now preserves its provider config and connection metadata instead of resetting it, with new UI tests in `OrgSettingsIntegrations.test.tsx` guarding the behavior.",
             "commit_shas": [
               "3d606cdc94c42702555b43c51216a77dfdf70eb0"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The update-integration DTO now omits absent patch fields entirely (rather than sending nulls), so editing a Google integration no longer wipes its stored OAuth credentials; explicit nulls are still respected for true clears, and the Integration Editor has new unit and e2e coverage for this path.",
+            "commit_shas": [
+              "4af39468016782965bbc307d2967d4a596a11237"
             ],
             "confidence": "high"
           }
@@ -381,10 +432,10 @@
       }
     ],
     "highlights": [
-      "Gmail and Calendar are now connectable Google integrations",
-      "OAuth proxied via aura-integrations with new env wiring",
-      "Hardened tool dispatch, save flow, and rename metadata preservation"
+      "Gmail and Google Calendar integration for orgs",
+      "Trusted runtime gains PATCH/DELETE and richer Calendar event building",
+      "Integration editor preserves OAuth credentials across renames and updates"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 3
   }
 }

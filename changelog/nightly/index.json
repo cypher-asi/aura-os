@@ -2,18 +2,18 @@
   {
     "date": "2026-06-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.630.1",
-    "title": "Google Gmail and Calendar land in Aura integrations",
-    "intro": "Today's nightly brings first-class Google connectivity to Aura. An afternoon change introduced Gmail and Calendar as connectable org integrations end-to-end, and a late-night follow-up hardened the tool surface and the integration save flow so connections behave predictably across edits and renames.",
+    "version": "0.1.0-nightly.631.1",
+    "title": "Google Workspace integration lands for Aura organizations",
+    "intro": "Today's nightly brings first-class Google Workspace support to Aura. Organizations can now connect Gmail and Google Calendar through an OAuth-backed flow, and follow-up work hardened the trusted runtime, the integration editor UI, and the save path so existing connections survive edits cleanly.",
     "entryCount": 2,
     "highlights": [
-      "Gmail and Calendar are now connectable Google integrations",
-      "OAuth proxied via aura-integrations with new env wiring",
-      "Hardened tool dispatch, save flow, and rename metadata preservation"
+      "Gmail and Google Calendar integration for orgs",
+      "Trusted runtime gains PATCH/DELETE and richer Calendar event building",
+      "Integration editor preserves OAuth credentials across renames and updates"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-06-07T04:12:58.678Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.630.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-06-07T05:07:35.459Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.631.1",
     "path": "history/2026-06-06.json"
   },
   {
