@@ -73,7 +73,7 @@ export function MetalCard({
         transparent
           ? undefined
           : {
-              background: `linear-gradient(${gradient}deg, #141414 0%, #0c0c0c 55%, #050505 100%)`,
+              background: `linear-gradient(${gradient}deg, #202020 0%, #161616 55%, #0c0c0c 100%)`,
             }
       }
     >
