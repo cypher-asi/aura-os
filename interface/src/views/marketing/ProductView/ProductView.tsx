@@ -1,9 +1,11 @@
 import { type ReactNode, useEffect } from "react";
 import { AgentChatSection } from "../AgentChatSection";
 import { AgentConsole } from "../AgentConsole";
-import { AgentOrbSection } from "../AgentOrbSection";
+// Temporarily hidden: agent orb + marquee section.
+// import { AgentOrbSection } from "../AgentOrbSection";
 import { ChangelogPreview } from "../ChangelogPreview";
-import { ExpertiseSection } from "../ExpertiseSection";
+import { ExpertiseSection, ExpertiseTabs } from "../ExpertiseSection";
+import { Section } from "../Section";
 import {
   FeaturePanel,
   OpenSourceScene,
@@ -14,8 +16,8 @@ import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
-import { OneComputerOneAgentSection } from "../OneComputerOneAgentSection";
 import { PersonalAgentSection } from "../PersonalAgentSection";
+import { BuiltForTrustSection } from "../BuiltForTrustSection";
 import { SpecQuadrantSection } from "../SpecQuadrantSection";
 import { PageHero } from "../PageHero";
 import { ProductCallToAction } from "../ProductCallToAction";
@@ -87,10 +89,18 @@ export function ProductView(): ReactNode {
       />
       <ExpertiseSection />
       <SpecQuadrantSection />
+      <Section
+        ariaLabel="Expertise areas"
+        fullHeight={false}
+        className="expertiseTabsSection"
+      >
+        <ExpertiseTabs />
+      </Section>
       <PersonalAgentSection />
-      <OneComputerOneAgentSection />
+      <BuiltForTrustSection />
       <AgentChatSection />
-      <AgentOrbSection />
+      {/* Temporarily hidden: agent orb + marquee section.
+      <AgentOrbSection /> */}
       <FeaturePanel
         headline="Private by Design."
         features={[

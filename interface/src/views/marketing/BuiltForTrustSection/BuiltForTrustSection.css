@@ -1,0 +1,11 @@
+/*
+ * Symmetric tight padding for the H2 intro band so its centered text lands
+ * midway between the bento above and the bento below, matching
+ * `.section.personalAgentIntro`. The bento itself inherits this padding via
+ * `.section.cardSection`. Two-class specificity overrides the shell's
+ * default 80px.
+ */
+.section.builtForTrustIntro {
+  padding-top: clamp(8px, 1.5vh, 20px);
+  padding-bottom: clamp(8px, 1.5vh, 20px);
+}
