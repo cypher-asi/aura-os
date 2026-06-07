@@ -65,6 +65,15 @@
   pointer-events: auto;
 }
 
+.personalAgentChatMock [data-sliding-pills-item] {
+  width: 56px;
+  flex: 0 0 56px;
+}
+
+.personalAgentChatMock [data-sliding-pills-item][aria-checked="true"] {
+  letter-spacing: 0.02em;
+}
+
 .personalAgentChatMock [data-sliding-pills-indicator] {
   display: block;
   background: linear-gradient(
