@@ -529,6 +529,13 @@
     0 0 9px color-mix(in srgb, var(--color-accent) 70%, transparent),
     0 0 16px color-mix(in srgb, var(--color-accent) 50%, transparent),
     0 0 26px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  /*
+   * The real selected style widens letter-spacing (0.02em -> 0.06em),
+   * which reflows the pill row and shoves sibling labels on every mode
+   * switch. Pin it to the unselected spacing so only color/glow change
+   * and the row stays metrically stable (no jank).
+   */
+  letter-spacing: 0.02em;
 }
 
 /* ---- Right sidekick (half width, scripted) ---- */
