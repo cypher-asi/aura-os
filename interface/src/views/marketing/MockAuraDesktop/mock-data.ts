@@ -273,7 +273,7 @@ export interface MockAgentAvatar {
 }
 
 export const FAVORITE_AGENTS: readonly MockAgentAvatar[] = [
-  { id: "frontend", name: "Frontend", status: "working" },
+  { id: "frontend", name: "Frontend", status: "running" },
   { id: "backend", name: "Backend", status: "idle" },
   { id: "reviewer", name: "Reviewer", status: "idle" },
 ];

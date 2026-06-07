@@ -43,7 +43,13 @@
   --color-accent: #01f4cb;
   --color-accent-text: #5ef2da;
   --color-surface-hover: rgba(255, 255, 255, 0.06);
-  --color-success: #4ade80;
+  /* Status / activity indicators (the "working" badge + dot, avatar
+     status dots, the rotating busy ring) all resolve to the cyan-green
+     accent so every "working" circle and dot reads as accent. The loop
+     glyph ring already binds to --color-accent directly. */
+  --color-success: var(--color-accent);
+  --color-status-info: var(--color-accent);
+  --loop-progress-color: var(--color-accent);
   --status-failed: #f87171;
   --icon-hover-bg: rgba(255, 255, 255, 0.08);
 

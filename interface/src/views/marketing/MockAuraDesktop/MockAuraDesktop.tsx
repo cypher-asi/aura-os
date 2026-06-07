@@ -562,7 +562,7 @@ function MockTaskbar({ appView }: { appView: "agents" | "projects" }): ReactNode
                   size={20}
                   name={agent.name}
                   status={agent.status}
-                  busy={agent.status === "working"}
+                  busy={agent.status === "running"}
                 />
               ))}
             </span>
