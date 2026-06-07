@@ -98,7 +98,7 @@ export function ProductView(): ReactNode {
           align="center"
           media={
             <div className="madeForYouDevice">
-              <ServiceDeviceCard />
+              <ServiceDeviceCard hexGrille />
             </div>
           }
         />

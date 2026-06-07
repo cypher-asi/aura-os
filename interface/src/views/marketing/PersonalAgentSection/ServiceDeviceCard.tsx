@@ -2,6 +2,16 @@ import { type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { SERVICE_LOGOS } from "./brand-logos";
 
+interface ServiceDeviceCardProps {
+  /**
+   * When true, the bottom grille renders as a recessed three-ring `Plate`
+   * inset wrapping a hex-packed metal-and-black mesh (the wide
+   * "Agents made for you." hero). Defaults to the flat dot-matrix grille
+   * used by the "Connected to everything" quadrant.
+   */
+  readonly hexGrille?: boolean;
+}
+
 /**
  * Mini-UI for the "Connected to everything" quadrant: a recreation of
  * the reference sampler/composer device. The outer body is the shared
@@ -16,7 +26,9 @@ import { SERVICE_LOGOS } from "./brand-logos";
  * label, then a dot-matrix speaker grille. Everything but the logos is
  * decorative (`aria-hidden`).
  */
-export function ServiceDeviceCard(): ReactNode {
+export function ServiceDeviceCard({
+  hexGrille = false,
+}: ServiceDeviceCardProps = {}): ReactNode {
   return (
     <Plate className="personalAgentDevice" aria-hidden="true">
       <div className="personalAgentDeviceContent">
@@ -52,7 +64,17 @@ export function ServiceDeviceCard(): ReactNode {
           <span className="personalAgentDeviceAsterisk">&#10033;</span>
         </div>
 
-        <div className="personalAgentDeviceGrille" />
+        {hexGrille ? (
+          <Plate
+            radius="12px"
+            className="personalAgentDeviceGrilleInset"
+            aria-hidden="true"
+          >
+            <div className="personalAgentDeviceHexMesh" />
+          </Plate>
+        ) : (
+          <div className="personalAgentDeviceGrille" />
+        )}
       </div>
     </Plate>
   );

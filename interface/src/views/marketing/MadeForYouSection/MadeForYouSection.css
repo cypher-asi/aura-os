@@ -52,7 +52,7 @@
 .madeForYouDevice .personalAgentDeviceContent::after {
   content: "";
   position: absolute;
-  top: 3px;
+  top: 0;
   bottom: 3px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
@@ -105,7 +105,9 @@
 .madeForYouDevice .personalAgentDeviceScreen {
   min-height: 220px;
   padding: 44px 36px;
-  border-radius: 18px;
+  /* Square corners so the screen's left/right edges sit flush against the
+     vertical divider lines top-to-bottom (the quadrant keeps its 14px). */
+  border-radius: 0;
 }
 
 /* This enlarged device shows a bare screen — drop the service logo grid
@@ -118,8 +120,53 @@
   font-size: 13px;
 }
 
-.madeForYouDevice .personalAgentDeviceGrille {
+/*
+ * Hero grille (hexGrille variant): a recessed three-ring `Plate` inset
+ * (same rim as the device body) holding a hex-packed metal-and-black mesh.
+ * The Plate supplies the rim + surface; this layer adds the padding between
+ * the rim and the mesh.
+ */
+.madeForYouDevice .personalAgentDeviceGrilleInset {
+  margin-top: 4px;
+}
+
+/*
+ * Hexagon mesh: a metal sheet (base linear gradient) punched with black
+ * holes packed in a honeycomb. Two offset black radial-gradient layers
+ * make the hex packing; the inset shadow reads the mesh as recessed.
+ *   1.1547 = 2 / sqrt(3); the half-cell / 0.577 offset hex-packs the rows.
+ */
+.madeForYouDevice .personalAgentDeviceHexMesh {
+  --hole: 4px;
+  --cell: 13px;
   height: 132px;
+  /* Padding step: margin reveals the Plate surface around the mesh. */
+  margin: 10px;
+  border-radius: 8px;
+  background-color: #2a2c31;
+  background-image:
+    radial-gradient(
+      circle,
+      #050505 var(--hole),
+      transparent calc(var(--hole) + 0.7px)
+    ),
+    radial-gradient(
+      circle,
+      #050505 var(--hole),
+      transparent calc(var(--hole) + 0.7px)
+    ),
+    linear-gradient(180deg, #6a6e76 0%, #44474d 55%, #2a2c31 100%);
+  background-size:
+    var(--cell) calc(var(--cell) * 1.1547),
+    var(--cell) calc(var(--cell) * 1.1547),
+    100% 100%;
+  background-position:
+    0 0,
+    calc(var(--cell) / 2) calc(var(--cell) * 0.577),
+    0 0;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
 @media (max-width: 768px) {
@@ -144,7 +191,9 @@
     padding: 28px 20px;
   }
 
-  .madeForYouDevice .personalAgentDeviceGrille {
+  .madeForYouDevice .personalAgentDeviceHexMesh {
+    --cell: 11px;
     height: 90px;
+    margin: 8px;
   }
 }
