@@ -9,6 +9,13 @@ interface MetalCardProps {
    * Independent of `wide`, so a card can be full-width at either height.
    */
   readonly short?: boolean;
+  /**
+   * Render the cell with NO background — the diagonal "metal" gradient
+   * is omitted so the section surface shows through. Use this for cards
+   * whose media is a free-floating object (e.g. the chat phones) rather
+   * than a framed mini-UI. Defaults to false (the gradient bg variant).
+   */
+  readonly transparent?: boolean;
   /** Diagonal gradient angle in degrees (default 135). */
   readonly gradient?: number;
   /**
@@ -38,6 +45,7 @@ interface MetalCardProps {
 export function MetalCard({
   wide = false,
   short = false,
+  transparent = false,
   gradient = 135,
   media,
   label,
@@ -51,6 +59,7 @@ export function MetalCard({
     "metalCard",
     wide ? "metalCardWide" : "",
     short ? "metalCardShort" : "",
+    transparent ? "metalCardTransparent" : "",
     align === "center" ? "metalCardCenter" : "",
     className,
   ]
@@ -60,9 +69,13 @@ export function MetalCard({
   return (
     <article
       className={cellClass}
-      style={{
-        background: `linear-gradient(${gradient}deg, #202020 0%, #161616 55%, #0c0c0c 100%)`,
-      }}
+      style={
+        transparent
+          ? undefined
+          : {
+              background: `linear-gradient(${gradient}deg, #141414 0%, #0c0c0c 55%, #050505 100%)`,
+            }
+      }
     >
       <div
         className={
