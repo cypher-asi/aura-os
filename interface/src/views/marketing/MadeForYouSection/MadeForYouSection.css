@@ -1,0 +1,14 @@
+/*
+ * Internal layout for the "Agents made for you." section, which sits
+ * directly above the "Expertise without ego." intro on the `/agents`
+ * page. The outer chrome (background tint, viewport reservation, column
+ * cap) is owned by the shared `<Section />` shell, and the centered
+ * headline + subhead band is owned by `<TextCard />`. This file only
+ * tweaks the section's padding so the band reads as a peer of the hero
+ * text area rather than floating in a full empty screen. Two-class
+ * specificity overrides the shell's default 80px.
+ */
+.section.madeForYouSection {
+  padding-top: 0;
+  padding-bottom: clamp(8px, 1.5vh, 20px);
+}

@@ -1,0 +1,1 @@
+export { MadeForYouSection } from "./MadeForYouSection";

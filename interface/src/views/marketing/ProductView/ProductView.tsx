@@ -16,6 +16,7 @@ import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
+import { MadeForYouSection } from "../MadeForYouSection";
 import { PersonalAgentSection } from "../PersonalAgentSection";
 import { BuiltForTrustSection } from "../BuiltForTrustSection";
 import { SpecQuadrantSection } from "../SpecQuadrantSection";
@@ -87,6 +88,7 @@ export function ProductView(): ReactNode {
         stageClassName={styles.consoleStage}
         stage={<AgentConsole />}
       />
+      <MadeForYouSection />
       <ExpertiseSection />
       <SpecQuadrantSection />
       <Section
