@@ -357,8 +357,7 @@
   width: 100%;
 }
 
-/* Arched, brushed-metal frame holding a recessed frosted lens (per the
-   reference image): rounded top corners taper to a near-square base. */
+/* Circular brushed-metal bezel holding a recessed frosted lens. */
 .madeForYouDevice .madeForYouLensBtn {
   position: relative;
   flex: 0 0 auto;
@@ -366,8 +365,8 @@
   align-items: center;
   justify-content: center;
   width: 40px;
-  height: 50px;
-  border-radius: 50% 50% 18% 18% / 38% 38% 14% 14%;
+  height: 40px;
+  border-radius: 50%;
   background: linear-gradient(
     180deg,
     #d9dbdf 0%,
@@ -578,7 +577,7 @@
 
   .madeForYouDevice .madeForYouLensBtn {
     width: 20px;
-    height: 26px;
+    height: 20px;
   }
 
   .madeForYouDevice .madeForYouLensGlow {
