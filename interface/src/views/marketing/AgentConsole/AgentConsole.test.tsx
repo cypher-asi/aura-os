@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { AgentConsole } from "./AgentConsole";
 
 vi.mock("./AgentConsole.module.css", () => ({
@@ -21,8 +21,28 @@ describe("AgentConsole", () => {
     expect(container.querySelector(".button")).toBeInTheDocument();
   });
 
-  it("marks the whole stage decorative via aria-hidden", () => {
+  it("starts on the first state with exactly one light lit", () => {
     const { container } = render(<AgentConsole />);
-    expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Private")).toBeInTheDocument();
+    const lit = container.querySelectorAll('.light[data-lit="true"]');
+    expect(lit).toHaveLength(1);
+  });
+
+  it("steps the state forward and back, wrapping at the ends", () => {
+    render(<AgentConsole />);
+    const next = screen.getByRole("button", { name: "Next" });
+    const prev = screen.getByRole("button", { name: "Previous" });
+
+    fireEvent.click(next);
+    expect(screen.getByText("Secure")).toBeInTheDocument();
+
+    // Back past the start wraps to the last state.
+    fireEvent.click(prev);
+    fireEvent.click(prev);
+    expect(screen.getByText("Open Source")).toBeInTheDocument();
+
+    // Forward past the end wraps back to the first state.
+    fireEvent.click(next);
+    expect(screen.getByText("Private")).toBeInTheDocument();
   });
 });

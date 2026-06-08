@@ -96,7 +96,6 @@ export function ProductView(): ReactNode {
             headlineCta={<CreateAgentButton source="product_hero" />}
           />
         }
-        stageHidden
         stageClassName={styles.consoleStage}
         stage={<AgentConsole />}
       />

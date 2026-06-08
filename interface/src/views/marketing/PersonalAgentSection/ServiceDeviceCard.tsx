@@ -39,24 +39,19 @@ const TERMINAL_LINES: ReadonlyArray<{
  * reuse the available clips; swap in a dedicated clip per section as they
  * land.
  */
+const MADE_FOR_YOU_VIDEO =
+  "/magnific_keep-composition-of-img2-and-have-character-materi_seedance_720p_4-3_24fps_26744.mp4";
+
 const SIDE_BUTTONS: ReadonlyArray<{
   readonly label: string;
   readonly video: string;
 }> = [
-  {
-    label: "Identity",
-    video:
-      "/magnific_have-character-img1-materialize-from-the-activated_seedance_720p_16-9_24fps_32651.mp4",
-  },
-  { label: "Expertise", video: "/AURA_visual_loop.mp4" },
-  { label: "Integrations", video: "/agent-character-rotate.mp4" },
-  { label: "Connections", video: "/personas/creator/desktop.mp4" },
-  { label: "Automations", video: "/AURA_visual_loop.mp4" },
-  {
-    label: "Launch",
-    video:
-      "/magnific_have-character-img1-materialize-from-the-activated_seedance_720p_16-9_24fps_32651.mp4",
-  },
+  { label: "Identity", video: MADE_FOR_YOU_VIDEO },
+  { label: "Expertise", video: MADE_FOR_YOU_VIDEO },
+  { label: "Integrations", video: MADE_FOR_YOU_VIDEO },
+  { label: "Connections", video: MADE_FOR_YOU_VIDEO },
+  { label: "Automations", video: MADE_FOR_YOU_VIDEO },
+  { label: "Launch", video: MADE_FOR_YOU_VIDEO },
 ];
 
 /**
@@ -115,6 +110,29 @@ export function ServiceDeviceCard({
   const [replayKey, setReplayKey] = useState<number>(0);
   // Which left-panel item is active; drives the center screen's clip.
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  // "Connected to everything" logo grid: an auto-advancing spotlight that
+  // gold-glows one integration at a time, looping across the grid. Only the
+  // quadrant variant renders the grid (the hex hero hides it).
+  const [spotlightIndex, setSpotlightIndex] = useState<number>(0);
+
+  useEffect(() => {
+    if (hexGrille || SERVICE_LOGOS.length === 0) {
+      return;
+    }
+    if (typeof window === "undefined") {
+      return;
+    }
+    const reduceMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduceMotion) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setSpotlightIndex((index) => (index + 1) % SERVICE_LOGOS.length);
+    }, 900);
+    return () => window.clearInterval(timer);
+  }, [hexGrille]);
 
   useEffect(() => {
     if (!hexGrille || typeof IntersectionObserver === "undefined") {
@@ -275,11 +293,10 @@ export function ServiceDeviceCard({
         {hexGrille ? (
           <div className="madeForYouSidePanel" aria-hidden="true">
             <div className="madeForYouKnobBay">
-              <div className="madeForYouPanelCaption">
-                <span className="madeForYouPanelCaptionTitle">DESIGN</span>
-                <span className="madeForYouPanelCaptionSub">
-                  YOUR PRIVATE AGENT
-                </span>
+              <div className="madeForYouKnob">
+                <div className="madeForYouKnobDial" ref={knobDialRef}>
+                  <span className="madeForYouKnobIndicator" />
+                </div>
               </div>
             </div>
 
@@ -322,10 +339,11 @@ export function ServiceDeviceCard({
             </div>
 
             <div className="madeForYouSideSpacer" aria-hidden="true">
-              <div className="madeForYouKnob">
-                <div className="madeForYouKnobDial" ref={knobDialRef}>
-                  <span className="madeForYouKnobIndicator" />
-                </div>
+              <div className="madeForYouPanelCaption">
+                <span className="madeForYouPanelCaptionTitle">DESIGN</span>
+                <span className="madeForYouPanelCaptionSub">
+                  YOUR PRIVATE AGENT
+                </span>
               </div>
             </div>
           </div>
@@ -385,8 +403,12 @@ export function ServiceDeviceCard({
           ) : null}
           <div className="personalAgentDeviceGloss" />
           <div className="personalAgentDeviceLogoGrid">
-            {SERVICE_LOGOS.map((logo) => (
-              <div key={logo.id} className="personalAgentDeviceLogo">
+            {SERVICE_LOGOS.map((logo, index) => (
+              <div
+                key={logo.id}
+                className="personalAgentDeviceLogo"
+                data-active={index === spotlightIndex ? "true" : undefined}
+              >
                 <svg
                   width={26}
                   height={26}
