@@ -252,7 +252,7 @@ export function ServiceDeviceCard({
 
         {hexGrille ? (
           <Plate
-            radius="12px"
+            radius="0 0 12px 12px"
             className="personalAgentDeviceGrilleInset"
             aria-hidden="true"
           >
