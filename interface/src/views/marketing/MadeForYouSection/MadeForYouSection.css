@@ -217,6 +217,11 @@
 
 .madeForYouDevice .madeForYouTerminalCursor {
   display: inline-block;
+  /* Center the caret in the line box (rather than baseline-aligning it) so the
+     13px inline-block never extends the flex line's height. Baseline alignment
+     made the actively-typing line ~1-2px taller, so each line visibly jerked
+     up the instant it finished and the caret moved on. */
+  align-self: center;
   width: 7px;
   height: 13px;
   background: var(--color-accent, #01f4cb);
