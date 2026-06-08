@@ -502,9 +502,9 @@
   background:
     radial-gradient(
         ellipse 130% 90% at 50% 0%,
-        #202020 0%,
-        #161616 55%,
-        #0c0c0c 100%
+        #1a1a1a 0%,
+        #191919 55%,
+        #181818 100%
       )
       padding-box,
     linear-gradient(
@@ -926,8 +926,10 @@
 .madeForYouDevice .madeForYouMeshStrip {
   position: absolute;
   z-index: 2;
-  /* Equal gap to the chassis rim on the left, right, and bottom so the mesh
-     floats as an inset panel rather than being cut off at the bottom edge. */
+  /* Inset from the chassis rim on the left, right, and bottom so the mesh reads
+     as a floating inset panel. The bottom inset runs a touch larger than the
+     sides because its long straight edge would otherwise read as a thin seam
+     against the chassis bottom (looking cut off). */
   left: 3px;
   right: 3px;
   bottom: 8px;
