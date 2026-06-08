@@ -6,12 +6,7 @@ import { AgentConsole } from "../AgentConsole";
 import { ChangelogPreview } from "../ChangelogPreview";
 import { ExpertiseSection, ExpertiseTabs } from "../ExpertiseSection";
 import { Section } from "../Section";
-import {
-  FeaturePanel,
-  OpenSourceScene,
-  PrivacyScene,
-  SecureScene,
-} from "../FeaturePanel/FeaturePanel";
+import { FeaturePanel, MetalPlateScene } from "../FeaturePanel/FeaturePanel";
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
@@ -130,21 +125,21 @@ export function ProductView(): ReactNode {
         headline="Private by Design."
         features={[
           {
-            illustration: <PrivacyScene />,
+            illustration: <MetalPlateScene />,
             title: "Private",
             description:
               "AURA does not view or train on your personal or corporate data. Data sent to frontier model providers is not directly identifiable.",
             tag: "PRIVACY",
           },
           {
-            illustration: <SecureScene />,
+            illustration: <MetalPlateScene />,
             title: "Secure",
             description:
               "The AURA harness and kernel is built from the ground up with security, verification and policy enforcement as first class citizens.",
             tag: "SECURITY",
           },
           {
-            illustration: <OpenSourceScene />,
+            illustration: <MetalPlateScene />,
             title: "Open Source",
             description:
               "AURA is 100% open source under the MIT license. Fork it at anytime with zero vendor lock-in.",

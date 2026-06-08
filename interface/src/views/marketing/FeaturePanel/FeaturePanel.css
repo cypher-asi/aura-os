@@ -168,6 +168,25 @@
   display: block;
 }
 
+/* Shared gold metal plate image used in place of the monoline scenes.
+   A raster asset, so it sits directly in the scene well at full width
+   rather than inheriting the `currentColor` glow treatment. */
+.featurePanelPlate {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+
+/* Keep the lit feel on hover: the raster plate can't recolor like the SVGs,
+   so add a warm gold glow instead. */
+.featurePanelItem:hover .featurePanelPlate {
+  filter:
+    drop-shadow(0 0 6px rgba(var(--gold-glow), 0.45))
+    drop-shadow(0 0 16px rgba(var(--gold-halo), 0.3));
+}
+
 /* Bottom-left text block: title, description, then the tag pill. */
 .featurePanelItemBody {
   position: relative;

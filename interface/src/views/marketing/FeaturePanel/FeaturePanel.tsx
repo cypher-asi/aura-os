@@ -54,6 +54,22 @@ export function FeaturePanel({
 }
 
 /**
+ * Gold art-deco metal plate used as the shared top-of-card visual across
+ * every FeaturePanel card. A raster image (not monoline SVG), so it sits
+ * directly in the scene well rather than inheriting `currentColor`.
+ */
+export function MetalPlateScene(): ReactNode {
+  return (
+    <img
+      src="/trust-metal-plate.png"
+      alt=""
+      className="featurePanelPlate"
+      aria-hidden="true"
+    />
+  );
+}
+
+/**
  * "Private" scene: an emissive padlock over redacted data lines, selling
  * the "not directly identifiable" promise. Painted in `currentColor` so
  * the parent `.featurePanelSceneArt` glow tints the whole illustration.
