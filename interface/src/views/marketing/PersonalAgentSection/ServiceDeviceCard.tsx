@@ -207,9 +207,11 @@ export function ServiceDeviceCard({
       <div className="personalAgentDeviceContent" ref={contentRef}>
         {hexGrille ? (
           <div className="madeForYouSidePanel" aria-hidden="true">
-            <div className="madeForYouKnob">
-              <div className="madeForYouKnobDial" ref={knobDialRef}>
-                <span className="madeForYouKnobIndicator" />
+            <div className="madeForYouKnobBay">
+              <div className="madeForYouKnob">
+                <div className="madeForYouKnobDial" ref={knobDialRef}>
+                  <span className="madeForYouKnobIndicator" />
+                </div>
               </div>
             </div>
 
@@ -243,6 +245,8 @@ export function ServiceDeviceCard({
                 })}
               </div>
             </div>
+
+            <div className="madeForYouSideSpacer" aria-hidden="true" />
           </div>
         ) : null}
 
