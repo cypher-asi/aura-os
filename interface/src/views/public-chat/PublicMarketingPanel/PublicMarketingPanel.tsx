@@ -57,6 +57,7 @@ const MARKETING_PATH_BG: Readonly<Record<string, string>> = {
   "/changelog": "#0f0f12",
   "/feedback": "#0f0f12",
   "/blog": "#0f0f12",
+  "/os": "#0f0f12",
   "/docs": "#0f0f12",
   "/terms": "#0f0f12",
   "/privacy": "#0f0f12",
@@ -137,6 +138,7 @@ export function PublicMarketingPanel(): React.ReactElement {
   const columnBackground =
     MARKETING_PATH_BG[pathname] ??
     (pathname.startsWith("/blog/") ? MARKETING_PATH_BG["/blog"] : undefined) ??
+    (pathname.startsWith("/os/") ? MARKETING_PATH_BG["/os"] : undefined) ??
     DEFAULT_MARKETING_BG;
 
   return (

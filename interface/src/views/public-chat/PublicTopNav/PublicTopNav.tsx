@@ -27,6 +27,7 @@ interface TopNavLink {
 const PRIMARY_LINKS: ReadonlyArray<TopNavLink> = [
   { tKey: "agents", label: "Agents", to: "/agents" },
   { tKey: "code", label: "Code", to: "/code" },
+  { tKey: "os", label: "OS", to: "/os" },
   { tKey: "pricing", label: "Pricing", to: "/pricing" },
 ];
 

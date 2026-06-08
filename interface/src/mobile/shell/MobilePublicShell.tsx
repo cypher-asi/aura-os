@@ -51,6 +51,7 @@ const NAV_ROWS: ReadonlyArray<NavRow> = [
   { tKey: "chat", label: "Chat", to: "/chat" },
   { tKey: "agents", label: "Agents", to: "/agents" },
   { tKey: "code", label: "Code", to: "/code" },
+  { tKey: "os", label: "OS", to: "/os" },
   { tKey: "pricing", label: "Pricing", to: "/pricing" },
   { tKey: "blog", label: "Blog", to: "/blog" },
   { tKey: "changelog", label: "Changelog", to: "/changelog" },

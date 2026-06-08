@@ -35,6 +35,7 @@ const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
     links: [
       { kind: "internal", label: "Agents", to: "/agents" },
       { kind: "internal", label: "Code", to: "/code" },
+      { kind: "internal", label: "OS", to: "/os" },
       { kind: "external", label: "The GRID", href: GRID_REPO_URL },
     ],
   },

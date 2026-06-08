@@ -5,6 +5,7 @@ import { useAuthStore } from "../../../stores/auth-store";
 import { useActiveNote, useNotesStore } from "../../../stores/notes-store";
 import type { Note, NoteStatus } from "../../../shared/api/notes";
 import { isAuraBlogProject } from "../aura-blog";
+import { isAuraWhitepaperProject } from "../aura-whitepaper";
 import styles from "./NotesInfoPanel.module.css";
 
 function formatDate(iso?: string | null): string {
@@ -57,19 +58,24 @@ function formatStatus(status?: string | null): string {
 
 /**
  * Editable CMS controls shown in the Info panel when the active note
- * lives in the reserved aura-blog project. Lets sys admins edit blog
- * metadata and publish/unpublish. The backend independently enforces
- * that only sys admins may write to this project. Local input state is
- * keyed on `noteId` so switching notes (or a store refresh) re-seeds it.
+ * lives in one of the reserved CMS projects (aura-blog or
+ * aura-whitepaper). Lets sys admins edit metadata and publish/unpublish.
+ * The backend independently enforces that only sys admins may write to
+ * these projects. Local input state is keyed on `noteId` so switching
+ * notes (or a store refresh) re-seeds it. When `isWhitepaper` is set the
+ * labels are tuned for the whitepaper (the `blogType` field doubles as
+ * the collapsible section key on the public `/os` page).
  */
 function BlogCmsSection({
   projectId,
   noteId,
   meta,
+  isWhitepaper = false,
 }: {
   projectId: string;
   noteId: string;
   meta: Note;
+  isWhitepaper?: boolean;
 }) {
   const patchNoteMeta = useNotesStore((s) => s.patchNoteMeta);
 
@@ -119,7 +125,9 @@ function BlogCmsSection({
 
   return (
     <div className={styles.cmsSection}>
-      <div className={styles.cmsHeading}>Blog post</div>
+      <div className={styles.cmsHeading}>
+        {isWhitepaper ? "Whitepaper section" : "Blog post"}
+      </div>
 
       <div className={styles.infoRow}>
         <span className={styles.infoLabel}>Status</span>
@@ -150,12 +158,14 @@ function BlogCmsSection({
       ) : null}
 
       <div className={styles.infoRow}>
-        <span className={styles.infoLabel}>Blog type</span>
+        <span className={styles.infoLabel}>
+          {isWhitepaper ? "Section" : "Blog type"}
+        </span>
         <input
           className={styles.cmsInput}
           type="text"
           value={blogType}
-          placeholder="e.g. announcement"
+          placeholder={isWhitepaper ? "e.g. harness" : "e.g. announcement"}
           onChange={(e) => setBlogType(e.target.value)}
           onBlur={() => {
             if ((meta.blogType ?? "") !== blogType) {
@@ -264,11 +274,13 @@ export function NotesInfoPanel() {
           <span className={styles.infoLabel}>Word count</span>
           <span className={styles.infoValue}>{note.wordCount}</span>
         </div>
-        {isAuraBlogProject(meta.projectId) ? (
+        {isAuraBlogProject(meta.projectId) ||
+        isAuraWhitepaperProject(meta.projectId) ? (
           <BlogCmsSection
             projectId={meta.projectId as string}
             noteId={meta.id}
             meta={meta}
+            isWhitepaper={isAuraWhitepaperProject(meta.projectId)}
           />
         ) : (
           <div className={styles.infoRow}>

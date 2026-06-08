@@ -54,6 +54,9 @@ const ModelsView = lazy(() =>
 const BlogView = lazy(() =>
   import("./views/marketing/BlogView").then((m) => ({ default: m.BlogView })),
 );
+const OsView = lazy(() =>
+  import("./views/marketing/OsView").then((m) => ({ default: m.OsView })),
+);
 const DownloadView = lazy(() =>
   import("./views/marketing/DownloadView").then((m) => ({ default: m.DownloadView })),
 );
@@ -457,6 +460,22 @@ function AppRoutes(): React.ReactElement {
                 element={
                   <Suspense fallback={null}>
                     <BlogView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="os"
+                element={
+                  <Suspense fallback={null}>
+                    <OsView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="os/:slug"
+                element={
+                  <Suspense fallback={null}>
+                    <OsView />
                   </Suspense>
                 }
               />

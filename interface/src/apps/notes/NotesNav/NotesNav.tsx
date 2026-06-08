@@ -36,7 +36,13 @@ import {
   buildAuraBlogProject,
   isAuraBlogProject,
 } from "../aura-blog";
+import {
+  AURA_WHITEPAPER_PROJECT_ID,
+  buildAuraWhitepaperProject,
+  isAuraWhitepaperProject,
+} from "../aura-whitepaper";
 import { seedAuraBlog } from "../seed-aura-blog/run";
+import { seedAuraWhitepaper } from "../seed-aura-whitepaper/run";
 
 /**
  * Draft/Published pill shown as the note's left-nav suffix inside the
@@ -96,7 +102,7 @@ function buildFolderChildren(
   notes: Note[],
   titleOverrides: Record<string, string>,
   onCreateInFolder: (folderId: string) => void,
-  isBlogProject: boolean,
+  isCmsProject: boolean,
 ): ExplorerNode[] {
   const childFolders = folders
     .filter((f) => (f.parentId ?? null) === parentId)
@@ -128,7 +134,7 @@ function buildFolderChildren(
         notes,
         titleOverrides,
         onCreateInFolder,
-        isBlogProject,
+        isCmsProject,
       ),
     }));
 
@@ -155,7 +161,7 @@ function buildFolderChildren(
       label,
       icon: <FileText size={14} aria-hidden="true" />,
       metadata: { type: "note" },
-      ...(isBlogProject ? { suffix: blogStatusSuffix(note.status) } : {}),
+      ...(isCmsProject ? { suffix: blogStatusSuffix(note.status) } : {}),
     }));
 
   return [...childFolders, ...childNotes];
@@ -209,16 +215,50 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
     }
   }, [seeding, loadTree]);
 
-  // The aura-blog CMS project is virtual: it is prepended to the rendered
-  // list for sys admins only (never persisted to the projects store), so
-  // non-admins never see it. The backend independently gates writes.
+  // One-time aura-whitepaper seeding (sys admins only). Creates and
+  // publishes the AURA OS whitepaper sections (the harness layers) from the
+  // bundled architecture-doc content, in the authenticated session.
+  const [seedingWp, setSeedingWp] = useState(false);
+  const [seedStatusWp, setSeedStatusWp] = useState<string | null>(null);
+  const handleSeedWhitepaper = useCallback(async () => {
+    if (seedingWp) return;
+    setSeedingWp(true);
+    setSeedStatusWp("Seeding AURA OS whitepaper…");
+    try {
+      const results = await seedAuraWhitepaper();
+      const created = results.filter((r) => r.status === "created").length;
+      const updated = results.filter((r) => r.status === "updated").length;
+      const errored = results.filter((r) => r.status === "error").length;
+      await loadTree(AURA_WHITEPAPER_PROJECT_ID);
+      setSeedStatusWp(
+        `Done: ${created} created, ${updated} updated${
+          errored ? `, ${errored} failed` : ""
+        }.`,
+      );
+    } catch (err) {
+      setSeedStatusWp(
+        `Seeding failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      setSeedingWp(false);
+    }
+  }, [seedingWp, loadTree]);
+
+  // The aura-blog and aura-whitepaper CMS projects are virtual: they are
+  // prepended to the rendered list for sys admins only (never persisted to
+  // the projects store), so non-admins never see them. The backend
+  // independently gates writes to both reserved projects.
   const projects = useMemo(() => {
     if (!isSysAdmin) return storeProjects;
-    if (storeProjects.some((p) => isAuraBlogProject(p.project_id))) {
-      return storeProjects;
-    }
     const orgId = storeProjects[0]?.org_id ?? "";
-    return [buildAuraBlogProject(orgId), ...storeProjects];
+    const prepend: typeof storeProjects = [];
+    if (!storeProjects.some((p) => isAuraBlogProject(p.project_id))) {
+      prepend.push(buildAuraBlogProject(orgId));
+    }
+    if (!storeProjects.some((p) => isAuraWhitepaperProject(p.project_id))) {
+      prepend.push(buildAuraWhitepaperProject(orgId));
+    }
+    return prepend.length ? [...prepend, ...storeProjects] : storeProjects;
   }, [storeProjects, isSysAdmin]);
 
   const { query: sidebarQuery, setAction } = useSidebarSearch("notes");
@@ -271,7 +311,8 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
   const data = useMemo<ExplorerNode[]>(() => {
     return projects.map((project) => {
       const projectId = project.project_id;
-      const isBlogProject = isAuraBlogProject(projectId);
+      const isCmsProject =
+        isAuraBlogProject(projectId) || isAuraWhitepaperProject(projectId);
       const tree: NotesProjectTree | undefined = trees[projectId];
       const children = tree
         ? buildFolderChildren(
@@ -281,7 +322,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
             tree.notes,
             tree.titleOverrides,
             (folderId) => handleCreateNote(projectId, folderId),
-            isBlogProject,
+            isCmsProject,
           )
         : [];
       return {
@@ -367,6 +408,18 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
           </button>
           {seedStatus ? (
             <span className={styles.seedStatus}>{seedStatus}</span>
+          ) : null}
+          <button
+            type="button"
+            className={styles.seedButton}
+            disabled={seedingWp}
+            onClick={() => void handleSeedWhitepaper()}
+            title="Create and publish the AURA OS whitepaper sections in aura-whitepaper"
+          >
+            {seedingWp ? "Seeding…" : "Seed AURA OS whitepaper"}
+          </button>
+          {seedStatusWp ? (
+            <span className={styles.seedStatus}>{seedStatusWp}</span>
           ) : null}
         </div>
       ) : null}

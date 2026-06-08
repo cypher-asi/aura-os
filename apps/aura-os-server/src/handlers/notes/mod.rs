@@ -45,6 +45,12 @@ use crate::state::{AppState, AuthJwt, AuthSession};
 /// published notes are exposed anonymously via `/api/public/blog`.
 pub(crate) const AURA_BLOG_PROJECT_ID: &str = "00000000-0000-0000-0000-00000000b106";
 
+/// Reserved project that backs the AURA OS whitepaper (`/os`). Mirrors
+/// [`AURA_BLOG_PROJECT_ID`]: whitepaper sections are notes under this fixed
+/// `project_id`, writes are sys-admin only (see [`require_blog_write`]), and
+/// the published subset is served anonymously via `/api/public/os`.
+pub(crate) const AURA_WHITEPAPER_PROJECT_ID: &str = "00000000-0000-0000-0000-00000000a05a";
+
 /// `{ "folders": [...], "notes": [...] }` payload returned by the tree
 /// endpoint. Reuses the storage row types verbatim.
 #[derive(Debug, Serialize)]
@@ -77,10 +83,11 @@ fn map_note_error(e: aura_os_storage::StorageError) -> ApiErrorResponse {
     }
 }
 
-/// Gate writes to the reserved blog project behind sys-admin. Any other
-/// project is writable by any authenticated caller (AuthJwt is enough).
+/// Gate writes to the reserved CMS projects (blog + whitepaper) behind
+/// sys-admin. Any other project is writable by any authenticated caller
+/// (AuthJwt is enough).
 fn require_blog_write(project_id: &str, session: &ZeroAuthSession) -> ApiResult<()> {
-    if project_id == AURA_BLOG_PROJECT_ID {
+    if project_id == AURA_BLOG_PROJECT_ID || project_id == AURA_WHITEPAPER_PROJECT_ID {
         require_sys_admin(session)?;
     }
     Ok(())
