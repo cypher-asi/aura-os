@@ -72,10 +72,10 @@
   /* Track is thinner than the percentage label, so let the label and the
      fill's neon glow bleed out of the slot rather than clip them. */
   overflow: visible;
-  /* 2px gradient inner border: a light gray at the top-left fading to dark on
+  /* 1px gradient inner border: a light gray at the top-left fading to dark on
      the right, painted on the border box while the dark slot fills the
      padding box. */
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   background:
     radial-gradient(
         ellipse 130% 160% at 50% 0%,
