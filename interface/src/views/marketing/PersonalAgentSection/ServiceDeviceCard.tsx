@@ -159,28 +159,30 @@ export function ServiceDeviceCard({
             </div>
 
             <div className="madeForYouSideButtons">
-              {SIDE_BUTTONS.map((item, index) => {
-                const isSelected = index === selectedIndex;
-                return (
-                  <button
-                    type="button"
-                    className={
-                      isSelected
-                        ? "madeForYouSideRow madeForYouSideRow--selected"
-                        : "madeForYouSideRow"
-                    }
-                    key={item.label}
-                    tabIndex={-1}
-                    aria-pressed={isSelected}
-                    onClick={() => setSelectedIndex(index)}
-                  >
-                    <span className="madeForYouLensBtn">
-                      <span className="madeForYouLensGlow" />
-                    </span>
-                    <span className="madeForYouSideLabel">{item.label}</span>
-                  </button>
-                );
-              })}
+              <div className="madeForYouSideScreen">
+                {SIDE_BUTTONS.map((item, index) => {
+                  const isSelected = index === selectedIndex;
+                  return (
+                    <button
+                      type="button"
+                      className={
+                        isSelected
+                          ? "madeForYouSideRow madeForYouSideRow--selected"
+                          : "madeForYouSideRow"
+                      }
+                      key={item.label}
+                      tabIndex={-1}
+                      aria-pressed={isSelected}
+                      onClick={() => setSelectedIndex(index)}
+                    >
+                      <span className="madeForYouLensBtn">
+                        <span className="madeForYouLensGlow" />
+                      </span>
+                      <span className="madeForYouSideLabel">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <Plate
