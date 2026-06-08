@@ -65,7 +65,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 14px;
+  height: 16px;
   border-radius: 999px;
   /* Track is thinner than the percentage label, so let the label and the
      fill's neon glow bleed out of the slot rather than clip them. */
@@ -88,7 +88,7 @@
   /* Shorter than the track so the black slot stands slightly taller than the
      glowing portion, leaving a thin dark margin above and below the fill. */
   height: 80%;
-  min-width: 14px;
+  min-width: 16px;
   border-radius: 999px;
   background: linear-gradient(90deg, #f4faf2 0%, #f1f9d3 100%);
   box-shadow:
@@ -832,11 +832,11 @@
   }
 
   .madeForYouProgressTrack {
-    height: 10px;
+    height: 12px;
   }
 
   .madeForYouProgressFill {
-    min-width: 10px;
+    min-width: 12px;
   }
 
   .madeForYouProgressLabel {
