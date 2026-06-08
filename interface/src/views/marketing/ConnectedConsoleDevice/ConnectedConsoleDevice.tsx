@@ -84,41 +84,43 @@ export function ConnectedConsoleDevice(): ReactNode {
         </div>
 
         <div className="consoleTray">
-          {CHANNELS.map((channel) => (
-            <button
-              key={channel.id}
-              type="button"
-              tabIndex={-1}
-              className={
-                channel.mark.kind === "zero"
-                  ? "consoleKey consoleKey--zero"
-                  : "consoleKey"
-              }
-              aria-label={channel.label}
-            >
-              {channel.mark.kind === "zero" ? (
-                <span className="consoleKeyZero">ZERO</span>
-              ) : channel.mark.kind === "icon" ? (
-                <channel.mark.Icon
-                  className="consoleKeyMark"
-                  size={26}
-                  strokeWidth={1.75}
-                  aria-hidden="true"
-                />
-              ) : (
-                <svg
-                  className="consoleKeyMark"
-                  width={24}
-                  height={24}
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d={channel.mark.path} />
-                </svg>
-              )}
-            </button>
-          ))}
+          <div className="consoleTrayWell">
+            {CHANNELS.map((channel) => (
+              <button
+                key={channel.id}
+                type="button"
+                tabIndex={-1}
+                className={
+                  channel.mark.kind === "zero"
+                    ? "consoleKey consoleKey--zero"
+                    : "consoleKey"
+                }
+                aria-label={channel.label}
+              >
+                {channel.mark.kind === "zero" ? (
+                  <span className="consoleKeyZero">ZERO</span>
+                ) : channel.mark.kind === "icon" ? (
+                  <channel.mark.Icon
+                    className="consoleKeyMark"
+                    size={26}
+                    strokeWidth={1.75}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <svg
+                    className="consoleKeyMark"
+                    width={24}
+                    height={24}
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d={channel.mark.path} />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

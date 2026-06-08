@@ -225,23 +225,55 @@
 }
 
 /*
- * Recessed tray of channel keys under the panel. A darker slab inset a
- * touch from the panel width, holding five gray matte caps.
+ * Channel-key tray, built as two tiers so it reads as a separate metal
+ * shelf stepped down below the speaker panel:
+ *   - `.consoleTray` is the METAL housing — the same radial-surface-in-
+ *     metallic-edge recipe as the panel, sat slightly lower with a soft
+ *     drop shadow and a top inset shadow (as if the panel above casts onto
+ *     it), so it looks like a lower metal tier.
+ *   - `.consoleTrayWell` is the recessed OFF-BLACK compartment the keys
+ *     sit in. It is deliberately a touch lighter than the page's near-
+ *     black background (#16181c vs ~#000) so the button cluster reads as a
+ *     distinct, contrasty inset rather than blending into the page.
  */
 .consoleTray {
   position: relative;
-  width: 88%;
-  margin-top: 3cqw;
+  width: 90%;
+  margin-top: 2.5cqw;
+  padding: 3cqw;
+  border-radius: 4.5cqw;
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+        ellipse 120% 180% at 50% 0%,
+        #3a3c41 0%,
+        #26282c 45%,
+        #15171a 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(120, 124, 132, 0.7) 0%,
+        rgba(14, 15, 18, 0.7) 100%
+      )
+      border-box;
+  box-shadow:
+    inset 0 3px 5px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 22px rgba(0, 0, 0, 0.55);
+}
+
+.consoleTrayWell {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 2cqw;
-  padding: 2.4cqw;
-  border-radius: 4cqw;
-  background: linear-gradient(180deg, #0d0e10 0%, #050506 100%);
+  padding: 2.6cqw;
+  border-radius: 3cqw;
+  background: #16181c;
   box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.8),
+    inset 0 3px 7px rgba(0, 0, 0, 0.85),
     inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 8px 16px rgba(0, 0, 0, 0.5);
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .consoleKey {
