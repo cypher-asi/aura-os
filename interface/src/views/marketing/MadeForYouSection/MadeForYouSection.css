@@ -63,11 +63,11 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 22px;
+  height: 20px;
   /* Inset the fill from the left and right by the same amount as the centered
-     fill's top/bottom gap ((22 - 60%) / 2 = 4.4px), so the glow keeps a
+     fill's top/bottom gap ((20 - 60%) / 2 = 4px), so the glow keeps a
      consistent dark margin on all four edges (including the right at 100%). */
-  padding: 0 4.4px;
+  padding: 0 4px;
   border-radius: 999px;
   /* Track is thinner than the percentage label, so let the label and the
      fill's neon glow bleed out of the slot rather than clip them. */
@@ -850,8 +850,8 @@
   }
 
   .madeForYouProgressTrack {
-    height: 16px;
-    padding: 0 3.2px;
+    height: 14px;
+    padding: 0 2.8px;
   }
 
   .madeForYouProgressFill {
