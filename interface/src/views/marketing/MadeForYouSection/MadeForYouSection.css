@@ -358,8 +358,16 @@
   justify-content: center;
   width: 100%;
   box-sizing: border-box;
+  margin: 0;
   padding: 4px 16px;
+  border: 0;
   border-radius: 999px;
+  /* Re-enable interaction inside the otherwise pointer-events:none panel. */
+  pointer-events: auto;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
   background:
     linear-gradient(
       180deg,
@@ -370,6 +378,30 @@
     inset 0 2px 5px rgba(0, 0, 0, 0.85),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05),
     0 1px 0 rgba(255, 255, 255, 0.22);
+  transition:
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+/* Selected item: the capsule and its label glow warm orange/amber. */
+.madeForYouDevice .madeForYouSideRow--selected {
+  background: linear-gradient(
+    180deg,
+    rgba(82, 41, 12, 0.94) 0%,
+    rgba(40, 18, 4, 0.96) 100%
+  );
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 150, 70, 0.5),
+    inset 0 0 16px rgba(255, 120, 40, 0.35),
+    0 0 16px rgba(255, 120, 40, 0.5);
+}
+
+.madeForYouDevice .madeForYouSideRow--selected .madeForYouSideLabel {
+  color: #ffcaa0;
+  text-shadow:
+    0 0 8px rgba(255, 140, 50, 0.95),
+    0 0 14px rgba(255, 110, 30, 0.6);
 }
 
 /* Circular brushed-metal bezel holding a recessed frosted lens. Pinned to the

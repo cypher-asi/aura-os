@@ -25,17 +25,30 @@ const TERMINAL_LINES: ReadonlyArray<{
 ];
 
 /**
- * Labels for the hero's left control panel: a vertical stack of arched,
- * orange-glowing lens buttons standing in for the steps of building an
- * agent on AURA. Purely decorative (the device root is `aria-hidden`).
+ * The hero's left control panel: a vertical stack of lens buttons standing
+ * in for the steps of building an agent on AURA. Selecting one swaps the
+ * clip playing on the center screen. The `video` paths are placeholders that
+ * reuse the available clips; swap in a dedicated clip per section as they
+ * land.
  */
-const SIDE_BUTTONS: ReadonlyArray<string> = [
-  "Identity",
-  "Expertise",
-  "Integrations",
-  "Connections",
-  "Automations",
-  "Launch",
+const SIDE_BUTTONS: ReadonlyArray<{
+  readonly label: string;
+  readonly video: string;
+}> = [
+  { label: "Identity", video: "/agent-character-rotate.mp4" },
+  { label: "Expertise", video: "/AURA_visual_loop.mp4" },
+  {
+    label: "Integrations",
+    video:
+      "/magnific_have-character-img1-materialize-from-the-activated_seedance_720p_16-9_24fps_32651.mp4",
+  },
+  { label: "Connections", video: "/personas/creator/desktop.mp4" },
+  { label: "Automations", video: "/AURA_visual_loop.mp4" },
+  {
+    label: "Launch",
+    video:
+      "/magnific_have-character-img1-materialize-from-the-activated_seedance_720p_16-9_24fps_32651.mp4",
+  },
 ];
 
 interface ServiceDeviceCardProps {
@@ -82,6 +95,8 @@ export function ServiceDeviceCard({
     return typeof IntersectionObserver === "undefined";
   });
   const [replayKey, setReplayKey] = useState<number>(0);
+  // Which left-panel item is active; drives the center screen's clip.
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   useEffect(() => {
     if (!hexGrille || typeof IntersectionObserver === "undefined") {
@@ -128,7 +143,9 @@ export function ServiceDeviceCard({
     } else {
       video.pause?.();
     }
-  }, [isActive, replayKey]);
+    // `selectedIndex` is a dep so picking a new section restarts its clip
+    // (the `<video>` is keyed on it, so this effect re-runs on the remount).
+  }, [isActive, replayKey, selectedIndex]);
 
   return (
     <Plate className="personalAgentDevice" aria-hidden="true">
@@ -142,14 +159,28 @@ export function ServiceDeviceCard({
             </div>
 
             <div className="madeForYouSideButtons">
-              {SIDE_BUTTONS.map((label) => (
-                <div className="madeForYouSideRow" key={label}>
-                  <span className="madeForYouLensBtn">
-                    <span className="madeForYouLensGlow" />
-                  </span>
-                  <span className="madeForYouSideLabel">{label}</span>
-                </div>
-              ))}
+              {SIDE_BUTTONS.map((item, index) => {
+                const isSelected = index === selectedIndex;
+                return (
+                  <button
+                    type="button"
+                    className={
+                      isSelected
+                        ? "madeForYouSideRow madeForYouSideRow--selected"
+                        : "madeForYouSideRow"
+                    }
+                    key={item.label}
+                    tabIndex={-1}
+                    aria-pressed={isSelected}
+                    onClick={() => setSelectedIndex(index)}
+                  >
+                    <span className="madeForYouLensBtn">
+                      <span className="madeForYouLensGlow" />
+                    </span>
+                    <span className="madeForYouSideLabel">{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             <Plate
@@ -169,9 +200,10 @@ export function ServiceDeviceCard({
         <div className="personalAgentDeviceScreen">
           {hexGrille ? (
             <video
+              key={selectedIndex}
               ref={videoRef}
               className="personalAgentDeviceVideo"
-              src="/magnific_have-character-img1-materialize-from-the-activated_seedance_720p_16-9_24fps_32651.mp4"
+              src={SIDE_BUTTONS[selectedIndex]?.video}
               muted
               playsInline
               preload="auto"
