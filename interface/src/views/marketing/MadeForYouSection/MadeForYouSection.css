@@ -84,7 +84,12 @@
         #050607 100%
       )
       padding-box,
-    linear-gradient(135deg, #9aa0a8 0%, #26282c 100%) border-box;
+    linear-gradient(
+        135deg,
+        rgba(154, 160, 168, 0.5) 0%,
+        rgba(38, 40, 44, 0.5) 100%
+      )
+      border-box;
   box-shadow:
     inset 0 2px 6px rgba(0, 0, 0, 0.9),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04),
