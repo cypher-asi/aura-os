@@ -458,7 +458,7 @@ export function ServiceDeviceCard({
                 className="personalAgentDeviceLogo"
                 data-active={litLogos.has(index) ? "true" : undefined}
                 aria-label={logo.label}
-                onClick={() => pulseLogo(index, 500)}
+                onClick={() => pulseLogo(index, 1500)}
               >
                 <svg
                   width={26}
