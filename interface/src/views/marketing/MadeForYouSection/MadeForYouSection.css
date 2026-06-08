@@ -79,7 +79,9 @@
 /* Emissive amber fill: white-hot core blooming out to deep orange, wrapped in
    the same layered neon glow the knob indicator carries. */
 .madeForYouProgressFill {
-  height: 100%;
+  /* 30% taller than the track; the flex track centers it so the glowing bar
+     stands a touch proud of the recessed slot top and bottom. */
+  height: 130%;
   min-width: 14px;
   border-radius: 999px;
   background: linear-gradient(90deg, #f4faf2 0%, #f1f9d3 100%);
