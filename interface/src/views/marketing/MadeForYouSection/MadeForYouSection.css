@@ -405,8 +405,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: linear-gradient(
     180deg,
@@ -424,8 +424,8 @@
 /* Recessed frosted-glass disc with an orange/amber hotspot at the left edge
    fading to translucent gray, matching the knob indicator's accent. */
 .madeForYouDevice .madeForYouLensGlow {
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: radial-gradient(
     circle at 22% 50%,
@@ -614,12 +614,12 @@
   }
 
   .madeForYouDevice .madeForYouLensBtn {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
   }
 
   .madeForYouDevice .madeForYouLensGlow {
-    width: 12px;
-    height: 12px;
+    width: 9px;
+    height: 9px;
   }
 }
