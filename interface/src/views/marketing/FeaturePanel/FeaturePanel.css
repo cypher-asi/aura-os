@@ -204,26 +204,27 @@
     rgba(255, 255, 255, 0.012) 32%,
     rgba(6, 6, 8, 0.22) 100%
   );
-  /* Inner-top shadow recesses the glass below the metal lip; lighter
-     bottom/side bevels keep it reading as thin glass; a soft inner gold
-     glow is the emissive reflecting across the glass surface. The gold seam
-     line (::after, higher z) stays bright on top. */
+  /* A thin recess under the metal lip, then a SIGNIFICANT inner gold glow:
+     a hot bloom blooming inward from the top seam plus a broad ambient gold
+     fill, so the emissive clearly lights up the inside of the glass. The
+     gold seam line (::after, higher z) stays brightest on top. */
   box-shadow:
-    inset 0 8px 14px -8px rgba(0, 0, 0, 0.6),
-    inset 0 -1px 4px rgba(0, 0, 0, 0.35),
-    inset 2px 0 5px rgba(0, 0, 0, 0.22),
-    inset -2px 0 5px rgba(0, 0, 0, 0.22),
-    inset 0 0 26px rgba(var(--gold-glow), 0.07);
+    inset 0 6px 12px -8px rgba(0, 0, 0, 0.55),
+    inset 0 22px 48px -12px rgba(var(--gold-glow), 0.5),
+    inset 0 0 36px rgba(var(--gold-glow), 0.2),
+    inset 0 0 72px rgba(var(--gold-halo), 0.14),
+    inset 0 -1px 4px rgba(0, 0, 0, 0.3);
   -webkit-backdrop-filter: blur(16px) saturate(1.15);
   backdrop-filter: blur(16px) saturate(1.15);
 }
 
-/* Gold emissive perimeter: a masked 1px gold gradient ring tracing all four
-   edges of the glass section (its top edge is the metal/glass divider). The
-   ring is brightest at the top and fades into the amber halo toward the
-   bottom; `filter: drop-shadow` follows the masked shape to bloom the line
-   into a lit gold filament (a `box-shadow` glow would be clipped by the
-   mask). */
+/* Gold emissive accent line: a transparent gradient border (the masked
+   padding/content-box XOR trick) tracing the glass edges. The gradient is
+   hot gold at the top (the metal/glass divider) and fades to transparent
+   toward the bottom, so it reads as a glowing accent line that dissolves
+   rather than a hard rectangular outline. `filter: drop-shadow` follows the
+   masked shape to bloom the line into a lit filament (a `box-shadow` glow
+   would be clipped by the mask). */
 .featurePanelItemBody::before {
   content: "";
   position: absolute;
@@ -234,8 +235,9 @@
   background: linear-gradient(
     180deg,
     rgba(var(--gold-glow), 1) 0%,
-    rgba(var(--gold-glow), 0.72) 40%,
-    rgba(var(--gold-halo), 0.5) 100%
+    rgba(var(--gold-glow), 0.55) 22%,
+    rgba(var(--gold-glow), 0.14) 55%,
+    rgba(var(--gold-glow), 0) 80%
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -294,18 +296,30 @@
     0 12px 30px -4px rgba(var(--gold-halo), 0.24);
 }
 
-/* Intensify the gold perimeter filament + its bloom. */
+/* Push more of the transparent gradient border into view + brighten its
+   bloom on hover. */
 .featurePanelItem:hover .featurePanelItemBody::before {
   background: linear-gradient(
     180deg,
     rgba(var(--gold-glow), 1) 0%,
-    rgba(var(--gold-glow), 0.7) 35%,
-    rgba(var(--gold-halo), 0.5) 100%
+    rgba(var(--gold-glow), 0.78) 30%,
+    rgba(var(--gold-glow), 0.3) 62%,
+    rgba(var(--gold-glow), 0) 88%
   );
   filter:
-    drop-shadow(0 0 4px rgba(var(--gold-glow), 0.7))
-    drop-shadow(0 0 9px rgba(var(--gold-glow), 0.45))
-    drop-shadow(0 0 16px rgba(var(--gold-halo), 0.35));
+    drop-shadow(0 0 5px rgba(var(--gold-glow), 0.95))
+    drop-shadow(0 0 12px rgba(var(--gold-glow), 0.6))
+    drop-shadow(0 0 22px rgba(var(--gold-halo), 0.45));
+}
+
+/* Deepen the significant inner glow on hover. */
+.featurePanelItem:hover .featurePanelItemBody {
+  box-shadow:
+    inset 0 6px 12px -8px rgba(0, 0, 0, 0.55),
+    inset 0 24px 54px -12px rgba(var(--gold-glow), 0.62),
+    inset 0 0 44px rgba(var(--gold-glow), 0.28),
+    inset 0 0 86px rgba(var(--gold-halo), 0.18),
+    inset 0 -1px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Brighten the divider seam glow on hover. */
