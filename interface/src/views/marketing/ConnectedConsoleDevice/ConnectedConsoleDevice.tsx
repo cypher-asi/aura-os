@@ -95,6 +95,7 @@ export function ConnectedConsoleDevice(): ReactNode {
   return (
     <div className="connectedConsole">
       <div className="consoleCord" aria-hidden="true">
+        <span className="consoleCordBase" />
         <span className="consoleCordTip" />
       </div>
 
