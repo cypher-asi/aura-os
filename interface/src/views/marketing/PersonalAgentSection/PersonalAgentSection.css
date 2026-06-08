@@ -441,7 +441,8 @@
 }
 
 .personalAgentDeviceAsteriskAccent {
-  color: #e5484d;
+  color: var(--gold-core, #e8cd89);
+  text-shadow: var(--gold-text-shadow, none);
 }
 
 .personalAgentDeviceLabel {
