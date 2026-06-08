@@ -3,15 +3,14 @@
  * `ProductView.module.css`: narrows the stacked marketing sections to
  * the same `--marketing-content-max-width` and pins the shared
  * off-black `--marketing-section-bg` + light text tokens so the
- * `PageHero`, `ChangelogPreview`, and `ProductCallToAction`
- * components render identically to the Agents page. `display: contents`
- * lets the custom properties cascade into each section without adding a
- * layout box of its own.
+ * `PageHero`, `CardSection`, `ChangelogPreview`, and
+ * `ProductCallToAction` components render identically to the Agents
+ * page.
  *
- * The first-screen layout (hero text band + content stage) is owned by
- * the shared `MarketingFirstScreen` component so this page and the
- * Agents page line up exactly; only the mock-desktop sizing specific to
- * this page lives here, layered on via the `desktopStage` stage class.
+ * The page adopts the Agents page's section language: a centered
+ * `PageHero` followed by a `CardSection` whose single wide `MetalCard`
+ * carries the mock AURA desktop. Only the mock-desktop sizing inside
+ * that card lives here, layered on via the `mockDesktop*` classes.
  */
 .codeView {
   --marketing-content-max-width: 63.75%;
@@ -32,79 +31,38 @@
 }
 
 /*
- * Surface gradient behind the mock desktop. The shared `.stage` paints
- * no background of its own, so it normally shows the flat
- * `--marketing-section-bg` from `.firstScreen`. Layering a gradient
- * here (scoped to the `/code` stage via this page class) turns that
- * flat band into a lit surface: the linear base starts at the exact
- * `--marketing-section-bg` (`#090909`) at the top so the join with the
- * hero band above is seamless, then lightens toward a gray "floor" at
- * the bottom. The low, wide radial highlight reads as light pooling on
- * the surface beneath the window, so the frame appears to sit on it.
+ * Mock desktop inside the metal card. `MetalCard`'s media well
+ * (`.metalCardMedia`) flex-grows to fill the card but is NOT a query
+ * container, so the mock's `cqw`/`cqh` footprint (declared on its
+ * `.frame` root in `MockAuraDesktop.module.css`) would collapse there.
+ * The holder re-establishes a sized query container so those units
+ * resolve against a definite box, and centers the mock inside the well.
  */
-.desktopStage {
-  background:
-    radial-gradient(
-      120% 70% at 50% 118%,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.03) 35%,
-      transparent 65%
-    ),
-    linear-gradient(180deg, #090909 0%, #0e0e11 42%, #1c1c20 100%);
-  /*
-   * Extend the surface well below the window so it reads as a desk the
-   * UI sits on. The shared `.stage` centers its content in a
-   * `~71vh` box; here we grow the box, pin the window toward the TOP
-   * (`align-items: start`, overriding the shared `place-items: center`
-   * while leaving its horizontal centering intact), and let the extra
-   * height plus the bottom padding become open surface beneath it. The
-   * window itself is kept at its original size by the viewport-based
-   * cap on `.desktopStage > div` below, so this only adds space rather
-   * than scaling the UI up.
-   */
-  height: clamp(560px, 96vh, 1120px);
-  align-items: start;
-  /* Flush to the stage top so the mock desktop's top edge begins at the
-     same vertical location as the `/agents` hero's metal console card,
-     whose top edge sits at its own (shared) stage top. Both stages start
-     at the identical Y (shared `MarketingFirstScreen` hero band + gap), so
-     zeroing this offset lines the two pages' first-screen content up. */
-  padding-top: 0;
-  padding-bottom: clamp(140px, 24vh, 300px);
-  /* Round the bottom of the surface so the gradient section ends in a
-     soft slab rather than hard square corners. */
-  border-bottom-left-radius: clamp(16px, 1.8vw, 26px);
-  border-bottom-right-radius: clamp(16px, 1.8vw, 26px);
+.mockDesktopHolder {
+  container-type: size;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
 }
 
 /*
- * Enlarge the mock window beyond MockAuraApp's default 75% footprint
- * so it dominates the first screen at roughly the size of a real
- * maximized window. Re-declares the same `min(Ncqw, calc(Ncqh*16/10))`
- * formula at 96% against the shared stage container (which already sets
- * `container-type: size`). Targets the appFrame as the stage's direct
- * child; specificity (0,1,1) beats the component's own `.appFrame`
- * rule (0,1,0).
- *
- * The box-shadow overrides the frame's own modest shadow
- * (`MockAuraDesktop.module.css`) with a deeper, lower, more diffuse
- * cast plus a tight contact shadow, grounding the window on the
- * surface gradient above.
- *
- * Sizing is pinned to the VIEWPORT (`68vh`) rather than the stage's
- * container-query height (`cqh`) so that growing `.desktopStage` (to
- * add surface below) does not also scale the window up — the window
- * keeps roughly the same footprint it had at the old `~71vh` stage,
- * and the added stage height becomes open surface beneath it.
+ * Size the mock 15% smaller than its default in-card footprint. The
+ * mock's `.frame` defaults to `min(96cqw, calc(96cqh * 16 / 10))`;
+ * re-declaring the same formula at `81.6` (96 x 0.85) against this
+ * holder shrinks the window to 85% of the well it sits in. The
+ * box-shadow grounds the frame on the metal panel. Targets the frame as
+ * the holder's direct child; specificity (0,1,1) beats the component's
+ * own `.frame` rule (0,1,0).
  */
-.desktopStage > div {
-  width: min(96cqw, calc(68vh * 16 / 10));
-  max-width: 96cqw;
-  max-height: 68vh;
+.mockDesktopHolder > div {
+  width: min(81.6cqw, calc(81.6cqh * 16 / 10));
+  max-width: 81.6cqw;
+  max-height: 81.6cqh;
   box-shadow:
     0 2px 6px -2px rgba(0, 0, 0, 0.5),
-    0 28px 50px -16px rgba(0, 0, 0, 0.65),
-    0 70px 110px -40px rgba(0, 0, 0, 0.7);
+    0 24px 44px -16px rgba(0, 0, 0, 0.6),
+    0 60px 96px -40px rgba(0, 0, 0, 0.65);
 }
 
 /*
