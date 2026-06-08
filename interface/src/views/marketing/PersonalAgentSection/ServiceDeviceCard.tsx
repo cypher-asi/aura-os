@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Check } from "lucide-react";
 import { Plate } from "../../../components/Plate";
 import { SERVICE_LOGOS } from "./brand-logos";
 
@@ -202,7 +203,15 @@ export function ServiceDeviceCard({
     // (the `<video>` is keyed on it, so this effect re-runs on the remount).
   }, [isActive, replayKey, selectedIndex]);
 
+  // Build progress reflects how far through the stages the selected step is,
+  // so the last step (Launch) reads as 100% complete.
+  const progressStage = SIDE_BUTTONS[selectedIndex];
+  const progressPercent = Math.round(
+    ((selectedIndex + 1) / SIDE_BUTTONS.length) * 100,
+  );
+
   return (
+    <>
     <Plate className="personalAgentDevice" aria-hidden="true">
       <div className="personalAgentDeviceContent" ref={contentRef}>
         {hexGrille ? (
@@ -220,6 +229,7 @@ export function ServiceDeviceCard({
                 {SIDE_BUTTONS.map((item, index) => {
                   const isSelected = index === selectedIndex;
                   const isBelow = index > selectedIndex;
+                  const isAbove = index < selectedIndex;
                   const className = [
                     "madeForYouSideRow",
                     isSelected ? "madeForYouSideRow--selected" : "",
@@ -236,9 +246,15 @@ export function ServiceDeviceCard({
                       aria-pressed={isSelected}
                       onClick={() => setSelectedIndex(index)}
                     >
-                      <span className="madeForYouLensBtn">
-                        <span className="madeForYouLensGlow" />
-                      </span>
+                      {isAbove ? (
+                        <Check
+                          className="madeForYouCheck"
+                          size={16}
+                          strokeWidth={3}
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      {isSelected ? <span className="madeForYouLensBtn" /> : null}
                       <span className="madeForYouSideLabel">{item.label}</span>
                     </button>
                   );
@@ -314,6 +330,25 @@ export function ServiceDeviceCard({
         ) : null}
       </div>
     </Plate>
+      {hexGrille ? (
+        <div
+          className="madeForYouProgress"
+          role="progressbar"
+          aria-valuenow={progressPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Build progress: ${progressStage?.label ?? ""}`}
+        >
+          <div className="madeForYouProgressTrack">
+            <div
+              className="madeForYouProgressFill"
+              style={{ width: `${progressPercent}%` }}
+            />
+            <span className="madeForYouProgressLabel">{progressPercent}%</span>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 

@@ -24,8 +24,89 @@
  */
 .madeForYouDevice {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(16px, 2vw, 28px);
   width: 100%;
+}
+
+/*
+ * Build-progress bar seated below the hero device. A raised metal bezel
+ * (matching the side-button tray) frames a dark recessed track; the fill is
+ * the same hot-orange neon emission used by the knob indicator and selected
+ * labels, and the percentage reads on the right inside the track. Width is
+ * driven inline from the selected stage, animating between steps.
+ */
+.madeForYouProgress {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1200px;
+  padding: 6px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2c2e33 0%, #191b1f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 0 rgba(255, 255, 255, 0.22),
+    0 4px 7px rgba(0, 0, 0, 0.45),
+    0 12px 20px rgba(0, 0, 0, 0.5);
+}
+
+.madeForYouProgressTrack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse 130% 160% at 50% 0%,
+    #15171a 0%,
+    #0a0b0d 60%,
+    #050607 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Emissive amber fill: white-hot core blooming out to deep orange, wrapped in
+   the same layered neon glow the knob indicator carries. */
+.madeForYouProgressFill {
+  height: 100%;
+  min-width: 36px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #ff6a10 0%,
+    #ffac5a 70%,
+    #fff0d6 92%,
+    #ffffff 100%
+  );
+  box-shadow:
+    0 0 4px rgba(255, 220, 170, 1),
+    0 0 9px rgba(255, 170, 80, 0.95),
+    0 0 18px rgba(255, 120, 30, 0.85),
+    0 0 30px rgba(255, 90, 5, 0.65);
+  transition: width 0.4s ease;
+}
+
+.madeForYouProgressLabel {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    monospace
+  );
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.96);
+  text-shadow: 0 0 6px rgba(1, 244, 203, 0.3);
 }
 
 .madeForYouDevice .personalAgentDevice {
@@ -528,6 +609,19 @@
   display: none;
 }
 
+/* Completed (above the selected) rows: a checkmark replaces the ring, pinned
+   to the same left slot and inheriting the row label's text color. */
+.madeForYouDevice .madeForYouCheck {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  transform: translateY(-50%);
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: rgba(232, 234, 238, 0.92);
+}
+
 .madeForYouDevice .madeForYouSideLabel {
   flex: 1 1 auto;
   text-align: center;
@@ -722,5 +816,23 @@
     width: 12px;
     height: 12px;
     border-width: 1.5px;
+  }
+
+  .madeForYouProgress {
+    max-width: 480px;
+    padding: 4px;
+  }
+
+  .madeForYouProgressTrack {
+    height: 26px;
+  }
+
+  .madeForYouProgressFill {
+    min-width: 26px;
+  }
+
+  .madeForYouProgressLabel {
+    right: 12px;
+    font-size: 10px;
   }
 }
