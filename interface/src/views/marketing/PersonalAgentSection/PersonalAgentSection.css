@@ -320,9 +320,9 @@
     drop-shadow(-0.5px 0 0 rgba(0, 0, 0, 0.5))
     drop-shadow(0 0.5px 0 rgba(0, 0, 0, 0.5))
     drop-shadow(0 -0.5px 0 rgba(0, 0, 0, 0.5))
-    drop-shadow(0 0 3px rgba(255, 255, 255, 0.95))
-    drop-shadow(0 0 7px rgba(255, 255, 255, 0.8))
-    drop-shadow(0 0 14px rgba(255, 255, 255, 0.5));
+    drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.7))
+    drop-shadow(0 0 3.5px rgba(255, 255, 255, 0.55))
+    drop-shadow(0 0 7px rgba(255, 255, 255, 0.35));
 }
 
 /* ----- Quadrant 3: service device ------------------------------ */
