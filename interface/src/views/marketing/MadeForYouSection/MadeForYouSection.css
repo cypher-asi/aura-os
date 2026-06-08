@@ -277,7 +277,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Knob sits at the top in normal flow; the list is absolutely centered
+     (below) so it lands on the panel's true vertical center regardless of the
+     knob's height. */
+  justify-content: flex-start;
   gap: 16px;
   padding: 24px 20px;
   pointer-events: none;
@@ -394,7 +397,11 @@
    + drop shadow read as "risen"), vertically centered between the knob and the
    grille inset. It frames a recessed inner screen that holds the items. */
 .madeForYouDevice .madeForYouSideButtons {
-  width: 100%;
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  transform: translateY(-50%);
   margin: 0;
   box-sizing: border-box;
   padding: 6px;
@@ -680,6 +687,8 @@
   }
 
   .madeForYouDevice .madeForYouSideButtons {
+    left: 6px;
+    right: 6px;
     padding: 3px;
     border-radius: 9px;
     box-shadow:
