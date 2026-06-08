@@ -65,6 +65,16 @@
   pointer-events: auto;
 }
 
+/* Marketing mock only: the "Local" status dot glows gold instead of purple
+   (the `span` type bump beats the shared `.dot[data-status="local"]` rule
+   regardless of stylesheet order). */
+.personalAgentChatMock span[data-status="local"] {
+  background: var(--gold-core, #e8cd89);
+  box-shadow:
+    0 0 4px rgba(var(--gold-glow), 0.6),
+    0 0 9px rgba(var(--gold-halo), 0.35);
+}
+
 .personalAgentChatMock [data-sliding-pills-item] {
   width: 56px;
   flex: 0 0 56px;
