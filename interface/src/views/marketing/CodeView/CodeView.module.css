@@ -31,17 +31,28 @@
 }
 
 /*
- * Zero this card's padding so the media well spans the FULL card. The
- * default `.metalCard` padding (50px) would otherwise shrink the box the
- * mock measures against, so a "85% of the card" sizing below would
- * really be 85% of (card - 100px). The `:global(.metalCard)` compound
- * raises specificity to (0,2,0) so it beats the shared component rule
- * (0,1,0) regardless of stylesheet order. The 85% mock cap below leaves
+ * Zero this card's padding so the media well spans the FULL card, and
+ * grow the card much taller than the default 626px so the 85%-sized mock
+ * below (which binds on HEIGHT first, given its 16/10 frame inside the
+ * full-bleed wide card) can scale up with it. The viewport-relative
+ * `clamp` lets the card track the screen height while staying within a
+ * sensible floor/ceiling. The `:global(.metalCard)` compound raises
+ * specificity to (0,2,0) so both overrides beat the shared component
+ * rules (0,1,0) regardless of stylesheet order. The 85% mock cap leaves
  * the surrounding ~15% as the visible metal frame, so no padding is
  * needed for breathing room.
  */
 :global(.metalCard).mockDesktopCard {
   padding: 0;
+  min-height: clamp(680px, 82vh, 1040px);
+}
+
+/* Keep the card at the shared mobile height where the narrow,
+   width-bound mock no longer needs the tall desktop frame. */
+@media (max-width: 768px) {
+  :global(.metalCard).mockDesktopCard {
+    min-height: 420px;
+  }
 }
 
 /*
