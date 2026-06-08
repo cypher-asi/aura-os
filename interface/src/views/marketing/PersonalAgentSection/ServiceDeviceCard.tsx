@@ -51,6 +51,15 @@ const SIDE_BUTTONS: ReadonlyArray<{
   },
 ];
 
+/**
+ * Resting pointing direction of the hero knob's orange indicator, in degrees
+ * (0 = pointing right, negative = up, matching `Math.atan2` screen coords).
+ * The marker sits near the dial's upper-right, so it rests aimed up-right;
+ * this offset is subtracted from the cursor angle so the marker tip lands on
+ * the pointer rather than the dial's 0deg axis.
+ */
+const KNOB_REST_ANGLE = -47;
+
 interface ServiceDeviceCardProps {
   /**
    * When true, the bottom grille renders as a recessed three-ring `Plate`
@@ -80,6 +89,7 @@ export function ServiceDeviceCard({
 }: ServiceDeviceCardProps = {}): ReactNode {
   const contentRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const knobDialRef = useRef<HTMLDivElement>(null);
 
   // Scroll-activation: the video + terminal go live whenever the card
   // scrolls into view, and re-fire each time it re-enters. `replayKey`
@@ -124,6 +134,51 @@ export function ServiceDeviceCard({
     return () => observer.disconnect();
   }, [hexGrille]);
 
+  // Hero knob follows the cursor: on any mouse movement, rotate the brushed-
+  // metal dial so its orange indicator aims at the pointer. Updates are
+  // coalesced to one per animation frame; the dial center is re-read each
+  // frame so it stays correct as the page scrolls. `KNOB_REST_ANGLE` is the
+  // indicator's resting direction (upper-right), subtracted so the marker tip,
+  // not the dial's 0deg, points at the cursor.
+  useEffect(() => {
+    if (!hexGrille || typeof window === "undefined") {
+      return;
+    }
+
+    let frame = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+
+    const apply = (): void => {
+      frame = 0;
+      const dial = knobDialRef.current;
+      if (!dial) {
+        return;
+      }
+      const rect = dial.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const deg = (Math.atan2(pointerY - cy, pointerX - cx) * 180) / Math.PI;
+      dial.style.transform = `rotate(${deg - KNOB_REST_ANGLE}deg)`;
+    };
+
+    const onMove = (event: MouseEvent): void => {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (frame === 0) {
+        frame = window.requestAnimationFrame(apply);
+      }
+    };
+
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      if (frame !== 0) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [hexGrille]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) {
@@ -153,7 +208,7 @@ export function ServiceDeviceCard({
         {hexGrille ? (
           <div className="madeForYouSidePanel" aria-hidden="true">
             <div className="madeForYouKnob">
-              <div className="madeForYouKnobDial">
+              <div className="madeForYouKnobDial" ref={knobDialRef}>
                 <span className="madeForYouKnobIndicator" />
               </div>
             </div>

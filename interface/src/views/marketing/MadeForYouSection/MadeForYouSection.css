@@ -304,6 +304,8 @@
   width: 66px;
   height: 66px;
   border-radius: 50%;
+  /* Eased follow as the dial rotates toward the cursor (angle set inline). */
+  transition: transform 0.12s ease-out;
   background:
     radial-gradient(
       circle at 50% 32%,
