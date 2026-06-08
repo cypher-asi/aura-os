@@ -495,10 +495,24 @@
   width: 100%;
   padding: 12px 14px;
   border-radius: 3px;
-  background: linear-gradient(135deg, #202020 0%, #161616 55%, #0c0c0c 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 1px 0 rgba(255, 255, 255, 0.22);
+  /* 1px gradient border on all sides: the radial metal fill paints the
+     padding box while a diagonal light-to-dark metallic gradient paints the
+     border box, so the rim reads as a beveled edge around the whole panel. */
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+        ellipse 130% 90% at 50% 0%,
+        #202020 0%,
+        #161616 55%,
+        #0c0c0c 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(154, 160, 168, 0.5) 0%,
+        rgba(38, 40, 44, 0.5) 100%
+      )
+      border-box;
 }
 
 /*
