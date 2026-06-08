@@ -34,17 +34,16 @@
 
 /*
  * Tight bevel top/bottom, but reserve symmetric horizontal room for two
- * equal-width full-height inset "metal" panels flanking the screen on the
- * left and right. The panels are painted as the content container's
- * ::before/::after so they span the whole device height (screen + label
- * strip + grille) inside the Plate rim. Rather than floating as separate
- * recessed sections, they butt flush against the screen and are split off
- * by a single 2px black top-to-bottom divider line on each panel's
- * screen-facing edge.
+ * equal-width full-height inset "metal" panels flanking the full-height
+ * screen. The panels are painted as the content container's ::before/::after
+ * so they span the whole device height inside the Plate rim. Rather than
+ * floating as separate recessed sections, they butt flush against the screen
+ * and are split off by a single 2px black top-to-bottom divider line on each
+ * panel's screen-facing edge.
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
-  padding: 0 252px 4px;
+  padding: 0 252px;
 }
 
 .madeForYouDevice .personalAgentDeviceContent::before,
@@ -104,11 +103,11 @@
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
-  /* 16:9 video section — height follows the screen width. `border-box` so
-     the ratio (and the inset:0 video) covers the full padded box. */
+  /* Full-height video section now owns the full center bay; the old label
+     strip and bottom grille are gone in this hero variant. */
   box-sizing: border-box;
   min-height: 0;
-  aspect-ratio: 16 / 9;
+  height: clamp(500px, 47vw, 560px);
   padding: 53px 43px;
   /* Square corners so the screen's left/right edges sit flush against the
      vertical divider lines top-to-bottom (the quadrant keeps its 14px). */
@@ -260,11 +259,8 @@
 
 /*
  * Left "control" panel: a vertical column of hardware controls sitting in
- * the left metal panel (the region reserved by the content's 108px left
- * padding, behind the ::before divider). A large rotary knob crowns a
- * stack of round push-buttons, each with a screen-printed mono label or
- * glyph to its left. Absolutely positioned within the (relative) content
- * box, inset 3px..106px so it stays clear of the 2px black divider line.
+ * the left metal panel. A smaller mesh inset now lives below the controls
+ * instead of spanning the bottom center of the device.
  */
 .madeForYouDevice .madeForYouSidePanel {
   position: absolute;
@@ -278,8 +274,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
-  padding: 36px 20px;
+  gap: 16px;
+  padding: 24px 20px;
   pointer-events: none;
 }
 
@@ -288,8 +284,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100px;
-  height: 100px;
+  width: 82px;
+  height: 82px;
   border-radius: 50%;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
@@ -305,8 +301,8 @@
 
 .madeForYouDevice .madeForYouKnobDial {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
   background:
     radial-gradient(
@@ -332,10 +328,10 @@
 /* Orange position indicator notched into the dial's upper-right. */
 .madeForYouDevice .madeForYouKnobIndicator {
   position: absolute;
-  top: 9px;
-  right: 16px;
-  width: 7px;
-  height: 19px;
+  top: 7px;
+  right: 13px;
+  width: 6px;
+  height: 16px;
   border-radius: 3px;
   background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
   box-shadow: 0 0 6px rgba(244, 85, 0, 0.7);
@@ -359,7 +355,7 @@
     Menlo,
     monospace
   );
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   color: rgba(60, 62, 66, 0.85);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
@@ -373,16 +369,16 @@
 }
 
 .madeForYouDevice .madeForYouSideGlyph svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 /* Round push-button: raised dark cap nested in a black recessed socket. */
 .madeForYouDevice .madeForYouSideBtn {
   position: relative;
   flex: 0 0 auto;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
@@ -401,8 +397,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 31px;
-  height: 31px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   background: linear-gradient(180deg, #2a2d33 0%, #0d0e11 100%);
@@ -418,35 +414,15 @@
   display: none;
 }
 
-.madeForYouDevice .personalAgentDeviceLabel {
-  font-size: 16px;
-}
-
-/* Pull the label strip up so its top border (the horizontal divider) sits
-   flush against the screen's bottom edge instead of leaving a gap; the
-   strip's own padding/marks are scaled up 20% with the rest of the panel. */
-.madeForYouDevice .personalAgentDeviceLabelStrip {
-  margin-top: 0;
-  gap: 14px;
-  padding: 14px 7px 17px;
-}
-
-.madeForYouDevice .personalAgentDeviceMarks {
-  gap: 8px;
-}
-
-.madeForYouDevice .personalAgentDeviceAsterisk {
-  font-size: 14px;
-}
-
 /*
- * Hero grille (hexGrille variant): a recessed three-ring `Plate` inset
- * (same rim as the device body) holding a hex-packed metal-and-black mesh.
- * The Plate supplies the rim + surface; this layer adds the padding between
- * the rim and the mesh.
+ * Left-panel grille (hexGrille variant): a smaller recessed three-ring
+ * `Plate` inset holding a hex-packed metal-and-black mesh below the controls.
  */
 .madeForYouDevice .personalAgentDeviceGrilleInset {
-  margin: 5px 12px 12px;
+  flex: 0 0 auto;
+  width: calc(100% - 16px);
+  max-width: 188px;
+  margin: auto 8px 0;
 }
 
 /*
@@ -456,12 +432,12 @@
  *   1.1547 = 2 / sqrt(3); the half-cell / 0.577 offset hex-packs the rows.
  */
 .madeForYouDevice .personalAgentDeviceHexMesh {
-  --hole: 2.6px;
-  --cell: 9.5px;
-  height: 79px;
+  --hole: 2px;
+  --cell: 7.5px;
+  height: 48px;
   /* Padding step: margin reveals the Plate surface around the mesh. */
-  margin: 12px;
-  border-radius: 10px;
+  margin: 8px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background-color: #0d0e11;
   background-image:
@@ -509,7 +485,7 @@
   /* Asymmetric on mobile: a narrow left control panel and a wider right panel
      so the side-menu terminal stays legible. */
   .madeForYouDevice .personalAgentDeviceContent {
-    padding: 0 150px 4px 84px;
+    padding: 0 150px 0 84px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::before {
@@ -541,24 +517,27 @@
 
   .madeForYouDevice .personalAgentDeviceScreen {
     min-height: 0;
+    height: clamp(280px, 75vw, 360px);
     padding: 34px 24px;
   }
 
   .madeForYouDevice .personalAgentDeviceGrilleInset {
-    margin: 4px 8px 8px;
+    width: calc(100% - 8px);
+    margin: auto 4px 0;
   }
 
   .madeForYouDevice .personalAgentDeviceHexMesh {
-    --cell: 7.5px;
-    height: 54px;
-    margin: 10px;
+    --hole: 1.8px;
+    --cell: 6.5px;
+    height: 34px;
+    margin: 6px;
   }
 
   /* Shrink the control column to fit the narrower 65px mobile panel. */
   .madeForYouDevice .madeForYouSidePanel {
     width: 78px;
-    gap: 9px;
-    padding: 10px 6px;
+    gap: 7px;
+    padding: 8px 6px;
   }
 
   .madeForYouDevice .madeForYouKnob {

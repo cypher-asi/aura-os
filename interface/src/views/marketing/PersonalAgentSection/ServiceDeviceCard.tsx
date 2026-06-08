@@ -172,6 +172,14 @@ export function ServiceDeviceCard({
               </span>
               <span className="madeForYouSideBtn" />
             </div>
+
+            <Plate
+              radius="12px"
+              className="personalAgentDeviceGrilleInset"
+              aria-hidden="true"
+            >
+              <div className="personalAgentDeviceHexMesh" />
+            </Plate>
           </div>
         ) : null}
 
@@ -209,29 +217,23 @@ export function ServiceDeviceCard({
           </div>
         </div>
 
-        <div className="personalAgentDeviceLabelStrip">
-          <div className="personalAgentDeviceMarks">
-            <span className="personalAgentDeviceAsterisk">&#10033;</span>
-            <span className="personalAgentDeviceAsterisk personalAgentDeviceAsteriskAccent">
-              &#10033;
-            </span>
-            <span className="personalAgentDeviceAsterisk">&#10033;</span>
-          </div>
-          <span className="personalAgentDeviceLabel">100+ Integrations</span>
-          <span className="personalAgentDeviceAsterisk">&#10033;</span>
-        </div>
+        {!hexGrille ? (
+          <>
+            <div className="personalAgentDeviceLabelStrip">
+              <div className="personalAgentDeviceMarks">
+                <span className="personalAgentDeviceAsterisk">&#10033;</span>
+                <span className="personalAgentDeviceAsterisk personalAgentDeviceAsteriskAccent">
+                  &#10033;
+                </span>
+                <span className="personalAgentDeviceAsterisk">&#10033;</span>
+              </div>
+              <span className="personalAgentDeviceLabel">100+ Integrations</span>
+              <span className="personalAgentDeviceAsterisk">&#10033;</span>
+            </div>
 
-        {hexGrille ? (
-          <Plate
-            radius="12px"
-            className="personalAgentDeviceGrilleInset"
-            aria-hidden="true"
-          >
-            <div className="personalAgentDeviceHexMesh" />
-          </Plate>
-        ) : (
-          <div className="personalAgentDeviceGrille" />
-        )}
+            <div className="personalAgentDeviceGrille" />
+          </>
+        ) : null}
       </div>
     </Plate>
   );
