@@ -99,7 +99,7 @@
         90deg,
         #2d3742 0%,
         #2d3742 var(--progress, 0%),
-        #131922 calc(var(--progress, 0%) + 24%),
+        #131922 calc(var(--progress, 0%) + 9%),
         #131922 100%
       )
       padding-box,
@@ -612,15 +612,20 @@
   box-shadow: none;
 }
 
-/* Selected item: the capsule stays as-is; only the label lights up as a
-   neon orange glow. */
+/* Selected item: the capsule stays as-is; only the label lights up. Carries
+   the same pale white-green core + amber-gold/amber-brown neon glow as the
+   progress bar fill and knob indicator (text-shadow has no spread, so the
+   halo radii are kept while the spread values are dropped). */
 .madeForYouDevice .madeForYouSideRow--selected .madeForYouSideLabel {
-  color: #ffd9a8;
+  color: #f4faf2;
   text-shadow:
-    0 0 4px rgba(255, 170, 80, 1),
-    0 0 8px rgba(255, 120, 30, 0.95),
-    0 0 16px rgba(255, 95, 10, 0.85),
-    0 0 28px rgba(255, 80, 0, 0.6);
+    0 0 4px rgba(232, 205, 137, 1),
+    0 0 9px rgba(232, 205, 137, 0.95),
+    0 0 18px rgba(232, 205, 137, 0.85),
+    0 0 30px rgba(232, 205, 137, 0.65),
+    0 0 14px rgba(153, 81, 25, 0.75),
+    0 0 26px rgba(153, 81, 25, 0.5),
+    0 0 44px rgba(153, 81, 25, 0.32);
 }
 
 /* Items below the selected one read as "upcoming": heavily muted gray text. */
@@ -629,14 +634,19 @@
   text-shadow: none;
 }
 
-/* Selected ring lights up with the same neon orange as the label. */
+/* Selected ring lights up with the same pale core + layered amber-gold/
+   amber-brown neon glow the progress bar fill and knob indicator carry. */
 .madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn {
-  border-color: #ffb46a;
+  border-color: #f1f9d3;
   box-shadow:
-    0 0 4px rgba(255, 170, 80, 1),
-    0 0 9px rgba(255, 120, 30, 0.9),
-    0 0 16px rgba(255, 95, 10, 0.75),
-    inset 0 0 5px rgba(255, 140, 50, 0.65);
+    0 0 4px rgba(232, 205, 137, 1),
+    0 0 9px rgba(232, 205, 137, 0.95),
+    0 0 18px rgba(232, 205, 137, 0.85),
+    0 0 30px rgba(232, 205, 137, 0.65),
+    0 0 14px 2px rgba(153, 81, 25, 0.75),
+    0 0 26px 5px rgba(153, 81, 25, 0.5),
+    0 0 44px 9px rgba(153, 81, 25, 0.32),
+    inset 0 0 5px rgba(232, 205, 137, 0.65);
 }
 
 /* Simple transparent ring pinned to the left edge of the capsule. Muted gray
@@ -844,8 +854,6 @@
   .madeForYouDevice .personalAgentDeviceHexMesh {
     --hole: 1.8px;
     --cell: 6.5px;
-    height: 42px;
-    margin: 2px;
   }
 
   /* Shrink the control column to fit the narrower 65px mobile panel. */
