@@ -1042,17 +1042,69 @@ button.attachRing::after {
    lighter weight, so the live field reads as set INTO the page rather than
    framed by a heavy chrome bezel. Opt-in via `attachAccent` so only the
    `/agents` mock LLM input mounts a canvas. */
+/* Registered so the conic ring's sweep angle can animate (custom properties
+   only animate when given a type). */
+@property --attach-ring-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
 button.attachOrb {
   border-radius: 50%;
-  overflow: hidden;
-  border: 1px solid transparent;
-  /* Dark panel behind the field (padding-box) + a subtle dark->light ring
-     (border-box) — same recipe as `.outerCapsule`, lighter values. */
+  /* Allow the pulsating glow halo to bleed past the disc edge. */
+  overflow: visible;
+  border: 2px solid transparent;
+  /* Dark center (padding-box) framed by a rotating GOLDEN conic ring
+     (border-box): a pale-gold crest sweeps around amber-gold / amber-brown
+     stops so the rim reads as a slowly-turning lit ring. */
   background:
-    linear-gradient(to bottom, #16181c, #2a2e36) padding-box,
-    linear-gradient(to bottom, #14161a, #3a3f48) border-box;
-  /* Dark glyph so the "+" stays legible over the bright field. */
-  color: #0b0c0e;
+    radial-gradient(circle at 50% 45%, #2a2e36, #16181c) padding-box,
+    conic-gradient(
+        from var(--attach-ring-angle),
+        rgba(232, 205, 137, 0.25) 0deg,
+        rgba(244, 250, 242, 0.95) 70deg,
+        rgba(232, 205, 137, 0.55) 150deg,
+        rgba(153, 81, 25, 0.4) 250deg,
+        rgba(232, 205, 137, 0.25) 360deg
+      )
+      border-box;
+  /* Gold glyph (overridden below with a glow). */
+  color: var(--gold-core, #f4faf2);
+  /* Slow rotation of the ring + a separate pulsating gold halo. */
+  animation:
+    attachOrbSpin 6.5s linear infinite,
+    attachOrbPulse 2.8s ease-in-out infinite;
+}
+
+@keyframes attachOrbSpin {
+  to {
+    --attach-ring-angle: 360deg;
+  }
+}
+
+@keyframes attachOrbPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 4px rgba(232, 205, 137, 0.35),
+      0 0 9px rgba(153, 81, 25, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 7px rgba(232, 205, 137, 0.6),
+      0 0 16px rgba(232, 205, 137, 0.35),
+      0 0 26px rgba(153, 81, 25, 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.attachOrb {
+    animation: none;
+    box-shadow:
+      0 0 6px rgba(232, 205, 137, 0.45),
+      0 0 14px rgba(153, 81, 25, 0.22);
+  }
 }
 
 /* Keep the shared hover plate circular so it matches the well. */
@@ -1076,11 +1128,23 @@ button.attachOrb::before {
   display: block;
   width: 100%;
   height: 100%;
+  /* Soft gold core glow pooled behind the "+" so the dark well reads as lit
+     gold rather than empty. */
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(244, 250, 242, 0.45) 0%,
+    rgba(232, 205, 137, 0.22) 45%,
+    transparent 72%
+  );
 }
 
-/* Subtle light halo keeps the dark "+" crisp against the field. */
+/* Gold-glowing "+" glyph. */
 .attachOrb > svg {
-  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.4));
+  color: var(--gold-core, #f4faf2);
+  filter:
+    drop-shadow(0 0 2px rgba(232, 205, 137, 0.9))
+    drop-shadow(0 0 5px rgba(232, 205, 137, 0.55))
+    drop-shadow(0 0 9px rgba(153, 81, 25, 0.45));
 }
 
 /* Light-weight recessed shadow over the field (mirrors `.outerCapsule`'s

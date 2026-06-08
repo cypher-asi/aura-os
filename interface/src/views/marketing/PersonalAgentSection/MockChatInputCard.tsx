@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Plate } from "../../../components/Plate";
 import { DesktopChatInputBar } from "../../../features/chat-ui/ChatInputBar";
 import type { AgentMode } from "../../../constants/modes";
-import { AuraScreenOrb } from "../AuraScreenOrb";
 
 /**
  * Mini-UI for the "Always ready" quadrant. Reuses the REAL authenticated
@@ -176,7 +175,7 @@ export function MockChatInputCard(): ReactNode {
           selectedModeOverride={selectedMode}
           onSelectedModeOverrideChange={jumpToMode}
           inputReadOnly
-          attachAccent={<AuraScreenOrb variant="radial" />}
+          attachAccent={<span aria-hidden="true" />}
         />
       </div>
     </Plate>
