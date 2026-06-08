@@ -115,10 +115,11 @@
   );
   font-size: 13px;
   letter-spacing: 0.04em;
-  /* `difference` blend inverts against whatever is behind: white text reads
-     dark over the bright glow and light over the dark track, so the
-     percentage stays legible wherever the fill edge sits. */
-  color: #ffffff;
+  /* `difference` blend inverts against whatever is behind. A light-gray base
+     (rather than pure white) softens the inversion so the text reads as an
+     off-black gray over the bright glow while staying light over the dark
+     track. */
+  color: #b4b4b4;
   mix-blend-mode: difference;
 }
 
