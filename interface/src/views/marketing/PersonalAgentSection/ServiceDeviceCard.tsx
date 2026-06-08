@@ -333,6 +333,12 @@ export function ServiceDeviceCard({
 
   return (
     <>
+    {hexGrille ? (
+      <div className="madeForYouDeviceCaption" aria-hidden="true">
+        <span className="madeForYouPanelCaptionTitle">DESIGN</span>
+        <span className="madeForYouPanelCaptionSub">YOUR PRIVATE AGENT</span>
+      </div>
+    ) : null}
     <Plate
       className="personalAgentDevice"
       aria-hidden={hexGrille ? undefined : "true"}
@@ -386,14 +392,7 @@ export function ServiceDeviceCard({
               </div>
             </div>
 
-            <div className="madeForYouSideSpacer" aria-hidden="true">
-              <div className="madeForYouPanelCaption">
-                <span className="madeForYouPanelCaptionTitle">DESIGN</span>
-                <span className="madeForYouPanelCaptionSub">
-                  YOUR PRIVATE AGENT
-                </span>
-              </div>
-            </div>
+            <div className="madeForYouSideSpacer" aria-hidden="true" />
           </div>
         ) : null}
 

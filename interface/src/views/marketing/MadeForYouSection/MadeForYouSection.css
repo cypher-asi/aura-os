@@ -251,21 +251,20 @@
 }
 
 /*
- * Right side-panel terminal LCD: a tall recessed green-on-black screen inset
- * into the enlarged right metal panel (the region reserved by the content's
- * right padding, in front of the ::after divider). Absolutely positioned and
- * spanning nearly the full device height; the metal slab reads as its bezel.
+ * Left side-panel terminal LCD: a tall recessed green-on-black screen inset
+ * into the enlarged left metal panel (the region reserved by the content's
+ * left padding, in front of the ::before divider). Absolutely positioned and
+ * vertically centered in the panel; the metal slab reads as its bezel.
  * Rendering a looping mock feed of an agent built + deployed to AURA.
  */
 .madeForYouDevice .madeForYouTerminalScreen {
   position: absolute;
   z-index: 2;
   top: 22px;
-  /* Stop well above the CTA pill that sits in the lower right panel (leaving a
-     clear gap between them); the full-width hex-mesh strip runs below both
-     along the chassis bottom. */
-  bottom: 162px;
-  right: 22px;
+  /* Equal 22px margins top and above the mesh strip so the LCD reads as
+     vertically centered in the left panel. */
+  bottom: calc(var(--mesh-strip-reserve) + 22px);
+  left: 22px;
   width: 204px;
   overflow: hidden;
   box-sizing: border-box;
@@ -426,17 +425,18 @@
 }
 
 /*
- * Left "control" panel: a vertical column of hardware controls sitting in
- * the left metal panel. A smaller mesh inset now lives below the controls
- * instead of spanning the bottom center of the device.
+ * Right "control" panel: a vertical column of hardware controls sitting in
+ * the right metal panel, seated above the "Create your agent" CTA slot.
  */
 .madeForYouDevice .madeForYouSidePanel {
   position: absolute;
   top: 0;
-  bottom: var(--mesh-strip-reserve);
-  left: 3px;
-  /* Span the full left panel (matches the `::before` divider width) so the
-     centered knob lands on the panel's true center rather than ~20px left. */
+  /* Stop above the CTA slot in the lower-right so the knob/stage column reads
+     as seated directly above the "Create your agent" button. */
+  bottom: 162px;
+  right: 3px;
+  /* Span the full right panel (matches the `::after` divider width) so the
+     centered knob lands on the panel's true center rather than ~20px off. */
   width: 248px;
   z-index: 2;
   display: flex;
@@ -452,29 +452,30 @@
   pointer-events: none;
 }
 
-/* Top band that holds the panel caption above the list. `min-height: 0` keeps
-   this flexible band balanced against the lower knob bay. */
+/* Top band that centers the knob above the list. `min-height: 0` keeps this
+   flexible band balanced against the lower caption bay. */
 .madeForYouDevice .madeForYouKnobBay {
   flex: 1 1 0;
   min-height: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   width: 100%;
-  padding-top: 24px;
 }
 
-.madeForYouDevice .madeForYouPanelCaption {
-  position: relative;
-  z-index: 1;
+/*
+ * Section caption lifted OUT of the device's right control panel and seated
+ * top-left above the chassis (the `.madeForYouDevice` flex column centers its
+ * children, so `align-self: flex-start` pins this to the left edge, outside
+ * the `Plate`).
+ */
+.madeForYouDevice .madeForYouDeviceCaption {
+  align-self: flex-start;
   display: flex;
-  flex: 0 0 auto;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  width: 100%;
-  text-align: center;
+  text-align: left;
   text-transform: uppercase;
 }
 
@@ -491,8 +492,8 @@
 }
 
 /*
- * Bottom band mirroring the caption bay so the list lands on the panel center.
- * It flex-centers the knob in the former wordmark slot.
+ * Bottom band mirroring the knob bay so the list lands on the panel center.
+ * It flex-centers the caption in the former wordmark slot.
  */
 .madeForYouDevice .madeForYouSideSpacer {
   flex: 1 1 0;
@@ -895,9 +896,14 @@
     0 0 2px rgba(232, 205, 137, 0.22),
     0 0 5px rgba(232, 205, 137, 0.16),
     0 0 10px rgba(232, 205, 137, 0.1),
+    0 0 16px rgba(232, 205, 137, 0.06),
     0 0 8px 1px rgba(153, 81, 25, 0.08),
     0 0 14px 2px rgba(153, 81, 25, 0.06),
     inset 0 0 3px rgba(232, 205, 137, 0.08);
+  transition:
+    transform 160ms ease,
+    border-color 220ms ease,
+    box-shadow 260ms ease;
 }
 
 /* Brighten the rim + glow on hover (beats the base `.ctaButton:hover`). */
@@ -1027,17 +1033,17 @@
     max-width: 480px;
   }
 
-  /* Asymmetric on mobile: a narrow left control panel and a wider right panel
-     so the side-menu terminal stays legible. */
+  /* Symmetric on mobile now that both flanks carry wide content: the terminal
+     on the left, and the control column + CTA stacked on the right. */
   .madeForYouDevice .personalAgentDeviceContent {
     --mesh-strip-reserve: 64px;
     --mesh-strip-height: 58px;
     --mesh-pattern-padding: 4px;
-    padding: 0 150px var(--mesh-strip-reserve) 84px;
+    padding: 0 150px var(--mesh-strip-reserve);
   }
 
   .madeForYouDevice .personalAgentDeviceContent::before {
-    width: 78px;
+    width: 144px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::after {
@@ -1046,8 +1052,8 @@
 
   .madeForYouDevice .madeForYouTerminalScreen {
     top: 12px;
-    bottom: 124px;
-    right: 12px;
+    bottom: calc(var(--mesh-strip-reserve) + 12px);
+    left: 12px;
     width: 128px;
     padding: 10px 10px 28px;
     font-size: 8px;
@@ -1088,9 +1094,10 @@
     --cell: 6.5px;
   }
 
-  /* Shrink the control column to fit the narrower 65px mobile panel. */
+  /* Control column fills the right mobile panel and stops above the CTA slot. */
   .madeForYouDevice .madeForYouSidePanel {
-    width: 78px;
+    width: 144px;
+    bottom: 124px;
     gap: 7px;
     padding: 0 6px;
   }
@@ -1101,21 +1108,20 @@
   }
 
   .madeForYouDevice .madeForYouKnobBay {
-    gap: 7px;
-    padding-top: 10px;
+    justify-content: center;
   }
 
-  .madeForYouDevice .madeForYouPanelCaption {
-    gap: 3px;
+  .madeForYouDevice .madeForYouDeviceCaption {
+    gap: 4px;
   }
 
   .madeForYouDevice .madeForYouPanelCaptionTitle {
-    font-size: 7px;
+    font-size: 11px;
     letter-spacing: 0.18em;
   }
 
   .madeForYouDevice .madeForYouPanelCaptionSub {
-    font-size: 5px;
+    font-size: 8px;
     letter-spacing: 0.1em;
   }
 
