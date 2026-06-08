@@ -64,7 +64,12 @@
    */
   height: clamp(560px, 96vh, 1120px);
   align-items: start;
-  padding-top: clamp(4px, 1.5vh, 20px);
+  /* Flush to the stage top so the mock desktop's top edge begins at the
+     same vertical location as the `/agents` hero's metal console card,
+     whose top edge sits at its own (shared) stage top. Both stages start
+     at the identical Y (shared `MarketingFirstScreen` hero band + gap), so
+     zeroing this offset lines the two pages' first-screen content up. */
+  padding-top: 0;
   padding-bottom: clamp(140px, 24vh, 300px);
   /* Round the bottom of the surface so the gradient section ends in a
      soft slab rather than hard square corners. */
