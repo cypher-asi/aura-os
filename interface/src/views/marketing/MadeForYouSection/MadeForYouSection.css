@@ -178,8 +178,9 @@
   /* Reserve a band at the bottom of the chassis for the full-width hex-mesh
      strip; the dividers, side panel, terminal, and CTA all stop above it. The
      band is taller than the build-progress pill so the pill reads as floating
-     vertically centered inside the mesh. */
-  --mesh-strip-reserve: 78px;
+     vertically centered inside the mesh. Sized to leave the mesh a bottom gap
+     that matches its side gap so it reads as an inset panel, not cut off. */
+  --mesh-strip-reserve: 86px;
   padding: 0 252px var(--mesh-strip-reserve);
 }
 
@@ -494,7 +495,12 @@
   width: 100%;
   padding: 12px 14px;
   border-radius: 3px;
-  background: linear-gradient(180deg, #2c2e33 0%, #191b1f 100%);
+  background: radial-gradient(
+    ellipse 130% 90% at 50% 0%,
+    #15171a 0%,
+    #0a0b0d 60%,
+    #050607 100%
+  );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
     0 1px 0 rgba(255, 255, 255, 0.22);
@@ -911,10 +917,12 @@
 .madeForYouDevice .madeForYouMeshStrip {
   position: absolute;
   z-index: 2;
+  /* Equal gap to the chassis rim on the left, right, and bottom so the mesh
+     floats as an inset panel rather than being cut off at the bottom edge. */
   left: 3px;
   right: 3px;
-  bottom: 3px;
-  height: calc(var(--mesh-strip-reserve) - 6px);
+  bottom: 8px;
+  height: calc(var(--mesh-strip-reserve) - 11px);
   box-sizing: border-box;
 }
 
@@ -981,7 +989,7 @@
   /* Asymmetric on mobile: a narrow left control panel and a wider right panel
      so the side-menu terminal stays legible. */
   .madeForYouDevice .personalAgentDeviceContent {
-    --mesh-strip-reserve: 58px;
+    --mesh-strip-reserve: 64px;
     padding: 0 150px var(--mesh-strip-reserve) 84px;
   }
 
