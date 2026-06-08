@@ -348,13 +348,27 @@
   margin: auto 0;
 }
 
-/* Lens button + label row: the arched glowing lens leads, the label follows. */
+/* Lens button + label row: the glowing lens leads, the label follows, both
+   seated in a rounded black-glass capsule recessed into the metal panel. */
 .madeForYouDevice .madeForYouSideRow {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
+  box-sizing: border-box;
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(28, 30, 34, 0.92) 0%,
+      rgba(8, 9, 11, 0.96) 100%
+    );
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 /* Circular brushed-metal bezel holding a recessed frosted lens. */
@@ -409,8 +423,8 @@
   );
   font-size: 12px;
   letter-spacing: 0.14em;
-  color: rgba(60, 62, 66, 0.85);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: rgba(232, 234, 238, 0.92);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
 }
 
 /* This enlarged device shows a bare screen — drop the service logo grid
@@ -568,6 +582,7 @@
 
   .madeForYouDevice .madeForYouSideRow {
     gap: 5px;
+    padding: 3px 7px 3px 3px;
   }
 
   .madeForYouDevice .madeForYouSideLabel {
