@@ -125,12 +125,15 @@
   aspect-ratio: 1 / 0.94;
   border-radius: 7cqw;
   border: 1px solid transparent;
+  /* Surface uses the same neutral dark-gray palette as the section
+     `MetalCard`s (#202020 -> #161616 -> #0c0c0c), painted as a radial
+     gradient so the case reads as part of the same metal family. */
   background:
     radial-gradient(
-        ellipse 100% 120% at 50% 32%,
-        #34363a 0%,
-        #26282c 48%,
-        #16181b 100%
+        ellipse 120% 130% at 50% 32%,
+        #202020 0%,
+        #161616 55%,
+        #0c0c0c 100%
       )
       padding-box,
     linear-gradient(
