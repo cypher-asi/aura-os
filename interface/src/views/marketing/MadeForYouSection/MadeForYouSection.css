@@ -91,16 +91,16 @@
      padding box. */
   border: 1px solid transparent;
   /* The slot fill brightens to a soft black right where the glow ends
-     (`--progress`, set inline from the selected stage) then falls off to the
-     deep `#131922`, so the lit spill tracks the progress edge. The registered
+     (     `--progress`, set inline from the selected stage) then falls off to the
+     deep `#121414`, so the lit spill tracks the progress edge. The registered
      `--progress` property lets this transition animate with the fill width. */
   background:
     linear-gradient(
         90deg,
         #2d3742 0%,
         #2d3742 var(--progress, 0%),
-        #131922 calc(var(--progress, 0%) + 9%),
-        #131922 100%
+        #121414 calc(var(--progress, 0%) + 9%),
+        #121414 100%
       )
       padding-box,
     linear-gradient(
