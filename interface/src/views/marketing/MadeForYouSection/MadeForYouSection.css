@@ -63,9 +63,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 16px;
+  height: 21px;
   /* Inset the fill from the left and right by the same amount as the centered
-     fill's top/bottom gap ((16 - 12px glow) / 2 = 2px), so the glow keeps a
+     fill's top/bottom gap ((21 - 17px glow) / 2 = 2px), so the glow keeps a
      consistent dark margin on all four edges (including the right at 100%). */
   padding: 0 2px;
   border-radius: 999px;
@@ -101,8 +101,8 @@
 .madeForYouProgressFill {
   /* Fixed glow height so the lit portion stays constant while the dark track
      around it tightens, leaving a slim even margin on all sides. */
-  height: 12px;
-  min-width: 12px;
+  height: 17px;
+  min-width: 17px;
   border-radius: 999px;
   background: linear-gradient(90deg, #f4faf2 0%, #f1f9d3 100%);
   box-shadow:
@@ -850,13 +850,13 @@
   }
 
   .madeForYouProgressTrack {
-    height: 13px;
+    height: 18px;
     padding: 0 2px;
   }
 
   .madeForYouProgressFill {
-    height: 9px;
-    min-width: 9px;
+    height: 14px;
+    min-width: 14px;
   }
 
   .madeForYouProgressLabel {
