@@ -31,12 +31,27 @@
 }
 
 /*
+ * Zero this card's padding so the media well spans the FULL card. The
+ * default `.metalCard` padding (50px) would otherwise shrink the box the
+ * mock measures against, so a "85% of the card" sizing below would
+ * really be 85% of (card - 100px). The `:global(.metalCard)` compound
+ * raises specificity to (0,2,0) so it beats the shared component rule
+ * (0,1,0) regardless of stylesheet order. The 85% mock cap below leaves
+ * the surrounding ~15% as the visible metal frame, so no padding is
+ * needed for breathing room.
+ */
+:global(.metalCard).mockDesktopCard {
+  padding: 0;
+}
+
+/*
  * Mock desktop inside the metal card. `MetalCard`'s media well
  * (`.metalCardMedia`) flex-grows to fill the card but is NOT a query
  * container, so the mock's `cqw`/`cqh` footprint (declared on its
  * `.frame` root in `MockAuraDesktop.module.css`) would collapse there.
- * The holder re-establishes a sized query container so those units
- * resolve against a definite box, and centers the mock inside the well.
+ * With the card's padding zeroed above, this holder fills the whole card
+ * and re-establishes a sized query container so the mock's units resolve
+ * against the full-card box, then centers the mock inside it.
  */
 .mockDesktopHolder {
   container-type: size;
@@ -47,18 +62,18 @@
 }
 
 /*
- * Size the mock 15% smaller than its default in-card footprint. The
- * mock's `.frame` defaults to `min(96cqw, calc(96cqh * 16 / 10))`;
- * re-declaring the same formula at `81.6` (96 x 0.85) against this
- * holder shrinks the window to 85% of the well it sits in. The
- * box-shadow grounds the frame on the metal panel. Targets the frame as
- * the holder's direct child; specificity (0,1,1) beats the component's
- * own `.frame` rule (0,1,0).
+ * Size the mock to 85% of the underlying card. With the holder filling
+ * the full (now unpadded) card, re-declaring the mock's own
+ * `min(Ncqw, calc(Ncqh * 16 / 10))` formula at `85` makes the window
+ * occupy 85% of the card on whichever axis binds first (height on the
+ * wide card, given the 16/10 frame). The box-shadow grounds the frame on
+ * the metal panel. Targets the frame as the holder's direct child;
+ * specificity (0,1,1) beats the component's own `.frame` rule (0,1,0).
  */
 .mockDesktopHolder > div {
-  width: min(81.6cqw, calc(81.6cqh * 16 / 10));
-  max-width: 81.6cqw;
-  max-height: 81.6cqh;
+  width: min(85cqw, calc(85cqh * 16 / 10));
+  max-width: 85cqw;
+  max-height: 85cqh;
   box-shadow:
     0 2px 6px -2px rgba(0, 0, 0, 0.5),
     0 24px 44px -16px rgba(0, 0, 0, 0.6),

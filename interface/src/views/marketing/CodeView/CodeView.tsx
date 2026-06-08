@@ -77,6 +77,7 @@ export function CodeView(): ReactNode {
           wide
           gradient={135}
           align="center"
+          className={styles.mockDesktopCard}
           media={
             <div className={styles.mockDesktopHolder} aria-hidden="true">
               <MockAuraDesktop />
