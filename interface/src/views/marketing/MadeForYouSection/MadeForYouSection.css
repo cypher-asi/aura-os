@@ -338,13 +338,66 @@
   transform: rotate(32deg);
 }
 
-/* Label/glyph + button row. */
+/* The six lens buttons sit as one group vertically centered in the leftover
+   space between the knob (above) and the grille inset (below). */
+.madeForYouDevice .madeForYouSideButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin: auto 0;
+}
+
+/* Lens button + label row: the arched glowing lens leads, the label follows. */
 .madeForYouDevice .madeForYouSideRow {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 16px;
   width: 100%;
+}
+
+/* Arched, brushed-metal frame holding a recessed frosted lens (per the
+   reference image): rounded top corners taper to a near-square base. */
+.madeForYouDevice .madeForYouLensBtn {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 50px;
+  border-radius: 50% 50% 18% 18% / 38% 38% 14% 14%;
+  background: linear-gradient(
+    180deg,
+    #d9dbdf 0%,
+    #b6b9bf 48%,
+    #cfd2d6 100%
+  );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.75),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.28),
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+/* Recessed frosted-glass disc with an orange/amber hotspot at the left edge
+   fading to translucent gray, matching the knob indicator's accent. */
+.madeForYouDevice .madeForYouLensGlow {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 22% 50%,
+    #ff8a3c 0%,
+    #f45500 14%,
+    rgba(220, 200, 190, 0.55) 46%,
+    rgba(205, 208, 212, 0.85) 100%
+  );
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+    0 0 7px rgba(244, 85, 0, 0.45);
 }
 
 .madeForYouDevice .madeForYouSideLabel {
@@ -359,53 +412,6 @@
   letter-spacing: 0.14em;
   color: rgba(60, 62, 66, 0.85);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.madeForYouDevice .madeForYouSideGlyph {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(70, 72, 76, 0.8);
-}
-
-.madeForYouDevice .madeForYouSideGlyph svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Round push-button: raised dark cap nested in a black recessed socket. */
-.madeForYouDevice .madeForYouSideBtn {
-  position: relative;
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse 120% 90% at 50% 0%,
-    #0a0a0a 0%,
-    #050505 60%,
-    #000 100%
-  );
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 1px 0 rgba(255, 255, 255, 0.22);
-}
-
-.madeForYouDevice .madeForYouSideBtn::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: linear-gradient(180deg, #2a2d33 0%, #0d0e11 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.6),
-    0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 /* This enlarged device shows a bare screen — drop the service logo grid
@@ -557,27 +563,26 @@
     height: 8px;
   }
 
+  .madeForYouDevice .madeForYouSideButtons {
+    gap: 6px;
+  }
+
   .madeForYouDevice .madeForYouSideRow {
     gap: 5px;
   }
 
   .madeForYouDevice .madeForYouSideLabel {
-    font-size: 7px;
-    letter-spacing: 0.1em;
+    font-size: 6px;
+    letter-spacing: 0.04em;
   }
 
-  .madeForYouDevice .madeForYouSideGlyph svg {
-    width: 10px;
-    height: 10px;
-  }
-
-  .madeForYouDevice .madeForYouSideBtn {
+  .madeForYouDevice .madeForYouLensBtn {
     width: 20px;
-    height: 20px;
+    height: 26px;
   }
 
-  .madeForYouDevice .madeForYouSideBtn::before {
-    width: 13px;
-    height: 13px;
+  .madeForYouDevice .madeForYouLensGlow {
+    width: 15px;
+    height: 15px;
   }
 }

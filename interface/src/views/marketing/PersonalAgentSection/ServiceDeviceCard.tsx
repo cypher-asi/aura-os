@@ -24,6 +24,20 @@ const TERMINAL_LINES: ReadonlyArray<{
   { text: "agent live - node us-west-2", kind: "ok" },
 ];
 
+/**
+ * Labels for the hero's left control panel: a vertical stack of arched,
+ * orange-glowing lens buttons standing in for the steps of building an
+ * agent on AURA. Purely decorative (the device root is `aria-hidden`).
+ */
+const SIDE_BUTTONS: ReadonlyArray<string> = [
+  "Identity",
+  "Expertise",
+  "Integrations",
+  "Connections",
+  "Automations",
+  "Launch",
+];
+
 interface ServiceDeviceCardProps {
   /**
    * When true, the bottom grille renders as a recessed three-ring `Plate`
@@ -127,50 +141,15 @@ export function ServiceDeviceCard({
               </div>
             </div>
 
-            <div className="madeForYouSideRow">
-              <span className="madeForYouSideLabel">PAGES</span>
-              <span className="madeForYouSideBtn" />
-            </div>
-
-            <div className="madeForYouSideRow">
-              <span className="madeForYouSideLabel">LOC</span>
-              <span className="madeForYouSideBtn" />
-            </div>
-
-            <div className="madeForYouSideRow">
-              <span className="madeForYouSideGlyph" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M4 9v6h4l5 4V5L8 9H4z"
-                    fill="currentColor"
-                  />
-                  <path
-                    d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              <span className="madeForYouSideBtn" />
-            </div>
-
-            <div className="madeForYouSideRow">
-              <span className="madeForYouSideGlyph" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M11 6 4 12l7 6V6zm9 0-7 6 7 6V6z" />
-                </svg>
-              </span>
-              <span className="madeForYouSideBtn" />
-            </div>
-
-            <div className="madeForYouSideRow">
-              <span className="madeForYouSideGlyph" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13 6 20 12l-7 6V6zM4 6l7 6-7 6V6z" />
-                </svg>
-              </span>
-              <span className="madeForYouSideBtn" />
+            <div className="madeForYouSideButtons">
+              {SIDE_BUTTONS.map((label) => (
+                <div className="madeForYouSideRow" key={label}>
+                  <span className="madeForYouLensBtn">
+                    <span className="madeForYouLensGlow" />
+                  </span>
+                  <span className="madeForYouSideLabel">{label}</span>
+                </div>
+              ))}
             </div>
 
             <Plate
@@ -192,7 +171,7 @@ export function ServiceDeviceCard({
             <video
               ref={videoRef}
               className="personalAgentDeviceVideo"
-              src="/agent-character-rotate.mp4"
+              src="/magnific_have-character-img1-materialize-from-the-activated_seedance_720p_16-9_24fps_32651.mp4"
               muted
               playsInline
               preload="auto"
