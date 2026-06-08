@@ -168,12 +168,19 @@
   display: block;
 }
 
+/* The plate fills the full card width, so override the narrow art wrapper
+   (sized for ~60% / max 180px monoline SVGs) when it holds the plate. */
+.featurePanelSceneArt:has(.featurePanelPlate) {
+  width: 100%;
+  max-width: none;
+}
+
 /* Shared gold metal plate image used in place of the monoline scenes.
    A raster asset, so it sits directly in the scene well at full width
    rather than inheriting the `currentColor` glow treatment. */
 .featurePanelPlate {
   width: 100%;
-  max-width: 200px;
+  max-width: none;
   height: auto;
   display: block;
   border-radius: 12px;
