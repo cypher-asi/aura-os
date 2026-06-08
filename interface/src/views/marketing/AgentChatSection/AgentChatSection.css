@@ -109,6 +109,11 @@
   justify-content: center;
   gap: 0;
   width: 100%;
+  /* Sit above the connected-console device below so the device's cord,
+     which overlaps up into the hero phone's bottom, tucks BEHIND the
+     opaque phone body and reads as plugged into the phone. */
+  position: relative;
+  z-index: 1;
 }
 
 .agentChatSectionPhones > :first-child {

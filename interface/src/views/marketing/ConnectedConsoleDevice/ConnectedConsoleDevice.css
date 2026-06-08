@@ -15,9 +15,14 @@
   flex-direction: column;
   align-items: center;
   width: clamp(280px, 30vw, 400px);
-  /* Tuck the device up toward the phones above so the cord reads as
-     descending from the centered hero phone. */
-  margin-top: clamp(-48px, -4vw, -16px);
+  /* Pull the device up so the cord overlaps UP INTO the hero phone's
+     bottom. Paired with the larger `.consoleCord` height below, the panel
+     itself stays roughly in place while the cord reaches further up. The
+     `z-index: 0` (vs the phones' `z-index: 1` in `AgentChatSection.css`)
+     tucks the overlapping cord BEHIND the phone, so it reads as plugged
+     into the phone's bottom rather than lying over the deck. */
+  margin-top: clamp(-96px, -6.4vw, -44px);
+  z-index: 0;
   /* Container context: internal hardware scales with the device width. */
   container-type: inline-size;
 }
@@ -30,7 +35,7 @@
 .consoleCord {
   position: relative;
   width: 7cqw;
-  height: clamp(64px, 11vh, 140px);
+  height: clamp(96px, 15vh, 185px);
   margin-bottom: -1.5cqw;
   border-radius: 4cqw 4cqw 0 0;
   background: linear-gradient(
