@@ -40,8 +40,12 @@
 .madeForYouProgress {
   box-sizing: border-box;
   width: 100%;
-  max-width: 1200px;
-  padding: 6px;
+  /* Much narrower than the 1200px device; the bar reads as a compact pill. */
+  max-width: 520px;
+  /* Tall vertical padding keeps the outer bezel ~48px while the inner track
+     shrinks ~60% (36px -> 14px), so the dark inset reads as a thin recessed
+     slot inside the unchanged panel. */
+  padding: 17px 6px;
   border-radius: 999px;
   background: linear-gradient(180deg, #2c2e33 0%, #191b1f 100%);
   box-shadow:
@@ -55,9 +59,11 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 36px;
+  height: 14px;
   border-radius: 999px;
-  overflow: hidden;
+  /* Track is thinner than the percentage label, so let the label and the
+     fill's neon glow bleed out of the slot rather than clip them. */
+  overflow: visible;
   background: radial-gradient(
     ellipse 130% 160% at 50% 0%,
     #15171a 0%,
@@ -74,7 +80,7 @@
    the same layered neon glow the knob indicator carries. */
 .madeForYouProgressFill {
   height: 100%;
-  min-width: 36px;
+  min-width: 14px;
   border-radius: 999px;
   background: linear-gradient(
     90deg,
@@ -819,20 +825,20 @@
   }
 
   .madeForYouProgress {
-    max-width: 480px;
-    padding: 4px;
+    max-width: 300px;
+    padding: 12px 4px;
   }
 
   .madeForYouProgressTrack {
-    height: 26px;
+    height: 10px;
   }
 
   .madeForYouProgressFill {
-    min-width: 26px;
+    min-width: 10px;
   }
 
   .madeForYouProgressLabel {
-    right: 12px;
-    font-size: 10px;
+    right: 10px;
+    font-size: 9px;
   }
 }
