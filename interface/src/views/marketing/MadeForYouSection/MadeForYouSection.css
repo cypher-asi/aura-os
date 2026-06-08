@@ -986,6 +986,9 @@
     inset 1px 0 2px rgba(0, 0, 0, 0.45),
     inset -1px 0 2px rgba(0, 0, 0, 0.45),
     inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    /* Broad transparent edge shadow darkens the mesh from every side. */
+    inset 0 0 34px 12px rgba(0, 0, 0, 0.48),
+    inset 0 0 92px 24px rgba(0, 0, 0, 0.32),
     /* Crisp 1px border hugging the outer edge of the mesh. */
     0 0 0 1px rgba(0, 0, 0, 0.75);
 }
