@@ -285,9 +285,12 @@
   pointer-events: none;
 }
 
-/* Top band that holds the knob, centered within the space above the list. */
+/* Top band that holds the knob, centered within the space above the list.
+   `min-height: 0` keeps the knob's intrinsic height from inflating this band
+   past the bottom spacer (which would push the list down and the knob low). */
 .madeForYouDevice .madeForYouKnobBay {
   flex: 1 1 0;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -297,6 +300,7 @@
 /* Bottom band mirroring the knob bay so the list lands on the panel center. */
 .madeForYouDevice .madeForYouSideSpacer {
   flex: 1 1 0;
+  min-height: 0;
   width: 100%;
 }
 
