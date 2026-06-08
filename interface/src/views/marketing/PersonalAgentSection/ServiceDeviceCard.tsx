@@ -220,7 +220,10 @@ export function ServiceDeviceCard({
   // The bar width animates via CSS; the readout counts up/down to the new
   // percentage (easeOutCubic) so the number tweens between stages rather than
   // snapping. A ref tracks the live value so an interrupted run continues from
-  // wherever it currently sits.
+  // wherever it currently sits. Like the always-on bar-width transition and the
+  // terminal typewriter, this count-up runs regardless of
+  // `prefers-reduced-motion`: it's the whole point of the readout, and pinning
+  // it to instant text while the glow visibly slides would read as broken.
   const [displayPercent, setDisplayPercent] = useState<number>(progressPercent);
   const displayPercentRef = useRef<number>(progressPercent);
 
@@ -231,10 +234,8 @@ export function ServiceDeviceCard({
       return;
     }
 
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced || typeof requestAnimationFrame === "undefined") {
+    // No `requestAnimationFrame` (SSR / JSDOM): jump straight to the target.
+    if (typeof requestAnimationFrame === "undefined") {
       displayPercentRef.current = to;
       const id = setTimeout(() => setDisplayPercent(to), 0);
       return () => clearTimeout(id);

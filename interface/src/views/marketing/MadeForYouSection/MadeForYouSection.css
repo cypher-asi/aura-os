@@ -48,7 +48,7 @@
      + z-index paint it in front of the mesh. */
   position: relative;
   z-index: 4;
-  margin-top: calc(-1 * clamp(16px, 2vw, 28px) - 70.5px);
+  margin-top: calc(-1 * clamp(16px, 2vw, 28px) - 68.5px);
   /* Equal padding all around (left/right match top/bottom); the dark inset
      track reads as a thin recessed slot centered inside the pill. */
   padding: 17px;
@@ -78,9 +78,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 21px;
+  height: 17px;
   /* Inset the fill from the left and right by the same amount as the centered
-     fill's top/bottom gap ((21 - 17px glow) / 2 = 2px), so the glow keeps a
+     fill's top/bottom gap ((17 - 13px glow) / 2 = 2px), so the glow keeps a
      consistent dark margin on all four edges (including the right at 100%). */
   padding: 0 2px;
   border-radius: 999px;
@@ -122,8 +122,8 @@
 .madeForYouProgressFill {
   /* Fixed glow height so the lit portion stays constant while the dark track
      around it tightens, leaving a slim even margin on all sides. */
-  height: 17px;
-  min-width: 17px;
+  height: 13px;
+  min-width: 13px;
   border-radius: 999px;
   background: linear-gradient(90deg, #f4faf2 0%, #f1f9d3 100%);
   box-shadow:
@@ -141,7 +141,7 @@
 .madeForYouProgressLabel {
   position: absolute;
   top: 50%;
-  right: 16px;
+  right: 12px;
   transform: translateY(-50%);
   font-family: var(
     --font-mono,
@@ -150,7 +150,7 @@
     Menlo,
     monospace
   );
-  font-size: 13px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   /* `difference` blend inverts against whatever is behind. A light-gray base
      (rather than pure white) softens the inversion so the text reads as an
