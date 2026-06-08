@@ -383,25 +383,15 @@
     background 0.2s ease;
 }
 
-/* Selected item: the capsule and its label glow warm orange/amber. */
-.madeForYouDevice .madeForYouSideRow--selected {
-  background: linear-gradient(
-    180deg,
-    rgba(82, 41, 12, 0.94) 0%,
-    rgba(40, 18, 4, 0.96) 100%
-  );
-  box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.6),
-    inset 0 0 0 1px rgba(255, 150, 70, 0.5),
-    inset 0 0 16px rgba(255, 120, 40, 0.35),
-    0 0 16px rgba(255, 120, 40, 0.5);
-}
-
+/* Selected item: the capsule stays as-is; only the label lights up as a
+   neon orange glow. */
 .madeForYouDevice .madeForYouSideRow--selected .madeForYouSideLabel {
-  color: #ffcaa0;
+  color: #ffd9a8;
   text-shadow:
-    0 0 8px rgba(255, 140, 50, 0.95),
-    0 0 14px rgba(255, 110, 30, 0.6);
+    0 0 4px rgba(255, 170, 80, 1),
+    0 0 8px rgba(255, 120, 30, 0.95),
+    0 0 16px rgba(255, 95, 10, 0.85),
+    0 0 28px rgba(255, 80, 0, 0.6);
 }
 
 /* Circular brushed-metal bezel holding a recessed frosted lens. Pinned to the
