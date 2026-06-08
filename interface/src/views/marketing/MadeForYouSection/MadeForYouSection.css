@@ -471,19 +471,8 @@
   appearance: none;
   -webkit-appearance: none;
   font: inherit;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(28, 30, 34, 0.92) 0%,
-      rgba(8, 9, 11, 0.96) 100%
-    );
-  box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.85),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 1px 0 rgba(255, 255, 255, 0.22);
-  transition:
-    box-shadow 0.2s ease,
-    background 0.2s ease;
+  background: none;
+  box-shadow: none;
 }
 
 /* Selected item: the capsule stays as-is; only the label lights up as a
