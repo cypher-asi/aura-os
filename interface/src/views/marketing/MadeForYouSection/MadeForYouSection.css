@@ -357,7 +357,7 @@
   gap: 14px;
   width: 100%;
   box-sizing: border-box;
-  padding: 6px 16px 6px 6px;
+  padding: 4px 16px 4px 5px;
   border-radius: 999px;
   background:
     linear-gradient(
@@ -378,8 +378,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: linear-gradient(
     180deg,
@@ -397,8 +397,8 @@
 /* Recessed frosted-glass disc with an orange/amber hotspot at the left edge
    fading to translucent gray, matching the knob indicator's accent. */
 .madeForYouDevice .madeForYouLensGlow {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: radial-gradient(
     circle at 22% 50%,
@@ -414,15 +414,11 @@
 }
 
 .madeForYouDevice .madeForYouSideLabel {
-  font-family: var(
-    --font-mono,
-    ui-monospace,
-    "SFMono-Regular",
-    Menlo,
-    monospace
-  );
-  font-size: 12px;
-  letter-spacing: 0.14em;
+  flex: 1 1 auto;
+  text-align: center;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 13px;
+  letter-spacing: 0.01em;
   color: rgba(232, 234, 238, 0.92);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
 }
@@ -591,12 +587,12 @@
   }
 
   .madeForYouDevice .madeForYouLensBtn {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
   }
 
   .madeForYouDevice .madeForYouLensGlow {
-    width: 15px;
-    height: 15px;
+    width: 12px;
+    height: 12px;
   }
 }
