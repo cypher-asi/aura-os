@@ -81,96 +81,103 @@
   min-height: 360px;
   border-radius: 24px;
   background: transparent;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  /* Drop shadow that floats the card, plus a gold emissive halo weighted
+     downward so the glass section's glow pools/reflects on the surface
+     below (the box-shadow paints outside the `overflow: hidden` clip). */
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    0 20px 52px -6px rgba(var(--gold-glow), 0.2),
+    0 8px 24px -4px rgba(var(--gold-halo), 0.16);
   transition: box-shadow 0.18s ease;
 }
 
-.featurePanelSceneArt,
-.featurePanelItemTitle,
-.featurePanelItemDesc,
-.featurePanelItemTag {
+.featurePanelMetalOverline,
+.featurePanelMetalTitle,
+.featurePanelItemDesc {
   transition:
     color 0.18s ease,
-    border-color 0.18s ease,
     text-shadow 0.18s ease,
     filter 0.18s ease;
 }
 
-/* Beveled metal top section — the upper of the card's two equal-height
-   grid rows. The two-layer background paints the metal gradient on the
-   padding-box and an outline gradient on the (transparent 1px) border-box
-   — the same recipe as our metal cards (`Plate.module.css` `.inner`,
-   `.madeForYouBrandPanel`) — so the rim reads as a beveled edge. Inset
-   highlights/shadow give it a brushed, slightly domed face. Top corners
-   follow the card radius; the touching (bottom) corners take a tight 3px
-   radius so the seam reads as two stacked plates. */
+/* Brushed-metal top section — the upper of the card's two equal-height grid
+   rows. Layered backgrounds on the padding-box build a convincing brushed
+   plate: a brighter silver base gradient, fine diagonal brushed striations,
+   and a soft diagonal sheen streak; the border-box paints the bright
+   metallic rim. Content (a stamped category overline + title) is anchored
+   like an ID plate (overline top, title bottom). Top corners follow the card
+   radius; the touching (bottom) corners take a tight 3px radius so the seam
+   reads as two stacked plates. */
 .featurePanelScene {
   position: relative;
   z-index: 1;
   width: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(24px, 2.4vw, 36px);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: clamp(22px, 2.2vw, 32px);
   border: 1px solid transparent;
-  /* Only the touching (bottom) corners get the tight 3px radius; the top
-     keeps the card's 24px. */
   border-radius: 24px 24px 3px 3px;
   background:
-    linear-gradient(135deg, #202020 0%, #161616 55%, #0c0c0c 100%) padding-box,
+    linear-gradient(
+        118deg,
+        rgba(255, 255, 255, 0) 30%,
+        rgba(255, 255, 255, 0.1) 48%,
+        rgba(255, 255, 255, 0) 60%
+      )
+      padding-box,
+    repeating-linear-gradient(
+        116deg,
+        rgba(255, 255, 255, 0.05) 0 1px,
+        rgba(255, 255, 255, 0) 1px 3px,
+        rgba(0, 0, 0, 0.06) 3px 4px,
+        rgba(255, 255, 255, 0) 4px 7px
+      )
+      padding-box,
+    linear-gradient(160deg, #4c4f55 0%, #34373c 38%, #202225 70%, #141517 100%)
+      padding-box,
     linear-gradient(
         135deg,
-        rgba(90, 94, 102, 0.65) 0%,
-        rgba(12, 13, 16, 0.65) 100%
+        rgba(150, 156, 165, 0.85) 0%,
+        rgba(70, 74, 80, 0.6) 45%,
+        rgba(12, 13, 16, 0.7) 100%
       )
       border-box;
-  /* A bright top highlight + a convex-feeling dark bottom edge make the
-     metal panel read as a proud plate sitting above the recessed glass.
-     The matching cast shadow lives as an inner-top shadow on the glass
-     below (so it can't bury the gold seam line that paints on top). */
+  /* Bright top highlight + convex dark bottom edge so the plate reads as a
+     proud, slightly domed metal slab above the recessed glass. */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -4px 6px rgba(0, 0, 0, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.55);
 }
 
-/* Flat monoline art: thin near-white lines, no bloom or drop-shadow. */
-.featurePanelSceneArt {
-  position: relative;
-  width: 60%;
-  max-width: 180px;
-  color: #f7f8fb;
+/* Stamped category overline (e.g. PRIVACY): faint etched caps at the top of
+   the plate, embossed with a dark/light shadow pair. */
+.featurePanelMetalOverline {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(214, 219, 226, 0.62);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.12),
+    0 -1px 1px rgba(0, 0, 0, 0.6);
 }
 
-.featurePanelSceneArt svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* The plate fills the full card width, so override the narrow art wrapper
-   (sized for ~60% / max 180px monoline SVGs) when it holds the plate. */
-.featurePanelSceneArt:has(.featurePanelPlate) {
-  width: 100%;
-  max-width: none;
-}
-
-/* Shared gold metal plate image used in place of the monoline scenes.
-   A raster asset, so it sits directly in the scene well at full width
-   rather than inheriting the `currentColor` glow treatment. */
-.featurePanelPlate {
-  width: 100%;
-  max-width: none;
-  height: auto;
-  display: block;
-  border-radius: 12px;
-}
-
-/* Keep the lit feel on hover: the raster plate can't recolor like the SVGs,
-   so add a warm gold glow instead. */
-.featurePanelItem:hover .featurePanelPlate {
-  filter:
-    drop-shadow(0 0 6px rgba(var(--gold-glow), 0.45))
-    drop-shadow(0 0 16px rgba(var(--gold-halo), 0.3));
+/* Big title struck into the plate: light brushed-metal fill with a stacked
+   emboss shadow so it reads as stamped metal, not flat text. */
+.featurePanelMetalTitle {
+  margin: 0;
+  font-size: clamp(26px, 2.6vw, 34px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #d8dce2;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.16),
+    0 2px 4px rgba(0, 0, 0, 0.55),
+    0 -1px 1px rgba(0, 0, 0, 0.5);
 }
 
 /* Glass bottom section: title, description, then the tag pill. A
@@ -189,22 +196,26 @@
   /* Only the touching (top) corners get the tight 3px radius; the bottom
      keeps the card's 24px. */
   border-radius: 3px 3px 24px 24px;
+  /* Far more transparent glass: a faint top sheen fading to a light dark
+     tint, so the page (and the emissive halo) read through it. */
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.09) 0%,
-    rgba(255, 255, 255, 0.02) 35%,
-    rgba(10, 10, 12, 0.55) 100%
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.012) 32%,
+    rgba(6, 6, 8, 0.22) 100%
   );
-  /* A strong inner-top shadow recesses the glass below the metal lip (the
-     metal's cast shadow), with inset bottom/side shadows for the thick
-     bevel. The gold seam line (::after, higher z) stays bright on top. */
+  /* Inner-top shadow recesses the glass below the metal lip; lighter
+     bottom/side bevels keep it reading as thin glass; a soft inner gold
+     glow is the emissive reflecting across the glass surface. The gold seam
+     line (::after, higher z) stays bright on top. */
   box-shadow:
-    inset 0 8px 12px -6px rgba(0, 0, 0, 0.75),
-    inset 0 -2px 6px rgba(0, 0, 0, 0.5),
-    inset 2px 0 6px rgba(0, 0, 0, 0.35),
-    inset -2px 0 6px rgba(0, 0, 0, 0.35);
-  -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  backdrop-filter: blur(20px) saturate(1.2);
+    inset 0 8px 14px -8px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 4px rgba(0, 0, 0, 0.35),
+    inset 2px 0 5px rgba(0, 0, 0, 0.22),
+    inset -2px 0 5px rgba(0, 0, 0, 0.22),
+    inset 0 0 26px rgba(var(--gold-glow), 0.07);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  backdrop-filter: blur(16px) saturate(1.15);
 }
 
 /* Gold emissive perimeter: a masked 1px gold gradient ring tracing all four
@@ -219,12 +230,12 @@
   inset: 0;
   z-index: 2;
   border-radius: inherit;
-  padding: 1px;
+  padding: 1.5px;
   background: linear-gradient(
     180deg,
-    rgba(var(--gold-glow), 0.95) 0%,
-    rgba(var(--gold-glow), 0.45) 35%,
-    rgba(var(--gold-halo), 0.32) 100%
+    rgba(var(--gold-glow), 1) 0%,
+    rgba(var(--gold-glow), 0.72) 40%,
+    rgba(var(--gold-halo), 0.5) 100%
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -235,9 +246,9 @@
     linear-gradient(#000 0 0);
   mask-composite: exclude;
   filter:
-    drop-shadow(0 0 3px rgba(var(--gold-glow), 0.5))
-    drop-shadow(0 0 6px rgba(var(--gold-glow), 0.3))
-    drop-shadow(0 0 10px rgba(var(--gold-halo), 0.25));
+    drop-shadow(0 0 4px rgba(var(--gold-glow), 0.9))
+    drop-shadow(0 0 10px rgba(var(--gold-glow), 0.6))
+    drop-shadow(0 0 20px rgba(var(--gold-halo), 0.42));
   pointer-events: none;
   transition: filter 0.18s ease;
 }
@@ -250,60 +261,37 @@
   position: absolute;
   inset: 0 0 auto 0;
   z-index: 3;
-  height: 1px;
+  height: 1.5px;
   background: linear-gradient(
     90deg,
-    rgba(var(--gold-glow), 0.25) 0%,
+    rgba(var(--gold-glow), 0.3) 0%,
     rgba(var(--gold-glow), 1) 50%,
-    rgba(var(--gold-glow), 0.25) 100%
+    rgba(var(--gold-glow), 0.3) 100%
   );
   box-shadow:
-    0 0 4px rgba(var(--gold-glow), 0.8),
-    0 0 9px rgba(var(--gold-glow), 0.5),
-    0 0 16px rgba(var(--gold-halo), 0.4);
+    0 0 5px rgba(var(--gold-glow), 1),
+    0 0 13px rgba(var(--gold-glow), 0.72),
+    0 0 24px rgba(var(--gold-halo), 0.5);
   pointer-events: none;
   transition: box-shadow 0.18s ease;
 }
 
-.featurePanelItemTitle {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
-  color: #f7f8fb;
-}
-
 .featurePanelItemDesc {
   margin: 0;
-  max-width: 34ch;
+  max-width: 38ch;
   font-size: 13px;
   line-height: 1.55;
   color: var(--color-text-secondary, #a3a3a8);
 }
 
-/* Static uppercase category pill at the bottom-left of each card. */
-.featurePanelItemTag {
-  align-self: flex-start;
-  margin-top: 4px;
-  padding: 6px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #f7f8fb;
-}
-
-/* Hover: lift the whole card with a warm gold halo. The metal/glass split
-   is kept (no gold wash over the metal); instead the gold emissive line and
-   the metal plate light up, and the title/desc/tag glow gold. */
+/* Hover: brighten the emissive halo + its reflection on the surface below.
+   The metal/glass split is kept (no gold wash over the metal); only the
+   emissive line/glow and the description light up. */
 .featurePanelItem:hover {
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.5),
-    0 0 24px rgba(var(--gold-glow), 0.22),
-    0 0 48px rgba(var(--gold-halo), 0.16);
+    0 26px 64px -6px rgba(var(--gold-glow), 0.32),
+    0 12px 30px -4px rgba(var(--gold-halo), 0.24);
 }
 
 /* Intensify the gold perimeter filament + its bloom. */
@@ -328,27 +316,8 @@
     0 0 22px rgba(var(--gold-halo), 0.5);
 }
 
-.featurePanelItem:hover .featurePanelItemTitle {
-  color: var(--gold-core, #f7f8fb);
-  text-shadow: var(--gold-text-shadow, none);
-}
-
-/* The monoline SVG art glows via filter (text-shadow doesn't reach strokes). */
-.featurePanelItem:hover .featurePanelSceneArt {
-  color: var(--gold-core, #f7f8fb);
-  filter:
-    drop-shadow(0 0 5px rgba(var(--gold-glow), 0.6))
-    drop-shadow(0 0 12px rgba(var(--gold-halo), 0.4));
-}
-
 .featurePanelItem:hover .featurePanelItemDesc {
-  color: rgba(var(--gold-glow), 0.82);
-}
-
-.featurePanelItem:hover .featurePanelItemTag {
-  border-color: rgba(var(--gold-glow), 0.5);
-  color: var(--gold-core, #f7f8fb);
-  text-shadow: var(--gold-text-shadow, none);
+  color: rgba(var(--gold-glow), 0.85);
 }
 
 @media (max-width: 900px) {

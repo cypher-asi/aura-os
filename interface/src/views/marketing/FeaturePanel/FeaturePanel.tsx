@@ -2,14 +2,9 @@ import { type ReactNode } from "react";
 import "./FeaturePanel.css";
 
 export interface FeaturePanelFeature {
-  /**
-   * Rich illustration scene rendered inside the dark `DeviceScreen`
-   * glass tile at the top of each card (see the `*Scene` exports below).
-   */
-  readonly illustration: ReactNode;
   readonly title: ReactNode;
   readonly description: ReactNode;
-  /** Static uppercase label shown in the bottom-left pill. */
+  /** Uppercase category, stamped as the overline on the metal section. */
   readonly tag: ReactNode;
 }
 
@@ -20,9 +15,10 @@ interface FeaturePanelProps {
 
 /**
  * Feature panel on the dark marketing surface. The headline is centered
- * across the top, with a row of floating black cards below — each card
- * holds a glowing illustration scene above its title + description,
- * echoing the reference three-up scene layout.
+ * across the top, with a row of floating cards below. Each card is a
+ * two-part "metal ID card": a brushed-metal top plate stamped with the
+ * category overline + title, fused to a translucent glass section that
+ * carries the description, with a bright gold emissive seam + perimeter.
  */
 export function FeaturePanel({
   headline,
@@ -37,13 +33,12 @@ export function FeaturePanel({
         <ul className="featurePanelGrid" role="list">
           {features.map((feature, index) => (
             <li key={index} className="featurePanelItem">
-              <div className="featurePanelScene" aria-hidden="true">
-                <div className="featurePanelSceneArt">{feature.illustration}</div>
+              <div className="featurePanelScene">
+                <span className="featurePanelMetalOverline">{feature.tag}</span>
+                <h3 className="featurePanelMetalTitle">{feature.title}</h3>
               </div>
               <div className="featurePanelItemBody">
-                <h3 className="featurePanelItemTitle">{feature.title}</h3>
                 <p className="featurePanelItemDesc">{feature.description}</p>
-                <span className="featurePanelItemTag">{feature.tag}</span>
               </div>
             </li>
           ))}
