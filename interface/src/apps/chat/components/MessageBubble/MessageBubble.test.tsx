@@ -167,6 +167,51 @@ describe("MessageBubble", () => {
     expect(screen.queryByRole("button", { name: "Buy credits" })).not.toBeInTheDocument();
   });
 
+  it("renders the agent + device context on error bubbles when errorAgentInfo is provided", () => {
+    render(
+      <MessageBubble
+        message={{
+          id: "error-agent-info-1",
+          role: "assistant",
+          content: "",
+          errorMessage: "local harness startup failed",
+        }}
+        errorAgentInfo={{
+          name: "Aura",
+          machineType: "local",
+          status: "idle",
+          clientDevice: "Desktop - Windows (DESKTOP-ABC)",
+          agentMachine: "DESKTOP-ABC",
+        }}
+      />,
+    );
+
+    // Agent identity line: name + local/remote + status.
+    expect(screen.getByText(/Aura \(local, idle\)/)).toBeInTheDocument();
+    // Both device descriptors render so a shared error reports where it
+    // happened and which machine the agent runs on.
+    expect(
+      screen.getByText("Desktop - Windows (DESKTOP-ABC)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("DESKTOP-ABC")).toBeInTheDocument();
+  });
+
+  it("omits the agent + device context when errorAgentInfo is absent (read-only surfaces)", () => {
+    render(
+      <MessageBubble
+        message={{
+          id: "error-agent-info-2",
+          role: "assistant",
+          content: "",
+          errorMessage: "connection lost",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("connection lost")).toBeInTheDocument();
+    expect(screen.queryByText("Agent")).not.toBeInTheDocument();
+  });
+
   it("renders a Retry button on error bubbles and fires onRetry when clicked", () => {
     const onRetry = vi.fn();
     render(

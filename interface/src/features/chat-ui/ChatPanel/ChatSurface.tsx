@@ -32,6 +32,7 @@ import { createSetters, ensureEntry } from "../../../hooks/stream/store";
 import { getLastSendArgs as getLastAgentChatSendArgs } from "../../../hooks/use-agent-chat-stream";
 import { getPartitionSendControl } from "../../../hooks/use-chat-stream/partition-send-control";
 import { recordStreamCloseReason } from "../../../shared/observability/stream-breadcrumbs";
+import { useErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
 import type { ChatAttachment } from "../../../api/streams";
 import type { Project } from "../../../shared/types";
 import type { GenerationMode } from "../../../constants/models";
@@ -225,6 +226,15 @@ export function ChatSurface({
     llmProjectId,
     agentId,
     sendDisabled,
+  });
+
+  // Agent identity + device context attached to every error rendered in
+  // this thread, so a user-shared failure always reports which agent
+  // (name, local/remote, status) failed and on which device.
+  const errorAgentInfo = useErrorReportAgentInfo({
+    agentId,
+    agentName,
+    machineType,
   });
 
   // Phase 2 stuck-stream actions. The pill in `ChatStreamingIndicator`
@@ -654,6 +664,8 @@ export function ChatSurface({
                 sessionBoundaries={sessionBoundaries}
                 onInitialAnchorReady={handleInitialAnchorReady}
                 onRetry={handleRetryLastSend}
+                errorAgentInfo={errorAgentInfo}
+                agentId={agentId}
                 isAutoFollowing={isAutoFollowing}
                 getUserUnpinnedAt={getUserUnpinnedAt}
                 density={isMobileLayout ? "mobile" : "desktop"}

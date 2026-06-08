@@ -9,6 +9,7 @@ import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../../../apps/chat/components/MessageBubble";
 import { StreamingBubble } from "../../../apps/chat/components/StreamingBubble";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
+import type { ErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
 
 import { useStreamStore } from "../../../hooks/stream/store";
 import { useImageScrollPin } from "../../../shared/hooks/use-image-scroll-pin";
@@ -38,6 +39,14 @@ interface ChatMessageListProps {
    * Optional because read-only/historical surfaces don't supply it.
    */
   onRetry?: () => void;
+  /**
+   * Agent + device context forwarded to each error bubble so a
+   * user-shared failure carries the agent name, local/remote type,
+   * status, and device. Optional on read-only/historical surfaces.
+   */
+  errorAgentInfo?: ErrorReportAgentInfo;
+  /** Agent id forwarded to error bubbles' `ReportBugButton`. */
+  agentId?: string;
   isAutoFollowing?: boolean;
   /** Returns a non-zero `performance.now()` timestamp once the user has
    * shown explicit upward scroll intent (wheel/touch/keyboard). When
@@ -84,6 +93,8 @@ export function ChatMessageList({
   sessionBoundaries,
   onInitialAnchorReady,
   onRetry,
+  errorAgentInfo,
+  agentId,
   isAutoFollowing = true,
   getUserUnpinnedAt,
   density = "desktop",
@@ -330,6 +341,8 @@ export function ChatMessageList({
                       initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
                       initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
                       streamKey={streamKey}
+                      agentId={agentId}
+                      errorAgentInfo={errorAgentInfo}
                       onRetry={onRetry}
                     />
                   </div>

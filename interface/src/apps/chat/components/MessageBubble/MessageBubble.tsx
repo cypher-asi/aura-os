@@ -38,6 +38,10 @@ import { LargeTextBlock, isLargeText } from "./LargeTextBlock";
 import { ReportBugButton } from "../../../../components/ReportBugButton";
 import { MessageActions } from "../MessageActions";
 import { useMarkdownCopy } from "../../../../shared/hooks/use-markdown-copy";
+import {
+  type ErrorReportAgentInfo,
+  formatErrorReportAgentInfo,
+} from "../../../../hooks/use-error-report-agent-info";
 
 interface Props {
   message: DisplaySessionEvent;
@@ -56,6 +60,13 @@ interface Props {
   agentId?: string;
   /** Phase 5: optional session id forwarded to the inline `ReportBugButton`. */
   sessionId?: string;
+  /**
+   * Agent identity + device context shown on, and copied with, every
+   * error variant so a user-shared failure carries the agent name,
+   * local/remote type, status, and device. Optional because read-only
+   * / historical surfaces don't resolve it.
+   */
+  errorAgentInfo?: ErrorReportAgentInfo;
   /**
    * Resend the most-recent prompt for this stream. When provided, error
    * bubbles (server busy / agent busy / generic stream errors) render a
@@ -129,6 +140,7 @@ export const MessageBubble = memo(function MessageBubble({
   streamKey,
   agentId,
   sessionId,
+  errorAgentInfo,
   onRetry,
 }: Props) {
   const openBuyCredits = useUIModalStore((state) => state.openBuyCredits);
@@ -296,6 +308,15 @@ export const MessageBubble = memo(function MessageBubble({
     ) {
       return null;
     }
+    // Agent + device context appended to the copied error so a shared
+    // failure is self-describing. Built once and reused for both the
+    // copy payload and the visible meta line below.
+    const agentInfoText = formatErrorReportAgentInfo(errorAgentInfo);
+    const copyErrorText = () => {
+      const base = message.errorMessage ?? "";
+      if (!agentInfoText) return base;
+      return base ? `${base}\n\n${agentInfoText}` : agentInfoText;
+    };
     return (
       <div className={styles.errorChrome}>
         {message.errorMessage && (
@@ -304,11 +325,29 @@ export const MessageBubble = memo(function MessageBubble({
               {message.errorMessage}
             </span>
             <CopyButton
-              getText={() => message.errorMessage ?? ""}
+              getText={copyErrorText}
               ariaLabel="Copy error message"
               iconOnly
               className={styles.errorCopyBtn}
             />
+          </div>
+        )}
+        {errorAgentInfo && (
+          <div className={styles.errorAgentMeta}>
+            <span className={styles.errorAgentMetaItem}>
+              <span className={styles.errorAgentMetaLabel}>Agent</span>
+              {errorAgentInfo.name ?? "unknown"} (
+              {errorAgentInfo.machineType === "remote" ? "remote" : "local"}
+              {errorAgentInfo.status ? `, ${errorAgentInfo.status}` : ""})
+            </span>
+            <span className={styles.errorAgentMetaItem}>
+              <span className={styles.errorAgentMetaLabel}>Device</span>
+              {errorAgentInfo.clientDevice}
+            </span>
+            <span className={styles.errorAgentMetaItem}>
+              <span className={styles.errorAgentMetaLabel}>Agent machine</span>
+              {errorAgentInfo.agentMachine}
+            </span>
           </div>
         )}
         <div className={styles.errorMetaRow}>

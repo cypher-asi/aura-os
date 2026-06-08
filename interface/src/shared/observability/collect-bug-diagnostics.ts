@@ -7,9 +7,12 @@ import {
 import { getStreamEntry } from "../../hooks/stream/store";
 import { useChatUIStore } from "../../stores/chat-ui-store";
 import { useAgentStore } from "../../apps/agents/stores/agent-store";
+import { useProfileStatusStore } from "../../stores/profile-status-store";
 import { useOrgStore } from "../../stores/org-store";
 import { useAuthStore } from "../../stores/auth-store";
 import { inferNativePlatform, isNativeRuntime } from "../lib/native-runtime";
+import { detectClientPlatform, formatClientDevice } from "../lib/device-info";
+import { resolveAvatarState } from "../../hooks/use-avatar-state";
 import type { DisplaySessionEvent } from "../types/stream";
 
 /**
@@ -56,6 +59,12 @@ export interface BugDiagnostics {
     agentId: string | null;
     agentName: string | null;
     agentRole: string | null;
+    /** "local" / "remote" when known. */
+    agentMachineType: string | null;
+    /** Normalized agent status (idle / running / error / ...). */
+    agentStatus: string | null;
+    /** Device the user is currently running the app on. */
+    clientDevice: string;
     model: string | null;
     reasoningEffort: string | null;
     mode: string | null;
@@ -174,18 +183,33 @@ function collectChatContext(streamKey: string | undefined): {
 function collectAgent(agentId: string | undefined): {
   agentName: string | null;
   agentRole: string | null;
+  agentMachineType: string | null;
+  agentStatus: string | null;
 } {
-  if (!agentId) return { agentName: null, agentRole: null };
+  const empty = {
+    agentName: null,
+    agentRole: null,
+    agentMachineType: null,
+    agentStatus: null,
+  };
+  if (!agentId) return empty;
   try {
     const agent = useAgentStore
       .getState()
       .agents.find((a) => a.agent_id === agentId);
+    const profile = useProfileStatusStore.getState();
+    const { status, machineType } = resolveAvatarState(
+      profile.statuses[agentId],
+      profile.machineTypes[agentId],
+    );
     return {
       agentName: agent?.name ?? null,
       agentRole: agent?.role ?? null,
+      agentMachineType: machineType,
+      agentStatus: status ?? null,
     };
   } catch {
-    return { agentName: null, agentRole: null };
+    return empty;
   }
 }
 
@@ -217,18 +241,7 @@ function collectUser(): BugDiagnostics["user"] {
 }
 
 function detectPlatform(): "desktop" | "mobile" | "web" {
-  try {
-    const w = window as unknown as Record<string, unknown>;
-    const isDesktop =
-      typeof w.__AURA_BOOT_AUTH__ !== "undefined" ||
-      typeof w.__TAURI__ !== "undefined" ||
-      typeof w.__TAURI_INTERNALS__ !== "undefined";
-    if (isDesktop) return "desktop";
-    if (isNativeRuntime() || inferNativePlatform() !== null) return "mobile";
-    return "web";
-  } catch {
-    return "web";
-  }
+  return detectClientPlatform();
 }
 
 function collectMachine(): BugDiagnostics["machine"] {
@@ -333,6 +346,9 @@ export function collectBugDiagnostics(
       agentId: agentId ?? null,
       agentName: agent.agentName,
       agentRole: agent.agentRole,
+      agentMachineType: agent.agentMachineType,
+      agentStatus: agent.agentStatus,
+      clientDevice: formatClientDevice(),
       model: chat.model,
       reasoningEffort: chat.reasoningEffort,
       mode: chat.mode,

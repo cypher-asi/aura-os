@@ -425,6 +425,35 @@
   margin-top: 1px;
 }
 
+/* Agent + device context shown under the error message. Renders as a
+   wrapping row of muted "Label value" chips so a user-shared error
+   always carries which agent failed, whether it is local/remote, its
+   status, the client device, and the agent's machine. */
+.errorAgentMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  min-width: 0;
+}
+
+.errorAgentMetaItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.errorAgentMetaLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+
 .errorMetaRow {
   display: flex;
   align-items: center;
