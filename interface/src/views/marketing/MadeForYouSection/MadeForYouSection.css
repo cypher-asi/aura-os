@@ -545,10 +545,10 @@
 .madeForYouDevice .personalAgentDeviceHexMesh {
   --hole: 2px;
   --cell: 7.5px;
-  height: 48px;
-  /* Padding step: margin reveals the Plate surface around the mesh. */
-  margin: 8px;
-  border-radius: 8px;
+  height: 58px;
+  /* Minimal margin so the mesh nearly fills the gate panel (little bevel). */
+  margin: 2px;
+  border-radius: 7px;
   border: 1px solid transparent;
   background-color: #0d0e11;
   background-image:
@@ -641,8 +641,8 @@
   .madeForYouDevice .personalAgentDeviceHexMesh {
     --hole: 1.8px;
     --cell: 6.5px;
-    height: 34px;
-    margin: 6px;
+    height: 42px;
+    margin: 2px;
   }
 
   /* Shrink the control column to fit the narrower 65px mobile panel. */
