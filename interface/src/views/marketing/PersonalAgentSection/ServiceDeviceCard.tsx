@@ -162,14 +162,18 @@ export function ServiceDeviceCard({
               <div className="madeForYouSideScreen">
                 {SIDE_BUTTONS.map((item, index) => {
                   const isSelected = index === selectedIndex;
+                  const isBelow = index > selectedIndex;
+                  const className = [
+                    "madeForYouSideRow",
+                    isSelected ? "madeForYouSideRow--selected" : "",
+                    isBelow ? "madeForYouSideRow--below" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
                   return (
                     <button
                       type="button"
-                      className={
-                        isSelected
-                          ? "madeForYouSideRow madeForYouSideRow--selected"
-                          : "madeForYouSideRow"
-                      }
+                      className={className}
                       key={item.label}
                       tabIndex={-1}
                       aria-pressed={isSelected}
