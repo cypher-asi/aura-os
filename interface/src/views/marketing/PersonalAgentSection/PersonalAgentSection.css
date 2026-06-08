@@ -308,21 +308,11 @@
     inset 0 -1px 1px rgba(255, 255, 255, 0.25);
 }
 
-/* Lit (gold) keys carry a WHITE glowing glyph rather than a dark one: a
-   bright white icon ringed by a 1px dark outline (four offset drop-shadows
-   trace the glyph edge) for crisp definition against the gold fill, then a
-   white bloom on top. */
+/* Lit (gold) keys carry a dark-black glyph, no outline or glow. */
 .personalAgentSkillBtn[data-lit="true"] svg {
-  color: #ffffff;
+  color: #0c0a07;
   opacity: 1;
-  filter:
-    drop-shadow(0.5px 0 0 rgba(0, 0, 0, 0.28))
-    drop-shadow(-0.5px 0 0 rgba(0, 0, 0, 0.28))
-    drop-shadow(0 0.5px 0 rgba(0, 0, 0, 0.28))
-    drop-shadow(0 -0.5px 0 rgba(0, 0, 0, 0.28))
-    drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.7))
-    drop-shadow(0 0 3.5px rgba(255, 255, 255, 0.55))
-    drop-shadow(0 0 7px rgba(255, 255, 255, 0.35));
+  filter: none;
 }
 
 /* ----- Quadrant 3: service device ------------------------------ */
