@@ -217,6 +217,53 @@ export function ServiceDeviceCard({
     ((selectedIndex + 1) / SIDE_BUTTONS.length) * 100,
   );
 
+  // The bar width animates via CSS; the readout counts up/down to the new
+  // percentage (easeOutCubic) so the number tweens between stages rather than
+  // snapping. A ref tracks the live value so an interrupted run continues from
+  // wherever it currently sits.
+  const [displayPercent, setDisplayPercent] = useState<number>(progressPercent);
+  const displayPercentRef = useRef<number>(progressPercent);
+
+  useEffect(() => {
+    const from = displayPercentRef.current;
+    const to = progressPercent;
+    if (from === to) {
+      return;
+    }
+
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced || typeof requestAnimationFrame === "undefined") {
+      displayPercentRef.current = to;
+      const id = setTimeout(() => setDisplayPercent(to), 0);
+      return () => clearTimeout(id);
+    }
+
+    const durationMs = 400;
+    const startedAt =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    let frame = 0;
+
+    const step = (): void => {
+      const now =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+      const t = Math.min(1, (now - startedAt) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const value = Math.round(from + (to - from) * eased);
+      displayPercentRef.current = value;
+      setDisplayPercent(value);
+      if (t < 1) {
+        frame = requestAnimationFrame(step);
+      } else {
+        displayPercentRef.current = to;
+      }
+    };
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [progressPercent]);
+
   return (
     <>
     <Plate
@@ -362,7 +409,7 @@ export function ServiceDeviceCard({
               className="madeForYouProgressFill"
               style={{ width: `${progressPercent}%` }}
             />
-            <span className="madeForYouProgressLabel">{progressPercent}%</span>
+            <span className="madeForYouProgressLabel">{displayPercent}%</span>
           </div>
         </div>
       ) : null}
