@@ -1,0 +1,303 @@
+/*
+ * Pure-CSS "connected console" device that follows the standing-phones
+ * section. Built from the same hardware recipes used elsewhere on the
+ * marketing page (the radial metal surface inside a 135deg metallic edge
+ * from `Plate` / `.phoneShellDeck`, and the orange accent
+ * `#ff8a3c -> #f45500` from `PhoneShell`). Internal hardware is sized in
+ * `cqw` (1cqw = 1% of `.connectedConsole` width) via the container context,
+ * so the cord, knob, grille, slider, and tray keys scale in lockstep with
+ * the device width across viewports.
+ */
+
+/* Drop the shell's default 80px top padding and let the cord spill upward
+   so it reads as descending from the centered hero phone in the section
+   above. The hero phone and this device are both page-centered, so they
+   line up horizontally for the "connected" read. */
+.section.connectedConsoleSection {
+  padding-top: 0;
+  padding-bottom: clamp(40px, 8vh, 96px);
+  overflow: visible;
+}
+
+.connectedConsole {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: clamp(280px, 34vw, 420px);
+  margin: 0 auto;
+  /* Container context: internal hardware scales with the device width. */
+  container-type: inline-size;
+}
+
+/*
+ * Cord descending from above. A gray cylinder (vertical sheen via a
+ * left-to-right gradient) that extends well above the panel — the negative
+ * top margin pulls it up into the gap so it visually bridges toward the
+ * hero phone overhead. The orange metal tip is the grommet where the cord
+ * enters the panel.
+ */
+.consoleCord {
+  position: relative;
+  width: 7cqw;
+  height: clamp(70px, 12vh, 150px);
+  margin-top: clamp(-90px, -8vh, -44px);
+  margin-bottom: -1.5cqw;
+  border-radius: 4cqw 4cqw 0 0;
+  background: linear-gradient(
+    90deg,
+    #2a2c30 0%,
+    #6b6f76 28%,
+    #9aa0a8 50%,
+    #565a60 74%,
+    #232529 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+.consoleCordTip {
+  position: absolute;
+  left: 50%;
+  bottom: -2cqw;
+  width: 11cqw;
+  height: 9cqw;
+  transform: translateX(-50%);
+  border-radius: 2.5cqw;
+  background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+    0 0 12px rgba(244, 85, 0, 0.5),
+    0 3px 6px rgba(0, 0, 0, 0.55);
+}
+
+.consoleStack {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+/*
+ * Main metal panel. Square-ish slab carrying the speaker grille, the MIX
+ * knob, and the right-edge slider. Same radial-surface-in-metallic-edge
+ * recipe as the shared `Plate` / `.phoneShellDeck`.
+ */
+.consoleBody {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 0.94;
+  border-radius: 7cqw;
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+        ellipse 100% 120% at 50% 32%,
+        #34363a 0%,
+        #26282c 48%,
+        #16181b 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(120, 124, 132, 0.7) 0%,
+        rgba(14, 15, 18, 0.7) 100%
+      )
+      border-box;
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.06),
+    0 18px 34px rgba(0, 0, 0, 0.55),
+    0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* Large circular dot-matrix speaker grille, centered-low like the
+   reference's driver. */
+.consoleGrille {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 66cqw;
+  height: 66cqw;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background-color: #131417;
+  background-image: radial-gradient(
+    circle,
+    rgba(0, 0, 0, 0.85) 1.1cqw,
+    rgba(255, 255, 255, 0.05) 1.3cqw,
+    transparent 1.7cqw
+  );
+  background-size: 3.4cqw 3.4cqw;
+  background-position: center;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* MIX knob bay, top-right. */
+.consoleKnobBay {
+  position: absolute;
+  top: 9cqw;
+  right: 9cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5cqw;
+  z-index: 2;
+}
+
+.consoleKnob {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14cqw;
+  height: 14cqw;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.consoleKnobDial {
+  position: relative;
+  width: 10.5cqw;
+  height: 10.5cqw;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 50% 32%,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    conic-gradient(
+      from 210deg,
+      #d7dade 0deg,
+      #9a9ea4 70deg,
+      #f1f2f4 140deg,
+      #a8acb2 210deg,
+      #e6e8ea 290deg,
+      #b2b6bc 360deg
+    );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.consoleKnobIndicator {
+  position: absolute;
+  top: 1.2cqw;
+  left: 50%;
+  width: 1.4cqw;
+  height: 3.2cqw;
+  transform: translateX(-50%);
+  border-radius: 0.7cqw;
+  background: #1a1a1c;
+}
+
+.consoleKnobLabel {
+  font-size: 2.6cqw;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Orange slider tab protruding from the right edge of the panel. */
+.consoleSlider {
+  position: absolute;
+  top: 56%;
+  right: -2.5cqw;
+  width: 5cqw;
+  height: 17cqw;
+  transform: translateY(-50%);
+  border-radius: 1.5cqw;
+  background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 0 10px rgba(244, 85, 0, 0.45),
+    0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+/*
+ * Recessed tray of channel keys under the panel. A darker slab inset a
+ * touch from the panel width, holding five gray matte caps.
+ */
+.consoleTray {
+  position: relative;
+  width: 88%;
+  margin-top: 3cqw;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2cqw;
+  padding: 2.4cqw;
+  border-radius: 4cqw;
+  background: linear-gradient(180deg, #0d0e10 0%, #050506 100%);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+.consoleKey {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1.08;
+  padding: 0;
+  border: none;
+  border-radius: 2.4cqw;
+  color: rgba(255, 255, 255, 0.42);
+  background: linear-gradient(180deg, #2c2f34 0%, #16181b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+
+.consoleKeyMark {
+  width: 48%;
+  height: auto;
+}
+
+/* Lit ZERO key — orange wordmark with an emissive glow. */
+.consoleKey--zero {
+  background: linear-gradient(180deg, #241712 0%, #160d0a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 138, 60, 0.25),
+    inset 0 0 12px rgba(244, 85, 0, 0.35),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.consoleKeyZero {
+  font-size: 3.6cqw;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ff7a2f;
+  text-shadow:
+    0 0 6px rgba(255, 122, 47, 0.8),
+    0 0 14px rgba(244, 85, 0, 0.6);
+}
+
+@media (max-width: 768px) {
+  .connectedConsole {
+    width: clamp(260px, 76vw, 360px);
+  }
+
+  .consoleCord {
+    margin-top: clamp(-70px, -7vh, -36px);
+  }
+}
