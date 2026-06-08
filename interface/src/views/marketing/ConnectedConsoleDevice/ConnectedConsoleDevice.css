@@ -34,7 +34,7 @@
  */
 .consoleCord {
   position: relative;
-  width: 7cqw;
+  width: 4.2cqw;
   height: clamp(170px, 24vh, 320px);
   margin-bottom: -1.5cqw;
   border-radius: 4cqw 4cqw 0 0;
