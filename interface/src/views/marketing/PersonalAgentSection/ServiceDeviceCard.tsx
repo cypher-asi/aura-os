@@ -243,19 +243,21 @@ export function ServiceDeviceCard({
                 })}
               </div>
             </div>
-
-            <Plate
-              radius="12px"
-              className="personalAgentDeviceGrilleInset"
-              aria-hidden="true"
-            >
-              <div className="personalAgentDeviceHexMesh" />
-            </Plate>
           </div>
         ) : null}
 
         {hexGrille ? (
           <TerminalScreen active={isActive} replayKey={replayKey} />
+        ) : null}
+
+        {hexGrille ? (
+          <Plate
+            radius="12px"
+            className="personalAgentDeviceGrilleInset"
+            aria-hidden="true"
+          >
+            <div className="personalAgentDeviceHexMesh" />
+          </Plate>
         ) : null}
 
         <div className="personalAgentDeviceScreen">

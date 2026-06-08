@@ -125,7 +125,8 @@
   position: absolute;
   z-index: 2;
   top: 22px;
-  bottom: 22px;
+  /* Stop short of the bottom so the relocated grille "gate" sits below it. */
+  bottom: 104px;
   right: 22px;
   width: 204px;
   overflow: hidden;
@@ -327,7 +328,9 @@
     0 2px 5px rgba(0, 0, 0, 0.7);
 }
 
-/* Orange position indicator notched into the dial's upper-right. */
+/* Orange position indicator notched into the dial's upper-right, lit as a
+   fully emissive LED: a uniform hot-orange bar wrapped in the same layered
+   neon glow the selected side-label text carries below, pulsing in and out. */
 .madeForYouDevice .madeForYouKnobIndicator {
   position: absolute;
   top: 7px;
@@ -335,9 +338,46 @@
   width: 6px;
   height: 16px;
   border-radius: 3px;
-  background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
-  box-shadow: 0 0 6px rgba(244, 85, 0, 0.7);
+  background: linear-gradient(180deg, #ffb066 0%, #ff7a1e 50%, #ff5a00 100%);
+  box-shadow:
+    inset 0 0 2px rgba(255, 245, 230, 0.95),
+    0 0 4px rgba(255, 170, 80, 1),
+    0 0 9px rgba(255, 120, 30, 0.95),
+    0 0 18px rgba(255, 95, 10, 0.9),
+    0 0 30px rgba(255, 80, 0, 0.7);
+  /* Compose with the cursor-follow rotation (set inline on the dial parent). */
   transform: rotate(32deg);
+  animation: madeForYouKnobPulse 1.6s ease-in-out infinite;
+}
+
+/* Pulse the LED's emission: the core brightens while the surrounding neon
+   halo swells and intensifies, then settles back. */
+@keyframes madeForYouKnobPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      inset 0 0 2px rgba(255, 245, 230, 0.9),
+      0 0 3px rgba(255, 170, 80, 0.9),
+      0 0 7px rgba(255, 120, 30, 0.8),
+      0 0 13px rgba(255, 95, 10, 0.65),
+      0 0 22px rgba(255, 80, 0, 0.45);
+  }
+  50% {
+    filter: brightness(1.35);
+    box-shadow:
+      inset 0 0 3px rgba(255, 250, 240, 1),
+      0 0 6px rgba(255, 180, 90, 1),
+      0 0 12px rgba(255, 130, 40, 1),
+      0 0 24px rgba(255, 100, 15, 0.95),
+      0 0 40px rgba(255, 85, 0, 0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .madeForYouDevice .madeForYouKnobIndicator {
+    animation: none;
+  }
 }
 
 /* Raised bezel/tray that stands proud of the metal surface (top edge highlight
@@ -485,11 +525,15 @@
  * Left-panel grille (hexGrille variant): a smaller recessed three-ring
  * `Plate` inset holding a hex-packed metal-and-black mesh below the controls.
  */
+/* Relocated from the bottom-left side panel to the right panel, seated below
+   the (shortened) terminal screen and matching its width/edge inset. */
 .madeForYouDevice .personalAgentDeviceGrilleInset {
-  flex: 0 0 auto;
-  width: calc(100% - 16px);
-  max-width: 188px;
-  margin: auto 8px 0;
+  position: absolute;
+  z-index: 2;
+  right: 22px;
+  bottom: 22px;
+  width: 204px;
+  box-sizing: border-box;
 }
 
 /*
@@ -565,7 +609,7 @@
 
   .madeForYouDevice .madeForYouTerminalScreen {
     top: 12px;
-    bottom: 12px;
+    bottom: 76px;
     right: 12px;
     width: 128px;
     padding: 10px 10px 28px;
@@ -589,8 +633,9 @@
   }
 
   .madeForYouDevice .personalAgentDeviceGrilleInset {
-    width: calc(100% - 8px);
-    margin: auto 4px 0;
+    right: 12px;
+    bottom: 12px;
+    width: 128px;
   }
 
   .madeForYouDevice .personalAgentDeviceHexMesh {
