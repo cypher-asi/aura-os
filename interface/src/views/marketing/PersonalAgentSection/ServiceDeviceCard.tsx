@@ -35,13 +35,13 @@ const SIDE_BUTTONS: ReadonlyArray<{
   readonly label: string;
   readonly video: string;
 }> = [
-  { label: "Identity", video: "/agent-character-rotate.mp4" },
-  { label: "Expertise", video: "/AURA_visual_loop.mp4" },
   {
-    label: "Integrations",
+    label: "Identity",
     video:
       "/magnific_have-character-img1-materialize-from-the-activated_seedance_720p_16-9_24fps_32651.mp4",
   },
+  { label: "Expertise", video: "/AURA_visual_loop.mp4" },
+  { label: "Integrations", video: "/agent-character-rotate.mp4" },
   { label: "Connections", video: "/personas/creator/desktop.mp4" },
   { label: "Automations", video: "/AURA_visual_loop.mp4" },
   {
