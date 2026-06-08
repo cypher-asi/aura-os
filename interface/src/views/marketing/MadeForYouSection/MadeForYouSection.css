@@ -124,13 +124,13 @@
   border-radius: 999px;
   background: linear-gradient(90deg, #f4faf2 0%, #f1f9d3 100%);
   box-shadow:
-    0 0 3px rgba(232, 205, 137, 0.72),
-    0 0 7px rgba(232, 205, 137, 0.58),
-    0 0 13px rgba(232, 205, 137, 0.42),
-    0 0 22px rgba(232, 205, 137, 0.28),
+    0 0 2px rgba(232, 205, 137, 0.55),
+    0 0 5px rgba(232, 205, 137, 0.4),
+    0 0 10px rgba(232, 205, 137, 0.28),
+    0 0 16px rgba(232, 205, 137, 0.18),
     /* Outer amber-brown halo that bleeds out into the dark track. */
-    0 0 10px 1px rgba(153, 81, 25, 0.28),
-    0 0 18px 3px rgba(153, 81, 25, 0.18);
+    0 0 8px 1px rgba(153, 81, 25, 0.18),
+    0 0 14px 2px rgba(153, 81, 25, 0.1);
   transition: width 0.4s ease;
 }
 
@@ -711,10 +711,10 @@
 .madeForYouDevice .madeForYouSideRow--selected .madeForYouSideLabel {
   color: #f4faf2;
   text-shadow:
-    0 0 3px rgba(232, 205, 137, 0.7),
-    0 0 7px rgba(232, 205, 137, 0.5),
-    0 0 13px rgba(232, 205, 137, 0.32),
-    0 0 20px rgba(153, 81, 25, 0.22);
+    0 0 2px rgba(232, 205, 137, 0.5),
+    0 0 5px rgba(232, 205, 137, 0.34),
+    0 0 10px rgba(232, 205, 137, 0.2),
+    0 0 14px rgba(153, 81, 25, 0.14);
 }
 
 /* Items below the selected one read as "upcoming": heavily muted gray text. */
@@ -731,12 +731,12 @@
   border-color: #f1f9d3;
   background: transparent;
   box-shadow:
-    0 0 3px rgba(232, 205, 137, 0.35),
-    0 0 7px rgba(232, 205, 137, 0.28),
-    0 0 14px rgba(232, 205, 137, 0.2),
-    0 0 12px 1px rgba(153, 81, 25, 0.18),
-    0 0 20px 3px rgba(153, 81, 25, 0.12),
-    inset 0 0 3px rgba(232, 205, 137, 0.28);
+    0 0 2px rgba(232, 205, 137, 0.25),
+    0 0 5px rgba(232, 205, 137, 0.18),
+    0 0 10px rgba(232, 205, 137, 0.12),
+    0 0 8px 1px rgba(153, 81, 25, 0.1),
+    0 0 14px 2px rgba(153, 81, 25, 0.07),
+    inset 0 0 2px rgba(232, 205, 137, 0.18);
 }
 
 /* Spinning progress arc seated INSIDE the static ring (a clear gap in from the
@@ -753,7 +753,7 @@
   border: 2px solid transparent;
   border-top-color: #ffffff;
   border-right-color: rgba(232, 205, 137, 0.6);
-  filter: drop-shadow(0 0 1.5px rgba(232, 205, 137, 0.55));
+  filter: drop-shadow(0 0 1px rgba(232, 205, 137, 0.35));
   will-change: transform;
   animation: madeForYouLensSpin 0.8s linear infinite;
 }
@@ -863,25 +863,25 @@
   /* Layered amber-gold core + amber-brown outer halo, matching the progress
      bar fill / selected lens glow, plus a faint inner gold spill. */
   box-shadow:
-    0 0 3px rgba(232, 205, 137, 0.32),
-    0 0 7px rgba(232, 205, 137, 0.24),
-    0 0 13px rgba(232, 205, 137, 0.18),
-    0 0 12px 1px rgba(153, 81, 25, 0.16),
-    0 0 20px 3px rgba(153, 81, 25, 0.1),
-    inset 0 0 4px rgba(232, 205, 137, 0.12);
+    0 0 2px rgba(232, 205, 137, 0.22),
+    0 0 5px rgba(232, 205, 137, 0.16),
+    0 0 10px rgba(232, 205, 137, 0.1),
+    0 0 8px 1px rgba(153, 81, 25, 0.08),
+    0 0 14px 2px rgba(153, 81, 25, 0.06),
+    inset 0 0 3px rgba(232, 205, 137, 0.08);
 }
 
 /* Brighten the rim + glow on hover (beats the base `.ctaButton:hover`). */
 .madeForYouDevice .madeForYouCta.madeForYouCta:hover {
   border-color: #f1f9d3;
   box-shadow:
-    0 0 4px rgba(232, 205, 137, 0.48),
-    0 0 9px rgba(232, 205, 137, 0.36),
-    0 0 16px rgba(232, 205, 137, 0.26),
-    0 0 24px rgba(232, 205, 137, 0.18),
-    0 0 14px 2px rgba(153, 81, 25, 0.24),
-    0 0 22px 4px rgba(153, 81, 25, 0.16),
-    inset 0 0 6px rgba(232, 205, 137, 0.18);
+    0 0 3px rgba(232, 205, 137, 0.34),
+    0 0 7px rgba(232, 205, 137, 0.24),
+    0 0 12px rgba(232, 205, 137, 0.17),
+    0 0 18px rgba(232, 205, 137, 0.12),
+    0 0 10px 1px rgba(153, 81, 25, 0.16),
+    0 0 16px 2px rgba(153, 81, 25, 0.1),
+    inset 0 0 4px rgba(232, 205, 137, 0.12);
 }
 
 /* Recolor the label to glowing gold while KEEPING the clipped-text shimmer.
