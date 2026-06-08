@@ -275,10 +275,11 @@ export function ServiceDeviceCard({
         {hexGrille ? (
           <div className="madeForYouSidePanel" aria-hidden="true">
             <div className="madeForYouKnobBay">
-              <div className="madeForYouKnob">
-                <div className="madeForYouKnobDial" ref={knobDialRef}>
-                  <span className="madeForYouKnobIndicator" />
-                </div>
+              <div className="madeForYouPanelCaption">
+                <span className="madeForYouPanelCaptionTitle">DESIGN</span>
+                <span className="madeForYouPanelCaptionSub">
+                  YOUR PRIVATE AGENT
+                </span>
               </div>
             </div>
 
@@ -321,8 +322,10 @@ export function ServiceDeviceCard({
             </div>
 
             <div className="madeForYouSideSpacer" aria-hidden="true">
-              <div className="madeForYouBrandPanel" aria-hidden="true">
-                <span className="madeForYouBrandMark" />
+              <div className="madeForYouKnob">
+                <div className="madeForYouKnobDial" ref={knobDialRef}>
+                  <span className="madeForYouKnobIndicator" />
+                </div>
               </div>
             </div>
           </div>
@@ -418,6 +421,14 @@ export function ServiceDeviceCard({
         ) : null}
       </div>
     </Plate>
+    {hexGrille ? (
+      <div
+        className="madeForYouBrandPanel madeForYouCardBrandPanel"
+        aria-hidden="true"
+      >
+        <span className="madeForYouBrandMark" />
+      </div>
+    ) : null}
     </>
   );
 }

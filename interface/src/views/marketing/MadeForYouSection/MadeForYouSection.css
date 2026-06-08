@@ -452,22 +452,47 @@
   pointer-events: none;
 }
 
-/* Top band that holds the knob, centered within the space above the list.
-   `min-height: 0` keeps the knob's intrinsic height from inflating this band
-   past the bottom spacer (which would push the list down and the knob low). */
+/* Top band that holds the panel caption above the list. `min-height: 0` keeps
+   this flexible band balanced against the lower knob bay. */
 .madeForYouDevice .madeForYouKnobBay {
   flex: 1 1 0;
   min-height: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
+  padding-top: 24px;
+}
+
+.madeForYouDevice .madeForYouPanelCaption {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.madeForYouDevice .madeForYouPanelCaptionTitle {
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  color: var(--color-text-secondary);
+}
+
+.madeForYouDevice .madeForYouPanelCaptionSub {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.32);
 }
 
 /*
- * Bottom band mirroring the knob bay so the list lands on the panel center.
- * It also flex-centers the brand plate so the wordmark sits vertically
- * centered in the space between the stages list and the panel bottom.
+ * Bottom band mirroring the caption bay so the list lands on the panel center.
+ * It flex-centers the knob in the former wordmark slot.
  */
 .madeForYouDevice .madeForYouSideSpacer {
   flex: 1 1 0;
@@ -511,6 +536,10 @@
         rgba(82, 86, 92, 0.3) 100%
       )
       border-box;
+}
+
+.madeForYouDevice .madeForYouCardBrandPanel {
+  width: min(248px, 100%);
 }
 
 /*
@@ -1069,6 +1098,25 @@
   .madeForYouDevice .madeForYouKnob {
     width: 40px;
     height: 40px;
+  }
+
+  .madeForYouDevice .madeForYouKnobBay {
+    gap: 7px;
+    padding-top: 10px;
+  }
+
+  .madeForYouDevice .madeForYouPanelCaption {
+    gap: 3px;
+  }
+
+  .madeForYouDevice .madeForYouPanelCaptionTitle {
+    font-size: 7px;
+    letter-spacing: 0.18em;
+  }
+
+  .madeForYouDevice .madeForYouPanelCaptionSub {
+    font-size: 5px;
+    letter-spacing: 0.1em;
   }
 
   .madeForYouDevice .madeForYouKnobDial {
