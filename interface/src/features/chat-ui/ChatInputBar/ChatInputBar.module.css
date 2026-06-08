@@ -1055,11 +1055,11 @@ button.attachOrb {
   /* Allow the pulsating glow halo to bleed past the disc edge. */
   overflow: visible;
   border: 2px solid transparent;
-  /* Dark center (padding-box) framed by a rotating GOLDEN conic ring
+  /* Solid black center (padding-box) framed by a rotating GOLDEN conic ring
      (border-box): a pale-gold crest sweeps around amber-gold / amber-brown
      stops so the rim reads as a slowly-turning lit ring. */
   background:
-    radial-gradient(circle at 50% 45%, #2a2e36, #16181c) padding-box,
+    linear-gradient(#000, #000) padding-box,
     conic-gradient(
         from var(--attach-ring-angle),
         rgba(232, 205, 137, 0.25) 0deg,
@@ -1128,14 +1128,8 @@ button.attachOrb::before {
   display: block;
   width: 100%;
   height: 100%;
-  /* Soft gold core glow pooled behind the "+" so the dark well reads as lit
-     gold rather than empty. */
-  background: radial-gradient(
-    circle at 50% 45%,
-    rgba(244, 250, 242, 0.45) 0%,
-    rgba(232, 205, 137, 0.22) 45%,
-    transparent 72%
-  );
+  /* Black inner well — the gold lives in the ring + the glowing "+". */
+  background: transparent;
 }
 
 /* "+" glyph styled like the build-progress bar fill: a pale white-hot core
