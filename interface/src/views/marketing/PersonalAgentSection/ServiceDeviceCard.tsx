@@ -1,6 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { Check } from "lucide-react";
 import { Plate } from "../../../components/Plate";
+import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { SERVICE_LOGOS } from "./brand-logos";
 
 /**
@@ -212,7 +219,10 @@ export function ServiceDeviceCard({
 
   return (
     <>
-    <Plate className="personalAgentDevice" aria-hidden="true">
+    <Plate
+      className="personalAgentDevice"
+      aria-hidden={hexGrille ? undefined : "true"}
+    >
       <div className="personalAgentDeviceContent" ref={contentRef}>
         {hexGrille ? (
           <div className="madeForYouSidePanel" aria-hidden="true">
@@ -271,16 +281,21 @@ export function ServiceDeviceCard({
         ) : null}
 
         {hexGrille ? (
-          <Plate
-            radius="0 0 12px 12px"
-            className="personalAgentDeviceGrilleInset"
-            aria-hidden="true"
-          >
-            <div className="personalAgentDeviceHexMesh" />
-          </Plate>
+          <div className="madeForYouCtaSlot">
+            <CreateAgentButton
+              source="made_for_you"
+              className="madeForYouCta"
+            />
+          </div>
         ) : null}
 
-        <div className="personalAgentDeviceScreen">
+        {hexGrille ? (
+          <div className="madeForYouMeshStrip" aria-hidden="true">
+            <div className="personalAgentDeviceHexMesh" />
+          </div>
+        ) : null}
+
+        <div className="personalAgentDeviceScreen" aria-hidden="true">
           {hexGrille ? (
             <video
               key={selectedIndex}
@@ -339,7 +354,10 @@ export function ServiceDeviceCard({
           aria-valuemax={100}
           aria-label={`Build progress: ${progressStage?.label ?? ""}`}
         >
-          <div className="madeForYouProgressTrack">
+          <div
+            className="madeForYouProgressTrack"
+            style={{ ["--progress"]: `${progressPercent}%` } as CSSProperties}
+          >
             <div
               className="madeForYouProgressFill"
               style={{ width: `${progressPercent}%` }}
@@ -429,7 +447,7 @@ function TerminalScreen({ active, replayKey }: TerminalScreenProps): ReactNode {
   const isComplete = lineIndex >= TERMINAL_LINES.length;
 
   return (
-    <div className="madeForYouTerminalScreen">
+    <div className="madeForYouTerminalScreen" aria-hidden="true">
       <div className="madeForYouTerminalGloss" />
       <div className="madeForYouTerminalScroll">
         <ul className="madeForYouTerminalLines">

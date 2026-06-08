@@ -42,6 +42,12 @@
   width: 100%;
   /* Much narrower than the 1200px device; the bar reads as a compact pill. */
   max-width: 520px;
+  /* Lift the pill up over the chassis' bottom hex-mesh strip so it reads as
+     floating in front of the mesh (cancels the column gap + ~14px overlap).
+     DOM order already paints it above the device. */
+  position: relative;
+  z-index: 4;
+  margin-top: calc(-1 * clamp(16px, 2vw, 28px) - 14px);
   /* Equal padding all around (left/right match top/bottom); the dark inset
      track reads as a thin recessed slot centered inside the pill. */
   padding: 17px;
@@ -57,6 +63,14 @@
   box-shadow:
     inset 0 2px 1px rgba(255, 255, 255, 0.07),
     0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Registered so the slot's lit-spill gradient can transition (custom
+   properties only animate when given a type). */
+@property --progress {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
 }
 
 .madeForYouProgressTrack {
@@ -76,12 +90,17 @@
      the right, painted on the border box while the dark slot fills the
      padding box. */
   border: 1px solid transparent;
+  /* The slot fill brightens to a soft black right where the glow ends
+     (`--progress`, set inline from the selected stage) then falls off to the
+     deep `#131922`, so the lit spill tracks the progress edge. The registered
+     `--progress` property lets this transition animate with the fill width. */
   background:
-    radial-gradient(
-        ellipse 130% 160% at 50% 0%,
-        #15171a 0%,
-        #0a0b0d 60%,
-        #050607 100%
+    linear-gradient(
+        90deg,
+        #2d3742 0%,
+        #2d3742 var(--progress, 0%),
+        #131922 calc(var(--progress, 0%) + 24%),
+        #131922 100%
       )
       padding-box,
     linear-gradient(
@@ -90,6 +109,7 @@
         rgba(38, 40, 44, 0.5) 100%
       )
       border-box;
+  transition: --progress 0.4s ease;
   box-shadow:
     inset 0 2px 6px rgba(0, 0, 0, 0.9),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04),
@@ -154,7 +174,10 @@
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
-  padding: 0 252px;
+  /* Reserve a band at the bottom of the chassis for the full-width hex-mesh
+     strip; the dividers, side panel, terminal, and CTA all stop above it. */
+  --mesh-strip-reserve: 40px;
+  padding: 0 252px var(--mesh-strip-reserve);
 }
 
 .madeForYouDevice .personalAgentDeviceContent::before,
@@ -162,7 +185,7 @@
   content: "";
   position: absolute;
   top: 0;
-  bottom: 0;
+  bottom: var(--mesh-strip-reserve);
   pointer-events: none;
 }
 
@@ -236,16 +259,15 @@
   position: absolute;
   z-index: 2;
   top: 22px;
-  /* Meet the gate "gate" mesh directly below: the terminal's square bottom
-     edge butts against the gate's square top edge so they read as one unit
-     (a hair of overlap avoids a sub-pixel seam). */
+  /* Stop above the CTA pill that now sits in the lower right panel; the
+     full-width hex-mesh strip runs below both along the chassis bottom. */
   bottom: 90px;
   right: 22px;
   width: 204px;
   overflow: hidden;
   box-sizing: border-box;
   padding: 16px 16px 40px;
-  border-radius: 12px 12px 0 0;
+  border-radius: 12px;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
     #0a0c0a 0%,
@@ -379,7 +401,7 @@
 .madeForYouDevice .madeForYouSidePanel {
   position: absolute;
   top: 0;
-  bottom: 0;
+  bottom: var(--mesh-strip-reserve);
   left: 3px;
   /* Span the full left panel (matches the `::before` divider width) so the
      centered knob lands on the panel's true center rather than ~20px left. */
@@ -671,17 +693,43 @@
 }
 
 /*
- * Left-panel grille (hexGrille variant): a smaller recessed three-ring
- * `Plate` inset holding a hex-packed metal-and-black mesh below the controls.
+ * Functional CTA pill seated in the lower right metal panel, in the slot the
+ * hex-mesh grille used to occupy (directly below the terminal LCD). Sits
+ * above the reserved bottom strip; the `.madeForYouCta` overrides shrink the
+ * shared `CreateAgentButton` so it fits the 204px panel width.
  */
-/* Relocated from the bottom-left side panel to the right panel, seated below
-   the (shortened) terminal screen and matching its width/edge inset. */
-.madeForYouDevice .personalAgentDeviceGrilleInset {
+.madeForYouDevice .madeForYouCtaSlot {
+  position: absolute;
+  z-index: 3;
+  right: 22px;
+  bottom: calc(var(--mesh-strip-reserve) + 10px);
+  width: 204px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Doubled class beats the base `.ctaButton` (0,1,0) per the component's
+   override contract, so these win regardless of stylesheet import order. */
+.madeForYouDevice .madeForYouCta.madeForYouCta {
+  width: 100%;
+  justify-content: center;
+  padding: 9px 16px;
+  font-size: 12px;
+}
+
+/*
+ * Full-width hex-mesh strip forming the chassis' new bottom band: a thin
+ * recessed metal grille spanning the whole device, hugging the inner Plate
+ * rim. The build-progress pill below overlaps and sits in front of it.
+ */
+.madeForYouDevice .madeForYouMeshStrip {
   position: absolute;
   z-index: 2;
-  right: 22px;
-  bottom: 22px;
-  width: 204px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  height: calc(var(--mesh-strip-reserve) - 6px);
   box-sizing: border-box;
 }
 
@@ -694,10 +742,9 @@
 .madeForYouDevice .personalAgentDeviceHexMesh {
   --hole: 2px;
   --cell: 7.5px;
-  height: 58px;
-  /* Minimal margin so the mesh nearly fills the gate panel (little bevel). */
-  margin: 2px;
-  border-radius: 0 0 7px 7px;
+  /* Fills the full-width strip wrapper. */
+  height: 100%;
+  border-radius: 7px;
   border: 1px solid transparent;
   background-color: #0d0e11;
   background-image:
@@ -745,7 +792,8 @@
   /* Asymmetric on mobile: a narrow left control panel and a wider right panel
      so the side-menu terminal stays legible. */
   .madeForYouDevice .personalAgentDeviceContent {
-    padding: 0 150px 0 84px;
+    --mesh-strip-reserve: 26px;
+    padding: 0 150px var(--mesh-strip-reserve) 84px;
   }
 
   .madeForYouDevice .personalAgentDeviceContent::before {
@@ -781,10 +829,16 @@
     padding: 34px 24px;
   }
 
-  .madeForYouDevice .personalAgentDeviceGrilleInset {
+  .madeForYouDevice .madeForYouCtaSlot {
     right: 12px;
-    bottom: 12px;
+    bottom: calc(var(--mesh-strip-reserve) + 6px);
     width: 128px;
+  }
+
+  .madeForYouDevice .madeForYouCta.madeForYouCta {
+    padding: 6px 8px;
+    font-size: 9px;
+    gap: 5px;
   }
 
   .madeForYouDevice .personalAgentDeviceHexMesh {
