@@ -276,36 +276,70 @@
     inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/*
+ * Glassy, embossed keycap. A domed top-light gradient plus a bright top
+ * rim, a 1px inner edge light, and an inner bottom shadow read as raised
+ * glass; the outer drop shadow lifts the cap off the well. The diagonal
+ * sheen (`::before`) sells the glass reflection. Corners are properly
+ * rounded and the sheen/rim inherit that radius.
+ */
 .consoleKey {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   aspect-ratio: 1 / 1.08;
   padding: 0;
   border: none;
-  border-radius: 2.4cqw;
-  color: rgba(255, 255, 255, 0.42);
-  background: linear-gradient(180deg, #2c2f34 0%, #16181b 100%);
+  border-radius: 3.2cqw;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.48);
+  background: linear-gradient(180deg, #383b41 0%, #23262b 46%, #14161a 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.6),
-    0 2px 4px rgba(0, 0, 0, 0.6);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.6),
+    0 3px 6px rgba(0, 0, 0, 0.55),
+    0 1px 1px rgba(0, 0, 0, 0.4);
   cursor: default;
 }
 
+/* Diagonal glass reflection across the upper corner. */
+.consoleKey::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    158deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.05) 24%,
+    rgba(255, 255, 255, 0) 46%
+  );
+  pointer-events: none;
+}
+
 .consoleKeyMark {
+  position: relative;
   width: 48%;
   height: auto;
 }
 
-/* Lit ZERO key — orange wordmark with an emissive glow. */
+/* Lit ZERO key — orange wordmark with an emissive glow, same raised glass
+   treatment as the other caps (it inherits the `::before` sheen). */
 .consoleKey--zero {
-  background: linear-gradient(180deg, #241712 0%, #160d0a 100%);
+  background: linear-gradient(180deg, #2c1c13 0%, #1d110a 52%, #130a06 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 138, 60, 0.25),
-    inset 0 0 12px rgba(244, 85, 0, 0.35),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.6),
-    0 2px 4px rgba(0, 0, 0, 0.6);
+    inset 0 1.5px 0 rgba(255, 170, 90, 0.32),
+    inset 0 0 0 1px rgba(255, 138, 60, 0.12),
+    inset 0 0 14px rgba(244, 85, 0, 0.4),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.5),
+    0 3px 6px rgba(0, 0, 0, 0.55),
+    0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.consoleKeyZero {
+  position: relative;
 }
 
 .consoleKeyZero {
