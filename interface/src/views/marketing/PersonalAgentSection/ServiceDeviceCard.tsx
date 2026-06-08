@@ -342,8 +342,29 @@ export function ServiceDeviceCard({
         ) : null}
 
         {hexGrille ? (
-          <div className="madeForYouMeshStrip" aria-hidden="true">
-            <div className="personalAgentDeviceHexMesh" />
+          <div className="madeForYouMeshStrip">
+            <div className="personalAgentDeviceHexMesh" aria-hidden="true" />
+            <div
+              className="madeForYouProgress"
+              role="progressbar"
+              aria-valuenow={progressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Build progress: ${progressStage?.label ?? ""}`}
+            >
+              <div
+                className="madeForYouProgressTrack"
+                style={
+                  { ["--progress"]: `${progressPercent}%` } as CSSProperties
+                }
+              >
+                <div
+                  className="madeForYouProgressFill"
+                  style={{ width: `${progressPercent}%` }}
+                />
+                <span className="madeForYouProgressLabel">{displayPercent}%</span>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -397,27 +418,6 @@ export function ServiceDeviceCard({
         ) : null}
       </div>
     </Plate>
-      {hexGrille ? (
-        <div
-          className="madeForYouProgress"
-          role="progressbar"
-          aria-valuenow={progressPercent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`Build progress: ${progressStage?.label ?? ""}`}
-        >
-          <div
-            className="madeForYouProgressTrack"
-            style={{ ["--progress"]: `${progressPercent}%` } as CSSProperties}
-          >
-            <div
-              className="madeForYouProgressFill"
-              style={{ width: `${progressPercent}%` }}
-            />
-            <span className="madeForYouProgressLabel">{displayPercent}%</span>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
