@@ -28,24 +28,20 @@ interface PhoneShellProps {
 }
 
 /**
- * Reusable, pure-CSS marketing phone device. The chassis, embossed
- * black-glass screen, and neomorphic control deck are all painted with
- * CSS (no pre-rendered image), so the device scales crisply at any size
- * and stays self-contained. The mock interface supplied via `children`
- * is overlaid inside the screen well, clipped to its rounded corners.
+ * Reusable, pure-CSS marketing phone device built from two SEPARATE
+ * stacked panels (no single chassis wrapping them):
+ *   - `.phoneShellTop` — the dark-glass screen panel with a thin metallic
+ *     bevel rim. Hosts `children` (the mock UI) and rests ON TOP of the
+ *     deck, slightly overlapping it and casting a drop shadow onto it.
+ *   - `.phoneShellDeck` — the wider brushed-metal control panel sitting
+ *     behind/under the top panel, carrying a rotary knob, a row of
+ *     decorative keys, a CONTROL/AUTO toggle, a dot-matrix speaker
+ *     grille, and the `AURA` wordmark.
  *
- * Layout, top to bottom:
- *   - `.phoneShellScreen` — recessed glossy black glass with an embossed
- *     bevel (darker top edge, brighter bottom lip) and a gradient border.
- *     Hosts `children` and casts a drop shadow onto the deck below.
- *   - `.phoneShellDeck` — a brushed-metal neomorphic panel carrying a
- *     rotary knob, a row of decorative keys, a CONTROL/AUTO toggle, a
- *     dot-matrix speaker grille, and the `AURA` wordmark.
- *
- * Everything below the screen is decorative hardware fiction
- * (`aria-hidden`). Sizing is `clamp()`-driven and respects the parent
- * flex container; the hero (`size="lg"`) variant is larger and lifted
- * forward so it visually overlaps the two side phones.
+ * Everything in the deck is decorative hardware fiction (`aria-hidden`).
+ * Sizing is `clamp()`-driven and respects the parent flex container;
+ * the hero (`size="lg"`) variant is larger and lifted forward so it
+ * visually overlaps the two side phones.
  */
 export function PhoneShell({
   size = "md",
@@ -62,7 +58,29 @@ export function PhoneShell({
       aria-label={ariaLabel}
       aria-hidden={ariaLabel ? undefined : true}
     >
-      <div className="phoneShellChassis">
+      <div className="phoneShellDeck" aria-hidden="true">
+        <div className="phoneShellKnob">
+          <div className="phoneShellKnobDial">
+            <span className="phoneShellKnobIndicator" />
+          </div>
+        </div>
+
+        <div className="phoneShellControls">
+          <div className="phoneShellButtons">
+            <span className="phoneShellBtn" />
+            <span className="phoneShellBtn" />
+            <span className="phoneShellBtn" />
+          </div>
+          <div className="phoneShellToggle">
+            <span className="phoneShellToggleKnob" />
+          </div>
+        </div>
+
+        <div className="phoneShellGrille" />
+        <span className="phoneShellWordmark">AURA</span>
+      </div>
+
+      <div className="phoneShellTop">
         <div className="phoneShellScreen">
           {children ?? (
             <div className="phoneShellPlaceholder">
@@ -72,28 +90,6 @@ export function PhoneShell({
               <span className="phoneShellPlaceholderLabel">Mock UI</span>
             </div>
           )}
-        </div>
-
-        <div className="phoneShellDeck" aria-hidden="true">
-          <div className="phoneShellKnob">
-            <div className="phoneShellKnobDial">
-              <span className="phoneShellKnobIndicator" />
-            </div>
-          </div>
-
-          <div className="phoneShellControls">
-            <div className="phoneShellButtons">
-              <span className="phoneShellBtn" />
-              <span className="phoneShellBtn" />
-              <span className="phoneShellBtn" />
-            </div>
-            <div className="phoneShellToggle">
-              <span className="phoneShellToggleKnob" />
-            </div>
-          </div>
-
-          <div className="phoneShellGrille" />
-          <span className="phoneShellWordmark">AURA</span>
         </div>
       </div>
     </div>
