@@ -465,19 +465,25 @@
   width: 100%;
 }
 
-/* Bottom band mirroring the knob bay so the list lands on the panel center. */
+/*
+ * Bottom band mirroring the knob bay so the list lands on the panel center.
+ * It also flex-centers the brand plate so the wordmark sits vertically
+ * centered in the space between the stages list and the panel bottom.
+ */
 .madeForYouDevice .madeForYouSideSpacer {
   flex: 1 1 0;
   min-height: 0;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /*
- * Subtle brand plate seated directly below the stages bezel, spanning the
- * same full panel width. Reads as a quiet recessed slab cut into the metal
- * (much more understated than the raised stages tray above it): a faint dark
- * gradient with a soft inset shadow and a 1px top highlight, so it sits flush
- * with the surface rather than standing proud.
+ * Subtle brand plate centered in the band below the stages bezel, spanning the
+ * same full panel width. It shares the dark surface of the device body behind
+ * it (no lighter fill), so it reads only as a quiet recessed outline cut into
+ * the metal: a soft inset shadow with a 1px top highlight.
  */
 .madeForYouDevice .madeForYouBrandPanel {
   flex: 0 0 auto;
@@ -486,10 +492,9 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin-top: 14px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: linear-gradient(180deg, #232529 0%, #16181c 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.34) 100%);
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.55),
     inset 0 0 0 1px rgba(255, 255, 255, 0.03),
@@ -497,17 +502,17 @@
 }
 
 /*
- * AURA wordmark etched into the brand plate. The PNG is used purely as an
- * alpha mask (its own glyph color is irrelevant) so we paint our own fill in
- * the plate's metal tone; the glyphs then read as the same material as the
- * surface. A stacked drop-shadow bevel — a dark shadow pushed down and a light
- * highlight pushed up — makes the wordmark look pressed/cut into the panel.
+ * AURA wordmark engraved into the brand plate. The PNG is used purely as an
+ * alpha mask (its own glyph color is irrelevant) so we paint our own fill — a
+ * muted brushed-metal gray that reads clearly against the dark plate. A
+ * stacked drop-shadow bevel — a dark shadow pushed down plus a faint light
+ * highlight pushed up — makes the wordmark look stamped/etched into the panel.
  */
 .madeForYouDevice .madeForYouBrandMark {
   display: block;
   width: 86px;
   height: 13px;
-  background: linear-gradient(180deg, #14161a 0%, #1d1f23 100%);
+  background: linear-gradient(180deg, #7c828b 0%, #9aa0a8 100%);
   -webkit-mask-image: url(/AURA_logo_text_mark.png);
   mask-image: url(/AURA_logo_text_mark.png);
   -webkit-mask-repeat: no-repeat;
@@ -516,8 +521,8 @@
   mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.08))
-    drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.65))
+    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.06));
 }
 
 /* Rotary knob: a raised brushed-metal dial in a shallow recessed ring. */
@@ -1090,7 +1095,6 @@
   }
 
   .madeForYouDevice .madeForYouBrandPanel {
-    margin-top: 7px;
     padding: 5px 4px;
     border-radius: 9px;
   }

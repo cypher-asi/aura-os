@@ -320,11 +320,11 @@ export function ServiceDeviceCard({
               </div>
             </div>
 
-            <div className="madeForYouBrandPanel" aria-hidden="true">
-              <span className="madeForYouBrandMark" />
+            <div className="madeForYouSideSpacer" aria-hidden="true">
+              <div className="madeForYouBrandPanel" aria-hidden="true">
+                <span className="madeForYouBrandMark" />
+              </div>
             </div>
-
-            <div className="madeForYouSideSpacer" aria-hidden="true" />
           </div>
         ) : null}
 
