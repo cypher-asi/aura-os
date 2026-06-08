@@ -117,8 +117,11 @@
   );
   font-size: 13px;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.96);
-  text-shadow: 0 0 6px rgba(1, 244, 203, 0.3);
+  /* `difference` blend inverts against whatever is behind: white text reads
+     dark over the bright glow and light over the dark track, so the
+     percentage stays legible wherever the fill edge sits. */
+  color: #ffffff;
+  mix-blend-mode: difference;
 }
 
 .madeForYouDevice .personalAgentDevice {
