@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -110,10 +111,57 @@ export function ServiceDeviceCard({
   const [replayKey, setReplayKey] = useState<number>(0);
   // Which left-panel item is active; drives the center screen's clip.
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  // "Connected to everything" logo grid: an auto-advancing spotlight that
-  // gold-glows one integration at a time, looping across the grid. Only the
-  // quadrant variant renders the grid (the hex hero hides it).
-  const [spotlightIndex, setSpotlightIndex] = useState<number>(0);
+
+  // "Connected to everything" logo grid: a set of currently-lit integrations
+  // that gold-glow. The auto-cycle pulses a new logo on a loop so the panel
+  // twinkles through different services; clicking a logo pulses just that one.
+  // Both paths go through `pulseLogo`, which lights a logo then turns it off
+  // after a duration. Only the quadrant variant renders the grid (the hex
+  // hero hides it).
+  const [litLogos, setLitLogos] = useState<ReadonlySet<number>>(
+    () => new Set<number>(),
+  );
+  const litTimersRef = useRef<Map<number, number>>(new Map());
+
+  const pulseLogo = useCallback((index: number, durationMs: number) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    setLitLogos((prev) => {
+      if (prev.has(index)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+    const existing = litTimersRef.current.get(index);
+    if (existing !== undefined) {
+      window.clearTimeout(existing);
+    }
+    const timer = window.setTimeout(() => {
+      setLitLogos((prev) => {
+        if (!prev.has(index)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
+      litTimersRef.current.delete(index);
+    }, durationMs);
+    litTimersRef.current.set(index, timer);
+  }, []);
+
+  useEffect(() => {
+    const timers = litTimersRef.current;
+    return () => {
+      for (const timer of timers.values()) {
+        window.clearTimeout(timer);
+      }
+      timers.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (hexGrille || SERVICE_LOGOS.length === 0) {
@@ -122,17 +170,17 @@ export function ServiceDeviceCard({
     if (typeof window === "undefined") {
       return;
     }
-    const reduceMotion = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    if (reduceMotion) {
-      return;
-    }
+    // Step by a stride that's coprime with the count so the spotlight hops
+    // around the grid (rather than marching strictly left-to-right) while
+    // still visiting every logo before repeating.
+    const stride = 5;
+    let cycleIndex = 0;
     const timer = window.setInterval(() => {
-      setSpotlightIndex((index) => (index + 1) % SERVICE_LOGOS.length);
-    }, 900);
+      pulseLogo((cycleIndex * stride) % SERVICE_LOGOS.length, 700);
+      cycleIndex += 1;
+    }, 600);
     return () => window.clearInterval(timer);
-  }, [hexGrille]);
+  }, [hexGrille, pulseLogo]);
 
   useEffect(() => {
     if (!hexGrille || typeof IntersectionObserver === "undefined") {
@@ -404,22 +452,24 @@ export function ServiceDeviceCard({
           <div className="personalAgentDeviceGloss" />
           <div className="personalAgentDeviceLogoGrid">
             {SERVICE_LOGOS.map((logo, index) => (
-              <div
+              <button
                 key={logo.id}
+                type="button"
                 className="personalAgentDeviceLogo"
-                data-active={index === spotlightIndex ? "true" : undefined}
+                data-active={litLogos.has(index) ? "true" : undefined}
+                aria-label={logo.label}
+                onClick={() => pulseLogo(index, 500)}
               >
                 <svg
                   width={26}
                   height={26}
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  role="img"
-                  aria-label={logo.label}
+                  aria-hidden="true"
                 >
                   <path d={logo.path} />
                 </svg>
-              </div>
+              </button>
             ))}
           </div>
         </div>

@@ -48,7 +48,8 @@
   font-weight: 300;
   line-height: 1.05;
   letter-spacing: -0.035em;
-  color: #f7f8fb;
+  color: var(--gold-core, #f7f8fb);
+  text-shadow: var(--gold-text-shadow, none);
 }
 
 .featurePanelGrid {
@@ -97,7 +98,8 @@
   backdrop-filter: blur(20px) saturate(1.2);
   transition:
     background 0.18s ease,
-    border-color 0.18s ease;
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 /* Gradient glass border ring, identical to `.changelogPreviewGrid::before`,
@@ -133,7 +135,9 @@
 .featurePanelItemTag {
   transition:
     color 0.18s ease,
-    border-color 0.18s ease;
+    border-color 0.18s ease,
+    text-shadow 0.18s ease,
+    filter 0.18s ease;
 }
 
 /* Illustration scene region at the top of each card. Grows to fill the
@@ -205,31 +209,55 @@
   color: #f7f8fb;
 }
 
-/* Hover: brand orange surface with inverted near-black art, text and pill,
-   matching the reference's featured card. */
+/* Hover: golden card — a deep surface with a warm gold wash, a gold gradient
+   rim, and a gold glow halo, so the art/title/tag light up as glowing gold. */
 .featurePanelItem:hover {
-  background: #f45500;
-  border-color: rgba(0, 0, 0, 0.18);
+  background:
+    radial-gradient(
+      ellipse 120% 80% at 50% 0%,
+      rgba(var(--gold-glow), 0.16) 0%,
+      rgba(var(--gold-halo), 0.05) 60%
+    ),
+    #14110a;
+  border-color: rgba(var(--gold-glow), 0.45);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 0 24px rgba(var(--gold-glow), 0.22),
+    0 0 48px rgba(var(--gold-halo), 0.16),
+    inset 0 1px 0 rgba(var(--gold-glow), 0.18);
 }
 
-/* The white glass ring belongs to the dark resting state; fade it out on
-   the orange hover surface so it doesn't read as a stray light rim. */
+/* Recolor the glass rim to gold on hover so the edge reads as a lit gold ring. */
 .featurePanelItem:hover::before {
-  opacity: 0;
+  background: linear-gradient(
+    160deg,
+    rgba(var(--gold-glow), 0.7) 0%,
+    rgba(var(--gold-glow), 0.22) 40%,
+    rgba(var(--gold-halo), 0.12) 100%
+  );
 }
 
-.featurePanelItem:hover .featurePanelSceneArt,
 .featurePanelItem:hover .featurePanelItemTitle {
-  color: #160a04;
+  color: var(--gold-core, #f7f8fb);
+  text-shadow: var(--gold-text-shadow, none);
+}
+
+/* The monoline SVG art glows via filter (text-shadow doesn't reach strokes). */
+.featurePanelItem:hover .featurePanelSceneArt {
+  color: var(--gold-core, #f7f8fb);
+  filter:
+    drop-shadow(0 0 5px rgba(var(--gold-glow), 0.6))
+    drop-shadow(0 0 12px rgba(var(--gold-halo), 0.4));
 }
 
 .featurePanelItem:hover .featurePanelItemDesc {
-  color: rgba(22, 10, 4, 0.78);
+  color: rgba(var(--gold-glow), 0.82);
 }
 
 .featurePanelItem:hover .featurePanelItemTag {
-  border-color: rgba(22, 10, 4, 0.45);
-  color: #160a04;
+  border-color: rgba(var(--gold-glow), 0.5);
+  color: var(--gold-core, #f7f8fb);
+  text-shadow: var(--gold-text-shadow, none);
 }
 
 @media (max-width: 900px) {

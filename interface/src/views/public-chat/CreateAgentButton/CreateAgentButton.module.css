@@ -25,7 +25,10 @@
  * declaration is a no-op there but stays for symmetry.
  */
 .ctaButton {
-  --glow: var(--public-cta-glow-color, #9b5cff);
+  /* Golden accent by default (the page's gold glow). The public-chat landing
+     still overrides this per-persona via `--public-cta-glow-color`; marketing
+     surfaces that don't publish it fall back to gold. */
+  --glow: var(--public-cta-glow-color, #e8cd89);
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
@@ -94,6 +97,9 @@
 
 .ctaButton > svg {
   display: block;
+  /* Gold-glow accent for the icon on the colored CTA. */
+  color: #9a6b16;
+  filter: drop-shadow(0 0 3px rgba(232, 205, 137, 0.7));
 }
 
 /* Label shimmer — a darker highlight band sweeps left-to-right across

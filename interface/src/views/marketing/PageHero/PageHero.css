@@ -237,6 +237,8 @@
        past the description max-width on wide viewports. */
   font-size: clamp(26px, 4.3vw, 48px);
   line-height: 1.05;
+  /* Glowing gold hero headline (golden accent). */
+  text-shadow: var(--gold-text-shadow, none);
   /* Hero-only override of the global `--color-text-primary`
      (which resolves to `#e6e8eb` in dark mode). The marketing
      hero now reads as a near-pure white slab against the
@@ -252,8 +254,10 @@
      defaults; this is a hero-specific typographic choice, not a
      global theme change. The literal `#f7f8fb` matches the
      near-white the changelog highres-capture script already
-     publishes for marketing surfaces. */
-  color: #f7f8fb;
+     publishes for marketing surfaces. Now tinted to the pale gold
+     core so the glowing-gold headline reads as one family with the
+     rest of the page. */
+  color: var(--gold-core, #f7f8fb);
   /* Drop the default 680px cap — at 66px the headline can still need
      more room than the default. The parent `.pageHeroCenteredStack`'s
      `width: 100%` cap still constrains the column. */

@@ -209,33 +209,53 @@ void main() {
   energy += bloom * 0.6;              // emissive vessels
   energy *= breathe;
 
-  // ----- RIGHT hemisphere: orange neon structure + purple matter --------
-  // Base look: glowing orange neon lines are the brain's inner structure (the
-  // vessels), set over purple "matter" filling the regions. A dim always-on
+  // ----- RIGHT hemisphere: multi-hue neon structure + tinted matter -----
+  // Base look: glowing neon lines (gold + pink/purple/blue) are the brain's
+  // inner structure (the vessels), set over hue-tinted "matter" filling the
+  // regions. A dim always-on
   // level keeps the structure visible; on top of that, localized bursts flash
   // ~a quarter of the regions at a time in fast, unpredictable spurts (no
   // global continuous loop). Travelling signals are layered on after.
   float basePulse = 0.55 + 1.15 * burstField(uv, t);
 
-  vec3 neonOrange = vec3(1.0, 0.46, 0.12);
-  vec3 matterPurple = vec3(0.46, 0.20, 0.80);
+  // Multi-hue neon palette: the golden accent (matching the progress-bar gold
+  // glow) stays the anchor, joined by complementary pink, purple and blue.
+  vec3 goldHue = vec3(1.0, 0.80, 0.35);
+  vec3 pinkHue = vec3(1.0, 0.42, 0.72);
+  vec3 purpleHue = vec3(0.60, 0.34, 1.0);
+  vec3 blueHue = vec3(0.32, 0.60, 1.0);
+
+  // Slow spatial + temporal field that sweeps the four hues across the tissue
+  // (0..3 selects gold -> pink -> purple -> blue), so different regions glow
+  // different colors and the mix drifts over time. The flow field warps the
+  // boundaries organically so the bands follow the vessel structure rather
+  // than reading as flat stripes.
+  float hueField =
+      0.5 + 0.5 * sin(uv.x * 4.5 + uv.y * 3.2 + t * 0.3 + flow * 2.0);
+  float h = hueField * 3.0;
+  vec3 structHue = mix(goldHue, pinkHue, clamp(h, 0.0, 1.0));
+  structHue = mix(structHue, purpleHue, clamp(h - 1.0, 0.0, 1.0));
+  structHue = mix(structHue, blueHue, clamp(h - 2.0, 0.0, 1.0));
 
   // Sharpened vessel term: threshold the soft angiography luminance so the
-  // orange glow and the travelling signals hug the ACTUAL neuronal structure
-  // (the bright lines) instead of bleeding into the surrounding tissue.
+  // glow and the travelling signals hug the ACTUAL neuronal structure (the
+  // bright lines) instead of bleeding into the surrounding tissue.
   float vessel = smoothstep(0.12, 0.42, mask);
 
-  // Purple matter: broad soft tissue from the aura/halo fields so the regions
-  // glow even away from the vessels.
+  // Matter: broad soft tissue from the aura/halo fields so the regions glow
+  // even away from the vessels — a dark tint of the local hue so the colored
+  // tissue stays cohesive with the neon structure above it.
   float matter = clamp(aura * 1.3 + outerGlow * 0.9 + bloom * 0.35, 0.0, 1.0);
-  vec3 rightCol = matterPurple * matter * basePulse;
+  vec3 matterCol = mix(vec3(0.34, 0.22, 0.30), structHue * 0.42, 0.6);
+  vec3 rightCol = matterCol * matter * basePulse;
 
-  // Orange neon inner structure: emissive vessels tied tightly to the masked
+  // Multi-hue neon inner structure: emissive vessels tied tightly to the masked
   // lines (only a thin bloom for the neon edge), plus a hot core on the
   // densest junctions so they read as bright soma nodes.
   float structure = (vessel * 1.35 + bloom * 0.25) * basePulse;
-  rightCol += neonOrange * structure;
-  rightCol += vec3(1.0, 0.72, 0.30) * pow(vessel, 2.0) * basePulse * 0.9;
+  rightCol += structHue * structure;
+  // Densest junctions bloom to a near-white core (works under any hue).
+  rightCol += vec3(0.98, 0.97, 0.92) * pow(vessel, 2.0) * basePulse * 0.9;
 
   // ----- Pulsating communication signals --------------------------------
   // Discrete bright "items" travelling region-to-region along several axes.
@@ -244,6 +264,7 @@ void main() {
   // gaussian isolates each into a compact moving packet. Gated by the vessel
   // mask so the signals ride the neon structure like real impulses.
   float comm = 0.0;
+  vec3 commCol = vec3(0.0);
   for (int i = 0; i < 5; i++) {
     float fi = float(i);
     float ang = fi * 1.7 + 0.5;
@@ -252,14 +273,25 @@ void main() {
     float freq = 5.0 + 1.6 * fi;
     float speed = 0.55 + 0.18 * fi;
     float ph = fract(proj * freq - t * speed);
-    comm += exp(-pow(ph - 0.5, 2.0) * 320.0);
+    float pkt = exp(-pow(ph - 0.5, 2.0) * 320.0);
+    comm += pkt;
+    // Each axis carries one of the palette hues so the travelling packets are
+    // multi-colored (gold, pink, purple, blue, then gold again).
+    vec3 axisHue = i == 0
+        ? goldHue
+        : (i == 1 ? pinkHue : (i == 2 ? purpleHue : (i == 3 ? blueHue : goldHue)));
+    commCol += axisHue * pkt;
   }
   // Tightly gate to the sharpened vessel so signals only run along the actual
   // structure, with just a sliver of bloom for a soft edge.
-  comm *= clamp(vessel + bloom * 0.12, 0.0, 1.0);
+  float commGate = clamp(vessel + bloom * 0.12, 0.0, 1.0);
+  comm *= commGate;
+  commCol *= commGate;
 
-  // Signals flash a hot near-white orange so they pop along the lines.
-  rightCol += vec3(1.0, 0.80, 0.45) * comm * 1.9;
+  // Hued packets along the lines, with a hot near-white core on the brightest
+  // peaks so the fastest signals still flash white.
+  rightCol += commCol * 1.7;
+  rightCol += vec3(1.0) * comm * comm * 0.45;
 
   // Hue-preserving tone cap: scale all channels down together when over-bright
   // so peaks stay saturated color instead of clamping to white.

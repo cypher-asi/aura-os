@@ -31,7 +31,10 @@
   font-weight: 300;
   line-height: 1.08;
   letter-spacing: -0.03em;
-  color: var(--color-text-primary);
+  /* Glowing gold headline (golden accent). Falls back to the primary text
+     color where the gold tokens aren't published. */
+  color: var(--gold-core, var(--color-text-primary));
+  text-shadow: var(--gold-text-shadow, none);
   max-width: 720px;
 }
 

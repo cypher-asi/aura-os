@@ -42,6 +42,27 @@
   --color-text-primary: #f7f8fb;
   --color-text-secondary: #a3a3a8;
   --color-text-muted: rgba(255, 255, 255, 0.52);
+  /* Shared "golden accent" derived from the build-progress bar fill
+     (see MadeForYouSection.css): a pale near-white core wrapped in a
+     layered amber-gold glow + amber-brown outer halo. Every gold-themed
+     surface on this page (headlines, console lights, brain, mode pill,
+     CTA, integrations, trust cards) references these tokens so they read
+     as one family. */
+  --gold-core: #f4faf2;
+  --gold-core-deep: #f1f9d3;
+  --gold-glow: 232, 205, 137;
+  --gold-halo: 153, 81, 25;
+  /* Pale-core text with a layered amber-gold glow. */
+  --gold-text-shadow:
+    0 0 6px rgba(var(--gold-glow), 0.45), 0 0 14px rgba(var(--gold-glow), 0.28),
+    0 0 22px rgba(var(--gold-halo), 0.2);
+  /* Emissive halo for lit dots / pills, matching the progress fill. */
+  --gold-box-glow:
+    0 0 2px rgba(var(--gold-glow), 0.55), 0 0 5px rgba(var(--gold-glow), 0.4),
+    0 0 10px rgba(var(--gold-glow), 0.28),
+    0 0 16px rgba(var(--gold-glow), 0.18),
+    0 0 8px 1px rgba(var(--gold-halo), 0.18),
+    0 0 14px 2px rgba(var(--gold-halo), 0.1);
   /* Full-height flex column (instead of `display: contents`) so the
      stacked sections can distribute leftover vertical space: the
      `ProductCallToAction` between the changelog and footer is

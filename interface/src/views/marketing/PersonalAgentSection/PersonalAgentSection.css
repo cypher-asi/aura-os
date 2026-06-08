@@ -70,20 +70,29 @@
   flex: 0 0 56px;
 }
 
+/* Selected mode label: glowing gold (golden accent) instead of neon blue,
+   overriding ModeSelector's blue label via higher specificity. The slide
+   animation below still plays on click. */
 .personalAgentChatMock [data-sliding-pills-item][aria-checked="true"] {
   letter-spacing: 0.02em;
+  -webkit-text-fill-color: var(--gold-core);
+  color: var(--gold-core);
+  text-shadow: var(--gold-text-shadow);
 }
 
+/* Borderless gold pill: drop the blue border entirely, leaving a soft gold
+   backing glow that slides under the lit label. */
 .personalAgentChatMock [data-sliding-pills-indicator] {
   display: block;
   background: linear-gradient(
     180deg,
-    rgba(77, 184, 255, 0.18) 0%,
-    rgba(77, 184, 255, 0.08) 100%
+    rgba(var(--gold-glow), 0.16) 0%,
+    rgba(var(--gold-glow), 0.06) 100%
   );
-  border: 1px solid rgba(77, 184, 255, 0.28);
+  border: none;
   box-shadow:
-    0 0 10px rgba(77, 184, 255, 0.18),
+    0 0 10px rgba(var(--gold-glow), 0.22),
+    0 0 18px rgba(var(--gold-halo), 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition:
     transform 95ms cubic-bezier(0.2, 0, 0, 1),
@@ -115,7 +124,8 @@
  * rim and the recessed black well (mirrors `.personalAgentDeviceContent`).
  */
 .personalAgentSkillPanel {
-  --skill-accent: #f45500;
+  /* Golden accent for lit skill keycaps (was orange). */
+  --skill-accent: #e8cd89;
   padding: 16px;
 }
 
@@ -369,17 +379,37 @@
 }
 
 .personalAgentDeviceLogo {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(232, 236, 245, 0.85);
-  filter: drop-shadow(0 0 6px rgba(150, 190, 255, 0.35));
-  transition: color 160ms ease, filter 160ms ease;
+  color: rgba(232, 236, 245, 0.7);
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5));
+  cursor: pointer;
+  transition: color 200ms ease, filter 200ms ease;
 }
 
+/* Auto-advancing spotlight: one integration at a time lights up with the
+   golden accent, looping across the grid (driven by `data-active` in the
+   component). */
+.personalAgentDeviceLogo[data-active="true"] {
+  color: var(--gold-core, #fff);
+  filter:
+    drop-shadow(0 0 6px rgba(var(--gold-glow), 0.7))
+    drop-shadow(0 0 12px rgba(var(--gold-halo), 0.45));
+}
+
+/* Hover always wins over the loop: hovering an integration makes it glow gold. */
 .personalAgentDeviceLogo:hover {
-  color: #fff;
-  filter: drop-shadow(0 0 9px rgba(170, 205, 255, 0.6));
+  color: var(--gold-core, #fff);
+  filter:
+    drop-shadow(0 0 7px rgba(var(--gold-glow), 0.85))
+    drop-shadow(0 0 16px rgba(var(--gold-halo), 0.5));
 }
 
 /* Label strip: hairline divider, asterisk markers + monospace label. */

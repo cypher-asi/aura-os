@@ -17,7 +17,10 @@
 
 /* Plate wrapper — capped width, centered, matching the device footprint. */
 .nrCard {
-  --nr-accent: #5b86c9;
+  /* Golden accent (matches the page's gold glow) for the lit ticks + status
+     dot, replacing the prior blue / cyan-green. */
+  --nr-accent: #e8cd89;
+  --nr-gold: #e8cd89;
   --nr-knob-size: 100px;
   width: 100%;
   /* Twice the original 525px so the panel/screen read as a wide landscape
@@ -337,8 +340,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  /* Theme green-cyan accent, with a pulsating layered glow. */
-  background: var(--color-accent);
+  /* Golden accent, with a pulsating layered glow. */
+  background: var(--nr-gold);
   animation: nrActiveDotPulse 1.8s ease-in-out infinite;
 }
 
@@ -346,14 +349,14 @@
   0%,
   100% {
     box-shadow:
-      0 0 4px var(--color-accent),
-      0 0 8px color-mix(in srgb, var(--color-accent) 45%, transparent);
+      0 0 4px var(--nr-gold),
+      0 0 8px color-mix(in srgb, var(--nr-gold) 45%, transparent);
   }
   50% {
     box-shadow:
-      0 0 8px var(--color-accent),
-      0 0 16px var(--color-accent),
-      0 0 26px color-mix(in srgb, var(--color-accent) 60%, transparent);
+      0 0 8px var(--nr-gold),
+      0 0 16px var(--nr-gold),
+      0 0 26px color-mix(in srgb, var(--nr-gold) 60%, transparent);
   }
 }
 
@@ -361,9 +364,9 @@
   .nrActiveDot {
     animation: none;
     box-shadow:
-      0 0 6px var(--color-accent),
-      0 0 12px var(--color-accent),
-      0 0 20px color-mix(in srgb, var(--color-accent) 55%, transparent);
+      0 0 6px var(--nr-gold),
+      0 0 12px var(--nr-gold),
+      0 0 20px color-mix(in srgb, var(--nr-gold) 55%, transparent);
   }
 }
 
@@ -437,10 +440,11 @@
 /* Lit meter segment: ticks from the start of the arc up to the knob pointer
    glow with the accent color, filling in real time as the cursor sweeps. */
 .nrKnobTickLit {
-  background: #eaf1ff;
+  background: var(--gold-core, #eaf1ff);
   box-shadow:
     0 0 4px var(--nr-accent),
-    0 0 7px var(--nr-accent);
+    0 0 7px var(--nr-accent),
+    0 0 12px rgba(var(--gold-halo), 0.4);
 }
 
 /* Raised neomorphic dial sunk into the bezel, with a thick gradient bezel
