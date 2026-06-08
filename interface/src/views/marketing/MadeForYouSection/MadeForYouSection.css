@@ -348,16 +348,17 @@
   margin: auto 0;
 }
 
-/* Lens button + label row: the glowing lens leads, the label follows, both
-   seated in a rounded black-glass capsule recessed into the metal panel. */
+/* Lens button + label capsule: a rounded black-glass pill recessed into the
+   metal panel. The lens floats at the left edge while the label is centered
+   across the full capsule width (so it reads centered within the panel). */
 .madeForYouDevice .madeForYouSideRow {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 14px;
+  justify-content: center;
   width: 100%;
   box-sizing: border-box;
-  padding: 4px 16px 4px 5px;
+  padding: 4px 16px;
   border-radius: 999px;
   background:
     linear-gradient(
@@ -371,9 +372,13 @@
     0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
-/* Circular brushed-metal bezel holding a recessed frosted lens. */
+/* Circular brushed-metal bezel holding a recessed frosted lens. Pinned to the
+   left edge of the capsule so it stays put while the label centers. */
 .madeForYouDevice .madeForYouLensBtn {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 5px;
+  transform: translateY(-50%);
   flex: 0 0 auto;
   display: flex;
   align-items: center;
