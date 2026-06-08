@@ -7,8 +7,8 @@ interface PhoneShellProps {
    *   - `"md"` — side-phone treatment. Smaller, recessed (no
    *     translateY offset).
    *   - `"lg"` — centered hero phone. Larger, lifted forward,
-   *     mirroring the middle iPhone in the Apple iPhone 17 reference
-   *     layout that this section is modeled after.
+   *     mirroring the middle device in the overlapping 3-phone
+   *     silhouette this section is modeled after.
    */
   readonly size?: "md" | "lg";
   /**
@@ -28,17 +28,24 @@ interface PhoneShellProps {
 }
 
 /**
- * Presentational phone frame for the marketing page. The chassis is a
- * pre-rendered phone image (`/phone-shell.png`, cropped to the device
- * silhouette on a pure-black background that blends with the section
- * surface), and the mock interface supplied via `children` is overlaid
- * on top, clipped to the render's screen rectangle.
+ * Reusable, pure-CSS marketing phone device. The chassis, embossed
+ * black-glass screen, and neomorphic control deck are all painted with
+ * CSS (no pre-rendered image), so the device scales crisply at any size
+ * and stays self-contained. The mock interface supplied via `children`
+ * is overlaid inside the screen well, clipped to its rounded corners.
  *
- * Sizing is `clamp()`-driven and respects the parent flex container,
- * so the same component scales from desktop hero widths down to the
- * single phone shown on narrow mobile viewports without per-breakpoint
- * overrides on the consumer. The hero (`size="lg"`) variant is larger
- * and lifted forward so it visually overlaps the two side phones.
+ * Layout, top to bottom:
+ *   - `.phoneShellScreen` — recessed glossy black glass with an embossed
+ *     bevel (darker top edge, brighter bottom lip) and a gradient border.
+ *     Hosts `children` and casts a drop shadow onto the deck below.
+ *   - `.phoneShellDeck` — a brushed-metal neomorphic panel carrying a
+ *     rotary knob, a row of decorative keys, a CONTROL/AUTO toggle, a
+ *     dot-matrix speaker grille, and the `AURA` wordmark.
+ *
+ * Everything below the screen is decorative hardware fiction
+ * (`aria-hidden`). Sizing is `clamp()`-driven and respects the parent
+ * flex container; the hero (`size="lg"`) variant is larger and lifted
+ * forward so it visually overlaps the two side phones.
  */
 export function PhoneShell({
   size = "md",
@@ -55,16 +62,39 @@ export function PhoneShell({
       aria-label={ariaLabel}
       aria-hidden={ariaLabel ? undefined : true}
     >
-      <img className="phoneShellImage" src="/phone-shell.png" alt="" aria-hidden />
-      <div className="phoneShellScreen">
-        {children ?? (
-          <div className="phoneShellPlaceholder">
-            <span className="phoneShellPlaceholderBar" />
-            <span className="phoneShellPlaceholderBar" />
-            <span className="phoneShellPlaceholderBar" />
-            <span className="phoneShellPlaceholderLabel">Mock UI</span>
+      <div className="phoneShellChassis">
+        <div className="phoneShellScreen">
+          {children ?? (
+            <div className="phoneShellPlaceholder">
+              <span className="phoneShellPlaceholderBar" />
+              <span className="phoneShellPlaceholderBar" />
+              <span className="phoneShellPlaceholderBar" />
+              <span className="phoneShellPlaceholderLabel">Mock UI</span>
+            </div>
+          )}
+        </div>
+
+        <div className="phoneShellDeck" aria-hidden="true">
+          <div className="phoneShellKnob">
+            <div className="phoneShellKnobDial">
+              <span className="phoneShellKnobIndicator" />
+            </div>
           </div>
-        )}
+
+          <div className="phoneShellControls">
+            <div className="phoneShellButtons">
+              <span className="phoneShellBtn" />
+              <span className="phoneShellBtn" />
+              <span className="phoneShellBtn" />
+            </div>
+            <div className="phoneShellToggle">
+              <span className="phoneShellToggleKnob" />
+            </div>
+          </div>
+
+          <div className="phoneShellGrille" />
+          <span className="phoneShellWordmark">AURA</span>
+        </div>
       </div>
     </div>
   );

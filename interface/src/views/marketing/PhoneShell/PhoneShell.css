@@ -1,88 +1,318 @@
 /*
- * Marketing phone shell backed by a pre-rendered device image
- * (`/phone-shell.png`). The render is cropped tight to the phone
- * silhouette on a pure-black background that blends with the section's
- * `#000` surface, so the layout box hugs the visible phone (which keeps
- * the overlapping 3-phone silhouette in `AgentChatSection.css` working).
- * The mock interface passed as `children` is overlaid via
- * `.phoneShellScreen`, positioned to the render's screen rectangle.
+ * Pure-CSS marketing phone device (no pre-rendered image). The chassis,
+ * embossed black-glass screen, and neomorphic metal control deck are all
+ * painted with CSS so the device scales crisply at any size and stays
+ * self-contained. Internal elements are sized in `cqw` (1cqw = 1% of the
+ * phone's width) via the container context on `.phoneShell`, so the knob,
+ * keys, grille, and wordmark all scale in lockstep with the device width
+ * across the `md` side phones and the `lg` hero.
  *
  * Two variants triggered by the parent class:
  *   - default (md) — side phone, smaller
  *   - hero (lg)    — centered phone, larger and lifted forward
  *
- * The `aspect-ratio` matches the cropped render (492 x 876) so the
- * image fills the box without distortion.
+ * The mock interface passed as `children` is overlaid via
+ * `.phoneShellScreen` (it absolutely fills the screen well and is clipped
+ * to its rounded corners).
  */
 .phoneShell {
   position: relative;
   flex-shrink: 0;
   width: clamp(225px, 27.5vw, 300px);
-  aspect-ratio: 501 / 881;
+  aspect-ratio: 250 / 480;
+  /* Container context so internal hardware scales with the device width. */
+  container-type: inline-size;
   /* Establish a stacking context per phone (z-index:0) so the side
-     phones' image/screen layers stay contained below them. Without an
-     explicit z-index here the shell would be `position: relative;
-     z-index: auto` (NOT a stacking context), letting a side phone's
-     inner `.phoneShellImage` bubble up and paint over the hero. The
-     hero raises this to `2` so it always wins. */
+     phones' layers stay contained below them; the hero raises this to
+     `2` so it always paints in front. */
   z-index: 0;
 }
 
 .phoneShellHero {
   width: clamp(275px, 32.5vw, 350px);
-  /* Lift the centered phone forward so it visually overlaps the two
-     side phones, and raise it above their stacking contexts so it
-     paints IN FRONT — the side phones tuck behind it. */
+  /* Lift the centered phone forward so it visually overlaps the two side
+     phones, and raise it above their stacking contexts so it paints IN
+     FRONT — the side phones tuck behind it. */
   transform: translateY(-30px);
   z-index: 2;
 }
 
 /*
- * The phone render fills the box. The PNG's background is transparent
- * (only the device silhouette is opaque), so a `drop-shadow` follows
- * the phone's shape and floats it off the section surface. It sits
- * below the screen overlay and is non-interactive (decorative chrome).
+ * Metal chassis. A vertical flex column holding the screen (flex-grow)
+ * above the control deck. The body is a dark brushed-metal gradient with
+ * a `border-box` gradient rim (light TL -> dark BR) matching the shared
+ * `Plate` treatment, plus a soft drop shadow floating it off the surface.
  */
-.phoneShellImage {
+.phoneShellChassis {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  display: block;
-  pointer-events: none;
-  user-select: none;
-  z-index: 1;
-  filter: drop-shadow(0 23px 33px rgba(0, 0, 0, 0.6))
-    drop-shadow(0 8px 13px rgba(0, 0, 0, 0.45));
+  display: flex;
+  flex-direction: column;
+  gap: 4cqw;
+  padding: 3.5cqw;
+  border-radius: 13cqw;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(
+        180deg,
+        #303236 0%,
+        #25272b 9%,
+        #1b1c1f 32%,
+        #151619 62%,
+        #0d0e10 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(168, 172, 180, 0.9) 0%,
+        rgba(30, 31, 34, 0.8) 42%,
+        rgba(120, 124, 132, 0.85) 100%
+      )
+      border-box;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
+    0 23px 33px rgba(0, 0, 0, 0.6),
+    0 8px 13px rgba(0, 0, 0, 0.45);
 }
 
 /*
- * Screen overlay — positioned to the render's matte screen rectangle.
- * The screen glass (measured on the 501x881 cropped render) runs from
- * x22 to x480 and y20 to y840, and is horizontally centered on the
- * image, so the left/right insets are SYMMETRIC (~4.3% each): the mock
- * UI both centers on the glass and spans it edge-to-edge. `overflow:
- * hidden` clips the mock UI to the slightly-rounded screen corners. No
- * background here: the `MockMobileChat` mock paints its own
- * (`position: absolute; inset: 0`).
+ * Recessed black-glass screen. The bevel is directional per the design:
+ * a heavy, dark inset on the TOP edge and a brighter highlight lip along
+ * the BOTTOM edge, so the glass reads as set deeper at the top. A
+ * `border-box` gradient ring (darker at top, lighter toward the bottom)
+ * paints the embossed bevel, and the outer downward `box-shadow` casts a
+ * drop shadow onto the control deck below. `overflow: hidden` clips the
+ * mock UI (`children`) to the rounded corners.
  */
 .phoneShellScreen {
-  position: absolute;
-  top: 2.6%;
-  bottom: 4.6%;
-  left: 4.3%;
-  right: 4.3%;
+  position: relative;
+  flex: 1 1 auto;
   overflow: hidden;
-  border-radius: 6%;
+  border-radius: 7cqw;
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+        ellipse 120% 90% at 50% 0%,
+        #0c0c0e 0%,
+        #060608 60%,
+        #000 100%
+      )
+      padding-box,
+    linear-gradient(
+        180deg,
+        rgba(90, 94, 102, 0.65) 0%,
+        rgba(40, 42, 46, 0.5) 38%,
+        rgba(180, 184, 192, 0.7) 100%
+      )
+      border-box;
+  box-shadow:
+    inset 0 9px 18px rgba(0, 0, 0, 0.95),
+    inset 0 3px 6px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(0, 0, 0, 0.9),
+    inset 0 -2px 1px rgba(255, 255, 255, 0.1),
+    0 7px 12px rgba(0, 0, 0, 0.55),
+    0 2px 5px rgba(0, 0, 0, 0.45);
   z-index: 2;
 }
 
+/* Top gloss reflection across the screen glass. */
+.phoneShellScreen::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 40%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
 /*
- * Default placeholder painted when no `children` are passed. Three
- * faint rounded bars hint at message rows; the bottom "Mock UI" label
- * makes the placeholder intent legible. Replaced entirely once real
- * mock content is passed via `children`.
+ * Neomorphic control deck. A dark brushed-metal panel (subtle vertical
+ * brush texture + top highlight) laid out as a 2x2 grid: rotary knob
+ * top-left, the key + toggle cluster top-right, the speaker grille
+ * bottom-left, and the AURA wordmark bottom-right.
+ */
+.phoneShellDeck {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 64cqw;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "knob controls"
+    "grille wordmark";
+  align-items: start;
+  gap: 4cqw 5cqw;
+  padding: 5cqw 5cqw 4cqw;
+  border-radius: 9cqw;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0 1px,
+      transparent 1px 3px
+    ),
+    linear-gradient(180deg, #34363b 0%, #26282c 45%, #17181b 100%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Rotary knob: raised brushed-metal dial in a shallow black recess. */
+.phoneShellKnob {
+  grid-area: knob;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26cqw;
+  height: 26cqw;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.phoneShellKnobDial {
+  position: relative;
+  width: 20cqw;
+  height: 20cqw;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 50% 32%,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    conic-gradient(
+      from 210deg,
+      #d7dade 0deg,
+      #9a9ea4 70deg,
+      #f1f2f4 140deg,
+      #a8acb2 210deg,
+      #e6e8ea 290deg,
+      #b2b6bc 360deg
+    );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+/* Accent position indicator notched near the top of the dial. */
+.phoneShellKnobIndicator {
+  position: absolute;
+  top: 2cqw;
+  left: 50%;
+  width: 2cqw;
+  height: 5cqw;
+  transform: translateX(-50%);
+  border-radius: 1cqw;
+  background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
+  box-shadow: 0 0 6px rgba(244, 85, 0, 0.7);
+}
+
+/* Right cluster: a row of keys above the CONTROL/AUTO toggle. */
+.phoneShellControls {
+  grid-area: controls;
+  display: flex;
+  flex-direction: column;
+  gap: 3cqw;
+  padding-top: 2cqw;
+}
+
+.phoneShellButtons {
+  display: flex;
+  gap: 2.5cqw;
+}
+
+/* Raised neomorphic keycap (HOME / ROTATE / LOCK in the reference). */
+.phoneShellBtn {
+  flex: 1 1 0;
+  height: 6cqw;
+  border-radius: 1.5cqw;
+  background: linear-gradient(180deg, #2a2d33 0%, #14161a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.6),
+    0 1.5px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* CONTROL/AUTO slider: a recessed track with an accent-lit knob slid to
+   the CONTROL position (left), echoing the reference's lit segment. */
+.phoneShellToggle {
+  position: relative;
+  height: 8cqw;
+  border-radius: 4cqw;
+  background: linear-gradient(180deg, #0a0b0d 0%, #15171a 100%);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.phoneShellToggleKnob {
+  position: absolute;
+  top: 1cqw;
+  left: 1cqw;
+  width: 46%;
+  height: calc(8cqw - 2cqw);
+  border-radius: 3cqw;
+  background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
+  box-shadow:
+    0 0 8px rgba(244, 85, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Dot-matrix speaker grille. */
+.phoneShellGrille {
+  grid-area: grille;
+  align-self: end;
+  width: 24cqw;
+  height: 7cqw;
+  border-radius: 2cqw;
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0.6px,
+    transparent 1px
+  );
+  background-size: 3cqw 3cqw;
+  background-position: center;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* AURA wordmark — replaces the reference device's "SNIFF" mark. */
+.phoneShellWordmark {
+  grid-area: wordmark;
+  align-self: end;
+  justify-self: end;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-weight: 700;
+  font-size: 7cqw;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  color: rgba(232, 234, 238, 0.85);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.6),
+    0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/*
+ * Default placeholder painted when no `children` are passed. Three faint
+ * rounded bars hint at message rows; the bottom "Mock UI" label makes the
+ * placeholder intent legible. Replaced entirely once real mock content is
+ * passed via `children`.
  */
 .phoneShellPlaceholder {
   position: absolute;
@@ -123,10 +353,11 @@
 
 @media (max-width: 768px) {
   /*
-   * On narrow viewports the hero phone is typically rendered solo
-   * (the side phones are hidden by `AgentChatSection.css`), so we drop
-   * the translateY lift — there's nothing to overlap and the offset
-   * would otherwise push the phone into the headline above it.
+   * On narrow viewports the hero phone is typically rendered solo (the
+   * side phones are hidden by `AgentChatSection.css`), so we drop the
+   * translateY lift — there's nothing to overlap and the offset would
+   * otherwise push the phone into the headline above it. Internal
+   * hardware scales automatically via the `cqw` container units.
    */
   .phoneShellHero {
     transform: none;

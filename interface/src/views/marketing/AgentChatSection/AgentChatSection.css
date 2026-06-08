@@ -46,17 +46,18 @@
  * two. Desktop-only; two-class specificity. */
 @media (min-width: 769px) {
   .metalCard.agentChatCard {
-    min-height: 975px;
+    min-height: 1010px;
     padding-top: 30px;
     padding-inline: calc(10.16vw + 43px);
   }
 }
 
 /* Mobile shows only the (solo) hero phone, which drops its lift but is
-   still ~500px tall — give the card enough room so it isn't cramped. */
+   still ~650px tall (screen + control deck) — give the card enough room
+   so it isn't cramped. */
 @media (max-width: 768px) {
   .metalCard.agentChatCard {
-    min-height: 775px;
+    min-height: 800px;
   }
 }
 
