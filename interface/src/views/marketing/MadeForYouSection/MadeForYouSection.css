@@ -63,11 +63,11 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 20px;
+  height: 16px;
   /* Inset the fill from the left and right by the same amount as the centered
-     fill's top/bottom gap ((20 - 60%) / 2 = 4px), so the glow keeps a
+     fill's top/bottom gap ((16 - 12px glow) / 2 = 2px), so the glow keeps a
      consistent dark margin on all four edges (including the right at 100%). */
-  padding: 0 4px;
+  padding: 0 2px;
   border-radius: 999px;
   /* Track is thinner than the percentage label, so let the label and the
      fill's neon glow bleed out of the slot rather than clip them. */
@@ -99,10 +99,10 @@
 /* Emissive amber fill: white-hot core blooming out to deep orange, wrapped in
    the same layered neon glow the knob indicator carries. */
 .madeForYouProgressFill {
-  /* Noticeably shorter than the track so the dark slot frames the glowing
-     portion with a clear black margin above and below, reading as recessed. */
-  height: 60%;
-  min-width: 14px;
+  /* Fixed glow height so the lit portion stays constant while the dark track
+     around it tightens, leaving a slim even margin on all sides. */
+  height: 12px;
+  min-width: 12px;
   border-radius: 999px;
   background: linear-gradient(90deg, #f4faf2 0%, #f1f9d3 100%);
   box-shadow:
@@ -850,12 +850,13 @@
   }
 
   .madeForYouProgressTrack {
-    height: 14px;
-    padding: 0 2.8px;
+    height: 13px;
+    padding: 0 2px;
   }
 
   .madeForYouProgressFill {
-    min-width: 11px;
+    height: 9px;
+    min-width: 9px;
   }
 
   .madeForYouProgressLabel {
