@@ -348,6 +348,12 @@ export const MessageBubble = memo(function MessageBubble({
               <span className={styles.errorAgentMetaLabel}>Agent machine</span>
               {errorAgentInfo.agentMachine}
             </span>
+            {errorAgentInfo.ip && (
+              <span className={styles.errorAgentMetaItem}>
+                <span className={styles.errorAgentMetaLabel}>IP</span>
+                {errorAgentInfo.ip}
+              </span>
+            )}
           </div>
         )}
         <div className={styles.errorMetaRow}>

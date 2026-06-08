@@ -9,14 +9,16 @@ describe("formatErrorReportAgentInfo", () => {
         name: "Aura",
         machineType: "local",
         status: "idle",
-        clientDevice: "Desktop - Windows (DESKTOP-ABC)",
+        clientDevice: "Desktop - Windows (DESKTOP-ABC, 192.168.1.5)",
         agentMachine: "DESKTOP-ABC",
+        ip: "192.168.1.5",
       }),
     ).toBe(
       [
         "Agent: Aura (local, idle)",
-        "Client device: Desktop - Windows (DESKTOP-ABC)",
+        "Client device: Desktop - Windows (DESKTOP-ABC, 192.168.1.5)",
         "Agent machine: DESKTOP-ABC",
+        "IP: 192.168.1.5",
       ].join("\n"),
     );
   });
@@ -29,6 +31,7 @@ describe("formatErrorReportAgentInfo", () => {
         status: "running",
         clientDevice: "Web - MacIntel",
         agentMachine: "Remote VM scout-1 (running)",
+        ip: "10.0.0.4:8080",
       }),
     ).toContain("Agent: Scout (remote, running)");
   });
@@ -41,12 +44,14 @@ describe("formatErrorReportAgentInfo", () => {
         status: null,
         clientDevice: "",
         agentMachine: "",
+        ip: null,
       }),
     ).toBe(
       [
         "Agent: unknown (local, unknown)",
         "Client device: unknown",
         "Agent machine: unknown",
+        "IP: unknown",
       ].join("\n"),
     );
   });
@@ -61,6 +66,14 @@ describe("formatClientDevice", () => {
     expect(
       formatClientDevice({ hostname: "DESKTOP-ABC", os: "Windows" }),
     ).toContain("Windows (DESKTOP-ABC)");
+  });
+
+  it("includes the IP alongside the hostname when provided", () => {
+    // The platform label varies by runtime (jsdom resolves to "Web"),
+    // so assert only on the device-detail portion we control here.
+    expect(
+      formatClientDevice({ hostname: "DESKTOP-ABC", os: "Windows", ip: "192.168.1.5" }),
+    ).toContain("Windows (DESKTOP-ABC, 192.168.1.5)");
   });
 
   it("always returns a non-empty platform label", () => {

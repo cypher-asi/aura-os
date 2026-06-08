@@ -19,6 +19,8 @@ export interface ErrorReportAgentInfo {
   clientDevice: string;
   /** Machine the agent itself runs on (local hostname / remote VM). */
   agentMachine: string;
+  /** IP address of the agent's machine (local IP / remote endpoint). */
+  ip: string | null;
 }
 
 interface UseErrorReportAgentInfoInput {
@@ -60,9 +62,14 @@ export function useErrorReportAgentInfo({
   // short-circuits the hook so local chats issue no extra request.
   const { data: remoteState } = useRemoteAgentState(isRemote ? agentId : undefined);
 
+  const ip = isRemote
+    ? remoteState?.endpoint?.trim() || null
+    : envInfo?.ip?.trim() || null;
+
   const clientDevice = formatClientDevice({
     hostname: envInfo?.hostname,
     os: envInfo?.os,
+    ip: envInfo?.ip,
   });
 
   const agentMachine = isRemote
@@ -75,6 +82,7 @@ export function useErrorReportAgentInfo({
     status: status ?? null,
     clientDevice,
     agentMachine,
+    ip,
   };
 }
 
@@ -94,5 +102,6 @@ export function formatErrorReportAgentInfo(
     `Agent: ${name} (${typeLabel}, ${status})`,
     `Client device: ${info.clientDevice || "unknown"}`,
     `Agent machine: ${info.agentMachine || "unknown"}`,
+    `IP: ${info.ip || "unknown"}`,
   ].join("\n");
 }

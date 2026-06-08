@@ -180,8 +180,9 @@ describe("MessageBubble", () => {
           name: "Aura",
           machineType: "local",
           status: "idle",
-          clientDevice: "Desktop - Windows (DESKTOP-ABC)",
+          clientDevice: "Desktop - Windows (DESKTOP-ABC, 192.168.1.5)",
           agentMachine: "DESKTOP-ABC",
+          ip: "192.168.1.5",
         }}
       />,
     );
@@ -191,9 +192,11 @@ describe("MessageBubble", () => {
     // Both device descriptors render so a shared error reports where it
     // happened and which machine the agent runs on.
     expect(
-      screen.getByText("Desktop - Windows (DESKTOP-ABC)"),
+      screen.getByText("Desktop - Windows (DESKTOP-ABC, 192.168.1.5)"),
     ).toBeInTheDocument();
     expect(screen.getByText("DESKTOP-ABC")).toBeInTheDocument();
+    // IP renders as its own labeled item.
+    expect(screen.getByText("192.168.1.5")).toBeInTheDocument();
   });
 
   it("omits the agent + device context when errorAgentInfo is absent (read-only surfaces)", () => {

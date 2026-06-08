@@ -35,6 +35,8 @@ export interface ClientDeviceParts {
   hostname?: string | null;
   /** Real OS string when known (desktop env info). */
   os?: string | null;
+  /** Machine IP address when known (desktop env info). */
+  ip?: string | null;
 }
 
 /**
@@ -68,6 +70,8 @@ export function formatClientDevice(parts: ClientDeviceParts = {}): string {
   }
 
   const host = parts.hostname?.trim() || null;
+  const ip = parts.ip?.trim() || null;
   const base = os ? `${label} - ${os}` : label;
-  return host ? `${base} (${host})` : base;
+  const inner = [host, ip].filter(Boolean).join(", ");
+  return inner ? `${base} (${inner})` : base;
 }
