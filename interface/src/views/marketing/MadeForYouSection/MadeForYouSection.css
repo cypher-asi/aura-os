@@ -423,50 +423,38 @@
     0 0 28px rgba(255, 80, 0, 0.6);
 }
 
-/* Circular brushed-metal bezel holding a recessed frosted lens. Pinned to the
-   left edge of the capsule so it stays put while the label centers. */
+/* Selected ring lights up with the same neon orange as the label. */
+.madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn {
+  border-color: #ffb46a;
+  box-shadow:
+    0 0 4px rgba(255, 170, 80, 1),
+    0 0 9px rgba(255, 120, 30, 0.9),
+    0 0 16px rgba(255, 95, 10, 0.75),
+    inset 0 0 5px rgba(255, 140, 50, 0.65);
+}
+
+/* Simple transparent ring pinned to the left edge of the capsule. Muted gray
+   by default; lit with the neon-orange glow (matching the label) when selected. */
 .madeForYouDevice .madeForYouLensBtn {
   position: absolute;
   top: 50%;
   left: 5px;
   transform: translateY(-50%);
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: linear-gradient(
-    180deg,
-    #d9dbdf 0%,
-    #b6b9bf 48%,
-    #cfd2d6 100%
-  );
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.75),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.28),
-    0 1px 2px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(0, 0, 0, 0.18);
+  background: transparent;
+  border: 2px solid rgba(150, 154, 162, 0.4);
+  box-shadow: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-/* Recessed frosted-glass disc with an orange/amber hotspot at the left edge
-   fading to translucent gray, matching the knob indicator's accent. */
+/* Inner disc is no longer used; the ring is the whole indicator. */
 .madeForYouDevice .madeForYouLensGlow {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 22% 50%,
-    #ff8a3c 0%,
-    #f45500 14%,
-    rgba(220, 200, 190, 0.55) 46%,
-    rgba(205, 208, 212, 0.85) 100%
-  );
-  box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.5),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.4),
-    0 0 7px rgba(244, 85, 0, 0.45);
+  display: none;
 }
 
 .madeForYouDevice .madeForYouSideLabel {
@@ -657,10 +645,6 @@
   .madeForYouDevice .madeForYouLensBtn {
     width: 12px;
     height: 12px;
-  }
-
-  .madeForYouDevice .madeForYouLensGlow {
-    width: 9px;
-    height: 9px;
+    border-width: 1.5px;
   }
 }
