@@ -99,12 +99,16 @@ export function AuraShell(): React.ReactElement {
   // host settings entry. Public mode strips all of it.
   const isStandard = mode === "standard";
 
-  // The public marketing /agents and /code routes paint a dark-mode
+  // The public marketing /agents, /code, and /os routes paint a dark-mode
   // diagonal gradient on the shell frame (see `.shell::before` in
   // AuraShell.module.css). Flag them so the CSS can fade it in/out.
   const { pathname } = useLocation();
   const publicGradientSurface =
-    isPublic && (pathname === "/agents" || pathname === "/code");
+    isPublic &&
+    (pathname === "/agents" ||
+      pathname === "/code" ||
+      pathname === "/os" ||
+      pathname.startsWith("/os/"));
 
   // Authed-side state. We call these hooks unconditionally because
   // their subscriptions are cheap store reads — `useAppUIStore`,

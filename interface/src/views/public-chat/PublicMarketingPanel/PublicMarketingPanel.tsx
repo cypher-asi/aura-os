@@ -57,7 +57,7 @@ const MARKETING_PATH_BG: Readonly<Record<string, string>> = {
   "/changelog": "#0f0f12",
   "/feedback": "#0f0f12",
   "/blog": "#0f0f12",
-  "/os": "#0f0f12",
+  "/os": "#000",
   "/docs": "#0f0f12",
   "/terms": "#0f0f12",
   "/privacy": "#0f0f12",

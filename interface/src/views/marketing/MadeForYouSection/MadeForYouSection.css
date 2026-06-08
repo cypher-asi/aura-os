@@ -279,9 +279,11 @@
   align-items: center;
   /* Three bands: a flexible knob bay on top, the fixed list, and an equal
      flexible spacer below. Equal top/bottom bands center the list on the
-     panel; the knob is centered within its (top) band. */
+     panel; the knob is centered within its (top) band. No vertical padding so
+     the knob bay spans from the true top edge to the list (knob lands on the
+     real midpoint of that gap). */
   justify-content: flex-start;
-  padding: 24px 20px;
+  padding: 0 20px;
   pointer-events: none;
 }
 
@@ -670,7 +672,7 @@
   .madeForYouDevice .madeForYouSidePanel {
     width: 78px;
     gap: 7px;
-    padding: 8px 6px;
+    padding: 0 6px;
   }
 
   .madeForYouDevice .madeForYouKnob {
