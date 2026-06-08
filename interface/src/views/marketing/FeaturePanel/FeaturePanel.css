@@ -196,14 +196,23 @@
   /* Only the touching (top) corners get the tight 3px radius; the bottom
      keeps the card's 24px. */
   border-radius: 3px 3px 24px 24px;
-  /* Far more transparent glass: a faint top sheen fading to a light dark
-     tint, so the page (and the emissive halo) read through it. */
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(255, 255, 255, 0.012) 32%,
-    rgba(6, 6, 8, 0.22) 100%
-  );
+  /* Highly transparent glossy glass: a soft diagonal reflection sweeping the
+     upper area over a near-clear pane with only a faint dark tint, so the
+     page + emissive halo read straight through it (paired with the heavy
+     backdrop blur below). */
+  background:
+    linear-gradient(
+      122deg,
+      rgba(255, 255, 255, 0.13) 0%,
+      rgba(255, 255, 255, 0.045) 18%,
+      rgba(255, 255, 255, 0) 44%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.035) 0%,
+      rgba(255, 255, 255, 0.008) 30%,
+      rgba(6, 6, 8, 0.12) 100%
+    );
   /* A thin recess under the metal lip, then a SIGNIFICANT inner gold glow:
      a hot bloom blooming inward from the top seam plus a broad ambient gold
      fill, so the emissive clearly lights up the inside of the glass. The
@@ -214,8 +223,8 @@
     inset 0 0 36px rgba(var(--gold-glow), 0.2),
     inset 0 0 72px rgba(var(--gold-halo), 0.14),
     inset 0 -1px 4px rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(16px) saturate(1.15);
-  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(30px) saturate(1.3);
+  backdrop-filter: blur(30px) saturate(1.3);
 }
 
 /* Gold emissive accent line: a transparent gradient border (the masked
