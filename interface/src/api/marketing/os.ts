@@ -1,8 +1,11 @@
 /**
  * Browser-side client for the public marketing `/os` whitepaper site.
  *
- * Mirrors `api/marketing/blog.ts`: the SPA talks to its own origin's
- * `aura-os-server` public endpoints and no JWT is attached. The markdown
+ * Mirrors `api/marketing/blog.ts`, but resolves against the configured /
+ * same-origin `aura-os-server` (via `resolveApiUrl`) rather than the
+ * prod-pinned blog host: the whitepaper content lives on whichever server
+ * the app is talking to (local in dev, same-origin in prod), so it is
+ * visible as soon as a sys admin seeds it. No JWT is attached. The markdown
  * BODY is NOT part of the JSON payload — it lives at the section's public
  * S3 `bodyUrl`, fetched separately with `fetchOsBody`.
  *
@@ -12,7 +15,7 @@
  *   - GET `/api/public/os/:slug`  -> single published section (404 if none).
  */
 
-import { resolveBlogApiUrl } from "../../shared/lib/host-config";
+import { resolveApiUrl } from "../../shared/lib/host-config";
 
 /**
  * Public, camelCase projection of a published whitepaper section. The
@@ -54,7 +57,7 @@ export class OsDocNotFoundError extends Error {
  * render the empty branch rather than an error screen.
  */
 export async function fetchOsDocs(): Promise<OsDoc[]> {
-  const url = resolveBlogApiUrl("/api/public/os");
+  const url = resolveApiUrl("/api/public/os");
 
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -79,7 +82,7 @@ export async function fetchOsDocs(): Promise<OsDoc[]> {
  * on 404 and a generic `Error` on any other non-OK response.
  */
 export async function fetchOsDoc(slug: string): Promise<OsDoc> {
-  const url = resolveBlogApiUrl(`/api/public/os/${encodeURIComponent(slug)}`);
+  const url = resolveApiUrl(`/api/public/os/${encodeURIComponent(slug)}`);
   const res = await fetch(url, { cache: "no-store" });
   if (res.status === 404) {
     throw new OsDocNotFoundError(slug);
