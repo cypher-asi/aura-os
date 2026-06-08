@@ -12,7 +12,6 @@ import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
 import { CardSection, MetalCard } from "../CardSection";
-import { ConnectedConsoleSection } from "../ConnectedConsoleSection";
 import { MadeForYouSection } from "../MadeForYouSection";
 import { ServiceDeviceCard } from "../PersonalAgentSection/ServiceDeviceCard";
 import { PersonalAgentSection } from "../PersonalAgentSection";
@@ -120,7 +119,6 @@ export function ProductView(): ReactNode {
       <PersonalAgentSection />
       <BuiltForTrustSection />
       <AgentChatSection />
-      <ConnectedConsoleSection />
       {/* Temporarily hidden: agent orb + marquee section.
       <AgentOrbSection /> */}
       <FeaturePanel

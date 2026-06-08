@@ -31,6 +31,17 @@
   overflow: visible;
 }
 
+/* Vertical composition inside the media well: the three phones on top,
+   then the connected-console device hanging directly beneath them (its
+   cord tucks up toward the centered hero phone). The card's writing block
+   renders below this whole stack, so the copy reads UNDER the device. */
+.agentChatSectionStack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 /* Center the H2 intro between the previous section card and the top of
    the (hero) phone, while keeping the H2 band height.
  *

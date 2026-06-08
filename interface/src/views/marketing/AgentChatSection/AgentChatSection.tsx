@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { PhoneShell } from "../PhoneShell";
+import { ConnectedConsoleDevice } from "../ConnectedConsoleDevice";
 import { Section } from "../Section";
 import { CardSection, MetalCard } from "../CardSection";
 import { MockMobileChat, MOBILE_CONVERSATIONS } from "../MockMobileChat";
@@ -68,25 +69,28 @@ export function AgentChatSection(): ReactNode {
           className="agentChatCard"
           description="Your AURA agents are always on. Pick up a conversation on your phone, your laptop, or your desktop. They remember everything and bring the same tools with them."
           media={
-            <div className="agentChatSectionPhones">
-              <PhoneShell
-                size="md"
-                ariaLabel={`Mobile chat with the ${AGENTS[leftChat.agentId].name} agent`}
-              >
-                <MockMobileChat conversation={leftChat} />
-              </PhoneShell>
-              <PhoneShell
-                size="lg"
-                ariaLabel={`Mobile chat with the ${AGENTS[centerChat.agentId].name} agent`}
-              >
-                <MockMobileChat conversation={centerChat} />
-              </PhoneShell>
-              <PhoneShell
-                size="md"
-                ariaLabel={`Mobile chat with the ${AGENTS[rightChat.agentId].name} agent`}
-              >
-                <MockMobileChat conversation={rightChat} />
-              </PhoneShell>
+            <div className="agentChatSectionStack">
+              <div className="agentChatSectionPhones">
+                <PhoneShell
+                  size="md"
+                  ariaLabel={`Mobile chat with the ${AGENTS[leftChat.agentId].name} agent`}
+                >
+                  <MockMobileChat conversation={leftChat} />
+                </PhoneShell>
+                <PhoneShell
+                  size="lg"
+                  ariaLabel={`Mobile chat with the ${AGENTS[centerChat.agentId].name} agent`}
+                >
+                  <MockMobileChat conversation={centerChat} />
+                </PhoneShell>
+                <PhoneShell
+                  size="md"
+                  ariaLabel={`Mobile chat with the ${AGENTS[rightChat.agentId].name} agent`}
+                >
+                  <MockMobileChat conversation={rightChat} />
+                </PhoneShell>
+              </div>
+              <ConnectedConsoleDevice />
             </div>
           }
         />
