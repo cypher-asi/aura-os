@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { usePublicPageViewed } from "../use-public-shell-analytics";
@@ -128,7 +128,16 @@ export function PublicMarketingPanel(): React.ReactElement {
   // pattern stashes the marketing path in `routeLocation`, so
   // `useLocation()` inside this panel still reads the marketing
   // pathname when the modal is open and we won't fight the overlay.
-  useEffect(() => {
+  //
+  // This runs in `useLayoutEffect` (not `useEffect`) so the reset
+  // happens after the DOM mutation but BEFORE the browser paints.
+  // When the destination view's lazy chunk is already cached, React
+  // renders it synchronously into this same `.scrollColumn` node,
+  // which keeps the previous `scrollTop`. A post-paint `useEffect`
+  // would let the new page paint already scrolled down and then snap
+  // to the top (visible jank), and the scroll-driven reveal /
+  // autoplay observers would evaluate against the stale position.
+  useLayoutEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [pathname]);
 
