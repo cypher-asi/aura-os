@@ -41,6 +41,37 @@ const CHANNELS: readonly Channel[] = [
   { id: "zero", label: "ZERO", mark: { kind: "zero" } },
 ];
 
+/** Radius of each drilled speaker hole, in the grille's 0-100 viewBox. */
+const GRILLE_HOLE_RADIUS = 1.55;
+
+/**
+ * Speaker-hole positions for the grille, laid out as CONCENTRIC RINGS
+ * (a polar pattern) rather than a square grid — one center hole, then
+ * rings at a fixed radial spacing, each ring carrying as many evenly
+ * spaced holes as its circumference allows. This reproduces the classic
+ * radial driver grille in the reference. Computed once at module load
+ * (the layout is static) over a 0-100 viewBox so it scales with the
+ * `<svg>`; the holes are painted directly onto the metal panel (no
+ * separate mesh disc behind them).
+ */
+const GRILLE_HOLES: ReadonlyArray<{ readonly cx: number; readonly cy: number }> =
+  (() => {
+    const holes: Array<{ cx: number; cy: number }> = [{ cx: 50, cy: 50 }];
+    const ringSpacing = 4.6;
+    const maxRadius = 47;
+    for (let radius = ringSpacing; radius <= maxRadius; radius += ringSpacing) {
+      const count = Math.round((2 * Math.PI * radius) / ringSpacing);
+      for (let i = 0; i < count; i += 1) {
+        const angle = (i / count) * 2 * Math.PI;
+        holes.push({
+          cx: 50 + radius * Math.cos(angle),
+          cy: 50 + radius * Math.sin(angle),
+        });
+      }
+    }
+    return holes;
+  })();
+
 /**
  * Marketing "connected console" — a pure-CSS hardware device that hangs
  * directly beneath the standing phones, reading as the hub the visitor's
@@ -78,7 +109,20 @@ export function ConnectedConsoleDevice(): ReactNode {
             <span className="consoleKnobLabel">MIX</span>
           </div>
 
-          <div className="consoleGrille" />
+          <svg
+            className="consoleGrille"
+            viewBox="0 0 100 100"
+            aria-hidden="true"
+          >
+            {GRILLE_HOLES.map((hole, index) => (
+              <circle
+                key={index}
+                cx={hole.cx}
+                cy={hole.cy}
+                r={GRILLE_HOLE_RADIUS}
+              />
+            ))}
+          </svg>
 
           <span className="consoleSlider" />
         </div>
