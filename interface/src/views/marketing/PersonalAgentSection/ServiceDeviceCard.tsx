@@ -320,6 +320,10 @@ export function ServiceDeviceCard({
               </div>
             </div>
 
+            <div className="madeForYouBrandPanel" aria-hidden="true">
+              <span className="madeForYouBrandMark" />
+            </div>
+
             <div className="madeForYouSideSpacer" aria-hidden="true" />
           </div>
         ) : null}
@@ -422,6 +426,8 @@ export function ServiceDeviceCard({
 const TERMINAL_CHAR_MS = 26;
 /** Brief pause after a line finishes before the next line starts typing. */
 const TERMINAL_LINE_PAUSE_MS = 260;
+/** Pause on the completed feed (final prompt held) before the loop restarts. */
+const TERMINAL_LOOP_PAUSE_MS = 2600;
 
 interface TerminalScreenProps {
   /** Whether the card is in view; gates the typewriter run. */
@@ -434,10 +440,11 @@ interface TerminalScreenProps {
  * Right-hand side-panel LCD of the hero device: a tall recessed terminal that
  * fills the enlarged right metal panel, typing out a mock feed of an agent
  * being created and deployed to the AURA network. Driven by the parent's
- * scroll-activation: each time the card enters view the feed types from the
- * top, one character at a time, with a trailing block caret that follows the
- * active line and settles on a final prompt once the run completes. The feed
- * is top-anchored so output reads top-to-bottom like a real console.
+ * scroll-activation: while the card is in view the feed types from the top, one
+ * character at a time, with a trailing block caret that follows the active line
+ * and settles on a final prompt once the run completes. After a brief hold it
+ * collapses back to the top and re-types, looping continuously. The feed is
+ * top-anchored so output reads top-to-bottom like a real console.
  * Everything is decorative (`aria-hidden` via the device root).
  *
  * Like the shared `TypewriterText`, the reveal runs regardless of
@@ -482,7 +489,16 @@ function TerminalScreen({ active, replayKey }: TerminalScreenProps): ReactNode {
       setCharIndex(0);
       if (line >= TERMINAL_LINES.length) {
         // Whole feed typed: `lineIndex` past the end flips `isComplete` so the
-        // trailing prompt + blinking caret render below the last line.
+        // trailing prompt + blinking caret render below the last line. Hold the
+        // completed feed briefly, then collapse back to the top and re-type so
+        // the LCD loops continuously while in view.
+        timer = setTimeout(() => {
+          line = 0;
+          char = 0;
+          setLineIndex(0);
+          setCharIndex(0);
+          timer = setTimeout(tick, TERMINAL_CHAR_MS);
+        }, TERMINAL_LOOP_PAUSE_MS);
         return;
       }
       timer = setTimeout(tick, TERMINAL_LINE_PAUSE_MS);

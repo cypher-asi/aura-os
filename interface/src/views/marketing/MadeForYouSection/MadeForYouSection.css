@@ -262,15 +262,17 @@
   position: absolute;
   z-index: 2;
   top: 22px;
-  /* Stop above the CTA pill that now sits in the lower right panel; the
-     full-width hex-mesh strip runs below both along the chassis bottom. */
-  bottom: 130px;
+  /* Stop well above the CTA pill that sits in the lower right panel (leaving a
+     clear gap between them); the full-width hex-mesh strip runs below both
+     along the chassis bottom. */
+  bottom: 162px;
   right: 22px;
   width: 204px;
   overflow: hidden;
   box-sizing: border-box;
   padding: 16px 16px 40px;
-  border-radius: 12px;
+  /* Match the pill radius of the "Create your agent" button below. */
+  border-radius: 999px;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
     #0a0c0a 0%,
@@ -318,7 +320,13 @@
    way a real console fills, with the trailing prompt following the last line. */
 .madeForYouDevice .madeForYouTerminalScroll {
   position: absolute;
-  inset: 16px 16px 16px;
+  /* The screen is a tall stadium (`border-radius: 999px`), so its top/bottom
+     ~half-width corners curve in over the text edges. Keep the text in the
+     straight middle band by insetting the viewport well below the top curve
+     and above the bottom curve; the leftward pull + padding still gives the
+     gold `$` glow room to render. */
+  inset: 64px 16px 64px 6px;
+  padding-left: 10px;
   overflow: hidden;
 }
 
@@ -342,27 +350,32 @@
 }
 
 /* Success lines glow gold so the "... ok" beats stand out against the white
-   log, matching the build-progress bar fill below (pale white-green core +
-   layered amber-gold/amber-brown neon glow). */
+   log, carrying the same pale core + layered amber-gold/amber-brown neon glow
+   as the selected stage label in the left panel. */
 .madeForYouDevice .madeForYouTerminalLine--ok {
   color: #f4faf2;
   text-shadow:
-    0 0 4px rgba(232, 205, 137, 1),
-    0 0 9px rgba(232, 205, 137, 0.85),
-    0 0 18px rgba(232, 205, 137, 0.65),
-    0 0 14px rgba(153, 81, 25, 0.55),
-    0 0 26px rgba(153, 81, 25, 0.32);
+    0 0 4px rgba(232, 205, 137, 0.75),
+    0 0 9px rgba(232, 205, 137, 0.71),
+    0 0 18px rgba(232, 205, 137, 0.64),
+    0 0 30px rgba(232, 205, 137, 0.49),
+    0 0 14px rgba(153, 81, 25, 0.56),
+    0 0 26px rgba(153, 81, 25, 0.38),
+    0 0 44px rgba(153, 81, 25, 0.24);
 }
 
-/* The `$` glyph + caret are the glowing-gold chrome of the prompt. */
+/* The `$` glyph + caret are the glowing-gold chrome of the prompt, matching the
+   selected stage label's glow. */
 .madeForYouDevice .madeForYouTerminalPrompt {
   color: #f4faf2;
   text-shadow:
-    0 0 4px rgba(232, 205, 137, 1),
-    0 0 9px rgba(232, 205, 137, 0.9),
-    0 0 18px rgba(232, 205, 137, 0.7),
-    0 0 14px rgba(153, 81, 25, 0.6),
-    0 0 26px rgba(153, 81, 25, 0.35);
+    0 0 4px rgba(232, 205, 137, 0.75),
+    0 0 9px rgba(232, 205, 137, 0.71),
+    0 0 18px rgba(232, 205, 137, 0.64),
+    0 0 30px rgba(232, 205, 137, 0.49),
+    0 0 14px rgba(153, 81, 25, 0.56),
+    0 0 26px rgba(153, 81, 25, 0.38),
+    0 0 44px rgba(153, 81, 25, 0.24);
 }
 
 .madeForYouDevice .madeForYouTerminalCursor {
@@ -376,11 +389,11 @@
   height: 13px;
   background: linear-gradient(90deg, #f4faf2 0%, #f1f9d3 100%);
   box-shadow:
-    0 0 4px rgba(232, 205, 137, 1),
-    0 0 9px rgba(232, 205, 137, 0.9),
-    0 0 18px rgba(232, 205, 137, 0.7),
-    0 0 14px 1px rgba(153, 81, 25, 0.55),
-    0 0 26px 3px rgba(153, 81, 25, 0.32);
+    0 0 4px rgba(232, 205, 137, 0.75),
+    0 0 9px rgba(232, 205, 137, 0.68),
+    0 0 18px rgba(232, 205, 137, 0.53),
+    0 0 14px 1px rgba(153, 81, 25, 0.41),
+    0 0 26px 3px rgba(153, 81, 25, 0.24);
   animation: madeForYouTerminalBlink 1s steps(1) infinite;
 }
 
@@ -457,6 +470,54 @@
   flex: 1 1 0;
   min-height: 0;
   width: 100%;
+}
+
+/*
+ * Subtle brand plate seated directly below the stages bezel, spanning the
+ * same full panel width. Reads as a quiet recessed slab cut into the metal
+ * (much more understated than the raised stages tray above it): a faint dark
+ * gradient with a soft inset shadow and a 1px top highlight, so it sits flush
+ * with the surface rather than standing proud.
+ */
+.madeForYouDevice .madeForYouBrandPanel {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #232529 0%, #16181c 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/*
+ * AURA wordmark etched into the brand plate. The PNG is used purely as an
+ * alpha mask (its own glyph color is irrelevant) so we paint our own fill in
+ * the plate's metal tone; the glyphs then read as the same material as the
+ * surface. A stacked drop-shadow bevel — a dark shadow pushed down and a light
+ * highlight pushed up — makes the wordmark look pressed/cut into the panel.
+ */
+.madeForYouDevice .madeForYouBrandMark {
+  display: block;
+  width: 86px;
+  height: 13px;
+  background: linear-gradient(180deg, #14161a 0%, #1d1f23 100%);
+  -webkit-mask-image: url(/AURA_logo_text_mark.png);
+  mask-image: url(/AURA_logo_text_mark.png);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.08))
+    drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.6));
 }
 
 /* Rotary knob: a raised brushed-metal dial in a shallow recessed ring. */
@@ -559,12 +620,6 @@
       0 0 16px 3px rgba(153, 81, 25, 0.8),
       0 0 30px 6px rgba(153, 81, 25, 0.55),
       0 0 48px 10px rgba(153, 81, 25, 0.35);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .madeForYouDevice .madeForYouKnobIndicator {
-    animation: none;
   }
 }
 
@@ -697,12 +752,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn::before {
-    animation: none;
-  }
-}
-
 /* Simple transparent ring pinned to the left edge of the capsule. Muted gray
    by default; lit with the neon-orange glow (matching the label) when selected. */
 .madeForYouDevice .madeForYouLensBtn {
@@ -766,7 +815,11 @@
   position: absolute;
   z-index: 3;
   right: 22px;
-  bottom: calc(var(--mesh-strip-reserve) + 10px);
+  /* Span the band between the panel bottom (the reserved mesh strip) and the
+     terminal LCD's bottom edge (its `bottom: 162px`), then flex-center the
+     button so it sits vertically centered in that gap. */
+  bottom: var(--mesh-strip-reserve);
+  height: calc(162px - var(--mesh-strip-reserve));
   width: 204px;
   display: flex;
   align-items: center;
@@ -774,12 +827,76 @@
 }
 
 /* Doubled class beats the base `.ctaButton` (0,1,0) per the component's
-   override contract, so these win regardless of stylesheet import order. */
+   override contract, so these win regardless of stylesheet import order.
+   In the panel this CTA is reskinned from the shared off-white pill into a
+   dark LCD-toned button (matching the terminal screen above) ringed with the
+   same pale-gold border + amber-gold/amber-brown neon glow the build-progress
+   bar and selected lens carry. */
 .madeForYouDevice .madeForYouCta.madeForYouCta {
   width: 100%;
   justify-content: center;
   padding: 9px 16px;
   font-size: 12px;
+  /* Same dark radial fill as the `.madeForYouTerminalScreen` LCD above. */
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0c0a 0%,
+    #050605 60%,
+    #000 100%
+  );
+  /* Pale-gold rim like the selected lens ring. */
+  border: 1px solid rgba(241, 249, 211, 0.85);
+  /* Arrow glyph (currentColor) picks up the same pale-gold as the label. */
+  color: #f4faf2;
+  /* Layered amber-gold core + amber-brown outer halo, matching the progress
+     bar fill / selected lens glow, plus a faint inner gold spill. */
+  box-shadow:
+    0 0 4px rgba(232, 205, 137, 0.55),
+    0 0 9px rgba(232, 205, 137, 0.45),
+    0 0 18px rgba(232, 205, 137, 0.38),
+    0 0 30px rgba(232, 205, 137, 0.28),
+    0 0 14px 2px rgba(153, 81, 25, 0.35),
+    0 0 26px 5px rgba(153, 81, 25, 0.22),
+    inset 0 0 6px rgba(232, 205, 137, 0.18);
+}
+
+/* Brighten the rim + glow on hover (beats the base `.ctaButton:hover`). */
+.madeForYouDevice .madeForYouCta.madeForYouCta:hover {
+  border-color: #f1f9d3;
+  box-shadow:
+    0 0 5px rgba(232, 205, 137, 0.75),
+    0 0 11px rgba(232, 205, 137, 0.6),
+    0 0 22px rgba(232, 205, 137, 0.48),
+    0 0 36px rgba(232, 205, 137, 0.34),
+    0 0 18px 3px rgba(153, 81, 25, 0.45),
+    0 0 30px 6px rgba(153, 81, 25, 0.28),
+    inset 0 0 8px rgba(232, 205, 137, 0.24);
+}
+
+/* Recolor the label to glowing gold while KEEPING the clipped-text shimmer.
+   The base `.ctaLabel` is a CSS-module class (its hashed name is unknown
+   here), so target the only `<span>` in the button and only swap the shimmer
+   gradient to gold tones (warm gold body with a bright pale band sweeping
+   across); the base rule still supplies the 200% background-size, text clip,
+   transparent fill, and the `ctaShimmer` animation. The amber-gold glow renders
+   from the glyph geometry behind the transparent fill. */
+.madeForYouDevice .madeForYouCta.madeForYouCta span {
+  /* Readable white label with a bright white band sweeping across (the
+     shimmer), instead of the dark gold that was hard to read. */
+  background: linear-gradient(90deg, #d6d6d6 0%, #ffffff 40%, #d6d6d6 80%);
+  /* The `background` shorthand above resets `background-clip` to `border-box`,
+     which (at this rule's higher specificity) was overriding the base's text
+     clip and painting the gradient as a solid bar. Re-declare the text clip
+     here so the gradient is masked back to the glyphs and the shimmer shows. */
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* White glow with a very faint soft-amber halo echoing the progress bar. */
+  text-shadow:
+    0 0 3px rgba(255, 255, 255, 0.55),
+    0 0 8px rgba(232, 205, 137, 0.28),
+    0 0 16px rgba(232, 205, 137, 0.16);
 }
 
 /*
@@ -808,10 +925,11 @@
   --cell: 7.5px;
   /* Fills the full-width strip wrapper. */
   height: 100%;
-  /* Bottom corners are concentric with the outer shell (22px shell radius
-     minus the 7px inset from the plate edge = 15px) so the mesh hugs the
-     chassis' rounded bottom corners; top corners stay lightly rounded. */
-  border-radius: 6px 6px 15px 15px;
+  /* Bottom corners follow the chassis shell's rounded corner so the mesh hugs
+     it with the same even gap it keeps along the straight edges (a tighter
+     radius would open a wider gap at the corner). Top corners stay lightly
+     rounded. */
+  border-radius: 6px 6px 19px 19px;
   border: 1px solid transparent;
   background-color: #0d0e11;
   background-image:
@@ -873,7 +991,7 @@
 
   .madeForYouDevice .madeForYouTerminalScreen {
     top: 12px;
-    bottom: 100px;
+    bottom: 124px;
     right: 12px;
     width: 128px;
     padding: 10px 10px 28px;
@@ -882,7 +1000,8 @@
   }
 
   .madeForYouDevice .madeForYouTerminalScroll {
-    inset: 10px 10px 10px;
+    inset: 38px 10px 38px 4px;
+    padding-left: 6px;
   }
 
   .madeForYouDevice .madeForYouTerminalCursor {
@@ -898,7 +1017,8 @@
 
   .madeForYouDevice .madeForYouCtaSlot {
     right: 12px;
-    bottom: calc(var(--mesh-strip-reserve) + 6px);
+    bottom: var(--mesh-strip-reserve);
+    height: calc(124px - var(--mesh-strip-reserve));
     width: 128px;
   }
 
@@ -967,6 +1087,17 @@
     width: 12px;
     height: 12px;
     border-width: 1.5px;
+  }
+
+  .madeForYouDevice .madeForYouBrandPanel {
+    margin-top: 7px;
+    padding: 5px 4px;
+    border-radius: 9px;
+  }
+
+  .madeForYouDevice .madeForYouBrandMark {
+    width: 44px;
+    height: 7px;
   }
 
   .madeForYouProgress {
