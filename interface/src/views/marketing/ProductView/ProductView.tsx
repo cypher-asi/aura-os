@@ -131,7 +131,7 @@ export function ProductView(): ReactNode {
             tag: "PRIVACY",
           },
           {
-            title: "Secure",
+            title: "Verifiable",
             description:
               "The AURA harness and kernel is built from the ground up with security, verification and policy enforcement as first class citizens.",
             tag: "SECURITY",
