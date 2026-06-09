@@ -41,17 +41,18 @@
   isolation: isolate;
   margin: 0;
   max-width: 14ch;
-  /* Luminous gold resting fill: the glyphs read as glowing gold, with a
-     tight emissive halo hugging the letterforms. The big breathing bloom
-     lives on the `::before` layer behind the glyphs so it can pulse
-     independently of this steady glyph glow. (An earlier approach used a
-     transparent fill + background-clip gradient here, which let the gold
-     text-shadow bleed through the glyphs and wash out the shimmer band —
-     the fill must stay opaque.) */
-  color: #fae5b3;
+  /* White-gold resting fill: mostly white with a warm champagne cast, so
+     the glyphs read luminous without going full gold. A subtle tight
+     halo hugs the letterforms; the big breathing bloom lives on the
+     `::before` layer behind the glyphs so it can pulse independently of
+     this steady glyph glow. (An earlier approach used a transparent
+     fill + background-clip gradient here, which let the gold text-shadow
+     bleed through the glyphs and wash out the shimmer band — the fill
+     must stay opaque.) */
+  color: #fdf4de;
   text-shadow:
-    0 0 10px rgba(var(--gold-glow), 0.5),
-    0 0 24px rgba(var(--gold-glow), 0.3);
+    0 0 10px rgba(var(--gold-glow), 0.38),
+    0 0 24px rgba(var(--gold-glow), 0.22);
   font-size: clamp(40px, 6vw, 72px);
   font-weight: 600;
   line-height: 1.05;
