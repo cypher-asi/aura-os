@@ -54,10 +54,6 @@ const EXPERTISE_TABS: readonly ExpertiseTab[] = [
     label: "Legal",
     blurb: "Review contracts and explain obligations clearly.",
   },
-  {
-    label: "More",
-    blurb: "Dozens more expert agents for whatever work demands.",
-  },
 ];
 
 /**
