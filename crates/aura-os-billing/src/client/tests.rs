@@ -24,6 +24,15 @@ async fn start_server(app: Router) -> (String, BillingClient) {
     (url, client)
 }
 
+async fn start_service_server(app: Router) -> (String, BillingClient) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+
+    let client = BillingClient::with_base_url_and_api_key(url.clone(), "service-key".to_string());
+    (url, client)
+}
+
 fn with_existing_account(app: Router) -> Router {
     app.route(
         "/v1/accounts/me",
@@ -337,6 +346,74 @@ async fn test_new_reads_z_billing_url() {
     std::env::remove_var("Z_BILLING_URL");
     let client2 = BillingClient::new();
     assert_eq!(client2.base_url, "https://z-billing.onrender.com");
+}
+
+#[tokio::test]
+async fn test_quote_llm_usage_success() {
+    async fn quote_handler(
+        headers: axum::http::HeaderMap,
+        Json(body): Json<serde_json::Value>,
+    ) -> axum::response::Response {
+        assert_eq!(
+            headers
+                .get("x-api-key")
+                .and_then(|value| value.to_str().ok()),
+            Some("service-key")
+        );
+        assert_eq!(
+            headers
+                .get("x-service-name")
+                .and_then(|value| value.to_str().ok()),
+            Some("aura-os-server")
+        );
+        assert_eq!(body["metric"]["type"], "llm_tokens");
+        assert_eq!(body["metric"]["provider"], "openai");
+        assert_eq!(body["metric"]["model"], "aura-gpt-5-4");
+        assert_eq!(body["metric"]["input_tokens"], 123);
+        assert_eq!(body["metric"]["output_tokens"], 45);
+        assert_eq!(body["zeroProUser"], false);
+        Json(serde_json::json!({
+            "cost_cents": 7,
+            "currency": "USD_CENTS"
+        }))
+        .into_response()
+    }
+
+    let app = Router::new().route("/v1/usage/quote", post(quote_handler));
+    let (_url, client) = start_service_server(app).await;
+
+    let quote = client
+        .quote_llm_usage(LlmUsageQuote {
+            provider: "openai".to_string(),
+            model: "aura-gpt-5-4".to_string(),
+            input_tokens: 123,
+            output_tokens: 45,
+            zero_pro_user: false,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(quote.cost_cents, 7);
+    assert_eq!(quote.currency, "USD_CENTS");
+}
+
+#[tokio::test]
+async fn test_quote_llm_usage_requires_service_api_key() {
+    let mut client = BillingClient::with_base_url("http://127.0.0.1:9".to_string());
+    client.service_api_key = None;
+
+    let err = client
+        .quote_llm_usage(LlmUsageQuote {
+            provider: "openai".to_string(),
+            model: "aura-gpt-5-4".to_string(),
+            input_tokens: 1,
+            output_tokens: 1,
+            zero_pro_user: false,
+        })
+        .await
+        .unwrap_err();
+
+    assert!(matches!(err, BillingError::ServiceApiKeyNotConfigured));
 }
 
 #[test]

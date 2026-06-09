@@ -8,6 +8,9 @@
 
 mod account;
 mod credits;
+mod usage;
+
+pub use usage::{LlmUsageQuote, UsageQuoteResponse};
 
 use std::time::Duration;
 
@@ -20,6 +23,8 @@ use crate::error::BillingError;
 pub struct BillingClient {
     http: Client,
     base_url: String,
+    service_api_key: Option<String>,
+    service_name: String,
 }
 
 impl BillingClient {
@@ -41,7 +46,18 @@ impl BillingClient {
                 .build()
                 .expect("failed to build billing http client"),
             base_url,
+            service_api_key: std::env::var("Z_BILLING_API_KEY")
+                .ok()
+                .filter(|key| !key.trim().is_empty()),
+            service_name: "aura-os-server".to_string(),
         }
+    }
+
+    #[cfg(any(test, feature = "test-utils"))]
+    pub fn with_base_url_and_api_key(base_url: String, api_key: String) -> Self {
+        let mut client = Self::build(base_url);
+        client.service_api_key = Some(api_key);
+        client
     }
 
     pub(super) async fn send_authed_json(
@@ -79,6 +95,26 @@ impl BillingClient {
         resp.json()
             .await
             .map_err(|e| BillingError::Deserialize(e.to_string()))
+    }
+
+    pub(super) async fn send_service_json(
+        &self,
+        method: Method,
+        path: &str,
+        body: serde_json::Value,
+    ) -> Result<reqwest::Response, BillingError> {
+        let Some(api_key) = self.service_api_key.as_deref() else {
+            return Err(BillingError::ServiceApiKeyNotConfigured);
+        };
+        let url = format!("{}{}", self.base_url, path);
+        self.http
+            .request(method, &url)
+            .header("x-api-key", api_key)
+            .header("x-service-name", &self.service_name)
+            .json(&body)
+            .send()
+            .await
+            .map_err(BillingError::from)
     }
 }
 

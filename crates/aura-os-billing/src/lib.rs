@@ -5,4 +5,5 @@ pub mod error;
 pub mod testutil;
 
 pub use client::BillingClient;
+pub use client::{LlmUsageQuote, UsageQuoteResponse};
 pub use error::BillingError;

@@ -45,6 +45,7 @@ pub(crate) mod setup;
 pub(crate) mod share;
 pub(crate) mod types;
 pub(crate) mod video;
+pub(crate) mod x402;
 
 // Public-mode surface re-exports. Only the items consumed from
 // outside this module live here; internal helpers stay reachable
@@ -61,3 +62,4 @@ pub(crate) use setup::public_setup;
 pub(crate) use share::get_public_share;
 pub(crate) use types::GuestClaims;
 pub(crate) use video::public_video_stream;
+pub(crate) use x402::{public_x402_chat_completions, public_x402_models};
