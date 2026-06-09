@@ -122,8 +122,15 @@
   border: 1.5px solid transparent;
   border-radius: 24px 24px 6px 6px;
   background:
-    /* Diagonal base: bottom-left #1d1d1d -> top-right #3a3a3a. */
-    linear-gradient(to top right, #1d1d1d 0%, #3a3a3a 100%) padding-box,
+    /* Same fill as the speaker console above (ConnectedConsoleDevice
+       `.consoleBody`): the shared MetalCard radial metal gradient. */
+    radial-gradient(
+        ellipse 120% 130% at 50% 32%,
+        #202020 0%,
+        #161616 55%,
+        #0c0c0c 100%
+      )
+      padding-box,
     /* 1.5px gradient rim: bottom-left #0b0b0b -> top-right #5e5e5e. */
     linear-gradient(to top right, #0b0b0b 0%, #5e5e5e 100%) border-box;
   /* Bright top highlight + convex dark bottom edge, plus a drop shadow cast
