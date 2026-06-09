@@ -96,8 +96,8 @@
   border-bottom-width: 5px;
   background: linear-gradient(
       0deg,
-      rgba(112, 116, 123, 0.9) 0%,
-      rgba(60, 63, 68, 0.7) 30%,
+      rgba(86, 89, 95, 0.9) 0%,
+      rgba(48, 50, 55, 0.7) 30%,
       rgba(20, 21, 24, 0.85) 65%,
       rgba(12, 13, 16, 0.85) 100%
     )
@@ -112,16 +112,25 @@
 }
 
 /*
- * Screen surface inside the top panel: fills it and clips `children` to
- * the rounded corners. No background of its own (the top panel paints the
- * dark glass behind the transparent mock UI); just a faint inner bevel.
+ * Screen surface inside the top panel: clips `children` to the rounded
+ * corners. Inset from the panel edges so a solid black recess frame rings
+ * the glass, with a crisp light inner border line and a darkening inset
+ * shadow toward the edges — together the screen reads as clearly recessed
+ * into the bezel rather than flush with it.
  */
 .phoneShellScreen {
   position: absolute;
-  inset: 0;
+  inset: 1.5cqw;
   overflow: hidden;
-  border-radius: 8cqw;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-radius: 7cqw;
+  box-shadow:
+    /* Solid black recess frame filling the gap out to the metallic rim. */
+    0 0 0 1.5cqw #000,
+    /* Crisp inner border line just inside the dark frame. */
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    /* Depth: darken toward the edges so the glass sits below the bezel. */
+    inset 0 2px 10px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Top gloss reflection across the screen glass. */
@@ -161,8 +170,9 @@
   justify-content: center;
   gap: 2.5cqw;
   /* Top padding clears the taller screen panel that overlaps this shorter
-     deck at the seam, keeping the keycaps fully visible below it. */
-  padding: 26cqw 4cqw 5cqw;
+     deck at the seam, and is enlarged so the LCD sits lower — exposing a bit
+     more of the bare metal panel top above it. */
+  padding: 31cqw 4cqw 5cqw;
   border-radius: 9cqw;
   /* Match the shared `<Plate />` metal panels used in the sections above:
      a radial metal surface (padding-box) inside a 135deg metallic gradient
@@ -221,6 +231,73 @@
   );
 }
 
+/* Additional inner border, inset 1.5px from the LCD edge: a 1px gradient ring
+   that is light along the top and sides and fades to dark at the bottom, held
+   at ~50% opacity. Painted border-only via the mask-composite cutout, on top
+   of the gauge/needle/text. */
+.phoneShellLcd::after {
+  content: "";
+  position: absolute;
+  inset: 1.5px;
+  border-radius: calc(4cqw - 1.5px);
+  border: 1px solid transparent;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.32) 42%,
+      rgba(0, 0, 0, 0.55) 100%
+    )
+    border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Orange meter glow filling the whole screen: brightest at the bottom-center
+   edge (below the INPUT/OUTPUT readouts) and fading up and out into nothing.
+   Sits behind the gauge and text but above the dark base. */
+.phoneShellLcdGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 4cqw;
+  pointer-events: none;
+  opacity: 0.25;
+  background: radial-gradient(
+    ellipse 92% 78% at 50% 100%,
+    rgba(250, 178, 92, 0.82) 0%,
+    rgba(247, 156, 64, 0.5) 38%,
+    rgba(247, 156, 64, 0) 75%
+  );
+  /* Slow breathing pulse so the orange screen glow swells and fades, as if
+     the meter is reacting to a held signal. */
+  transform-origin: 50% 100%;
+  animation: phoneShellLcdGlowPulse 3.6s ease-in-out infinite alternate;
+}
+
+@keyframes phoneShellLcdGlowPulse {
+  0% {
+    opacity: 0.18;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phoneShellLcdGlow {
+    animation: none;
+    opacity: 0.25;
+    transform: none;
+  }
+}
+
 /* The gauge SVG occupies the upper region of the LCD; viewBox units map to a
    200x96 coordinate space scaled to fit the screen width. */
 .phoneShellLcdGauge {
@@ -229,66 +306,101 @@
   height: auto;
 }
 
-/* Arced dB scale: a faint gold sweep with a soft bloom. */
+/* Arced dB scale: a thin sweep whose ends fade to nothing via the
+   `#phoneShellArcFade` stroke gradient (set on the element in markup). */
 .phoneShellLcdArc {
-  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.45);
-  stroke-width: 1.5;
-  filter: drop-shadow(0 0 2px rgba(var(--gold-glow, 232, 205, 137), 0.5));
+  stroke-width: 1.2;
 }
 
-/* Tick marks along the arc. */
+/* Tick marks straddling the arc: very thin, dashed, dark-gray hairlines,
+   slightly longer than the bare scale line. */
 .phoneShellLcdTick {
-  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.7);
-  stroke-width: 2;
-  stroke-linecap: round;
-  filter: drop-shadow(0 0 2px rgba(var(--gold-glow, 232, 205, 137), 0.45));
+  stroke: rgba(150, 150, 150, 0.55);
+  stroke-width: 0.6;
+  stroke-linecap: butt;
+  stroke-dasharray: 1.4 1.4;
 }
 
-/* Numbered scale labels, glowing gold. */
+/* Numbered scale labels, crisp white, sitting above the ticks. */
 .phoneShellLcdTickLabel {
-  fill: var(--gold-core, #f4faf2);
-  font-size: 11px;
+  fill: #f4f4f4;
+  font-size: 8.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  filter:
-    drop-shadow(0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.7))
-    drop-shadow(0 0 6px rgba(var(--gold-halo, 153, 81, 25), 0.4));
 }
 
-/* Needle: a bright near-white core with a layered gold/amber bloom, pivoting
-   from the bottom-center hub. Resting angle sits high on the scale; the sway
-   animation rocks it a few degrees around that rest position. */
+/* Needle: a thin, bright near-white bar with a layered gold/amber bloom. It is
+   anchored to the bottom-center of the LCD and runs the full screen height, so
+   its base sits on the bottom edge while the tip sweeps up toward the scale.
+   The sway animation rocks it a few degrees around its rest angle. */
 .phoneShellLcdNeedle {
-  stroke: #fff;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  transform-box: view-box;
-  transform-origin: 100px 92px;
-  transform: rotate(-14deg);
-  filter:
-    drop-shadow(0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.95))
-    drop-shadow(0 0 7px rgba(var(--gold-glow, 232, 205, 137), 0.7))
-    drop-shadow(0 0 12px rgba(var(--gold-halo, 153, 81, 25), 0.5));
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  margin-left: -0.4cqw;
+  width: 0.8cqw;
+  height: 98%;
+  border-radius: 1cqw 1cqw 0 0;
+  background: linear-gradient(
+    180deg,
+    #fff 0%,
+    rgba(255, 255, 255, 0.85) 55%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  box-shadow:
+    0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.95),
+    0 0 7px rgba(var(--gold-glow, 232, 205, 137), 0.7),
+    0 0 12px rgba(var(--gold-halo, 153, 81, 25), 0.5);
+  transform-origin: bottom center;
+  /* Swing between the per-phone min/max angles (randomized inline, with
+     fallbacks). We animate a registered <number> `--needle-t` from 0..1 and
+     derive the angle via calc(), so the rotation interpolates smoothly even
+     though the endpoints come from custom properties; duration/delay are set
+     inline too. */
+  transform: rotate(
+    calc(
+      var(--needle-min, -34deg) +
+        (var(--needle-max, -10deg) - var(--needle-min, -34deg)) *
+        var(--needle-t)
+    )
+  );
+  pointer-events: none;
   animation: phoneShellNeedleSway 4.5s ease-in-out infinite;
 }
 
-/* Needle pivot hub. */
-.phoneShellLcdHub {
-  fill: #1a1410;
-  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.7);
-  stroke-width: 1.5;
-  filter: drop-shadow(0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.6));
+@property --needle-t {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
 }
 
+/* Weighted toward the high end (t -> 1 == max angle == more to the right /
+   higher vibes): the needle lingers near the top of the scale and only makes
+   brief dips back to the left. */
 @keyframes phoneShellNeedleSway {
   0% {
-    transform: rotate(-22deg);
+    --needle-t: 1;
+  }
+  20% {
+    --needle-t: 0.82;
+  }
+  34% {
+    --needle-t: 0.97;
   }
   50% {
-    transform: rotate(-4deg);
+    --needle-t: 0.66;
+  }
+  64% {
+    --needle-t: 0.9;
+  }
+  80% {
+    --needle-t: 0.3;
+  }
+  92% {
+    --needle-t: 0.85;
   }
   100% {
-    transform: rotate(-22deg);
+    --needle-t: 1;
   }
 }
 
@@ -351,6 +463,8 @@
   font-weight: 600;
   color: var(--gold-core, #f4faf2);
   text-shadow: 0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.5);
+  /* Fixed-width digits so the live count doesn't jitter the layout. */
+  font-variant-numeric: tabular-nums;
 }
 
 /* Soft top sheen + faint scanlines for the LCD read (mirrors the
@@ -375,11 +489,6 @@
     );
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .phoneShellLcdNeedle {
-    animation: none;
-  }
-}
 
 /*
  * Default placeholder painted when no `children` are passed. Three faint
