@@ -274,12 +274,14 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   const envRT = pmrem.fromScene(envScene, 0.04);
   scene.environment = envRT.texture;
 
-  const ambient = new THREE.AmbientLight(0x1a2028, 1.0);
+  // Matte surfaces lean on the lights (not env reflections) for shaping, so
+  // the key/fill run a bit hotter than they would for a glossy build.
+  const ambient = new THREE.AmbientLight(0x1a2028, 1.1);
   scene.add(ambient);
-  const key = new THREE.DirectionalLight(0xffffff, 1.4);
+  const key = new THREE.DirectionalLight(0xffffff, 1.7);
   key.position.set(2.5, 4, 2.5);
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0x8fa3bf, 0.5);
+  const fill = new THREE.DirectionalLight(0x8fa3bf, 0.6);
   fill.position.set(-3, 1.5, -1);
   scene.add(fill);
 
@@ -291,30 +293,32 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   const caseMaterial = new THREE.MeshStandardMaterial({
     color: 0x2a2d31,
     map: caseTexture,
-    metalness: 0.82,
-    roughness: 0.45,
-    envMapIntensity: 1.0,
+    metalness: 0.72,
+    roughness: 0.68,
+    envMapIntensity: 0.55,
   });
   const plateTexture = createBrushedTexture("#16181b", "#3c4046");
   plateTexture.anisotropy = maxAniso;
   const plateMaterial = new THREE.MeshStandardMaterial({
     color: 0x24262a,
     map: plateTexture,
-    metalness: 0.8,
-    roughness: 0.5,
-    envMapIntensity: 0.85,
+    metalness: 0.7,
+    roughness: 0.72,
+    envMapIntensity: 0.45,
   });
   const baseMaterial = new THREE.MeshStandardMaterial({
     color: 0x17181a,
-    metalness: 0.7,
-    roughness: 0.6,
-    envMapIntensity: 0.6,
+    metalness: 0.6,
+    roughness: 0.78,
+    envMapIntensity: 0.35,
   });
+  // Screws stay a touch glossier than the case so they still read as
+  // machined hardware against the matte body.
   const screwMaterial = new THREE.MeshStandardMaterial({
     color: 0x33363b,
-    metalness: 0.95,
-    roughness: 0.3,
-    envMapIntensity: 1.1,
+    metalness: 0.85,
+    roughness: 0.45,
+    envMapIntensity: 0.8,
   });
 
   const logoTexture = createLogoTexture();
