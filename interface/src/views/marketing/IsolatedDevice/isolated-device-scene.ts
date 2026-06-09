@@ -530,21 +530,48 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     group.add(led);
   }
 
-  // Ghost outline computers above and below the real device: the footprint
-  // loop at the body top and bottom, the screen-recess loop on top, and a
-  // short vertical line at each rounded corner. All share one gray line
-  // material so they read as schematic copies rather than hardware.
-  const ghostMaterial = new THREE.LineBasicMaterial({
+  // Ghost outline computers above and below the real device, drawn as a
+  // schematic wireframe in three line "weights" (WebGL lines are always
+  // 1px, so weight is faked with brightness/opacity tiers): a strong outer
+  // silhouette (top rim doubled for a heavier read + corner verticals),
+  // mid-tier structural seams (lid seam, base, screen recess, asterisk
+  // mark), and faint interior detail (case seam, recessed-plate echo, vent
+  // hatching).
+  const ghostStrongMaterial = new THREE.LineBasicMaterial({
+    color: 0x9aa0a8,
+    transparent: true,
+    opacity: 0.55,
+  });
+  const ghostMidMaterial = new THREE.LineBasicMaterial({
     color: 0x7a7f86,
     transparent: true,
-    opacity: 0.4,
+    opacity: 0.32,
   });
+  const ghostFaintMaterial = new THREE.LineBasicMaterial({
+    color: 0x6a6f76,
+    transparent: true,
+    opacity: 0.18,
+  });
+
   const ghostFootprint = roundedSquare(SIZE, CORNER_R);
+  const lidSeamY = LID_Y - LID_BEVEL;
+  // Loops, outermost first: doubled top rim, lid seam, case/base seams.
   const ghostTopGeo = track(outlineLoop(ghostFootprint, DEVICE_H));
-  const ghostBottomGeo = track(outlineLoop(ghostFootprint, 0));
+  const ghostTopUnderGeo = track(outlineLoop(ghostFootprint, DEVICE_H - 0.016));
+  const ghostLidSeamGeo = track(outlineLoop(ghostFootprint, lidSeamY));
+  const ghostCaseSeamGeo = track(outlineLoop(ghostFootprint, CASE_BOTTOM));
+  const ghostBaseGeo = track(
+    outlineLoop(roundedSquare(BASE_SILHOUETTE, CORNER_R - 0.06), 0),
+  );
+  // Top-plate detail: the screen recess plus a fainter inner echo.
   const ghostHoleGeo = track(
     outlineLoop(roundedSquare(HOLE_SIZE, HOLE_R), DEVICE_H),
   );
+  const ghostPlateGeo = track(
+    outlineLoop(roundedSquare(HOLE_SIZE - 0.18, HOLE_R - 0.05), DEVICE_H),
+  );
+
+  // Silhouette verticals at the rounded corners.
   const ghostCornerPts: number[] = [];
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
@@ -559,12 +586,47 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     "position",
     new THREE.Float32BufferAttribute(ghostCornerPts, 3),
   );
+
+  // Six-spoke asterisk mark centered on the top plate, like the reference.
+  const asteriskPts: number[] = [];
+  for (let i = 0; i < 6; i += 1) {
+    const a = (i * Math.PI) / 3 + Math.PI / 6;
+    asteriskPts.push(
+      Math.cos(a) * 0.06, DEVICE_H, Math.sin(a) * 0.06,
+      Math.cos(a) * 0.32, DEVICE_H, Math.sin(a) * 0.32,
+    );
+  }
+  const ghostAsteriskGeo = track(new THREE.BufferGeometry());
+  ghostAsteriskGeo.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(asteriskPts, 3),
+  );
+
+  // Louver hatching on the two visible walls, mirroring the real vents.
+  const hatchPts: number[] = [];
+  for (let i = 0; i < 9; i += 1) {
+    const along = -0.55 + (i * 0.42) / 8;
+    hatchPts.push(along, 0.21, SIZE / 2, along, 0.39, SIZE / 2);
+    hatchPts.push(SIZE / 2, 0.21, along, SIZE / 2, 0.39, along);
+  }
+  const ghostHatchGeo = track(new THREE.BufferGeometry());
+  ghostHatchGeo.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(hatchPts, 3),
+  );
+
   for (const yOffset of [GHOST_ABOVE_Y, GHOST_BELOW_Y]) {
     const ghost = new THREE.Group();
-    ghost.add(new THREE.Line(ghostTopGeo, ghostMaterial));
-    ghost.add(new THREE.Line(ghostBottomGeo, ghostMaterial));
-    ghost.add(new THREE.Line(ghostHoleGeo, ghostMaterial));
-    ghost.add(new THREE.LineSegments(ghostCornerGeo, ghostMaterial));
+    ghost.add(new THREE.Line(ghostTopGeo, ghostStrongMaterial));
+    ghost.add(new THREE.Line(ghostTopUnderGeo, ghostFaintMaterial));
+    ghost.add(new THREE.Line(ghostLidSeamGeo, ghostMidMaterial));
+    ghost.add(new THREE.Line(ghostCaseSeamGeo, ghostFaintMaterial));
+    ghost.add(new THREE.Line(ghostBaseGeo, ghostMidMaterial));
+    ghost.add(new THREE.Line(ghostHoleGeo, ghostMidMaterial));
+    ghost.add(new THREE.Line(ghostPlateGeo, ghostFaintMaterial));
+    ghost.add(new THREE.LineSegments(ghostCornerGeo, ghostStrongMaterial));
+    ghost.add(new THREE.LineSegments(ghostAsteriskGeo, ghostMidMaterial));
+    ghost.add(new THREE.LineSegments(ghostHatchGeo, ghostFaintMaterial));
     ghost.position.y = yOffset;
     group.add(ghost);
   }
@@ -697,7 +759,9 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       orbMaterial.dispose();
       baseMaterial.dispose();
       ventMaterial.dispose();
-      ghostMaterial.dispose();
+      ghostStrongMaterial.dispose();
+      ghostMidMaterial.dispose();
+      ghostFaintMaterial.dispose();
       dashMaterial.dispose();
       etchSeamMaterial.dispose();
       etchDashMaterial.dispose();
