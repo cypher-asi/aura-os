@@ -137,13 +137,13 @@
    right edge. With `background-size: 300%`, animating the position from
    100% back to 0% moves the gradient rightward, so the band travels
    left-to-right. The full position sweep is compressed into the first
-   30% of the 4s cycle (a 1.2s glint) and then HELD off-text for the
-   remaining 70%, so the streak only fires once every 4 seconds. */
+   23% of the 4s cycle (a ~0.92s glint) and then HELD off-text for the
+   remainder, so the streak only fires once every 4 seconds. */
 @keyframes ctaShimmer {
   0% {
     background-position: 100% 0;
   }
-  30% {
+  23% {
     background-position: 0% 0;
   }
   100% {
