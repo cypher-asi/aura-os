@@ -54,10 +54,13 @@
 
 .featurePanelGrid {
   width: 100%;
+  /* Narrower than the section so the three cards read as tall rectangles
+     rather than wide tiles. */
+  max-width: 960px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: clamp(20px, 2.4vw, 32px);
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   list-style: none;
 }
@@ -78,7 +81,7 @@
   display: grid;
   grid-template-rows: 1fr 1fr;
   text-align: left;
-  min-height: 360px;
+  min-height: 480px;
   border-radius: 24px;
   background: transparent;
   /* Drop shadow that floats the card, plus a gold emissive halo weighted
