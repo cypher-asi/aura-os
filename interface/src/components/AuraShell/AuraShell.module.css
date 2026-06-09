@@ -244,20 +244,17 @@
  * `ShellTitlebar`'s outer element without reaching into its CSS
  * module, so the shared primitive's default border remains intact
  * for `LoginView` and other surfaces that mount it directly.
- */
-.shell[data-ui-mode="public"] :global(.titlebar-drag) {
-  background: transparent !important;
-  border-color: transparent;
-}
-
-/*
- * Public mode hides the main app top bar entirely. Scoped with the `>`
- * direct-child combinator so it only matches the shell's own
- * `AuraTitlebar`, NOT the nested `MockAuraDesktop` mock titlebar (also a
- * `.titlebar-drag`, but deep inside `.mainPanel`), which must stay visible.
+ *
+ * Scoped with the `>` direct-child combinator so it only strips the
+ * shell's OWN main top bar (`AuraTitlebar`). The mock window top bars
+ * nested in `.mainPanel` (`MockAuraApp`'s `.topChrome`,
+ * `MockAuraDesktop`'s `.titlebar`) are also `.titlebar-drag`; a
+ * descendant combinator would override their own tinted backgrounds to
+ * transparent and make those mock bars read as missing.
  */
 .shell[data-ui-mode="public"] > :global(.titlebar-drag) {
-  display: none;
+  background: transparent !important;
+  border-color: transparent;
 }
 
 /*
