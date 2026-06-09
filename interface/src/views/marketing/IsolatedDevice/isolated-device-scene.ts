@@ -94,15 +94,17 @@ const DEVICE_H = 0.655;
 const GHOST_ABOVE_Y = 2.33; // group origin (body bottom) of the upper ghost
 const GHOST_BELOW_Y = -2.33; // group origin of the lower ghost
 const GHOST_CORNER = 0.882; // |x|=|z| of the rounded-corner verticals
-const DASH_COLUMN = 0.95;
+/**
+ * Dash columns connect the devices ONLY across the gaps between them: an
+ * upper run from the main computer's top surface into the bottom of the
+ * upper ghost, and a lower run from the lower ghost's top into the main
+ * computer's underside. They stand on the lid ring near its corners
+ * (inside the footprint), so they read as rooted in the top plate.
+ */
+const DASH_INSET = 0.7; // |x|=|z| of each column on the lid ring
 const DASH_LEN = 0.06;
 const DASH_PERIOD = 0.12; // dash + gap
 const DASH_SPEED = 0.35; // world units per second, downward
-// The tilted ortho projection maps screen height to a y-range that depends
-// on each column's z; this span keeps every column's dashes running through
-// both canvas edges on the full-stack (1 / 2.15) portrait framing.
-const DASH_Y_MIN = -5.0;
-const DASH_Y_MAX = 5.8;
 
 /**
  * Pose: the near vertical corner points exactly at the camera (a perfect
@@ -693,28 +695,41 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     group.add(ghost);
   }
 
-  // Dashed connector columns at the four footprint corners, spanning the
-  // whole ghost stack. The dashes are real segments (not LineDashedMaterial)
-  // so the animation loop can stream them downward by sliding each column
-  // one period and wrapping; the extra leading period keeps both ends
-  // covered during the slide. One object PER column (not one shared object)
-  // so three.js's per-object transparency sort draws the far columns behind
-  // the alpha-blended screen plane and the near one in front of the body.
+  // Dashed connector columns between the devices: an upper run spanning the
+  // gap from the main lid top to the upper ghost's bottom, and a lower run
+  // from the lower ghost's top to the main computer's underside. The dashes
+  // are real segments (not LineDashedMaterial) so the animation loop can
+  // stream them downward by sliding each column one period and wrapping;
+  // each run extends one period past both ends so the sliding pattern stays
+  // seamless — the overshoot tucks invisibly into the solid body on one end
+  // and pokes into the wireframe ghost on the other, which reads as the
+  // line "entering" the computer. One object PER column so three.js's
+  // per-object transparency sort layers them correctly against the screen.
   const dashMaterial = new THREE.LineBasicMaterial({
     color: 0x70757c,
     transparent: true,
     opacity: 0.45,
     depthWrite: false,
   });
+  const dashRuns: ReadonlyArray<readonly [number, number]> = [
+    [DEVICE_H, GHOST_ABOVE_Y], // main top surface -> upper ghost bottom
+    [GHOST_BELOW_Y + DEVICE_H, 0], // lower ghost top -> main underside
+  ];
   const dashColumns: THREE.LineSegments[] = [];
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
       const dashPts: number[] = [];
-      for (let y = DASH_Y_MIN; y < DASH_Y_MAX + DASH_PERIOD; y += DASH_PERIOD) {
-        dashPts.push(
-          sx * DASH_COLUMN, y, sz * DASH_COLUMN,
-          sx * DASH_COLUMN, y + DASH_LEN, sz * DASH_COLUMN,
-        );
+      for (const [runStart, runEnd] of dashRuns) {
+        for (
+          let y = runStart - DASH_PERIOD;
+          y < runEnd + DASH_PERIOD;
+          y += DASH_PERIOD
+        ) {
+          dashPts.push(
+            sx * DASH_INSET, y, sz * DASH_INSET,
+            sx * DASH_INSET, y + DASH_LEN, sz * DASH_INSET,
+          );
+        }
       }
       const dashGeo = track(new THREE.BufferGeometry());
       dashGeo.setAttribute(
