@@ -41,18 +41,17 @@
   isolation: isolate;
   margin: 0;
   max-width: 14ch;
-  /* White-gold resting fill: mostly white with a warm champagne cast, so
-     the glyphs read luminous without going full gold. A subtle tight
-     halo hugs the letterforms; the big breathing bloom lives on the
-     `::before` layer behind the glyphs so it can pulse independently of
-     this steady glyph glow. (An earlier approach used a transparent
-     fill + background-clip gradient here, which let the gold text-shadow
-     bleed through the glyphs and wash out the shimmer band — the fill
-     must stay opaque.) */
+  /* White-gold gradient fill: near-white on the left easing into the
+     warm champagne cast on the right, clipped to the glyphs. Every stop
+     is opaque, and this element carries NO text-shadow (all glow lives
+     on the `::before` layer) — a shadow here would bleed through the
+     transparent text fill and wash out both the fill and the shimmer
+     band. `color` is only the fallback if background-clip ever fails. */
   color: #fdf4de;
-  text-shadow:
-    0 0 10px rgba(var(--gold-glow), 0.38),
-    0 0 24px rgba(var(--gold-glow), 0.22);
+  background-image: linear-gradient(90deg, #ffffff 0%, #fdf4de 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   font-size: clamp(40px, 6vw, 72px);
   font-weight: 600;
   line-height: 1.05;
@@ -74,8 +73,12 @@
   color: transparent;
   /* Large, dispersed bloom: wide blur radii at low alphas spread the
      light far around the headline instead of concentrating it at the
-     glyph edges. */
+     glyph edges. The two tight layers are the steady glyph halo that
+     used to live on the base element (it had to move here when the fill
+     became a background-clip gradient). */
   text-shadow:
+    0 0 10px rgba(var(--gold-glow), 0.38),
+    0 0 24px rgba(var(--gold-glow), 0.22),
     0 0 28px rgba(var(--gold-glow), 0.3),
     0 0 64px rgba(var(--gold-glow), 0.25),
     0 0 120px rgba(var(--gold-glow), 0.2),
