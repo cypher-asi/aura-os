@@ -197,9 +197,12 @@
   align-items: center;
   justify-content: center;
   margin: 0;
-  /* Taller cap so the height reads like the chunky "Intelligent in all
-     domains" keycaps above (the width still hugs the label). */
-  padding: 3.4cqw 3cqw;
+  /* Match the chunky height of the "Intelligent in all domains" keycaps above:
+     a tall fixed-height cap (the width still hugs the label). The deck's usable
+     height is ~48cqw, so an ~18cqw cap (+ socket) still leaves room for two
+     wrapped rows. */
+  min-height: 18cqw;
+  padding: 0 3cqw;
   border: 0;
   border-radius: 1.6cqw;
   appearance: none;
@@ -232,7 +235,7 @@
 .phoneShellKeyLabel {
   position: relative;
   z-index: 1;
-  font-size: 2.6cqw;
+  font-size: 3cqw;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.04em;
