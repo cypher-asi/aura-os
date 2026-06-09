@@ -1,21 +1,21 @@
 import { type ReactNode } from "react";
-import { Calendar, Code, Image as ImageIcon, Music } from "lucide-react";
 import "./PhoneShell.css";
 
 /**
- * Decorative keycaps on the phone's metal deck, styled after the
+ * Decorative slang keycaps on the phone's metal deck, styled after the
  * "Intelligent in all domains" skill keys. Purely decorative hardware
  * (`aria-hidden` via the deck root); a couple rest in the golden accent.
  */
 const DECK_KEYS: ReadonlyArray<{
   readonly id: string;
-  readonly Icon: typeof Code;
+  readonly label: string;
   readonly lit?: boolean;
 }> = [
-  { id: "code", Icon: Code, lit: true },
-  { id: "image", Icon: ImageIcon },
-  { id: "calendar", Icon: Calendar },
-  { id: "music", Icon: Music },
+  { id: "cook", label: "COOK", lit: true },
+  { id: "send-it", label: "SEND IT" },
+  { id: "no-cap", label: "NO CAP" },
+  { id: "yolo", label: "YOLO", lit: true },
+  { id: "for-the-plot", label: "FOR THE PLOT" },
 ];
 
 interface PhoneShellProps {
@@ -76,17 +76,13 @@ export function PhoneShell({
     >
       <div className="phoneShellDeck" aria-hidden="true">
         <div className="phoneShellKeys">
-          {DECK_KEYS.map(({ id, Icon, lit }) => (
+          {DECK_KEYS.map(({ id, label, lit }) => (
             <span
               key={id}
               className="phoneShellKey"
               data-lit={lit ? "true" : undefined}
             >
-              <Icon
-                className="phoneShellKeyIcon"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
+              <span className="phoneShellKeyLabel">{label}</span>
             </span>
           ))}
         </div>
