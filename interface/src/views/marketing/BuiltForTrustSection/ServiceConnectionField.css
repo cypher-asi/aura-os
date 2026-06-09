@@ -1,8 +1,10 @@
 /*
- * SVG mesh overlay wiring the service rail nozzles to the device nozzles.
+ * SVG overlay routing the service rail nozzles into the single device port.
  * Painted first in the stage so it sits behind the rail keycaps and the
- * device, leaving only the gap between them visible. Lines are gray at rest
- * and light to the page-scoped gold accent when their source key is lit.
+ * device, leaving only the gap between them visible. Each line is a gray
+ * resting stroke plus a moving light pulse (normalized via pathLength=100)
+ * that travels left-to-right so it reads as energy flowing into the device.
+ * A lit key's line surges to the page-scoped gold accent.
  */
 .serviceConnectionField {
   position: absolute;
@@ -13,21 +15,60 @@
   overflow: visible;
 }
 
-.serviceConnectionLines path {
+.serviceFlowLine path {
   fill: none;
+  stroke-linecap: round;
+}
+
+/* Resting line. */
+.serviceFlowBase {
   stroke: rgba(150, 162, 180, 0.16);
   stroke-width: 1;
-  stroke-linecap: round;
   transition: stroke 220ms ease;
 }
 
-.serviceConnectionLinesActive path[data-active="true"] {
-  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.85);
+/* Moving light: a short bright dash chasing along the normalized path. The
+   long gap keeps a single travelling pulse per line. Decreasing dashoffset
+   moves the dash from the rail end toward the port (left-to-right). */
+.serviceFlowPulse {
+  stroke: rgba(208, 216, 230, 0.5);
   stroke-width: 1.4;
+  stroke-dasharray: 5 95;
+  animation: serviceFlow 2.4s linear infinite;
 }
 
-/* Soft bloom on the lit group only, so the gold lines read as energized
-   without smearing the resting gray mesh. */
-.serviceConnectionLinesActive {
-  filter: drop-shadow(0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.5));
+@keyframes serviceFlow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+/* Surge: a lit key warms its whole line and sends a brighter, longer, faster
+   gold pulse with a soft bloom. */
+.serviceFlowLine[data-active="true"] .serviceFlowBase {
+  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.5);
+}
+
+.serviceFlowLine[data-active="true"] .serviceFlowPulse {
+  stroke: rgb(var(--gold-glow, 232, 205, 137));
+  stroke-width: 2;
+  stroke-dasharray: 10 90;
+  animation-duration: 1.5s;
+  filter: drop-shadow(0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.8));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .serviceFlowPulse {
+    animation: none;
+    /* Hide the static dash at rest; only lit lines show a solid gold line. */
+    stroke: transparent;
+  }
+
+  .serviceFlowLine[data-active="true"] .serviceFlowPulse {
+    stroke: rgb(var(--gold-glow, 232, 205, 137));
+    stroke-dasharray: none;
+  }
 }

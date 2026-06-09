@@ -9,41 +9,29 @@ import "./TrustDeviceStage.css";
 /**
  * Composes the Built for trust device card's media well: the skeuomorphic
  * `ServiceButtonRail` pinned far-left, the centered WebGL `IsolatedDevice`,
- * a column of nozzles down the device's left edge, and the
- * `ServiceConnectionField` SVG mesh wiring the two together. Owns the shared
- * lit state (`useServicePulse`) so a lit rail key also lights every mesh
- * line leaving it.
+ * a single converging port on the device's left edge, and the
+ * `ServiceConnectionField` SVG that routes every rail line into that port.
+ * Owns the shared lit state (`useServicePulse`) so a lit rail key also
+ * surges the energy flowing down its connection line.
  */
-
-/** Nozzles down the device's left edge that the mesh fans into. */
-const DEVICE_NOZZLE_COUNT = 16;
-
 export function TrustDeviceStage(): ReactNode {
   const stageRef = useRef<HTMLDivElement>(null);
   const { litLogos, activate } = useServicePulse(RAIL_LOGOS.length);
 
   return (
     <div className="builtForTrustStage" ref={stageRef}>
-      <ServiceConnectionField
-        stageRef={stageRef}
-        litLogos={litLogos}
-        deviceNozzleCount={DEVICE_NOZZLE_COUNT}
-      />
+      <ServiceConnectionField stageRef={stageRef} litLogos={litLogos} />
 
       <ServiceButtonRail litLogos={litLogos} onActivate={activate} />
 
       <div className="builtForTrustDeviceWrap">
         <IsolatedDevice />
-        <div className="trustDeviceNozzleColumn" aria-hidden="true">
-          {Array.from({ length: DEVICE_NOZZLE_COUNT }, (_, j) => (
-            <span
-              key={j}
-              className="trustDeviceNozzle"
-              data-device-nozzle={j}
-              style={{ top: `${((j + 0.5) / DEVICE_NOZZLE_COUNT) * 100}%` }}
-            />
-          ))}
-        </div>
+        <span
+          className="trustDevicePort"
+          data-device-port
+          data-active={litLogos.size > 0 ? "true" : undefined}
+          aria-hidden="true"
+        />
       </div>
     </div>
   );

@@ -2,7 +2,6 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useState,
   type ReactNode,
   type RefObject,
@@ -11,14 +10,15 @@ import { RAIL_LOGOS } from "./service-rail-logos";
 import "./ServiceConnectionField.css";
 
 /**
- * SVG mesh that wires each service rail nozzle to a band of nozzles down the
- * device's left edge. Lines are gray at rest; when a rail key lights (auto-
- * cycle or click), every line leaving that key lights gold in step with the
+ * SVG that routes every service rail nozzle into a single converging port on
+ * the device's left edge. Each line carries a continuous left-to-right light
+ * pulse so it reads as energy flowing into the computer; when a rail key
+ * lights (auto-cycle or click) its line surges gold, driven by the
  * `litLogos` set owned by the parent `TrustDeviceStage`.
  *
- * Nozzle positions are measured from the live DOM (the rail and device place
- * real nozzle elements tagged `data-rail-nozzle` / `data-device-nozzle`), so
- * the mesh stays glued to them across resizes without hard-coded geometry.
+ * Endpoints are measured from the live DOM (the rail places nozzles tagged
+ * `data-rail-nozzle`, the device a single `data-device-port`), so the lines
+ * stay glued to them across resizes without hard-coded geometry.
  */
 
 interface Point {
@@ -26,53 +26,19 @@ interface Point {
   readonly y: number;
 }
 
-interface Edge {
-  readonly source: number;
-  readonly target: number;
-}
-
 interface ServiceConnectionFieldProps {
   readonly stageRef: RefObject<HTMLDivElement | null>;
   readonly litLogos: ReadonlySet<number>;
-  readonly deviceNozzleCount: number;
 }
 
-/** How many device nozzles each rail key fans to on either side of center. */
-const FAN_SPREAD = 3;
+/** Spacing between staggered pulse starts, in seconds. */
+const PULSE_STAGGER_S = 0.45;
 
-/**
- * Deterministic many-to-many mapping: each rail key targets a vertical band
- * of device nozzles centered on its proportional position, so the lines fan
- * out and cross like a flow diagram.
- */
-function buildEdges(railCount: number, deviceCount: number): Edge[] {
-  if (railCount === 0 || deviceCount === 0) {
-    return [];
-  }
-  const ratio = deviceCount / railCount;
-  const edges: Edge[] = [];
-  for (let i = 0; i < railCount; i += 1) {
-    const center = Math.round((i + 0.5) * ratio - 0.5);
-    for (let d = -FAN_SPREAD; d <= FAN_SPREAD; d += 1) {
-      const j = center + d;
-      if (j >= 0 && j < deviceCount) {
-        edges.push({ source: i, target: j });
-      }
-    }
-  }
-  return edges;
-}
-
-function readPoints(
-  stage: HTMLElement,
-  selector: string,
-  attr: string,
-  count: number,
-): Point[] {
+function readRailPoints(stage: HTMLElement, count: number): Point[] {
   const stageRect = stage.getBoundingClientRect();
   const points = new Array<Point | undefined>(count);
-  stage.querySelectorAll<HTMLElement>(selector).forEach((el) => {
-    const index = Number(el.dataset[attr]);
+  stage.querySelectorAll<HTMLElement>("[data-rail-nozzle]").forEach((el) => {
+    const index = Number(el.dataset.railNozzle);
     if (Number.isNaN(index)) {
       return;
     }
@@ -85,6 +51,19 @@ function readPoints(
   return points.filter((p): p is Point => p !== undefined);
 }
 
+function readPortPoint(stage: HTMLElement): Point | null {
+  const el = stage.querySelector<HTMLElement>("[data-device-port]");
+  if (!el) {
+    return null;
+  }
+  const stageRect = stage.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2 - stageRect.left,
+    y: rect.top + rect.height / 2 - stageRect.top,
+  };
+}
+
 function curve(from: Point, to: Point): string {
   const dx = (to.x - from.x) * 0.5;
   return `M ${from.x.toFixed(1)} ${from.y.toFixed(1)} C ${(from.x + dx).toFixed(1)} ${from.y.toFixed(1)}, ${(to.x - dx).toFixed(1)} ${to.y.toFixed(1)}, ${to.x.toFixed(1)} ${to.y.toFixed(1)}`;
@@ -93,16 +72,10 @@ function curve(from: Point, to: Point): string {
 export function ServiceConnectionField({
   stageRef,
   litLogos,
-  deviceNozzleCount,
 }: ServiceConnectionFieldProps): ReactNode {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [railPoints, setRailPoints] = useState<Point[]>([]);
-  const [devicePoints, setDevicePoints] = useState<Point[]>([]);
-
-  const edges = useMemo(
-    () => buildEdges(RAIL_LOGOS.length, deviceNozzleCount),
-    [deviceNozzleCount],
-  );
+  const [portPoint, setPortPoint] = useState<Point | null>(null);
 
   const measure = useCallback(() => {
     const stage = stageRef.current;
@@ -111,18 +84,9 @@ export function ServiceConnectionField({
     }
     const rect = stage.getBoundingClientRect();
     setSize({ width: rect.width, height: rect.height });
-    setRailPoints(
-      readPoints(stage, "[data-rail-nozzle]", "railNozzle", RAIL_LOGOS.length),
-    );
-    setDevicePoints(
-      readPoints(
-        stage,
-        "[data-device-nozzle]",
-        "deviceNozzle",
-        deviceNozzleCount,
-      ),
-    );
-  }, [stageRef, deviceNozzleCount]);
+    setRailPoints(readRailPoints(stage, RAIL_LOGOS.length));
+    setPortPoint(readPortPoint(stage));
+  }, [stageRef]);
 
   useLayoutEffect(() => {
     measure();
@@ -145,11 +109,7 @@ export function ServiceConnectionField({
     };
   }, [stageRef, measure]);
 
-  if (
-    railPoints.length === 0 ||
-    devicePoints.length === 0 ||
-    size.width === 0
-  ) {
+  if (railPoints.length === 0 || portPoint === null || size.width === 0) {
     return (
       <svg
         className="serviceConnectionField"
@@ -159,20 +119,13 @@ export function ServiceConnectionField({
     );
   }
 
-  const paths = edges
-    .map((edge) => {
-      const from = railPoints[edge.source];
-      const to = devicePoints[edge.target];
-      if (!from || !to) {
-        return null;
-      }
-      return {
-        key: `${edge.source}-${edge.target}`,
-        d: curve(from, to),
-        active: litLogos.has(edge.source),
-      };
-    })
-    .filter((p): p is { key: string; d: string; active: boolean } => p !== null);
+  // Stable, index-keyed line list so the CSS flow animation never restarts
+  // when `litLogos` changes; only the `data-active` attribute toggles.
+  const lines = railPoints.map((from, i) => ({
+    key: i,
+    d: curve(from, portPoint),
+    active: litLogos.has(i),
+  }));
 
   return (
     <svg
@@ -183,21 +136,21 @@ export function ServiceConnectionField({
       aria-hidden="true"
       focusable="false"
     >
-      {/* Rest lines first, lit lines on top so the glow is never buried. */}
-      <g className="serviceConnectionLines">
-        {paths
-          .filter((p) => !p.active)
-          .map((p) => (
-            <path key={p.key} d={p.d} />
-          ))}
-      </g>
-      <g className="serviceConnectionLines serviceConnectionLinesActive">
-        {paths
-          .filter((p) => p.active)
-          .map((p) => (
-            <path key={p.key} d={p.d} data-active="true" />
-          ))}
-      </g>
+      {lines.map((line) => (
+        <g
+          key={line.key}
+          className="serviceFlowLine"
+          data-active={line.active ? "true" : undefined}
+        >
+          <path className="serviceFlowBase" d={line.d} pathLength={100} />
+          <path
+            className="serviceFlowPulse"
+            d={line.d}
+            pathLength={100}
+            style={{ animationDelay: `${-line.key * PULSE_STAGGER_S}s` }}
+          />
+        </g>
+      ))}
     </svg>
   );
 }
