@@ -289,7 +289,9 @@
   /* Sit well below the raised panel so the top bar reads as clearly
      elevated above the button area. */
   margin-top: 7cqw;
-  padding: 3cqw;
+  /* Extra bottom padding leaves room for the LOWER part of the housing
+     (`::after`) — the metal base ledge the keys sit on. */
+  padding: 2.6cqw 3cqw 7cqw;
   border-radius: 4.5cqw;
   border: 1px solid transparent;
   background:
@@ -310,6 +312,28 @@
     inset 0 3px 5px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 12px 22px rgba(0, 0, 0, 0.55);
+}
+
+/*
+ * Lower part of the button housing: a raised metal ledge/lip spanning the
+ * tray beneath the keys, with a bright top seam and a soft drop shadow so
+ * it reads as the front base the keycaps sit on — the step that connects
+ * the upper key shelf down to the lower edge of the housing.
+ */
+.consoleTray::after {
+  content: "";
+  position: absolute;
+  left: 2.6cqw;
+  right: 2.6cqw;
+  bottom: 1.8cqw;
+  height: 3.4cqw;
+  border-radius: 1.8cqw;
+  background: linear-gradient(180deg, #34373c 0%, #212327 48%, #15171a 100%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 .consoleTrayWell {
