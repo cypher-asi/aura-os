@@ -229,34 +229,6 @@ function createVentTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-/** Soft contact shadow pooled under the device on the ground plane. */
-function createShadowTexture(): THREE.CanvasTexture {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (ctx) {
-    const grad = ctx.createRadialGradient(
-      size / 2,
-      size / 2,
-      0,
-      size / 2,
-      size / 2,
-      size / 2,
-    );
-    grad.addColorStop(0, "rgba(0, 0, 0, 0.55)");
-    grad.addColorStop(0.5, "rgba(0, 0, 0, 0.28)");
-    grad.addColorStop(0.78, "rgba(0, 0, 0, 0)");
-    grad.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
-
 /**
  * WebGL "isolated device" scene — a dark matte-metal Mac-mini-style appliance
  * modelled after the reference render, framed diagonally from a high 3/4
@@ -352,13 +324,6 @@ export function createIsolatedDeviceScene(
     roughness: 0.9,
     depthWrite: false,
   });
-  const shadowTexture = createShadowTexture();
-  const shadowMaterial = new THREE.MeshBasicMaterial({
-    map: shadowTexture,
-    transparent: true,
-    depthWrite: false,
-  });
-
   const group = new THREE.Group();
   group.rotation.y = BASE_YAW;
   scene.add(group);
@@ -441,13 +406,6 @@ export function createIsolatedDeviceScene(
   ventRight.rotation.y = Math.PI / 2;
   ventRight.position.set(SIZE / 2 + 0.0015, VENT_Y, VENT_CENTER);
   group.add(ventRight);
-
-  // Ground contact shadow (rotates with the group so it stays centered).
-  const shadowGeo = track(new THREE.PlaneGeometry(3.8, 3.8));
-  shadowGeo.rotateX(-Math.PI / 2);
-  const shadowMesh = new THREE.Mesh(shadowGeo, shadowMaterial);
-  shadowMesh.position.y = -0.004;
-  group.add(shadowMesh);
 
   function fitCamera(): void {
     // Frame to the device's diagonal footprint width with a small margin; the
@@ -557,12 +515,10 @@ export function createIsolatedDeviceScene(
       screwMaterial.dispose();
       logoMaterial.dispose();
       ventMaterial.dispose();
-      shadowMaterial.dispose();
       caseTexture.dispose();
       plateTexture.dispose();
       logoTexture.dispose();
       ventTexture.dispose();
-      shadowTexture.dispose();
       envRT.texture.dispose();
       pmrem.dispose();
       renderer.dispose();
