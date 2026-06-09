@@ -8,7 +8,10 @@ import {
 } from "react";
 import { Check } from "lucide-react";
 import { Plate } from "../../../components/Plate";
-import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
+import {
+  CreateAgentButton,
+  CREATE_AGENT_CLICK_EVENT,
+} from "../../public-chat/CreateAgentButton";
 import { SERVICE_LOGOS } from "./brand-logos";
 
 /**
@@ -261,6 +264,22 @@ export function ServiceDeviceCard({
         window.cancelAnimationFrame(frame);
       }
     };
+  }, [hexGrille]);
+
+  // Clicking any "Create your agent" pill anywhere on the page completes the
+  // on-screen build: jump the stepper to the final "Launch" step so the
+  // progress bar tweens to 100%. Only the hex hero variant renders the
+  // stepper/progress, so the listener is gated to it.
+  useEffect(() => {
+    if (!hexGrille || typeof window === "undefined") {
+      return;
+    }
+    const onCreateClick = () => {
+      setSelectedIndex(SIDE_BUTTONS.length - 1);
+    };
+    window.addEventListener(CREATE_AGENT_CLICK_EVENT, onCreateClick);
+    return () =>
+      window.removeEventListener(CREATE_AGENT_CLICK_EVENT, onCreateClick);
   }, [hexGrille]);
 
   useEffect(() => {

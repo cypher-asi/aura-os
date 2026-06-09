@@ -3,6 +3,14 @@ import { ArrowRight } from "lucide-react";
 import { track } from "../../../lib/analytics";
 import styles from "./CreateAgentButton.module.css";
 
+/**
+ * Window event broadcast whenever any "Create your agent" pill is clicked.
+ * The marketing `/agents` "Agents made for you" device listens for it and
+ * jumps its build stepper to the final "Launch" step (100%), so clicking the
+ * CTA anywhere on the page completes the on-screen build animation.
+ */
+export const CREATE_AGENT_CLICK_EVENT = "aura:create-agent-click";
+
 interface CreateAgentButtonProps {
   /**
    * Optional consumer-supplied class appended to the base
@@ -78,6 +86,9 @@ export function CreateAgentButton({
       // `PublicChatView` would flash in behind the modal.
       onClick={() => {
         track("public_create_agent_clicked", { source });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(CREATE_AGENT_CLICK_EVENT));
+        }
         navigate("/login?tab=register", {
           state: { backgroundLocation: location },
         });
