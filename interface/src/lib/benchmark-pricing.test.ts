@@ -16,6 +16,20 @@ describe("benchmark pricing", () => {
     expect(pricing.cacheRead).toBe(0.3);
   });
 
+  it("resolves Claude Fable 5 pricing for raw and Aura-managed ids", () => {
+    for (const model of ["claude-fable-5", "aura-claude-fable-5"]) {
+      const pricing = resolvePricing(model);
+
+      expect(pricing.provider).toBe("anthropic");
+      expect(pricing.source).toBe("anthropic-pricing");
+      expect(pricing.model).toBe("claude-fable-5");
+      expect(pricing.input).toBe(10);
+      expect(pricing.output).toBe(50);
+      expect(pricing.cacheWrite).toBe(12.5);
+      expect(pricing.cacheRead).toBe(1);
+    }
+  });
+
   it("marks unknown pricing explicitly instead of silently dropping it", () => {
     const pricing = resolvePricing("claude-unknown-next", "anthropic");
 
