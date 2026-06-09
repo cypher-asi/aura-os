@@ -35,6 +35,14 @@ const EXPERTISE_TABS: readonly ExpertiseTab[] = [
     blurb: "Draft posts and calendars that stay on voice.",
   },
   {
+    label: "Sales",
+    blurb: "Draft outreach and move deals forward on voice.",
+  },
+  {
+    label: "Marketing",
+    blurb: "Plan campaigns and produce on-brand content.",
+  },
+  {
     label: "Design",
     blurb: "Turn rough ideas into polished interfaces.",
   },

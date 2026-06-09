@@ -32,7 +32,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px 28px;
+  gap: 8px 20px;
   width: 100%;
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
@@ -89,7 +89,7 @@
   background: none;
   cursor: pointer;
   font: inherit;
-  font-size: clamp(13px, 1.2vw, 16px);
+  font-size: clamp(12px, 1vw, 14px);
   font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--color-text-secondary);

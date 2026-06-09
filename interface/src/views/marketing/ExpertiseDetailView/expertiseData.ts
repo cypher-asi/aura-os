@@ -131,6 +131,52 @@ export const CAPABILITIES: readonly ExpertiseEntry[] = [
     ],
   },
   {
+    slug: "sales",
+    kind: "capability",
+    label: "Sales",
+    headline: "More pipeline, less busywork.",
+    heroBlurb: "Research accounts and draft outreach that moves deals.",
+    overview:
+      "AURA sales agents research accounts, personalize outreach, and keep your pipeline current so reps spend time selling instead of typing. They draft on-voice messages grounded in your context and surface the next best action on every deal.",
+    useCases: [
+      {
+        title: "Account research",
+        description: "Build briefs on prospects from public and internal sources.",
+      },
+      {
+        title: "Outreach drafts",
+        description: "Personalize emails and sequences on your voice and offer.",
+      },
+      {
+        title: "Pipeline hygiene",
+        description: "Keep CRM records current and flag deals that need attention.",
+      },
+    ],
+  },
+  {
+    slug: "marketing",
+    kind: "capability",
+    label: "Marketing",
+    headline: "Campaigns that stay on brand.",
+    heroBlurb: "Plan, draft, and adapt content across every channel.",
+    overview:
+      "AURA marketing agents plan campaigns, produce on-brand content, and adapt it per channel while holding your voice. They turn a brief into a slate of assets and keep the calendar moving so your channels never go quiet.",
+    useCases: [
+      {
+        title: "Campaign planning",
+        description: "Turn a brief into channels, themes, and a content calendar.",
+      },
+      {
+        title: "Content production",
+        description: "Draft and repurpose assets across channels in your voice.",
+      },
+      {
+        title: "Performance analysis",
+        description: "Turn campaign data into clear, actionable insight.",
+      },
+    ],
+  },
+  {
     slug: "design",
     kind: "capability",
     label: "Design",
