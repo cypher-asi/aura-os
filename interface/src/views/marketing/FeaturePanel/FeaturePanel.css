@@ -100,14 +100,12 @@
     filter 0.18s ease;
 }
 
-/* Brushed-metal top section — the upper of the card's two equal-height grid
-   rows. Layered backgrounds on the padding-box build a convincing brushed
-   plate: a brighter silver base gradient, fine diagonal brushed striations,
-   and a soft diagonal sheen streak; the border-box paints the bright
-   metallic rim. Content (a stamped category overline + title) is anchored
-   like an ID plate (overline top, title bottom). Top corners follow the card
-   radius; the touching (bottom) corners take a tight 3px radius so the seam
-   reads as two stacked plates. */
+/* Metal top section — the upper of the card's two equal-height grid rows.
+   A clean diagonal base gradient on the padding-box with a brighter metallic
+   rim on the border-box. Content (a stamped category overline + title) is
+   anchored like an ID plate (overline top, title bottom). Top corners follow
+   the card radius; the touching (bottom) corners take a tight 3px radius so
+   the seam reads as two stacked plates. */
 .featurePanelScene {
   position: relative;
   z-index: 1;
@@ -121,21 +119,6 @@
   border: 1.5px solid transparent;
   border-radius: 24px 24px 3px 3px;
   background:
-    linear-gradient(
-        118deg,
-        rgba(255, 255, 255, 0) 30%,
-        rgba(255, 255, 255, 0.1) 48%,
-        rgba(255, 255, 255, 0) 60%
-      )
-      padding-box,
-    repeating-linear-gradient(
-        116deg,
-        rgba(255, 255, 255, 0.05) 0 1px,
-        rgba(255, 255, 255, 0) 1px 3px,
-        rgba(0, 0, 0, 0.06) 3px 4px,
-        rgba(255, 255, 255, 0) 4px 7px
-      )
-      padding-box,
     /* Diagonal base: bottom-left #1d1d1d -> top-right #3a3a3a. */
     linear-gradient(to top right, #1d1d1d 0%, #3a3a3a 100%) padding-box,
     /* 1.5px gradient rim: bottom-left #0b0b0b -> top-right #5e5e5e. */
