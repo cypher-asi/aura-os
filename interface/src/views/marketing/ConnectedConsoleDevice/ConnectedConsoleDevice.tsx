@@ -6,15 +6,20 @@ import "./ConnectedConsoleDevice.css";
  * line-icon style (24x24 viewBox, `fill: none`, `stroke: currentColor`), so
  * every key reads as an outline rather than a filled silhouette. Slack,
  * Discord, and Telegram are the CC0 Tabler-icons `brand-*` outlines; the
- * iMessage glyph is a hand-drawn squircle-plus-bubble matching the app icon
- * (no outline brand set carries it). Kept inline so the marketing page pulls
- * in no extra icon dependency.
+ * iMessage glyph is the lucide `message-circle` bubble (no outline brand set
+ * carries an iMessage mark). Kept inline so the marketing page pulls in no
+ * extra icon dependency.
  */
+// Tabler's brand-slack joins all four arms at the exact center (12,12), which
+// reads as a single congested knot at key size. Each arm here is the Tabler
+// subpath nudged 1.4 units away from center along both axes (only the leading
+// `M` changes — the rest of each path is relative), opening up the gaps
+// between the lobes like the real Slack mark.
 const SLACK_OUTLINE_PATHS: readonly string[] = [
-  "M12 12v-6a2 2 0 0 1 4 0v6m0 -2a2 2 0 1 1 2 2h-6",
-  "M12 12h6a2 2 0 0 1 0 4h-6m2 0a2 2 0 1 1 -2 2v-6",
-  "M12 12v6a2 2 0 0 1 -4 0v-6m0 2a2 2 0 1 1 -2 -2h6",
-  "M12 12h-6a2 2 0 0 1 0 -4h6m-2 0a2 2 0 1 1 2 -2v6",
+  "M13.4 10.6v-6a2 2 0 0 1 4 0v6m0 -2a2 2 0 1 1 2 2h-6",
+  "M13.4 13.4h6a2 2 0 0 1 0 4h-6m2 0a2 2 0 1 1 -2 2v-6",
+  "M10.6 13.4v6a2 2 0 0 1 -4 0v-6m0 2a2 2 0 1 1 -2 -2h6",
+  "M10.6 10.6h-6a2 2 0 0 1 0 -4h6m-2 0a2 2 0 1 1 2 -2v6",
 ];
 
 const DISCORD_OUTLINE_PATHS: readonly string[] = [
@@ -30,13 +35,12 @@ const TELEGRAM_OUTLINE_PATHS: readonly string[] = [
 ];
 
 /**
- * The iMessage app icon as an outline: the rounded-square app tile with the
- * speech bubble (bottom-left tail) inside. Hand-drawn — neither Tabler nor
- * any other CC0 outline set carries an iMessage mark.
+ * iMessage — the lucide `message-circle` chat bubble (tail at bottom-left),
+ * inlined as path data so the key renders through the same outline-`<svg>`
+ * branch as the other brands.
  */
 const IMESSAGE_OUTLINE_PATHS: readonly string[] = [
-  "M3 7a4 4 0 0 1 4 -4h10a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-10a4 4 0 0 1 -4 -4z",
-  "M12 7.75c-2.9 0 -5.25 1.74 -5.25 3.9c0 .98 .49 1.88 1.3 2.56c-.13 .55 -.4 1.04 -.77 1.43c-.18 .2 -.04 .52 .23 .49c.92 -.1 1.74 -.43 2.39 -.85c.65 .18 1.36 .27 2.1 .27c2.9 0 5.25 -1.74 5.25 -3.9s-2.35 -3.9 -5.25 -3.9z",
+  "M7.9 20A9 9 0 1 0 4 16.1L2 22Z",
 ];
 
 /**
