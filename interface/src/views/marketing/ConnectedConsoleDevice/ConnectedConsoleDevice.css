@@ -289,15 +289,16 @@
       #e85a14 90%,
       #f4651f 100%
     );
-  /* Right INNER shadow darkens the far-right edge (the wheel curving away)
-     so the orange peaks just inboard of it; a contained outer glow escapes
-     only on the right; the left edge stays hard black. */
+  /* All orange is contained INSIDE the wheel: an inner orange glow rising
+     from the right, capped by a dark right inner shadow at the very edge.
+     No outset orange shadow, so nothing glows outside the div. The left
+     edge stays hard black; only a neutral black drop shadow sits outside
+     for elevation. */
   box-shadow:
-    inset -5px 0 8px rgba(0, 0, 0, 0.7),
+    inset -4px 0 6px rgba(0, 0, 0, 0.65),
+    inset -11px 0 14px rgba(244, 85, 0, 0.5),
     inset 2px 0 0 rgba(0, 0, 0, 0.9),
     inset 0 1px 1px rgba(255, 255, 255, 0.16),
-    9px 0 11px -3px rgba(244, 85, 0, 0.85),
-    5px 0 5px -1px rgba(255, 138, 60, 0.75),
     0 3px 6px -1px rgba(0, 0, 0, 0.5);
 }
 
@@ -371,8 +372,8 @@
   grid-template-columns: repeat(5, 1fr);
   width: 100%;
   box-sizing: border-box;
-  gap: 2cqw;
-  padding: 2.6cqw;
+  gap: 0.8cqw;
+  padding: 1cqw 2px;
   border-radius: 3cqw;
   background: #16181c;
   box-shadow:
@@ -382,11 +383,8 @@
 }
 
 /*
- * Glassy, embossed keycap. A domed top-light gradient plus a bright top
- * rim, a 1px inner edge light, and an inner bottom shadow read as raised
- * glass; the outer drop shadow lifts the cap off the well. The diagonal
- * sheen (`::before`) sells the glass reflection. Corners are properly
- * rounded and the sheen/rim inherit that radius.
+ * Flat matte keycap: a single solid fill with a tight 3px radius, no inner
+ * shadow or glass sheen, sitting in the recessed well.
  */
 .consoleKey {
   position: relative;
@@ -396,32 +394,11 @@
   aspect-ratio: 1 / 1.08;
   padding: 0;
   border: none;
-  border-radius: 3.2cqw;
+  border-radius: 3px;
   overflow: hidden;
   color: rgba(255, 255, 255, 0.48);
-  background: linear-gradient(180deg, #383b41 0%, #23262b 46%, #14161a 100%);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.6),
-    0 3px 6px rgba(0, 0, 0, 0.55),
-    0 1px 1px rgba(0, 0, 0, 0.4);
+  background: #23262b;
   cursor: default;
-}
-
-/* Diagonal glass reflection across the upper corner. */
-.consoleKey::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    158deg,
-    rgba(255, 255, 255, 0.16) 0%,
-    rgba(255, 255, 255, 0.05) 24%,
-    rgba(255, 255, 255, 0) 46%
-  );
-  pointer-events: none;
 }
 
 .consoleKeyMark {
@@ -430,17 +407,9 @@
   height: auto;
 }
 
-/* Lit ZERO key — orange wordmark with an emissive glow, same raised glass
-   treatment as the other caps (it inherits the `::before` sheen). */
+/* Lit ZERO key — flat orange-tinted cap with the same glowing wordmark. */
 .consoleKey--zero {
-  background: linear-gradient(180deg, #2c1c13 0%, #1d110a 52%, #130a06 100%);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 170, 90, 0.32),
-    inset 0 0 0 1px rgba(255, 138, 60, 0.12),
-    inset 0 0 14px rgba(244, 85, 0, 0.4),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.5),
-    0 3px 6px rgba(0, 0, 0, 0.55),
-    0 1px 1px rgba(0, 0, 0, 0.4);
+  background: #1d110a;
 }
 
 .consoleKeyZero {
