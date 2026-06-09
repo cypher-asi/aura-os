@@ -14,8 +14,11 @@
 .phoneShell {
   position: relative;
   flex-shrink: 0;
+  /* Width reduced 20% from the original clamp(225px, 27.5vw, 300px); height
+     is pinned to the ORIGINAL (width * 480/250) so the device gets narrower
+     without getting shorter. */
   width: clamp(180px, 22vw, 240px);
-  aspect-ratio: 250 / 480;
+  height: clamp(432px, 52.8vw, 576px);
   /* Container context so internal hardware scales with the device width. */
   container-type: inline-size;
   /* Establish a stacking context per phone (z-index:0) so the side
@@ -25,7 +28,10 @@
 }
 
 .phoneShellHero {
+  /* 20% narrower than the original clamp(275px, 32.5vw, 350px); height kept
+     at the original so only the width shrinks. */
   width: clamp(220px, 26vw, 280px);
+  height: clamp(528px, 62.4vw, 672px);
   /* Lift the centered phone forward so it visually overlaps the two side
      phones, and raise it above their stacking contexts so it paints IN
      FRONT — the side phones tuck behind it. */
@@ -46,7 +52,9 @@
   top: 0;
   left: 1.5cqw;
   right: 1.5cqw;
-  height: 62%;
+  /* Screen taller by 25% (was 62%), taking over the space freed by the
+     shorter deck below. */
+  height: 77.5%;
   z-index: 2;
   overflow: hidden;
   border-radius: 9cqw;
@@ -114,7 +122,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 44%;
+  /* Bottom control section smaller by 25% (was 44%). */
+  height: 33%;
   z-index: 1;
   display: grid;
   grid-template-columns: auto 1fr;
@@ -124,19 +133,29 @@
     "grille wordmark";
   align-items: start;
   gap: 3cqw 5cqw;
-  padding: 15cqw 5cqw 4cqw;
+  /* Larger top padding clears the now-taller screen panel that overlaps
+     this shorter deck at the seam, keeping the controls fully visible. */
+  padding: 28cqw 5cqw 4cqw;
   border-radius: 9cqw;
+  /* Match the shared `<Plate />` metal panels used in the sections above:
+     a radial metal surface (padding-box) inside a 135deg metallic gradient
+     edge (border-box), rather than the brushed-line gradient. */
+  border: 1px solid transparent;
   background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.02) 0 1px,
-      transparent 1px 3px
-    ),
-    linear-gradient(180deg, #34363b 0%, #26282c 45%, #17181b 100%);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
-    0 8px 16px rgba(0, 0, 0, 0.5);
+    radial-gradient(
+        ellipse 90% 120% at 50% 40%,
+        #202020 0%,
+        #1a1a1a 55%,
+        #101010 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(90, 94, 102, 0.65) 0%,
+        rgba(12, 13, 16, 0.65) 100%
+      )
+      border-box;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
 }
 
 /* Rotary knob: raised brushed-metal dial in a shallow black recess. */
@@ -269,20 +288,18 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-/* AURA wordmark — replaces the reference device's "SNIFF" mark. */
+/* AURA wordmark — the real AURA logo image (same `/AURA_logo_text_mark.png`
+   used in the shell's top-left), sized to the deck via container units. */
 .phoneShellWordmark {
   grid-area: wordmark;
   align-self: end;
   justify-self: end;
-  font-family: var(--font-sans, system-ui, sans-serif);
-  font-weight: 700;
-  font-size: 7cqw;
-  letter-spacing: 0.12em;
-  line-height: 1;
-  color: rgba(232, 234, 238, 0.85);
-  text-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.6),
-    0 -1px 0 rgba(255, 255, 255, 0.08);
+  height: 7cqw;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: right bottom;
+  opacity: 0.85;
 }
 
 /*
@@ -339,5 +356,6 @@
   .phoneShellHero {
     transform: none;
     width: clamp(220px, 60vw, 280px);
+    height: clamp(528px, 144vw, 672px);
   }
 }

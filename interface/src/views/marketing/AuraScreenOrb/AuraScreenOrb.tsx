@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   RADIAL_FRAGMENT_SHADER,
   SCREEN_FRAGMENT_SHADER,
@@ -83,6 +83,10 @@ export function AuraScreenOrb({
   variant = "screen",
 }: AuraScreenOrbProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Drives the entrance fade: stays false until the WebGL context is up
+  // and the first frame has actually been painted, so the orb fades in
+  // smoothly when ready instead of popping in as an empty/black canvas.
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -146,8 +150,14 @@ export function AuraScreenOrb({
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 
+    let painted = false;
     const renderLoop = (now: number) => {
       draw((now - start) / 1000);
+      // Reveal the orb only after the first real frame is on screen.
+      if (!painted) {
+        painted = true;
+        setReady(true);
+      }
       rafId = requestAnimationFrame(renderLoop);
     };
 
@@ -161,6 +171,8 @@ export function AuraScreenOrb({
       gl.deleteVertexArray(vao);
       gl.deleteProgram(program);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
+      // Re-arm the entrance fade if the effect re-runs (e.g. variant change).
+      setReady(false);
     };
   }, [variant]);
 
@@ -168,7 +180,13 @@ export function AuraScreenOrb({
     <div className={className} aria-hidden="true">
       <canvas
         ref={canvasRef}
-        style={{ width: "100%", height: "100%", display: "block" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "block",
+          opacity: ready ? 1 : 0,
+          transition: "opacity 600ms ease-out",
+        }}
       />
     </div>
   );

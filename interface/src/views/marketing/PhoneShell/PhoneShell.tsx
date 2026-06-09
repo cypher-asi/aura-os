@@ -77,7 +77,12 @@ export function PhoneShell({
         </div>
 
         <div className="phoneShellGrille" />
-        <span className="phoneShellWordmark">AURA</span>
+        <img
+          className="phoneShellWordmark"
+          src="/AURA_logo_text_mark.png"
+          alt="AURA"
+          draggable={false}
+        />
       </div>
 
       <div className="phoneShellTop">

@@ -401,11 +401,10 @@ export function ServiceDeviceCard({
         ) : null}
 
         {hexGrille ? (
-          <div className="madeForYouCtaSlot">
-            <CreateAgentButton
-              source="made_for_you"
-              className="madeForYouCta"
-            />
+          <div className="madeForYouCtaSlot" aria-hidden="true">
+            <div className="madeForYouBrandPanel">
+              <span className="madeForYouBrandMark" />
+            </div>
           </div>
         ) : null}
 
@@ -493,11 +492,8 @@ export function ServiceDeviceCard({
       </div>
     </Plate>
     {hexGrille ? (
-      <div
-        className="madeForYouBrandPanel madeForYouCardBrandPanel"
-        aria-hidden="true"
-      >
-        <span className="madeForYouBrandMark" />
+      <div className="madeForYouCardCtaSlot">
+        <CreateAgentButton source="made_for_you" className="madeForYouCta" />
       </div>
     ) : null}
     </>
