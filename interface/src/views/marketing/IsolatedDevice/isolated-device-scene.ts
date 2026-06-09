@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { FRAGMENT_SHADER as ORB_FRAGMENT_SHADER } from "../AuraOrb/shaders";
 
 export interface IsolatedDeviceScene {
   dispose(): void;
@@ -58,7 +59,9 @@ const SCREW_OFFSET = 0.585;
 const SCREW_RADIUS = 0.034;
 const SCREW_HEIGHT = 0.016;
 
-const LOGO_SIZE = 0.6;
+/** Orb screen under the glass panel (square; edges hide under the lid ring). */
+const ORB_PLANE_SIZE = 1.5;
+const ORB_PLANE_Y = 0.59;
 
 /** Louver bank planes on the case walls, tucked toward the far wall ends. */
 const VENT_W = 0.48;
@@ -78,6 +81,19 @@ const LED_START_X = -0.56; // strip start, aligned over the vent's left edge
 const LED_Y = 0.48;
 
 /**
+ * Etched wall lines (sides only, after the reference): a thin continuous
+ * seam groove running just under the lid across each visible wall's flat
+ * region, and a vertical dashed groove near each wall's near-corner end.
+ */
+const ETCH_SEAM_W = 1.2; // spans the wall's flat region between corners
+const ETCH_SEAM_H = 0.02;
+const ETCH_SEAM_Y = 0.515;
+const ETCH_DASH_W = 0.02;
+const ETCH_DASH_H = 0.34;
+const ETCH_DASH_Y = 0.33;
+const ETCH_DASH_POS = 0.55; // along the wall, just before the corner curve
+
+/**
  * Pose: the near vertical corner points exactly at the camera (a perfect
  * diamond silhouette), viewed from high enough that the top plate dominates
  * like the reference photo. The pose is fixed — no sway or pointer tilt —
@@ -86,6 +102,33 @@ const LED_Y = 0.48;
 const BASE_YAW = -Math.PI / 4;
 const CAMERA_ELEVATION_DEG = 42;
 const CAMERA_TARGET_Y = 0.28;
+
+const ORB_VERTEX_SHADER = `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+/**
+ * The hero section's orb shader (see `../AuraOrb/shaders.ts`), retargeted
+ * from a full-screen WebGL2 pass to a three.js GLSL1 `ShaderMaterial` on the
+ * panel screen plane: the `#version` line and explicit output declaration
+ * are swapped for three's GLSL1 conventions, and the screen-space coordinate
+ * setup becomes plane UVs (scaled so the orb fills the panel). Sharing the
+ * source string keeps the device's screen in lockstep with the hero orb.
+ */
+const ORB_PANEL_FRAGMENT_SHADER = ORB_FRAGMENT_SHADER.replace(
+  "#version 300 es",
+  "",
+)
+  .replace("out vec4 fragColor;", "varying vec2 vUv;")
+  .replace("fragColor =", "gl_FragColor =")
+  .replace(
+    "vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;",
+    "vec2 uv = (vUv - 0.5) * 1.6;",
+  );
 
 /** Rounded square centered on the origin (the device's squircle footprint). */
 function roundedSquare(size: number, radius: number): THREE.Shape {
@@ -172,42 +215,6 @@ function createBrushedTexture(base: string, streak: string): THREE.CanvasTexture
 }
 
 /**
- * Embossed logo decal (transparent canvas): a rounded-square outline with a
- * downward chevron, drawn as a light stroke offset under a dark stroke so it
- * reads as stamped into the metal. Laid as a plane on the recessed plate.
- */
-function createLogoTexture(): THREE.CanvasTexture {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (ctx) {
-    const drawMark = (offset: number, style: string): void => {
-      ctx.strokeStyle = style;
-      ctx.lineWidth = 14;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.beginPath();
-      ctx.roundRect(96 + offset, 96 + offset, 320, 320, 48);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(186 + offset, 226 + offset);
-      ctx.lineTo(256 + offset, 300 + offset);
-      ctx.lineTo(326 + offset, 226 + offset);
-      ctx.stroke();
-    };
-    // Light lip below-right, then the dark engraved line on top.
-    drawMark(4, "rgba(255, 255, 255, 0.10)");
-    drawMark(0, "rgba(0, 0, 0, 0.55)");
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  return tex;
-}
-
-/**
  * Louvered vent decal (transparent canvas): a bank of thin dark slats, each
  * with a faint light lip on its leading edge, matching the drilled intake
  * banks on the reference case walls.
@@ -242,11 +249,48 @@ function createVentTexture(): THREE.CanvasTexture {
 }
 
 /**
+ * Etched groove decal (transparent canvas): a thin dark line with a faint
+ * light lip beneath it, so it reads as a recess milled into the wall.
+ * `dashed` breaks the line into short segments like the reference's etched
+ * tick lines; otherwise it draws one continuous seam.
+ */
+function createEtchTexture(dashed: boolean): THREE.CanvasTexture {
+  const w = 512;
+  const h = 16;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const dash = 30;
+    const gap = 18;
+    const step = dashed ? dash + gap : w;
+    const len = dashed ? dash : w;
+    for (let x = 0; x < w; x += step) {
+      const segment = Math.min(len, w - x);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+      ctx.beginPath();
+      ctx.roundRect(x, 5, segment, 4, 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.09)";
+      ctx.beginPath();
+      ctx.roundRect(x, 9, segment, 2, 1);
+      ctx.fill();
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+/**
  * WebGL "isolated device" scene — a dark matte-metal Mac-mini-style appliance
  * modelled after the reference render, locked in a centered perfect-diamond
- * pose from a high angle. The geometry is static; the only motion is the
- * status LED strip beeping in sequence (skipped under reduced motion, where
- * the LEDs hold a steady glow and the scene renders a single frame).
+ * pose from a high angle. The recessed top panel is glass, with the hero
+ * section's orb animation streaming on a screen beneath it. The geometry is
+ * static; the motion is the orb shader plus the status LED strip beeping in
+ * sequence (under reduced motion both freeze into a single static frame).
  */
 export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScene {
   const width = host.clientWidth || 320;
@@ -297,14 +341,26 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     roughness: 0.68,
     envMapIntensity: 0.55,
   });
-  const plateTexture = createBrushedTexture("#16181b", "#3c4046");
-  plateTexture.anisotropy = maxAniso;
-  const plateMaterial = new THREE.MeshStandardMaterial({
-    color: 0x24262a,
-    map: plateTexture,
-    metalness: 0.7,
-    roughness: 0.72,
-    envMapIntensity: 0.45,
+  // Glass top panel: a smoked pane that keeps a faint surface presence
+  // (sheen + env reflections) while letting the orb screen below stream
+  // through via alpha blending.
+  const glassMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x10141a,
+    transparent: true,
+    opacity: 0.22,
+    metalness: 0,
+    roughness: 0.08,
+    clearcoat: 1,
+    clearcoatRoughness: 0.12,
+    envMapIntensity: 1.2,
+  });
+  // Orb screen under the glass — the hero section's shader, driven by the
+  // same time uniform contract as the full-screen original.
+  const orbUniforms = { u_time: { value: 0 } };
+  const orbMaterial = new THREE.ShaderMaterial({
+    vertexShader: ORB_VERTEX_SHADER,
+    fragmentShader: ORB_PANEL_FRAGMENT_SHADER,
+    uniforms: orbUniforms,
   });
   const baseMaterial = new THREE.MeshStandardMaterial({
     color: 0x17181a,
@@ -321,17 +377,25 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     envMapIntensity: 0.8,
   });
 
-  const logoTexture = createLogoTexture();
-  const logoMaterial = new THREE.MeshStandardMaterial({
-    map: logoTexture,
-    transparent: true,
-    metalness: 0.6,
-    roughness: 0.6,
-    depthWrite: false,
-  });
   const ventTexture = createVentTexture();
   const ventMaterial = new THREE.MeshStandardMaterial({
     map: ventTexture,
+    transparent: true,
+    metalness: 0.2,
+    roughness: 0.9,
+    depthWrite: false,
+  });
+  const etchSeamTexture = createEtchTexture(false);
+  const etchSeamMaterial = new THREE.MeshStandardMaterial({
+    map: etchSeamTexture,
+    transparent: true,
+    metalness: 0.2,
+    roughness: 0.9,
+    depthWrite: false,
+  });
+  const etchDashTexture = createEtchTexture(true);
+  const etchDashMaterial = new THREE.MeshStandardMaterial({
+    map: etchDashTexture,
     transparent: true,
     metalness: 0.2,
     roughness: 0.9,
@@ -375,7 +439,15 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   lidMesh.position.y = LID_Y;
   group.add(lidMesh);
 
-  // Recessed top plate filling the lid opening, sunk below the rim.
+  // Orb screen: a square plane under the glass whose edges hide beneath the
+  // lid ring, playing the hero orb shader.
+  const orbGeo = track(new THREE.PlaneGeometry(ORB_PLANE_SIZE, ORB_PLANE_SIZE));
+  orbGeo.rotateX(-Math.PI / 2);
+  const orbMesh = new THREE.Mesh(orbGeo, orbMaterial);
+  orbMesh.position.y = ORB_PLANE_Y;
+  group.add(orbMesh);
+
+  // Glass top panel filling the lid opening, sunk below the rim.
   const plateGeo = track(
     extrudeSlab(
       roundedSquare(PLATE_SIZE - 2 * PLATE_BEVEL, PLATE_R - PLATE_BEVEL),
@@ -383,11 +455,12 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       PLATE_BEVEL,
     ),
   );
-  const plateMesh = new THREE.Mesh(plateGeo, plateMaterial);
+  const plateMesh = new THREE.Mesh(plateGeo, glassMaterial);
   plateMesh.position.y = PLATE_Y;
   group.add(plateMesh);
 
-  // Four pan-head screws just inside the plate corners.
+  // Four pan-head screws just inside the panel corners, reading as the
+  // retainers holding the glass down.
   const screwGeo = track(
     new THREE.CylinderGeometry(SCREW_RADIUS, SCREW_RADIUS, SCREW_HEIGHT, 24),
   );
@@ -403,13 +476,6 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     }
   }
 
-  // Embossed logo decal lying on the plate center.
-  const logoGeo = track(new THREE.PlaneGeometry(LOGO_SIZE, LOGO_SIZE));
-  logoGeo.rotateX(-Math.PI / 2);
-  const logoMesh = new THREE.Mesh(logoGeo, logoMaterial);
-  logoMesh.position.y = PLATE_TOP + 0.002;
-  group.add(logoMesh);
-
   // Louver banks on the two camera-facing walls, toward the far ends.
   const ventGeo = track(new THREE.PlaneGeometry(VENT_W, VENT_H));
   const ventFront = new THREE.Mesh(ventGeo, ventMaterial);
@@ -419,6 +485,30 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   ventRight.rotation.y = Math.PI / 2;
   ventRight.position.set(SIZE / 2 + 0.0015, VENT_Y, VENT_CENTER);
   group.add(ventRight);
+
+  // Etched wall lines (sides only): a continuous seam groove running just
+  // under the lid across both visible walls, and a vertical dashed groove
+  // tucked toward each wall's near-corner end, after the reference.
+  const etchSeamGeo = track(new THREE.PlaneGeometry(ETCH_SEAM_W, ETCH_SEAM_H));
+  const seamFront = new THREE.Mesh(etchSeamGeo, etchSeamMaterial);
+  seamFront.position.set(0, ETCH_SEAM_Y, SIZE / 2 + 0.0015);
+  group.add(seamFront);
+  const seamRight = new THREE.Mesh(etchSeamGeo, etchSeamMaterial);
+  seamRight.rotation.y = Math.PI / 2;
+  seamRight.position.set(SIZE / 2 + 0.0015, ETCH_SEAM_Y, 0);
+  group.add(seamRight);
+
+  // Vertical dashes: the plane is built lying along X (so the dash texture
+  // runs down its length) and spun 90deg about Z to stand upright.
+  const etchDashGeo = track(new THREE.PlaneGeometry(ETCH_DASH_H, ETCH_DASH_W));
+  etchDashGeo.rotateZ(Math.PI / 2);
+  const dashFront = new THREE.Mesh(etchDashGeo, etchDashMaterial);
+  dashFront.position.set(ETCH_DASH_POS, ETCH_DASH_Y, SIZE / 2 + 0.0015);
+  group.add(dashFront);
+  const dashRight = new THREE.Mesh(etchDashGeo, etchDashMaterial);
+  dashRight.rotation.y = Math.PI / 2;
+  dashRight.position.set(SIZE / 2 + 0.0015, ETCH_DASH_Y, ETCH_DASH_POS);
+  group.add(dashRight);
 
   // Status LED strip above the front louver bank. One emissive material per
   // dot so the chase animation can pulse them in sequence.
@@ -477,6 +567,7 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   function animate(): void {
     raf = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
+    orbUniforms.u_time.value = t;
     for (let i = 0; i < ledMaterials.length; i += 1) {
       const pulse = Math.pow(Math.max(0, Math.sin(t * 2.4 - i * 0.7)), 8);
       ledMaterials[i].emissiveIntensity = 0.12 + 2.2 * pulse;
@@ -516,10 +607,12 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   resizeObserver.observe(host);
 
   if (reducedMotion) {
-    // Steady mid-glow instead of the chase, in a single static frame.
+    // Steady mid-glow instead of the chase, and a frozen mid-cycle orb, in a
+    // single static frame.
     for (const ledMaterial of ledMaterials) {
       ledMaterial.emissiveIntensity = 0.9;
     }
+    orbUniforms.u_time.value = 4;
     renderFrame();
   } else {
     start();
@@ -535,15 +628,17 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       for (const ledMaterial of ledMaterials) ledMaterial.dispose();
       for (const geo of geometries) geo.dispose();
       caseMaterial.dispose();
-      plateMaterial.dispose();
+      glassMaterial.dispose();
+      orbMaterial.dispose();
       baseMaterial.dispose();
       screwMaterial.dispose();
-      logoMaterial.dispose();
       ventMaterial.dispose();
+      etchSeamMaterial.dispose();
+      etchDashMaterial.dispose();
       caseTexture.dispose();
-      plateTexture.dispose();
-      logoTexture.dispose();
       ventTexture.dispose();
+      etchSeamTexture.dispose();
+      etchDashTexture.dispose();
       envRT.texture.dispose();
       pmrem.dispose();
       renderer.dispose();
