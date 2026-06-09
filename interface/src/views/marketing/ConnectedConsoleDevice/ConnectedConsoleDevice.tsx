@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { MessageCircle, Send } from "lucide-react";
 import "./ConnectedConsoleDevice.css";
 
 /**
- * Multi-subpath OUTLINE (stroke) glyphs for the brand keys, in the same
- * lucide outline style (24x24 viewBox, `fill: none`, `stroke: currentColor`)
- * as the iMessage bubble and Telegram paper-plane, so every key reads as a
- * line icon rather than a filled silhouette. Paths are the CC0 Tabler-icons
- * `brand-slack` / `brand-discord` outlines, kept inline so the marketing page
- * pulls in no extra icon dependency.
+ * Multi-subpath OUTLINE (stroke) glyphs for the brand keys, all in the same
+ * line-icon style (24x24 viewBox, `fill: none`, `stroke: currentColor`), so
+ * every key reads as an outline rather than a filled silhouette. Slack,
+ * Discord, and Telegram are the CC0 Tabler-icons `brand-*` outlines; the
+ * iMessage glyph is a hand-drawn squircle-plus-bubble matching the app icon
+ * (no outline brand set carries it). Kept inline so the marketing page pulls
+ * in no extra icon dependency.
  */
 const SLACK_OUTLINE_PATHS: readonly string[] = [
   "M12 12v-6a2 2 0 0 1 4 0v6m0 -2a2 2 0 1 1 2 2h-6",
@@ -24,17 +24,30 @@ const DISCORD_OUTLINE_PATHS: readonly string[] = [
   "M7 16.5c3.5 1 6.5 1 10 0",
 ];
 
+/** Tabler `brand-telegram` — the actual angled Telegram paper plane. */
+const TELEGRAM_OUTLINE_PATHS: readonly string[] = [
+  "M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4",
+];
+
+/**
+ * The iMessage app icon as an outline: the rounded-square app tile with the
+ * speech bubble (bottom-left tail) inside. Hand-drawn — neither Tabler nor
+ * any other CC0 outline set carries an iMessage mark.
+ */
+const IMESSAGE_OUTLINE_PATHS: readonly string[] = [
+  "M3 7a4 4 0 0 1 4 -4h10a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-10a4 4 0 0 1 -4 -4z",
+  "M12 7.75c-2.9 0 -5.25 1.74 -5.25 3.9c0 .98 .49 1.88 1.3 2.56c-.13 .55 -.4 1.04 -.77 1.43c-.18 .2 -.04 .52 .23 .49c.92 -.1 1.74 -.43 2.39 -.85c.65 .18 1.36 .27 2.1 .27c2.9 0 5.25 -1.74 5.25 -3.9s-2.35 -3.9 -5.25 -3.9z",
+];
+
 /**
  * A single channel key in the bottom tray. `mark` is either an outline brand
- * glyph (a set of `currentColor` stroke subpaths in a 24x24 viewBox), a lucide
- * icon component (the outline glyphs for the iMessage bubble and Telegram
- * paper-plane), or `"zero"` — the lit orange ZERO wordmark. No ZERO image
- * asset exists in the repo, so it is painted as styled text faithful to the
- * reference; swapping in an `<img>` later is a one-line change.
+ * glyph (a set of `currentColor` stroke subpaths in a 24x24 viewBox) or
+ * `"zero"` — the lit orange ZERO wordmark. No ZERO image asset exists in the
+ * repo, so it is painted as styled text faithful to the reference; swapping
+ * in an `<img>` later is a one-line change.
  */
 type ChannelMark =
   | { readonly kind: "outline"; readonly paths: readonly string[] }
-  | { readonly kind: "icon"; readonly Icon: typeof MessageCircle }
   | { readonly kind: "zero" };
 
 interface Channel {
@@ -44,9 +57,9 @@ interface Channel {
 }
 
 const CHANNELS: readonly Channel[] = [
-  { id: "imessage", label: "iMessage", mark: { kind: "icon", Icon: MessageCircle } },
+  { id: "imessage", label: "iMessage", mark: { kind: "outline", paths: IMESSAGE_OUTLINE_PATHS } },
   { id: "slack", label: "Slack", mark: { kind: "outline", paths: SLACK_OUTLINE_PATHS } },
-  { id: "telegram", label: "Telegram", mark: { kind: "icon", Icon: Send } },
+  { id: "telegram", label: "Telegram", mark: { kind: "outline", paths: TELEGRAM_OUTLINE_PATHS } },
   { id: "discord", label: "Discord", mark: { kind: "outline", paths: DISCORD_OUTLINE_PATHS } },
   { id: "zero", label: "ZERO", mark: { kind: "zero" } },
 ];
@@ -174,8 +187,10 @@ export function ConnectedConsoleDevice(): ReactNode {
   return (
     <div className="connectedConsole">
       <div className="consoleCord" aria-hidden="true">
-        <span className="consoleCordBase" />
-        <span className="consoleCordTip" />
+        <span className="consoleConnectorLayer consoleConnectorLayer1" />
+        <span className="consoleConnectorLayer consoleConnectorLayer2" />
+        <span className="consoleConnectorLayer consoleConnectorLayer3" />
+        <span className="consoleConnectorLayer consoleConnectorLayer4" />
       </div>
 
       <div className="consoleStack">
@@ -225,13 +240,6 @@ export function ConnectedConsoleDevice(): ReactNode {
               >
                 {channel.mark.kind === "zero" ? (
                   <span className="consoleKeyZero">ZERO</span>
-                ) : channel.mark.kind === "icon" ? (
-                  <channel.mark.Icon
-                    className="consoleKeyMark"
-                    size={26}
-                    strokeWidth={1.75}
-                    aria-hidden="true"
-                  />
                 ) : (
                   <svg
                     className="consoleKeyMark"
