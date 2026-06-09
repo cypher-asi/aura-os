@@ -1,4 +1,10 @@
 const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
+  "claude-fable-5": {
+    input: 10,
+    output: 50,
+    cacheWrite: 12.5,
+    cacheRead: 1,
+  },
   "claude-opus-4-8": {
     input: 5,
     output: 25,
@@ -296,6 +302,8 @@ function normalizeModelKey(model) {
   if (fireworksModel) return fireworksModel[1];
   const fireworksRouter = unprefixed.match(/^accounts\/fireworks\/routers\/(.+)$/);
   if (fireworksRouter) return fireworksRouter[1];
+  const auraClaude = unprefixed.match(/^aura-(claude-.+)$/);
+  if (auraClaude) return auraClaude[1];
   const auraFireworksModels = {
     "aura-kimi-k2-6": "kimi-k2p6",
     "aura-kimi-k2-5": "kimi-k2p5",
