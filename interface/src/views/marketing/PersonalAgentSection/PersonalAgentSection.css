@@ -316,9 +316,11 @@
 }
 
 /* Click flash: the glyph lights up with the golden accent glow for ~1.5s
-   (driven by `data-flash` in the component). Overrides the resting glyph
-   tone; the always-lit `data-lit` keys keep their dark glyph. */
-.personalAgentSkillBtn[data-flash="true"]:not([data-lit="true"]) svg {
+   (driven by `data-flash` in the component). Applies to every key, including
+   the always-lit gold keys, so clicking a colored key also tints its glyph
+   gold. The `[data-flash]` rule is authored after the `[data-lit] svg` rule
+   above (equal specificity) so it wins for lit keys while flashing. */
+.personalAgentSkillBtn[data-flash="true"] svg {
   color: var(--gold-core, #f4faf2);
   filter:
     drop-shadow(0 0 5px rgba(var(--gold-glow), 0.85))
