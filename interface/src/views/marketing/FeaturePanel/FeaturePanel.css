@@ -154,20 +154,20 @@
     0 -1px 1px rgba(0, 0, 0, 0.6);
 }
 
-/* Big title struck into the plate: a near-black fill with a deep black
-   shadow around/inside the glyphs plus a faint light bottom edge, so the
-   text reads as engraved/recessed into the metal. */
+/* Big title struck into the plate: a mid-gray fill with an inner shadow
+   along the top edge (dark cast inside the glyphs) plus a faint light bottom
+   catch, so the text reads as recessed/engraved into the metal. No outer
+   drop shadow. */
 .featurePanelMetalTitle {
   margin: 0;
   font-size: clamp(26px, 2.6vw, 34px);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: #1b1b19;
+  color: #454545;
   text-shadow:
-    0 1px 1px rgba(0, 0, 0, 0.85),
-    0 0 6px rgba(0, 0, 0, 0.6),
-    0 1px 0 rgba(255, 255, 255, 0.12);
+    0 -1px 1px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* Glass bottom section container. It holds a glowing gold line layer with
