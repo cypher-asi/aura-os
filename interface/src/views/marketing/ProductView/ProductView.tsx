@@ -6,7 +6,7 @@ import { AgentConsole } from "../AgentConsole";
 import { ChangelogPreview } from "../ChangelogPreview";
 import { ExpertiseSection, ExpertiseTabs } from "../ExpertiseSection";
 import { Section } from "../Section";
-import { FeaturePanel } from "../FeaturePanel/FeaturePanel";
+import { PrivacyFeaturePanel } from "../PrivacyFeaturePanel";
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
@@ -121,32 +121,7 @@ export function ProductView(): ReactNode {
       <AgentChatSection />
       {/* Temporarily hidden: agent orb + marquee section.
       <AgentOrbSection /> */}
-      <FeaturePanel
-        headline="Designed for your privacy."
-        features={[
-          {
-            title: "Private",
-            description:
-              "AURA never views or trains on your personal or corporate data. Anything sent to frontier models stays unidentifiable.",
-            tag: "PQ-Encryption",
-            shape: "circle",
-          },
-          {
-            title: "Verifiable",
-            description:
-              "The AURA harness and kernel are built from the ground up with security, verification, and policy as first-class citizens.",
-            tag: "Trusted Execution",
-            shape: "triangle",
-          },
-          {
-            title: "Open Source",
-            description:
-              "AURA is 100% open source under the MIT license. Fork it anytime, with zero vendor lock-in and no strings attached.",
-            tag: "MIT License",
-            shape: "square",
-          },
-        ]}
-      />
+      <PrivacyFeaturePanel />
       <ChangelogPreview />
       <ProductCallToAction />
       <MarketingFooter />

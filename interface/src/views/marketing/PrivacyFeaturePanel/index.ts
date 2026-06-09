@@ -1,0 +1,1 @@
+export { PrivacyFeaturePanel } from "./PrivacyFeaturePanel";
