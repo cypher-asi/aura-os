@@ -1,53 +1,38 @@
-import { type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import {
+  createIsolatedDeviceScene,
+  isWebGLAvailable,
+} from "./isolated-device-scene";
 import "./IsolatedDevice.css";
 
 /**
- * Marketing "isolated device" — a pure-CSS, diagonally-viewed Mac-mini-style
- * computer that sits centered in the "Isolated by default." trust card. It is
- * a genuine CSS 3D cuboid (`transform-style: preserve-3d`) rotated into an
- * isometric pose so it reads as a small sealed appliance: a brushed lid with a
- * recessed inner seam, four corner screws, and a faintly etched center mark,
- * over two visible case faces carrying louvered vents (a larger bank low on
- * the front-left face, a smaller one on the right face), matching the
- * reference render.
+ * Marketing "isolated device" — a WebGL-rendered, diagonally-viewed
+ * Mac-mini-style computer centered in the "Isolated by default." trust card,
+ * modelled after the reference render: a squircle-footprint case with a
+ * rounded-over lid edge, a recessed top plate with four corner screws and a
+ * centered embossed logo, louver banks on the walls, and an inset base
+ * plinth — finished in the site's dark matte metal rather than the photo's
+ * bright silver.
  *
- * The whole device is decorative hardware fiction, so the scene is
- * `aria-hidden`. It is recolored to the same dark-metal gradient family as the
- * `ConnectedConsoleDevice` speaker panel rather than the photo's bright
- * silver. Internals are sized in `cqw` within a `container-type: inline-size`
- * context so the device scales with its well like the other hardware props.
+ * The device is decorative hardware fiction, so the host is `aria-hidden`
+ * and nothing renders if WebGL is unavailable. The scene idles with a gentle
+ * sway and leans toward the pointer; `prefers-reduced-motion` collapses it
+ * to a single static frame.
  */
 export function IsolatedDevice(): ReactNode {
-  return (
-    <div className="isolatedDevice" aria-hidden="true">
-      <div className="isolatedScene">
-        <div className="isolatedShadow" />
+  const hostRef = useRef<HTMLDivElement>(null);
 
-        {/* Front-left case face — the larger vent bank, low on the wall. */}
-        <div className="isolatedFace isolatedFace--left">
-          <span className="isolatedVent isolatedVent--large" />
-        </div>
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host || !isWebGLAvailable()) {
+      return;
+    }
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const scene = createIsolatedDeviceScene(host, { reducedMotion });
+    return () => scene.dispose();
+  }, []);
 
-        {/* Right case face — the smaller vent bank, up on the wall. */}
-        <div className="isolatedFace isolatedFace--right">
-          <span className="isolatedVent isolatedVent--small" />
-        </div>
-
-        {/* Rounded fillet across the near (front) vertical edge where the two
-            case faces meet, so that corner reads round like the lid corners. */}
-        <div className="isolatedFace isolatedFace--corner" />
-
-        {/* Brushed lid: recessed inner seam, four corner screws, etched mark. */}
-        <div className="isolatedTop">
-          <div className="isolatedSeam">
-            <span className="isolatedScrew isolatedScrew--tl" />
-            <span className="isolatedScrew isolatedScrew--tr" />
-            <span className="isolatedScrew isolatedScrew--bl" />
-            <span className="isolatedScrew isolatedScrew--br" />
-          </div>
-          <span className="isolatedMark" />
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="isolatedDevice" aria-hidden="true" ref={hostRef} />;
 }
