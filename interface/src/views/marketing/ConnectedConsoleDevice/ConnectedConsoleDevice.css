@@ -191,13 +191,12 @@
   z-index: 2;
 }
 
-/* Knob shrunk ~50% (14cqw -> 7cqw) from its prior size. */
 .consoleKnob {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 7cqw;
-  height: 7cqw;
+  width: 14cqw;
+  height: 14cqw;
   border-radius: 50%;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
@@ -213,12 +212,11 @@
 
 /* Matte-black dial (vs the old brushed-silver conic metal): a soft top-lit
    black surface that still catches a faint highlight up top so the rotation
-   reads. Halved in size (10.5cqw -> 5.25cqw); the cursor-follow rotation is
-   set inline by the component. */
+   reads. The cursor-follow rotation is set inline by the component. */
 .consoleKnobDial {
   position: relative;
-  width: 5.25cqw;
-  height: 5.25cqw;
+  width: 10.5cqw;
+  height: 10.5cqw;
   border-radius: 50%;
   /* Eased follow as the dial rotates toward the cursor (angle set inline). */
   transition: transform 0.12s ease-out;
@@ -242,15 +240,15 @@
 
 /* Golden position indicator notched into the dial top, lit as a fully
    emissive LED with the same layered neon glow + pulse as the "Agents made for
-   you" hero knob. Halved alongside the dial. */
+   you" hero knob. */
 .consoleKnobIndicator {
   position: absolute;
-  top: 0.6cqw;
+  top: 1.2cqw;
   left: 50%;
-  width: 0.7cqw;
-  height: 1.6cqw;
+  width: 1.4cqw;
+  height: 3.2cqw;
   transform: translateX(-50%);
-  border-radius: 0.35cqw;
+  border-radius: 0.7cqw;
   background: linear-gradient(180deg, #f4faf2 0%, #f1f9d3 100%);
   box-shadow:
     0 0 4px rgba(232, 205, 137, 1),
