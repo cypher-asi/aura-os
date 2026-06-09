@@ -92,11 +92,15 @@
   margin-left: calc(var(--size) / -2);
   border-radius: 7cqw;
   transform: translateZ(calc(var(--thk) / 2));
-  /* Brushed-metal sheen + a beveled bright rim around the lid edge. */
+  /* Crisp beveled edge matching the metal panels above: a sharp 1px bright
+     top line and 1px dark bottom line (the bevel), plus shallow low-blur
+     insets for the surface curvature. No wide soft glows, so the rounded
+     corners stay sharp. */
   box-shadow:
-    inset 0 0 0 0.4cqw rgba(255, 255, 255, 0.05),
-    inset 0.6cqw 0.6cqw 1.4cqw rgba(255, 255, 255, 0.08),
-    inset -1cqw -1cqw 2.4cqw rgba(0, 0, 0, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    inset 0 2px 3px rgba(255, 255, 255, 0.05),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.45);
 }
 
 /*
