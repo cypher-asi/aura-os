@@ -72,12 +72,15 @@
   z-index: -1;
   pointer-events: none;
   color: transparent;
+  /* Large, dispersed bloom: wide blur radii at low alphas spread the
+     light far around the headline instead of concentrating it at the
+     glyph edges. */
   text-shadow:
-    0 0 14px rgba(var(--gold-glow), 0.5),
-    0 0 32px rgba(var(--gold-glow), 0.42),
-    0 0 64px rgba(var(--gold-glow), 0.32),
-    0 0 110px rgba(var(--gold-halo), 0.3),
-    0 0 160px rgba(var(--gold-halo), 0.2);
+    0 0 28px rgba(var(--gold-glow), 0.3),
+    0 0 64px rgba(var(--gold-glow), 0.25),
+    0 0 120px rgba(var(--gold-glow), 0.2),
+    0 0 200px rgba(var(--gold-halo), 0.18),
+    0 0 280px rgba(var(--gold-halo), 0.12);
   animation: ctaGlowPulse 2.8s ease-in-out infinite;
 }
 
