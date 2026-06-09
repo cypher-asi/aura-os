@@ -127,11 +127,17 @@
   padding: 0 10px;
   text-align: center;
   pointer-events: none;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(0, 0, 0, 0.62);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  /* White bloom behind the dark ink so the label pops harder against the
+     bright plasma field. */
+  text-shadow:
+    0 0 4px rgba(255, 255, 255, 0.9),
+    0 0 9px rgba(255, 255, 255, 0.75),
+    0 0 16px rgba(255, 255, 255, 0.5);
 }
 
 /* ----- Status lights ------------------------------------------------ */

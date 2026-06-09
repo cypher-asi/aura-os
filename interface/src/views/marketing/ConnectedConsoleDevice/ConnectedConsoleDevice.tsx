@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MessageCircle, Send } from "lucide-react";
 import "./ConnectedConsoleDevice.css";
 
@@ -116,6 +116,9 @@ const GRILLE_HOLES: ReadonlyArray<{ readonly cx: number; readonly cy: number }> 
  */
 export function ConnectedConsoleDevice(): ReactNode {
   const knobDialRef = useRef<HTMLDivElement>(null);
+  // Which channel key is currently "pressed" (selected). The ZERO key is the
+  // active channel by default; clicking any other key presses it instead.
+  const [pressedChannel, setPressedChannel] = useState<string>("zero");
 
   // MIX knob follows the cursor: on any mouse movement, rotate the brushed-
   // metal dial so its glowing indicator aims at the pointer. Updates are
@@ -210,13 +213,15 @@ export function ConnectedConsoleDevice(): ReactNode {
               <button
                 key={channel.id}
                 type="button"
-                tabIndex={-1}
                 className={
                   channel.mark.kind === "zero"
                     ? "consoleKey consoleKey--zero"
                     : "consoleKey"
                 }
                 aria-label={channel.label}
+                aria-pressed={pressedChannel === channel.id}
+                data-pressed={pressedChannel === channel.id ? "true" : undefined}
+                onClick={() => setPressedChannel(channel.id)}
               >
                 {channel.mark.kind === "zero" ? (
                   <span className="consoleKeyZero">ZERO</span>

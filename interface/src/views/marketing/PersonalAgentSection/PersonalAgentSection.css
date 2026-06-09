@@ -209,7 +209,7 @@
   border-radius: 10px;
   background: linear-gradient(180deg, #202329 0%, #0d0e11 100%);
   color: var(--color-text-secondary);
-  cursor: default;
+  cursor: pointer;
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
     inset 0 -2px 2px rgba(0, 0, 0, 0.6),
@@ -313,6 +313,16 @@
   color: #0c0a07;
   opacity: 1;
   filter: none;
+}
+
+/* Click flash: the glyph lights up with the golden accent glow for ~1.5s
+   (driven by `data-flash` in the component). Overrides the resting glyph
+   tone; the always-lit `data-lit` keys keep their dark glyph. */
+.personalAgentSkillBtn[data-flash="true"]:not([data-lit="true"]) svg {
+  color: var(--gold-core, #f4faf2);
+  filter:
+    drop-shadow(0 0 5px rgba(var(--gold-glow), 0.85))
+    drop-shadow(0 0 11px rgba(var(--gold-halo), 0.5));
 }
 
 /* ----- Quadrant 3: service device ------------------------------ */

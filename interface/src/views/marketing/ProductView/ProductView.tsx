@@ -122,7 +122,7 @@ export function ProductView(): ReactNode {
       {/* Temporarily hidden: agent orb + marquee section.
       <AgentOrbSection /> */}
       <FeaturePanel
-        headline="Private by Design."
+        headline="Designed for your privacy."
         features={[
           {
             title: "Private",

@@ -49,7 +49,12 @@
   left: 0;
   top: 0;
   height: 2px;
-  background: var(--color-text-primary);
+  /* Glowing golden accent underline matching the page's gold family. */
+  background: var(--gold-core, var(--color-text-primary));
+  box-shadow:
+    0 0 4px rgba(var(--gold-glow), 0.85),
+    0 0 9px rgba(var(--gold-glow), 0.5),
+    0 0 16px rgba(var(--gold-halo), 0.4);
   border-radius: 2px;
   pointer-events: none;
   /* Hidden until the first imperative measurement writes a real
@@ -118,7 +123,9 @@
 }
 
 .expertiseTab[data-selected="true"] {
-  color: var(--color-text-primary);
+  /* Selected label lights up with the golden accent glow. */
+  color: var(--gold-core, var(--color-text-primary));
+  text-shadow: var(--gold-text-shadow, none);
   font-weight: 600;
   opacity: 1;
 }

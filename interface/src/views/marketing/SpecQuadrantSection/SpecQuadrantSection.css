@@ -297,7 +297,10 @@
    layout. `top` is tuned to land just above the dome's shoulder seam. */
 .nrStatus {
   position: absolute;
-  top: 61px;
+  /* Drop the ACTIVATION / ONLINE row to the bottom of the controls plate so
+     its bottom inset matches the left/right side inset (equal padding all
+     round). */
+  bottom: 11px;
   /* Edge-anchored so REDUCTION / ACTIVE flank the knob at the far left/right.
      11px (not 18) because the plate now bleeds 7px past the controls' sides,
      keeping the same visual inset from the plate edge as before. */
@@ -324,7 +327,10 @@
 .nrReductionValue {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-primary);
+  /* Glowing golden accent so the live ACTIVATION readout reads as emitted
+     light, matching the lit ticks + status dot. */
+  color: var(--gold-core, #f4faf2);
+  text-shadow: var(--gold-text-shadow, none);
 }
 
 .nrActive {
@@ -484,8 +490,13 @@
   height: 22px;
   margin-left: -1px;
   border-radius: 1px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+  /* Golden accent pointer with a layered glow so the dial line reads as the
+     same emitted light as the lit ticks. */
+  background: var(--gold-core, #f4faf2);
+  box-shadow:
+    0 0 4px var(--nr-accent, #e8cd89),
+    0 0 8px var(--nr-accent, #e8cd89),
+    0 0 14px rgba(var(--gold-halo), 0.45);
   transform: rotate(var(--nr-knob-angle, 0deg));
   transform-origin: 50% calc(var(--nr-knob-size) / 2 - 16px);
   transition: transform 0.12s ease-out;
@@ -530,7 +541,8 @@
   }
 
   .nrStatus {
-    top: 52px;
+    /* Bottom inset matches the 7px side inset on the narrower mobile plate. */
+    bottom: 7px;
     /* 7px keeps the same visual inset from the plate edge given its 7px
        side bleed (mirrors the desktop 11px on the narrower mobile plate). */
     left: 7px;

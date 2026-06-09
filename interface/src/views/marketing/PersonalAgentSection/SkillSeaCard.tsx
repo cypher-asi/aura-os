@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { SkillIcon } from "../../../components/SkillShopModal/SkillIcon";
 
@@ -48,7 +48,32 @@ const SKILL_GROUPS: readonly (readonly SkillButton[])[] = [
   ],
 ];
 
+/** How long a tapped keycap glows the golden accent before settling back. */
+const FLASH_MS = 1500;
+
 export function SkillSeaCard(): ReactNode {
+  // Which keycap is currently playing its gold click-flash, keyed by skill id.
+  const [flashedId, setFlashedId] = useState<string | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flashKey = useCallback((id: string) => {
+    setFlashedId(id);
+    if (flashTimerRef.current) {
+      clearTimeout(flashTimerRef.current);
+    }
+    flashTimerRef.current = setTimeout(() => {
+      setFlashedId((current) => (current === id ? null : current));
+    }, FLASH_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (flashTimerRef.current) {
+        clearTimeout(flashTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <Plate className="personalAgentSkillPlate" aria-hidden="true">
       <div className="personalAgentSkillPanel">
@@ -66,8 +91,10 @@ export function SkillSeaCard(): ReactNode {
                       tabIndex={-1}
                       className="personalAgentSkillBtn"
                       data-lit={skill.lit ? "true" : undefined}
+                      data-flash={flashedId === skill.id ? "true" : undefined}
                       aria-label={skill.label}
                       title={skill.label}
+                      onClick={() => flashKey(skill.id)}
                     >
                       <SkillIcon name={skill.id} size={20} />
                     </button>

@@ -312,24 +312,24 @@
   height: 24cqw;
   border-radius: 1.4cqw;
   overflow: hidden;
-  /* Face: a horizontal gradient that stays black on the LEFT and ramps to
-     orange on the right-inner side. The ribs live on `::before` so they can
-     be tinted orange and faded out on the right independently. */
+  /* Face: a horizontal gradient that stays black on the LEFT and ramps to a
+     warm gold on the right-inner side (matching the page's golden glow). The
+     ribs live on `::before` so they can be tinted gold and faded out on the
+     right independently. */
   background: linear-gradient(
     90deg,
     #07080a 0%,
     #0c0d10 46%,
-    #6a2a09 70%,
-    #e85a14 90%,
-    #f4651f 100%
+    #4a3a14 70%,
+    #c9a85a 90%,
+    #e8cd89 100%
   );
-  /* All orange is contained INSIDE the wheel: an inner orange glow rising
-     from the right, capped by a dark right inner shadow at the very edge.
-     No outset orange shadow, so nothing glows outside the div. The left
-     edge stays hard black; only a neutral black drop shadow sits outside
-     for elevation. */
+  /* All gold is contained INSIDE the wheel: an inner gold glow rising from the
+     right, capped by a dark right inner shadow at the very edge. No outset
+     glow, so nothing glows outside the div. The left edge stays hard black;
+     only a neutral black drop shadow sits outside for elevation. */
   box-shadow:
-    inset -11px 0 14px rgba(244, 85, 0, 0.5),
+    inset -11px 0 14px rgba(var(--gold-glow), 0.5),
     inset 2px 0 0 rgba(0, 0, 0, 0.9),
     inset 0 1px 1px rgba(255, 255, 255, 0.16),
     0 3px 6px -1px rgba(0, 0, 0, 0.5);
@@ -350,9 +350,9 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 150, 70, 0.2) 30%,
-    rgba(255, 120, 45, 0.72) 62%,
-    rgba(87, 31, 8, 0.58) 88%,
+    rgba(var(--gold-glow), 0.2) 30%,
+    rgba(var(--gold-glow), 0.72) 62%,
+    rgba(var(--gold-halo), 0.58) 88%,
     transparent 100%
   );
   -webkit-mask-image: repeating-linear-gradient(
@@ -387,11 +387,11 @@
   width: 3px;
   background: linear-gradient(
     180deg,
-    #5e2408 0%,
-    #c5480d 30%,
-    #ff8a3c 50%,
-    #c5480d 70%,
-    #5e2408 100%
+    rgba(var(--gold-halo), 0.85) 0%,
+    rgba(var(--gold-glow), 0.7) 30%,
+    var(--gold-core, #e8cd89) 50%,
+    rgba(var(--gold-glow), 0.7) 70%,
+    rgba(var(--gold-halo), 0.85) 100%
   );
   pointer-events: none;
 }
@@ -528,12 +528,49 @@
   justify-content: center;
   aspect-ratio: 1 / 1.08;
   padding: 0;
-  border: none;
   border-radius: 3px;
   overflow: hidden;
   color: rgba(255, 255, 255, 0.48);
-  background: #23262b;
-  cursor: default;
+  /* Flat fill (padding-box) wrapped in a metallic gradient BORDER (border-box):
+     lit on the top-left edge, sinking to near-black on the bottom-right. */
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#23262b, #23262b) padding-box,
+    linear-gradient(
+        155deg,
+        rgba(255, 255, 255, 0.32) 0%,
+        rgba(255, 255, 255, 0.08) 38%,
+        rgba(0, 0, 0, 0.45) 100%
+      )
+      border-box;
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.12s ease,
+    color 0.12s ease;
+}
+
+/* Hover (only on keys that aren't already pressed): brighten the glyph so the
+   key reads as interactive. */
+.consoleKey:not([data-pressed="true"]):hover {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* Pressed/selected key: pushed down and recessed with an inner shadow, and the
+   glyph lit with the golden accent so the active channel stands out. */
+.consoleKey[data-pressed="true"] {
+  transform: translateY(1px);
+  color: var(--gold-core, #f4faf2);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+/* Lit glyph carries the gold glow (the marks paint in currentColor). */
+.consoleKey[data-pressed="true"] .consoleKeyMark {
+  filter:
+    drop-shadow(0 0 4px rgba(var(--gold-glow), 0.8))
+    drop-shadow(0 0 9px rgba(var(--gold-halo), 0.45));
 }
 
 .consoleKeyMark {
@@ -542,9 +579,19 @@
   height: auto;
 }
 
-/* Lit ZERO key — flat orange-tinted cap with the same glowing wordmark. */
+/* Lit ZERO key — flat gold-tinted cap with a distinct GOLD gradient border
+   (warm and lit on the top-left, deep amber on the bottom-right), matching the
+   page's golden glow family. */
 .consoleKey--zero {
-  background: #1d110a;
+  background:
+    linear-gradient(#161208, #161208) padding-box,
+    linear-gradient(
+        155deg,
+        rgba(var(--gold-glow), 0.9) 0%,
+        rgba(var(--gold-glow), 0.5) 45%,
+        rgba(var(--gold-halo), 0.7) 100%
+      )
+      border-box;
 }
 
 .consoleKeyZero {
@@ -555,10 +602,10 @@
   font-size: 3.6cqw;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: #ff7a2f;
+  color: var(--gold-core, #f4faf2);
   text-shadow:
-    0 0 6px rgba(255, 122, 47, 0.8),
-    0 0 14px rgba(244, 85, 0, 0.6);
+    0 0 6px rgba(var(--gold-glow), 0.85),
+    0 0 14px rgba(var(--gold-halo), 0.6);
 }
 
 @media (max-width: 768px) {

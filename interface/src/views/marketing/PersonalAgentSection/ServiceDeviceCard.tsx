@@ -122,6 +122,11 @@ export function ServiceDeviceCard({
     () => new Set<number>(),
   );
   const litTimersRef = useRef<Map<number, number>>(new Map());
+  // Wall-clock timestamp until which the auto-cycle spotlight is paused.
+  // Clicking a logo sets this 2s into the future so the twinkle holds while
+  // the visitor inspects their pick. Ref-based so the interval reads it
+  // without re-rendering.
+  const pauseCycleUntilRef = useRef<number>(0);
 
   const pulseLogo = useCallback((index: number, durationMs: number) => {
     if (typeof window === "undefined") {
@@ -176,6 +181,11 @@ export function ServiceDeviceCard({
     const stride = 5;
     let cycleIndex = 0;
     const timer = window.setInterval(() => {
+      // Hold the auto-cycle while a recent click is still within its pause
+      // window, so clicking an integration stops the twinkle for 2 seconds.
+      if (Date.now() < pauseCycleUntilRef.current) {
+        return;
+      }
       pulseLogo((cycleIndex * stride) % SERVICE_LOGOS.length, 700);
       cycleIndex += 1;
     }, 600);
@@ -335,7 +345,7 @@ export function ServiceDeviceCard({
     <>
     {hexGrille ? (
       <div className="madeForYouDeviceCaption" aria-hidden="true">
-        <span className="madeForYouPanelCaptionTitle">DESIGN</span>
+        <span className="madeForYouPanelCaptionTitle">CONFIGURE</span>
         <span className="madeForYouPanelCaptionSub">YOUR PRIVATE AGENT</span>
       </div>
     ) : null}
@@ -456,7 +466,10 @@ export function ServiceDeviceCard({
                 className="personalAgentDeviceLogo"
                 data-active={litLogos.has(index) ? "true" : undefined}
                 aria-label={logo.label}
-                onClick={() => pulseLogo(index, 1500)}
+                onClick={() => {
+                  pauseCycleUntilRef.current = Date.now() + 2000;
+                  pulseLogo(index, 1500);
+                }}
               >
                 <svg
                   width={26}

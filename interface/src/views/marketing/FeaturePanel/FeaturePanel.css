@@ -28,6 +28,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* The h2 band is collapsed to `min-height: auto` above, so the headline
+     sits tight at the section top. Mirror the section's top padding as the gap
+     below the headline so the whitespace under "Designed for your privacy"
+     matches the space above it before the cards begin. */
   gap: clamp(40px, 6vw, 72px);
   /* Track the public landing-page `MockAuraApp` wallpaper width; see
      `--marketing-content-max-width` in `interface/src/index.css`. */
