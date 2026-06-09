@@ -3,6 +3,7 @@ import { Section } from "../Section";
 import { CardSection, MetalCard } from "../CardSection";
 import { TextCard } from "../TextCard";
 import { MockChatInputCard } from "./MockChatInputCard";
+import { ModelMarquee } from "./ModelMarquee";
 import { ServiceDeviceCard } from "./ServiceDeviceCard";
 import { SkillSeaCard } from "./SkillSeaCard";
 import "./PersonalAgentSection.css";
@@ -23,8 +24,10 @@ const HEADLINE_ID = "personalAgentHeadline";
  * the exact same height as the other H2 intros and lets it center
  * card-to-card between the bento above and the bento below.
  *
- * Bento quadrants — one full-width on top and two below, each pairing a
- * live mini-UI with a title + description:
+ * Bento cells — a thin full-width model marquee on top, then one
+ * full-width quadrant and two below, each pairing a live mini-UI with
+ * a title + description:
+ *   0. Model marquee             -> every model from /models, looping
  *   1. "Always on"               -> the real chat input (mocked / static)
  *   2. "Intelligent in all domains" -> a sea of skills
  *   3. "Connected to everything" -> the services it connects to
@@ -46,6 +49,12 @@ export function PersonalAgentSection(): ReactNode {
       </Section>
 
       <CardSection ariaLabel="What your agent can do">
+        <MetalCard
+          wide
+          gradient={180}
+          className="paCardModelMarquee"
+          media={<ModelMarquee />}
+        />
         <MetalCard
           wide
           short

@@ -41,6 +41,34 @@
   }
 }
 
+/* ----- Cell 0: model marquee strip ------------------------------ */
+
+/*
+ * Thin full-width panel holding the looping model strip (see
+ * ModelMarquee.css). Collapses MetalCard's quadrant metrics
+ * (626px min-height / 50px padding) down to a slim band; the media
+ * well inside already flex-grows and centers, so the marquee sits
+ * vertically centered in the strip. Two-class specificity overrides
+ * `.metalCard` at every breakpoint.
+ */
+.metalCard.paCardModelMarquee {
+  min-height: 0;
+  height: 84px;
+  padding: 0;
+  gap: 0;
+  /* Bleed 1px into the grid's seam gap so no divider line is drawn
+     between the strip and the "Always on" card below — the two read
+     as one continuous panel. */
+  margin-bottom: -1px;
+}
+
+@media (max-width: 768px) {
+  .metalCard.paCardModelMarquee {
+    min-height: 0;
+    height: 60px;
+  }
+}
+
 /* ----- Quadrant 1: chat input mock ----------------------------- */
 
 /*

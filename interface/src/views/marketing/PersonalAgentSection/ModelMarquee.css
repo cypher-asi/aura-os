@@ -1,0 +1,113 @@
+/*
+ * ModelMarquee — thin looping strip of "provider logo + model name"
+ * cells that fills the slim top panel of the personal-agent bento
+ * (see `.paCardModelMarquee` in PersonalAgentSection.css). The loop
+ * mechanism mirrors AgentMarquee.module.css: a duplicated list inside
+ * a `max-content` track translated by exactly -50% per cycle.
+ */
+.modelMarquee {
+  width: 100%;
+  overflow: hidden;
+  /* Fade the strip's entry/exit zones into the panel instead of
+     letting cells pop at the hard edge. The mask also hides the
+     one place the per-item hairline divider is asymmetric (the very
+     first item of the track has a leading divider that the wrapped
+     copy lacks). */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    #000 6%,
+    #000 94%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    #000 6%,
+    #000 94%,
+    transparent 100%
+  );
+}
+
+.modelMarqueeTrack {
+  display: flex;
+  align-items: center;
+  /* Size to the full intrinsic width of both copies so the keyframe's
+     `translateX(-50%)` sweeps exactly one copy per cycle. */
+  width: max-content;
+  /* ~36 cells x ~190px ≈ 6.8k px per copy; 90s ≈ 75px/s — a steady,
+     readable drift in the same cadence family as AgentMarquee. */
+  animation: model-marquee-scroll 90s linear infinite;
+  will-change: transform;
+}
+
+/* Pause the drift while the visitor reads a model name. */
+.modelMarquee:hover .modelMarqueeTrack {
+  animation-play-state: paused;
+}
+
+@keyframes model-marquee-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* One copy of the model list; two are rendered back to back. */
+.modelMarqueeGroup {
+  display: flex;
+  align-items: center;
+}
+
+.modelMarqueeItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 28px;
+  white-space: nowrap;
+  /* Hairline divider between cells, applied uniformly to every item
+     (including across the copy boundary) so the wrap is seamless. */
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Mono brand marks inherit this via `currentColor` — the same muted
+   gray as the integration glyphs on the service device screen
+   (`.personalAgentDeviceLogo`). */
+.modelMarqueeLogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: rgba(232, 236, 245, 0.7);
+  transition: color 200ms ease, filter 200ms ease;
+}
+
+/* Hovering a model lights its mark with the golden accent glow,
+   mirroring `.personalAgentDeviceLogo:hover`. */
+.modelMarqueeItem:hover .modelMarqueeLogo {
+  color: var(--gold-core, #fff);
+  filter:
+    drop-shadow(0 0 7px rgba(var(--gold-glow), 0.85))
+    drop-shadow(0 0 16px rgba(var(--gold-halo), 0.5));
+}
+
+.modelMarqueeName {
+  font-size: 14px;
+  font-weight: 450;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .modelMarqueeItem {
+    gap: 8px;
+    padding: 0 18px;
+  }
+
+  .modelMarqueeName {
+    font-size: 13px;
+  }
+}
