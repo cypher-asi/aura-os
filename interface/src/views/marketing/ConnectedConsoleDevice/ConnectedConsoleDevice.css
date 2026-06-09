@@ -191,12 +191,13 @@
   z-index: 2;
 }
 
+/* Knob shrunk ~50% (14cqw -> 7cqw) from its prior size. */
 .consoleKnob {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 14cqw;
-  height: 14cqw;
+  width: 7cqw;
+  height: 7cqw;
   border-radius: 50%;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
@@ -210,45 +211,46 @@
     0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
+/* Matte-black dial (vs the old brushed-silver conic metal): a soft top-lit
+   black surface that still catches a faint highlight up top so the rotation
+   reads. Halved in size (10.5cqw -> 5.25cqw); the cursor-follow rotation is
+   set inline by the component. */
 .consoleKnobDial {
   position: relative;
-  width: 10.5cqw;
-  height: 10.5cqw;
+  width: 5.25cqw;
+  height: 5.25cqw;
   border-radius: 50%;
   /* Eased follow as the dial rotates toward the cursor (angle set inline). */
   transition: transform 0.12s ease-out;
   background:
     radial-gradient(
-      circle at 50% 32%,
-      rgba(255, 255, 255, 0.22) 0%,
-      rgba(255, 255, 255, 0) 55%
+      circle at 50% 28%,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0) 52%
     ),
-    conic-gradient(
-      from 210deg,
-      #d7dade 0deg,
-      #9a9ea4 70deg,
-      #f1f2f4 140deg,
-      #a8acb2 210deg,
-      #e6e8ea 290deg,
-      #b2b6bc 360deg
+    radial-gradient(
+      ellipse 120% 100% at 50% 30%,
+      #1d1d1f 0%,
+      #121214 55%,
+      #060607 100%
     );
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.6),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.18),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.7),
     0 2px 4px rgba(0, 0, 0, 0.7);
 }
 
-/* Orange/amber position indicator notched into the dial top, lit as a fully
+/* Golden position indicator notched into the dial top, lit as a fully
    emissive LED with the same layered neon glow + pulse as the "Agents made for
-   you" hero knob. */
+   you" hero knob. Halved alongside the dial. */
 .consoleKnobIndicator {
   position: absolute;
-  top: 1.2cqw;
+  top: 0.6cqw;
   left: 50%;
-  width: 1.4cqw;
-  height: 3.2cqw;
+  width: 0.7cqw;
+  height: 1.6cqw;
   transform: translateX(-50%);
-  border-radius: 0.7cqw;
+  border-radius: 0.35cqw;
   background: linear-gradient(180deg, #f4faf2 0%, #f1f9d3 100%);
   box-shadow:
     0 0 4px rgba(232, 205, 137, 1),
@@ -297,12 +299,12 @@
 }
 
 /*
- * Side thumbwheel on the upper-right edge. A black ribbed scroll wheel:
- * fine horizontal grooves (repeating gradient) over a diagonal light->dark
- * face. The LEFT edge (attached to the panel) is hard black; the orange
- * backlight glows only from the RIGHT edge (outer + inner orange shadow).
- * Shifted right so its left edge sits flush against the panel's right edge
- * rather than overlapping the panel face.
+ * Side thumbwheel on the upper-right edge. A matte-black ribbed scroll wheel:
+ * fine horizontal grooves (repeating gradient) over a neutral dark face. The
+ * face stays black across its whole width; the only gold is a thin pinstripe
+ * pinned to the far-RIGHT edge (`::after`). Shifted right so its left edge
+ * sits flush against the panel's right edge rather than overlapping the panel
+ * face.
  */
 .consoleSlider {
   position: absolute;
@@ -312,35 +314,31 @@
   height: 24cqw;
   border-radius: 1.4cqw;
   overflow: hidden;
-  /* Face: a horizontal gradient that stays black on the LEFT and ramps to a
-     warm gold on the right-inner side (matching the page's golden glow). The
-     ribs live on `::before` so they can be tinted gold and faded out on the
-     right independently. */
+  /* Face: a neutral matte-black gradient (subtle center sheen, darker edges),
+     with only a barely-warm hint in the final few percent so the gold edge
+     doesn't sit on a hard cut. */
   background: linear-gradient(
     90deg,
-    #07080a 0%,
-    #0c0d10 46%,
-    #4a3a14 70%,
-    #c9a85a 90%,
-    #e8cd89 100%
+    #0a0b0d 0%,
+    #141518 50%,
+    #0a0b0d 92%,
+    #14110a 100%
   );
-  /* All gold is contained INSIDE the wheel: an inner gold glow rising from the
-     right, capped by a dark right inner shadow at the very edge. No outset
-     glow, so nothing glows outside the div. The left edge stays hard black;
-     only a neutral black drop shadow sits outside for elevation. */
+  /* Matte black: a hard black left inner edge, a faint top sheen, and only a
+     thin warm inner glow hugging the right edge. The strong gold backlight is
+     gone, so the wheel reads as machined black metal with a gold-edge accent. */
   box-shadow:
-    inset -11px 0 14px rgba(var(--gold-glow), 0.5),
+    inset -3px 0 6px rgba(var(--gold-glow), 0.22),
     inset 2px 0 0 rgba(0, 0, 0, 0.9),
-    inset 0 1px 1px rgba(255, 255, 255, 0.16),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12),
     0 3px 6px -1px rgba(0, 0, 0, 0.5);
 }
 
 /*
- * Ribs (fine horizontal grooves). The grooves themselves carry the color:
- * they start transparent/dark on the black side, brighten into the same
- * orange as the wheel face, then darken and fade transparent at the far-right
- * edge so the ribs dissolve into the side color rather than ending as white
- * highlights.
+ * Ribs (fine horizontal grooves). Neutral machined grooves: a soft white
+ * highlight that brightens toward the center then fades transparent at the
+ * far-right edge so the ribs dissolve into the gold-edge accent rather than
+ * ending as bright lines.
  */
 .consoleSlider::before {
   content: "";
@@ -349,10 +347,9 @@
   border-radius: inherit 0 0 inherit;
   background: linear-gradient(
     90deg,
-    transparent 0%,
-    rgba(var(--gold-glow), 0.2) 30%,
-    rgba(var(--gold-glow), 0.72) 62%,
-    rgba(var(--gold-halo), 0.58) 88%,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.12) 45%,
+    rgba(255, 255, 255, 0.08) 75%,
     transparent 100%
   );
   -webkit-mask-image: repeating-linear-gradient(
@@ -373,10 +370,10 @@
 }
 
 /*
- * Lit accent line down the wheel's right side: a 1px vertical strip,
- * brightest orange in the middle and fading to darker orange at the top
- * and bottom ends. Inset from the edges so it stays inside the rounded
- * corners (and the glow stays within the div).
+ * Thin gold pinstripe down the wheel's far-right edge: a ~1.5px vertical
+ * strip, brightest gold in the middle and fading to darker amber at the top
+ * and bottom ends. This is the lone gold accent on the otherwise matte-black
+ * wheel.
  */
 .consoleSlider::after {
   content: "";
@@ -384,7 +381,7 @@
   top: 0;
   bottom: 0;
   right: 0;
-  width: 3px;
+  width: 1.5px;
   background: linear-gradient(
     180deg,
     rgba(var(--gold-halo), 0.85) 0%,
@@ -421,15 +418,15 @@
   padding: 4.5cqw 2px 2.6cqw;
   border-radius: 0 0 4.5cqw 4.5cqw;
   border: 1px solid transparent;
-  /* Dark off-black across the top, fading down to a lighter gray at the front
-     (bottom) of the tray. */
+  /* Same radial-metal-in-135deg-edge recipe as the `.consoleBody` speaker
+     panel above, so the button shelf reads as the same brushed-metal slab
+     rather than a separate gray gradient block. */
   background:
-    linear-gradient(
-        180deg,
-        #0c0d0f 0%,
-        #17191c 32%,
-        #2a2c30 72%,
-        #3a3d42 100%
+    radial-gradient(
+        ellipse 120% 130% at 50% 32%,
+        #202020 0%,
+        #161616 55%,
+        #0c0c0c 100%
       )
       padding-box,
     linear-gradient(
@@ -438,11 +435,16 @@
         rgba(14, 15, 18, 0.7) 100%
       )
       border-box;
+  /* The extruded front EDGE itself is painted by the `::before` / `::after`
+     faces below (they follow the rounded bottom corners); here the large soft
+     shadows lift the whole shelf well off the page so its front edge reads as
+     "coming off the page", pushed deeper than before. */
   box-shadow:
     inset 0 2px 3px rgba(255, 255, 255, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     inset 0 -5px 9px rgba(0, 0, 0, 0.45),
-    0 22px 30px rgba(0, 0, 0, 0.55);
+    0 40px 52px rgba(0, 0, 0, 0.66),
+    0 20px 30px rgba(0, 0, 0, 0.55);
 }
 
 /*
@@ -475,7 +477,7 @@
  * edge that gives the side its depth.
  */
 .consoleTray::before {
-  bottom: -10px;
+  bottom: -16px;
   /* Fully opaque so it backs the whole tray silhouette: its top is hidden
      behind the tray face and only the corner-following overhang shows, which
      guarantees the rounded corners are filled (no page peeking through). */
@@ -489,13 +491,13 @@
  * reads as the solid front edge of the shelf.
  */
 .consoleTray::after {
-  bottom: -7px;
+  bottom: -11px;
   background: linear-gradient(
     180deg,
-    transparent calc(100% - 14px),
-    #5c6066 calc(100% - 12px),
-    #44474c calc(100% - 8px),
-    #2c2e32 calc(100% - 3px),
+    transparent calc(100% - 20px),
+    #6a6e74 calc(100% - 18px),
+    #4c4f54 calc(100% - 12px),
+    #303338 calc(100% - 5px),
     #1c1e21 100%
   );
 }
