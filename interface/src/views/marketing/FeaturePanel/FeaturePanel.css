@@ -161,19 +161,19 @@
     0 -1px 1px rgba(0, 0, 0, 0.6);
 }
 
-/* Big title struck into the plate: light brushed-metal fill with a stacked
-   emboss shadow so it reads as stamped metal, not flat text. */
+/* Big title struck into the plate: a warm cream fill with an inner drop
+   shadow along the top edge (dark cast above + faint light below) so the
+   text reads as engraved/pressed into the metal. */
 .featurePanelMetalTitle {
   margin: 0;
   font-size: clamp(26px, 2.6vw, 34px);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: #d8dce2;
+  color: #dfd8ce;
   text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.16),
-    0 2px 4px rgba(0, 0, 0, 0.55),
-    0 -1px 1px rgba(0, 0, 0, 0.5);
+    0 -1px 1px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 /* Glass bottom section: title, description, then the tag pill. A
