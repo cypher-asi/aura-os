@@ -236,9 +236,9 @@
     linear-gradient(#000 0 0);
   mask-composite: exclude;
   filter:
-    drop-shadow(0 0 4px rgba(var(--gold-glow), 0.95))
-    drop-shadow(0 0 11px rgba(var(--gold-glow), 0.65))
-    drop-shadow(0 0 22px rgba(var(--gold-halo), 0.45));
+    drop-shadow(0 0 4px rgba(var(--gold-glow), 0.5))
+    drop-shadow(0 0 11px rgba(var(--gold-glow), 0.32))
+    drop-shadow(0 0 22px rgba(var(--gold-halo), 0.22));
   pointer-events: none;
   transition: filter 0.18s ease;
 }
@@ -267,7 +267,7 @@
     );
   box-shadow:
     inset 0 6px 12px -8px rgba(0, 0, 0, 0.5),
-    inset 0 0 30px rgba(var(--gold-glow), 0.1),
+    inset 0 0 30px rgba(var(--gold-glow), 0.05),
     inset 0 -1px 4px rgba(0, 0, 0, 0.28);
   /* Lighter blur so the gold line behind reads through as a distorted line,
      not a fully diffused halo. */
@@ -315,25 +315,25 @@
     rgba(var(--gold-glow), 0) 88%
   );
   filter:
-    drop-shadow(0 0 5px rgba(var(--gold-glow), 1))
-    drop-shadow(0 0 13px rgba(var(--gold-glow), 0.7))
-    drop-shadow(0 0 24px rgba(var(--gold-halo), 0.5));
+    drop-shadow(0 0 5px rgba(var(--gold-glow), 0.55))
+    drop-shadow(0 0 13px rgba(var(--gold-glow), 0.38))
+    drop-shadow(0 0 24px rgba(var(--gold-halo), 0.28));
 }
 
 /* Warm the glass surface glow on hover. */
 .featurePanelItem:hover .featurePanelGlassSurface {
   box-shadow:
     inset 0 6px 12px -8px rgba(0, 0, 0, 0.5),
-    inset 0 0 42px rgba(var(--gold-glow), 0.2),
+    inset 0 0 42px rgba(var(--gold-glow), 0.1),
     inset 0 -1px 4px rgba(0, 0, 0, 0.28);
 }
 
 /* Brighten the divider seam glow on hover. */
 .featurePanelItem:hover .featurePanelItemBody::after {
   box-shadow:
-    0 0 5px rgba(var(--gold-glow), 1),
-    0 0 12px rgba(var(--gold-glow), 0.65),
-    0 0 22px rgba(var(--gold-halo), 0.5);
+    0 0 5px rgba(var(--gold-glow), 0.6),
+    0 0 12px rgba(var(--gold-glow), 0.4),
+    0 0 22px rgba(var(--gold-halo), 0.28);
 }
 
 .featurePanelItem:hover .featurePanelItemDesc {
