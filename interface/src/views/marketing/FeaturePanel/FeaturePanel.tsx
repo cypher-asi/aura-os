@@ -139,9 +139,11 @@ const ENGRAVED_GEOMETRY: Record<FeaturePanelShape, ReactNode> = {
 /**
  * Engraved outline shape drawn in the metal plate of a FeaturePanel card.
  * Pure vector (no raster): a hollow shape (`fill="none"`) traced with a thick
- * darker metallic gradient stroke and an inner-shadow filter, so it reads as a
- * recessed/engraved border with the metal plate showing through the center.
- * Each instance mints unique `defs` IDs so the three cards never collide.
+ * darker border and an inner-shadow filter, so it reads as a recessed/engraved
+ * border with the metal plate showing through the center. The stroke is a
+ * single flat color (no directional gradient) so the inner shadow reads equally
+ * on every side. Each instance mints a unique filter ID so the three cards
+ * never collide.
  */
 export function EngravedShape({
   kind,
@@ -149,7 +151,6 @@ export function EngravedShape({
   readonly kind: FeaturePanelShape;
 }): ReactNode {
   const uid = useId().replace(/:/g, "");
-  const gradientId = `engravedStroke-${uid}`;
   const shadowId = `engravedShadow-${uid}`;
 
   return (
@@ -160,15 +161,10 @@ export function EngravedShape({
       aria-hidden="true"
     >
       <defs>
-        {/* Darker metallic ramp echoing the plate rim: dark bottom-left ->
-            brighter top-right. */}
-        <linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0%" stopColor="#0d0d0d" />
-          <stop offset="50%" stopColor="#4a4a4a" />
-          <stop offset="100%" stopColor="#8a8a8a" />
-        </linearGradient>
-        {/* Inner shadow: punch the source out of an offset blur, then fill the
-            resulting inner band with a soft black so the stroke looks engraved. */}
+        {/* Inner shadow: punch the source out of a symmetric (un-offset) blur,
+            then fill the resulting inner band with a soft black so the stroke
+            looks engraved. With no offset and a flat stroke color, the shadow
+            is uniform on every edge of the shape. */}
         <filter
           id={shadowId}
           x="-25%"
@@ -176,16 +172,14 @@ export function EngravedShape({
           width="150%"
           height="150%"
         >
-          {/* No offset: a symmetric blur of the alpha keeps the inner shadow
-              uniform on every edge of the shape rather than pooling at one side. */}
-          <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="engravedBlur" />
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="engravedBlur" />
           <feComposite
             in="SourceAlpha"
             in2="engravedBlur"
             operator="out"
             result="engravedInverse"
           />
-          <feFlood floodColor="#000000" floodOpacity="0.85" />
+          <feFlood floodColor="#000000" floodOpacity="0.9" />
           <feComposite
             in2="engravedInverse"
             operator="in"
@@ -199,7 +193,7 @@ export function EngravedShape({
       </defs>
       <g
         fill="none"
-        stroke={`url(#${gradientId})`}
+        stroke="#3a3a3a"
         strokeWidth="11"
         strokeLinejoin="round"
         filter={`url(#${shadowId})`}
