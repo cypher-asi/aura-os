@@ -142,8 +142,9 @@ const ENGRAVED_GEOMETRY: Record<FeaturePanelShape, ReactNode> = {
  * darker border and an inner-shadow filter, so it reads as a recessed/engraved
  * border with the metal plate showing through the center. The stroke is a
  * single flat color (no directional gradient) so the inner shadow reads equally
- * on every side. Each instance mints a unique filter ID so the three cards
- * never collide.
+ * on every side. A slightly wider stroke sits behind the band so a 1px gradient
+ * bevel (background color -> lighter) shows on both the inner and outer edges.
+ * Each instance mints unique `defs` IDs so the three cards never collide.
  */
 export function EngravedShape({
   kind,
@@ -152,6 +153,8 @@ export function EngravedShape({
 }): ReactNode {
   const uid = useId().replace(/:/g, "");
   const shadowId = `engravedShadow-${uid}`;
+  const edgeId = `engravedEdge-${uid}`;
+  const geometry = ENGRAVED_GEOMETRY[kind];
 
   return (
     <svg
@@ -161,6 +164,13 @@ export function EngravedShape({
       aria-hidden="true"
     >
       <defs>
+        {/* 1px edge bevel: a gradient that rises from the background color to a
+            lighter tone, drawn on a wider stroke so it peeks out 1px on both the
+            inner and outer contour of the band. */}
+        <linearGradient id={edgeId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#161616" />
+          <stop offset="100%" stopColor="#777777" />
+        </linearGradient>
         {/* Inner shadow: punch the source out of a symmetric (un-offset) blur,
             then fill the resulting inner band with a soft black so the stroke
             looks engraved. With no offset and a flat stroke color, the shadow
@@ -191,14 +201,16 @@ export function EngravedShape({
           </feMerge>
         </filter>
       </defs>
-      <g
-        fill="none"
-        stroke="#3a3a3a"
-        strokeWidth="11"
-        strokeLinejoin="round"
-        filter={`url(#${shadowId})`}
-      >
-        {ENGRAVED_GEOMETRY[kind]}
+      <g fill="none" strokeLinejoin="round">
+        {/* Wider stroke behind the band: the 1px sliver on each side becomes the
+            inner + outer edge bevel. */}
+        <g stroke={`url(#${edgeId})`} strokeWidth="13">
+          {geometry}
+        </g>
+        {/* Main band, engraved via the uniform inner shadow. */}
+        <g stroke="#3a3a3a" strokeWidth="11" filter={`url(#${shadowId})`}>
+          {geometry}
+        </g>
       </g>
     </svg>
   );
