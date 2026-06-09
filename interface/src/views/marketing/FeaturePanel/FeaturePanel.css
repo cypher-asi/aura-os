@@ -26,11 +26,12 @@
   padding: clamp(8px, 1.5vh, 20px) 32px clamp(40px, 6vw, 72px);
 }
 
-.featurePanelItemTitle,
+.featurePanelMetalOverline,
+.featurePanelMetalTitle,
 .featurePanelItemDesc {
-  -webkit-user-select: text;
-  user-select: text;
-  cursor: text;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
 }
 
 .featurePanelGrid {
