@@ -91,8 +91,8 @@ const ETCH_DASH_POS = 0.55; // along the wall, just before the corner curve
  * of clipping through its walls.
  */
 const DEVICE_H = 0.655;
-const GHOST_ABOVE_Y = 2.75; // group origin (body bottom) of the upper ghost
-const GHOST_BELOW_Y = -2.75; // group origin of the lower ghost
+const GHOST_ABOVE_Y = 2.33; // group origin (body bottom) of the upper ghost
+const GHOST_BELOW_Y = -2.33; // group origin of the lower ghost
 const GHOST_CORNER = 0.882; // |x|=|z| of the rounded-corner verticals
 const DASH_COLUMN = 0.95;
 const DASH_LEN = 0.06;

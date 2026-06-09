@@ -13,7 +13,7 @@
   width: clamp(320px, 30vw, 420px);
   /* Tall enough (at this width) that the upper and lower ghost computers
      are fully inside the ortho frustum rather than cropping at the edges. */
-  aspect-ratio: 1 / 2.15;
+  aspect-ratio: 1 / 1.95;
 }
 
 .isolatedDevice canvas {
