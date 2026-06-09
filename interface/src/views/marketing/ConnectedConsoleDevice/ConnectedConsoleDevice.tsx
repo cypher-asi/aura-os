@@ -1,29 +1,39 @@
-import { type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { MessageCircle, Send } from "lucide-react";
-import { SERVICE_LOGOS } from "../PersonalAgentSection/brand-logos";
 import "./ConnectedConsoleDevice.css";
 
 /**
- * Pull the single-path brand marks (24x24, `currentColor`) reused for the
- * tray keys out of the shared `SERVICE_LOGOS` set so the channel buttons
- * track the same CC0 simple-icons glyphs the rest of the marketing page
- * uses, without re-declaring the path data here.
+ * Multi-subpath OUTLINE (stroke) glyphs for the brand keys, in the same
+ * lucide outline style (24x24 viewBox, `fill: none`, `stroke: currentColor`)
+ * as the iMessage bubble and Telegram paper-plane, so every key reads as a
+ * line icon rather than a filled silhouette. Paths are the CC0 Tabler-icons
+ * `brand-slack` / `brand-discord` outlines, kept inline so the marketing page
+ * pulls in no extra icon dependency.
  */
-const BRAND_PATHS: Record<string, string> = Object.fromEntries(
-  SERVICE_LOGOS.map((logo) => [logo.id, logo.path]),
-);
+const SLACK_OUTLINE_PATHS: readonly string[] = [
+  "M12 12v-6a2 2 0 0 1 4 0v6m0 -2a2 2 0 1 1 2 2h-6",
+  "M12 12h6a2 2 0 0 1 0 4h-6m2 0a2 2 0 1 1 -2 2v-6",
+  "M12 12v6a2 2 0 0 1 -4 0v-6m0 2a2 2 0 1 1 -2 -2h6",
+  "M12 12h-6a2 2 0 0 1 0 -4h6m-2 0a2 2 0 1 1 2 -2v6",
+];
+
+const DISCORD_OUTLINE_PATHS: readonly string[] = [
+  "M8 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0",
+  "M14 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0",
+  "M15.5 17c0 1 1.5 3 2 3c1.5 0 2.833 -1.667 3.5 -3c.667 -1.667 .5 -5.833 -1.5 -11.5c-1.457 -1.015 -3 -1.34 -4.5 -1.5l-.972 1.923a11.913 11.913 0 0 0 -4.053 0l-.975 -1.923c-1.5 .16 -3.043 .485 -4.5 1.5c-2 5.667 -2.167 9.833 -1.5 11.5c.667 1.333 2 3 3.5 3c.5 0 2 -2 2 -3",
+  "M7 16.5c3.5 1 6.5 1 10 0",
+];
 
 /**
- * A single channel key in the bottom tray. `mark` is either a brand SVG
- * path string (rendered in a 24x24 `currentColor` viewBox), a lucide icon
- * component (for the outline glyphs that match the reference's iMessage
- * bubble and Telegram paper-plane), or `"zero"` — the lit orange ZERO
- * wordmark. No ZERO image asset exists in the repo, so it is painted as
- * styled text faithful to the reference; swapping in an `<img>` later is a
- * one-line change.
+ * A single channel key in the bottom tray. `mark` is either an outline brand
+ * glyph (a set of `currentColor` stroke subpaths in a 24x24 viewBox), a lucide
+ * icon component (the outline glyphs for the iMessage bubble and Telegram
+ * paper-plane), or `"zero"` — the lit orange ZERO wordmark. No ZERO image
+ * asset exists in the repo, so it is painted as styled text faithful to the
+ * reference; swapping in an `<img>` later is a one-line change.
  */
 type ChannelMark =
-  | { readonly kind: "path"; readonly path: string }
+  | { readonly kind: "outline"; readonly paths: readonly string[] }
   | { readonly kind: "icon"; readonly Icon: typeof MessageCircle }
   | { readonly kind: "zero" };
 
@@ -35,11 +45,19 @@ interface Channel {
 
 const CHANNELS: readonly Channel[] = [
   { id: "imessage", label: "iMessage", mark: { kind: "icon", Icon: MessageCircle } },
-  { id: "slack", label: "Slack", mark: { kind: "path", path: BRAND_PATHS.slack } },
+  { id: "slack", label: "Slack", mark: { kind: "outline", paths: SLACK_OUTLINE_PATHS } },
   { id: "telegram", label: "Telegram", mark: { kind: "icon", Icon: Send } },
-  { id: "discord", label: "Discord", mark: { kind: "path", path: BRAND_PATHS.discord } },
+  { id: "discord", label: "Discord", mark: { kind: "outline", paths: DISCORD_OUTLINE_PATHS } },
   { id: "zero", label: "ZERO", mark: { kind: "zero" } },
 ];
+
+/**
+ * Resting direction of the MIX knob's indicator, in degrees (0 = right,
+ * -90 = up, matching `Math.atan2` screen coords). The indicator sits at the
+ * dial's top pointing straight up, so this is subtracted from the cursor angle
+ * to land the indicator tip on the pointer rather than the dial's 0deg axis.
+ */
+const KNOB_REST_ANGLE = -90;
 
 /** Radius of each drilled speaker hole, in the grille's 0-100 viewBox. */
 const GRILLE_HOLE_RADIUS = 1.7;
@@ -97,6 +115,59 @@ const GRILLE_HOLES: ReadonlyArray<{ readonly cx: number; readonly cy: number }> 
  * `cqw` like the `PhoneShell`.
  */
 export function ConnectedConsoleDevice(): ReactNode {
+  const knobDialRef = useRef<HTMLDivElement>(null);
+
+  // MIX knob follows the cursor: on any mouse movement, rotate the brushed-
+  // metal dial so its glowing indicator aims at the pointer. Updates are
+  // coalesced to one per animation frame; the dial center is re-read each frame
+  // so it stays correct as the page scrolls. `KNOB_REST_ANGLE` (straight up) is
+  // subtracted so the indicator tip, not the dial's 0deg, points at the cursor.
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let frame = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    // Accumulated rotation (degrees). We unwrap the raw -180..180 angle into a
+    // continuous value so crossing the +/-180 seam advances by the shortest
+    // signed delta, and the eased transition never spins the long way around.
+    let currentRotation = 0;
+
+    const apply = (): void => {
+      frame = 0;
+      const dial = knobDialRef.current;
+      if (!dial) {
+        return;
+      }
+      const rect = dial.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const deg = (Math.atan2(pointerY - cy, pointerX - cx) * 180) / Math.PI;
+      const target = deg - KNOB_REST_ANGLE;
+      const delta = ((target - currentRotation) % 360 + 540) % 360 - 180;
+      currentRotation += delta;
+      dial.style.transform = `rotate(${currentRotation}deg)`;
+    };
+
+    const onMove = (event: MouseEvent): void => {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (frame === 0) {
+        frame = window.requestAnimationFrame(apply);
+      }
+    };
+
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      if (frame !== 0) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, []);
+
   return (
     <div className="connectedConsole">
       <div className="consoleCord" aria-hidden="true">
@@ -108,7 +179,7 @@ export function ConnectedConsoleDevice(): ReactNode {
         <div className="consoleBody" aria-hidden="true">
           <div className="consoleKnobBay">
             <div className="consoleKnob">
-              <div className="consoleKnobDial">
+              <div className="consoleKnobDial" ref={knobDialRef}>
                 <span className="consoleKnobIndicator" />
               </div>
             </div>
@@ -162,10 +233,16 @@ export function ConnectedConsoleDevice(): ReactNode {
                     width={24}
                     height={24}
                     viewBox="0 0 24 24"
-                    fill="currentColor"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                     aria-hidden="true"
                   >
-                    <path d={channel.mark.path} />
+                    {channel.mark.paths.map((d) => (
+                      <path key={d} d={d} />
+                    ))}
                   </svg>
                 )}
               </button>

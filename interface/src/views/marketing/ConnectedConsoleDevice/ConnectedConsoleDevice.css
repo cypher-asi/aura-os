@@ -215,6 +215,8 @@
   width: 10.5cqw;
   height: 10.5cqw;
   border-radius: 50%;
+  /* Eased follow as the dial rotates toward the cursor (angle set inline). */
+  transition: transform 0.12s ease-out;
   background:
     radial-gradient(
       circle at 50% 32%,
@@ -236,6 +238,9 @@
     0 2px 4px rgba(0, 0, 0, 0.7);
 }
 
+/* Orange/amber position indicator notched into the dial top, lit as a fully
+   emissive LED with the same layered neon glow + pulse as the "Agents made for
+   you" hero knob. */
 .consoleKnobIndicator {
   position: absolute;
   top: 1.2cqw;
@@ -244,7 +249,44 @@
   height: 3.2cqw;
   transform: translateX(-50%);
   border-radius: 0.7cqw;
-  background: #1a1a1c;
+  background: linear-gradient(180deg, #f4faf2 0%, #f1f9d3 100%);
+  box-shadow:
+    0 0 4px rgba(232, 205, 137, 1),
+    0 0 9px rgba(232, 205, 137, 0.95),
+    0 0 18px rgba(232, 205, 137, 0.85),
+    0 0 30px rgba(232, 205, 137, 0.65),
+    0 0 14px 2px rgba(153, 81, 25, 0.75),
+    0 0 26px 5px rgba(153, 81, 25, 0.5),
+    0 0 44px 9px rgba(153, 81, 25, 0.32);
+  animation: consoleKnobPulse 1.6s ease-in-out infinite;
+}
+
+/* Pulse the LED's emission: the core brightens while the surrounding neon halo
+   swells and intensifies, then settles back. */
+@keyframes consoleKnobPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      0 0 3px rgba(232, 205, 137, 0.9),
+      0 0 7px rgba(232, 205, 137, 0.85),
+      0 0 13px rgba(232, 205, 137, 0.7),
+      0 0 22px rgba(232, 205, 137, 0.5),
+      0 0 14px 2px rgba(153, 81, 25, 0.6),
+      0 0 26px 5px rgba(153, 81, 25, 0.4),
+      0 0 44px 9px rgba(153, 81, 25, 0.25);
+  }
+  50% {
+    filter: brightness(1.4);
+    box-shadow:
+      0 0 6px rgba(232, 205, 137, 1),
+      0 0 13px rgba(232, 205, 137, 1),
+      0 0 26px rgba(232, 205, 137, 0.95),
+      0 0 42px rgba(232, 205, 137, 0.85),
+      0 0 16px 3px rgba(153, 81, 25, 0.8),
+      0 0 30px 6px rgba(153, 81, 25, 0.55),
+      0 0 48px 10px rgba(153, 81, 25, 0.35);
+  }
 }
 
 .consoleKnobLabel {
@@ -269,33 +311,24 @@
   width: 5cqw;
   height: 24cqw;
   border-radius: 1.4cqw;
-  /* Face: fine horizontal ribs over a horizontal gradient that stays black
-     on the LEFT and ramps to orange on the right-inner side. */
-  background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.16) 0px,
-      rgba(255, 255, 255, 0.16) 1px,
-      rgba(0, 0, 0, 0) 1px,
-      rgba(0, 0, 0, 0.5) 2px,
-      rgba(0, 0, 0, 0.5) 4px,
-      rgba(0, 0, 0, 0) 4px
-    ),
-    linear-gradient(
-      90deg,
-      #07080a 0%,
-      #0c0d10 46%,
-      #6a2a09 70%,
-      #e85a14 90%,
-      #f4651f 100%
-    );
+  overflow: hidden;
+  /* Face: a horizontal gradient that stays black on the LEFT and ramps to
+     orange on the right-inner side. The ribs live on `::before` so they can
+     be tinted orange and faded out on the right independently. */
+  background: linear-gradient(
+    90deg,
+    #07080a 0%,
+    #0c0d10 46%,
+    #6a2a09 70%,
+    #e85a14 90%,
+    #f4651f 100%
+  );
   /* All orange is contained INSIDE the wheel: an inner orange glow rising
      from the right, capped by a dark right inner shadow at the very edge.
      No outset orange shadow, so nothing glows outside the div. The left
      edge stays hard black; only a neutral black drop shadow sits outside
      for elevation. */
   box-shadow:
-    inset -4px 0 6px rgba(0, 0, 0, 0.65),
     inset -11px 0 14px rgba(244, 85, 0, 0.5),
     inset 2px 0 0 rgba(0, 0, 0, 0.9),
     inset 0 1px 1px rgba(255, 255, 255, 0.16),
@@ -303,12 +336,73 @@
 }
 
 /*
- * Channel-key tray, built as two tiers so it reads as a separate metal
- * shelf stepped down below the speaker panel:
+ * Ribs (fine horizontal grooves). The grooves themselves carry the color:
+ * they start transparent/dark on the black side, brighten into the same
+ * orange as the wheel face, then darken and fade transparent at the far-right
+ * edge so the ribs dissolve into the side color rather than ending as white
+ * highlights.
+ */
+.consoleSlider::before {
+  content: "";
+  position: absolute;
+  inset: 0 3px 0 0;
+  border-radius: inherit 0 0 inherit;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 150, 70, 0.2) 30%,
+    rgba(255, 120, 45, 0.72) 62%,
+    rgba(87, 31, 8, 0.58) 88%,
+    transparent 100%
+  );
+  -webkit-mask-image: repeating-linear-gradient(
+    180deg,
+    #000 0px,
+    #000 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mask-image: repeating-linear-gradient(
+    180deg,
+    #000 0px,
+    #000 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  pointer-events: none;
+}
+
+/*
+ * Lit accent line down the wheel's right side: a 1px vertical strip,
+ * brightest orange in the middle and fading to darker orange at the top
+ * and bottom ends. Inset from the edges so it stays inside the rounded
+ * corners (and the glow stays within the div).
+ */
+.consoleSlider::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    #5e2408 0%,
+    #c5480d 30%,
+    #ff8a3c 50%,
+    #c5480d 70%,
+    #5e2408 100%
+  );
+  pointer-events: none;
+}
+
+/*
+ * Channel-key tray — a separate metal shelf stepped down below the speaker
+ * panel:
  *   - `.consoleTray` is the METAL housing — the same radial-surface-in-
- *     metallic-edge recipe as the panel, sat slightly lower with a soft
- *     drop shadow and a top inset shadow (as if the panel above casts onto
- *     it), so it looks like a lower metal tier.
+ *     metallic-edge recipe as the panel, and the same extruded-slab bottom
+ *     edge, so its lower edge reads as the same thick rounded slab as
+ *     `.consoleBody` above.
  *   - `.consoleTrayWell` is the recessed OFF-BLACK compartment the keys
  *     sit in. It is deliberately a touch lighter than the page's near-
  *     black background (#16181c vs ~#000) so the button cluster reads as a
@@ -317,20 +411,25 @@
 .consoleTray {
   position: relative;
   width: 90%;
-  /* Sit well below the raised panel so the top bar reads as clearly
-     elevated above the button area. */
-  margin-top: 7cqw;
-  /* Extra bottom padding leaves room for the LOWER part of the housing
-     (`::after`) — the metal base ledge the keys sit on. */
-  padding: 2.6cqw 3cqw 7cqw;
-  border-radius: 4.5cqw;
+  /* Pull the tray UP so its (square) top tucks behind the panel above. The
+     panel has a higher z-index and an opaque extruded bottom edge, so it
+     covers the tray's top border — the lower section reads as connected to
+     the upper one with no seam. */
+  margin-top: -3.5cqw;
+  /* Extra top padding drops the recessed well (and its keys) down from the
+     tray's top edge so every key sits fully inside the housing. */
+  padding: 4.5cqw 2px 2.6cqw;
+  border-radius: 0 0 4.5cqw 4.5cqw;
   border: 1px solid transparent;
+  /* Dark off-black across the top, fading down to a lighter gray at the front
+     (bottom) of the tray. */
   background:
-    radial-gradient(
-        ellipse 120% 180% at 50% 0%,
-        #3a3c41 0%,
-        #26282c 45%,
-        #15171a 100%
+    linear-gradient(
+        180deg,
+        #0c0d0f 0%,
+        #17191c 32%,
+        #2a2c30 72%,
+        #3a3d42 100%
       )
       padding-box,
     linear-gradient(
@@ -340,31 +439,65 @@
       )
       border-box;
   box-shadow:
-    inset 0 3px 5px rgba(0, 0, 0, 0.55),
+    inset 0 2px 3px rgba(255, 255, 255, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 12px 22px rgba(0, 0, 0, 0.55);
+    inset 0 -5px 9px rgba(0, 0, 0, 0.45),
+    0 22px 30px rgba(0, 0, 0, 0.55);
 }
 
 /*
- * Lower part of the button housing: a raised metal ledge/lip spanning the
- * tray beneath the keys, with a bright top seam and a soft drop shadow so
- * it reads as the front base the keycaps sit on — the step that connects
- * the upper key shelf down to the lower edge of the housing.
+ * 3D extruded slab side beneath the tray, built from TWO stacked faces that
+ * both sit BEHIND the tray (`z-index: -1`; the tray sets no z-index, so these
+ * resolve against `.consoleStack` and paint under the tray's opaque face,
+ * showing only where they overhang). Each gradient is transparent across the
+ * portion hidden behind the tray, then turns solid just past the tray's bottom
+ * fold so the lit/dark bands land exactly on the visible overhang.
  */
+.consoleTray::before,
 .consoleTray::after {
   content: "";
   position: absolute;
-  left: 2.6cqw;
-  right: 2.6cqw;
-  bottom: 1.8cqw;
-  height: 3.4cqw;
-  border-radius: 1.8cqw;
-  background: linear-gradient(180deg, #34373c 0%, #212327 48%, #15171a 100%);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.55),
-    0 2px 4px rgba(0, 0, 0, 0.5);
+  /* Same silhouette as the tray (full width + inherited radius), just shifted
+     DOWN, so the overhang that peeks below follows the rounded bottom corners
+     and connects flush with the sides. The lit/dark bands are pinned in px
+     from the bottom so they stay put regardless of the tray's height. */
+  left: 0;
+  right: 0;
+  top: 0;
+  border-radius: inherit;
+  z-index: -1;
   pointer-events: none;
+}
+
+/*
+ * Lower/back face: a darker slab peeking furthest out at the bottom. It sits
+ * behind the lit front lip so a thin dark band shows beneath it — the second
+ * edge that gives the side its depth.
+ */
+.consoleTray::before {
+  bottom: -10px;
+  /* Fully opaque so it backs the whole tray silhouette: its top is hidden
+     behind the tray face and only the corner-following overhang shows, which
+     guarantees the rounded corners are filled (no page peeking through). */
+  background: linear-gradient(180deg, #15171a 0%, #0c0d0f 72%, #050608 100%);
+}
+
+/*
+ * Front lip: a short beveled metal face below the tray. It picks up a soft
+ * highlight at the top fold (continuing the tray face's light-gray front
+ * rather than a hard white line) and falls to a darker base, so the bottom
+ * reads as the solid front edge of the shelf.
+ */
+.consoleTray::after {
+  bottom: -7px;
+  background: linear-gradient(
+    180deg,
+    transparent calc(100% - 14px),
+    #5c6066 calc(100% - 12px),
+    #44474c calc(100% - 8px),
+    #2c2e32 calc(100% - 3px),
+    #1c1e21 100%
+  );
 }
 
 .consoleTrayWell {
@@ -372,8 +505,10 @@
   grid-template-columns: repeat(5, 1fr);
   width: 100%;
   box-sizing: border-box;
+  /* Drop the key plate a further 20px down inside the housing. */
+  margin-top: 20px;
   gap: 0.8cqw;
-  padding: 1cqw 2px;
+  padding: 1cqw;
   border-radius: 3cqw;
   background: #16181c;
   box-shadow:
