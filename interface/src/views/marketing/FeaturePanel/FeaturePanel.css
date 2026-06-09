@@ -117,7 +117,7 @@
   gap: 16px;
   padding: clamp(22px, 2.2vw, 32px);
   border: 1.5px solid transparent;
-  border-radius: 24px 24px 3px 3px;
+  border-radius: 24px 24px 6px 6px;
   background:
     /* Diagonal base: bottom-left #1d1d1d -> top-right #3a3a3a. */
     linear-gradient(to top right, #1d1d1d 0%, #3a3a3a 100%) padding-box,
@@ -171,10 +171,12 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
+  /* Narrower than the metal plate above so it reads as an inset glass panel. */
+  margin-inline: clamp(12px, 1.8vw, 20px);
   padding: clamp(24px, 2.4vw, 36px);
-  /* Only the touching (top) corners get the tight 3px radius; the bottom
-     keeps the card's 24px. */
-  border-radius: 3px 3px 24px 24px;
+  /* Top corners take a 6px radius to match the metal's 6px bottom; the
+     bottom keeps the card's 24px. */
+  border-radius: 6px 6px 24px 24px;
   /* Highly transparent glossy glass: a soft diagonal reflection sweeping the
      upper area over a near-clear pane with only a faint dark tint, so the
      page + emissive halo read straight through it (paired with the heavy
