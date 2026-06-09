@@ -172,20 +172,10 @@
   margin-top: auto;
 }
 
-/* Bordered frame around the metal-plate artwork: a metallic rim with a faint
-   gold inner glow, matching the card's hardware/gold language. */
+/* Bare container for the metal-plate artwork: no border/fill/shadow, so the
+   transparent ring sits directly on the metal plate. */
 .featurePanelSceneFrame {
   width: 100%;
-  border: 1.5px solid transparent;
-  border-radius: 12px;
-  overflow: hidden;
-  background:
-    #060606 padding-box,
-    linear-gradient(to top right, #0b0b0b 0%, #5e5e5e 100%) border-box;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 0 22px rgba(var(--gold-glow), 0.12),
-    0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
 .featurePanelSceneImage {
