@@ -1,8 +1,7 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PERSONAS } from "../../public-chat/personas";
 import { ProductView } from "./ProductView";
 
 // `ProductScreenSection` calls `window.matchMedia("(prefers-reduced-motion:
@@ -102,25 +101,4 @@ describe("ProductView", () => {
     ).toBeTruthy();
   });
 
-  // Temporarily skipped: the `<AgentOrbSection />` (orb + agent marquee)
-  // is commented out of `ProductView` for now, so the marquee no longer
-  // renders here. Re-enable this test when the section is restored.
-  it.skip("mounts the agent marquee in the orb section with one card per persona", () => {
-    // The orb + agent marquee moved out of the hero into the
-    // standalone `<AgentOrbSection />` (below the agent-chat section),
-    // so the strip should still be present on the rendered ProductView.
-    // The marquee duplicates the persona list for the seamless wrap, so
-    // we assert at least one card per persona renders (the duplicate
-    // count is covered explicitly in `AgentMarquee.test.tsx` —
-    // duplicating the assertion here would make a future loop-strategy
-    // tweak fail in two places at once for the same reason).
-    renderProductView();
-    const marquee = screen.getByTestId("agent-marquee");
-    for (const persona of PERSONAS) {
-      const cards = within(marquee).getAllByRole("img", {
-        name: `${persona.name}, ${persona.role}`,
-      });
-      expect(cards.length).toBeGreaterThanOrEqual(1);
-    }
-  });
 });

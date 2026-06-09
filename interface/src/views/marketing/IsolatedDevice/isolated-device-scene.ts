@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { FRAGMENT_SHADER as ORB_FRAGMENT_SHADER } from "../AuraOrb/shaders";
+import { SCREEN_FRAGMENT_SHADER } from "../AuraScreenOrb/shaders";
 
 export interface IsolatedDeviceScene {
   dispose(): void;
@@ -112,14 +112,18 @@ void main() {
 `;
 
 /**
- * The hero section's orb shader (see `../AuraOrb/shaders.ts`), retargeted
- * from a full-screen WebGL2 pass to a three.js GLSL1 `ShaderMaterial` on the
- * panel screen plane: the `#version` line and explicit output declaration
- * are swapped for three's GLSL1 conventions, and the screen-space coordinate
- * setup becomes plane UVs (scaled so the orb fills the panel). Sharing the
- * source string keeps the device's screen in lockstep with the hero orb.
+ * The first section's console-screen shader (the AgentConsole's marbled
+ * plasma field, see `../AuraScreenOrb/shaders.ts`), retargeted from a
+ * full-screen WebGL2 pass to a three.js GLSL1 `ShaderMaterial` on the panel
+ * screen plane: the `#version` line and explicit output declaration are
+ * swapped for three's GLSL1 conventions, and both screen-space coordinate
+ * setups (the flow field's and the vignette's) become plane UVs against a
+ * fixed virtual resolution. The vignette's rounded-box radius is widened to
+ * follow the glass panel's rounded-square silhouette instead of the console
+ * pill. Sharing the source string keeps the device's screen in lockstep
+ * with the first section's animation.
  */
-const ORB_PANEL_FRAGMENT_SHADER = ORB_FRAGMENT_SHADER.replace(
+const ORB_PANEL_FRAGMENT_SHADER = SCREEN_FRAGMENT_SHADER.replace(
   "#version 300 es",
   "",
 )
@@ -127,8 +131,19 @@ const ORB_PANEL_FRAGMENT_SHADER = ORB_FRAGMENT_SHADER.replace(
   .replace("fragColor =", "gl_FragColor =")
   .replace(
     "vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;",
-    "vec2 uv = (vUv - 0.5) * 1.6;",
+    "vec2 uv = vUv - 0.5;",
+  )
+  .replace(
+    "vec2 fragP = gl_FragCoord.xy - 0.5 * u_resolution;",
+    "vec2 fragP = (vUv - 0.5) * u_resolution;",
+  )
+  .replace(
+    "float radius = min(halfRes.x, halfRes.y);",
+    "float radius = 0.36 * min(halfRes.x, halfRes.y);",
   );
+
+/** Virtual pixel resolution fed to the vignette math on the panel plane. */
+const ORB_PANEL_VIRTUAL_RES = 512;
 
 /** Rounded square centered on the origin (the device's squircle footprint). */
 function roundedSquare(size: number, radius: number): THREE.Shape {
@@ -287,10 +302,11 @@ function createEtchTexture(dashed: boolean): THREE.CanvasTexture {
 /**
  * WebGL "isolated device" scene — a dark matte-metal Mac-mini-style appliance
  * modelled after the reference render, locked in a centered perfect-diamond
- * pose from a high angle. The recessed top panel is glass, with the hero
- * section's orb animation streaming on a screen beneath it. The geometry is
- * static; the motion is the orb shader plus the status LED strip beeping in
- * sequence (under reduced motion both freeze into a single static frame).
+ * pose from a high angle. The recessed top panel is glass, with the first
+ * section's console plasma animation streaming on a screen beneath it. The
+ * geometry is static; the motion is the plasma shader plus the status LED
+ * strip beeping in sequence (under reduced motion both freeze into a single
+ * static frame).
  */
 export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScene {
   const width = host.clientWidth || 320;
@@ -354,13 +370,21 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     clearcoatRoughness: 0.12,
     envMapIntensity: 1.2,
   });
-  // Orb screen under the glass — the hero section's shader, driven by the
-  // same time uniform contract as the full-screen original.
-  const orbUniforms = { u_time: { value: 0 } };
+  // Screen under the glass — the first section's console plasma shader,
+  // driven by the same uniform contract as the full-screen original. The
+  // shader feathers its own alpha along the rounded-square vignette, so the
+  // material blends over the dark case interior beneath.
+  const orbUniforms = {
+    u_time: { value: 0 },
+    u_resolution: {
+      value: new THREE.Vector2(ORB_PANEL_VIRTUAL_RES, ORB_PANEL_VIRTUAL_RES),
+    },
+  };
   const orbMaterial = new THREE.ShaderMaterial({
     vertexShader: ORB_VERTEX_SHADER,
     fragmentShader: ORB_PANEL_FRAGMENT_SHADER,
     uniforms: orbUniforms,
+    transparent: true,
   });
   const baseMaterial = new THREE.MeshStandardMaterial({
     color: 0x17181a,
@@ -439,8 +463,8 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   lidMesh.position.y = LID_Y;
   group.add(lidMesh);
 
-  // Orb screen: a square plane under the glass whose edges hide beneath the
-  // lid ring, playing the hero orb shader.
+  // Screen: a square plane under the glass whose edges hide beneath the
+  // lid ring, playing the first section's console plasma shader.
   const orbGeo = track(new THREE.PlaneGeometry(ORB_PLANE_SIZE, ORB_PLANE_SIZE));
   orbGeo.rotateX(-Math.PI / 2);
   const orbMesh = new THREE.Mesh(orbGeo, orbMaterial);

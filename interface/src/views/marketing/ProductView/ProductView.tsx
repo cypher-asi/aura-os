@@ -1,8 +1,6 @@
 import { type ReactNode, useEffect } from "react";
 import { AgentChatSection } from "../AgentChatSection";
 import { AgentConsole } from "../AgentConsole";
-// Temporarily hidden: agent orb + marquee section.
-// import { AgentOrbSection } from "../AgentOrbSection";
 import { ChangelogPreview } from "../ChangelogPreview";
 import { ExpertiseSection, ExpertiseTabs } from "../ExpertiseSection";
 import { Section } from "../Section";
@@ -107,6 +105,7 @@ export function ProductView(): ReactNode {
           }
         />
       </CardSection>
+      <PersonalAgentSection />
       <ExpertiseSection />
       <SpecQuadrantSection />
       <Section
@@ -116,11 +115,8 @@ export function ProductView(): ReactNode {
       >
         <ExpertiseTabs />
       </Section>
-      <PersonalAgentSection />
       <BuiltForTrustSection />
       <AgentChatSection />
-      {/* Temporarily hidden: agent orb + marquee section.
-      <AgentOrbSection /> */}
       <PrivacyFeaturePanel />
       <ChangelogPreview />
       <ProductCallToAction />
