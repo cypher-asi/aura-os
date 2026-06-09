@@ -252,7 +252,7 @@ export const INDUSTRIES: readonly ExpertiseEntry[] = [
     slug: "finance-banking",
     kind: "industry",
     label: "Finance & Banking",
-    headline: "Sovereign Intelligence for Finance",
+    headline: "Private Intelligence for Finance",
     heroBlurb:
       "Private AI that risk teams trust, regulators accept, and clients rely on. No compromises on data \u2014 ever.",
     overview:
@@ -294,7 +294,7 @@ export const INDUSTRIES: readonly ExpertiseEntry[] = [
     slug: "healthcare",
     kind: "industry",
     label: "Healthcare",
-    headline: "Sovereign Intelligence for Healthcare",
+    headline: "Private Intelligence for Healthcare",
     heroBlurb:
       "Private AI that clinicians trust, regulators accept, and patients deserve. No compromises on data \u2014 ever.",
     overview:
@@ -318,7 +318,7 @@ export const INDUSTRIES: readonly ExpertiseEntry[] = [
     slug: "legal-services",
     kind: "industry",
     label: "Legal",
-    headline: "Sovereign Intelligence for Legal",
+    headline: "Private Intelligence for Legal",
     heroBlurb:
       "Private AI that firms trust and clients rely on. No compromises on confidentiality \u2014 ever.",
     overview:
@@ -342,7 +342,7 @@ export const INDUSTRIES: readonly ExpertiseEntry[] = [
     slug: "marketing-media",
     kind: "industry",
     label: "Marketing & Media",
-    headline: "Sovereign Intelligence for Marketing",
+    headline: "Private Intelligence for Marketing",
     heroBlurb:
       "Private AI that keeps your brand on voice and your data your own.",
     overview:
@@ -366,7 +366,7 @@ export const INDUSTRIES: readonly ExpertiseEntry[] = [
     slug: "ecommerce-retail",
     kind: "industry",
     label: "E-commerce & Retail",
-    headline: "Sovereign Intelligence for Retail",
+    headline: "Private Intelligence for Retail",
     heroBlurb:
       "Private AI that scales your storefront without giving up your data.",
     overview:
@@ -390,7 +390,7 @@ export const INDUSTRIES: readonly ExpertiseEntry[] = [
     slug: "education",
     kind: "industry",
     label: "Education",
-    headline: "Sovereign Intelligence for Education",
+    headline: "Private Intelligence for Education",
     heroBlurb:
       "Private AI that supports educators and protects student data.",
     overview:
@@ -414,7 +414,7 @@ export const INDUSTRIES: readonly ExpertiseEntry[] = [
     slug: "real-estate",
     kind: "industry",
     label: "Real Estate",
-    headline: "Sovereign Intelligence for Real Estate",
+    headline: "Private Intelligence for Real Estate",
     heroBlurb:
       "Private AI that moves deals forward and keeps your data your own.",
     overview:
@@ -438,7 +438,7 @@ export const INDUSTRIES: readonly ExpertiseEntry[] = [
     slug: "technology-saas",
     kind: "industry",
     label: "Technology / SaaS",
-    headline: "Sovereign Intelligence for Technology",
+    headline: "Private Intelligence for Technology",
     heroBlurb:
       "Private AI that ships product and keeps your codebase your own.",
     overview:
