@@ -24,9 +24,9 @@ export function isWebGLAvailable(): boolean {
  * a recessed top plate carrying four corner screws and a centered embossed
  * logo, all sitting on a slightly inset base plinth. Vertical layout (y-up):
  *
- *   0.00 .. 0.14  base plinth (inset)
- *   0.12 .. 0.47  case band (full footprint, carries the louver banks)
- *   0.46 .. 0.57  lid (bevelled ring with the recessed plate inside)
+ *   0.00 .. 0.14   base plinth (inset)
+ *   0.12 .. 0.555  case band (full footprint, louver banks + LED strip)
+ *   0.545 .. 0.655 lid (bevelled ring with the recessed plate inside)
  */
 const SIZE = 2;
 const CORNER_R = 0.4;
@@ -37,11 +37,11 @@ const BASE_DEPTH = 0.11; // + 2 * bevel = 0.14 tall
 const BASE_Y = 0.015;
 
 const CASE_BOTTOM = 0.12;
-const CASE_TOP = 0.47;
+const CASE_TOP = 0.555;
 
 const LID_BEVEL = 0.03;
 const LID_DEPTH = 0.05; // + 2 * bevel = 0.11 tall
-const LID_Y = 0.49; // bottom bevel tucks to 0.46; top face lands at 0.57
+const LID_Y = 0.575; // bottom bevel tucks to 0.545; top face lands at 0.655
 
 /** Rounded-square opening cut through the lid ring (shape-local size). */
 const HOLE_SIZE = 1.46;
@@ -51,7 +51,7 @@ const PLATE_SIZE = 1.5;
 const PLATE_R = 0.27;
 const PLATE_BEVEL = 0.012;
 const PLATE_DEPTH = 0.02;
-const PLATE_TOP = 0.545; // recessed 0.025 below the lid top
+const PLATE_TOP = 0.63; // recessed 0.025 below the lid top
 const PLATE_Y = PLATE_TOP - PLATE_DEPTH - PLATE_BEVEL;
 
 const SCREW_OFFSET = 0.585;
@@ -64,7 +64,18 @@ const LOGO_SIZE = 0.6;
 const VENT_W = 0.48;
 const VENT_H = 0.22;
 const VENT_CENTER = -0.34; // along the wall, clear of the corner rounding
-const VENT_Y = 0.3; // vertical center within the case band
+const VENT_Y = 0.3; // sits low in the case band, leaving room for the LEDs
+
+/**
+ * Status LED strip: a row of small amber dots on the front-left wall, above
+ * the louver bank, that "beep" in a chasing sequence. Each dot gets its own
+ * emissive material so the chase can drive intensities per dot.
+ */
+const LED_COUNT = 6;
+const LED_RADIUS = 0.016;
+const LED_SPACING = 0.066;
+const LED_START_X = -0.56; // strip start, aligned over the vent's left edge
+const LED_Y = 0.48;
 
 /**
  * Pose: the near vertical corner points exactly at the camera (a perfect
@@ -74,7 +85,7 @@ const VENT_Y = 0.3; // vertical center within the case band
  */
 const BASE_YAW = -Math.PI / 4;
 const CAMERA_ELEVATION_DEG = 42;
-const CAMERA_TARGET_Y = 0.24;
+const CAMERA_TARGET_Y = 0.28;
 
 /** Rounded square centered on the origin (the device's squircle footprint). */
 function roundedSquare(size: number, radius: number): THREE.Shape {
@@ -233,8 +244,9 @@ function createVentTexture(): THREE.CanvasTexture {
 /**
  * WebGL "isolated device" scene — a dark matte-metal Mac-mini-style appliance
  * modelled after the reference render, locked in a centered perfect-diamond
- * pose from a high angle. The scene is static: it renders one frame up front
- * and re-renders only on resize.
+ * pose from a high angle. The geometry is static; the only motion is the
+ * status LED strip beeping in sequence (skipped under reduced motion, where
+ * the LEDs hold a steady glow and the scene renders a single frame).
  */
 export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScene {
   const width = host.clientWidth || 320;
@@ -404,6 +416,28 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   ventRight.position.set(SIZE / 2 + 0.0015, VENT_Y, VENT_CENTER);
   group.add(ventRight);
 
+  // Status LED strip above the front louver bank. One emissive material per
+  // dot so the chase animation can pulse them in sequence.
+  const ledGeo = track(new THREE.CircleGeometry(LED_RADIUS, 24));
+  const ledMaterials: THREE.MeshStandardMaterial[] = [];
+  for (let i = 0; i < LED_COUNT; i += 1) {
+    const ledMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1a1208,
+      emissive: 0xffa028,
+      emissiveIntensity: 0.12,
+      metalness: 0.1,
+      roughness: 0.4,
+    });
+    ledMaterials.push(ledMaterial);
+    const led = new THREE.Mesh(ledGeo, ledMaterial);
+    led.position.set(
+      LED_START_X + i * LED_SPACING,
+      LED_Y,
+      SIZE / 2 + 0.0015,
+    );
+    group.add(led);
+  }
+
   function fitCamera(): void {
     // Frame to the device's diagonal footprint width with a small margin; the
     // long camera distance keeps the projection near-orthographic like the
@@ -427,21 +461,74 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     renderer.render(scene, camera);
   }
 
+  // LED chase: each dot pulses with a phase offset down the strip, so a
+  // bright "beep" runs left-to-right with a faint resting glow between hits.
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  const clock = new THREE.Clock();
+  let raf = 0;
+  let running = false;
+
+  function animate(): void {
+    raf = requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+    for (let i = 0; i < ledMaterials.length; i += 1) {
+      const pulse = Math.pow(Math.max(0, Math.sin(t * 2.4 - i * 0.7)), 8);
+      ledMaterials[i].emissiveIntensity = 0.12 + 2.2 * pulse;
+    }
+    renderFrame();
+  }
+
+  function start(): void {
+    if (reducedMotion || running) return;
+    running = true;
+    clock.start();
+    animate();
+  }
+
+  function stop(): void {
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+  }
+
+  const onVisibilityChange = (): void => {
+    if (document.hidden) stop();
+    else start();
+  };
+  if (!reducedMotion) {
+    document.addEventListener("visibilitychange", onVisibilityChange);
+  }
+
   const resizeObserver = new ResizeObserver(() => {
     const w = host.clientWidth || width;
     const h = host.clientHeight || height;
     renderer.setSize(w, h);
     camera.aspect = w / h;
     fitCamera();
-    renderFrame();
+    if (!running) renderFrame();
   });
   resizeObserver.observe(host);
 
-  renderFrame();
+  if (reducedMotion) {
+    // Steady mid-glow instead of the chase, in a single static frame.
+    for (const ledMaterial of ledMaterials) {
+      ledMaterial.emissiveIntensity = 0.9;
+    }
+    renderFrame();
+  } else {
+    start();
+  }
 
   return {
     dispose(): void {
+      stop();
+      if (!reducedMotion) {
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+      }
       resizeObserver.disconnect();
+      for (const ledMaterial of ledMaterials) ledMaterial.dispose();
       for (const geo of geometries) geo.dispose();
       caseMaterial.dispose();
       plateMaterial.dispose();
