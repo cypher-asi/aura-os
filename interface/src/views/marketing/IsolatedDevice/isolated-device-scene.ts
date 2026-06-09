@@ -21,13 +21,13 @@ export function isWebGLAvailable(): boolean {
 
 /*
  * Device geometry, in world units (footprint side = 2). Shaped after the
- * reference render: a squircle-footprint case with a rounded-over lid edge,
- * a recessed top plate carrying four corner screws and a centered embossed
- * logo, all sitting on a slightly inset base plinth. Vertical layout (y-up):
+ * reference render: a squircle-footprint case with a rounded-over lid edge
+ * and a recessed screen in the lid opening, all sitting on a slightly inset
+ * base plinth. Vertical layout (y-up):
  *
  *   0.00 .. 0.14   base plinth (inset)
  *   0.12 .. 0.555  case band (full footprint, louver banks + LED strip)
- *   0.545 .. 0.655 lid (bevelled ring with the recessed plate inside)
+ *   0.545 .. 0.655 lid (bevelled ring with the recessed screen inside)
  */
 const SIZE = 2;
 const CORNER_R = 0.4;
@@ -48,18 +48,7 @@ const LID_Y = 0.575; // bottom bevel tucks to 0.545; top face lands at 0.655
 const HOLE_SIZE = 1.46;
 const HOLE_R = 0.26;
 
-const PLATE_SIZE = 1.5;
-const PLATE_R = 0.27;
-const PLATE_BEVEL = 0.012;
-const PLATE_DEPTH = 0.02;
-const PLATE_TOP = 0.63; // recessed 0.025 below the lid top
-const PLATE_Y = PLATE_TOP - PLATE_DEPTH - PLATE_BEVEL;
-
-const SCREW_OFFSET = 0.585;
-const SCREW_RADIUS = 0.034;
-const SCREW_HEIGHT = 0.016;
-
-/** Orb screen under the glass panel (square; edges hide under the lid ring). */
+/** Recessed screen panel (square; edges hide under the lid ring). */
 const ORB_PLANE_SIZE = 1.5;
 const ORB_PLANE_Y = 0.59;
 
@@ -119,7 +108,7 @@ void main() {
  * swapped for three's GLSL1 conventions, and both screen-space coordinate
  * setups (the flow field's and the vignette's) become plane UVs against a
  * fixed virtual resolution. The vignette's rounded-box radius is widened to
- * follow the glass panel's rounded-square silhouette instead of the console
+ * follow the screen panel's rounded-square silhouette instead of the console
  * pill. Sharing the source string keeps the device's screen in lockstep
  * with the first section's animation.
  */
@@ -302,11 +291,10 @@ function createEtchTexture(dashed: boolean): THREE.CanvasTexture {
 /**
  * WebGL "isolated device" scene — a dark matte-metal Mac-mini-style appliance
  * modelled after the reference render, locked in a centered perfect-diamond
- * pose from a high angle. The recessed top panel is glass, with the first
- * section's console plasma animation streaming on a screen beneath it. The
- * geometry is static; the motion is the plasma shader plus the status LED
- * strip beeping in sequence (under reduced motion both freeze into a single
- * static frame).
+ * pose from a high angle. The lid opening holds a recessed screen streaming
+ * the first section's console plasma animation. The geometry is static; the
+ * motion is the plasma shader plus the status LED strip beeping in sequence
+ * (under reduced motion both freeze into a single static frame).
  */
 export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScene {
   const width = host.clientWidth || 320;
@@ -357,22 +345,9 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     roughness: 0.68,
     envMapIntensity: 0.55,
   });
-  // Glass top panel: a smoked pane that keeps a faint surface presence
-  // (sheen + env reflections) while letting the orb screen below stream
-  // through via alpha blending.
-  const glassMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x10141a,
-    transparent: true,
-    opacity: 0.22,
-    metalness: 0,
-    roughness: 0.08,
-    clearcoat: 1,
-    clearcoatRoughness: 0.12,
-    envMapIntensity: 1.2,
-  });
-  // Screen under the glass — the first section's console plasma shader,
-  // driven by the same uniform contract as the full-screen original. The
-  // shader feathers its own alpha along the rounded-square vignette, so the
+  // Recessed screen — the first section's console plasma shader, driven by
+  // the same uniform contract as the full-screen original. The shader
+  // feathers its own alpha along the rounded-square vignette, so the
   // material blends over the dark case interior beneath.
   const orbUniforms = {
     u_time: { value: 0 },
@@ -392,15 +367,6 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     roughness: 0.78,
     envMapIntensity: 0.35,
   });
-  // Screws stay a touch glossier than the case so they still read as
-  // machined hardware against the matte body.
-  const screwMaterial = new THREE.MeshStandardMaterial({
-    color: 0x33363b,
-    metalness: 0.85,
-    roughness: 0.45,
-    envMapIntensity: 0.8,
-  });
-
   const ventTexture = createVentTexture();
   const ventMaterial = new THREE.MeshStandardMaterial({
     map: ventTexture,
@@ -454,8 +420,8 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   caseMesh.position.y = CASE_BOTTOM;
   group.add(caseMesh);
 
-  // Lid: a beveled ring (the rounded-over edge) with the recessed-plate
-  // opening cut through it; the bevel also chamfers into the recess.
+  // Lid: a beveled ring (the rounded-over edge) with the screen opening cut
+  // through it; the bevel also chamfers into the recess.
   const lidShape = roundedSquare(SIZE - 2 * LID_BEVEL, CORNER_R - LID_BEVEL);
   lidShape.holes.push(roundedSquare(HOLE_SIZE, HOLE_R));
   const lidGeo = track(extrudeSlab(lidShape, LID_DEPTH, LID_BEVEL));
@@ -463,42 +429,13 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   lidMesh.position.y = LID_Y;
   group.add(lidMesh);
 
-  // Screen: a square plane under the glass whose edges hide beneath the
-  // lid ring, playing the first section's console plasma shader.
+  // Screen: a square plane recessed into the lid opening (its edges hide
+  // beneath the lid ring), playing the first section's console plasma.
   const orbGeo = track(new THREE.PlaneGeometry(ORB_PLANE_SIZE, ORB_PLANE_SIZE));
   orbGeo.rotateX(-Math.PI / 2);
   const orbMesh = new THREE.Mesh(orbGeo, orbMaterial);
   orbMesh.position.y = ORB_PLANE_Y;
   group.add(orbMesh);
-
-  // Glass top panel filling the lid opening, sunk below the rim.
-  const plateGeo = track(
-    extrudeSlab(
-      roundedSquare(PLATE_SIZE - 2 * PLATE_BEVEL, PLATE_R - PLATE_BEVEL),
-      PLATE_DEPTH,
-      PLATE_BEVEL,
-    ),
-  );
-  const plateMesh = new THREE.Mesh(plateGeo, glassMaterial);
-  plateMesh.position.y = PLATE_Y;
-  group.add(plateMesh);
-
-  // Four pan-head screws just inside the panel corners, reading as the
-  // retainers holding the glass down.
-  const screwGeo = track(
-    new THREE.CylinderGeometry(SCREW_RADIUS, SCREW_RADIUS, SCREW_HEIGHT, 24),
-  );
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      const screw = new THREE.Mesh(screwGeo, screwMaterial);
-      screw.position.set(
-        sx * SCREW_OFFSET,
-        PLATE_TOP + SCREW_HEIGHT / 2 - 0.006,
-        sz * SCREW_OFFSET,
-      );
-      group.add(screw);
-    }
-  }
 
   // Louver banks on the two camera-facing walls, toward the far ends.
   const ventGeo = track(new THREE.PlaneGeometry(VENT_W, VENT_H));
@@ -652,10 +589,8 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       for (const ledMaterial of ledMaterials) ledMaterial.dispose();
       for (const geo of geometries) geo.dispose();
       caseMaterial.dispose();
-      glassMaterial.dispose();
       orbMaterial.dispose();
       baseMaterial.dispose();
-      screwMaterial.dispose();
       ventMaterial.dispose();
       etchSeamMaterial.dispose();
       etchDashMaterial.dispose();

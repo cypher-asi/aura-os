@@ -9,9 +9,8 @@ import "./IsolatedDevice.css";
  * Marketing "isolated device" — a WebGL-rendered Mac-mini-style computer
  * centered in the "Isolated by default." trust card, modelled after the
  * reference render: a squircle-footprint case with a rounded-over lid edge,
- * a recessed glass top panel (with the first section's console plasma
- * animation streaming on a screen beneath it) held by four corner screws, louver
- * banks on the walls, and an inset base plinth — finished in the site's
+ * a recessed top screen streaming the first section's console plasma
+ * animation, louver banks on the walls, and an inset base plinth — finished in the site's
  * dark matte metal rather than the photo's bright silver. It is locked in
  * a centered perfect-diamond pose viewed from a high angle; the motion is
  * the orb plus a strip of status LEDs above the front louver bank beeping
