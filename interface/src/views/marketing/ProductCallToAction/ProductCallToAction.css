@@ -41,14 +41,17 @@
   isolation: isolate;
   margin: 0;
   max-width: 14ch;
-  /* Pure white resting fill with NO text-shadow of its own: the gold
-     glow lives entirely on the `::before` layer behind the glyphs (so it
-     can pulse independently), and keeping the bloom off this element is
-     what lets the letterforms read crisply white. (An earlier approach
-     used a transparent fill + background-clip gradient here, which let
-     the gold text-shadow bleed through the glyphs and wash out both the
-     white text and the shimmer band.) */
-  color: #fff;
+  /* Luminous gold resting fill: the glyphs read as glowing gold, with a
+     tight emissive halo hugging the letterforms. The big breathing bloom
+     lives on the `::before` layer behind the glyphs so it can pulse
+     independently of this steady glyph glow. (An earlier approach used a
+     transparent fill + background-clip gradient here, which let the gold
+     text-shadow bleed through the glyphs and wash out the shimmer band —
+     the fill must stay opaque.) */
+  color: #fae5b3;
+  text-shadow:
+    0 0 10px rgba(var(--gold-glow), 0.5),
+    0 0 24px rgba(var(--gold-glow), 0.3);
   font-size: clamp(40px, 6vw, 72px);
   font-weight: 600;
   line-height: 1.05;
@@ -56,12 +59,11 @@
 }
 
 /* Glow layer: re-renders the same text (via `data-text`) behind the
-   white glyphs with an invisible fill — only its layered amber-gold
-   text-shadow paints. Putting the bloom on its own layer keeps the
-   glyphs above pure white AND lets the whole halo pulse by animating
-   one cheap property (opacity) instead of interpolating shadow lists.
-   Deliberately skips the tight glyph-hugging layer from
-   `--gold-text-shadow` — at this size it tints the letterforms gold. */
+   gold glyphs with an invisible fill — only its layered amber-gold
+   text-shadow paints. Putting the bloom on its own layer lets the whole
+   halo pulse by animating one cheap property (opacity) instead of
+   interpolating shadow lists, while the glyphs' own tight glow stays
+   steady. */
 .productCtaTagline::before {
   content: attr(data-text) / "";
   position: absolute;
@@ -70,11 +72,11 @@
   pointer-events: none;
   color: transparent;
   text-shadow:
-    0 0 14px rgba(var(--gold-glow), 0.35),
-    0 0 32px rgba(var(--gold-glow), 0.32),
-    0 0 64px rgba(var(--gold-glow), 0.24),
-    0 0 110px rgba(var(--gold-halo), 0.24),
-    0 0 160px rgba(var(--gold-halo), 0.16);
+    0 0 14px rgba(var(--gold-glow), 0.5),
+    0 0 32px rgba(var(--gold-glow), 0.42),
+    0 0 64px rgba(var(--gold-glow), 0.32),
+    0 0 110px rgba(var(--gold-halo), 0.3),
+    0 0 160px rgba(var(--gold-halo), 0.2);
   animation: ctaGlowPulse 2.8s ease-in-out infinite;
 }
 
