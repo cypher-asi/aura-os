@@ -19,6 +19,12 @@ export interface FeaturePanelFeature {
   readonly description: string;
   /** Uppercase category, stamped as the overline on the metal section. */
   readonly tag: ReactNode;
+  /**
+   * Optional framed artwork rendered in the metal plate. When set, the metal
+   * section grows to show the image reasonably large between the overline and
+   * the title.
+   */
+  readonly imageSrc?: string;
 }
 
 interface FeaturePanelProps {
@@ -75,14 +81,30 @@ export function FeaturePanel({
           {features.map((feature, index) => (
             <li
               key={index}
-              className="featurePanelItem"
+              className={`featurePanelItem${
+                feature.imageSrc ? " featurePanelItem--media" : ""
+              }`}
               role="button"
               tabIndex={0}
               onClick={() => play(index)}
               onKeyDown={(event) => onKeyDown(event, index)}
             >
-              <div className="featurePanelScene">
+              <div
+                className={`featurePanelScene${
+                  feature.imageSrc ? " featurePanelScene--media" : ""
+                }`}
+              >
                 <span className="featurePanelMetalOverline">{feature.tag}</span>
+                {feature.imageSrc && (
+                  <div className="featurePanelSceneFrame">
+                    <img
+                      src={feature.imageSrc}
+                      alt=""
+                      className="featurePanelSceneImage"
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
                 <h3 className="featurePanelMetalTitle">{feature.title}</h3>
               </div>
               <div className="featurePanelItemBody">

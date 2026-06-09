@@ -62,7 +62,7 @@
   display: grid;
   grid-template-rows: 1fr 1fr;
   text-align: left;
-  min-height: 480px;
+  min-height: 420px;
   border-radius: 24px;
   background: transparent;
   cursor: pointer;
@@ -148,6 +148,51 @@
   text-shadow: var(--gold-text-shadow, none);
 }
 
+/* Media cards (those carrying a framed image, e.g. the "Private" card): give
+   the metal plate the larger share of the card so the artwork reads big, and
+   let the glass section keep just enough room for its 4-line copy. */
+.featurePanelItem--media {
+  grid-template-rows: 1.55fr 1fr;
+}
+
+/* When the metal plate hosts artwork, anchor the overline at the top, the
+   framed image in the middle (allowed to grow), and the title at the bottom. */
+.featurePanelScene--media {
+  justify-content: flex-start;
+  gap: clamp(16px, 1.6vw, 22px);
+}
+
+.featurePanelScene--media .featurePanelSceneFrame {
+  margin-top: auto;
+}
+
+.featurePanelScene--media .featurePanelMetalTitle {
+  margin-top: auto;
+}
+
+/* Bordered frame around the metal-plate artwork: a metallic rim with a faint
+   gold inner glow, matching the card's hardware/gold language. */
+.featurePanelSceneFrame {
+  width: 100%;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    #060606 padding-box,
+    linear-gradient(to top right, #0b0b0b 0%, #5e5e5e 100%) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 0 22px rgba(var(--gold-glow), 0.12),
+    0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.featurePanelSceneImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
 /* Glass bottom section container. It holds a glowing gold line layer with
    the frosted glass surface stacked ON TOP of it, so the line reads through
    the blurred, translucent glass (distorted). Just slightly narrower than the
@@ -159,7 +204,7 @@
   align-items: flex-start;
   gap: 12px;
   margin-inline: clamp(4px, 0.7vw, 8px);
-  padding: clamp(24px, 2.4vw, 36px);
+  padding: clamp(18px, 1.8vw, 26px) clamp(24px, 2.4vw, 36px);
   /* Top corners take a 6px radius to match the metal's 6px bottom; the bottom
      keeps the card's 24px. Shared by both stacked layers. */
   --glass-radius: 6px 6px 24px 24px;

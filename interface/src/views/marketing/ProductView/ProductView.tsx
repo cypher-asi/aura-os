@@ -127,19 +127,20 @@ export function ProductView(): ReactNode {
           {
             title: "Private",
             description:
-              "AURA does not view or train on your personal or corporate data. Data sent to frontier model providers is not directly identifiable.",
+              "AURA never views or trains on your personal or corporate data. Anything sent to frontier models stays unidentifiable.",
             tag: "PRIVACY",
+            imageSrc: "/privacy-ring.png",
           },
           {
             title: "Verifiable",
             description:
-              "The AURA harness and kernel is built from the ground up with security, verification and policy enforcement as first class citizens.",
+              "The AURA harness and kernel are built from the ground up with security, verification, and policy as first-class citizens.",
             tag: "SECURITY",
           },
           {
             title: "Open Source",
             description:
-              "AURA is 100% open source under the MIT license. Fork it at anytime with zero vendor lock-in.",
+              "AURA is 100% open source under the MIT license. Fork it anytime, with zero vendor lock-in and no strings attached.",
             tag: "OPEN SOURCE",
           },
         ]}
