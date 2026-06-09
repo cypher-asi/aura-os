@@ -251,6 +251,16 @@
 }
 
 /*
+ * Public mode hides the main app top bar entirely. Scoped with the `>`
+ * direct-child combinator so it only matches the shell's own
+ * `AuraTitlebar`, NOT the nested `MockAuraDesktop` mock titlebar (also a
+ * `.titlebar-drag`, but deep inside `.mainPanel`), which must stay visible.
+ */
+.shell[data-ui-mode="public"] > :global(.titlebar-drag) {
+  display: none;
+}
+
+/*
  * Default (dark) theme: the authed top app bar (titlebar) drops its
  * frosted background + border so it floats cleanly on the gradient
  * outer-shell backdrop. `ShellTitlebar`'s `.blur` sets its background
