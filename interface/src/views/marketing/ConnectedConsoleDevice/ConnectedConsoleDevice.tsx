@@ -42,31 +42,36 @@ const CHANNELS: readonly Channel[] = [
 ];
 
 /** Radius of each drilled speaker hole, in the grille's 0-100 viewBox. */
-const GRILLE_HOLE_RADIUS = 1.55;
+const GRILLE_HOLE_RADIUS = 1.7;
 
 /**
- * Speaker-hole positions for the grille, laid out as CONCENTRIC RINGS
- * (a polar pattern) rather than a square grid — one center hole, then
- * rings at a fixed radial spacing, each ring carrying as many evenly
- * spaced holes as its circumference allows. This reproduces the classic
- * radial driver grille in the reference. Computed once at module load
- * (the layout is static) over a 0-100 viewBox so it scales with the
- * `<svg>`; the holes are painted directly onto the metal panel (no
- * separate mesh disc behind them).
+ * Speaker-hole positions for the grille, laid out as a HEXAGONAL
+ * close-packed grid clipped to a circle. Hex packing (alternate rows
+ * offset by half the spacing, rows spaced by `spacing * sqrt(3)/2`) gives
+ * a uniform, coherent mesh that fills the disc edge-to-edge — unlike a
+ * polar/ring layout, which leaves visible radial spokes and uneven gaps.
+ * Computed once at module load over a 0-100 viewBox so it scales with the
+ * `<svg>`; the holes are painted directly onto the metal panel.
  */
 const GRILLE_HOLES: ReadonlyArray<{ readonly cx: number; readonly cy: number }> =
   (() => {
-    const holes: Array<{ cx: number; cy: number }> = [{ cx: 50, cy: 50 }];
-    const ringSpacing = 4.6;
+    const holes: Array<{ cx: number; cy: number }> = [];
+    const spacing = 4.3;
+    const rowHeight = (spacing * Math.sqrt(3)) / 2;
     const maxRadius = 47;
-    for (let radius = ringSpacing; radius <= maxRadius; radius += ringSpacing) {
-      const count = Math.round((2 * Math.PI * radius) / ringSpacing);
-      for (let i = 0; i < count; i += 1) {
-        const angle = (i / count) * 2 * Math.PI;
-        holes.push({
-          cx: 50 + radius * Math.cos(angle),
-          cy: 50 + radius * Math.sin(angle),
-        });
+    const limit = maxRadius - GRILLE_HOLE_RADIUS;
+    const rows = Math.ceil(maxRadius / rowHeight);
+    const cols = Math.ceil(maxRadius / spacing) + 1;
+    for (let row = -rows; row <= rows; row += 1) {
+      const cy = 50 + row * rowHeight;
+      const xOffset = row % 2 === 0 ? 0 : spacing / 2;
+      for (let col = -cols; col <= cols; col += 1) {
+        const cx = 50 + col * spacing + xOffset;
+        const dx = cx - 50;
+        const dy = cy - 50;
+        if (Math.sqrt(dx * dx + dy * dy) <= limit) {
+          holes.push({ cx, cy });
+        }
       }
     }
     return holes;
