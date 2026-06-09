@@ -38,14 +38,29 @@
   height: clamp(170px, 24vh, 320px);
   margin-bottom: -1.5cqw;
   border-radius: 4cqw 4cqw 0 0;
-  background: linear-gradient(
-    90deg,
-    #050506 0%,
-    #2a2c30 26%,
-    #3a3c40 50%,
-    #1c1d20 74%,
-    #050506 100%
-  );
+  /* Braided sleeve: two crossing sets of diagonal threads (a herringbone
+     weave) over a cylindrical dark base that shades the rounded sides. */
+  background:
+    repeating-linear-gradient(
+      63deg,
+      rgba(255, 255, 255, 0.07) 0 1px,
+      rgba(0, 0, 0, 0) 1px 4px,
+      rgba(0, 0, 0, 0.5) 4px 5px,
+      rgba(0, 0, 0, 0) 5px 8px
+    ),
+    repeating-linear-gradient(
+      -63deg,
+      rgba(255, 255, 255, 0.07) 0 1px,
+      rgba(0, 0, 0, 0) 1px 4px,
+      rgba(0, 0, 0, 0.5) 4px 5px,
+      rgba(0, 0, 0, 0) 5px 8px
+    ),
+    linear-gradient(
+      90deg,
+      #050506 0%,
+      #202124 50%,
+      #050506 100%
+    );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 2px 6px rgba(0, 0, 0, 0.5);
@@ -53,80 +68,114 @@
 }
 
 /*
- * Cord-entry hardware where the cable meets the panel, in two stacked
- * pieces (matching the reference):
- *   - `.consoleCordTip` — the orange rubber GROMMET/boot the cord plugs
- *     into: wider than the cord, with rounded top shoulders and a glossy
- *     left-lit face.
- *   - `.consoleCordBase` — the metallic silver FLANGE the grommet seats
- *     on, resting flat on the dark panel surface.
+ * Cord-entry hardware where the cable meets the panel: four stacked metal
+ * connector bands (like a high-end audio plug), placed bottom-to-top with no
+ * overlap. Each `bottom` equals the previous band's top edge so the bands
+ * sit flush against one another:
+ *   1. `Layer1` — bright metal band seated on the speaker panel.
+ *   2. `Layer2` — a darker, longer band (the barrel).
+ *   3. `Layer3` / 4. `Layer4` — two more bright bands matching layer 1.
  */
-.consoleCordTip {
+.consoleConnectorLayer {
   position: absolute;
   left: 50%;
-  bottom: 1cqw;
-  width: 13cqw;
-  height: 11cqw;
   transform: translateX(-50%);
-  border-radius: 5.5cqw 5.5cqw 2cqw 2cqw;
-  /* Same dark radial fill as the speaker-box body so it reads as the same
-     molded metal family. */
-  background: radial-gradient(
-    ellipse 120% 130% at 50% 32%,
-    #202020 0%,
-    #161616 55%,
-    #0c0c0c 100%
-  );
-  box-shadow:
-    inset 0 2px 2px rgba(255, 255, 255, 0.12),
-    inset 2px 0 3px rgba(255, 255, 255, 0.06),
-    inset 0 -3px 5px rgba(0, 0, 0, 0.45),
-    0 3px 6px rgba(0, 0, 0, 0.5);
+  border-radius: 0.84cqw;
   z-index: 2;
 }
 
-/* Nozzle: a narrower neck that comes out of the dark connector and meets the
-   cord, in the same dark speaker-box color so it reads as one part. */
-.consoleCordTip::before {
+/* Dark matte-black metal band: a soft lighter-black highlight set toward the
+   left, falling off to darker black on the sides — low-gloss so it reads matte
+   rather than chrome. */
+.consoleConnectorLayer1,
+.consoleConnectorLayer3,
+.consoleConnectorLayer4 {
+  background: radial-gradient(
+    ellipse 95% 160% at 35% 50%,
+    #2c2c2e 0%,
+    #1b1b1d 45%,
+    #0e0e0f 74%,
+    #050506 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.55),
+    0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Layer 1: widest, seated on the panel surface. */
+.consoleConnectorLayer1 {
+  bottom: -1.05cqw;
+  width: 11.9cqw;
+  height: 3.5cqw;
+}
+
+/* Layer 2: darker and longer barrel sitting directly on layer 1. */
+.consoleConnectorLayer2 {
+  bottom: 2.45cqw;
+  width: 10.5cqw;
+  height: 3.15cqw;
+  border-radius: 1px;
+  background: radial-gradient(
+    ellipse 80% 150% at 50% 45%,
+    #3a3c40 0%,
+    #232529 45%,
+    #131416 78%,
+    #08090a 100%
+  );
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.55),
+    0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Layer 3: bright band on top of the barrel. */
+.consoleConnectorLayer3 {
+  bottom: 5.6cqw;
+  width: 10.5cqw;
+  height: 1.225cqw;
+}
+
+/* Layer 4: top bright band the cord emerges from, with heavily rounded top
+   corners. */
+.consoleConnectorLayer4 {
+  bottom: 6.825cqw;
+  width: 9.1cqw;
+  height: 2.45cqw;
+  border-radius: 2.1cqw 2.1cqw 0.84cqw 0.84cqw;
+}
+
+/* Gold notched + beveled accent strip seated on the top of layer 4 (the
+   gold-pinned ring where the braided cord exits). The vertical dark lines of
+   the repeating gradient carve the notches; the warm halo gives the gold glow. */
+.consoleConnectorLayer4::before {
   content: "";
   position: absolute;
   left: 50%;
-  top: -2.4cqw;
-  width: 6cqw;
-  height: 4cqw;
+  top: -0.91cqw;
+  width: 5.6cqw;
+  height: 0.63cqw;
   transform: translateX(-50%);
-  border-radius: 2cqw 2cqw 0.8cqw 0.8cqw;
-  background: radial-gradient(
-    ellipse 120% 130% at 50% 25%,
-    #242424 0%,
-    #161616 60%,
-    #0c0c0c 100%
-  );
+  border-radius: 0.35cqw;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.55) 0 0.112cqw,
+      rgba(0, 0, 0, 0) 0.112cqw 0.735cqw
+    ),
+    linear-gradient(
+      180deg,
+      #fbf0c4 0%,
+      #e7c873 24%,
+      #c9962f 58%,
+      #7c4e15 100%
+    );
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.1),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.4);
-}
-
-.consoleCordBase {
-  position: absolute;
-  left: 50%;
-  bottom: -2.5cqw;
-  width: 19cqw;
-  height: 6cqw;
-  transform: translateX(-50%);
-  border-radius: 3cqw;
-  background: linear-gradient(
-    180deg,
-    #e2e4e7 0%,
-    #b0b4ba 38%,
-    #797d83 72%,
-    #5a5d63 100%
-  );
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.4),
-    0 4px 8px rgba(0, 0, 0, 0.55);
-  z-index: 1;
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.4),
+    0 0 3px rgba(var(--gold-glow), 0.3),
+    0 0 6px rgba(var(--gold-glow), 0.15);
+  z-index: 3;
 }
 
 .consoleStack {
@@ -222,18 +271,27 @@
   width: 14cqw;
   height: 14cqw;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.5);
-  background: radial-gradient(
-    ellipse 120% 90% at 50% 0%,
-    #0a0a0a 0%,
-    #050505 60%,
-    #000 100%
-  );
+  /* Dark 50%-transparent gradient ring (border-box trick): the radial fill
+     paints the padding-box, the dark linear gradient paints the border. */
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+        ellipse 120% 90% at 50% 0%,
+        #0a0a0a 0%,
+        #050505 60%,
+        #000 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(78, 80, 86, 0.5) 0%,
+        rgba(10, 11, 13, 0.5) 100%
+      )
+      border-box;
   box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.85),
+    inset 0 1px 2px rgba(0, 0, 0, 0.5),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 1px 0 rgba(255, 255, 255, 0.22),
-    0 0 6px rgba(255, 255, 255, 0.18);
+    0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 /* Matte-black dial (vs the old brushed-silver conic metal): a soft top-lit
@@ -244,20 +302,31 @@
   width: 10.5cqw;
   height: 10.5cqw;
   border-radius: 50%;
+  /* Small black-to-gray gradient rim around the spinning dial. */
+  border: 1px solid transparent;
   /* Eased follow as the dial rotates toward the cursor (angle set inline). */
   transition: transform 0.12s ease-out;
   background:
     radial-gradient(
-      circle at 50% 28%,
-      rgba(255, 255, 255, 0.16) 0%,
-      rgba(255, 255, 255, 0) 52%
-    ),
+        circle at 50% 28%,
+        rgba(255, 255, 255, 0.16) 0%,
+        rgba(255, 255, 255, 0) 52%
+      )
+      padding-box,
     radial-gradient(
-      ellipse 120% 100% at 50% 30%,
-      #1d1d1f 0%,
-      #121214 55%,
-      #060607 100%
-    );
+        ellipse 120% 100% at 50% 30%,
+        #1d1d1f 0%,
+        #121214 55%,
+        #060607 100%
+      )
+      padding-box,
+    linear-gradient(
+        160deg,
+        #4a4d52 0%,
+        #1f2125 55%,
+        #2b2e33 100%
+      )
+      border-box;
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.18),
     inset 0 -2px 3px rgba(0, 0, 0, 0.7),
@@ -569,6 +638,14 @@
         rgba(0, 0, 0, 0.45) 100%
       )
       border-box;
+  /* Raised keycap: a solid bottom side face (the bevel) plus an ambient cast
+     shadow into the well, so the cap stands proud of the surface, and a faint
+     top highlight so the lit face reads correctly. */
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.55),
+    0 3px 0 rgba(0, 0, 0, 0.4),
+    0 4px 6px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   cursor: pointer;
   transition:
     transform 0.08s ease,
@@ -585,7 +662,7 @@
 /* Pressed/selected key: pushed down and recessed with an inner shadow, and the
    glyph lit with the golden accent so the active channel stands out. */
 .consoleKey[data-pressed="true"] {
-  transform: translateY(1px);
+  transform: translateY(2px);
   color: var(--gold-core, #f4faf2);
   box-shadow:
     inset 0 2px 5px rgba(0, 0, 0, 0.7),
@@ -609,13 +686,17 @@
    (warm and lit on the top-left, deep amber on the bottom-right), matching the
    page's golden glow family. */
 .consoleKey--zero {
+  /* Grow the rim so more of the gold gradient is visible. */
+  border-width: 2px;
   background:
     linear-gradient(#161208, #161208) padding-box,
     linear-gradient(
         155deg,
-        rgba(var(--gold-glow), 0.9) 0%,
-        rgba(var(--gold-glow), 0.5) 45%,
-        rgba(var(--gold-halo), 0.7) 100%
+        rgba(var(--gold-glow), 0.95) 0%,
+        rgba(var(--gold-glow), 0.6) 30%,
+        rgba(var(--gold-glow), 0.18) 55%,
+        rgba(var(--gold-halo), 0.55) 80%,
+        rgba(var(--gold-halo), 0.85) 100%
       )
       border-box;
 }
@@ -630,8 +711,10 @@
   letter-spacing: 0.08em;
   color: var(--gold-core, #f4faf2);
   text-shadow:
-    0 0 6px rgba(var(--gold-glow), 0.85),
-    0 0 14px rgba(var(--gold-halo), 0.6);
+    0 0 8px rgba(var(--gold-glow), 0.95),
+    0 0 22px rgba(var(--gold-glow), 0.7),
+    0 0 40px rgba(var(--gold-halo), 0.6),
+    0 0 64px rgba(var(--gold-halo), 0.4);
 }
 
 @media (max-width: 768px) {
