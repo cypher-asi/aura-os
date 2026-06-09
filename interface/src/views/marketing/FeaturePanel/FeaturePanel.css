@@ -27,29 +27,11 @@
   user-select: text;
 }
 
-.featurePanelHeadline,
 .featurePanelItemTitle,
 .featurePanelItemDesc {
   -webkit-user-select: text;
   user-select: text;
   cursor: text;
-}
-
-.featurePanelHeader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.featurePanelHeadline {
-  margin: 0;
-  font-size: clamp(36px, 5vw, 56px);
-  font-weight: 300;
-  line-height: 1.05;
-  letter-spacing: -0.035em;
-  color: var(--gold-core, #f7f8fb);
-  text-shadow: var(--gold-text-shadow, none);
 }
 
 .featurePanelGrid {
@@ -84,6 +66,7 @@
   min-height: 480px;
   border-radius: 24px;
   background: transparent;
+  cursor: pointer;
   /* Drop shadow that floats the card, plus a gold emissive halo weighted
      downward so the glass section's glow pools/reflects on the surface
      below (the box-shadow paints outside the `overflow: hidden` clip). */
@@ -262,6 +245,13 @@
   color: var(--color-text-secondary, #a3a3a8);
 }
 
+/* Keyboard focus ring for the clickable card (click/Enter/Space replays the
+   description typewriter). */
+.featurePanelItem:focus-visible {
+  outline: 2px solid rgba(var(--gold-glow), 0.8);
+  outline-offset: 3px;
+}
+
 /* Hover: brighten the emissive halo + its reflection on the surface below.
    The metal/glass split is kept (no gold wash over the metal); only the
    emissive line/glow and the description light up. */
@@ -325,9 +315,5 @@
 @media (max-width: 480px) {
   .featurePanel {
     padding: 56px 20px;
-  }
-
-  .featurePanelHeadline {
-    font-size: clamp(32px, 10vw, 44px);
   }
 }

@@ -1,9 +1,20 @@
-import { type ReactNode } from "react";
+import {
+  useCallback,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import { TextCard } from "../TextCard";
+import { TypewriterText } from "../../public-chat/TypewriterText";
 import "./FeaturePanel.css";
 
 export interface FeaturePanelFeature {
   readonly title: ReactNode;
-  readonly description: ReactNode;
+  /**
+   * Body copy in the glass section. A plain string so a click on the card
+   * can replay it with the shared `TypewriterText` reveal.
+   */
+  readonly description: string;
   /** Uppercase category, stamped as the overline on the metal section. */
   readonly tag: ReactNode;
 }
@@ -24,15 +35,41 @@ export function FeaturePanel({
   headline,
   features,
 }: FeaturePanelProps): ReactNode {
+  // Which card's description is currently playing the typewriter reveal, and
+  // a nonce that bumps on every click so re-clicking the same card replays it
+  // (the `TypewriterText` is keyed on the nonce, so it remounts and re-types).
+  const [active, setActive] = useState<number | null>(null);
+  const [playKey, setPlayKey] = useState<number>(0);
+
+  const play = useCallback((index: number): void => {
+    setActive(index);
+    setPlayKey((key) => key + 1);
+  }, []);
+
+  const onKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLLIElement>, index: number): void => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        play(index);
+      }
+    },
+    [play],
+  );
+
   return (
     <section className="featurePanel">
       <div className="featurePanelInner">
-        <header className="featurePanelHeader">
-          <h2 className="featurePanelHeadline">{headline}</h2>
-        </header>
+        <TextCard level="h2" headline={headline} />
         <ul className="featurePanelGrid" role="list">
           {features.map((feature, index) => (
-            <li key={index} className="featurePanelItem">
+            <li
+              key={index}
+              className="featurePanelItem"
+              role="button"
+              tabIndex={0}
+              onClick={() => play(index)}
+              onKeyDown={(event) => onKeyDown(event, index)}
+            >
               <div className="featurePanelScene">
                 <span className="featurePanelMetalOverline">{feature.tag}</span>
                 <h3 className="featurePanelMetalTitle">{feature.title}</h3>
@@ -40,7 +77,17 @@ export function FeaturePanel({
               <div className="featurePanelItemBody">
                 <span className="featurePanelGlassLine" aria-hidden="true" />
                 <span className="featurePanelGlassSurface" aria-hidden="true" />
-                <p className="featurePanelItemDesc">{feature.description}</p>
+                <p className="featurePanelItemDesc">
+                  {active === index ? (
+                    <TypewriterText
+                      key={playKey}
+                      text={feature.description}
+                      speedMs={16}
+                    />
+                  ) : (
+                    feature.description
+                  )}
+                </p>
               </div>
             </li>
           ))}
