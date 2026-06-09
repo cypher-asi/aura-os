@@ -10,7 +10,17 @@
   /* Off-black surface tint inherited from `.productView` (see the
      `--marketing-section-bg` rationale in `ProductView.module.css`). */
   background: var(--marketing-section-bg, #000);
-  padding: 96px 32px;
+  /* Top padding matches the headline-to-cards gap below so the headline's
+     top spacing reads balanced with its bottom spacing. */
+  padding: clamp(40px, 6vw, 72px) 32px 96px;
+}
+
+/* The shared TextCard h2 band reserves a tall, vertically-centered block
+   (min-height up to 420px); here we want the "Private by Design." headline to
+   sit close to the section top, so collapse that reserved height and let the
+   section padding + inner gap own the spacing. */
+.featurePanelInner .textCardH2 {
+  min-height: auto;
 }
 
 .featurePanelInner {
