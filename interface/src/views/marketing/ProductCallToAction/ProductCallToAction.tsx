@@ -35,7 +35,12 @@ export function ProductCallToAction({
       className="productCtaSection"
       aria-label="Product call to action"
     >
-      <h2 className="productCtaTagline">{tagline}</h2>
+      {/* `data-text` feeds the `::after` shimmer overlay in the CSS,
+          which re-renders the same glyphs with a moving gold band
+          clipped to them (see `.productCtaTagline::after`). */}
+      <h2 className="productCtaTagline" data-text={tagline}>
+        {tagline}
+      </h2>
       <div className="productCtaActions">
         <Link
           to={{ pathname: "/login", search: registerSearch }}

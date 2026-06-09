@@ -34,44 +34,69 @@
 }
 
 .productCtaTagline {
+  position: relative;
   margin: 0;
   max-width: 14ch;
-  /* Pale gold core so the tagline reads as one family with the rest of
-     the gold-accented marketing page (mirrors `.pageHeroHeadline`). */
-  color: var(--gold-core, #f7f8fb);
-  /* Standard layered amber-gold accent glow, plus several wider/brighter
-     outer layers for an extra luminous halo that reaches further out. */
+  /* Pure white resting fill: the glyphs are opaque, so the layered glow
+     below sits BEHIND them and never tints the letterforms. (The previous
+     approach used a transparent fill + background-clip gradient on this
+     element, which let the gold text-shadow bleed through the glyphs and
+     wash out both the white text and the band.) */
+  color: #fff;
+  /* Soft layered amber-gold glow. Deliberately skips the tight 6px
+     glyph-hugging layer from `--gold-text-shadow` — at this size it
+     visually tints the letterforms gold, and the resting text should
+     read white. The wider layers supply the luminous halo. */
   text-shadow:
-    var(--gold-text-shadow, none),
-    0 0 40px rgba(var(--gold-glow), 0.4),
-    0 0 72px rgba(var(--gold-glow), 0.3),
-    0 0 110px rgba(var(--gold-halo), 0.26),
-    0 0 160px rgba(var(--gold-halo), 0.18);
+    0 0 14px rgba(var(--gold-glow), 0.35),
+    0 0 32px rgba(var(--gold-glow), 0.32),
+    0 0 64px rgba(var(--gold-glow), 0.24),
+    0 0 110px rgba(var(--gold-halo), 0.24),
+    0 0 160px rgba(var(--gold-halo), 0.16);
   font-size: clamp(40px, 6vw, 72px);
   font-weight: 600;
   line-height: 1.05;
   letter-spacing: -0.03em;
-  /* Shimmer: a bright gold glint clipped to the glyphs streaks across the
-     white text. The fill is transparent so the gradient shows through
-     (the soft gold glow above still renders, since text-shadow is
-     glyph-shaped and ignores fill). The base stops are the near-white
-     core so the resting text reads white; only a tight, luminous gold
-     band — with a brighter highlight core — moves. The gradient is 3x
-     the element width so the glint crosses quickly and recurs often. */
+}
+
+/* Shimmer overlay: re-renders the same text (via `data-text` on the h2)
+   directly on top of the white glyphs, with a mostly-transparent gradient
+   clipped to the letterforms. Only the tight luminous gold band paints,
+   so at rest the overlay is invisible and the white-with-glow base shows;
+   when the band crosses, a gold glint streaks across the glyphs. Keeping
+   the band on its own layer (with NO text-shadow) is what makes it
+   actually visible — on the base element the glow bled through the
+   transparent fill and drowned it out. The `/ ""` alt text keeps screen
+   readers from announcing the duplicated string. The gradient is 3x the
+   element width so the glint crosses quickly and recurs often.
+
+   Intentionally NOT gated behind prefers-reduced-motion: Windows
+   machines with "animation effects" off match `reduce`, which silently
+   disabled the previous shimmer entirely; this is a subtle, small-area
+   decorative glint, so it stays on for everyone. */
+.productCtaTagline::after {
+  content: attr(data-text) / "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* The band must be SATURATED gold, not pale gold: it paints on top of
+     white glyphs, so a near-white gold would be invisible. Deep amber
+     edges ramp into a luminous gold core. */
   background-image: linear-gradient(
     100deg,
-    var(--gold-core, #f7f8fb) 0%,
-    var(--gold-core, #f7f8fb) 42%,
-    rgb(var(--gold-glow, 232, 205, 137)) 47%,
-    rgb(255, 241, 204) 50%,
-    rgb(var(--gold-glow, 232, 205, 137)) 53%,
-    var(--gold-core, #f7f8fb) 58%,
-    var(--gold-core, #f7f8fb) 100%
+    rgba(196, 150, 70, 0) 0%,
+    rgba(196, 150, 70, 0) 42%,
+    rgb(196, 150, 70) 46.5%,
+    rgb(255, 214, 120) 50%,
+    rgb(196, 150, 70) 53.5%,
+    rgba(196, 150, 70, 0) 58%,
+    rgba(196, 150, 70, 0) 100%
   );
   background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  color: transparent;
   animation: ctaShimmer 2.4s linear infinite;
 }
 
@@ -85,13 +110,6 @@
   }
   to {
     background-position: 100% 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .productCtaTagline {
-    animation: none;
-    background-position: 0 0;
   }
 }
 
