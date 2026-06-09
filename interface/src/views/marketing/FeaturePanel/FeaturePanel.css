@@ -142,7 +142,7 @@
    pale-core + layered amber-gold text-shadow used across the page). */
 .featurePanelMetalTitle {
   margin: 0;
-  font-size: clamp(26px, 2.6vw, 34px);
+  font-size: clamp(21px, 2.1vw, 27px);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
