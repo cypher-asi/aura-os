@@ -178,7 +178,9 @@
   align-items: center;
   justify-content: center;
   margin: 0;
-  padding: 1.5cqw 3cqw;
+  /* Taller cap so the height reads like the chunky "Intelligent in all
+     domains" keycaps above (the width still hugs the label). */
+  padding: 3.4cqw 3cqw;
   border: 0;
   border-radius: 1.6cqw;
   appearance: none;
