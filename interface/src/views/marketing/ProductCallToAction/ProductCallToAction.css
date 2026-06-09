@@ -127,18 +127,24 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: ctaShimmer 0.6s linear infinite;
+  animation: ctaShimmer 4s linear infinite;
 }
 
 /* The band starts off the LEFT edge, streaks across, and exits off the
    right edge. With `background-size: 300%`, animating the position from
    100% back to 0% moves the gradient rightward, so the band travels
-   left-to-right. The 0.6s cycle keeps the glint racing across rapidly. */
+   left-to-right. The full position sweep is compressed into the first
+   15% of the 4s cycle (= the same fast 0.6s glint as before) and then
+   HELD off-text for the remaining 85%, so the rapid streak only fires
+   once every 4 seconds. */
 @keyframes ctaShimmer {
-  from {
+  0% {
     background-position: 100% 0;
   }
-  to {
+  15% {
+    background-position: 0% 0;
+  }
+  100% {
     background-position: 0% 0;
   }
 }
