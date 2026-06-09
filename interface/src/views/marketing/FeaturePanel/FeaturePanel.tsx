@@ -176,8 +176,9 @@ export function EngravedShape({
           width="150%"
           height="150%"
         >
-          <feOffset in="SourceAlpha" dx="0" dy="2" />
-          <feGaussianBlur stdDeviation="2" result="engravedBlur" />
+          {/* No offset: a symmetric blur of the alpha keeps the inner shadow
+              uniform on every edge of the shape rather than pooling at one side. */}
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="engravedBlur" />
           <feComposite
             in="SourceAlpha"
             in2="engravedBlur"
