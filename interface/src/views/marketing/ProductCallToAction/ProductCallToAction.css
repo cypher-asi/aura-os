@@ -25,7 +25,15 @@
 .productCtaTagline {
   margin: 0;
   max-width: 14ch;
-  color: #fff;
+  /* Pale gold core so the tagline reads as one family with the rest of
+     the gold-accented marketing page (mirrors `.pageHeroHeadline`). */
+  color: var(--gold-core, #f7f8fb);
+  /* Standard layered amber-gold accent glow, plus two wider/brighter
+     outer layers for an extra luminous halo around the tagline. */
+  text-shadow:
+    var(--gold-text-shadow, none),
+    0 0 36px rgba(var(--gold-glow), 0.32),
+    0 0 60px rgba(var(--gold-halo), 0.22);
   font-size: clamp(40px, 6vw, 72px);
   font-weight: 600;
   line-height: 1.05;

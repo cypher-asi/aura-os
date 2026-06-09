@@ -45,7 +45,7 @@ export function ProductCallToAction({
             track("public_signup_clicked", { source: "product_cta" })
           }
         >
-          Register
+          Sign Up
         </Link>
         <Link
           to={downloadHref}
