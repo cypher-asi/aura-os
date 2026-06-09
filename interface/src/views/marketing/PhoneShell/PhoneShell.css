@@ -170,20 +170,40 @@
 }
 
 /* Horizontal "keyboard key" cap (like an Enter key): a wide, short rounded
-   button that sizes to its label and wraps onto multiple rows. */
+   button that sizes to its label and wraps onto multiple rows. Clickable —
+   tapping flashes the label gold for ~1.5s (mirrors the skill keys). */
 .phoneShellKey {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin: 0;
   padding: 1.5cqw 3cqw;
+  border: 0;
   border-radius: 1.6cqw;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  cursor: pointer;
   background: linear-gradient(180deg, #202329 0%, #0d0e11 100%);
   color: rgba(255, 255, 255, 0.6);
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
     inset 0 -2px 2px rgba(0, 0, 0, 0.6),
     0 1.5px 3px rgba(0, 0, 0, 0.6);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease;
+}
+
+.phoneShellKey:hover {
+  color: rgba(255, 255, 255, 0.85);
+  transform: translateY(-1px);
+}
+
+.phoneShellKey:active {
+  transform: translateY(0);
 }
 
 /* Short slang label sitting raised on the keycap; inherits the keycap `color`
@@ -199,6 +219,9 @@
   text-transform: uppercase;
   white-space: nowrap;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
+  transition:
+    color 140ms ease,
+    text-shadow 140ms ease;
 }
 
 /* Lit / featured keycap: warm golden fill + soft glow, matching the lit skill
@@ -218,6 +241,17 @@
 }
 
 .phoneShellKey[data-lit="true"] .phoneShellKeyLabel {
+  filter: none;
+}
+
+/* Click flash: the label lights up with the golden accent glow for ~1.5s
+   (driven by `data-flash` in the component), matching the skill keys. Applies
+   to every keycap, including the lit gold ones. */
+.phoneShellKey[data-flash="true"] .phoneShellKeyLabel {
+  color: var(--gold-core, #f4faf2);
+  text-shadow:
+    0 0 5px rgba(var(--gold-glow, 232, 205, 137), 0.85),
+    0 0 11px rgba(var(--gold-halo, 153, 81, 25), 0.5);
   filter: none;
 }
 

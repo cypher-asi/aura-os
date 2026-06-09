@@ -1,5 +1,14 @@
-import { type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import "./PhoneShell.css";
+
+/** How long a tapped keycap glows the golden accent before settling back. */
+const KEY_FLASH_MS = 1500;
 
 /**
  * Decorative slang keycaps on the phone's metal deck, styled after the
@@ -67,6 +76,30 @@ export function PhoneShell({
   const isHero = size === "lg";
   const className = isHero ? "phoneShell phoneShellHero" : "phoneShell";
 
+  // Which deck keycap is currently playing its gold click-flash (keyed by id),
+  // mirroring the "Intelligent in all domains" skill keys. Per-phone state so
+  // each device flashes independently.
+  const [flashedKey, setFlashedKey] = useState<string | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flashKey = useCallback((id: string) => {
+    setFlashedKey(id);
+    if (flashTimerRef.current) {
+      clearTimeout(flashTimerRef.current);
+    }
+    flashTimerRef.current = setTimeout(() => {
+      setFlashedKey((current) => (current === id ? null : current));
+    }, KEY_FLASH_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (flashTimerRef.current) {
+        clearTimeout(flashTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div
       className={className}
@@ -77,13 +110,18 @@ export function PhoneShell({
       <div className="phoneShellDeck" aria-hidden="true">
         <div className="phoneShellKeys">
           {DECK_KEYS.map(({ id, label, lit }) => (
-            <span
+            <button
+              type="button"
               key={id}
+              tabIndex={-1}
               className="phoneShellKey"
               data-lit={lit ? "true" : undefined}
+              data-flash={flashedKey === id ? "true" : undefined}
+              aria-label={label}
+              onClick={() => flashKey(id)}
             >
               <span className="phoneShellKeyLabel">{label}</span>
-            </span>
+            </button>
           ))}
         </div>
       </div>
