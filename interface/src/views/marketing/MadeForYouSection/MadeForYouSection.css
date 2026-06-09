@@ -413,8 +413,11 @@
 }
 
 /* Scroll-triggered character video filling the hero screen, behind the gloss.
-   Playback is driven by the card's IntersectionObserver (play once on entry,
-   replay on re-entry) rather than a CSS/HTML loop. */
+   Two layers are stacked: the looping clip sits underneath and runs
+   continuously, while the Identity intro build animation plays on top and
+   crossfades out (via opacity) once it ends, revealing the loop. Playback is
+   driven by the card's IntersectionObserver + step selection rather than a
+   CSS/HTML loop on the intro. */
 .madeForYouDevice .personalAgentDeviceVideo {
   position: absolute;
   inset: 0;
@@ -422,6 +425,20 @@
   height: 100%;
   object-fit: cover;
   z-index: 0;
+}
+
+.madeForYouDevice .personalAgentDeviceVideo--loop {
+  z-index: 0;
+}
+
+.madeForYouDevice .personalAgentDeviceVideo--intro {
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+.madeForYouDevice .personalAgentDeviceVideo--intro[data-visible="true"] {
+  opacity: 1;
 }
 
 /*

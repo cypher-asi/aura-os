@@ -37,25 +37,35 @@ const TERMINAL_LINES: ReadonlyArray<{
 ];
 
 /**
- * The hero's left control panel: a vertical stack of lens buttons standing
- * in for the steps of building an agent on AURA. Selecting one swaps the
- * clip playing on the center screen. The `video` paths are placeholders that
- * reuse the available clips; swap in a dedicated clip per section as they
- * land.
+ * The hero's center screen plays one of two clips depending on the active
+ * step:
+ *   - `INTRO_VIDEO` — the "agents made for you" build animation. It runs once
+ *     on initial load and each time the "Identity" step is (re)selected, then
+ *     crossfades into the looping clip below.
+ *   - `LOOP_VIDEO` — a continuously looping shot of the agent looking into the
+ *     camera. It sits under the intro and is what's shown for every other step
+ *     (Expertise, Integrations, Connections, Automations, Launch).
  */
-const MADE_FOR_YOU_VIDEO =
+const INTRO_VIDEO =
   "/magnific_keep-composition-of-img2-and-have-character-materi_seedance_720p_4-3_24fps_26744.mp4";
+const LOOP_VIDEO =
+  "/magnific_make-a-looping-video-of-character-looking-into-cam_seedance_720p_4-3_24fps_46282.mp4";
 
+/**
+ * The hero's left control panel: a vertical stack of lens buttons standing
+ * in for the steps of building an agent on AURA. The first ("Identity") step
+ * plays the intro build animation before settling into the looping clip; every
+ * other step shows the loop directly.
+ */
 const SIDE_BUTTONS: ReadonlyArray<{
   readonly label: string;
-  readonly video: string;
 }> = [
-  { label: "Identity", video: MADE_FOR_YOU_VIDEO },
-  { label: "Expertise", video: MADE_FOR_YOU_VIDEO },
-  { label: "Integrations", video: MADE_FOR_YOU_VIDEO },
-  { label: "Connections", video: MADE_FOR_YOU_VIDEO },
-  { label: "Automations", video: MADE_FOR_YOU_VIDEO },
-  { label: "Launch", video: MADE_FOR_YOU_VIDEO },
+  { label: "Identity" },
+  { label: "Expertise" },
+  { label: "Integrations" },
+  { label: "Connections" },
+  { label: "Automations" },
+  { label: "Launch" },
 ];
 
 /**
@@ -95,7 +105,8 @@ export function ServiceDeviceCard({
   hexGrille = false,
 }: ServiceDeviceCardProps = {}): ReactNode {
   const contentRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const introVideoRef = useRef<HTMLVideoElement>(null);
+  const loopVideoRef = useRef<HTMLVideoElement>(null);
   const knobDialRef = useRef<HTMLDivElement>(null);
 
   // Scroll-activation: the video + terminal go live whenever the card
@@ -114,6 +125,12 @@ export function ServiceDeviceCard({
   const [replayKey, setReplayKey] = useState<number>(0);
   // Which left-panel item is active; drives the center screen's clip.
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  // Whether the "Identity" intro build animation has finished for the current
+  // visit. While false (and Identity is active) the intro clip plays on top of
+  // the loop; once it ends it crossfades out to reveal the looping clip.
+  const [introDone, setIntroDone] = useState<boolean>(false);
+  const isIdentity = selectedIndex === 0;
+  const introVisible = isIdentity && !introDone;
 
   // "Connected to everything" logo grid: a set of currently-lit integrations
   // that gold-glow. The auto-cycle pulses a new logo on a loop so the panel
@@ -210,6 +227,8 @@ export function ServiceDeviceCard({
           if (entry.isIntersecting) {
             setIsActive(true);
             setReplayKey((key) => key + 1);
+            // Replay the Identity intro animation on each scroll-in.
+            setIntroDone(false);
           } else {
             setIsActive(false);
           }
@@ -283,27 +302,36 @@ export function ServiceDeviceCard({
   }, [hexGrille]);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) {
+    const loop = loopVideoRef.current;
+    const intro = introVideoRef.current;
+
+    if (!isActive) {
+      loop?.pause?.();
+      intro?.pause?.();
       return;
     }
-    if (isActive) {
+
+    // The loop clip runs continuously under everything so the crossfade lands
+    // on already-playing motion rather than a frozen first frame.
+    void loop?.play?.()?.catch(() => {
+      // Autoplay can be rejected (e.g. before user interaction); the clip is
+      // muted + decorative, so a silent failure is acceptable.
+    });
+
+    // The intro only plays on the Identity step until it finishes; restart it
+    // from the top each time it (re)activates.
+    if (introVisible && intro) {
       try {
-        video.currentTime = 0;
+        intro.currentTime = 0;
       } catch {
-        // Some environments throw when seeking before metadata loads;
-        // the play() call below still starts from the buffered start.
+        // Some environments throw when seeking before metadata loads; the
+        // play() call below still starts from the buffered start.
       }
-      void video.play?.()?.catch(() => {
-        // Autoplay can be rejected (e.g. before user interaction); the
-        // clip is muted + decorative, so a silent failure is acceptable.
-      });
+      void intro.play?.()?.catch(() => {});
     } else {
-      video.pause?.();
+      intro?.pause?.();
     }
-    // `selectedIndex` is a dep so picking a new section restarts its clip
-    // (the `<video>` is keyed on it, so this effect re-runs on the remount).
-  }, [isActive, replayKey, selectedIndex]);
+  }, [isActive, replayKey, introVisible]);
 
   // Build progress reflects how far through the stages the selected step is,
   // so the last step (Launch) reads as 100% complete.
@@ -403,7 +431,14 @@ export function ServiceDeviceCard({
                       key={item.label}
                       tabIndex={-1}
                       aria-pressed={isSelected}
-                      onClick={() => setSelectedIndex(index)}
+                      onClick={() => {
+                        setSelectedIndex(index);
+                        // Re-arm the intro whenever Identity is (re)selected so
+                        // it plays again before settling into the loop.
+                        if (index === 0) {
+                          setIntroDone(false);
+                        }
+                      }}
                     >
                       {isAbove ? (
                         <Check
@@ -466,15 +501,27 @@ export function ServiceDeviceCard({
 
         <div className="personalAgentDeviceScreen" aria-hidden="true">
           {hexGrille ? (
-            <video
-              key={selectedIndex}
-              ref={videoRef}
-              className="personalAgentDeviceVideo"
-              src={SIDE_BUTTONS[selectedIndex]?.video}
-              muted
-              playsInline
-              preload="auto"
-            />
+            <>
+              <video
+                ref={loopVideoRef}
+                className="personalAgentDeviceVideo personalAgentDeviceVideo--loop"
+                src={LOOP_VIDEO}
+                muted
+                loop
+                playsInline
+                preload="auto"
+              />
+              <video
+                ref={introVideoRef}
+                className="personalAgentDeviceVideo personalAgentDeviceVideo--intro"
+                src={INTRO_VIDEO}
+                muted
+                playsInline
+                preload="auto"
+                data-visible={introVisible ? "true" : undefined}
+                onEnded={() => setIntroDone(true)}
+              />
+            </>
           ) : null}
           <div className="personalAgentDeviceGloss" />
           <div className="personalAgentDeviceLogoGrid">
