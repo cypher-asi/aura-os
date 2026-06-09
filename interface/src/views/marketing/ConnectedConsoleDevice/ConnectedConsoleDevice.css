@@ -315,6 +315,8 @@
 .consoleTrayWell {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  width: 100%;
+  box-sizing: border-box;
   gap: 2cqw;
   padding: 2.6cqw;
   border-radius: 3cqw;
