@@ -192,11 +192,22 @@ function nearArc(shape: THREE.Shape, y: number): THREE.BufferGeometry {
     }
   });
   const rotated = [...pts2.slice(farIndex), ...pts2.slice(0, farIndex)];
-  // Keep strictly inside the near side (threshold > 0) so the arcs stop just
-  // short of the corner silhouette verticals instead of crossing them.
   const pts = rotated
-    .filter((p) => p.x + p.y >= 0.02)
+    .filter((p) => p.x + p.y >= -0.001)
     .map((p) => new THREE.Vector3(p.x, y, p.y));
+  // Snap the run's ends onto the exact silhouette corner points (where the
+  // corner verticals stand), so the arc meets them cleanly — the discrete
+  // loop sampling otherwise leaves a small gap or a crossing stub.
+  const west = new THREE.Vector3(-GHOST_CORNER, y, GHOST_CORNER);
+  const east = new THREE.Vector3(GHOST_CORNER, y, -GHOST_CORNER);
+  const first = pts[0];
+  if (first.distanceTo(west) < first.distanceTo(east)) {
+    pts.unshift(west);
+    pts.push(east);
+  } else {
+    pts.unshift(east);
+    pts.push(west);
+  }
   return new THREE.BufferGeometry().setFromPoints(pts);
 }
 
@@ -602,11 +613,13 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   );
 
   // Silhouette verticals at the three VISIBLE rounded corners (the far
-  // corner is hidden on the solid device, so the ghost skips it too).
+  // corner is hidden on the solid device, so the ghost skips it too). They
+  // run from the case seam up to the top rim so neither end dangles past a
+  // drawn line.
   const ghostCornerPts: number[] = [];
   for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1]]) {
     ghostCornerPts.push(
-      sx * GHOST_CORNER, 0, sz * GHOST_CORNER,
+      sx * GHOST_CORNER, CASE_BOTTOM, sz * GHOST_CORNER,
       sx * GHOST_CORNER, DEVICE_H, sz * GHOST_CORNER,
     );
   }
