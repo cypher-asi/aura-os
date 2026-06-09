@@ -269,6 +269,8 @@
   width: 5cqw;
   height: 24cqw;
   border-radius: 1.4cqw;
+  /* Face: fine horizontal ribs over a horizontal gradient that stays black
+     on the LEFT and ramps to orange on the right-inner side. */
   background:
     repeating-linear-gradient(
       180deg,
@@ -279,17 +281,23 @@
       rgba(0, 0, 0, 0.5) 4px,
       rgba(0, 0, 0, 0) 4px
     ),
-    linear-gradient(215deg, #44464b 0%, #1c1e22 50%, #0a0b0d 100%);
-  /* The outer orange glow uses a large positive x-offset with NEGATIVE
-     spread so its blur can't reach past the wheel's left edge — the glow
-     only escapes on the right. The inner orange comes from the right edge,
-     and the left edge stays hard black. */
+    linear-gradient(
+      90deg,
+      #07080a 0%,
+      #0c0d10 46%,
+      #6a2a09 70%,
+      #e85a14 90%,
+      #f4651f 100%
+    );
+  /* Right INNER shadow darkens the far-right edge (the wheel curving away)
+     so the orange peaks just inboard of it; a contained outer glow escapes
+     only on the right; the left edge stays hard black. */
   box-shadow:
+    inset -5px 0 8px rgba(0, 0, 0, 0.7),
+    inset 2px 0 0 rgba(0, 0, 0, 0.9),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16),
     9px 0 11px -3px rgba(244, 85, 0, 0.85),
     5px 0 5px -1px rgba(255, 138, 60, 0.75),
-    inset -5px 0 8px rgba(244, 85, 0, 0.55),
-    inset 2px 0 0 rgba(0, 0, 0, 0.9),
-    inset 0 1px 1px rgba(255, 255, 255, 0.18),
     0 3px 6px -1px rgba(0, 0, 0, 0.5);
 }
 
