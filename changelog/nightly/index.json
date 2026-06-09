@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-06-09",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.633.1",
+    "title": "Pay-per-call x402 LLM endpoint lands with hardened billing",
+    "intro": "Today's nightly opens up an x402-protected public chat completions endpoint, letting external clients pay per request to talk to Aura's models. A follow-up tightens how the server connects to the z-billing service so usage settlement can't be pointed at unsafe URLs.",
+    "entryCount": 2,
+    "highlights": [
+      "New x402 public LLM endpoint with on-chain micropayments",
+      "Billing client now rejects insecure or private service URLs",
+      "Configurable model allowlist, price ceiling, and facilitator for x402"
+    ],
+    "rawCommitCount": 4,
+    "generatedAt": "2026-06-09T16:36:45.304Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.633.1",
+    "path": "history/2026-06-09.json"
+  },
+  {
     "date": "2026-06-06",
     "channel": "nightly",
     "version": "0.1.0-nightly.632.1",
