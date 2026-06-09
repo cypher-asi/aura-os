@@ -35,28 +35,58 @@
 
 .productCtaTagline {
   position: relative;
+  /* Contain the `z-index: -1` glow layer (`::before`) inside this
+     element's own stacking context, so it paints behind the glyphs but
+     can never slip behind the section background. */
+  isolation: isolate;
   margin: 0;
   max-width: 14ch;
-  /* Pure white resting fill: the glyphs are opaque, so the layered glow
-     below sits BEHIND them and never tints the letterforms. (The previous
-     approach used a transparent fill + background-clip gradient on this
-     element, which let the gold text-shadow bleed through the glyphs and
-     wash out both the white text and the band.) */
+  /* Pure white resting fill with NO text-shadow of its own: the gold
+     glow lives entirely on the `::before` layer behind the glyphs (so it
+     can pulse independently), and keeping the bloom off this element is
+     what lets the letterforms read crisply white. (An earlier approach
+     used a transparent fill + background-clip gradient here, which let
+     the gold text-shadow bleed through the glyphs and wash out both the
+     white text and the shimmer band.) */
   color: #fff;
-  /* Soft layered amber-gold glow. Deliberately skips the tight 6px
-     glyph-hugging layer from `--gold-text-shadow` — at this size it
-     visually tints the letterforms gold, and the resting text should
-     read white. The wider layers supply the luminous halo. */
+  font-size: clamp(40px, 6vw, 72px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+/* Glow layer: re-renders the same text (via `data-text`) behind the
+   white glyphs with an invisible fill — only its layered amber-gold
+   text-shadow paints. Putting the bloom on its own layer keeps the
+   glyphs above pure white AND lets the whole halo pulse by animating
+   one cheap property (opacity) instead of interpolating shadow lists.
+   Deliberately skips the tight glyph-hugging layer from
+   `--gold-text-shadow` — at this size it tints the letterforms gold. */
+.productCtaTagline::before {
+  content: attr(data-text) / "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  color: transparent;
   text-shadow:
     0 0 14px rgba(var(--gold-glow), 0.35),
     0 0 32px rgba(var(--gold-glow), 0.32),
     0 0 64px rgba(var(--gold-glow), 0.24),
     0 0 110px rgba(var(--gold-halo), 0.24),
     0 0 160px rgba(var(--gold-halo), 0.16);
-  font-size: clamp(40px, 6vw, 72px);
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  animation: ctaGlowPulse 2.8s ease-in-out infinite;
+}
+
+/* Continuous breathing of the blurred gold bloom behind the headline. */
+@keyframes ctaGlowPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Shimmer overlay: re-renders the same text (via `data-text` on the h2)
@@ -97,19 +127,19 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: ctaShimmer 2.4s linear infinite;
+  animation: ctaShimmer 0.6s linear infinite;
 }
 
-/* The band starts off the right edge, crosses through the middle of the
-   loop (the fast visible glint), and exits off the left edge. Because
-   the gradient is 3x wide, the band crosses the text quickly and the
-   glint recurs frequently within the cycle. */
+/* The band starts off the LEFT edge, streaks across, and exits off the
+   right edge. With `background-size: 300%`, animating the position from
+   100% back to 0% moves the gradient rightward, so the band travels
+   left-to-right. The 0.6s cycle keeps the glint racing across rapidly. */
 @keyframes ctaShimmer {
   from {
-    background-position: 0% 0;
+    background-position: 100% 0;
   }
   to {
-    background-position: 100% 0;
+    background-position: 0% 0;
   }
 }
 
