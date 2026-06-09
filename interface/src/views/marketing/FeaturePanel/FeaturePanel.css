@@ -154,29 +154,16 @@
     0 -1px 1px rgba(0, 0, 0, 0.6);
 }
 
-/* Big title struck into the plate with a black inner shadow that wraps every
-   letter: a black `-webkit-text-stroke` darkens each glyph's full edge (all
-   sides of every letter), while a symmetric clipped gradient (black at the
-   top/bottom, mid-gray #454545 through the middle) adds depth. (CSS has no
-   inset text-shadow, so the inner shadow is painted into the fill via
-   `background-clip: text` + the edge stroke.) */
+/* Big title on the plate, lit with our standard gold accent glow (the same
+   pale-core + layered amber-gold text-shadow used across the page). */
 .featurePanelMetalTitle {
   margin: 0;
   font-size: clamp(26px, 2.6vw, 34px);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: #454545;
-  background: linear-gradient(
-    180deg,
-    #000 0%,
-    #454545 50%,
-    #000 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0.75px rgba(0, 0, 0, 0.5);
+  color: var(--gold-core, #f7f8fb);
+  text-shadow: var(--gold-text-shadow, none);
 }
 
 /* Glass bottom section container. It holds a glowing gold line layer with
