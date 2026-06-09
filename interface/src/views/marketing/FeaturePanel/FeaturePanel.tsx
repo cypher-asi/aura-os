@@ -203,6 +203,12 @@ export function EngravedShape({
         </filter>
       </defs>
       <g fill="none" strokeLinejoin="round">
+        {/* Center fill: a flat dark tone close to the section background, so the
+            hollow reads as recessed background rather than the lighter metal
+            plate behind. Sits at the bottom; the band/edges draw over its rim. */}
+        <g fill="#161616" stroke="none">
+          {geometry}
+        </g>
         {/* Wider stroke behind the band: the 0.5px sliver on each side becomes
             the inner + outer edge bevel, at 50% opacity. */}
         <g stroke={`url(#${edgeId})`} strokeWidth="12" opacity="0.5">
