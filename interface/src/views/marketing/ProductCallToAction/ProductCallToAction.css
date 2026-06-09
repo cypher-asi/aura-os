@@ -2,6 +2,17 @@
   /* Off-black surface tint inherited from `.productView` (see the
      `--marketing-section-bg` rationale in `ProductView.module.css`). */
   background: var(--marketing-section-bg, #000);
+  /* Self-contained gold tokens (mirrors `ProductView.module.css`) so the
+     tagline glow + shimmer render identically on every surface that
+     mounts this component. `.codeView` does not define these tokens, so
+     without this fallback the `/code` tagline would lose its glow and
+     shimmer entirely. */
+  --gold-core: #f4faf2;
+  --gold-glow: 232, 205, 137;
+  --gold-halo: 153, 81, 25;
+  --gold-text-shadow:
+    0 0 6px rgba(var(--gold-glow), 0.45), 0 0 14px rgba(var(--gold-glow), 0.28),
+    0 0 22px rgba(var(--gold-halo), 0.2);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -28,16 +39,60 @@
   /* Pale gold core so the tagline reads as one family with the rest of
      the gold-accented marketing page (mirrors `.pageHeroHeadline`). */
   color: var(--gold-core, #f7f8fb);
-  /* Standard layered amber-gold accent glow, plus two wider/brighter
-     outer layers for an extra luminous halo around the tagline. */
+  /* Standard layered amber-gold accent glow, plus several wider/brighter
+     outer layers for an extra luminous halo that reaches further out. */
   text-shadow:
     var(--gold-text-shadow, none),
-    0 0 36px rgba(var(--gold-glow), 0.32),
-    0 0 60px rgba(var(--gold-halo), 0.22);
+    0 0 40px rgba(var(--gold-glow), 0.4),
+    0 0 72px rgba(var(--gold-glow), 0.3),
+    0 0 110px rgba(var(--gold-halo), 0.26),
+    0 0 160px rgba(var(--gold-halo), 0.18);
   font-size: clamp(40px, 6vw, 72px);
   font-weight: 600;
   line-height: 1.05;
   letter-spacing: -0.03em;
+  /* Shimmer: a bright gold glint clipped to the glyphs streaks across the
+     white text. The fill is transparent so the gradient shows through
+     (the soft gold glow above still renders, since text-shadow is
+     glyph-shaped and ignores fill). The base stops are the near-white
+     core so the resting text reads white; only a tight, luminous gold
+     band — with a brighter highlight core — moves. The gradient is 3x
+     the element width so the glint crosses quickly and recurs often. */
+  background-image: linear-gradient(
+    100deg,
+    var(--gold-core, #f7f8fb) 0%,
+    var(--gold-core, #f7f8fb) 42%,
+    rgb(var(--gold-glow, 232, 205, 137)) 47%,
+    rgb(255, 241, 204) 50%,
+    rgb(var(--gold-glow, 232, 205, 137)) 53%,
+    var(--gold-core, #f7f8fb) 58%,
+    var(--gold-core, #f7f8fb) 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ctaShimmer 2.4s linear infinite;
+}
+
+/* The band starts off the right edge, crosses through the middle of the
+   loop (the fast visible glint), and exits off the left edge. Because
+   the gradient is 3x wide, the band crosses the text quickly and the
+   glint recurs frequently within the cycle. */
+@keyframes ctaShimmer {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .productCtaTagline {
+    animation: none;
+    background-position: 0 0;
+  }
 }
 
 .productCtaActions {
