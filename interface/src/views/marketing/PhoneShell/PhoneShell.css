@@ -111,11 +111,10 @@
 
 /*
  * Bottom control panel — a SEPARATE brushed-metal slab the top panel rests
- * on. It spans the full device width and the bottom ~44%, with its top
+ * on. It spans the full device width and the bottom ~33%, with its top
  * edge tucked behind the top panel (they overlap at the seam). A generous
- * top padding keeps the controls below the overlapping top panel. Laid out
- * as a 2x2 grid: rotary knob top-left, the key + toggle cluster top-right,
- * the speaker grille bottom-left, and the AURA wordmark bottom-right.
+ * top padding keeps the keycaps below the overlapping top panel. Hosts a
+ * single centered row of raised keycaps (styled after the skill keys).
  */
 .phoneShellDeck {
   position: absolute;
@@ -125,17 +124,13 @@
   /* Bottom control section smaller by 25% (was 44%). */
   height: 33%;
   z-index: 1;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr;
-  grid-template-areas:
-    "knob controls"
-    "grille wordmark";
-  align-items: start;
-  gap: 3cqw 5cqw;
-  /* Larger top padding clears the now-taller screen panel that overlaps
-     this shorter deck at the seam, keeping the controls fully visible. */
-  padding: 28cqw 5cqw 4cqw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5cqw;
+  /* Top padding clears the taller screen panel that overlaps this shorter
+     deck at the seam, keeping the keycaps fully visible below it. */
+  padding: 26cqw 4cqw 5cqw;
   border-radius: 9cqw;
   /* Match the shared `<Plate />` metal panels used in the sections above:
      a radial metal surface (padding-box) inside a 135deg metallic gradient
@@ -158,183 +153,81 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
 }
 
-/* Rotary knob: raised brushed-metal dial in a shallow black recess. */
-.phoneShellKnob {
-  grid-area: knob;
+/* Keycap pad: a centered row of raised neomorphic keycaps styled after the
+   "Intelligent in all domains" skill keys, replacing the former rotary knob /
+   key cluster / CONTROL toggle / speaker grille / AURA wordmark. Decorative
+   hardware only. */
+.phoneShellKeys {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26cqw;
-  height: 26cqw;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse 120% 90% at 50% 0%,
-    #0a0a0a 0%,
-    #050505 60%,
-    #000 100%
-  );
-  box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.85),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 1px 0 rgba(255, 255, 255, 0.25);
-}
-
-.phoneShellKnobDial {
-  position: relative;
-  width: 20cqw;
-  height: 20cqw;
-  border-radius: 50%;
-  background:
-    radial-gradient(
-      circle at 50% 32%,
-      rgba(255, 255, 255, 0.22) 0%,
-      rgba(255, 255, 255, 0) 55%
-    ),
-    conic-gradient(
-      from 210deg,
-      #d7dade 0deg,
-      #9a9ea4 70deg,
-      #f1f2f4 140deg,
-      #a8acb2 210deg,
-      #e6e8ea 290deg,
-      #b2b6bc 360deg
-    );
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.6),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
-    0 2px 5px rgba(0, 0, 0, 0.7);
-}
-
-/* Accent position indicator notched near the top of the dial. */
-.phoneShellKnobIndicator {
-  position: absolute;
-  top: 2cqw;
-  left: 50%;
-  width: 2cqw;
-  height: 5cqw;
-  transform: translateX(-50%);
-  border-radius: 1cqw;
-  background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
-  box-shadow: 0 0 6px rgba(244, 85, 0, 0.7);
-}
-
-/* Right cluster: a row of keys above the CONTROL/AUTO toggle. */
-.phoneShellControls {
-  grid-area: controls;
-  display: flex;
-  flex-direction: column;
-  gap: 3cqw;
-  padding-top: 2cqw;
-}
-
-.phoneShellButtons {
-  display: flex;
   gap: 2.5cqw;
 }
 
-/* Raised neomorphic keycap (HOME / ROTATE / LOCK in the reference). */
-.phoneShellBtn {
-  flex: 1 1 0;
-  height: 6cqw;
-  border-radius: 1.5cqw;
-  background: linear-gradient(180deg, #2a2d33 0%, #14161a 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.6),
-    0 1.5px 3px rgba(0, 0, 0, 0.6);
-}
-
-/* CONTROL/AUTO slider: a recessed track with an accent-lit knob slid to
-   the CONTROL position (left), echoing the reference's lit segment. */
-.phoneShellToggle {
+.phoneShellKey {
   position: relative;
-  height: 8cqw;
-  border-radius: 4cqw;
-  background: linear-gradient(180deg, #0a0b0d 0%, #15171a 100%);
-  box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.85),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-.phoneShellToggleKnob {
-  position: absolute;
-  top: 1cqw;
-  left: 1cqw;
-  width: 46%;
-  height: calc(8cqw - 2cqw);
-  border-radius: 3cqw;
-  background: linear-gradient(180deg, #ff8a3c 0%, #f45500 100%);
-  box-shadow:
-    0 0 8px rgba(244, 85, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-/* Dot-matrix speaker grille. */
-.phoneShellGrille {
-  grid-area: grille;
-  align-self: end;
-  width: 24cqw;
-  height: 7cqw;
-  border-radius: 2cqw;
-  background-image: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.1) 0.6px,
-    transparent 1px
-  );
-  background-size: 3cqw 3cqw;
-  background-position: center;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
-}
-
-/* AURA "tag" — a small brushed-metal container holding the masked metallic
-   wordmark, mirroring the `.madeForYouBrandPanel` / `.madeForYouBrandMark`
-   tag in the "Agents made for you" device: a radial metal fill inside a
-   135deg metallic gradient edge, smaller than the old bare wordmark. */
-.phoneShellBrandPanel {
-  grid-area: wordmark;
-  align-self: end;
-  justify-self: end;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.4cqw 2.2cqw;
-  border-radius: 1.4cqw;
-  border: 1px solid transparent;
-  background:
-    radial-gradient(
-        ellipse 130% 90% at 50% 0%,
-        #1a1a1a 0%,
-        #191919 55%,
-        #181818 100%
-      )
-      padding-box,
-    linear-gradient(
-        135deg,
-        rgba(104, 109, 116, 0.25) 0%,
-        rgba(82, 86, 92, 0.3) 100%
-      )
-      border-box;
+  width: 13cqw;
+  aspect-ratio: 1;
+  border-radius: 2.6cqw;
+  background: linear-gradient(180deg, #2a2d33 0%, #14161a 100%);
+  color: #b9bec7;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.6),
+    0 1.5px 3px rgba(0, 0, 0, 0.6);
 }
 
-/* Masked metallic gradient version of the wordmark (vs the old flat <img>),
-   matching the made-for-you brand mark's vertical silver gradient + bevel. */
-.phoneShellBrandMark {
-  display: block;
-  width: 13cqw;
-  height: 4cqw;
-  background: linear-gradient(180deg, #7c828b 0%, #9aa0a8 100%);
-  -webkit-mask-image: url(/AURA_logo_text_mark.png);
-  mask-image: url(/AURA_logo_text_mark.png);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.65))
-    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.06));
+/* Embossed circular well behind the glyph (mirrors the skill keycap recess). */
+.phoneShellKey::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 76%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, #15171b 0%, #1f2228 100%);
+  box-shadow:
+    inset 0 1.5px 3px rgba(0, 0, 0, 0.7),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Glyph raised above the recess; inherits the keycap `color` (lucide strokes
+   in currentColor). */
+.phoneShellKeyIcon {
+  position: relative;
+  z-index: 1;
+  width: 6cqw;
+  height: 6cqw;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
+}
+
+/* Lit / featured keycap: warm golden fill + soft glow, matching the lit skill
+   keys and the rest of the page's gold accent family. */
+.phoneShellKey[data-lit="true"] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--gold-core, #f4faf2) 16%, #e8cd89 84%) 0%,
+    #e8cd89 100%
+  );
+  color: #1a0e08;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.3),
+    0 1.5px 3px rgba(0, 0, 0, 0.55),
+    0 0 10px rgba(var(--gold-glow, 232, 205, 137), 0.45);
+}
+
+.phoneShellKey[data-lit="true"]::before {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #e8cd89 80%, #000 20%) 0%,
+    color-mix(in srgb, #e8cd89 96%, #fff 4%) 100%
+  );
 }
 
 /*

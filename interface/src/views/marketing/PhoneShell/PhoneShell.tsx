@@ -1,5 +1,22 @@
 import { type ReactNode } from "react";
+import { Calendar, Code, Image as ImageIcon, Music } from "lucide-react";
 import "./PhoneShell.css";
+
+/**
+ * Decorative keycaps on the phone's metal deck, styled after the
+ * "Intelligent in all domains" skill keys. Purely decorative hardware
+ * (`aria-hidden` via the deck root); a couple rest in the golden accent.
+ */
+const DECK_KEYS: ReadonlyArray<{
+  readonly id: string;
+  readonly Icon: typeof Code;
+  readonly lit?: boolean;
+}> = [
+  { id: "code", Icon: Code, lit: true },
+  { id: "image", Icon: ImageIcon },
+  { id: "calendar", Icon: Calendar },
+  { id: "music", Icon: Music },
+];
 
 interface PhoneShellProps {
   /**
@@ -34,9 +51,8 @@ interface PhoneShellProps {
  *     bevel rim. Hosts `children` (the mock UI) and rests ON TOP of the
  *     deck, slightly overlapping it and casting a drop shadow onto it.
  *   - `.phoneShellDeck` — the wider brushed-metal control panel sitting
- *     behind/under the top panel, carrying a rotary knob, a row of
- *     decorative keys, a CONTROL/AUTO toggle, a dot-matrix speaker
- *     grille, and the `AURA` wordmark.
+ *     behind/under the top panel, carrying a centered row of raised
+ *     keycaps styled after the "Intelligent in all domains" skill keys.
  *
  * Everything in the deck is decorative hardware fiction (`aria-hidden`).
  * Sizing is `clamp()`-driven and respects the parent flex container;
@@ -59,27 +75,21 @@ export function PhoneShell({
       aria-hidden={ariaLabel ? undefined : true}
     >
       <div className="phoneShellDeck" aria-hidden="true">
-        <div className="phoneShellKnob">
-          <div className="phoneShellKnobDial">
-            <span className="phoneShellKnobIndicator" />
-          </div>
+        <div className="phoneShellKeys">
+          {DECK_KEYS.map(({ id, Icon, lit }) => (
+            <span
+              key={id}
+              className="phoneShellKey"
+              data-lit={lit ? "true" : undefined}
+            >
+              <Icon
+                className="phoneShellKeyIcon"
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+            </span>
+          ))}
         </div>
-
-        <div className="phoneShellControls">
-          <div className="phoneShellButtons">
-            <span className="phoneShellBtn" />
-            <span className="phoneShellBtn" />
-            <span className="phoneShellBtn" />
-          </div>
-          <div className="phoneShellToggle">
-            <span className="phoneShellToggleKnob" />
-          </div>
-        </div>
-
-        <div className="phoneShellGrille" />
-        <span className="phoneShellBrandPanel">
-          <span className="phoneShellBrandMark" role="img" aria-label="AURA" />
-        </span>
       </div>
 
       <div className="phoneShellTop">

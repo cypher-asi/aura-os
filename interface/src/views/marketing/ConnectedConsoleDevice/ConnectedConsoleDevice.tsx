@@ -1,23 +1,54 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { MessageCircle, Send } from "lucide-react";
 import "./ConnectedConsoleDevice.css";
 
 /**
- * A single text key in the bottom tray. Each key is a raised neomorphic
- * keycap (styled after the "Intelligent in all domains" skill keys) carrying
- * a short slang label; `lit` keys rest in the golden accent fill.
+ * Multi-subpath OUTLINE (stroke) glyphs for the brand keys, in the same
+ * lucide outline style (24x24 viewBox, `fill: none`, `stroke: currentColor`)
+ * as the iMessage bubble and Telegram paper-plane, so every key reads as a
+ * line icon rather than a filled silhouette. Paths are the CC0 Tabler-icons
+ * `brand-slack` / `brand-discord` outlines, kept inline so the marketing page
+ * pulls in no extra icon dependency.
  */
-interface ConsoleKey {
+const SLACK_OUTLINE_PATHS: readonly string[] = [
+  "M12 12v-6a2 2 0 0 1 4 0v6m0 -2a2 2 0 1 1 2 2h-6",
+  "M12 12h6a2 2 0 0 1 0 4h-6m2 0a2 2 0 1 1 -2 2v-6",
+  "M12 12v6a2 2 0 0 1 -4 0v-6m0 2a2 2 0 1 1 -2 -2h6",
+  "M12 12h-6a2 2 0 0 1 0 -4h6m-2 0a2 2 0 1 1 2 -2v6",
+];
+
+const DISCORD_OUTLINE_PATHS: readonly string[] = [
+  "M8 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0",
+  "M14 12a1 1 0 1 0 2 0a1 1 0 0 0 -2 0",
+  "M15.5 17c0 1 1.5 3 2 3c1.5 0 2.833 -1.667 3.5 -3c.667 -1.667 .5 -5.833 -1.5 -11.5c-1.457 -1.015 -3 -1.34 -4.5 -1.5l-.972 1.923a11.913 11.913 0 0 0 -4.053 0l-.975 -1.923c-1.5 .16 -3.043 .485 -4.5 1.5c-2 5.667 -2.167 9.833 -1.5 11.5c.667 1.333 2 3 3.5 3c.5 0 2 -2 2 -3",
+  "M7 16.5c3.5 1 6.5 1 10 0",
+];
+
+/**
+ * A single channel key in the bottom tray. `mark` is either an outline brand
+ * glyph (a set of `currentColor` stroke subpaths in a 24x24 viewBox), a lucide
+ * icon component (the outline glyphs for the iMessage bubble and Telegram
+ * paper-plane), or `"zero"` — the lit orange ZERO wordmark. No ZERO image
+ * asset exists in the repo, so it is painted as styled text faithful to the
+ * reference; swapping in an `<img>` later is a one-line change.
+ */
+type ChannelMark =
+  | { readonly kind: "outline"; readonly paths: readonly string[] }
+  | { readonly kind: "icon"; readonly Icon: typeof MessageCircle }
+  | { readonly kind: "zero" };
+
+interface Channel {
   readonly id: string;
   readonly label: string;
-  readonly lit?: boolean;
+  readonly mark: ChannelMark;
 }
 
-const CONSOLE_KEYS: readonly ConsoleKey[] = [
-  { id: "cook", label: "COOK", lit: true },
-  { id: "send-it", label: "SEND IT" },
-  { id: "no-cap", label: "NO CAP" },
-  { id: "yolo", label: "YOLO", lit: true },
-  { id: "for-the-plot", label: "FOR THE PLOT" },
+const CHANNELS: readonly Channel[] = [
+  { id: "imessage", label: "iMessage", mark: { kind: "icon", Icon: MessageCircle } },
+  { id: "slack", label: "Slack", mark: { kind: "outline", paths: SLACK_OUTLINE_PATHS } },
+  { id: "telegram", label: "Telegram", mark: { kind: "icon", Icon: Send } },
+  { id: "discord", label: "Discord", mark: { kind: "outline", paths: DISCORD_OUTLINE_PATHS } },
+  { id: "zero", label: "ZERO", mark: { kind: "zero" } },
 ];
 
 /**
@@ -70,9 +101,9 @@ const GRILLE_HOLES: ReadonlyArray<{ readonly cx: number; readonly cy: number }> 
  * agents speak through. A gray cord with an orange metal tip descends from
  * the centered hero phone above into a brushed-metal speaker panel (large
  * dot-matrix grille, a "MIX" knob, and an orange slider tab on the right
- * edge). Below it a recessed tray carries five raised keycaps (styled after
- * the "Intelligent in all domains" skill keys) labelled with short slang
- * commands, a couple lit in the golden accent.
+ * edge). Below it a recessed tray carries five gray matte keys for the
+ * messaging channels AURA plugs into: iMessage, Slack, Telegram, Discord,
+ * and the lit ZERO key.
  *
  * Designed to be embedded in a flex column (e.g. `AgentChatSection`'s media
  * well, beneath the phones and above the card's writing block) so the copy
@@ -85,9 +116,9 @@ const GRILLE_HOLES: ReadonlyArray<{ readonly cx: number; readonly cy: number }> 
  */
 export function ConnectedConsoleDevice(): ReactNode {
   const knobDialRef = useRef<HTMLDivElement>(null);
-  // Which key is currently "pressed" (selected). The first key is active by
-  // default; clicking any other key presses it instead.
-  const [pressedKey, setPressedKey] = useState<string>(CONSOLE_KEYS[0].id);
+  // Which channel key is currently "pressed" (selected). The ZERO key is the
+  // active channel by default; clicking any other key presses it instead.
+  const [pressedChannel, setPressedChannel] = useState<string>("zero");
 
   // MIX knob follows the cursor: on any mouse movement, rotate the brushed-
   // metal dial so its glowing indicator aims at the pointer. Updates are
@@ -178,20 +209,48 @@ export function ConnectedConsoleDevice(): ReactNode {
 
         <div className="consoleTray">
           <div className="consoleTrayWell">
-            {CONSOLE_KEYS.map((consoleKey) => (
-              <div key={consoleKey.id} className="consoleKeySocket">
-                <button
-                  type="button"
-                  className="consoleKey"
-                  aria-label={consoleKey.label}
-                  aria-pressed={pressedKey === consoleKey.id}
-                  data-lit={consoleKey.lit ? "true" : undefined}
-                  data-pressed={pressedKey === consoleKey.id ? "true" : undefined}
-                  onClick={() => setPressedKey(consoleKey.id)}
-                >
-                  <span className="consoleKeyLabel">{consoleKey.label}</span>
-                </button>
-              </div>
+            {CHANNELS.map((channel) => (
+              <button
+                key={channel.id}
+                type="button"
+                className={
+                  channel.mark.kind === "zero"
+                    ? "consoleKey consoleKey--zero"
+                    : "consoleKey"
+                }
+                aria-label={channel.label}
+                aria-pressed={pressedChannel === channel.id}
+                data-pressed={pressedChannel === channel.id ? "true" : undefined}
+                onClick={() => setPressedChannel(channel.id)}
+              >
+                {channel.mark.kind === "zero" ? (
+                  <span className="consoleKeyZero">ZERO</span>
+                ) : channel.mark.kind === "icon" ? (
+                  <channel.mark.Icon
+                    className="consoleKeyMark"
+                    size={26}
+                    strokeWidth={1.75}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <svg
+                    className="consoleKeyMark"
+                    width={24}
+                    height={24}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    {channel.mark.paths.map((d) => (
+                      <path key={d} d={d} />
+                    ))}
+                  </svg>
+                )}
+              </button>
             ))}
           </div>
         </div>
