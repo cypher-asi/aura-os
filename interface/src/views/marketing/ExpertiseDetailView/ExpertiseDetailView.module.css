@@ -1,0 +1,96 @@
+/*
+ * ExpertiseDetailView — wrapper for the public `/expertise/:slug`
+ * routes. Mirrors `ProductView.module.css` / `CodeView.module.css`:
+ * narrows the stacked marketing sections to the same
+ * `--marketing-content-max-width` and pins the shared off-black
+ * `--marketing-section-bg` + light text tokens so the `PageHero`,
+ * `CardSection`, `FeaturePanel`, `ChangelogPreview`, and
+ * `ProductCallToAction` components render identically to the Agents
+ * page.
+ */
+.expertiseView {
+  --marketing-content-max-width: 63.75%;
+  --marketing-section-bg: #090909;
+  --color-text-primary: #f7f8fb;
+  --color-text-secondary: #a3a3a8;
+  --color-text-muted: rgba(255, 255, 255, 0.52);
+  /* Full-height flex column so `ProductCallToAction` (flex: 1) absorbs
+     leftover space and pins the footer to the bottom on short
+     viewports — same pattern as ProductView/CodeView. */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/*
+ * Hero "screen": the wide MetalCard's media well, left empty for now.
+ * Reserves a balanced area on the metal-gradient panel so the card
+ * reads as a framed screen ready to receive an image or video later.
+ */
+.screenPlaceholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+}
+
+/*
+ * Use-case bento cells. The shared `.metalCard` is 626px tall (sized
+ * for the Agents page's large feature cards); these are text-only, so
+ * compact them to a sensible height. The `:global(.metalCard)` compound
+ * raises specificity to (0,2,0) so the override beats the shared rule
+ * regardless of stylesheet order (same technique as CodeView's
+ * mock-desktop card).
+ */
+:global(.metalCard).useCaseCard {
+  min-height: 280px;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  :global(.metalCard).useCaseCard {
+    min-height: 220px;
+  }
+}
+
+/*
+ * "Request a demo" hero CTA. A non-functional placeholder for now,
+ * styled as an off-white marketing pill so it reads as the page's
+ * primary call to action under the headline.
+ */
+.demoButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)),
+    #f3efe7;
+  color: #0c0816;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 200ms ease;
+  box-shadow:
+    0 0 0 1px rgba(232, 205, 137, 0.22),
+    0 0 12px rgba(232, 205, 137, 0.28);
+}
+
+.demoButton:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(232, 205, 137, 0.32),
+    0 0 18px rgba(232, 205, 137, 0.4);
+}
+
+.demoButton:active {
+  transform: translateY(1px);
+}
+
+.demoButton:focus-visible {
+  outline: 2px solid var(--color-overlay-focus, var(--color-border-strong));
+  outline-offset: 2px;
+}

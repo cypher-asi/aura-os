@@ -1,8 +1,9 @@
 /**
  * Smoke test for `PublicTopNav`. Pins the primary marketing links
- * (Agents / Code / OS / Pricing) and their hrefs, asserts the Home link
- * was removed (the logo owns "home"), and verifies the Resources
- * dropdown opens to reveal Blog / Changelog / Feedback / Models.
+ * (Agents / Code / OS) and their hrefs, asserts the Home link was
+ * removed (the logo owns "home"), verifies the Resources dropdown
+ * reveals Pricing / Blog / Changelog / Feedback / Models, and checks
+ * the Expertise dropdown exposes its Capabilities + Industries columns.
  */
 
 import { render, screen } from "@testing-library/react";
@@ -17,7 +18,6 @@ const PRIMARY = [
   { label: "Agents", to: "/agents" },
   { label: "Code", to: "/code" },
   { label: "OS", to: "/os" },
-  { label: "Pricing", to: "/pricing" },
 ] as const;
 
 describe("PublicTopNav", () => {
@@ -35,6 +35,9 @@ describe("PublicTopNav", () => {
     }
 
     expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
+    // Pricing moved into the Resources dropdown, so it is no longer a
+    // primary top-level link.
+    expect(screen.queryByRole("link", { name: "Pricing" })).not.toBeInTheDocument();
   });
 
   it("flags the matching primary link active for its route", () => {
@@ -52,7 +55,7 @@ describe("PublicTopNav", () => {
     );
   });
 
-  it("opens the Resources dropdown to reveal Blog / Changelog / Feedback / Models", async () => {
+  it("opens the Resources dropdown to reveal Pricing / Blog / Changelog / Feedback / Models", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={["/agents"]}>
@@ -67,6 +70,9 @@ describe("PublicTopNav", () => {
 
     await user.click(screen.getByRole("button", { name: /Resources/i }));
 
+    expect(
+      screen.getByRole("menuitem", { name: "Pricing" }),
+    ).toHaveAttribute("href", "/pricing");
     expect(
       screen.getByRole("menuitem", { name: "Blog" }),
     ).toHaveAttribute("href", "/blog");
@@ -109,6 +115,42 @@ describe("PublicTopNav", () => {
 
     expect(
       screen.getByRole("button", { name: /Resources/i }).className,
+    ).toContain(styles.linkActive);
+  });
+
+  it("opens the Expertise dropdown to reveal Capabilities and Industries", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/agents"]}>
+        <PublicTopNav />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Research" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Expertise/i }));
+
+    // Capability column.
+    expect(
+      screen.getByRole("menuitem", { name: "Research" }),
+    ).toHaveAttribute("href", "/expertise/research");
+    // Industry column.
+    expect(
+      screen.getByRole("menuitem", { name: "Finance & Banking" }),
+    ).toHaveAttribute("href", "/expertise/finance-banking");
+  });
+
+  it("marks Expertise active when on an /expertise route", () => {
+    render(
+      <MemoryRouter initialEntries={["/expertise/finance-banking"]}>
+        <PublicTopNav />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Expertise/i }).className,
     ).toContain(styles.linkActive);
   });
 });

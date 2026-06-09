@@ -52,6 +52,11 @@ const NAV_ROWS: ReadonlyArray<NavRow> = [
   { tKey: "agents", label: "Agents", to: "/agents" },
   { tKey: "code", label: "Code", to: "/code" },
   { tKey: "os", label: "OS", to: "/os" },
+  // Mirrors desktop: Expertise sits where Pricing used to, and Pricing
+  // moves down with the rest of the Resources group. The mobile drawer
+  // is a flat list, so Expertise links to the Agents page rather than
+  // expanding the desktop Capabilities / Industries dropdown.
+  { tKey: "expertise", label: "Expertise", to: "/agents" },
   { tKey: "pricing", label: "Pricing", to: "/pricing" },
   { tKey: "blog", label: "Blog", to: "/blog" },
   { tKey: "changelog", label: "Changelog", to: "/changelog" },

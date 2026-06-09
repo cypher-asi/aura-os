@@ -122,6 +122,34 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
 }
 
+/*
+ * Expertise dropdown: a wider panel laying its two groups
+ * (Capabilities / Industries) side by side instead of the default
+ * single stacked column.
+ */
+.menuColumns {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.menuSection {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+}
+
+.menuSectionTitle {
+  padding: 4px 10px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #8a8a90);
+}
+
 .menuItem {
   display: block;
   font-size: 12px;

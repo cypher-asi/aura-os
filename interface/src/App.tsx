@@ -36,6 +36,11 @@ const IdeView = lazy(() => import("./views/IdeView").then((m) => ({ default: m.I
 const ProductView = lazy(() =>
   import("./views/marketing/ProductView").then((m) => ({ default: m.ProductView })),
 );
+const ExpertiseDetailView = lazy(() =>
+  import("./views/marketing/ExpertiseDetailView").then((m) => ({
+    default: m.ExpertiseDetailView,
+  })),
+);
 const CodeView = lazy(() =>
   import("./views/marketing/CodeView").then((m) => ({ default: m.CodeView })),
 );
@@ -399,6 +404,14 @@ function AppRoutes(): React.ReactElement {
                 element={
                   <Suspense fallback={null}>
                     <ProductView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="expertise/:slug"
+                element={
+                  <Suspense fallback={null}>
+                    <ExpertiseDetailView />
                   </Suspense>
                 }
               />

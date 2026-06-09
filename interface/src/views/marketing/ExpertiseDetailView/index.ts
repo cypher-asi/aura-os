@@ -1,0 +1,1 @@
+export { ExpertiseDetailView } from "./ExpertiseDetailView";
