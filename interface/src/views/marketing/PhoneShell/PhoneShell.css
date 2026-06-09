@@ -273,28 +273,21 @@
     rgba(247, 156, 64, 0.5) 38%,
     rgba(247, 156, 64, 0) 75%
   );
-  /* Slow breathing pulse so the orange screen glow swells and fades, as if
-     the meter is reacting to a held signal. */
+  /* Breathing pulse so the orange screen glow swells and fades, as if the
+     meter is reacting to a held signal. Wide opacity swing so the pulse reads
+     clearly even behind the gauge and gloss layers above it. */
   transform-origin: 50% 100%;
-  animation: phoneShellLcdGlowPulse 3.6s ease-in-out infinite alternate;
+  animation: phoneShellLcdGlowPulse 2.8s ease-in-out infinite alternate;
 }
 
 @keyframes phoneShellLcdGlowPulse {
   0% {
-    opacity: 0.18;
-    transform: scale(0.98);
+    opacity: 0.22;
+    transform: scale(0.99);
   }
   100% {
-    opacity: 0.4;
-    transform: scale(1.04);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .phoneShellLcdGlow {
-    animation: none;
-    opacity: 0.25;
-    transform: none;
+    opacity: 0.36;
+    transform: scale(1.03);
   }
 }
 

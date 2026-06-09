@@ -1,5 +1,44 @@
-import { type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import "./PhoneShell.css";
+
+/** How often the INPUT/OUTPUT readouts tick to their next value. */
+const READOUT_TICK_MS = 160;
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
+/** Formats a dB value as a signed, 2-decimal readout (e.g. `+0.42 dB`). */
+function formatDb(value: number): string {
+  const sign = value > 0.005 ? "+" : value < -0.005 ? "" : "";
+  return `${sign}${value.toFixed(2)} dB`;
+}
+
+/**
+ * Per-instance randomized motion for the VU-meter needle so the three phones
+ * sway at different speeds and across different positions. Computed once per
+ * mount and fed to the needle as CSS custom properties + animation timing; a
+ * negative delay desyncs the starting position so they never march in step.
+ */
+function makeNeedleStyle(): CSSProperties {
+  // 0deg points straight up (center); positive = right of center, toward the
+  // 0 dB / high-vibes side. The needle dwells at `maxAngle` (right of center)
+  // and only dips back toward `minAngle` (around/left of center) briefly.
+  const minAngle = -(8 + Math.random() * 18); // dip end: ~ -8deg..-26deg
+  const maxAngle = 24 + Math.random() * 14; // dwell end: ~ +24deg..+38deg
+  const duration = 3 + Math.random() * 3; // 3s..6s
+  const delay = -Math.random() * duration; // desync start position
+  return {
+    "--needle-min": `${minAngle.toFixed(1)}deg`,
+    "--needle-max": `${maxAngle.toFixed(1)}deg`,
+    animationDuration: `${duration.toFixed(2)}s`,
+    animationDelay: `${delay.toFixed(2)}s`,
+  } as CSSProperties;
+}
 
 interface PhoneShellProps {
   /**
@@ -52,6 +91,22 @@ export function PhoneShell({
   const isHero = size === "lg";
   const className = isHero ? "phoneShell phoneShellHero" : "phoneShell";
 
+  const [needleStyle] = useState(makeNeedleStyle);
+
+  // Live-meter INPUT/OUTPUT readouts: a bounded random walk so the numbers
+  // gradually count up and down like a real level meter.
+  const [readout, setReadout] = useState({ input: -1.03, output: 0 });
+  useEffect(() => {
+    let input = -1.03;
+    let output = 0;
+    const id = window.setInterval(() => {
+      input = clamp(input + (Math.random() - 0.5) * 0.7, -6, -0.1);
+      output = clamp(output + (Math.random() - 0.5) * 0.6, -3, 1.5);
+      setReadout({ input, output });
+    }, READOUT_TICK_MS);
+    return () => window.clearInterval(id);
+  }, []);
+
   return (
     <div
       className={className}
@@ -61,46 +116,68 @@ export function PhoneShell({
     >
       <div className="phoneShellDeck" aria-hidden="true">
         <div className="phoneShellLcd">
+          <div className="phoneShellLcdGlow" />
           <svg
             className="phoneShellLcdGauge"
             viewBox="0 0 200 96"
             preserveAspectRatio="xMidYMid meet"
           >
-            {/* Arced dB scale (sweeps from lower-left up to lower-right). */}
+            <defs>
+              {/* Arc stroke gradient: opaque across the middle, fading to
+                  nothing at the left and right ends. */}
+              <linearGradient
+                id="phoneShellArcFade"
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="0"
+              >
+                <stop offset="0%" stopColor="#d7d7d7" stopOpacity="0" />
+                <stop offset="26%" stopColor="#d7d7d7" stopOpacity="0.5" />
+                <stop offset="74%" stopColor="#d7d7d7" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#d7d7d7" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+
+            {/* Arced dB scale; ends fade into nothing via the stroke gradient. */}
             <path
               className="phoneShellLcdArc"
-              d="M 24 88 A 80 80 0 0 1 176 88"
+              d="M 30.7 58 A 80 80 0 0 1 169.3 58"
               fill="none"
+              stroke="url(#phoneShellArcFade)"
             />
-            {/* Tick marks + numbered labels along the arc. Angles span the
-                same -60deg..+60deg sweep the needle pivots through, with the
-                pivot at the bottom-center (100, 92). */}
+
+            {/* Tick marks straddling the arc, with numbered labels sitting
+                ABOVE the ticks (outside the semicircle). The needle pivot is at
+                the bottom-center (100, 98), just below the visible viewport. */}
             {[
-              { label: "-30", angle: -58 },
+              { label: "-30", angle: -55 },
               { label: "-20", angle: -34 },
-              { label: "-10", angle: -8 },
-              { label: "-5", angle: 14 },
-              { label: "0", angle: 40 },
+              { label: "-10", angle: -10 },
+              { label: "-5", angle: 16 },
+              { label: "0", angle: 42 },
             ].map(({ label, angle }) => {
-              const rad = ((angle - 90) * Math.PI) / 180;
+              const rad = (angle * Math.PI) / 180;
               const cx = 100;
-              const cy = 92;
-              const rOuter = 76;
-              const rInner = 66;
-              const rText = 54;
+              const cy = 98;
+              const rInner = 72;
+              const rOuter = 84;
+              const rText = 92;
+              const sin = Math.sin(rad);
+              const cos = Math.cos(rad);
               return (
-                <g key={label} className="phoneShellLcdTickGroup">
+                <g key={label}>
                   <line
                     className="phoneShellLcdTick"
-                    x1={cx + rInner * Math.cos(rad)}
-                    y1={cy + rInner * Math.sin(rad)}
-                    x2={cx + rOuter * Math.cos(rad)}
-                    y2={cy + rOuter * Math.sin(rad)}
+                    x1={cx + rInner * sin}
+                    y1={cy - rInner * cos}
+                    x2={cx + rOuter * sin}
+                    y2={cy - rOuter * cos}
                   />
                   <text
                     className="phoneShellLcdTickLabel"
-                    x={cx + rText * Math.cos(rad)}
-                    y={cy + rText * Math.sin(rad)}
+                    x={cx + rText * sin}
+                    y={cy - rText * cos}
                     textAnchor="middle"
                     dominantBaseline="central"
                   >
@@ -109,27 +186,28 @@ export function PhoneShell({
                 </g>
               );
             })}
-            {/* Needle: pivots from the bottom-center, animated via CSS. */}
-            <line
-              className="phoneShellLcdNeedle"
-              x1="100"
-              y1="92"
-              x2="100"
-              y2="20"
-            />
-            <circle className="phoneShellLcdHub" cx="100" cy="92" r="5" />
+
           </svg>
 
-          <span className="phoneShellLcdTitle">COMPRESSOR</span>
+          {/* Needle: a full-height element pivoting from the bottom-center of
+              the whole LCD so it runs all the way to the bottom of the screen
+              and sweeps up toward the scale. */}
+          <div className="phoneShellLcdNeedle" style={needleStyle} />
+
+          <span className="phoneShellLcdTitle">DREAMS</span>
           <span className="phoneShellLcdSub">TUBE</span>
 
           <div className="phoneShellLcdReadout phoneShellLcdReadout--in">
             <span className="phoneShellLcdReadoutLabel">INPUT</span>
-            <span className="phoneShellLcdReadoutValue">-1.03 dB</span>
+            <span className="phoneShellLcdReadoutValue">
+              {formatDb(readout.input)}
+            </span>
           </div>
           <div className="phoneShellLcdReadout phoneShellLcdReadout--out">
             <span className="phoneShellLcdReadoutLabel">OUTPUT</span>
-            <span className="phoneShellLcdReadoutValue">+0.00 dB</span>
+            <span className="phoneShellLcdReadoutValue">
+              {formatDb(readout.output)}
+            </span>
           </div>
 
           <div className="phoneShellLcdGloss" />
