@@ -1,4 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { Plate } from "../../../components/Plate";
+import { DeviceScreen } from "../../../components/DeviceScreen";
 import {
   createIsolatedDeviceScene,
   isWebGLAvailable,
@@ -17,6 +19,10 @@ import "./IsolatedDevice.css";
  * beeping in sequence — always looping, like the hero console's ambient
  * readout it mirrors.
  *
+ * The scene is mounted in the shared marketing device kit — a `<Plate />`
+ * panel with a recessed `<DeviceScreen />` well — so it sits inset into the
+ * page like every other element holder (matching the hero `AgentConsole`).
+ *
  * The device is decorative hardware fiction, so the host is `aria-hidden`
  * and nothing renders if WebGL is unavailable.
  */
@@ -32,5 +38,11 @@ export function IsolatedDevice(): ReactNode {
     return () => scene.dispose();
   }, []);
 
-  return <div className="isolatedDevice" aria-hidden="true" ref={hostRef} />;
+  return (
+    <Plate radius="38px" className="isolatedDevicePlate">
+      <DeviceScreen className="isolatedDeviceScreen">
+        <div className="isolatedDevice" aria-hidden="true" ref={hostRef} />
+      </DeviceScreen>
+    </Plate>
+  );
 }

@@ -1,8 +1,20 @@
 /*
  * Host well for the WebGL "isolated device" (see isolated-device-scene.ts).
  * The canvas is appended by the scene and fills the host; sizing mirrors the
- * other marketing hardware props so the device scales with the card.
+ * other marketing hardware props so the device scales with the card. The
+ * host sits inside the shared device kit: a `<Plate />` chassis holding a
+ * recessed `<DeviceScreen />` well, like the hero console.
  */
+
+/* Recessed screen well the scene sits inset into. The margin is the plate's
+   visible surface band around the well (Plate owns only its rims, so the
+   content spacing lives here); the padding insets the canvas from the
+   well's bezel. */
+.isolatedDeviceScreen.isolatedDeviceScreen {
+  border-radius: 26px;
+  margin: 14px;
+  padding: 10px;
+}
 
 .isolatedDevice {
   position: relative;
