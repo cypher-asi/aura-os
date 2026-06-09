@@ -257,13 +257,15 @@
 /*
  * Side thumbwheel on the upper-right edge. A black ribbed scroll wheel:
  * fine horizontal grooves (repeating gradient) over a diagonal light->dark
- * face, with the orange backlight glowing from the LEFT edge (outer + inner
- * orange shadow) and a hard black border down the RIGHT.
+ * face. The LEFT edge (attached to the panel) is hard black; the orange
+ * backlight glows only from the RIGHT edge (outer + inner orange shadow).
+ * Shifted right so its left edge sits flush against the panel's right edge
+ * rather than overlapping the panel face.
  */
 .consoleSlider {
   position: absolute;
   top: 15cqw;
-  right: -2cqw;
+  right: -4.5cqw;
   width: 5cqw;
   height: 24cqw;
   border-radius: 1.4cqw;
@@ -277,12 +279,12 @@
       rgba(0, 0, 0, 0.5) 4px,
       rgba(0, 0, 0, 0) 4px
     ),
-    linear-gradient(135deg, #46484d 0%, #1d1f23 52%, #0a0b0d 100%);
+    linear-gradient(215deg, #44464b 0%, #1c1e22 50%, #0a0b0d 100%);
   box-shadow:
-    -3px 0 12px rgba(244, 85, 0, 0.8),
-    -1px 0 3px rgba(255, 138, 60, 0.7),
-    inset 4px 0 6px rgba(244, 85, 0, 0.45),
-    inset -2px 0 0 rgba(0, 0, 0, 0.9),
+    3px 0 12px rgba(244, 85, 0, 0.85),
+    1px 0 3px rgba(255, 138, 60, 0.7),
+    inset -4px 0 7px rgba(244, 85, 0, 0.5),
+    inset 2px 0 0 rgba(0, 0, 0, 0.9),
     inset 0 1px 1px rgba(255, 255, 255, 0.18),
     0 3px 6px rgba(0, 0, 0, 0.5);
 }
