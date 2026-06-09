@@ -140,9 +140,10 @@ const ENGRAVED_GEOMETRY: Record<FeaturePanelShape, ReactNode> = {
  * Engraved outline shape drawn in the metal plate of a FeaturePanel card.
  * Pure vector (no raster): a hollow shape (`fill="none"`) traced with a thick
  * darker border and an inner-shadow filter, so it reads as a recessed/engraved
- * border with the metal plate showing through the center. The stroke is a
- * single flat color (no directional gradient) so the inner shadow reads equally
- * on every side. A slightly wider stroke sits behind the band so a 0.5px
+ * border with the metal plate showing through the center. The band stroke is a
+ * flat tone close to the background (no directional gradient), so it reads as a
+ * recessed groove defined by its edge bevel + a uniform inner shadow that is
+ * equal on every side. A slightly wider stroke sits behind the band so a 0.5px
  * gradient bevel (background color -> lighter, 50% opacity) shows on both the
  * inner and outer edges. Each instance mints unique `defs` IDs so cards never
  * collide.
@@ -203,19 +204,15 @@ export function EngravedShape({
         </filter>
       </defs>
       <g fill="none" strokeLinejoin="round">
-        {/* Center fill: a flat dark tone close to the section background, so the
-            hollow reads as recessed background rather than the lighter metal
-            plate behind. Sits at the bottom; the band/edges draw over its rim. */}
-        <g fill="#161616" stroke="none">
-          {geometry}
-        </g>
         {/* Wider stroke behind the band: the 0.5px sliver on each side becomes
             the inner + outer edge bevel, at 50% opacity. */}
         <g stroke={`url(#${edgeId})`} strokeWidth="12" opacity="0.5">
           {geometry}
         </g>
-        {/* Main band, engraved via the uniform inner shadow. */}
-        <g stroke="#3a3a3a" strokeWidth="11" filter={`url(#${shadowId})`}>
+        {/* Main band: a flat dark tone close to the section background, so the
+            border itself reads as recessed background and is defined only by the
+            edge bevel + the uniform inner shadow. */}
+        <g stroke="#161616" strokeWidth="11" filter={`url(#${shadowId})`}>
           {geometry}
         </g>
       </g>
