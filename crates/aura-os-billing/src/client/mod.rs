@@ -12,9 +12,9 @@ mod usage;
 
 pub use usage::{LlmUsageQuote, UsageQuoteResponse};
 
-use std::time::Duration;
+use std::{net::IpAddr, time::Duration};
 
-use reqwest::{Client, Method};
+use reqwest::{Client, Method, Url};
 use tracing::warn;
 
 use crate::error::BillingError;
@@ -106,9 +106,9 @@ impl BillingClient {
         let Some(api_key) = self.service_api_key.as_deref() else {
             return Err(BillingError::ServiceApiKeyNotConfigured);
         };
-        let url = format!("{}{}", self.base_url, path);
+        let url = self.service_url(path)?;
         self.http
-            .request(method, &url)
+            .request(method, url)
             .header("x-api-key", api_key)
             .header("x-service-name", &self.service_name)
             .json(&body)
@@ -116,11 +116,74 @@ impl BillingClient {
             .await
             .map_err(BillingError::from)
     }
+
+    fn service_url(&self, path: &str) -> Result<Url, BillingError> {
+        let mut base_url = self.base_url.trim_end_matches('/').to_string();
+        base_url.push('/');
+        let base = Url::parse(&base_url)
+            .map_err(|error| BillingError::InvalidServiceUrl(error.to_string()))?;
+        validate_service_base_url(&base)?;
+        base.join(path.trim_start_matches('/'))
+            .map_err(|error| BillingError::InvalidServiceUrl(error.to_string()))
+    }
 }
 
 impl Default for BillingClient {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+fn validate_service_base_url(url: &Url) -> Result<(), BillingError> {
+    if url.username() != "" || url.password().is_some() {
+        return Err(BillingError::InsecureServiceUrl);
+    }
+
+    if url.scheme() == "https" && is_public_host(url) {
+        return Ok(());
+    }
+
+    #[cfg(any(test, feature = "test-utils", debug_assertions))]
+    if url.scheme() == "http" && is_loopback_host(url) {
+        return Ok(());
+    }
+
+    Err(BillingError::InsecureServiceUrl)
+}
+
+fn is_public_host(url: &Url) -> bool {
+    let Some(host) = url.host_str() else {
+        return false;
+    };
+    if let Ok(addr) = host.parse::<IpAddr>() {
+        return match addr {
+            IpAddr::V4(addr) => {
+                !(addr.is_private()
+                    || addr.is_loopback()
+                    || addr.is_link_local()
+                    || addr.is_broadcast()
+                    || addr.is_unspecified())
+            }
+            IpAddr::V6(addr) => !(addr.is_loopback() || addr.is_unspecified()),
+        };
+    }
+
+    let normalized = host.trim_end_matches('.').to_ascii_lowercase();
+    !matches!(normalized.as_str(), "localhost" | "localhost.localdomain")
+}
+
+#[cfg(any(test, feature = "test-utils", debug_assertions))]
+fn is_loopback_host(url: &Url) -> bool {
+    let Some(host) = url.host_str() else {
+        return false;
+    };
+    if let Ok(addr) = host.parse::<IpAddr>() {
+        match addr {
+            IpAddr::V4(addr) => addr.is_loopback(),
+            IpAddr::V6(addr) => addr.is_loopback(),
+        }
+    } else {
+        host.eq_ignore_ascii_case("localhost")
     }
 }
 

@@ -417,6 +417,31 @@ async fn test_quote_llm_usage_requires_service_api_key() {
 }
 
 #[test]
+fn test_service_url_accepts_https_public_host() {
+    let client = BillingClient::with_base_url("https://z-billing.onrender.com/base".to_string());
+    let url = client.service_url("/v1/usage/quote").unwrap();
+
+    assert_eq!(
+        url.as_str(),
+        "https://z-billing.onrender.com/base/v1/usage/quote"
+    );
+}
+
+#[test]
+fn test_service_url_rejects_unsafe_hosts() {
+    for base_url in [
+        "http://z-billing.onrender.com",
+        "https://127.0.0.1",
+        "https://localhost",
+        "https://user:pass@z-billing.onrender.com",
+    ] {
+        let client = BillingClient::with_base_url(base_url.to_string());
+        let err = client.service_url("/v1/usage/quote").unwrap_err();
+        assert!(matches!(err, BillingError::InsecureServiceUrl));
+    }
+}
+
+#[test]
 fn test_credit_balance_deserialize() {
     let json = r#"{"balance_cents": 42000, "plan": "pro", "balance_formatted": "$420.00"}"#;
     let bal: CreditBalance = serde_json::from_str(json).unwrap();
