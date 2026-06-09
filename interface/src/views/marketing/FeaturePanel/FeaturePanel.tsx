@@ -38,6 +38,8 @@ export function FeaturePanel({
                 <h3 className="featurePanelMetalTitle">{feature.title}</h3>
               </div>
               <div className="featurePanelItemBody">
+                <span className="featurePanelGlassLine" aria-hidden="true" />
+                <span className="featurePanelGlassSurface" aria-hidden="true" />
                 <p className="featurePanelItemDesc">{feature.description}</p>
               </div>
             </li>

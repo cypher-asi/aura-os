@@ -162,68 +162,32 @@
     0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-/* Glass bottom section: title, description, then the tag pill. A
-   light-to-dark vertical glass fill over a translucent base (so the 20px
-   backdrop blur stays live), with a thick beveled rim built from a strong
-   inset top highlight plus inset bottom/side shadows. The gold emissive
-   line (divider + perimeter) is painted by the `::before`/`::after` below. */
+/* Glass bottom section container. It holds a glowing gold line layer with
+   the frosted glass surface stacked ON TOP of it, so the line reads through
+   the blurred, translucent glass (distorted). Just slightly narrower than the
+   metal plate above; the description sits above both layers. */
 .featurePanelItemBody {
   position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  /* Just slightly narrower than the metal plate above. */
   margin-inline: clamp(4px, 0.7vw, 8px);
   padding: clamp(24px, 2.4vw, 36px);
   /* Top corners take a 6px radius to match the metal's 6px bottom; the bottom
-     keeps the card's 24px. */
-  border-radius: 6px 6px 24px 24px;
-  /* Highly transparent glossy glass: a soft diagonal reflection sweeping the
-     upper area over a near-clear pane with only a faint dark tint, so the
-     page + emissive halo read straight through it (paired with the heavy
-     backdrop blur below). */
-  background:
-    linear-gradient(
-      122deg,
-      rgba(255, 255, 255, 0.13) 0%,
-      rgba(255, 255, 255, 0.045) 18%,
-      rgba(255, 255, 255, 0) 44%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.035) 0%,
-      rgba(255, 255, 255, 0.008) 30%,
-      rgba(6, 6, 8, 0.12) 100%
-    );
-  /* A thin recess under the metal lip, then a SIGNIFICANT inner gold glow:
-     a hot bloom blooming inward from the top seam plus a broad ambient gold
-     fill, so the emissive clearly lights up the inside of the glass. The
-     gold seam line (::after, higher z) stays brightest on top. */
-  box-shadow:
-    inset 0 6px 12px -8px rgba(0, 0, 0, 0.55),
-    inset 0 22px 48px -12px rgba(var(--gold-glow), 0.5),
-    inset 0 0 36px rgba(var(--gold-glow), 0.2),
-    inset 0 0 72px rgba(var(--gold-halo), 0.14),
-    inset 0 -1px 4px rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(30px) saturate(1.3);
-  backdrop-filter: blur(30px) saturate(1.3);
+     keeps the card's 24px. Shared by both stacked layers. */
+  --glass-radius: 6px 6px 24px 24px;
 }
 
-/* Gold emissive accent line: a transparent gradient border (the masked
-   padding/content-box XOR trick) tracing the glass edges. The gradient is
-   hot gold at the top (the metal/glass divider) and fades to transparent
-   toward the bottom, so it reads as a glowing accent line that dissolves
-   rather than a hard rectangular outline. `filter: drop-shadow` follows the
-   masked shape to bloom the line into a lit filament (a `box-shadow` glow
-   would be clipped by the mask). */
-.featurePanelItemBody::before {
-  content: "";
+/* Glowing gold accent line, BEHIND the glass surface (z 0). A transparent
+   gradient border (masked XOR trick) tracing the panel, hot at the divider
+   and fading down, bloomed via `drop-shadow`. The glass surface above blurs
+   it, so it shows through distorted rather than as a crisp outline. */
+.featurePanelGlassLine {
   position: absolute;
   inset: 0;
-  z-index: 2;
-  border-radius: inherit;
+  z-index: 0;
+  border-radius: var(--glass-radius);
   padding: 1.5px;
   background: linear-gradient(
     180deg,
@@ -241,37 +205,48 @@
     linear-gradient(#000 0 0);
   mask-composite: exclude;
   filter:
-    drop-shadow(0 0 4px rgba(var(--gold-glow), 0.9))
-    drop-shadow(0 0 10px rgba(var(--gold-glow), 0.6))
-    drop-shadow(0 0 20px rgba(var(--gold-halo), 0.42));
+    drop-shadow(0 0 4px rgba(var(--gold-glow), 0.95))
+    drop-shadow(0 0 11px rgba(var(--gold-glow), 0.65))
+    drop-shadow(0 0 22px rgba(var(--gold-halo), 0.45));
   pointer-events: none;
   transition: filter 0.18s ease;
 }
 
-/* The divider itself: a brighter horizontal gold filament along the
-   metal/glass seam, with an un-masked emissive glow so the seam reads as
-   the hottest part of the line. */
-.featurePanelItemBody::after {
-  content: "";
+/* Frosted glass surface ON TOP of the line (z 1). Highly transparent glossy
+   fill + a heavy backdrop blur, so the gold line behind it reads through,
+   diffused/distorted. A faint inner gold glow + bevel keep it reading as a
+   lit glass slab. */
+.featurePanelGlassSurface {
   position: absolute;
-  inset: 0 0 auto 0;
-  z-index: 3;
-  height: 1.5px;
-  background: linear-gradient(
-    90deg,
-    rgba(var(--gold-glow), 0.3) 0%,
-    rgba(var(--gold-glow), 1) 50%,
-    rgba(var(--gold-glow), 0.3) 100%
-  );
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--glass-radius);
+  background:
+    linear-gradient(
+      122deg,
+      rgba(255, 255, 255, 0.13) 0%,
+      rgba(255, 255, 255, 0.045) 18%,
+      rgba(255, 255, 255, 0) 44%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.035) 0%,
+      rgba(255, 255, 255, 0.008) 30%,
+      rgba(6, 6, 8, 0.12) 100%
+    );
   box-shadow:
-    0 0 5px rgba(var(--gold-glow), 1),
-    0 0 13px rgba(var(--gold-glow), 0.72),
-    0 0 24px rgba(var(--gold-halo), 0.5);
+    inset 0 6px 12px -8px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(var(--gold-glow), 0.12),
+    inset 0 -1px 4px rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(26px) saturate(1.3);
+  backdrop-filter: blur(26px) saturate(1.3);
   pointer-events: none;
   transition: box-shadow 0.18s ease;
 }
 
 .featurePanelItemDesc {
+  position: relative;
+  z-index: 2;
   margin: 0;
   max-width: 38ch;
   font-size: 13px;
@@ -290,8 +265,8 @@
 }
 
 /* Push more of the transparent gradient border into view + brighten its
-   bloom on hover. */
-.featurePanelItem:hover .featurePanelItemBody::before {
+   bloom on hover (still behind / distorted by the glass). */
+.featurePanelItem:hover .featurePanelGlassLine {
   background: linear-gradient(
     180deg,
     rgba(var(--gold-glow), 1) 0%,
@@ -300,19 +275,17 @@
     rgba(var(--gold-glow), 0) 88%
   );
   filter:
-    drop-shadow(0 0 5px rgba(var(--gold-glow), 0.95))
-    drop-shadow(0 0 12px rgba(var(--gold-glow), 0.6))
-    drop-shadow(0 0 22px rgba(var(--gold-halo), 0.45));
+    drop-shadow(0 0 5px rgba(var(--gold-glow), 1))
+    drop-shadow(0 0 13px rgba(var(--gold-glow), 0.7))
+    drop-shadow(0 0 24px rgba(var(--gold-halo), 0.5));
 }
 
-/* Deepen the significant inner glow on hover. */
-.featurePanelItem:hover .featurePanelItemBody {
+/* Warm the glass surface glow on hover. */
+.featurePanelItem:hover .featurePanelGlassSurface {
   box-shadow:
-    inset 0 6px 12px -8px rgba(0, 0, 0, 0.55),
-    inset 0 24px 54px -12px rgba(var(--gold-glow), 0.62),
-    inset 0 0 44px rgba(var(--gold-glow), 0.28),
-    inset 0 0 86px rgba(var(--gold-halo), 0.18),
-    inset 0 -1px 4px rgba(0, 0, 0, 0.3);
+    inset 0 6px 12px -8px rgba(0, 0, 0, 0.5),
+    inset 0 0 42px rgba(var(--gold-glow), 0.2),
+    inset 0 -1px 4px rgba(0, 0, 0, 0.28);
 }
 
 /* Brighten the divider seam glow on hover. */
