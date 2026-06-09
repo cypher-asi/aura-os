@@ -186,7 +186,7 @@ export function ConnectedConsoleDevice(): ReactNode {
                 <span className="consoleKnobIndicator" />
               </div>
             </div>
-            <span className="consoleKnobLabel">MIX</span>
+            <span className="consoleKnobLabel">VIBE</span>
           </div>
 
           <svg

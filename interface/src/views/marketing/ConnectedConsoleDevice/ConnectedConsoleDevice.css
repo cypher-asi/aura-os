@@ -40,14 +40,14 @@
   border-radius: 4cqw 4cqw 0 0;
   background: linear-gradient(
     90deg,
-    #2a2c30 0%,
-    #6b6f76 28%,
-    #9aa0a8 50%,
-    #565a60 74%,
-    #232529 100%
+    #050506 0%,
+    #2a2c30 26%,
+    #3a3c40 50%,
+    #1c1d20 74%,
+    #050506 100%
   );
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 2px 6px rgba(0, 0, 0, 0.5);
   z-index: 1;
 }
@@ -69,18 +69,42 @@
   height: 11cqw;
   transform: translateX(-50%);
   border-radius: 5.5cqw 5.5cqw 2cqw 2cqw;
-  background: linear-gradient(
-    105deg,
-    #ff9a52 0%,
-    #f4651f 42%,
-    #e34c00 100%
+  /* Same dark radial fill as the speaker-box body so it reads as the same
+     molded metal family. */
+  background: radial-gradient(
+    ellipse 120% 130% at 50% 32%,
+    #202020 0%,
+    #161616 55%,
+    #0c0c0c 100%
   );
   box-shadow:
-    inset 0 2px 2px rgba(255, 255, 255, 0.4),
-    inset 2px 0 3px rgba(255, 255, 255, 0.18),
-    inset 0 -3px 5px rgba(0, 0, 0, 0.3),
+    inset 0 2px 2px rgba(255, 255, 255, 0.12),
+    inset 2px 0 3px rgba(255, 255, 255, 0.06),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.45),
     0 3px 6px rgba(0, 0, 0, 0.5);
   z-index: 2;
+}
+
+/* Nozzle: a narrower neck that comes out of the dark connector and meets the
+   cord, in the same dark speaker-box color so it reads as one part. */
+.consoleCordTip::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2.4cqw;
+  width: 6cqw;
+  height: 4cqw;
+  transform: translateX(-50%);
+  border-radius: 2cqw 2cqw 0.8cqw 0.8cqw;
+  background: radial-gradient(
+    ellipse 120% 130% at 50% 25%,
+    #242424 0%,
+    #161616 60%,
+    #0c0c0c 100%
+  );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.1),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.4);
 }
 
 .consoleCordBase {
@@ -198,6 +222,7 @@
   width: 14cqw;
   height: 14cqw;
   border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
     #0a0a0a 0%,
@@ -207,7 +232,8 @@
   box-shadow:
     inset 0 2px 4px rgba(0, 0, 0, 0.85),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 1px 0 rgba(255, 255, 255, 0.22);
+    0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 6px rgba(255, 255, 255, 0.18);
 }
 
 /* Matte-black dial (vs the old brushed-silver conic metal): a soft top-lit
