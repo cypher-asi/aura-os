@@ -160,22 +160,24 @@
    only. */
 .phoneShellKeys {
   display: flex;
-  align-items: stretch;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
   justify-content: center;
-  gap: 1.6cqw;
+  gap: 1.8cqw;
   width: 100%;
+  height: 100%;
 }
 
+/* Horizontal "keyboard key" cap (like an Enter key): a wide, short rounded
+   button that sizes to its label and wraps onto multiple rows. */
 .phoneShellKey {
   position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 1;
-  padding: 0.6cqw;
-  border-radius: 2.4cqw;
+  padding: 1.5cqw 3cqw;
+  border-radius: 1.6cqw;
   background: linear-gradient(180deg, #202329 0%, #0d0e11 100%);
   color: rgba(255, 255, 255, 0.6);
   box-shadow:
@@ -185,16 +187,17 @@
 }
 
 /* Short slang label sitting raised on the keycap; inherits the keycap `color`
-   and wraps to fit the square cap. */
+   and stays on a single line so the cap reads as a horizontal key. */
 .phoneShellKeyLabel {
   position: relative;
   z-index: 1;
-  font-size: 2.4cqw;
+  font-size: 2.6cqw;
   font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: 0.02em;
+  line-height: 1;
+  letter-spacing: 0.04em;
   text-align: center;
   text-transform: uppercase;
+  white-space: nowrap;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
 }
 
