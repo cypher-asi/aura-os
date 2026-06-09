@@ -6,39 +6,24 @@
    off-black section background. All variables referenced here resolve
    from ZUI's global token layer; the `.featurePanel*` prefix keeps the
    selector namespace conflict-free. */
+/* H2 intro section for the privacy headline. Uses the shared `<Section />`
+   shell with the same tight top/bottom padding as every other H2 intro on the
+   page (`.personalAgentIntro`, `.agentChatIntro`, etc.); the open space above
+   and below the headline comes from the shared `.textCardH2` reserved band, so
+   the rhythm matches the sibling sections exactly. */
+.section.featurePanelIntro {
+  padding-top: clamp(8px, 1.5vh, 20px);
+  padding-bottom: clamp(8px, 1.5vh, 20px);
+}
+
 .featurePanel {
   /* Off-black surface tint inherited from `.productView` (see the
      `--marketing-section-bg` rationale in `ProductView.module.css`). */
   background: var(--marketing-section-bg, #000);
-  /* Symmetric top/bottom padding so the space above the headline matches the
-     space between the cards and the changelog section below. */
-  padding: clamp(40px, 6vw, 72px) 32px;
-}
-
-/* The shared TextCard h2 band reserves a tall, vertically-centered block
-   (min-height up to 420px); here we want the "Private by Design." headline to
-   sit close to the section top, so collapse that reserved height and let the
-   section padding + inner gap own the spacing. */
-.featurePanelInner .textCardH2 {
-  min-height: auto;
-}
-
-.featurePanelInner {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /* The h2 band is collapsed to `min-height: auto` above, so the headline
-     sits tight at the section top. Mirror the section's top padding as the gap
-     below the headline so the whitespace under "Designed for your privacy"
-     matches the space above it before the cards begin. */
-  gap: clamp(40px, 6vw, 72px);
-  /* Track the public landing-page `MockAuraApp` wallpaper width; see
-     `--marketing-content-max-width` in `interface/src/index.css`. */
-  max-width: var(--marketing-content-max-width, 1200px);
-  margin: 0 auto;
-  -webkit-user-select: text;
-  user-select: text;
+  /* Cards band below the intro: tight top padding tucks the cards under the
+     intro's reserved bottom whitespace, while a comfortable bottom keeps
+     separation from the changelog section below. */
+  padding: clamp(8px, 1.5vh, 20px) 32px clamp(40px, 6vw, 72px);
 }
 
 .featurePanelItemTitle,
@@ -322,12 +307,12 @@
 
 @media (max-width: 768px) {
   .featurePanel {
-    padding: 72px 24px;
+    padding: clamp(8px, 1.5vh, 20px) 24px 64px;
   }
 }
 
 @media (max-width: 480px) {
   .featurePanel {
-    padding: 56px 20px;
+    padding: clamp(8px, 1.5vh, 20px) 20px 48px;
   }
 }

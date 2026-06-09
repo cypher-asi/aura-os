@@ -1,9 +1,11 @@
 import {
   useCallback,
+  useId,
   useState,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { Section } from "../Section";
 import { TextCard } from "../TextCard";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import "./FeaturePanel.css";
@@ -25,11 +27,13 @@ interface FeaturePanelProps {
 }
 
 /**
- * Feature panel on the dark marketing surface. The headline is centered
- * across the top, with a row of floating cards below. Each card is a
- * two-part "metal ID card": a brushed-metal top plate stamped with the
- * category overline + title, fused to a translucent glass section that
- * carries the description, with a bright gold emissive seam + perimeter.
+ * Feature panel on the dark marketing surface. Renders as a standard H2
+ * intro section (the shared `<Section />` + `<TextCard level="h2" />`, so the
+ * headline reserves the same centered whitespace as every other H2 intro on
+ * the page) followed by a separate band of floating cards below. Each card is
+ * a two-part "metal ID card": a brushed-metal top plate stamped with the
+ * category overline + title, fused to a translucent glass section that carries
+ * the description, with a bright gold emissive seam + perimeter.
  */
 export function FeaturePanel({
   headline,
@@ -40,6 +44,7 @@ export function FeaturePanel({
   // (the `TypewriterText` is keyed on the nonce, so it remounts and re-types).
   const [active, setActive] = useState<number | null>(null);
   const [playKey, setPlayKey] = useState<number>(0);
+  const headlineId = useId();
 
   const play = useCallback((index: number): void => {
     setActive(index);
@@ -57,9 +62,15 @@ export function FeaturePanel({
   );
 
   return (
-    <section className="featurePanel">
-      <div className="featurePanelInner">
-        <TextCard level="h2" headline={headline} />
+    <>
+      <Section
+        ariaLabelledBy={headlineId}
+        fullHeight={false}
+        className="featurePanelIntro"
+      >
+        <TextCard level="h2" id={headlineId} headline={headline} />
+      </Section>
+      <section className="featurePanel" aria-labelledby={headlineId}>
         <ul className="featurePanelGrid" role="list">
           {features.map((feature, index) => (
             <li
@@ -92,8 +103,8 @@ export function FeaturePanel({
             </li>
           ))}
         </ul>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
 
