@@ -33,6 +33,10 @@ export function IsolatedDevice(): ReactNode {
           <span className="isolatedVent isolatedVent--small" />
         </div>
 
+        {/* Rounded fillet across the near (front) vertical edge where the two
+            case faces meet, so that corner reads round like the lid corners. */}
+        <div className="isolatedFace isolatedFace--corner" />
+
         {/* Brushed lid: recessed inner seam, four corner screws, etched mark. */}
         <div className="isolatedTop">
           <div className="isolatedSeam">

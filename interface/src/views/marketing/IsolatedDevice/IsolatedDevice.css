@@ -223,6 +223,45 @@
 }
 
 /*
+ * Corner fillet: a narrow vertical facet straddling the +X/+Y footprint corner
+ * (the near, viewer-facing vertical edge of the diamond). It is rotated 45deg
+ * about the vertical so it faces the camera, and pushed a hair proud of the
+ * two side walls so it covers their sharp meeting seam. A bright-centered
+ * horizontal sheen makes the flat facet read as a rounded vertical edge that
+ * matches the lid's rounded corners.
+ */
+.isolatedFace--corner {
+  width: 9cqw;
+  height: var(--thk);
+  margin-top: calc(var(--thk) / -2);
+  margin-left: calc(9cqw / -2);
+  border-radius: 0 0 1.4cqw 1.4cqw;
+  transform: rotateZ(-45deg) rotateX(-90deg)
+    translateZ(calc(var(--size) / 1.414 + 0.3cqw));
+  /* Override the shared radial fill with a center-lit cylindrical sheen so the
+     facet looks like a curved corner; keep the metallic border-box edge line. */
+  background:
+    linear-gradient(
+        90deg,
+        #0a0a0b 0%,
+        #1c1d20 30%,
+        #303236 50%,
+        #1c1d20 70%,
+        #0a0a0b 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(120, 124, 132, 0.7) 0%,
+        rgba(14, 15, 18, 0.7) 100%
+      )
+      border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.5);
+}
+
+/*
  * Louvered vents — thin recessed slits cut into the case. Each slit is a dark
  * groove with a faint light lip on one side (two stacked repeating gradients).
  */
