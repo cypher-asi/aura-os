@@ -23,7 +23,9 @@
   width: clamp(300px, 34vw, 460px);
   aspect-ratio: 1 / 0.86;
   container-type: inline-size;
-  perspective: 1500px;
+  /* Orthographic (no `perspective`): a true isometric projection avoids the
+     perspective foreshortening that makes the GPU resample the rotated faces
+     and blurs their rounded corners. */
 }
 
 /*
@@ -37,6 +39,7 @@
   height: var(--size);
   transform-style: preserve-3d;
   transform: translateY(-6cqw) rotateX(58deg) rotateZ(45deg);
+  will-change: transform;
 }
 
 /*
@@ -50,6 +53,11 @@
   position: absolute;
   top: 50%;
   left: 50%;
+  /* Crisp rounded corners: stop the browser flattening/resampling the rotated
+     layers (the main source of fuzzy edges in a 3D scene). */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: flat;
 }
 
 /* Shared dark-metal fill + border treatment copied verbatim from the speaker
