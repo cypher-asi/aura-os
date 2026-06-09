@@ -169,6 +169,25 @@
   height: 100%;
 }
 
+/* Black socket each keycap is pressed into (mirrors the skill keys'
+   `.personalAgentSkillSocket`): a near-black recess with inset shadows; the
+   raised keycap sits inside it, revealed through the socket's padding. */
+.phoneShellKeySocket {
+  display: inline-flex;
+  padding: 1cqw;
+  border-radius: 2.4cqw;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 -5px 12px rgba(0, 0, 0, 0.85);
+}
+
 /* Horizontal "keyboard key" cap (like an Enter key): a wide, short rounded
    button that sizes to its label and wraps onto multiple rows. Clickable —
    tapping flashes the label gold for ~1.5s (mirrors the skill keys). */

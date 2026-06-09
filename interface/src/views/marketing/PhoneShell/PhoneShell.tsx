@@ -110,18 +110,19 @@ export function PhoneShell({
       <div className="phoneShellDeck" aria-hidden="true">
         <div className="phoneShellKeys">
           {DECK_KEYS.map(({ id, label, lit }) => (
-            <button
-              type="button"
-              key={id}
-              tabIndex={-1}
-              className="phoneShellKey"
-              data-lit={lit ? "true" : undefined}
-              data-flash={flashedKey === id ? "true" : undefined}
-              aria-label={label}
-              onClick={() => flashKey(id)}
-            >
-              <span className="phoneShellKeyLabel">{label}</span>
-            </button>
+            <span key={id} className="phoneShellKeySocket">
+              <button
+                type="button"
+                tabIndex={-1}
+                className="phoneShellKey"
+                data-lit={lit ? "true" : undefined}
+                data-flash={flashedKey === id ? "true" : undefined}
+                aria-label={label}
+                onClick={() => flashKey(id)}
+              >
+                <span className="phoneShellKeyLabel">{label}</span>
+              </button>
+            </span>
           ))}
         </div>
       </div>
