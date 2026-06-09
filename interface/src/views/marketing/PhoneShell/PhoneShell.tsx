@@ -1,31 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { type ReactNode } from "react";
 import "./PhoneShell.css";
-
-/** How long a tapped keycap glows the golden accent before settling back. */
-const KEY_FLASH_MS = 1500;
-
-/**
- * Decorative slang keycaps on the phone's metal deck, styled after the
- * "Intelligent in all domains" skill keys. Purely decorative hardware
- * (`aria-hidden` via the deck root); a couple rest in the golden accent.
- */
-const DECK_KEYS: ReadonlyArray<{
-  readonly id: string;
-  readonly label: string;
-  readonly lit?: boolean;
-}> = [
-  { id: "cook", label: "COOK", lit: true },
-  { id: "send-it", label: "SEND IT" },
-  { id: "no-cap", label: "NO CAP" },
-  { id: "yolo", label: "YOLO", lit: true },
-  { id: "for-the-plot", label: "FOR THE PLOT" },
-];
 
 interface PhoneShellProps {
   /**
@@ -60,13 +34,15 @@ interface PhoneShellProps {
  *     bevel rim. Hosts `children` (the mock UI) and rests ON TOP of the
  *     deck, slightly overlapping it and casting a drop shadow onto it.
  *   - `.phoneShellDeck` — the wider brushed-metal control panel sitting
- *     behind/under the top panel, carrying a centered row of raised
- *     keycaps styled after the "Intelligent in all domains" skill keys.
+ *     behind/under the top panel, carrying a recessed analog VU-meter /
+ *     compressor LCD (gold-glowing arc scale, swaying needle, and
+ *     INPUT/OUTPUT readouts) in the page's gold accent family.
  *
  * Everything in the deck is decorative hardware fiction (`aria-hidden`).
- * Sizing is `clamp()`-driven and respects the parent flex container;
- * the hero (`size="lg"`) variant is larger and lifted forward so it
- * visually overlaps the two side phones.
+ * Sizing is `cqw`-driven (container context on `.phoneShell`) so the LCD
+ * gauge, ticks, needle, and labels all scale in lockstep with the device
+ * width; the hero (`size="lg"`) variant is larger and lifted forward so
+ * it visually overlaps the two side phones.
  */
 export function PhoneShell({
   size = "md",
@@ -76,30 +52,6 @@ export function PhoneShell({
   const isHero = size === "lg";
   const className = isHero ? "phoneShell phoneShellHero" : "phoneShell";
 
-  // Which deck keycap is currently playing its gold click-flash (keyed by id),
-  // mirroring the "Intelligent in all domains" skill keys. Per-phone state so
-  // each device flashes independently.
-  const [flashedKey, setFlashedKey] = useState<string | null>(null);
-  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const flashKey = useCallback((id: string) => {
-    setFlashedKey(id);
-    if (flashTimerRef.current) {
-      clearTimeout(flashTimerRef.current);
-    }
-    flashTimerRef.current = setTimeout(() => {
-      setFlashedKey((current) => (current === id ? null : current));
-    }, KEY_FLASH_MS);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (flashTimerRef.current) {
-        clearTimeout(flashTimerRef.current);
-      }
-    };
-  }, []);
-
   return (
     <div
       className={className}
@@ -108,22 +60,79 @@ export function PhoneShell({
       aria-hidden={ariaLabel ? undefined : true}
     >
       <div className="phoneShellDeck" aria-hidden="true">
-        <div className="phoneShellKeys">
-          {DECK_KEYS.map(({ id, label, lit }) => (
-            <span key={id} className="phoneShellKeySocket">
-              <button
-                type="button"
-                tabIndex={-1}
-                className="phoneShellKey"
-                data-lit={lit ? "true" : undefined}
-                data-flash={flashedKey === id ? "true" : undefined}
-                aria-label={label}
-                onClick={() => flashKey(id)}
-              >
-                <span className="phoneShellKeyLabel">{label}</span>
-              </button>
-            </span>
-          ))}
+        <div className="phoneShellLcd">
+          <svg
+            className="phoneShellLcdGauge"
+            viewBox="0 0 200 96"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {/* Arced dB scale (sweeps from lower-left up to lower-right). */}
+            <path
+              className="phoneShellLcdArc"
+              d="M 24 88 A 80 80 0 0 1 176 88"
+              fill="none"
+            />
+            {/* Tick marks + numbered labels along the arc. Angles span the
+                same -60deg..+60deg sweep the needle pivots through, with the
+                pivot at the bottom-center (100, 92). */}
+            {[
+              { label: "-30", angle: -58 },
+              { label: "-20", angle: -34 },
+              { label: "-10", angle: -8 },
+              { label: "-5", angle: 14 },
+              { label: "0", angle: 40 },
+            ].map(({ label, angle }) => {
+              const rad = ((angle - 90) * Math.PI) / 180;
+              const cx = 100;
+              const cy = 92;
+              const rOuter = 76;
+              const rInner = 66;
+              const rText = 54;
+              return (
+                <g key={label} className="phoneShellLcdTickGroup">
+                  <line
+                    className="phoneShellLcdTick"
+                    x1={cx + rInner * Math.cos(rad)}
+                    y1={cy + rInner * Math.sin(rad)}
+                    x2={cx + rOuter * Math.cos(rad)}
+                    y2={cy + rOuter * Math.sin(rad)}
+                  />
+                  <text
+                    className="phoneShellLcdTickLabel"
+                    x={cx + rText * Math.cos(rad)}
+                    y={cy + rText * Math.sin(rad)}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                  >
+                    {label}
+                  </text>
+                </g>
+              );
+            })}
+            {/* Needle: pivots from the bottom-center, animated via CSS. */}
+            <line
+              className="phoneShellLcdNeedle"
+              x1="100"
+              y1="92"
+              x2="100"
+              y2="20"
+            />
+            <circle className="phoneShellLcdHub" cx="100" cy="92" r="5" />
+          </svg>
+
+          <span className="phoneShellLcdTitle">COMPRESSOR</span>
+          <span className="phoneShellLcdSub">TUBE</span>
+
+          <div className="phoneShellLcdReadout phoneShellLcdReadout--in">
+            <span className="phoneShellLcdReadoutLabel">INPUT</span>
+            <span className="phoneShellLcdReadoutValue">-1.03 dB</span>
+          </div>
+          <div className="phoneShellLcdReadout phoneShellLcdReadout--out">
+            <span className="phoneShellLcdReadoutLabel">OUTPUT</span>
+            <span className="phoneShellLcdReadoutValue">+0.00 dB</span>
+          </div>
+
+          <div className="phoneShellLcdGloss" />
         </div>
       </div>
 

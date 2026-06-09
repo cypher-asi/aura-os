@@ -75,10 +75,40 @@
       )
       border-box;
   box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.85),
+    inset 0 6px 16px rgba(0, 0, 0, 0.9),
     inset 0 -1px 0 rgba(255, 255, 255, 0.06),
     0 14px 22px rgba(0, 0, 0, 0.6),
     0 5px 10px rgba(0, 0, 0, 0.45);
+}
+
+/*
+ * Second (inner) bevel border, concentric inside the metallic rim above. It
+ * is weighted THICKER along the bottom edge and its gradient runs to DARK at
+ * the top (light at the bottom), so the device reads as having a heavier
+ * machined lower lip. The mask cuts out the center so only the border paints.
+ */
+.phoneShellTop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8.4cqw;
+  border: 1.5px solid transparent;
+  border-bottom-width: 5px;
+  background: linear-gradient(
+      0deg,
+      rgba(112, 116, 123, 0.9) 0%,
+      rgba(60, 63, 68, 0.7) 30%,
+      rgba(20, 21, 24, 0.85) 65%,
+      rgba(12, 13, 16, 0.85) 100%
+    )
+    border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 4;
 }
 
 /*
@@ -118,8 +148,10 @@
  */
 .phoneShellDeck {
   position: absolute;
-  left: 0;
-  right: 0;
+  /* Inset wider than the screen panel (which sits at 1.5cqw) so the bottom
+     plane is slightly NARROWER than the screen above it. */
+  left: 3cqw;
+  right: 3cqw;
   bottom: 0;
   /* Bottom control section smaller by 25% (was 44%). */
   height: 33%;
@@ -153,130 +185,200 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
 }
 
-/* Keycap pad: a centered row of raised neomorphic keycaps styled after the
-   "Intelligent in all domains" skill keys, replacing the former rotary knob /
-   key cluster / CONTROL toggle / speaker grille / AURA wordmark. Each carries
-   a short slang label; a couple rest in the golden accent. Decorative hardware
-   only. */
-.phoneShellKeys {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  align-content: center;
-  justify-content: center;
-  gap: 1.8cqw;
+/*
+ * Recessed analog VU-meter / compressor LCD that fills the deck's usable
+ * area (below the overlapping top panel). A dark inset glass screen carrying
+ * a gold-glowing arced dB scale, ticks, a gently swaying needle, a
+ * `COMPRESSOR` wordmark, and INPUT/OUTPUT readouts — all in the page's gold
+ * accent family. Decorative hardware only. Built on the recessed-screen
+ * recipe shared with the `MadeForYouSection` terminal LCD.
+ */
+.phoneShellLcd {
+  position: relative;
   width: 100%;
   height: 100%;
-}
-
-/* Black socket each keycap is pressed into (mirrors the skill keys'
-   `.personalAgentSkillSocket`): a near-black recess with inset shadows; the
-   raised keycap sits inside it, revealed through the socket's padding. */
-.phoneShellKeySocket {
-  display: inline-flex;
-  padding: 1cqw;
-  border-radius: 2.4cqw;
+  overflow: hidden;
+  border-radius: 4cqw;
+  padding: 2.5cqw 3cqw 2cqw;
+  box-sizing: border-box;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
-    #0a0a0a 0%,
-    #050505 60%,
+    #120c08 0%,
+    #0a0706 55%,
     #000 100%
   );
   box-shadow:
     inset 0 2px 6px rgba(0, 0, 0, 0.9),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    inset 0 -5px 12px rgba(0, 0, 0, 0.85);
-}
-
-/* Horizontal "keyboard key" cap (like an Enter key): a wide, short rounded
-   button that sizes to its label and wraps onto multiple rows. Clickable —
-   tapping flashes the label gold for ~1.5s (mirrors the skill keys). */
-.phoneShellKey {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  /* Match the chunky height of the "Intelligent in all domains" keycaps above:
-     a tall fixed-height cap (the width still hugs the label). The deck's usable
-     height is ~48cqw, so an ~18cqw cap (+ socket) still leaves room for two
-     wrapped rows. */
-  min-height: 18cqw;
-  padding: 0 3cqw;
-  border: 0;
-  border-radius: 1.6cqw;
-  appearance: none;
-  -webkit-appearance: none;
-  font: inherit;
-  cursor: pointer;
-  background: linear-gradient(180deg, #202329 0%, #0d0e11 100%);
-  color: rgba(255, 255, 255, 0.6);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -2px 2px rgba(0, 0, 0, 0.6),
-    0 1.5px 3px rgba(0, 0, 0, 0.6);
-  transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    color 140ms ease;
-}
-
-.phoneShellKey:hover {
-  color: rgba(255, 255, 255, 0.85);
-  transform: translateY(-1px);
-}
-
-.phoneShellKey:active {
-  transform: translateY(0);
-}
-
-/* Short slang label sitting raised on the keycap; inherits the keycap `color`
-   and stays on a single line so the cap reads as a horizontal key. */
-.phoneShellKeyLabel {
-  position: relative;
-  z-index: 1;
-  font-size: 3cqw;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  text-align: center;
-  text-transform: uppercase;
-  white-space: nowrap;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
-  transition:
-    color 140ms ease,
-    text-shadow 140ms ease;
-}
-
-/* Lit / featured keycap: warm golden fill + soft glow, matching the lit skill
-   keys and the rest of the page's gold accent family. */
-.phoneShellKey[data-lit="true"] {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--gold-core, #f4faf2) 16%, #e8cd89 84%) 0%,
-    #e8cd89 100%
+    inset 0 0 18px 2px rgba(var(--gold-halo, 153, 81, 25), 0.16),
+    0 1px 0 rgba(255, 255, 255, 0.16);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    monospace
   );
-  color: #1a0e08;
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.32),
-    inset 0 -2px 2px rgba(0, 0, 0, 0.3),
-    0 1.5px 3px rgba(0, 0, 0, 0.55),
-    0 0 10px rgba(var(--gold-glow, 232, 205, 137), 0.45);
 }
 
-.phoneShellKey[data-lit="true"] .phoneShellKeyLabel {
-  filter: none;
+/* The gauge SVG occupies the upper region of the LCD; viewBox units map to a
+   200x96 coordinate space scaled to fit the screen width. */
+.phoneShellLcdGauge {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-/* Click flash: the label lights up with the golden accent glow for ~1.5s
-   (driven by `data-flash` in the component), matching the skill keys. Applies
-   to every keycap, including the lit gold ones. */
-.phoneShellKey[data-flash="true"] .phoneShellKeyLabel {
+/* Arced dB scale: a faint gold sweep with a soft bloom. */
+.phoneShellLcdArc {
+  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.45);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 2px rgba(var(--gold-glow, 232, 205, 137), 0.5));
+}
+
+/* Tick marks along the arc. */
+.phoneShellLcdTick {
+  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.7);
+  stroke-width: 2;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 2px rgba(var(--gold-glow, 232, 205, 137), 0.45));
+}
+
+/* Numbered scale labels, glowing gold. */
+.phoneShellLcdTickLabel {
+  fill: var(--gold-core, #f4faf2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  filter:
+    drop-shadow(0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.7))
+    drop-shadow(0 0 6px rgba(var(--gold-halo, 153, 81, 25), 0.4));
+}
+
+/* Needle: a bright near-white core with a layered gold/amber bloom, pivoting
+   from the bottom-center hub. Resting angle sits high on the scale; the sway
+   animation rocks it a few degrees around that rest position. */
+.phoneShellLcdNeedle {
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 100px 92px;
+  transform: rotate(-14deg);
+  filter:
+    drop-shadow(0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.95))
+    drop-shadow(0 0 7px rgba(var(--gold-glow, 232, 205, 137), 0.7))
+    drop-shadow(0 0 12px rgba(var(--gold-halo, 153, 81, 25), 0.5));
+  animation: phoneShellNeedleSway 4.5s ease-in-out infinite;
+}
+
+/* Needle pivot hub. */
+.phoneShellLcdHub {
+  fill: #1a1410;
+  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.7);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.6));
+}
+
+@keyframes phoneShellNeedleSway {
+  0% {
+    transform: rotate(-22deg);
+  }
+  50% {
+    transform: rotate(-4deg);
+  }
+  100% {
+    transform: rotate(-22deg);
+  }
+}
+
+/* Compressor wordmark, glowing gold, centered just under the gauge. */
+.phoneShellLcdTitle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8.5cqw;
+  text-align: center;
+  font-size: 4.4cqw;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   color: var(--gold-core, #f4faf2);
   text-shadow:
-    0 0 5px rgba(var(--gold-glow, 232, 205, 137), 0.85),
-    0 0 11px rgba(var(--gold-halo, 153, 81, 25), 0.5);
-  filter: none;
+    var(--gold-text-shadow),
+    0 0 5px rgba(var(--gold-glow, 232, 205, 137), 0.6);
+}
+
+.phoneShellLcdSub {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14cqw;
+  text-align: center;
+  font-size: 2.2cqw;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: rgba(var(--gold-glow, 232, 205, 137), 0.7);
+  text-shadow: 0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.45);
+}
+
+/* INPUT / OUTPUT readouts pinned to the lower corners of the screen. */
+.phoneShellLcdReadout {
+  position: absolute;
+  bottom: 2cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4cqw;
+  font-size: 2cqw;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+}
+
+.phoneShellLcdReadout--in {
+  left: 3cqw;
+  text-align: left;
+}
+
+.phoneShellLcdReadout--out {
+  right: 3cqw;
+  text-align: right;
+}
+
+.phoneShellLcdReadoutLabel {
+  color: rgba(var(--gold-glow, 232, 205, 137), 0.6);
+}
+
+.phoneShellLcdReadoutValue {
+  font-weight: 600;
+  color: var(--gold-core, #f4faf2);
+  text-shadow: 0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.5);
+}
+
+/* Soft top sheen + faint scanlines for the LCD read (mirrors the
+   `MadeForYouSection` terminal gloss). */
+.phoneShellLcdGloss {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 4cqw;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0) 38%
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0.16) 3px
+    );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phoneShellLcdNeedle {
+    animation: none;
+  }
 }
 
 /*
