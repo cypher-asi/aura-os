@@ -170,6 +170,34 @@ function outlineLoop(shape: THREE.Shape, y: number): THREE.BufferGeometry {
   return new THREE.BufferGeometry().setFromPoints(pts);
 }
 
+/**
+ * Camera-facing half of a footprint loop at a given height: only the points
+ * on the near side of the +x/+z viewing diagonal, i.e. poor-man's
+ * hidden-line removal. Body seams drawn with this read like seams on the
+ * solid device's visible walls — full loops would also draw their far arcs,
+ * which stack up on screen and make the wireframe body look much taller
+ * than the real computer.
+ */
+function nearArc(shape: THREE.Shape, y: number): THREE.BufferGeometry {
+  const pts2 = shape.getPoints(64);
+  // Rotate the loop so it starts at the farthest point from the camera,
+  // making the kept near-side run contiguous.
+  let farIndex = 0;
+  let farValue = Infinity;
+  pts2.forEach((p, i) => {
+    const v = p.x + p.y;
+    if (v < farValue) {
+      farValue = v;
+      farIndex = i;
+    }
+  });
+  const rotated = [...pts2.slice(farIndex), ...pts2.slice(0, farIndex)];
+  const pts = rotated
+    .filter((p) => p.x + p.y >= -0.05)
+    .map((p) => new THREE.Vector3(p.x, y, p.y));
+  return new THREE.BufferGeometry().setFromPoints(pts);
+}
+
 /** Rounded square centered on the origin (the device's squircle footprint). */
 function roundedSquare(size: number, radius: number): THREE.Shape {
   const h = size / 2;
@@ -555,13 +583,16 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
 
   const ghostFootprint = roundedSquare(SIZE, CORNER_R);
   const lidSeamY = LID_Y - LID_BEVEL;
-  // Loops, outermost first: doubled top rim, lid seam, case/base seams.
+  // The top rim and its echo are full loops (the whole plate is visible on
+  // the real device too); the body seams below are near-side arcs only, so
+  // the wireframe body reads with the same apparent height as the solid
+  // computer instead of stacking far-side arcs down the screen.
   const ghostTopGeo = track(outlineLoop(ghostFootprint, DEVICE_H));
   const ghostTopUnderGeo = track(outlineLoop(ghostFootprint, DEVICE_H - 0.016));
-  const ghostLidSeamGeo = track(outlineLoop(ghostFootprint, lidSeamY));
-  const ghostCaseSeamGeo = track(outlineLoop(ghostFootprint, CASE_BOTTOM));
+  const ghostLidSeamGeo = track(nearArc(ghostFootprint, lidSeamY));
+  const ghostCaseSeamGeo = track(nearArc(ghostFootprint, CASE_BOTTOM));
   const ghostBaseGeo = track(
-    outlineLoop(roundedSquare(BASE_SILHOUETTE, CORNER_R - 0.06), 0),
+    nearArc(roundedSquare(BASE_SILHOUETTE, CORNER_R - 0.06), 0),
   );
   // Top-plate detail: the screen recess plus a fainter inner echo.
   const ghostHoleGeo = track(
@@ -571,15 +602,14 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     outlineLoop(roundedSquare(HOLE_SIZE - 0.18, HOLE_R - 0.05), DEVICE_H),
   );
 
-  // Silhouette verticals at the rounded corners.
+  // Silhouette verticals at the three VISIBLE rounded corners (the far
+  // corner is hidden on the solid device, so the ghost skips it too).
   const ghostCornerPts: number[] = [];
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      ghostCornerPts.push(
-        sx * GHOST_CORNER, 0, sz * GHOST_CORNER,
-        sx * GHOST_CORNER, DEVICE_H, sz * GHOST_CORNER,
-      );
-    }
+  for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1]]) {
+    ghostCornerPts.push(
+      sx * GHOST_CORNER, 0, sz * GHOST_CORNER,
+      sx * GHOST_CORNER, DEVICE_H, sz * GHOST_CORNER,
+    );
   }
   const ghostCornerGeo = track(new THREE.BufferGeometry());
   ghostCornerGeo.setAttribute(
