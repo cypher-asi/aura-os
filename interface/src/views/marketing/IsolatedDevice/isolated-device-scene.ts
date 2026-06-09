@@ -696,51 +696,73 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   }
 
   // Dashed connector columns between the devices: an upper run spanning the
-  // gap from the main lid top to the upper ghost's bottom, and a lower run
-  // from the lower ghost's top to the main computer's underside. The dashes
-  // are real segments (not LineDashedMaterial) so the animation loop can
-  // stream them downward by sliding each column one period and wrapping;
-  // each run extends one period past both ends so the sliding pattern stays
-  // seamless — the overshoot tucks invisibly into the solid body on one end
-  // and pokes into the wireframe ghost on the other, which reads as the
-  // line "entering" the computer. One object PER column so three.js's
-  // per-object transparency sort layers them correctly against the screen.
+  // gap from the main lid top to the upper ghost's bottom seam line, and a
+  // lower run from the lower ghost's top rim to the main computer's
+  // underside. The dash Y positions are rewritten every frame (a conveyor
+  // hard-clamped to each run's bounds), so dashes shrink in at a run's top
+  // edge and shrink out at its bottom — never poking past the wireframe's
+  // bottom line the way a slide-and-wrap pattern would.
   const dashMaterial = new THREE.LineBasicMaterial({
     color: 0x70757c,
     transparent: true,
     opacity: 0.45,
     depthWrite: false,
   });
-  const dashRuns: ReadonlyArray<readonly [number, number]> = [
-    [DEVICE_H, GHOST_ABOVE_Y], // main top surface -> upper ghost bottom
-    [GHOST_BELOW_Y + DEVICE_H, 0], // lower ghost top -> main underside
-  ];
+  const dashRuns = [
+    // Main top surface -> the upper ghost's bottom (case seam) line.
+    { start: DEVICE_H, end: GHOST_ABOVE_Y + CASE_BOTTOM },
+    // Lower ghost top rim -> the main computer's underside.
+    { start: GHOST_BELOW_Y + DEVICE_H, end: 0 },
+  ].map((run) => ({
+    ...run,
+    count: Math.ceil((run.end - run.start) / DASH_PERIOD) + 1,
+  }));
+  const dashTotal = dashRuns.reduce((n, run) => n + run.count, 0);
   const dashColumns: THREE.LineSegments[] = [];
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
-      const dashPts: number[] = [];
-      for (const [runStart, runEnd] of dashRuns) {
-        for (
-          let y = runStart - DASH_PERIOD;
-          y < runEnd + DASH_PERIOD;
-          y += DASH_PERIOD
-        ) {
-          dashPts.push(
-            sx * DASH_INSET, y, sz * DASH_INSET,
-            sx * DASH_INSET, y + DASH_LEN, sz * DASH_INSET,
-          );
-        }
+      const arr = new Float32Array(dashTotal * 6);
+      for (let i = 0; i < dashTotal; i += 1) {
+        arr[i * 6] = sx * DASH_INSET;
+        arr[i * 6 + 2] = sz * DASH_INSET;
+        arr[i * 6 + 3] = sx * DASH_INSET;
+        arr[i * 6 + 5] = sz * DASH_INSET;
       }
+      const dashAttr = new THREE.BufferAttribute(arr, 3);
+      dashAttr.setUsage(THREE.DynamicDrawUsage);
       const dashGeo = track(new THREE.BufferGeometry());
-      dashGeo.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(dashPts, 3),
-      );
+      dashGeo.setAttribute("position", dashAttr);
       const column = new THREE.LineSegments(dashGeo, dashMaterial);
+      // The Y values are rewritten per frame; skip culling against the
+      // initial (degenerate) bounds.
+      column.frustumCulled = false;
       dashColumns.push(column);
       group.add(column);
     }
   }
+
+  /** Rewrite every column's dash Y spans for time `t` (conveyor downward). */
+  function updateDashes(t: number): void {
+    for (const column of dashColumns) {
+      const attr = column.geometry.attributes
+        .position as THREE.BufferAttribute;
+      const arr = attr.array as Float32Array;
+      let seg = 0;
+      for (const run of dashRuns) {
+        const cycle = run.count * DASH_PERIOD;
+        for (let i = 0; i < run.count; i += 1) {
+          const p = run.end - ((i * DASH_PERIOD + t * DASH_SPEED) % cycle);
+          const y0 = Math.max(run.start, p);
+          const y1 = Math.min(run.end, Math.max(run.start, p + DASH_LEN));
+          arr[seg * 6 + 1] = y0;
+          arr[seg * 6 + 4] = y1;
+          seg += 1;
+        }
+      }
+      attr.needsUpdate = true;
+    }
+  }
+  updateDashes(0);
 
   function fitCamera(aspect: number): void {
     // Orthographic frustum fixed to the diamond's width; the vertical extent
@@ -787,11 +809,8 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       const pulse = Math.pow(Math.max(0, Math.sin(t * 2.4 - i * 0.7)), 8);
       ledMaterials[i].emissiveIntensity = 0.12 + 2.2 * pulse;
     }
-    // Stream the connector dashes downward, wrapping every period.
-    const dashShift = -((t * DASH_SPEED) % DASH_PERIOD);
-    for (const column of dashColumns) {
-      column.position.y = dashShift;
-    }
+    // Stream the connector dashes downward through their runs.
+    updateDashes(t);
     renderFrame();
   }
 
