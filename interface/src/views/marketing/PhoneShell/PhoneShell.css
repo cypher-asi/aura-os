@@ -288,18 +288,53 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-/* AURA wordmark — the real AURA logo image (same `/AURA_logo_text_mark.png`
-   used in the shell's top-left), sized to the deck via container units. */
-.phoneShellWordmark {
+/* AURA "tag" — a small brushed-metal container holding the masked metallic
+   wordmark, mirroring the `.madeForYouBrandPanel` / `.madeForYouBrandMark`
+   tag in the "Agents made for you" device: a radial metal fill inside a
+   135deg metallic gradient edge, smaller than the old bare wordmark. */
+.phoneShellBrandPanel {
   grid-area: wordmark;
   align-self: end;
   justify-self: end;
-  height: 7cqw;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
-  object-position: right bottom;
-  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.4cqw 2.2cqw;
+  border-radius: 1.4cqw;
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+        ellipse 130% 90% at 50% 0%,
+        #1a1a1a 0%,
+        #191919 55%,
+        #181818 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(104, 109, 116, 0.25) 0%,
+        rgba(82, 86, 92, 0.3) 100%
+      )
+      border-box;
+}
+
+/* Masked metallic gradient version of the wordmark (vs the old flat <img>),
+   matching the made-for-you brand mark's vertical silver gradient + bevel. */
+.phoneShellBrandMark {
+  display: block;
+  width: 13cqw;
+  height: 4cqw;
+  background: linear-gradient(180deg, #7c828b 0%, #9aa0a8 100%);
+  -webkit-mask-image: url(/AURA_logo_text_mark.png);
+  mask-image: url(/AURA_logo_text_mark.png);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.65))
+    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.06));
 }
 
 /*
