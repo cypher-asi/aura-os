@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect } from "react";
 import { CardSection, MetalCard } from "../CardSection";
 import { ChangelogPreview } from "../ChangelogPreview";
+import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
 import { MockAuraDesktop } from "../MockAuraDesktop";
 import { PageHero } from "../PageHero";
@@ -57,20 +58,27 @@ export function CodeView(): ReactNode {
 
   return (
     <div className={styles.codeView}>
-      <PageHero
-        headline={
-          <span className={styles.headlineReserve} data-text={HERO_HEADLINE}>
-            <TypewriterText
-              text={HERO_HEADLINE}
-              speedMs={45}
-              showCaret={false}
-            />
-          </span>
+      <MarketingFirstScreen
+        hero={
+          <PageHero
+            headline={
+              <span
+                className={styles.headlineReserve}
+                data-text={HERO_HEADLINE}
+              >
+                <TypewriterText
+                  text={HERO_HEADLINE}
+                  speedMs={45}
+                  showCaret={false}
+                />
+              </span>
+            }
+            description="A frontier coding harness designed for security, automation and verifiability that is 100% open source."
+            preview={null}
+            centered
+            headlineCta={<CreateAgentButton source="code_hero" />}
+          />
         }
-        description="A frontier coding harness designed for security, automation and verifiability that is 100% open source."
-        preview={null}
-        centered
-        headlineCta={<CreateAgentButton source="code_hero" />}
       />
       <CardSection ariaLabel="The AURA coding desktop">
         <MetalCard

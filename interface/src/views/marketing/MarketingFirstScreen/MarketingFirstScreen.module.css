@@ -21,6 +21,19 @@
 }
 
 /*
+ * No-stage variant (the `/code` page mounts only the hero band here and
+ * lets its own `CardSection` mock-desktop card follow as a sibling).
+ * Dropping the bottom padding hands the band->card gap to the
+ * CardSection's own `padding-top: clamp(8px, 1.5vh, 20px)`, which mirrors
+ * the `gap` this layout uses between band and stage on `/agents`. With
+ * the shared `padding-top` + `.heroBand` height preserved, the first card
+ * top lands at the same vertical position as the `/agents` stage top.
+ */
+.firstScreenNoStage {
+  padding-bottom: 0;
+}
+
+/*
  * Hero text band. Vertically (and horizontally) centers the PageHero
  * stack in a short band above the stage instead of letting PageHero's
  * `centered` mode reserve the full body height (which would push the

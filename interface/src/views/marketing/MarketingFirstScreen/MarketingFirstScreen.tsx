@@ -10,11 +10,14 @@ interface MarketingFirstScreenProps {
   readonly hero: ReactNode;
   /**
    * Large first-screen content placed in the stage below the hero
-   * band (the mock desktop on `/code`, the orb video + agent marquee
-   * on `/agents`). The stage's shared height/start guarantees this
-   * content begins at the same vertical position on every page.
+   * band (the orb video + agent marquee on `/agents`). The stage's
+   * shared height/start guarantees this content begins at the same
+   * vertical position on every page. Optional: `/code` omits it and
+   * lets its own `CardSection` mock-desktop card follow the band, so
+   * the card starts where the `/agents` stage does (the band height
+   * is the shared anchor).
    */
-  readonly stage: ReactNode;
+  readonly stage?: ReactNode;
   /**
    * Optional class appended to the stage so a consuming view can layer
    * on content-specific sizing (e.g. the mock desktop's container-
@@ -50,12 +53,18 @@ export function MarketingFirstScreen({
     ? `${styles.stage} ${stageClassName}`
     : styles.stage;
 
+  const rootClass = stage
+    ? styles.firstScreen
+    : `${styles.firstScreen} ${styles.firstScreenNoStage}`;
+
   return (
-    <div className={styles.firstScreen}>
+    <div className={rootClass}>
       <div className={styles.heroBand}>{hero}</div>
-      <div className={stageClass} aria-hidden={stageHidden || undefined}>
-        {stage}
-      </div>
+      {stage ? (
+        <div className={stageClass} aria-hidden={stageHidden || undefined}>
+          {stage}
+        </div>
+      ) : null}
     </div>
   );
 }
