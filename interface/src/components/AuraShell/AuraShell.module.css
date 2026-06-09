@@ -246,6 +246,7 @@
  * for `LoginView` and other surfaces that mount it directly.
  */
 .shell[data-ui-mode="public"] :global(.titlebar-drag) {
+  background: transparent !important;
   border-color: transparent;
 }
 
