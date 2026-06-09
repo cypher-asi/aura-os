@@ -5,6 +5,9 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+
+/** Engraved shape variants drawn in the metal plate of a FeaturePanel card. */
+export type FeaturePanelShape = "circle" | "triangle" | "square";
 import { Section } from "../Section";
 import { TextCard } from "../TextCard";
 import { TypewriterText } from "../../public-chat/TypewriterText";
@@ -20,11 +23,11 @@ export interface FeaturePanelFeature {
   /** Uppercase category, stamped as the overline on the metal section. */
   readonly tag: ReactNode;
   /**
-   * Optional framed artwork rendered in the metal plate. When set, the metal
-   * section grows to show the image reasonably large between the overline and
+   * Optional engraved shape rendered in the metal plate. When set, the metal
+   * section grows to show the shape reasonably large between the overline and
    * the title.
    */
-  readonly imageSrc?: string;
+  readonly shape?: FeaturePanelShape;
 }
 
 interface FeaturePanelProps {
@@ -82,7 +85,7 @@ export function FeaturePanel({
             <li
               key={index}
               className={`featurePanelItem${
-                feature.imageSrc ? " featurePanelItem--media" : ""
+                feature.shape ? " featurePanelItem--media" : ""
               }`}
               role="button"
               tabIndex={0}
@@ -91,18 +94,13 @@ export function FeaturePanel({
             >
               <div
                 className={`featurePanelScene${
-                  feature.imageSrc ? " featurePanelScene--media" : ""
+                  feature.shape ? " featurePanelScene--media" : ""
                 }`}
               >
                 <span className="featurePanelMetalOverline">{feature.tag}</span>
-                {feature.imageSrc && (
+                {feature.shape && (
                   <div className="featurePanelSceneFrame">
-                    <img
-                      src={feature.imageSrc}
-                      alt=""
-                      className="featurePanelSceneImage"
-                      aria-hidden="true"
-                    />
+                    <EngravedShape kind={feature.shape} />
                   </div>
                 )}
                 <h3 className="featurePanelMetalTitle">{feature.title}</h3>
@@ -127,6 +125,87 @@ export function FeaturePanel({
         </ul>
       </section>
     </>
+  );
+}
+
+const ENGRAVED_GEOMETRY: Record<FeaturePanelShape, ReactNode> = {
+  circle: <circle cx="60" cy="60" r="42" />,
+  // Centered, slightly inset triangle so the thick stroke + inner shadow stay
+  // inside the 120x120 viewBox.
+  triangle: <polygon points="60,22 98,94 22,94" />,
+  square: <rect x="20" y="20" width="80" height="80" rx="10" />,
+};
+
+/**
+ * Engraved outline shape drawn in the metal plate of a FeaturePanel card.
+ * Pure vector (no raster): a hollow shape (`fill="none"`) traced with a thick
+ * darker metallic gradient stroke and an inner-shadow filter, so it reads as a
+ * recessed/engraved border with the metal plate showing through the center.
+ * Each instance mints unique `defs` IDs so the three cards never collide.
+ */
+export function EngravedShape({
+  kind,
+}: {
+  readonly kind: FeaturePanelShape;
+}): ReactNode {
+  const uid = useId().replace(/:/g, "");
+  const gradientId = `engravedStroke-${uid}`;
+  const shadowId = `engravedShadow-${uid}`;
+
+  return (
+    <svg
+      className="featurePanelSceneShape"
+      viewBox="0 0 120 120"
+      role="img"
+      aria-hidden="true"
+    >
+      <defs>
+        {/* Darker metallic ramp echoing the plate rim: dark bottom-left ->
+            brighter top-right. */}
+        <linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#0d0d0d" />
+          <stop offset="50%" stopColor="#4a4a4a" />
+          <stop offset="100%" stopColor="#8a8a8a" />
+        </linearGradient>
+        {/* Inner shadow: punch the source out of an offset blur, then fill the
+            resulting inner band with a soft black so the stroke looks engraved. */}
+        <filter
+          id={shadowId}
+          x="-25%"
+          y="-25%"
+          width="150%"
+          height="150%"
+        >
+          <feOffset in="SourceAlpha" dx="0" dy="2" />
+          <feGaussianBlur stdDeviation="2" result="engravedBlur" />
+          <feComposite
+            in="SourceAlpha"
+            in2="engravedBlur"
+            operator="out"
+            result="engravedInverse"
+          />
+          <feFlood floodColor="#000000" floodOpacity="0.85" />
+          <feComposite
+            in2="engravedInverse"
+            operator="in"
+            result="engravedShadow"
+          />
+          <feMerge>
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode in="engravedShadow" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g
+        fill="none"
+        stroke={`url(#${gradientId})`}
+        strokeWidth="11"
+        strokeLinejoin="round"
+        filter={`url(#${shadowId})`}
+      >
+        {ENGRAVED_GEOMETRY[kind]}
+      </g>
+    </svg>
   );
 }
 

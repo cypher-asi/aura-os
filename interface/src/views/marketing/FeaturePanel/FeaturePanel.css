@@ -178,15 +178,17 @@
   width: 100%;
 }
 
-.featurePanelSceneImage {
+/* Engraved vector shape (circle / triangle / square) drawn in the metal
+   plate. Hollow center (the SVG `fill` is none), so the metal plate shows
+   through; the gradient stroke + inner-shadow filter live in the SVG itself.
+   Centered and capped so all three shapes occupy the same square footprint. */
+.featurePanelSceneShape {
   display: block;
   width: 100%;
+  max-width: 168px;
+  aspect-ratio: 1;
   height: auto;
-  object-fit: cover;
-  /* Screen-blend the artwork onto the metal plate so any solid-black image
-     background drops out (matching the transparent-PNG cards), leaving only
-     the light wireframe. */
-  mix-blend-mode: screen;
+  margin-inline: auto;
 }
 
 /* Glass bottom section container. It holds a glowing gold line layer with
