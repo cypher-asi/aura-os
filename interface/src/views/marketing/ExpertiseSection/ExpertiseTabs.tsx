@@ -19,32 +19,36 @@ interface ExpertiseTab {
 
 const EXPERTISE_TABS: readonly ExpertiseTab[] = [
   {
-    label: "General",
-    blurb: "Reason through any task and turn ambiguity into action.",
+    label: "Research",
+    blurb: "Dig through sources and synthesize what actually matters.",
   },
   {
-    label: "Coding",
-    blurb: "Ship features from repo context to tested PRs.",
-  },
-  {
-    label: "Design",
-    blurb: "Turn rough ideas into polished interfaces.",
+    label: "Writing",
+    blurb: "Draft, edit, and polish prose in your voice.",
   },
   {
     label: "Creative",
     blurb: "Brainstorm sharper campaigns, concepts, and copy.",
   },
   {
-    label: "Video",
-    blurb: "Plan, edit, and caption clips for every platform.",
-  },
-  {
     label: "Social",
     blurb: "Draft posts and calendars that stay on voice.",
   },
   {
-    label: "Accounting",
-    blurb: "Reconcile books and surface the numbers that matter.",
+    label: "Design",
+    blurb: "Turn rough ideas into polished interfaces.",
+  },
+  {
+    label: "Coding",
+    blurb: "Ship features from repo context to tested PRs.",
+  },
+  {
+    label: "Analytics",
+    blurb: "Turn raw data into clear, decision-ready insight.",
+  },
+  {
+    label: "Finance",
+    blurb: "Model budgets and surface the numbers that matter.",
   },
   {
     label: "Legal",
