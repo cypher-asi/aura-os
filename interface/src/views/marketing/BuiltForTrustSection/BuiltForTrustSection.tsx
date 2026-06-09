@@ -2,8 +2,7 @@ import { type ReactNode } from "react";
 import { Section } from "../Section";
 import { CardSection, MetalCard } from "../CardSection";
 import { TextCard } from "../TextCard";
-import { IsolatedDevice } from "../IsolatedDevice/IsolatedDevice";
-import { ServiceButtonRail } from "./ServiceButtonRail";
+import { TrustDeviceStage } from "./TrustDeviceStage";
 import "./BuiltForTrustSection.css";
 
 const HEADLINE_ID = "builtForTrustHeadline";
@@ -42,12 +41,7 @@ export function BuiltForTrustSection(): ReactNode {
           short
           gradient={135}
           className="builtForTrustDevice"
-          media={
-            <div className="builtForTrustStage">
-              <ServiceButtonRail />
-              <IsolatedDevice />
-            </div>
-          }
+          media={<TrustDeviceStage />}
         />
         <MetalCard
           gradient={135}

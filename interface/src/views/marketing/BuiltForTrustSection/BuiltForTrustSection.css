@@ -28,36 +28,14 @@
 }
 
 /*
- * Stage inside the device card's media well: the WebGL `IsolatedDevice`
- * stays centered while the skeuomorphic `ServiceButtonRail` is pinned to
- * the far-left edge, vertically centered, so it frames the device without
- * shifting it.
+ * The stage layout that fills this card's media well (rail + WebGL device +
+ * connection mesh) lives in TrustDeviceStage.css alongside its component.
  */
-.builtForTrustStage {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.builtForTrustStage .serviceButtonRail {
-  position: absolute;
-  top: 50%;
-  left: clamp(16px, 6vw, 96px);
-  transform: translateY(-50%);
-}
 
 @media (max-width: 768px) {
   /* Scale the mobile `short` height (360px) by the same 50%. */
   .builtForTrustDevice.metalCardShort {
     min-height: 540px;
-  }
-
-  /* Tuck the rail to the card edge so it doesn't crowd the smaller device. */
-  .builtForTrustStage .serviceButtonRail {
-    left: 8px;
   }
 
   /* Scale the mobile base height (420px) down by the same 45%. */

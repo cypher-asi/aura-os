@@ -1,0 +1,33 @@
+/*
+ * SVG mesh overlay wiring the service rail nozzles to the device nozzles.
+ * Painted first in the stage so it sits behind the rail keycaps and the
+ * device, leaving only the gap between them visible. Lines are gray at rest
+ * and light to the page-scoped gold accent when their source key is lit.
+ */
+.serviceConnectionField {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.serviceConnectionLines path {
+  fill: none;
+  stroke: rgba(150, 162, 180, 0.16);
+  stroke-width: 1;
+  stroke-linecap: round;
+  transition: stroke 220ms ease;
+}
+
+.serviceConnectionLinesActive path[data-active="true"] {
+  stroke: rgba(var(--gold-glow, 232, 205, 137), 0.85);
+  stroke-width: 1.4;
+}
+
+/* Soft bloom on the lit group only, so the gold lines read as energized
+   without smearing the resting gray mesh. */
+.serviceConnectionLinesActive {
+  filter: drop-shadow(0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.5));
+}

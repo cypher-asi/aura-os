@@ -1,0 +1,64 @@
+/*
+ * Layout for the Built for trust device card's media well. The WebGL
+ * `IsolatedDevice` stays centered while the `ServiceButtonRail` is pinned to
+ * the far-left edge; the `ServiceConnectionField` SVG mesh spans the gap and
+ * the device carries a column of nozzles down its left edge.
+ */
+.builtForTrustStage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.builtForTrustStage .serviceButtonRail {
+  position: absolute;
+  top: 50%;
+  left: clamp(16px, 6vw, 96px);
+  transform: translateY(-50%);
+}
+
+/* Relative frame around the device so the left-edge nozzles anchor to it. */
+.builtForTrustDeviceWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Column of nozzles down the device's left edge that the mesh fans into. */
+.trustDeviceNozzleColumn {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* Sit just outside the device host's left edge. */
+  left: -6px;
+  width: 0;
+}
+
+.trustDeviceNozzle {
+  position: absolute;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 50% 35%, #3a3f47 0%, #15171b 70%, #0a0b0d 100%);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 768px) {
+  .builtForTrustStage .serviceButtonRail {
+    left: 8px;
+  }
+
+  /* The gap is too tight on phones; keep nozzles, drop the mesh. */
+  .builtForTrustStage .serviceConnectionField {
+    display: none;
+  }
+}
