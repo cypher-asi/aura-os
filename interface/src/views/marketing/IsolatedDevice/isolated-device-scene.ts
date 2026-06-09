@@ -192,8 +192,10 @@ function nearArc(shape: THREE.Shape, y: number): THREE.BufferGeometry {
     }
   });
   const rotated = [...pts2.slice(farIndex), ...pts2.slice(0, farIndex)];
+  // Keep strictly inside the near side (threshold > 0) so the arcs stop just
+  // short of the corner silhouette verticals instead of crossing them.
   const pts = rotated
-    .filter((p) => p.x + p.y >= -0.05)
+    .filter((p) => p.x + p.y >= 0.02)
     .map((p) => new THREE.Vector3(p.x, y, p.y));
   return new THREE.BufferGeometry().setFromPoints(pts);
 }
@@ -591,9 +593,6 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   const ghostTopUnderGeo = track(outlineLoop(ghostFootprint, DEVICE_H - 0.016));
   const ghostLidSeamGeo = track(nearArc(ghostFootprint, lidSeamY));
   const ghostCaseSeamGeo = track(nearArc(ghostFootprint, CASE_BOTTOM));
-  const ghostBaseGeo = track(
-    nearArc(roundedSquare(BASE_SILHOUETTE, CORNER_R - 0.06), 0),
-  );
   // Top-plate detail: the screen recess plus a fainter inner echo.
   const ghostHoleGeo = track(
     outlineLoop(roundedSquare(HOLE_SIZE, HOLE_R), DEVICE_H),
@@ -651,7 +650,6 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     ghost.add(new THREE.Line(ghostTopUnderGeo, ghostFaintMaterial));
     ghost.add(new THREE.Line(ghostLidSeamGeo, ghostMidMaterial));
     ghost.add(new THREE.Line(ghostCaseSeamGeo, ghostFaintMaterial));
-    ghost.add(new THREE.Line(ghostBaseGeo, ghostMidMaterial));
     ghost.add(new THREE.Line(ghostHoleGeo, ghostMidMaterial));
     ghost.add(new THREE.Line(ghostPlateGeo, ghostFaintMaterial));
     ghost.add(new THREE.LineSegments(ghostCornerGeo, ghostStrongMaterial));
