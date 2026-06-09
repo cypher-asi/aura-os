@@ -94,6 +94,19 @@ Edit `.env` and set:
 | `AURA_INTEGRATIONS_URL` | No | aura-integrations URL for encrypted integrations and Google OAuth. Required for users to connect Google. |
 | `AURA_INTEGRATIONS_INTERNAL_TOKEN` | No | Internal token matching aura-integrations `INTERNAL_SERVICE_TOKEN`; used for service-to-service secret resolution paths. |
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
+| `Z_BILLING_API_KEY` | No | Service API key for z-billing. Required when the public x402 chat endpoint settles actual token usage from z-billing quotes. |
+| `AURA_X402_PAY_TO` | No | Wallet address that receives x402 payments. Required to enable the paid x402 endpoints. |
+| `AURA_X402_CHAT_PRICE` | No | Maximum dollar-denominated x402 authorization for one `POST /api/public/x402/v1/chat/completions` request (default: `$0.02`). With the default `upto` scheme, Aura settles the actual z-billing usage quote up to this ceiling. |
+| `AURA_X402_CHAT_SCHEME` | No | x402 scheme for the paid chat endpoint: `upto` by default for usage-shaped LLM calls, or `exact` for fixed-price testing. |
+| `AURA_X402_DEFAULT_MODEL` | No | Default model for the paid public chat endpoint (default: `aura-claude-haiku-4-5`). |
+| `AURA_X402_MODELS` | No | Comma-separated public allowlist for `GET /api/public/x402/v1/models` and paid chat model validation. If set, `AURA_X402_DEFAULT_MODEL` must be included; if unset, only the default model is exposed. |
+| `AURA_X402_MAX_TOKENS` | No | Maximum `max_tokens` accepted by the paid public chat endpoint; must be greater than `0` (default: `1024`). |
+| `AURA_X402_CHAT_TIMEOUT_SECONDS` | No | Timeout for one paid public chat completion through the harness/router stack (default: `120`). |
+| `AURA_X402_NETWORK` | No | CAIP-2 network identifier for x402 payments (default: `eip155:84532`, Base Sepolia). |
+| `AURA_X402_ASSET` | No | Token contract used in x402 payment requirements (default: Base Sepolia USDC). |
+| `AURA_X402_FACILITATOR_URL` | No | Facilitator base URL for `/verify` and `/settle` (default: `https://x402.org/facilitator`, testnet only). |
+| `AURA_X402_RESOURCE_BASE_URL` | No | Public base URL advertised in x402 resource metadata. Useful behind proxies when `Host` is not the canonical origin. |
+| `AURA_X402_MAX_TIMEOUT_SECONDS` | No | Payment authorization timeout advertised to x402 clients (default: `60`). |
 | `GITHUB_APP_*` | No | GitHub App ID, private key, and slug for repository linking |
 
 The server reads `.env` from the current working directory when you run `aura-os-server` or `aura-os-desktop`.

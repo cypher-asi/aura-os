@@ -64,6 +64,14 @@ pub(super) fn public_routes() -> Router<AppState> {
         .route(
             "/api/public/blog/:slug",
             get(public::get_published_blog_by_slug),
+        )
+        .route(
+            "/api/public/x402/v1/models",
+            get(public::public_x402_models),
+        )
+        .route(
+            "/api/public/x402/v1/chat/completions",
+            post(public::public_x402_chat_completions),
         );
     if public_generation_enabled() {
         router = router

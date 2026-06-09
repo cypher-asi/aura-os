@@ -19,4 +19,13 @@ pub enum BillingError {
 
     #[error("Insufficient credits: balance_cents={balance_cents}")]
     InsufficientCredits { balance_cents: i64 },
+
+    #[error("Z_BILLING_API_KEY is not configured")]
+    ServiceApiKeyNotConfigured,
+
+    #[error("Z_BILLING_URL is invalid: {0}")]
+    InvalidServiceUrl(String),
+
+    #[error("Z_BILLING_URL must be an HTTPS public endpoint for service-authenticated calls")]
+    InsecureServiceUrl,
 }
