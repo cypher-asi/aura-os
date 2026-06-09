@@ -9,3 +9,59 @@
   padding-top: clamp(8px, 1.5vh, 20px);
   padding-bottom: clamp(8px, 1.5vh, 20px);
 }
+
+/*
+ * The full-width device card is 50% taller than the shared `short` height
+ * (500px -> 750px) so the computer media has more room to breathe above the
+ * three copy cards. Scoped here so other bentos keep the base height.
+ */
+.builtForTrustDevice.metalCardShort {
+  min-height: 750px;
+}
+
+/*
+ * The three copy cards are 45% shorter than the shared base height
+ * (626px -> 344px) so the row stays compact beneath the tall device card.
+ */
+.builtForTrustCopy.metalCard {
+  min-height: 344px;
+}
+
+/*
+ * Stage inside the device card's media well: the WebGL `IsolatedDevice`
+ * stays centered while the skeuomorphic `ServiceButtonRail` is pinned to
+ * the far-left edge, vertically centered, so it frames the device without
+ * shifting it.
+ */
+.builtForTrustStage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.builtForTrustStage .serviceButtonRail {
+  position: absolute;
+  top: 50%;
+  left: clamp(16px, 6vw, 96px);
+  transform: translateY(-50%);
+}
+
+@media (max-width: 768px) {
+  /* Scale the mobile `short` height (360px) by the same 50%. */
+  .builtForTrustDevice.metalCardShort {
+    min-height: 540px;
+  }
+
+  /* Tuck the rail to the card edge so it doesn't crowd the smaller device. */
+  .builtForTrustStage .serviceButtonRail {
+    left: 8px;
+  }
+
+  /* Scale the mobile base height (420px) down by the same 45%. */
+  .builtForTrustCopy.metalCard {
+    min-height: 231px;
+  }
+}
