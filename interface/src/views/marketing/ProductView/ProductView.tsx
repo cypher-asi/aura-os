@@ -128,14 +128,14 @@ export function ProductView(): ReactNode {
             title: "Private",
             description:
               "AURA never views or trains on your personal or corporate data. Anything sent to frontier models stays unidentifiable.",
-            tag: "Post Quantum-Encryption",
+            tag: "PQ-Encryption",
             imageSrc: "/privacy-ring.png",
           },
           {
             title: "Verifiable",
             description:
               "The AURA harness and kernel are built from the ground up with security, verification, and policy as first-class citizens.",
-            tag: "Trust Execution Environments",
+            tag: "Trusted Execution",
             imageSrc: "/verifiable-loop.png",
           },
           {
