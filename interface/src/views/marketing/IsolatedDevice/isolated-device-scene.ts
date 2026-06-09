@@ -614,13 +614,25 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
 
   // Silhouette verticals at the three VISIBLE rounded corners (the far
   // corner is hidden on the solid device, so the ghost skips it too). They
-  // run from the case seam up to the top rim so neither end dangles past a
-  // drawn line.
+  // run from the case seam up to the top rim, with a per-vertex color
+  // gradient: bright at the rim, fading down to the faint case-seam color
+  // so each vertical melts into the bottom line. (The fade is baked into
+  // the vertex COLOR — scaled toward black to emulate the faint tier's
+  // lower opacity over the dark page — since line opacity is per-material.)
+  const cornerTopColor = new THREE.Color(0x9aa0a8);
+  const cornerBottomColor = new THREE.Color(0x6a6f76).multiplyScalar(
+    0.18 / 0.55,
+  );
   const ghostCornerPts: number[] = [];
+  const ghostCornerColors: number[] = [];
   for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1]]) {
     ghostCornerPts.push(
       sx * GHOST_CORNER, CASE_BOTTOM, sz * GHOST_CORNER,
       sx * GHOST_CORNER, DEVICE_H, sz * GHOST_CORNER,
+    );
+    ghostCornerColors.push(
+      cornerBottomColor.r, cornerBottomColor.g, cornerBottomColor.b,
+      cornerTopColor.r, cornerTopColor.g, cornerTopColor.b,
     );
   }
   const ghostCornerGeo = track(new THREE.BufferGeometry());
@@ -628,6 +640,15 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     "position",
     new THREE.Float32BufferAttribute(ghostCornerPts, 3),
   );
+  ghostCornerGeo.setAttribute(
+    "color",
+    new THREE.Float32BufferAttribute(ghostCornerColors, 3),
+  );
+  const ghostCornerMaterial = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.55,
+  });
 
   // Six-spoke asterisk mark centered on the top plate, like the reference.
   const asteriskPts: number[] = [];
@@ -665,7 +686,7 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     ghost.add(new THREE.Line(ghostCaseSeamGeo, ghostFaintMaterial));
     ghost.add(new THREE.Line(ghostHoleGeo, ghostMidMaterial));
     ghost.add(new THREE.Line(ghostPlateGeo, ghostFaintMaterial));
-    ghost.add(new THREE.LineSegments(ghostCornerGeo, ghostStrongMaterial));
+    ghost.add(new THREE.LineSegments(ghostCornerGeo, ghostCornerMaterial));
     ghost.add(new THREE.LineSegments(ghostAsteriskGeo, ghostMidMaterial));
     ghost.add(new THREE.LineSegments(ghostHatchGeo, ghostFaintMaterial));
     ghost.position.y = yOffset;
@@ -803,6 +824,7 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       ghostStrongMaterial.dispose();
       ghostMidMaterial.dispose();
       ghostFaintMaterial.dispose();
+      ghostCornerMaterial.dispose();
       dashMaterial.dispose();
       etchSeamMaterial.dispose();
       etchDashMaterial.dispose();
