@@ -108,12 +108,20 @@ export function ServiceDeviceCard({
   const introVideoRef = useRef<HTMLVideoElement>(null);
   const loopVideoRef = useRef<HTMLVideoElement>(null);
   const knobDialRef = useRef<HTMLDivElement>(null);
+  // Whether the intro clip has already been started (seeked to 0) for the
+  // current arming. Lets scroll re-entry resume the intro in place rather than
+  // restarting it; only a fresh arming (initial load or re-selecting Identity)
+  // clears this so the intro replays from the top.
+  const introPlayedRef = useRef<boolean>(false);
 
-  // Scroll-activation: the video + terminal go live whenever the card
+  // Scroll-activation: the loop video + terminal go live whenever the card
   // scrolls into view, and re-fire each time it re-enters. `replayKey`
   // bumps on every entry so the terminal typewriter (which keys off it)
-  // restarts from the top alongside the video. The non-`hexGrille` quadrant
-  // variant has no video/terminal, and environments without
+  // restarts from the top. (The Identity intro build animation is the
+  // exception — scrolling away and back resumes it in place rather than
+  // restarting; see `introPlayedRef` and the observer below.) The
+  // non-`hexGrille` quadrant variant has no video/terminal, and environments
+  // without
   // `IntersectionObserver` (e.g. JSDOM) can't observe scroll, so both start
   // active so their content renders fully rather than sitting blank.
   const [isActive, setIsActive] = useState<boolean>(() => {
@@ -227,8 +235,12 @@ export function ServiceDeviceCard({
           if (entry.isIntersecting) {
             setIsActive(true);
             setReplayKey((key) => key + 1);
-            // Replay the Identity intro animation on each scroll-in.
-            setIntroDone(false);
+            // The Identity intro build animation is armed by `introDone` +
+            // `introPlayedRef` and seeks to 0 only on a fresh arming (initial
+            // load or re-selecting "Identity"). It is intentionally NOT
+            // re-armed here, so scrolling away and back resumes the intro in
+            // place (or keeps the settled loop once it has finished) rather
+            // than restarting from the top.
           } else {
             setIsActive(false);
           }
@@ -318,14 +330,19 @@ export function ServiceDeviceCard({
       // muted + decorative, so a silent failure is acceptable.
     });
 
-    // The intro only plays on the Identity step until it finishes; restart it
-    // from the top each time it (re)activates.
+    // The intro only plays on the Identity step until it finishes. Seek to the
+    // top only on a fresh arming (tracked by `introPlayedRef`); on a plain
+    // scroll re-entry we resume from the current frame so scrolling away and
+    // back doesn't restart the build animation.
     if (introVisible && intro) {
-      try {
-        intro.currentTime = 0;
-      } catch {
-        // Some environments throw when seeking before metadata loads; the
-        // play() call below still starts from the buffered start.
+      if (!introPlayedRef.current) {
+        try {
+          intro.currentTime = 0;
+        } catch {
+          // Some environments throw when seeking before metadata loads; the
+          // play() call below still starts from the buffered start.
+        }
+        introPlayedRef.current = true;
       }
       void intro.play?.()?.catch(() => {});
     } else {
@@ -434,9 +451,12 @@ export function ServiceDeviceCard({
                       onClick={() => {
                         setSelectedIndex(index);
                         // Re-arm the intro whenever Identity is (re)selected so
-                        // it plays again before settling into the loop.
+                        // it plays again from the top before settling into the
+                        // loop. Clearing `introPlayedRef` lets the playback
+                        // effect seek back to 0 on the next activation.
                         if (index === 0) {
                           setIntroDone(false);
+                          introPlayedRef.current = false;
                         }
                       }}
                     >
