@@ -91,27 +91,31 @@ const ETCH_DASH_POS = 0.55; // along the wall, just before the corner curve
  * of clipping through its walls.
  */
 const DEVICE_H = 0.655;
-const GHOST_ABOVE_Y = 2.85; // group origin (body bottom) of the upper ghost
-const GHOST_BELOW_Y = -2.8; // group origin of the lower ghost
+const GHOST_ABOVE_Y = 2.75; // group origin (body bottom) of the upper ghost
+const GHOST_BELOW_Y = -2.75; // group origin of the lower ghost
 const GHOST_CORNER = 0.882; // |x|=|z| of the rounded-corner verticals
 const DASH_COLUMN = 0.95;
 const DASH_LEN = 0.06;
 const DASH_PERIOD = 0.12; // dash + gap
 const DASH_SPEED = 0.35; // world units per second, downward
-const DASH_Y_MIN = -3.6;
-const DASH_Y_MAX = 4.4;
+// The tilted ortho projection maps screen height to a y-range that depends
+// on each column's z; this span keeps every column's dashes running through
+// both canvas edges on the full-stack (1 / 2.15) portrait framing.
+const DASH_Y_MIN = -5.0;
+const DASH_Y_MAX = 5.8;
 
 /**
  * Pose: the near vertical corner points exactly at the camera (a perfect
- * diamond silhouette), viewed from high enough that the top plate dominates
- * like the reference photo. The pose is fixed — no sway or pointer tilt —
- * so the diamond stays perfectly centered and symmetric. The camera is
- * ORTHOGRAPHIC: no perspective foreshortening, so every computer in the
- * stack projects at exactly the same width/height and the composition sits
- * flat on the page like the rest of the site's isometric artwork.
+ * diamond silhouette), angled forward so the walls read alongside the top
+ * plate, with the near bottom corner staying centered. The pose is fixed —
+ * no sway or pointer tilt — so the diamond stays perfectly centered and
+ * symmetric. The camera is ORTHOGRAPHIC: no perspective foreshortening, so
+ * every computer in the stack projects at exactly the same width/height and
+ * the composition sits flat on the page like the rest of the site's
+ * isometric artwork.
  */
 const BASE_YAW = -Math.PI / 4;
-const CAMERA_ELEVATION_DEG = 42;
+const CAMERA_ELEVATION_DEG = 30;
 const CAMERA_TARGET_Y = 0.33; // midpoint of the ghost stack
 const CAMERA_DISTANCE = 10;
 /** Ortho frustum width: the diamond footprint plus a small margin. */

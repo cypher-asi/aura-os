@@ -11,7 +11,9 @@
      the canvas gets taller), wide enough that the center device keeps the
      same on-screen footprint as the original landscape composition. */
   width: clamp(320px, 30vw, 420px);
-  aspect-ratio: 1 / 1.55;
+  /* Tall enough (at this width) that the upper and lower ghost computers
+     are fully inside the ortho frustum rather than cropping at the edges. */
+  aspect-ratio: 1 / 2.15;
 }
 
 .isolatedDevice canvas {
