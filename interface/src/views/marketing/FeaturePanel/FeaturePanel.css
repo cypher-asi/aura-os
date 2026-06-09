@@ -154,10 +154,12 @@
     0 -1px 1px rgba(0, 0, 0, 0.6);
 }
 
-/* Big title struck into the plate: a mid-gray fill with an inner shadow
-   along the top edge (dark cast inside the glyphs) plus a faint light bottom
-   catch, so the text reads as recessed/engraved into the metal. No outer
-   drop shadow. */
+/* Big title struck into the plate with an OBVIOUS inner shadow: the glyph
+   fill itself is a top-dark gradient (shadow pooling inside the top of each
+   letter) that fades down to the mid-gray #454545, clipped to the text. A
+   faint light rim along the bottom completes the engraved/recessed read.
+   (CSS has no inset text-shadow, so the inner shadow is painted into the
+   fill via `background-clip: text`.) */
 .featurePanelMetalTitle {
   margin: 0;
   font-size: clamp(26px, 2.6vw, 34px);
@@ -165,9 +167,16 @@
   line-height: 1;
   letter-spacing: -0.02em;
   color: #454545;
-  text-shadow:
-    0 -1px 1px rgba(0, 0, 0, 0.6),
-    0 1px 0 rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    180deg,
+    #0d0d0d 0%,
+    #242424 38%,
+    #454545 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 /* Glass bottom section container. It holds a glowing gold line layer with
