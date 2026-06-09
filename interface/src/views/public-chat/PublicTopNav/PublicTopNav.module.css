@@ -159,7 +159,12 @@
   white-space: nowrap;
   padding: 7px 10px;
   border-radius: 8px;
-  color: var(--color-text-secondary, #c9c9cf);
+  /* Match the marketing h2 subhead secondary gray (the
+     `--color-text-secondary: #a3a3a8` set on the ProductView /
+     ExpertiseDetailView page wrappers). The dropdown is portaled to
+     `document.body`, outside those wrappers, so the value is pinned
+     here rather than inherited. */
+  color: #a3a3a8;
   transition: color 120ms ease, background-color 120ms ease;
 }
 
