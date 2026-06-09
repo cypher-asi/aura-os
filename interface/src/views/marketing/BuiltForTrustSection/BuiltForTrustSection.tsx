@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { Section } from "../Section";
 import { CardSection, MetalCard } from "../CardSection";
 import { TextCard } from "../TextCard";
+import { IsolatedDevice } from "../IsolatedDevice/IsolatedDevice";
 import "./BuiltForTrustSection.css";
 
 const HEADLINE_ID = "builtForTrustHeadline";
@@ -28,7 +29,7 @@ export function BuiltForTrustSection(): ReactNode {
         <TextCard
           level="h2"
           id={HEADLINE_ID}
-          headline="Built for Trust."
+          headline="Built for trust."
           subhead="AURA agents run in isolated virtual machines within trusted execution environments."
         />
       </Section>
@@ -36,15 +37,17 @@ export function BuiltForTrustSection(): ReactNode {
       <CardSection ariaLabel="How AURA earns your trust">
         <MetalCard
           wide
+          short
           gradient={135}
           title="Isolated by default."
-          description="Every AURA agent runs in its own sandboxed virtual machine, walled off from your system and from every other agent."
+          description="Each AURA agent runs in its own sandboxed VM, isolated from your system and other agents."
+          media={<IsolatedDevice />}
         />
         <MetalCard
           gradient={225}
           align="center"
           title="Trusted execution."
-          description="Agents run inside hardware-backed trusted execution environments, so their memory and compute stay sealed end to end."
+          description="Hardware-backed enclaves keep each agent's memory and compute sealed end to end."
         />
         <MetalCard
           gradient={135}
