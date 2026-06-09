@@ -13,8 +13,9 @@ import "./IsolatedDevice.css";
  * animation, louver banks on the walls, and an inset base plinth — finished in the site's
  * dark matte metal rather than the photo's bright silver. It is locked in
  * a centered perfect-diamond pose viewed from a high angle; the motion is
- * the orb plus a strip of status LEDs above the front louver bank beeping
- * in sequence (both frozen under reduced motion).
+ * the plasma plus a strip of status LEDs above the front louver bank
+ * beeping in sequence — always looping, like the hero console's ambient
+ * readout it mirrors.
  *
  * The device is decorative hardware fiction, so the host is `aria-hidden`
  * and nothing renders if WebGL is unavailable.

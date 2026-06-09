@@ -293,8 +293,9 @@ function createEtchTexture(dashed: boolean): THREE.CanvasTexture {
  * modelled after the reference render, locked in a centered perfect-diamond
  * pose from a high angle. The lid opening holds a recessed screen streaming
  * the first section's console plasma animation. The geometry is static; the
- * motion is the plasma shader plus the status LED strip beeping in sequence
- * (under reduced motion both freeze into a single static frame).
+ * motion is the plasma shader plus the status LED strip beeping in sequence,
+ * always looping (like the hero console's ambient readout), paused only
+ * while the tab is hidden.
  */
 export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScene {
   const width = host.clientWidth || 320;
@@ -518,9 +519,10 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
 
   // LED chase: each dot pulses with a phase offset down the strip, so a
   // bright "beep" runs left-to-right with a faint resting glow between hits.
-  const reducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
+  // Always animating (paused only while the tab is hidden): like the hero
+  // console's `AuraScreenOrb`, the plasma screen is an ambient living
+  // readout, so it keeps looping rather than honoring reduced motion with a
+  // frozen frame.
   const clock = new THREE.Clock();
   let raf = 0;
   let running = false;
@@ -537,7 +539,7 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   }
 
   function start(): void {
-    if (reducedMotion || running) return;
+    if (running) return;
     running = true;
     clock.start();
     animate();
@@ -553,9 +555,7 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     if (document.hidden) stop();
     else start();
   };
-  if (!reducedMotion) {
-    document.addEventListener("visibilitychange", onVisibilityChange);
-  }
+  document.addEventListener("visibilitychange", onVisibilityChange);
 
   const resizeObserver = new ResizeObserver(() => {
     const w = host.clientWidth || width;
@@ -567,24 +567,12 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   });
   resizeObserver.observe(host);
 
-  if (reducedMotion) {
-    // Steady mid-glow instead of the chase, and a frozen mid-cycle orb, in a
-    // single static frame.
-    for (const ledMaterial of ledMaterials) {
-      ledMaterial.emissiveIntensity = 0.9;
-    }
-    orbUniforms.u_time.value = 4;
-    renderFrame();
-  } else {
-    start();
-  }
+  start();
 
   return {
     dispose(): void {
       stop();
-      if (!reducedMotion) {
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-      }
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       resizeObserver.disconnect();
       for (const ledMaterial of ledMaterials) ledMaterial.dispose();
       for (const geo of geometries) geo.dispose();
