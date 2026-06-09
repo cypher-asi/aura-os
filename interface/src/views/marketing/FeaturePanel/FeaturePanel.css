@@ -168,9 +168,9 @@
   color: #454545;
   background: linear-gradient(
     180deg,
-    #101010 0%,
+    #000 0%,
     #454545 50%,
-    #101010 100%
+    #000 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
