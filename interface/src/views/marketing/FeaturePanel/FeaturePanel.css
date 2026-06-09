@@ -118,7 +118,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: clamp(22px, 2.2vw, 32px);
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   border-radius: 24px 24px 3px 3px;
   background:
     linear-gradient(
@@ -136,20 +136,16 @@
         rgba(255, 255, 255, 0) 4px 7px
       )
       padding-box,
-    linear-gradient(160deg, #4c4f55 0%, #34373c 38%, #202225 70%, #141517 100%)
-      padding-box,
-    linear-gradient(
-        135deg,
-        rgba(150, 156, 165, 0.85) 0%,
-        rgba(70, 74, 80, 0.6) 45%,
-        rgba(12, 13, 16, 0.7) 100%
-      )
-      border-box;
-  /* Bright top highlight + convex dark bottom edge so the plate reads as a
-     proud, slightly domed metal slab above the recessed glass. */
+    /* Diagonal base: bottom-left #1d1d1d -> top-right #3a3a3a. */
+    linear-gradient(to top right, #1d1d1d 0%, #3a3a3a 100%) padding-box,
+    /* 1.5px gradient rim: bottom-left #0b0b0b -> top-right #5e5e5e. */
+    linear-gradient(to top right, #0b0b0b 0%, #5e5e5e 100%) border-box;
+  /* Bright top highlight + convex dark bottom edge, plus a drop shadow cast
+     to the bottom-left. */
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -4px 8px rgba(0, 0, 0, 0.55);
+    inset 0 -4px 8px rgba(0, 0, 0, 0.55),
+    -10px 10px 22px rgba(0, 0, 0, 0.5);
 }
 
 /* Stamped category overline (e.g. PRIVACY): faint etched caps at the top of
