@@ -496,6 +496,14 @@ function AppRoutes(): React.ReactElement {
                 }
               />
               <Route
+                path="docs/:slug"
+                element={
+                  <Suspense fallback={null}>
+                    <DocsView />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="terms"
                 element={
                   <Suspense fallback={null}>

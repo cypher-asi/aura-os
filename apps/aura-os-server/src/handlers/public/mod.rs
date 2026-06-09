@@ -35,6 +35,7 @@
 pub(crate) mod blog;
 pub(crate) mod chat;
 pub(crate) mod demo_agent;
+pub(crate) mod docs;
 pub(crate) mod gate;
 pub(crate) mod generation_common;
 pub(crate) mod image;
@@ -54,6 +55,7 @@ pub(crate) mod video;
 // produced in phase 1.
 pub(crate) use blog::{get_published_blog_by_slug, list_published_blog};
 pub(crate) use chat::public_chat_stream;
+pub(crate) use docs::{get_published_docs_by_slug, list_published_docs};
 pub(crate) use image::public_image_stream;
 pub(crate) use jwt::{decode_guest_token, extract_bearer_from_headers, is_guest_token};
 pub(crate) use model3d::public_model3d_stream;

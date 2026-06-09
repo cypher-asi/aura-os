@@ -41,8 +41,14 @@ import {
   buildAuraWhitepaperProject,
   isAuraWhitepaperProject,
 } from "../aura-whitepaper";
+import {
+  AURA_DOCS_PROJECT_ID,
+  buildAuraDocsProject,
+  isAuraDocsProject,
+} from "../aura-docs";
 import { seedAuraBlog } from "../seed-aura-blog/run";
 import { seedAuraWhitepaper } from "../seed-aura-whitepaper/run";
+import { seedAuraDocs } from "../seed-aura-docs/run";
 
 /**
  * Draft/Published pill shown as the note's left-nav suffix inside the
@@ -244,10 +250,39 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
     }
   }, [seedingWp, loadTree]);
 
-  // The aura-blog and aura-whitepaper CMS projects are virtual: they are
-  // prepended to the rendered list for sys admins only (never persisted to
-  // the projects store), so non-admins never see them. The backend
-  // independently gates writes to both reserved projects.
+  // One-time aura-docs seeding (sys admins only). Creates and publishes the
+  // documentation pages (organized by repository / package) from the bundled
+  // seed content, in the authenticated session.
+  const [seedingDocs, setSeedingDocs] = useState(false);
+  const [seedStatusDocs, setSeedStatusDocs] = useState<string | null>(null);
+  const handleSeedDocs = useCallback(async () => {
+    if (seedingDocs) return;
+    setSeedingDocs(true);
+    setSeedStatusDocs("Seeding documentation…");
+    try {
+      const results = await seedAuraDocs();
+      const created = results.filter((r) => r.status === "created").length;
+      const updated = results.filter((r) => r.status === "updated").length;
+      const errored = results.filter((r) => r.status === "error").length;
+      await loadTree(AURA_DOCS_PROJECT_ID);
+      setSeedStatusDocs(
+        `Done: ${created} created, ${updated} updated${
+          errored ? `, ${errored} failed` : ""
+        }.`,
+      );
+    } catch (err) {
+      setSeedStatusDocs(
+        `Seeding failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      setSeedingDocs(false);
+    }
+  }, [seedingDocs, loadTree]);
+
+  // The aura-blog, aura-whitepaper, and aura-docs CMS projects are virtual:
+  // they are prepended to the rendered list for sys admins only (never
+  // persisted to the projects store), so non-admins never see them. The
+  // backend independently gates writes to all three reserved projects.
   const projects = useMemo(() => {
     if (!isSysAdmin) return storeProjects;
     const orgId = storeProjects[0]?.org_id ?? "";
@@ -257,6 +292,9 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
     }
     if (!storeProjects.some((p) => isAuraWhitepaperProject(p.project_id))) {
       prepend.push(buildAuraWhitepaperProject(orgId));
+    }
+    if (!storeProjects.some((p) => isAuraDocsProject(p.project_id))) {
+      prepend.push(buildAuraDocsProject(orgId));
     }
     return prepend.length ? [...prepend, ...storeProjects] : storeProjects;
   }, [storeProjects, isSysAdmin]);
@@ -312,7 +350,9 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
     return projects.map((project) => {
       const projectId = project.project_id;
       const isCmsProject =
-        isAuraBlogProject(projectId) || isAuraWhitepaperProject(projectId);
+        isAuraBlogProject(projectId) ||
+        isAuraWhitepaperProject(projectId) ||
+        isAuraDocsProject(projectId);
       const tree: NotesProjectTree | undefined = trees[projectId];
       const children = tree
         ? buildFolderChildren(
@@ -420,6 +460,18 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
           </button>
           {seedStatusWp ? (
             <span className={styles.seedStatus}>{seedStatusWp}</span>
+          ) : null}
+          <button
+            type="button"
+            className={styles.seedButton}
+            disabled={seedingDocs}
+            onClick={() => void handleSeedDocs()}
+            title="Create and publish the documentation pages in aura-docs"
+          >
+            {seedingDocs ? "Seeding…" : "Seed documentation"}
+          </button>
+          {seedStatusDocs ? (
+            <span className={styles.seedStatus}>{seedStatusDocs}</span>
           ) : null}
         </div>
       ) : null}

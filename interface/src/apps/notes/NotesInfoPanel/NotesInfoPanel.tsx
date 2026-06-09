@@ -6,6 +6,7 @@ import { useActiveNote, useNotesStore } from "../../../stores/notes-store";
 import type { Note, NoteStatus } from "../../../shared/api/notes";
 import { isAuraBlogProject } from "../aura-blog";
 import { isAuraWhitepaperProject } from "../aura-whitepaper";
+import { isAuraDocsProject } from "../aura-docs";
 import styles from "./NotesInfoPanel.module.css";
 
 function formatDate(iso?: string | null): string {
@@ -71,12 +72,17 @@ function BlogCmsSection({
   noteId,
   meta,
   isWhitepaper = false,
+  isDocs = false,
 }: {
   projectId: string;
   noteId: string;
   meta: Note;
   isWhitepaper?: boolean;
+  isDocs?: boolean;
 }) {
+  // Whitepaper and docs both use the `blogType` field as a grouping key
+  // (whitepaper section / docs repository) rather than a blog category.
+  const isGrouped = isWhitepaper || isDocs;
   const patchNoteMeta = useNotesStore((s) => s.patchNoteMeta);
 
   const [blogType, setBlogType] = useState(meta.blogType ?? "");
@@ -126,7 +132,7 @@ function BlogCmsSection({
   return (
     <div className={styles.cmsSection}>
       <div className={styles.cmsHeading}>
-        {isWhitepaper ? "Whitepaper section" : "Blog post"}
+        {isDocs ? "Doc page" : isWhitepaper ? "Whitepaper section" : "Blog post"}
       </div>
 
       <div className={styles.infoRow}>
@@ -159,13 +165,19 @@ function BlogCmsSection({
 
       <div className={styles.infoRow}>
         <span className={styles.infoLabel}>
-          {isWhitepaper ? "Section" : "Blog type"}
+          {isDocs ? "Repository" : isGrouped ? "Section" : "Blog type"}
         </span>
         <input
           className={styles.cmsInput}
           type="text"
           value={blogType}
-          placeholder={isWhitepaper ? "e.g. harness" : "e.g. announcement"}
+          placeholder={
+            isDocs
+              ? "e.g. aura-os-server"
+              : isWhitepaper
+                ? "e.g. harness"
+                : "e.g. announcement"
+          }
           onChange={(e) => setBlogType(e.target.value)}
           onBlur={() => {
             if ((meta.blogType ?? "") !== blogType) {
@@ -275,12 +287,14 @@ export function NotesInfoPanel() {
           <span className={styles.infoValue}>{note.wordCount}</span>
         </div>
         {isAuraBlogProject(meta.projectId) ||
-        isAuraWhitepaperProject(meta.projectId) ? (
+        isAuraWhitepaperProject(meta.projectId) ||
+        isAuraDocsProject(meta.projectId) ? (
           <BlogCmsSection
             projectId={meta.projectId as string}
             noteId={meta.id}
             meta={meta}
             isWhitepaper={isAuraWhitepaperProject(meta.projectId)}
+            isDocs={isAuraDocsProject(meta.projectId)}
           />
         ) : (
           <div className={styles.infoRow}>

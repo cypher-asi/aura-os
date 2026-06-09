@@ -148,6 +148,7 @@ export function PublicMarketingPanel(): React.ReactElement {
     MARKETING_PATH_BG[pathname] ??
     (pathname.startsWith("/blog/") ? MARKETING_PATH_BG["/blog"] : undefined) ??
     (pathname.startsWith("/os/") ? MARKETING_PATH_BG["/os"] : undefined) ??
+    (pathname.startsWith("/docs/") ? MARKETING_PATH_BG["/docs"] : undefined) ??
     DEFAULT_MARKETING_BG;
 
   return (
