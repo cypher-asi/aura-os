@@ -174,11 +174,10 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  /* Narrower than the metal plate above so it reads as an inset glass panel. */
-  margin-inline: clamp(12px, 1.8vw, 20px);
   padding: clamp(24px, 2.4vw, 36px);
-  /* Top corners take a 6px radius to match the metal's 6px bottom; the
-     bottom keeps the card's 24px. */
+  /* Full width, edges aligned with the metal plate's outer lines. Top corners
+     take a 6px radius to match the metal's 6px bottom; the bottom keeps the
+     card's 24px. */
   border-radius: 6px 6px 24px 24px;
   /* Highly transparent glossy glass: a soft diagonal reflection sweeping the
      upper area over a near-clear pane with only a faint dark tint, so the
