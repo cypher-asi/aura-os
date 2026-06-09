@@ -143,6 +143,7 @@ export function ProductView(): ReactNode {
             description:
               "AURA is 100% open source under the MIT license. Fork it anytime, with zero vendor lock-in and no strings attached.",
             tag: "MIT License",
+            imageSrc: "/open-source-knot.png",
           },
         ]}
       />

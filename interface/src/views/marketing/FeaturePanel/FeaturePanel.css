@@ -183,6 +183,10 @@
   width: 100%;
   height: auto;
   object-fit: cover;
+  /* Screen-blend the artwork onto the metal plate so any solid-black image
+     background drops out (matching the transparent-PNG cards), leaving only
+     the light wireframe. */
+  mix-blend-mode: screen;
 }
 
 /* Glass bottom section container. It holds a glowing gold line layer with
