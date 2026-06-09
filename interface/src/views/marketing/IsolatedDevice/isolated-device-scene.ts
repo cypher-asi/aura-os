@@ -83,14 +83,39 @@ const ETCH_DASH_Y = 0.33;
 const ETCH_DASH_POS = 0.55; // along the wall, just before the corner curve
 
 /**
+ * Ghost stack: simplified gray-outline copies of the computer above and
+ * below the real one, joined by four dashed columns at the footprint
+ * corners that stream downward — the "instances dropping through the
+ * pipeline" composition from the reference. `DASH_COLUMN` sits just outside
+ * the body's rounded corners so the columns pass the solid device instead
+ * of clipping through its walls.
+ */
+const DEVICE_H = 0.655;
+const GHOST_ABOVE_Y = 2.85; // group origin (body bottom) of the upper ghost
+const GHOST_BELOW_Y = -2.8; // group origin of the lower ghost
+const GHOST_CORNER = 0.882; // |x|=|z| of the rounded-corner verticals
+const DASH_COLUMN = 0.95;
+const DASH_LEN = 0.06;
+const DASH_PERIOD = 0.12; // dash + gap
+const DASH_SPEED = 0.35; // world units per second, downward
+const DASH_Y_MIN = -3.6;
+const DASH_Y_MAX = 4.4;
+
+/**
  * Pose: the near vertical corner points exactly at the camera (a perfect
  * diamond silhouette), viewed from high enough that the top plate dominates
  * like the reference photo. The pose is fixed — no sway or pointer tilt —
- * so the diamond stays perfectly centered and symmetric.
+ * so the diamond stays perfectly centered and symmetric. The camera is
+ * ORTHOGRAPHIC: no perspective foreshortening, so every computer in the
+ * stack projects at exactly the same width/height and the composition sits
+ * flat on the page like the rest of the site's isometric artwork.
  */
 const BASE_YAW = -Math.PI / 4;
 const CAMERA_ELEVATION_DEG = 42;
-const CAMERA_TARGET_Y = 0.28;
+const CAMERA_TARGET_Y = 0.33; // midpoint of the ghost stack
+const CAMERA_DISTANCE = 10;
+/** Ortho frustum width: the diamond footprint plus a small margin. */
+const CAMERA_VIEW_W = SIZE * Math.SQRT2 * 1.12;
 
 const ORB_VERTEX_SHADER = `
 varying vec2 vUv;
@@ -133,6 +158,13 @@ const ORB_PANEL_FRAGMENT_SHADER = SCREEN_FRAGMENT_SHADER.replace(
 
 /** Virtual pixel resolution fed to the vignette math on the panel plane. */
 const ORB_PANEL_VIRTUAL_RES = 512;
+
+/** Closed polyline loop of a footprint shape at a given height (y-up). */
+function outlineLoop(shape: THREE.Shape, y: number): THREE.BufferGeometry {
+  const pts = shape.getPoints(64).map((p) => new THREE.Vector3(p.x, y, p.y));
+  pts.push(pts[0].clone());
+  return new THREE.BufferGeometry().setFromPoints(pts);
+}
 
 /** Rounded square centered on the origin (the device's squircle footprint). */
 function roundedSquare(size: number, radius: number): THREE.Shape {
@@ -315,7 +347,7 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   renderer.domElement.style.height = "100%";
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(25, width / height, 0.1, 100);
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
 
   // Environment for the metallic reflections; lights add directional shaping.
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -494,24 +526,101 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     group.add(led);
   }
 
-  function fitCamera(): void {
-    // Frame to the device's diagonal footprint width with a small margin; the
-    // long camera distance keeps the projection near-orthographic like the
-    // reference photo.
-    const margin = 1.12;
-    const projectedW = SIZE * Math.SQRT2 * margin;
-    const vFov = THREE.MathUtils.degToRad(camera.fov);
-    const dist = projectedW / 2 / Math.tan(vFov / 2) / camera.aspect;
+  // Ghost outline computers above and below the real device: the footprint
+  // loop at the body top and bottom, the screen-recess loop on top, and a
+  // short vertical line at each rounded corner. All share one gray line
+  // material so they read as schematic copies rather than hardware.
+  const ghostMaterial = new THREE.LineBasicMaterial({
+    color: 0x7a7f86,
+    transparent: true,
+    opacity: 0.4,
+  });
+  const ghostFootprint = roundedSquare(SIZE, CORNER_R);
+  const ghostTopGeo = track(outlineLoop(ghostFootprint, DEVICE_H));
+  const ghostBottomGeo = track(outlineLoop(ghostFootprint, 0));
+  const ghostHoleGeo = track(
+    outlineLoop(roundedSquare(HOLE_SIZE, HOLE_R), DEVICE_H),
+  );
+  const ghostCornerPts: number[] = [];
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      ghostCornerPts.push(
+        sx * GHOST_CORNER, 0, sz * GHOST_CORNER,
+        sx * GHOST_CORNER, DEVICE_H, sz * GHOST_CORNER,
+      );
+    }
+  }
+  const ghostCornerGeo = track(new THREE.BufferGeometry());
+  ghostCornerGeo.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(ghostCornerPts, 3),
+  );
+  for (const yOffset of [GHOST_ABOVE_Y, GHOST_BELOW_Y]) {
+    const ghost = new THREE.Group();
+    ghost.add(new THREE.Line(ghostTopGeo, ghostMaterial));
+    ghost.add(new THREE.Line(ghostBottomGeo, ghostMaterial));
+    ghost.add(new THREE.Line(ghostHoleGeo, ghostMaterial));
+    ghost.add(new THREE.LineSegments(ghostCornerGeo, ghostMaterial));
+    ghost.position.y = yOffset;
+    group.add(ghost);
+  }
+
+  // Dashed connector columns at the four footprint corners, spanning the
+  // whole ghost stack. The dashes are real segments (not LineDashedMaterial)
+  // so the animation loop can stream them downward by sliding each column
+  // one period and wrapping; the extra leading period keeps both ends
+  // covered during the slide. One object PER column (not one shared object)
+  // so three.js's per-object transparency sort draws the far columns behind
+  // the alpha-blended screen plane and the near one in front of the body.
+  const dashMaterial = new THREE.LineBasicMaterial({
+    color: 0x70757c,
+    transparent: true,
+    opacity: 0.45,
+    depthWrite: false,
+  });
+  const dashColumns: THREE.LineSegments[] = [];
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const dashPts: number[] = [];
+      for (let y = DASH_Y_MIN; y < DASH_Y_MAX + DASH_PERIOD; y += DASH_PERIOD) {
+        dashPts.push(
+          sx * DASH_COLUMN, y, sz * DASH_COLUMN,
+          sx * DASH_COLUMN, y + DASH_LEN, sz * DASH_COLUMN,
+        );
+      }
+      const dashGeo = track(new THREE.BufferGeometry());
+      dashGeo.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(dashPts, 3),
+      );
+      const column = new THREE.LineSegments(dashGeo, dashMaterial);
+      dashColumns.push(column);
+      group.add(column);
+    }
+  }
+
+  function fitCamera(aspect: number): void {
+    // Orthographic frustum fixed to the diamond's width; the vertical extent
+    // follows the host's aspect ratio, so a taller canvas reveals more of
+    // the ghost stack (which crops at the top/bottom edges like the
+    // reference composition). No perspective: every computer in the stack
+    // projects at the same size.
+    const halfW = CAMERA_VIEW_W / 2;
+    const halfH = halfW / aspect;
+    camera.left = -halfW;
+    camera.right = halfW;
+    camera.top = halfH;
+    camera.bottom = -halfH;
     const elev = THREE.MathUtils.degToRad(CAMERA_ELEVATION_DEG);
     camera.position.set(
       0,
-      CAMERA_TARGET_Y + Math.sin(elev) * dist,
-      Math.cos(elev) * dist,
+      CAMERA_TARGET_Y + Math.sin(elev) * CAMERA_DISTANCE,
+      Math.cos(elev) * CAMERA_DISTANCE,
     );
     camera.lookAt(0, CAMERA_TARGET_Y, 0);
     camera.updateProjectionMatrix();
   }
-  fitCamera();
+  fitCamera(width / height);
 
   function renderFrame(): void {
     renderer.render(scene, camera);
@@ -534,6 +643,11 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     for (let i = 0; i < ledMaterials.length; i += 1) {
       const pulse = Math.pow(Math.max(0, Math.sin(t * 2.4 - i * 0.7)), 8);
       ledMaterials[i].emissiveIntensity = 0.12 + 2.2 * pulse;
+    }
+    // Stream the connector dashes downward, wrapping every period.
+    const dashShift = -((t * DASH_SPEED) % DASH_PERIOD);
+    for (const column of dashColumns) {
+      column.position.y = dashShift;
     }
     renderFrame();
   }
@@ -561,8 +675,7 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     const w = host.clientWidth || width;
     const h = host.clientHeight || height;
     renderer.setSize(w, h);
-    camera.aspect = w / h;
-    fitCamera();
+    fitCamera(w / h);
     if (!running) renderFrame();
   });
   resizeObserver.observe(host);
@@ -580,6 +693,8 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       orbMaterial.dispose();
       baseMaterial.dispose();
       ventMaterial.dispose();
+      ghostMaterial.dispose();
+      dashMaterial.dispose();
       etchSeamMaterial.dispose();
       etchDashMaterial.dispose();
       caseTexture.dispose();

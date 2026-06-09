@@ -6,8 +6,12 @@
 
 .isolatedDevice {
   position: relative;
-  width: clamp(300px, 34vw, 460px);
-  aspect-ratio: 1 / 0.86;
+  /* Portrait stage: tall enough for the ghost-computer stack above and
+     below the real device (the ortho camera reveals more of the stack as
+     the canvas gets taller), wide enough that the center device keeps the
+     same on-screen footprint as the original landscape composition. */
+  width: clamp(320px, 30vw, 420px);
+  aspect-ratio: 1 / 1.55;
 }
 
 .isolatedDevice canvas {
@@ -18,6 +22,6 @@
 
 @media (max-width: 768px) {
   .isolatedDevice {
-    width: clamp(260px, 74vw, 360px);
+    width: clamp(240px, 60vw, 340px);
   }
 }
