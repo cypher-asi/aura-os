@@ -759,42 +759,57 @@
 
 /* Selected ring lights up with the same pale core + layered amber-gold/
    amber-brown neon glow the progress bar fill and knob indicator carry. The
-   single edge-hugging inset layer reads as a soft inner shadow that extends
-   the outer glow inward while keeping the center transparent. */
+   interior stays empty (no spinner); instead the OUTER glow is intensified and
+   pulsates so the active step reads as a softly breathing beacon. */
 .madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn {
   border-color: #f1f9d3;
   background: transparent;
   box-shadow:
-    0 0 2px rgba(232, 205, 137, 0.25),
-    0 0 5px rgba(232, 205, 137, 0.18),
-    0 0 10px rgba(232, 205, 137, 0.12),
-    0 0 8px 1px rgba(153, 81, 25, 0.1),
-    0 0 14px 2px rgba(153, 81, 25, 0.07),
-    inset 0 0 2px rgba(232, 205, 137, 0.18);
+    0 0 4px rgba(232, 205, 137, 0.55),
+    0 0 9px rgba(232, 205, 137, 0.4),
+    0 0 18px rgba(232, 205, 137, 0.28),
+    0 0 14px 3px rgba(153, 81, 25, 0.32),
+    0 0 26px 6px rgba(153, 81, 25, 0.2),
+    inset 0 0 2px rgba(232, 205, 137, 0.22);
+  animation: madeForYouLensPulse 1.6s ease-in-out infinite;
 }
 
-/* Spinning progress arc seated INSIDE the static ring (a clear gap in from the
-   border) so it sweeps over the transparent dark interior rather than on top of
-   the bright rim, where its motion would be washed out. Built as the classic
-   CSS spinner — a transparent ring with only the top/right border edges lit —
-   rotated forever. This avoids mask/conic + transform compositor quirks, so the
-   visible arc reliably sweeps the dark center like a progress indicator. */
-.madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn::before {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  border-top-color: #ffffff;
-  border-right-color: rgba(232, 205, 137, 0.6);
-  filter: drop-shadow(0 0 1px rgba(232, 205, 137, 0.35));
-  will-change: transform;
-  animation: madeForYouLensSpin 0.8s linear infinite;
+/* Pulse the selected ring's OUTER glow: the amber-gold + amber-brown halo
+   swells and intensifies, then settles back, without touching the interior. */
+@keyframes madeForYouLensPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 4px rgba(232, 205, 137, 0.5),
+      0 0 9px rgba(232, 205, 137, 0.36),
+      0 0 16px rgba(232, 205, 137, 0.24),
+      0 0 12px 2px rgba(153, 81, 25, 0.26),
+      0 0 22px 4px rgba(153, 81, 25, 0.16),
+      inset 0 0 2px rgba(232, 205, 137, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 8px rgba(232, 205, 137, 0.95),
+      0 0 17px rgba(232, 205, 137, 0.65),
+      0 0 30px rgba(232, 205, 137, 0.45),
+      0 0 20px 4px rgba(153, 81, 25, 0.5),
+      0 0 38px 8px rgba(153, 81, 25, 0.3),
+      inset 0 0 3px rgba(232, 205, 137, 0.3);
+  }
 }
 
-@keyframes madeForYouLensSpin {
-  to {
-    transform: rotate(360deg);
+/* Reduced motion: hold the selected ring at a steady intense glow instead of
+   pulsating. */
+@media (prefers-reduced-motion: reduce) {
+  .madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn {
+    animation: none;
+    box-shadow:
+      0 0 7px rgba(232, 205, 137, 0.8),
+      0 0 15px rgba(232, 205, 137, 0.55),
+      0 0 26px rgba(232, 205, 137, 0.38),
+      0 0 18px 3px rgba(153, 81, 25, 0.42),
+      0 0 32px 6px rgba(153, 81, 25, 0.26),
+      inset 0 0 2px rgba(232, 205, 137, 0.26);
   }
 }
 
