@@ -10,9 +10,9 @@
   /* Off-black surface tint inherited from `.productView` (see the
      `--marketing-section-bg` rationale in `ProductView.module.css`). */
   background: var(--marketing-section-bg, #000);
-  /* Top padding matches the headline-to-cards gap below so the headline's
-     top spacing reads balanced with its bottom spacing. */
-  padding: clamp(40px, 6vw, 72px) 32px 96px;
+  /* Symmetric top/bottom padding so the space above the headline matches the
+     space between the cards and the changelog section below. */
+  padding: clamp(40px, 6vw, 72px) 32px;
 }
 
 /* The shared TextCard h2 band reserves a tall, vertically-centered block
