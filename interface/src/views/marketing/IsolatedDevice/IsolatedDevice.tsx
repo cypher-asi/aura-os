@@ -6,18 +6,17 @@ import {
 import "./IsolatedDevice.css";
 
 /**
- * Marketing "isolated device" — a WebGL-rendered, diagonally-viewed
- * Mac-mini-style computer centered in the "Isolated by default." trust card,
- * modelled after the reference render: a squircle-footprint case with a
- * rounded-over lid edge, a recessed top plate with four corner screws and a
- * centered embossed logo, louver banks on the walls, and an inset base
- * plinth — finished in the site's dark matte metal rather than the photo's
- * bright silver.
+ * Marketing "isolated device" — a WebGL-rendered Mac-mini-style computer
+ * centered in the "Isolated by default." trust card, modelled after the
+ * reference render: a squircle-footprint case with a rounded-over lid edge,
+ * a recessed top plate with four corner screws and a centered embossed
+ * logo, louver banks on the walls, and an inset base plinth — finished in
+ * the site's dark matte metal rather than the photo's bright silver. It is
+ * locked in a centered perfect-diamond pose viewed from a high angle, and
+ * renders statically (one frame, re-rendered on resize).
  *
  * The device is decorative hardware fiction, so the host is `aria-hidden`
- * and nothing renders if WebGL is unavailable. The scene idles with a gentle
- * sway and leans toward the pointer; `prefers-reduced-motion` collapses it
- * to a single static frame.
+ * and nothing renders if WebGL is unavailable.
  */
 export function IsolatedDevice(): ReactNode {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -27,10 +26,7 @@ export function IsolatedDevice(): ReactNode {
     if (!host || !isWebGLAvailable()) {
       return;
     }
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const scene = createIsolatedDeviceScene(host, { reducedMotion });
+    const scene = createIsolatedDeviceScene(host);
     return () => scene.dispose();
   }, []);
 

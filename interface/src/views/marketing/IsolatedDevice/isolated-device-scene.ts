@@ -1,10 +1,6 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
-export interface IsolatedDeviceSceneOptions {
-  reducedMotion: boolean;
-}
-
 export interface IsolatedDeviceScene {
   dispose(): void;
 }
@@ -70,9 +66,14 @@ const VENT_H = 0.22;
 const VENT_CENTER = -0.34; // along the wall, clear of the corner rounding
 const VENT_Y = 0.3; // vertical center within the case band
 
-/** Resting pose: the near vertical corner points at the camera. */
+/**
+ * Pose: the near vertical corner points exactly at the camera (a perfect
+ * diamond silhouette), viewed from high enough that the top plate dominates
+ * like the reference photo. The pose is fixed — no sway or pointer tilt —
+ * so the diamond stays perfectly centered and symmetric.
+ */
 const BASE_YAW = -Math.PI / 4;
-const CAMERA_ELEVATION_DEG = 32;
+const CAMERA_ELEVATION_DEG = 42;
 const CAMERA_TARGET_Y = 0.24;
 
 /** Rounded square centered on the origin (the device's squircle footprint). */
@@ -231,15 +232,11 @@ function createVentTexture(): THREE.CanvasTexture {
 
 /**
  * WebGL "isolated device" scene — a dark matte-metal Mac-mini-style appliance
- * modelled after the reference render, framed diagonally from a high 3/4
- * angle. Idles with a gentle yaw sway and tilts toward the pointer; under
- * reduced motion it renders a single static frame (re-rendered on resize).
+ * modelled after the reference render, locked in a centered perfect-diamond
+ * pose from a high angle. The scene is static: it renders one frame up front
+ * and re-renders only on resize.
  */
-export function createIsolatedDeviceScene(
-  host: HTMLElement,
-  options: IsolatedDeviceSceneOptions,
-): IsolatedDeviceScene {
-  const reducedMotion = options.reducedMotion;
+export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScene {
   const width = host.clientWidth || 320;
   const height = host.clientHeight || 280;
 
@@ -430,84 +427,21 @@ export function createIsolatedDeviceScene(
     renderer.render(scene, camera);
   }
 
-  // Pointer tilt: the device leans gently toward the cursor over the card.
-  let targetYawOffset = 0;
-  let targetPitch = 0;
-  const onPointerMove = (event: PointerEvent): void => {
-    const rect = host.getBoundingClientRect();
-    const nx = (event.clientX - rect.left) / rect.width - 0.5;
-    const ny = (event.clientY - rect.top) / rect.height - 0.5;
-    targetYawOffset = nx * 0.22;
-    targetPitch = ny * 0.1;
-  };
-  const onPointerLeave = (): void => {
-    targetYawOffset = 0;
-    targetPitch = 0;
-  };
-
-  const clock = new THREE.Clock();
-  let raf = 0;
-  let running = false;
-
-  function animate(): void {
-    raf = requestAnimationFrame(animate);
-    const t = clock.getElapsedTime();
-    const sway = Math.sin(t * 0.45) * 0.05;
-    const desiredYaw = BASE_YAW + sway + targetYawOffset;
-    group.rotation.y += (desiredYaw - group.rotation.y) * 0.06;
-    group.rotation.x += (targetPitch - group.rotation.x) * 0.06;
-    renderFrame();
-  }
-
-  function start(): void {
-    if (reducedMotion || running) return;
-    running = true;
-    clock.start();
-    animate();
-  }
-
-  function stop(): void {
-    running = false;
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
-  }
-
-  const onVisibilityChange = (): void => {
-    if (document.hidden) stop();
-    else start();
-  };
-
-  if (!reducedMotion) {
-    host.addEventListener("pointermove", onPointerMove);
-    host.addEventListener("pointerleave", onPointerLeave);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-  }
-
   const resizeObserver = new ResizeObserver(() => {
     const w = host.clientWidth || width;
     const h = host.clientHeight || height;
     renderer.setSize(w, h);
     camera.aspect = w / h;
     fitCamera();
-    if (reducedMotion) renderFrame();
+    renderFrame();
   });
   resizeObserver.observe(host);
 
-  if (reducedMotion) {
-    renderFrame();
-  } else {
-    start();
-  }
+  renderFrame();
 
   return {
     dispose(): void {
-      stop();
       resizeObserver.disconnect();
-      if (!reducedMotion) {
-        host.removeEventListener("pointermove", onPointerMove);
-        host.removeEventListener("pointerleave", onPointerLeave);
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-      }
       for (const geo of geometries) geo.dispose();
       caseMaterial.dispose();
       plateMaterial.dispose();
