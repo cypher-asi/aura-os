@@ -60,7 +60,9 @@
      split the card 50/50, and the pair grows together to fit the taller
      section's content. */
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  /* Metal row flexes to fill; the glass row is pinned short so it hugs its
+     4-line copy (~40% shorter than the old 50/50 split). */
+  grid-template-rows: 1fr 194px;
   text-align: left;
   min-height: 420px;
   border-radius: 24px;
@@ -152,7 +154,7 @@
    the metal plate the larger share of the card so the artwork reads big, and
    let the glass section keep just enough room for its 4-line copy. */
 .featurePanelItem--media {
-  grid-template-rows: 1.55fr 1fr;
+  grid-template-rows: 1fr 152px;
 }
 
 /* When the metal plate hosts artwork, anchor the overline at the top, the
