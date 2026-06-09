@@ -719,26 +719,27 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   }));
   const dashTotal = dashRuns.reduce((n, run) => n + run.count, 0);
   const dashColumns: THREE.LineSegments[] = [];
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      const arr = new Float32Array(dashTotal * 6);
-      for (let i = 0; i < dashTotal; i += 1) {
-        arr[i * 6] = sx * DASH_INSET;
-        arr[i * 6 + 2] = sz * DASH_INSET;
-        arr[i * 6 + 3] = sx * DASH_INSET;
-        arr[i * 6 + 5] = sz * DASH_INSET;
-      }
-      const dashAttr = new THREE.BufferAttribute(arr, 3);
-      dashAttr.setUsage(THREE.DynamicDrawUsage);
-      const dashGeo = track(new THREE.BufferGeometry());
-      dashGeo.setAttribute("position", dashAttr);
-      const column = new THREE.LineSegments(dashGeo, dashMaterial);
-      // The Y values are rewritten per frame; skip culling against the
-      // initial (degenerate) bounds.
-      column.frustumCulled = false;
-      dashColumns.push(column);
-      group.add(column);
+  // Three columns only: the far corner is skipped because in the diamond
+  // pose it projects onto the same screen vertical as the near column,
+  // interleaving with it into what reads as a doubled center line.
+  for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1]]) {
+    const arr = new Float32Array(dashTotal * 6);
+    for (let i = 0; i < dashTotal; i += 1) {
+      arr[i * 6] = sx * DASH_INSET;
+      arr[i * 6 + 2] = sz * DASH_INSET;
+      arr[i * 6 + 3] = sx * DASH_INSET;
+      arr[i * 6 + 5] = sz * DASH_INSET;
     }
+    const dashAttr = new THREE.BufferAttribute(arr, 3);
+    dashAttr.setUsage(THREE.DynamicDrawUsage);
+    const dashGeo = track(new THREE.BufferGeometry());
+    dashGeo.setAttribute("position", dashAttr);
+    const column = new THREE.LineSegments(dashGeo, dashMaterial);
+    // The Y values are rewritten per frame; skip culling against the
+    // initial (degenerate) bounds.
+    column.frustumCulled = false;
+    dashColumns.push(column);
+    group.add(column);
   }
 
   /** Rewrite every column's dash Y spans for time `t` (conveyor downward). */
