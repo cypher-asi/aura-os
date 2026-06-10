@@ -137,19 +137,21 @@ const DASH_PERIOD = 0.12; // dash + gap
 const DASH_SPEED = 0.35; // world units per second, downward
 
 /**
- * Hover glow: a soft additive halo sprite sits behind each computer in the
- * stack and fades in while that computer is hovered, plus the hovered
- * ghost's wireframe lines brighten and the solid device's case picks up a
- * faint emissive warmth. The fade is an exponential approach (per-frame
- * lerp) so the glow eases in/out instead of popping.
+ * Hover glow: a soft white additive halo sprite fades in while a computer
+ * is hovered, plus the hovered ghost's wireframe lines brighten. The ghost
+ * halos sit centered behind their wireframes; the solid middle device's
+ * halo is dropped below its base instead (its materials stay untouched),
+ * so the glow reads as light spilling out from under the computer. The
+ * fade is an exponential approach (per-frame lerp) so the glow eases
+ * in/out instead of popping.
  */
 const GLOW_CENTER_Y = DEVICE_H / 2;
+const GLOW_MIDDLE_Y = -0.35; // middle halo center, tucked under the base
 const GLOW_SCALE_X = 3.6;
 const GLOW_SCALE_Y = 1.9;
 const GLOW_MAX_OPACITY = 0.16;
 const GLOW_FADE_RATE = 9; // 1/s exponential approach toward the target
 const GHOST_HOVER_BOOST = 0.45; // extra line-opacity multiplier at full glow
-const CASE_HOVER_EMISSIVE = 0.14; // solid device emissive at full glow
 
 const DEVICE_TIERS: readonly DeviceTier[] = ["top", "middle", "bottom"];
 
@@ -443,9 +445,8 @@ function createEtchTexture(dashed: boolean): THREE.CanvasTexture {
 }
 
 /**
- * Soft radial hover-glow decal (transparent canvas): a gold-tinted falloff
- * matching the page's `--gold-glow` token, rendered as an additive sprite
- * behind the hovered computer.
+ * Soft radial hover-glow decal (transparent canvas): a cool white falloff
+ * rendered as an additive sprite behind (or under) the hovered computer.
  */
 function createGlowTexture(): THREE.CanvasTexture {
   const size = 256;
@@ -462,9 +463,9 @@ function createGlowTexture(): THREE.CanvasTexture {
       size / 2,
       size / 2,
     );
-    grad.addColorStop(0, "rgba(232, 205, 137, 0.85)");
-    grad.addColorStop(0.45, "rgba(232, 205, 137, 0.28)");
-    grad.addColorStop(1, "rgba(232, 205, 137, 0)");
+    grad.addColorStop(0, "rgba(240, 244, 250, 0.85)");
+    grad.addColorStop(0.45, "rgba(226, 232, 242, 0.26)");
+    grad.addColorStop(1, "rgba(226, 232, 242, 0)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
   }
@@ -533,10 +534,6 @@ export function createIsolatedDeviceScene(
     metalness: 0.72,
     roughness: 0.68,
     envMapIntensity: 0.55,
-    // Hover glow: the emissive intensity lerps up while the middle (solid)
-    // computer is hovered, warming the case in the gold accent.
-    emissive: 0xe8cd89,
-    emissiveIntensity: 0,
   });
   // Recessed screen — the first section's console plasma shader, driven by
   // the same uniform contract as the full-screen original. The shader
@@ -690,8 +687,8 @@ export function createIsolatedDeviceScene(
   // stack, plus a per-tier registry of line materials that brighten while
   // their computer is hovered (the ghost loop below fills these in with its
   // per-ghost material clones). The sprites render first (renderOrder -1,
-  // no depth test) so the solid device occludes its own glow into a rim
-  // halo rather than a wash across the case.
+  // no depth test) so the solid device occludes the glow — its own halo,
+  // centered below the base, reads as light spilling out from underneath.
   const glowTexture = createGlowTexture();
   interface TierGlow {
     spriteMaterial: THREE.SpriteMaterial;
@@ -703,7 +700,7 @@ export function createIsolatedDeviceScene(
   }
   const tierCenterY: Record<DeviceTier, number> = {
     top: GHOST_ABOVE_Y + GLOW_CENTER_Y,
-    middle: GLOW_CENTER_Y,
+    middle: GLOW_MIDDLE_Y,
     bottom: GHOST_BELOW_Y + GLOW_CENTER_Y,
   };
   const tierGlows = {} as Record<DeviceTier, TierGlow>;
@@ -1060,8 +1057,9 @@ export function createIsolatedDeviceScene(
     // Stream the connector dashes downward through their runs.
     updateDashes(t);
     // Hover glow: each tier's level eases toward hovered (1) or idle (0),
-    // driving its halo sprite's opacity, the ghost wireframe brightening,
-    // and (for the middle tier) the solid case's emissive warmth.
+    // driving its halo sprite's opacity and the ghost wireframe
+    // brightening. The solid middle device's materials stay untouched —
+    // its halo under the base carries the whole effect.
     const ease = 1 - Math.exp(-GLOW_FADE_RATE * dt);
     for (const tier of DEVICE_TIERS) {
       const glow = tierGlows[tier];
@@ -1073,8 +1071,6 @@ export function createIsolatedDeviceScene(
           entry.baseOpacity * (1 + GHOST_HOVER_BOOST * glow.level);
       }
     }
-    caseMaterial.emissiveIntensity =
-      CASE_HOVER_EMISSIVE * tierGlows.middle.level;
     renderFrame();
   }
 

@@ -34,9 +34,9 @@ interface IsolatedDeviceProps {
  * page like every other element holder (matching the hero `AgentConsole`).
  *
  * Hovering a computer in the stack (top ghost / solid middle / bottom
- * ghost) fades in a slight gold glow on that computer and reports the tier
- * via `onHoverChange`, which the trust section uses to swap the display
- * panel's readout.
+ * ghost) fades in a soft white glow on that computer (spilling out from
+ * under the solid middle device) and reports the tier via `onHoverChange`,
+ * which the trust section uses to swap the display panel's readout.
  *
  * The device is decorative hardware fiction, so the host is `aria-hidden`
  * and nothing renders if WebGL is unavailable.
