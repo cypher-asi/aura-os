@@ -1,72 +1,71 @@
-# A golden marketing overhaul, internationalization, and Telegram-native replies
+# Marketing site overhaul, i18n foundation, and agent platform fixes
 
 - Date: `2026-06-10`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.635.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.635.1
+- Version: `0.1.0-nightly.636.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.636.1
 
-Most of today landed in the public marketing site: the /agents and /code pages got a top-to-bottom redesign around a hardware-device visual language and a unified golden accent, with new sections, animated WebGL devices, and a built-from-scratch interactive desktop mock. Alongside the visuals, the app picked up an i18n foundation with 20 languages, Notes-backed /os and /docs CMS pages, sturdier chat error reporting, and a more resilient web logout. Telegram replies now render with native MarkdownV2 formatting.
+A sprawling multi-day batch dominated by a top-to-bottom redesign of the public marketing site — new /agents, /code, /os, and /docs experiences with hardware-inspired CSS/WebGL devices, a unified gold accent, and full i18n scaffolding across 20 languages. Smaller but meaningful platform work landed alongside: a logout reliability fix, Telegram MarkdownV2 rendering, remote-agent org healing, richer chat error reports, and Mixpanel OS attribution on server-emitted events.
 
-## 12:06 AM — Cyan-green becomes the default theme accent
+## 12:06 AM — Cyan-green replaces purple as the default accent
 
-New users without a saved theme preference now land on the cyan-green accent instead of purple.
+New users without a saved theme preference now boot into the cyan-green accent instead of purple.
 
-- Default theme accent flipped to cyan-green (#01f4cb) for new users, while existing users keep their persisted color choice. (`94cff7b`)
+- First-run users now get the cyan-green accent (#01f4cb) by default; anyone with a persisted choice keeps their existing theme. (`94cff7b`)
 
-## 11:23 AM — Remote agent org repair and rounder chat bubbles
+## 11:23 AM — Chat polish, analytics recovery, and remote-agent org healing
 
-Remote agents stop rendering blank Organizations, public chat analytics is restored, and the chat surface gets a softer iMessage-style look.
+iMessage-style chat bubbles and glowing sidekick labels landed alongside a restored Mixpanel event and a server-side fix that keeps remote agents' Organization field populated.
 
-- Remote agents now keep their organization populated end-to-end: the post-provision PUT threads the submitted org, list endpoints backfill legacy NULL-org records, and the profile card falls back to the active org name for not-yet-healed agents. (`6227727`)
-- Public chat regained its missing `public_message_sent` Mixpanel event on desktop and mobile, restoring the by-mode analytics breakdown that broke when the send hook was inlined. (`775ecea`)
-- User chat bubbles are now a uniform 18px iMessage-style radius, and selected sidekick labels, the Refer member button, and the active Agents/Projects switch picked up theme-aware glow tokens with unified typography. (`7e94787`, `8fe4a9a`)
+- User chat bubbles are now uniformly rounded (18px) on desktop and mobile for a softer iMessage-style look. (`7e94787`)
+- Selected sidekick sections, the Refer member button, and the active Agents/Projects switch label pick up a theme-aware glow, with unified 11px uppercase typography and tighter AgentInfoPanel spec text. (`8fe4a9a`)
+- Restored the public_message_sent Mixpanel event on both desktop and mobile public-chat sends, fixing the broken "by mode" breakdown. (`775ecea`)
+- Remote agents no longer render with a blank Organization: the post-provision PUT now threads the submitted org through, and list_agents backfills legacy NULL-org rows so the card heals on next view. (`6227727`)
 
-## 11:48 AM — Telegram replies render as native MarkdownV2
+## 11:48 AM — Telegram replies render in native MarkdownV2
 
-Agent replies sent through the Telegram channel now style natively instead of leaking raw markdown.
+Agent responses delivered via Telegram now use Telegram's MarkdownV2 dialect, with a plain-text fallback so escaping edge cases can never drop a message.
 
-- Telegram channel converts agent CommonMark output to Telegram's MarkdownV2 so bold, italic, code, and links render natively, with an automatic fallback to plain stripped text whenever Telegram rejects the formatted message. (`edd820c`)
+- The Telegram channel converts CommonMark into MarkdownV2 so bold, italic, code, and links style natively; if Telegram rejects the formatted payload, the agent falls back to stripped plain text so the reply still goes through. (`edd820c`)
 
-## 11:48 AM — Marketing site rebuilt around a hardware-device visual language
+## 11:48 AM — i18n foundation, prior-session chat history, and the new marketing system
 
-The public /agents and /code pages got a sweeping redesign: new sections, a shared device kit, animated WebGL screens, a richer theme system, and a fully interactive desktop mock, alongside an i18n foundation and a resilient web logout.
+A two-day push wired up internationalization across 20 languages, added a Load prior session affordance to chat, hardened web logout, and rebuilt the public /agents and /code pages around a shared hardware-device and metal-card design system.
 
-- Internationalization landed across the app: i18next + react-i18next with lazy-loaded common/nav/auth/settings namespaces, an early <html lang/dir> stamp for RTL, a shared language store, and Settings + public taskbar language switchers, with bundles for 20 languages including Arabic, CJK, and Hindi. (`4bbf9f7`, `b336a6f`, `3ae7aec`, `4d6fc95`)
-- Logout on the web is now resilient: localStorage failures from the force-logged-out sentinel no longer abort teardown, the session clear runs in a guarded path, and users always navigate back to the public home even when storage is blocked or partitioned. (`2d0ee74`)
-- The /agents page was rebuilt around a sampler/console hardware metaphor: a shared device kit (DeviceScreen, HardwareKey, DotMatrixGrille, DeviceLabelStrip, Plate, Knob) drives a tall AgentConsole hero, a four-quadrant PersonalAgentSection bento with neomorphic skill keys and a service integrations device, a centered "Expertise without ego" intro, and reusable TextCard/CardSection/MetalCard primitives. (`1fb435e`, `395e523`, `13e0508`, `b352f44`, `624d51b`, `5090f8c`, `68f6ab8`)
-- Live WebGL visuals replaced static art across the page: the agent device screen, the mock LLM "+" attach button, and a split-brain noise-reduction visualization on the Expertise card all animate from custom shaders, with cursor-driven knob and tick-meter feedback and graceful fallbacks when WebGL2 is unavailable. (`56c87e0`, `69c2509`, `3fe3972`, `07d559b`, `b6311b8`, `de547fc`, `92440f1`, `41b3e4d`)
-- The /code page swapped its placeholder workspace for a fully interactive MockAuraDesktop: an agents/projects nav with a working toggle, a live LLM chat using the real DesktopChatInputBar, a half-width sidekick that scripts a Terminal-stream-to-Tasks loop, and a real-app taskbar, all pinned to a cyan-green accent. (`3a7168e`, `e94f8c4`, `8789a65`, `b22fb0f`, `d9aa2c2`)
-- The public landing got a Creator persona with a looping video wallpaper and a full-screen WebGL plasma background, plus a redesigned "Agents made for you" hero device with a hex-mesh grille, side terminal LCD, and looping character clip. (`6a010dd`, `ae52348`, `6c9a81f`, `eea01d9`, `c8a798c`, `5e62738`)
-- The 3D agent profile card and theme settings caught up: the metal frame swaps to brushed silver in light mode with regenerated textures, theme presets export as a copyable aura-theme JSON, and the preset and font pickers use the in-app dropdown instead of OS-native selects. (`6308165`, `eb83d05`, `d5d0c41`, `8f31d4d`)
-- Chat history gained a "Load prior session" affordance: a divider-marked button prepends the previous session above the current chat in project chat, the agents shell, and the chat app, with scroll position held stable so on-screen messages don't jump. (`ca08bba`, `e12083d`)
+- i18next + react-i18next are now wired up with lazy-loaded namespaces, an early <html lang/dir> stamp for RTL, and locale bundles for 20 languages (en/de/es/fr/pt-BR plus ar/ja/ko/zh-Hant/hi/id/nl/pl/tr/vi/th/uk and more); a Settings language section and a public taskbar/drawer language dropdown share a single store so they stay in sync. (`4bbf9f7`, `b336a6f`, `3ae7aec`, `4d6fc95`)
+- Chat transcripts gain a repeatable Load prior session button that prepends the previous session's messages above a labeled divider, with stable scroll anchoring so the current viewport doesn't jump as history loads. (`ca08bba`, `e12083d`)
+- Web logout is now resilient: localStorage failures in endLocalSession can no longer abort the session clear, and a finally block guarantees navigation to the public home, so File/Profile/Settings/Org logouts always land users on the logged-out surface in browsers. (`2d0ee74`)
+- The /agents hero, integrations grid, skill keys, privacy cards, and CTA were rebuilt around a shared Plate/MetalCard/DeviceScreen/HardwareKey/Knob kit, with WebGL orbs, a noise-reduction brain visualization, and a per-stage "Agents made for you" device driving the new section flow. (`1fb435e`, `68f6ab8`, `b6311b8`, `c8a798c`)
+- The /code page hero was replaced with an interactive mock of the authenticated AURA desktop — agents/projects nav, a live LLM chat using the real input bar, a scripted Terminal-to-Tasks sidekick loop, and the bottom taskbar — built from the app's real presentational components fed mock data. (`3a7168e`, `e94f8c4`, `8789a65`)
+- New Creator persona becomes the default public landing agent with a full-screen WebGL plasma background and a looping character video wallpaper inside the mock desktop. (`6a010dd`, `eea01d9`, `6396dc1`)
 
-## 11:38 AM — Server-side Mixpanel events now report OS
+## 11:38 AM — Mixpanel server events now report $os
 
-Session, share-link, and share-link-generated events posted from the server pick up the correct `$os` bucket instead of "(not set)".
+Server-emitted events join the browser SDK's OS slicing instead of bucketing as "$os = (not set)".
 
-- Server-emitted Mixpanel events (session_active, share_link_opened, share_link_generated) now derive `$os` from the request User-Agent using the same regex ladder as the browser SDK, so server- and client-side OS slices merge correctly. (`158e736`)
+- session_active, share_link_opened, and share_link_generated now derive $os from the request User-Agent using the same regex ladder as mixpanel-browser, so server- and client-side events merge into the same OS slices. (`158e736`)
 
-## 12:56 PM — Golden-accent marketing redesign with /os and /docs CMS
+## 12:56 PM — Gold-accent marketing finish, /os and /docs CMS, and chat error context
 
-The /agents marketing surface was retinted to a unified golden accent and gained new device sections, a Notes-backed /os whitepaper and /docs site joined the public nav, and chat error reporting now travels with full agent and device context.
+Three days of marketing polish unified the public site around a gold accent, added Notes-backed whitepaper and documentation surfaces, brought the homepage into a continuous scroll with the agents page, and shipped diagnostic improvements to chat error blocks.
 
-- A unified golden accent replaced the orange/blue/violet/white mix across the /agents page: headlines, console lights, knob ticks, expertise tab underline, integration spotlight, skill keys, CTA buttons, and trust cards all share the same gold tokens, with matching glow on the mock LLM attach orb. (`4318527`, `f1b15b6`, `cc01067`)
-- The "Agents made for you" hero became a fully interactive build-stage device: clickable Identity/Expertise/Integrations/Connections/Automations/Launch list, a knob and progress bar that track each stage, a typewriter terminal that types its log on scroll, and a Create-your-agent click that completes the build animation. (`b211b5e`, `f314881`, `18dac59`, `2b74046`)
-- New "Connected" and "Built for trust" sections shipped: a CSS speaker console with channel keys, ribbed thumbwheel, and concentric speaker grille connects from the hero phones; a WebGL IsolatedDevice with a ghost-stack of computers, streaming connector dashes, a service button rail, and a CD-player-style display panel powers the trust story. (`66b5ef6`, `b7fbe8c`, `f3d795d`, `b9be91e`, `a6ba4ec`, `2e19c32`, `ccf3752`, `5b2eca3`)
-- The expertise selector moved inside the intelligence device with per-discipline content: switching off General now drives a typewriter capability list on the left flank and a bespoke CSS/SVG example mockup on the right for Research, Writing, Creative, Social, Sales, Marketing, Design, Coding, Analytics, Finance, and Legal. (`85a2959`, `0222229`, `081cc9b`)
-- Two new Notes-backed CMS pages went live on the public site: /os renders the AURA OS whitepaper from a reserved aura-whitepaper project, and /docs is a three-column GitBook-style site backed by an aura-docs project, both served anonymously via /api/public/os and /api/public/docs and editable by sys admins in the Notes app. (`6379550`, `34458d3`, `4eeec8a`)
-- Chat error blocks are now self-describing: every error renders and copies the agent name, local/remote type, status, the user's current device, the agent's machine, and the agent IP (local IP or remote endpoint), with the same fields mirrored into the Report bug bundle. (`0df0a60`, `7a4ce56`)
-- The landing page now flows directly into /agents on scroll: wheeling past the last persona eases into the agents section stack, scrolling back re-locks the persona carousel behind a momentum guard, and the nav foreground hands off to the marketing pair while inside the agents region. (`525d2f4`)
-- Public nav and marketing chrome got reorganized: a feature-flagged Expertise dropdown with /expertise/:slug detail pages, Pricing promoted next to Code, OS tucked into Resources, a transparent public top bar, and a footer bottom bar with the CYPHER, INC. copyright and a GitHub link. (`7e630ae`, `b737e94`, `c009306`, `53ca2d3`, `4e27622`)
-- The marketing site picked up real localization: public-chat, marketing footer, top nav, feedback, models, blog, changelog, docs, OS, and the agents-page sections now resolve their strings through the i18n namespaces, including the default public-chat session title. (`a9085b2`, `abf82b8`, `552c906`, `2ffe8a1`, `db35f8e`, `e635ad0`, `4444e37`)
-- Marketing input chrome was hardened against theme bleed: the /code mock and the /agents MockChatInputCard pin themselves to dark with the dark input-pill tokens so the reused real chat input stays dark regardless of the visitor's active app theme. (`21e3660`)
+- The /agents page was retinted around a shared golden accent — hero console lights, expertise tab underline, knob/ACTIVATION readouts, skill keys, integrations cycle, mode selector, and CTA all glow in unified gold tokens with a shimmering "Feel the AGI." tagline. (`4318527`, `cc01067`, `c97dbe7`, `9c8ea6b`)
+- A new public /os whitepaper page and /docs site are now backed by reserved Notes projects, with sys-admin-authored markdown on S3 served anonymously via /api/public/os and /api/public/docs; the /docs page uses a three-column GitBook-style layout. (`6379550`, `34458d3`, `4eeec8a`)
+- The intelligence spec device gained a built-in expertise selector that swaps in per-discipline capability typewriters and example mockups (Research, Writing, Creative, Coding, Analytics, Finance, Legal, and more) around the always-on brain, replacing the standalone tab strip. (`85a2959`, `0222229`)
+- Built a new Built-for-trust section anchored by a WebGL Mac-mini-style isolated device with a ghost-computer stack, a service button rail with converging energy connectors into the device, plus a CD-tray display panel, password lock, and always-on toggle. (`f3d795d`, `b9be91e`, `2e19c32`, `a7b6b3d`, `ccf3752`)
+- The landing persona carousel now flows directly into the embedded /agents section stack: scrolling past the last persona eases into the agents content and scrolling back re-locks the carousel with a momentum-settle guard. (`525d2f4`)
+- Chat error blocks now display and copy the agent name, local/remote type, status, device context, and the agent machine's IP, with the same fields mirrored into the Report bug bundle so user-shared error reports are self-describing. (`0df0a60`, `7a4ce56`)
+- Marketing surfaces were broadly localized — public top nav, footer (including a new GitHub link and copyright bottom bar), Feedback and Models views, and the remaining marketing sections now run through i18n; marketing chat inputs are pinned to the dark theme regardless of the visitor's app theme. (`a9085b2`, `abf82b8`, `4444e37`, `21e3660`)
+- Reduced layout churn while the chat prompt is being typed, with matching eval scenarios aligning the chat and workflow checks. (`440cf34`)
 
 ## Highlights
 
-- Marketing site rebuilt around a hardware-device design language and golden accent
-- i18n scaffolding plus 20 locale bundles and user-facing language switchers
-- Notes-backed /os whitepaper and /docs CMS pages
-- Telegram agent replies now use native MarkdownV2 formatting
-- Web logout hardened so File/Profile/Settings/Org logout always clears the session
-- Chat error blocks carry agent, device, and IP context for self-describing bug reports
+- Default accent flipped to cyan-green
+- Telegram replies now render in native MarkdownV2
+- Web logout hardened so it always clears the session
+- i18n scaffolding plus 20 locale bundles and a public language switcher
+- Full marketing site rebuild around a shared device/metal-card kit
+- New /os whitepaper and /docs CMS surfaces backed by Notes
+- Chat error blocks now self-report agent, device, and IP context
+- Mixpanel server events now carry $os for clean OS slicing
 

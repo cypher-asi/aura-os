@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-10T08:48:01.787Z",
+  "generatedAt": "2026-06-10T20:58:37.372Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.635.1",
+  "version": "0.1.0-nightly.636.1",
   "date": "2026-06-10",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.635.1",
-  "lastIncludedSha": "4444e37a7deb7ef5736043483290ac613ad70520",
-  "previousProcessedSha": "5352382459a8f8fc6748752cca8149f1b1967b91",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.636.1",
+  "lastIncludedSha": "440cf343d4bdeb3af3f5bb3ac11f404a73cfff87",
+  "previousProcessedSha": "4444e37a7deb7ef5736043483290ac613ad70520",
   "commitShas": [
     "94cff7ba85e25327f13c1b57f3bd8c1e12141278",
     "7e94787689099789a9aa433cd1492a192cf74bfe",
@@ -507,10 +507,11 @@
     "2ffe8a19444b84e79d70853da9bde6f757a41ed8",
     "db35f8ec6cf49cb899539d51bbceaa9f937de9a9",
     "e635ad02955a687c64e8d37b464f200e96147860",
-    "4444e37a7deb7ef5736043483290ac613ad70520"
+    "4444e37a7deb7ef5736043483290ac613ad70520",
+    "440cf343d4bdeb3af3f5bb3ac11f404a73cfff87"
   ],
-  "rawCommitCount": 497,
-  "filteredCommitCount": 496,
+  "rawCommitCount": 498,
+  "filteredCommitCount": 497,
   "rawCommits": [
     {
       "sha": "94cff7ba85e25327f13c1b57f3bd8c1e12141278",
@@ -20598,6 +20599,51 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "440cf343d4bdeb3af3f5bb3ac11f404a73cfff87",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-10T16:52:08-04:00",
+      "subject": "Fix chat prompt typing layout churn (#47)",
+      "body": "* fix(chat): reduce prompt typing layout churn\n\n* fix(evals): align chat and workflow checks",
+      "parents": [
+        "4444e37a7deb7ef5736043483290ac613ad70520"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/InputBarShell.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatSurface.tsx",
+        "interface/tests/e2e/evals/chatCoreMockApp.ts",
+        "interface/tests/e2e/evals/scenarios/core-browser-smoke.json",
+        "interface/tests/e2e/evals/workflow-e2e.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 130,
+        "deletions": 22
+      },
+      "committedAtMs": 1781124728000,
+      "cleanSubject": "Fix chat prompt typing layout churn (#47)",
+      "keywords": [
+        "chat",
+        "prompt",
+        "typing",
+        "layout",
+        "churn"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/features",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -20605,29 +20651,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.635.1",
+      "version": "0.1.0-nightly.636.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 63344100
+          "sizeBytes": 63339924
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 130165240
+          "sizeBytes": 130161144
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -20637,29 +20683,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.635.1",
+      "version": "0.1.0-nightly.636.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.635.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.636.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 59290252
+          "sizeBytes": 59294743
         },
         {
-          "name": "AURA_0.1.0-nightly.635.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.636.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 58328530
+          "sizeBytes": 58332790
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -20669,29 +20715,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.635.1",
+      "version": "0.1.0-nightly.636.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.635.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.636.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61361488
+          "sizeBytes": 61365875
         },
         {
-          "name": "AURA_0.1.0-nightly.635.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.636.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60425021
+          "sizeBytes": 60426989
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -20701,17 +20747,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.635.1",
+      "version": "0.1.0-nightly.636.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 46980069
+          "sizeBytes": 46979334
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.635.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.636.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -20720,19 +20766,19 @@
     }
   ],
   "rendered": {
-    "title": "A golden marketing overhaul, internationalization, and Telegram-native replies",
-    "intro": "Most of today landed in the public marketing site: the /agents and /code pages got a top-to-bottom redesign around a hardware-device visual language and a unified golden accent, with new sections, animated WebGL devices, and a built-from-scratch interactive desktop mock. Alongside the visuals, the app picked up an i18n foundation with 20 languages, Notes-backed /os and /docs CMS pages, sturdier chat error reporting, and a more resilient web logout. Telegram replies now render with native MarkdownV2 formatting.",
+    "title": "Marketing site overhaul, i18n foundation, and agent platform fixes",
+    "intro": "A sprawling multi-day batch dominated by a top-to-bottom redesign of the public marketing site — new /agents, /code, /os, and /docs experiences with hardware-inspired CSS/WebGL devices, a unified gold accent, and full i18n scaffolding across 20 languages. Smaller but meaningful platform work landed alongside: a logout reliability fix, Telegram MarkdownV2 rendering, remote-agent org healing, richer chat error reports, and Mixpanel OS attribution on server-emitted events.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "12:06 AM",
         "started_at": "2026-06-05T07:06:59.000Z",
         "ended_at": "2026-06-05T07:06:59.000Z",
-        "title": "Cyan-green becomes the default theme accent",
-        "summary": "New users without a saved theme preference now land on the cyan-green accent instead of purple.",
+        "title": "Cyan-green replaces purple as the default accent",
+        "summary": "New users without a saved theme preference now boot into the cyan-green accent instead of purple.",
         "items": [
           {
-            "text": "Default theme accent flipped to cyan-green (#01f4cb) for new users, while existing users keep their persisted color choice.",
+            "text": "First-run users now get the cyan-green accent (#01f4cb) by default; anyone with a persisted choice keeps their existing theme.",
             "commit_shas": [
               "94cff7ba85e25327f13c1b57f3bd8c1e12141278"
             ],
@@ -20745,28 +20791,34 @@
         "time_label": "11:23 AM",
         "started_at": "2026-06-05T18:23:00.000Z",
         "ended_at": "2026-06-05T18:46:56.000Z",
-        "title": "Remote agent org repair and rounder chat bubbles",
-        "summary": "Remote agents stop rendering blank Organizations, public chat analytics is restored, and the chat surface gets a softer iMessage-style look.",
+        "title": "Chat polish, analytics recovery, and remote-agent org healing",
+        "summary": "iMessage-style chat bubbles and glowing sidekick labels landed alongside a restored Mixpanel event and a server-side fix that keeps remote agents' Organization field populated.",
         "items": [
           {
-            "text": "Remote agents now keep their organization populated end-to-end: the post-provision PUT threads the submitted org, list endpoints backfill legacy NULL-org records, and the profile card falls back to the active org name for not-yet-healed agents.",
+            "text": "User chat bubbles are now uniformly rounded (18px) on desktop and mobile for a softer iMessage-style look.",
             "commit_shas": [
-              "622772751846eebce23515999ffe57c251ae8422"
+              "7e94787689099789a9aa433cd1492a192cf74bfe"
             ],
             "confidence": "high"
           },
           {
-            "text": "Public chat regained its missing `public_message_sent` Mixpanel event on desktop and mobile, restoring the by-mode analytics breakdown that broke when the send hook was inlined.",
+            "text": "Selected sidekick sections, the Refer member button, and the active Agents/Projects switch label pick up a theme-aware glow, with unified 11px uppercase typography and tighter AgentInfoPanel spec text.",
+            "commit_shas": [
+              "8fe4a9add98821b35dcd90c423b7e3ff4b7c77c2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Restored the public_message_sent Mixpanel event on both desktop and mobile public-chat sends, fixing the broken \"by mode\" breakdown.",
             "commit_shas": [
               "775ecea2fe3c49cb5f1162dfd7244542d526c7c2"
             ],
             "confidence": "high"
           },
           {
-            "text": "User chat bubbles are now a uniform 18px iMessage-style radius, and selected sidekick labels, the Refer member button, and the active Agents/Projects switch picked up theme-aware glow tokens with unified typography.",
+            "text": "Remote agents no longer render with a blank Organization: the post-provision PUT now threads the submitted org through, and list_agents backfills legacy NULL-org rows so the card heals on next view.",
             "commit_shas": [
-              "7e94787689099789a9aa433cd1492a192cf74bfe",
-              "8fe4a9add98821b35dcd90c423b7e3ff4b7c77c2"
+              "622772751846eebce23515999ffe57c251ae8422"
             ],
             "confidence": "high"
           }
@@ -20777,11 +20829,11 @@
         "time_label": "11:48 AM",
         "started_at": "2026-06-05T18:48:11.000Z",
         "ended_at": "2026-06-05T18:48:11.000Z",
-        "title": "Telegram replies render as native MarkdownV2",
-        "summary": "Agent replies sent through the Telegram channel now style natively instead of leaking raw markdown.",
+        "title": "Telegram replies render in native MarkdownV2",
+        "summary": "Agent responses delivered via Telegram now use Telegram's MarkdownV2 dialect, with a plain-text fallback so escaping edge cases can never drop a message.",
         "items": [
           {
-            "text": "Telegram channel converts agent CommonMark output to Telegram's MarkdownV2 so bold, italic, code, and links render natively, with an automatic fallback to plain stripped text whenever Telegram rejects the formatted message.",
+            "text": "The Telegram channel converts CommonMark into MarkdownV2 so bold, italic, code, and links style natively; if Telegram rejects the formatted payload, the agent falls back to stripped plain text so the reply still goes through.",
             "commit_shas": [
               "edd820cfa3f0d414adf245c6fa261e77c7e8c6e6"
             ],
@@ -20794,11 +20846,11 @@
         "time_label": "11:48 AM",
         "started_at": "2026-06-05T18:48:51.000Z",
         "ended_at": "2026-06-07T18:35:54.000Z",
-        "title": "Marketing site rebuilt around a hardware-device visual language",
-        "summary": "The public /agents and /code pages got a sweeping redesign: new sections, a shared device kit, animated WebGL screens, a richer theme system, and a fully interactive desktop mock, alongside an i18n foundation and a resilient web logout.",
+        "title": "i18n foundation, prior-session chat history, and the new marketing system",
+        "summary": "A two-day push wired up internationalization across 20 languages, added a Load prior session affordance to chat, hardened web logout, and rebuilt the public /agents and /code pages around a shared hardware-device and metal-card design system.",
         "items": [
           {
-            "text": "Internationalization landed across the app: i18next + react-i18next with lazy-loaded common/nav/auth/settings namespaces, an early <html lang/dir> stamp for RTL, a shared language store, and Settings + public taskbar language switchers, with bundles for 20 languages including Arabic, CJK, and Hindi.",
+            "text": "i18next + react-i18next are now wired up with lazy-loaded namespaces, an early <html lang/dir> stamp for RTL, and locale bundles for 20 languages (en/de/es/fr/pt-BR plus ar/ja/ko/zh-Hant/hi/id/nl/pl/tr/vi/th/uk and more); a Settings language section and a public taskbar/drawer language dropdown share a single store so they stay in sync.",
             "commit_shas": [
               "4bbf9f7522fa9484ea8118f622fe2059c5415c89",
               "b336a6f8c96f19aaa14753bd2200314428e35b42",
@@ -20808,77 +20860,45 @@
             "confidence": "high"
           },
           {
-            "text": "Logout on the web is now resilient: localStorage failures from the force-logged-out sentinel no longer abort teardown, the session clear runs in a guarded path, and users always navigate back to the public home even when storage is blocked or partitioned.",
+            "text": "Chat transcripts gain a repeatable Load prior session button that prepends the previous session's messages above a labeled divider, with stable scroll anchoring so the current viewport doesn't jump as history loads.",
+            "commit_shas": [
+              "ca08bbaeea3fe160e1b8d0229f4773380143c529",
+              "e12083d8ebb8fa15656140ea3843ffd080bc1e99"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Web logout is now resilient: localStorage failures in endLocalSession can no longer abort the session clear, and a finally block guarantees navigation to the public home, so File/Profile/Settings/Org logouts always land users on the logged-out surface in browsers.",
             "commit_shas": [
               "2d0ee74e09e67c8ef98fd3574b61d646c024bbfb"
             ],
             "confidence": "high"
           },
           {
-            "text": "The /agents page was rebuilt around a sampler/console hardware metaphor: a shared device kit (DeviceScreen, HardwareKey, DotMatrixGrille, DeviceLabelStrip, Plate, Knob) drives a tall AgentConsole hero, a four-quadrant PersonalAgentSection bento with neomorphic skill keys and a service integrations device, a centered \"Expertise without ego\" intro, and reusable TextCard/CardSection/MetalCard primitives.",
+            "text": "The /agents hero, integrations grid, skill keys, privacy cards, and CTA were rebuilt around a shared Plate/MetalCard/DeviceScreen/HardwareKey/Knob kit, with WebGL orbs, a noise-reduction brain visualization, and a per-stage \"Agents made for you\" device driving the new section flow.",
             "commit_shas": [
               "1fb435eb977a869a5c0e72b22f8ded317b75e790",
-              "395e523645fb883327d66517989382336479d27c",
-              "13e05081af914b790f25eef8701b9b3ea2b31998",
-              "b352f441e10c2a9d433908ca166a6f2b16a8755b",
-              "624d51b8dd0ac49c4f5f9858167605490f872b71",
-              "5090f8ce95beab3415e7e39b69a23c10dd8ba9e2",
-              "68f6ab8d77d85d899740941b3600352f8f822ab9"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Live WebGL visuals replaced static art across the page: the agent device screen, the mock LLM \"+\" attach button, and a split-brain noise-reduction visualization on the Expertise card all animate from custom shaders, with cursor-driven knob and tick-meter feedback and graceful fallbacks when WebGL2 is unavailable.",
-            "commit_shas": [
-              "56c87e0bfbe37794783abd87adad6b23bd780e4f",
-              "69c25091d53176d5206c0f1e4d3d069d4dca8734",
-              "3fe397275f65d594b01f2c32b2e599fca1708a5c",
-              "07d559b268cc5a30b01c2b8c8f47e749be4aa1c9",
+              "68f6ab8d77d85d899740941b3600352f8f822ab9",
               "b6311b86f1eb89c56ae65b676f8847380cd6ab26",
-              "de547fc51de2ba2dc90b060cba502e01330d229e",
-              "92440f1f441c0bfcb91b4d607bd271f85680f944",
-              "41b3e4dcbc6b05c45e001e243f2c32dd7db2044b"
+              "c8a798c49a356fc498984e0d33b9e692148f1526"
             ],
             "confidence": "high"
           },
           {
-            "text": "The /code page swapped its placeholder workspace for a fully interactive MockAuraDesktop: an agents/projects nav with a working toggle, a live LLM chat using the real DesktopChatInputBar, a half-width sidekick that scripts a Terminal-stream-to-Tasks loop, and a real-app taskbar, all pinned to a cyan-green accent.",
+            "text": "The /code page hero was replaced with an interactive mock of the authenticated AURA desktop — agents/projects nav, a live LLM chat using the real input bar, a scripted Terminal-to-Tasks sidekick loop, and the bottom taskbar — built from the app's real presentational components fed mock data.",
             "commit_shas": [
               "3a7168ec73670ab0ac3c412e3a271852fca7868e",
               "e94f8c4dc0e8930cf6a339aa751eb09b760e8be8",
-              "8789a65288138ccb54f7351d5e9cd9c7699ad42a",
-              "b22fb0f6ca105f5b5b9b1125682c38d2c32ed6d6",
-              "d9aa2c2ddf7455e881f56fda67682880bc7fead5"
+              "8789a65288138ccb54f7351d5e9cd9c7699ad42a"
             ],
             "confidence": "high"
           },
           {
-            "text": "The public landing got a Creator persona with a looping video wallpaper and a full-screen WebGL plasma background, plus a redesigned \"Agents made for you\" hero device with a hex-mesh grille, side terminal LCD, and looping character clip.",
+            "text": "New Creator persona becomes the default public landing agent with a full-screen WebGL plasma background and a looping character video wallpaper inside the mock desktop.",
             "commit_shas": [
               "6a010dd36c7f3b2301271ff53123fbaaf6e80d80",
-              "ae523482e4dacfee22b043322ead79b17fac4482",
-              "6c9a81fa3a9c12e4c87fd0ad49322d08f4a958b8",
               "eea01d90eb1b369d94afd150754ceef561a38818",
-              "c8a798c49a356fc498984e0d33b9e692148f1526",
-              "5e627384a12bdd44b2efa0d3d7cec5dd17ba6002"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The 3D agent profile card and theme settings caught up: the metal frame swaps to brushed silver in light mode with regenerated textures, theme presets export as a copyable aura-theme JSON, and the preset and font pickers use the in-app dropdown instead of OS-native selects.",
-            "commit_shas": [
-              "63081659f4d688bf910b0051863449b83c3e6891",
-              "eb83d05159dc65be32f4b99398f5dce23cf0d0d6",
-              "d5d0c4111ce0f4b107c6b9a42617b58bb194c68a",
-              "8f31d4d1dfcb90fb50cffe05cef54b161e3c4f52"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Chat history gained a \"Load prior session\" affordance: a divider-marked button prepends the previous session above the current chat in project chat, the agents shell, and the chat app, with scroll position held stable so on-screen messages don't jump.",
-            "commit_shas": [
-              "ca08bbaeea3fe160e1b8d0229f4773380143c529",
-              "e12083d8ebb8fa15656140ea3843ffd080bc1e99"
+              "6396dc14dc9d796812eb2b793fd2abc7e9bb6821"
             ],
             "confidence": "high"
           }
@@ -20889,11 +20909,11 @@
         "time_label": "11:38 AM",
         "started_at": "2026-06-07T18:38:33.000Z",
         "ended_at": "2026-06-07T18:38:33.000Z",
-        "title": "Server-side Mixpanel events now report OS",
-        "summary": "Session, share-link, and share-link-generated events posted from the server pick up the correct `$os` bucket instead of \"(not set)\".",
+        "title": "Mixpanel server events now report $os",
+        "summary": "Server-emitted events join the browser SDK's OS slicing instead of bucketing as \"$os = (not set)\".",
         "items": [
           {
-            "text": "Server-emitted Mixpanel events (session_active, share_link_opened, share_link_generated) now derive `$os` from the request User-Agent using the same regex ladder as the browser SDK, so server- and client-side OS slices merge correctly.",
+            "text": "session_active, share_link_opened, and share_link_generated now derive $os from the request User-Agent using the same regex ladder as mixpanel-browser, so server- and client-side events merge into the same OS slices.",
             "commit_shas": [
               "158e736122da34c17e27c556af5387d08f6cd9bd"
             ],
@@ -20905,54 +20925,22 @@
         "batch_id": "entry-6",
         "time_label": "12:56 PM",
         "started_at": "2026-06-07T19:56:21.000Z",
-        "ended_at": "2026-06-10T08:32:10.000Z",
-        "title": "Golden-accent marketing redesign with /os and /docs CMS",
-        "summary": "The /agents marketing surface was retinted to a unified golden accent and gained new device sections, a Notes-backed /os whitepaper and /docs site joined the public nav, and chat error reporting now travels with full agent and device context.",
+        "ended_at": "2026-06-10T20:52:08.000Z",
+        "title": "Gold-accent marketing finish, /os and /docs CMS, and chat error context",
+        "summary": "Three days of marketing polish unified the public site around a gold accent, added Notes-backed whitepaper and documentation surfaces, brought the homepage into a continuous scroll with the agents page, and shipped diagnostic improvements to chat error blocks.",
         "items": [
           {
-            "text": "A unified golden accent replaced the orange/blue/violet/white mix across the /agents page: headlines, console lights, knob ticks, expertise tab underline, integration spotlight, skill keys, CTA buttons, and trust cards all share the same gold tokens, with matching glow on the mock LLM attach orb.",
+            "text": "The /agents page was retinted around a shared golden accent — hero console lights, expertise tab underline, knob/ACTIVATION readouts, skill keys, integrations cycle, mode selector, and CTA all glow in unified gold tokens with a shimmering \"Feel the AGI.\" tagline.",
             "commit_shas": [
               "4318527b69af2b7db714adc3c8b43685b3f2caef",
-              "f1b15b60bd2b6d0ee1e1a1f4afc90fa68cbefb16",
-              "cc01067b7cef8dcb10c3581e56e48b7fa4ff3c4f"
+              "cc01067b7cef8dcb10c3581e56e48b7fa4ff3c4f",
+              "c97dbe787e7cdc7e82782f58ef727531a843a54b",
+              "9c8ea6bc2e4eeffb7be9771872c935f190ff6faf"
             ],
             "confidence": "high"
           },
           {
-            "text": "The \"Agents made for you\" hero became a fully interactive build-stage device: clickable Identity/Expertise/Integrations/Connections/Automations/Launch list, a knob and progress bar that track each stage, a typewriter terminal that types its log on scroll, and a Create-your-agent click that completes the build animation.",
-            "commit_shas": [
-              "b211b5ea56bbc76c8c04ad21ee7ec7ada216651f",
-              "f314881d95490f3786c599418607e27fbbb53c33",
-              "18dac5904ca2138adc24c961a728c569638dbaa8",
-              "2b74046783ff4a3d29dd1b76ea245726d2933b4f"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "New \"Connected\" and \"Built for trust\" sections shipped: a CSS speaker console with channel keys, ribbed thumbwheel, and concentric speaker grille connects from the hero phones; a WebGL IsolatedDevice with a ghost-stack of computers, streaming connector dashes, a service button rail, and a CD-player-style display panel powers the trust story.",
-            "commit_shas": [
-              "66b5ef689f7346db5a92c7556eb23aaf536fa6a4",
-              "b7fbe8c0f3ddab5125aded584d522dd481881e18",
-              "f3d795dcb91d3dc0d16839e046f610c8961fe297",
-              "b9be91ed94a0a037bca2fec4d85ab06cd9996d59",
-              "a6ba4ec3190e9cd7211d0293f7058339477aa862",
-              "2e19c32bb0a49d8f4205f61614d119d201b7ea15",
-              "ccf37526679308ab51e9291c056fcc9aa513ceee",
-              "5b2eca361a33478522d7400cd3649d467a3880d7"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The expertise selector moved inside the intelligence device with per-discipline content: switching off General now drives a typewriter capability list on the left flank and a bespoke CSS/SVG example mockup on the right for Research, Writing, Creative, Social, Sales, Marketing, Design, Coding, Analytics, Finance, and Legal.",
-            "commit_shas": [
-              "85a295927f4a9d488bf33bdda5ecf0121b32cf09",
-              "02222294dc76c2041f3a848456a0f48141dd984b",
-              "081cc9b30d4af6a9c1da7296ed3141bfafaa0859"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Two new Notes-backed CMS pages went live on the public site: /os renders the AURA OS whitepaper from a reserved aura-whitepaper project, and /docs is a three-column GitBook-style site backed by an aura-docs project, both served anonymously via /api/public/os and /api/public/docs and editable by sys admins in the Notes app.",
+            "text": "A new public /os whitepaper page and /docs site are now backed by reserved Notes projects, with sys-admin-authored markdown on S3 served anonymously via /api/public/os and /api/public/docs; the /docs page uses a three-column GitBook-style layout.",
             "commit_shas": [
               "6379550f244e277fd5dd59fdf1049358e3250d18",
               "34458d3e431fb02036e026d21172a7d13c2c71b4",
@@ -20961,7 +20949,33 @@
             "confidence": "high"
           },
           {
-            "text": "Chat error blocks are now self-describing: every error renders and copies the agent name, local/remote type, status, the user's current device, the agent's machine, and the agent IP (local IP or remote endpoint), with the same fields mirrored into the Report bug bundle.",
+            "text": "The intelligence spec device gained a built-in expertise selector that swaps in per-discipline capability typewriters and example mockups (Research, Writing, Creative, Coding, Analytics, Finance, Legal, and more) around the always-on brain, replacing the standalone tab strip.",
+            "commit_shas": [
+              "85a295927f4a9d488bf33bdda5ecf0121b32cf09",
+              "02222294dc76c2041f3a848456a0f48141dd984b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Built a new Built-for-trust section anchored by a WebGL Mac-mini-style isolated device with a ghost-computer stack, a service button rail with converging energy connectors into the device, plus a CD-tray display panel, password lock, and always-on toggle.",
+            "commit_shas": [
+              "f3d795dcb91d3dc0d16839e046f610c8961fe297",
+              "b9be91ed94a0a037bca2fec4d85ab06cd9996d59",
+              "2e19c32bb0a49d8f4205f61614d119d201b7ea15",
+              "a7b6b3d956a00dcedaf0c61b8ded09a7484b63ec",
+              "ccf37526679308ab51e9291c056fcc9aa513ceee"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The landing persona carousel now flows directly into the embedded /agents section stack: scrolling past the last persona eases into the agents content and scrolling back re-locks the carousel with a momentum-settle guard.",
+            "commit_shas": [
+              "525d2f47ce3dcc38ffbab94befb51c4a9366bdb6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat error blocks now display and copy the agent name, local/remote type, status, device context, and the agent machine's IP, with the same fields mirrored into the Report bug bundle so user-shared error reports are self-describing.",
             "commit_shas": [
               "0df0a6056f526d3247cc5db9fa638b3d4c0535d7",
               "7a4ce569d5541864f8c666950e9fc09649a1a00f"
@@ -20969,40 +20983,19 @@
             "confidence": "high"
           },
           {
-            "text": "The landing page now flows directly into /agents on scroll: wheeling past the last persona eases into the agents section stack, scrolling back re-locks the persona carousel behind a momentum guard, and the nav foreground hands off to the marketing pair while inside the agents region.",
-            "commit_shas": [
-              "525d2f47ce3dcc38ffbab94befb51c4a9366bdb6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Public nav and marketing chrome got reorganized: a feature-flagged Expertise dropdown with /expertise/:slug detail pages, Pricing promoted next to Code, OS tucked into Resources, a transparent public top bar, and a footer bottom bar with the CYPHER, INC. copyright and a GitHub link.",
-            "commit_shas": [
-              "7e630ae0bd34aacbc5189407d8985e66229b1525",
-              "b737e94d63f2247db8f663095d6c8a275c89056a",
-              "c0093068bc50b72a45104780cfc570020de2c0de",
-              "53ca2d3a35775cdc4d33af4b0eb334bd6a892769",
-              "4e2762257856ace8be1b4e54a39fb29584d0fb63"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The marketing site picked up real localization: public-chat, marketing footer, top nav, feedback, models, blog, changelog, docs, OS, and the agents-page sections now resolve their strings through the i18n namespaces, including the default public-chat session title.",
+            "text": "Marketing surfaces were broadly localized — public top nav, footer (including a new GitHub link and copyright bottom bar), Feedback and Models views, and the remaining marketing sections now run through i18n; marketing chat inputs are pinned to the dark theme regardless of the visitor's app theme.",
             "commit_shas": [
               "a9085b2b5859a59e07d5c6c0e4e190b0b65577fb",
               "abf82b8f831daf34427073f2cdce8300a4082cdc",
-              "552c9067df232b4121b1744e1b7648ad66b94897",
-              "2ffe8a19444b84e79d70853da9bde6f757a41ed8",
-              "db35f8ec6cf49cb899539d51bbceaa9f937de9a9",
-              "e635ad02955a687c64e8d37b464f200e96147860",
-              "4444e37a7deb7ef5736043483290ac613ad70520"
+              "4444e37a7deb7ef5736043483290ac613ad70520",
+              "21e36607d544c45be7da56e68ccf809765e41e90"
             ],
             "confidence": "high"
           },
           {
-            "text": "Marketing input chrome was hardened against theme bleed: the /code mock and the /agents MockChatInputCard pin themselves to dark with the dark input-pill tokens so the reused real chat input stays dark regardless of the visitor's active app theme.",
+            "text": "Reduced layout churn while the chat prompt is being typed, with matching eval scenarios aligning the chat and workflow checks.",
             "commit_shas": [
-              "21e36607d544c45be7da56e68ccf809765e41e90"
+              "440cf343d4bdeb3af3f5bb3ac11f404a73cfff87"
             ],
             "confidence": "medium"
           }
@@ -21010,13 +21003,15 @@
       }
     ],
     "highlights": [
-      "Marketing site rebuilt around a hardware-device design language and golden accent",
-      "i18n scaffolding plus 20 locale bundles and user-facing language switchers",
-      "Notes-backed /os whitepaper and /docs CMS pages",
-      "Telegram agent replies now use native MarkdownV2 formatting",
-      "Web logout hardened so File/Profile/Settings/Org logout always clears the session",
-      "Chat error blocks carry agent, device, and IP context for self-describing bug reports"
+      "Default accent flipped to cyan-green",
+      "Telegram replies now render in native MarkdownV2",
+      "Web logout hardened so it always clears the session",
+      "i18n scaffolding plus 20 locale bundles and a public language switcher",
+      "Full marketing site rebuild around a shared device/metal-card kit",
+      "New /os whitepaper and /docs CMS surfaces backed by Notes",
+      "Chat error blocks now self-report agent, device, and IP context",
+      "Mixpanel server events now carry $os for clean OS slicing"
     ],
-    "raw_commit_count": 496
+    "raw_commit_count": 497
   }
 }
