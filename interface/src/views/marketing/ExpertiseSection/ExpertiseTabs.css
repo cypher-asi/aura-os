@@ -1,0 +1,161 @@
+/*
+ * Tab slider beneath the "Expertise without ego." headline. Mirrors the
+ * Apple feature-tab pattern: a centered row of discipline labels above a
+ * thin divider, with the active label brought to full opacity and marked
+ * by an underline, and a single description paragraph below that swaps
+ * per tab. Colors reuse the marketing text tokens cascaded from
+ * `.productView` (`--color-text-*`).
+ */
+/*
+ * Tighten the gap between the "Intelligence without limits" spec bento
+ * above and this tab slider. The shared `<Section />` shell defaults to
+ * 80px vertical padding; the two-class selector overrides only the top
+ * so the slider tucks up close under the bento while keeping its normal
+ * bottom rhythm into the personal-agent bento below.
+ */
+.section.expertiseTabsSection {
+  padding-top: clamp(8px, 1.5vh, 20px);
+}
+
+.expertiseTabs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 820px;
+  margin-inline: auto;
+}
+
+.expertiseTabsRow {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  width: 100%;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/*
+ * Single underline shared across all tabs. Its `left`/`top`/`width` are
+ * driven by JS (measured from the active tab) and animated here so the
+ * marker glides between tabs instead of snapping. `translateX` is used
+ * for the horizontal travel so the slide runs on the compositor.
+ */
+.expertiseTabsIndicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 2px;
+  /* Glowing golden accent underline matching the page's gold family. */
+  background: var(--gold-core, var(--color-text-primary));
+  box-shadow:
+    0 0 4px rgba(var(--gold-glow), 0.85),
+    0 0 9px rgba(var(--gold-glow), 0.5),
+    0 0 16px rgba(var(--gold-halo), 0.4);
+  border-radius: 2px;
+  pointer-events: none;
+  /* Hidden until the first imperative measurement writes a real
+     transform / width (and opacity: 1) so the marker doesn't slide in
+     from the origin on mount. */
+  opacity: 0;
+  transform: translateX(0);
+  will-change: transform, width;
+  transition:
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    width 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    top 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+ * Keep this short slide even when the environment reports reduced motion:
+ * the moving underline is the tab selector's primary "selection moved"
+ * affordance, and the live preview environment can report reduced motion
+ * by default. The app-level reduced-motion rule uses `!important`, so this
+ * targeted override needs to match it for this one control.
+ */
+:root[data-motion="reduced"] .expertiseTabsIndicator {
+  transition-duration: 320ms, 320ms, 320ms !important;
+}
+
+.expertiseTab {
+  position: relative;
+  display: inline-grid;
+  margin: 0;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: clamp(12px, 1vw, 14px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  transition:
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+/* Hidden bold-weight copy that fixes the tab's width to its selected
+   size so toggling `font-weight: 600` never reflows the row. */
+.expertiseTabGhost {
+  grid-area: 1 / 1;
+  font-weight: 600;
+  visibility: hidden;
+}
+
+.expertiseTabLabel {
+  grid-area: 1 / 1;
+}
+
+.expertiseTab:hover {
+  color: var(--color-text-primary);
+  opacity: 1;
+}
+
+.expertiseTab:focus-visible {
+  outline: 2px solid var(--color-text-primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.expertiseTab[data-selected="true"] {
+  /* Selected label lights up with the golden accent glow. */
+  color: var(--gold-core, var(--color-text-primary));
+  text-shadow: var(--gold-text-shadow, none);
+  font-weight: 600;
+  opacity: 1;
+}
+
+.expertiseTabsPanel {
+  display: grid;
+  width: 100%;
+  max-width: 620px;
+}
+
+.expertiseTabsPanelItem {
+  grid-area: 1 / 1;
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: var(--leading-relaxed, 1.6);
+  color: var(--color-text-secondary);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inactive blurbs stay in flow (so the grid cell keeps the tallest
+   blurb's height) but are hidden and non-interactive. */
+.expertiseTabsPanelItem[data-active="false"] {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expertiseTab {
+    transition: none;
+  }
+}

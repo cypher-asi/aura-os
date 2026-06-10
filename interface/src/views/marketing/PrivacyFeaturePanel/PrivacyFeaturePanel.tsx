@@ -12,7 +12,7 @@ import { FeaturePanel } from "../FeaturePanel/FeaturePanel";
 export function PrivacyFeaturePanel(): ReactNode {
   return (
     <FeaturePanel
-      headline="Designed for your privacy."
+      headline="Designed for your humanity."
       features={[
         {
           title: "Private",
