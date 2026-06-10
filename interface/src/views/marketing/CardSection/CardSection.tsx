@@ -9,6 +9,8 @@ interface CardSectionProps {
   readonly ariaLabelledBy?: string;
   /** Optional extra class appended to the underlying `<Section />`. */
   readonly className?: string;
+  /** Grid column count (default 2). Use 3 for an equal three-up row. */
+  readonly columns?: 2 | 3;
 }
 
 /**
@@ -28,8 +30,11 @@ export function CardSection({
   ariaLabel,
   ariaLabelledBy,
   className,
+  columns = 2,
 }: CardSectionProps): ReactNode {
   const sectionClass = className ? `cardSection ${className}` : "cardSection";
+  const gridClass =
+    columns === 3 ? "cardSectionGrid cardSectionGridCols3" : "cardSectionGrid";
   return (
     <Section
       ariaLabel={ariaLabel}
@@ -37,7 +42,7 @@ export function CardSection({
       fullHeight={false}
       className={sectionClass}
     >
-      <div className="cardSectionGrid">{children}</div>
+      <div className={gridClass}>{children}</div>
     </Section>
   );
 }

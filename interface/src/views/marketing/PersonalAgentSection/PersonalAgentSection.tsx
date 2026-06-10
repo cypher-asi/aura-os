@@ -24,11 +24,10 @@ const HEADLINE_ID = "personalAgentHeadline";
  * the exact same height as the other H2 intros and lets it center
  * card-to-card between the bento above and the bento below.
  *
- * Bento cells — a thin full-width model marquee on top, then one
- * full-width quadrant and two below, each pairing a live mini-UI with
- * a title + description:
- *   0. Model marquee             -> every model from /models, looping
- *   1. "Always on"               -> the real chat input (mocked / static)
+ * Bento cells — one full-width quadrant on top and two below, each
+ * pairing a live mini-UI with a title + description:
+ *   1. "Always on"               -> the real chat input (mocked / static),
+ *        with the looping model marquee pinned across the card's top edge
  *   2. "Intelligent in all domains" -> a sea of skills
  *   3. "Connected to everything" -> the services it connects to
  */
@@ -43,7 +42,7 @@ export function PersonalAgentSection(): ReactNode {
         <TextCard
           level="h2"
           id={HEADLINE_ID}
-          headline="Multi-modal. Highly skilled."
+          headline="Every model. Every mode."
           subhead="AURA is your own personal agent that supports you with everything from light tasks to deep work."
         />
       </Section>
@@ -51,16 +50,19 @@ export function PersonalAgentSection(): ReactNode {
       <CardSection ariaLabel="What your agent can do">
         <MetalCard
           wide
-          gradient={180}
-          className="paCardModelMarquee"
-          media={<ModelMarquee />}
-        />
-        <MetalCard
-          wide
-          short
           gradient={135}
           className="paCardWide"
-          media={<MockChatInputCard />}
+          mediaClassName="paAlwaysOnMediaWell"
+          media={
+            <>
+              <div className="paAlwaysOnMarquee">
+                <ModelMarquee />
+              </div>
+              <div className="paAlwaysOnChat">
+                <MockChatInputCard />
+              </div>
+            </>
+          }
           title="Always on."
           description="Ask or direct your agent to do almost anything. It will get to work and report back when necessary."
         />

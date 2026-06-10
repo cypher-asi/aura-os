@@ -1,4 +1,10 @@
-import { type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Anthropic,
   ByteDance,
@@ -27,6 +33,13 @@ const MODELS: readonly MarketingModelEntry[] = buildMarketingModelEntries();
 const LOGO_SIZE = 18;
 
 /**
+ * How long a clicked model stays lit with the golden accent before
+ * settling back — matches the integration-logo pulse in
+ * `ServiceDeviceCard` (`pulseLogo(index, 1500)`).
+ */
+const LIT_MS = 1500;
+
+/**
  * Marketing-provider label -> brand logo. All marks render as the
  * mono variant so they inherit `currentColor` and match the muted
  * gray of the integration glyphs in the service device card
@@ -51,22 +64,33 @@ const PROVIDER_LOGOS: Record<string, ReactNode> = {
 interface ModelItemsProps {
   /** The duplicate copy is decoration only — hidden from the a11y tree. */
   readonly ariaHidden?: boolean;
+  /** Set of model ids currently lit with the gold accent. */
+  readonly litIds: ReadonlySet<string>;
+  readonly onModelClick: (id: string) => void;
 }
 
-function ModelItems({ ariaHidden = false }: ModelItemsProps): ReactNode {
+function ModelItems({
+  ariaHidden = false,
+  litIds,
+  onModelClick,
+}: ModelItemsProps): ReactNode {
   return (
     <div className="modelMarqueeGroup" aria-hidden={ariaHidden || undefined}>
       {MODELS.map((model) => (
-        <span
+        <button
+          type="button"
           className="modelMarqueeItem"
           key={model.id}
+          tabIndex={ariaHidden ? -1 : undefined}
+          data-active={litIds.has(model.id) ? "true" : undefined}
           title={`${model.name} — ${model.provider}`}
+          onClick={() => onModelClick(model.id)}
         >
           <span className="modelMarqueeLogo">
             {PROVIDER_LOGOS[model.provider] ?? null}
           </span>
           <span className="modelMarqueeName">{model.name}</span>
-        </span>
+        </button>
       ))}
     </div>
   );
@@ -80,13 +104,70 @@ function ModelItems({ ariaHidden = false }: ModelItemsProps): ReactNode {
  * rendered twice inside a `width: max-content` track that slides
  * exactly `-50%` per cycle, so the second copy lands where the first
  * started and the drift reads as one continuous band.
+ *
+ * Hovering anywhere over the panel pauses the drift. Clicking models
+ * lights each with the golden accent and holds it for {@link LIT_MS}
+ * before settling back — multiple can be lit at once, each with its
+ * own independent timer, matching the integration-logo pulse logic in
+ * `ServiceDeviceCard`.
  */
 export function ModelMarquee(): ReactNode {
+  // Set of model ids currently lit, each with its own turn-off timer
+  // tracked in `litTimersRef` and keyed by id.
+  const [litIds, setLitIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
+  const litTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+
+  const pulseModel = useCallback((id: string, durationMs: number) => {
+    setLitIds((prev) => {
+      if (prev.has(id)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    const existing = litTimersRef.current.get(id);
+    if (existing !== undefined) {
+      clearTimeout(existing);
+    }
+    const timer = setTimeout(() => {
+      setLitIds((prev) => {
+        if (!prev.has(id)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      litTimersRef.current.delete(id);
+    }, durationMs);
+    litTimersRef.current.set(id, timer);
+  }, []);
+
+  useEffect(() => {
+    const timers = litTimersRef.current;
+    return () => {
+      for (const timer of timers.values()) {
+        clearTimeout(timer);
+      }
+      timers.clear();
+    };
+  }, []);
+
+  const handleClick = useCallback(
+    (id: string) => pulseModel(id, LIT_MS),
+    [pulseModel],
+  );
+
   return (
     <div className="modelMarquee" aria-label="Models available on AURA">
       <div className="modelMarqueeTrack">
-        <ModelItems />
-        <ModelItems ariaHidden />
+        <ModelItems litIds={litIds} onModelClick={handleClick} />
+        <ModelItems litIds={litIds} onModelClick={handleClick} ariaHidden />
       </div>
     </div>
   );

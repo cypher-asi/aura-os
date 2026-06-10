@@ -41,31 +41,63 @@
   }
 }
 
-/* ----- Cell 0: model marquee strip ------------------------------ */
+/* ----- Quadrant 1: chat input mock + model marquee ------------- */
 
 /*
- * Thin full-width panel holding the looping model strip (see
- * ModelMarquee.css). Collapses MetalCard's quadrant metrics
- * (626px min-height / 50px padding) down to a slim band; the media
- * well inside already flex-grows and centers, so the marquee sits
- * vertically centered in the strip. Two-class specificity overrides
- * `.metalCard` at every breakpoint.
+ * The "Always on" card stacks the looping model marquee across its
+ * top edge with the chat-input mock centered below. Its media well is
+ * laid out as a column (overriding MetalCard's centered media flex)
+ * and allowed to overflow so the marquee can break out of the card's
+ * padding to the full card edge.
  */
-.metalCard.paCardModelMarquee {
-  min-height: 0;
+.paAlwaysOnMediaWell {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  /* Let the marquee's negative margins paint up into the card's top
+     padding (the band's `overflow: hidden` still clips the card to its
+     rounded outer corners). */
+  overflow: visible;
+}
+
+/*
+ * Model marquee band, pinned across the card's top edge. Negative
+ * margins cancel the card's padding (50px top + side on base; the
+ * desktop `.paCardWide` side override is mirrored below) so the strip
+ * spans the full card width and reaches the top corner. No background
+ * of its own — the card's diagonal metal gradient shows through so the
+ * strip reads as part of the same "Always on" panel.
+ */
+.paAlwaysOnMarquee {
+  position: relative;
   height: 84px;
-  padding: 0;
-  gap: 0;
-  /* Bleed 1px into the grid's seam gap so no divider line is drawn
-     between the strip and the "Always on" card below — the two read
-     as one continuous panel. */
-  margin-bottom: -1px;
+  margin: -50px -50px 0;
+  overflow: hidden;
+}
+
+/* Chat-input mock fills the rest of the card and stays centered. */
+.paAlwaysOnChat {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+@media (min-width: 769px) {
+  /* Mirror the desktop `.paCardWide` inline padding so the strip still
+     breaks out to the full card edge at this breakpoint. */
+  .paAlwaysOnMarquee {
+    margin-inline: calc(-10.16vw - 43px);
+  }
 }
 
 @media (max-width: 768px) {
-  .metalCard.paCardModelMarquee {
-    min-height: 0;
+  /* Card padding drops to 28px on mobile — match the breakout. */
+  .paAlwaysOnMarquee {
     height: 60px;
+    margin: -28px -28px 0;
   }
 }
 

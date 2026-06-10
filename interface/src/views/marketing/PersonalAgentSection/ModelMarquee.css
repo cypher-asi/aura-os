@@ -7,6 +7,12 @@
  */
 .modelMarquee {
   width: 100%;
+  /* Fill the panel's media well so hovering ANYWHERE over the strip
+     (not just the text line) pauses the drift and the per-model
+     buttons span the full panel height. */
+  height: 100%;
+  display: flex;
+  align-items: stretch;
   overflow: hidden;
   /* Fade the strip's entry/exit zones into the panel instead of
      letting cells pop at the hard edge. The mask also hides the
@@ -31,7 +37,7 @@
 
 .modelMarqueeTrack {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   /* Size to the full intrinsic width of both copies so the keyframe's
      `translateX(-50%)` sweeps exactly one copy per cycle. */
   width: max-content;
@@ -41,8 +47,11 @@
   will-change: transform;
 }
 
-/* Pause the drift while the visitor reads a model name. */
-.modelMarquee:hover .modelMarqueeTrack {
+/* Pause the drift while the cursor is anywhere over the panel (the
+   marquee stretches to the panel's full height) so a visitor can
+   read and click a model. Keyboard focus pauses it too. */
+.modelMarquee:hover .modelMarqueeTrack,
+.modelMarquee:focus-within .modelMarqueeTrack {
   animation-play-state: paused;
 }
 
@@ -58,18 +67,25 @@
 /* One copy of the model list; two are rendered back to back. */
 .modelMarqueeGroup {
   display: flex;
-  align-items: center;
+  align-items: stretch;
 }
 
+/* Each cell is a real (decorative) button: full panel height, pointer
+   cursor, and the same golden click pulse as the integration logos. */
 .modelMarqueeItem {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  border: none;
+  background: none;
+  font: inherit;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 28px;
   white-space: nowrap;
-  /* Hairline divider between cells, applied uniformly to every item
-     (including across the copy boundary) so the wrap is seamless. */
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  outline: none;
 }
 
 /* Mono brand marks inherit this via `currentColor` — the same muted
@@ -84,9 +100,13 @@
   transition: color 200ms ease, filter 200ms ease;
 }
 
-/* Hovering a model lights its mark with the golden accent glow,
-   mirroring `.personalAgentDeviceLogo:hover`. */
-.modelMarqueeItem:hover .modelMarqueeLogo {
+/* Hovering or clicking a model lights its mark with the golden accent
+   glow, mirroring `.personalAgentDeviceLogo:hover`; the lit state
+   (`data-active`, driven by the component) holds it bright after the
+   cursor moves on. */
+.modelMarqueeItem:hover .modelMarqueeLogo,
+.modelMarqueeItem:focus-visible .modelMarqueeLogo,
+.modelMarqueeItem[data-active="true"] .modelMarqueeLogo {
   color: var(--gold-core, #fff);
   filter:
     drop-shadow(0 0 7px rgba(var(--gold-glow), 0.85))
@@ -99,6 +119,15 @@
   letter-spacing: 0.01em;
   line-height: 1;
   color: var(--color-text-secondary);
+  transition: color 200ms ease;
+}
+
+/* The model name steps up to full brightness alongside its glowing
+   mark while hovered or lit. */
+.modelMarqueeItem:hover .modelMarqueeName,
+.modelMarqueeItem:focus-visible .modelMarqueeName,
+.modelMarqueeItem[data-active="true"] .modelMarqueeName {
+  color: var(--color-text-primary);
 }
 
 @media (max-width: 768px) {

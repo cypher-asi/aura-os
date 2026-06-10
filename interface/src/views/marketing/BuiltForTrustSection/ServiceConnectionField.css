@@ -2,9 +2,11 @@
  * SVG overlay routing the service rail nozzles into the single device port.
  * Painted first in the stage so it sits behind the rail keycaps and the
  * device, leaving only the gap between them visible. Each line is a gray
- * resting stroke plus a moving light pulse (normalized via pathLength=100)
- * that travels left-to-right so it reads as energy flowing into the device.
- * A lit key's line surges to the page-scoped gold accent.
+ * resting stroke plus a travelling comet of light dots (a head and trailing
+ * ghosts driven by SMIL animateMotion) that streaks left-to-right so it
+ * reads as energy flowing into the device. A lit key surges its line gold;
+ * when the key settles the line slowly fades back to dormant gray, leaving
+ * an afterglow that layers up as more keys pulse.
  */
 .serviceConnectionField {
   position: absolute;
@@ -15,60 +17,37 @@
   overflow: visible;
 }
 
-.serviceFlowLine path {
-  fill: none;
-  stroke-linecap: round;
-}
-
-/* Resting line. */
+/* Resting line. The slow stroke transition is the fade *back* to gray when a
+   key deactivates (the active rule below overrides it with a fast fade in). */
 .serviceFlowBase {
+  fill: none;
   stroke: rgba(150, 162, 180, 0.16);
   stroke-width: 1;
-  transition: stroke 220ms ease;
+  stroke-linecap: round;
+  transition: stroke 1800ms ease-out;
 }
 
-/* Moving light: a short bright dash chasing along the normalized path. The
-   long gap keeps a single travelling pulse per line. Decreasing dashoffset
-   moves the dash from the rail end toward the port (left-to-right). */
-.serviceFlowPulse {
-  stroke: rgba(208, 216, 230, 0.5);
-  stroke-width: 1.4;
-  stroke-dasharray: 5 95;
-  animation: serviceFlow 2.4s linear infinite;
+/* Travelling light dots (positioned by animateMotion along the line). */
+.serviceFlowDot {
+  fill: rgba(220, 228, 240, 0.9);
+  transition:
+    fill 1800ms ease-out,
+    filter 1800ms ease-out;
 }
 
-@keyframes serviceFlow {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: -100;
-  }
-}
-
-/* Surge: a lit key warms its whole line and sends a brighter, longer, faster
-   gold pulse with a soft bloom. */
+/* Surge: a lit key warms its whole line and turns the comet gold with a soft
+   bloom. The fast transition makes the gold arrive quickly; removing
+   `data-active` falls back to the slow transitions above, so the line lingers
+   and ghosts on the way back to gray. */
 .serviceFlowLine[data-active="true"] .serviceFlowBase {
   stroke: rgba(var(--gold-glow, 232, 205, 137), 0.5);
+  transition: stroke 220ms ease-in;
 }
 
-.serviceFlowLine[data-active="true"] .serviceFlowPulse {
-  stroke: rgb(var(--gold-glow, 232, 205, 137));
-  stroke-width: 2;
-  stroke-dasharray: 10 90;
-  animation-duration: 1.5s;
-  filter: drop-shadow(0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.8));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .serviceFlowPulse {
-    animation: none;
-    /* Hide the static dash at rest; only lit lines show a solid gold line. */
-    stroke: transparent;
-  }
-
-  .serviceFlowLine[data-active="true"] .serviceFlowPulse {
-    stroke: rgb(var(--gold-glow, 232, 205, 137));
-    stroke-dasharray: none;
-  }
+.serviceFlowLine[data-active="true"] .serviceFlowDot {
+  fill: rgb(var(--gold-glow, 232, 205, 137));
+  filter: drop-shadow(0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.9));
+  transition:
+    fill 220ms ease-in,
+    filter 220ms ease-in;
 }

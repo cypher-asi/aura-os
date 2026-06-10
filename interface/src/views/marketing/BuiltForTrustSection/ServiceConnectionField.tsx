@@ -31,8 +31,14 @@ interface ServiceConnectionFieldProps {
   readonly litLogos: ReadonlySet<number>;
 }
 
-/** Spacing between staggered pulse starts, in seconds. */
-const PULSE_STAGGER_S = 0.45;
+/** How long one light dot takes to travel a line, rail to port. */
+const PULSE_DUR_S = 2.6;
+/** Per-line offset so the dots don't travel in lockstep. */
+const LINE_STAGGER_S = 0.5;
+/** Head + trailing ghosts that form each line's travelling comet. */
+const PULSE_GHOSTS = 4;
+/** Lag between successive ghosts in the trail, in seconds. */
+const GHOST_GAP_S = 0.18;
 
 function readRailPoints(stage: HTMLElement, count: number): Point[] {
   const stageRect = stage.getBoundingClientRect();
@@ -136,21 +142,37 @@ export function ServiceConnectionField({
       aria-hidden="true"
       focusable="false"
     >
-      {lines.map((line) => (
-        <g
-          key={line.key}
-          className="serviceFlowLine"
-          data-active={line.active ? "true" : undefined}
-        >
-          <path className="serviceFlowBase" d={line.d} pathLength={100} />
-          <path
-            className="serviceFlowPulse"
-            d={line.d}
-            pathLength={100}
-            style={{ animationDelay: `${-line.key * PULSE_STAGGER_S}s` }}
-          />
-        </g>
-      ))}
+      {lines.map((line) => {
+        const pathId = `trustFlowPath-${line.key}`;
+        return (
+          <g
+            key={line.key}
+            className="serviceFlowLine"
+            data-active={line.active ? "true" : undefined}
+          >
+            <path id={pathId} className="serviceFlowBase" d={line.d} />
+            {/* A head dot plus trailing ghosts travel the path so the light
+                reads as a comet streaking left-to-right into the port. */}
+            {Array.from({ length: PULSE_GHOSTS }, (_, g) => (
+              <circle
+                key={g}
+                className="serviceFlowDot"
+                r={2.6 - g * 0.45}
+                style={{ opacity: 1 - g * (0.7 / PULSE_GHOSTS) }}
+              >
+                <animateMotion
+                  dur={`${PULSE_DUR_S}s`}
+                  begin={`${-line.key * LINE_STAGGER_S + g * GHOST_GAP_S}s`}
+                  repeatCount="indefinite"
+                  calcMode="linear"
+                >
+                  <mpath href={`#${pathId}`} />
+                </animateMotion>
+              </circle>
+            ))}
+          </g>
+        );
+      })}
     </svg>
   );
 }

@@ -647,10 +647,24 @@
     0 4px 6px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   cursor: pointer;
+  /* Springy transform easing so a released key pops back up past its rest
+     position and settles, giving the cap a tactile bounce. */
   transition:
-    transform 0.08s ease,
-    box-shadow 0.12s ease,
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.14s ease,
     color 0.12s ease;
+}
+
+/* While held: the cap dips quickly into the well (a fast, non-bouncy push
+   down). On release the springy base transition above carries it back up. */
+.consoleKey:active {
+  transform: translateY(3px);
+  transition:
+    transform 0.05s ease-out,
+    box-shadow 0.05s ease-out;
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 /* Hover (only on keys that aren't already pressed): brighten the glyph so the
@@ -686,16 +700,20 @@
    (warm and lit on the top-left, deep amber on the bottom-right), matching the
    page's golden glow family. */
 .consoleKey--zero {
-  /* Grow the rim so more of the gold gradient is visible. */
-  border-width: 2px;
+  /* Thin 1px rim with an uneven gold gradient — some stops dip to low alpha so
+     the border fades in and out around the cap rather than reading as a solid
+     ring. */
+  border-width: 1px;
   background:
     linear-gradient(#161208, #161208) padding-box,
     linear-gradient(
         155deg,
         rgba(var(--gold-glow), 0.95) 0%,
-        rgba(var(--gold-glow), 0.6) 30%,
-        rgba(var(--gold-glow), 0.18) 55%,
-        rgba(var(--gold-halo), 0.55) 80%,
+        rgba(var(--gold-glow), 0.35) 18%,
+        rgba(var(--gold-glow), 0.7) 34%,
+        rgba(var(--gold-glow), 0.12) 52%,
+        rgba(var(--gold-halo), 0.55) 70%,
+        rgba(var(--gold-halo), 0.15) 84%,
         rgba(var(--gold-halo), 0.85) 100%
       )
       border-box;
@@ -711,10 +729,12 @@
   letter-spacing: 0.08em;
   color: var(--gold-core, #f4faf2);
   text-shadow:
-    0 0 8px rgba(var(--gold-glow), 0.95),
-    0 0 22px rgba(var(--gold-glow), 0.7),
-    0 0 40px rgba(var(--gold-halo), 0.6),
-    0 0 64px rgba(var(--gold-halo), 0.4);
+    0 0 6px rgba(var(--gold-glow), 1),
+    0 0 16px rgba(var(--gold-glow), 0.95),
+    0 0 34px rgba(var(--gold-glow), 0.8),
+    0 0 60px rgba(var(--gold-halo), 0.7),
+    0 0 96px rgba(var(--gold-halo), 0.55),
+    0 0 140px rgba(var(--gold-halo), 0.4);
 }
 
 @media (max-width: 768px) {

@@ -72,9 +72,6 @@ const DOWNLOAD_CARDS: readonly DownloadCard[] = [
   },
 ];
 
-const DOWNLOAD_MAIN_VIDEO_SRC =
-  "/magnific_have-character-img1-materialize-from-the-activated_seedance_720p_16-9_24fps_32651.mp4";
-
 function detectPlatform(): DownloadPlatform {
   if (typeof window === "undefined") return "unknown";
   const nav = window.navigator as Navigator & {
@@ -133,17 +130,6 @@ export function DownloadView() {
         <h1 className="downloadPageHeadline">
           Download AURA for every major desktop platform.
         </h1>
-        <div className="downloadHeroVideoFrame" aria-hidden="true">
-          <video
-            className="downloadHeroVideo"
-            src={DOWNLOAD_MAIN_VIDEO_SRC}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-          />
-        </div>
         <div className="downloadGrid">
           {DOWNLOAD_CARDS.map((card) => {
             const isPrimary =
