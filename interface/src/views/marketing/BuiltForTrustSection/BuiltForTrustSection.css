@@ -34,6 +34,12 @@
  * connection mesh) lives in TrustDeviceStage.css alongside its component.
  */
 
+/* The scaled-up right display panel (TrustDisplayPanel) is taller than the
+   media well; let it extend into the card padding instead of clipping. */
+.builtForTrustDevice .metalCardMedia {
+  overflow: visible;
+}
+
 @media (max-width: 768px) {
   /* Scale the mobile `short` height (360px) by the same 50%. */
   .builtForTrustDevice.metalCardShort {
