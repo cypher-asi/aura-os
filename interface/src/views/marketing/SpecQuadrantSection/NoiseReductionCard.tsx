@@ -429,9 +429,8 @@ export function NoiseReductionCard(): ReactNode {
 
           <div className="nrPanel">
             <div className="nrControls">
-              {/* ACTIVATION / ONLINE readout, seated at the very bottom of the
-                  visible screen (bottom inset matches the side inset), flanking
-                  the knob. */}
+              {/* ACTIVATION / ONLINE readout, seated in the dark band just
+                  above the lighter controls/pill plate, flanking the knob. */}
               <div className="nrStatus" aria-hidden="true">
                 <span className="nrReduction">
                   <span className="nrReductionLabel">ACTIVATION</span>
