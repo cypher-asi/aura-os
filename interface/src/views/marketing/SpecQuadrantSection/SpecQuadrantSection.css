@@ -302,13 +302,13 @@
 
 /* ----- Status row --------------------------------------------------- */
 
-/* Seated at the very bottom of the visible screen, flanking the knob, so the
-   live readout reads as on-screen telemetry pinned to the screen's bottom
-   edge. Bottom-anchored within the controls layer with the SAME inset as the
-   left/right edges (22px) so the bottom padding matches the side padding. */
+/* Seated in the dark band just above the lighter controls/pill plate (where
+   the panel background goes dark), flanking the knob, so the live readout
+   reads as on-screen telemetry pinned to the bottom of the dark screen area.
+   Bottom-anchored above the pill selector. */
 .nrStatus {
   position: absolute;
-  bottom: 22px;
+  bottom: 101px;
   /* Edge-anchored so ACTIVATION / ONLINE sit at the screen's far left/right,
      clear of the centered brain/knob. */
   left: 22px;
@@ -428,7 +428,11 @@
 
 /* Sits below the knob, where the caption used to be. Flex-centered so the
    set-in capsule reads centered (and vertically centered) in the controls
-   band. Above the masked dome plate so it isn't clipped by the seam. */
+   band. Above the masked dome plate so it isn't clipped by the seam. The
+   `translateY` lifts the capsule up so it reads as vertically centered in the
+   dark band between the ACTIVATION/ONLINE readout row above and the panel's
+   bottom edge below, without changing the controls box height (so the
+   knob-dome seam geometry is preserved). */
 .nrExpertise {
   position: relative;
   z-index: 1;
@@ -437,6 +441,7 @@
   justify-content: center;
   width: 100%;
   margin-top: 4px;
+  transform: translateY(-16px);
 }
 
 /*
@@ -646,8 +651,15 @@
   }
 
   .nrStatus {
-    bottom: 18px;
+    bottom: 93px;
     left: 18px;
     right: 18px;
+  }
+
+  /* The discipline pills wrap to several rows on the narrow mobile plate and
+     already fill the band, so skip the desktop vertical-centering lift (it
+     would push them up into the knob / readout row). */
+  .nrExpertise {
+    transform: none;
   }
 }
