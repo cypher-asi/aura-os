@@ -22,10 +22,10 @@ function CubeFaces(): ReactNode {
  * Decorative media for the "Trusted and verifiable." trust card: a
  * rounded-corner screen device in the section's dark machined-metal
  * language (shared three-ring `Plate` rim, recessed near-black glass)
- * displaying a holographic cube nested inside a larger cube — both built
- * from CSS 3D faces with thin iridescent edges, tumbling together in a
- * slow perpetual rotation. Purely decorative, so the stage is
- * `aria-hidden`.
+ * displaying a cube nested inside a larger cube — a frosted white-glass
+ * outer wireframe around a glowing orange core cube in the page's gold
+ * accent, both built from CSS 3D faces and tumbling together in a slow
+ * perpetual rotation. Purely decorative, so the stage is `aria-hidden`.
  */
 export function VerifiedCubeScreen(): ReactNode {
   return (

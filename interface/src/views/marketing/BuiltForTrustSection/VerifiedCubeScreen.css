@@ -1,9 +1,10 @@
 /*
  * Rounded-corner screen device for the "Trusted and verifiable." trust
  * card. Same dark machined-metal family as its siblings (shared three-ring
- * Plate rim, recessed near-black screen), but the glass holds a holographic
- * cube-within-a-cube: two nested CSS 3D wireframe cubes with thin
- * iridescent edges and faint glassy fills, tumbling together forever.
+ * Plate rim, recessed near-black screen), but the glass holds a
+ * cube-within-a-cube hologram: a frosted white-glass outer wireframe cube
+ * around a glowing orange inner cube (the page's gold accent), tumbling
+ * together forever.
  */
 
 .verifiedCubeStage {
@@ -50,14 +51,15 @@
     inset 0 -6px 14px rgba(0, 0, 0, 0.8);
 }
 
-/* Faint cool ambient halo on the screen floor behind the hologram. */
+/* Warm ambient halo on the screen floor behind the hologram, in the
+   page's gold accent family. */
 .verifiedCubeGlow {
   position: absolute;
   inset: 0;
   background: radial-gradient(
     ellipse 58% 52% at 50% 54%,
-    rgba(120, 140, 255, 0.14) 0%,
-    rgba(150, 110, 255, 0.07) 45%,
+    rgba(var(--gold-glow, 232, 205, 137), 0.16) 0%,
+    rgba(var(--gold-halo, 153, 81, 25), 0.1) 45%,
     transparent 75%
   );
   pointer-events: none;
@@ -109,9 +111,9 @@
 }
 
 /*
- * One glassy face: a very faint iridescent fill (padding-box) under a thin
- * bright holographic edge gradient (border-box), echoing the cyan ->
- * violet -> magenta sheen of the reference hologram.
+ * One glassy face: a very faint frosted-white fill (padding-box) under a
+ * thin bright white edge gradient (border-box), with a soft warm bloom so
+ * the wireframe reads as lit glass over the orange core.
  */
 .verifiedCubeFace {
   position: absolute;
@@ -121,58 +123,64 @@
   background:
     linear-gradient(
         135deg,
-        rgba(110, 220, 255, 0.07) 0%,
-        rgba(150, 120, 255, 0.05) 55%,
-        rgba(255, 110, 220, 0.07) 100%
+        rgba(255, 255, 255, 0.025) 0%,
+        rgba(255, 244, 228, 0.01) 55%,
+        rgba(255, 255, 255, 0.02) 100%
       )
       padding-box,
     linear-gradient(
         135deg,
-        rgba(110, 235, 255, 0.85) 0%,
-        rgba(150, 120, 255, 0.75) 45%,
-        rgba(255, 110, 220, 0.7) 100%
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(255, 255, 255, 0.45) 45%,
+        rgba(255, 255, 255, 0.75) 100%
       )
       border-box;
 }
 
-/* Warmer gold-green sheen on the horizontal faces, like the reference
-   cube's lit floor edge. */
+/* Slightly warmer tint on the horizontal faces, catching the glow of the
+   orange core below/above them. */
 .verifiedCubeFace--top,
 .verifiedCubeFace--bottom {
   background:
     linear-gradient(
         135deg,
-        rgba(190, 255, 170, 0.06) 0%,
-        rgba(110, 220, 255, 0.05) 60%,
-        rgba(150, 120, 255, 0.06) 100%
+        rgba(255, 233, 205, 0.03) 0%,
+        rgba(255, 255, 255, 0.01) 60%,
+        rgba(255, 233, 205, 0.02) 100%
       )
       padding-box,
     linear-gradient(
         135deg,
-        rgba(220, 255, 150, 0.8) 0%,
-        rgba(110, 235, 255, 0.7) 55%,
-        rgba(150, 120, 255, 0.7) 100%
+        rgba(255, 240, 220, 0.75) 0%,
+        rgba(255, 255, 255, 0.5) 55%,
+        rgba(255, 240, 220, 0.65) 100%
       )
       border-box;
 }
 
-/* The inner cube's edges read slightly brighter through the outer glass. */
+/*
+ * The inner cube is the glowing orange accent: warm ember fill, hot
+ * gold-white edges, and a strong gold halo bleeding through the outer
+ * glass (same warm core + gold-glow recipe as the password dots and ON
+ * lettering).
+ */
 .verifiedCubeInner .verifiedCubeFace {
   border-width: 1px;
   background:
     linear-gradient(
         135deg,
-        rgba(110, 220, 255, 0.1) 0%,
-        rgba(255, 110, 220, 0.08) 100%
+        rgba(255, 158, 64, 0.16) 0%,
+        rgba(var(--gold-halo, 153, 81, 25), 0.2) 100%
       )
       padding-box,
     linear-gradient(
         135deg,
-        rgba(160, 245, 255, 0.95) 0%,
-        rgba(190, 150, 255, 0.85) 50%,
-        rgba(255, 150, 230, 0.85) 100%
+        rgba(255, 222, 178, 0.95) 0%,
+        rgba(255, 158, 64, 0.9) 50%,
+        rgba(255, 222, 178, 0.85) 100%
       )
       border-box;
+  box-shadow: 0 0 10px rgba(255, 158, 64, 0.35);
 }
 
 .verifiedCubeFace--front {
