@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -143,6 +144,7 @@ function DocsNav({
   groups: readonly NavGroup[];
   activeSlug: string | null;
 }): React.ReactElement {
+  const { t } = useTranslation("marketing");
   // All groups expanded by default; clicking a header collapses it.
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
@@ -156,7 +158,12 @@ function DocsNav({
   };
 
   return (
-    <nav className={styles.nav} aria-label="Documentation navigation">
+    <nav
+      className={styles.nav}
+      aria-label={t("docs.navigationAriaLabel", {
+        defaultValue: "Documentation navigation",
+      })}
+    >
       {groups.map((group) => {
         const isCollapsed = collapsed.has(group.key);
         return (
@@ -203,6 +210,7 @@ function DocsNav({
  * current section is highlighted as the reader scrolls.
  */
 function DocsToc({ items }: { items: readonly TocItem[] }): React.ReactElement | null {
+  const { t } = useTranslation("marketing");
   const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -228,8 +236,13 @@ function DocsToc({ items }: { items: readonly TocItem[] }): React.ReactElement |
   if (items.length === 0) return null;
 
   return (
-    <nav className={styles.toc} aria-label="On this page">
-      <p className={styles.tocTitle}>On this page</p>
+    <nav
+      className={styles.toc}
+      aria-label={t("docs.tocAriaLabel", { defaultValue: "On this page" })}
+    >
+      <p className={styles.tocTitle}>
+        {t("docs.tocTitle", { defaultValue: "On this page" })}
+      </p>
       <ul className={styles.tocList}>
         {items.map((item) => (
           <li
@@ -261,6 +274,7 @@ function DocsToc({ items }: { items: readonly TocItem[] }): React.ReactElement |
  * S3 `bodyUrl`. Page chrome is owned by the public-mode `PublicMarketingPanel`.
  */
 export function DocsView(): React.ReactElement {
+  const { t } = useTranslation("marketing");
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
 
@@ -293,11 +307,16 @@ export function DocsView(): React.ReactElement {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = doc ? `AURA Docs - ${doc.title}` : "AURA - Docs";
+    document.title = doc
+      ? t("docs.docDocumentTitle", {
+          defaultValue: `AURA Docs - ${doc.title}`,
+          title: doc.title,
+        })
+      : t("docs.documentTitle", { defaultValue: "AURA - Docs" });
     return () => {
       document.title = previousTitle;
     };
-  }, [doc]);
+  }, [doc, t]);
 
   // Scroll the reading column back to the top when the page changes.
   useEffect(() => {
@@ -313,14 +332,16 @@ export function DocsView(): React.ReactElement {
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           <Link to="/docs" className={styles.sidebarTitle}>
-            Documentation
+            {t("docs.sidebarTitle", { defaultValue: "Documentation" })}
           </Link>
           {docsLoading ? (
             <p className={styles.navState} aria-busy="true">
-              Loading…
+              {t("docs.loading", { defaultValue: "Loading…" })}
             </p>
           ) : groups.length === 0 ? (
-            <p className={styles.navState}>No pages yet.</p>
+            <p className={styles.navState}>
+              {t("docs.noPages", { defaultValue: "No pages yet." })}
+            </p>
           ) : (
             <DocsNav groups={groups} activeSlug={activeSlug} />
           )}
@@ -329,24 +350,30 @@ export function DocsView(): React.ReactElement {
         <article className={styles.content} data-docs-content>
           {docError instanceof DocsDocNotFoundError ? (
             <div className={styles.notFound}>
-              <h1>Page not found</h1>
+              <h1>
+                {t("docs.notFound.heading", { defaultValue: "Page not found" })}
+              </h1>
               <p>
-                This documentation page doesn&apos;t exist or isn&apos;t
-                published yet.
+                {t("docs.notFound.body", {
+                  defaultValue:
+                    "This documentation page doesn't exist or isn't published yet.",
+                })}
               </p>
               <button
                 type="button"
                 className={styles.notFoundLink}
                 onClick={() => navigate("/docs")}
               >
-                Back to the overview
+                {t("docs.notFound.backButton", {
+                  defaultValue: "Back to the overview",
+                })}
               </button>
             </div>
           ) : (
             <div className={styles.markdownBody}>
               {bodyLoading ? (
                 <p className={styles.navState} aria-busy="true">
-                  Loading…
+                  {t("docs.loading", { defaultValue: "Loading…" })}
                 </p>
               ) : body ? (
                 <ReactMarkdown
@@ -358,11 +385,17 @@ export function DocsView(): React.ReactElement {
                 </ReactMarkdown>
               ) : !docsLoading && allDocs.length === 0 ? (
                 <p className={styles.navState}>
-                  The documentation site is connected, but no pages have been
-                  published yet.
+                  {t("docs.empty.body", {
+                    defaultValue:
+                      "The documentation site is connected, but no pages have been published yet.",
+                  })}
                 </p>
               ) : (
-                <p className={styles.navState}>This page has no content yet.</p>
+                <p className={styles.navState}>
+                  {t("docs.noContent", {
+                    defaultValue: "This page has no content yet.",
+                  })}
+                </p>
               )}
             </div>
           )}

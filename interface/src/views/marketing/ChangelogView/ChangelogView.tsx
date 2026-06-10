@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   type ChangelogEntry,
   type ChangelogTimelineMedia,
@@ -37,7 +38,6 @@ function normalizeManifestChannel(
   return "nightly";
 }
 
-const COMMITS_LIVE_TITLE = `Live total across ${AURA_PUBLIC_REPOS.length} AURA repositories`;
 const BANNER_COUNT_UP_DURATION_MS = 1000;
 
 /** Placeholder shown when commit totals can't be resolved and no
@@ -162,12 +162,10 @@ function computeReleasesPerDay(
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
-const STAT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
-
-function formatStatLabel(date: string): string {
+function formatStatLabel(date: string, language: string): string {
   const parsed = new Date(`${date}T12:00:00Z`);
   if (Number.isNaN(parsed.getTime())) return date;
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(language, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -188,6 +186,7 @@ interface ReleasesPerDayChartProps {
 function ReleasesPerDayChart({
   series,
 }: ReleasesPerDayChartProps): ReactNode {
+  const { t, i18n } = useTranslation("marketing");
   // `useId` / `useState` run before the early return so hook order stays
   // stable across renders regardless of whether the dataset is empty on
   // first paint.
@@ -218,8 +217,18 @@ function ReleasesPerDayChart({
   // still brightens via `:hover` so the visual "which one" + textual
   // "how many" channels reinforce each other.
   const caption = hoveredPoint
-    ? `${hoveredPoint.releases} release${hoveredPoint.releases === 1 ? "" : "s"} · ${formatStatLabel(hoveredPoint.date)}`
-    : "Releases per day";
+    ? t("changelog.chart.captionWithCount", {
+        defaultValue:
+          hoveredPoint.releases === 1
+            ? `1 release · ${formatStatLabel(hoveredPoint.date, i18n.language)}`
+            : `${hoveredPoint.releases} releases · ${formatStatLabel(
+                hoveredPoint.date,
+                i18n.language,
+              )}`,
+        count: hoveredPoint.releases,
+        date: formatStatLabel(hoveredPoint.date, i18n.language),
+      })
+    : t("changelog.chart.caption", { defaultValue: "Releases per day" });
 
   return (
     <div
@@ -239,7 +248,9 @@ function ReleasesPerDayChart({
       viewBox={`0 0 ${viewWidth} ${viewHeight}`}
       preserveAspectRatio="none"
       role="img"
-      aria-label="Releases per day over time"
+      aria-label={t("changelog.chart.ariaLabel", {
+        defaultValue: "Releases per day over time",
+      })}
     >
       <defs>
         {/*
@@ -314,9 +325,16 @@ function ReleasesPerDayChart({
             onPointerEnter={() => setHoveredIndex(index)}
           >
             <title>
-              {`${formatStatLabel(point.date)}: ${point.releases} release${
-                point.releases === 1 ? "" : "s"
-              }`}
+              {t("changelog.chart.barTitle", {
+                defaultValue:
+                  point.releases === 1
+                    ? `${formatStatLabel(point.date, i18n.language)}: 1 release`
+                    : `${formatStatLabel(point.date, i18n.language)}: ${
+                        point.releases
+                      } releases`,
+                count: point.releases,
+                date: formatStatLabel(point.date, i18n.language),
+              })}
             </title>
           </rect>
         );
@@ -326,30 +344,34 @@ function ReleasesPerDayChart({
   );
 }
 
-function formatDateLabel(value: string): string {
+function formatDateLabel(value: string, language: string): string {
   const parsed = new Date(`${value}T12:00:00Z`);
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(language, {
     month: "long",
     day: "numeric",
     year: "numeric",
   }).format(parsed);
 }
 
-function formatTimelineTime(value: string, fallbackLabel: string): string {
+function formatTimelineTime(
+  value: string,
+  fallbackLabel: string,
+  language: string,
+): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return fallbackLabel;
   }
 
   try {
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat(language, {
       timeZone: CHANGELOG_TIME_ZONE,
       hour: "numeric",
       minute: "2-digit",
       timeZoneName: "shortGeneric",
     }).format(parsed);
   } catch {
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat(language, {
       timeZone: CHANGELOG_TIME_ZONE,
       hour: "numeric",
       minute: "2-digit",
@@ -375,16 +397,27 @@ function getMediaAltText(title: string, alt: string | undefined): string {
  * parent route.
  */
 export function ChangelogView(): ReactNode {
+  const { t, i18n } = useTranslation("marketing");
+  const statNumberFormatter = useMemo(
+    () => new Intl.NumberFormat(i18n.language),
+    [i18n.language],
+  );
+  const commitsLiveTitle = t("changelog.commitsLiveTitle", {
+    defaultValue: `Live total across ${AURA_PUBLIC_REPOS.length} AURA repositories`,
+    count: AURA_PUBLIC_REPOS.length,
+  });
   const { key: visitKey } = useLocation();
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "AURA - Changelog";
+    document.title = t("changelog.documentTitle", {
+      defaultValue: "AURA - Changelog",
+    });
 
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [t]);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["marketing-changelog"],
@@ -573,21 +606,35 @@ export function ChangelogView(): ReactNode {
     <section className="changelogPage">
       <div className="changelogPageShell">
         <BannerCard
-          ariaLabel="Changelog summary"
+          ariaLabel={t("changelog.summaryAriaLabel", {
+            defaultValue: "Changelog summary",
+          })}
           className="changelogStatsCard"
         >
           <header className="changelogStatsCardHeader">
-            <h1 className="changelogPageTitle">Changelog</h1>
+            <h1 className="changelogPageTitle">
+              {t("changelog.title", { defaultValue: "Changelog" })}
+            </h1>
             {(latestVersion || latestRelease) ? (
               <div className="changelogStat changelogStatVersion">
-                <span className="changelogStatLabel">Current version</span>
+                <span className="changelogStatLabel">
+                  {t("changelog.currentVersion", {
+                    defaultValue: "Current version",
+                  })}
+                </span>
                 {latestVersion ? (
                   <button
                     type="button"
                     className="changelogStatValue changelogStatValueButton"
                     onClick={handleVersionAutoDownload}
-                    aria-label={`Download AURA ${latestVersion} for your operating system`}
-                    title="Click to download the build for your operating system"
+                    aria-label={t("changelog.downloadVersionAriaLabel", {
+                      defaultValue: `Download AURA ${latestVersion} for your operating system`,
+                      version: latestVersion,
+                    })}
+                    title={t("changelog.downloadVersionTitle", {
+                      defaultValue:
+                        "Click to download the build for your operating system",
+                    })}
                   >
                     {latestVersion}
                   </button>
@@ -604,15 +651,20 @@ export function ChangelogView(): ReactNode {
                       ).toLocaleString()}
                     >
                       {latestReleaseAgo
-                        ? `Released ${latestReleaseAgo}`
-                        : "Released recently"}
+                        ? t("changelog.releasedAgo", {
+                            defaultValue: `Released ${latestReleaseAgo}`,
+                            relativeTime: latestReleaseAgo,
+                          })
+                        : t("changelog.releasedRecently", {
+                            defaultValue: "Released recently",
+                          })}
                     </time>
                     <div className="changelogStatVersionActions">
                       <Link
                         to="/download"
                         className="changelogStatVersionLink"
                       >
-                        Download
+                        {t("changelog.download", { defaultValue: "Download" })}
                         <span aria-hidden="true">&nbsp;&rarr;</span>
                       </Link>
                       <a
@@ -621,7 +673,7 @@ export function ChangelogView(): ReactNode {
                         rel="noopener noreferrer"
                         className="changelogStatVersionLink"
                       >
-                        GitHub
+                        {t("changelog.github", { defaultValue: "GitHub" })}
                         <span aria-hidden="true">&nbsp;&rarr;</span>
                       </a>
                     </div>
@@ -634,41 +686,57 @@ export function ChangelogView(): ReactNode {
           <div className="changelogStatsCardBody">
             <dl className="changelogStatsGrid">
               <div className="changelogStat">
-                <dt className="changelogStatLabel">Releases this month</dt>
+                <dt className="changelogStatLabel">
+                  {t("changelog.stats.releasesThisMonth", {
+                    defaultValue: "Releases this month",
+                  })}
+                </dt>
                 <dd className="changelogStatValue">
-                  {STAT_NUMBER_FORMATTER.format(releasesThisMonthDisplay)}
+                  {statNumberFormatter.format(releasesThisMonthDisplay)}
                 </dd>
               </div>
               <div className="changelogStat">
-                <dt className="changelogStatLabel">Commits this month</dt>
+                <dt className="changelogStatLabel">
+                  {t("changelog.stats.commitsThisMonth", {
+                    defaultValue: "Commits this month",
+                  })}
+                </dt>
                 <dd
                   className="changelogStatValue"
                   aria-live="polite"
                   aria-busy={commitStatsLoading ? "true" : "false"}
-                  title={COMMITS_LIVE_TITLE}
+                  title={commitsLiveTitle}
                 >
                   {commitStatsUnavailable
                     ? STAT_UNAVAILABLE
-                    : STAT_NUMBER_FORMATTER.format(commitsThisMonthDisplay)}
+                    : statNumberFormatter.format(commitsThisMonthDisplay)}
                 </dd>
               </div>
               <div className="changelogStat">
-                <dt className="changelogStatLabel">All-time releases</dt>
+                <dt className="changelogStatLabel">
+                  {t("changelog.stats.allTimeReleases", {
+                    defaultValue: "All-time releases",
+                  })}
+                </dt>
                 <dd className="changelogStatValue">
-                  {STAT_NUMBER_FORMATTER.format(releasesAllTimeDisplay)}
+                  {statNumberFormatter.format(releasesAllTimeDisplay)}
                 </dd>
               </div>
               <div className="changelogStat">
-                <dt className="changelogStatLabel">All-time commits</dt>
+                <dt className="changelogStatLabel">
+                  {t("changelog.stats.allTimeCommits", {
+                    defaultValue: "All-time commits",
+                  })}
+                </dt>
                 <dd
                   className="changelogStatValue"
                   aria-live="polite"
                   aria-busy={commitStatsLoading ? "true" : "false"}
-                  title={COMMITS_LIVE_TITLE}
+                  title={commitsLiveTitle}
                 >
                   {commitStatsUnavailable
                     ? STAT_UNAVAILABLE
-                    : STAT_NUMBER_FORMATTER.format(commitsAllTimeDisplay)}
+                    : statNumberFormatter.format(commitsAllTimeDisplay)}
                 </dd>
               </div>
             </dl>
@@ -678,7 +746,12 @@ export function ChangelogView(): ReactNode {
         </BannerCard>
 
         {entries.length > 0 ? (
-          <div className="changelogEntries" aria-label="Aura changelog entries">
+          <div
+            className="changelogEntries"
+            aria-label={t("changelog.entriesAriaLabel", {
+              defaultValue: "Aura changelog entries",
+            })}
+          >
             {entries.map((entry) => {
               const entryKey = `${entry.date}-${entry.version ?? entry.generatedAt}`;
               const releaseCount = entry.rendered.entries.length;
@@ -692,7 +765,7 @@ export function ChangelogView(): ReactNode {
                     className="changelogEntryDate"
                     dateTime={entry.date}
                   >
-                    {formatDateLabel(entry.date)}
+                    {formatDateLabel(entry.date, i18n.language)}
                   </time>
 
                   <div className="changelogEntryBody">
@@ -700,17 +773,37 @@ export function ChangelogView(): ReactNode {
                       <div className="changelogEntryMeta">
                         <span>{entry.channel}</span>
                         <span>
-                          {releaseCount} release{releaseCount === 1 ? "" : "s"}
+                          {t("changelog.entry.releaseCount", {
+                            defaultValue:
+                              releaseCount === 1
+                                ? "1 release"
+                                : `${releaseCount} releases`,
+                            count: releaseCount,
+                          })}
                         </span>
-                        <span>{commitCount} commits</span>
+                        <span>
+                          {t("changelog.entry.commitCount", {
+                            defaultValue:
+                              commitCount === 1
+                                ? "1 commit"
+                                : `${commitCount} commits`,
+                            count: commitCount,
+                          })}
+                        </span>
                       </div>
 
                       {highlights.length > 0 && (
                         <section
                           className="changelogTldr"
-                          aria-label="Daily Update"
+                          aria-label={t("changelog.dailyUpdate", {
+                            defaultValue: "Daily Update",
+                          })}
                         >
-                          <h2 className="changelogTldrLabel">Daily Update</h2>
+                          <h2 className="changelogTldrLabel">
+                            {t("changelog.dailyUpdate", {
+                              defaultValue: "Daily Update",
+                            })}
+                          </h2>
                           <ol className="changelogTldrList">
                             {highlights.map((highlight, highlightIndex) => (
                               <li
@@ -746,6 +839,7 @@ export function ChangelogView(): ReactNode {
                                 {formatTimelineTime(
                                   timelineEntry.started_at,
                                   timelineEntry.time_label,
+                                  i18n.language,
                                 )}
                               </span>
                               <div className="changelogSection">
@@ -762,7 +856,13 @@ export function ChangelogView(): ReactNode {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="changelogSectionMediaLink"
-                                      aria-label={`Open screenshot for ${timelineEntry.title}`}
+                                      aria-label={t(
+                                        "changelog.openScreenshotAriaLabel",
+                                        {
+                                          defaultValue: `Open screenshot for ${timelineEntry.title}`,
+                                          title: timelineEntry.title,
+                                        },
+                                      )}
                                     >
                                       <img
                                         src={media.assetUrl}
@@ -789,7 +889,9 @@ export function ChangelogView(): ReactNode {
                                           {item.commit_shas.length > 0 && (
                                             <div className="changelogSectionSources">
                                               <span className="changelogSectionSourcesLabel">
-                                                Sources
+                                                {t("changelog.sources", {
+                                                  defaultValue: "Sources",
+                                                })}
                                               </span>
                                               {item.commit_shas.map((sha) => (
                                                 <a
@@ -825,10 +927,16 @@ export function ChangelogView(): ReactNode {
           </div>
         ) : renderEmpty ? (
           <div className="changelogEmptyState">
-            <h2>No changelog entries yet.</h2>
+            <h2>
+              {t("changelog.empty.heading", {
+                defaultValue: "No changelog entries yet.",
+              })}
+            </h2>
             <p>
-              The release feed is connected, but no published changelog
-              entries were found yet.
+              {t("changelog.empty.body", {
+                defaultValue:
+                  "The release feed is connected, but no published changelog entries were found yet.",
+              })}
             </p>
           </div>
         ) : null}

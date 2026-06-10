@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -112,6 +113,7 @@ function OsNav({
   groups: readonly NavGroup[];
   activeSlug: string | null;
 }): React.ReactElement {
+  const { t } = useTranslation("marketing");
   // All groups expanded by default; clicking a header collapses it.
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
@@ -125,7 +127,12 @@ function OsNav({
   };
 
   return (
-    <nav className={styles.nav} aria-label="Whitepaper navigation">
+    <nav
+      className={styles.nav}
+      aria-label={t("os.navigationAriaLabel", {
+        defaultValue: "Whitepaper navigation",
+      })}
+    >
       {groups.map((group) => {
         const isCollapsed = collapsed.has(group.key);
         return (
@@ -175,6 +182,7 @@ function OsNav({
  * `bodyUrl`. Page chrome is owned by the public-mode `PublicMarketingPanel`.
  */
 export function OsView(): React.ReactElement {
+  const { t } = useTranslation("marketing");
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
 
@@ -205,11 +213,16 @@ export function OsView(): React.ReactElement {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = doc ? `AURA OS - ${doc.title}` : "AURA - OS";
+    document.title = doc
+      ? t("os.docDocumentTitle", {
+          defaultValue: `AURA OS - ${doc.title}`,
+          title: doc.title,
+        })
+      : t("os.documentTitle", { defaultValue: "AURA - OS" });
     return () => {
       document.title = previousTitle;
     };
-  }, [doc]);
+  }, [doc, t]);
 
   // Scroll the reading column back to the top when the section changes.
   useEffect(() => {
@@ -225,14 +238,16 @@ export function OsView(): React.ReactElement {
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           <Link to="/os" className={styles.sidebarTitle}>
-            AURA OS
+            {t("os.sidebarTitle", { defaultValue: "AURA OS" })}
           </Link>
           {docsLoading ? (
             <p className={styles.navState} aria-busy="true">
-              Loading…
+              {t("os.loading", { defaultValue: "Loading…" })}
             </p>
           ) : groups.length === 0 ? (
-            <p className={styles.navState}>No sections yet.</p>
+            <p className={styles.navState}>
+              {t("os.noSections", { defaultValue: "No sections yet." })}
+            </p>
           ) : (
             <OsNav groups={groups} activeSlug={activeSlug} />
           )}
@@ -241,24 +256,32 @@ export function OsView(): React.ReactElement {
         <article className={styles.content} data-os-content>
           {docError instanceof OsDocNotFoundError ? (
             <div className={styles.notFound}>
-              <h1>Section not found</h1>
+              <h1>
+                {t("os.notFound.heading", {
+                  defaultValue: "Section not found",
+                })}
+              </h1>
               <p>
-                This part of the whitepaper doesn&apos;t exist or isn&apos;t
-                published yet.
+                {t("os.notFound.body", {
+                  defaultValue:
+                    "This part of the whitepaper doesn't exist or isn't published yet.",
+                })}
               </p>
               <button
                 type="button"
                 className={styles.notFoundLink}
                 onClick={() => navigate("/os")}
               >
-                Back to the overview
+                {t("os.notFound.backButton", {
+                  defaultValue: "Back to the overview",
+                })}
               </button>
             </div>
           ) : (
             <div className={styles.markdownBody}>
               {bodyLoading ? (
                   <p className={styles.navState} aria-busy="true">
-                    Loading…
+                    {t("os.loading", { defaultValue: "Loading…" })}
                   </p>
                 ) : body ? (
                   <ReactMarkdown
@@ -270,11 +293,17 @@ export function OsView(): React.ReactElement {
                   </ReactMarkdown>
                 ) : !docsLoading && allDocs.length === 0 ? (
                   <p className={styles.navState}>
-                    The AURA OS whitepaper is connected, but no sections have
-                    been published yet.
+                    {t("os.empty.body", {
+                      defaultValue:
+                        "The AURA OS whitepaper is connected, but no sections have been published yet.",
+                    })}
                   </p>
                 ) : (
-                  <p className={styles.navState}>This section has no content yet.</p>
+                  <p className={styles.navState}>
+                    {t("os.noContent", {
+                      defaultValue: "This section has no content yet.",
+                    })}
+                  </p>
                 )}
             </div>
           )}

@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "./MarketingFooter.css";
 
 /**
@@ -92,16 +93,29 @@ const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
  * work.
  */
 export function MarketingFooter(): React.ReactNode {
+  const { t } = useTranslation("marketing");
   const { pathname } = useLocation();
   return (
-    <footer className="marketingFooter" aria-label="Site footer">
+    <footer
+      className="marketingFooter"
+      aria-label={t("footer.ariaLabel", { defaultValue: "Site footer" })}
+    >
       <div className="marketingFooterCard">
-        <nav className="marketingFooterColumns" aria-label="Footer navigation">
-          {FOOTER_COLUMNS.map((column) => (
+        <nav
+          className="marketingFooterColumns"
+          aria-label={t("footer.navigationAriaLabel", {
+            defaultValue: "Footer navigation",
+          })}
+        >
+          {FOOTER_COLUMNS.map((column, columnIndex) => (
             <div key={column.heading} className="marketingFooterColumn">
-              <h2 className="marketingFooterHeading">{column.heading}</h2>
+              <h2 className="marketingFooterHeading">
+                {t(`footer.columns.${columnIndex}.heading`, {
+                  defaultValue: column.heading,
+                })}
+              </h2>
               <ul className="marketingFooterList">
-                {column.links.map((link) => (
+                {column.links.map((link, linkIndex) => (
                   <li key={link.label} className="marketingFooterItem">
                     {link.kind === "internal" ? (
                       <Link
@@ -111,7 +125,9 @@ export function MarketingFooter(): React.ReactNode {
                           if (pathname === link.to) scrollMarketingColumnToTop();
                         }}
                       >
-                        {link.label}
+                        {t(`footer.columns.${columnIndex}.links.${linkIndex}`, {
+                          defaultValue: link.label,
+                        })}
                       </Link>
                     ) : (
                       <a
@@ -120,7 +136,9 @@ export function MarketingFooter(): React.ReactNode {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        {link.label}
+                        {t(`footer.columns.${columnIndex}.links.${linkIndex}`, {
+                          defaultValue: link.label,
+                        })}
                       </a>
                     )}
                   </li>
@@ -131,7 +149,10 @@ export function MarketingFooter(): React.ReactNode {
         </nav>
         <div className="marketingFooterBottom">
           <span className="marketingFooterCopyright">
-            Copyright {new Date().getFullYear()}
+            {t("footer.copyright", {
+              defaultValue: `Copyright ${new Date().getFullYear()}`,
+              year: new Date().getFullYear(),
+            })}
           </span>
           <a
             href={COMPANY_URL}

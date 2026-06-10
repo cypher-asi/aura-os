@@ -195,7 +195,7 @@ export function ModelsView(): ReactNode {
         >
           <header className="modelsStatsCardHeader">
             <h1 className="modelsPageTitle">
-              {t("models.title", { defaultValue: "Models" })}
+              {t(`models.modeTitles.${mode}`, { defaultValue: MODE_TITLE[mode] })}
             </h1>
             <p className="modelsPageSubtitle">
               {t("models.subtitle", {

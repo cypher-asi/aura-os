@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { track } from "../../../lib/analytics";
 import "./ProductCallToAction.css";
 
@@ -22,7 +23,11 @@ export function ProductCallToAction({
   tagline = "Feel the AGI.",
   downloadHref = "/download",
 }: ProductCallToActionProps): React.ReactNode {
+  const { t } = useTranslation("marketing");
   const location = useLocation();
+  const resolvedTagline = tagline === "Feel the AGI."
+    ? t("cta.tagline", { defaultValue: "Feel the AGI." })
+    : tagline;
 
   const registerParams = new URLSearchParams(location.search);
   registerParams.set("tab", "register");
@@ -33,13 +38,15 @@ export function ProductCallToAction({
   return (
     <section
       className="productCtaSection"
-      aria-label="Product call to action"
+      aria-label={t("cta.ariaLabel", {
+        defaultValue: "Product call to action",
+      })}
     >
       {/* `data-text` feeds the `::after` shimmer overlay in the CSS,
           which re-renders the same glyphs with a moving gold band
           clipped to them (see `.productCtaTagline::after`). */}
-      <h2 className="productCtaTagline" data-text={tagline}>
-        {tagline}
+      <h2 className="productCtaTagline" data-text={resolvedTagline}>
+        {resolvedTagline}
       </h2>
       <div className="productCtaActions">
         <Link
@@ -50,7 +57,7 @@ export function ProductCallToAction({
             track("public_signup_clicked", { source: "product_cta" })
           }
         >
-          Sign Up
+          {t("cta.signUp", { defaultValue: "Sign Up" })}
         </Link>
         <Link
           to={downloadHref}
@@ -59,7 +66,7 @@ export function ProductCallToAction({
             track("public_download_clicked", { source: "product_cta" })
           }
         >
-          Download
+          {t("cta.download", { defaultValue: "Download" })}
         </Link>
       </div>
     </section>

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   fetchChangelogEntries,
   type ChangelogEntry,
@@ -13,12 +14,12 @@ type ChangelogPreviewProps = {
   readonly ctaHref?: string;
 };
 
-function formatCardDate(value: string): string {
+function formatCardDate(value: string, language: string): string {
   const parsed = new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(language, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -30,7 +31,7 @@ function getCardTitle(entry: ChangelogEntry): string {
     return entry.rendered.title;
   }
   const firstTimeline = entry.rendered.entries[0];
-  return firstTimeline?.title ?? "Release update";
+  return firstTimeline?.title ?? "";
 }
 
 /**
@@ -51,6 +52,17 @@ export function ChangelogPreview({
   ctaLabel = "See what's new in AURA",
   ctaHref = "/changelog",
 }: ChangelogPreviewProps = {}): React.ReactNode {
+  const { t, i18n } = useTranslation("marketing");
+  const resolvedHeading =
+    heading === "Changelog"
+      ? t("changelogPreview.heading", { defaultValue: "Changelog" })
+      : heading;
+  const resolvedCtaLabel =
+    ctaLabel === "See what's new in AURA"
+      ? t("changelogPreview.ctaLabel", {
+          defaultValue: "See what's new in AURA",
+        })
+      : ctaLabel;
   const { data, isLoading, isError } = useQuery({
     queryKey: ["marketing-changelog"],
     queryFn: fetchChangelogEntries,
@@ -68,14 +80,20 @@ export function ChangelogPreview({
   return (
     <section
       className="changelogPreview"
-      aria-label="Recent changelog entries"
+      aria-label={t("changelogPreview.ariaLabel", {
+        defaultValue: "Recent changelog entries",
+      })}
     >
       <div className="changelogPreviewShell">
-        <h2 className="changelogPreviewHeading">{heading}</h2>
+        <h2 className="changelogPreviewHeading">{resolvedHeading}</h2>
         <div className="changelogPreviewGrid">
           {visibleEntries.map((entry) => {
             const entryKey = `${entry.date}-${entry.version ?? entry.generatedAt}`;
-            const title = getCardTitle(entry);
+            const title =
+              getCardTitle(entry) ||
+              t("changelogPreview.releaseUpdate", {
+                defaultValue: "Release update",
+              });
             return (
               <Link
                 key={entryKey}
@@ -86,7 +104,7 @@ export function ChangelogPreview({
                   className="changelogPreviewDate"
                   dateTime={entry.date}
                 >
-                  {formatCardDate(entry.date)}
+                  {formatCardDate(entry.date, i18n.language)}
                 </time>
                 <p className="changelogPreviewTitle">{title}</p>
                 {entry.version ? (
@@ -99,7 +117,7 @@ export function ChangelogPreview({
           })}
         </div>
         <Link to={ctaHref} className="changelogPreviewCta">
-          {ctaLabel} <span aria-hidden="true">&rarr;</span>
+          {resolvedCtaLabel} <span aria-hidden="true">&rarr;</span>
         </Link>
       </div>
     </section>

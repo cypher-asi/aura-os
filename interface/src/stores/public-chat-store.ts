@@ -13,7 +13,6 @@
 
 import { create } from "zustand";
 import { setupPublicSession } from "../api/public-chat";
-import i18n from "../i18n";
 import { track } from "../lib/analytics";
 
 /** Modality. Code + Plan ship in Phase 2; image / video / model3d
@@ -442,5 +441,5 @@ function deriveTitle(content: string): string {
 }
 
 function newChatTitle(): string {
-  return i18n.t("publicChat:sessions.newChat", { defaultValue: "New chat" });
+  return "New chat";
 }

@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Section } from "../Section";
 import { CardSection, MetalCard } from "../CardSection";
 import { TextCard } from "../TextCard";
@@ -27,6 +28,7 @@ const HEADLINE_ID = "builtForTrustHeadline";
  * their media wells.
  */
 export function BuiltForTrustSection(): ReactNode {
+  const { t } = useTranslation("marketing");
   return (
     <>
       <Section
@@ -37,12 +39,22 @@ export function BuiltForTrustSection(): ReactNode {
         <TextCard
           level="h2"
           id={HEADLINE_ID}
-          headline="Built for trust."
-          subhead="AURA agents run in isolated virtual machines within trusted execution environments."
+          headline={t("sections.builtForTrust.headline", {
+            defaultValue: "Built for trust.",
+          })}
+          subhead={t("sections.builtForTrust.subhead", {
+            defaultValue:
+              "AURA agents run in isolated virtual machines within trusted execution environments.",
+          })}
         />
       </Section>
 
-      <CardSection ariaLabel="How AURA earns your trust" columns={3}>
+      <CardSection
+        ariaLabel={t("sections.builtForTrust.ariaLabel", {
+          defaultValue: "How AURA earns your trust",
+        })}
+        columns={3}
+      >
         <MetalCard
           wide
           short
@@ -54,24 +66,39 @@ export function BuiltForTrustSection(): ReactNode {
           gradient={135}
           align="center"
           className="builtForTrustCopy"
-          title="Always on."
-          description="Your agent keeps working around the clock, even while you're away and your devices are off."
+          title={t("sections.builtForTrust.cards.alwaysOn.title", {
+            defaultValue: "Always on.",
+          })}
+          description={t("sections.builtForTrust.cards.alwaysOn.description", {
+            defaultValue:
+              "Your agent keeps working around the clock, even while you're away and your devices are off.",
+          })}
           media={<AlwaysOnToggle />}
         />
         <MetalCard
           gradient={225}
           align="center"
           className="builtForTrustCopy"
-          title="Isolated by default."
-          description="Each agent runs in its own sandboxed VM, fully sealed off from your system and other agents."
+          title={t("sections.builtForTrust.cards.isolated.title", {
+            defaultValue: "Isolated by default.",
+          })}
+          description={t("sections.builtForTrust.cards.isolated.description", {
+            defaultValue:
+              "Each agent runs in its own sandboxed VM, fully sealed off from your system and other agents.",
+          })}
           media={<PasswordLockDevice />}
         />
         <MetalCard
           gradient={135}
           align="center"
           className="builtForTrustCopy"
-          title="Trusted and verifiable."
-          description="Every environment is attested before it runs, so you can always verify what you're trusting."
+          title={t("sections.builtForTrust.cards.verifiable.title", {
+            defaultValue: "Trusted and verifiable.",
+          })}
+          description={t("sections.builtForTrust.cards.verifiable.description", {
+            defaultValue:
+              "Every environment is attested before it runs, so you can always verify what you're trusting.",
+          })}
           media={<VerifiedCubeScreen />}
         />
       </CardSection>

@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Section } from "../Section";
 import { CardSection, MetalCard } from "../CardSection";
 import { TextCard } from "../TextCard";
@@ -32,6 +33,7 @@ const HEADLINE_ID = "personalAgentHeadline";
  *   3. "Connected to everything" -> the services it connects to
  */
 export function PersonalAgentSection(): ReactNode {
+  const { t } = useTranslation("marketing");
   return (
     <>
       <Section
@@ -42,12 +44,21 @@ export function PersonalAgentSection(): ReactNode {
         <TextCard
           level="h2"
           id={HEADLINE_ID}
-          headline="Every model. Every mode."
-          subhead="AURA is your own personal agent that supports you with everything from light tasks to deep work."
+          headline={t("sections.personalAgent.headline", {
+            defaultValue: "Every model. Every mode.",
+          })}
+          subhead={t("sections.personalAgent.subhead", {
+            defaultValue:
+              "AURA is your own personal agent that supports you with everything from light tasks to deep work.",
+          })}
         />
       </Section>
 
-      <CardSection ariaLabel="What your agent can do">
+      <CardSection
+        ariaLabel={t("sections.personalAgent.ariaLabel", {
+          defaultValue: "What your agent can do",
+        })}
+      >
         <MetalCard
           wide
           gradient={135}
@@ -63,24 +74,39 @@ export function PersonalAgentSection(): ReactNode {
               </div>
             </>
           }
-          title="Always on."
-          description="Ask or direct your agent to do almost anything. It will get to work and report back when necessary."
+          title={t("sections.personalAgent.cards.alwaysOn.title", {
+            defaultValue: "Always on.",
+          })}
+          description={t("sections.personalAgent.cards.alwaysOn.description", {
+            defaultValue:
+              "Ask or direct your agent to do almost anything. It will get to work and report back when necessary.",
+          })}
         />
         <MetalCard
           gradient={225}
           className="paCardSkills"
           align="center"
           media={<SkillSeaCard />}
-          title="Intelligent in all domains."
-          description="Your agent is a genius in all domains. It can help with the simple tasks of life, to creative projects, to advanced design and coding."
+          title={t("sections.personalAgent.cards.domains.title", {
+            defaultValue: "Intelligent in all domains.",
+          })}
+          description={t("sections.personalAgent.cards.domains.description", {
+            defaultValue:
+              "Your agent is a genius in all domains. It can help with the simple tasks of life, to creative projects, to advanced design and coding.",
+          })}
         />
         <MetalCard
           gradient={135}
           className="paCardServices"
           align="center"
           media={<ServiceDeviceCard />}
-          title="Connected to everything."
-          description="AURA securely connects to your services so it knows everything about you. Your data never leaves your own secure computer and is never trained on."
+          title={t("sections.personalAgent.cards.connected.title", {
+            defaultValue: "Connected to everything.",
+          })}
+          description={t("sections.personalAgent.cards.connected.description", {
+            defaultValue:
+              "AURA securely connects to your services so it knows everything about you. Your data never leaves your own secure computer and is never trained on.",
+          })}
         />
       </CardSection>
     </>

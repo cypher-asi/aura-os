@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import "./ProductScreenSection.css";
 
 type LightboxPhase = "closed" | "opening" | "open" | "closing";
@@ -113,6 +114,13 @@ export function ProductScreenSection({
   imageSrc,
   imageAlt,
 }: ProductScreenSectionProps): ReactNode {
+  const { t } = useTranslation("marketing");
+  const resolvedPlaceholderLabel =
+    placeholderLabel === "Image placeholder"
+      ? t("productScreen.placeholderLabel", {
+          defaultValue: "Image placeholder",
+        })
+      : placeholderLabel;
   const inlineImageRef = useRef<HTMLImageElement | null>(null);
   const animatedImageShellRef = useRef<HTMLDivElement | null>(null);
   const backdropRef = useRef<HTMLDivElement | null>(null);
@@ -422,7 +430,7 @@ export function ProductScreenSection({
             className="productScreenSectionLightbox"
             role="dialog"
             aria-modal="true"
-            aria-label={imageAlt ?? placeholderLabel}
+            aria-label={imageAlt ?? resolvedPlaceholderLabel}
             onClick={closeFullscreen}
           >
             <div
@@ -434,9 +442,11 @@ export function ProductScreenSection({
               type="button"
               className="productScreenSectionLightboxClose"
               onClick={closeFullscreen}
-              aria-label="Close fullscreen image"
+              aria-label={t("productScreen.closeFullscreenAriaLabel", {
+                defaultValue: "Close fullscreen image",
+              })}
             >
-              Close
+              {t("productScreen.close", { defaultValue: "Close" })}
             </button>
             <div
               ref={animatedImageShellRef}
@@ -446,7 +456,7 @@ export function ProductScreenSection({
             >
               <img
                 src={imageSrc}
-                alt={imageAlt ?? placeholderLabel}
+                alt={imageAlt ?? resolvedPlaceholderLabel}
                 className="productScreenSectionLightboxImage"
               />
             </div>
@@ -473,7 +483,12 @@ export function ProductScreenSection({
                 type="button"
                 className="productScreenSectionImageButton"
                 onClick={openFullscreen}
-                aria-label={`Open fullscreen image: ${imageAlt ?? placeholderLabel}`}
+                aria-label={t("productScreen.openFullscreenAriaLabel", {
+                  defaultValue: `Open fullscreen image: ${
+                    imageAlt ?? resolvedPlaceholderLabel
+                  }`,
+                  label: imageAlt ?? resolvedPlaceholderLabel,
+                })}
               >
                 <div
                   className={`productScreenSectionImageFrame ${
@@ -485,7 +500,7 @@ export function ProductScreenSection({
                   <img
                     ref={inlineImageRef}
                     src={imageSrc}
-                    alt={imageAlt ?? placeholderLabel}
+                    alt={imageAlt ?? resolvedPlaceholderLabel}
                     className="productScreenSectionImage"
                   />
                 </div>
@@ -495,10 +510,10 @@ export function ProductScreenSection({
           ) : (
             <div
               className="productScreenSectionPlaceholder"
-              aria-label={placeholderLabel}
+              aria-label={resolvedPlaceholderLabel}
               role="img"
             >
-              <span>{placeholderLabel}</span>
+              <span>{resolvedPlaceholderLabel}</span>
             </div>
           )
         ) : null}

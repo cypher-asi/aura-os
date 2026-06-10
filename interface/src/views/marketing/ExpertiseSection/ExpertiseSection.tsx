@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Section } from "../Section";
 import { TextCard } from "../TextCard";
 import "./ExpertiseSection.css";
@@ -15,6 +16,7 @@ const HEADLINE_ID = "expertiseSectionHeadline";
  * rather than floating in a full empty screen.
  */
 export function ExpertiseSection(): ReactNode {
+  const { t } = useTranslation("marketing");
   return (
     <Section
       ariaLabelledBy={HEADLINE_ID}
@@ -24,12 +26,18 @@ export function ExpertiseSection(): ReactNode {
       <TextCard
         level="h2"
         id={HEADLINE_ID}
-        headline="Expertise without ego."
+        headline={t("sections.expertise.headline", {
+          defaultValue: "Expertise without ego.",
+        })}
         subhead={
           <>
-            AURA agents are experts in every discipline.
+            {t("sections.expertise.subheadLine1", {
+              defaultValue: "AURA agents are experts in every discipline.",
+            })}
             <br />
-            From coding to science to creativity.
+            {t("sections.expertise.subheadLine2", {
+              defaultValue: "From coding to science to creativity.",
+            })}
           </>
         }
       />

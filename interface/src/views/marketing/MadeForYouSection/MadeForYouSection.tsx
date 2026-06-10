@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Section } from "../Section";
 import { TextCard } from "../TextCard";
 import "./MadeForYouSection.css";
@@ -13,6 +14,7 @@ const HEADLINE_ID = "madeForYouSectionHeadline";
  * peer of the hero text area rather than floating in a full empty screen.
  */
 export function MadeForYouSection(): ReactNode {
+  const { t } = useTranslation("marketing");
   return (
     <Section
       ariaLabelledBy={HEADLINE_ID}
@@ -22,8 +24,12 @@ export function MadeForYouSection(): ReactNode {
       <TextCard
         level="h2"
         id={HEADLINE_ID}
-        headline="Agents made for you."
-        subhead="Design and launch your agent in 30 seconds."
+        headline={t("sections.madeForYou.headline", {
+          defaultValue: "Agents made for you.",
+        })}
+        subhead={t("sections.madeForYou.subhead", {
+          defaultValue: "Design and launch your agent in 30 seconds.",
+        })}
       />
     </Section>
   );

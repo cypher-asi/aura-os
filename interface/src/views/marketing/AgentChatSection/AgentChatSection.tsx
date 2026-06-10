@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { PhoneShell } from "../PhoneShell";
 import { ConnectedConsoleDevice } from "../ConnectedConsoleDevice";
 import { Section } from "../Section";
@@ -39,6 +40,7 @@ const HEADLINE_ID = "agentChatSectionHeadline";
  * desktop-style 3-phone row into a phone width.
  */
 export function AgentChatSection(): ReactNode {
+  const { t } = useTranslation("marketing");
   const [leftChat, centerChat, rightChat] = MOBILE_CONVERSATIONS;
 
   return (
@@ -53,39 +55,59 @@ export function AgentChatSection(): ReactNode {
           id={HEADLINE_ID}
           headline={
             <>
-              Chat with your agents.
+              {t("sections.agentChat.headlineLine1", {
+                defaultValue: "Chat with your agents.",
+              })}
               <br />
-              From anywhere.
+              {t("sections.agentChat.headlineLine2", {
+                defaultValue: "From anywhere.",
+              })}
             </>
           }
         />
       </Section>
 
-      <CardSection ariaLabel="Chat with your agents from anywhere">
+      <CardSection
+        ariaLabel={t("sections.agentChat.ariaLabel", {
+          defaultValue: "Chat with your agents from anywhere",
+        })}
+      >
         <MetalCard
           wide
           transparent
           align="center"
           className="agentChatCard"
-          description="Your AURA agents are always on. Pick up a conversation on your phone, your laptop, or your desktop. They remember everything and bring the same tools with them."
+          description={t("sections.agentChat.description", {
+            defaultValue:
+              "Your AURA agents are always on. Pick up a conversation on your phone, your laptop, or your desktop. They remember everything and bring the same tools with them.",
+          })}
           media={
             <div className="agentChatSectionStack">
               <div className="agentChatSectionPhones">
                 <PhoneShell
                   size="md"
-                  ariaLabel={`Mobile chat with the ${AGENTS[leftChat.agentId].name} agent`}
+                  ariaLabel={t("sections.agentChat.phoneAriaLabel", {
+                    defaultValue: `Mobile chat with the ${AGENTS[leftChat.agentId].name} agent`,
+                    agentName: AGENTS[leftChat.agentId].name,
+                  })}
                 >
                   <MockMobileChat conversation={leftChat} />
                 </PhoneShell>
                 <PhoneShell
                   size="lg"
-                  ariaLabel={`Mobile chat with the ${AGENTS[centerChat.agentId].name} agent`}
+                  ariaLabel={t("sections.agentChat.phoneAriaLabel", {
+                    defaultValue: `Mobile chat with the ${AGENTS[centerChat.agentId].name} agent`,
+                    agentName: AGENTS[centerChat.agentId].name,
+                  })}
                 >
                   <MockMobileChat conversation={centerChat} />
                 </PhoneShell>
                 <PhoneShell
                   size="md"
-                  ariaLabel={`Mobile chat with the ${AGENTS[rightChat.agentId].name} agent`}
+                  ariaLabel={t("sections.agentChat.phoneAriaLabel", {
+                    defaultValue: `Mobile chat with the ${AGENTS[rightChat.agentId].name} agent`,
+                    agentName: AGENTS[rightChat.agentId].name,
+                  })}
                 >
                   <MockMobileChat conversation={rightChat} />
                 </PhoneShell>

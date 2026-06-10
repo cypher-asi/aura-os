@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect } from "react";
 import { Navigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { CardSection, MetalCard } from "../CardSection";
 import { ChangelogPreview } from "../ChangelogPreview";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
@@ -30,41 +31,65 @@ import styles from "./ExpertiseDetailView.module.css";
  * only renders the section stack. Unknown slugs redirect to `/agents`.
  */
 export function ExpertiseDetailView(): ReactNode {
+  const { t } = useTranslation("marketing");
   const { slug } = useParams<{ slug: string }>();
   const entry = slug ? getExpertiseEntry(slug) : undefined;
 
   useEffect(() => {
     if (!entry) return;
     const previousTitle = document.title;
-    document.title = `AURA - ${entry.label}`;
+    document.title = t("expertise.documentTitle", {
+      defaultValue: `AURA - ${entry.label}`,
+      label: t(`expertise.entries.${entry.slug}.label`, {
+        defaultValue: entry.label,
+      }),
+    });
     return () => {
       document.title = previousTitle;
     };
-  }, [entry]);
+  }, [entry, t]);
 
   if (!entry) {
     return <Navigate to="/agents" replace />;
   }
+
+  const entryLabel = t(`expertise.entries.${entry.slug}.label`, {
+    defaultValue: entry.label,
+  });
+  const entryHeadline = t(`expertise.entries.${entry.slug}.headline`, {
+    defaultValue: entry.headline,
+  });
+  const entryHeroBlurb = t(`expertise.entries.${entry.slug}.heroBlurb`, {
+    defaultValue: entry.heroBlurb,
+  });
+  const entryOverview = t(`expertise.entries.${entry.slug}.overview`, {
+    defaultValue: entry.overview,
+  });
 
   return (
     <div className={styles.expertiseView}>
       <MarketingFirstScreen
         hero={
           <PageHero
-            label={entry.label}
-            headline={entry.headline}
-            description={entry.heroBlurb}
+            label={entryLabel}
+            headline={entryHeadline}
+            description={entryHeroBlurb}
             preview={null}
             centered
             headlineCta={
               <button type="button" className={styles.demoButton}>
-                Request a demo
+                {t("expertise.requestDemo", { defaultValue: "Request a demo" })}
               </button>
             }
           />
         }
       />
-      <CardSection ariaLabel={`${entry.label} preview`}>
+      <CardSection
+        ariaLabel={t("expertise.previewAriaLabel", {
+          defaultValue: `${entryLabel} preview`,
+          label: entryLabel,
+        })}
+      >
         <MetalCard
           wide
           gradient={135}
@@ -72,20 +97,51 @@ export function ExpertiseDetailView(): ReactNode {
           media={<div className={styles.screenPlaceholder} aria-hidden="true" />}
         />
       </CardSection>
-      <Section ariaLabel={`${entry.label} overview`} fullHeight={false}>
-        <TextCard level="h2" headline="Overview" subhead={entry.overview} />
+      <Section
+        ariaLabel={t("expertise.overviewAriaLabel", {
+          defaultValue: `${entryLabel} overview`,
+          label: entryLabel,
+        })}
+        fullHeight={false}
+      >
+        <TextCard
+          level="h2"
+          headline={t("expertise.overview", { defaultValue: "Overview" })}
+          subhead={entryOverview}
+        />
       </Section>
-      <Section ariaLabel={`${entry.label} use cases`} fullHeight={false}>
-        <TextCard level="h2" headline="Use cases" />
+      <Section
+        ariaLabel={t("expertise.useCasesAriaLabel", {
+          defaultValue: `${entryLabel} use cases`,
+          label: entryLabel,
+        })}
+        fullHeight={false}
+      >
+        <TextCard
+          level="h2"
+          headline={t("expertise.useCases", { defaultValue: "Use cases" })}
+        />
       </Section>
-      <CardSection ariaLabel={`${entry.label} use cases`}>
-        {entry.useCases.map((useCase) => (
+      <CardSection
+        ariaLabel={t("expertise.useCasesAriaLabel", {
+          defaultValue: `${entryLabel} use cases`,
+          label: entryLabel,
+        })}
+      >
+        {entry.useCases.map((useCase, index) => (
           <MetalCard
             key={useCase.title}
             gradient={135}
             className={styles.useCaseCard}
-            title={useCase.title}
-            description={useCase.description}
+            title={t(`expertise.entries.${entry.slug}.useCases.${index}.title`, {
+              defaultValue: useCase.title,
+            })}
+            description={t(
+              `expertise.entries.${entry.slug}.useCases.${index}.description`,
+              {
+                defaultValue: useCase.description,
+              },
+            )}
           />
         ))}
       </CardSection>

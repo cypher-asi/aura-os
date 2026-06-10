@@ -1,6 +1,7 @@
 import { isValidElement, type ReactNode, useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -18,17 +19,15 @@ import styles from "./BlogView.module.css";
 const MD_REMARK = [remarkGfm];
 const MD_REHYPE = [rehypeHighlight];
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-});
-
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, language: string): string {
   if (!value) return "";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "";
-  return DATE_FORMATTER.format(parsed);
+  return new Intl.DateTimeFormat(language, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(parsed);
 }
 
 function isAuraAiHost(): boolean {
@@ -115,6 +114,7 @@ const MD_COMPONENTS: Components = {
 };
 
 function PostByline({ post }: { post: BlogPost }): React.ReactElement {
+  const { t } = useTranslation("marketing");
   return (
     <div className={styles.byline}>
       <Avatar
@@ -128,7 +128,10 @@ function PostByline({ post }: { post: BlogPost }): React.ReactElement {
           <span className={styles.bylineName}>{post.authorName}</span>
         ) : null}
         <span className={styles.bylineReadTime}>
-          {post.readTimeMinutes} min read
+          {t("blog.readTime", {
+            defaultValue: `${post.readTimeMinutes} min read`,
+            count: post.readTimeMinutes,
+          })}
         </span>
       </span>
     </div>
@@ -157,6 +160,7 @@ function stripLeadingTitle(markdown: string): string {
 }
 
 function BlogPostCard({ post }: { post: BlogPost }): React.ReactElement {
+  const { t, i18n } = useTranslation("marketing");
   return (
     <Link to={`/blog/${post.slug}`} className={styles.card}>
       {post.heroImageUrl ? (
@@ -174,7 +178,9 @@ function BlogPostCard({ post }: { post: BlogPost }): React.ReactElement {
         <div className={styles.cardMeta}>
           <span className={styles.cardType}>{post.blogType}</span>
           {post.publishedAt ? (
-            <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+            <time dateTime={post.publishedAt}>
+              {formatDate(post.publishedAt, i18n.language)}
+            </time>
           ) : null}
         </div>
         <h2 className={styles.cardTitle}>{post.title}</h2>
@@ -189,7 +195,12 @@ function BlogPostCard({ post }: { post: BlogPost }): React.ReactElement {
           {post.authorName ? (
             <span className={styles.cardAuthor}>{post.authorName}</span>
           ) : null}
-          <span className={styles.cardReadTime}>{post.readTimeMinutes} min read</span>
+          <span className={styles.cardReadTime}>
+            {t("blog.readTime", {
+              defaultValue: `${post.readTimeMinutes} min read`,
+              count: post.readTimeMinutes,
+            })}
+          </span>
         </div>
       </div>
     </Link>
@@ -218,11 +229,14 @@ function PostThumb({
 }
 
 function PostMeta({ post }: { post: BlogPost }): React.ReactElement {
+  const { i18n } = useTranslation("marketing");
   return (
     <div className={styles.listMeta}>
       <span className={styles.metaType}>{post.blogType}</span>
       {post.publishedAt ? (
-        <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+        <time dateTime={post.publishedAt}>
+          {formatDate(post.publishedAt, i18n.language)}
+        </time>
       ) : null}
     </div>
   );
@@ -267,21 +281,27 @@ function BlogTable({
 }: {
   posts: readonly BlogPost[];
 }): React.ReactElement {
+  const { t, i18n } = useTranslation("marketing");
   return (
-    <section className={styles.archive} aria-label="All posts">
-      <span className={styles.archiveLabel}>All posts</span>
+    <section
+      className={styles.archive}
+      aria-label={t("blog.allPosts", { defaultValue: "All posts" })}
+    >
+      <span className={styles.archiveLabel}>
+        {t("blog.allPosts", { defaultValue: "All posts" })}
+      </span>
       <table className={styles.table}>
         <thead>
           <tr>
-            <th scope="col">Title</th>
+            <th scope="col">{t("blog.table.title", { defaultValue: "Title" })}</th>
             <th scope="col" className={styles.colAuthor}>
-              Author
+              {t("blog.table.author", { defaultValue: "Author" })}
             </th>
             <th scope="col" className={styles.colType}>
-              Type
+              {t("blog.table.type", { defaultValue: "Type" })}
             </th>
             <th scope="col" className={styles.colDate}>
-              Date
+              {t("blog.table.date", { defaultValue: "Date" })}
             </th>
           </tr>
         </thead>
@@ -300,7 +320,7 @@ function BlogTable({
               <td className={styles.colDate}>
                 {post.publishedAt ? (
                   <time dateTime={post.publishedAt}>
-                    {formatDate(post.publishedAt)}
+                    {formatDate(post.publishedAt, i18n.language)}
                   </time>
                 ) : (
                   "—"
@@ -323,28 +343,41 @@ function BlogIndex({
   isLoading: boolean;
   suppressLoadingMessage: boolean;
 }): React.ReactElement {
+  const { t } = useTranslation("marketing");
   const [featured, ...rest] = posts;
   return (
     <div className={styles.indexShell}>
       <header className={styles.indexHeader}>
-        <span className={styles.latestLabel}>Latest</span>
+        <span className={styles.latestLabel}>
+          {t("blog.latest", { defaultValue: "Latest" })}
+        </span>
       </header>
       {isLoading ? (
         suppressLoadingMessage ? null : (
           <p className={styles.stateMessage} aria-busy="true">
-            Loading posts…
+            {t("blog.loadingPosts", { defaultValue: "Loading posts…" })}
           </p>
         )
       ) : posts.length === 0 ? (
         <div className={styles.emptyState}>
-          <h2>No posts yet.</h2>
-          <p>The blog is connected, but no posts have been published yet.</p>
+          <h2>{t("blog.empty.heading", { defaultValue: "No posts yet." })}</h2>
+          <p>
+            {t("blog.empty.body", {
+              defaultValue:
+                "The blog is connected, but no posts have been published yet.",
+            })}
+          </p>
         </div>
       ) : (
         <>
           {featured ? <FeaturedPost post={featured} /> : null}
           {rest.length > 0 ? (
-            <div className={styles.listGrid} aria-label="Recent posts">
+            <div
+              className={styles.listGrid}
+              aria-label={t("blog.recentPostsAriaLabel", {
+                defaultValue: "Recent posts",
+              })}
+            >
               {rest.map((post) => (
                 <BlogListItem key={post.id} post={post} />
               ))}
@@ -362,6 +395,7 @@ function TableOfContents({
 }: {
   items: readonly TocItem[];
 }): React.ReactElement | null {
+  const { t } = useTranslation("marketing");
   if (items.length === 0) return null;
 
   const handleClick = (
@@ -376,8 +410,15 @@ function TableOfContents({
   };
 
   return (
-    <nav className={styles.toc} aria-label="Table of contents">
-      <span className={styles.tocLabel}>Table of Contents</span>
+    <nav
+      className={styles.toc}
+      aria-label={t("blog.tocAriaLabel", {
+        defaultValue: "Table of contents",
+      })}
+    >
+      <span className={styles.tocLabel}>
+        {t("blog.tocTitle", { defaultValue: "Table of Contents" })}
+      </span>
       <ul className={styles.tocList}>
         {items.map((item, index) => (
           <li
@@ -406,6 +447,7 @@ function BlogSinglePost({
   bodyLoading: boolean;
   otherPosts: readonly BlogPost[];
 }): React.ReactElement {
+  const { t, i18n } = useTranslation("marketing");
   const renderedBody = useMemo(() => stripLeadingTitle(body), [body]);
   const toc = useMemo(() => buildToc(renderedBody), [renderedBody]);
 
@@ -422,9 +464,19 @@ function BlogSinglePost({
   return (
     <div className={styles.postShell}>
       <div className={styles.postLayout}>
-        <aside className={styles.leftRail} aria-label="Blog navigation">
-          <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-            <Link to="/blog">Blog</Link>
+        <aside
+          className={styles.leftRail}
+          aria-label={t("blog.navigationAriaLabel", {
+            defaultValue: "Blog navigation",
+          })}
+        >
+          <nav
+            className={styles.breadcrumb}
+            aria-label={t("blog.breadcrumbAriaLabel", {
+              defaultValue: "Breadcrumb",
+            })}
+          >
+            <Link to="/blog">{t("blog.title", { defaultValue: "Blog" })}</Link>
             <span aria-hidden="true" className={styles.breadcrumbSep}>
               /
             </span>
@@ -432,9 +484,13 @@ function BlogSinglePost({
           </nav>
 
           <div className={styles.prevList}>
-            <span className={styles.prevListLabel}>More posts</span>
+            <span className={styles.prevListLabel}>
+              {t("blog.morePosts", { defaultValue: "More posts" })}
+            </span>
             {otherPosts.length === 0 ? (
-              <p className={styles.prevListEmpty}>No other posts yet.</p>
+              <p className={styles.prevListEmpty}>
+                {t("blog.noOtherPosts", { defaultValue: "No other posts yet." })}
+              </p>
             ) : (
               <ul>
                 {otherPosts.map((other) => (
@@ -449,7 +505,7 @@ function BlogSinglePost({
                           dateTime={other.publishedAt}
                           className={styles.prevListDate}
                         >
-                          {formatDate(other.publishedAt)}
+                          {formatDate(other.publishedAt, i18n.language)}
                         </time>
                       ) : null}
                     </Link>
@@ -463,7 +519,7 @@ function BlogSinglePost({
         <article className={styles.postColumn}>
           {post.publishedAt ? (
             <time className={styles.postDate} dateTime={post.publishedAt}>
-              {formatDate(post.publishedAt)}
+              {formatDate(post.publishedAt, i18n.language)}
             </time>
           ) : null}
 
@@ -487,7 +543,7 @@ function BlogSinglePost({
           <div className={styles.markdownBody}>
             {bodyLoading ? (
               <p className={styles.stateMessage} aria-busy="true">
-                Loading…
+                {t("blog.loading", { defaultValue: "Loading…" })}
               </p>
             ) : body ? (
               <ReactMarkdown
@@ -499,7 +555,9 @@ function BlogSinglePost({
               </ReactMarkdown>
             ) : (
               <p className={styles.stateMessage}>
-                This post has no content yet.
+                {t("blog.noContent", {
+                  defaultValue: "This post has no content yet.",
+                })}
               </p>
             )}
           </div>
@@ -507,8 +565,15 @@ function BlogSinglePost({
       </div>
 
       {groupedByType.length > 0 ? (
-        <section className={styles.moreSection} aria-label="More from the blog">
-          <h2 className={styles.moreSectionTitle}>More from the blog</h2>
+        <section
+          className={styles.moreSection}
+          aria-label={t("blog.moreFromBlog", {
+            defaultValue: "More from the blog",
+          })}
+        >
+          <h2 className={styles.moreSectionTitle}>
+            {t("blog.moreFromBlog", { defaultValue: "More from the blog" })}
+          </h2>
           {groupedByType.map(([type, group]) => (
             <div key={type} className={styles.moreGroup}>
               <h3 className={styles.moreGroupTitle}>{type}</h3>
@@ -535,6 +600,7 @@ function BlogSinglePost({
  * `PublicMarketingPanel`; `usePublicPageViewed` is fired there.
  */
 export function BlogView(): React.ReactElement {
+  const { t } = useTranslation("marketing");
   const { slug } = useParams<{ slug?: string }>();
 
   const { data: posts, isLoading: postsLoading } = useQuery({
@@ -562,11 +628,16 @@ export function BlogView(): React.ReactElement {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = post ? `AURA - ${post.title}` : "AURA - Blog";
+    document.title = post
+      ? t("blog.postDocumentTitle", {
+          defaultValue: `AURA - ${post.title}`,
+          title: post.title,
+        })
+      : t("blog.documentTitle", { defaultValue: "AURA - Blog" });
     return () => {
       document.title = previousTitle;
     };
-  }, [post]);
+  }, [post, t]);
 
   const allPosts = useMemo<readonly BlogPost[]>(() => posts ?? [], [posts]);
 
@@ -586,10 +657,17 @@ export function BlogView(): React.ReactElement {
     return (
       <section className={styles.page}>
         <div className={styles.notFound}>
-          <h1>Post not found</h1>
-          <p>The post you're looking for doesn't exist or isn't published.</p>
+          <h1>{t("blog.notFound.heading", { defaultValue: "Post not found" })}</h1>
+          <p>
+            {t("blog.notFound.body", {
+              defaultValue:
+                "The post you're looking for doesn't exist or isn't published.",
+            })}
+          </p>
           <Link to="/blog" className={styles.notFoundLink}>
-            ← Back to the blog
+            {t("blog.notFound.backLink", {
+              defaultValue: "← Back to the blog",
+            })}
           </Link>
         </div>
       </section>
@@ -600,7 +678,7 @@ export function BlogView(): React.ReactElement {
     return (
       <section className={styles.page}>
         <p className={styles.stateMessage} aria-busy="true">
-          Loading post…
+          {t("blog.loadingPost", { defaultValue: "Loading post…" })}
         </p>
       </section>
     );

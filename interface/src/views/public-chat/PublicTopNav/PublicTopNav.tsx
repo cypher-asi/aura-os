@@ -211,6 +211,7 @@ function ExpertiseColumn({
   readonly entries: readonly ExpertiseEntry[];
   readonly currentPath: string;
 }): React.ReactElement {
+  const { t } = useTranslation("marketing");
   return (
     <div className={styles.menuSection}>
       <span className={styles.menuSectionTitle}>{title}</span>
@@ -228,7 +229,9 @@ function ExpertiseColumn({
               if (currentPath === to) scrollMarketingColumnToTop();
             }}
           >
-            {entry.label}
+            {t(`expertise.entries.${entry.slug}.label`, {
+              defaultValue: entry.label,
+            })}
           </NavLink>
         );
       })}
