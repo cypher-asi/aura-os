@@ -12,6 +12,7 @@ import {
   CreateAgentButton,
   CREATE_AGENT_CLICK_EVENT,
 } from "../../public-chat/CreateAgentButton";
+import { TypewriterText } from "../../public-chat/TypewriterText";
 import { SERVICE_LOGOS } from "./brand-logos";
 
 /**
@@ -59,13 +60,30 @@ const LOOP_VIDEO =
  */
 const SIDE_BUTTONS: ReadonlyArray<{
   readonly label: string;
+  /**
+   * One-line description streamed into the stage LCD when the row is selected.
+   * Kept parallel (imperative, ~40-50 chars) so each reads as a peer step.
+   */
+  readonly description: string;
 }> = [
-  { label: "Identity" },
-  { label: "Expertise" },
-  { label: "Integrations" },
-  { label: "Connections" },
-  { label: "Automations" },
-  { label: "Launch" },
+  { label: "Identity", description: "Create your agent's name and 3D avatar." },
+  {
+    label: "Expertise",
+    description: "Build your agent's core skills and knowledge.",
+  },
+  {
+    label: "Integrations",
+    description: "Grant your agent secure access to your data.",
+  },
+  {
+    label: "Connections",
+    description: "Link your agent to iMessage, Telegram, and more.",
+  },
+  {
+    label: "Automations",
+    description: "Schedule the daily tasks your agent runs for you.",
+  },
+  { label: "Launch", description: "Birth your agent into the world." },
 ];
 
 /**
@@ -505,26 +523,15 @@ export function ServiceDeviceCard({
         {hexGrille ? (
           <div className="madeForYouMeshStrip">
             <div className="personalAgentDeviceHexMesh" aria-hidden="true" />
-            <div
-              className="madeForYouProgress"
-              role="progressbar"
-              aria-valuenow={progressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={`Build progress: ${progressStage?.label ?? ""}`}
-            >
-              <div
-                className="madeForYouProgressTrack"
-                style={
-                  { ["--progress"]: `${progressPercent}%` } as CSSProperties
-                }
-              >
-                <div
-                  className="madeForYouProgressFill"
-                  style={{ width: `${progressPercent}%` }}
+            <div className="madeForYouStageScreen" aria-hidden="true">
+              <div className="madeForYouStageGloss" />
+              <p className="madeForYouStageText">
+                <TypewriterText
+                  key={selectedIndex}
+                  text={progressStage?.description ?? ""}
+                  speedMs={22}
                 />
-                <span className="madeForYouProgressLabel">{displayPercent}%</span>
-              </div>
+              </p>
             </div>
           </div>
         ) : null}
@@ -602,6 +609,25 @@ export function ServiceDeviceCard({
     </Plate>
     {hexGrille ? (
       <div className="madeForYouCardCtaSlot">
+        <div
+          className="madeForYouProgress"
+          role="progressbar"
+          aria-valuenow={progressPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Build progress: ${progressStage?.label ?? ""}`}
+        >
+          <div
+            className="madeForYouProgressTrack"
+            style={{ ["--progress"]: `${progressPercent}%` } as CSSProperties}
+          >
+            <div
+              className="madeForYouProgressFill"
+              style={{ width: `${progressPercent}%` }}
+            />
+            <span className="madeForYouProgressLabel">{displayPercent}%</span>
+          </div>
+        </div>
         <CreateAgentButton source="made_for_you" className="madeForYouCta" />
       </div>
     ) : null}
