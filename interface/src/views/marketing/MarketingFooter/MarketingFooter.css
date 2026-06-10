@@ -109,15 +109,13 @@
 }
 
 /* Bottom bar inside the card: copyright on the left, the company link
-   on the right, separated from the link columns by a hairline rule. */
+   on the right. */
 .marketingFooterBottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-top: 40px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .marketingFooterCopyright {
