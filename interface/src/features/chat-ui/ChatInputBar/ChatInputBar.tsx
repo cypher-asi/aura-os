@@ -80,6 +80,25 @@ export interface ChatInputBarHandle {
   isFocused?: () => boolean;
 }
 
+function getTrailingTriggerQuery(
+  value: string,
+  cursor: number,
+  trigger: "/" | "@",
+): { start: number; query: string } | null {
+  let tokenStart = cursor;
+  while (tokenStart > 0) {
+    const code = value.charCodeAt(tokenStart - 1);
+    if (code === 32 || code === 9 || code === 10 || code === 13) break;
+    tokenStart--;
+  }
+
+  if (value.charAt(tokenStart) !== trigger) return null;
+  return {
+    start: tokenStart,
+    query: value.slice(tokenStart + 1, cursor),
+  };
+}
+
 /**
  * Lazily fetches the rendered text the harness counted for each static
  * context bucket. Built by the surface that owns the chat (agent- vs
@@ -649,11 +668,10 @@ export const DesktopChatInputBar = memo(
         const el = shellRef.current?.getTextarea();
         if (!el) return;
         const cursor = el.selectionStart;
-        const textBefore = value.slice(0, cursor);
-        const slashMatch = textBefore.match(/(^|\s)\/(\S*)$/);
+        const slashMatch = getTrailingTriggerQuery(value, cursor, "/");
         if (slashMatch) {
-          slashStartRef.current = textBefore.lastIndexOf("/");
-          setSlashQuery(slashMatch[2]);
+          slashStartRef.current = slashMatch.start;
+          setSlashQuery(slashMatch.query);
           setSlashMenuOpen(true);
         } else if (slashMenuOpen) {
           setSlashMenuOpen(false);
@@ -667,11 +685,11 @@ export const DesktopChatInputBar = memo(
         // in practice — `@` and `/` are different leading tokens — so
         // no tie-breaking is needed here.
         if (canUseMentions) {
-          const mentionMatch = textBefore.match(/(^|\s)@(\S*)$/);
+          const mentionMatch = getTrailingTriggerQuery(value, cursor, "@");
           if (mentionMatch) {
             const wasClosed = !mentionMenuOpen;
-            mentionStartRef.current = textBefore.lastIndexOf("@");
-            setMentionQuery(mentionMatch[2]);
+            mentionStartRef.current = mentionMatch.start;
+            setMentionQuery(mentionMatch.query);
             setMentionMenuOpen(true);
             // Refresh the file listing the moment the menu opens so
             // newly-created files show up without waiting for the

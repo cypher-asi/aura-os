@@ -360,6 +360,29 @@ function InputBarShellInner(
     const el = textareaRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     let lastWidth = el.clientWidth;
+    let frame: number | null = null;
+    let needsHeightOnly = false;
+    let needsFullResize = false;
+    const scheduleResize = (heightOnly: boolean) => {
+      if (heightOnly) {
+        needsHeightOnly = true;
+      } else {
+        needsFullResize = true;
+      }
+      if (frame != null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        const runFullResize = needsFullResize;
+        needsFullResize = false;
+        const runHeightOnly = needsHeightOnly;
+        needsHeightOnly = false;
+        if (runFullResize) {
+          autoResize();
+        } else if (runHeightOnly) {
+          applyHeightOnly();
+        }
+      });
+    };
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
@@ -374,15 +397,20 @@ function InputBarShellInner(
             // the anti-osc prediction by a sub-pixel. Consume the
             // lockout and only update the inline height.
             transitionLockoutRef.current--;
-            applyHeightOnly();
+            scheduleResize(true);
           } else {
-            autoResize();
+            scheduleResize(false);
           }
         }
       }
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      if (frame != null) {
+        window.cancelAnimationFrame(frame);
+      }
+      ro.disconnect();
+    };
   }, [autoResize, applyHeightOnly]);
 
   useEffect(() => {
