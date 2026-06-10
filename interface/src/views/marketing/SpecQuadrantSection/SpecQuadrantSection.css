@@ -270,7 +270,7 @@
      extended screen so the knob/dome stay put while the screen bottom reaches
      down to the dome peak. */
   margin: -13px -18px -7px;
-  padding: 16px 18px 28px;
+  padding: 16px 18px 18px;
 }
 
 .nrControls::before {
@@ -302,21 +302,19 @@
 
 /* ----- Status row --------------------------------------------------- */
 
-/* Absolutely placed so REDUCTION / ACTIVE flank the knob just above the
-   seam line (in the dark shoulders), without affecting the knob/dome
-   layout. `top` is tuned to land just above the dome's shoulder seam. */
+/* Seated at the very bottom of the visible screen, flanking the knob, so the
+   live readout reads as on-screen telemetry pinned to the screen's bottom
+   edge. Bottom-anchored within the controls layer with the SAME inset as the
+   left/right edges (22px) so the bottom padding matches the side padding. */
 .nrStatus {
   position: absolute;
-  /* Drop the ACTIVATION / ONLINE row to the bottom of the controls plate so
-     its bottom inset matches the left/right side inset (equal padding all
-     round). */
-  bottom: 11px;
-  /* Edge-anchored so REDUCTION / ACTIVE flank the knob at the far left/right.
-     11px (not 18) because the plate now bleeds 7px past the controls' sides,
-     keeping the same visual inset from the plate edge as before. */
-  left: 11px;
-  right: 11px;
-  z-index: 1;
+  bottom: 22px;
+  /* Edge-anchored so ACTIVATION / ONLINE sit at the screen's far left/right,
+     clear of the centered brain/knob. */
+  left: 22px;
+  right: 22px;
+  /* Above the controls plate and brain artwork. */
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -644,15 +642,12 @@
 
   .nrControls {
     margin: -15px -14px -7px;
-    padding: 14px 14px 24px;
+    padding: 14px 14px 16px;
   }
 
   .nrStatus {
-    /* Bottom inset matches the 7px side inset on the narrower mobile plate. */
-    bottom: 7px;
-    /* 7px keeps the same visual inset from the plate edge given its 7px
-       side bleed (mirrors the desktop 11px on the narrower mobile plate). */
-    left: 7px;
-    right: 7px;
+    bottom: 18px;
+    left: 18px;
+    right: 18px;
   }
 }

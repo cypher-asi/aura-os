@@ -1,0 +1,766 @@
+/*
+ * Per-discipline showcase rendered inside the `NoiseReductionCard` screen for
+ * every non-General expertise: a typewriter capability list on the LEFT flank
+ * (`.nrCapabilityField`, vertically centered) and a small CSS/SVG example
+ * mockup on the RIGHT flank (`.nrExampleField`), both flanking the always-on
+ * centered brain. Mirrors the General code/paint flank geometry + fade masks.
+ */
+
+/* ----- Left flank: capabilities typewriter --------------------------- */
+
+.nrCapabilityField {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center; /* vertical centering of the list */
+  width: 44%;
+  height: 100%;
+  padding: 0 10px 0 26px;
+  pointer-events: none;
+  user-select: none;
+  -webkit-mask: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 12%,
+    #000 88%,
+    transparent 100%
+  );
+  mask: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 12%,
+    #000 88%,
+    transparent 100%
+  );
+}
+
+.nrCapList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nrCapItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.nrCapBullet {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--gold-core, #e8cd89);
+  box-shadow: 0 0 5px var(--nr-gold, #e8cd89);
+}
+
+.nrCapText {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.84);
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.65);
+}
+
+.nrCapCaret {
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -2px;
+  background: var(--gold-core, #e8cd89);
+  box-shadow: 0 0 6px var(--nr-gold, #e8cd89);
+  animation: nrCapBlink 0.9s steps(1) infinite;
+}
+
+@keyframes nrCapBlink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ----- Right flank: example mockups ---------------------------------- */
+
+.nrExampleField {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44%;
+  height: 100%;
+  padding: 0 18px 0 10px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.nrExample {
+  animation: nrExIn 0.5s ease both;
+}
+
+.nrExScale {
+  transform: scale(var(--nr-ex-scale, 1));
+  transform-origin: center;
+}
+
+.nrExFloat {
+  animation: nrExFloat 7s ease-in-out infinite;
+}
+
+@keyframes nrExIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes nrExFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+/* ----- Shared mockup primitives -------------------------------------- */
+
+.nrExLine {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.nrExBar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #8a8276, #c0b9aa);
+}
+
+.nrExMetric {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold-core, #e8cd89);
+  text-shadow: var(--gold-text-shadow, none);
+  font-variant-numeric: tabular-nums;
+}
+
+.nrExChip {
+  font-size: 8.5px;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.72);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+/* Light "paper" sheet (research / writing / legal). */
+.nrExPaper {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 190px;
+  padding: 14px;
+  border-radius: 8px;
+  color: #2a2a2a;
+  background: linear-gradient(180deg, #f6f4ee, #e7e3d9);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.nrExPaper .nrExLine {
+  background: rgba(30, 30, 30, 0.16);
+}
+
+.nrExHeading {
+  display: block;
+  height: 8px;
+  border-radius: 3px;
+  background: rgba(30, 30, 30, 0.55);
+}
+
+.nrExSub {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(30, 30, 30, 0.3);
+}
+
+/* Dark glass "panel" (sales / marketing / analytics / finance). */
+.nrExPanel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 198px;
+  padding: 13px;
+  border-radius: 9px;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 32, 38, 0.94),
+    rgba(15, 17, 21, 0.94)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.nrExPanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Window chrome (design / coding). */
+.nrExWin {
+  box-sizing: border-box;
+  width: 202px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0d0f13;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.55);
+}
+
+.nrExWinBar {
+  display: flex;
+  gap: 5px;
+  padding: 7px 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nrExWinBar span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ----- Research ------------------------------------------------------ */
+
+.nrExPaperBadge {
+  position: absolute;
+  top: 11px;
+  right: 11px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #b23b3b;
+  padding: 1px 4px;
+  border: 1px solid rgba(178, 59, 59, 0.5);
+  border-radius: 3px;
+}
+
+.nrExFig {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 42px;
+  padding: 2px 0;
+}
+
+.nrExResearch .nrExBar {
+  background: linear-gradient(180deg, #6f7b8a, #a3adba);
+}
+
+.nrExTwoCol {
+  display: flex;
+  gap: 9px;
+}
+
+.nrExCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ----- Writing ------------------------------------------------------- */
+
+.nrExPara {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nrExWriting .nrExPara + .nrExPara {
+  margin-top: 4px;
+}
+
+/* ----- Creative ------------------------------------------------------ */
+
+.nrExMood {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 42px;
+  gap: 7px;
+  width: 188px;
+}
+
+.nrExTile {
+  border-radius: 7px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.nrExTile1 {
+  background: linear-gradient(135deg, #ff8a5c, #ff3d77);
+}
+.nrExTile2 {
+  background: linear-gradient(135deg, #7c5cff, #5cc8ff);
+}
+.nrExTile3 {
+  background: linear-gradient(135deg, #34d399, #a3e635);
+}
+.nrExTile4 {
+  background: linear-gradient(135deg, #fbbf24, #f97316);
+}
+.nrExTile5 {
+  background: linear-gradient(135deg, #22d3ee, #3b82f6);
+}
+.nrExTile6 {
+  background: linear-gradient(135deg, #f472b6, #a855f7);
+}
+
+/* ----- Social -------------------------------------------------------- */
+
+.nrExSocial {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  width: 196px;
+}
+
+.nrExFlow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nrExNode {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 11px;
+  color: var(--gold-core, #e8cd89);
+  background: linear-gradient(
+    180deg,
+    rgba(40, 42, 48, 0.95),
+    rgba(22, 24, 28, 0.95)
+  );
+  border: 1px solid rgba(232, 205, 137, 0.35);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.nrExWire {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(232, 205, 137, 0.15),
+    rgba(232, 205, 137, 0.6),
+    rgba(232, 205, 137, 0.15)
+  );
+}
+
+.nrExCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(28, 30, 36, 0.95),
+    rgba(16, 18, 22, 0.95)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+}
+
+.nrExPostHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.nrExAvatar {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5cc8ff, #7c5cff);
+}
+
+.nrExPostFoot {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* ----- Sales --------------------------------------------------------- */
+
+.nrExKanban {
+  display: flex;
+  gap: 6px;
+}
+
+.nrExKanCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.nrExKanColHead {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(232, 205, 137, 0.45);
+}
+
+.nrExDeal {
+  height: 18px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ----- Marketing ----------------------------------------------------- */
+
+.nrExChips {
+  display: flex;
+  gap: 5px;
+}
+
+.nrExFunnel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.nrExFunStep {
+  height: 11px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(232, 205, 137, 0.7),
+    rgba(232, 205, 137, 0.32)
+  );
+}
+
+.nrExStat {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* ----- Design -------------------------------------------------------- */
+
+.nrExWinBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.nrExHero {
+  height: 34px;
+  border-radius: 6px;
+  background: linear-gradient(
+    135deg,
+    rgba(124, 92, 255, 0.6),
+    rgba(92, 200, 255, 0.5)
+  );
+}
+
+.nrExRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.nrExBtn {
+  width: 36px;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--gold-core, #e8cd89);
+  opacity: 0.85;
+}
+
+.nrExSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.nrExSw1 {
+  background: #ff6b6b;
+}
+.nrExSw2 {
+  background: #4dd4ac;
+}
+.nrExSw3 {
+  background: #5b8def;
+}
+
+.nrExGrid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.nrExGrid3 span {
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ----- Coding -------------------------------------------------------- */
+
+.nrExCode {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 9.5px;
+  line-height: 1.2;
+}
+
+.nrExCodeLine {
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.tkKw {
+  color: #c792ea;
+}
+.tkFn {
+  color: #82aaff;
+}
+.tkStr {
+  color: #c3e88d;
+}
+.tkNum {
+  color: #f78c6c;
+}
+.tkVar {
+  color: #eeffff;
+}
+
+.nrExTerm {
+  padding: 7px 10px;
+  font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 9.5px;
+  color: #c3e88d;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nrExTermPrompt {
+  margin-right: 5px;
+  color: var(--gold-core, #e8cd89);
+}
+
+/* ----- Analytics ----------------------------------------------------- */
+
+.nrExKpis {
+  display: flex;
+  gap: 6px;
+}
+
+.nrExKpi {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.nrExKpi b {
+  font-size: 11px;
+  color: var(--gold-core, #e8cd89);
+}
+
+.nrExKpi i {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.nrExSvg {
+  display: block;
+  width: 100%;
+  height: 36px;
+}
+
+.nrExPoly {
+  fill: none;
+  stroke: var(--gold-core, #e8cd89);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 3px rgba(232, 205, 137, 0.5));
+}
+
+.nrExAnalytics .nrExFig {
+  height: 34px;
+}
+
+.nrExAnalytics .nrExBar {
+  background: linear-gradient(
+    180deg,
+    rgba(232, 205, 137, 0.8),
+    rgba(232, 205, 137, 0.35)
+  );
+}
+
+/* ----- Finance ------------------------------------------------------- */
+
+.nrExMetric.nrExUp {
+  color: #5fd08a;
+  text-shadow: none;
+}
+
+.nrExPolyUp {
+  stroke: #5fd08a;
+  filter: drop-shadow(0 0 3px rgba(95, 208, 138, 0.5));
+}
+
+.nrExSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nrExSheetRow {
+  display: flex;
+  gap: 3px;
+}
+
+.nrExCell {
+  flex: 1;
+  height: 10px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nrExCell.is-num {
+  background: rgba(95, 208, 138, 0.14);
+  border-color: rgba(95, 208, 138, 0.2);
+}
+
+/* ----- Legal --------------------------------------------------------- */
+
+.nrExClause {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.nrExNum {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 700;
+  color: #6f7b8a;
+}
+
+.nrExSign {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.nrExSignMark {
+  width: 60px;
+  height: 20px;
+}
+
+.nrExSignMark path {
+  fill: none;
+  stroke: #2a2a2a;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.nrExSeal {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(178, 59, 59, 0.55);
+  box-shadow: inset 0 0 0 2px rgba(178, 59, 59, 0.2);
+}
+
+/* ----- Reduced motion ------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .nrExample {
+    animation: nrExIn 0.4s ease both;
+  }
+  .nrExFloat {
+    animation: none;
+  }
+  .nrCapCaret {
+    animation: none;
+  }
+}
+
+/* ----- Mobile -------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .nrExScale {
+    --nr-ex-scale: 0.74;
+  }
+  .nrCapabilityField {
+    width: 46%;
+    padding-left: 16px;
+  }
+  .nrExampleField {
+    width: 46%;
+    padding-right: 12px;
+  }
+  .nrCapText {
+    font-size: 11px;
+  }
+  .nrCapList {
+    gap: 7px;
+  }
+}

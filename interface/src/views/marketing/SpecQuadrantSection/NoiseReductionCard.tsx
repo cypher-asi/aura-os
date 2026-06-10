@@ -2,30 +2,13 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Plate } from "../../../components/Plate";
 import { SlidingPills, type SlidingPillItem } from "../../../components/SlidingPills";
 import { NoiseReductionBrain } from "../NoiseReductionBrain";
-
-/**
- * Disciplines shown in the set-in pill selector below the knob. `General`
- * is first and selected by default; it renders the looping code (left) /
- * image (right) flanks. Every other discipline currently renders blank
- * flanks — the switching is wired up here and per-discipline side content
- * is added later.
- */
-const EXPERTISES = [
-  "General",
-  "Research",
-  "Writing",
-  "Creative",
-  "Social",
-  "Sales",
-  "Marketing",
-  "Design",
-  "Coding",
-  "Analytics",
-  "Finance",
-  "Legal",
-] as const;
-
-type Expertise = (typeof EXPERTISES)[number];
+import { CapabilityList } from "./expertiseContent";
+import {
+  EXAMPLE_COMPONENTS,
+  EXPERTISE_CAPABILITIES,
+  EXPERTISES,
+  type Expertise,
+} from "./expertiseExamples";
 
 const EXPERTISE_PILLS: readonly SlidingPillItem<Expertise>[] = EXPERTISES.map(
   (label) => ({ id: label, label }),
@@ -52,8 +35,9 @@ const EXPERTISE_PILLS: readonly SlidingPillItem<Expertise>[] = EXPERTISES.map(
  * but the discipline selector is decorative (`aria-hidden`).
  *
  * The selector defaults to `General`, which renders the looping code (left)
- * and image (right) flanks; switching to any other discipline clears the
- * flanks for now (per-discipline side content is added later).
+ * and image (right) flanks; switching to any other discipline renders that
+ * discipline's typewriter capability list (left) and example mockup (right)
+ * around the same centered brain (see `expertiseContent.tsx`).
  *
  * The knob is driven by the cursor's vertical position in the viewport: the
  * top reads 0 (pointer hard left), the center reads 50% (pointer straight up),
@@ -189,11 +173,16 @@ export function NoiseReductionCard(): ReactNode {
   const galleryBoxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const galleryImgRefs = useRef<(HTMLImageElement | null)[]>([]);
 
-  // Selected discipline. `General` (first) is the default and is the only
-  // one with side-flank content for now; switching to any other discipline
-  // clears the flanks until per-discipline content is added later.
+  // Selected discipline. `General` (first) is the default and renders the
+  // bespoke code (left) / paint (right) flanks. Every other discipline renders
+  // a typewriter capability list (left) + an example mockup (right) around the
+  // same centered brain (see `expertiseContent.tsx`).
   const [expertise, setExpertise] = useState<Expertise>("General");
   const showGeneralFlanks = expertise === "General";
+  // Narrow away `General` so the per-discipline content maps stay strongly
+  // typed; `null` while General is active.
+  const specialized = expertise === "General" ? null : expertise;
+  const ExampleMockup = specialized ? EXAMPLE_COMPONENTS[specialized] : null;
 
   // Live ACTIVATION readout: a number floored at 0.01 that rapidly rises and
   // falls. Updated imperatively each frame (no re-render) so the digits flicker
@@ -418,12 +407,31 @@ export function NoiseReductionCard(): ReactNode {
                 ))}
               </div>
             ) : null}
+            {/* Specialized disciplines: typewriter capability list (left) and
+                an example mockup (right) flanking the centered brain. Keyed by
+                discipline so the typewriter restarts on every switch. */}
+            {specialized ? (
+              <div className="nrCapabilityField">
+                <CapabilityList
+                  key={specialized}
+                  capabilities={EXPERTISE_CAPABILITIES[specialized]}
+                />
+              </div>
+            ) : null}
+            {ExampleMockup ? (
+              <div className="nrExampleField">
+                <ExampleMockup />
+              </div>
+            ) : null}
             <NoiseReductionBrain className="nrScreenBrain" />
             <div className="nrScreenGloss" />
           </div>
 
           <div className="nrPanel">
             <div className="nrControls">
+              {/* ACTIVATION / ONLINE readout, seated at the very bottom of the
+                  visible screen (bottom inset matches the side inset), flanking
+                  the knob. */}
               <div className="nrStatus" aria-hidden="true">
                 <span className="nrReduction">
                   <span className="nrReductionLabel">ACTIVATION</span>
