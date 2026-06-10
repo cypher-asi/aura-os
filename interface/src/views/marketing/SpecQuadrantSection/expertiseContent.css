@@ -9,6 +9,11 @@
 /* ----- Left flank: capabilities typewriter --------------------------- */
 
 .nrCapabilityField {
+  /* Spans from the panel's left edge to the brain's left edge; content is
+     flex-centered so the list sits midway in that gap. `--nr-brain-half` is
+     the centered brain's half-width (it stays a fixed px since the brain is
+     height-contained), so `50% - half` lands on the brain's left edge. */
+  --nr-brain-half: 150px;
   position: absolute;
   top: 0;
   left: 0;
@@ -16,9 +21,10 @@
   box-sizing: border-box;
   display: flex;
   align-items: center; /* vertical centering of the list */
-  width: 44%;
+  justify-content: center; /* horizontal centering in the gap */
+  width: calc(50% - var(--nr-brain-half));
   height: 100%;
-  padding: 0 10px 0 26px;
+  padding: 0 8px;
   pointer-events: none;
   user-select: none;
   -webkit-mask: linear-gradient(
@@ -94,6 +100,9 @@
 /* ----- Right flank: example mockups ---------------------------------- */
 
 .nrExampleField {
+  /* Mirror of `.nrCapabilityField`: spans from the brain's right edge to the
+     panel's right edge, content centered midway in that gap. */
+  --nr-brain-half: 150px;
   position: absolute;
   top: 0;
   right: 0;
@@ -102,9 +111,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44%;
+  width: calc(50% - var(--nr-brain-half));
   height: 100%;
-  padding: 0 18px 0 10px;
+  padding: 0 8px;
   pointer-events: none;
   user-select: none;
 }
@@ -749,13 +758,18 @@
   .nrExScale {
     --nr-ex-scale: 0.74;
   }
+  /* The mobile brain leaves almost no clear gap beside it, so gap-centering
+     would crush the text. Fall back to wider flanks (the list/example overlap
+     the brain's faint edges, as the General code/paint flanks already do). */
   .nrCapabilityField {
-    width: 46%;
-    padding-left: 16px;
+    width: 48%;
+    justify-content: flex-start;
+    padding: 0 6px 0 16px;
   }
   .nrExampleField {
-    width: 46%;
-    padding-right: 12px;
+    width: 48%;
+    justify-content: center;
+    padding: 0 12px 0 6px;
   }
   .nrCapText {
     font-size: 11px;
