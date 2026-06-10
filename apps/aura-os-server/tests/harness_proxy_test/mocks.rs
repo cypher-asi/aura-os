@@ -124,8 +124,7 @@ pub(crate) async fn start_clobbering_mock_harness(home: std::path::PathBuf) -> S
         }
     };
 
-    let agent_skills_post =
-        |_req: Request<Body>| async move { axum::Json(json!({ "ok": true })).into_response() };
+    let agent_skills_post = || async move { axum::Json(json!({ "ok": true })).into_response() };
 
     let mock_app = Router::new()
         .route("/api/skills", post(skills_post))

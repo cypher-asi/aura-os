@@ -16,6 +16,7 @@ mod brave_search;
 mod builders;
 mod freepik;
 mod github;
+mod google;
 mod linear;
 mod mailchimp;
 mod metricool;
@@ -54,6 +55,7 @@ fn build_method_catalog() -> Vec<TrustedIntegrationMethodDefinition> {
     methods.extend(metricool::methods());
     methods.extend(mailchimp::methods());
     methods.extend(resend::methods());
+    methods.extend(google::methods());
     methods
 }
 

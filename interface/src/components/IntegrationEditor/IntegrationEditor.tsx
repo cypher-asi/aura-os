@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Input, Text } from "@cypher-asi/zui";
+import { CalendarDays, CheckCircle2, Mail, ShieldCheck } from "lucide-react";
 import type { OrgIntegration } from "../../shared/types";
 import {
   getIntegrationConfigFields,
@@ -18,8 +19,8 @@ export interface IntegrationEditorPayload {
   provider: string;
   kind: IntegrationKind;
   default_model: string | null;
-  provider_config: Record<string, unknown> | null;
-  api_key: string | null;
+  provider_config?: Record<string, unknown> | null;
+  api_key?: string | null;
 }
 
 export interface IntegrationEditorProps {
@@ -30,12 +31,15 @@ export interface IntegrationEditorProps {
   canManage: boolean;
   /** When matches the integration id (or "new" for the create flow) the editor shows a saving state. */
   busyId: string | null;
-  onCreate: (payload: IntegrationEditorPayload) => Promise<OrgIntegration | null>;
+  onCreate: (
+    payload: IntegrationEditorPayload,
+  ) => Promise<OrgIntegration | null>;
   onUpdate: (
     integrationId: string,
     payload: Partial<IntegrationEditorPayload> & { enabled?: boolean | null },
   ) => Promise<OrgIntegration | null>;
   onDelete: (integrationId: string) => Promise<void>;
+  onConnectGoogle?: () => Promise<boolean | null>;
 }
 
 interface Draft {
@@ -45,16 +49,24 @@ interface Draft {
   providerConfig: Record<string, string>;
 }
 
-function stringConfig(config: Record<string, unknown> | null | undefined): Record<string, string> {
+function stringConfig(
+  config: Record<string, unknown> | null | undefined,
+): Record<string, string> {
   if (!config) return {};
   return Object.fromEntries(
     Object.entries(config)
       .filter(([, value]) => value != null)
-      .map(([key, value]) => [key, Array.isArray(value) ? value.join(" ") : String(value)]),
+      .map(([key, value]) => [
+        key,
+        Array.isArray(value) ? value.join(" ") : String(value),
+      ]),
   );
 }
 
-function normalizeProviderConfig(provider: string, values: Record<string, string>) {
+function normalizeProviderConfig(
+  provider: string,
+  values: Record<string, string>,
+) {
   const fields = getIntegrationConfigFields(provider);
   if (fields.length === 0) return null;
 
@@ -72,7 +84,8 @@ function normalizeProviderConfig(provider: string, values: Record<string, string
   return Object.keys(config).length > 0 ? config : null;
 }
 
-function kindLabel(kind: IntegrationKind): string {
+function kindLabel(kind: IntegrationKind, provider?: string): string {
+  if (provider === "google") return "Connected Account";
   if (kind === "workspace_connection") return "Workspace Connection";
   if (kind === "workspace_integration") return "Workspace Integration";
   return "MCP Server";
@@ -82,7 +95,10 @@ function supportsCapabilityToggle(kind: IntegrationKind): boolean {
   return kind === "workspace_integration" || kind === "mcp_server";
 }
 
-function emptyDraft(integration: OrgIntegration | null, defaultName: string): Draft {
+function emptyDraft(
+  integration: OrgIntegration | null,
+  defaultName: string,
+): Draft {
   return {
     name: integration?.name ?? defaultName,
     defaultModel: integration?.default_model ?? "",
@@ -105,6 +121,7 @@ export function IntegrationEditor({
   onCreate,
   onUpdate,
   onDelete,
+  onConnectGoogle,
 }: IntegrationEditorProps) {
   const definition = getIntegrationDefinition(provider);
   const kind: IntegrationKind = definition?.kind ?? "workspace_connection";
@@ -113,10 +130,16 @@ export function IntegrationEditor({
   const authHint = definition?.authHint ?? null;
   const description = definition?.description ?? "Shared workspace capability.";
   const docsUrl = definition?.docsUrl ?? null;
-  const configFields = useMemo(() => getIntegrationConfigFields(provider), [provider]);
+  const configFields = useMemo(
+    () => getIntegrationConfigFields(provider),
+    [provider],
+  );
   const showModel = supportsDefaultModel(provider);
+  const isGoogle = provider === "google";
 
-  const [draft, setDraft] = useState<Draft>(() => emptyDraft(integration, definition?.label ?? provider));
+  const [draft, setDraft] = useState<Draft>(() =>
+    emptyDraft(integration, definition?.label ?? provider),
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Reset the draft when the selected provider or underlying integration
@@ -127,11 +150,37 @@ export function IntegrationEditor({
   }, [integration, provider, definition?.label]);
 
   const isNew = integration === null;
+  const googleAccount = integration?.provider_config?.accountEmail
+    ? String(integration.provider_config.accountEmail)
+    : integration?.has_secret
+      ? "Your Google account is connected"
+      : "Not connected";
   const busyKey = isNew ? "new" : integration?.integration_id;
-  const isBusy = busyId !== null && busyKey !== undefined && busyId === busyKey;
+  const isOAuthBusy = busyId === "google_oauth";
+  const isBusy =
+    isOAuthBusy ||
+    (busyId !== null && busyKey !== undefined && busyId === busyKey);
+
+  const handleConnectGoogle = async () => {
+    if (!canManage || !onConnectGoogle) return;
+    setErrorMessage(null);
+    try {
+      await onConnectGoogle();
+      const { track } = await import("../../lib/analytics");
+      track("integration_connected", { provider });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to connect Google",
+      );
+    }
+  };
 
   const handleSave = async () => {
     if (!canManage) return;
+    if (isGoogle && isNew) {
+      await handleConnectGoogle();
+      return;
+    }
     if (!draft.name.trim()) {
       setErrorMessage("Integration name is required.");
       return;
@@ -141,10 +190,16 @@ export function IntegrationEditor({
       name: draft.name.trim(),
       provider,
       kind,
-      default_model: showModel ? (draft.defaultModel.trim() || null) : null,
-      provider_config: normalizeProviderConfig(provider, draft.providerConfig),
-      api_key: draft.apiKey.trim() || null,
+      default_model: showModel ? draft.defaultModel.trim() || null : null,
     };
+    const providerConfig = normalizeProviderConfig(provider, draft.providerConfig);
+    if (providerConfig != null || isNew || configFields.length > 0) {
+      payload.provider_config = providerConfig;
+    }
+    const apiKey = draft.apiKey.trim();
+    if (apiKey) {
+      payload.api_key = apiKey;
+    }
     try {
       if (isNew) {
         await onCreate(payload);
@@ -164,7 +219,9 @@ export function IntegrationEditor({
     if (!integration || !canManage) return;
     setErrorMessage(null);
     try {
-      await onUpdate(integration.integration_id, { enabled: !integration.enabled });
+      await onUpdate(integration.integration_id, {
+        enabled: !integration.enabled,
+      });
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to update integration",
@@ -193,10 +250,17 @@ export function IntegrationEditor({
   return (
     <div>
       <h2 className={styles.sectionTitle}>{getIntegrationLabel(provider)}</h2>
-      <Text size="xs" variant="muted">{description}</Text>
+      <Text size="xs" variant="muted">
+        {description}
+      </Text>
       {docsUrl ? (
         <div className={styles.topMarginSm}>
-          <a href={docsUrl} target="_blank" rel="noreferrer" className={styles.integrationHint}>
+          <a
+            href={docsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={styles.integrationHint}
+          >
             View provider docs
           </a>
         </div>
@@ -222,12 +286,26 @@ export function IntegrationEditor({
           {integration ? (
             <div className={styles.integrationSummary}>
               <div className={styles.integrationMeta}>
-                <div className={styles.integrationHeader}>{integration.name}</div>
+                <div className={styles.integrationHeader}>
+                  {integration.name}
+                </div>
                 <div className={styles.integrationBadgeRow}>
-                  <span className={styles.integrationBadge}>{getIntegrationLabel(integration.provider)}</span>
-                  <span className={styles.integrationBadge}>{kindLabel(integration.kind)}</span>
                   <span className={styles.integrationBadge}>
-                    {integration.secret_last4 ? `Key ••••${integration.secret_last4}` : "No key"}
+                    {getIntegrationLabel(integration.provider)}
+                  </span>
+                  <span className={styles.integrationBadge}>
+                    {kindLabel(integration.kind, integration.provider)}
+                  </span>
+                  <span className={styles.integrationBadge}>
+                    {isGoogle
+                      ? integration.provider_config?.accountEmail
+                        ? String(integration.provider_config.accountEmail)
+                        : integration.has_secret
+                          ? "Your Google account"
+                          : "Not connected"
+                      : integration.secret_last4
+                        ? `Key ••••${integration.secret_last4}`
+                        : "No key"}
                   </span>
                   {supportsCapabilityToggle(integration.kind) && (
                     <span className={styles.integrationBadge}>
@@ -250,56 +328,167 @@ export function IntegrationEditor({
             </div>
           ) : null}
 
-          <div className={`${styles.integrationFields} ${integration ? styles.integrationEditor : ""}`}>
-            <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
-              <label className={styles.integrationFieldLabel} htmlFor={`integration-name-${provider}`}>Name</label>
-              <Input
-                id={`integration-name-${provider}`}
-                aria-label={`Integration name for ${getIntegrationLabel(provider)}`}
-                value={draft.name}
-                onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder={`e.g. ${definition?.label ?? "Provider"} Production`}
-              />
-            </div>
-            <div className={`${styles.integrationFieldGroup} ${showModel || configFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}>
-              <label className={styles.integrationFieldLabel} htmlFor={`integration-key-${provider}`}>{secretLabel}</label>
-              <Input
-                id={`integration-key-${provider}`}
-                aria-label={`${secretLabel} for ${getIntegrationLabel(provider)}`}
-                type="password"
-                value={draft.apiKey}
-                onChange={(e) => setDraft((prev) => ({ ...prev, apiKey: e.target.value }))}
-                placeholder={keyPlaceholder}
-              />
-              {authHint && <Text size="xs" variant="muted">{authHint}</Text>}
-            </div>
+          <div
+            className={`${styles.integrationFields} ${integration ? styles.integrationEditor : ""}`}
+          >
+            {isGoogle ? (
+              <div
+                className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}
+              >
+                <div className={styles.googleStatusPanel}>
+                  <div className={styles.googleStatusHeader}>
+                    {integration?.has_secret ? (
+                      <CheckCircle2 size={16} className={styles.googleStatusIconConnected} />
+                    ) : (
+                      <ShieldCheck size={16} className={styles.googleStatusIcon} />
+                    )}
+                    <div>
+                      <div className={styles.integrationFieldLabel}>Your Google account</div>
+                      <div className={styles.googleStatusValue}>{googleAccount}</div>
+                    </div>
+                  </div>
+                  <div className={styles.googleCapabilityGrid}>
+                    <div className={styles.googleCapabilityItem}>
+                      <Mail size={15} />
+                      <div>
+                        <div className={styles.googleCapabilityTitle}>Gmail</div>
+                        <div className={styles.googleCapabilityBody}>
+                          Search, read, draft, and send mail from your account
+                        </div>
+                      </div>
+                    </div>
+                    <div className={styles.googleCapabilityItem}>
+                      <CalendarDays size={15} />
+                      <div>
+                        <div className={styles.googleCapabilityTitle}>Calendar</div>
+                        <div className={styles.googleCapabilityBody}>
+                          List calendars, schedule meetings, and manage events
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.integrationActions}>
+                  <Button
+                    variant="primary"
+                    onClick={handleConnectGoogle}
+                    disabled={isBusy || !canManage || !onConnectGoogle}
+                  >
+                    {isOAuthBusy
+                      ? "Connecting..."
+                      : integration?.has_secret
+                        ? "Reconnect Google"
+                        : "Connect Google"}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {!isGoogle || !isNew ? (
+              <div
+                className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}
+              >
+                <label
+                  className={styles.integrationFieldLabel}
+                  htmlFor={`integration-name-${provider}`}
+                >
+                  Name
+                </label>
+                <Input
+                  id={`integration-name-${provider}`}
+                  aria-label={`Integration name for ${getIntegrationLabel(provider)}`}
+                  value={draft.name}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  placeholder={`e.g. ${definition?.label ?? "Provider"} Production`}
+                />
+              </div>
+            ) : null}
+            {!isGoogle ? (
+              <div
+                className={`${styles.integrationFieldGroup} ${showModel || configFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}
+              >
+                <label
+                  className={styles.integrationFieldLabel}
+                  htmlFor={`integration-key-${provider}`}
+                >
+                  {secretLabel}
+                </label>
+                <Input
+                  id={`integration-key-${provider}`}
+                  aria-label={`${secretLabel} for ${getIntegrationLabel(provider)}`}
+                  type="password"
+                  value={draft.apiKey}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, apiKey: e.target.value }))
+                  }
+                  placeholder={keyPlaceholder}
+                />
+                {authHint && (
+                  <Text size="xs" variant="muted">
+                    {authHint}
+                  </Text>
+                )}
+              </div>
+            ) : authHint ? (
+              <Text size="xs" variant="muted">
+                {authHint}
+              </Text>
+            ) : null}
             {(showModel || configFields.length > 0) && (
-              <details className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull} ${styles.integrationAdvanced}`}>
-                <summary className={styles.integrationAdvancedSummary}>Advanced</summary>
+              <details
+                className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull} ${styles.integrationAdvanced}`}
+              >
+                <summary className={styles.integrationAdvancedSummary}>
+                  Advanced
+                </summary>
                 <div className={styles.integrationAdvancedBody}>
                   {showModel && (
                     <div className={styles.integrationFieldGroup}>
-                      <label className={styles.integrationFieldLabel} htmlFor={`integration-model-${provider}`}>Preferred Model</label>
+                      <label
+                        className={styles.integrationFieldLabel}
+                        htmlFor={`integration-model-${provider}`}
+                      >
+                        Preferred Model
+                      </label>
                       <Input
                         id={`integration-model-${provider}`}
                         aria-label={`Preferred model for ${getIntegrationLabel(provider)}`}
                         value={draft.defaultModel}
-                        onChange={(e) => setDraft((prev) => ({ ...prev, defaultModel: e.target.value }))}
+                        onChange={(e) =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            defaultModel: e.target.value,
+                          }))
+                        }
                         placeholder="Optional preferred model"
                       />
                     </div>
                   )}
                   {configFields.map((field) => (
-                    <div key={field.key} className={styles.integrationFieldGroup}>
-                      <label className={styles.integrationFieldLabel} htmlFor={`integration-${provider}-${field.key}`}>{field.label}</label>
+                    <div
+                      key={field.key}
+                      className={styles.integrationFieldGroup}
+                    >
+                      <label
+                        className={styles.integrationFieldLabel}
+                        htmlFor={`integration-${provider}-${field.key}`}
+                      >
+                        {field.label}
+                      </label>
                       <Input
                         id={`integration-${provider}-${field.key}`}
                         aria-label={`${field.label} for ${getIntegrationLabel(provider)}`}
                         value={draft.providerConfig[field.key] ?? ""}
-                        onChange={(e) => setDraft((prev) => ({
-                          ...prev,
-                          providerConfig: { ...prev.providerConfig, [field.key]: e.target.value },
-                        }))}
+                        onChange={(e) =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            providerConfig: {
+                              ...prev.providerConfig,
+                              [field.key]: e.target.value,
+                            },
+                          }))
+                        }
                         placeholder={field.placeholder}
                       />
                     </div>
@@ -317,13 +506,15 @@ export function IntegrationEditor({
                   Delete
                 </Button>
               ) : null}
-              <Button
-                variant="primary"
-                onClick={handleSave}
-                disabled={isBusy || !canManage}
-              >
-                {isBusy ? "Saving..." : integration ? "Save" : "Add"}
-              </Button>
+              {!(isGoogle && isNew) ? (
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={isBusy || !canManage}
+                >
+                  {isBusy ? "Saving..." : integration ? "Save" : "Add"}
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>

@@ -8,7 +8,15 @@ import { getIntegrationDefinition } from "../../../lib/integrationCatalog";
 
 export function IntegrationDetailView() {
   const { provider } = useParams<{ provider: string }>();
-  const { integrations, busyId, canManage, create, update, remove } = useIntegrationsManager();
+  const {
+    integrations,
+    busyId,
+    canManage,
+    create,
+    update,
+    remove,
+    connectGoogle,
+  } = useIntegrationsManager();
 
   const definition = provider ? getIntegrationDefinition(provider) : undefined;
 
@@ -40,6 +48,7 @@ export function IntegrationDetailView() {
       onCreate={create}
       onUpdate={update}
       onDelete={remove}
+      onConnectGoogle={connectGoogle}
     />
   );
 }

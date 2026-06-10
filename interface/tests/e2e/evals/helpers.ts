@@ -10,7 +10,9 @@ type DeviceName =
   | "eval-desktop-chromium"
   | "eval-mobile-chromium"
   | "eval-mobile-webkit"
-  | "eval-live-desktop";
+  | "eval-live-desktop"
+  | "eval-chat-core-desktop"
+  | "eval-chat-core-mobile";
 
 interface RoleTarget {
   role: AriaRole;
@@ -83,6 +85,61 @@ export interface WorkflowE2EScenario {
   verification: {
     statsTexts: string[];
     taskOutputContains: string[];
+  };
+}
+
+interface ChatCoreAgentFixture {
+  agentId: string;
+  agentInstanceId: string;
+  name: string;
+  role: string;
+  personality: string;
+  systemPrompt: string;
+  machineType: "local" | "remote";
+  adapterType: string;
+  defaultModel: string;
+}
+
+interface ChatCoreProjectFixture {
+  projectId: string;
+  orgId: string;
+  name: string;
+  description: string;
+}
+
+interface ChatCoreSseEvent {
+  event: string;
+  data: Record<string, unknown>;
+}
+
+export interface ChatCoreScenario {
+  id: string;
+  suite: "chat-core";
+  kind: "agent_chat_core_loop";
+  title: string;
+  devices: DeviceName[];
+  project: ChatCoreProjectFixture;
+  agent: ChatCoreAgentFixture;
+  initialHistory: Array<Record<string, unknown>>;
+  turn: {
+    input: string;
+    expectedAction: string | null;
+    expectedModel: string;
+    slashCommands?: Array<{
+      id: string;
+      query: string;
+      label: string;
+    }>;
+    expectedCommands?: string[];
+    streamEvents: ChatCoreSseEvent[];
+    persistedHistory: Array<Record<string, unknown>>;
+  };
+  verification: {
+    visibleTexts: string[];
+    expectedStreamEventTypes: string[];
+    expectedStreamRequestCount: number;
+    expectedHistoryRequestMinimum: number;
+    expectedContextUtilization: number;
   };
 }
 
@@ -270,6 +327,10 @@ export async function loadLiveBenchmarkScenarios(): Promise<LiveBenchmarkScenari
 
 export async function loadWorkflowE2EScenarios(): Promise<WorkflowE2EScenario[]> {
   return readJsonFile<WorkflowE2EScenario[]>(path.join(scenariosDir, "workflow-e2e.json"));
+}
+
+export async function loadChatCoreScenarios(): Promise<ChatCoreScenario[]> {
+  return readJsonFile<ChatCoreScenario[]>(path.join(scenariosDir, "chat-core.json"));
 }
 
 export async function bootstrapScenarioPage(page: Page, scenario: BrowserScenario) {

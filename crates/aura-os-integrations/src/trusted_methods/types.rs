@@ -5,7 +5,7 @@
 //! provider, schema, prompt signature) and the
 //! `TrustedIntegrationRuntimeSpec` payload that the trusted-runtime
 //! dispatcher reads to actually execute the call (REST/GraphQL/Brave
-//! Search/Resend send-email).
+//! Search/Resend/Gmail/Google Calendar provider-specific calls).
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -28,6 +28,8 @@ pub struct TrustedIntegrationMethodDefinition {
 pub enum TrustedIntegrationHttpMethod {
     Get,
     Post,
+    Patch,
+    Delete,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -36,6 +38,7 @@ pub enum TrustedIntegrationArgValueType {
     String,
     StringList,
     PositiveNumber,
+    Boolean,
     Json,
 }
 
@@ -149,4 +152,9 @@ pub enum TrustedIntegrationRuntimeSpec {
         vertical: String,
     },
     ResendSendEmail,
+    GmailSendEmail,
+    GmailCreateDraft,
+    GoogleCalendarCreateEvent,
+    GoogleCalendarUpdateEvent,
+    GoogleCalendarDeleteEvent,
 }

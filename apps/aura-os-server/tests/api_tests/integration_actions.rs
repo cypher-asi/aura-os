@@ -442,3 +442,132 @@ pub async fn assert_resend_actions(app: &Router, org_id: &OrgId) {
     let resend_email = response_json(resp).await;
     assert_eq!(resend_email["email"]["id"], "email-1");
 }
+
+pub async fn assert_google_actions(app: &Router, org_id: &OrgId) {
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/gmail_search_messages"),
+        Some(serde_json::json!({
+            "query": "newer_than:7d",
+            "max_results": 5
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let gmail_search = response_json(resp).await;
+    assert_eq!(gmail_search["messages"][0]["id"], "msg-1");
+    assert_eq!(gmail_search["result_size_estimate"], 1);
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/gmail_get_message"),
+        Some(serde_json::json!({
+            "message_id": "msg-1"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let gmail_message = response_json(resp).await;
+    assert_eq!(gmail_message["message"]["snippet"], "Read-only Gmail test");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/google_calendar_list_calendars"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let calendars = response_json(resp).await;
+    assert_eq!(calendars["calendars"][0]["id"], "primary");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/google_calendar_list_events"),
+        Some(serde_json::json!({
+            "calendar_id": "primary",
+            "time_min": "2026-06-06T00:00:00-04:00",
+            "time_max": "2026-06-07T00:00:00-04:00"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let events = response_json(resp).await;
+    assert_eq!(events["events"][0]["id"], "event-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/gmail_create_draft"),
+        Some(serde_json::json!({
+            "from": "Aura <sender@example.com>",
+            "to": ["recipient@example.com"],
+            "subject": "Aura draft test",
+            "text": "Draft body",
+            "thread_id": "thread-1"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let draft = response_json(resp).await;
+    assert_eq!(draft["draft"]["id"], "draft-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/gmail_send_draft"),
+        Some(serde_json::json!({
+            "draft_id": "draft-1"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let sent_draft = response_json(resp).await;
+    assert_eq!(sent_draft["message"]["id"], "sent-draft-msg-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/google_calendar_create_event"),
+        Some(serde_json::json!({
+            "calendar_id": "primary",
+            "summary": "Aura planning",
+            "start": "2026-06-06T10:00:00-04:00",
+            "end": "2026-06-06T10:30:00-04:00",
+            "attendees": ["guest@example.com"],
+            "send_updates": "none",
+            "create_google_meet": true
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let created = response_json(resp).await;
+    assert_eq!(created["event"]["id"], "event-created-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/google_calendar_update_event"),
+        Some(serde_json::json!({
+            "calendar_id": "primary",
+            "event_id": "event-1",
+            "summary": "Moved planning",
+            "start": "2026-06-06T11:00:00-04:00",
+            "end": "2026-06-06T11:30:00-04:00",
+            "send_updates": "none"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated = response_json(resp).await;
+    assert_eq!(updated["event"]["summary"], "Moved planning");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/google_calendar_delete_event"),
+        Some(serde_json::json!({
+            "calendar_id": "primary",
+            "event_id": "event-1",
+            "send_updates": "none"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let deleted = response_json(resp).await;
+    assert_eq!(deleted["event"]["deleted"], true);
+}

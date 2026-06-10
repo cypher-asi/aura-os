@@ -41,6 +41,10 @@ pub(super) fn org_routes() -> Router<AppState> {
             put(orgs::update_integration).delete(orgs::delete_integration),
         )
         .route(
+            "/api/orgs/:org_id/integrations/oauth/google/start",
+            get(orgs::start_google_oauth),
+        )
+        .route(
             "/api/orgs/:org_id/tool-actions/:tool_name",
             post(org_tools::call_tool),
         )

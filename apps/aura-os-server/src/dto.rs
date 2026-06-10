@@ -548,17 +548,35 @@ pub(crate) struct CreateOrgIntegrationRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct UpdateOrgIntegrationRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<aura_os_core::OrgIntegrationKind>,
-    #[serde(default, deserialize_with = "deserialize_patch_option")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_patch_option"
+    )]
     pub default_model: Option<Option<String>>,
-    #[serde(default, deserialize_with = "deserialize_patch_option")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_patch_option"
+    )]
     pub provider_config: Option<Option<serde_json::Value>>,
-    #[serde(default, deserialize_with = "deserialize_patch_option")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_patch_option"
+    )]
     pub api_key: Option<Option<String>>,
-    #[serde(default, deserialize_with = "deserialize_patch_option")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_patch_option"
+    )]
     pub enabled: Option<Option<bool>>,
 }
 
@@ -641,6 +659,56 @@ impl AuthSessionResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn update_integration_serializes_absent_patch_fields_as_omitted() {
+        let req = UpdateOrgIntegrationRequest {
+            name: Some("Google".to_string()),
+            provider: Some("google".to_string()),
+            kind: Some(aura_os_core::OrgIntegrationKind::WorkspaceIntegration),
+            default_model: None,
+            provider_config: None,
+            api_key: None,
+            enabled: None,
+        };
+
+        let body = serde_json::to_value(req).expect("serialize update request");
+
+        assert_eq!(
+            body,
+            json!({
+                "name": "Google",
+                "provider": "google",
+                "kind": "workspace_integration"
+            })
+        );
+    }
+
+    #[test]
+    fn update_integration_serializes_explicit_null_patch_fields() {
+        let req = UpdateOrgIntegrationRequest {
+            name: None,
+            provider: None,
+            kind: None,
+            default_model: Some(None),
+            provider_config: Some(None),
+            api_key: Some(None),
+            enabled: Some(None),
+        };
+
+        let body = serde_json::to_value(req).expect("serialize update request");
+
+        assert_eq!(
+            body,
+            json!({
+                "default_model": null,
+                "provider_config": null,
+                "api_key": null,
+                "enabled": null
+            })
+        );
+    }
 
     /// Frontend client (`interface/src/shared/api/tasks.ts`) and the
     /// aura-os-server integration tests POST `{ new_status: "..." }`.

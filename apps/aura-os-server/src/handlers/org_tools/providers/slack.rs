@@ -29,7 +29,7 @@ pub(super) async fn dispatch(
 }
 
 async fn list_channels(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let url = format!(
         "{}/conversations.list?types=public_channel,private_channel&exclude_archived=true&limit=100",
         slack_base_url()?
@@ -61,7 +61,7 @@ async fn list_channels(state: &AppState, org_id: &OrgId, args: &Value) -> ApiRes
 }
 
 async fn post_message(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let channel_id = required_string(args, &["channel_id", "channelId"])?;
     let text = required_string(args, &["text", "message"])?;
     let url = format!("{}/chat.postMessage", slack_base_url()?);

@@ -50,6 +50,7 @@ impl ProviderEnvGuard {
                 format!("{provider_url}/mailchimp"),
             );
             std::env::set_var("AURA_RESEND_API_BASE_URL", format!("{provider_url}/resend"));
+            std::env::set_var("AURA_GOOGLE_API_BASE_URL", format!("{provider_url}/google"));
         }
 
         Self
@@ -70,6 +71,7 @@ impl Drop for ProviderEnvGuard {
             std::env::remove_var("AURA_METRICOOL_API_BASE_URL");
             std::env::remove_var("AURA_MAILCHIMP_API_BASE_URL");
             std::env::remove_var("AURA_RESEND_API_BASE_URL");
+            std::env::remove_var("AURA_GOOGLE_API_BASE_URL");
         }
     }
 }
@@ -86,7 +88,7 @@ pub async fn create_test_integrations(app: &Router, org_id: &OrgId) {
     }
 }
 
-fn integration_payloads() -> [serde_json::Value; 11] {
+fn integration_payloads() -> [serde_json::Value; 12] {
     [
         serde_json::json!({
             "name": "GitHub",
@@ -160,6 +162,17 @@ fn integration_payloads() -> [serde_json::Value; 11] {
             "provider": "resend",
             "kind": "workspace_integration",
             "api_key": "re_test"
+        }),
+        serde_json::json!({
+            "name": "Google",
+            "provider": "google",
+            "kind": "workspace_integration",
+            "api_key": "google_oauth_access_token",
+            "provider_config": {
+                "authType": "oauth2",
+                "ownerUserId": "u1",
+                "accountEmail": "u1@example.com"
+            }
         }),
     ]
 }

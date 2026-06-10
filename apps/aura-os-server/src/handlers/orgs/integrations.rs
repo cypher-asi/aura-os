@@ -5,7 +5,7 @@
 //! available and fall back to the local org service in standalone
 //! deployments.
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use reqwest::Url;
@@ -22,6 +22,11 @@ use crate::handlers::permissions::require_org_role;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 use super::map_org_err;
+
+#[derive(serde::Deserialize)]
+pub(crate) struct GoogleOAuthStartQuery {
+    return_url: Option<String>,
+}
 
 fn validate_mcp_server_config(
     kind: &OrgIntegrationKind,
@@ -369,4 +374,23 @@ pub(crate) async fn delete_integration(
         .delete_integration(&org_id, &integration_id)
         .map_err(map_org_err)?;
     Ok(Json(()))
+}
+
+pub(crate) async fn start_google_oauth(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
+    Path(org_id): Path<OrgId>,
+    Query(query): Query<GoogleOAuthStartQuery>,
+) -> ApiResult<Json<Value>> {
+    let client = state
+        .integrations_client
+        .as_ref()
+        .ok_or_else(|| ApiError::bad_request("Google OAuth requires AURA_INTEGRATIONS_URL"))?;
+    require_org_role(&state, &org_id.to_string(), &jwt, &session, "admin").await?;
+    let response = client
+        .start_google_oauth(&org_id, &jwt, query.return_url.as_deref())
+        .await
+        .map_err(map_integrations_error)?;
+    Ok(Json(response))
 }

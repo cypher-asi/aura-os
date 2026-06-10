@@ -34,6 +34,7 @@
     "perf:guardrails": "npm run build && npm run perf:bundle-budgets && npm run test:e2e:perf",
     "test:evals": "playwright test tests/e2e/evals",
     "test:evals:smoke": "playwright test tests/e2e/evals/core-feature-smoke.spec.ts",
+    "test:evals:chat-core": "playwright test tests/e2e/evals/chat-core.spec.ts",
     "test:evals:workflow": "playwright test tests/e2e/evals/workflow-e2e.spec.ts",
     "test:evals:benchmark": "playwright test tests/e2e/evals/live-benchmark.spec.ts",
     "test:demo-screenshots": "node --test ./scripts/lib/demo-screenshot-*.test.mjs",

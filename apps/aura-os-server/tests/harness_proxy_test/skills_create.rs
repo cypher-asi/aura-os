@@ -86,7 +86,7 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
 
     let install_call = captured
         .iter()
-        .find(|(uri, _)| uri == format!("/api/agents/{agent}/skills"))
+        .find(|(uri, _)| *uri == format!("/api/agents/{agent}/skills"))
         .expect("expected install POST to /api/agents/<id>/skills");
     let install_body: serde_json::Value =
         serde_json::from_str(&install_call.1).expect("install body is valid JSON");

@@ -33,10 +33,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "aura_proxy",
     label: "AURA Proxy",
     kind: "workspace_connection",
-    description: "Workspace-level Aura proxy access for managed model and runtime requests.",
+    description:
+      "Workspace-level Aura proxy access for managed model and runtime requests.",
     secretLabel: "AURA Proxy API Key",
     secretPlaceholder: "Paste the AURA Proxy API key",
-    authHint: "Use a shared AURA Proxy key when the workspace should route requests through Aura.",
+    authHint:
+      "Use a shared AURA Proxy key when the workspace should route requests through Aura.",
     supportsDefaultModel: true,
     runtimeCompatibleAdapters: [],
   },
@@ -44,10 +46,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "github",
     label: "GitHub",
     kind: "workspace_integration",
-    description: "Repository, issue, and pull request workflows for the workspace.",
+    description:
+      "Repository, issue, and pull request workflows for the workspace.",
     secretLabel: "GitHub Token",
     secretPlaceholder: "Paste the GitHub token",
-    authHint: "Use a fine-grained PAT or app token with the repo scopes your workspace needs.",
+    authHint:
+      "Use a fine-grained PAT or app token with the repo scopes your workspace needs.",
     docsUrl: "https://docs.github.com/en/rest/authentication",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -56,10 +60,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "linear",
     label: "Linear",
     kind: "workspace_integration",
-    description: "Planning, issue tracking, and sprint workflows for the workspace.",
+    description:
+      "Planning, issue tracking, and sprint workflows for the workspace.",
     secretLabel: "Linear API Key",
     secretPlaceholder: "Paste the Linear API key",
-    authHint: "Use a Linear API key or OAuth token with the teams and workflows your workspace needs.",
+    authHint:
+      "Use a Linear API key or OAuth token with the teams and workflows your workspace needs.",
     docsUrl: "https://linear.app/developers/graphql",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -68,10 +74,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "slack",
     label: "Slack",
     kind: "workspace_integration",
-    description: "Messaging, channel access, and workspace coordination workflows.",
+    description:
+      "Messaging, channel access, and workspace coordination workflows.",
     secretLabel: "Slack Bot Token",
     secretPlaceholder: "Paste the Slack bot token",
-    authHint: "Use a bot token with only the channels and posting scopes your workspace needs.",
+    authHint:
+      "Use a bot token with only the channels and posting scopes your workspace needs.",
     docsUrl: "https://docs.slack.dev/authentication/tokens/",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -83,7 +91,8 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     description: "Docs, notes, and knowledge-base workflows for the workspace.",
     secretLabel: "Notion Integration Secret",
     secretPlaceholder: "Paste the Notion secret",
-    authHint: "Use an internal integration secret with access to the pages and databases your workspace needs.",
+    authHint:
+      "Use an internal integration secret with access to the pages and databases your workspace needs.",
     docsUrl: "https://developers.notion.com/docs/authorization",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -92,10 +101,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "brave_search",
     label: "Brave Search",
     kind: "workspace_integration",
-    description: "Web search, research, and competitive-intelligence workflows for the workspace.",
+    description:
+      "Web search, research, and competitive-intelligence workflows for the workspace.",
     secretLabel: "Brave Search API Key",
     secretPlaceholder: "Paste the Brave Search API key",
-    authHint: "Use a Brave Search API key when the workspace should access Brave-powered web search tools.",
+    authHint:
+      "Use a Brave Search API key when the workspace should access Brave-powered web search tools.",
     docsUrl: "https://api-dashboard.search.brave.com/app/documentation",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -104,10 +115,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "freepik",
     label: "Freepik",
     kind: "workspace_integration",
-    description: "AI image and video generation workflows for creative content production.",
+    description:
+      "AI image and video generation workflows for creative content production.",
     secretLabel: "Freepik API Key",
     secretPlaceholder: "Paste the Freepik API key",
-    authHint: "Use a Freepik API key with access to the image or video generation endpoints your workspace needs.",
+    authHint:
+      "Use a Freepik API key with access to the image or video generation endpoints your workspace needs.",
     docsUrl: "https://docs.freepik.com/",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -116,10 +129,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "buffer",
     label: "Buffer",
     kind: "workspace_integration",
-    description: "Social scheduling and publishing workflows across connected channels.",
+    description:
+      "Social scheduling and publishing workflows across connected channels.",
     secretLabel: "Buffer Access Token",
     secretPlaceholder: "Paste the Buffer access token",
-    authHint: "Use a Buffer access token for the connected social accounts your workspace is allowed to publish to.",
+    authHint:
+      "Use a Buffer access token for the connected social accounts your workspace is allowed to publish to.",
     docsUrl: "https://buffer.com/developers/api",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -128,10 +143,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "apify",
     label: "Apify",
     kind: "workspace_integration",
-    description: "Web scraping, data extraction, and browser automation workflows.",
+    description:
+      "Web scraping, data extraction, and browser automation workflows.",
     secretLabel: "Apify API Token",
     secretPlaceholder: "Paste the Apify API token",
-    authHint: "Use an Apify API token when the workspace should run Actors, scraping jobs, or structured extraction tasks.",
+    authHint:
+      "Use an Apify API token when the workspace should run Actors, scraping jobs, or structured extraction tasks.",
     docsUrl: "https://docs.apify.com/api/v2",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -140,10 +157,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "metricool",
     label: "Metricool",
     kind: "workspace_integration",
-    description: "Social analytics, campaign reporting, and cross-channel performance workflows.",
+    description:
+      "Social analytics, campaign reporting, and cross-channel performance workflows.",
     secretLabel: "Metricool API Token",
     secretPlaceholder: "Paste the Metricool API token",
-    authHint: "Use a Metricool token with access to the brands and channels your workspace should analyze.",
+    authHint:
+      "Use a Metricool token with access to the brands and channels your workspace should analyze.",
     docsUrl: "https://developers.metricool.com/",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -166,10 +185,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "mailchimp",
     label: "Mailchimp",
     kind: "workspace_integration",
-    description: "Audience, campaign, and email marketing workflows for player communications.",
+    description:
+      "Audience, campaign, and email marketing workflows for player communications.",
     secretLabel: "Mailchimp API Key",
     secretPlaceholder: "Paste the Mailchimp API key",
-    authHint: "Use a Mailchimp API key with access to the audiences and campaigns your workspace should manage.",
+    authHint:
+      "Use a Mailchimp API key with access to the audiences and campaigns your workspace should manage.",
     docsUrl: "https://mailchimp.com/developer/marketing/api/",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
@@ -185,11 +206,28 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "resend",
     label: "Resend",
     kind: "workspace_integration",
-    description: "Transactional email and sending-domain workflows for workspace notifications and outreach.",
+    description:
+      "Transactional email and sending-domain workflows for workspace notifications and outreach.",
     secretLabel: "Resend API Key",
     secretPlaceholder: "Paste the Resend API key",
-    authHint: "Use a Resend API key with access to the domains and email flows your workspace should send from.",
+    authHint:
+      "Use a Resend API key with access to the domains and email flows your workspace should send from.",
     docsUrl: "https://resend.com/docs/api-reference/emails/send-email",
+    supportsDefaultModel: false,
+    runtimeCompatibleAdapters: [],
+  },
+  {
+    id: "google",
+    label: "Google",
+    kind: "workspace_integration",
+    description:
+      "Gmail search, drafts, sending, and Google Calendar event workflows through your connected Google account.",
+    secretLabel: "Google Account",
+    secretPlaceholder: "Connect your Google account",
+    authHint:
+      "Connect your Google account with OAuth. Aura stores encrypted refresh credentials server-side and only exposes the tools to your Aura user.",
+    docsUrl:
+      "https://developers.google.com/identity/protocols/oauth2/web-server",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
   },
@@ -197,10 +235,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "mcp_server",
     label: "Custom MCP Server",
     kind: "mcp_server",
-    description: "Attach a custom MCP server so its tools can be registered into the workspace tool surface.",
+    description:
+      "Attach a custom MCP server so its tools can be registered into the workspace tool surface.",
     secretLabel: "Optional MCP Token",
     secretPlaceholder: "Optional bearer token or API key",
-    authHint: "Use URL for remote HTTP MCP or command/args for stdio MCP. Save a token only when the server requires one.",
+    authHint:
+      "Use URL for remote HTTP MCP or command/args for stdio MCP. Save a token only when the server requires one.",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],
     configFields: [
@@ -234,7 +274,9 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
   },
 ];
 
-export function getIntegrationDefinition(provider: string): IntegrationDefinition | undefined {
+export function getIntegrationDefinition(
+  provider: string,
+): IntegrationDefinition | undefined {
   return INTEGRATION_CATALOG.find((definition) => definition.id === provider);
 }
 
@@ -281,7 +323,10 @@ export function getSecretLabel(provider: string): string {
 }
 
 export function getSecretPlaceholder(provider: string): string {
-  return getIntegrationDefinition(provider)?.secretPlaceholder ?? "Paste the provider secret";
+  return (
+    getIntegrationDefinition(provider)?.secretPlaceholder ??
+    "Paste the provider secret"
+  );
 }
 
 export function getIntegrationSurfaceLabel(provider: string): string {
@@ -302,7 +347,9 @@ export function getIntegrationKind(provider: string): IntegrationKind {
   return getIntegrationDefinition(provider)?.kind ?? "workspace_connection";
 }
 
-export function getIntegrationConfigFields(provider: string): IntegrationConfigField[] {
+export function getIntegrationConfigFields(
+  provider: string,
+): IntegrationConfigField[] {
   return getIntegrationDefinition(provider)?.configFields ?? [];
 }
 
@@ -311,9 +358,9 @@ export function supportsDefaultModel(provider: string): boolean {
 }
 
 export function runtimeAuthProvidersForAdapter(adapterType: string): string[] {
-  return INTEGRATION_CATALOG
-    .filter((definition) => definition.runtimeCompatibleAdapters.includes(adapterType))
-    .map((definition) => definition.id);
+  return INTEGRATION_CATALOG.filter((definition) =>
+    definition.runtimeCompatibleAdapters.includes(adapterType),
+  ).map((definition) => definition.id);
 }
 
 export function supportsOrgIntegrationAuth(adapterType: string): boolean {
@@ -324,11 +371,14 @@ export function filterRuntimeCompatibleIntegrations(
   adapterType: string,
   integrations: OrgIntegration[],
 ): OrgIntegration[] {
-  const requiredProviders = new Set(runtimeAuthProvidersForAdapter(adapterType));
+  const requiredProviders = new Set(
+    runtimeAuthProvidersForAdapter(adapterType),
+  );
   if (requiredProviders.size === 0) return [];
   return integrations.filter(
     (integration) =>
-      integration.kind === "workspace_connection" && requiredProviders.has(integration.provider),
+      integration.kind === "workspace_connection" &&
+      requiredProviders.has(integration.provider),
   );
 }
 
@@ -339,7 +389,8 @@ export function integrationSections(): Array<{
   providers: IntegrationDefinition[];
 }> {
   const workspaceConnectionProviders = INTEGRATION_CATALOG.filter(
-    (provider) => provider.kind === "workspace_connection" && provider.id !== "aura_proxy",
+    (provider) =>
+      provider.kind === "workspace_connection" && provider.id !== "aura_proxy",
   );
 
   return [
@@ -353,13 +404,18 @@ export function integrationSections(): Array<{
       id: "workspace_integration",
       title: "Apps",
       description: "Connected work apps that can supply tools and workflows.",
-      providers: INTEGRATION_CATALOG.filter((provider) => provider.kind === "workspace_integration"),
+      providers: INTEGRATION_CATALOG.filter(
+        (provider) => provider.kind === "workspace_integration",
+      ),
     },
     {
       id: "mcp_server",
       title: "MCP Servers",
-      description: "Additional tool sources that expose their own tool surface through MCP.",
-      providers: INTEGRATION_CATALOG.filter((provider) => provider.kind === "mcp_server"),
+      description:
+        "Additional tool sources that expose their own tool surface through MCP.",
+      providers: INTEGRATION_CATALOG.filter(
+        (provider) => provider.kind === "mcp_server",
+      ),
     },
   ];
 }

@@ -11,6 +11,7 @@ import {
 describe("normalizePricingKey", () => {
   it("maps aura-managed ids to provider pricing keys", () => {
     expect(normalizePricingKey("aura-claude-opus-4-8")).toBe("claude-opus-4-8");
+    expect(normalizePricingKey("aura-claude-fable-5")).toBe("claude-fable-5");
     expect(normalizePricingKey("aura-gpt-5-5")).toBe("gpt-5.5");
     expect(normalizePricingKey("aura-gpt-5-4-mini")).toBe("gpt-5.4-mini");
     expect(normalizePricingKey("aura-kimi-k2-6")).toBe("kimi-k2p6");
@@ -51,6 +52,16 @@ describe("resolvePricing for Google Gemini", () => {
 });
 
 describe("getBilledPricing", () => {
+  it("resolves Claude Fable 5 at Anthropic's published rates", () => {
+    const base = resolvePricing("aura-claude-fable-5");
+    expect(base.provider).toBe("anthropic");
+    expect(base.model).toBe("claude-fable-5");
+    expect(base.input).toBe(10);
+    expect(base.output).toBe(50);
+    expect(base.cacheWrite).toBe(12.5);
+    expect(base.cacheRead).toBe(1);
+  });
+
   it("applies the 20% markup to base rates", () => {
     const base = resolvePricing("aura-claude-opus-4-8");
     const billed = getBilledPricing("aura-claude-opus-4-8");

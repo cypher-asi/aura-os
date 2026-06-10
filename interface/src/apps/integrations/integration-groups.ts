@@ -51,6 +51,7 @@ const PROVIDER_GROUP: Record<string, IntegrationGroupId> = {
   slack: "communication",
   notion: "productivity",
   linear: "productivity",
+  google: "productivity",
   github: "coding",
   buffer: "social_media",
   metricool: "social_media",

@@ -29,7 +29,7 @@ pub(super) async fn dispatch(
 }
 
 async fn list_repos(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let url = format!(
         "{}/user/repos?per_page=20&sort=updated",
         app_provider_base_url(KIND)
@@ -65,7 +65,7 @@ fn repo_summary(repo: Value) -> Value {
 }
 
 async fn create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let owner = required_string(args, &["owner"])?;
     let repo = required_string(args, &["repo"])?;
     let title = required_string(args, &["title"])?;

@@ -321,7 +321,7 @@ pub(crate) async fn get_update_status(
     Json(serde_json::json!({
         "update": *status,
         "channel": *channel,
-        "current_version": env!("CARGO_PKG_VERSION"),
+        "current_version": crate::release_version::current_version(),
         "supported": crate::updater::updater_supported(),
         "update_base_url": crate::updater::update_base_url(),
         "endpoint_template": endpoint_template,

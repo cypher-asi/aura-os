@@ -21,7 +21,7 @@ pub(super) fn check_for_available_update(
         .replace("{{arch}}", std::env::consts::ARCH);
     info!(
         %endpoint,
-        current_version = env!("CARGO_PKG_VERSION"),
+        current_version = crate::release_version::current_version(),
         %channel,
         "checking for updates"
     );

@@ -81,7 +81,7 @@ fn updater_config(channel: UpdateChannel) -> Result<PackagerUpdaterConfig, Strin
 pub(super) fn build_updater(
     channel: UpdateChannel,
 ) -> Result<cargo_packager_updater::Updater, String> {
-    let current_version = SemverVersion::parse(env!("CARGO_PKG_VERSION"))
+    let current_version = SemverVersion::parse(crate::release_version::current_version())
         .map_err(|e| format!("invalid current version: {e}"))?;
     let config = updater_config(channel)?;
     UpdaterBuilder::new(current_version, config)

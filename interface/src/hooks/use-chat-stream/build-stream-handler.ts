@@ -17,6 +17,8 @@ import {
   handleToolCallSnapshot,
   handleToolCall as coreHandleToolCall,
   handleToolResult as coreHandleToolResult,
+  handleToolCallRetrying,
+  handleToolCallFailed,
   handleEventSaved,
   handleAssistantTurnBoundary,
   handleStreamError,
@@ -361,6 +363,31 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
             if (typeof parsed?.deleted === "string") sidekickRef.current.removeSpec(parsed.deleted);
           } catch { /* ignore */ }
         }
+        break;
+      }
+      case EventType.ToolCallRetrying: {
+        const c = event.content;
+        const id = typeof c.tool_use_id === "string" ? c.tool_use_id.trim() : "";
+        if (!id) break;
+        handleToolCallRetrying(refs, setters, {
+          id,
+          name: (typeof c.tool_name === "string" && c.tool_name) || "unknown",
+          attempt: c.attempt,
+          max_attempts: c.max_attempts,
+          delay_ms: c.delay_ms,
+          reason: c.reason ?? "",
+        });
+        break;
+      }
+      case EventType.ToolCallFailed: {
+        const c = event.content;
+        const id = typeof c.tool_use_id === "string" ? c.tool_use_id.trim() : "";
+        if (!id) break;
+        handleToolCallFailed(refs, setters, {
+          id,
+          name: (typeof c.tool_name === "string" && c.tool_name) || "unknown",
+          reason: c.reason ?? "",
+        });
         break;
       }
       case EventType.SpecSaved: {

@@ -29,7 +29,7 @@ pub(super) async fn dispatch(
 }
 
 async fn list_audiences(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let base_url = mailchimp_base_url(&integration)?;
     let response = provider_json_request(
         &state.http_client,
@@ -57,7 +57,7 @@ async fn list_audiences(state: &AppState, org_id: &OrgId, args: &Value) -> ApiRe
 }
 
 async fn list_campaigns(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let base_url = mailchimp_base_url(&integration)?;
     let response = provider_json_request(
         &state.http_client,

@@ -126,6 +126,7 @@ async fn proxy_forwards_skill_activate() {
 
 #[tokio::test]
 async fn proxy_forwards_agent_skills_list() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -147,6 +148,7 @@ async fn proxy_forwards_agent_skills_list() {
 
 #[tokio::test]
 async fn proxy_forwards_agent_skill_install() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -169,6 +171,7 @@ async fn proxy_forwards_agent_skill_install() {
 
 #[tokio::test]
 async fn proxy_forwards_agent_skill_uninstall() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);

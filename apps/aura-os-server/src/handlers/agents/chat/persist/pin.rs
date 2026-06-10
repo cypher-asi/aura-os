@@ -43,7 +43,10 @@ pub(crate) async fn try_pin_session(
     // Stringify once at the storage boundary; the in-memory id stays
     // typed for downstream consumers.
     let pinned_str = pinned.to_string();
-    match storage.list_sessions(project_agent_id, jwt).await {
+    match storage
+        .list_sessions_including_empty(project_agent_id, jwt)
+        .await
+    {
         Ok(sessions) => {
             if sessions.iter().any(|s| s.id == pinned_str) {
                 PinnedSessionOutcome::Matched(*pinned)

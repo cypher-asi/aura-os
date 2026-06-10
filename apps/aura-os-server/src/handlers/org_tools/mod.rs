@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::workspace_tools::installed_workspace_app_tool_catalog;
 use crate::handlers::trusted_mcp;
-use crate::state::{AppState, AuthJwt};
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 mod args;
 mod http;
@@ -40,6 +40,7 @@ pub(crate) struct McpToolQuery {
 pub(crate) async fn call_tool(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path((org_id, tool_name)): Path<(OrgId, String)>,
     Json(args): Json<Value>,
 ) -> ApiResult<Json<Value>> {
@@ -53,7 +54,15 @@ pub(crate) async fn call_tool(
     } else {
         let contract = app_provider_contract_by_tool(&tool_name)
             .ok_or_else(|| ApiError::not_found(format!("unknown org tool `{tool_name}`")))?;
-        dispatch_app_provider_tool(contract.kind, &state, &org_id, &tool_name, &args).await?
+        dispatch_app_provider_tool(
+            contract.kind,
+            &state,
+            &org_id,
+            &session.user_id,
+            &tool_name,
+            &args,
+        )
+        .await?
     };
 
     Ok(Json(result))

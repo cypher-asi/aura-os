@@ -1,20 +1,28 @@
 name: Setup Node.js
 description: |
-  Installs Node.js via actions/setup-node with a registry-reachability retry
-  gate in front of it.
+  Installs Node.js via actions/setup-node with lightweight network hardening
+  around it.
 
   actions/setup-node resolves the requested version by first querying
   api.github.com (for the actions/node-versions manifest) and then falling
   back to a direct download from nodejs.org. On a transient DNS / egress blip
   both lookups fail fast with `getaddrinfo ENOTFOUND` and the whole job dies on
   the very first attempt -- this is what took down the `build-sidecar` job on
-  the self-hosted Windows runner. The gate below polls both hosts with backoff
-  so a short-lived network hiccup is ridden out before setup-node runs.
+  the self-hosted Windows runner. The Windows-only gate below polls both hosts
+  with backoff so a short-lived network hiccup is ridden out before setup-node
+  runs.
 
   The gate is intentionally non-fatal: if the hosts are still unreachable after
   all attempts it emits a warning and lets setup-node run anyway, so the real
   underlying error is still surfaced in the logs (which also makes a genuine
-  runner network/egress misconfiguration obvious).
+  runner network/egress misconfiguration obvious). Linux/macOS skip this gate to
+  avoid adding retry latency for a runner-specific failure mode we have only
+  seen on Windows.
+
+  The setup-node invocation itself is retried for all platforms. Hosted runners
+  do not always have the exact requested version in the setup-node manifest or
+  tool cache, so a transient direct-download TLS failure can otherwise leave the
+  runner on its preinstalled Node version and fail later parity checks.
 
   This wraps (rather than replaces) actions/setup-node so its native npm cache
   restore and `post` cache-save step keep working unchanged.
@@ -37,6 +45,7 @@ runs:
   using: composite
   steps:
     - name: Wait for Node/GitHub registries
+      if: runner.os == 'Windows'
       shell: bash
       run: |
         set -uo pipefail
@@ -65,8 +74,52 @@ runs:
         done
 
     - name: Install Node.js
+      id: setup_node_1
+      continue-on-error: true
       uses: actions/setup-node@v5
       with:
         node-version: ${{ inputs.node-version }}
         cache: ${{ inputs.cache }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
+
+    - name: Back off before retrying Node.js install
+      if: steps.setup_node_1.outcome == 'failure'
+      shell: bash
+      run: sleep 5
+
+    - name: Install Node.js retry 2
+      id: setup_node_2
+      if: steps.setup_node_1.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v5
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.cache }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+
+    - name: Back off before final Node.js install retry
+      if: steps.setup_node_1.outcome == 'failure' && steps.setup_node_2.outcome == 'failure'
+      shell: bash
+      run: sleep 10
+
+    - name: Install Node.js retry 3
+      id: setup_node_3
+      if: steps.setup_node_1.outcome == 'failure' && steps.setup_node_2.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/setup-node@v5
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.cache }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+
+    - name: Verify Node.js version
+      shell: bash
+      run: |
+        set -euo pipefail
+        actual="$(node --version | sed 's/^v//')"
+        expected="${{ inputs.node-version }}"
+        if [ "$actual" != "$expected" ]; then
+          echo "::error::Expected Node.js ${expected}, but found ${actual} after setup-node retries."
+          exit 1
+        fi
+        echo "Node.js ${actual} is active."

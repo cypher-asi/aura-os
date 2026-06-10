@@ -30,7 +30,7 @@ pub(super) async fn dispatch(
 }
 
 async fn search_pages(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let query = required_string(args, &["query"])?;
     let url = format!("{}/search", notion_base_url()?);
     let response = provider_json_request(
@@ -62,7 +62,7 @@ async fn search_pages(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResu
 }
 
 async fn create_page(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let parent_page_id = required_string(args, &["parent_page_id", "parentPageId"])?;
     let title = required_string(args, &["title"])?;
     let content = optional_string(

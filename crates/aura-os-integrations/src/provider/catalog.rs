@@ -130,6 +130,16 @@ pub fn app_provider_contracts() -> &'static [AppProviderContract] {
                 static_headers: &[],
             },
         },
+        AppProviderContract {
+            kind: AppProviderKind::Google,
+            trusted: true,
+            request: AppProviderRequestContract {
+                env_base_url_key: Some("AURA_GOOGLE_API_BASE_URL"),
+                default_base_url: Some("https://www.googleapis.com"),
+                auth_scheme: AppProviderAuthScheme::AuthorizationBearer,
+                static_headers: &[],
+            },
+        },
     ]
 }
 

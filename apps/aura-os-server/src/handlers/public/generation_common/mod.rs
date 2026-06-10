@@ -228,6 +228,16 @@ async fn run_public_generation_task(
     // between the initial start and the final completed frame.
     let bytes = response.bytes_stream();
     let inner = build_public_generation_sse(bytes, generation_id, guard, modality);
+    forward_public_generation_events_with_heartbeats(&tx, inner, modality).await;
+}
+
+async fn forward_public_generation_events_with_heartbeats<S>(
+    tx: &mpsc::Sender<Result<Event, Infallible>>,
+    inner: S,
+    modality: PublicModality,
+) where
+    S: futures_core::Stream<Item = Result<Event, Infallible>>,
+{
     let mut inner = std::pin::pin!(inner);
     loop {
         match tokio::time::timeout(GENERATION_HEARTBEAT_INTERVAL, inner.next()).await {
@@ -437,44 +447,23 @@ mod streaming_tests {
     /// `apps/aura-os-server/src/handlers/generation/image.rs`.
     #[tokio::test(start_paused = true)]
     async fn heartbeat_fires_when_upstream_stays_silent() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let url = format!("http://{addr}/v1/generate-image/stream");
-
-        let mock_handle = tokio::spawn(async move {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let mut buf = vec![0u8; 4096];
-            let _ = socket.read(&mut buf).await;
-            let response = "HTTP/1.1 200 OK\r\n\
-                            Content-Type: text/event-stream\r\n\
-                            Transfer-Encoding: chunked\r\n\
-                            \r\n";
-            let _ = socket.write_all(response.as_bytes()).await;
-            let _ = socket.flush().await;
-            std::future::pending::<()>().await;
+        let (tx, mut rx) = mpsc::channel::<Result<Event, Infallible>>(8);
+        let inner = futures_util::stream::pending::<Result<Event, Infallible>>();
+        let forwarder = tokio::spawn(async move {
+            forward_public_generation_events_with_heartbeats(&tx, inner, PublicModality::Image)
+                .await;
         });
 
-        let (tx, mut rx) = mpsc::channel::<Result<Event, Infallible>>(8);
-        tokio::spawn(run_public_generation_task(
-            tx,
-            "guest-jwt".to_string(),
-            url,
-            json!({ "prompt": "a cat" }),
-            PublicModality::Image,
-            "gen-test".to_string(),
-            mk_guard(PublicModality::Image),
-        ));
-
-        let first = rx.recv().await.expect("first").expect("infallible");
-        assert_eq!(event_kind(&first), "generation_start");
-
-        tokio::task::yield_now().await;
         tokio::time::advance(GENERATION_HEARTBEAT_INTERVAL + Duration::from_secs(1)).await;
 
         let heartbeat = rx.recv().await.expect("heartbeat").expect("infallible");
-        assert_eq!(event_kind(&heartbeat), "generation_progress");
+        assert_eq!(
+            event_kind(&heartbeat),
+            "generation_progress",
+            "expected heartbeat progress event, got {heartbeat:?}"
+        );
 
-        mock_handle.abort();
+        forwarder.abort();
     }
 
     #[tokio::test]

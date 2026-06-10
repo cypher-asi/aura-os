@@ -30,7 +30,7 @@ pub(super) async fn dispatch(
 }
 
 async fn list_actors(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let url = build_actor_list_url(args)?;
     let response = provider_json_request(
         &state.http_client,
@@ -76,7 +76,7 @@ fn build_actor_list_url(args: &Value) -> ApiResult<reqwest::Url> {
 }
 
 async fn run_actor(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let actor_id = required_string(args, &["actor_id", "actorId"])?;
     let mut payload = args.get("input").cloned().unwrap_or_else(|| json!({}));
     if payload.is_null() {

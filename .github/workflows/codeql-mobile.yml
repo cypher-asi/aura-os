@@ -1,0 +1,125 @@
+name: CodeQL Mobile
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/codeql-mobile.yml
+      - interface/android/**
+      - interface/ios/**
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/codeql-mobile.yml
+      - interface/android/**
+      - interface/ios/**
+  schedule:
+    - cron: "31 9 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-mobile-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-mobile:
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.detect.outputs.android }}
+      ios: ${{ steps.detect.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed mobile surfaces
+        id: detect
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_AFTER_SHA: ${{ github.sha }}
+        run: |
+          node <<'NODE'
+          const { execSync } = require("node:child_process");
+          const fs = require("node:fs");
+
+          const eventName = process.env.GITHUB_EVENT_NAME;
+          let changedFiles = [];
+
+          if (eventName === "workflow_dispatch" || eventName === "schedule") {
+            changedFiles = ["interface/android/", "interface/ios/"];
+          } else if (eventName === "pull_request" && process.env.PR_BASE_SHA && process.env.PR_HEAD_SHA) {
+            changedFiles = execSync(
+              `git diff --name-only ${process.env.PR_BASE_SHA} ${process.env.PR_HEAD_SHA}`,
+              { encoding: "utf8" },
+            ).split(/\r?\n/).filter(Boolean);
+          } else if (eventName === "push" && process.env.PUSH_BEFORE_SHA && process.env.PUSH_AFTER_SHA) {
+            changedFiles = execSync(
+              `git diff --name-only ${process.env.PUSH_BEFORE_SHA} ${process.env.PUSH_AFTER_SHA}`,
+              { encoding: "utf8" },
+            ).split(/\r?\n/).filter(Boolean);
+          }
+
+          const workflowChanged = changedFiles.includes(".github/workflows/codeql-mobile.yml");
+          const android = workflowChanged || changedFiles.some((file) => file.startsWith("interface/android/"));
+          const ios = workflowChanged || changedFiles.some((file) => file.startsWith("interface/ios/"));
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `android=${android ? "true" : "false"}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `ios=${ios ? "true" : "false"}\n`);
+          console.log(JSON.stringify({ android, ios, changedFiles }, null, 2));
+          NODE
+
+  analyze-java-kotlin:
+    name: Analyze Java / Kotlin
+    needs: detect-mobile
+    if: needs.detect-mobile.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:java-kotlin"
+
+  analyze-swift:
+    name: Analyze Swift
+    needs: detect-mobile
+    if: needs.detect-mobile.outputs.ios == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.4.app
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: swift
+
+      - name: Build iOS app for Swift extraction
+        run: node scripts/ci/verify-ios.mjs
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:swift"

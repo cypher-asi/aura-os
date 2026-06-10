@@ -24,11 +24,12 @@ pub(super) async fn resolve_org_integration(
     state: &AppState,
     org_id: &OrgId,
     provider: &str,
+    user_id: Option<&str>,
     args: &Value,
 ) -> ApiResult<ResolvedOrgIntegration> {
     let integration_id = optional_string(args, &["integration_id", "integrationId"]);
     let integration =
-        pick_org_integration_metadata(state, org_id, provider, integration_id).await?;
+        pick_org_integration_metadata(state, org_id, provider, user_id, integration_id).await?;
     let secret = load_org_integration_secret(state, org_id, &integration).await?;
 
     Ok(ResolvedOrgIntegration {
@@ -41,17 +42,25 @@ async fn pick_org_integration_metadata(
     state: &AppState,
     org_id: &OrgId,
     provider: &str,
+    user_id: Option<&str>,
     integration_id: Option<String>,
 ) -> ApiResult<OrgIntegration> {
     if let Some(integration) =
-        load_canonical_org_integration(state, org_id, provider, integration_id.as_deref()).await?
+        load_canonical_org_integration(state, org_id, provider, user_id, integration_id.as_deref())
+            .await?
     {
         return Ok(integration);
     }
     if let Some(integration_id) = integration_id {
-        return load_shadow_org_integration_by_id(state, org_id, provider, &integration_id);
+        return load_shadow_org_integration_by_id(
+            state,
+            org_id,
+            provider,
+            user_id,
+            &integration_id,
+        );
     }
-    load_shadow_org_integration_for_provider(state, org_id, provider)
+    load_shadow_org_integration_for_provider(state, org_id, provider, user_id)
 }
 
 async fn load_org_integration_secret(
@@ -106,6 +115,7 @@ async fn load_canonical_org_integration(
     state: &AppState,
     org_id: &OrgId,
     provider: &str,
+    user_id: Option<&str>,
     integration_id: Option<&str>,
 ) -> ApiResult<Option<OrgIntegration>> {
     let Some(client) = &state.integrations_client else {
@@ -113,10 +123,11 @@ async fn load_canonical_org_integration(
     };
 
     if let Some(integration_id) = integration_id {
-        return load_canonical_by_id(state, client, org_id, provider, integration_id).await;
+        return load_canonical_by_id(state, client, org_id, provider, user_id, integration_id)
+            .await;
     }
 
-    load_canonical_by_provider(state, client, org_id, provider).await
+    load_canonical_by_provider(state, client, org_id, provider, user_id).await
 }
 
 async fn load_canonical_by_id(
@@ -124,6 +135,7 @@ async fn load_canonical_by_id(
     client: &aura_os_integrations::IntegrationsClient,
     org_id: &OrgId,
     provider: &str,
+    user_id: Option<&str>,
     integration_id: &str,
 ) -> ApiResult<Option<OrgIntegration>> {
     match client
@@ -131,7 +143,7 @@ async fn load_canonical_by_id(
         .await
     {
         Ok(integration) => {
-            let integration = validate_org_tool_integration(integration, provider)?;
+            let integration = validate_org_tool_integration(integration, provider, user_id)?;
             if let Err(error) = state
                 .org_service
                 .sync_integration_shadow(&integration, IntegrationSecretUpdate::Preserve)
@@ -166,6 +178,7 @@ async fn load_canonical_by_provider(
     client: &aura_os_integrations::IntegrationsClient,
     org_id: &OrgId,
     provider: &str,
+    user_id: Option<&str>,
 ) -> ApiResult<Option<OrgIntegration>> {
     match client.list_integrations_internal(org_id).await {
         Ok(integrations) => {
@@ -181,7 +194,7 @@ async fn load_canonical_by_provider(
             }
             let integration = integrations
                 .into_iter()
-                .find(|integration| matches_org_tool_provider(integration, provider))
+                .find(|integration| matches_org_tool_provider(integration, provider, user_id))
                 .ok_or_else(|| {
                     ApiError::bad_request(format!(
                         "no enabled `{provider}` org integration with a key is available"
@@ -205,6 +218,7 @@ fn load_shadow_org_integration_by_id(
     state: &AppState,
     org_id: &OrgId,
     provider: &str,
+    user_id: Option<&str>,
     integration_id: &str,
 ) -> ApiResult<OrgIntegration> {
     let integration = state
@@ -212,20 +226,21 @@ fn load_shadow_org_integration_by_id(
         .get_integration(org_id, integration_id)
         .map_err(|e| ApiError::internal(format!("loading org integration: {e}")))?
         .ok_or_else(|| ApiError::not_found("integration not found"))?;
-    validate_org_tool_integration(integration, provider)
+    validate_org_tool_integration(integration, provider, user_id)
 }
 
 fn load_shadow_org_integration_for_provider(
     state: &AppState,
     org_id: &OrgId,
     provider: &str,
+    user_id: Option<&str>,
 ) -> ApiResult<OrgIntegration> {
     state
         .org_service
         .list_integrations(org_id)
         .map_err(|e| ApiError::internal(format!("listing org integrations: {e}")))?
         .into_iter()
-        .find(|integration| matches_org_tool_provider(integration, provider))
+        .find(|integration| matches_org_tool_provider(integration, provider, user_id))
         .ok_or_else(|| {
             ApiError::bad_request(format!(
                 "no enabled `{provider}` org integration with a key is available"
@@ -236,6 +251,7 @@ fn load_shadow_org_integration_for_provider(
 fn validate_org_tool_integration(
     integration: OrgIntegration,
     provider: &str,
+    user_id: Option<&str>,
 ) -> ApiResult<OrgIntegration> {
     if integration.provider != provider {
         return Err(ApiError::bad_request(format!(
@@ -254,6 +270,9 @@ fn validate_org_tool_integration(
             "integration `{}` is disabled",
             integration.name
         )));
+    }
+    if !google_integration_visible_to_user(&integration, provider, user_id) {
+        return Err(ApiError::not_found("integration not found"));
     }
     Ok(integration)
 }
@@ -373,9 +392,39 @@ async fn load_mcp_integration_secret(
     Ok(resolved.unwrap_or_default())
 }
 
-fn matches_org_tool_provider(integration: &OrgIntegration, provider: &str) -> bool {
+fn matches_org_tool_provider(
+    integration: &OrgIntegration,
+    provider: &str,
+    user_id: Option<&str>,
+) -> bool {
     integration.provider == provider
         && integration.has_secret
         && integration.enabled
         && integration.kind == OrgIntegrationKind::WorkspaceIntegration
+        && google_integration_visible_to_user(integration, provider, user_id)
+}
+
+fn google_integration_visible_to_user(
+    integration: &OrgIntegration,
+    provider: &str,
+    user_id: Option<&str>,
+) -> bool {
+    if provider != "google" {
+        return true;
+    }
+    let Some(user_id) = user_id else {
+        return false;
+    };
+    google_owner_user_id(integration.provider_config.as_ref())
+        .map(|owner| owner == user_id)
+        .unwrap_or(false)
+}
+
+fn google_owner_user_id(provider_config: Option<&Value>) -> Option<&str> {
+    provider_config?
+        .as_object()?
+        .get("ownerUserId")?
+        .as_str()
+        .map(str::trim)
+        .filter(|owner| !owner.is_empty())
 }

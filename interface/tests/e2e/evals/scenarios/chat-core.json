@@ -1,0 +1,726 @@
+[
+  {
+    "id": "project-agent-chat-core-turn",
+    "suite": "chat-core",
+    "kind": "agent_chat_core_loop",
+    "title": "Project agent chat core turn persists and renders",
+    "devices": ["eval-chat-core-desktop"],
+    "project": {
+      "projectId": "proj-chat-core",
+      "orgId": "org-chat-core",
+      "name": "Chat Core Fixture",
+      "description": "Fixture project for deterministic agent chat evals."
+    },
+    "agent": {
+      "agentId": "agent-chat-core",
+      "agentInstanceId": "agent-inst-chat-core",
+      "name": "Core Loop Agent",
+      "role": "Engineer",
+      "personality": "Careful and concise",
+      "systemPrompt": "Answer with deterministic fixture evidence.",
+      "machineType": "remote",
+      "adapterType": "aura_harness",
+      "defaultModel": "aura-claude-sonnet-4-6"
+    },
+    "initialHistory": [],
+    "turn": {
+      "input": "Run the chat core health check.",
+      "expectedAction": null,
+      "expectedModel": "aura-claude-sonnet-4-6",
+      "streamEvents": [
+        {
+          "event": "progress",
+          "data": { "stage": "queued" }
+        },
+        {
+          "event": "text_delta",
+          "data": { "text": "Chat core loop is healthy." }
+        },
+        {
+          "event": "tool_use_start",
+          "data": { "id": "tool-1", "name": "run_command" }
+        },
+        {
+          "event": "tool_call",
+          "data": {
+            "id": "tool-1",
+            "name": "run_command",
+            "input": { "cmd": "printf chat-core-ok" }
+          }
+        },
+        {
+          "event": "tool_result",
+          "data": {
+            "id": "tool-1",
+            "name": "run_command",
+            "result": "{\"stdout\":\"chat-core-ok\",\"exit_code\":0}",
+            "is_error": false
+          }
+        },
+        {
+          "event": "token_usage",
+          "data": { "input_tokens": 96, "output_tokens": 52 }
+        },
+        {
+          "event": "assistant_message_end",
+          "data": {
+            "message_id": "msg-assistant-chat-core",
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 96,
+              "output_tokens": 52,
+              "context_utilization": 0.18,
+              "estimated_context_tokens": 148
+            }
+          }
+        },
+        {
+          "event": "message_end",
+          "data": {
+            "message_id": "msg-assistant-chat-core",
+            "event": {
+              "event_id": "evt-assistant-chat-core",
+              "agent_instance_id": "agent-inst-chat-core",
+              "project_id": "proj-chat-core",
+              "role": "assistant",
+              "content": "Chat core loop is healthy.",
+              "content_blocks": [],
+              "thinking": null,
+              "thinking_duration_ms": 0,
+              "created_at": "2026-06-05T00:00:00.000Z"
+            }
+          }
+        },
+        {
+          "event": "done",
+          "data": { "message_id": "msg-assistant-chat-core" }
+        }
+      ],
+      "persistedHistory": [
+        {
+          "event_id": "evt-user-chat-core",
+          "agent_instance_id": "agent-inst-chat-core",
+          "project_id": "proj-chat-core",
+          "role": "user",
+          "content": "Run the chat core health check.",
+          "content_blocks": [],
+          "created_at": "2026-06-05T00:00:00.000Z"
+        },
+        {
+          "event_id": "evt-assistant-chat-core",
+          "agent_instance_id": "agent-inst-chat-core",
+          "project_id": "proj-chat-core",
+          "role": "assistant",
+          "content": "Chat core loop is healthy.",
+          "content_blocks": [],
+          "thinking": null,
+          "thinking_duration_ms": 0,
+          "created_at": "2026-06-05T00:00:01.000Z"
+        }
+      ]
+    },
+    "verification": {
+      "visibleTexts": [
+        "Run the chat core health check.",
+        "Chat core loop is healthy."
+      ],
+      "expectedStreamEventTypes": [
+        "progress",
+        "text_delta",
+        "tool_use_start",
+        "tool_call",
+        "tool_result",
+        "token_usage",
+        "assistant_message_end",
+        "message_end",
+        "done"
+      ],
+      "expectedStreamRequestCount": 1,
+      "expectedHistoryRequestMinimum": 1,
+      "expectedContextUtilization": 0.18
+    }
+  },
+  {
+    "id": "project-agent-command-forwarding-chat",
+    "suite": "chat-core",
+    "kind": "agent_chat_core_loop",
+    "title": "Project agent chat forwards selected slash commands",
+    "devices": ["eval-chat-core-desktop"],
+    "project": {
+      "projectId": "proj-chat-core-command",
+      "orgId": "org-chat-core",
+      "name": "Command Forwarding Fixture",
+      "description": "Fixture project for deterministic command forwarding evals."
+    },
+    "agent": {
+      "agentId": "agent-command-forwarding",
+      "agentInstanceId": "agent-inst-command-forwarding",
+      "name": "Command Forwarding Agent",
+      "role": "Platform Engineer",
+      "personality": "Direct and contract-focused",
+      "systemPrompt": "Answer with deterministic fixture evidence after honoring selected commands.",
+      "machineType": "remote",
+      "adapterType": "aura_harness",
+      "defaultModel": "aura-gpt-5-4"
+    },
+    "initialHistory": [],
+    "turn": {
+      "input": "Inspect package metadata with the selected command.",
+      "expectedAction": null,
+      "expectedModel": "aura-gpt-5-4",
+      "slashCommands": [
+        {
+          "id": "run_command",
+          "query": "run",
+          "label": "Run Command"
+        }
+      ],
+      "expectedCommands": ["run_command"],
+      "streamEvents": [
+        {
+          "event": "progress",
+          "data": { "stage": "queued" }
+        },
+        {
+          "event": "text_delta",
+          "data": { "text": "Command forwarding is healthy." }
+        },
+        {
+          "event": "tool_use_start",
+          "data": { "id": "tool-command-1", "name": "run_command" }
+        },
+        {
+          "event": "tool_call",
+          "data": {
+            "id": "tool-command-1",
+            "name": "run_command",
+            "input": { "cmd": "node -p require('./package.json').name" }
+          }
+        },
+        {
+          "event": "tool_result",
+          "data": {
+            "id": "tool-command-1",
+            "name": "run_command",
+            "result": "{\"stdout\":\"aura-interface\",\"exit_code\":0}",
+            "is_error": false
+          }
+        },
+        {
+          "event": "token_usage",
+          "data": { "input_tokens": 101, "output_tokens": 45 }
+        },
+        {
+          "event": "assistant_message_end",
+          "data": {
+            "message_id": "msg-assistant-command-forwarding",
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 101,
+              "output_tokens": 45,
+              "context_utilization": 0.16,
+              "estimated_context_tokens": 146
+            }
+          }
+        },
+        {
+          "event": "message_end",
+          "data": {
+            "message_id": "msg-assistant-command-forwarding",
+            "event": {
+              "event_id": "evt-assistant-command-forwarding",
+              "agent_instance_id": "agent-inst-command-forwarding",
+              "project_id": "proj-chat-core-command",
+              "role": "assistant",
+              "content": "Command forwarding is healthy.",
+              "content_blocks": [],
+              "thinking": null,
+              "thinking_duration_ms": 0,
+              "created_at": "2026-06-05T00:00:00.000Z"
+            }
+          }
+        },
+        {
+          "event": "done",
+          "data": { "message_id": "msg-assistant-command-forwarding" }
+        }
+      ],
+      "persistedHistory": [
+        {
+          "event_id": "evt-user-command-forwarding",
+          "agent_instance_id": "agent-inst-command-forwarding",
+          "project_id": "proj-chat-core-command",
+          "role": "user",
+          "content": "Inspect package metadata with the selected command.",
+          "content_blocks": [],
+          "created_at": "2026-06-05T00:00:00.000Z"
+        },
+        {
+          "event_id": "evt-assistant-command-forwarding",
+          "agent_instance_id": "agent-inst-command-forwarding",
+          "project_id": "proj-chat-core-command",
+          "role": "assistant",
+          "content": "Command forwarding is healthy.",
+          "content_blocks": [],
+          "thinking": null,
+          "thinking_duration_ms": 0,
+          "created_at": "2026-06-05T00:00:01.000Z"
+        }
+      ]
+    },
+    "verification": {
+      "visibleTexts": [
+        "Inspect package metadata with the selected command.",
+        "Command forwarding is healthy."
+      ],
+      "expectedStreamEventTypes": [
+        "progress",
+        "text_delta",
+        "tool_use_start",
+        "tool_call",
+        "tool_result",
+        "token_usage",
+        "assistant_message_end",
+        "message_end",
+        "done"
+      ],
+      "expectedStreamRequestCount": 1,
+      "expectedHistoryRequestMinimum": 1,
+      "expectedContextUtilization": 0.16
+    }
+  },
+  {
+    "id": "project-agent-attach-existing-chat",
+    "suite": "chat-core",
+    "kind": "agent_chat_core_loop",
+    "title": "Attach existing project agent then chat",
+    "devices": ["eval-chat-core-mobile"],
+    "project": {
+      "projectId": "proj-chat-core-attach",
+      "orgId": "org-chat-core",
+      "name": "Attach Agent Fixture",
+      "description": "Fixture project for project-agent attach evals."
+    },
+    "agent": {
+      "agentId": "agent-shared-qa",
+      "agentInstanceId": "agent-inst-shared-qa",
+      "name": "Shared QA Agent",
+      "role": "QA Engineer",
+      "personality": "Precise and verification-oriented",
+      "systemPrompt": "Verify project setup and answer with deterministic fixture evidence.",
+      "machineType": "remote",
+      "adapterType": "aura_harness",
+      "defaultModel": "aura-claude-sonnet-4-6"
+    },
+    "initialHistory": [],
+    "turn": {
+      "input": "Confirm attached agent chat works.",
+      "expectedAction": null,
+      "expectedModel": "aura-claude-sonnet-4-6",
+      "streamEvents": [
+        {
+          "event": "progress",
+          "data": { "stage": "queued" }
+        },
+        {
+          "event": "text_delta",
+          "data": { "text": "Attached agent chat is healthy." }
+        },
+        {
+          "event": "tool_use_start",
+          "data": { "id": "tool-attach-1", "name": "run_command" }
+        },
+        {
+          "event": "tool_call",
+          "data": {
+            "id": "tool-attach-1",
+            "name": "run_command",
+            "input": { "cmd": "printf attached-agent-ok" }
+          }
+        },
+        {
+          "event": "tool_result",
+          "data": {
+            "id": "tool-attach-1",
+            "name": "run_command",
+            "result": "{\"stdout\":\"attached-agent-ok\",\"exit_code\":0}",
+            "is_error": false
+          }
+        },
+        {
+          "event": "token_usage",
+          "data": { "input_tokens": 88, "output_tokens": 49 }
+        },
+        {
+          "event": "assistant_message_end",
+          "data": {
+            "message_id": "msg-assistant-attach-agent",
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 88,
+              "output_tokens": 49,
+              "context_utilization": 0.12,
+              "estimated_context_tokens": 137
+            }
+          }
+        },
+        {
+          "event": "message_end",
+          "data": {
+            "message_id": "msg-assistant-attach-agent",
+            "event": {
+              "event_id": "evt-assistant-attach-agent",
+              "agent_instance_id": "agent-inst-shared-qa",
+              "project_id": "proj-chat-core-attach",
+              "role": "assistant",
+              "content": "Attached agent chat is healthy.",
+              "content_blocks": [],
+              "thinking": null,
+              "thinking_duration_ms": 0,
+              "created_at": "2026-06-05T00:00:00.000Z"
+            }
+          }
+        },
+        {
+          "event": "done",
+          "data": { "message_id": "msg-assistant-attach-agent" }
+        }
+      ],
+      "persistedHistory": [
+        {
+          "event_id": "evt-user-attach-agent",
+          "agent_instance_id": "agent-inst-shared-qa",
+          "project_id": "proj-chat-core-attach",
+          "role": "user",
+          "content": "Confirm attached agent chat works.",
+          "content_blocks": [],
+          "created_at": "2026-06-05T00:00:00.000Z"
+        },
+        {
+          "event_id": "evt-assistant-attach-agent",
+          "agent_instance_id": "agent-inst-shared-qa",
+          "project_id": "proj-chat-core-attach",
+          "role": "assistant",
+          "content": "Attached agent chat is healthy.",
+          "content_blocks": [],
+          "thinking": null,
+          "thinking_duration_ms": 0,
+          "created_at": "2026-06-05T00:00:01.000Z"
+        }
+      ]
+    },
+    "verification": {
+      "visibleTexts": [
+        "Confirm attached agent chat works.",
+        "Attached agent chat is healthy."
+      ],
+      "expectedStreamEventTypes": [
+        "progress",
+        "text_delta",
+        "tool_use_start",
+        "tool_call",
+        "tool_result",
+        "token_usage",
+        "assistant_message_end",
+        "message_end",
+        "done"
+      ],
+      "expectedStreamRequestCount": 1,
+      "expectedHistoryRequestMinimum": 1,
+      "expectedContextUtilization": 0.12
+    }
+  },
+  {
+    "id": "project-agent-rich-tool-retry-chat",
+    "suite": "chat-core",
+    "kind": "agent_chat_core_loop",
+    "title": "Project agent chat renders rich tool retry failure events",
+    "devices": ["eval-chat-core-desktop"],
+    "project": {
+      "projectId": "proj-chat-core-tools",
+      "orgId": "org-chat-core",
+      "name": "Tool Retry Fixture",
+      "description": "Fixture project for deterministic rich tool stream evals."
+    },
+    "agent": {
+      "agentId": "agent-chat-tools",
+      "agentInstanceId": "agent-inst-chat-tools",
+      "name": "Tool Retry Agent",
+      "role": "Engineer",
+      "personality": "Careful and recovery-oriented",
+      "systemPrompt": "Exercise rich tool stream events with deterministic fixture evidence.",
+      "machineType": "remote",
+      "adapterType": "aura_harness",
+      "defaultModel": "aura-gpt-5-4"
+    },
+    "initialHistory": [],
+    "turn": {
+      "input": "Exercise the rich tool retry path.",
+      "expectedAction": null,
+      "expectedModel": "aura-gpt-5-4",
+      "streamEvents": [
+        {
+          "event": "progress",
+          "data": { "stage": "queued" }
+        },
+        {
+          "event": "thinking_delta",
+          "data": { "thinking": "Checking retry instrumentation." }
+        },
+        {
+          "event": "text_delta",
+          "data": { "text": "Retry instrumentation is active." }
+        },
+        {
+          "event": "tool_call_started",
+          "data": { "id": "tool-rich-write", "name": "write_file" }
+        },
+        {
+          "event": "tool_call_snapshot",
+          "data": {
+            "id": "tool-rich-write",
+            "name": "write_file",
+            "input": { "content": "retry coverage" }
+          }
+        },
+        {
+          "event": "tool_call_retrying",
+          "data": {
+            "tool_use_id": "tool-rich-write",
+            "tool_name": "write_file",
+            "attempt": 2,
+            "max_attempts": 4,
+            "delay_ms": 10,
+            "reason": "upstream_529_overloaded"
+          }
+        },
+        {
+          "event": "tool_call_failed",
+          "data": {
+            "tool_use_id": "tool-rich-write",
+            "tool_name": "write_file",
+            "reason": "upstream_529_overloaded"
+          }
+        },
+        {
+          "event": "assistant_message_end",
+          "data": {
+            "message_id": "msg-assistant-rich-tool",
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 124,
+              "output_tokens": 61,
+              "context_utilization": 0.21,
+              "estimated_context_tokens": 185
+            }
+          }
+        },
+        {
+          "event": "message_end",
+          "data": {
+            "message_id": "msg-assistant-rich-tool",
+            "event": {
+              "event_id": "evt-assistant-rich-tool",
+              "agent_instance_id": "agent-inst-chat-tools",
+              "project_id": "proj-chat-core-tools",
+              "role": "assistant",
+              "content": "Retry instrumentation is active.",
+              "content_blocks": [],
+              "thinking": "Checking retry instrumentation.",
+              "thinking_duration_ms": 42,
+              "created_at": "2026-06-05T00:00:00.000Z"
+            }
+          }
+        },
+        {
+          "event": "done",
+          "data": { "message_id": "msg-assistant-rich-tool" }
+        }
+      ],
+      "persistedHistory": [
+        {
+          "event_id": "evt-user-rich-tool",
+          "agent_instance_id": "agent-inst-chat-tools",
+          "project_id": "proj-chat-core-tools",
+          "role": "user",
+          "content": "Exercise the rich tool retry path.",
+          "content_blocks": [],
+          "created_at": "2026-06-05T00:00:00.000Z"
+        },
+        {
+          "event_id": "evt-assistant-rich-tool",
+          "agent_instance_id": "agent-inst-chat-tools",
+          "project_id": "proj-chat-core-tools",
+          "role": "assistant",
+          "content": "Retry instrumentation is active.",
+          "content_blocks": [],
+          "thinking": "Checking retry instrumentation.",
+          "thinking_duration_ms": 42,
+          "created_at": "2026-06-05T00:00:01.000Z"
+        }
+      ]
+    },
+    "verification": {
+      "visibleTexts": [
+        "Exercise the rich tool retry path.",
+        "Retry instrumentation is active."
+      ],
+      "expectedStreamEventTypes": [
+        "progress",
+        "thinking_delta",
+        "text_delta",
+        "tool_call_started",
+        "tool_call_snapshot",
+        "tool_call_retrying",
+        "tool_call_failed",
+        "assistant_message_end",
+        "message_end",
+        "done"
+      ],
+      "expectedStreamRequestCount": 1,
+      "expectedHistoryRequestMinimum": 1,
+      "expectedContextUtilization": 0.21
+    }
+  },
+  {
+    "id": "project-agent-create-remote-chat",
+    "suite": "chat-core",
+    "kind": "agent_chat_core_loop",
+    "title": "Create remote project agent then chat",
+    "devices": ["eval-chat-core-mobile"],
+    "project": {
+      "projectId": "proj-chat-core-create",
+      "orgId": "org-chat-core",
+      "name": "Create Agent Fixture",
+      "description": "Fixture project for project-agent create evals."
+    },
+    "agent": {
+      "agentId": "agent-created-release",
+      "agentInstanceId": "agent-inst-created-release",
+      "name": "CreatedReleaseAgent",
+      "role": "Release Engineer",
+      "personality": "Calm and release-focused",
+      "systemPrompt": "Confirm the created project agent can chat with deterministic fixture evidence.",
+      "machineType": "remote",
+      "adapterType": "aura_harness",
+      "defaultModel": "aura-claude-sonnet-4-6"
+    },
+    "initialHistory": [],
+    "turn": {
+      "input": "Confirm newly created project agent chat works.",
+      "expectedAction": null,
+      "expectedModel": "aura-claude-sonnet-4-6",
+      "streamEvents": [
+        {
+          "event": "progress",
+          "data": { "stage": "queued" }
+        },
+        {
+          "event": "text_delta",
+          "data": { "text": "Created agent chat is healthy." }
+        },
+        {
+          "event": "tool_use_start",
+          "data": { "id": "tool-create-1", "name": "run_command" }
+        },
+        {
+          "event": "tool_call",
+          "data": {
+            "id": "tool-create-1",
+            "name": "run_command",
+            "input": { "cmd": "printf created-agent-ok" }
+          }
+        },
+        {
+          "event": "tool_result",
+          "data": {
+            "id": "tool-create-1",
+            "name": "run_command",
+            "result": "{\"stdout\":\"created-agent-ok\",\"exit_code\":0}",
+            "is_error": false
+          }
+        },
+        {
+          "event": "token_usage",
+          "data": { "input_tokens": 91, "output_tokens": 47 }
+        },
+        {
+          "event": "assistant_message_end",
+          "data": {
+            "message_id": "msg-assistant-created-agent",
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 91,
+              "output_tokens": 47,
+              "context_utilization": 0.14,
+              "estimated_context_tokens": 138
+            }
+          }
+        },
+        {
+          "event": "message_end",
+          "data": {
+            "message_id": "msg-assistant-created-agent",
+            "event": {
+              "event_id": "evt-assistant-created-agent",
+              "agent_instance_id": "agent-inst-created-release",
+              "project_id": "proj-chat-core-create",
+              "role": "assistant",
+              "content": "Created agent chat is healthy.",
+              "content_blocks": [],
+              "thinking": null,
+              "thinking_duration_ms": 0,
+              "created_at": "2026-06-05T00:00:00.000Z"
+            }
+          }
+        },
+        {
+          "event": "done",
+          "data": { "message_id": "msg-assistant-created-agent" }
+        }
+      ],
+      "persistedHistory": [
+        {
+          "event_id": "evt-user-created-agent",
+          "agent_instance_id": "agent-inst-created-release",
+          "project_id": "proj-chat-core-create",
+          "role": "user",
+          "content": "Confirm newly created project agent chat works.",
+          "content_blocks": [],
+          "created_at": "2026-06-05T00:00:00.000Z"
+        },
+        {
+          "event_id": "evt-assistant-created-agent",
+          "agent_instance_id": "agent-inst-created-release",
+          "project_id": "proj-chat-core-create",
+          "role": "assistant",
+          "content": "Created agent chat is healthy.",
+          "content_blocks": [],
+          "thinking": null,
+          "thinking_duration_ms": 0,
+          "created_at": "2026-06-05T00:00:01.000Z"
+        }
+      ]
+    },
+    "verification": {
+      "visibleTexts": [
+        "Confirm newly created project agent chat works.",
+        "Created agent chat is healthy."
+      ],
+      "expectedStreamEventTypes": [
+        "progress",
+        "text_delta",
+        "tool_use_start",
+        "tool_call",
+        "tool_result",
+        "token_usage",
+        "assistant_message_end",
+        "message_end",
+        "done"
+      ],
+      "expectedStreamRequestCount": 1,
+      "expectedHistoryRequestMinimum": 1,
+      "expectedContextUtilization": 0.14
+    }
+  }
+]

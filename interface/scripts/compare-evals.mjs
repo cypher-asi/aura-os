@@ -50,6 +50,56 @@ function compareScenario(candidate, baseline) {
     }
   }
 
+  if (baseline.suite === "chat-core") {
+    if ((candidate.counts.unhandledApiRequests ?? 0) > 0) {
+      blocking.push(`unhandled API requests increased to ${candidate.counts.unhandledApiRequests}`);
+    }
+
+    if ((candidate.counts.streamRequests ?? 0) !== (baseline.counts.streamRequests ?? 0)) {
+      blocking.push(
+        `stream requests changed from ${baseline.counts.streamRequests} to ${candidate.counts.streamRequests}`,
+      );
+    }
+
+    if ((candidate.counts.streamEvents ?? 0) < (baseline.counts.streamEvents ?? 0)) {
+      blocking.push(`stream events dropped from ${baseline.counts.streamEvents} to ${candidate.counts.streamEvents}`);
+    }
+
+    if ((candidate.counts.persistedEvents ?? 0) < (baseline.counts.persistedEvents ?? 0)) {
+      blocking.push(
+        `persisted events dropped from ${baseline.counts.persistedEvents} to ${candidate.counts.persistedEvents}`,
+      );
+    }
+
+    if ((baseline.counts.agentAttachRequests ?? 0) > 0) {
+      if ((candidate.counts.agentAttachRequests ?? 0) !== (baseline.counts.agentAttachRequests ?? 0)) {
+        blocking.push(
+          `agent attach requests changed from ${baseline.counts.agentAttachRequests} to ${candidate.counts.agentAttachRequests}`,
+        );
+      }
+
+      if ((candidate.counts.attachedAgents ?? 0) < (baseline.counts.attachedAgents ?? 0)) {
+        blocking.push(
+          `attached agents dropped from ${baseline.counts.attachedAgents} to ${candidate.counts.attachedAgents}`,
+        );
+      }
+    }
+
+    if ((baseline.counts.agentCreateRequests ?? 0) > 0) {
+      if ((candidate.counts.agentCreateRequests ?? 0) !== (baseline.counts.agentCreateRequests ?? 0)) {
+        blocking.push(
+          `agent create requests changed from ${baseline.counts.agentCreateRequests} to ${candidate.counts.agentCreateRequests}`,
+        );
+      }
+
+      if ((candidate.counts.remoteAgentStateRequests ?? 0) < (baseline.counts.remoteAgentStateRequests ?? 0)) {
+        blocking.push(
+          `remote agent state checks dropped from ${baseline.counts.remoteAgentStateRequests} to ${candidate.counts.remoteAgentStateRequests}`,
+        );
+      }
+    }
+  }
+
   // Skip the duration warning if the baseline doesn't have a measured value
   // yet (0). Otherwise any non-zero candidate duration is "infinity-x" larger
   // and we'd warn on every run until someone refreshes the baseline.

@@ -30,6 +30,7 @@ export default defineConfig({
         "**/responsive-unification.spec.ts",
         "**/desktop-visual.spec.ts",
         "**/team-settings-integrations.spec.ts",
+        "**/google-integration-ui.spec.ts",
         "**/agent-runtime-config.spec.ts",
       ],
       use: {
@@ -46,7 +47,7 @@ export default defineConfig({
     },
     {
       name: "mobile-chromium",
-      testMatch: ["**/pwa-mobile.spec.ts", "**/pwa-mobile-visual.spec.ts", "**/responsive-unification.spec.ts"],
+      testMatch: ["**/pwa-mobile.spec.ts", "**/pwa-mobile-visual.spec.ts", "**/responsive-unification.spec.ts", "**/google-integration-ui.spec.ts"],
       use: {
         ...devices["Pixel 7"],
       },
@@ -86,6 +87,21 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "eval-chat-core-desktop",
+      testMatch: ["**/evals/chat-core.spec.ts"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "eval-chat-core-mobile",
+      testMatch: ["**/evals/chat-core.spec.ts"],
+      use: {
+        ...devices["Pixel 7"],
       },
     },
     {

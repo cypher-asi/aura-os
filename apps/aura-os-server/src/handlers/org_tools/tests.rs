@@ -22,6 +22,7 @@ use chrono::Utc;
 use reqwest::header::AUTHORIZATION;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
@@ -54,8 +55,17 @@ async fn start_mock_integrations_server(
     integration: OrgIntegration,
     secret: Option<&'static str>,
 ) -> String {
+    start_mock_integrations_server_with_secret_counter(integration, secret, None).await
+}
+
+async fn start_mock_integrations_server_with_secret_counter(
+    integration: OrgIntegration,
+    secret: Option<&'static str>,
+    secret_hits: Option<Arc<AtomicUsize>>,
+) -> String {
     let list_integration = integration.clone();
     let get_integration = integration.clone();
+    let secret_hit_counter = secret_hits.clone();
     let app = Router::new()
         .route(
             "/internal/orgs/:org_id/integrations",
@@ -82,8 +92,14 @@ async fn start_mock_integrations_server(
         .route(
             "/internal/orgs/:org_id/integrations/:integration_id/secret",
             get(
-                move |Path((_org_id, _integration_id)): Path<(String, String)>| async move {
-                    Json(serde_json::json!({ "secret": secret }))
+                move |Path((_org_id, _integration_id)): Path<(String, String)>| {
+                    let secret_hit_counter = secret_hit_counter.clone();
+                    async move {
+                        if let Some(counter) = secret_hit_counter {
+                            counter.fetch_add(1, Ordering::SeqCst);
+                        }
+                        Json(serde_json::json!({ "secret": secret }))
+                    }
                 },
             ),
         );
@@ -216,6 +232,7 @@ async fn resolve_org_integration_prefers_canonical_metadata_for_selected_id() {
         &state,
         &org_id,
         "github",
+        None,
         &serde_json::json!({ "integration_id": integration_id }),
     )
     .await
@@ -262,12 +279,186 @@ async fn resolve_org_integration_prefers_canonical_provider_list() {
         "internal-token",
     )));
 
-    let resolved = resolve_org_integration(&state, &org_id, "github", &serde_json::json!({}))
+    let resolved = resolve_org_integration(&state, &org_id, "github", None, &serde_json::json!({}))
         .await
         .expect("resolve canonical provider integration");
 
     assert_eq!(resolved.metadata, canonical);
     assert_eq!(resolved.secret, "canonical-secret");
+}
+
+#[tokio::test]
+async fn resolve_google_integration_requires_matching_owner_user() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    let integration = state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            None,
+            "Google".to_string(),
+            "google".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            Some(serde_json::json!({
+                "ownerUserId": "user-1",
+                "accountEmail": "one@example.com"
+            })),
+            Some(true),
+            IntegrationSecretUpdate::Set("google-access-token".to_string()),
+        )
+        .expect("save google integration");
+
+    let denied = resolve_org_integration(
+        &state,
+        &org_id,
+        "google",
+        Some("user-2"),
+        &serde_json::json!({ "integration_id": integration.integration_id }),
+    )
+    .await;
+    assert!(
+        denied.is_err(),
+        "other users must not resolve Google tokens"
+    );
+
+    let resolved = resolve_org_integration(
+        &state,
+        &org_id,
+        "google",
+        Some("user-1"),
+        &serde_json::json!({ "integration_id": integration.integration_id }),
+    )
+    .await
+    .expect("owner resolves google integration");
+    assert_eq!(resolved.secret, "google-access-token");
+}
+
+#[tokio::test]
+async fn resolve_google_integration_denies_missing_owner_user() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    let integration = state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            None,
+            "Google".to_string(),
+            "google".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            Some(serde_json::json!({
+                "accountEmail": "one@example.com"
+            })),
+            Some(true),
+            IntegrationSecretUpdate::Set("google-access-token".to_string()),
+        )
+        .expect("save google integration");
+
+    let denied = resolve_org_integration(
+        &state,
+        &org_id,
+        "google",
+        Some("user-1"),
+        &serde_json::json!({ "integration_id": integration.integration_id }),
+    )
+    .await;
+
+    assert!(
+        denied.is_err(),
+        "Google integrations without an owner user id must not resolve"
+    );
+}
+
+#[tokio::test]
+async fn resolve_google_integration_denies_blank_owner_user() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    let integration = state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            None,
+            "Google".to_string(),
+            "google".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            Some(serde_json::json!({
+                "ownerUserId": "   ",
+                "accountEmail": "one@example.com"
+            })),
+            Some(true),
+            IntegrationSecretUpdate::Set("google-access-token".to_string()),
+        )
+        .expect("save google integration");
+
+    let denied = resolve_org_integration(
+        &state,
+        &org_id,
+        "google",
+        Some("user-1"),
+        &serde_json::json!({ "integration_id": integration.integration_id }),
+    )
+    .await;
+
+    assert!(
+        denied.is_err(),
+        "Google integrations with a blank owner user id must not resolve"
+    );
+}
+
+#[tokio::test]
+async fn resolve_google_canonical_denies_before_secret_fetch_when_owner_mismatches() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let mut state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+    let integration_id = "canonical-google";
+
+    let mut canonical = sample_integration(org_id, integration_id, "Google", "google", true, true);
+    canonical.provider_config = Some(serde_json::json!({
+        "ownerUserId": "user-1",
+        "accountEmail": "one@example.com"
+    }));
+    let secret_hits = Arc::new(AtomicUsize::new(0));
+    let base_url = start_mock_integrations_server_with_secret_counter(
+        canonical,
+        Some("canonical-google-token"),
+        Some(secret_hits.clone()),
+    )
+    .await;
+    state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+        &base_url,
+        "internal-token",
+    )));
+
+    let denied = resolve_org_integration(
+        &state,
+        &org_id,
+        "google",
+        Some("user-2"),
+        &serde_json::json!({ "integration_id": integration_id }),
+    )
+    .await;
+
+    assert!(
+        denied.is_err(),
+        "other users must not resolve canonical Google tokens"
+    );
+    assert_eq!(
+        secret_hits.load(Ordering::SeqCst),
+        0,
+        "secret retrieval must not run after Google owner validation fails"
+    );
 }
 
 #[tokio::test]

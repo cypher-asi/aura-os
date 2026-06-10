@@ -98,6 +98,84 @@ function run(command, args, options = {}) {
   }
 }
 
+export function cargoCacheWrapperEnabled(env = process.env) {
+  return Boolean(env.RUSTC_WRAPPER || env.CARGO_BUILD_RUSTC_WRAPPER);
+}
+
+export function cargoCacheFallbackEnv(env = process.env) {
+  const fallback = { ...env };
+  delete fallback.RUSTC_WRAPPER;
+  delete fallback.CARGO_BUILD_RUSTC_WRAPPER;
+  return fallback;
+}
+
+function runCargoWithCacheFallback(args, options = {}) {
+  const result = spawnSync("cargo", args, {
+    stdio: "inherit",
+    ...options,
+  });
+  if (result.status === 0) {
+    return;
+  }
+
+  const env = options.env ?? process.env;
+  if (!cargoCacheWrapperEnabled(env)) {
+    throw new Error(`cargo ${args.join(" ")} failed with status ${result.status}`);
+  }
+
+  console.warn(
+    "\n[prepare-desktop-sidecar] cargo failed with a compiler cache wrapper enabled; " +
+      "retrying once without RUSTC_WRAPPER so cache backend issues do not fail the build.",
+  );
+
+  const fallback = spawnSync("cargo", args, {
+    stdio: "inherit",
+    ...options,
+    env: cargoCacheFallbackEnv(env),
+  });
+  if (fallback.status !== 0) {
+    throw new Error(`cargo ${args.join(" ")} failed with status ${fallback.status}`);
+  }
+}
+
+export function normalizeSccacheWrapperPath(wrapperPath, platform = process.platform) {
+  if (!wrapperPath || platform !== "win32") {
+    return wrapperPath;
+  }
+
+  let normalized = wrapperPath.replaceAll("/", "\\");
+  if (!normalized.toLowerCase().endsWith(".exe")) {
+    normalized = `${normalized}.exe`;
+  }
+  return path.win32.normalize(normalized);
+}
+
+function sidecarBuildEnv() {
+  const env = { ...process.env };
+  if (env.SCCACHE_PATH && env.RUSTC_WRAPPER === "sccache") {
+    env.RUSTC_WRAPPER = normalizeSccacheWrapperPath(env.SCCACHE_PATH);
+  }
+  if (env.RUSTC_WRAPPER && !env.CARGO_BUILD_RUSTC_WRAPPER) {
+    env.CARGO_BUILD_RUSTC_WRAPPER = env.RUSTC_WRAPPER;
+  }
+  return env;
+}
+
+function printBuildEnv(env) {
+  console.log(JSON.stringify({
+    sidecarBuildEnv: {
+      rustcSet: Boolean(env.RUSTC),
+      cargoSet: Boolean(env.CARGO),
+      rustcWrapperSet: Boolean(env.RUSTC_WRAPPER),
+      cargoBuildRustcWrapperSet: Boolean(env.CARGO_BUILD_RUSTC_WRAPPER),
+      sccachePathSet: Boolean(env.SCCACHE_PATH),
+      cargoTargetDirSet: Boolean(env.CARGO_TARGET_DIR),
+      sccacheGhaEnabledSet: Boolean(env.SCCACHE_GHA_ENABLED),
+      sccacheWebdavEndpointSet: Boolean(env.SCCACHE_WEBDAV_ENDPOINT),
+    },
+  }, null, 2));
+}
+
 function parseArgs(argv) {
   return {
     checkOnly: argv.includes("--check"),
@@ -131,8 +209,10 @@ function main() {
     return;
   }
 
-  run(
-    "cargo",
+  const buildEnv = sidecarBuildEnv();
+  printBuildEnv(buildEnv);
+
+  runCargoWithCacheFallback(
     [
       "build",
       "--release",
@@ -145,7 +225,7 @@ function main() {
     ],
     {
       cwd: harnessDir,
-      env: process.env,
+      env: buildEnv,
     },
   );
 

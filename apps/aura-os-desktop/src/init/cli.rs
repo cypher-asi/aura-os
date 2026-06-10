@@ -44,7 +44,8 @@ pub(crate) fn channel_report() -> String {
         Channel::Dev => "Dev",
     };
     format!(
-        "channel={label} data_dir={data} skills_home={skills} window_title=\"{title}\" mutex={mutex} desktop_port={port} updater_enabled={updater}",
+        "channel={label} version={version} data_dir={data} skills_home={skills} window_title=\"{title}\" mutex={mutex} desktop_port={port} updater_enabled={updater}",
+        version = crate::release_version::current_version(),
         data = channel.data_dir_name(),
         skills = channel.skills_home_name(),
         title = channel.window_title(),
