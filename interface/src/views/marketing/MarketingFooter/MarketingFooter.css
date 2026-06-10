@@ -108,6 +108,38 @@
   color: var(--public-nav-fg-color, #fff);
 }
 
+/* Bottom bar inside the card: copyright on the left, the company link
+   on the right, separated from the link columns by a hairline rule. */
+.marketingFooterBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.marketingFooterCopyright {
+  color: var(--public-nav-fg-color-muted, #c9c9cf);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.marketingFooterCompany {
+  color: var(--public-nav-fg-color-muted, #c9c9cf);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.marketingFooterCompany:hover {
+  color: var(--public-nav-fg-color, #fff);
+}
+
 @media (max-width: 768px) {
   .marketingFooter {
     gap: 84px;

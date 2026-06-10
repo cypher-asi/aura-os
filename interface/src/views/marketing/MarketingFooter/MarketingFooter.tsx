@@ -42,6 +42,8 @@ const X_URL = "https://x.com/aura_asi";
 
 const GITHUB_URL = "https://github.com/cypher-asi/";
 
+const COMPANY_URL = "https://cypher.net";
+
 const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     heading: "Product",
@@ -127,6 +129,19 @@ export function MarketingFooter(): React.ReactNode {
             </div>
           ))}
         </nav>
+        <div className="marketingFooterBottom">
+          <span className="marketingFooterCopyright">
+            Copyright {new Date().getFullYear()}
+          </span>
+          <a
+            href={COMPANY_URL}
+            className="marketingFooterCompany"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            CYPHER, INC.
+          </a>
+        </div>
       </div>
       <img
         className="marketingFooterWordmark"
