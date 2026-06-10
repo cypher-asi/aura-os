@@ -46,8 +46,10 @@ interface TrustDisplayPanelProps {
  * to the `ServiceButtonRail` pinned on the left. Modelled on the reference
  * deck, top to bottom inside one shared three-ring `<Plate />` rim:
  *
- *   1. a recessed disc tray with a slowly spinning iridescent disc under a
- *      pill-shaped clamp bar,
+ *   1. a recessed disc tray holding a raised beveled MDAT-style chassis: a
+ *      set-in rounded window with a slowly spinning data disc (curved spec
+ *      text, groove rings, layered hub, metal core) beside an etched
+ *      INSERT plate and a recessed logo well,
  *   2. a dark inset VFD glass (the recessed-LCD recipe from `PhoneShell`)
  *      with gold mono readouts — agent VM number, a live ticking uptime
  *      counter, a segmented attestation bar, and lit status flags,
@@ -101,11 +103,50 @@ export function TrustDisplayPanel({
     <Plate className="trustDisplayPanel" aria-hidden="true">
       <div className="trustDisplayBezel">
         <div className="trustDiscWell">
-          <div className="trustDisc">
-            <div className="trustDiscFace" />
-            <div className="trustDiscHub" />
+          <div className="trustDiscChassis">
+            <div className="trustDiscWindow">
+              <div className="trustDisc">
+                <div className="trustDiscSpinner">
+                  <div className="trustDiscFace" />
+                  <svg
+                    className="trustDiscText"
+                    viewBox="0 0 200 200"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <path
+                        id="trustDiscTextPath"
+                        d="M 100,100 m -88,0 a 88,88 0 1,1 176,0 a 88,88 0 1,1 -176,0"
+                      />
+                    </defs>
+                    <text className="trustDiscTextRing">
+                      <textPath href="#trustDiscTextPath">
+                        SANDBOXED VM &#8226; TRUSTED EXECUTION &#8226; ATTESTED
+                        BOOT &#8226; MDLP COMPATIBLE &#8226; ENHANCED &#8226;
+                        ISOLATED RUNTIME &#8226;
+                      </textPath>
+                    </text>
+                  </svg>
+                </div>
+                <div className="trustDiscHub">
+                  <span className="trustDiscCore" />
+                </div>
+              </div>
+            </div>
+
+            <div className="trustDiscSide">
+              <div className="trustDiscPlate">
+                <span className="trustDiscPlateArrow" />
+                <span className="trustDiscPlateText">Insert disc/mini</span>
+              </div>
+              <div className="trustDiscLogoWell">
+                <span className="trustDiscLogoBadge">
+                  <span className="trustDiscLogoMark">AURA</span>
+                  <span className="trustDiscLogoSub">Mini data-disc</span>
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="trustDiscClamp" />
         </div>
 
         <div

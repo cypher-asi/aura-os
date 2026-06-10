@@ -2,7 +2,8 @@
  * Skeuomorphic CD-player transport panel for the Built for trust device
  * card — the right-hand counterpart to the left `ServiceButtonRail`. One
  * shared three-ring <Plate /> rim stacks, top to bottom: a recessed disc
- * tray with a spinning iridescent disc, a dark recessed VFD glass (the
+ * tray holding a raised MDAT-style chassis (set-in spinning data disc,
+ * etched INSERT plate, recessed logo well), a dark recessed VFD glass (the
  * inset-LCD recipe from PhoneShell.css) carrying gold mono readouts in the
  * page's --gold-* tokens, and a row of round cream transport keys. The
  * bezel height is computed from the same --trust-rail-* custom properties
@@ -28,16 +29,14 @@
 }
 
 /* ----------------------------------------------------------------------
- * Disc tray: a recessed dark well holding the spinning disc, crossed by a
- * pill-shaped clamp bar like the reference player's laser assembly.
+ * Disc tray: a recessed dark well holding a raised, beveled MDAT-style
+ * chassis (3px in from the well edges) — a set-in rounded disc window on
+ * the left, an etched INSERT plate and recessed logo well on the right.
  * ------------------------------------------------------------------- */
 
 .trustDiscWell {
   position: relative;
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   height: 188px;
   overflow: hidden;
   border-radius: 12px;
@@ -54,41 +53,120 @@
     0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.trustDisc {
+/* Raised chassis panel: matte body with a bright top bevel, dark bottom
+   edge, and a drop shadow onto the well floor so it reads as physically
+   raised out of the recess. */
+.trustDiscChassis {
+  position: absolute;
+  inset: 3px;
+  display: flex;
+  gap: 7px;
+  padding: 7px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #25272c 0%, #1b1d21 55%, #15161a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.65),
+    inset 1px 0 0 rgba(255, 255, 255, 0.05),
+    inset -1px 0 0 rgba(0, 0, 0, 0.4),
+    0 4px 10px rgba(0, 0, 0, 0.75),
+    0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Rounded, beveled disc window set into the chassis. The oversized disc
+   is clipped by it on the right, like the reference's half-exposed CD. */
+.trustDiscWindow {
   position: relative;
-  width: 148px;
+  flex: 1 1 56%;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 9px;
+  background: radial-gradient(
+    ellipse 130% 110% at 35% 30%,
+    #101114 0%,
+    #0a0b0d 55%,
+    #050506 100%
+  );
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+/* The disc itself: oversized and pushed left so its right side is cut by
+   the window edge while the hub stays fully visible. */
+.trustDisc {
+  position: absolute;
+  top: 50%;
+  left: -34px;
+  width: 196px;
   aspect-ratio: 1;
   border-radius: 50%;
-  /* Seats the disc in the tray rather than floating on it. */
+  transform: translateY(-50%);
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.7),
+    0 2px 10px rgba(0, 0, 0, 0.75),
     0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-/* Iridescent data face: a muted pastel spectrum sweeping around the disc
-   plus a soft specular wedge, slowly rotating like a spinning CD. */
+/* Face + curved text rotate together as one platter. */
+.trustDiscSpinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: trustDiscSpin 14s linear infinite;
+}
+
+/* Dark pressed data face: near-black base, fine concentric groove lines,
+   two brighter track-boundary rings, and a soft rotating sheen wedge. */
 .trustDiscFace {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background:
-    radial-gradient(
-      circle at 38% 30%,
-      rgba(255, 255, 255, 0.4) 0%,
-      rgba(255, 255, 255, 0) 42%
-    ),
     conic-gradient(
-      from 20deg,
-      #9a9da4 0%,
-      #b9a08c 12%,
-      #c9bd8e 24%,
-      #93b694 38%,
-      #7fa3ad 52%,
-      #9a8fb0 66%,
-      #b08c95 80%,
-      #9a9da4 100%
+      from 215deg,
+      rgba(255, 255, 255, 0.09) 0deg,
+      rgba(255, 255, 255, 0) 60deg,
+      rgba(255, 255, 255, 0.03) 150deg,
+      rgba(255, 255, 255, 0) 230deg,
+      rgba(255, 255, 255, 0.09) 360deg
+    ),
+    radial-gradient(
+      circle,
+      transparent 0 57%,
+      rgba(255, 255, 255, 0.07) 57.5%,
+      transparent 58.5%,
+      transparent 76%,
+      rgba(255, 255, 255, 0.05) 76.5%,
+      transparent 77.5%
+    ),
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      #0b0c0e 0px,
+      #15161a 1.5px,
+      #0b0c0e 3px
     );
-  animation: trustDiscSpin 7s linear infinite;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 0 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Curved spec text riding just inside the disc rim. */
+.trustDiscText {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.trustDiscTextRing {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  fill: rgba(255, 255, 255, 0.5);
 }
 
 @keyframes trustDiscSpin {
@@ -97,30 +175,65 @@
   }
 }
 
-/* Center hub: dark clamped core with a hairline metal ring. */
+/* Layered hub: a dark clamp ring stepping into a deeper black band
+   (painted border-only via ::before), stationary over the spinner. */
 .trustDiscHub {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 36%;
+  width: 42%;
   aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   background: radial-gradient(
-    circle at 50% 38%,
-    #25272c 0%,
-    #121317 55%,
-    #07080a 100%
+    circle at 50% 36%,
+    #1d1f24 0%,
+    #101115 55%,
+    #060708 100%
   );
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.18),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.8),
-    0 0 0 2px rgba(0, 0, 0, 0.65),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.85),
+    0 0 0 2px rgba(0, 0, 0, 0.7),
     0 0 0 3px rgba(255, 255, 255, 0.06);
 }
 
-/* Spindle hole punched through the hub. */
-.trustDiscHub::after {
+/* Second, deeper black ring band inside the clamp ring. */
+.trustDiscHub::before {
+  content: "";
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #0b0c0e 0%, #040405 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* Brushed-metal inner circle ending the hub stack, with a tiny dark
+   spindle point at its center. */
+.trustDiscCore {
+  position: relative;
+  z-index: 1;
+  width: 42%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 32%,
+    #c7cad0 0%,
+    #969ba3 48%,
+    #5f646d 100%
+  );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.45),
+    0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.trustDiscCore::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -129,27 +242,112 @@
   aspect-ratio: 1;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: #000;
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.9),
-    0 1px 0 rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at 50% 35%, #2a2d33 0%, #0a0b0d 100%);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9);
 }
 
-/* Pill-shaped clamp bar crossing the tray over the disc's center, like
-   the reference player's laser/clamp assembly. */
-.trustDiscClamp {
-  position: absolute;
-  top: 50%;
-  left: 14px;
-  right: 14px;
-  height: 48px;
-  border-radius: 24px;
-  transform: translateY(-50%);
-  background: linear-gradient(180deg, #1f2126 0%, #0d0e11 100%);
+/* ----------------------------------------------------------------------
+ * Right column of the chassis: etched INSERT plate centered mid-column,
+ * recessed logo well pinned to the bottom.
+ * ------------------------------------------------------------------- */
+
+.trustDiscSide {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 44%;
+  min-width: 0;
+  gap: 7px;
+}
+
+/* Raised middle plate carrying the etched eject triangle + caption. */
+.trustDiscPlate {
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 6px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #292b30 0%, #1d1f23 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.6),
-    0 5px 12px rgba(0, 0, 0, 0.65);
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    0 3px 7px rgba(0, 0, 0, 0.6);
+}
+
+/* Etched glyphs/text: darker-than-surface fill with a faint light edge
+   beneath, so they read as pressed into the plate. */
+.trustDiscPlateArrow {
+  width: 18px;
+  height: 13px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, #101114 0%, #16181c 100%);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.06));
+}
+
+.trustDiscPlateText {
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(6, 7, 9, 0.85);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+/* Bottom recessed section, sunk lower than the chassis surface, leaving
+   room for the etched logo badge. */
+.trustDiscLogoWell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 52px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #121317 0%, #17181c 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* Etched rounded logo badge, MDAT-style: wordmark over a micro caption. */
+.trustDiscLogoBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.trustDiscLogoMark {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.3em;
+  /* Optically recenters the trailing tracking gap. */
+  margin-right: -0.3em;
+  color: rgba(8, 9, 11, 0.95);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.trustDiscLogoSub {
+  font-size: 5.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.22em;
+  margin-right: -0.22em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(8, 9, 11, 0.85);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* ----------------------------------------------------------------------
