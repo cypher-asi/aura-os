@@ -460,16 +460,26 @@ export function ServiceDeviceCard({
                         }
                       }}
                     >
-                      {isAbove ? (
-                        <Check
-                          className="madeForYouCheck"
-                          size={16}
-                          strokeWidth={3}
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                      {isSelected ? <span className="madeForYouLensBtn" /> : null}
+                      <span
+                        className="madeForYouSideNumber"
+                        aria-hidden="true"
+                      >
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
                       <span className="madeForYouSideLabel">{item.label}</span>
+                      <span className="madeForYouSideIndicator">
+                        {isAbove ? (
+                          <Check
+                            className="madeForYouCheck"
+                            size={16}
+                            strokeWidth={3}
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                        {isSelected ? (
+                          <span className="madeForYouLensBtn" />
+                        ) : null}
+                      </span>
                     </button>
                   );
                 })}

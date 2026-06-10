@@ -239,15 +239,40 @@
 }
 
 .madeForYouDevice .personalAgentDeviceScreen {
-  /* Full-height video section now owns the full center bay; the old label
-     strip and bottom grille are gone in this hero variant. */
+  /* Large circular screen centered in the chassis bay. Sized to the bay width
+     but capped, with a 1:1 aspect ratio + 50% radius so it reads as a disc set
+     into the surrounding metal panel rather than a full-height rectangle
+     butting the dividers. */
   box-sizing: border-box;
   min-height: 0;
-  height: clamp(500px, 47vw, 560px);
-  padding: 53px 43px;
-  /* Square corners so the screen's left/right edges sit flush against the
-     vertical divider lines top-to-bottom (the quadrant keeps its 14px). */
-  border-radius: 0;
+  width: min(560px, 100%);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  padding: 0;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* Deep recessed "sunken screen" overlay painted ON TOP of the looping video
+   (z-index above both clips), mirroring the inset-shadow recess of the
+   "Connected to everything" device below: a strong dark top inset + secondary
+   blur read as the glass disc sinking below the bezel, with a faint bottom-edge
+   light lip. This makes the character feel set down into the panel. */
+.madeForYouDevice .personalAgentDeviceScreen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.95),
+    inset 0 3px 5px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(0, 0, 0, 0.9),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /*
@@ -691,60 +716,52 @@
   }
 }
 
-/* Raised bezel/tray that stands proud of the metal surface (top edge highlight
-   + drop shadow read as "risen"), vertically centered between the knob and the
-   grille inset. It frames a recessed inner screen that holds the items. */
+/* Flat control-panel face holding the stage list, vertically centered between
+   the knob and the grille inset. No raised bezel gradient and no outer drop
+   shadow: a matte metal panel with only a thin engraved rim, so the list reads
+   as a computer panel rather than a risen glossy tray. */
 .madeForYouDevice .madeForYouSideButtons {
   flex: 0 0 auto;
   width: 100%;
   margin: 0;
   box-sizing: border-box;
   padding: 6px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #2c2e33 0%, #191b1f 100%);
+  border-radius: 10px;
+  background: #232529;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 1px 0 rgba(255, 255, 255, 0.22),
-    0 4px 7px rgba(0, 0, 0, 0.45),
-    0 12px 20px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Recessed glossy black inner screen inset into the raised bezel; the six
-   lens-button rows are laid out as a centered column on its surface. */
+/* Inner panel face the stage rows sit on: a flat dark matte surface with a
+   single hairline rim, rather than the glossy recessed LCD it replaced. */
 .madeForYouDevice .madeForYouSideScreen {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   box-sizing: border-box;
-  padding: 12px 10px;
-  border-radius: 11px;
-  background: radial-gradient(
-    ellipse 130% 90% at 50% 0%,
-    #15171a 0%,
-    #0a0b0d 60%,
-    #050607 100%
-  );
-  box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  padding: 10px 8px;
+  border-radius: 6px;
+  background: #1a1c1f;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
 }
 
-/* Lens button + label capsule: a rounded black-glass pill recessed into the
-   metal panel. The lens floats at the left edge while the label is centered
-   across the full capsule width (so it reads centered within the panel). */
+/* Stage row laid out as three columns: a serif index number on the left, the
+   centered stage label, and a status slot (ring / check) on the right. The
+   left and right columns are equal fixed widths so the label stays optically
+   centered between them. */
 .madeForYouDevice .madeForYouSideRow {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 26px 1fr 26px;
   align-items: center;
-  justify-content: center;
   width: 100%;
   box-sizing: border-box;
   margin: 0;
-  padding: 4px 16px;
+  padding: 5px 12px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   /* Re-enable interaction inside the otherwise pointer-events:none panel. */
   pointer-events: auto;
   cursor: pointer;
@@ -753,6 +770,32 @@
   font: inherit;
   background: none;
   box-shadow: none;
+}
+
+/* Serif index ("01", "02", "03" ...) engraved at the left of each row, muted
+   so it reads as a quiet hardware serial that balances the ring/check on the
+   right. */
+.madeForYouDevice .madeForYouSideNumber {
+  grid-column: 1;
+  justify-self: start;
+  font-family: Georgia, "Times New Roman", "Iowan Old Style", serif;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(160, 164, 172, 0.5);
+}
+
+/* Right-hand status slot: holds either the selected pulsing ring or the
+   completed checkmark, centered in a fixed box that mirrors the left number
+   column's width so the label stays centered. */
+.madeForYouDevice .madeForYouSideIndicator {
+  grid-column: 3;
+  justify-self: end;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
 }
 
 /* Selected item: the capsule stays as-is; only the label lights up. Carries
@@ -833,10 +876,6 @@
 /* Simple transparent ring pinned to the left edge of the capsule. Muted gray
    by default; lit with the neon-orange glow (matching the label) when selected. */
 .madeForYouDevice .madeForYouLensBtn {
-  position: absolute;
-  top: 50%;
-  left: 5px;
-  transform: translateY(-50%);
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
@@ -854,13 +893,9 @@
   display: none;
 }
 
-/* Completed (above the selected) rows: a checkmark replaces the ring, pinned
-   to the same left slot and inheriting the row label's text color. */
+/* Completed (above the selected) rows: a checkmark replaces the ring in the
+   right-hand status slot, inheriting the row label's text color. */
 .madeForYouDevice .madeForYouCheck {
-  position: absolute;
-  top: 50%;
-  left: 6px;
-  transform: translateY(-50%);
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
@@ -868,7 +903,7 @@
 }
 
 .madeForYouDevice .madeForYouSideLabel {
-  flex: 1 1 auto;
+  grid-column: 2;
   text-align: center;
   font-family: var(--font-sans, system-ui, sans-serif);
   font-size: 13px;
@@ -1107,8 +1142,11 @@
 
   .madeForYouDevice .personalAgentDeviceScreen {
     min-height: 0;
-    height: clamp(280px, 75vw, 360px);
-    padding: 34px 24px;
+    width: min(320px, 100%);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    padding: 0;
   }
 
   .madeForYouDevice .madeForYouCtaSlot {
@@ -1184,8 +1222,13 @@
   }
 
   .madeForYouDevice .madeForYouSideRow {
-    gap: 5px;
-    padding: 3px 7px 3px 3px;
+    grid-template-columns: 14px 1fr 14px;
+    padding: 3px 6px;
+  }
+
+  .madeForYouDevice .madeForYouSideNumber {
+    font-size: 7px;
+    letter-spacing: 0.02em;
   }
 
   .madeForYouDevice .madeForYouSideLabel {
@@ -1193,10 +1236,20 @@
     letter-spacing: 0.04em;
   }
 
+  .madeForYouDevice .madeForYouSideIndicator {
+    width: 12px;
+    height: 12px;
+  }
+
   .madeForYouDevice .madeForYouLensBtn {
     width: 12px;
     height: 12px;
     border-width: 1.5px;
+  }
+
+  .madeForYouDevice .madeForYouCheck {
+    width: 11px;
+    height: 11px;
   }
 
   .madeForYouDevice .madeForYouBrandPanel {
