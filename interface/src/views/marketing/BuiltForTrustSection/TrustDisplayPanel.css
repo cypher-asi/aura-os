@@ -344,15 +344,14 @@
     0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+/* The app's actual wordmark image (same asset as the titlebar logo),
+   knocked to black + dimmed so it reads as etched into the badge like
+   the caption below it. */
 .trustDiscLogoMark {
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.3em;
-  /* Optically recenters the trailing tracking gap. */
-  margin-right: -0.3em;
-  color: rgba(8, 9, 11, 0.95);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+  height: 9px;
+  width: auto;
+  filter: brightness(0) drop-shadow(0 1px 0 rgba(255, 255, 255, 0.1));
+  opacity: 0.9;
 }
 
 .trustDiscLogoSub {

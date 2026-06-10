@@ -106,7 +106,11 @@ export function TrustDisplayPanel({
               </div>
               <div className="trustDiscLogoWell">
                 <span className="trustDiscLogoBadge">
-                  <span className="trustDiscLogoMark">AURA</span>
+                  <img
+                    className="trustDiscLogoMark"
+                    src="/AURA_logo_text_mark.png"
+                    alt="AURA"
+                  />
                   <span className="trustDiscLogoSub">Mini data-disc</span>
                 </span>
               </div>
