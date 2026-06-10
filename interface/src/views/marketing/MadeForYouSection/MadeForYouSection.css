@@ -161,20 +161,16 @@
 }
 
 /*
- * Tight bevel top/bottom, but reserve symmetric horizontal room for two
- * equal-width full-height inset "metal" panels flanking the full-height
- * screen. The panels are painted as the content container's ::before/::after
- * so they span the whole device height inside the Plate rim. Rather than
- * floating as separate recessed sections, they butt flush against the screen
- * and are split off by a single 2px black top-to-bottom divider line on each
- * panel's screen-facing edge.
+ * Reserve symmetric horizontal room for the left control panel and the right
+ * terminal panel flanking the center screen. The panels carry no divider lines
+ * against the screen; they read as floating components over the chassis.
  */
 .madeForYouDevice .personalAgentDeviceContent {
   position: relative;
   /* Reserve a band at the bottom of the chassis for the full-width hex-mesh
-     strip; the dividers, side panel, terminal, and CTA all stop above it. The
-     strip owns the centered progress pill plus an internally padded mesh
-     texture so the honeycomb no longer clips against the bottom edge. */
+     strip; the side panel, terminal, and CTA all stop above it. The strip owns
+     the centered progress pill plus an internally padded mesh texture so the
+     honeycomb no longer clips against the bottom edge. */
   --mesh-strip-reserve: 86px;
   --mesh-strip-gap: 3px;
   --mesh-strip-height: 80px;
@@ -182,87 +178,50 @@
   padding: 0 252px var(--mesh-strip-reserve);
 }
 
-.madeForYouDevice .personalAgentDeviceContent::before,
-.madeForYouDevice .personalAgentDeviceContent::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: var(--mesh-strip-reserve);
-  pointer-events: none;
-}
-
-/* Left panel: no fill (the main Plate surface shows through) with a 2px
-   black divider line plus a 1px metallic gradient highlight on its outer
-   edge, both on its right (screen-facing) edge; outer corners
-   rounded to hug the Plate rim, inner edge kept square so the divider runs
-   straight top to bottom. */
-.madeForYouDevice .personalAgentDeviceContent::before {
-  left: 3px;
-  width: 248px;
-  border-radius: 26px 0 0 26px;
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(120, 125, 135, 0.75) 0%,
-      rgba(95, 100, 110, 0.45) 100%
-    ),
-    linear-gradient(to left, #000 0, #000 2px, transparent 2px);
-  background-repeat: no-repeat;
-  background-size:
-    1px 100%,
-    100% 100%;
-  background-position:
-    right 2px top,
-    0 0;
-}
-
-/* Right panel: same width as the left, with the same 2px black divider
-   line on its left (screen-facing) edge. */
-.madeForYouDevice .personalAgentDeviceContent::after {
-  right: 3px;
-  width: 248px;
-  border-radius: 0 26px 26px 0;
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(120, 125, 135, 0.75) 0%,
-      rgba(95, 100, 110, 0.45) 100%
-    ),
-    linear-gradient(to right, #000 0, #000 2px, transparent 2px);
-  background-repeat: no-repeat;
-  background-size:
-    1px 100%,
-    100% 100%;
-  background-position:
-    left 2px top,
-    0 0;
-}
-
 .madeForYouDevice .personalAgentDeviceScreen {
   /* Large circular screen centered in the chassis bay. Sized to the bay width
      but capped, with a 1:1 aspect ratio + 50% radius so it reads as a disc set
-     into the surrounding metal panel rather than a full-height rectangle
-     butting the dividers. */
+     into the surrounding metal panel rather than a full-height rectangle. The
+     22px top/bottom margins match the right-hand terminal LCD's inset so the
+     disc shares the panel's vertical rhythm. */
+  /* Ring of metal panel around the recessed video screen (the bezel width). */
+  --screen-ring: 16px;
   box-sizing: border-box;
   min-height: 0;
   width: min(560px, 100%);
   height: auto;
   aspect-ratio: 1 / 1;
-  margin: 0 auto;
+  margin: 22px auto;
   padding: 0;
   border-radius: 50%;
   overflow: hidden;
+  /* Circular metal panel matching the shared `<Plate />` surface; the video
+     screen is recessed into it (the `::after` inset border + the bezel ring
+     around the inset video), so the disc reads as its own circular device
+     module mounted on the chassis. No gradient border (it aliased on the 50%
+     radius) and no outer drop shadow. */
+  background: radial-gradient(
+    ellipse 90% 120% at 50% 40%,
+    #202020 0%,
+    #1a1a1a 55%,
+    #101010 100%
+  );
+  /* Outer panel bevel: top highlight + bottom shadow lip so the metal ring
+     reads as a raised bezel. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 
-/* Deep recessed "sunken screen" overlay painted ON TOP of the looping video
-   (z-index above both clips), mirroring the inset-shadow recess of the
-   "Connected to everything" device below: a strong dark top inset + secondary
-   blur read as the glass disc sinking below the bezel, with a faint bottom-edge
-   light lip. This makes the character feel set down into the panel. */
+/* Recessed inner screen borders, inset from the panel by the bezel ring and
+   matching the shared `<DeviceScreen />` recipe used by the LLM section: a
+   strong dark top inset + secondary blur read as glass sunk below the bezel,
+   with a 1px dark rim and a faint bottom-edge light lip. Painted ON TOP of the
+   video (z-index above both clips) so the recess wraps the disc's edge. */
 .madeForYouDevice .personalAgentDeviceScreen::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: var(--screen-ring);
   z-index: 3;
   border-radius: 50%;
   pointer-events: none;
@@ -278,8 +237,8 @@
 /*
  * Right side-panel terminal LCD: a tall recessed green-on-black screen inset
  * into the enlarged right metal panel (the region reserved by the content's
- * right padding, in front of the ::after divider). Absolutely positioned and
- * vertically centered in the panel; the metal slab reads as its bezel.
+ * right padding). Absolutely positioned and vertically centered in the panel;
+ * the metal slab reads as its bezel.
  * Rendering a looping mock feed of an agent built + deployed to AURA.
  */
 .madeForYouDevice .madeForYouTerminalScreen {
@@ -445,10 +404,14 @@
    CSS/HTML loop on the intro. */
 .madeForYouDevice .personalAgentDeviceVideo {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  /* Inset by the bezel ring so the metal panel shows around the recessed
+     screen; the video is its own clean circle (border-radius clip, no reliance
+     on the parent's overflow), avoiding edge aliasing. */
+  inset: var(--screen-ring);
+  width: auto;
+  height: auto;
   object-fit: cover;
+  border-radius: 50%;
   z-index: 0;
 }
 
@@ -478,8 +441,8 @@
      in front (higher z-index) in the lower-left, below the centered list. */
   bottom: var(--mesh-strip-reserve);
   left: 3px;
-  /* Span the full left panel (matches the `::before` divider width) so the
-     centered knob lands on the panel's true center rather than ~20px off. */
+  /* Span the full left panel (248px wide) so the centered knob lands on the
+     panel's true center rather than ~20px off. */
   width: 248px;
   z-index: 2;
   display: flex;
@@ -716,25 +679,39 @@
   }
 }
 
-/* Flat control-panel face holding the stage list, vertically centered between
-   the knob and the grille inset. No raised bezel gradient and no outer drop
-   shadow: a matte metal panel with only a thin engraved rim, so the list reads
-   as a computer panel rather than a risen glossy tray. */
+/* Beveled chassis holding the stage list, vertically centered between the knob
+   and the grille inset. Matches the "computer container" of the Built for Trust
+   device (shared `<Plate />`): a radial metal surface in a 1px metallic
+   gradient border (light top-left -> dark bottom-right) reads as a machined
+   bevel. No outer drop shadow, so it sits flush in the panel rather than rising
+   off it. */
 .madeForYouDevice .madeForYouSideButtons {
   flex: 0 0 auto;
   width: 100%;
   margin: 0;
   box-sizing: border-box;
   padding: 6px;
-  border-radius: 10px;
-  background: #232529;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+        ellipse 90% 120% at 50% 40%,
+        #202020 0%,
+        #1a1a1a 55%,
+        #101010 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(90, 94, 102, 0.65) 0%,
+        rgba(12, 13, 16, 0.65) 100%
+      )
+      border-box;
 }
 
-/* Inner panel face the stage rows sit on: a flat dark matte surface with a
-   single hairline rim, rather than the glossy recessed LCD it replaced. */
+/* Recessed inner screen the rows sit on, matching the shared `<DeviceScreen />`
+   recipe (off-black radial fill sunk below the bevel by stacked inset shadows),
+   the same recessed glass used by the trust-section computer. */
 .madeForYouDevice .madeForYouSideScreen {
   display: flex;
   flex-direction: column;
@@ -742,9 +719,20 @@
   width: 100%;
   box-sizing: border-box;
   padding: 10px 8px;
-  border-radius: 6px;
-  background: #1a1c1f;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  border-radius: 11px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0d0d0d 0%,
+    #0a0a0a 60%,
+    #090909 100%
+  );
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.95),
+    inset 0 3px 5px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(0, 0, 0, 0.9),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* Stage row laid out as three columns: a serif index number on the left, the
@@ -1112,14 +1100,6 @@
     padding: 0 150px var(--mesh-strip-reserve);
   }
 
-  .madeForYouDevice .personalAgentDeviceContent::before {
-    width: 144px;
-  }
-
-  .madeForYouDevice .personalAgentDeviceContent::after {
-    width: 144px;
-  }
-
   .madeForYouDevice .madeForYouTerminalScreen {
     top: 12px;
     bottom: calc(var(--mesh-strip-reserve) + 12px);
@@ -1141,11 +1121,13 @@
   }
 
   .madeForYouDevice .personalAgentDeviceScreen {
+    --screen-ring: 10px;
     min-height: 0;
     width: min(320px, 100%);
     height: auto;
     aspect-ratio: 1 / 1;
-    margin: 0 auto;
+    /* Match the mobile terminal LCD's 12px inset. */
+    margin: 12px auto;
     padding: 0;
   }
 
