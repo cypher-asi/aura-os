@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  lazy,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -7,7 +9,6 @@ import {
   useState,
   type CSSProperties,
   type FormEvent,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { useTheme } from "@cypher-asi/zui";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -31,9 +32,23 @@ import { CreateAgentButton } from "../CreateAgentButton";
 import { PersonaTickRail } from "../PersonaTickRail";
 import { PublicChatBubble } from "../PublicChatBubble";
 import { TypewriterText } from "../TypewriterText";
+import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { deriveChatPalette } from "../MockAuraApp/derive-chat-palette";
 import { PERSONAS, getPersonaAt, type Persona } from "../personas";
 import styles from "./PublicChatView.module.css";
+
+/*
+ * The full `/agents` marketing section stack, embedded below the
+ * persona-carousel hero so wheeling past the last persona scrolls
+ * seamlessly into the agents story without a route change. Lazy so
+ * the landing page's initial chunk stays unchanged — the sections
+ * mount below the fold as soon as the chunk arrives, which warms
+ * their media + IntersectionObserver animations long before the
+ * visitor finishes the persona cycle.
+ */
+const AgentsPageSections = lazy(
+  () => import("../../marketing/ProductView/AgentsPageSections"),
+);
 
 /**
  * Right-side surface for the public (logged-out) shell.
@@ -90,6 +105,34 @@ const FADE_MS = 550;
 // swipe would occasionally trip a persona change.
 const WHEEL_DELTA_THRESHOLD = 4;
 const PUBLIC_CHAT_PATH = "/chat";
+
+// Duration of the programmatic glide from the persona hero into the
+// embedded agents page (one viewport height) after the visitor wheels
+// past the LAST persona. A cubic ease-out over ~700ms reads as "the
+// page takes over and settles" rather than a teleport, and an rAF
+// tween (instead of `scrollTo({ behavior: "smooth" })`) gives us a
+// deterministic completion signal plus a consistent curve across
+// platforms.
+const AGENTS_AUTO_SCROLL_MS = 700;
+
+// Momentum-settle window for re-entering carousel mode. When an
+// upward fling brings the scroll column back to `scrollTop === 0`,
+// the trackpad keeps streaming inertial wheel-up events; without a
+// settle guard those leftovers would blast backward through several
+// personas the instant the carousel re-locks. Wheel events are
+// swallowed until this many ms pass with NO wheel activity, so the
+// fling lands you on the last persona and the next deliberate
+// gesture resumes cycling.
+const WHEEL_SETTLE_MS = 160;
+
+// Theme-invariant dark-mode nav foreground pair, mirrored from
+// `PublicMarketingPanel`. Published on <html> while the visitor is
+// scrolled into the embedded agents content (near-black sections) so
+// the persistent `PublicSidebarFooter` nav stays readable; the active
+// persona's own pair is restored as the visitor scrolls back up into
+// the hero.
+const MARKETING_NAV_FG_COLOR = "#e6e8eb";
+const MARKETING_NAV_FG_COLOR_MUTED = "#c9c9cf";
 
 // Taglines cycled by the landing hero's looping typewriter (type ->
 // hold -> erase -> next -> repeat). The first/longest entry doubles as
@@ -179,6 +222,26 @@ export function PublicChatView(): React.ReactElement {
   const streamRef = useRef<PublicChatStreamHandle | null>(null);
   const heroSlotRef = useRef<HTMLDivElement | null>(null);
   const heroStageRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  // Whether the visitor has scrolled past ~half the hero viewport into
+  // the embedded agents content. Drives the nav foreground handoff
+  // (persona pair <-> marketing dark pair) — see the nav-vars effect.
+  const [inAgentsRegion, setInAgentsRegion] = useState(false);
+
+  // Mirrors for the native wheel/scroll listeners, which live outside
+  // the React render cycle. `activeIndexRef` tracks the committed
+  // persona index; the rest carry the carousel <-> scroll state
+  // machine described on the wheel effect below.
+  const activeIndexRef = useRef(activeIndex);
+  const inAgentsRegionRef = useRef(false);
+  const lastWheelAtRef = useRef(0);
+  const lastScrollTopRef = useRef(0);
+  const relockGuardRef = useRef(false);
+  const autoScrollRef = useRef<{ raf: number } | null>(null);
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   const [swap, setSwap] = useState<PersonaSwapState>(() => ({
     committedIndex: 0,
@@ -405,46 +468,154 @@ export function PublicChatView(): React.ReactElement {
     setActiveIndex(next);
   }, []);
 
-  // Wheel-driven persona cycling. Scrolling down on the public chat
-  // surface advances to the next persona (one further down the
-  // tick rail) and scrolling up rewinds to the previous one,
-  // wrapping past either end so the list reads as an infinite
-  // carousel rather than a clamped slider.
+  // Wheel-driven persona carousel + scroll-into-agents state machine.
   //
-  // Gated on `!isChatPage` because the chat surface hides both the
-  // `PersonaTickRail` AND the `MockAuraApp` hero — the visitor has
-  // no on-screen affordance that says "scrolling cycles the
-  // theme", so an accidental swipe inside the transcript would
-  // flip the page bg from underneath them with no visible cause.
-  // Landing keeps the carousel because both surfaces are visible
-  // there and the scroll-to-cycle gesture reads naturally against
-  // the right-edge tick column.
+  // The landing surface is a scroll column whose first child is the
+  // 100%-height persona hero and whose second child is the embedded
+  // `/agents` section stack. The column behaves in two modes keyed
+  // off `scrollTop`:
   //
-  // No time-based throttle: every wheel event with a non-trivial
-  // deltaY advances the active persona by one step. A momentum
-  // trackpad flick will therefore stream multiple persona changes
-  // in quick succession, which is the desired "snappy" feel — the
-  // 550ms cross-fade is decorative and the active persona
-  // (rail aria-current, dock border, theme vars) flips immediately
-  // on each accepted wheel event regardless of how many fade
-  // overlays are still mid-animation. Discrete mouse-wheel notches
-  // continue to feel like one-notch-one-persona because each notch
-  // fires a single wheel event.
-  const handleWheelCycle = useCallback(
-    (event: ReactWheelEvent<HTMLDivElement>): void => {
-      if (isChatPage) return;
+  //   LOCKED (scrollTop === 0) — carousel mode. Wheel events are
+  //   intercepted (`preventDefault`): wheel-down advances one persona
+  //   per event (no time-based throttle — same snappy contract as
+  //   before), wheel-up rewinds one, both CLAMPED at the ends. The
+  //   old infinite wrap is gone because "past the last persona" is
+  //   now a meaningful boundary: the wheel-down AFTER the last
+  //   persona kicks off an rAF tween that glides the column one
+  //   viewport height down into the agents hero.
+  //
+  //   UNLOCKED (scrollTop > 0) — agents mode. Nothing is
+  //   intercepted; the visitor scrolls the agents page natively.
+  //   When an upward scroll lands the column back at the top, the
+  //   carousel re-locks behind a momentum-settle guard (see
+  //   WHEEL_SETTLE_MS) so leftover trackpad inertia doesn't blast
+  //   backward through several personas.
+  //
+  // This is a NATIVE non-passive listener (not React `onWheel`)
+  // because React registers root wheel listeners as passive, which
+  // makes `preventDefault()` a no-op — and the locked mode depends
+  // on actually cancelling the scroll.
+  //
+  // Gated on `!isChatPage`: the chat surface hides the tick rail and
+  // hero, so there's no affordance explaining the gesture, and the
+  // scroll column itself doesn't mount there.
+  const cancelAgentsAutoScroll = useCallback((): void => {
+    if (autoScrollRef.current != null) {
+      cancelAnimationFrame(autoScrollRef.current.raf);
+      autoScrollRef.current = null;
+    }
+  }, []);
+
+  const startAgentsAutoScroll = useCallback((): void => {
+    const scroller = scrollerRef.current;
+    if (!scroller || autoScrollRef.current != null) return;
+    const from = scroller.scrollTop;
+    const target = scroller.clientHeight;
+    if (target <= from) return;
+
+    const prefersReduce =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduce) {
+      scroller.scrollTop = target;
+      return;
+    }
+
+    const start = performance.now();
+    // Identity object doubles as a cancellation token: a wheel-up or
+    // unmount swaps `autoScrollRef.current` away from `state`, and
+    // any already-queued frame sees the mismatch and goes inert.
+    const state = { raf: 0 };
+    autoScrollRef.current = state;
+    const step = (now: number): void => {
+      if (autoScrollRef.current !== state) return;
+      const t = Math.min(1, (now - start) / AGENTS_AUTO_SCROLL_MS);
+      const eased = 1 - Math.pow(1 - t, 3);
+      scroller.scrollTop = from + (target - from) * eased;
+      if (t < 1) {
+        state.raf = requestAnimationFrame(step);
+      } else {
+        autoScrollRef.current = null;
+      }
+    };
+    state.raf = requestAnimationFrame(step);
+  }, []);
+
+  useEffect(() => {
+    if (isChatPage) return;
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const handleWheel = (event: WheelEvent): void => {
       const delta = event.deltaY;
       if (Math.abs(delta) < WHEEL_DELTA_THRESHOLD) return;
+      const now = performance.now();
+      const prevWheelAt = lastWheelAtRef.current;
+      lastWheelAtRef.current = now;
 
-      const direction = delta > 0 ? 1 : -1;
-      const n = PERSONAS.length;
-      // Double-mod to normalize negative results into the [0, n)
-      // range; a single `%` in JS preserves sign so `-1 % 6 === -1`
-      // would otherwise round-trip into the clamp guard below.
-      setActiveIndex((prev) => ((prev + direction) % n + n) % n);
-    },
-    [isChatPage],
-  );
+      // Glide into agents in flight: wheel-down is swallowed so
+      // momentum doesn't fight (or double) the tween; wheel-up hands
+      // control straight back to the visitor — cancel the tween and
+      // let the native scroll carry them up from wherever it reached.
+      if (autoScrollRef.current != null) {
+        if (delta > 0) {
+          event.preventDefault();
+        } else {
+          cancelAgentsAutoScroll();
+        }
+        return;
+      }
+
+      // Agents mode: fully native scroll.
+      if (scroller.scrollTop > 0) return;
+
+      // Carousel mode. Swallow inertial leftovers from the fling
+      // that just re-locked the carousel: only a gap of
+      // WHEEL_SETTLE_MS with no wheel activity re-arms cycling.
+      if (relockGuardRef.current) {
+        if (now - prevWheelAt < WHEEL_SETTLE_MS) {
+          event.preventDefault();
+          return;
+        }
+        relockGuardRef.current = false;
+      }
+
+      event.preventDefault();
+      if (delta > 0) {
+        if (activeIndexRef.current >= PERSONAS.length - 1) {
+          startAgentsAutoScroll();
+        } else {
+          setActiveIndex((prev) => Math.min(prev + 1, PERSONAS.length - 1));
+        }
+      } else {
+        setActiveIndex((prev) => Math.max(prev - 1, 0));
+      }
+    };
+
+    const handleScroll = (): void => {
+      const top = scroller.scrollTop;
+      // Re-lock: arriving back at the very top from the agents
+      // region arms the momentum-settle guard.
+      if (top <= 0 && lastScrollTopRef.current > 0) {
+        relockGuardRef.current = true;
+      }
+      lastScrollTopRef.current = top;
+
+      const inAgents = top > scroller.clientHeight * 0.5;
+      if (inAgents !== inAgentsRegionRef.current) {
+        inAgentsRegionRef.current = inAgents;
+        setInAgentsRegion(inAgents);
+      }
+    };
+
+    scroller.addEventListener("wheel", handleWheel, { passive: false });
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener("wheel", handleWheel);
+      scroller.removeEventListener("scroll", handleScroll);
+      cancelAgentsAutoScroll();
+    };
+  }, [isChatPage, cancelAgentsAutoScroll, startAgentsAutoScroll]);
 
   // Foreground vars + CTA glow bound to the ACTIVE persona so the
   // tick click flips them instantly, matching the rail's
@@ -461,8 +632,19 @@ export function PublicChatView(): React.ReactElement {
         root.style.removeProperty(name);
       }
     };
-    apply("--public-nav-fg-color", siteForegroundColor);
-    apply("--public-nav-fg-color-muted", siteForegroundColorMuted);
+    // While scrolled into the embedded agents content the persona bg
+    // is covered by the near-black marketing sections, so the nav
+    // foreground hands off to the same theme-invariant dark pair
+    // `PublicMarketingPanel` publishes on `/agents`; scrolling back
+    // up into the hero restores the persona's own pair.
+    apply(
+      "--public-nav-fg-color",
+      inAgentsRegion ? MARKETING_NAV_FG_COLOR : siteForegroundColor,
+    );
+    apply(
+      "--public-nav-fg-color-muted",
+      inAgentsRegion ? MARKETING_NAV_FG_COLOR_MUTED : siteForegroundColorMuted,
+    );
     // Hero tagline color: an explicit per-persona `heroHeadlineColor`
     // wins (e.g. a dark tagline over a dark-bg persona whose nav stays
     // light); otherwise derive polarity from the nav foreground — pure
@@ -480,7 +662,7 @@ export function PublicChatView(): React.ReactElement {
       root.style.removeProperty("--public-nav-fg-color-muted");
       root.style.removeProperty("--hero-headline-color");
     };
-  }, [activePersona]);
+  }, [activePersona, inAgentsRegion]);
 
   // Chat palette bound to the COMMITTED persona so the in-window
   // text tokens flip in the same render as the wallpaper.
@@ -531,7 +713,6 @@ export function PublicChatView(): React.ReactElement {
       data-persona-id={committedPersona.id}
       data-testid="public-chat-view"
       style={chatViewStyle}
-      onWheel={handleWheelCycle}
     >
       {/*
        * Current page bg layer — paints the new persona's color +
@@ -587,64 +768,105 @@ export function PublicChatView(): React.ReactElement {
         </div>
       ) : null}
       {/*
-       * Empty-state hero — the decorative `MockAuraApp` window with
-       * the persona wallpaper, scripted DM windows, and bottom-left
-       * avatar dock. Only mounts on the landing surface; chat mode
-       * (`/chat`) hides it entirely so the chat surface, input bar,
-       * and persona page bg own the visual field without the demo
-       * desktop dominating the foreground. Unmounting (rather than
-       * `display: none`) also stops the scripted DM timer + the
-       * fish-eye dock magnifier from running while the visitor is
-       * focused on chatting.
+       * Landing scroll column — the surface the wheel/scroll state
+       * machine drives. First child is the 100%-height persona hero
+       * (the carousel viewport: MockAuraApp window, tick rail, CTA),
+       * second is the embedded `/agents` section stack. While the
+       * column sits at `scrollTop === 0` the wheel listener cycles
+       * personas; wheeling past the LAST persona glides the column
+       * into the agents content, and scrolling back to the top
+       * re-enters the carousel. Chat mode (`/chat`) unmounts the
+       * whole column so the chat surface, input bar, and persona
+       * page bg own the visual field — and the scripted DM timers /
+       * dock magnifier inside the hero stop running.
        */}
       {!isChatPage ? (
-        <div className={styles.heroSlot} ref={heroSlotRef}>
-          <div className={styles.heroStage} ref={heroStageRef}>
-            <div className={styles.heroHeadlineZone}>
-              <span
-                className={styles.heroHeadline}
-                data-text="Your Private Agent."
-              >
-                <TypewriterText
-                  text="Your Private Agent."
-                  phrases={HERO_PHRASES}
-                  speedMs={45}
-                />
-              </span>
-            </div>
-            <ComposePanel
-              desktopBackgroundUrl={committedPersona.theme.desktopBackgroundUrl}
-            desktopBackgroundVideoUrl={
-              committedPersona.theme.desktopBackgroundVideoUrl ?? null
-            }
-            desktopBackgroundPosition={
-              committedPersona.theme.desktopBackgroundPosition
-            }
-            desktopBackgroundFit={committedPersona.theme.desktopBackgroundFit}
-            desktopBackgroundColor={committedPersona.theme.desktopBackgroundColor}
-            desktopBackgroundScale={committedPersona.theme.desktopBackgroundScale}
-            desktopBackgroundOffsetY={
-              committedPersona.theme.desktopBackgroundOffsetY
-            }
-            outgoingDesktopBackground={
-              outgoingPersona && swap.outgoing
-                ? {
-                    url: outgoingPersona.theme.desktopBackgroundUrl,
-                    videoUrl:
-                      outgoingPersona.theme.desktopBackgroundVideoUrl ?? null,
-                    position: outgoingPersona.theme.desktopBackgroundPosition,
-                    fit: outgoingPersona.theme.desktopBackgroundFit,
-                    color: outgoingPersona.theme.desktopBackgroundColor,
-                    scale: outgoingPersona.theme.desktopBackgroundScale,
-                    offsetY: outgoingPersona.theme.desktopBackgroundOffsetY,
-                    fadeKey: swap.outgoing.fadeKey,
+        <div
+          className={styles.scrollColumn}
+          ref={scrollerRef}
+          data-testid="public-chat-scroll"
+        >
+          <div className={styles.heroViewport}>
+            <div className={styles.heroSlot} ref={heroSlotRef}>
+              <div className={styles.heroStage} ref={heroStageRef}>
+                <div className={styles.heroHeadlineZone}>
+                  <span
+                    className={styles.heroHeadline}
+                    data-text="Your Private Agent."
+                  >
+                    <TypewriterText
+                      text="Your Private Agent."
+                      phrases={HERO_PHRASES}
+                      speedMs={45}
+                    />
+                  </span>
+                </div>
+                <ComposePanel
+                  desktopBackgroundUrl={
+                    committedPersona.theme.desktopBackgroundUrl
                   }
-                : null
-            }
-            chatPalette={chatPalette}
-            activePersonaIndex={activeIndex}
-            onPersonaSelect={handleActiveIndexChange}
-            />
+                  desktopBackgroundVideoUrl={
+                    committedPersona.theme.desktopBackgroundVideoUrl ?? null
+                  }
+                  desktopBackgroundPosition={
+                    committedPersona.theme.desktopBackgroundPosition
+                  }
+                  desktopBackgroundFit={
+                    committedPersona.theme.desktopBackgroundFit
+                  }
+                  desktopBackgroundColor={
+                    committedPersona.theme.desktopBackgroundColor
+                  }
+                  desktopBackgroundScale={
+                    committedPersona.theme.desktopBackgroundScale
+                  }
+                  desktopBackgroundOffsetY={
+                    committedPersona.theme.desktopBackgroundOffsetY
+                  }
+                  outgoingDesktopBackground={
+                    outgoingPersona && swap.outgoing
+                      ? {
+                          url: outgoingPersona.theme.desktopBackgroundUrl,
+                          videoUrl:
+                            outgoingPersona.theme.desktopBackgroundVideoUrl ??
+                            null,
+                          position:
+                            outgoingPersona.theme.desktopBackgroundPosition,
+                          fit: outgoingPersona.theme.desktopBackgroundFit,
+                          color: outgoingPersona.theme.desktopBackgroundColor,
+                          scale: outgoingPersona.theme.desktopBackgroundScale,
+                          offsetY:
+                            outgoingPersona.theme.desktopBackgroundOffsetY,
+                          fadeKey: swap.outgoing.fadeKey,
+                        }
+                      : null
+                  }
+                  chatPalette={chatPalette}
+                  activePersonaIndex={activeIndex}
+                  onPersonaSelect={handleActiveIndexChange}
+                />
+              </div>
+            </div>
+            {/*
+             * Right-edge persona selector. Lives inside the hero
+             * viewport so it scrolls away with the carousel — once
+             * the visitor is in the agents content there's no
+             * persona affordance floating over the marketing story.
+             */}
+            <div className={styles.tickRailSlot}>
+              <PersonaTickRail
+                activeIndex={activeIndex}
+                onActiveIndexChange={handleActiveIndexChange}
+              />
+            </div>
+            <div className={styles.ctaSlot}>
+              <CreateAgentButton source="public_chat" />
+            </div>
+          </div>
+          <div className={styles.agentsEmbed}>
+            <Suspense fallback={null}>
+              <AgentsPageSections />
+            </Suspense>
           </div>
         </div>
       ) : null}
@@ -678,21 +900,6 @@ export function PublicChatView(): React.ReactElement {
           ) : null}
         </div>
       ) : null}
-      {/*
-       * Right-edge persona selector. Pinned to the landing surface
-       * for the same reason as the hero above: chat mode hides it
-       * so the chat surface owns the visual field. Unmounting also
-       * tears down the rail's hover-debounce timers and overlay
-       * panel state instead of leaving them lurking off-screen.
-       */}
-      {!isChatPage ? (
-        <div className={styles.tickRailSlot}>
-          <PersonaTickRail
-            activeIndex={activeIndex}
-            onActiveIndexChange={handleActiveIndexChange}
-          />
-        </div>
-      ) : null}
       {isChatPage ? (
         <form
           className={styles.inputBarSlot}
@@ -724,9 +931,7 @@ export function PublicChatView(): React.ReactElement {
           {sendError ? <p className={styles.sendError}>{sendError}</p> : null}
         </form>
       ) : (
-        <div className={styles.ctaSlot}>
-          <CreateAgentButton source="public_chat" />
-        </div>
+        <OverlayScrollbar scrollRef={scrollerRef} />
       )}
       <div className={styles.preloadStash} aria-hidden="true">
         {preloadUrls.map((url) => (

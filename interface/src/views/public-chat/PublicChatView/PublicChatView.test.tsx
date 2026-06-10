@@ -84,6 +84,22 @@ vi.mock("../MockAuraApp", () => ({
   ),
 }));
 
+// Stub the embedded `/agents` section stack (lazy-loaded below the
+// landing hero). The real component pulls in the entire marketing
+// page — AgentConsole timers, WebGL devices, media — none of which
+// these layout/carousel tests exercise. The stub keeps the scroll
+// column's second child present so scroll geometry assertions stay
+// meaningful.
+vi.mock("../../marketing/ProductView/AgentsPageSections", () => {
+  const AgentsPageSectionsStub = () => (
+    <div data-testid="agents-embed-stub" />
+  );
+  return {
+    AgentsPageSections: AgentsPageSectionsStub,
+    default: AgentsPageSectionsStub,
+  };
+});
+
 import { PublicChatView } from "./PublicChatView";
 import { usePublicChatStore } from "../../../stores/public-chat-store";
 
@@ -702,19 +718,23 @@ describe("PublicChatView", () => {
 });
 
 /**
- * Wheel-driven persona cycling: the entire public chat surface
- * acts as a vertical carousel — scrolling down advances to the
- * next persona (one step down the tick rail) and scrolling up
- * rewinds, wrapping past either end. There is intentionally NO
- * time-based throttle: every accepted wheel event advances exactly
- * one persona so the rail feels as snappy as the input device
- * (one wheel-notch = one persona; a fast trackpad flick streams
- * multiple persona changes in quick succession, which is the
- * desired "feels fast" behaviour).
+ * Wheel-driven persona carousel + scroll-into-agents handoff: while
+ * the landing scroll column sits at `scrollTop === 0` the surface
+ * acts as a vertical carousel — wheel-down advances one persona per
+ * event (no time-based throttle), wheel-up rewinds, both CLAMPED at
+ * the ends. Wheeling down past the LAST persona glides the column
+ * into the embedded `/agents` content instead of wrapping; once
+ * scrolled (`scrollTop > 0`) wheel events are fully native, and
+ * arriving back at the top re-locks the carousel behind a
+ * momentum-settle guard.
  */
 describe("PublicChatView wheel cycling", () => {
+  function scroller(): HTMLElement {
+    return screen.getByTestId("public-chat-scroll");
+  }
+
   function wheel(deltaY: number): void {
-    fireEvent.wheel(screen.getByTestId("public-chat-view"), { deltaY });
+    fireEvent.wheel(scroller(), { deltaY });
   }
 
   it("advances to the next persona on a wheel-down gesture", () => {
@@ -731,39 +751,121 @@ describe("PublicChatView wheel cycling", () => {
     );
   });
 
-  it("wraps from the first persona to the last on a wheel-up gesture", () => {
-    // Creator (index 0) + wheel-up should land on Cypher Punk
-    // (index PERSONAS.length - 1 = 6) rather than clamping at the
-    // top — the user explicitly asked for cycling, not clamping.
+  it("clamps at the first persona on a wheel-up gesture (no backward wrap)", () => {
+    // The carousel no longer wraps: "before the first persona" and
+    // "after the last persona" are meaningful boundaries now that
+    // the end of the cycle hands off into the agents scroll. A
+    // wheel-up on Creator (index 0) stays on Creator.
     renderView();
     expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
 
     wheel(-120);
-
-    expect(tickFor("Cypher Punk")).toHaveAttribute("aria-current", "true");
-    expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
-      "data-active-persona-index",
-      "6",
-    );
-  });
-
-  it("wraps from the last persona back to the first on a wheel-down gesture", () => {
-    // Companion to the wrap-backwards test above. Land on Cypher
-    // Punk first via the panel (clicking is the established
-    // user-driven path) and then wheel-down to prove the forward
-    // wrap also works end-to-start.
-    renderView();
-    fireEvent.mouseEnter(screen.getByTestId("persona-tick-rail"));
-    fireEvent.click(panelFor("Cypher Punk"));
-    expect(tickFor("Cypher Punk")).toHaveAttribute("aria-current", "true");
-
-    wheel(120);
 
     expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
     expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
       "data-active-persona-index",
       "0",
     );
+  });
+
+  it("glides into the agents content on the wheel-down past the last persona instead of wrapping", () => {
+    // Land on Cypher Punk (the last persona) via the panel, then
+    // wheel down once more: the persona must NOT wrap back to
+    // Creator — instead the scroll column tweens one viewport
+    // height down into the embedded agents page. Fake timers drive
+    // the rAF tween deterministically; the column's clientHeight is
+    // stubbed because jsdom has no layout.
+    vi.useFakeTimers();
+    try {
+      renderView();
+      const column = scroller();
+      Object.defineProperty(column, "clientHeight", {
+        configurable: true,
+        value: 600,
+      });
+      fireEvent.mouseEnter(screen.getByTestId("persona-tick-rail"));
+      fireEvent.click(panelFor("Cypher Punk"));
+      expect(tickFor("Cypher Punk")).toHaveAttribute("aria-current", "true");
+
+      wheel(120);
+
+      // Persona stays clamped on the last entry...
+      expect(tickFor("Cypher Punk")).toHaveAttribute("aria-current", "true");
+      expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
+        "data-active-persona-index",
+        "6",
+      );
+
+      // ...and the rAF tween glides scrollTop to one viewport height
+      // (the top of the agents hero) once the 700ms window elapses.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(column.scrollTop).toBe(600);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not cycle personas while scrolled into the agents content", () => {
+    // Once the visitor is inside the embedded agents page
+    // (`scrollTop > 0`), wheel events belong to the native scroll —
+    // intercepting them there would flip the persona theme with no
+    // carousel on screen.
+    renderView();
+    const column = scroller();
+    column.scrollTop = 500;
+
+    wheel(120);
+    wheel(-120);
+
+    expect(tickFor("Creator")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
+      "data-active-persona-index",
+      "0",
+    );
+  });
+
+  it("re-locks the carousel at the top behind a momentum-settle guard", () => {
+    // An upward fling that lands the column back at `scrollTop === 0`
+    // keeps streaming inertial wheel-up events; those must be
+    // swallowed until a settle gap (WHEEL_SETTLE_MS = 160) passes
+    // with no wheel activity, then deliberate cycling resumes.
+    vi.useFakeTimers();
+    try {
+      renderView();
+      fireEvent.mouseEnter(screen.getByTestId("persona-tick-rail"));
+      fireEvent.click(panelFor("Cypher Punk"));
+      const column = scroller();
+
+      // Visitor is in the agents region scrolling up: wheel events
+      // pass through natively but their timestamps are tracked.
+      column.scrollTop = 500;
+      fireEvent.scroll(column);
+      wheel(-120);
+
+      // The fling reaches the top — re-lock arms the settle guard.
+      column.scrollTop = 0;
+      fireEvent.scroll(column);
+
+      // Inertial leftovers arriving within the settle window are
+      // swallowed: still Cypher Punk.
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+      wheel(-120);
+      expect(tickFor("Cypher Punk")).toHaveAttribute("aria-current", "true");
+
+      // After a quiet gap longer than the settle window, the next
+      // deliberate wheel-up resumes backward cycling.
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      wheel(-120);
+      expect(tickFor("Researcher")).toHaveAttribute("aria-current", "true");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("advances one persona per wheel event with no time-based throttle", () => {
@@ -789,21 +891,19 @@ describe("PublicChatView wheel cycling", () => {
     );
   });
 
-  it("a wheel-down stream past the end wraps cleanly through the carousel boundary", () => {
-    // The wrap arithmetic (`((prev + dir) % n + n) % n`) must hold
-    // up across consecutive same-tick events, not just a single
-    // boundary crossing. PERSONAS.length is 7, so eight wheel-down
-    // events from index 0 land on index 1 (= 8 mod 7) — Vibecoder —
-    // having passed through every persona exactly once plus a
-    // re-entry into Creator mid-stream.
+  it("a wheel-down stream past the end clamps on the last persona (the handoff owns the boundary)", () => {
+    // Eight wheel-down events from index 0: six advance Creator →
+    // Cypher Punk (index 6), the seventh starts the glide into the
+    // agents content, the eighth is swallowed by the in-flight
+    // tween. The persona must never wrap back through Creator.
     renderView();
 
     for (let i = 0; i < 8; i += 1) wheel(120);
 
-    expect(tickFor("Vibecoder")).toHaveAttribute("aria-current", "true");
+    expect(tickFor("Cypher Punk")).toHaveAttribute("aria-current", "true");
     expect(screen.getByTestId("mock-aura-app-stub")).toHaveAttribute(
       "data-active-persona-index",
-      "1",
+      "6",
     );
   });
 
