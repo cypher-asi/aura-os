@@ -11,12 +11,29 @@
   justify-content: center;
   width: 100%;
   height: 100%;
+  /* Shared sizing for the left rail and right display panel: key size, key
+     gap, and well padding. Both ServiceButtonRail.css and
+     TrustDisplayPanel.css derive their dimensions from these so the two
+     side panels stay exactly the same height. */
+  --trust-rail-key: 56px;
+  --trust-rail-gap: 12px;
+  --trust-rail-pad: 12px;
 }
 
 .builtForTrustStage .serviceButtonRail {
   position: absolute;
   top: 50%;
   left: clamp(16px, 6vw, 96px);
+  transform: translateY(-50%);
+}
+
+/* VFD readout panel mirrored on the device's right, vertically centered at
+   the same height as the rail (see TrustDisplayPanel.css for the height
+   math) but wider. */
+.builtForTrustStage .trustDisplayPanel {
+  position: absolute;
+  top: 50%;
+  right: clamp(16px, 6vw, 96px);
   transform: translateY(-50%);
 }
 
@@ -64,12 +81,24 @@
 }
 
 @media (max-width: 768px) {
+  .builtForTrustStage {
+    --trust-rail-key: 44px;
+    --trust-rail-gap: 9px;
+    --trust-rail-pad: 9px;
+  }
+
   .builtForTrustStage .serviceButtonRail {
     left: 8px;
   }
 
   /* The gap is too tight on phones; keep nozzles, drop the mesh. */
   .builtForTrustStage .serviceConnectionField {
+    display: none;
+  }
+
+  /* No room beside the device on phones; the display panel sits this one
+     out, like the mesh. */
+  .builtForTrustStage .trustDisplayPanel {
     display: none;
   }
 }

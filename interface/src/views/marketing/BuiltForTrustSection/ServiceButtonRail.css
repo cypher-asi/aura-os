@@ -9,12 +9,14 @@
 
 /* The rail uses the shared three-ring <Plate /> rim so it reads as part of
    the underlying panel; the column layout + content padding live on the
-   well inside the Plate's surface. */
+   well inside the Plate's surface. Key size / gap / padding come from the
+   shared --trust-rail-* properties on .builtForTrustStage so the
+   TrustDisplayPanel on the device's other side can match this height. */
 .serviceButtonRailWell {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--trust-rail-gap, 12px);
+  padding: var(--trust-rail-pad, 12px);
 }
 
 /*
@@ -25,7 +27,7 @@
 .serviceButtonSocket {
   position: relative;
   display: flex;
-  width: 56px;
+  width: var(--trust-rail-key, 56px);
   aspect-ratio: 1;
   border-radius: 16px;
   padding: 4px;
@@ -169,18 +171,14 @@
     0 0 12px rgba(var(--gold-glow, 232, 205, 137), 0.45);
 }
 
+/* Mobile key size / gap / padding come from the --trust-rail-* overrides
+   on .builtForTrustStage (TrustDeviceStage.css). */
 @media (max-width: 768px) {
-  .serviceButtonRailWell {
-    gap: 9px;
-    padding: 9px;
-  }
-
   .serviceButtonNozzle {
     right: -13px;
   }
 
   .serviceButtonSocket {
-    width: 44px;
     border-radius: 13px;
   }
 

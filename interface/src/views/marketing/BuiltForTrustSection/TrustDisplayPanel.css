@@ -1,0 +1,473 @@
+/*
+ * Skeuomorphic CD-player transport panel for the Built for trust device
+ * card — the right-hand counterpart to the left `ServiceButtonRail`. One
+ * shared three-ring <Plate /> rim stacks, top to bottom: a recessed disc
+ * tray with a spinning iridescent disc, a dark recessed VFD glass (the
+ * inset-LCD recipe from PhoneShell.css) carrying gold mono readouts in the
+ * page's --gold-* tokens, and a row of round cream transport keys. The
+ * bezel height is computed from the same --trust-rail-* custom properties
+ * the rail consumes (set on .builtForTrustStage in TrustDeviceStage.css)
+ * so both side panels can never drift apart; only the width differs.
+ */
+
+.trustDisplayPanel {
+  width: clamp(190px, 17vw, 244px);
+}
+
+/* Matches the rail well's total height: 8 keys + 7 gaps + 2 paddings. */
+.trustDisplayBezel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--trust-rail-pad, 12px);
+  box-sizing: border-box;
+  height: calc(
+    var(--trust-rail-key, 56px) * 8 + var(--trust-rail-gap, 12px) * 7 +
+      var(--trust-rail-pad, 12px) * 2
+  );
+  padding: var(--trust-rail-pad, 12px);
+}
+
+/* ----------------------------------------------------------------------
+ * Disc tray: a recessed dark well holding the spinning disc, crossed by a
+ * pill-shaped clamp bar like the reference player's laser assembly.
+ * ------------------------------------------------------------------- */
+
+.trustDiscWell {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 188px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: radial-gradient(
+    ellipse 120% 100% at 50% 0%,
+    #131418 0%,
+    #0a0b0d 60%,
+    #020203 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.trustDisc {
+  position: relative;
+  width: 148px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  /* Seats the disc in the tray rather than floating on it. */
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Iridescent data face: a muted pastel spectrum sweeping around the disc
+   plus a soft specular wedge, slowly rotating like a spinning CD. */
+.trustDiscFace {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 38% 30%,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0) 42%
+    ),
+    conic-gradient(
+      from 20deg,
+      #9a9da4 0%,
+      #b9a08c 12%,
+      #c9bd8e 24%,
+      #93b694 38%,
+      #7fa3ad 52%,
+      #9a8fb0 66%,
+      #b08c95 80%,
+      #9a9da4 100%
+    );
+  animation: trustDiscSpin 7s linear infinite;
+}
+
+@keyframes trustDiscSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Center hub: dark clamped core with a hairline metal ring. */
+.trustDiscHub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle at 50% 38%,
+    #25272c 0%,
+    #121317 55%,
+    #07080a 100%
+  );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.18),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.8),
+    0 0 0 2px rgba(0, 0, 0, 0.65),
+    0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+
+/* Spindle hole punched through the hub. */
+.trustDiscHub::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: #000;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Pill-shaped clamp bar crossing the tray over the disc's center, like
+   the reference player's laser/clamp assembly. */
+.trustDiscClamp {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  right: 14px;
+  height: 48px;
+  border-radius: 24px;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, #1f2126 0%, #0d0e11 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.6),
+    0 5px 12px rgba(0, 0, 0, 0.65);
+}
+
+/* ----------------------------------------------------------------------
+ * VFD glass: near-black recessed screen with gold readouts, shared
+ * recipe with the PhoneShell compressor LCD.
+ * ------------------------------------------------------------------- */
+
+.trustDisplayWell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  box-sizing: border-box;
+  padding: 16px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #120c08 0%,
+    #0a0706 55%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 0 18px 2px rgba(var(--gold-halo, 153, 81, 25), 0.16),
+    0 1px 0 rgba(255, 255, 255, 0.12);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    monospace
+  );
+}
+
+/* Soft gold wash rising from the glass floor; swells while energy is
+   arriving from the rail or a transport key was pressed. */
+.trustDisplayGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+  opacity: 0.18;
+  background: radial-gradient(
+    ellipse 95% 70% at 50% 100%,
+    rgba(250, 178, 92, 0.8) 0%,
+    rgba(247, 156, 64, 0.45) 38%,
+    rgba(247, 156, 64, 0) 75%
+  );
+  transition: opacity 320ms ease;
+}
+
+.trustDisplayWell[data-active="true"] .trustDisplayGlow {
+  opacity: 0.38;
+}
+
+/* VM number on the left, uptime counter on the right — like the
+   reference's TRACK / TIME split. */
+.trustDisplayRow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.trustDisplayGroup {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.trustDisplayGroup--end {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.trustDisplayLabel {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(var(--gold-glow, 232, 205, 137), 0.55);
+  text-shadow: 0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.35);
+}
+
+/* Big VFD digits, brightening slightly while the display is active. */
+.trustDisplayDigits {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  color: var(--gold-core, #f4faf2);
+  text-shadow:
+    0 0 6px rgba(var(--gold-glow, 232, 205, 137), 0.55),
+    0 0 16px rgba(var(--gold-halo, 153, 81, 25), 0.4);
+  /* Fixed-width digits so the live counter doesn't jitter the layout. */
+  font-variant-numeric: tabular-nums;
+  transition: text-shadow 320ms ease;
+}
+
+.trustDisplayWell[data-active="true"] .trustDisplayDigits {
+  text-shadow:
+    0 0 7px rgba(var(--gold-glow, 232, 205, 137), 0.85),
+    0 0 20px rgba(var(--gold-halo, 153, 81, 25), 0.55);
+}
+
+.trustDisplayDigits--uptime {
+  font-size: 21px;
+  line-height: 1.25;
+}
+
+/* Segmented attestation bar, like a CD player's PLAYING ADDRESS strip. */
+.trustDisplaySegments {
+  display: flex;
+  gap: 3px;
+}
+
+.trustDisplaySegment {
+  flex: 1;
+  height: 8px;
+  border-radius: 1.5px;
+  background: rgba(var(--gold-glow, 232, 205, 137), 0.1);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+  transition: background 200ms ease, box-shadow 200ms ease;
+}
+
+.trustDisplaySegment[data-lit="true"] {
+  background: rgb(var(--gold-glow, 232, 205, 137));
+  box-shadow:
+    0 0 5px rgba(var(--gold-glow, 232, 205, 137), 0.7),
+    0 0 10px rgba(var(--gold-halo, 153, 81, 25), 0.4);
+}
+
+/* Tiny lit status flags along the glass floor, like the reference's
+   MASTER TEMPO indicator strip. */
+.trustDisplayFlags {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trustDisplayFlag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(var(--gold-glow, 232, 205, 137), 0.8);
+  text-shadow: 0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.4);
+}
+
+.trustDisplayFlagDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgb(var(--gold-glow, 232, 205, 137));
+  box-shadow: 0 0 5px rgba(var(--gold-glow, 232, 205, 137), 0.8);
+}
+
+/* Top sheen + faint scanlines so the readout sits behind curved glass
+   (mirrors the PhoneShell LCD gloss). */
+.trustDisplayGloss {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0) 38%
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0) 3px,
+      rgba(0, 0, 0, 0.14) 3px,
+      rgba(0, 0, 0, 0.14) 4px
+    );
+}
+
+/* Inner border ring, light on top fading dark at the bottom, painted
+   border-only via the mask-composite cutout (same as the PhoneShell LCD). */
+.trustDisplayWell::after {
+  content: "";
+  position: absolute;
+  inset: 1.5px;
+  border-radius: 10.5px;
+  border: 1px solid transparent;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.32) 42%,
+      rgba(0, 0, 0, 0.55) 100%
+    )
+    border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ----------------------------------------------------------------------
+ * Transport keys: round cream cue buttons (plus a small dark reseal key)
+ * sitting directly on the plate surface beneath the LCD.
+ * ------------------------------------------------------------------- */
+
+.trustTransportKeys {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  gap: 10px;
+  padding: 4px 2px 2px;
+}
+
+.trustTransportKey {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* Cream domed keycap recessed into a dark socket ring. */
+.trustTransportKeyCap {
+  width: 42px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 32%,
+    #f6efdd 0%,
+    #e6dabc 55%,
+    #b8a87e 100%
+  );
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.75),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.3),
+    0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 0 3px #06070a,
+    0 0 0 4px rgba(255, 255, 255, 0.07);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.trustTransportKey:hover .trustTransportKeyCap {
+  transform: translateY(-1px);
+}
+
+.trustTransportKey:active .trustTransportKeyCap {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.25),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.6),
+    0 0 0 3px #06070a,
+    0 0 0 4px rgba(255, 255, 255, 0.07);
+}
+
+.trustTransportKeyLabel {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-text-secondary, #b9bec7);
+}
+
+/* Small dark utility key, like the reference's RELOOP button. */
+.trustTransportKey--small .trustTransportKeyCap {
+  width: 30px;
+  margin-top: 6px;
+  background: radial-gradient(
+    circle at 50% 32%,
+    #2a2d33 0%,
+    #16181c 60%,
+    #0a0b0d 100%
+  );
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.7),
+    0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 0 3px #06070a,
+    0 0 0 4px rgba(255, 255, 255, 0.07);
+}
+
+.trustTransportKey--small:active .trustTransportKeyCap {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.6),
+    0 0 0 3px #06070a,
+    0 0 0 4px rgba(255, 255, 255, 0.07);
+}
