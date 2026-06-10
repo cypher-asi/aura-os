@@ -13,6 +13,7 @@
 
 import { create } from "zustand";
 import { setupPublicSession } from "../api/public-chat";
+import i18n from "../i18n";
 import { track } from "../lib/analytics";
 
 /** Modality. Code + Plan ship in Phase 2; image / video / model3d
@@ -172,7 +173,8 @@ function migrateSessions(
   for (const [sessionId, rawSession] of Object.entries(raw)) {
     if (!isObject(rawSession)) continue;
     const id = typeof rawSession.id === "string" ? rawSession.id : sessionId;
-    const title = typeof rawSession.title === "string" ? rawSession.title : "New chat";
+    const title =
+      typeof rawSession.title === "string" ? rawSession.title : newChatTitle();
     const updatedAt =
       typeof rawSession.updatedAt === "number" ? rawSession.updatedAt : Date.now();
     const turns: PublicMessage[] = Array.isArray(rawSession.turns)
@@ -278,7 +280,7 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
     const id = randomId("public");
     const session: PublicSession = {
       id,
-      title: "New chat",
+      title: newChatTitle(),
       updatedAt: Date.now(),
       turns: [],
     };
@@ -307,7 +309,7 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
       const sessionExists = !!existing;
       const session: PublicSession = existing ?? {
         id: sessionId,
-        title: "New chat",
+        title: newChatTitle(),
         updatedAt: Date.now(),
         turns: [],
       };
@@ -435,6 +437,10 @@ export function selectSession(
 
 function deriveTitle(content: string): string {
   const trimmed = content.trim();
-  if (!trimmed) return "New chat";
+  if (!trimmed) return newChatTitle();
   return trimmed.length > 60 ? `${trimmed.slice(0, 57)}…` : trimmed;
+}
+
+function newChatTitle(): string {
+  return i18n.t("publicChat:sessions.newChat", { defaultValue: "New chat" });
 }
