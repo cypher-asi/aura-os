@@ -14,7 +14,22 @@ pub(crate) fn preferred_local_harness_port() -> u16 {
     aura_os_core::Channel::current().preferred_sidecar_port()
 }
 
-pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
+/// Spawn the bundled `aura-node` sidecar.
+///
+/// `aura_os_server_port` is the actual port the embedded `aura-os-server`
+/// just bound to. We forward it as `AURA_OS_SERVER_URL=http://127.0.0.1:{port}`
+/// on the child's env so the harness's
+/// `aura-runtime::config::aura_os_server_url` resolves to the live desktop
+/// server instead of falling back to the hardcoded
+/// `DESKTOP_LOOPBACK_OS_SERVER_URL` constant (which assumes the stable
+/// channel's `19847`). Without this, cross-agent callbacks (`list_agents`,
+/// `send_to_agent`, spec writes, image gen, etc.) target the wrong port on
+/// dev-channel desktops (which bind 19848) and on any session where 19847
+/// was already taken and the OS picked an ephemeral port.
+pub(crate) fn maybe_spawn_local_harness_sidecar(
+    data_dir: &Path,
+    aura_os_server_port: u16,
+) -> Option<Child> {
     let explicit_harness_url =
         env_string("LOCAL_HARNESS_URL").map(|value| value.trim_end_matches('/').to_string());
     let harness_binary = resolve_managed_harness_binary(data_dir);
@@ -63,9 +78,12 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
     }
 
     let mut command = Command::new(&harness_binary);
-    command
-        .env("AURA_LISTEN_ADDR", &listen_addr)
-        .env("AURA_DATA_DIR", &harness_data_dir);
+    configure_sidecar_command_env(
+        &mut command,
+        &listen_addr,
+        &harness_data_dir,
+        aura_os_server_port,
+    );
     configure_background_child(&mut command, &harness_data_dir.join("sidecar.log"));
 
     if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
@@ -80,6 +98,28 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
         }
     }
     child
+}
+
+/// Apply the env vars the harness sidecar process needs to a freshly
+/// constructed [`Command`]. Extracted into a free function so unit tests
+/// can assert on the env without going through `spawn()` / IO.
+///
+/// `aura_os_server_port` is forwarded as `AURA_OS_SERVER_URL` to override
+/// the harness's hardcoded `DESKTOP_LOOPBACK_OS_SERVER_URL` fallback
+/// (`:19847`, the stable-channel port). Without this override, dev-channel
+/// desktops (`:19848`) and any session where 19847 was taken see every
+/// cross-agent harness callback target a dead port.
+fn configure_sidecar_command_env(
+    command: &mut Command,
+    listen_addr: &str,
+    harness_data_dir: &Path,
+    aura_os_server_port: u16,
+) {
+    let aura_os_server_url = format!("http://127.0.0.1:{aura_os_server_port}");
+    command
+        .env("AURA_LISTEN_ADDR", listen_addr)
+        .env("AURA_DATA_DIR", harness_data_dir)
+        .env("AURA_OS_SERVER_URL", aura_os_server_url);
 }
 
 fn spawn_and_wait_for_health(
@@ -199,7 +239,11 @@ pub(crate) fn stop_managed_local_harness(managed_local_harness: &mut Option<Chil
 
 #[cfg(test)]
 mod tests {
-    use super::wait_for_harness_health;
+    use super::{configure_sidecar_command_env, wait_for_harness_health};
+    use std::collections::HashMap;
+    use std::ffi::OsString;
+    use std::path::Path;
+    use std::process::Command;
     use std::time::Duration;
 
     #[test]
@@ -218,5 +262,54 @@ mod tests {
             Duration::ZERO,
             || true,
         ));
+    }
+
+    fn env_map(command: &Command) -> HashMap<OsString, OsString> {
+        command
+            .get_envs()
+            .filter_map(|(k, v)| v.map(|v| (k.to_os_string(), v.to_os_string())))
+            .collect()
+    }
+
+    #[test]
+    fn configure_sidecar_command_env_sets_aura_os_server_url_to_loopback_port() {
+        let mut command = Command::new("does-not-need-to-exist");
+        configure_sidecar_command_env(
+            &mut command,
+            "127.0.0.1:8080",
+            Path::new("/tmp/aura-test"),
+            19848,
+        );
+        let envs = env_map(&command);
+        assert_eq!(
+            envs.get(OsString::from("AURA_OS_SERVER_URL").as_os_str()),
+            Some(&OsString::from("http://127.0.0.1:19848")),
+            "AURA_OS_SERVER_URL must be a loopback URL with the bound port — this is the entire point of the patch"
+        );
+    }
+
+    #[test]
+    fn configure_sidecar_command_env_threads_listen_addr_and_data_dir() {
+        let mut command = Command::new("does-not-need-to-exist");
+        configure_sidecar_command_env(
+            &mut command,
+            "127.0.0.1:9090",
+            Path::new("/tmp/aura-test-data"),
+            19847,
+        );
+        let envs = env_map(&command);
+        assert_eq!(
+            envs.get(OsString::from("AURA_LISTEN_ADDR").as_os_str()),
+            Some(&OsString::from("127.0.0.1:9090")),
+        );
+        assert_eq!(
+            envs.get(OsString::from("AURA_DATA_DIR").as_os_str()),
+            Some(&OsString::from("/tmp/aura-test-data")),
+        );
+        assert_eq!(
+            envs.get(OsString::from("AURA_OS_SERVER_URL").as_os_str()),
+            Some(&OsString::from("http://127.0.0.1:19847")),
+            "stable-channel port 19847 must round-trip unchanged — no behavior change for stable users"
+        );
     }
 }

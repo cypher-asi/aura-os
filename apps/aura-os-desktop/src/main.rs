@@ -52,13 +52,22 @@ use crate::ui::main_window::{create_main_webview, create_main_window};
 use crate::ui::menu::install_macos_app_menu;
 use crate::ui::runtime::{run_event_loop, spawn_fallback_show_timer, LoopContext, LoopState};
 
-/// Aggregated artefacts from the data-directory + harness phase of startup.
+/// Aggregated artefacts from the data-directory phase of startup.
+///
+/// The harness sidecar handle was previously bundled here, but it is now
+/// spawned *after* `bind_listener` so the actual bound port can be
+/// forwarded to the child as `AURA_OS_SERVER_URL`. Without that, the
+/// harness's `aura-runtime` config falls back to the hardcoded stable-channel
+/// port (`19847`) and every cross-agent callback into aura-os-server hits a
+/// dead port on dev-channel desktops.
 struct PreBindStartup {
     store_path: std::path::PathBuf,
     webview_data_dir: std::path::PathBuf,
     interface_dir: Option<std::path::PathBuf>,
     route_state: RouteState,
-    managed_local_harness: Option<std::process::Child>,
+    /// `true` when the operator passed `--external-harness` — we must not
+    /// spawn a managed sidecar post-bind in that case.
+    external_harness: bool,
 }
 
 /// Aggregated artefacts produced once the embedded server is up and the
@@ -97,6 +106,15 @@ fn main() {
 
     let (std_listener, server_port, server_url) = bind_listener();
     self_heal_loopback_overrides(server_port);
+
+    // Spawn the harness sidecar AFTER `bind_listener` so the actual bound
+    // port can be threaded to the child as `AURA_OS_SERVER_URL`. Without
+    // this, the harness's hardcoded `DESKTOP_LOOPBACK_OS_SERVER_URL`
+    // fallback (`:19847`, the stable-channel port) is wrong on dev
+    // channel (`:19848`) and on any session where the OS auto-picked an
+    // ephemeral port — and every cross-agent callback the harness makes
+    // back into aura-os-server hits the wrong port.
+    let managed_local_harness = maybe_spawn_managed_local_harness(&pre_bind, server_port);
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
@@ -192,7 +210,7 @@ fn main() {
         main_webview,
         web_context,
         managed_frontend_dev_server: server.managed_frontend_dev_server,
-        managed_local_harness: pre_bind.managed_local_harness,
+        managed_local_harness,
         initial_frontend_base_url,
         initial_using_frontend_dev_server: server.frontend_target.using_frontend_dev_server,
         icon_data,
@@ -216,19 +234,41 @@ fn prepare_pre_bind(cli: DesktopCliArgs) -> PreBindStartup {
     let route_state = RouteState::load(&data_dir);
     install_panic_hook(&data_dir);
     install_native_crash_handler(&data_dir);
-    let managed_local_harness = if cli.external_harness {
+    // External-harness operators must have a reachable harness *before* we
+    // bind the embedded server, otherwise the subsequent server-thread
+    // startup picks up a broken upstream and fails opaque-ly. This check
+    // exits the process on its own when the configured harness is missing.
+    if cli.external_harness {
         enforce_external_harness_or_exit();
-        None
-    } else {
-        maybe_spawn_local_harness_sidecar(&data_dir)
-    };
+    }
     PreBindStartup {
         store_path,
         webview_data_dir,
         interface_dir,
         route_state,
-        managed_local_harness,
+        external_harness: cli.external_harness,
     }
+}
+
+/// Spawn the managed local harness sidecar with the actual bound
+/// `aura-os-server` port threaded through. Called *after* `bind_listener`
+/// so the child receives an accurate `AURA_OS_SERVER_URL`. Returns `None`
+/// when the operator opted into an externally-managed harness via
+/// `--external-harness` (in which case the harness was already verified
+/// reachable in `prepare_pre_bind`).
+fn maybe_spawn_managed_local_harness(
+    pre_bind: &PreBindStartup,
+    server_port: u16,
+) -> Option<std::process::Child> {
+    if pre_bind.external_harness {
+        return None;
+    }
+    let data_dir = pre_bind
+        .store_path
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| pre_bind.store_path.clone());
+    maybe_spawn_local_harness_sidecar(&data_dir, server_port)
 }
 
 fn resolve_frontend(server_url: &str, server_port: u16) -> ServerStartup {
