@@ -15,6 +15,7 @@ import {
   INDUSTRIES,
   type ExpertiseEntry,
 } from "../../marketing/ExpertiseDetailView/expertiseData";
+import { isMarketingExpertiseEnabled } from "../../../shared/lib/featureFlags";
 import styles from "./PublicTopNav.module.css";
 
 interface TopNavLink {
@@ -28,24 +29,25 @@ interface TopNavLink {
 /**
  * Primary marketing links, rendered left-to-right in the centered
  * top bar. `Expertise` and `Resources` are not in this list — they
- * open dropdowns instead of navigating to a single route.
+ * open dropdowns instead of navigating to a single route. `Pricing`
+ * sits beside `Code`; `OS` moved into the `Resources` dropdown.
  */
 const PRIMARY_LINKS: ReadonlyArray<TopNavLink> = [
   { tKey: "agents", label: "Agents", to: "/agents" },
   { tKey: "code", label: "Code", to: "/code" },
-  { tKey: "os", label: "OS", to: "/os" },
+  { tKey: "pricing", label: "Pricing", to: "/pricing" },
 ];
 
 /**
- * Routes grouped under the `Resources` dropdown. `Pricing` moved here
- * (from the primary row) and sits at the top.
+ * Routes grouped under the `Resources` dropdown. `OS` moved here (from
+ * the primary row) and sits at the bottom of the menu.
  */
 const RESOURCE_LINKS: ReadonlyArray<TopNavLink> = [
-  { tKey: "pricing", label: "Pricing", to: "/pricing" },
   { tKey: "blog", label: "Blog", to: "/blog" },
   { tKey: "changelog", label: "Changelog", to: "/changelog" },
   { tKey: "feedback", label: "Feedback", to: "/feedback" },
   { tKey: "models", label: "Models", to: "/models" },
+  { tKey: "os", label: "OS", to: "/os" },
 ];
 
 /**
@@ -251,21 +253,23 @@ export function PublicTopNav(): React.ReactElement {
           {t(link.tKey, { defaultValue: link.label })}
         </NavLink>
       ))}
-      <NavDropdown
-        label={t("expertise", { defaultValue: "Expertise" })}
-        ariaLabel="Expertise"
-        active={expertiseActive}
-        menuClassName={styles.menuColumns}
-      >
-        <ExpertiseColumn
-          title={t("capabilities", { defaultValue: "Capabilities" })}
-          entries={CAPABILITIES}
-        />
-        <ExpertiseColumn
-          title={t("industries", { defaultValue: "Industries" })}
-          entries={INDUSTRIES}
-        />
-      </NavDropdown>
+      {isMarketingExpertiseEnabled() && (
+        <NavDropdown
+          label={t("expertise", { defaultValue: "Expertise" })}
+          ariaLabel="Expertise"
+          active={expertiseActive}
+          menuClassName={styles.menuColumns}
+        >
+          <ExpertiseColumn
+            title={t("capabilities", { defaultValue: "Capabilities" })}
+            entries={CAPABILITIES}
+          />
+          <ExpertiseColumn
+            title={t("industries", { defaultValue: "Industries" })}
+            entries={INDUSTRIES}
+          />
+        </NavDropdown>
+      )}
       <NavDropdown
         label={t("resources", { defaultValue: "Resources" })}
         ariaLabel="Resources"

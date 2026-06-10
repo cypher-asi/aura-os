@@ -3,6 +3,9 @@ interface ImportMetaEnv {
   readonly VITE_ANDROID_DEFAULT_HOST?: string;
   readonly VITE_IOS_DEFAULT_HOST?: string;
   readonly VITE_ENABLE_SETTINGS_PROVIDER_SELECTION?: string;
+  // Temporarily gates the marketing top-nav "Expertise" dropdown. Hidden
+  // unless this is set to a truthy value (1/true/yes/on).
+  readonly VITE_ENABLE_MARKETING_EXPERTISE?: string;
   readonly VITE_DEFAULT_INVITE_CODE?: string;
   readonly VITE_MIXPANEL_TOKEN?: string;
   readonly VITE_PRIVACY_POLICY_URL?: string;

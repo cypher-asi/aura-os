@@ -1,9 +1,9 @@
 /**
  * Smoke test for `PublicTopNav`. Pins the primary marketing links
- * (Agents / Code / OS) and their hrefs, asserts the Home link was
+ * (Agents / Code / Pricing) and their hrefs, asserts the Home link was
  * removed (the logo owns "home"), verifies the Resources dropdown
- * reveals Pricing / Blog / Changelog / Feedback / Models, and checks
- * the Expertise dropdown exposes its Capabilities + Industries columns.
+ * reveals Blog / Changelog / Feedback / Models / OS, and checks that
+ * the Expertise dropdown is hidden by default (gated behind a flag).
  */
 
 import { render, screen } from "@testing-library/react";
@@ -17,7 +17,7 @@ import styles from "./PublicTopNav.module.css";
 const PRIMARY = [
   { label: "Agents", to: "/agents" },
   { label: "Code", to: "/code" },
-  { label: "OS", to: "/os" },
+  { label: "Pricing", to: "/pricing" },
 ] as const;
 
 describe("PublicTopNav", () => {
@@ -35,9 +35,9 @@ describe("PublicTopNav", () => {
     }
 
     expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
-    // Pricing moved into the Resources dropdown, so it is no longer a
+    // OS moved into the Resources dropdown, so it is no longer a
     // primary top-level link.
-    expect(screen.queryByRole("link", { name: "Pricing" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "OS" })).not.toBeInTheDocument();
   });
 
   it("flags the matching primary link active for its route", () => {
@@ -55,7 +55,7 @@ describe("PublicTopNav", () => {
     );
   });
 
-  it("opens the Resources dropdown to reveal Pricing / Blog / Changelog / Feedback / Models", async () => {
+  it("opens the Resources dropdown to reveal Blog / Changelog / Feedback / Models / OS", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={["/agents"]}>
@@ -71,9 +71,6 @@ describe("PublicTopNav", () => {
     await user.click(screen.getByRole("button", { name: /Resources/i }));
 
     expect(
-      screen.getByRole("menuitem", { name: "Pricing" }),
-    ).toHaveAttribute("href", "/pricing");
-    expect(
       screen.getByRole("menuitem", { name: "Blog" }),
     ).toHaveAttribute("href", "/blog");
     expect(
@@ -85,6 +82,14 @@ describe("PublicTopNav", () => {
     expect(
       screen.getByRole("menuitem", { name: "Models" }),
     ).toHaveAttribute("href", "/models");
+    expect(
+      screen.getByRole("menuitem", { name: "OS" }),
+    ).toHaveAttribute("href", "/os");
+    // Pricing was promoted to a primary link, so it is no longer in
+    // the Resources dropdown.
+    expect(
+      screen.queryByRole("menuitem", { name: "Pricing" }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens the Resources dropdown on hover", async () => {
@@ -118,8 +123,7 @@ describe("PublicTopNav", () => {
     ).toContain(styles.linkActive);
   });
 
-  it("opens the Expertise dropdown to reveal Capabilities and Industries", async () => {
-    const user = userEvent.setup();
+  it("hides the Expertise dropdown by default (gated behind a feature flag)", () => {
     render(
       <MemoryRouter initialEntries={["/agents"]}>
         <PublicTopNav />
@@ -127,30 +131,7 @@ describe("PublicTopNav", () => {
     );
 
     expect(
-      screen.queryByRole("menuitem", { name: "Research" }),
+      screen.queryByRole("button", { name: /Expertise/i }),
     ).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /Expertise/i }));
-
-    // Capability column.
-    expect(
-      screen.getByRole("menuitem", { name: "Research" }),
-    ).toHaveAttribute("href", "/expertise/research");
-    // Industry column.
-    expect(
-      screen.getByRole("menuitem", { name: "Finance & Banking" }),
-    ).toHaveAttribute("href", "/expertise/finance-banking");
-  });
-
-  it("marks Expertise active when on an /expertise route", () => {
-    render(
-      <MemoryRouter initialEntries={["/expertise/finance-banking"]}>
-        <PublicTopNav />
-      </MemoryRouter>,
-    );
-
-    expect(
-      screen.getByRole("button", { name: /Expertise/i }).className,
-    ).toContain(styles.linkActive);
   });
 });
