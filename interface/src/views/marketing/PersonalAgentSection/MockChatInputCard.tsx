@@ -162,7 +162,12 @@ export function MockChatInputCard(): ReactNode {
 
   return (
     <Plate radius="999px" className="personalAgentChatMock">
-      <div className="personalAgentChatMockContent">
+      {/* Force the reused real chat input to dark regardless of the
+          visitor's app theme — the marketing card is dark in every
+          theme, so the input's theme-aware tokens must not flip to
+          light. `data-theme="dark"` re-pins the semantic tokens; the
+          pill chrome tokens are pinned in PersonalAgentSection.css. */}
+      <div className="personalAgentChatMockContent" data-theme="dark">
         <DesktopChatInputBar
           input={text}
           onInputChange={() => {}}

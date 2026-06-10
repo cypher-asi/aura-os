@@ -173,6 +173,18 @@
 
 .personalAgentChatMockContent {
   padding: 61px 39px;
+  /* The wrapper carries `data-theme="dark"` (see MockChatInputCard.tsx)
+     so the reused real chat input keeps the dark semantic tokens in
+     every site theme. The input-pill chrome tokens live only under
+     `:root` / `[data-theme='light']` in index.css (no `[data-theme='dark']`
+     rule), so `data-theme="dark"` alone wouldn't reset them — pin the
+     dark recipe here. The attach "+" uses the theme-independent gold
+     `.attachOrb` (attachAccent is passed), so --attach-ring-plate is
+     intentionally omitted. */
+  --input-pill-fill: linear-gradient(135deg, #1e1e1e, #181818);
+  --input-pill-stroke: linear-gradient(135deg, #121212, #565656);
+  --input-pill-stroke-focus: linear-gradient(135deg, #1e1e1e, #6a6a6a);
+  --pill-shadow: #141414;
 }
 
 /* ----- Quadrant 2: neomorphic skill control panel -------------- */
