@@ -15,6 +15,16 @@
   }
 }
 
+/* Column wrapper that stacks the section caption above the device chassis
+   (mirrors `.madeForYouDevice`), centered in the wide cell's media well. */
+.nrStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(16px, 2vw, 28px);
+  width: 100%;
+}
+
 /* Plate wrapper — capped width, centered, matching the device footprint. */
 .nrCard {
   /* Golden accent (matches the page's gold glow) for the lit ticks + status
@@ -392,17 +402,16 @@
 
 /* ----- Caption ------------------------------------------------------ */
 
-/* Letter-spaced caps below the knob: a brighter STRENGTH heading over a
-   dimmer subtitle. Above the masked plate (`z-index: 1`, like the knob)
-   so it isn't clipped by the dome seam. */
+/* Letter-spaced caps seated ABOVE the chassis (lifted out of the control
+   panel, mirroring the made-for-you device caption): a brighter heading
+   over a dimmer subtitle, centered on the page. */
 .nrCaption {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   text-align: center;
+  text-transform: uppercase;
 }
 
 .nrCaptionTitle {
@@ -415,6 +424,104 @@
   font-size: 11px;
   letter-spacing: 0.18em;
   color: rgba(255, 255, 255, 0.32);
+}
+
+/* ----- Expertise selector ------------------------------------------- */
+
+/* Sits below the knob, where the caption used to be. Flex-centered so the
+   set-in capsule reads centered (and vertically centered) in the controls
+   band. Above the masked dome plate so it isn't clipped by the seam. */
+.nrExpertise {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4px;
+}
+
+/*
+ * Two-tier inset capsule, ported from the agent mode selector's
+ * `.outerCapsule`: a recessed well (dark->light gradient ring + hard black
+ * ring + top-heavy inner shadow) with the inner pills floating on top. The
+ * 12-discipline row wraps within the capsule on narrow devices.
+ */
+.nrExpertiseCapsule {
+  --capsule-bg-top: #16181c;
+  --capsule-bg-bottom: #2a2e36;
+  --capsule-bevel-dark: #14161a;
+  --capsule-bevel-light: #3a3f48;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(
+        to bottom,
+        var(--capsule-bg-top),
+        var(--capsule-bg-bottom)
+      )
+      padding-box,
+    linear-gradient(
+        to bottom,
+        var(--capsule-bevel-dark),
+        var(--capsule-bevel-light)
+      )
+      border-box;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+/* Inner black-glass capsule (ported from the mode selector `.pills`). The
+   SlidingPills root is `inline-flex`; allow it to wrap so all 12 pills fit
+   on narrow devices. Scoped under `.nrExpertise` so these beat the
+   SlidingPills module defaults regardless of stylesheet import order. */
+.nrExpertise .nrExpertisePills {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  background: rgba(8, 10, 14, 0.55);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow:
+    inset 0 5px 9px rgba(0, 0, 0, 0.38),
+    inset 0 2px 4px rgba(0, 0, 0, 0.26),
+    inset 0 -5px 9px rgba(0, 0, 0, 0.32),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.22);
+}
+
+.nrExpertise .nrExpertiseSegment {
+  box-sizing: border-box;
+  padding: 3px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* See-through gold pill indicator (matches the marketing mode-selector
+   override): a transparent fill framed by a glowing gold border. */
+.nrExpertise .nrExpertiseIndicator {
+  display: block;
+  background: transparent;
+  border: 1px solid rgba(var(--gold-glow), 0.85);
+  box-shadow:
+    0 0 6px rgba(var(--gold-glow), 0.5),
+    0 0 12px rgba(var(--gold-halo), 0.3),
+    inset 0 0 6px rgba(var(--gold-glow), 0.18);
+}
+
+/* Selected discipline label: glowing gold, matching the page's gold family. */
+.nrExpertise .nrExpertiseSegment[aria-checked="true"] {
+  -webkit-text-fill-color: var(--gold-core);
+  color: var(--gold-core);
+  text-shadow: var(--gold-text-shadow);
 }
 
 /* Tick dots concentric with the knob, spanning the top 240deg arc (bottom

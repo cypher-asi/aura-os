@@ -1,6 +1,35 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Plate } from "../../../components/Plate";
+import { SlidingPills, type SlidingPillItem } from "../../../components/SlidingPills";
 import { NoiseReductionBrain } from "../NoiseReductionBrain";
+
+/**
+ * Disciplines shown in the set-in pill selector below the knob. `General`
+ * is first and selected by default; it renders the looping code (left) /
+ * image (right) flanks. Every other discipline currently renders blank
+ * flanks — the switching is wired up here and per-discipline side content
+ * is added later.
+ */
+const EXPERTISES = [
+  "General",
+  "Research",
+  "Writing",
+  "Creative",
+  "Social",
+  "Sales",
+  "Marketing",
+  "Design",
+  "Coding",
+  "Analytics",
+  "Finance",
+  "Legal",
+] as const;
+
+type Expertise = (typeof EXPERTISES)[number];
+
+const EXPERTISE_PILLS: readonly SlidingPillItem<Expertise>[] = EXPERTISES.map(
+  (label) => ({ id: label, label }),
+);
 
 /**
  * Mini-UI for the spec bento below `ExpertiseSection`: a static recreation
@@ -17,8 +46,14 @@ import { NoiseReductionBrain } from "../NoiseReductionBrain";
  * and out at randomized, unpredictable positions, sizes, and timing. That
  * flows seamlessly into the matte LCD body, a status row (ACTIVATION +
  * ONLINE), a large centered knob ringed by a full circle of tick dots and a
- * single pointer, and a caption panel (INTELLIGENCE / WITHOUT LIMITS).
- * Everything is decorative (`aria-hidden`); nothing here is a real control.
+ * single pointer, and — below the knob — a set-in pill selector for the
+ * active discipline. The INTELLIGENCE / WITHOUT LIMITS caption is seated
+ * above the chassis (mirroring the made-for-you device caption). Everything
+ * but the discipline selector is decorative (`aria-hidden`).
+ *
+ * The selector defaults to `General`, which renders the looping code (left)
+ * and image (right) flanks; switching to any other discipline clears the
+ * flanks for now (per-discipline side content is added later).
  *
  * The knob is driven by the cursor's vertical position in the viewport: the
  * top reads 0 (pointer hard left), the center reads 50% (pointer straight up),
@@ -154,6 +189,12 @@ export function NoiseReductionCard(): ReactNode {
   const galleryBoxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const galleryImgRefs = useRef<(HTMLImageElement | null)[]>([]);
 
+  // Selected discipline. `General` (first) is the default and is the only
+  // one with side-flank content for now; switching to any other discipline
+  // clears the flanks until per-discipline content is added later.
+  const [expertise, setExpertise] = useState<Expertise>("General");
+  const showGeneralFlanks = expertise === "General";
+
   // Live ACTIVATION readout: a number floored at 0.01 that rapidly rises and
   // falls. Updated imperatively each frame (no re-render) so the digits flicker
   // like a busy live meter.
@@ -180,6 +221,9 @@ export function NoiseReductionCard(): ReactNode {
   // reading like several instances working in parallel. Driven imperatively (no
   // re-render); animates unconditionally to match the always-on brain readout.
   useEffect(() => {
+    // Only the `General` discipline renders the code flank; other
+    // disciplines mount blank flanks (no cards), so skip the loop.
+    if (!showGeneralFlanks) return;
     const cards = snippetCardRefs.current;
     const pres = snippetPreRefs.current;
     if (!cards.length) return;
@@ -254,7 +298,7 @@ export function NoiseReductionCard(): ReactNode {
       }
     }, 42);
     return () => clearInterval(id);
-  }, []);
+  }, [showGeneralFlanks]);
 
   // Right flank: image boxes that pop in/out via the CSS `nrPop` keyframe, each
   // on its own randomized duration/phase so they drift apart. On every cycle
@@ -262,6 +306,7 @@ export function NoiseReductionCard(): ReactNode {
   // its image, position, size, and crop for an unpredictable, creative feel.
   // Animates unconditionally to match the always-on brain + ACTIVATION readout.
   useEffect(() => {
+    if (!showGeneralFlanks) return;
     const boxes = galleryBoxRefs.current;
     const imgs = galleryImgRefs.current;
     boxes.forEach((box, i) => {
@@ -281,7 +326,7 @@ export function NoiseReductionCard(): ReactNode {
       cleanups.push(() => box.removeEventListener("animationiteration", onIter));
     });
     return () => cleanups.forEach((fn) => fn());
-  }, []);
+  }, [showGeneralFlanks]);
 
   // Drive the knob from the cursor's vertical position anywhere in the
   // viewport: top of the viewport reads 0 (pointer hard left), the vertical
@@ -318,108 +363,133 @@ export function NoiseReductionCard(): ReactNode {
   const defaultLitMax = (KNOB_TICKS - 1) / 2;
 
   return (
-    <Plate className="nrCard" aria-hidden="true">
-      <div className="nrContent">
-        <div className="nrScreen">
-          <div className="nrCodeField">
-            {Array.from({ length: SNIPPET_COUNT }).map((_, i) => (
-              <div
-                key={i}
-                className="nrCodeSnippet"
-                ref={(el) => {
-                  snippetCardRefs.current[i] = el;
-                }}
-              >
-                <pre
-                  className="nrBinaryText"
-                  ref={(el) => {
-                    snippetPreRefs.current[i] = el;
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="nrGallery">
-            {Array.from({ length: GALLERY_COUNT }).map((_, i) => (
-              <div
-                key={i}
-                className="nrGalleryBox"
-                ref={(el) => {
-                  galleryBoxRefs.current[i] = el;
-                }}
-              >
-                <img
-                  className="nrGalleryPhoto"
-                  ref={(el) => {
-                    galleryImgRefs.current[i] = el;
-                  }}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-            ))}
-          </div>
-          <NoiseReductionBrain className="nrScreenBrain" />
-          <div className="nrScreenGloss" />
-        </div>
+    <div className="nrStage">
+      {/* Section caption seated above the chassis (mirrors the
+          "CONFIGURE / YOUR PRIVATE AGENT" caption above the made-for-you
+          device), lifted out of the device's control panel. */}
+      <div className="nrCaption" aria-hidden="true">
+        <span className="nrCaptionTitle">INTELLIGENCE</span>
+        <span className="nrCaptionSub">WITHOUT LIMITS</span>
+      </div>
 
-        <div className="nrPanel">
-          <div className="nrControls">
-            <div className="nrStatus">
-              <span className="nrReduction">
-                <span className="nrReductionLabel">ACTIVATION</span>
-                <span className="nrReductionValue" ref={activationRef}>
-                  0.01
-                </span>
-              </span>
-              <span className="nrActive">
-                <span className="nrActiveDot" />
-                ONLINE
-              </span>
-            </div>
-
-            <div className="nrKnobWrap">
-              <div className="nrKnobTicks">
-                {Array.from({ length: KNOB_TICKS }).map((_, i) => {
-                  // Drop the two arc endpoints (the bottom-left and
-                  // bottom-right dots) while keeping every other dot in place.
-                  if (i === 0 || i === KNOB_TICKS - 1) {
-                    return null;
-                  }
-                  const angle =
-                    -TICK_ARC_DEG / 2 +
-                    (i / (KNOB_TICKS - 1)) * TICK_ARC_DEG;
-                  return (
-                    <span
-                      key={i}
+      <Plate className="nrCard">
+        <div className="nrContent">
+          <div className="nrScreen" aria-hidden="true">
+            {showGeneralFlanks ? (
+              <div className="nrCodeField">
+                {Array.from({ length: SNIPPET_COUNT }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="nrCodeSnippet"
+                    ref={(el) => {
+                      snippetCardRefs.current[i] = el;
+                    }}
+                  >
+                    <pre
+                      className="nrBinaryText"
                       ref={(el) => {
-                        tickRefs.current[i] = el;
-                      }}
-                      className={
-                        i <= defaultLitMax
-                          ? "nrKnobTick nrKnobTickLit"
-                          : "nrKnobTick"
-                      }
-                      style={{
-                        transform: `rotate(${angle}deg) translateY(calc(var(--nr-knob-size) / -2 - 12px))`,
+                        snippetPreRefs.current[i] = el;
                       }}
                     />
-                  );
-                })}
+                  </div>
+                ))}
               </div>
-              <div className="nrKnob">
-                <span className="nrKnobPointer" ref={knobPointerRef} />
+            ) : null}
+            {showGeneralFlanks ? (
+              <div className="nrGallery">
+                {Array.from({ length: GALLERY_COUNT }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="nrGalleryBox"
+                    ref={(el) => {
+                      galleryBoxRefs.current[i] = el;
+                    }}
+                  >
+                    <img
+                      className="nrGalleryPhoto"
+                      ref={(el) => {
+                        galleryImgRefs.current[i] = el;
+                      }}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                ))}
               </div>
-            </div>
+            ) : null}
+            <NoiseReductionBrain className="nrScreenBrain" />
+            <div className="nrScreenGloss" />
+          </div>
 
-            <div className="nrCaption">
-              <span className="nrCaptionTitle">INTELLIGENCE</span>
-              <span className="nrCaptionSub">WITHOUT LIMITS</span>
+          <div className="nrPanel">
+            <div className="nrControls">
+              <div className="nrStatus" aria-hidden="true">
+                <span className="nrReduction">
+                  <span className="nrReductionLabel">ACTIVATION</span>
+                  <span className="nrReductionValue" ref={activationRef}>
+                    0.01
+                  </span>
+                </span>
+                <span className="nrActive">
+                  <span className="nrActiveDot" />
+                  ONLINE
+                </span>
+              </div>
+
+              <div className="nrKnobWrap" aria-hidden="true">
+                <div className="nrKnobTicks">
+                  {Array.from({ length: KNOB_TICKS }).map((_, i) => {
+                    // Drop the two arc endpoints (the bottom-left and
+                    // bottom-right dots) while keeping every other dot in place.
+                    if (i === 0 || i === KNOB_TICKS - 1) {
+                      return null;
+                    }
+                    const angle =
+                      -TICK_ARC_DEG / 2 +
+                      (i / (KNOB_TICKS - 1)) * TICK_ARC_DEG;
+                    return (
+                      <span
+                        key={i}
+                        ref={(el) => {
+                          tickRefs.current[i] = el;
+                        }}
+                        className={
+                          i <= defaultLitMax
+                            ? "nrKnobTick nrKnobTickLit"
+                            : "nrKnobTick"
+                        }
+                        style={{
+                          transform: `rotate(${angle}deg) translateY(calc(var(--nr-knob-size) / -2 - 12px))`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="nrKnob">
+                  <span className="nrKnobPointer" ref={knobPointerRef} />
+                </div>
+              </div>
+
+              {/* Set-in pill selector (mirrors the mode selector capsule):
+                  picks the discipline whose side-flank content shows. */}
+              <div className="nrExpertise">
+                <div className="nrExpertiseCapsule">
+                  <SlidingPills
+                    items={EXPERTISE_PILLS}
+                    value={expertise}
+                    onChange={setExpertise}
+                    ariaLabel="Expertise"
+                    className="nrExpertisePills"
+                    segmentClassName="nrExpertiseSegment"
+                    indicatorClassName="nrExpertiseIndicator"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </Plate>
+      </Plate>
+    </div>
   );
 }

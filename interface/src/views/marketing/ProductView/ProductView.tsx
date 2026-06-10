@@ -2,8 +2,7 @@ import { type ReactNode, useEffect } from "react";
 import { AgentChatSection } from "../AgentChatSection";
 import { AgentConsole } from "../AgentConsole";
 import { ChangelogPreview } from "../ChangelogPreview";
-import { ExpertiseSection, ExpertiseTabs } from "../ExpertiseSection";
-import { Section } from "../Section";
+import { ExpertiseSection } from "../ExpertiseSection";
 import { PrivacyFeaturePanel } from "../PrivacyFeaturePanel";
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
@@ -108,13 +107,6 @@ export function ProductView(): ReactNode {
       <PersonalAgentSection />
       <ExpertiseSection />
       <SpecQuadrantSection />
-      <Section
-        ariaLabel="Expertise areas"
-        fullHeight={false}
-        className="expertiseTabsSection"
-      >
-        <ExpertiseTabs />
-      </Section>
       <BuiltForTrustSection />
       <AgentChatSection />
       <PrivacyFeaturePanel />
