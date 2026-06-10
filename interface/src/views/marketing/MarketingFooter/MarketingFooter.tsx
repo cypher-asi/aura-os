@@ -40,6 +40,8 @@ const GRID_REPO_URL = "https://github.com/cypher-asi/the-grid";
 
 const X_URL = "https://x.com/aura_asi";
 
+const GITHUB_URL = "https://github.com/cypher-asi/";
+
 const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     heading: "Product",
@@ -62,7 +64,10 @@ const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
   },
   {
     heading: "Connect",
-    links: [{ kind: "external", label: "X", href: X_URL }],
+    links: [
+      { kind: "external", label: "GitHub", href: GITHUB_URL },
+      { kind: "external", label: "X", href: X_URL },
+    ],
   },
   {
     heading: "Legal",
