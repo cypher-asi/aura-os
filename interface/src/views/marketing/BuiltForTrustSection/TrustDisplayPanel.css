@@ -106,7 +106,7 @@
   position: absolute;
   top: 50%;
   left: 100%;
-  width: 255px;
+  width: 204px;
   aspect-ratio: 1;
   border-radius: 50%;
   transform: translate(-50%, -50%);
@@ -186,9 +186,9 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  /* ~82px: holds the hub stack at its pre-enlargement absolute size so
-     the bigger disc face grows around it instead of scaling it up. */
-  width: 32%;
+  /* ~82px: holds the hub stack at the same absolute size as the disc
+     face is resized around it. */
+  width: 40%;
   aspect-ratio: 1;
   display: flex;
   align-items: center;
