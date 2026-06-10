@@ -262,7 +262,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: center;
   flex: 1 1 44%;
   min-width: 0;
   gap: 0;
@@ -307,15 +307,19 @@
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.09);
 }
 
-/* Bottom recessed section, sunk lower than the chassis surface, leaving
-   room for the etched logo badge. */
+/* Recessed logo section hanging directly off the centered plate's bottom
+   edge. The negative bottom margin removes its height from the flex
+   centering math, so the PLATE (not the pair) sits exactly on the
+   column's vertical center while the well rides below it, leaving clear
+   chassis margin underneath. */
 .trustDiscLogoWell {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  height: 52px;
+  height: 32px;
   margin-right: -7px;
+  margin-bottom: -32px;
   border-radius: 0 0 7px 7px;
   background: linear-gradient(180deg, #121317 0%, #17181c 100%);
   box-shadow:
