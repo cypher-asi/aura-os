@@ -48,8 +48,13 @@ const LID_Y = 0.575; // bottom bevel tucks to 0.545; top face lands at 0.655
 const HOLE_SIZE = 1.46;
 const HOLE_R = 0.26;
 
-/** Recessed screen panel (square; edges hide under the lid ring). */
-const ORB_PLANE_SIZE = 1.5;
+/**
+ * Recessed screen panel (square; edges hide under the lid ring). The lid
+ * opening is widest at mid-depth (the extrude bevel flares the 1.46 hole to
+ * ~1.52 there), so the plane overshoots that flare — otherwise a sliver of
+ * the dark case shows past the plane's edge at the opening corners.
+ */
+const ORB_PLANE_SIZE = 1.56;
 const ORB_PLANE_Y = 0.59;
 
 /** Louver bank planes on the case walls, tucked toward the far wall ends. */
@@ -98,10 +103,21 @@ const GHOST_CORNER = 0.882; // |x|=|z| of the rounded-corner verticals
  * Dash columns connect the devices ONLY across the gaps between them: an
  * upper run from the main computer's top surface into the bottom of the
  * upper ghost, and a lower run from the lower ghost's top into the main
- * computer's underside. They stand on the lid ring near its corners
- * (inside the footprint), so they read as rooted in the top plate.
+ * computer's underside. They stand on the lid ring (inside the footprint),
+ * so they read as rooted in the top plate: the middle column by the near
+ * corner, and each side column on a side corner's diagonal, centered
+ * between the screen-recess corner line and the outer corner vertical.
  */
-const DASH_INSET = 0.7; // |x|=|z| of each column on the lid ring
+const DASH_INSET = 0.7; // |x|=|z| of the middle column on the lid ring
+/** |x|=|z| of the screen-recess (hole) outline's rounded-corner point. */
+const HOLE_CORNER = HOLE_SIZE / 2 - HOLE_R + HOLE_R / Math.SQRT2;
+/**
+ * |x|=|z| of each side dash column, midway between the screen recess's
+ * corner and the silhouette corner: on screen each side column reads as
+ * centered between the stack's inner (screen-corner) line and its outer
+ * corner vertical.
+ */
+const DASH_SIDE = (GHOST_CORNER + HOLE_CORNER) / 2;
 const DASH_LEN = 0.06;
 const DASH_PERIOD = 0.12; // dash + gap
 const DASH_SPEED = 0.35; // world units per second, downward
@@ -164,6 +180,34 @@ const ORB_PANEL_FRAGMENT_SHADER = SCREEN_FRAGMENT_SHADER.replace(
 
 /** Virtual pixel resolution fed to the vignette math on the panel plane. */
 const ORB_PANEL_VIRTUAL_RES = 512;
+
+/**
+ * View-space depth (z toward the camera, after `BASE_YAW`) of a footprint
+ * shape's near silhouette at a given view-space x. Walks the rotated loop's
+ * segments and keeps the largest interpolated z crossing that x. Used to
+ * clamp the dash columns where they visually cross the upper ghost's bottom
+ * seam: the columns are inset behind that edge, so a dash run ending at the
+ * seam's world height would project past the diagonal line on screen.
+ */
+function nearSilhouetteDepth(shape: THREE.Shape, viewX: number): number {
+  const cos = Math.cos(BASE_YAW);
+  const sin = Math.sin(BASE_YAW);
+  const pts = shape.getPoints(128).map((p) => ({
+    x: p.x * cos + p.y * sin,
+    z: -p.x * sin + p.y * cos,
+  }));
+  let best = -Infinity;
+  for (let i = 0; i < pts.length; i += 1) {
+    const a = pts[i];
+    const b = pts[(i + 1) % pts.length];
+    const lo = Math.min(a.x, b.x);
+    const hi = Math.max(a.x, b.x);
+    if (viewX < lo || viewX > hi || hi - lo < 1e-6) continue;
+    const t = (viewX - a.x) / (b.x - a.x);
+    best = Math.max(best, a.z + t * (b.z - a.z));
+  }
+  return best;
+}
 
 /** Closed polyline loop of a footprint shape at a given height (y-up). */
 function outlineLoop(shape: THREE.Shape, y: number): THREE.BufferGeometry {
@@ -708,48 +752,70 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     opacity: 0.45,
     depthWrite: false,
   });
-  const dashRuns = [
-    // Main top surface -> the upper ghost's bottom (case seam) line.
-    { start: DEVICE_H, end: GHOST_ABOVE_Y + CASE_BOTTOM },
-    // Lower ghost top rim -> the main computer's underside.
-    { start: GHOST_BELOW_Y + DEVICE_H, end: 0 },
-  ].map((run) => ({
-    ...run,
-    count: Math.ceil((run.end - run.start) / DASH_PERIOD) + 1,
-  }));
-  const dashTotal = dashRuns.reduce((n, run) => n + run.count, 0);
-  const dashColumns: THREE.LineSegments[] = [];
-  // Three columns only: the far corner is skipped because in the diamond
-  // pose it projects onto the same screen vertical as the near column,
-  // interleaving with it into what reads as a doubled center line.
-  for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1]]) {
+  const elevTan = Math.tan(THREE.MathUtils.degToRad(CAMERA_ELEVATION_DEG));
+  const ghostSeamY = GHOST_ABOVE_Y + CASE_BOTTOM;
+  interface DashColumn {
+    line: THREE.LineSegments;
+    runs: { start: number; end: number; count: number }[];
+  }
+  const dashColumns: DashColumn[] = [];
+  // Three columns only (middle by the near corner, sides on the lid ring's
+  // side corners at the `DASH_SIDE` diagonal): the far corner is skipped
+  // because in the diamond pose it projects onto the same screen vertical
+  // as the near column, interleaving with it into what reads as a doubled
+  // center line.
+  const dashAnchors: Array<[number, number]> = [
+    [DASH_INSET, DASH_INSET],
+    [-DASH_SIDE, DASH_SIDE],
+    [DASH_SIDE, -DASH_SIDE],
+  ];
+  for (const [px, pz] of dashAnchors) {
+    // Each column is inset behind the ghost's near silhouette, so its upper
+    // run must stop short of the seam's world height by the depth gap times
+    // tan(elevation) — exactly where the column's projection crosses the
+    // ghost's bottom diagonal edge on screen.
+    const colViewX = px * Math.cos(BASE_YAW) + pz * Math.sin(BASE_YAW);
+    const colViewZ = -px * Math.sin(BASE_YAW) + pz * Math.cos(BASE_YAW);
+    const edgeViewZ = nearSilhouetteDepth(ghostFootprint, colViewX);
+    const upperEnd = ghostSeamY - (edgeViewZ - colViewZ) * elevTan;
+    const runs = [
+      // Main top surface -> the upper ghost's bottom (case seam) line, as
+      // it appears on screen at this column's position.
+      { start: DEVICE_H, end: upperEnd },
+      // Lower ghost top rim -> the main computer's underside.
+      { start: GHOST_BELOW_Y + DEVICE_H, end: 0 },
+    ].map((run) => ({
+      ...run,
+      count: Math.ceil((run.end - run.start) / DASH_PERIOD) + 1,
+    }));
+    const dashTotal = runs.reduce((n, run) => n + run.count, 0);
     const arr = new Float32Array(dashTotal * 6);
     for (let i = 0; i < dashTotal; i += 1) {
-      arr[i * 6] = sx * DASH_INSET;
-      arr[i * 6 + 2] = sz * DASH_INSET;
-      arr[i * 6 + 3] = sx * DASH_INSET;
-      arr[i * 6 + 5] = sz * DASH_INSET;
+      arr[i * 6] = px;
+      arr[i * 6 + 2] = pz;
+      arr[i * 6 + 3] = px;
+      arr[i * 6 + 5] = pz;
     }
     const dashAttr = new THREE.BufferAttribute(arr, 3);
     dashAttr.setUsage(THREE.DynamicDrawUsage);
     const dashGeo = track(new THREE.BufferGeometry());
     dashGeo.setAttribute("position", dashAttr);
-    const column = new THREE.LineSegments(dashGeo, dashMaterial);
+    const line = new THREE.LineSegments(dashGeo, dashMaterial);
     // The Y values are rewritten per frame; skip culling against the
     // initial (degenerate) bounds.
-    column.frustumCulled = false;
-    dashColumns.push(column);
-    group.add(column);
+    line.frustumCulled = false;
+    dashColumns.push({ line, runs });
+    group.add(line);
   }
 
   /** Rewrite every column's dash Y spans for time `t` (conveyor downward). */
   function updateDashes(t: number): void {
     for (const column of dashColumns) {
-      const attr = column.geometry.attributes
+      const attr = column.line.geometry.attributes
         .position as THREE.BufferAttribute;
       const arr = attr.array as Float32Array;
       let seg = 0;
-      for (const run of dashRuns) {
+      for (const run of column.runs) {
         const cycle = run.count * DASH_PERIOD;
         for (let i = 0; i < run.count; i += 1) {
           const p = run.end - ((i * DASH_PERIOD + t * DASH_SPEED) % cycle);
