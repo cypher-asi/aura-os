@@ -4,6 +4,7 @@ import { CardSection, MetalCard } from "../CardSection";
 import { TextCard } from "../TextCard";
 import { TrustDeviceStage } from "./TrustDeviceStage";
 import { PasswordLockDevice } from "./PasswordLockDevice";
+import { AlwaysOnToggle } from "./AlwaysOnToggle";
 import "./BuiltForTrustSection.css";
 
 const HEADLINE_ID = "builtForTrustHeadline";
@@ -18,8 +19,9 @@ const HEADLINE_ID = "builtForTrustHeadline";
  *
  * The three copy cards carry a title + two-line description; `MetalCard`'s
  * media well flex-grows to push the copy to the cell floor, keeping titles
- * bottom-aligned across the row. The middle card ("Isolated by default.")
- * seats the animated `PasswordLockDevice` in its media well.
+ * bottom-aligned across the row. The first card ("Always on.") seats the
+ * glowing `AlwaysOnToggle` switch and the middle card ("Isolated by
+ * default.") the animated `PasswordLockDevice` in their media wells.
  */
 export function BuiltForTrustSection(): ReactNode {
   return (
@@ -51,6 +53,7 @@ export function BuiltForTrustSection(): ReactNode {
           className="builtForTrustCopy"
           title="Always on."
           description="Your agent keeps working around the clock, even while you're away and your devices are off."
+          media={<AlwaysOnToggle />}
         />
         <MetalCard
           gradient={225}

@@ -1,0 +1,144 @@
+/*
+ * Pill toggle device for the "Always on." trust card. Recreates the
+ * reference switch — metallic rim, dark recessed track, glossy round knob
+ * on the left, glowing teal ON lettering on the right — but darker, in the
+ * site's machined-metal family, and set into the card panel via a recessed
+ * socket rather than floating on top of it.
+ */
+
+.alwaysOnStage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Recessed pill socket sunk into the card surface: dark top inner shadow +
+ * faint bottom light edge (the same depression recipe as the service-rail
+ * keycap sockets), so the toggle reads as mounted into the panel.
+ */
+.alwaysOnSocket {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(256px, 76%);
+  border-radius: 999px;
+  padding: 7px;
+  background: linear-gradient(180deg, #0a0a0b 0%, #121214 100%);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.07),
+    0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* The Plate supplies the three-ring metallic bezel; fill the socket. */
+.alwaysOnShell {
+  position: relative;
+  width: 100%;
+}
+
+/*
+ * Near-black recessed track inside the bezel, holding the knob and the
+ * lettering. Top-heavy inset shadows + hairline rim so it reads as a well
+ * sunk into the chassis (same treatment as the password-lock screen).
+ */
+.alwaysOnTrack {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 999px;
+  background: radial-gradient(
+    ellipse 120% 130% at 50% 0%,
+    #101113 0%,
+    #0a0b0c 60%,
+    #050505 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.8);
+}
+
+/*
+ * Raised circular knob on the left: glossy silver cap like the reference,
+ * pulled down toward mid-grey so it sits in the dark palette. Bright top
+ * bevel, shaded bottom edge, and a drop shadow onto the track floor.
+ */
+.alwaysOnKnob {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 28%,
+    #dadde0 0%,
+    #b9bdc2 38%,
+    #8e9298 72%,
+    #6f7378 100%
+  );
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.75),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.45),
+    0 5px 12px rgba(0, 0, 0, 0.75),
+    0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/*
+ * Neon ON lettering: teal core with layered glows, matching the reference
+ * sign. The glow breathes slowly but never switches off.
+ */
+.alwaysOnLabel {
+  flex: 1 1 auto;
+  text-align: center;
+  padding-right: 8px;
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: #5ce8de;
+  text-shadow:
+    0 0 4px rgba(92, 232, 222, 0.9),
+    0 0 12px rgba(64, 205, 196, 0.65),
+    0 0 26px rgba(38, 166, 158, 0.5);
+  animation: alwaysOnBreathe 3.6s ease-in-out infinite;
+  user-select: none;
+}
+
+@keyframes alwaysOnBreathe {
+  0%,
+  100% {
+    opacity: 1;
+    text-shadow:
+      0 0 4px rgba(92, 232, 222, 0.9),
+      0 0 12px rgba(64, 205, 196, 0.65),
+      0 0 26px rgba(38, 166, 158, 0.5);
+  }
+  50% {
+    opacity: 0.82;
+    text-shadow:
+      0 0 3px rgba(92, 232, 222, 0.7),
+      0 0 9px rgba(64, 205, 196, 0.45),
+      0 0 18px rgba(38, 166, 158, 0.32);
+  }
+}
+
+@media (max-width: 768px) {
+  .alwaysOnSocket {
+    width: min(224px, 82%);
+  }
+
+  .alwaysOnKnob {
+    width: 50px;
+    height: 50px;
+  }
+
+  .alwaysOnLabel {
+    font-size: 26px;
+  }
+}
