@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import "./TrustDisplayPanel.css";
 
@@ -14,16 +8,8 @@ const FRAMES_PER_SECOND = 75;
 const TICK_MS = 120;
 /** Cells in the segmented attestation bar. */
 const SEGMENT_COUNT = 14;
-/** How long a transport key press holds the display surge. */
-const PRESS_PULSE_MS = 1500;
 
 const STATUS_FLAGS = ["Attested", "Sealed", "Isolated"] as const;
-
-/** Round transport keys under the LCD, like a CD player's cue buttons. */
-const TRANSPORT_KEYS = [
-  { id: "attest", label: "Attest" },
-  { id: "verify", label: "Verify" },
-] as const;
 
 /** Formats elapsed ms as a CD-player style `M:SS:FF` transport counter. */
 function formatUptime(elapsedMs: number): string {
@@ -50,22 +36,19 @@ interface TrustDisplayPanelProps {
  *      set-in rounded window with a slowly spinning data disc (curved spec
  *      text, groove rings, layered hub, metal core) beside an etched
  *      INSERT plate and a recessed logo well,
- *   2. a dark inset VFD glass (the recessed-LCD recipe from `PhoneShell`)
- *      with gold mono readouts — agent VM number, a live ticking uptime
- *      counter, a segmented attestation bar, and lit status flags,
- *   3. a row of round cream transport keys (plus a small dark reseal key).
+ *   2. a dark inset screen (the same deep-recess glass recipe as the
+ *      integrations device screen in `PersonalAgentSection`) matching the
+ *      disc tray's height, with gold mono readouts — agent VM number, a
+ *      live ticking uptime counter, a segmented attestation bar, and lit
+ *      status flags.
  *
- * Sized to exactly the rail's height via the shared `--trust-rail-*`
- * custom properties on `.builtForTrustStage`, but wider. Purely decorative
- * (`aria-hidden`); the display surges when energy crosses the mesh (any
- * rail key lit) or when a transport key is pressed.
+ * Purely decorative (`aria-hidden`); the display surges while energy is
+ * crossing the mesh (any rail key lit).
  */
 export function TrustDisplayPanel({
   active,
 }: TrustDisplayPanelProps): ReactNode {
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [pressLit, setPressLit] = useState(false);
-  const pressTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const startedAt = Date.now();
@@ -75,25 +58,7 @@ export function TrustDisplayPanel({
     return () => window.clearInterval(timer);
   }, []);
 
-  const pressKey = useCallback(() => {
-    setPressLit(true);
-    if (pressTimerRef.current !== undefined) {
-      window.clearTimeout(pressTimerRef.current);
-    }
-    pressTimerRef.current = window.setTimeout(() => {
-      setPressLit(false);
-    }, PRESS_PULSE_MS);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (pressTimerRef.current !== undefined) {
-        window.clearTimeout(pressTimerRef.current);
-      }
-    };
-  }, []);
-
-  const lit = active || pressLit;
+  const lit = active;
 
   // The attestation bar refills one cell per second, then wraps — like a
   // CD player's PLAYING ADDRESS bar marching across the disc.
@@ -191,30 +156,6 @@ export function TrustDisplayPanel({
           </ul>
 
           <div className="trustDisplayGloss" />
-        </div>
-
-        <div className="trustTransportKeys">
-          {TRANSPORT_KEYS.map((key) => (
-            <button
-              key={key.id}
-              type="button"
-              tabIndex={-1}
-              className="trustTransportKey"
-              onClick={pressKey}
-            >
-              <span className="trustTransportKeyCap" />
-              <span className="trustTransportKeyLabel">{key.label}</span>
-            </button>
-          ))}
-          <button
-            type="button"
-            tabIndex={-1}
-            className="trustTransportKey trustTransportKey--small"
-            onClick={pressKey}
-          >
-            <span className="trustTransportKeyCap" />
-            <span className="trustTransportKeyLabel">Reseal</span>
-          </button>
         </div>
       </div>
     </Plate>

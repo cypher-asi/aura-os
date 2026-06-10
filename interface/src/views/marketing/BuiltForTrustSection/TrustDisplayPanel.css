@@ -3,12 +3,10 @@
  * card — the right-hand counterpart to the left `ServiceButtonRail`. One
  * shared three-ring <Plate /> rim stacks, top to bottom: a recessed disc
  * tray holding a raised MDAT-style chassis (set-in spinning data disc,
- * etched INSERT plate, recessed logo well), a dark recessed VFD glass (the
- * inset-LCD recipe from PhoneShell.css) carrying gold mono readouts in the
- * page's --gold-* tokens, and a row of round cream transport keys. The
- * bezel height is computed from the same --trust-rail-* custom properties
- * the rail consumes (set on .builtForTrustStage in TrustDeviceStage.css)
- * so both side panels can never drift apart; only the width differs.
+ * etched INSERT plate, recessed logo well), and a matching-height dark
+ * recessed screen (the deep-recess glass recipe shared with the
+ * integrations device screen in PersonalAgentSection.css) carrying gold
+ * mono readouts in the page's --gold-* tokens.
  */
 
 .trustDisplayPanel {
@@ -25,16 +23,12 @@
   transform-origin: right center;
 }
 
-/* Matches the rail well's total height: 8 keys + 7 gaps + 2 paddings. */
+/* Content-sized bezel: the disc tray and the equal-height screen below. */
 .trustDisplayBezel {
   display: flex;
   flex-direction: column;
   gap: var(--trust-rail-pad, 12px);
   box-sizing: border-box;
-  height: calc(
-    var(--trust-rail-key, 56px) * 8 + var(--trust-rail-gap, 12px) * 7 +
-      var(--trust-rail-pad, 12px) * 2
-  );
   padding: var(--trust-rail-pad, 12px);
 }
 
@@ -363,14 +357,15 @@
 }
 
 /* ----------------------------------------------------------------------
- * VFD glass: near-black recessed screen with gold readouts, shared
- * recipe with the PhoneShell compressor LCD.
+ * Screen: same height as the disc tray above, styled with the deep-recess
+ * glass recipe shared with the integrations device screen
+ * (.personalAgentDeviceScreen in PersonalAgentSection.css).
  * ------------------------------------------------------------------- */
 
 .trustDisplayWell {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
+  height: 188px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -378,18 +373,23 @@
   box-sizing: border-box;
   padding: 16px;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 14px;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
-    #120c08 0%,
-    #0a0706 55%,
+    #0a0a0a 0%,
+    #050505 60%,
     #000 100%
   );
+  /* Deeper recess: a strong dark top inset + secondary blur read as the
+     screen sinking below the bezel, with a faint bottom-edge highlight
+     catching light on the lip. */
   box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    inset 0 0 18px 2px rgba(var(--gold-halo, 153, 81, 25), 0.16),
-    0 1px 0 rgba(255, 255, 255, 0.12);
+    inset 0 6px 14px rgba(0, 0, 0, 0.95),
+    inset 0 3px 5px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(0, 0, 0, 0.9),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
   font-family: var(
     --font-mono,
     ui-monospace,
@@ -404,7 +404,7 @@
 .trustDisplayGlow {
   position: absolute;
   inset: 0;
-  border-radius: 12px;
+  border-radius: 14px;
   pointer-events: none;
   opacity: 0.18;
   background: radial-gradient(
@@ -539,145 +539,17 @@
   box-shadow: 0 0 5px rgba(var(--gold-glow, 232, 205, 137), 0.8);
 }
 
-/* Top sheen + faint scanlines so the readout sits behind curved glass
-   (mirrors the PhoneShell LCD gloss). */
+/* Top gloss reflection across the screen glass (same recipe as the
+   integrations device screen's gloss). */
 .trustDisplayGloss {
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto 0;
+  height: 42%;
   z-index: 2;
   pointer-events: none;
-  border-radius: 12px;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.07) 0%,
-      rgba(255, 255, 255, 0) 38%
-    ),
-    repeating-linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0) 3px,
-      rgba(0, 0, 0, 0.14) 3px,
-      rgba(0, 0, 0, 0.14) 4px
-    );
-}
-
-/* Inner border ring, light on top fading dark at the bottom, painted
-   border-only via the mask-composite cutout (same as the PhoneShell LCD). */
-.trustDisplayWell::after {
-  content: "";
-  position: absolute;
-  inset: 1.5px;
-  border-radius: 10.5px;
-  border: 1px solid transparent;
   background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.55) 0%,
-      rgba(255, 255, 255, 0.32) 42%,
-      rgba(0, 0, 0, 0.55) 100%
-    )
-    border-box;
-  -webkit-mask:
-    linear-gradient(#000 0 0) padding-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0.5;
-  pointer-events: none;
-  z-index: 3;
-}
-
-/* ----------------------------------------------------------------------
- * Transport keys: round cream cue buttons (plus a small dark reseal key)
- * sitting directly on the plate surface beneath the LCD.
- * ------------------------------------------------------------------- */
-
-.trustTransportKeys {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-around;
-  gap: 10px;
-  padding: 4px 2px 2px;
-}
-
-.trustTransportKey {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-/* Cream domed keycap recessed into a dark socket ring. */
-.trustTransportKeyCap {
-  width: 42px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 32%,
-    #f6efdd 0%,
-    #e6dabc 55%,
-    #b8a87e 100%
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0) 100%
   );
-  box-shadow:
-    inset 0 2px 3px rgba(255, 255, 255, 0.75),
-    inset 0 -3px 5px rgba(0, 0, 0, 0.3),
-    0 3px 6px rgba(0, 0, 0, 0.65),
-    0 0 0 3px #06070a,
-    0 0 0 4px rgba(255, 255, 255, 0.07);
-  transition: transform 140ms ease, box-shadow 140ms ease;
-}
-
-.trustTransportKey:hover .trustTransportKeyCap {
-  transform: translateY(-1px);
-}
-
-.trustTransportKey:active .trustTransportKeyCap {
-  transform: translateY(1px);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.25),
-    inset 0 -1px 2px rgba(255, 255, 255, 0.4),
-    0 1px 3px rgba(0, 0, 0, 0.6),
-    0 0 0 3px #06070a,
-    0 0 0 4px rgba(255, 255, 255, 0.07);
-}
-
-.trustTransportKeyLabel {
-  font-size: 8.5px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--color-text-secondary, #b9bec7);
-}
-
-/* Small dark utility key, like the reference's RELOOP button. */
-.trustTransportKey--small .trustTransportKeyCap {
-  width: 30px;
-  margin-top: 6px;
-  background: radial-gradient(
-    circle at 50% 32%,
-    #2a2d33 0%,
-    #16181c 60%,
-    #0a0b0d 100%
-  );
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.7),
-    0 3px 6px rgba(0, 0, 0, 0.65),
-    0 0 0 3px #06070a,
-    0 0 0 4px rgba(255, 255, 255, 0.07);
-}
-
-.trustTransportKey--small:active .trustTransportKeyCap {
-  transform: translateY(1px);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.8),
-    0 1px 3px rgba(0, 0, 0, 0.6),
-    0 0 0 3px #06070a,
-    0 0 0 4px rgba(255, 255, 255, 0.07);
 }
