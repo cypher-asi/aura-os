@@ -259,16 +259,24 @@
  * ------------------------------------------------------------------- */
 
 .trustDiscSide {
+  position: relative;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   flex: 1 1 44%;
   min-width: 0;
   gap: 7px;
 }
 
-/* Raised middle plate carrying the etched eject triangle + caption. */
+/* Raised middle plate carrying the etched eject triangle + caption,
+   vertically centered on the column's full height (absolute, so the
+   bottom logo well doesn't skew the centering). */
 .trustDiscPlate {
-  margin: auto 0;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
