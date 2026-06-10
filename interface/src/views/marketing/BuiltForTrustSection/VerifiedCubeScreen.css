@@ -67,7 +67,7 @@
 
 /* 3D viewport. `--cube` drives both cubes so one knob scales the pair. */
 .verifiedCubeScene {
-  --cube: 92px;
+  --cube: 78px;
   position: relative;
   width: var(--cube);
   height: var(--cube);
@@ -235,6 +235,6 @@
   }
 
   .verifiedCubeScene {
-    --cube: 76px;
+    --cube: 65px;
   }
 }
