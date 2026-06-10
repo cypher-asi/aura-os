@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { SCREEN_FRAGMENT_SHADER } from "../AuraScreenOrb/shaders";
+import { createProviderLogoTextures } from "./provider-logo-textures";
 
 /**
  * The three computers in the stack, top to bottom: the upper ghost
@@ -135,6 +136,22 @@ const DASH_SIDE = (GHOST_CORNER + HOLE_CORNER) / 2;
 const DASH_LEN = 0.06;
 const DASH_PERIOD = 0.12; // dash + gap
 const DASH_SPEED = 0.35; // world units per second, downward
+
+/**
+ * Provider-logo quadrant on the upper ghost's top plate: four flat decals
+ * arranged 2x2 inside the screen-recess area, each rotating through the
+ * model-provider marks. Per quadrant the cycle is fade in -> hold -> fade
+ * out -> hidden gap (where the mark swaps to the next provider), with the
+ * four quadrants staggered a quarter-cycle apart so requests read as
+ * continuously streaming through different providers.
+ */
+const LOGO_QUAD_OFFSET = 0.36; // |x|=|z| of each quadrant center
+const LOGO_QUAD_SIZE = 0.44; // side of each square decal plane
+const LOGO_CYCLE_S = 4.8; // full per-quadrant cycle length
+const LOGO_VISIBLE_S = 3.4; // visible portion (fades included); rest is gap
+const LOGO_FADE_S = 0.7; // fade-in / fade-out ramp within the visible span
+const LOGO_MAX_OPACITY = 0.5; // matches the wireframe's mid tier
+const LOGO_DRIFT = 0.05; // total upward drift across a visibility span
 
 /**
  * Hover glow: a soft white additive halo sprite fades in while a computer
@@ -730,9 +747,9 @@ export function createIsolatedDeviceScene(
   // schematic wireframe in three line "weights" (WebGL lines are always
   // 1px, so weight is faked with brightness/opacity tiers): a strong outer
   // silhouette (top rim doubled for a heavier read + corner verticals),
-  // mid-tier structural seams (lid seam, base, screen recess, and the AURA
-  // wordmark on the top computer), and faint interior detail (case seam,
-  // recessed-plate echo, vent hatching).
+  // mid-tier structural seams (lid seam, base, screen recess, and the
+  // provider-logo quadrant on the top computer's plate), and faint interior
+  // detail (case seam, recessed-plate echo, vent hatching).
   const ghostStrongMaterial = new THREE.LineBasicMaterial({
     color: 0x9aa0a8,
     transparent: true,
@@ -805,29 +822,28 @@ export function createIsolatedDeviceScene(
     opacity: 0.55,
   });
 
-  // AURA wordmark on the top plate (only the upper ghost carries it): the
-  // app's actual wordmark PNG laid flat as a decal, tinted gray and faded so
-  // it reads in the same tier as the wireframe rather than as a bright logo.
-  // The plane lies in the x-z plane (rotateX) and is spun (mesh.rotation.y,
-  // set on the instance below) so the word runs along the plate's upper-left
-  // edge toward the far corner.
-  const WORDMARK_SRC = "/AURA_logo_text_mark.png";
-  const WORDMARK_ASPECT = 3322 / 421; // intrinsic w/h of the wordmark PNG
-  const WORDMARK_WIDTH = 0.85; // along the word, in plate units
-  const wordmarkTexture = new THREE.TextureLoader().load(WORDMARK_SRC);
-  wordmarkTexture.colorSpace = THREE.SRGBColorSpace;
-  wordmarkTexture.anisotropy = maxAniso;
-  const wordmarkMaterial = new THREE.MeshBasicMaterial({
-    map: wordmarkTexture,
-    color: 0x9aa0a8,
-    transparent: true,
-    opacity: 0.6,
-    depthWrite: false,
-  });
-  const wordmarkGeo = track(
-    new THREE.PlaneGeometry(WORDMARK_WIDTH, WORDMARK_WIDTH / WORDMARK_ASPECT),
+  // Provider-logo quadrant on the top plate (only the upper ghost carries
+  // it): four flat decals lying in the x-z plane, gray-tinted like the
+  // wireframe, whose opacity/height/mark are animated per frame in
+  // `updateLogoQuads`. Each mesh is counter-yawed against the group's
+  // diamond pose so the marks read upright to the viewer.
+  const logoTextures = createProviderLogoTextures(maxAniso);
+  const logoGeo = track(
+    new THREE.PlaneGeometry(LOGO_QUAD_SIZE, LOGO_QUAD_SIZE),
   );
-  wordmarkGeo.rotateX(-Math.PI / 2);
+  logoGeo.rotateX(-Math.PI / 2);
+  interface LogoQuad {
+    material: THREE.MeshBasicMaterial;
+    mesh: THREE.Mesh;
+    /** Quadrant slot (0..3); also the per-quad stagger step. */
+    slot: number;
+    /** Y of the plate face this quad's drift is centered on (world). */
+    baseY: number;
+    /** Cycle number whose mark is currently mapped, to detect swaps. */
+    cycle: number;
+  }
+  const logoQuads: LogoQuad[] = [];
+  const logoMaterials: THREE.MeshBasicMaterial[] = [];
 
   // Louver hatching on the two visible walls, mirroring the real vents.
   const hatchPts: number[] = [];
@@ -867,17 +883,37 @@ export function createIsolatedDeviceScene(
     ghost.add(new THREE.Line(ghostPlateGeo, faint));
     ghost.add(new THREE.LineSegments(ghostCornerGeo, corner));
     ghost.add(new THREE.LineSegments(ghostHatchGeo, faint));
-    // Only the top computer carries the AURA wordmark; the bottom one's
-    // plate stays bare.
+    // Only the top computer carries the provider-logo quadrant; the bottom
+    // one's plate stays bare.
     if (yOffset === GHOST_ABOVE_Y) {
-      const wordmark = new THREE.Mesh(wordmarkGeo, wordmarkMaterial);
-      wordmark.rotation.y = Math.PI / 2; // run the word along the upper-left edge
-      wordmark.position.set(-0.5, DEVICE_H + 0.002, 0);
-      ghost.add(wordmark);
-      tierGlows.top.lineMaterials.push({
-        material: wordmarkMaterial,
-        baseOpacity: wordmarkMaterial.opacity,
-      });
+      const quadCorners: Array<[number, number]> = [
+        [-LOGO_QUAD_OFFSET, -LOGO_QUAD_OFFSET],
+        [LOGO_QUAD_OFFSET, -LOGO_QUAD_OFFSET],
+        [-LOGO_QUAD_OFFSET, LOGO_QUAD_OFFSET],
+        [LOGO_QUAD_OFFSET, LOGO_QUAD_OFFSET],
+      ];
+      for (let slot = 0; slot < quadCorners.length; slot += 1) {
+        const [qx, qz] = quadCorners[slot];
+        const material = new THREE.MeshBasicMaterial({
+          map: logoTextures[slot % logoTextures.length],
+          color: 0x9aa0a8,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        });
+        logoMaterials.push(material);
+        const mesh = new THREE.Mesh(logoGeo, material);
+        mesh.rotation.y = -BASE_YAW; // undo the diamond yaw: marks face the viewer
+        mesh.position.set(qx, DEVICE_H + 0.002, qz);
+        ghost.add(mesh);
+        logoQuads.push({
+          material,
+          mesh,
+          slot,
+          baseY: DEVICE_H + 0.002,
+          cycle: 0,
+        });
+      }
     }
     ghost.position.y = yOffset;
     group.add(ghost);
@@ -975,6 +1011,51 @@ export function createIsolatedDeviceScene(
   }
   updateDashes(0);
 
+  /**
+   * Drive the top plate's provider-logo quadrant for time `t`: each quad
+   * runs the shared fade-in -> hold -> fade-out -> hidden-gap cycle a
+   * quarter-cycle apart, drifting gently upward while visible (echoing the
+   * dash conveyor) and swapping to the next provider mark while invisible
+   * (the wrap point sits inside the hidden gap, so swaps never pop). The
+   * hover boost folds into the opacity here — the quads are NOT registered
+   * in `tierGlows`, whose pass would otherwise fight this per-frame
+   * envelope for `material.opacity`.
+   */
+  function updateLogoQuads(t: number): void {
+    const boost = 1 + GHOST_HOVER_BOOST * tierGlows.top.level;
+    const stagger = LOGO_CYCLE_S / logoQuads.length;
+    for (const quad of logoQuads) {
+      const phase = t + quad.slot * stagger;
+      const local = phase % LOGO_CYCLE_S;
+      const cycle = Math.floor(phase / LOGO_CYCLE_S);
+      if (cycle !== quad.cycle) {
+        quad.cycle = cycle;
+        // Step every slot by the quad count so the four quads always show
+        // four distinct providers while still visiting the whole roster.
+        quad.material.map =
+          logoTextures[
+            (quad.slot + cycle * logoQuads.length) % logoTextures.length
+          ];
+      }
+      let envelope = 0;
+      if (local < LOGO_VISIBLE_S) {
+        const fadeIn = THREE.MathUtils.smoothstep(local, 0, LOGO_FADE_S);
+        const fadeOut =
+          1 -
+          THREE.MathUtils.smoothstep(
+            local,
+            LOGO_VISIBLE_S - LOGO_FADE_S,
+            LOGO_VISIBLE_S,
+          );
+        envelope = Math.min(fadeIn, fadeOut);
+      }
+      quad.material.opacity = LOGO_MAX_OPACITY * envelope * boost;
+      const progress = Math.min(local / LOGO_VISIBLE_S, 1);
+      quad.mesh.position.y = quad.baseY + (progress - 0.5) * LOGO_DRIFT;
+    }
+  }
+  updateLogoQuads(0);
+
   // Hover detection: the camera pose is fixed, so instead of raycasting the
   // pointer is bucketed into three vertical bands split at the two stack
   // gaps (between the middle device's top and the upper ghost's bottom, and
@@ -1071,6 +1152,8 @@ export function createIsolatedDeviceScene(
           entry.baseOpacity * (1 + GHOST_HOVER_BOOST * glow.level);
       }
     }
+    // After the glow pass so the quads fold in the settled hover level.
+    updateLogoQuads(t);
     renderFrame();
   }
 
@@ -1124,8 +1207,8 @@ export function createIsolatedDeviceScene(
       ghostMidMaterial.dispose();
       ghostFaintMaterial.dispose();
       ghostCornerMaterial.dispose();
-      wordmarkMaterial.dispose();
-      wordmarkTexture.dispose();
+      for (const logoMaterial of logoMaterials) logoMaterial.dispose();
+      for (const logoTexture of logoTextures) logoTexture.dispose();
       dashMaterial.dispose();
       etchSeamMaterial.dispose();
       etchDashMaterial.dispose();
