@@ -1,5 +1,19 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "./MarketingFooter.css";
+
+/**
+ * Smooth-scrolls the marketing scroll column (mounted by
+ * `PublicMarketingPanel`) back to the top. Used when a footer link
+ * targets the page the visitor is already on — React Router treats
+ * that as a no-op navigation, so the column would otherwise stay at
+ * the bottom where the footer lives.
+ */
+function scrollMarketingColumnToTop(): void {
+  const column = document.querySelector<HTMLElement>(
+    "[data-marketing-scroll-column]",
+  );
+  column?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+}
 
 type InternalLink = {
   readonly kind: "internal";
@@ -24,10 +38,7 @@ type FooterColumn = {
 // `BottomTaskbar/PoweredByGridButton.tsx`.
 const GRID_REPO_URL = "https://github.com/cypher-asi/the-grid";
 
-// TODO: replace the X and YouTube placeholder hrefs with the real
-// social URLs once the accounts are finalized.
-const X_URL = "#";
-const YOUTUBE_URL = "#";
+const X_URL = "https://x.com/aura_asi";
 
 const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
   {
@@ -51,10 +62,7 @@ const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
   },
   {
     heading: "Connect",
-    links: [
-      { kind: "external", label: "X (@aura_asi)", href: X_URL },
-      { kind: "external", label: "YouTube", href: YOUTUBE_URL },
-    ],
+    links: [{ kind: "external", label: "X", href: X_URL }],
   },
   {
     heading: "Legal",
@@ -74,10 +82,10 @@ const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
  * Internal destinations use React Router `Link` (same in-app navigation
  * as `ProductCallToAction`); external destinations render as real
  * `<a target="_blank">` so the browser's open-in-new-tab affordances
- * work. X and YouTube currently point at `#` placeholders pending the
- * real social URLs (see the TODO above).
+ * work.
  */
 export function MarketingFooter(): React.ReactNode {
+  const { pathname } = useLocation();
   return (
     <footer className="marketingFooter" aria-label="Site footer">
       <div className="marketingFooterCard">
@@ -89,7 +97,13 @@ export function MarketingFooter(): React.ReactNode {
                 {column.links.map((link) => (
                   <li key={link.label} className="marketingFooterItem">
                     {link.kind === "internal" ? (
-                      <Link to={link.to} className="marketingFooterLink">
+                      <Link
+                        to={link.to}
+                        className="marketingFooterLink"
+                        onClick={() => {
+                          if (pathname === link.to) scrollMarketingColumnToTop();
+                        }}
+                      >
                         {link.label}
                       </Link>
                     ) : (

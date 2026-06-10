@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { PageHero } from "../PageHero";
 
 /**
@@ -8,20 +9,27 @@ import { PageHero } from "../PageHero";
  * column) is owned by the public-mode `AuraShell` + `PublicMarketingPanel`.
  */
 export function PrivacyView(): ReactNode {
+  const { t } = useTranslation("marketing");
+
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "AURA - Privacy Policy";
+    document.title = t("privacy.documentTitle", {
+      defaultValue: "AURA - Privacy Policy",
+    });
 
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [t]);
 
   return (
     <PageHero
-      label="LEGAL"
-      headline="Privacy Policy"
-      description="Our Privacy Policy is being finalized and will be published here soon."
+      label={t("privacy.label", { defaultValue: "LEGAL" })}
+      headline={t("privacy.headline", { defaultValue: "Privacy Policy" })}
+      description={t("privacy.description", {
+        defaultValue:
+          "Our Privacy Policy is being finalized and will be published here soon.",
+      })}
       preview={null}
       centered
     />

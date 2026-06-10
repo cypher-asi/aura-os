@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import "./SupportView.css";
 
 // Standalone, auth-independent support page served at `/support`.
@@ -10,21 +11,29 @@ import "./SupportView.css";
 const SUPPORT_EMAIL = "support@aura.ai";
 
 export function SupportView() {
+  const { t } = useTranslation("marketing");
+
   return (
     <main className="supportPage">
       <div className="supportCard">
         <p className="supportWordmark">AURA</p>
-        <h1 className="supportHeadline">Support</h1>
+        <h1 className="supportHeadline">
+          {t("support.headline", { defaultValue: "Support" })}
+        </h1>
         <p className="supportBody">
-          Need help with AURA? We&rsquo;re here for you. Email our support team
-          and we&rsquo;ll get back to you as soon as we can.
+          {t("support.body", {
+            defaultValue:
+              "Need help with AURA? We\u2019re here for you. Email our support team and we\u2019ll get back to you as soon as we can.",
+          })}
         </p>
         <a className="supportEmail" href={`mailto:${SUPPORT_EMAIL}`}>
           {SUPPORT_EMAIL}
         </a>
         <p className="supportNote">
-          For account or billing questions, please include the email address
-          associated with your AURA account.
+          {t("support.note", {
+            defaultValue:
+              "For account or billing questions, please include the email address associated with your AURA account.",
+          })}
         </p>
       </div>
     </main>

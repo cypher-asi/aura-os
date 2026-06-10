@@ -785,6 +785,10 @@ export function PublicChatView(): React.ReactElement {
           className={styles.scrollColumn}
           ref={scrollerRef}
           data-testid="public-chat-scroll"
+          // Stable hook so the titlebar's AURA wordmark can reset the
+          // landing page to the top ("home") when it is already the
+          // active route — see `PublicLeading` in `AuraTitlebar`.
+          data-public-home-scroll=""
         >
           <div className={styles.heroViewport}>
             <div className={styles.heroSlot} ref={heroSlotRef}>

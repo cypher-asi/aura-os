@@ -14,7 +14,14 @@ import {
  */
 export const LANGUAGE_STORAGE_KEY = "aura-language";
 
-export const I18N_NAMESPACES = ["common", "nav", "auth", "settings"] as const;
+export const I18N_NAMESPACES = [
+  "common",
+  "nav",
+  "auth",
+  "settings",
+  "marketing",
+  "publicChat",
+] as const;
 
 function readStoredLanguage(): string | null {
   try {
@@ -53,7 +60,13 @@ void i18n
   .use(
     resourcesToBackend(
       (language: string, namespace: string) =>
-        import(`../locales/${language}/${namespace}.json`),
+        // Not every locale ships every namespace yet (newer namespaces like
+        // `marketing`/`publicChat` start English-only). A missing file must
+        // resolve to an empty catalog so i18next falls back to `en` instead
+        // of rejecting the import and logging a hard error.
+        import(`../locales/${language}/${namespace}.json`).catch(() => ({
+          default: {},
+        })),
     ),
   )
   .use(initReactI18next)

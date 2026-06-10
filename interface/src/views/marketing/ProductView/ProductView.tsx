@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { AgentsPageSections } from "./AgentsPageSections";
 
 /**
@@ -11,14 +12,16 @@ import { AgentsPageSections } from "./AgentsPageSections";
  * by the public-mode `AuraShell` + `PublicMarketingPanel`.
  */
 export function ProductView(): ReactNode {
+  const { t } = useTranslation("marketing");
+
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "AURA - Agents";
+    document.title = t("agents.documentTitle", { defaultValue: "AURA - Agents" });
 
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [t]);
 
   return <AgentsPageSections />;
 }

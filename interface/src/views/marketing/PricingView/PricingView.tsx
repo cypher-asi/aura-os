@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
@@ -18,19 +19,25 @@ type BillingCycle = "monthly" | "yearly";
 const HERO_HEADLINE = "Starting at free.";
 
 interface Plan {
+  /** Stable id used to build i18n keys (`pricing.plans.<id>.*`). */
+  readonly id: string;
+  /** English fallback name. */
   readonly name: string;
   readonly monthlyPrice: string;
   readonly yearlyPrice: string;
+  /** English fallback description. */
   readonly description: string;
-  readonly features: readonly ReactNode[];
-  readonly ctaLabel: string;
+  /** English fallback feature lines. */
+  readonly features: readonly string[];
   readonly href: string;
   readonly recommended?: boolean;
+  /** English fallback price note. */
   readonly priceNote?: string;
 }
 
 const PLANS: readonly Plan[] = [
   {
+    id: "free",
     name: "Free",
     monthlyPrice: "$0",
     yearlyPrice: "$0",
@@ -40,20 +47,20 @@ const PLANS: readonly Plan[] = [
       "Local open source models",
       "Pay-as-you-go for frontier models",
     ],
-    ctaLabel: "Download",
     href: "/download",
   },
   {
+    id: "pro",
     name: "Pro",
     monthlyPrice: "$20",
     yearlyPrice: "$192",
     priceNote: "$10/mo for Zero Pro OG subscribers",
     description: "Everything in Free, plus:",
     features: ["$20 worth of monthly credits", "Remote agents"],
-    ctaLabel: "Download",
     href: "/download",
   },
   {
+    id: "sage",
     name: "Sage",
     monthlyPrice: "$200",
     yearlyPrice: "$1,920",
@@ -62,7 +69,6 @@ const PLANS: readonly Plan[] = [
       "20x usage on frontier models",
       "Priority access to new features",
     ],
-    ctaLabel: "Download",
     href: "/download",
   },
 ] as const;
@@ -74,17 +80,29 @@ const PLANS: readonly Plan[] = [
  * parent route; the page itself is just the pricing section.
  */
 export function PricingView(): ReactNode {
+  const { t } = useTranslation("marketing");
+  // Resolve once so the streamed `text` and the `data-text` reservation
+  // ghost stay byte-identical even after translation.
+  const heroHeadline = t("pricing.heroHeadline", {
+    defaultValue: HERO_HEADLINE,
+  });
+
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "AURA - Pricing";
+    document.title = t("pricing.documentTitle", {
+      defaultValue: "AURA - Pricing",
+    });
 
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [t]);
 
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
-  const cadenceLabel = billingCycle === "monthly" ? "/mo." : "/yr.";
+  const cadenceLabel =
+    billingCycle === "monthly"
+      ? t("pricing.cadenceMonthly", { defaultValue: "/mo." })
+      : t("pricing.cadenceYearly", { defaultValue: "/yr." });
 
   return (
     <section className="pricingPage">
@@ -94,26 +112,33 @@ export function PricingView(): ReactNode {
             centered
             preview={null}
             headline={
-              <span className="pricingHeadlineReserve" data-text={HERO_HEADLINE}>
+              <span className="pricingHeadlineReserve" data-text={heroHeadline}>
                 <TypewriterText
-                  text={HERO_HEADLINE}
+                  text={heroHeadline}
                   speedMs={45}
                   showCaret={false}
                 />
               </span>
             }
-            description="Start with local open source models for free, then pay only for the frontier models you use."
+            description={t("pricing.heroDescription", {
+              defaultValue:
+                "Start with local open source models for free, then pay only for the frontier models you use.",
+            })}
             headlineCta={<CreateAgentButton source="pricing_hero" />}
           />
         </div>
 
         <div className="pricingPlansSection">
           <div className="pricingPlansSectionHeader">
-            <p className="pricingPlansLabel">Individual Plans</p>
+            <p className="pricingPlansLabel">
+              {t("pricing.plansLabel", { defaultValue: "Individual Plans" })}
+            </p>
             <div
               className="pricingToggle"
               role="tablist"
-              aria-label="Billing cycle"
+              aria-label={t("pricing.billingCycleAriaLabel", {
+                defaultValue: "Billing cycle",
+              })}
             >
               <button
                 type="button"
@@ -122,7 +147,7 @@ export function PricingView(): ReactNode {
                 className={`pricingToggleButton${billingCycle === "monthly" ? " pricingToggleButtonActive" : ""}`}
                 onClick={() => setBillingCycle("monthly")}
               >
-                Monthly
+                {t("pricing.monthly", { defaultValue: "Monthly" })}
               </button>
               <button
                 type="button"
@@ -131,7 +156,7 @@ export function PricingView(): ReactNode {
                 className={`pricingToggleButton${billingCycle === "yearly" ? " pricingToggleButtonActive" : ""}`}
                 onClick={() => setBillingCycle("yearly")}
               >
-                Yearly
+                {t("pricing.yearly", { defaultValue: "Yearly" })}
               </button>
             </div>
           </div>
@@ -144,13 +169,17 @@ export function PricingView(): ReactNode {
 
               return (
                 <article
-                  key={plan.name}
+                  key={plan.id}
                   className={`pricingPlanCard${plan.recommended ? " pricingPlanCardRecommended" : ""}`}
                 >
                   <div className="pricingPlanBody">
                     <div className="pricingPlanHeading">
                       <div className="pricingPlanTitleRow">
-                        <h2 className="pricingPlanTitle">{plan.name}</h2>
+                        <h2 className="pricingPlanTitle">
+                          {t(`pricing.plans.${plan.id}.name`, {
+                            defaultValue: plan.name,
+                          })}
+                        </h2>
                       </div>
                       <p className="pricingPlanPrice">
                         <span className="pricingPlanPriceValue">{price}</span>
@@ -161,17 +190,23 @@ export function PricingView(): ReactNode {
                         )}
                       </p>
                       {plan.priceNote && (
-                        <p className="pricingPlanPriceNote">{plan.priceNote}</p>
+                        <p className="pricingPlanPriceNote">
+                          {t(`pricing.plans.${plan.id}.priceNote`, {
+                            defaultValue: plan.priceNote,
+                          })}
+                        </p>
                       )}
                       <p className="pricingPlanDescription">
-                        {plan.description}
+                        {t(`pricing.plans.${plan.id}.description`, {
+                          defaultValue: plan.description,
+                        })}
                       </p>
                     </div>
 
                     <ul className="pricingPlanFeatureList">
                       {plan.features.map((feature, index) => (
                         <li
-                          key={`${plan.name}-${index}`}
+                          key={`${plan.id}-${index}`}
                           className="pricingPlanFeature"
                         >
                           <Check
@@ -179,7 +214,11 @@ export function PricingView(): ReactNode {
                             strokeWidth={2}
                             className="pricingPlanFeatureIcon"
                           />
-                          <span>{feature}</span>
+                          <span>
+                            {t(`pricing.plans.${plan.id}.features.${index}`, {
+                              defaultValue: feature,
+                            })}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -189,7 +228,7 @@ export function PricingView(): ReactNode {
                     to={plan.href}
                     className={`pricingPlanButton${plan.recommended ? " pricingPlanButtonPrimary" : ""}`}
                   >
-                    {plan.ctaLabel}
+                    {t("pricing.downloadCta", { defaultValue: "Download" })}
                   </Link>
                 </article>
               );

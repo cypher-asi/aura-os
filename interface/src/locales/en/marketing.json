@@ -1,0 +1,96 @@
+{
+  "agents": {
+    "documentTitle": "AURA - Agents",
+    "heroHeadline": "Delegate everything.",
+    "heroDescriptionLine1": "AURA agents are experts in every field",
+    "heroDescriptionLine2": "that work while you sleep.",
+    "buildDeviceAriaLabel": "Build your agent"
+  },
+  "code": {
+    "documentTitle": "AURA - Code",
+    "heroHeadline": "Code while you sleep.",
+    "heroDescription": "A frontier coding harness designed for security, automation and verifiability that is 100% open source.",
+    "deviceAriaLabel": "The AURA coding desktop"
+  },
+  "terms": {
+    "documentTitle": "AURA - Terms of Service",
+    "label": "LEGAL",
+    "headline": "Terms of Service",
+    "description": "Our Terms of Service are being finalized and will be published here soon."
+  },
+  "privacy": {
+    "documentTitle": "AURA - Privacy Policy",
+    "label": "LEGAL",
+    "headline": "Privacy Policy",
+    "description": "Our Privacy Policy is being finalized and will be published here soon."
+  },
+  "support": {
+    "headline": "Support",
+    "body": "Need help with AURA? We\u2019re here for you. Email our support team and we\u2019ll get back to you as soon as we can.",
+    "note": "For account or billing questions, please include the email address associated with your AURA account."
+  },
+  "pricing": {
+    "documentTitle": "AURA - Pricing",
+    "heroHeadline": "Starting at free.",
+    "heroDescription": "Start with local open source models for free, then pay only for the frontier models you use.",
+    "plansLabel": "Individual Plans",
+    "billingCycleAriaLabel": "Billing cycle",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "downloadCta": "Download",
+    "plans": {
+      "free": {
+        "name": "Free",
+        "description": "Get started for free:",
+        "features": {
+          "0": "No credit card required",
+          "1": "Local open source models",
+          "2": "Pay-as-you-go for frontier models"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "Everything in Free, plus:",
+        "priceNote": "$10/mo for Zero Pro OG subscribers",
+        "features": {
+          "0": "$20 worth of monthly credits",
+          "1": "Remote agents"
+        }
+      },
+      "sage": {
+        "name": "Sage",
+        "description": "Everything in Pro, plus:",
+        "features": {
+          "0": "20x usage on frontier models",
+          "1": "Priority access to new features"
+        }
+      }
+    }
+  },
+  "download": {
+    "documentTitle": "Download \u2014 AURA",
+    "headline": "Download AURA for every major desktop platform.",
+    "cta": "Download",
+    "loading": "Loading...",
+    "cards": {
+      "mac-apple-silicon": {
+        "description": "Native build for M1, M2, M3, and M4 Macs.",
+        "meta": "Recommended for most Macs"
+      },
+      "mac-intel": {
+        "description": "Desktop build for x86-based Macs and older MacBook Pro and iMac hardware.",
+        "meta": "Only for pre-Apple Silicon Macs"
+      },
+      "windows": {
+        "description": "Signed Windows installer with the latest desktop runtime and updater support.",
+        "meta": "x64 installer"
+      },
+      "linux": {
+        "description": "Portable AppImage for Linux desktops, suitable for direct download and launch.",
+        "meta": "x86_64 AppImage"
+      }
+    }
+  }
+}

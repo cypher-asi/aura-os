@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { AgentChatSection } from "../AgentChatSection";
 import { AgentConsole } from "../AgentConsole";
 import { ChangelogPreview } from "../ChangelogPreview";
@@ -55,6 +56,11 @@ const HERO_HEADLINE = "Delegate everything.";
  * this stack mounts it brings its own dark surface tokens with it.
  */
 export function AgentsPageSections(): ReactNode {
+  const { t } = useTranslation("marketing");
+  // Resolve once so the streamed `text` and the `data-text` reservation
+  // ghost stay byte-identical even after translation.
+  const heroHeadline = t("agents.heroHeadline", { defaultValue: HERO_HEADLINE });
+
   return (
     <div className={styles.productView}>
       <MarketingFirstScreen
@@ -63,10 +69,10 @@ export function AgentsPageSections(): ReactNode {
             headline={
               <span
                 className={styles.headlineReserve}
-                data-text={HERO_HEADLINE}
+                data-text={heroHeadline}
               >
                 <TypewriterText
-                  text={HERO_HEADLINE}
+                  text={heroHeadline}
                   speedMs={45}
                   showCaret={false}
                 />
@@ -74,9 +80,13 @@ export function AgentsPageSections(): ReactNode {
             }
             description={
               <>
-                AURA agents are experts in every field
+                {t("agents.heroDescriptionLine1", {
+                  defaultValue: "AURA agents are experts in every field",
+                })}
                 <br />
-                that work while you sleep.
+                {t("agents.heroDescriptionLine2", {
+                  defaultValue: "that work while you sleep.",
+                })}
               </>
             }
             preview={null}
@@ -88,7 +98,11 @@ export function AgentsPageSections(): ReactNode {
         stage={<AgentConsole />}
       />
       <MadeForYouSection />
-      <CardSection ariaLabel="Build your agent">
+      <CardSection
+        ariaLabel={t("agents.buildDeviceAriaLabel", {
+          defaultValue: "Build your agent",
+        })}
+      >
         <MetalCard
           wide
           gradient={135}

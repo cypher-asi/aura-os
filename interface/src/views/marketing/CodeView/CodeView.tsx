@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { CardSection, MetalCard } from "../CardSection";
 import { ChangelogPreview } from "../ChangelogPreview";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
@@ -47,14 +48,19 @@ const HERO_HEADLINE = "Code while you sleep.";
  * only renders the section stack.
  */
 export function CodeView(): ReactNode {
+  const { t } = useTranslation("marketing");
+  // Resolve once so the streamed `text` and the `data-text` reservation
+  // ghost stay byte-identical even after translation.
+  const heroHeadline = t("code.heroHeadline", { defaultValue: HERO_HEADLINE });
+
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "AURA - Code";
+    document.title = t("code.documentTitle", { defaultValue: "AURA - Code" });
 
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [t]);
 
   return (
     <div className={styles.codeView}>
@@ -64,23 +70,30 @@ export function CodeView(): ReactNode {
             headline={
               <span
                 className={styles.headlineReserve}
-                data-text={HERO_HEADLINE}
+                data-text={heroHeadline}
               >
                 <TypewriterText
-                  text={HERO_HEADLINE}
+                  text={heroHeadline}
                   speedMs={45}
                   showCaret={false}
                 />
               </span>
             }
-            description="A frontier coding harness designed for security, automation and verifiability that is 100% open source."
+            description={t("code.heroDescription", {
+              defaultValue:
+                "A frontier coding harness designed for security, automation and verifiability that is 100% open source.",
+            })}
             preview={null}
             centered
             headlineCta={<CreateAgentButton source="code_hero" />}
           />
         }
       />
-      <CardSection ariaLabel="The AURA coding desktop">
+      <CardSection
+        ariaLabel={t("code.deviceAriaLabel", {
+          defaultValue: "The AURA coding desktop",
+        })}
+      >
         <MetalCard
           wide
           gradient={135}

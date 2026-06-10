@@ -200,12 +200,36 @@ function AuthedLeading({
 }
 
 function PublicLeading(): React.ReactElement {
+  // The AURA wordmark always goes "home" (the `Link` to "/"). When the
+  // visitor is already on the homepage and scrolled down, navigating to
+  // "/" is a no-op — React Router won't re-mount or reset the landing's
+  // own scroll column — so we manually glide that column back to the
+  // top. On every other route (e.g. `/agents`) the homepage column
+  // isn't mounted, so the click falls through to the normal navigation
+  // that lands the visitor on the homepage hero.
+  const handleLogoClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+  ): void => {
+    const homeColumn = document.querySelector<HTMLElement>(
+      "[data-public-home-scroll]",
+    );
+    if (homeColumn && homeColumn.scrollTop > 0) {
+      event.preventDefault();
+      homeColumn.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <span
       className={`${styles.titleLeading} titlebar-no-drag`}
       onDoubleClick={(e) => e.stopPropagation()}
     >
-      <Link to="/" aria-label="AURA home" className={styles.titleLogoLink}>
+      <Link
+        to="/"
+        aria-label="AURA home"
+        className={styles.titleLogoLink}
+        onClick={handleLogoClick}
+      >
         <img
           src="/AURA_logo_text_mark.png"
           alt="AURA"

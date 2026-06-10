@@ -40,14 +40,12 @@ function LockGlyph(): ReactNode {
  * Decorative media for the "Isolated by default." trust card: a pill-shaped
  * lock device rendered in the site's dark machined-metal language (shared
  * three-ring `Plate` rim, recessed near-black screen, raised circular lock
- * keycap with a gold-glowing padlock glyph seated inside the shell),
- * backlit by a warm glow that bleeds past the chassis onto the card like
- * the device is lit from behind.
+ * keycap with a gold-glowing padlock glyph seated inside the shell).
  *
  * A password is forever being entered: glowing dots count up to the full
  * six, hold, then count back down, with the dot group staying horizontally
- * centered as it grows and shrinks. The backlight breathes with the count.
- * Purely decorative, so the whole stage is `aria-hidden`.
+ * centered as it grows and shrinks. Purely decorative, so the whole stage
+ * is `aria-hidden`.
  */
 export function PasswordLockDevice(): ReactNode {
   const [count, setCount] = useState(0);
@@ -75,10 +73,6 @@ export function PasswordLockDevice(): ReactNode {
 
   return (
     <div className="passwordLockStage" aria-hidden="true">
-      <div
-        className="passwordLockGlow"
-        style={{ opacity: 0.45 + 0.55 * (count / MAX_DOTS) }}
-      />
       <Plate radius="999px" className="passwordLockShell">
         <div className="passwordLockBody">
           <div className="passwordLockScreen">

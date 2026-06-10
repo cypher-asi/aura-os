@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "./DownloadView.css";
 
 type DownloadPlatform = "mac" | "windows" | "linux" | "unknown";
@@ -107,6 +108,7 @@ function resolveUrl(
 }
 
 export function DownloadView() {
+  const { t } = useTranslation("marketing");
   const [platform] = useState<DownloadPlatform>(() => detectPlatform());
   const [manifest, setManifest] = useState<DownloadManifest | null>(null);
 
@@ -121,14 +123,18 @@ export function DownloadView() {
   }, []);
 
   useEffect(() => {
-    document.title = "Download — AURA";
-  }, []);
+    document.title = t("download.documentTitle", {
+      defaultValue: "Download \u2014 AURA",
+    });
+  }, [t]);
 
   return (
     <section className="downloadPage">
       <div className="downloadPageContent">
         <h1 className="downloadPageHeadline">
-          Download AURA for every major desktop platform.
+          {t("download.headline", {
+            defaultValue: "Download AURA for every major desktop platform.",
+          })}
         </h1>
         <div className="downloadGrid">
           {DOWNLOAD_CARDS.map((card) => {
@@ -140,7 +146,7 @@ export function DownloadView() {
 
             return (
               <article
-                key={card.title}
+                key={card.assetKey}
                 className={`downloadCard${isPrimary ? " downloadCardRecommended" : ""}`}
               >
                 <div className="downloadCardBody">
@@ -150,7 +156,9 @@ export function DownloadView() {
                     </div>
                     <span className="downloadCardEyebrow">{card.eyebrow}</span>
                     <p className="downloadCardDescription">
-                      {card.description}
+                      {t(`download.cards.${card.assetKey}.description`, {
+                        defaultValue: card.description,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -164,9 +172,15 @@ export function DownloadView() {
                       if (!href) e.preventDefault();
                     }}
                   >
-                    {href ? card.cta : "Loading..."}
+                    {href
+                      ? t("download.cta", { defaultValue: card.cta })
+                      : t("download.loading", { defaultValue: "Loading..." })}
                   </a>
-                  <p className="downloadCardMeta">{card.meta}</p>
+                  <p className="downloadCardMeta">
+                    {t(`download.cards.${card.assetKey}.meta`, {
+                      defaultValue: card.meta,
+                    })}
+                  </p>
                 </div>
               </article>
             );

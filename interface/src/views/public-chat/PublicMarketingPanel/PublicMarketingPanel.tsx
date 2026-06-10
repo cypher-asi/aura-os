@@ -157,6 +157,11 @@ export function PublicMarketingPanel(): React.ReactElement {
         ref={scrollRef}
         className={styles.scrollColumn}
         style={{ background: columnBackground }}
+        // Stable hook so the header nav (see `PublicTopNav`) can reset
+        // this column to the top when the visitor clicks the link for
+        // the page they are already on — same-route clicks are a no-op
+        // for React Router, so it never resets on its own.
+        data-marketing-scroll-column=""
       >
         <Outlet key={pathname} />
       </div>

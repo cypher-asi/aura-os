@@ -45,6 +45,7 @@ const PRIMARY_LINKS: ReadonlyArray<TopNavLink> = [
 const RESOURCE_LINKS: ReadonlyArray<TopNavLink> = [
   { tKey: "blog", label: "Blog", to: "/blog" },
   { tKey: "changelog", label: "Changelog", to: "/changelog" },
+  { tKey: "downloads", label: "Downloads", to: "/download" },
   { tKey: "feedback", label: "Feedback", to: "/feedback" },
   { tKey: "models", label: "Models", to: "/models" },
   { tKey: "os", label: "OS", to: "/os" },
@@ -186,29 +187,51 @@ function NavDropdown({
   );
 }
 
+/**
+ * Smooth-scrolls the marketing scroll column (mounted by
+ * `PublicMarketingPanel`) back to the top. Used when the visitor
+ * clicks the header link for the page they are already on: React
+ * Router treats that as a no-op navigation, so the column would
+ * otherwise stay wherever they had scrolled to.
+ */
+function scrollMarketingColumnToTop(): void {
+  const column = document.querySelector<HTMLElement>(
+    "[data-marketing-scroll-column]",
+  );
+  column?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+}
+
 /** Renders one `/expertise/:slug` menu column (Capabilities or Industries). */
 function ExpertiseColumn({
   title,
   entries,
+  currentPath,
 }: {
   readonly title: string;
   readonly entries: readonly ExpertiseEntry[];
+  readonly currentPath: string;
 }): React.ReactElement {
   return (
     <div className={styles.menuSection}>
       <span className={styles.menuSectionTitle}>{title}</span>
-      {entries.map((entry) => (
-        <NavLink
-          key={entry.slug}
-          to={`/expertise/${entry.slug}`}
-          role="menuitem"
-          className={({ isActive }) =>
-            `${styles.menuItem} ${isActive ? styles.menuItemActive : ""}`
-          }
-        >
-          {entry.label}
-        </NavLink>
-      ))}
+      {entries.map((entry) => {
+        const to = `/expertise/${entry.slug}`;
+        return (
+          <NavLink
+            key={entry.slug}
+            to={to}
+            role="menuitem"
+            className={({ isActive }) =>
+              `${styles.menuItem} ${isActive ? styles.menuItemActive : ""}`
+            }
+            onClick={() => {
+              if (currentPath === to) scrollMarketingColumnToTop();
+            }}
+          >
+            {entry.label}
+          </NavLink>
+        );
+      })}
     </div>
   );
 }
@@ -249,7 +272,14 @@ export function PublicTopNav(): React.ReactElement {
       onDoubleClick={(event) => event.stopPropagation()}
     >
       {PRIMARY_LINKS.map((link) => (
-        <NavLink key={link.tKey} to={link.to} className={linkClassName}>
+        <NavLink
+          key={link.tKey}
+          to={link.to}
+          className={linkClassName}
+          onClick={() => {
+            if (pathname === link.to) scrollMarketingColumnToTop();
+          }}
+        >
           {t(link.tKey, { defaultValue: link.label })}
         </NavLink>
       ))}
@@ -263,10 +293,12 @@ export function PublicTopNav(): React.ReactElement {
           <ExpertiseColumn
             title={t("capabilities", { defaultValue: "Capabilities" })}
             entries={CAPABILITIES}
+            currentPath={pathname}
           />
           <ExpertiseColumn
             title={t("industries", { defaultValue: "Industries" })}
             entries={INDUSTRIES}
+            currentPath={pathname}
           />
         </NavDropdown>
       )}
@@ -283,6 +315,9 @@ export function PublicTopNav(): React.ReactElement {
             className={({ isActive }) =>
               `${styles.menuItem} ${isActive ? styles.menuItemActive : ""}`
             }
+            onClick={() => {
+              if (pathname === link.to) scrollMarketingColumnToTop();
+            }}
           >
             {t(link.tKey, { defaultValue: link.label })}
           </NavLink>

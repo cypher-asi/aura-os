@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { PageHero } from "../PageHero";
 
 /**
@@ -8,20 +9,27 @@ import { PageHero } from "../PageHero";
  * column) is owned by the public-mode `AuraShell` + `PublicMarketingPanel`.
  */
 export function TermsView(): ReactNode {
+  const { t } = useTranslation("marketing");
+
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "AURA - Terms of Service";
+    document.title = t("terms.documentTitle", {
+      defaultValue: "AURA - Terms of Service",
+    });
 
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [t]);
 
   return (
     <PageHero
-      label="LEGAL"
-      headline="Terms of Service"
-      description="Our Terms of Service are being finalized and will be published here soon."
+      label={t("terms.label", { defaultValue: "LEGAL" })}
+      headline={t("terms.headline", { defaultValue: "Terms of Service" })}
+      description={t("terms.description", {
+        defaultValue:
+          "Our Terms of Service are being finalized and will be published here soon.",
+      })}
       preview={null}
       centered
     />
