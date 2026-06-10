@@ -382,15 +382,24 @@ export function ChatSurface({
     const GAP_PX = 5;
     const INDICATOR_PX = 68;
     const pill = inputBar.querySelector<HTMLElement>('[data-input-pill="true"]');
+    let frame: number | null = null;
+    let lastIndicatorBottom: number | null = null;
+    let lastClearance: number | null = null;
+    let lastMaskCutoff: number | null = null;
     const apply = () => {
+      frame = null;
       const height = inputBar.getBoundingClientRect().height;
       if (height <= 0) return;
       const bottom = Math.round(height + GAP_PX);
-      area.style.setProperty("--streaming-indicator-bottom", `${bottom}px`);
-      area.style.setProperty(
-        "--chat-input-clearance",
-        `${bottom + INDICATOR_PX}px`,
-      );
+      const clearance = bottom + INDICATOR_PX;
+      if (lastIndicatorBottom !== bottom) {
+        area.style.setProperty("--streaming-indicator-bottom", `${bottom}px`);
+        lastIndicatorBottom = bottom;
+      }
+      if (lastClearance !== clearance) {
+        area.style.setProperty("--chat-input-clearance", `${clearance}px`);
+        lastClearance = clearance;
+      }
       // Clip the transcript at the actual input pill's vertical midline
       // (not the whole input section). Measured from the panel bottom so
       // the mask in `.messageArea` cuts content exactly through the middle
@@ -401,15 +410,23 @@ export function ChatSurface({
         const midFromBottom = Math.round(
           areaRect.bottom - (pillRect.top + pillRect.height / 2),
         );
-        if (midFromBottom > 0) {
+        if (midFromBottom > 0 && lastMaskCutoff !== midFromBottom) {
           area.style.setProperty("--chat-input-mask-cutoff", `${midFromBottom}px`);
+          lastMaskCutoff = midFromBottom;
         }
       }
     };
-    apply();
-    const ro = new ResizeObserver(apply);
+    const scheduleApply = () => {
+      if (frame != null) return;
+      frame = window.requestAnimationFrame(apply);
+    };
+    scheduleApply();
+    const ro = new ResizeObserver(scheduleApply);
     ro.observe(inputBar);
     return () => {
+      if (frame != null) {
+        window.cancelAnimationFrame(frame);
+      }
       ro.disconnect();
       area.style.removeProperty("--streaming-indicator-bottom");
       area.style.removeProperty("--chat-input-clearance");

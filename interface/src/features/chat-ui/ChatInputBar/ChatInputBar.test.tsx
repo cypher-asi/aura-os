@@ -150,6 +150,39 @@ describe("ChatInputBar", () => {
     expect(onInputChange).toHaveBeenCalled();
   });
 
+  it("opens slash commands only for the trailing token", () => {
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = vi.fn();
+    const onInputChange = vi.fn();
+    try {
+      render(<ChatInputBar {...makeProps({ onInputChange })} />);
+
+      const textarea = screen.getByPlaceholderText("/ for commands, @ for context");
+      const promptWithPath = "inspect src/foo/bar";
+      fireEvent.change(textarea, {
+        target: {
+          value: promptWithPath,
+          selectionStart: promptWithPath.length,
+          selectionEnd: promptWithPath.length,
+        },
+      });
+      expect(screen.queryByText("Record Demo")).not.toBeInTheDocument();
+
+      const promptWithCommand = "please /rec";
+      fireEvent.change(textarea, {
+        target: {
+          value: promptWithCommand,
+          selectionStart: promptWithCommand.length,
+          selectionEnd: promptWithCommand.length,
+        },
+      });
+      expect(screen.getByText("Record Demo")).toBeInTheDocument();
+      expect(onInputChange).toHaveBeenLastCalledWith(promptWithCommand);
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
   it("calls onSend on Enter key (without shift)", async () => {
     const user = userEvent.setup();
     const onSend = vi.fn();

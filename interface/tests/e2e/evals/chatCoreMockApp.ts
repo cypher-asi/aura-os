@@ -353,10 +353,16 @@ export async function installChatCoreMockApp(
     if (pathname === "/api/agents/harness/setup" && method === "POST") {
       return json(route, { status: "ready", harness_id: "eval-harness" });
     }
-    if (pathname === `/api/agents/${scenario.agent.agentId}/remote_agent/state`) {
+    const remoteAgentStateMatch = pathname.match(/^\/api\/agents\/([^/]+)\/remote_agent\/state$/);
+    if (
+      remoteAgentStateMatch &&
+      (remoteAgentStateMatch[1] === scenario.agent.agentId ||
+        remoteAgentStateMatch[1] === scenario.agent.agentInstanceId)
+    ) {
+      const requestedAgentId = remoteAgentStateMatch[1];
       remoteAgentStateRequests.push(`${method} ${pathname}`);
       return json(route, {
-        agent_id: scenario.agent.agentId,
+        agent_id: requestedAgentId,
         state: "running",
         uptime_seconds: 120,
         active_sessions: 0,
