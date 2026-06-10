@@ -145,8 +145,8 @@ const DASH_SPEED = 0.35; // world units per second, downward
  * four quadrants staggered a quarter-cycle apart so requests read as
  * continuously streaming through different providers.
  */
-const LOGO_QUAD_OFFSET = 0.36; // |x|=|z| of each quadrant center
-const LOGO_QUAD_SIZE = 0.44; // side of each square decal plane
+const LOGO_QUAD_OFFSET = 0.31; // |x|=|z| of each quadrant center
+const LOGO_QUAD_SIZE = 0.3; // side of each square decal plane
 const LOGO_CYCLE_S = 4.8; // full per-quadrant cycle length
 const LOGO_VISIBLE_S = 3.4; // visible portion (fades included); rest is gap
 const LOGO_FADE_S = 0.7; // fade-in / fade-out ramp within the visible span

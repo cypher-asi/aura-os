@@ -3,18 +3,20 @@ import { renderToStaticMarkup } from "react-dom/server";
 import * as THREE from "three";
 import {
   Anthropic,
+  ByteDance,
   DeepSeek,
   Gemini,
   Minimax,
   Moonshot,
   OpenAI,
   Qwen,
+  Tripo,
   ZAI,
 } from "@lobehub/icons";
 
 /**
  * The model-provider marks rotated through the top ghost computer's plate
- * quadrant — the same mono `@lobehub/icons` roster the `/models` marquee
+ * quadrant — the full mono `@lobehub/icons` roster the `/models` marquee
  * uses, so the hardware fiction never drifts from the actual offering.
  */
 const PROVIDER_MARKS = [
@@ -26,6 +28,8 @@ const PROVIDER_MARKS = [
   Moonshot,
   Minimax,
   ZAI,
+  Tripo,
+  ByteDance,
 ] as const;
 
 /** Rasterization size of each mark's SVG, in texture pixels. */
