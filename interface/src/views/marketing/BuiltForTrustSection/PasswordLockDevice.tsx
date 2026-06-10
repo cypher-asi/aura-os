@@ -18,8 +18,8 @@ const HOLD_EMPTY_MS = 900;
 function LockGlyph(): ReactNode {
   return (
     <svg
-      width="22"
-      height="22"
+      width="26"
+      height="26"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -40,8 +40,9 @@ function LockGlyph(): ReactNode {
  * Decorative media for the "Isolated by default." trust card: a pill-shaped
  * lock device rendered in the site's dark machined-metal language (shared
  * three-ring `Plate` rim, recessed near-black screen, raised circular lock
- * keycap overhanging the right edge), backlit by a warm glow that bleeds
- * past the chassis onto the card like the device is lit from behind.
+ * keycap with a gold-glowing padlock glyph seated inside the shell),
+ * backlit by a warm glow that bleeds past the chassis onto the card like
+ * the device is lit from behind.
  *
  * A password is forever being entered: glowing dots count up to the full
  * six, hold, then count back down, with the dot group staying horizontally
