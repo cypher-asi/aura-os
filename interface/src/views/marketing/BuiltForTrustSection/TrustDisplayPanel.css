@@ -429,7 +429,7 @@
 
 /* Big VFD digits, brightening slightly while the display is active. */
 .trustDisplayDigits {
-  font-size: 30px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.05em;
@@ -450,11 +450,12 @@
 }
 
 .trustDisplayDigits--uptime {
-  font-size: 21px;
+  font-size: 10.5px;
   line-height: 1.25;
 }
 
-/* Segmented attestation bar, like a CD player's PLAYING ADDRESS strip. */
+/* Segmented attestation bar, like a CD player's PLAYING ADDRESS strip:
+   a thin run of cells whose lit state glows white. */
 .trustDisplaySegments {
   display: flex;
   gap: 3px;
@@ -462,53 +463,54 @@
 
 .trustDisplaySegment {
   flex: 1;
-  height: 8px;
-  border-radius: 1.5px;
+  height: 4px;
+  border-radius: 1px;
   background: rgba(232, 236, 245, 0.08);
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
   transition: background 200ms ease, box-shadow 200ms ease;
 }
 
 .trustDisplaySegment[data-lit="true"] {
-  background: rgb(var(--gold-glow, 232, 205, 137));
+  background: rgb(244, 248, 252);
   box-shadow:
-    0 0 5px rgba(var(--gold-glow, 232, 205, 137), 0.7),
-    0 0 10px rgba(var(--gold-halo, 153, 81, 25), 0.4);
+    0 0 5px rgba(255, 255, 255, 0.7),
+    0 0 10px rgba(220, 230, 245, 0.35);
 }
 
-/* Tiny lit status flags along the glass floor, like the reference's
-   MASTER TEMPO indicator strip. */
-.trustDisplayFlags {
+/* Per-computer readout along the glass floor: a gold VFD title plus the
+   typewriter description for whichever computer in the stack is active.
+   Fills the well's remaining height and clips (rather than reflows) while
+   the text streams in. */
+.trustDisplayReadout {
   position: relative;
   z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 6px 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  flex-direction: column;
+  gap: 5px;
+  overflow: hidden;
 }
 
-/* Muted-grey flag captions; only the status dots carry the gold accent. */
-.trustDisplayFlag {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 8.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+.trustDisplayReadoutTitle {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: rgba(232, 236, 245, 0.55);
+  color: var(--gold-core, #f4faf2);
+  text-shadow:
+    0 0 6px rgba(var(--gold-glow, 232, 205, 137), 0.55),
+    0 0 14px rgba(var(--gold-halo, 153, 81, 25), 0.4);
 }
 
-.trustDisplayFlagDot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgb(var(--gold-glow, 232, 205, 137));
-  box-shadow: 0 0 5px rgba(var(--gold-glow, 232, 205, 137), 0.8);
+.trustDisplayReadoutLine {
+  margin: 0;
+  font-size: 8.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  color: rgba(232, 236, 245, 0.62);
 }
 
 /* Top gloss reflection across the screen glass (same recipe as the
