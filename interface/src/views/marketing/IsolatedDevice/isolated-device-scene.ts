@@ -621,9 +621,9 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   // schematic wireframe in three line "weights" (WebGL lines are always
   // 1px, so weight is faked with brightness/opacity tiers): a strong outer
   // silhouette (top rim doubled for a heavier read + corner verticals),
-  // mid-tier structural seams (lid seam, base, screen recess, asterisk
-  // mark), and faint interior detail (case seam, recessed-plate echo, vent
-  // hatching).
+  // mid-tier structural seams (lid seam, base, screen recess, and the AURA
+  // wordmark on the top computer), and faint interior detail (case seam,
+  // recessed-plate echo, vent hatching).
   const ghostStrongMaterial = new THREE.LineBasicMaterial({
     color: 0x9aa0a8,
     transparent: true,
@@ -696,20 +696,29 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     opacity: 0.55,
   });
 
-  // Six-spoke asterisk mark centered on the top plate, like the reference.
-  const asteriskPts: number[] = [];
-  for (let i = 0; i < 6; i += 1) {
-    const a = (i * Math.PI) / 3 + Math.PI / 6;
-    asteriskPts.push(
-      Math.cos(a) * 0.06, DEVICE_H, Math.sin(a) * 0.06,
-      Math.cos(a) * 0.32, DEVICE_H, Math.sin(a) * 0.32,
-    );
-  }
-  const ghostAsteriskGeo = track(new THREE.BufferGeometry());
-  ghostAsteriskGeo.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(asteriskPts, 3),
+  // AURA wordmark on the top plate (only the upper ghost carries it): the
+  // app's actual wordmark PNG laid flat as a decal, tinted gray and faded so
+  // it reads in the same tier as the wireframe rather than as a bright logo.
+  // The plane lies in the x-z plane (rotateX) and is spun (mesh.rotation.y,
+  // set on the instance below) so the word runs along the plate's upper-left
+  // edge toward the far corner.
+  const WORDMARK_SRC = "/AURA_logo_text_mark.png";
+  const WORDMARK_ASPECT = 3322 / 421; // intrinsic w/h of the wordmark PNG
+  const WORDMARK_WIDTH = 0.85; // along the word, in plate units
+  const wordmarkTexture = new THREE.TextureLoader().load(WORDMARK_SRC);
+  wordmarkTexture.colorSpace = THREE.SRGBColorSpace;
+  wordmarkTexture.anisotropy = maxAniso;
+  const wordmarkMaterial = new THREE.MeshBasicMaterial({
+    map: wordmarkTexture,
+    color: 0x9aa0a8,
+    transparent: true,
+    opacity: 0.6,
+    depthWrite: false,
+  });
+  const wordmarkGeo = track(
+    new THREE.PlaneGeometry(WORDMARK_WIDTH, WORDMARK_WIDTH / WORDMARK_ASPECT),
   );
+  wordmarkGeo.rotateX(-Math.PI / 2);
 
   // Louver hatching on the two visible walls, mirroring the real vents.
   const hatchPts: number[] = [];
@@ -733,8 +742,15 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     ghost.add(new THREE.Line(ghostHoleGeo, ghostMidMaterial));
     ghost.add(new THREE.Line(ghostPlateGeo, ghostFaintMaterial));
     ghost.add(new THREE.LineSegments(ghostCornerGeo, ghostCornerMaterial));
-    ghost.add(new THREE.LineSegments(ghostAsteriskGeo, ghostMidMaterial));
     ghost.add(new THREE.LineSegments(ghostHatchGeo, ghostFaintMaterial));
+    // Only the top computer carries the AURA wordmark; the bottom one's
+    // plate stays bare.
+    if (yOffset === GHOST_ABOVE_Y) {
+      const wordmark = new THREE.Mesh(wordmarkGeo, wordmarkMaterial);
+      wordmark.rotation.y = Math.PI / 2; // run the word along the upper-left edge
+      wordmark.position.set(-0.5, DEVICE_H + 0.002, 0);
+      ghost.add(wordmark);
+    }
     ghost.position.y = yOffset;
     group.add(ghost);
   }
@@ -926,6 +942,8 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       ghostMidMaterial.dispose();
       ghostFaintMaterial.dispose();
       ghostCornerMaterial.dispose();
+      wordmarkMaterial.dispose();
+      wordmarkTexture.dispose();
       dashMaterial.dispose();
       etchSeamMaterial.dispose();
       etchDashMaterial.dispose();
