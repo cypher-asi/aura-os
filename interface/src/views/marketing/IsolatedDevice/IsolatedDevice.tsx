@@ -4,8 +4,18 @@ import { DeviceScreen } from "../../../components/DeviceScreen";
 import {
   createIsolatedDeviceScene,
   isWebGLAvailable,
+  type DeviceTier,
 } from "./isolated-device-scene";
 import "./IsolatedDevice.css";
+
+interface IsolatedDeviceProps {
+  /**
+   * Fires when the pointer moves over a different computer in the stack
+   * (top ghost, solid middle device, bottom ghost), or off the canvas
+   * (`null`). Drives the Built for trust display panel's readout.
+   */
+  readonly onHoverChange?: (tier: DeviceTier | null) => void;
+}
 
 /**
  * Marketing "isolated device" — a WebGL-rendered Mac-mini-style computer
@@ -23,18 +33,32 @@ import "./IsolatedDevice.css";
  * panel with a recessed `<DeviceScreen />` well — so it sits inset into the
  * page like every other element holder (matching the hero `AgentConsole`).
  *
+ * Hovering a computer in the stack (top ghost / solid middle / bottom
+ * ghost) fades in a slight gold glow on that computer and reports the tier
+ * via `onHoverChange`, which the trust section uses to swap the display
+ * panel's readout.
+ *
  * The device is decorative hardware fiction, so the host is `aria-hidden`
  * and nothing renders if WebGL is unavailable.
  */
-export function IsolatedDevice(): ReactNode {
+export function IsolatedDevice({
+  onHoverChange,
+}: IsolatedDeviceProps = {}): ReactNode {
   const hostRef = useRef<HTMLDivElement>(null);
+  // Kept in a ref so a new callback identity never remounts the scene.
+  const onHoverChangeRef = useRef(onHoverChange);
+  useEffect(() => {
+    onHoverChangeRef.current = onHoverChange;
+  }, [onHoverChange]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host || !isWebGLAvailable()) {
       return;
     }
-    const scene = createIsolatedDeviceScene(host);
+    const scene = createIsolatedDeviceScene(host, {
+      onHoverChange: (tier) => onHoverChangeRef.current?.(tier),
+    });
     return () => scene.dispose();
   }, []);
 

@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
+import { TypewriterText } from "../../public-chat/TypewriterText";
+import type { DeviceTier } from "../IsolatedDevice/isolated-device-scene";
 import "./TrustDisplayPanel.css";
 
 /** CD-transport frame rate the uptime readout counts in (M:SS:FF). */
@@ -9,7 +11,32 @@ const TICK_MS = 120;
 /** Cells in the segmented attestation bar. */
 const SEGMENT_COUNT = 14;
 
-const STATUS_FLAGS = ["Attested", "Sealed", "Isolated"] as const;
+/**
+ * Per-computer readout copy: shown on the display glass for whichever
+ * computer in the WebGL stack is hovered/active. Each description is one
+ * continuous string (no hard breaks) written to wrap to ~3 lines on the
+ * display glass.
+ */
+const TIER_READOUTS: Record<
+  DeviceTier,
+  { title: string; description: string }
+> = {
+  top: {
+    title: "AURA Router",
+    description:
+      "A secure routing layer brokering every request across open source and frontier models.",
+  },
+  middle: {
+    title: "AURA Runtime Harness",
+    description:
+      "All data flows through AURA's custom harness. Every step is atomic, immutable and audited.",
+  },
+  bottom: {
+    title: "AURA Swarm",
+    description:
+      "An isolated trusted execution environment. Your keys never leave it and the host sees nothing.",
+  },
+};
 
 /** Formats elapsed ms as a CD-player style `M:SS:FF` transport counter. */
 function formatUptime(elapsedMs: number): string {
@@ -24,6 +51,11 @@ function formatUptime(elapsedMs: number): string {
 interface TrustDisplayPanelProps {
   /** True while any rail key is lit, so the display surges with the mesh. */
   readonly active: boolean;
+  /**
+   * The computer in the WebGL stack whose readout the screen shows
+   * (whichever was hovered last; the stage defaults it to "middle").
+   */
+  readonly tier: DeviceTier;
 }
 
 /**
@@ -39,14 +71,16 @@ interface TrustDisplayPanelProps {
  *   2. a dark inset screen (the same deep-recess glass recipe as the
  *      integrations device screen in `PersonalAgentSection`) matching the
  *      disc tray's height, with gold mono readouts — agent VM number, a
- *      live ticking uptime counter, a segmented attestation bar, and lit
- *      status flags.
+ *      live ticking uptime counter, a segmented attestation bar, and a
+ *      per-computer readout (title + typewriter description) for whichever
+ *      computer in the WebGL stack is hovered/active.
  *
  * Purely decorative (`aria-hidden`); the display surges while energy is
  * crossing the mesh (any rail key lit).
  */
 export function TrustDisplayPanel({
   active,
+  tier,
 }: TrustDisplayPanelProps): ReactNode {
   const [elapsedMs, setElapsedMs] = useState(0);
 
@@ -63,6 +97,8 @@ export function TrustDisplayPanel({
   // The attestation bar refills one cell per second, then wraps — like a
   // CD player's PLAYING ADDRESS bar marching across the disc.
   const litSegments = Math.floor(elapsedMs / 1000) % (SEGMENT_COUNT + 1);
+
+  const readout = TIER_READOUTS[tier];
 
   return (
     <Plate className="trustDisplayPanel" aria-hidden="true">
@@ -147,14 +183,18 @@ export function TrustDisplayPanel({
             </div>
           </div>
 
-          <ul className="trustDisplayFlags">
-            {STATUS_FLAGS.map((flag) => (
-              <li key={flag} className="trustDisplayFlag">
-                <span className="trustDisplayFlagDot" />
-                {flag}
-              </li>
-            ))}
-          </ul>
+          {/* Keyed on the tier so switching computers remounts the
+              typewriters and the description re-types from scratch. */}
+          <div className="trustDisplayReadout" key={tier}>
+            <span className="trustDisplayReadoutTitle">{readout.title}</span>
+            <p className="trustDisplayReadoutLine">
+              <TypewriterText
+                text={readout.description}
+                speedMs={12}
+                showCaret={false}
+              />
+            </p>
+          </div>
 
           <div className="trustDisplayGloss" />
         </div>

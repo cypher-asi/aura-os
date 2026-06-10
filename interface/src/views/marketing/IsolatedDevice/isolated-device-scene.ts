@@ -2,6 +2,20 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { SCREEN_FRAGMENT_SHADER } from "../AuraScreenOrb/shaders";
 
+/**
+ * The three computers in the stack, top to bottom: the upper ghost
+ * wireframe, the solid middle device, and the lower ghost wireframe.
+ */
+export type DeviceTier = "top" | "middle" | "bottom";
+
+export interface IsolatedDeviceSceneOptions {
+  /**
+   * Fires when the pointer moves onto a different computer in the stack
+   * (or off the canvas entirely, reported as `null`).
+   */
+  onHoverChange?: (tier: DeviceTier | null) => void;
+}
+
 export interface IsolatedDeviceScene {
   dispose(): void;
 }
@@ -121,6 +135,23 @@ const DASH_SIDE = (GHOST_CORNER + HOLE_CORNER) / 2;
 const DASH_LEN = 0.06;
 const DASH_PERIOD = 0.12; // dash + gap
 const DASH_SPEED = 0.35; // world units per second, downward
+
+/**
+ * Hover glow: a soft additive halo sprite sits behind each computer in the
+ * stack and fades in while that computer is hovered, plus the hovered
+ * ghost's wireframe lines brighten and the solid device's case picks up a
+ * faint emissive warmth. The fade is an exponential approach (per-frame
+ * lerp) so the glow eases in/out instead of popping.
+ */
+const GLOW_CENTER_Y = DEVICE_H / 2;
+const GLOW_SCALE_X = 3.6;
+const GLOW_SCALE_Y = 1.9;
+const GLOW_MAX_OPACITY = 0.16;
+const GLOW_FADE_RATE = 9; // 1/s exponential approach toward the target
+const GHOST_HOVER_BOOST = 0.45; // extra line-opacity multiplier at full glow
+const CASE_HOVER_EMISSIVE = 0.14; // solid device emissive at full glow
+
+const DEVICE_TIERS: readonly DeviceTier[] = ["top", "middle", "bottom"];
 
 /**
  * Pose: the near vertical corner points exactly at the camera (a perfect
@@ -412,6 +443,37 @@ function createEtchTexture(dashed: boolean): THREE.CanvasTexture {
 }
 
 /**
+ * Soft radial hover-glow decal (transparent canvas): a gold-tinted falloff
+ * matching the page's `--gold-glow` token, rendered as an additive sprite
+ * behind the hovered computer.
+ */
+function createGlowTexture(): THREE.CanvasTexture {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const grad = ctx.createRadialGradient(
+      size / 2,
+      size / 2,
+      0,
+      size / 2,
+      size / 2,
+      size / 2,
+    );
+    grad.addColorStop(0, "rgba(232, 205, 137, 0.85)");
+    grad.addColorStop(0.45, "rgba(232, 205, 137, 0.28)");
+    grad.addColorStop(1, "rgba(232, 205, 137, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/**
  * WebGL "isolated device" scene — a dark matte-metal Mac-mini-style appliance
  * modelled after the reference render, locked in a centered perfect-diamond
  * pose from a high angle. The lid opening holds a recessed screen streaming
@@ -420,7 +482,10 @@ function createEtchTexture(dashed: boolean): THREE.CanvasTexture {
  * always looping (like the hero console's ambient readout), paused only
  * while the tab is hidden.
  */
-export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScene {
+export function createIsolatedDeviceScene(
+  host: HTMLElement,
+  options: IsolatedDeviceSceneOptions = {},
+): IsolatedDeviceScene {
   const width = host.clientWidth || 320;
   const height = host.clientHeight || 280;
 
@@ -468,6 +533,10 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     metalness: 0.72,
     roughness: 0.68,
     envMapIntensity: 0.55,
+    // Hover glow: the emissive intensity lerps up while the middle (solid)
+    // computer is hovered, warming the case in the gold accent.
+    emissive: 0xe8cd89,
+    emissiveIntensity: 0,
   });
   // Recessed screen — the first section's console plasma shader, driven by
   // the same uniform contract as the full-screen original. The shader
@@ -617,6 +686,49 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     group.add(led);
   }
 
+  // Hover glow rig: one additive halo sprite behind each computer in the
+  // stack, plus a per-tier registry of line materials that brighten while
+  // their computer is hovered (the ghost loop below fills these in with its
+  // per-ghost material clones). The sprites render first (renderOrder -1,
+  // no depth test) so the solid device occludes its own glow into a rim
+  // halo rather than a wash across the case.
+  const glowTexture = createGlowTexture();
+  interface TierGlow {
+    spriteMaterial: THREE.SpriteMaterial;
+    lineMaterials: {
+      material: THREE.LineBasicMaterial | THREE.MeshBasicMaterial;
+      baseOpacity: number;
+    }[];
+    level: number;
+  }
+  const tierCenterY: Record<DeviceTier, number> = {
+    top: GHOST_ABOVE_Y + GLOW_CENTER_Y,
+    middle: GLOW_CENTER_Y,
+    bottom: GHOST_BELOW_Y + GLOW_CENTER_Y,
+  };
+  const tierGlows = {} as Record<DeviceTier, TierGlow>;
+  // Per-ghost material clones (the base ghost materials are shared recipes;
+  // brightening one hovered ghost needs its own instances). Collected here
+  // for disposal.
+  const hoverMaterials: THREE.Material[] = [];
+  for (const tier of DEVICE_TIERS) {
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: glowTexture,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,
+    });
+    hoverMaterials.push(spriteMaterial);
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.position.set(0, tierCenterY[tier], 0);
+    sprite.scale.set(GLOW_SCALE_X, GLOW_SCALE_Y, 1);
+    sprite.renderOrder = -1;
+    group.add(sprite);
+    tierGlows[tier] = { spriteMaterial, lineMaterials: [], level: 0 };
+  }
+
   // Ghost outline computers above and below the real device, drawn as a
   // schematic wireframe in three line "weights" (WebGL lines are always
   // 1px, so weight is faked with brightness/opacity tiers): a strong outer
@@ -734,15 +846,30 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   );
 
   for (const yOffset of [GHOST_ABOVE_Y, GHOST_BELOW_Y]) {
+    const tier: DeviceTier = yOffset === GHOST_ABOVE_Y ? "top" : "bottom";
+    // Each ghost gets its own clones of the shared line materials so the
+    // hovered ghost can brighten independently of the other one.
+    const strong = ghostStrongMaterial.clone();
+    const mid = ghostMidMaterial.clone();
+    const faint = ghostFaintMaterial.clone();
+    const corner = ghostCornerMaterial.clone();
+    hoverMaterials.push(strong, mid, faint, corner);
+    tierGlows[tier].lineMaterials.push(
+      { material: strong, baseOpacity: strong.opacity },
+      { material: mid, baseOpacity: mid.opacity },
+      { material: faint, baseOpacity: faint.opacity },
+      { material: corner, baseOpacity: corner.opacity },
+    );
+
     const ghost = new THREE.Group();
-    ghost.add(new THREE.Line(ghostTopGeo, ghostStrongMaterial));
-    ghost.add(new THREE.Line(ghostTopUnderGeo, ghostFaintMaterial));
-    ghost.add(new THREE.Line(ghostLidSeamGeo, ghostMidMaterial));
-    ghost.add(new THREE.Line(ghostCaseSeamGeo, ghostFaintMaterial));
-    ghost.add(new THREE.Line(ghostHoleGeo, ghostMidMaterial));
-    ghost.add(new THREE.Line(ghostPlateGeo, ghostFaintMaterial));
-    ghost.add(new THREE.LineSegments(ghostCornerGeo, ghostCornerMaterial));
-    ghost.add(new THREE.LineSegments(ghostHatchGeo, ghostFaintMaterial));
+    ghost.add(new THREE.Line(ghostTopGeo, strong));
+    ghost.add(new THREE.Line(ghostTopUnderGeo, faint));
+    ghost.add(new THREE.Line(ghostLidSeamGeo, mid));
+    ghost.add(new THREE.Line(ghostCaseSeamGeo, faint));
+    ghost.add(new THREE.Line(ghostHoleGeo, mid));
+    ghost.add(new THREE.Line(ghostPlateGeo, faint));
+    ghost.add(new THREE.LineSegments(ghostCornerGeo, corner));
+    ghost.add(new THREE.LineSegments(ghostHatchGeo, faint));
     // Only the top computer carries the AURA wordmark; the bottom one's
     // plate stays bare.
     if (yOffset === GHOST_ABOVE_Y) {
@@ -750,6 +877,10 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
       wordmark.rotation.y = Math.PI / 2; // run the word along the upper-left edge
       wordmark.position.set(-0.5, DEVICE_H + 0.002, 0);
       ghost.add(wordmark);
+      tierGlows.top.lineMaterials.push({
+        material: wordmarkMaterial,
+        baseOpacity: wordmarkMaterial.opacity,
+      });
     }
     ghost.position.y = yOffset;
     group.add(ghost);
@@ -847,6 +978,15 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   }
   updateDashes(0);
 
+  // Hover detection: the camera pose is fixed, so instead of raycasting the
+  // pointer is bucketed into three vertical bands split at the two stack
+  // gaps (between the middle device's top and the upper ghost's bottom, and
+  // between the middle device's bottom and the lower ghost's top). The
+  // band boundaries live in NDC y and are recomputed on every camera fit.
+  let hoveredTier: DeviceTier | null = null;
+  let bandTopNdcY = 1;
+  let bandBottomNdcY = -1;
+
   function fitCamera(aspect: number): void {
     // Orthographic frustum fixed to the diamond's width; the vertical extent
     // follows the host's aspect ratio, so a taller canvas reveals more of
@@ -867,8 +1007,30 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     );
     camera.lookAt(0, CAMERA_TARGET_Y, 0);
     camera.updateProjectionMatrix();
+    bandTopNdcY = new THREE.Vector3(0, (DEVICE_H + GHOST_ABOVE_Y) / 2, 0)
+      .project(camera).y;
+    bandBottomNdcY = new THREE.Vector3(0, (GHOST_BELOW_Y + DEVICE_H) / 2, 0)
+      .project(camera).y;
   }
   fitCamera(width / height);
+
+  function setHoveredTier(tier: DeviceTier | null): void {
+    if (tier === hoveredTier) return;
+    hoveredTier = tier;
+    options.onHoverChange?.(tier);
+  }
+
+  const onPointerMove = (event: PointerEvent): void => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    if (rect.height === 0) return;
+    const ndcY = 1 - ((event.clientY - rect.top) / rect.height) * 2;
+    setHoveredTier(
+      ndcY > bandTopNdcY ? "top" : ndcY < bandBottomNdcY ? "bottom" : "middle",
+    );
+  };
+  const onPointerLeave = (): void => setHoveredTier(null);
+  renderer.domElement.addEventListener("pointermove", onPointerMove);
+  renderer.domElement.addEventListener("pointerleave", onPointerLeave);
 
   function renderFrame(): void {
     renderer.render(scene, camera);
@@ -883,10 +1045,13 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
   const clock = new THREE.Clock();
   let raf = 0;
   let running = false;
+  let lastTime = 0;
 
   function animate(): void {
     raf = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
+    const dt = Math.min(Math.max(t - lastTime, 0), 0.1);
+    lastTime = t;
     orbUniforms.u_time.value = t;
     for (let i = 0; i < ledMaterials.length; i += 1) {
       const pulse = Math.pow(Math.max(0, Math.sin(t * 2.4 - i * 0.7)), 8);
@@ -894,6 +1059,22 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     }
     // Stream the connector dashes downward through their runs.
     updateDashes(t);
+    // Hover glow: each tier's level eases toward hovered (1) or idle (0),
+    // driving its halo sprite's opacity, the ghost wireframe brightening,
+    // and (for the middle tier) the solid case's emissive warmth.
+    const ease = 1 - Math.exp(-GLOW_FADE_RATE * dt);
+    for (const tier of DEVICE_TIERS) {
+      const glow = tierGlows[tier];
+      const target = hoveredTier === tier ? 1 : 0;
+      glow.level += (target - glow.level) * ease;
+      glow.spriteMaterial.opacity = GLOW_MAX_OPACITY * glow.level;
+      for (const entry of glow.lineMaterials) {
+        entry.material.opacity =
+          entry.baseOpacity * (1 + GHOST_HOVER_BOOST * glow.level);
+      }
+    }
+    caseMaterial.emissiveIntensity =
+      CASE_HOVER_EMISSIVE * tierGlows.middle.level;
     renderFrame();
   }
 
@@ -901,6 +1082,7 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     if (running) return;
     running = true;
     clock.start();
+    lastTime = 0;
     animate();
   }
 
@@ -931,8 +1113,12 @@ export function createIsolatedDeviceScene(host: HTMLElement): IsolatedDeviceScen
     dispose(): void {
       stop();
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
       resizeObserver.disconnect();
       for (const ledMaterial of ledMaterials) ledMaterial.dispose();
+      for (const hoverMaterial of hoverMaterials) hoverMaterial.dispose();
+      glowTexture.dispose();
       for (const geo of geometries) geo.dispose();
       caseMaterial.dispose();
       orbMaterial.dispose();
