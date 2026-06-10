@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Box, Image as ImageIcon, Search, Sparkles, Video } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   listModels,
@@ -12,8 +13,6 @@ import { useCountUp } from "../../../hooks/use-count-up";
 import { BannerCard } from "../BannerCard/BannerCard";
 
 import "./ModelsView.css";
-
-const STAT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
 
 type ModeFilter = "all" | ModelMode;
 type StatusFilter = "all" | ModelStatus;
@@ -66,6 +65,17 @@ interface ModelCardProps {
 }
 
 function ModelCard({ entry, featured = false }: ModelCardProps): ReactNode {
+  const { t } = useTranslation("marketing");
+  const statusLabel =
+    entry.status === "live"
+      ? t("models.status.live", { defaultValue: "Live" })
+      : t("models.status.soon", { defaultValue: "Soon" });
+  const statusAriaLabel =
+    entry.status === "live"
+      ? t("models.status.liveAriaLabel", { defaultValue: "Status: Live" })
+      : t("models.status.soonAriaLabel", {
+          defaultValue: "Status: Coming soon",
+        });
   return (
     <article
       className={`modelsCard${featured ? " modelsCardFeatured" : ""}`}
@@ -84,9 +94,9 @@ function ModelCard({ entry, featured = false }: ModelCardProps): ReactNode {
         </div>
         <span
           className={`modelsStatusBadge modelsStatusBadge-${entry.status}`}
-          aria-label={`Status: ${entry.status === "live" ? "Live" : "Coming soon"}`}
+          aria-label={statusAriaLabel}
         >
-          {entry.status === "live" ? "Live" : "Soon"}
+          {statusLabel}
         </span>
       </div>
       <p className="modelsCardDescription">{entry.description}</p>
@@ -107,13 +117,20 @@ function ModelCard({ entry, featured = false }: ModelCardProps): ReactNode {
  * and the upstream catalog only fetches once per session.
  */
 export function ModelsView(): ReactNode {
+  const { t, i18n } = useTranslation("marketing");
+  const statNumberFormatter = useMemo(
+    () => new Intl.NumberFormat(i18n.language),
+    [i18n.language],
+  );
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "AURA - Models";
+    document.title = t("models.documentTitle", {
+      defaultValue: "AURA - Models",
+    });
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [t]);
 
   const [mode, setMode] = useState<ModeFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -170,44 +187,63 @@ export function ModelsView(): ReactNode {
   return (
     <section className="modelsPage">
       <div className="modelsBannerWrap">
-        <BannerCard ariaLabel="Models summary" className="modelsStatsCard">
+        <BannerCard
+          ariaLabel={t("models.summaryAriaLabel", {
+            defaultValue: "Models summary",
+          })}
+          className="modelsStatsCard"
+        >
           <header className="modelsStatsCardHeader">
-            <h1 className="modelsPageTitle">Models</h1>
+            <h1 className="modelsPageTitle">
+              {t("models.title", { defaultValue: "Models" })}
+            </h1>
             <p className="modelsPageSubtitle">
-              The frontier models powering AURA, across text, image, video, and
-              3D.
+              {t("models.subtitle", {
+                defaultValue:
+                  "The frontier models powering AURA, across text, image, video, and 3D.",
+              })}
             </p>
           </header>
 
           <dl className="modelsStatsGrid">
             <div className="modelsStat">
-              <dt className="modelsStatLabel">Total Models</dt>
+              <dt className="modelsStatLabel">
+                {t("models.stats.total", { defaultValue: "Total Models" })}
+              </dt>
               <dd className="modelsStatValue">
-                {STAT_NUMBER_FORMATTER.format(totalDisplay)}
+                {statNumberFormatter.format(totalDisplay)}
               </dd>
             </div>
             <div className="modelsStat">
-              <dt className="modelsStatLabel">Text</dt>
+              <dt className="modelsStatLabel">
+                {t("models.stats.text", { defaultValue: "Text" })}
+              </dt>
               <dd className="modelsStatValue">
-                {STAT_NUMBER_FORMATTER.format(textDisplay)}
+                {statNumberFormatter.format(textDisplay)}
               </dd>
             </div>
             <div className="modelsStat">
-              <dt className="modelsStatLabel">Video</dt>
+              <dt className="modelsStatLabel">
+                {t("models.stats.video", { defaultValue: "Video" })}
+              </dt>
               <dd className="modelsStatValue">
-                {STAT_NUMBER_FORMATTER.format(videoDisplay)}
+                {statNumberFormatter.format(videoDisplay)}
               </dd>
             </div>
             <div className="modelsStat">
-              <dt className="modelsStatLabel">Image</dt>
+              <dt className="modelsStatLabel">
+                {t("models.stats.image", { defaultValue: "Image" })}
+              </dt>
               <dd className="modelsStatValue">
-                {STAT_NUMBER_FORMATTER.format(imageDisplay)}
+                {statNumberFormatter.format(imageDisplay)}
               </dd>
             </div>
             <div className="modelsStat">
-              <dt className="modelsStatLabel">3D</dt>
+              <dt className="modelsStatLabel">
+                {t("models.stats.threeD", { defaultValue: "3D" })}
+              </dt>
               <dd className="modelsStatValue">
-                {STAT_NUMBER_FORMATTER.format(threeDDisplay)}
+                {statNumberFormatter.format(threeDDisplay)}
               </dd>
             </div>
           </dl>
@@ -218,7 +254,9 @@ export function ModelsView(): ReactNode {
         <div
           className="modelsModeRow"
           role="tablist"
-          aria-label="Filter by modality"
+          aria-label={t("models.filterByModalityAriaLabel", {
+            defaultValue: "Filter by modality",
+          })}
         >
           {MODE_OPTIONS.map((opt) => (
             <button
@@ -234,7 +272,11 @@ export function ModelsView(): ReactNode {
                   {opt.icon}
                 </span>
               )}
-              <span>{opt.label}</span>
+              <span>
+                {t(`models.modeOptions.${opt.id}`, {
+                  defaultValue: opt.label,
+                })}
+              </span>
             </button>
           ))}
         </div>
@@ -243,7 +285,9 @@ export function ModelsView(): ReactNode {
           <div
             className="modelsStatusRow"
             role="tablist"
-            aria-label="Filter by status"
+            aria-label={t("models.filterByStatusAriaLabel", {
+              defaultValue: "Filter by status",
+            })}
           >
             {STATUS_OPTIONS.map((opt) => (
               <button
@@ -254,16 +298,25 @@ export function ModelsView(): ReactNode {
                 className={`modelsStatusButton${opt.id === status ? " modelsStatusButtonActive" : ""}`}
                 onClick={() => setStatus(opt.id)}
               >
-                {opt.label}
+                {t(`models.statusOptions.${opt.id}`, {
+                  defaultValue: opt.label,
+                })}
               </button>
             ))}
           </div>
-          <label className="modelsSearch" aria-label="Search models">
+          <label
+            className="modelsSearch"
+            aria-label={t("models.searchAriaLabel", {
+              defaultValue: "Search models",
+            })}
+          >
             <Search size={14} strokeWidth={1.75} aria-hidden />
             <input
               type="search"
               className="modelsSearchInput"
-              placeholder="Search models..."
+              placeholder={t("models.searchPlaceholder", {
+                defaultValue: "Search models...",
+              })}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -274,9 +327,13 @@ export function ModelsView(): ReactNode {
           <div
             className="modelsSection"
             role="region"
-            aria-label="Featured models"
+            aria-label={t("models.featuredAriaLabel", {
+              defaultValue: "Featured models",
+            })}
           >
-            <p className="modelsSectionLabel">Featured</p>
+            <p className="modelsSectionLabel">
+              {t("models.featured", { defaultValue: "Featured" })}
+            </p>
             <div className="modelsFeaturedGrid">
               {featured.map((entry) => (
                 <ModelCard key={entry.id} entry={entry} featured />
@@ -288,15 +345,23 @@ export function ModelsView(): ReactNode {
         <div
           className="modelsSection"
           role="region"
-          aria-label="All models"
+          aria-label={t("models.allModelsAriaLabel", {
+            defaultValue: "All models",
+          })}
         >
-          <p className="modelsSectionLabel">{MODE_TITLE[mode]}</p>
+          <p className="modelsSectionLabel">
+            {t(`models.modeTitles.${mode}`, { defaultValue: MODE_TITLE[mode] })}
+          </p>
           {showLoading ? (
-            <p className="modelsEmptyState">Loading catalog…</p>
+            <p className="modelsEmptyState">
+              {t("models.loadingCatalog", { defaultValue: "Loading catalog…" })}
+            </p>
           ) : showEmpty ? (
             <p className="modelsEmptyState">
-              No models match the current filters. Try clearing search or
-              switching tabs.
+              {t("models.empty", {
+                defaultValue:
+                  "No models match the current filters. Try clearing search or switching tabs.",
+              })}
             </p>
           ) : (
             <div className="modelsGrid">

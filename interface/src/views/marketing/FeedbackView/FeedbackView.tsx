@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import {
   listFeedback,
@@ -14,8 +15,6 @@ import { BannerCard } from "../BannerCard/BannerCard";
 import { FeedbackCard } from "./FeedbackCard";
 import { FeedbackFilters } from "./FeedbackFilters";
 import "./FeedbackView.css";
-
-const STAT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
 const BANNER_COUNT_UP_DURATION_MS = 1000;
 
 /**
@@ -32,6 +31,11 @@ const BANNER_COUNT_UP_DURATION_MS = 1000;
  * upstream URL directly.
  */
 export function FeedbackView(): ReactNode {
+  const { t, i18n } = useTranslation("marketing");
+  const statNumberFormatter = useMemo(
+    () => new Intl.NumberFormat(i18n.language),
+    [i18n.language],
+  );
   // Freeze the reset key at mount so the banner count-up replays only when
   // the user navigates *to* the page (a fresh mount), not on in-page filter
   // changes. Filters update the search params via `navigate(..., { replace })`,
@@ -42,12 +46,14 @@ export function FeedbackView(): ReactNode {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "AURA - Feedback";
+    document.title = t("feedback.documentTitle", {
+      defaultValue: "AURA - Feedback",
+    });
 
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [t]);
 
   const [searchParams] = useSearchParams();
   const sort = normalizeSort(searchParams.get("sort"));
@@ -104,31 +110,53 @@ export function FeedbackView(): ReactNode {
   return (
     <section className="feedbackPage">
       <div className="feedbackBannerWrap">
-        <BannerCard ariaLabel="Feedback summary" className="feedbackStatsCard">
+        <BannerCard
+          ariaLabel={t("feedback.summaryAriaLabel", {
+            defaultValue: "Feedback summary",
+          })}
+          className="feedbackStatsCard"
+        >
           <header className="feedbackStatsCardHeader">
-            <h1 className="feedbackPageTitle">Feedback</h1>
+            <h1 className="feedbackPageTitle">
+              {t("feedback.title", { defaultValue: "Feedback" })}
+            </h1>
             <p className="feedbackPageSubtitle">
-              Our users submit feedback and AURA autonomously improves itself.
+              {t("feedback.subtitle", {
+                defaultValue:
+                  "Our users submit feedback and AURA autonomously improves itself.",
+              })}
             </p>
           </header>
 
           <dl className="feedbackStatsGrid">
             <div className="feedbackStat">
-              <dt className="feedbackStatLabel">Items Submitted</dt>
+              <dt className="feedbackStatLabel">
+                {t("feedback.stats.submitted", {
+                  defaultValue: "Items Submitted",
+                })}
+              </dt>
               <dd className="feedbackStatValue">
-                {STAT_NUMBER_FORMATTER.format(submittedDisplay)}
+                {statNumberFormatter.format(submittedDisplay)}
               </dd>
             </div>
             <div className="feedbackStat">
-              <dt className="feedbackStatLabel">Items Resolved</dt>
+              <dt className="feedbackStatLabel">
+                {t("feedback.stats.resolved", {
+                  defaultValue: "Items Resolved",
+                })}
+              </dt>
               <dd className="feedbackStatValue">
-                {STAT_NUMBER_FORMATTER.format(resolvedDisplay)}
+                {statNumberFormatter.format(resolvedDisplay)}
               </dd>
             </div>
             <div className="feedbackStat">
-              <dt className="feedbackStatLabel">Participants</dt>
+              <dt className="feedbackStatLabel">
+                {t("feedback.stats.participants", {
+                  defaultValue: "Participants",
+                })}
+              </dt>
               <dd className="feedbackStatValue">
-                {STAT_NUMBER_FORMATTER.format(participantsDisplay)}
+                {statNumberFormatter.format(participantsDisplay)}
               </dd>
             </div>
           </dl>
@@ -140,15 +168,29 @@ export function FeedbackView(): ReactNode {
 
         <div className="feedbackListColumn">
           {entries.length > 0 ? (
-            <div className="feedbackList" aria-label="Feedback entries">
+            <div
+              className="feedbackList"
+              aria-label={t("feedback.entriesAriaLabel", {
+                defaultValue: "Feedback entries",
+              })}
+            >
               {entries.map((entry) => (
                 <FeedbackCard key={entry.id} entry={entry} />
               ))}
             </div>
           ) : showEmpty ? (
             <div className="feedbackEmptyState">
-              <h2>No feedback yet.</h2>
-              <p>No AURA feedback posts match the current filters.</p>
+              <h2>
+                {t("feedback.empty.heading", {
+                  defaultValue: "No feedback yet.",
+                })}
+              </h2>
+              <p>
+                {t("feedback.empty.body", {
+                  defaultValue:
+                    "No AURA feedback posts match the current filters.",
+                })}
+              </p>
             </div>
           ) : null}
         </div>
