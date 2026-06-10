@@ -5,6 +5,7 @@ import { TextCard } from "../TextCard";
 import { TrustDeviceStage } from "./TrustDeviceStage";
 import { PasswordLockDevice } from "./PasswordLockDevice";
 import { AlwaysOnToggle } from "./AlwaysOnToggle";
+import { VerifiedCubeScreen } from "./VerifiedCubeScreen";
 import "./BuiltForTrustSection.css";
 
 const HEADLINE_ID = "builtForTrustHeadline";
@@ -20,8 +21,10 @@ const HEADLINE_ID = "builtForTrustHeadline";
  * The three copy cards carry a title + two-line description; `MetalCard`'s
  * media well flex-grows to push the copy to the cell floor, keeping titles
  * bottom-aligned across the row. The first card ("Always on.") seats the
- * glowing `AlwaysOnToggle` switch and the middle card ("Isolated by
- * default.") the animated `PasswordLockDevice` in their media wells.
+ * glowing `AlwaysOnToggle` switch, the middle card ("Isolated by
+ * default.") the animated `PasswordLockDevice`, and the last card
+ * ("Trusted and verifiable.") the holographic `VerifiedCubeScreen` in
+ * their media wells.
  */
 export function BuiltForTrustSection(): ReactNode {
   return (
@@ -62,7 +65,6 @@ export function BuiltForTrustSection(): ReactNode {
           title="Isolated by default."
           description="Each agent runs in its own sandboxed VM, fully sealed off from your system and other agents."
           media={<PasswordLockDevice />}
-          mediaClassName="passwordLockMediaWell"
         />
         <MetalCard
           gradient={135}
@@ -70,6 +72,7 @@ export function BuiltForTrustSection(): ReactNode {
           className="builtForTrustCopy"
           title="Trusted and verifiable."
           description="Every environment is attested before it runs, so you can always verify what you're trusting."
+          media={<VerifiedCubeScreen />}
         />
       </CardSection>
     </>

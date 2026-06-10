@@ -1,0 +1,232 @@
+/*
+ * Rounded-corner screen device for the "Trusted and verifiable." trust
+ * card. Same dark machined-metal family as its siblings (shared three-ring
+ * Plate rim, recessed near-black screen), but the glass holds a holographic
+ * cube-within-a-cube: two nested CSS 3D wireframe cubes with thin
+ * iridescent edges and faint glassy fills, tumbling together forever.
+ */
+
+.verifiedCubeStage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* The Plate supplies the rim + radial metal surface; size the panel here. */
+.verifiedCubeShell {
+  position: relative;
+  width: min(244px, 86%);
+}
+
+.verifiedCubeBody {
+  padding: 10px;
+}
+
+/*
+ * Recessed near-black screen: top-heavy inset shadows + hairline rim so it
+ * reads as glass sunk into the chassis (same recipe as the password-lock
+ * screen), but a rounded rectangle tall enough for the cube to tumble in.
+ */
+.verifiedCubeScreen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 168px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse 120% 130% at 50% 0%,
+    #101113 0%,
+    #0a0b0c 60%,
+    #050505 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.8);
+}
+
+/* Faint cool ambient halo on the screen floor behind the hologram. */
+.verifiedCubeGlow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 58% 52% at 50% 54%,
+    rgba(120, 140, 255, 0.14) 0%,
+    rgba(150, 110, 255, 0.07) 45%,
+    transparent 75%
+  );
+  pointer-events: none;
+}
+
+/* 3D viewport. `--cube` drives both cubes so one knob scales the pair. */
+.verifiedCubeScene {
+  --cube: 92px;
+  position: relative;
+  width: var(--cube);
+  height: var(--cube);
+  perspective: 700px;
+}
+
+/* Gentle pitch oscillation so the tumble never reads as a flat spin. */
+.verifiedCubeTilt {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: verifiedCubePitch 9s ease-in-out infinite alternate;
+}
+
+/* Perpetual slow yaw shared by both cubes, so they rotate as one body. */
+.verifiedCubeSpin {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: verifiedCubeYaw 16s linear infinite;
+}
+
+.verifiedCube {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.verifiedCubeOuter {
+  --cube-size: var(--cube);
+  inset: 0;
+}
+
+/* Half-scale cube centered inside the same rotating body. */
+.verifiedCubeInner {
+  --cube-size: calc(var(--cube) * 0.5);
+  top: 50%;
+  left: 50%;
+  width: var(--cube-size);
+  height: var(--cube-size);
+  transform: translate3d(-50%, -50%, 0);
+}
+
+/*
+ * One glassy face: a very faint iridescent fill (padding-box) under a thin
+ * bright holographic edge gradient (border-box), echoing the cyan ->
+ * violet -> magenta sheen of the reference hologram.
+ */
+.verifiedCubeFace {
+  position: absolute;
+  width: var(--cube-size);
+  height: var(--cube-size);
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(
+        135deg,
+        rgba(110, 220, 255, 0.07) 0%,
+        rgba(150, 120, 255, 0.05) 55%,
+        rgba(255, 110, 220, 0.07) 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(110, 235, 255, 0.85) 0%,
+        rgba(150, 120, 255, 0.75) 45%,
+        rgba(255, 110, 220, 0.7) 100%
+      )
+      border-box;
+}
+
+/* Warmer gold-green sheen on the horizontal faces, like the reference
+   cube's lit floor edge. */
+.verifiedCubeFace--top,
+.verifiedCubeFace--bottom {
+  background:
+    linear-gradient(
+        135deg,
+        rgba(190, 255, 170, 0.06) 0%,
+        rgba(110, 220, 255, 0.05) 60%,
+        rgba(150, 120, 255, 0.06) 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(220, 255, 150, 0.8) 0%,
+        rgba(110, 235, 255, 0.7) 55%,
+        rgba(150, 120, 255, 0.7) 100%
+      )
+      border-box;
+}
+
+/* The inner cube's edges read slightly brighter through the outer glass. */
+.verifiedCubeInner .verifiedCubeFace {
+  border-width: 1px;
+  background:
+    linear-gradient(
+        135deg,
+        rgba(110, 220, 255, 0.1) 0%,
+        rgba(255, 110, 220, 0.08) 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(160, 245, 255, 0.95) 0%,
+        rgba(190, 150, 255, 0.85) 50%,
+        rgba(255, 150, 230, 0.85) 100%
+      )
+      border-box;
+}
+
+.verifiedCubeFace--front {
+  transform: rotateY(0deg) translateZ(calc(var(--cube-size) / 2));
+}
+
+.verifiedCubeFace--back {
+  transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
+}
+
+.verifiedCubeFace--right {
+  transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
+}
+
+.verifiedCubeFace--left {
+  transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
+}
+
+.verifiedCubeFace--top {
+  transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
+}
+
+.verifiedCubeFace--bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
+}
+
+@keyframes verifiedCubeYaw {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+@keyframes verifiedCubePitch {
+  from {
+    transform: rotateX(-18deg);
+  }
+  to {
+    transform: rotateX(-32deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .verifiedCubeShell {
+    width: min(220px, 86%);
+  }
+
+  .verifiedCubeScreen {
+    height: 140px;
+  }
+
+  .verifiedCubeScene {
+    --cube: 76px;
+  }
+}
