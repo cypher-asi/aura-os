@@ -1,5 +1,25 @@
 [
   {
+    "date": "2026-06-10",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.635.1",
+    "title": "A golden marketing overhaul, internationalization, and Telegram-native replies",
+    "intro": "Most of today landed in the public marketing site: the /agents and /code pages got a top-to-bottom redesign around a hardware-device visual language and a unified golden accent, with new sections, animated WebGL devices, and a built-from-scratch interactive desktop mock. Alongside the visuals, the app picked up an i18n foundation with 20 languages, Notes-backed /os and /docs CMS pages, sturdier chat error reporting, and a more resilient web logout. Telegram replies now render with native MarkdownV2 formatting.",
+    "entryCount": 6,
+    "highlights": [
+      "Marketing site rebuilt around a hardware-device design language and golden accent",
+      "i18n scaffolding plus 20 locale bundles and user-facing language switchers",
+      "Notes-backed /os whitepaper and /docs CMS pages",
+      "Telegram agent replies now use native MarkdownV2 formatting",
+      "Web logout hardened so File/Profile/Settings/Org logout always clears the session",
+      "Chat error blocks carry agent, device, and IP context for self-describing bug reports"
+    ],
+    "rawCommitCount": 497,
+    "generatedAt": "2026-06-10T08:48:01.787Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.635.1",
+    "path": "history/2026-06-10.json"
+  },
+  {
     "date": "2026-06-09",
     "channel": "nightly",
     "version": "0.1.0-nightly.634.1",
