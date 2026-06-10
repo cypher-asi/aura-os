@@ -81,7 +81,9 @@ for (const scenario of scenarios) {
 
     await timed("open_workbench", () => page.goto(`/projects/${project.project_id}/work`));
     await expect(page.getByRole("button", { name: "Plans", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Tasks", exact: true }).last()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Run", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Task Feed/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Log Output", exact: true })).toBeVisible();
     // Stats is the last sidekick tab and overflows into the "More" menu at
     // the default panel width, so assert it's still reachable there rather
     // than as a top-level button. Widening the panel brings it back inline.

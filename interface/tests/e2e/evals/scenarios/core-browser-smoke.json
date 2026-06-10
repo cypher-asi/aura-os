@@ -65,7 +65,11 @@
           "visibleRoles": [
             { "role": "button", "name": "Demo Project" },
             { "role": "button", "name": "Plans", "exact": true },
-            { "role": "button", "name": "Tasks", "exact": true }
+            { "role": "button", "name": "Run", "exact": true }
+          ],
+          "visibleTexts": [
+            "Task Feed (1)",
+            "Log Output"
           ]
         }
       },
