@@ -111,7 +111,6 @@ export function TrustDisplayPanel({
                     src="/AURA_logo_text_mark.png"
                     alt="AURA"
                   />
-                  <span className="trustDiscLogoSub">Mini data-disc</span>
                 </span>
               </div>
             </div>
