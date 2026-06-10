@@ -13,14 +13,14 @@
   width: clamp(190px, 17vw, 244px);
 }
 
-/* The whole deck renders slightly larger than its laid-out box (the old
-   1.35 scale brought down 20%). Scaling (rather than resizing) keeps
+/* The whole deck renders slightly larger than its laid-out box. Scaling
+   (rather than resizing) keeps
    every fixed-px detail inside in proportion and leaves the layout box
    alone. The doubled class outranks the stage's positioning rule
    regardless of CSS import order; right-center origin preserves the
    right inset + vertical centering. */
 .builtForTrustStage .trustDisplayPanel.trustDisplayPanel {
-  transform: translateY(-50%) scale(1.08);
+  transform: translateY(-50%) scale(1.19);
   transform-origin: right center;
 }
 
@@ -372,12 +372,7 @@
   padding: 16px;
   overflow: hidden;
   border-radius: 14px;
-  background: radial-gradient(
-    ellipse 120% 90% at 50% 0%,
-    #0a0a0a 0%,
-    #050505 60%,
-    #000 100%
-  );
+  background: #050505;
   /* Deeper recess: a strong dark top inset + secondary blur read as the
      screen sinking below the bezel, with a faint bottom-edge highlight
      catching light on the lip. */
@@ -395,27 +390,6 @@
     Menlo,
     monospace
   );
-}
-
-/* Soft gold wash rising from the glass floor; swells while energy is
-   arriving from the rail or a transport key was pressed. */
-.trustDisplayGlow {
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  pointer-events: none;
-  opacity: 0.18;
-  background: radial-gradient(
-    ellipse 95% 70% at 50% 100%,
-    rgba(250, 178, 92, 0.8) 0%,
-    rgba(247, 156, 64, 0.45) 38%,
-    rgba(247, 156, 64, 0) 75%
-  );
-  transition: opacity 320ms ease;
-}
-
-.trustDisplayWell[data-active="true"] .trustDisplayGlow {
-  opacity: 0.38;
 }
 
 /* VM number on the left, uptime counter on the right — like the
@@ -443,14 +417,14 @@
   text-align: right;
 }
 
+/* Muted-grey label, matching the integrations screen's resting icons. */
 .trustDisplayLabel {
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: rgba(var(--gold-glow, 232, 205, 137), 0.55);
-  text-shadow: 0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.35);
+  color: rgba(232, 236, 245, 0.55);
 }
 
 /* Big VFD digits, brightening slightly while the display is active. */
@@ -490,7 +464,7 @@
   flex: 1;
   height: 8px;
   border-radius: 1.5px;
-  background: rgba(var(--gold-glow, 232, 205, 137), 0.1);
+  background: rgba(232, 236, 245, 0.08);
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
   transition: background 200ms ease, box-shadow 200ms ease;
 }
@@ -516,6 +490,7 @@
   list-style: none;
 }
 
+/* Muted-grey flag captions; only the status dots carry the gold accent. */
 .trustDisplayFlag {
   display: flex;
   align-items: center;
@@ -525,8 +500,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: rgba(var(--gold-glow, 232, 205, 137), 0.8);
-  text-shadow: 0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.4);
+  color: rgba(232, 236, 245, 0.55);
 }
 
 .trustDisplayFlagDot {

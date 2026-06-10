@@ -121,8 +121,6 @@ export function TrustDisplayPanel({
           className="trustDisplayWell"
           data-active={lit ? "true" : undefined}
         >
-          <div className="trustDisplayGlow" />
-
           <div className="trustDisplayRow">
             <div className="trustDisplayGroup">
               <span className="trustDisplayLabel">VM</span>
