@@ -1121,6 +1121,13 @@
   color: rgba(232, 234, 238, 0.92);
 }
 
+/* Selected row swaps the glowing ring for a muted checkmark — dimmed to the
+   same quiet gray as the upcoming rows so the active step reads as "in
+   progress" without the neon beacon. */
+.madeForYouDevice .madeForYouCheck--muted {
+  color: rgba(160, 164, 172, 0.5);
+}
+
 .madeForYouDevice .madeForYouSideLabel {
   grid-column: 2;
   text-align: center;

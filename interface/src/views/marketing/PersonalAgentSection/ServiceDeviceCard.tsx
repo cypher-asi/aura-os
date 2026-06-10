@@ -486,16 +486,17 @@ export function ServiceDeviceCard({
                       </span>
                       <span className="madeForYouSideLabel">{item.label}</span>
                       <span className="madeForYouSideIndicator">
-                        {isAbove ? (
+                        {isAbove || isSelected ? (
                           <Check
-                            className="madeForYouCheck"
+                            className={
+                              isSelected
+                                ? "madeForYouCheck madeForYouCheck--muted"
+                                : "madeForYouCheck"
+                            }
                             size={16}
                             strokeWidth={3}
                             aria-hidden="true"
                           />
-                        ) : null}
-                        {isSelected ? (
-                          <span className="madeForYouLensBtn" />
                         ) : null}
                       </span>
                     </button>
