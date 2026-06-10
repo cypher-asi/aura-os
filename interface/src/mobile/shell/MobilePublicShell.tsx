@@ -69,7 +69,7 @@ const PUBLIC_CHAT_PATH = "/chat";
 export function MobilePublicShell(): React.ReactElement {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useTranslation(["nav", "auth", "common"]);
+  const { t } = useTranslation(["nav", "auth", "common", "publicChat"]);
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const [searchParams] = useSearchParams();
@@ -150,14 +150,28 @@ export function MobilePublicShell(): React.ReactElement {
         <button
           type="button"
           className={styles.menuButton}
-          aria-label={drawerOpen ? "Close menu" : "Open menu"}
+          aria-label={
+            drawerOpen
+              ? t("publicChat:mobileShell.closeMenu", {
+                  defaultValue: "Close menu",
+                })
+              : t("publicChat:mobileShell.openMenu", {
+                  defaultValue: "Open menu",
+                })
+          }
           aria-expanded={drawerOpen}
           aria-controls="mobile-public-drawer"
           onClick={drawerOpen ? closeDrawer : openDrawer}
         >
           {drawerOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
         </button>
-        <Link to="/" className={styles.wordmark} aria-label="AURA home">
+        <Link
+          to="/"
+          className={styles.wordmark}
+          aria-label={t("publicChat:mobileShell.homeAriaLabel", {
+            defaultValue: "AURA home",
+          })}
+        >
           AURA
         </Link>
         {canDeleteActiveChat ? (
@@ -165,7 +179,10 @@ export function MobilePublicShell(): React.ReactElement {
             type="button"
             className={styles.deleteButton}
             onClick={handleDeleteActiveChat}
-            aria-label={`Delete chat "${activeSession?.title ?? "this chat"}"`}
+            aria-label={t("publicChat:sessions.deleteChatAriaLabel", {
+              defaultValue: `Delete chat "${activeSession?.title ?? "this chat"}"`,
+              title: activeSession?.title ?? "this chat",
+            })}
             data-testid="mobile-public-delete-chat"
           >
             <Trash2 size={20} aria-hidden="true" />
@@ -188,7 +205,9 @@ export function MobilePublicShell(): React.ReactElement {
       <button
         type="button"
         className={`${styles.backdrop} ${drawerOpen ? styles.backdropOpen : ""}`}
-        aria-label="Close menu"
+        aria-label={t("publicChat:mobileShell.closeMenu", {
+          defaultValue: "Close menu",
+        })}
         aria-hidden={!drawerOpen}
         tabIndex={drawerOpen ? 0 : -1}
         onClick={closeDrawer}
@@ -197,20 +216,29 @@ export function MobilePublicShell(): React.ReactElement {
         id="mobile-public-drawer"
         className={`${styles.drawer} ${drawerOpen ? styles.drawerOpen : ""}`}
         aria-hidden={!drawerOpen}
-        aria-label="Public navigation"
+        aria-label={t("publicChat:mobileShell.publicNavigation", {
+          defaultValue: "Public navigation",
+        })}
       >
         <div className={styles.drawerHeader}>
           <span className={styles.drawerTitle}>AURA</span>
           <button
             type="button"
             className={styles.drawerClose}
-            aria-label="Close menu"
+            aria-label={t("publicChat:mobileShell.closeMenu", {
+              defaultValue: "Close menu",
+            })}
             onClick={closeDrawer}
           >
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <nav className={styles.drawerNav} aria-label="Public sections">
+        <nav
+          className={styles.drawerNav}
+          aria-label={t("publicChat:mobileShell.publicSections", {
+            defaultValue: "Public sections",
+          })}
+        >
           {NAV_ROWS.map((row) => (
             <NavLink
               key={row.tKey}

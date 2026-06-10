@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { MockAuraApp } from "../MockAuraApp";
 import type { OutgoingDesktopBackground } from "../MockAuraApp/MockAuraApp";
 import type { ChatPalette } from "../MockAuraApp/derive-chat-palette";
@@ -116,11 +117,14 @@ export function ComposePanel({
   activePersonaIndex,
   onPersonaSelect,
 }: ComposePanelProps = {}): React.ReactElement {
+  const { t } = useTranslation("publicChat");
   return (
     <div
       className={styles.composePanel}
       role="region"
-      aria-label="Start a new conversation"
+      aria-label={t("compose.startConversationAriaLabel", {
+        defaultValue: "Start a new conversation",
+      })}
     >
       <MockAuraApp
         desktopBackgroundUrl={desktopBackgroundUrl}

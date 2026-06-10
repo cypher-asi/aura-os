@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { PublicMessage } from "../../../stores/public-chat-store";
 import { LLMOutput } from "../../../apps/chat/components/LLMOutput";
 import styles from "./PublicChatBubble.module.css";
@@ -57,6 +58,7 @@ export function PublicChatBubble({
   message,
   isStreaming,
 }: PublicChatBubbleProps): React.ReactElement {
+  const { t } = useTranslation("publicChat");
   const rowClass = isUser(message)
     ? `${styles.messageRow} ${styles.messageRowUser}`
     : `${styles.messageRow} ${styles.messageRowAssistant}`;
@@ -93,7 +95,11 @@ export function PublicChatBubble({
   return (
     <div className={rowClass}>
       <div className={styles.messageBubble}>
-        {`${message.mode} generated from: ${message.prompt}`}
+        {t("bubble.mediaGeneratedFrom", {
+          defaultValue: `${message.mode} generated from: ${message.prompt}`,
+          mode: message.mode,
+          prompt: message.prompt,
+        })}
       </div>
     </div>
   );

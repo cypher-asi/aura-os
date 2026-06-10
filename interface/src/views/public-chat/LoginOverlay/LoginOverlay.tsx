@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef } from "react";
 import { Panel, Text } from "@cypher-asi/zui";
 import { X } from "lucide-react";
 import { useLocation, useNavigate, type Location } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useLoginForm } from "../../LoginView/use-login-form";
 import { LoginForm } from "../../LoginView/LoginForm";
 import { ResetPasswordForm } from "../../LoginView/ResetPasswordForm";
@@ -22,6 +23,7 @@ import styles from "./LoginOverlay.module.css";
  * shell already owns those layers.
  */
 export function LoginOverlay() {
+  const { t } = useTranslation("publicChat");
   const navigate = useNavigate();
   const location = useLocation();
   const headingId = useId();
@@ -94,13 +96,15 @@ export function LoginOverlay() {
           type="button"
           className={styles.loginOverlayClose}
           onClick={handleClose}
-          aria-label="Close login"
-          title="Close"
+          aria-label={t("login.closeLoginAriaLabel", {
+            defaultValue: "Close login",
+          })}
+          title={t("login.close", { defaultValue: "Close" })}
         >
           <X size={16} />
         </button>
         <Text id={headingId} align="center" className={loginStyles.cardTitle}>
-          Login to AURA
+          {t("login.heading", { defaultValue: "Login to AURA" })}
         </Text>
 
         {f.showResetPassword ? (

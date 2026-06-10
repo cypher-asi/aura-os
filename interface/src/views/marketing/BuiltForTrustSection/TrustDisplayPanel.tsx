@@ -123,8 +123,8 @@ export function TrustDisplayPanel({
                     <text className="trustDiscTextRing">
                       <textPath href="#trustDiscTextPath">
                         SANDBOXED VM &#8226; TRUSTED EXECUTION &#8226; ATTESTED
-                        BOOT &#8226; MDLP COMPATIBLE &#8226; ENHANCED &#8226;
-                        ISOLATED RUNTIME &#8226;
+                        BOOT &#8226; CONFIDENTIAL COMPUTE &#8226; ENCRYPTED
+                        MEMORY &#8226; ISOLATED RUNTIME &#8226;
                       </textPath>
                     </text>
                   </svg>

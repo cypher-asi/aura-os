@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { usePublicChatStore } from "../../../stores/public-chat-store";
 import styles from "./PublicSessionsPanel.module.css";
 
@@ -33,6 +34,7 @@ interface PublicSessionsPanelProps {
 export function PublicSessionsPanel({
   searchQuery = "",
 }: PublicSessionsPanelProps): React.ReactElement {
+  const { t } = useTranslation("publicChat");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeSessionId = searchParams.get("session");
@@ -85,8 +87,8 @@ export function PublicSessionsPanel({
 
   const isFiltering = searchQuery.trim().length > 0;
   const emptyMessage = isFiltering
-    ? "No matching chats"
-    : "No conversations yet";
+    ? t("sessions.noMatchingChats", { defaultValue: "No matching chats" })
+    : t("sessions.noConversations", { defaultValue: "No conversations yet" });
 
   return (
     <div className={styles.sessionsBody}>
@@ -115,7 +117,10 @@ export function PublicSessionsPanel({
               type="button"
               className={styles.deleteButton}
               onClick={() => handleDelete(session.id)}
-              aria-label={`Delete chat "${session.title}"`}
+              aria-label={t("sessions.deleteChatAriaLabel", {
+                defaultValue: `Delete chat "${session.title}"`,
+                title: session.title,
+              })}
             >
               <X size={14} />
             </button>

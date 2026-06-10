@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { LLMOutput } from "../../../apps/chat/components/LLMOutput";
 import {
   ShareNotFoundError,
@@ -31,6 +32,7 @@ type LoadState =
   | { readonly status: "error" };
 
 export function SharedSessionView(): React.ReactElement {
+  const { t } = useTranslation("publicChat");
   const { shareToken } = useParams<{ shareToken: string }>();
   const token = shareToken ?? "";
   // The `.root` section owns the vertical scroll in both mount contexts
@@ -42,7 +44,9 @@ export function SharedSessionView(): React.ReactElement {
     <section
       ref={containerRef}
       className={styles.root}
-      aria-label="Shared conversation"
+      aria-label={t("sharedSession.ariaLabel", {
+        defaultValue: "Shared conversation",
+      })}
     >
       <div className={styles.column}>
         {isValidShareToken(token) ? (
@@ -52,8 +56,13 @@ export function SharedSessionView(): React.ReactElement {
           <SharedSessionLoader key={token} token={token} containerRef={containerRef} />
         ) : (
           <ShareMessage
-            heading="This share link is unavailable"
-            body="The conversation may have been unshared or the link is incorrect."
+            heading={t("sharedSession.unavailable.heading", {
+              defaultValue: "This share link is unavailable",
+            })}
+            body={t("sharedSession.unavailable.body", {
+              defaultValue:
+                "The conversation may have been unshared or the link is incorrect.",
+            })}
           />
         )}
       </div>
@@ -101,6 +110,7 @@ function SharedSessionContent({
   state: LoadState;
   containerRef: React.RefObject<HTMLElement | null>;
 }): React.ReactElement {
+  const { t } = useTranslation("publicChat");
   // Land the viewer at the bottom (latest message) once the transcript
   // commits. The conversation is static (`isStreaming={false}`) and the
   // markdown lays out synchronously, so a single layout-effect pin runs
@@ -115,7 +125,9 @@ function SharedSessionContent({
   if (state.status === "loading") {
     return (
       <p className={styles.status} role="status" aria-live="polite">
-        Loading shared conversation…
+        {t("sharedSession.loading", {
+          defaultValue: "Loading shared conversation…",
+        })}
       </p>
     );
   }
@@ -123,8 +135,13 @@ function SharedSessionContent({
   if (state.status === "not-found") {
     return (
       <ShareMessage
-        heading="This share link is unavailable"
-        body="The conversation may have been unshared or the link is incorrect."
+        heading={t("sharedSession.unavailable.heading", {
+          defaultValue: "This share link is unavailable",
+        })}
+        body={t("sharedSession.unavailable.body", {
+          defaultValue:
+            "The conversation may have been unshared or the link is incorrect.",
+        })}
       />
     );
   }
@@ -132,8 +149,13 @@ function SharedSessionContent({
   if (state.status === "error") {
     return (
       <ShareMessage
-        heading="Something went wrong"
-        body="We couldn't load this shared conversation. Please try again later."
+        heading={t("sharedSession.error.heading", {
+          defaultValue: "Something went wrong",
+        })}
+        body={t("sharedSession.error.body", {
+          defaultValue:
+            "We couldn't load this shared conversation. Please try again later.",
+        })}
       />
     );
   }
@@ -141,8 +163,13 @@ function SharedSessionContent({
   if (state.events.length === 0) {
     return (
       <ShareMessage
-        heading="This conversation is empty"
-        body="There are no messages to show in this shared conversation."
+        heading={t("sharedSession.empty.heading", {
+          defaultValue: "This conversation is empty",
+        })}
+        body={t("sharedSession.empty.body", {
+          defaultValue:
+            "There are no messages to show in this shared conversation.",
+        })}
       />
     );
   }

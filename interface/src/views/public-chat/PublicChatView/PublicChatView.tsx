@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useTheme } from "@cypher-asi/zui";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   isGuestAuthError,
   streamPublicChat,
@@ -200,6 +201,7 @@ function toPublicChatHistory(turns: readonly PublicMessage[]): PublicChatTurn[] 
 export function PublicChatView(): React.ReactElement {
   usePublicPageViewed();
   usePublicGateShown();
+  const { t } = useTranslation("publicChat");
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -251,6 +253,19 @@ export function PublicChatView(): React.ReactElement {
 
   const activeSession =
     activeSessionId != null ? sessions[activeSessionId] ?? null : null;
+  const heroHeadline = t("chat.heroPhrases.privateAgent", {
+    defaultValue: "Your Private Agent.",
+  });
+  const heroPhrases = useMemo(
+    () =>
+      HERO_PHRASES.map((phrase, index) =>
+        t(`chat.heroPhrases.${index}`, { defaultValue: phrase }),
+      ),
+    [t],
+  );
+  const unableToSendMessage = t("chat.errors.unableToSend", {
+    defaultValue: "Unable to send message",
+  });
 
   // Note: `/chat` without a valid `?session=` deliberately does NOT
   // auto-mint a session here. Sessions are minted by exactly two
@@ -372,14 +387,14 @@ export function PublicChatView(): React.ReactElement {
                   setSendError(
                     retryErr instanceof Error
                       ? retryErr.message
-                      : "Unable to send message",
+                      : unableToSendMessage,
                   );
                   setIsSending(false);
                   streamRef.current = null;
                 });
               return;
             }
-            setSendError(err.message || "Unable to send message");
+            setSendError(err.message || unableToSendMessage);
             setIsSending(false);
             streamRef.current = null;
           },
@@ -396,7 +411,7 @@ export function PublicChatView(): React.ReactElement {
         appendUserTurn(targetSessionId, message);
         launchStream(token, false);
       } catch (err) {
-        setSendError(err instanceof Error ? err.message : "Unable to send message");
+        setSendError(err instanceof Error ? err.message : unableToSendMessage);
         setIsSending(false);
       }
     },
@@ -412,6 +427,7 @@ export function PublicChatView(): React.ReactElement {
       isSending,
       navigate,
       setTurnCount,
+      unableToSendMessage,
     ],
   );
 
@@ -796,11 +812,11 @@ export function PublicChatView(): React.ReactElement {
                 <div className={styles.heroHeadlineZone}>
                   <span
                     className={styles.heroHeadline}
-                    data-text="Your Private Agent."
+                    data-text={heroHeadline}
                   >
                     <TypewriterText
-                      text="Your Private Agent."
-                      phrases={HERO_PHRASES}
+                      text={heroHeadline}
+                      phrases={heroPhrases}
                       speedMs={45}
                     />
                   </span>
@@ -877,7 +893,12 @@ export function PublicChatView(): React.ReactElement {
       {isChatPage ? (
         <div className={styles.chatSurface} aria-live="polite">
           {activeSession && activeSession.turns.length > 0 ? (
-            <div className={styles.transcript} aria-label="Chat transcript">
+            <div
+              className={styles.transcript}
+              aria-label={t("chat.transcriptAriaLabel", {
+                defaultValue: "Chat transcript",
+              })}
+            >
               {activeSession.turns.map((message, idx) => {
                 // The in-flight assistant turn is identified by being
                 // the last assistant message in the turns array while
@@ -911,14 +932,16 @@ export function PublicChatView(): React.ReactElement {
           autoComplete="off"
         >
           <label className={styles.inputLabel} htmlFor="public-chat-input">
-            Message Aura
+            {t("chat.inputLabel", { defaultValue: "Message Aura" })}
           </label>
           <input
             id="public-chat-input"
             className={styles.chatInput}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Ask Aura anything..."
+            placeholder={t("chat.inputPlaceholder", {
+              defaultValue: "Ask Aura anything...",
+            })}
             disabled={isSending}
             autoComplete="off"
             autoCorrect="off"
@@ -930,7 +953,9 @@ export function PublicChatView(): React.ReactElement {
             className={styles.sendButton}
             disabled={isSending || draft.trim().length === 0}
           >
-            {isSending ? "Sending" : "Send"}
+            {isSending
+              ? t("chat.sending", { defaultValue: "Sending" })
+              : t("chat.send", { defaultValue: "Send" })}
           </button>
           {sendError ? <p className={styles.sendError}>{sendError}</p> : null}
         </form>

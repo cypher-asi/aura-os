@@ -5,6 +5,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactElement,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { PERSONAS } from "../personas";
 import styles from "./PersonaTickRail.module.css";
 
@@ -76,6 +77,7 @@ export function PersonaTickRail({
   activeIndex,
   onActiveIndexChange,
 }: PersonaTickRailProps): ReactElement {
+  const { t } = useTranslation("publicChat");
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -129,7 +131,12 @@ export function PersonaTickRail({
       onMouseEnter={open}
       onMouseLeave={handleMouseLeave}
     >
-      <ul className={styles.list} aria-label="Agent personas">
+      <ul
+        className={styles.list}
+        aria-label={t("personas.railAriaLabel", {
+          defaultValue: "Agent personas",
+        })}
+      >
         {PERSONAS.map((persona, index) => {
           const isActive = index === activeIndex;
           return (
@@ -137,7 +144,9 @@ export function PersonaTickRail({
               <button
                 type="button"
                 className={styles.tickButton}
-                aria-label={persona.name}
+                aria-label={t(`personas.names.${persona.id}`, {
+                  defaultValue: persona.name,
+                })}
                 aria-current={isActive ? "true" : undefined}
                 data-active={isActive ? "true" : "false"}
                 data-persona-id={persona.id}
@@ -169,7 +178,9 @@ export function PersonaTickRail({
                 tabIndex={isOpen ? 0 : -1}
                 onClick={() => commitSelection(index)}
               >
-                {persona.name}
+                {t(`personas.names.${persona.id}`, {
+                  defaultValue: persona.name,
+                })}
               </button>
             </li>
           ))}

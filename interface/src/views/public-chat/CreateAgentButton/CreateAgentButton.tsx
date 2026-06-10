@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
 import { track } from "../../../lib/analytics";
 import styles from "./CreateAgentButton.module.css";
@@ -68,6 +69,7 @@ export function CreateAgentButton({
   className,
   source = "public_landing",
 }: CreateAgentButtonProps = {}): React.ReactElement {
+  const { t } = useTranslation("publicChat");
   const navigate = useNavigate();
   const location = useLocation();
   const buttonClassName = className
@@ -94,7 +96,9 @@ export function CreateAgentButton({
         });
       }}
     >
-      <span className={styles.ctaLabel}>Create your agent</span>
+      <span className={styles.ctaLabel}>
+        {t("createAgent.label", { defaultValue: "Create your agent" })}
+      </span>
       <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
     </button>
   );

@@ -6,6 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowUp } from "lucide-react";
 import {
   isGuestAuthError,
@@ -76,6 +77,7 @@ const COMPOSER_PLACEHOLDER = "What do you want to create?";
 export function MobilePublicChatView(): React.ReactElement {
   usePublicPageViewed();
   usePublicGateShown();
+  const { t } = useTranslation("publicChat");
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -99,6 +101,12 @@ export function MobilePublicChatView(): React.ReactElement {
 
   const activeSession =
     activeSessionId != null ? sessions[activeSessionId] ?? null : null;
+  const composerPlaceholder = t("mobileChat.composerPlaceholder", {
+    defaultValue: COMPOSER_PLACEHOLDER,
+  });
+  const unableToSendMessage = t("chat.errors.unableToSend", {
+    defaultValue: "Unable to send message",
+  });
 
   // Note: `/chat` without a valid `?session=` deliberately does NOT
   // auto-mint a session here. Sessions are minted by `handleSubmit`
@@ -178,14 +186,14 @@ export function MobilePublicChatView(): React.ReactElement {
                   setSendError(
                     retryErr instanceof Error
                       ? retryErr.message
-                      : "Unable to send message",
+                      : unableToSendMessage,
                   );
                   setIsSending(false);
                   streamRef.current = null;
                 });
               return;
             }
-            setSendError(err.message || "Unable to send message");
+            setSendError(err.message || unableToSendMessage);
             setIsSending(false);
             streamRef.current = null;
           },
@@ -202,7 +210,7 @@ export function MobilePublicChatView(): React.ReactElement {
         appendUserTurn(targetSessionId, message);
         launchStream(token, false);
       } catch (err) {
-        setSendError(err instanceof Error ? err.message : "Unable to send message");
+        setSendError(err instanceof Error ? err.message : unableToSendMessage);
         setIsSending(false);
       }
     },
@@ -218,6 +226,7 @@ export function MobilePublicChatView(): React.ReactElement {
       isSending,
       navigate,
       setTurnCount,
+      unableToSendMessage,
     ],
   );
 
@@ -225,9 +234,11 @@ export function MobilePublicChatView(): React.ReactElement {
     <div className={styles.root} data-testid="mobile-public-chat-view">
       {!isChatPage ? (
         <div className={styles.heroSlot}>
-          <h1 className={styles.heroHeading}>{COMPOSER_PLACEHOLDER}</h1>
+          <h1 className={styles.heroHeading}>{composerPlaceholder}</h1>
           <p className={styles.heroBlurb}>
-            Send Aura a prompt and start building.
+            {t("mobileChat.heroBlurb", {
+              defaultValue: "Send Aura a prompt and start building.",
+            })}
           </p>
         </div>
       ) : (
@@ -235,7 +246,9 @@ export function MobilePublicChatView(): React.ReactElement {
           ref={transcriptRef}
           className={styles.transcript}
           aria-live="polite"
-          aria-label="Chat transcript"
+          aria-label={t("chat.transcriptAriaLabel", {
+            defaultValue: "Chat transcript",
+          })}
           data-testid="mobile-public-chat-transcript"
         >
           {activeSession && activeSession.turns.length > 0 ? (
@@ -258,7 +271,7 @@ export function MobilePublicChatView(): React.ReactElement {
             })
           ) : (
             <div className={styles.transcriptEmpty} aria-hidden="true">
-              {COMPOSER_PLACEHOLDER}
+              {composerPlaceholder}
             </div>
           )}
         </div>
@@ -266,14 +279,14 @@ export function MobilePublicChatView(): React.ReactElement {
 
       <form className={styles.composer} onSubmit={handleSubmit}>
         <label className={styles.composerLabel} htmlFor="mobile-public-chat-input">
-          Message Aura
+          {t("chat.inputLabel", { defaultValue: "Message Aura" })}
         </label>
         <input
           id="mobile-public-chat-input"
           className={styles.composerInput}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder={COMPOSER_PLACEHOLDER}
+          placeholder={composerPlaceholder}
           disabled={isSending}
           autoComplete="off"
           autoCorrect="on"
@@ -284,7 +297,11 @@ export function MobilePublicChatView(): React.ReactElement {
           type="submit"
           className={styles.composerSend}
           disabled={isSending || draft.trim().length === 0}
-          aria-label={isSending ? "Sending" : "Send"}
+          aria-label={
+            isSending
+              ? t("chat.sending", { defaultValue: "Sending" })
+              : t("chat.send", { defaultValue: "Send" })
+          }
         >
           <ArrowUp size={18} strokeWidth={2.4} aria-hidden="true" />
         </button>
