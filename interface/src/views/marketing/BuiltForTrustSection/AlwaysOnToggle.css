@@ -1,9 +1,9 @@
 /*
  * Pill toggle device for the "Always on." trust card. Recreates the
  * reference switch — metallic rim, dark recessed track, glossy round knob
- * on the left, glowing teal ON lettering on the right — but darker, in the
- * site's machined-metal family, and set into the card panel via a recessed
- * socket rather than floating on top of it.
+ * on the left, glowing ON lettering on the right — but darker, in the
+ * site's machined-metal family with the page's gold accent, and set into
+ * the card panel via a recessed socket rather than floating on top of it.
  */
 
 .alwaysOnStage {
@@ -24,9 +24,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(256px, 76%);
+  width: min(120px, 64%);
   border-radius: 999px;
-  padding: 7px;
+  padding: 3px;
   background: linear-gradient(180deg, #0a0a0b 0%, #121214 100%);
   box-shadow:
     inset 0 2px 6px rgba(0, 0, 0, 0.85),
@@ -49,8 +49,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 8px;
+  gap: 8px;
+  /* 3px socket + 4px track + 31px knob: the original 72px device stack
+     scaled down 30%. */
+  padding: 4px 6px;
   border-radius: 999px;
   background: radial-gradient(
     ellipse 120% 130% at 50% 0%,
@@ -71,8 +73,8 @@
  */
 .alwaysOnKnob {
   flex: 0 0 auto;
-  width: 58px;
-  height: 58px;
+  width: 31px;
+  height: 31px;
   border-radius: 50%;
   background: radial-gradient(
     circle at 38% 28%,
@@ -89,23 +91,24 @@
 }
 
 /*
- * Neon ON lettering: teal core with layered glows, matching the reference
- * sign. The glow breathes slowly but never switches off.
+ * Neon ON lettering in the page's gold accent (same warm core + gold-glow
+ * halo recipe as the password dots and lit keycaps). The glow breathes
+ * slowly but never switches off.
  */
 .alwaysOnLabel {
   flex: 1 1 auto;
   text-align: center;
-  padding-right: 8px;
+  padding-right: 6px;
   font-family: inherit;
-  font-size: 30px;
+  font-size: 17px;
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1;
-  color: #5ce8de;
+  color: #ffe9cd;
   text-shadow:
-    0 0 4px rgba(92, 232, 222, 0.9),
-    0 0 12px rgba(64, 205, 196, 0.65),
-    0 0 26px rgba(38, 166, 158, 0.5);
+    0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.9),
+    0 0 12px rgba(var(--gold-glow, 232, 205, 137), 0.55),
+    0 0 26px rgba(var(--gold-halo, 153, 81, 25), 0.5);
   animation: alwaysOnBreathe 3.6s ease-in-out infinite;
   user-select: none;
 }
@@ -115,30 +118,21 @@
   100% {
     opacity: 1;
     text-shadow:
-      0 0 4px rgba(92, 232, 222, 0.9),
-      0 0 12px rgba(64, 205, 196, 0.65),
-      0 0 26px rgba(38, 166, 158, 0.5);
+      0 0 4px rgba(var(--gold-glow, 232, 205, 137), 0.9),
+      0 0 12px rgba(var(--gold-glow, 232, 205, 137), 0.55),
+      0 0 26px rgba(var(--gold-halo, 153, 81, 25), 0.5);
   }
   50% {
     opacity: 0.82;
     text-shadow:
-      0 0 3px rgba(92, 232, 222, 0.7),
-      0 0 9px rgba(64, 205, 196, 0.45),
-      0 0 18px rgba(38, 166, 158, 0.32);
+      0 0 3px rgba(var(--gold-glow, 232, 205, 137), 0.7),
+      0 0 9px rgba(var(--gold-glow, 232, 205, 137), 0.4),
+      0 0 18px rgba(var(--gold-halo, 153, 81, 25), 0.32);
   }
 }
 
 @media (max-width: 768px) {
   .alwaysOnSocket {
-    width: min(224px, 82%);
-  }
-
-  .alwaysOnKnob {
-    width: 50px;
-    height: 50px;
-  }
-
-  .alwaysOnLabel {
-    font-size: 26px;
+    width: min(112px, 70%);
   }
 }

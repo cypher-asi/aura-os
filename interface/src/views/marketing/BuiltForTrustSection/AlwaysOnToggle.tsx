@@ -7,7 +7,7 @@ import "./AlwaysOnToggle.css";
  * switch permanently latched ON, rendered in the site's dark machined-metal
  * language. Recessed pill socket sunk into the card panel, the shared
  * three-ring `Plate` rim as the metallic bezel, a near-black inner track,
- * and inside it a raised silver knob on the left with glowing teal "ON"
+ * and inside it a raised silver knob on the left with gold-glowing "ON"
  * lettering on the right — the glow slowly breathes but never switches off.
  * Purely decorative, so the whole stage is `aria-hidden`.
  */
