@@ -20,11 +20,13 @@
 }
 
 /*
- * The three copy cards are 45% shorter than the shared base height
- * (626px -> 344px) so the row stays compact beneath the tall device card.
+ * The three copy cards are shorter than the shared base height
+ * (626px -> 464px, the old 344px compact height scaled up 35%) so the row
+ * stays subordinate to the tall device card while leaving room for each
+ * card's media (e.g. the password lock device).
  */
 .builtForTrustCopy.metalCard {
-  min-height: 344px;
+  min-height: 464px;
 }
 
 /*
@@ -38,8 +40,8 @@
     min-height: 540px;
   }
 
-  /* Scale the mobile base height (420px) down by the same 45%. */
+  /* The old 231px mobile compact height scaled up by the same 35%. */
   .builtForTrustCopy.metalCard {
-    min-height: 231px;
+    min-height: 312px;
   }
 }

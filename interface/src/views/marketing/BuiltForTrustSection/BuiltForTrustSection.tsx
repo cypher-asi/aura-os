@@ -3,6 +3,7 @@ import { Section } from "../Section";
 import { CardSection, MetalCard } from "../CardSection";
 import { TextCard } from "../TextCard";
 import { TrustDeviceStage } from "./TrustDeviceStage";
+import { PasswordLockDevice } from "./PasswordLockDevice";
 import "./BuiltForTrustSection.css";
 
 const HEADLINE_ID = "builtForTrustHeadline";
@@ -15,9 +16,10 @@ const HEADLINE_ID = "builtForTrustHeadline";
  * `<CardSection />` / `<MetalCard />` shells so its rhythm matches every
  * other themed marketing section.
  *
- * The three copy cards carry only a title + description (no media well
- * content); `MetalCard`'s media well flex-grows to push the copy to the
- * cell floor, keeping titles bottom-aligned across the row.
+ * The three copy cards carry a title + two-line description; `MetalCard`'s
+ * media well flex-grows to push the copy to the cell floor, keeping titles
+ * bottom-aligned across the row. The middle card ("Isolated by default.")
+ * seats the animated `PasswordLockDevice` in its media well.
  */
 export function BuiltForTrustSection(): ReactNode {
   return (
@@ -47,22 +49,24 @@ export function BuiltForTrustSection(): ReactNode {
           gradient={135}
           align="center"
           className="builtForTrustCopy"
-          title="Isolated by default."
-          description="Each AURA agent runs in its own sandboxed VM, isolated from your system and other agents."
+          title="Always on."
+          description="Your agent keeps working around the clock, even while you're away and your devices are off."
         />
         <MetalCard
           gradient={225}
           align="center"
           className="builtForTrustCopy"
-          title="Trusted execution."
-          description="Hardware-backed enclaves keep each agent's memory and compute sealed end to end."
+          title="Isolated by default."
+          description="Each agent runs in its own sandboxed VM, fully sealed off from your system and other agents."
+          media={<PasswordLockDevice />}
+          mediaClassName="passwordLockMediaWell"
         />
         <MetalCard
           gradient={135}
           align="center"
           className="builtForTrustCopy"
-          title="Verifiable end to end."
-          description="Every environment is attested before it runs, so you can verify what you're trusting."
+          title="Trusted and verifiable."
+          description="Every environment is attested before it runs, so you can always verify what you're trusting."
         />
       </CardSection>
     </>
