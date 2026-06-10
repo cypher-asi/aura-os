@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Bug,
   CheckCircle2,
@@ -107,12 +108,14 @@ function FolderSection({
 
 interface FilterRowProps<Id extends string> {
   readonly option: FeedbackFilterOption<Id>;
+  readonly label: string;
   readonly selected: boolean;
   readonly onSelect: (id: Id) => void;
 }
 
 function FilterRow<Id extends string>({
   option,
+  label,
   selected,
   onSelect,
 }: FilterRowProps<Id>): ReactNode {
@@ -126,7 +129,7 @@ function FilterRow<Id extends string>({
       <span className="feedbackFilterRowIcon" aria-hidden>
         <Icon name={option.iconName} />
       </span>
-      <span className="feedbackFilterRowLabel">{option.label}</span>
+      <span className="feedbackFilterRowLabel">{label}</span>
     </button>
   );
 }
@@ -142,6 +145,7 @@ export function FeedbackFilters({
   category,
   status,
 }: FeedbackFiltersProps): ReactNode {
+  const { t } = useTranslation("marketing");
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -152,6 +156,24 @@ export function FeedbackFilters({
     status: true,
   });
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const sortLabel = useCallback(
+    (option: FeedbackFilterOption<string>) =>
+      t(`feedback.filters.sort.${option.id}`, { defaultValue: option.label }),
+    [t],
+  );
+  const categoryLabel = useCallback(
+    (option: FeedbackFilterOption<string>) =>
+      t(`feedback.filters.category.${option.id}`, {
+        defaultValue: option.label,
+      }),
+    [t],
+  );
+  const statusLabel = useCallback(
+    (option: FeedbackFilterOption<string>) =>
+      t(`feedback.filters.status.${option.id}`, { defaultValue: option.label }),
+    [t],
+  );
 
   const toggle = useCallback((id: SectionId) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -179,21 +201,27 @@ export function FeedbackFilters({
 
   const summary = useMemo(() => {
     const parts: string[] = [];
-    const sortLabel = FEEDBACK_SORT_FILTERS.find((s) => s.id === sort)?.label;
-    if (sortLabel) parts.push(sortLabel);
+    const sortOption = FEEDBACK_SORT_FILTERS.find((s) => s.id === sort);
+    if (sortOption) parts.push(sortLabel(sortOption));
     if (category) {
-      parts.push(CATEGORY_LABELS[category as FeedbackCategory] ?? category);
+      const fallback = CATEGORY_LABELS[category as FeedbackCategory] ?? category;
+      parts.push(
+        t(`feedback.filters.category.${category}`, { defaultValue: fallback }),
+      );
     }
     if (status) {
-      parts.push(STATUS_LABELS[status as FeedbackStatus] ?? status);
+      const fallback = STATUS_LABELS[status as FeedbackStatus] ?? status;
+      parts.push(t(`feedback.filters.status.${status}`, { defaultValue: fallback }));
     }
     return parts.join(" \u00b7 ");
-  }, [sort, category, status]);
+  }, [sort, category, status, sortLabel, t]);
 
   return (
     <aside
       className={`feedbackSidebar ${mobileOpen ? "feedbackSidebarOpen" : ""}`}
-      aria-label="Feedback filters"
+      aria-label={t("feedback.filters.ariaLabel", {
+        defaultValue: "Feedback filters",
+      })}
     >
       <button
         type="button"
@@ -203,7 +231,9 @@ export function FeedbackFilters({
         onClick={() => setMobileOpen((v) => !v)}
       >
         <Filter size={14} strokeWidth={1.75} />
-        <span className="feedbackMobileToggleLabel">Filters</span>
+        <span className="feedbackMobileToggleLabel">
+          {t("feedback.filters.toggle", { defaultValue: "Filters" })}
+        </span>
         {summary ? (
           <span className="feedbackMobileToggleSummary">{summary}</span>
         ) : null}
@@ -217,7 +247,9 @@ export function FeedbackFilters({
 
       <div id="feedback-filters-body" className="feedbackSidebarBody">
         <FolderSection
-          label="Trending"
+          label={t("feedback.filters.sections.trending", {
+            defaultValue: "Trending",
+          })}
           expanded={expanded.trending}
           onToggle={() => toggle("trending")}
         >
@@ -225,6 +257,7 @@ export function FeedbackFilters({
             <FilterRow
               key={opt.id}
               option={opt}
+              label={sortLabel(opt)}
               selected={opt.id === sort}
               onSelect={(id) => updateParam("sort", id)}
             />
@@ -232,12 +265,13 @@ export function FeedbackFilters({
         </FolderSection>
 
         <FolderSection
-          label="Type"
+          label={t("feedback.filters.sections.type", { defaultValue: "Type" })}
           expanded={expanded.type}
           onToggle={() => toggle("type")}
         >
           <FilterRow
             option={FEEDBACK_ALL_CATEGORY_OPTION}
+            label={categoryLabel(FEEDBACK_ALL_CATEGORY_OPTION)}
             selected={category === null}
             onSelect={() => updateParam("type", null)}
           />
@@ -245,6 +279,7 @@ export function FeedbackFilters({
             <FilterRow
               key={opt.id}
               option={opt}
+              label={categoryLabel(opt)}
               selected={opt.id === category}
               onSelect={(id) => updateParam("type", id)}
             />
@@ -252,12 +287,15 @@ export function FeedbackFilters({
         </FolderSection>
 
         <FolderSection
-          label="Status"
+          label={t("feedback.filters.sections.status", {
+            defaultValue: "Status",
+          })}
           expanded={expanded.status}
           onToggle={() => toggle("status")}
         >
           <FilterRow
             option={FEEDBACK_ALL_STATUS_OPTION}
+            label={statusLabel(FEEDBACK_ALL_STATUS_OPTION)}
             selected={status === null}
             onSelect={() => updateParam("status", null)}
           />
@@ -265,6 +303,7 @@ export function FeedbackFilters({
             <FilterRow
               key={opt.id}
               option={opt}
+              label={statusLabel(opt)}
               selected={opt.id === status}
               onSelect={(id) => updateParam("status", id)}
             />
