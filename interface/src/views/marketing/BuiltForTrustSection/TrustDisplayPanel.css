@@ -99,12 +99,13 @@
     0 1px 0 rgba(255, 255, 255, 0.09);
 }
 
-/* The disc itself: oversized (clipped by the window on every side) and
-   centered so the hub sits in the middle of the window. */
+/* The disc itself: oversized (clipped by the window) with its center on
+   the window's right edge, so only its left half shows — like a half-
+   exposed minidisc. */
 .trustDisc {
   position: absolute;
   top: 50%;
-  left: 50%;
+  left: 100%;
   width: 255px;
   aspect-ratio: 1;
   border-radius: 50%;
