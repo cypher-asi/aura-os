@@ -102,7 +102,7 @@ export function TrustDisplayPanel({
             <div className="trustDiscSide">
               <div className="trustDiscPlate">
                 <span className="trustDiscPlateArrow" />
-                <span className="trustDiscPlateText">Insert disc/mini</span>
+                <span className="trustDiscPlateText">Insert tokens</span>
               </div>
               <div className="trustDiscLogoWell">
                 <span className="trustDiscLogoBadge">
