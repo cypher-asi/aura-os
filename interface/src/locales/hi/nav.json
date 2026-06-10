@@ -1,16 +1,17 @@
 {
-  "agents": "एजेंट",
-  "blog": "ब्लॉग",
-  "capabilities": "क्षमताओं",
-  "changelog": "बदलाव सूची",
   "chat": "चैट",
+  "agents": "एजेंट",
   "code": "कोड",
-  "downloads": "डाउनलोड",
-  "expertise": "विशेषज्ञता",
-  "feedback": "प्रतिक्रिया",
-  "industries": "इंडस्ट्रीज",
-  "models": "मॉडल",
   "os": "OS",
   "pricing": "मूल्य",
-  "resources": "संसाधन"
+  "blog": "ब्लॉग",
+  "changelog": "बदलाव सूची",
+  "downloads": "डाउनलोड",
+  "feedback": "प्रतिक्रिया",
+  "models": "मॉडल",
+  "status": "Status",
+  "resources": "संसाधन",
+  "expertise": "विशेषज्ञता",
+  "capabilities": "क्षमताओं",
+  "industries": "इंडस्ट्रीज"
 }

@@ -1,16 +1,17 @@
 {
-  "agents": "Agenten",
-  "blog": "Blog",
-  "capabilities": "Mogelijkheden",
-  "changelog": "Wijzigingen",
   "chat": "Chat",
+  "agents": "Agenten",
   "code": "Code",
-  "downloads": "Downloads",
-  "expertise": "Expertise",
-  "feedback": "Feedback",
-  "industries": "Industrieën",
-  "models": "Modellen",
   "os": "OS",
   "pricing": "Prijzen",
-  "resources": "Bronnen"
+  "blog": "Blog",
+  "changelog": "Wijzigingen",
+  "downloads": "Downloads",
+  "feedback": "Feedback",
+  "models": "Modellen",
+  "status": "Status",
+  "resources": "Bronnen",
+  "expertise": "Expertise",
+  "capabilities": "Mogelijkheden",
+  "industries": "Industrieën"
 }

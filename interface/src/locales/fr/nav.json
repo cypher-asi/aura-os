@@ -1,16 +1,17 @@
 {
-  "agents": "Agents",
-  "blog": "Blog",
-  "capabilities": "Capacités",
-  "changelog": "Nouveautés",
   "chat": "Chat",
+  "agents": "Agents",
   "code": "Code",
-  "downloads": "Téléchargements",
-  "expertise": "Compétence",
-  "feedback": "Retours",
-  "industries": "Secteurs",
-  "models": "Modèles",
   "os": "OS",
   "pricing": "Tarifs",
-  "resources": "Ressources"
+  "blog": "Blog",
+  "changelog": "Nouveautés",
+  "downloads": "Téléchargements",
+  "feedback": "Retours",
+  "models": "Modèles",
+  "status": "Status",
+  "resources": "Ressources",
+  "expertise": "Compétence",
+  "capabilities": "Capacités",
+  "industries": "Secteurs"
 }

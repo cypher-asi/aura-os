@@ -214,6 +214,18 @@ describe("MenuBar", () => {
     expect(openChangelog).toHaveBeenCalledTimes(1);
   });
 
+  it("Help > Status navigates in-app when logged in", async () => {
+    isAuthenticatedMock = true;
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const user = userEvent.setup();
+    renderMenuBar();
+    await user.click(screen.getByRole("menuitem", { name: "Help" }));
+    await user.click(screen.getByRole("menuitem", { name: /^Status$/ }));
+    expect(mockNavigate).toHaveBeenCalledWith("/status");
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
   it("Help > Downloads opens aura.ai/download in a new tab when logged out", async () => {
     isAuthenticatedMock = false;
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
@@ -223,6 +235,22 @@ describe("MenuBar", () => {
     await user.click(screen.getByRole("menuitem", { name: /Downloads/ }));
     expect(openSpy).toHaveBeenCalledWith(
       "https://aura.ai/download",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
+  it("Help > Status opens aura.ai/status in a new tab when logged out", async () => {
+    isAuthenticatedMock = false;
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const user = userEvent.setup();
+    renderMenuBar();
+    await user.click(screen.getByRole("menuitem", { name: "Help" }));
+    await user.click(screen.getByRole("menuitem", { name: /^Status$/ }));
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://aura.ai/status",
       "_blank",
       "noopener,noreferrer",
     );

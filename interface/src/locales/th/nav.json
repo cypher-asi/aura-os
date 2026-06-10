@@ -1,16 +1,17 @@
 {
-  "agents": "เอเจนต์",
-  "blog": "บล็อก",
-  "capabilities": "ความสามารถ",
-  "changelog": "บันทึกการเปลี่ยนแปลง",
   "chat": "แชท",
+  "agents": "เอเจนต์",
   "code": "โค้ด",
-  "downloads": "ดาวน์โหลด",
-  "expertise": "ความเชี่ยวชาญ",
-  "feedback": "ความคิดเห็น",
-  "industries": "อุตสาหกรรม",
-  "models": "โมเดล",
   "os": "OS",
   "pricing": "ราคา",
-  "resources": "ทรัพยากร"
+  "blog": "บล็อก",
+  "changelog": "บันทึกการเปลี่ยนแปลง",
+  "downloads": "ดาวน์โหลด",
+  "feedback": "ความคิดเห็น",
+  "models": "โมเดล",
+  "status": "Status",
+  "resources": "ทรัพยากร",
+  "expertise": "ความเชี่ยวชาญ",
+  "capabilities": "ความสามารถ",
+  "industries": "อุตสาหกรรม"
 }

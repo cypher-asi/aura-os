@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "title": "Aura Feature Health",
+  "description": "Public-facing feature health backed by Aura-owned live eval probes.",
+  "features": [
+    {
+      "id": "core-api",
+      "label": "Core API",
+      "category": "platform",
+      "priority": 10,
+      "description": "Aura OS API reachability, authenticated session reads, and runtime environment metadata.",
+      "publicSummary": "Core API routes and environment metadata are responding.",
+      "checks": [
+        { "id": "api-health", "required": true, "staleAfterMinutes": 5, "warningLatencyMs": 1200, "outageLatencyMs": 5000 },
+        { "id": "auth-session", "required": true, "staleAfterMinutes": 10, "warningLatencyMs": 2000, "outageLatencyMs": 8000 },
+        { "id": "system-info", "required": false, "staleAfterMinutes": 20, "warningLatencyMs": 2500, "outageLatencyMs": 8000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 2
+    },
+    {
+      "id": "identity-orgs",
+      "label": "Identity and Organizations",
+      "category": "platform",
+      "priority": 15,
+      "description": "Session validation, current user profile sync, and organization membership lookup.",
+      "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
+      "checks": [
+        { "id": "auth-validate", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 3500, "outageLatencyMs": 10000 },
+        { "id": "orgs-list", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 3500, "outageLatencyMs": 10000 },
+        { "id": "user-profile", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 3500, "outageLatencyMs": 10000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 2
+    },
+    {
+      "id": "public-experience",
+      "label": "Public Chat and APIs",
+      "category": "website",
+      "priority": 18,
+      "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
+      "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
+      "checks": [
+        { "id": "public-setup", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
+        { "id": "public-chat-stream", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 25000, "outageLatencyMs": 90000 },
+        { "id": "public-feedback-api", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
+        { "id": "public-models-api", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
+        { "id": "public-blog-api", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
+        { "id": "public-x402-models", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
+        { "id": "public-x402-payment-challenge", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "local-agents",
+      "label": "Local Agents",
+      "category": "agents",
+      "priority": 20,
+      "description": "Local agent template creation, project binding, and workspace-backed chat readiness.",
+      "publicSummary": "Local agents can be created and exercised through the harness.",
+      "checks": [
+        { "id": "local-agent-create", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "local-agent-runtime", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 15000, "outageLatencyMs": 45000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 2
+    },
+    {
+      "id": "remote-agents",
+      "label": "Remote Agents",
+      "category": "agents",
+      "priority": 30,
+      "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
+      "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
+      "checks": [
+        { "id": "remote-agent-create", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 30000, "outageLatencyMs": 120000 },
+        { "id": "remote-agent-state", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 5000, "outageLatencyMs": 20000 },
+        { "id": "remote-agent-runtime", "required": false, "staleAfterMinutes": 20, "warningLatencyMs": 20000, "outageLatencyMs": 60000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 2
+    },
+    {
+      "id": "projects-specs-tasks",
+      "label": "Projects, Specs, and Tasks",
+      "category": "automation",
+      "priority": 35,
+      "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
+      "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
+      "checks": [
+        { "id": "project-crud", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 7000, "outageLatencyMs": 20000 },
+        { "id": "spec-task-crud", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 9000, "outageLatencyMs": 25000 },
+        { "id": "project-stats", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "loop-status", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 2
+    },
+    {
+      "id": "process-workflows",
+      "label": "Processes",
+      "category": "automation",
+      "priority": 38,
+      "description": "Process workflow lists, process creation, default ignition node creation, and cleanup.",
+      "publicSummary": "Process workflows can be listed and created.",
+      "checks": [
+        { "id": "process-list", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "process-crud", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 9000, "outageLatencyMs": 25000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "model-responses",
+      "label": "Model Responses",
+      "category": "models",
+      "priority": 40,
+      "description": "Curated model matrix smoke tests through Aura's runtime path.",
+      "publicSummary": "Supported text models are returning valid assistant responses.",
+      "checks": [
+        { "id": "model-matrix", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 25000, "outageLatencyMs": 60000 }
+      ],
+      "minPassRate": 0.9,
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "media-generation",
+      "label": "Media Generation",
+      "category": "media",
+      "priority": 45,
+      "description": "Image, 3D, and video generation stream routers, progress frames, completion payloads, and artifact URLs.",
+      "publicSummary": "Media generation streams can complete with generated artifacts.",
+      "checks": [
+        { "id": "image-generation-stream", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 45000, "outageLatencyMs": 120000 },
+        { "id": "model3d-generation-stream", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 90000, "outageLatencyMs": 240000 },
+        { "id": "video-generation-stream", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 120000, "outageLatencyMs": 300000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "spec-task-loop",
+      "label": "Autonomous Build Loop",
+      "category": "automation",
+      "priority": 50,
+      "description": "End-to-end spec generation, task extraction, autonomous loop execution, and artifact validation.",
+      "publicSummary": "Aura can turn requirements into tasks and complete a small validated build.",
+      "checks": [
+        { "id": "live-benchmark-hello-world", "required": true, "staleAfterMinutes": 120, "warningLatencyMs": 240000, "outageLatencyMs": 600000 },
+        { "id": "harness-fixture-suite", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 120000, "outageLatencyMs": 300000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "marketplace-bootstrap",
+      "label": "Marketplace and Bootstrap",
+      "category": "agents",
+      "priority": 55,
+      "description": "Marketplace agent catalog and harness bootstrap health.",
+      "publicSummary": "Marketplace and bootstrap services are reachable.",
+      "checks": [
+        { "id": "marketplace-agents", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "harness-health", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "integrations-billing",
+      "label": "Integrations and Billing",
+      "category": "platform",
+      "priority": 60,
+      "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
+      "publicSummary": "Integrations and billing surfaces are responding.",
+      "checks": [
+        { "id": "org-integrations-list", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "org-tool-actions-list", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "billing-status", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "credits-balance", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "community-feedback",
+      "label": "Community and Feedback",
+      "category": "website",
+      "priority": 65,
+      "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
+      "publicSummary": "Community and feedback data surfaces are responding.",
+      "checks": [
+        { "id": "feedback-list", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "bug-reports-mine", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "feed-list", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "leaderboard", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "platform-stats", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "desktop-runtime",
+      "label": "Desktop Runtime",
+      "category": "platform",
+      "priority": 68,
+      "description": "Desktop runtime defaults and local terminal API availability.",
+      "publicSummary": "Desktop runtime support endpoints are responding.",
+      "checks": [
+        { "id": "workspace-defaults", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
+        { "id": "terminal-list", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "streams-debug",
+      "label": "Streams and Debug",
+      "category": "platform",
+      "priority": 70,
+      "description": "Stream reattachment registry and debug run index.",
+      "publicSummary": "Stream and debug inspection endpoints are reachable.",
+      "checks": [
+        { "id": "active-streams", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
+        { "id": "debug-projects", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "eval-artifacts",
+      "label": "Eval Artifacts",
+      "category": "automation",
+      "priority": 75,
+      "description": "Existing Playwright and benchmark eval summaries produced by Aura's eval lanes.",
+      "publicSummary": "Aura eval artifacts are being produced and retained.",
+      "checks": [
+        { "id": "eval-summary-artifacts", "required": false, "staleAfterMinutes": 1440, "warningLatencyMs": 1000, "outageLatencyMs": 3000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "public-website",
+      "label": "Public Website",
+      "category": "website",
+      "priority": 80,
+      "description": "Public Aura pages, status JSON, and marketing routes.",
+      "publicSummary": "Aura's public web surfaces are reachable.",
+      "checks": [
+        { "id": "public-status-page", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 2000, "outageLatencyMs": 8000 },
+        { "id": "public-models-page", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
+        { "id": "public-marketing-pages", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 2
+    }
+  ]
+}

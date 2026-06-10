@@ -1,16 +1,17 @@
 {
-  "agents": "智慧代理",
-  "blog": "部落格",
-  "capabilities": "能力",
-  "changelog": "更新日誌",
   "chat": "聊天",
+  "agents": "智慧代理",
   "code": "程式碼",
-  "downloads": "下載",
-  "expertise": "專業知識",
-  "feedback": "意見回饋",
-  "industries": "產業",
-  "models": "模型",
   "os": "OS",
   "pricing": "價格",
-  "resources": "資源"
+  "blog": "部落格",
+  "changelog": "更新日誌",
+  "downloads": "下載",
+  "feedback": "意見回饋",
+  "models": "模型",
+  "status": "Status",
+  "resources": "資源",
+  "expertise": "專業知識",
+  "capabilities": "能力",
+  "industries": "產業"
 }

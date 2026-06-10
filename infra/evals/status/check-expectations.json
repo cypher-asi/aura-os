@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "checks": {
+    "api-health": {
+      "description": "The server health endpoint returns an ok status payload.",
+      "requiredEvidence": ["status"],
+      "assertions": [{ "path": "status", "equals": "ok" }]
+    },
+    "auth-session": {
+      "description": "Authenticated session returns a user id and response keys.",
+      "requiredEvidence": ["userPresent", "keys"],
+      "assertions": [
+        { "path": "userPresent", "equals": true },
+        { "path": "keys", "nonEmpty": true }
+      ]
+    },
+    "system-info": {
+      "description": "System info endpoint returns a JSON object.",
+      "requiredEvidence": ["keys"]
+    },
+    "auth-validate": {
+      "description": "Auth validation refresh returns a user id and access state.",
+      "requiredEvidence": ["userIdPresent", "accessGranted"],
+      "assertions": [
+        { "path": "userIdPresent", "equals": true },
+        { "path": "accessGranted", "equals": true }
+      ]
+    },
+    "orgs-list": {
+      "description": "The current user resolves at least one organization membership.",
+      "requiredEvidence": ["orgId", "orgCount"],
+      "assertions": [{ "path": "orgCount", "min": 1 }]
+    },
+    "user-profile": {
+      "description": "The current user profile endpoint returns a user identifier.",
+      "requiredEvidence": ["userIdPresent", "keys"],
+      "assertions": [
+        { "path": "userIdPresent", "equals": true },
+        { "path": "keys", "nonEmpty": true }
+      ]
+    },
+    "public-setup": {
+      "description": "Public guest setup mints a token and reports turn limits.",
+      "requiredEvidence": ["tokenPresent", "turnCount", "limit"],
+      "assertions": [
+        { "path": "tokenPresent", "equals": true },
+        { "path": "limit", "min": 1 }
+      ]
+    },
+    "public-chat-stream": {
+      "description": "Public chat emits at least one text delta frame.",
+      "requiredEvidence": ["frameTypes", "textSample"],
+      "assertions": [
+        { "path": "frameTypes", "contains": "text_delta" },
+        { "path": "textSample", "nonEmpty": true }
+      ]
+    },
+    "public-feedback-api": {
+      "description": "Public feedback API returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "public-models-api": {
+      "description": "Public models API returns a list count.",
+      "requiredEvidence": ["count"],
+      "assertions": [{ "path": "count", "min": 1 }]
+    },
+    "public-blog-api": {
+      "description": "Public blog API returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "public-x402-models": {
+      "description": "Public x402 model discovery returns an OpenAI-shaped model list.",
+      "requiredEvidence": ["modelCount", "object"],
+      "assertions": [
+        { "path": "object", "equals": "list" },
+        { "path": "modelCount", "min": 1 }
+      ]
+    },
+    "public-x402-payment-challenge": {
+      "description": "Public x402 chat returns a payment challenge with wallet, network, asset, and amount fields before settlement.",
+      "requiredEvidence": ["status", "payToPresent", "network", "asset", "amount", "acceptsCount"],
+      "assertions": [
+        { "path": "status", "equals": 402 },
+        { "path": "payToPresent", "equals": true },
+        { "path": "network", "nonEmpty": true },
+        { "path": "asset", "nonEmpty": true },
+        { "path": "amount", "nonEmpty": true },
+        { "path": "acceptsCount", "min": 1 }
+      ]
+    },
+    "local-agent-create": {
+      "description": "Local agent creation returns agent identity and environment fields.",
+      "requiredEvidence": ["orgId", "agentId", "machineType", "environment"]
+    },
+    "local-agent-runtime": {
+      "description": "Local runtime test returns the expected response metadata.",
+      "requiredEvidence": ["orgId", "agentId", "model", "provider", "message"],
+      "assertions": [{ "path": "message", "containsIgnoreCase": "hello from aura" }]
+    },
+    "remote-agent-create": {
+      "description": "Remote agent creation reaches a ready state.",
+      "requiredEvidence": ["orgId", "agentId", "vmIdPresent", "remoteState"],
+      "assertions": [
+        { "path": "vmIdPresent", "equals": true },
+        { "path": "remoteState", "oneOf": ["running", "idle", "ready"] }
+      ]
+    },
+    "remote-agent-state": {
+      "description": "Remote state polling returns ready and latest state payloads.",
+      "requiredEvidence": ["orgId", "agentId", "readyState", "state"]
+    },
+    "remote-agent-runtime": {
+      "description": "Remote runtime test returns the expected response metadata.",
+      "requiredEvidence": ["orgId", "agentId", "model", "provider", "message"],
+      "assertions": [{ "path": "message", "containsIgnoreCase": "hello from aura" }]
+    },
+    "project-crud": {
+      "description": "Project create/get/list/delete roundtrip returns project identity.",
+      "requiredEvidence": ["orgId", "projectId", "listed", "projectName"]
+    },
+    "spec-task-crud": {
+      "description": "Spec and task create/read/delete roundtrip returns all ids.",
+      "requiredEvidence": ["orgId", "projectId", "specId", "taskId", "specHashPresent", "taskCount"]
+    },
+    "project-stats": {
+      "description": "Project stats endpoint returns a JSON object for a project.",
+      "requiredEvidence": ["projectId", "keys"]
+    },
+    "loop-status": {
+      "description": "Loop status endpoint returns a JSON object for a project.",
+      "requiredEvidence": ["projectId", "keys"]
+    },
+    "process-list": {
+      "description": "Process and folder list endpoints return list counts.",
+      "requiredEvidence": ["processes", "folders"]
+    },
+    "process-crud": {
+      "description": "Process create/list-nodes/delete roundtrip returns process identity and node count.",
+      "requiredEvidence": ["projectId", "processId", "nodeCount"]
+    },
+    "model-matrix": {
+      "description": "Every configured model is exercised and pass/total counts are recorded.",
+      "requiredEvidence": ["orgId", "passed", "total", "results"],
+      "assertions": [
+        { "path": "total", "min": 1 },
+        { "path": "passed", "min": 1 },
+        { "path": "results", "nonEmpty": true }
+      ]
+    },
+    "image-generation-stream": {
+      "description": "Image generation stream emits frame types and a completion artifact signal.",
+      "requiredEvidence": ["frameTypes", "imageUrlPresent"],
+      "assertions": [
+        { "path": "frameTypes", "contains": "generation_completed" },
+        { "path": "imageUrlPresent", "equals": true }
+      ]
+    },
+    "model3d-generation-stream": {
+      "description": "3D generation stream emits frame types and completion.",
+      "requiredEvidence": ["frameTypes"]
+    },
+    "video-generation-stream": {
+      "description": "Video generation stream emits frame types and completion.",
+      "requiredEvidence": ["frameTypes"]
+    },
+    "live-benchmark-hello-world": {
+      "description": "Existing live benchmark artifact reports benchmark output.",
+      "requiredEvidence": ["files"]
+    },
+    "harness-fixture-suite": {
+      "description": "Existing harness fixture artifact reports fixture output.",
+      "requiredEvidence": ["files"]
+    },
+    "marketplace-agents": {
+      "description": "Marketplace agent catalog returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "harness-health": {
+      "description": "Harness bootstrap health returns a JSON health payload.",
+      "requiredEvidence": []
+    },
+    "org-integrations-list": {
+      "description": "Org integrations endpoint returns a list count for the current org.",
+      "requiredEvidence": ["orgId", "count"]
+    },
+    "org-tool-actions-list": {
+      "description": "Org tool actions endpoint returns a list count for the current org.",
+      "requiredEvidence": ["orgId", "count"]
+    },
+    "billing-status": {
+      "description": "Subscription endpoint returns plan/subscription state or response keys.",
+      "requiredEvidence": ["keys", "subscriptionKnown"],
+      "assertions": [
+        { "path": "keys", "nonEmpty": true },
+        { "path": "subscriptionKnown", "equals": true }
+      ]
+    },
+    "credits-balance": {
+      "description": "Credits balance endpoint returns a JSON object for the current org.",
+      "requiredEvidence": ["orgId", "keys"]
+    },
+    "feedback-list": {
+      "description": "Authenticated feedback endpoint returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "bug-reports-mine": {
+      "description": "My bug reports endpoint returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "feed-list": {
+      "description": "Feed endpoint returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "leaderboard": {
+      "description": "Leaderboard endpoint returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "platform-stats": {
+      "description": "Platform stats endpoint returns a JSON object.",
+      "requiredEvidence": ["present", "keys"],
+      "assertions": [{ "path": "present", "equals": true }]
+    },
+    "workspace-defaults": {
+      "description": "Workspace defaults endpoint returns a workspace root signal.",
+      "requiredEvidence": ["workspaceRootPresent"],
+      "assertions": [{ "path": "workspaceRootPresent", "equals": true }]
+    },
+    "terminal-list": {
+      "description": "Terminal list endpoint returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "active-streams": {
+      "description": "Active stream registry returns a list count.",
+      "requiredEvidence": ["count"]
+    },
+    "debug-projects": {
+      "description": "Debug project index returns a JSON object.",
+      "requiredEvidence": ["keys"]
+    },
+    "eval-summary-artifacts": {
+      "description": "Eval artifact scan reports files and found counts.",
+      "requiredEvidence": ["files"]
+    },
+    "public-status-page": {
+      "description": "Public status JSON returns overall state and feature count.",
+      "requiredEvidence": ["overall", "featureCount"],
+      "assertions": [
+        { "path": "overall", "oneOf": ["operational", "degraded", "partial_outage", "major_outage", "unknown", "maintenance"] },
+        { "path": "featureCount", "min": 1 }
+      ]
+    },
+    "public-models-page": {
+      "description": "Public models page returns an HTTP status.",
+      "requiredEvidence": ["status"],
+      "assertions": [{ "path": "status", "min": 200, "max": 399 }]
+    },
+    "public-marketing-pages": {
+      "description": "Public marketing route sweep returns per-route results.",
+      "requiredEvidence": ["results"]
+    }
+  }
+}

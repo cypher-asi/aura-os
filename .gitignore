@@ -30,6 +30,8 @@ desktop-smoke-logs
 # Evals
 evals/reports/promptfoo-results.json
 infra/evals/reports/promptfoo-results.json
+infra/evals/reports/status/checks/
+infra/evals/reports/status/status.json
 infra/evals/local-stack/.runtime
 infra/evals/local-stack/stack.env
 .venv-swebench/

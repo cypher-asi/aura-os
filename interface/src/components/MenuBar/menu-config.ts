@@ -23,6 +23,7 @@ export type MenuActionKey =
   | "view.toggleFullscreen"
   | "help.visitWebsite"
   | "help.downloads"
+  | "help.status"
   | "help.changelog"
   | "help.gettingStarted";
 
@@ -101,6 +102,7 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     entries: [
       { type: "item", id: "help.visitWebsite", label: "Visit aura.ai" },
       { type: "item", id: "help.downloads", label: "Downloads" },
+      { type: "item", id: "help.status", label: "Status" },
       { type: "item", id: "help.changelog", label: "Changelog" },
       { type: "item", id: "help.gettingStarted", label: "Getting Started" },
     ],

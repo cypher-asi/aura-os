@@ -1,16 +1,17 @@
 {
-  "agents": "Агенти",
-  "blog": "Блог",
-  "capabilities": "Можливості",
-  "changelog": "Журнал змін",
   "chat": "Чат",
+  "agents": "Агенти",
   "code": "Код",
-  "downloads": "Завантаження",
-  "expertise": "Експертиза",
-  "feedback": "Відгуки",
-  "industries": "Галузі промисловості",
-  "models": "Моделі",
   "os": "OS",
   "pricing": "Ціни",
-  "resources": "Ресурси"
+  "blog": "Блог",
+  "changelog": "Журнал змін",
+  "downloads": "Завантаження",
+  "feedback": "Відгуки",
+  "models": "Моделі",
+  "status": "Status",
+  "resources": "Ресурси",
+  "expertise": "Експертиза",
+  "capabilities": "Можливості",
+  "industries": "Галузі промисловості"
 }

@@ -1,0 +1,51 @@
+name: Aura Feature Health
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 25.9.0
+
+      - name: Run feature health probes
+        id: probes
+        continue-on-error: true
+        env:
+          AURA_STATUS_API_BASE_URL: ${{ secrets.AURA_STATUS_API_BASE_URL }}
+          AURA_STATUS_PUBLIC_BASE_URL: ${{ secrets.AURA_STATUS_PUBLIC_BASE_URL }}
+          AURA_STATUS_ACCESS_TOKEN: ${{ secrets.AURA_STATUS_ACCESS_TOKEN }}
+          AURA_STATUS_MODEL_IDS: ${{ vars.AURA_STATUS_MODEL_IDS }}
+          AURA_STATUS_IMAGE_MODEL: ${{ vars.AURA_STATUS_IMAGE_MODEL }}
+          AURA_STATUS_ENVIRONMENT: production
+        run: npm run status:probes
+
+      - name: Build public status snapshot
+        if: always()
+        env:
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: github-actions
+        run: npm run status:snapshot
+
+      - name: Upload status snapshot
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: aura-feature-health
+          path: |
+            interface/public/status/status.json
+            infra/evals/reports/status/status.json
+            infra/evals/reports/status/checks

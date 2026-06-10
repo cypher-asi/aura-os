@@ -1,16 +1,17 @@
 {
-  "agents": "Агенты",
-  "blog": "Блог",
-  "capabilities": "Возможности",
-  "changelog": "Изменения",
   "chat": "Чат",
+  "agents": "Агенты",
   "code": "Код",
-  "downloads": "Загрузки",
-  "expertise": "Экспертиза",
-  "feedback": "Отзывы",
-  "industries": "Отрасли",
-  "models": "Модели",
   "os": "OS",
   "pricing": "Цены",
-  "resources": "Ресурсы"
+  "blog": "Блог",
+  "changelog": "Изменения",
+  "downloads": "Загрузки",
+  "feedback": "Отзывы",
+  "models": "Модели",
+  "status": "Status",
+  "resources": "Ресурсы",
+  "expertise": "Экспертиза",
+  "capabilities": "Возможности",
+  "industries": "Отрасли"
 }
