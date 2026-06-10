@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Plate } from "../../../components/Plate";
 import { DeviceScreen } from "../../../components/DeviceScreen";
 import { AuraScreenOrb } from "../AuraScreenOrb";
@@ -16,9 +16,10 @@ import styles from "./AgentConsole.module.css";
  * marketing device kit (`<Plate />`, `<DeviceScreen />`) so it reads as the
  * same hardware family as the quadrant device below.
  *
- * The left button steps the lit light (and label) one state back, the right
- * one steps it forward, wrapping at the ends so exactly one light is lit at
- * a time. The WebGL field itself stays decorative/ambient.
+ * The console cycles through the states on its own once per second; the left
+ * button steps the lit light (and label) one state back, the right one steps
+ * it forward, wrapping at the ends so exactly one light is lit at a time. The
+ * WebGL field itself stays decorative/ambient.
  */
 
 /**
@@ -27,11 +28,34 @@ import styles from "./AgentConsole.module.css";
  */
 const STATES = ["Private", "Secure", "Verifiable", "Open Source"] as const;
 
+/** Cadence of the unattended auto-advance through the states. */
+const AUTO_ROTATE_MS = 1000;
+
 export function AgentConsole(): ReactNode {
   const [active, setActive] = useState(0);
+  // Bumped on every manual step so the auto-rotate effect re-arms with a fresh
+  // full interval, keeping a click from being instantly overridden by a tick
+  // that was already pending.
+  const [restartKey, setRestartKey] = useState(0);
 
-  const step = (delta: number) =>
+  const step = useCallback((delta: number) => {
     setActive((i) => (i + delta + STATES.length) % STATES.length);
+    setRestartKey((key) => key + 1);
+  }, []);
+
+  // Auto-advance one state per second. The functional updater means the
+  // interval never needs `active` in its deps; it re-arms only when the
+  // visitor clicks (via `restartKey`).
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const id = window.setInterval(
+      () => setActive((i) => (i + 1) % STATES.length),
+      AUTO_ROTATE_MS,
+    );
+    return () => window.clearInterval(id);
+  }, [restartKey]);
 
   return (
     <div className={styles.console}>
