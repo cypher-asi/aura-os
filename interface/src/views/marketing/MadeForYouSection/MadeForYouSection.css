@@ -184,10 +184,18 @@
      into the surrounding metal panel rather than a full-height rectangle. The
      22px top/bottom margins match the right-hand terminal LCD's inset so the
      disc shares the panel's vertical rhythm. */
-  /* Ring of metal panel around the recessed video screen (the bezel width). */
+  /* Metal bezel ring width, and the gap between the video circle and the inner
+     glass-disc edge (the video is inset by ring + gap). */
   --screen-ring: 16px;
+  --video-gap: 6px;
   box-sizing: border-box;
   min-height: 0;
+  /* Don't let the flex column grow/shrink the disc's height off-square; with
+     flex sizing locked, aspect-ratio derives the height from the width so the
+     disc stays a perfect circle (auto height alone let flex distort it into an
+     ellipse). */
+  flex: 0 0 auto;
+  align-self: center;
   width: min(560px, 100%);
   height: auto;
   aspect-ratio: 1 / 1;
@@ -195,11 +203,14 @@
   padding: 0;
   border-radius: 50%;
   overflow: hidden;
-  /* Circular metal panel matching the shared `<Plate />` surface; the video
-     screen is recessed into it (the `::after` inset border + the bezel ring
-     around the inset video), so the disc reads as its own circular device
-     module mounted on the chassis. No gradient border (it aliased on the 50%
-     radius) and no outer drop shadow. */
+  /* Own stacking context so the layered children (gold light -> frosted glass
+     -> video) order cleanly and the glass's backdrop blur captures only the
+     gold light + panel beneath it. */
+  isolation: isolate;
+  /* Circular metal panel matching the shared `<Plate />` surface; inside it a
+     gold pulsating light (`::before`) sits beneath a frosted glass panel
+     (`::after`), with the clear circular video floating on top, so the disc
+     reads as its own circular device module mounted on the chassis. */
   background: radial-gradient(
     ellipse 90% 120% at 50% 40%,
     #202020 0%,
@@ -213,25 +224,31 @@
     inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 
-/* Recessed inner screen borders, inset from the panel by the bezel ring and
-   matching the shared `<DeviceScreen />` recipe used by the LLM section: a
-   strong dark top inset + secondary blur read as glass sunk below the bezel,
-   with a 1px dark rim and a faint bottom-edge light lip. Painted ON TOP of the
-   video (z-index above both clips) so the recess wraps the disc's edge. */
-.madeForYouDevice .personalAgentDeviceScreen::after {
+/* Gold accent light sitting BELOW the glass: a ring of gold glow concentrated
+   around the inner perimeter of the disc that pulsates. The frosted glass
+   (::after) above blurs and distorts it, so the light reads as shining up
+   through the glass around the outer ring (the center is covered by the video).
+   Uses the device's amber-gold / amber-brown tones. */
+.madeForYouDevice .personalAgentDeviceScreen::before {
   content: "";
   position: absolute;
   inset: var(--screen-ring);
-  z-index: 3;
+  z-index: 1;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow:
-    inset 0 6px 14px rgba(0, 0, 0, 0.95),
-    inset 0 3px 5px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(0, 0, 0, 0.9),
-    inset 0 -14px 30px rgba(0, 0, 0, 0.85),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  /* Clean warm-gold palette (no green/olive, no muddy brown): a faint warm
+     glow blooming through soft gold to a light amber falloff. Kept subtle. */
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 50%,
+    rgba(255, 200, 105, 0.22) 76%,
+    rgba(255, 230, 168, 0.3) 88%,
+    rgba(255, 196, 92, 0.34) 95%,
+    rgba(214, 142, 52, 0.2) 99%,
+    transparent 100%
+  );
+  filter: blur(0.5px);
+  animation: madeForYouScreenGlow 2.6s ease-in-out infinite;
 }
 
 /*
@@ -404,25 +421,89 @@
    CSS/HTML loop on the intro. */
 .madeForYouDevice .personalAgentDeviceVideo {
   position: absolute;
-  /* Inset by the bezel ring so the metal panel shows around the recessed
-     screen; the video is its own clean circle (border-radius clip, no reliance
-     on the parent's overflow), avoiding edge aliasing. */
-  inset: var(--screen-ring);
-  width: auto;
-  height: auto;
+  /* Inset by the bezel ring + the glass disc's 1px inner border + a 6px gap,
+     so the video circle's edge sits 6px inside the glass's inner bevel border
+     and both glows (glass rim + video halo) stay visible in the gap. A
+     <video> is a replaced element, so `inset` with auto width/height would
+     resolve to the clip's intrinsic 16:9 box (an off-center ellipse under the
+     50% radius); explicit square top/left + width/height keep it a centered
+     circle since the parent screen is a 1:1 square. */
+  --video-inset: calc(var(--screen-ring) + 1px + var(--video-gap, 6px));
+  top: var(--video-inset);
+  left: var(--video-inset);
+  width: calc(100% - var(--video-inset) * 2);
+  height: calc(100% - var(--video-inset) * 2);
   object-fit: cover;
   border-radius: 50%;
-  z-index: 0;
+  /* Golden glow ringing the video circle (sits over the frosted glass). */
+  box-shadow:
+    0 0 16px 1px rgba(255, 196, 92, 0.5),
+    0 0 30px 6px rgba(255, 178, 72, 0.32),
+    0 0 16px 2px rgba(214, 142, 52, 0.3);
 }
 
+/* Frosted transparent glass panel filling the inner disc, sitting BELOW the
+   video (which is opaque and covers the center) and ABOVE the gold light. Its
+   backdrop blur distorts the gold light shining up from beneath, so the outer
+   ring around the video reads as edge-lit frosted glass. */
+.madeForYouDevice .personalAgentDeviceScreen::after {
+  content: "";
+  position: absolute;
+  inset: var(--screen-ring);
+  z-index: 2;
+  border-radius: 50%;
+  pointer-events: none;
+  /* White frosted glass: a translucent white tint over the backdrop blur, with
+     a soft white rim + top highlight so it reads as a milky glass disc. */
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px) saturate(115%);
+  -webkit-backdrop-filter: blur(10px) saturate(115%);
+  box-shadow:
+    /* Dark border ringing the white glass (inner + outer crisp dark edge). */
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 2px 6px rgba(255, 255, 255, 0.12),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Pulse the gold light beneath the glass: it brightens and swells slightly,
+   then settles, so the glow throbs through the frosted glass. */
+@keyframes madeForYouScreenGlow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.99);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+/* Reduced motion: hold the gold light at a steady soft glow. */
+@media (prefers-reduced-motion: reduce) {
+  .madeForYouDevice .personalAgentDeviceScreen::before {
+    animation: none;
+    opacity: 0.65;
+  }
+}
+
+/* The video clips sit on TOP of the frosted glass (z-index 2) and gold light
+   (z-index 1), as a clear circle in the center of the disc. */
 .madeForYouDevice .personalAgentDeviceVideo--loop {
-  z-index: 0;
+  z-index: 3;
 }
 
 .madeForYouDevice .personalAgentDeviceVideo--intro {
-  z-index: 1;
+  z-index: 4;
   opacity: 0;
   transition: opacity 600ms ease;
+}
+
+/* The shared top-gloss reflection isn't used in this hero variant; the glass
+   panel + gold light own the screen treatment. */
+.madeForYouDevice .personalAgentDeviceGloss {
+  display: none;
 }
 
 .madeForYouDevice .personalAgentDeviceVideo--intro[data-visible="true"] {
