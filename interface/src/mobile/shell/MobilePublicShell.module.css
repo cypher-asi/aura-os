@@ -20,10 +20,15 @@
   width: 100%;
   height: 100dvh;
   min-height: 100dvh;
-  background: var(--color-bg-canvas, #0b0b0e);
+  /* Outer shell backdrop: a lighter charcoal frame the bordered page floats
+     on. Lighter at the very top (behind the bar) easing darker toward the
+     bottom so the top bar reads as a distinctly-coloured shell header and the
+     thin perimeter gutter frames the darker page below — the "shell" look. */
+  background: linear-gradient(180deg, #202022 0%, #141416 100%);
   color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .topbar {
@@ -32,9 +37,11 @@
   justify-content: space-between;
   height: 52px;
   padding: 0 8px 0 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border, #334155) 50%, transparent);
-  background: color-mix(in srgb, var(--color-bg-elevated, #111827) 92%, transparent);
-  backdrop-filter: blur(14px);
+  /* Transparent so the lighter shell backdrop shows through — this is the
+     "different color for the top" that frames the darker bordered page below.
+     A hairline under the bar separates it from the framed page. */
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   z-index: 10;
   flex-shrink: 0;
 }
@@ -107,5 +114,23 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  /* Framed page: a near-black screen inset from the shell on the sides +
+     bottom, with rounded corners and a 1px gradient stroke perimeter (the
+     same `--shell-stroke-top -> side -> bottom` recipe the desktop `.body`
+     uses). The stroke is painted as a `border-box` background behind a
+     transparent 1px border; `box-sizing: border-box` keeps the border eating
+     inward so the page size is unchanged. */
+  margin: 0 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background:
+    var(--color-bg-canvas, #0b0b0e) padding-box,
+    linear-gradient(
+        to bottom,
+        var(--shell-stroke-top, #424242) 0%,
+        var(--shell-stroke-side, #262626) 50%,
+        var(--shell-stroke-bottom, #121212) 100%
+      )
+      border-box;
   overflow: hidden;
 }

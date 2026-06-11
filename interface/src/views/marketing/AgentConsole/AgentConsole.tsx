@@ -77,7 +77,16 @@ export function AgentConsole(): ReactNode {
 
           <div className={styles.raised}>
             <DeviceScreen className={styles.screen}>
-              {!isMobileLayout && (
+              {isMobileLayout ? (
+                <img
+                  src="/agent-console-orb.png"
+                  alt=""
+                  aria-hidden="true"
+                  className={styles.screenPoster}
+                  decoding="async"
+                  loading="lazy"
+                />
+              ) : (
                 <AuraScreenOrb className={styles.screenOrb} />
               )}
               <span className={styles.screenLabel}>

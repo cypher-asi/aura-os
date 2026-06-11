@@ -96,15 +96,26 @@ export function IsolatedDevice({
   return (
     <Plate radius="38px" className="isolatedDevicePlate">
       <DeviceScreen className="isolatedDeviceScreen">
-        <div
-          className="isolatedDevice"
-          aria-hidden="true"
-          ref={hostRef}
-          style={{
-            opacity: ready ? 1 : 0,
-            transition: "opacity 600ms ease-out",
-          }}
-        />
+        {isMobileLayout ? (
+          <img
+            src="/isolated-device.png"
+            alt=""
+            aria-hidden="true"
+            className="isolatedDevicePoster"
+            decoding="async"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className="isolatedDevice"
+            aria-hidden="true"
+            ref={hostRef}
+            style={{
+              opacity: ready ? 1 : 0,
+              transition: "opacity 600ms ease-out",
+            }}
+          />
+        )}
       </DeviceScreen>
     </Plate>
   );

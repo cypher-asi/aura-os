@@ -1513,3 +1513,186 @@
     font-size: 9px;
   }
 }
+
+/*
+ * Mobile reflow (overrides the cramped landscape block above — same selector
+ * specificity, later in source). The desktop device crams a left control
+ * column, a center disc, a right terminal, a brand plate, and a bottom mesh
+ * strip into one absolutely-positioned landscape chassis; on a phone that
+ * collapses into the overlapping mess reported. Here every region is dropped
+ * to normal flow and stacked in a single centered column, with the two purely
+ * decorative bits (hex mesh + brand wordmark plate) hidden to keep it clean.
+ */
+@media (max-width: 768px) {
+  .madeForYouDevice .personalAgentDevice {
+    max-width: 420px;
+  }
+
+  .madeForYouDevice .personalAgentDeviceContent {
+    --mesh-strip-reserve: 0px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  /* 1 — step list (knob + Identity..Launch). */
+  .madeForYouDevice .madeForYouSidePanel {
+    position: static;
+    order: 1;
+    width: 100%;
+    bottom: auto;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0;
+  }
+
+  .madeForYouDevice .madeForYouKnobBay {
+    flex: 0 0 auto;
+  }
+
+  .madeForYouDevice .madeForYouKnob {
+    width: 48px;
+    height: 48px;
+  }
+
+  .madeForYouDevice .madeForYouKnobDial {
+    width: 38px;
+    height: 38px;
+  }
+
+  .madeForYouDevice .madeForYouKnobIndicator {
+    top: 4px;
+    right: 7px;
+    width: 3px;
+    height: 9px;
+  }
+
+  .madeForYouDevice .madeForYouSideButtons {
+    padding: 6px;
+    border-radius: 12px;
+  }
+
+  .madeForYouDevice .madeForYouSideScreen {
+    gap: 6px;
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .madeForYouDevice .madeForYouSideRow {
+    grid-template-columns: 18px 1fr 18px;
+    padding: 8px 10px;
+  }
+
+  .madeForYouDevice .madeForYouSideNumber {
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+
+  .madeForYouDevice .madeForYouSideLabel {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  .madeForYouDevice .madeForYouSideIndicator,
+  .madeForYouDevice .madeForYouLensBtn,
+  .madeForYouDevice .madeForYouCheck {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* 2 — center screen (video disc + integration logos). */
+  .madeForYouDevice .personalAgentDeviceScreen {
+    order: 2;
+    --screen-ring: 10px;
+    min-height: 0;
+    width: min(300px, 100%);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  /* 3 — stage-description LCD (its mesh-strip wrapper goes static; the
+     decorative honeycomb texture is hidden). */
+  .madeForYouDevice .madeForYouMeshStrip {
+    position: static;
+    order: 3;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    height: auto;
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .madeForYouDevice .personalAgentDeviceHexMesh {
+    display: none;
+  }
+
+  .madeForYouDevice .madeForYouStageScreen {
+    max-width: 100%;
+    min-height: 40px;
+    padding: 8px 16px;
+  }
+
+  .madeForYouDevice .madeForYouStageText {
+    font-size: 11px;
+    letter-spacing: 0.01em;
+  }
+
+  /* 4 — terminal LCD, full width below the stage line. */
+  .madeForYouDevice .madeForYouTerminalScreen {
+    position: static;
+    order: 4;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    height: 168px;
+    margin: 0;
+    padding: 12px 12px 16px;
+    font-size: 9px;
+    line-height: 1.6;
+  }
+
+  .madeForYouDevice .madeForYouTerminalScroll {
+    inset: 12px;
+    padding-left: 6px;
+  }
+
+  .madeForYouDevice .madeForYouTerminalCursor {
+    width: 6px;
+    height: 11px;
+  }
+
+  /* Decorative wordmark plate — redundant with the CONFIGURE caption; hide. */
+  .madeForYouDevice .madeForYouCtaSlot {
+    display: none;
+  }
+
+  /* Progress bar + CTA (rendered below the plate). */
+  .madeForYouProgress {
+    max-width: 100%;
+    padding: 14px;
+  }
+
+  .madeForYouProgressTrack {
+    height: 18px;
+    padding: 0 2px;
+  }
+
+  .madeForYouProgressFill {
+    height: 14px;
+    min-width: 14px;
+  }
+
+  .madeForYouProgressLabel {
+    right: 12px;
+    font-size: 10px;
+  }
+}

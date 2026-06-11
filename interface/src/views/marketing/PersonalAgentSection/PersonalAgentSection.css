@@ -187,6 +187,30 @@
   --pill-shadow: #141414;
 }
 
+/*
+ * Mobile: the chat capsule is a near-square card on a phone, so the desktop
+ * `Plate radius="999px"` collapses it into a circle that clips the mode
+ * selector and overlaps the input text (see the reported mobile bug). Pin a
+ * rounded-rect radius (overrides the Plate's inline `--plate-radius`, so it
+ * needs `!important`), cut the oversized content padding, and let the mode
+ * pills size to their content so the whole bar (modes + input) stays visible.
+ */
+@media (max-width: 768px) {
+  .personalAgentChatMock {
+    --plate-radius: 26px !important;
+    max-width: 100%;
+  }
+
+  .personalAgentChatMockContent {
+    padding: 14px 14px;
+  }
+
+  .personalAgentChatMock [data-sliding-pills-item] {
+    width: auto;
+    flex: 0 0 auto;
+  }
+}
+
 /* ----- Quadrant 2: neomorphic skill control panel -------------- */
 
 /* Plate wrapper sizing — matches the service device width so the two
