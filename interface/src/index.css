@@ -26,6 +26,21 @@
   scroll-behavior: auto !important;
 }
 
+/* Mobile: never paint a scrollbar. `useAuraCapabilities` stamps
+   `data-mobile-layout="true"` on <html> at the phone/tablet breakpoint;
+   touch surfaces scroll by drag, so the native bar is pure visual noise.
+   Covers every scroll container (shell body, menus, code blocks, nested
+   scrollers) in one place. */
+[data-mobile-layout="true"] * {
+  scrollbar-width: none;
+}
+
+[data-mobile-layout="true"] *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 /* Hard global override: the thick keyboard-focus ring is removed in every
    app mode per product decision. The universal !important rule beats any
    per-component focus-ring rule that would otherwise repaint an outline. */

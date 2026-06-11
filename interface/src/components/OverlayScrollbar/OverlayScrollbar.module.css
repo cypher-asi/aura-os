@@ -11,6 +11,12 @@
   z-index: var(--overlay-scrollbar-z-index, 2);
 }
 
+/* Mobile shows no scrollbar at all — the overlay thumb is a pointer
+   affordance that has no place on touch surfaces. */
+:global([data-mobile-layout="true"]) .scrollTrack {
+  display: none;
+}
+
 .scrollThumb {
   position: absolute;
   right: 0;
