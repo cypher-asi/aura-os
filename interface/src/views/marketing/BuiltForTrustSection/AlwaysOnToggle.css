@@ -106,20 +106,46 @@
 }
 
 /*
- * Neon ON lettering in the page's gold accent (same warm core + gold-glow
- * halo recipe as the password dots and lit keycaps). The glow breathes
- * slowly but never switches off.
+ * Positioned wrapper for the "ON" lettering: it fills the open area beside
+ * the knob and owns the toggle fade, so when the switch is clicked it fades
+ * out, snaps to the now-open side, then fades back in once the knob lands.
  */
 .alwaysOnLabel {
   position: absolute;
   top: 0;
   bottom: 0;
-  /* Fill the open area beside the knob (knob starts on the left). */
+  /* Fill the open area beside the knob (knob starts on the left). The
+     label repositions instantly while it is faded out, so no position
+     transition here — only opacity fades. */
   left: 43px;
   right: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
+  opacity: 1;
+  /* Fade the label back in once the knob has arrived. */
+  transition: opacity 200ms ease-in;
+}
+
+/* Fade out fast as the knob starts sliding. */
+.alwaysOnLabel[data-hidden="true"] {
+  opacity: 0;
+  transition: opacity 110ms ease-out;
+}
+
+/* When the knob moves right, the "ON" label flips to the open left side. */
+.alwaysOnTrack[data-side="right"] .alwaysOnLabel {
+  left: 6px;
+  right: 43px;
+}
+
+/*
+ * Neon ON lettering in the page's gold accent. The glow breathes slowly
+ * but never switches off; this inner element owns the type + breathe so
+ * the outer label can own positioning + the toggle fade independently.
+ */
+.alwaysOnLabelText {
   font-family: inherit;
   font-size: 17px;
   font-weight: 800;
@@ -131,16 +157,6 @@
     0 0 12px rgba(var(--gold-glow, 232, 205, 137), 0.55),
     0 0 26px rgba(var(--gold-halo, 153, 81, 25), 0.5);
   animation: alwaysOnBreathe 3.6s ease-in-out infinite;
-  user-select: none;
-  transition:
-    left 280ms cubic-bezier(0.4, 0, 0.2, 1),
-    right 280ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* When the knob moves right, the "ON" label flips to the open left side. */
-.alwaysOnTrack[data-side="right"] .alwaysOnLabel {
-  left: 6px;
-  right: 43px;
 }
 
 @keyframes alwaysOnBreathe {

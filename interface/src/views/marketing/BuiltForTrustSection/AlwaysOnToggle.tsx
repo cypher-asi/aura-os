@@ -1,6 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import "./AlwaysOnToggle.css";
+
+/** Knob slide duration (kept in sync with the CSS transition). */
+const SLIDE_MS = 280;
 
 /**
  * Media for the "Always on." trust card: a skeuomorphic toggle switch in
@@ -17,19 +20,39 @@ import "./AlwaysOnToggle.css";
  */
 export function AlwaysOnToggle(): ReactNode {
   const [side, setSide] = useState<"left" | "right">("left");
+  // The "ON" label fades out while the knob slides, then fades back in on
+  // the now-open side once the knob has arrived.
+  const [labelShown, setLabelShown] = useState(true);
+  const timerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    return () => window.clearTimeout(timerRef.current);
+  }, []);
+
+  const toggle = () => {
+    window.clearTimeout(timerRef.current);
+    setLabelShown(false);
+    setSide((s) => (s === "left" ? "right" : "left"));
+    timerRef.current = window.setTimeout(() => setLabelShown(true), SLIDE_MS);
+  };
+
   return (
     <div className="alwaysOnStage">
       <button
         type="button"
         className="alwaysOnSocket"
         aria-label="Always on"
-        onClick={() => setSide((s) => (s === "left" ? "right" : "left"))}
+        onClick={toggle}
       >
         <Plate radius="999px" className="alwaysOnShell">
           <div className="alwaysOnTrack" data-side={side}>
             <span className="alwaysOnKnob" aria-hidden="true" />
-            <span className="alwaysOnLabel" aria-hidden="true">
-              ON
+            <span
+              className="alwaysOnLabel"
+              data-hidden={labelShown ? undefined : "true"}
+              aria-hidden="true"
+            >
+              <span className="alwaysOnLabelText">ON</span>
             </span>
           </div>
         </Plate>
