@@ -38,10 +38,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
+  /* Same height as the desktop shell titlebar (`--shell-chrome-height`). */
+  height: var(--shell-chrome-height, 32px);
+  min-height: var(--shell-chrome-height, 32px);
   padding: 0 8px 0 16px;
   /* Floats transparent on the shell backdrop, exactly like the desktop
-     titlebar — the framed page's own top border below is the dividing line. */
+     titlebar. No border below — the framed page sits flush beneath it. */
   background: transparent;
   z-index: 10;
   flex-shrink: 0;
@@ -50,8 +52,7 @@
 .logoLink {
   display: inline-flex;
   align-items: center;
-  /* Keep a generous tap target around the small wordmark. */
-  min-height: 44px;
+  height: 100%;
 }
 
 .logo {
@@ -68,8 +69,8 @@
 }
 
 .menuButton {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 28px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -92,8 +93,8 @@
  * chat you're on is the only delete entry point.
  */
 .deleteButton {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 28px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -123,8 +124,11 @@
      border eating inward so the page size is unchanged. A matching bottom
      inset (+ safe area) frames the page on mobile where there is no taskbar. */
   margin: 0 5px calc(5px + env(safe-area-inset-bottom, 0px));
-  border-radius: 6px;
+  /* No top border / top rounding so the page sits flush beneath the bar with
+     no divider line; the shell frame stroke wraps only the sides + bottom. */
+  border-radius: 0 0 6px 6px;
   border: 1px solid transparent;
+  border-top: 0;
   background:
     var(--color-bg, #0b0b0e) padding-box,
     linear-gradient(
