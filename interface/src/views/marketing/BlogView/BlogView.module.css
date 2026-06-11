@@ -6,7 +6,7 @@
  * sidebar / scroll column) is owned by `PublicMarketingPanel`.
  */
 .page {
-  --blog-bg: #0f0f12;
+  --blog-bg: #090909;
   --blog-text-primary: #f7f8fb;
   --blog-text-secondary: #a3a3a8;
   --blog-text-muted: rgba(255, 255, 255, 0.52);
@@ -19,7 +19,7 @@
   min-height: calc(100vh - var(--marketing-taskbar-safe-offset));
   min-height: calc(100dvh - var(--marketing-taskbar-safe-offset));
   padding: 120px clamp(20px, 5vw, 56px) 96px;
-  background: var(--marketing-section-bg, #0f0f12);
+  background: var(--marketing-section-bg, #090909);
   color: var(--blog-text-primary);
   font-size: 16px;
   line-height: 1.6;

@@ -50,6 +50,25 @@ const DownloadsModal = lazy(() =>
   })),
 );
 
+/**
+ * Public marketing routes that paint the dark-mode diagonal gradient
+ * outer-shell frame (`.shell::before`). Originally just `/agents` +
+ * `/code` + `/os`; now every primary marketing page shares the frame so
+ * they read as one consistent surface. `/os` and `/blog` `:slug`
+ * children are matched by prefix in `publicGradientSurface` below.
+ */
+const MARKETING_GRADIENT_PATHS = new Set<string>([
+  "/agents",
+  "/code",
+  "/os",
+  "/pricing",
+  "/blog",
+  "/changelog",
+  "/feedback",
+  "/models",
+  "/download",
+]);
+
 function blurActiveElement(): void {
   const active = document.activeElement;
   if (active instanceof HTMLElement) {
@@ -94,16 +113,16 @@ export function AuraShell(): React.ReactElement {
   // host settings entry. Public mode strips all of it.
   const isStandard = mode === "standard";
 
-  // The public marketing /agents, /code, and /os routes paint a dark-mode
+  // Every primary public marketing page paints the same dark-mode
   // diagonal gradient on the shell frame (see `.shell::before` in
   // AuraShell.module.css). Flag them so the CSS can fade it in/out.
+  // `/os` and `/blog` also have `:slug` children that share the frame.
   const { pathname } = useLocation();
   const publicGradientSurface =
     isPublic &&
-    (pathname === "/agents" ||
-      pathname === "/code" ||
-      pathname === "/os" ||
-      pathname.startsWith("/os/"));
+    (MARKETING_GRADIENT_PATHS.has(pathname) ||
+      pathname.startsWith("/os/") ||
+      pathname.startsWith("/blog/"));
 
   // Authed-side state. We call these hooks unconditionally because
   // their subscriptions are cheap store reads — `useAppUIStore`,

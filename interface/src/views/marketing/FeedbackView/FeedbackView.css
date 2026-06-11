@@ -2,24 +2,10 @@
   min-height: calc(100vh - var(--marketing-taskbar-safe-offset));
   min-height: calc(100dvh - var(--marketing-taskbar-safe-offset));
   padding: 120px 32px 0;
-  /* Off-black surface tint matching the `/product` page sections
-     (see the `--marketing-section-bg` rationale in
-     `ProductView.module.css`). The token isn't inherited here
-     because `FeedbackView` isn't wrapped by `.productView`, so
-     reference it explicitly with the same `#0f0f12` fallback.
-
-     A light slate-blue top glow sits above the dark base so the
-     frosted summary banner has something to blur through. It is kept
-     bright (and the banner tint stays fairly opaque below) so the
-     card's dark text retains contrast; it fades to transparent before
-     the feedback list so that content stays on the dark surface. */
-  background:
-    radial-gradient(
-      120% 80% at 50% -10%,
-      rgba(150, 185, 205, 0.5) 0%,
-      rgba(123, 162, 180, 0) 48%
-    ),
-    var(--marketing-section-bg, #0f0f12);
+  /* Flat off-black surface matching `/agents` + `/code`
+     (`--marketing-section-bg`); the gradient outer-shell frame is
+     painted by `AuraShell` `.shell::before`. */
+  background: #090909;
 }
 
 /*
@@ -59,23 +45,11 @@
   margin: 0 auto 48px;
 }
 
-/* Slate-blue gradient banner with dark text. Mirrors the Changelog
-   summary card's gradient geometry (brightest in the upper-right,
-   fading darker toward the lower-left) but swaps the dark purple for
-   the user-provided #7DA2B4 swatch, so the card carries dark text
-   instead of the white text used on Changelog. */
+/* Summary banner. Uses the shared `BannerCard` "risen black glass"
+   surface with light text, matching the Changelog / Models banners. */
 .feedbackStatsCard {
   padding: 32px;
-  color: #13242c;
-  /* Higher alpha than the other glass banners so the frosted card
-     stays light enough for the dark text to remain legible. */
-  background:
-    radial-gradient(
-      ellipse 120% 110% at 72% 38%,
-      rgba(154, 185, 200, 0.85) 0%,
-      rgba(125, 162, 180, 0.78) 45%,
-      rgba(107, 143, 161, 0.72) 100%
-    );
+  color: #fff;
 }
 
 .feedbackStatsCardHeader {
@@ -90,7 +64,7 @@
   line-height: 0.96;
   letter-spacing: -0.06em;
   font-weight: 400;
-  color: #13242c;
+  color: #fff;
 }
 
 .feedbackPageSubtitle {
@@ -98,7 +72,7 @@
   max-width: 560px;
   font-size: 15px;
   line-height: 1.5;
-  color: rgba(15, 30, 38, 0.72);
+  color: rgba(255, 255, 255, 0.56);
 }
 
 .feedbackStatsGrid {
@@ -122,7 +96,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(15, 30, 38, 0.6);
+  color: rgba(255, 255, 255, 0.56);
 }
 
 .feedbackStatValue {
@@ -132,7 +106,7 @@
   letter-spacing: -0.02em;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: #13242c;
+  color: #fff;
 }
 
 @media (max-width: 768px) {
