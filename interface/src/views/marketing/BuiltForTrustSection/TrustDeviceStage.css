@@ -30,9 +30,10 @@
 /* VFD readout panel mirrored on the device's right, vertically centered at
    the same height as the rail (see TrustDisplayPanel.css for the height
    math) but wider. Horizontally centered in the gap between the centered
-   device and the card's right edge: the stage measures that midpoint and
-   feeds it in as --trust-panel-center-x (TrustDeviceStage.tsx); the 75%
-   fallback positions it for the first paint before measurement lands. */
+   device's right edge and the OUTER card panel's right edge (the .metalCard,
+   not the padding-inset stage): the stage measures that midpoint and feeds
+   it in as --trust-panel-center-x (TrustDeviceStage.tsx); the 75% fallback
+   positions it for the first paint before measurement lands. */
 .builtForTrustStage .trustDisplayPanel {
   position: absolute;
   top: 50%;
