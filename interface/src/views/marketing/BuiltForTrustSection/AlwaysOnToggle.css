@@ -25,13 +25,22 @@
   align-items: center;
   justify-content: center;
   width: min(120px, 64%);
+  border: 0;
   border-radius: 999px;
   padding: 3px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
   background: linear-gradient(180deg, #0a0a0b 0%, #121214 100%);
   box-shadow:
     inset 0 2px 6px rgba(0, 0, 0, 0.85),
     inset 0 -1px 0 rgba(255, 255, 255, 0.07),
     0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.alwaysOnSocket:focus-visible {
+  outline: 2px solid rgba(var(--gold-glow, 232, 205, 137), 0.85);
+  outline-offset: 3px;
 }
 
 /* The Plate supplies the three-ring metallic bezel; fill the socket. */
@@ -46,12 +55,10 @@
  * sunk into the chassis (same treatment as the password-lock screen).
  */
 .alwaysOnTrack {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  position: relative;
   /* 3px socket + 4px track + 31px knob: the original 72px device stack
-     scaled down 30%. */
+     scaled down 30%. Knob (31px) + 4px top/bottom padding = 39px tall. */
+  height: 39px;
   padding: 4px 6px;
   border-radius: 999px;
   background: radial-gradient(
@@ -72,7 +79,9 @@
  * bevel, shaded bottom edge, and a drop shadow onto the track floor.
  */
 .alwaysOnKnob {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 4px;
+  left: 6px;
   width: 31px;
   height: 31px;
   border-radius: 50%;
@@ -88,6 +97,12 @@
     inset 0 -3px 5px rgba(0, 0, 0, 0.45),
     0 5px 12px rgba(0, 0, 0, 0.75),
     0 1px 3px rgba(0, 0, 0, 0.6);
+  transition: left 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Knob latched to the right end of the track when toggled. */
+.alwaysOnTrack[data-side="right"] .alwaysOnKnob {
+  left: calc(100% - 31px - 6px);
 }
 
 /*
@@ -96,9 +111,15 @@
  * slowly but never switches off.
  */
 .alwaysOnLabel {
-  flex: 1 1 auto;
-  text-align: center;
-  padding-right: 6px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* Fill the open area beside the knob (knob starts on the left). */
+  left: 43px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: inherit;
   font-size: 17px;
   font-weight: 800;
@@ -111,6 +132,15 @@
     0 0 26px rgba(var(--gold-halo, 153, 81, 25), 0.5);
   animation: alwaysOnBreathe 3.6s ease-in-out infinite;
   user-select: none;
+  transition:
+    left 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    right 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* When the knob moves right, the "ON" label flips to the open left side. */
+.alwaysOnTrack[data-side="right"] .alwaysOnLabel {
+  left: 6px;
+  right: 43px;
 }
 
 @keyframes alwaysOnBreathe {
@@ -134,5 +164,12 @@
 @media (max-width: 768px) {
   .alwaysOnSocket {
     width: min(112px, 70%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alwaysOnKnob,
+  .alwaysOnLabel {
+    transition: none;
   }
 }

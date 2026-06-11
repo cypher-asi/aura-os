@@ -1,80 +1,132 @@
 {
   "agents": {
+    "buildDeviceAriaLabel": "Build your agent",
     "documentTitle": "AURA - Agents",
-    "heroHeadline": "Delegate everything.",
     "heroDescriptionLine1": "AURA agents are experts in every field",
     "heroDescriptionLine2": "that work while you sleep.",
-    "buildDeviceAriaLabel": "Build your agent"
+    "heroHeadline": "Delegate everything."
+  },
+  "blog": {
+    "allPosts": "All posts",
+    "breadcrumbAriaLabel": "Breadcrumb",
+    "documentTitle": "AURA - Blog",
+    "empty": {
+      "body": "The blog is connected, but no posts have been published yet.",
+      "heading": "No posts yet."
+    },
+    "latest": "Latest",
+    "loading": "Loading…",
+    "loadingPost": "Loading post…",
+    "loadingPosts": "Loading posts…",
+    "moreFromBlog": "More from the blog",
+    "morePosts": "More posts",
+    "navigationAriaLabel": "Blog navigation",
+    "noContent": "This post has no content yet.",
+    "noOtherPosts": "No other posts yet.",
+    "notFound": {
+      "backLink": "← Back to the blog",
+      "body": "The post you're looking for doesn't exist or isn't published.",
+      "heading": "Post not found"
+    },
+    "postDocumentTitle": "AURA - {{title}}",
+    "readTime_one": "{{count}} min read",
+    "readTime_other": "{{count}} min read",
+    "recentPostsAriaLabel": "Recent posts",
+    "table": {
+      "author": "Author",
+      "date": "Date",
+      "title": "Title",
+      "type": "Type"
+    },
+    "title": "Blog",
+    "tocAriaLabel": "Table of contents",
+    "tocTitle": "Table of Contents"
+  },
+  "changelog": {
+    "chart": {
+      "ariaLabel": "Releases per day over time",
+      "barTitle_one": "{{date}}: 1 release",
+      "barTitle_other": "{{date}}: {{count}} releases",
+      "caption": "Releases per day",
+      "captionWithCount_one": "1 release · {{date}}",
+      "captionWithCount_other": "{{count}} releases · {{date}}"
+    },
+    "commitsLiveTitle_one": "Live total across {{count}} AURA repository",
+    "commitsLiveTitle_other": "Live total across {{count}} AURA repositories",
+    "currentVersion": "Current version",
+    "dailyUpdate": "Daily Update",
+    "documentTitle": "AURA - Changelog",
+    "download": "Download",
+    "downloadVersionAriaLabel": "Download AURA {{version}} for your operating system",
+    "downloadVersionTitle": "Click to download the build for your operating system",
+    "empty": {
+      "body": "The release feed is connected, but no published changelog entries were found yet.",
+      "heading": "No changelog entries yet."
+    },
+    "entriesAriaLabel": "Aura changelog entries",
+    "entry": {
+      "commitCount_one": "1 commit",
+      "commitCount_other": "{{count}} commits",
+      "releaseCount_one": "1 release",
+      "releaseCount_other": "{{count}} releases"
+    },
+    "github": "GitHub",
+    "openScreenshotAriaLabel": "Open screenshot for {{title}}",
+    "releasedAgo": "Released {{relativeTime}}",
+    "releasedRecently": "Released recently",
+    "sources": "Sources",
+    "stats": {
+      "allTimeCommits": "All-time commits",
+      "allTimeReleases": "All-time releases",
+      "commitsThisMonth": "Commits this month",
+      "releasesThisMonth": "Releases this month"
+    },
+    "summaryAriaLabel": "Changelog summary",
+    "title": "Changelog"
+  },
+  "changelogPreview": {
+    "ariaLabel": "Recent changelog entries",
+    "ctaLabel": "See what's new in AURA",
+    "heading": "Changelog",
+    "releaseUpdate": "Release update"
   },
   "code": {
+    "deviceAriaLabel": "The AURA coding desktop",
     "documentTitle": "AURA - Code",
-    "heroHeadline": "Code while you sleep.",
     "heroDescription": "A frontier coding harness designed for security, automation and verifiability that is 100% open source.",
-    "deviceAriaLabel": "The AURA coding desktop"
+    "heroHeadline": "Code while you sleep."
   },
-  "terms": {
-    "documentTitle": "AURA - Terms of Service",
-    "label": "LEGAL",
-    "headline": "Terms of Service",
-    "description": "Our Terms of Service are being finalized and will be published here soon."
+  "cta": {
+    "ariaLabel": "Product call to action",
+    "download": "Download",
+    "signUp": "Sign Up",
+    "tagline": "Feel the AGI."
   },
-  "privacy": {
-    "documentTitle": "AURA - Privacy Policy",
-    "label": "LEGAL",
-    "headline": "Privacy Policy",
-    "description": "Our Privacy Policy is being finalized and will be published here soon."
-  },
-  "support": {
-    "headline": "Support",
-    "body": "Need help with AURA? We\u2019re here for you. Email our support team and we\u2019ll get back to you as soon as we can.",
-    "note": "For account or billing questions, please include the email address associated with your AURA account."
-  },
-  "pricing": {
-    "documentTitle": "AURA - Pricing",
-    "heroHeadline": "Starting at free.",
-    "heroDescription": "Start with local open source models for free, then pay only for the frontier models you use.",
-    "plansLabel": "Individual Plans",
-    "billingCycleAriaLabel": "Billing cycle",
-    "monthly": "Monthly",
-    "yearly": "Yearly",
-    "cadenceMonthly": "/mo.",
-    "cadenceYearly": "/yr.",
-    "downloadCta": "Download",
-    "plans": {
-      "free": {
-        "name": "Free",
-        "description": "Get started for free:",
-        "features": {
-          "0": "No credit card required",
-          "1": "Local open source models",
-          "2": "Pay-as-you-go for frontier models"
-        }
-      },
-      "pro": {
-        "name": "Pro",
-        "description": "Everything in Free, plus:",
-        "priceNote": "$10/mo for Zero Pro OG subscribers",
-        "features": {
-          "0": "$20 worth of monthly credits",
-          "1": "Remote agents"
-        }
-      },
-      "sage": {
-        "name": "Sage",
-        "description": "Everything in Pro, plus:",
-        "features": {
-          "0": "20x usage on frontier models",
-          "1": "Priority access to new features"
-        }
-      }
-    }
+  "docs": {
+    "docDocumentTitle": "AURA Docs - {{title}}",
+    "documentTitle": "AURA - Docs",
+    "empty": {
+      "body": "The documentation site is connected, but no pages have been published yet."
+    },
+    "loading": "Loading…",
+    "navigationAriaLabel": "Documentation navigation",
+    "noContent": "This page has no content yet.",
+    "noPages": "No pages yet.",
+    "notFound": {
+      "backButton": "Back to the overview",
+      "body": "This documentation page doesn't exist or isn't published yet.",
+      "heading": "Page not found"
+    },
+    "sidebarTitle": "Documentation",
+    "tocAriaLabel": "On this page",
+    "tocTitle": "On this page"
   },
   "download": {
-    "documentTitle": "Download \u2014 AURA",
-    "headline": "Download AURA for every major desktop platform.",
-    "cta": "Download",
-    "loading": "Loading...",
     "cards": {
+      "linux": {
+        "description": "Portable AppImage for Linux desktops, suitable for direct download and launch.",
+        "meta": "x86_64 AppImage"
+      },
       "mac-apple-silicon": {
         "description": "Native build for M1, M2, M3, and M4 Macs.",
         "meta": "Recommended for most Macs"
@@ -86,11 +138,258 @@
       "windows": {
         "description": "Signed Windows installer with the latest desktop runtime and updater support.",
         "meta": "x64 installer"
-      },
-      "linux": {
-        "description": "Portable AppImage for Linux desktops, suitable for direct download and launch.",
-        "meta": "x86_64 AppImage"
       }
+    },
+    "cta": "Download",
+    "documentTitle": "Download — AURA",
+    "headline": "Download AURA for every major desktop platform.",
+    "loading": "Loading..."
+  },
+  "expertise": {
+    "documentTitle": "AURA - {{label}}",
+    "overview": "Overview",
+    "overviewAriaLabel": "{{label}} overview",
+    "previewAriaLabel": "{{label}} preview",
+    "requestDemo": "Request a demo",
+    "useCases": "Use cases",
+    "useCasesAriaLabel": "{{label}} use cases"
+  },
+  "feedback": {
+    "card": {
+      "anonymousAuthor": "Anonymous",
+      "commentCount_one": "1 comment",
+      "commentCount_other": "{{count}} comments",
+      "time": {
+        "daysAgo_one": "{{count}}d ago",
+        "daysAgo_other": "{{count}}d ago",
+        "hoursAgo_one": "{{count}}h ago",
+        "hoursAgo_other": "{{count}}h ago",
+        "minutesAgo_one": "{{count}}m ago",
+        "minutesAgo_other": "{{count}}m ago",
+        "monthsAgo_one": "{{count}}mo ago",
+        "monthsAgo_other": "{{count}}mo ago",
+        "secondsAgo_one": "{{count}}s ago",
+        "secondsAgo_other": "{{count}}s ago",
+        "yearsAgo_one": "{{count}}y ago",
+        "yearsAgo_other": "{{count}}y ago"
+      },
+      "voteScoreAriaLabel": "Vote score"
+    },
+    "documentTitle": "AURA - Feedback",
+    "empty": {
+      "body": "No AURA feedback posts match the current filters.",
+      "heading": "No feedback yet."
+    },
+    "entriesAriaLabel": "Feedback entries",
+    "filters": {
+      "ariaLabel": "Feedback filters",
+      "sections": {
+        "status": "Status",
+        "trending": "Trending",
+        "type": "Type"
+      },
+      "toggle": "Filters"
+    },
+    "stats": {
+      "participants": "Participants",
+      "resolved": "Items Resolved",
+      "submitted": "Items Submitted"
+    },
+    "subtitle": "Our users submit feedback and AURA autonomously improves itself.",
+    "summaryAriaLabel": "Feedback summary",
+    "title": "Feedback"
+  },
+  "footer": {
+    "ariaLabel": "Site footer",
+    "copyright": "Copyright © {{year}}",
+    "navigationAriaLabel": "Footer navigation"
+  },
+  "models": {
+    "allModelsAriaLabel": "All models",
+    "documentTitle": "AURA - Models",
+    "empty": "No models match the current filters. Try clearing search or switching tabs.",
+    "featured": "Featured",
+    "featuredAriaLabel": "Featured models",
+    "filterByModalityAriaLabel": "Filter by modality",
+    "filterByStatusAriaLabel": "Filter by status",
+    "loadingCatalog": "Loading catalog…",
+    "searchAriaLabel": "Search models",
+    "searchPlaceholder": "Search models...",
+    "stats": {
+      "image": "Image",
+      "text": "Text",
+      "threeD": "3D",
+      "total": "Total Models",
+      "video": "Video"
+    },
+    "status": {
+      "live": "Live",
+      "liveAriaLabel": "Status: Live",
+      "soon": "Soon",
+      "soonAriaLabel": "Status: Coming soon"
+    },
+    "subtitle": "The frontier models powering AURA, across text, image, video, and 3D.",
+    "summaryAriaLabel": "Models summary"
+  },
+  "os": {
+    "docDocumentTitle": "AURA OS - {{title}}",
+    "documentTitle": "AURA - OS",
+    "empty": {
+      "body": "The AURA OS whitepaper is connected, but no sections have been published yet."
+    },
+    "navigationAriaLabel": "Whitepaper navigation",
+    "noContent": "This section has no content yet.",
+    "noSections": "No sections yet.",
+    "notFound": {
+      "backButton": "Back to the overview",
+      "body": "This part of the whitepaper doesn't exist or isn't published yet.",
+      "heading": "Section not found"
+    },
+    "sidebarTitle": "AURA OS"
+  },
+  "pricing": {
+    "billingCycleAriaLabel": "Billing cycle",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "documentTitle": "AURA - Pricing",
+    "downloadCta": "Download",
+    "heroDescription": "Start with local open source models for free, then pay only for the frontier models you use.",
+    "heroHeadline": "Starting at free.",
+    "monthly": "Monthly",
+    "plans": {
+      "free": {
+        "description": "Get started for free:",
+        "features": {
+          "0": "No credit card required",
+          "1": "Local open source models",
+          "2": "Pay-as-you-go for frontier models"
+        },
+        "name": "Free"
+      },
+      "pro": {
+        "description": "Everything in Free, plus:",
+        "features": {
+          "0": "$20 worth of monthly credits",
+          "1": "Remote agents"
+        },
+        "name": "Pro",
+        "priceNote": "$10/mo for Zero Pro OG subscribers"
+      },
+      "sage": {
+        "description": "Everything in Pro, plus:",
+        "features": {
+          "0": "20x usage on frontier models",
+          "1": "Priority access to new features"
+        },
+        "name": "Sage"
+      }
+    },
+    "plansLabel": "Individual Plans",
+    "yearly": "Yearly"
+  },
+  "privacy": {
+    "description": "Our Privacy Policy is being finalized and will be published here soon.",
+    "documentTitle": "AURA - Privacy Policy",
+    "headline": "Privacy Policy",
+    "label": "LEGAL"
+  },
+  "productScreen": {
+    "close": "Close",
+    "closeFullscreenAriaLabel": "Close fullscreen image",
+    "openFullscreenAriaLabel": "Open fullscreen image: {{label}}",
+    "placeholderLabel": "Image placeholder"
+  },
+  "sections": {
+    "agentChat": {
+      "ariaLabel": "Chat with your agents from anywhere",
+      "description": "Your AURA agents are always on. Pick up a conversation on your phone, your laptop, or your desktop. They remember everything and bring the same tools with them.",
+      "headlineLine1": "Chat with your agents.",
+      "headlineLine2": "From anywhere.",
+      "phoneAriaLabel": "Mobile chat with the {{agentName}} agent"
+    },
+    "builtForTrust": {
+      "ariaLabel": "How AURA earns your trust",
+      "cards": {
+        "alwaysOn": {
+          "description": "Your agent works around the clock, even while your devices are off.",
+          "title": "Always on."
+        },
+        "isolated": {
+          "description": "Each agent runs in its own sandboxed VM, fully sealed off from your system and other agents.",
+          "title": "Isolated by default."
+        },
+        "verifiable": {
+          "description": "Every environment is attested before it runs, so you can always verify what you're trusting.",
+          "title": "Trusted and verifiable."
+        }
+      },
+      "headline": "Built for trust.",
+      "subhead": "AURA agents run in isolated virtual machines within trusted execution environments."
+    },
+    "expertise": {
+      "headline": "Expertise without ego.",
+      "subheadLine1": "AURA agents are experts in every discipline.",
+      "subheadLine2": "From coding to science to creativity."
+    },
+    "madeForYou": {
+      "headline": "Agents made for you.",
+      "subhead": "Design and launch your agent in 30 seconds."
+    },
+    "personalAgent": {
+      "ariaLabel": "What your agent can do",
+      "cards": {
+        "alwaysOn": {
+          "description": "Ask or direct your agent to do almost anything. It will get to work and report back when necessary.",
+          "title": "Always on."
+        },
+        "connected": {
+          "description": "AURA securely connects to your services so it knows everything about you. Your data never leaves your own secure computer and is never trained on.",
+          "title": "Connected to everything."
+        },
+        "domains": {
+          "description": "Your agent is a genius in all domains. It can help with the simple tasks of life, to creative projects, to advanced design and coding.",
+          "title": "Intelligent in all domains."
+        }
+      },
+      "headline": "Every model. Every mode.",
+      "subhead": "AURA is your own personal agent that supports you with everything from light tasks to deep work."
+    },
+    "privacy": {
+      "features": {
+        "openSource": {
+          "description": "AURA is 100% open source under the MIT license. Fork it anytime, with zero vendor lock-in and no strings attached.",
+          "tag": "MIT License",
+          "title": "Open Source"
+        },
+        "private": {
+          "description": "AURA never views or trains on your personal or corporate data. Anything sent to frontier models stays unidentifiable.",
+          "tag": "PQ-Encryption",
+          "title": "Private"
+        },
+        "verifiable": {
+          "description": "The AURA harness and kernel are built from the ground up with security, verification, and policy as first-class citizens.",
+          "tag": "Trusted Execution",
+          "title": "Verifiable"
+        }
+      },
+      "headline": "Designed for your humanity."
     }
+  },
+  "support": {
+    "body": "Need help with AURA? We’re here for you. Email our support team and we’ll get back to you as soon as we can.",
+    "headline": "Support",
+    "note": "For account or billing questions, please include the email address associated with your AURA account."
+  },
+  "taglines": {
+    "decentralized": "Decentralized.",
+    "openSource": "Open Source.",
+    "private": "Private.",
+    "secure": "Secure."
+  },
+  "terms": {
+    "description": "Our Terms of Service are being finalized and will be published here soon.",
+    "documentTitle": "AURA - Terms of Service",
+    "headline": "Terms of Service",
+    "label": "LEGAL"
   }
 }

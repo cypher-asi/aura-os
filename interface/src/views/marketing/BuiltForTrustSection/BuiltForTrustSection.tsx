@@ -71,7 +71,7 @@ export function BuiltForTrustSection(): ReactNode {
           })}
           description={t("sections.builtForTrust.cards.alwaysOn.description", {
             defaultValue:
-              "Your agent keeps working around the clock, even while you're away and your devices are off.",
+              "Your agent works around the clock, even while your devices are off.",
           })}
           media={<AlwaysOnToggle />}
         />
