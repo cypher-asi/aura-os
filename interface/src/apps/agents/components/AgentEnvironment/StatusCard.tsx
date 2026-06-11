@@ -16,6 +16,9 @@ import {
   type RecoveryNotice,
 } from "./helpers"
 
+/** GitHub repo the deployed harness build is sourced from. */
+const HARNESS_REPO_URL = "https://github.com/cypher-asi/aura-harness"
+
 interface StatusCardProps {
   isLocal: boolean
   isRemote: boolean
@@ -183,6 +186,23 @@ function RemoteStatusContent({
         <div className={styles.statusRow}>
           <span className={styles.statusLabel}>Runtime</span>
           <span className={styles.statusValue}>{vmState.runtime_version}</span>
+        </div>
+      )}
+      {vmState?.harness_git_sha && (
+        <div className={styles.statusRow}>
+          <span className={styles.statusLabel}>Harness</span>
+          <span className={styles.statusValue}>
+            <a
+              className={styles.commitLink}
+              href={`${HARNESS_REPO_URL}/commit/${vmState.harness_git_sha}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={vmState.harness_git_sha}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {vmState.harness_git_sha.slice(0, 7)}
+            </a>
+          </span>
         </div>
       )}
       {vmState && (vmState.cpu_millicores || vmState.memory_mb) && (

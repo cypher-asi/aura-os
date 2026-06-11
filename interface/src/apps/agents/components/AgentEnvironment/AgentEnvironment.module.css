@@ -121,6 +121,19 @@
   word-break: break-all;
 }
 
+.commitLink {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono, monospace);
+  text-decoration: underline;
+  text-decoration-color: var(--color-text-muted);
+  text-underline-offset: 2px;
+}
+
+.commitLink:hover {
+  color: var(--color-accent, var(--color-text-primary));
+  text-decoration-color: currentColor;
+}
+
 .recoveryNotice {
   display: flex;
   flex-direction: column;
