@@ -199,12 +199,18 @@
 
 .codeLink :global(code) {
   color: var(--os-fg-muted);
+  /* Subtle dotted underline so code references read as clickable links
+     without adopting the loud accent-green of prose links. */
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: currentColor;
+  text-underline-offset: 2px;
   transition: color 0.12s ease;
 }
 
 .codeLink:hover :global(code) {
   color: var(--os-fg);
-  text-decoration: underline;
+  text-decoration-style: solid;
 }
 
 .markdownBody :global(pre) {

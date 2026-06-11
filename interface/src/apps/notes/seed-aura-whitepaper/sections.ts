@@ -1,9 +1,10 @@
 /**
  * Seed content for the AURA OS whitepaper CMS (the public `/os` page).
  *
- * The first part of the whitepaper is the **Harness**, split into the ten
- * layers of the harness architecture (plus an overview and the user-flow
- * diagrams). Each entry below becomes a published note under the reserved
+ * The first part of the whitepaper is the **AURA Harness**, split into the ten
+ * layers of the harness architecture (plus an overview, the architectural
+ * invariants, and the user-flow diagrams). Each entry below becomes a
+ * published note under the reserved
  * aura-whitepaper project; the `section` field doubles as the collapsible
  * left-nav group key on the public page, and `sortOrder` controls the
  * within-section order. Content is transcribed from
@@ -85,6 +86,27 @@ store    — durable storage · sealed WriteStore (Invariant §10)
 core     — behavior-free IDs · capability enums · modes · wire types
 ${F}
 
+## Request lifecycle (internals)
+
+Every front-end funnels into the same kernel / \`AgentLoop\` pipeline. The resolved \`AgentMode\` gates each external effect before the policy layer narrows per tool.
+
+${F}text
+mode resolution (first match wins)
+  CLI --mode  >  /mode (TUI)  >  SDK SessionConfig.mode  >
+  FleetConfig.default_mode  >  AgentMode::Agent (fallback)
+        |
+        v
+ input -> Transaction -> AgentLoop --reason--> ModelProvider
+        ^                    |  stop = ToolUse        |
+        |                    v                        |
+        |          mode gate + Policy::check          |
+        |                    |  allow                 |
+        |          ExecutorRouter -> Tools (sandbox)  |
+        |                    |                        |
+        +------- Effect -----+    --> RecordEntry (append-only log)
+                                  --> TurnEvents (UI / WS)
+${F}
+
 ## Layers, in dependency order
 
 | Layer | Purpose |
@@ -158,6 +180,23 @@ core
  └─ aura-protocol          RuntimeRequest · wire API
 ${F}
 
+## Internals
+
+Permissions resolve through pure functions: a request's capabilities are narrowed against the per-mode \`CapabilityProfile\`, then intersected with the agent's grant to produce the \`EffectivePermissions\` the policy gate reads.
+
+${F}text
+ CapabilityProfile (per AgentMode)
+        |
+        v
+   narrow(requested, profile)
+        |            Permissions (agent grant)
+        v            |
+     intersect( .  , . )
+        |
+        v
+   EffectivePermissions  -->  aura-exec-policy::evaluate  /  kernel Policy::check
+${F}
+
 #### \`aura-core-types\`
 
 Strongly-typed identifier newtypes (\`TurnId\`, \`RunId\`, \`ToolCallId\`, \`SessionId\`) and the small share-by-value structs that the agent/fleet layers traffic in. Re-exports \`AgentMode\` and \`Capability\` for crates that want a single import surface.
@@ -215,6 +254,24 @@ store
  └─ aura-store (shell)   re-exports aura-store-db
 ${F}
 
+## Internals
+
+The sealed \`WriteStore\` is the only commit path; \`ReadStore\` is everyone else's surface. A new backend cannot be written outside \`aura-store-db\` because the \`Sealed\` marker is crate-private.
+
+${F}text
+        Kernel
+          |  Arc<dyn WriteStore>  (sealed: append_entry_atomic, _batch, ...)
+          v
+   +---------------------------+      non-kernel: Arc<dyn ReadStore>
+   |  aura-store-db RocksStore  |<---- scan / get_head_seq / enqueue_tx
+   +------------+--------------+
+                |  single WriteBatch (atomic)
+        +-------+--------+-------------+
+        v                v             v
+    CF: record      CF: agent_meta   CF: inbox
+   key = (agent_id, seq)
+${F}
+
 #### \`aura-store-db\`
 
 RocksDB-backed durable storage. Owns the three column families (\`record\`, \`agent_meta\`, \`inbox\`), the key encoders, and the atomic \`WriteBatch\` commit path. Implements both \`Store\` (legacy) and the sealed \`WriteStore\`.
@@ -257,6 +314,21 @@ config
  └─ aura-config  AuraConfig · AgentConfig · ReasonerConfig · FleetConfig · env loader
 ${F}
 
+## Internals
+
+Configuration resolves once into \`AuraConfig\`; every crate reads \`loaded()\` rather than touching the environment directly.
+
+${F}text
+ env vars ----+
+ (AURA_HOME,  |
+  budgets)    +--> aura_config::load --> AuraConfig --> loaded()  [process-wide]
+ TOML files --+                              |
+                                             +-- AgentConfig / ReasonerConfig
+                                             +-- FleetConfig.default_mode --> AgentMode chain
+
+ every crate reads loaded(); never std::env::var directly
+${F}
+
 #### \`aura-config\`
 
 \`AuraConfig\` aggregate plus the per-subsystem \`AgentConfig\`, \`ReasonerConfig\`, \`FleetConfig\` (carries \`default_mode\` — the daemon rung of the \`AgentMode\` resolution chain), and the env loader (\`AURA_HOME\`, \`AURA_FLEET_DEFAULT_MODE\`, retry/thinking budgets). Hosts the \`aura migrate\` stub.`,
@@ -286,6 +358,23 @@ ${F}text
 model
  ├─ aura-model-reasoner  ModelProvider · StreamEvent · AnthropicProvider · MockProvider
  └─ aura-reasoner (shell)  re-exports aura-model-reasoner
+${F}
+
+## Internals
+
+Production model calls only flow through \`KernelModelGateway\` (Invariant §1). Stream events accumulate, and recording finalizes exactly once on natural end, error, or drop.
+
+${F}text
+ AgentLoop --(&dyn ModelProvider)--> KernelModelGateway   [sealed RecordingModelProvider]
+                                          |  Kernel::reason_streaming
+                                          v
+                                    AnthropicProvider (proxy, retry, model-chain fallback)
+                                          |  StreamEvent: TextDelta / Thinking / ToolUse / ...
+                                          v
+                                    StreamAccumulator
+                                          |  on end | error | drop
+                                          v
+                                    RecordEntry (Reasoning) in agent log
 ${F}
 
 #### \`aura-model-reasoner\`
@@ -324,6 +413,21 @@ context
  ├─ aura-context-compaction  pure history / tool-surface / storage compaction
  └─ aura-context-skills      SkillManager · SkillInstallStore
        (+ legacy aura-{prompts,memory,compaction,skills} shells)
+${F}
+
+## Internals
+
+Read-only assembly pulls signal into the prompt; memory uses a two-stage write pipeline with deterministic retrieval; compaction is pure (the agent performs the model call and applies the result back through this layer).
+
+${F}text
+ PROMPT ASSEMBLY                         MEMORY WRITE PIPELINE
+ system prompt + bootstrap               TurnSummary
+   + steering injections                   |  1) heuristic extraction
+   + retrieved MemoryPackets               |  2) optional LLM refinement
+   + active skills                         v
+        |                            facts / events / procedures (own CFs)
+        v                                  |  deterministic retrieval
+   model-facing context  <--------- MemoryPacket injection
 ${F}
 
 #### \`aura-context-prompts\`
@@ -372,6 +476,21 @@ plugin
  ├─ aura-plugin-hooks       HookEvent · HookEngine · HookOutcome
  ├─ aura-plugin-mcp         McpClient · McpConnectionManager
  └─ aura-plugin-connectors  ConnectorRegistry · ConnectorEntry
+${F}
+
+## Internals
+
+Hooks fire at lifecycle points with a scrubbed environment; the \`PermissionRequest\` hook can approve or deny a live "ask" (Invariant §4 carve-out 5b). MCP servers are stdio JSON-RPC, first-active-wins per server id, with per-request timeouts.
+
+${F}text
+ agent-loop / spawn lifecycle
+   PreToolUse -> PostToolUse -> PermissionRequest -> ...  (10 HookEvents)
+        |  HookEngine (scrubbed env: no AURA_* secrets)
+        v
+   HookOutcome: Approve | Deny | Continue | Block | Replace | TimedOut
+
+ MCP:  McpConnectionManager --spawn (cleared env)--> server
+        first-active-wins per server id; per-request timeout
 ${F}
 
 #### \`aura-plugin-api\`
@@ -427,6 +546,27 @@ exec
 ${F}
 
 > **Warn-only edge:** \`aura-tools\` depends on \`aura-kernel\` — the single remaining upward dependency in the workspace. The deep fix is to relocate \`Executor\` / \`ExecuteContext\` / \`SpawnHook\` traits to a new exec-layer home, tracked as a Phase 10 follow-up.
+
+## Internals
+
+A tool call resolves through the catalog, passes the kernel policy gate, then executes inside the sandbox; subagent work runs in an isolated worktree first.
+
+${F}text
+ ToolCall --ToolResolver--> CatalogEntry
+      |
+      v
+ mode gate + Policy::check  (deny / capability / scope / ask)
+      |  allow
+      v
+ ExecutorRouter -> aura-tools Executor
+      |                 |
+      |            FsSandbox / ProcessSandbox  (canonicalise, prefix-check, allowlist)
+      |                 |
+      |            ConflictRegistry lock (advisory)
+      v                 v
+   Effect <-------- sandboxed FS / command / git / domain
+ (subagent: WorktreeIsolation provisions an IsolatedWorkspace before scheduling)
+${F}
 
 #### \`aura-exec-conflict\`
 
@@ -490,6 +630,29 @@ agent
  └─ aura-kernel (shell)      re-exports aura-agent-kernel
 ${F}
 
+## Internals
+
+The kernel is deterministic — same record window in, same output out. Each turn builds context, reasons, checks policy, dispatches, and records every step.
+
+${F}text
+ record window (last N entries for this agent)
+      |
+      v
+ ContextBuilder --> context_hash = hash(tx || window hashes)
+      |
+      v
+ reason / reason_streaming --> ModelProvider          [RecordEntry: Reasoning]
+      |  stop = ToolUse?
+      v
+ Policy::check --> Decision (accepted ids | rejected)  [RecordEntry: ToolProposal]
+      |  approved
+      v
+ ExecutorRouter.execute --> Effect                    [RecordEntry: ToolExecution]
+      |
+      v
+ next iteration (AgentLoop)  or  EndTurn -> AgentLoopResult
+${F}
+
 #### \`aura-agent-kernel\`
 
 The deterministic kernel. Builds context from the record window, calls the reasoner, enforces policy, dispatches execution through the \`ExecutorRouter\`, and produces \`RecordEntry\`s. Given the same record, produces the same output. Key types: \`Kernel\`, \`KernelConfig\`, \`ExecutorRouter\`, \`Executor\`, \`ExecuteContext\`, \`Policy\`, \`ContextBuilder\`, \`ReplayConsumer\`.
@@ -544,6 +707,29 @@ fleet
  ├─ aura-fleet-mailbox    bounded MPSC AgentJob mailbox
  ├─ aura-fleet-daemon     FleetDaemon · resolve_session_mode
  └─ aura-fleet-subagent   FleetSubagentDispatcher (SubagentDispatchHook)
+${F}
+
+## Internals
+
+The \`task\` tool fans out through the fleet dispatcher. Each spawn takes the per-parent lease, derives a narrowed child, acquires a quota ticket, appends the \`SubagentSpawn\` audit row, then runs the child through the same scheduler lane.
+
+${F}text
+ task tool --(SubagentDispatchHook)--> FleetSubagentDispatcher
+      |
+      v
+ ParentLeaseRegistry lease   (per parent; dedupe by (parent, tool_call_id))
+      |
+      v
+ derive_subagent(parent, request)   -- may only narrow mode / perms / model
+      |
+      v
+ QuotaPool.acquire -> BudgetTicket   (RAII; releases on drop)
+      |
+      v
+ append SubagentSpawn audit row (write_system_record)
+      |
+      v
+ ChildRunner -> Scheduler.schedule_agent_with_overrides   (Wait | Detached | Batch)
 ${F}
 
 #### \`aura-fleet-registry\`
@@ -605,6 +791,23 @@ surface
  └─ aura-terminal / aura-automaton / aura-auth (+ surface shells)
 ${F}
 
+## Internals
+
+The gateway is inbound-only; the engine owns orchestration. A run is a two-step exchange: \`POST /v1/run\` returns a \`run_id\`, then the client attaches \`WS /stream/:run_id\`.
+
+${F}text
+ Client --POST /v1/run (RuntimeRequest)--> aura-runtime gateway
+      |                                       |  resolve_session_mode -> AgentMode
+      |                                       |  Engine::submit -> park pending run
+      |  <-- 201 { run_id, event_stream_url }
+      |
+      |  --WS /stream/:run_id--> gateway --> Engine Scheduler (per-agent claim §12.a)
+      |  <-- Outbound::SessionReady               |  Worker.process_agent -> AgentLoop
+      |  Inbound::UserMessage -->                 |
+      |  <-- TextDelta / ToolResult / AssistantMessageEnd
+      |  Inbound::Cancel --> CancellationToken
+${F}
+
 #### \`aura-surface-cli\`
 
 CLI composition root. Owns the clap \`Cli\` / \`Commands\` / \`RunArgs\` definitions, the \`ModeFlag\` global flag (top of the \`AgentMode\` resolution chain), the event-loop wiring, the record-loader utility, and the surface-layer \`session_helpers\`.
@@ -634,10 +837,119 @@ Hosts the HTTP \`DomainApi\` implementation that the kernel domain gateway and a
 The Ratatui-based terminal UI library; the long-running automaton workflows (\`ChatAutomaton\`, \`DevLoopAutomaton\`, \`SpecGenAutomaton\`, \`TaskRunAutomaton\`); and the zOS login client + credential persistence.`,
   },
   {
+    title: "Invariants",
+    slug: "harness-invariants",
+    section: "harness",
+    sortOrder: 11,
+    excerpt:
+      "The fifteen architectural invariants (kernel boundary, policy, audit/replay determinism, concurrency, structure) and how they are enforced.",
+    body: `# Invariants
+
+The fifteen architectural invariants (§1-§15) the harness must uphold; violations are bugs. Unless noted, each is scoped to a single agent's kernel and that agent's record log - cross-agent contracts live in §12 and §15.
+
+## Overview
+
+- **Part A - Kernel boundary & mediation (§1, §2, §3, §8, §9).** The per-agent \`Kernel\` is the sole external gateway; every state change and every LLM call is recorded; gateways are transparent and the \`AgentLoop\` is isolated.
+- **Part B - Policy & authorization (§4, §11).** Every tool call runs the full \`Policy::check\`; live "ask" decisions are session-scoped.
+- **Part C - Record, audit, determinism & replay (§5, §6, §7, §10).** Complete decision chains, deterministic per-agent \`context_hash\`, monotonic sequencing, and an append-only immutable log.
+- **Part D - Concurrency & cross-agent parallelism (§12, §15).** Single writer per agent; unrelated agents run fully in parallel without weakening replay determinism.
+- **Part E - Workspace & plugin structure (§13, §14).** The strict ten-layer stack and the sandboxed external plugin surface.
+
+## Architecture
+
+Per-agent kernels with cross-agent parallelism. The \`Scheduler\` grants one processing claim per agent (§12.a); each agent owns its own \`Kernel\`, \`next_seq\` counter, and append-only log. One RocksDB store backs them all via column families keyed by (agent_id, seq).
+
+${F}text
+                  +------------------------------------------------+
+                  |  Scheduler  (store-backed per-agent claim §12) |
+                  +------+-------------+-------------+--------------+
+              claim A    |   claim B   |   claim C   |   (parallel)
+                         v             v             v
+                    Kernel A       Kernel B      Kernel C
+                  (id=A,seq_A)   (id=B,seq_B)  (id=C,seq_C)
+                         |             |             |
+                  append (A,seq) append (B,seq) append (C,seq)
+                         v             v             v
+                      log A         log B         log C
+                         +-------------+-------------+
+                                       v
+              RocksDB column families keyed by (agent_id, seq)
+${F}
+
+## §4 policy pipeline (internals)
+
+Every \`ToolProposal\` runs the full \`Policy::check\` - orthogonal hard-denial layers first, then the tri-state per-tool resolve. A \`Deny\`-only check (or the pure \`evaluate\` in \`aura-exec-policy\`) is never a substitute.
+
+${F}text
+ToolProposal
+   |
+   v
+[ deny layer ]  allowed_action_kinds? --no--> reject
+   |
+[ capability ] caller holds required caps? --no--> reject
+   |
+[ scope ]      args within AgentScope? --no--> reject
+   |
+[ integrations ] required ones installed? --no--> reject
+   |
+   v
+resolve_tool_state (UserToolDefaults + AgentToolPermissions)
+   |        |              |
+  Allow    Deny           Ask
+   |        |              |
+   v      reject     ToolApprovalPrompter? --no--> deny (headless)
+ execute                   |  yes
+                  PermissionRequest hook (carve-out 5b)
+                           |
+                   Approve | Deny | (fall through to live prompt)
+${F}
+
+## §7 / §10 append path (internals)
+
+Record append is per-agent, monotonic, and atomic. Inbox dequeue and record append commit in a single \`WriteBatch\`; only the kernel's sealed \`WriteStore\` can commit, while everyone else holds \`ReadStore\`.
+
+${F}text
+Kernel (Arc<dyn WriteStore>)            non-kernel callers (Arc<dyn ReadStore>)
+   |  append_entry_atomic(agent, seq)        |  enqueue_tx / set_agent_status
+   v                                         v
+ next_seq = head_seq + 1   (no gaps, no dups)
+   |
+   v
+ single WriteBatch { dequeue inbox tx ; put (agent_id, seq) -> entry }
+   |
+   v
+ commit  -- all-or-nothing -->  immutable log  (no update/delete/truncate)
+${F}
+
+## Strict numeric index
+
+| #   | Invariant | Part |
+|-----|-----------|------|
+| §1  | Each agent's kernel is the sole external gateway | A |
+| §2  | Every state change for agent A passes through A's kernel | A |
+| §3  | Every LLM call is recorded | A |
+| §4  | Full policy enforcement | B |
+| §5  | Complete audit trail | C |
+| §6  | Per-agent deterministic context | C |
+| §7  | Per-agent monotonic sequencing | C |
+| §8  | Gateway transparency | A |
+| §9  | AgentLoop isolation | A |
+| §10 | Per-agent append-only record | C |
+| §11 | Session-scoped tool decisions | B |
+| §12 | Single writer per agent | D |
+| §13 | Layered architecture | E |
+| §14 | Plugin sandbox | E |
+| §15 | Cross-agent parallelism | D |
+
+## Enforcement
+
+Invariants §1, §2, §3, §9, and §10 are guarded by ripgrep bands in \`check_invariants.sh\` (run from CI on every push). The remaining invariants - §4 policy, §5 audit, §6 determinism, §7 sequencing, §8 gateway, §11 session, §12 single-writer, §13 layering, §14 plugin sandbox, §15 parallelism - are enforced by Rust test suites. Type-level seals back the boundary: \`RecordingModelProvider\` (only \`KernelModelGateway\` satisfies it) and the crate-private \`Sealed\` marker on \`WriteStore\`.`,
+  },
+  {
     title: "User flows",
     slug: "harness-user-flows",
     section: "harness",
-    sortOrder: 11,
+    sortOrder: 12,
     excerpt:
       "How data moves through the system for interactive, run-kickoff, headless, and error-recovery paths.",
     body: `# User flows
@@ -665,6 +977,24 @@ ${F}
 
 Default mode when a user runs \`cargo run\` or \`aura\`.
 
+${F}text
+ User    TUI      EventLoop      AgentLoop      Model      KTG / Tools
+  | type   |          |             |             |            |
+  |------->| UiEvent   |             |             |            |
+  |        |--------->| append +     |             |            |
+  |        |          | run_with_events --------->|             |
+  |        |          |             | reason ---->|             |
+  |        |          |             |<-- StreamEvents ----------|
+  |        |<-- UiCommand (TextDelta / Thinking / ToolStart)    |
+  |<-render|          |             |             |            |
+  |        |          | stop = ToolUse:           |            |
+  |        |          |             | execute ---------------->| (mode + policy, sandbox)
+  |        |          |             |<-- Effect / ToolResult ---|
+  |        |<-- UiCommand::CompleteTool           |            |
+  |        |          | stop = EndTurn -> StepComplete         |
+  |<-final-|          |             |             |            |
+${F}
+
 **Data path:** User input → \`UiEvent\` channel → Event Loop appends to \`Vec<Message>\` → \`AgentLoop.run_with_events()\` → streaming \`TurnEvent\`s back through an \`mpsc\` channel → Event Loop maps to \`UiCommand\` → Terminal renders. On a \`ToolUse\` stop reason, the kernel runs the mode + policy check, dispatches through the \`ExecutorRouter\` to sandboxed FS / command tools, and feeds the \`Effect\` back to the loop.
 
 ## Flow 2: Run kickoff + WebSocket session
@@ -672,13 +1002,21 @@ Default mode when a user runs \`cargo run\` or \`aura\`.
 Used by \`aura-os\` and other clients connecting over the harness wire. A **two-step exchange**:
 
 ${F}text
-Client                    Gateway / Engine
-  │  POST /v1/run  ──────────▶ resolve_session_mode → Engine::submit(req)
-  │  ◀── 201 { run_id, event_stream_url }
-  │  WS connect /stream/:run_id ─▶ open_chat_stream → create Session
-  │  ◀── Outbound::SessionReady
-  │  Inbound::UserMessage ──▶ run_with_events → model + tools
-  │  ◀── Outbound::TextDelta / ToolResult / AssistantMessageEnd
+ Client        Gateway          Engine       Session    AgentLoop   Model/Tools
+   | POST /v1/run |               |            |           |           |
+   |------------->| resolve_session_mode -> AgentMode      |           |
+   |              | Engine::submit -------->| park pending run         |
+   |<-- 201 { run_id, event_stream_url } ---|            |           |
+   | WS /stream/:run_id            |          |           |           |
+   |------------->| open_chat_stream ------->| create Session         |
+   |<-- Outbound::SessionReady     |          |           |           |
+   | Inbound::UserMessage -------->| run_with_events -------------->|  |
+   |              |                |          |           | reason -->| Model
+   |<-- Outbound::TextDelta        |          |           |<-- stream-|
+   |              | alt tool: KTG.execute ------------------------->| Tools
+   |<-- Outbound::ToolResult       |          |           |           |
+   |<-- Outbound::AssistantMessageEnd { usage, files_changed }       |
+   | Inbound::Cancel --> CancellationToken                           |
 ${F}
 
 The client never sends an init frame — the run is already up by the time the WS attaches. A \`Cancel\` may arrive at any time and trips the \`CancellationToken\`. \`DevLoop\` and \`TaskRun\` follow the same two-step exchange but their WS is event-only.
@@ -687,14 +1025,64 @@ The client never sends an init frame — the run is already up by the time the W
 
 When running \`aura run --ui none\` or as \`aura-node\`, transactions are submitted via HTTP and processed by the engine's scheduler.
 
+${F}text
+ Client   Gateway   Store(inbox)  Scheduler    Worker     AgentLoop   Fleet
+   | POST /tx |         |            |           |           |          |
+   |--------->| enqueue_tx|          |           |           |          |
+   |<-- 202 --|         |            |           |           |          |
+   |          |         |<-- claim per-agent (§12)|          |          |
+   |          |         | dequeue_tx -> process_agent ------>|          |
+   |          |         |            |           | model + tools        |
+   |          |         |            |           | alt task: spawn ---->| Fleet
+   |          |         |            |<-- schedule_agent_with_overrides -|
+   |          |         |<-- append_entry_atomic(agent, seq, entry) -----|
+   | GET /agents/{id}/record -------->|          |           |          |
+   |<-- Vec<RecordEntry> |            |           |           |          |
+${F}
+
 **Data path:** HTTP \`POST /tx\` → Store inbox → Scheduler dequeues (acquiring the per-agent claim, Invariant §12) → Worker runs \`AgentLoop\` → result committed atomically to the record log via \`append_entry_atomic\` → Client polls via \`GET /agents/{id}/record\`. Subagent spawn lands through \`FleetSubagentDispatcher\` and re-enters the same scheduler lane, inheriting the per-agent processing claim.
 
 ## Flow 4: Streaming error recovery (StreamReset)
 
 When a streaming model call fails mid-stream, the system recovers deterministically: partial \`TextDelta\`s already shown are cleared via \`TurnEvent::StreamReset\`, then a non-streaming \`provider.complete(request)\` fallback produces the authoritative content, re-emitted as a single \`TextDelta\`.
 
+${F}text
+ AgentLoop                Model                  UI / WS
+   | complete_streaming --->|                      |
+   |<-- TextDelta("partial")                       |
+   | TurnEvent::TextDelta("partial") ------------->| renders partial
+   |<-- StreamEvent::Error (connection lost)       |
+   | TurnEvent::StreamReset ---------------------->| clears partial
+   | complete(request)  (non-streaming fallback)   |
+   |<-- full ModelResponse                         |
+   | TurnEvent::TextDelta(full_text) ------------->| renders authoritative
+${F}
+
 ## Data lifecycle summary
 
-Every user interaction follows the same fundamental path: input becomes a transaction, the \`AgentLoop\` orchestrates model calls and tool execution in a loop, results are emitted as \`TurnEvent\`s for real-time display, and the final state is persisted as a \`RecordEntry\` in the append-only log.`,
+Every user interaction follows the same fundamental path: input becomes a transaction, the \`AgentLoop\` orchestrates model calls and tool execution in a loop, results are emitted as \`TurnEvent\`s for real-time display, and the final state is persisted as a \`RecordEntry\` in the append-only log.
+
+${F}text
+ INPUT          PROCESSING                                    OUTPUT
+ -----          ----------                                    ------
+ User Prompt    AgentLoop
+     |            |
+     v            v
+ Transaction -> ModelProvider -> ModelResponse -> StopReason?
+                                                   |       |
+                                                ToolUse  EndTurn
+                                                   |       |
+                                                   v       v
+                                    KernelToolGateway   AgentLoopResult -> TurnEvents (UI / WS)
+                                                   |
+                                                   v
+                                    ExecutorRouter -> ToolExecutor + Sandbox
+                                                   |
+                                                   v
+                                                 Effect -> (back to AgentLoop)
+                                                                |
+                                                                v
+                                                        RecordEntry -> RocksDB
+${F}`,
   },
 ];
