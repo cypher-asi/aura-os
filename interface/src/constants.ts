@@ -21,3 +21,4 @@ export const DEBUG_SIDEKICK_ACTIVE_TAB_KEY = "aura-debug-sidekick-active-tab";
 export const DEBUG_COLLAPSED_PROJECTS_KEY = "aura-debug-collapsed-projects";
 export const LAST_DEBUG_PROJECT_KEY = "aura-debug-last-project";
 export const LAST_DEBUG_RUN_KEY = "aura-debug-last-run";
+export const RECENT_LOGIN_EMAILS_KEY = "aura-recent-login-emails";

@@ -1,11 +1,14 @@
 import {
+  addRecentLoginEmail,
   clearLastAgentIf,
   getLastAgent,
   getLastProject,
   getProjectOrder,
+  getRecentLoginEmails,
   getTaskbarAppOrder,
   getTaskbarAppsCollapsed,
   getTaskbarRightCollapsed,
+  removeRecentLoginEmail,
   setLastAgent,
   setLastProject,
   setProjectOrder,
@@ -20,6 +23,7 @@ const PROJECT_ORDER_KEY = "aura-project-order";
 const TASKBAR_APP_ORDER_KEY = "aura-taskbar-app-order";
 const TASKBAR_APPS_COLLAPSED_KEY = "aura-taskbar-apps-collapsed";
 const TASKBAR_RIGHT_COLLAPSED_KEY = "aura-taskbar-right-collapsed";
+const RECENT_LOGIN_EMAILS_KEY = "aura-recent-login-emails";
 
 describe("storage", () => {
   let store: Record<string, string>;
@@ -307,6 +311,76 @@ describe("storage", () => {
     it("removes the key when the order is empty", () => {
       setTaskbarAppOrder([]);
       expect(localStorage.removeItem).toHaveBeenCalledWith(TASKBAR_APP_ORDER_KEY);
+    });
+  });
+
+  describe("recent login emails", () => {
+    it("returns an empty list when nothing is stored", () => {
+      expect(getRecentLoginEmails()).toEqual([]);
+    });
+
+    it("returns stored emails and ignores blanks/non-strings", () => {
+      store[RECENT_LOGIN_EMAILS_KEY] = JSON.stringify([
+        "alice@example.com",
+        "  ",
+        42,
+        "bob@example.com",
+      ]);
+      expect(getRecentLoginEmails()).toEqual([
+        "alice@example.com",
+        "bob@example.com",
+      ]);
+    });
+
+    it("falls back to an empty list for malformed JSON", () => {
+      store[RECENT_LOGIN_EMAILS_KEY] = "not-json";
+      expect(getRecentLoginEmails()).toEqual([]);
+    });
+
+    it("prepends the most-recent email", () => {
+      addRecentLoginEmail("alice@example.com");
+      addRecentLoginEmail("bob@example.com");
+      expect(getRecentLoginEmails()).toEqual([
+        "bob@example.com",
+        "alice@example.com",
+      ]);
+    });
+
+    it("dedupes case-insensitively and moves the reused email to the front", () => {
+      addRecentLoginEmail("alice@example.com");
+      addRecentLoginEmail("bob@example.com");
+      addRecentLoginEmail("ALICE@example.com");
+      expect(getRecentLoginEmails()).toEqual([
+        "ALICE@example.com",
+        "bob@example.com",
+      ]);
+    });
+
+    it("ignores blank emails", () => {
+      addRecentLoginEmail("   ");
+      expect(getRecentLoginEmails()).toEqual([]);
+    });
+
+    it("caps the list at five entries", () => {
+      for (let i = 0; i < 7; i++) addRecentLoginEmail(`user${i}@example.com`);
+      const emails = getRecentLoginEmails();
+      expect(emails).toHaveLength(5);
+      expect(emails[0]).toBe("user6@example.com");
+      expect(emails).not.toContain("user0@example.com");
+    });
+
+    it("removes a specific email case-insensitively", () => {
+      addRecentLoginEmail("alice@example.com");
+      addRecentLoginEmail("bob@example.com");
+      removeRecentLoginEmail("ALICE@EXAMPLE.COM");
+      expect(getRecentLoginEmails()).toEqual(["bob@example.com"]);
+    });
+
+    it("clears the key once the last email is removed", () => {
+      addRecentLoginEmail("alice@example.com");
+      removeRecentLoginEmail("alice@example.com");
+      expect(localStorage.removeItem).toHaveBeenCalledWith(RECENT_LOGIN_EMAILS_KEY);
+      expect(getRecentLoginEmails()).toEqual([]);
     });
   });
 });

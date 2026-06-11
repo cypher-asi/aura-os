@@ -10,6 +10,7 @@ import {
   MENU_BAR_COLLAPSED_KEY,
   PROJECT_ORDER_KEY,
   PUBLIC_SIDEBAR_COLLAPSED_KEY,
+  RECENT_LOGIN_EMAILS_KEY,
   TASKBAR_APP_ORDER_KEY,
   TASKBAR_APPS_COLLAPSED_KEY,
   TASKBAR_HIDDEN_APPS_KEY,
@@ -487,6 +488,63 @@ export function setTaskbarHiddenAppIds(ids: string[]): void {
     // hidden apps isn't re-defaulted back to the registry's `defaultHidden`
     // set on the next load.
     localStorage.setItem(TASKBAR_HIDDEN_APPS_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+const MAX_RECENT_LOGIN_EMAILS = 5;
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/**
+ * Previously-used login emails, most-recent first. Lets the login form
+ * offer a dropdown of remembered accounts instead of forcing the user
+ * to retype their address on every visit. Capped at
+ * `MAX_RECENT_LOGIN_EMAILS`; passwords are never stored.
+ */
+export function getRecentLoginEmails(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_LOGIN_EMAILS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0,
+      );
+    }
+  } catch {
+    // ignore malformed data
+  }
+  return [];
+}
+
+export function addRecentLoginEmail(email: string): void {
+  const trimmed = email.trim();
+  if (!trimmed) return;
+  try {
+    const key = normalizeEmail(trimmed);
+    const next = [
+      trimmed,
+      ...getRecentLoginEmails().filter((e) => normalizeEmail(e) !== key),
+    ].slice(0, MAX_RECENT_LOGIN_EMAILS);
+    localStorage.setItem(RECENT_LOGIN_EMAILS_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function removeRecentLoginEmail(email: string): void {
+  try {
+    const key = normalizeEmail(email);
+    const next = getRecentLoginEmails().filter((e) => normalizeEmail(e) !== key);
+    if (next.length === 0) {
+      localStorage.removeItem(RECENT_LOGIN_EMAILS_KEY);
+      return;
+    }
+    localStorage.setItem(RECENT_LOGIN_EMAILS_KEY, JSON.stringify(next));
   } catch {
     // ignore storage failures
   }

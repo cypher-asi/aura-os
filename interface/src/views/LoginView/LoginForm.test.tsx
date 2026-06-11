@@ -63,14 +63,32 @@ import { LoginForm } from "./LoginForm";
 interface RenderArgs {
   activeTab?: "signin" | "register";
   email?: string;
+  recentEmails?: string[];
+  addingNewEmail?: boolean;
+  onSelectEmail?: () => void;
+  onAddAccount?: () => void;
+  onRemoveEmail?: () => void;
 }
 
-function renderForm({ activeTab = "signin", email = "" }: RenderArgs = {}) {
+function renderForm({
+  activeTab = "signin",
+  email = "",
+  recentEmails = [],
+  addingNewEmail = true,
+  onSelectEmail = vi.fn(),
+  onAddAccount = vi.fn(),
+  onRemoveEmail = vi.fn(),
+}: RenderArgs = {}) {
   return render(
     <LoginForm
       activeTab={activeTab}
       email={email}
       setEmail={vi.fn()}
+      recentEmails={recentEmails}
+      addingNewEmail={addingNewEmail}
+      onSelectEmail={onSelectEmail}
+      onAddAccount={onAddAccount}
+      onRemoveEmail={onRemoveEmail}
       password=""
       setPassword={vi.fn()}
       confirmPassword=""
@@ -138,6 +156,11 @@ describe("LoginForm email auto-focus", () => {
         activeTab="register"
         email=""
         setEmail={vi.fn()}
+        recentEmails={[]}
+        addingNewEmail={true}
+        onSelectEmail={vi.fn()}
+        onAddAccount={vi.fn()}
+        onRemoveEmail={vi.fn()}
         password=""
         setPassword={vi.fn()}
         confirmPassword=""
@@ -156,5 +179,66 @@ describe("LoginForm email auto-focus", () => {
 
     const emailAfter = screen.getByPlaceholderText("Email") as HTMLInputElement;
     expect(document.activeElement).toBe(emailAfter);
+  });
+});
+
+describe("LoginForm remembered-account dropdown", () => {
+  it("renders the plain email input when there are no remembered accounts", () => {
+    renderForm({ recentEmails: [], addingNewEmail: true });
+    expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
+    expect(screen.queryByText("Add an account")).not.toBeInTheDocument();
+  });
+
+  it("renders the account dropdown on Sign In when accounts are remembered", () => {
+    renderForm({
+      activeTab: "signin",
+      email: "alice@example.com",
+      recentEmails: ["alice@example.com", "bob@example.com"],
+      addingNewEmail: false,
+    });
+    expect(screen.queryByPlaceholderText("Email")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /alice@example.com/i })).toBeInTheDocument();
+  });
+
+  it("opens the dropdown and exposes the saved emails plus 'Add an account'", () => {
+    renderForm({
+      activeTab: "signin",
+      email: "alice@example.com",
+      recentEmails: ["alice@example.com", "bob@example.com"],
+      addingNewEmail: false,
+    });
+    act(() => {
+      screen.getByRole("button", { name: /alice@example.com/i }).click();
+    });
+    expect(screen.getByText("bob@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Add an account")).toBeInTheDocument();
+  });
+
+  it("calls onAddAccount when 'Add an account' is chosen", () => {
+    const onAddAccount = vi.fn();
+    renderForm({
+      activeTab: "signin",
+      email: "alice@example.com",
+      recentEmails: ["alice@example.com"],
+      addingNewEmail: false,
+      onAddAccount,
+    });
+    act(() => {
+      screen.getByRole("button", { name: /alice@example.com/i }).click();
+    });
+    act(() => {
+      screen.getByText("Add an account").click();
+    });
+    expect(onAddAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the plain input on the Create Account tab even with saved accounts", () => {
+    renderForm({
+      activeTab: "register",
+      recentEmails: ["alice@example.com"],
+      addingNewEmail: false,
+    });
+    expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
+    expect(screen.queryByText("Add an account")).not.toBeInTheDocument();
   });
 });

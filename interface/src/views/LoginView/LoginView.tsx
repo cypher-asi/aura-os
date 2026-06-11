@@ -85,6 +85,11 @@ export function LoginView() {
               activeTab={f.activeTab}
               email={f.email}
               setEmail={f.setEmail}
+              recentEmails={f.recentEmails}
+              addingNewEmail={f.addingNewEmail}
+              onSelectEmail={f.handleSelectEmail}
+              onAddAccount={f.handleAddAccount}
+              onRemoveEmail={f.handleRemoveEmail}
               password={f.password}
               setPassword={f.setPassword}
               confirmPassword={f.confirmPassword}

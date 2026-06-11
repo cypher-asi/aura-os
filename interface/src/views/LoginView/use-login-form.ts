@@ -12,6 +12,11 @@ import { authApi } from "../../shared/api/auth";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import {
+  addRecentLoginEmail,
+  getRecentLoginEmails,
+  removeRecentLoginEmail,
+} from "../../utils/storage";
 
 export type AuthTab = "signin" | "register";
 
@@ -83,7 +88,17 @@ export function useLoginForm() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [email, setEmail] = useState("");
+  // Remembered accounts power the Sign In email dropdown. Seed `email`
+  // with the most-recent account so a returning visitor can sign in
+  // with one tap; `addingNewEmail` flips the field back to free-text
+  // entry when the visitor chooses "Add an account".
+  const [recentEmails, setRecentEmails] = useState<string[]>(() =>
+    getRecentLoginEmails(),
+  );
+  const [addingNewEmail, setAddingNewEmail] = useState(
+    () => recentEmails.length === 0,
+  );
+  const [email, setEmail] = useState(() => recentEmails[0] ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
@@ -112,12 +127,42 @@ export function useLoginForm() {
   }, [from, isAuthenticated, isLoading, navigate]);
 
   function resetForm(): void {
-    setEmail("");
     setPassword("");
     setConfirmPassword("");
     setName("");
     setInviteCode("");
     setError(null);
+  }
+
+  function handleSelectEmail(value: string): void {
+    setEmail(value);
+    setAddingNewEmail(false);
+  }
+
+  function handleAddAccount(): void {
+    setEmail("");
+    setAddingNewEmail(true);
+  }
+
+  function handleRemoveEmail(value: string): void {
+    removeRecentLoginEmail(value);
+    const next = getRecentLoginEmails();
+    setRecentEmails(next);
+    if (next.length === 0) {
+      setEmail("");
+      setAddingNewEmail(true);
+      return;
+    }
+    // If the removed account was the selected one, fall back to the
+    // next most-recent so the dropdown never points at a forgotten
+    // address.
+    if (!next.some((e) => e.toLowerCase() === value.trim().toLowerCase())) {
+      setEmail((current) =>
+        current.trim().toLowerCase() === value.trim().toLowerCase()
+          ? next[0]
+          : current,
+      );
+    }
   }
 
   function openResetPassword(): void {
@@ -146,8 +191,20 @@ export function useLoginForm() {
   }
 
   function handleTabChange(id: string): void {
-    setActiveTab(id as AuthTab);
+    const tab = id as AuthTab;
+    setActiveTab(tab);
     resetForm();
+    // The remembered-account dropdown only applies to Sign In. Creating
+    // an account always means typing a fresh address, so the Create
+    // Account tab uses free-text entry; returning to Sign In restores
+    // the dropdown (and the most-recent account) when one exists.
+    if (tab === "signin" && recentEmails.length > 0) {
+      setEmail(recentEmails[0]);
+      setAddingNewEmail(false);
+    } else {
+      setEmail("");
+      setAddingNewEmail(true);
+    }
   }
 
   async function handleSubmit(e: FormEvent): Promise<void> {
@@ -176,6 +233,7 @@ export function useLoginForm() {
       }
     }
 
+    const trimmedEmail = email.trim();
     setLoading(true);
     try {
       if (activeTab === "signin") {
@@ -198,6 +256,10 @@ export function useLoginForm() {
 
         await register(email, password, name.trim(), finalCode);
       }
+      // Remember the email only after a successful auth so failed
+      // attempts (typos, wrong password) don't pollute the dropdown.
+      addRecentLoginEmail(trimmedEmail);
+      setRecentEmails(getRecentLoginEmails());
       await refreshStatus();
       navigate(from, { replace: true });
     } catch (err) {
@@ -233,6 +295,11 @@ export function useLoginForm() {
     activeTab,
     email,
     setEmail,
+    recentEmails,
+    addingNewEmail,
+    handleSelectEmail,
+    handleAddAccount,
+    handleRemoveEmail,
     password,
     setPassword,
     confirmPassword,

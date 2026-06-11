@@ -1,12 +1,18 @@
 import { useEffect, useRef, type FormEvent } from "react";
 import { Input, Button, Tabs, Spinner } from "@cypher-asi/zui";
 import { AUTH_TABS, type AuthTab } from "./use-login-form";
+import { LoginEmailSelect } from "./LoginEmailSelect";
 import styles from "./LoginView.module.css";
 
 interface LoginFormProps {
   activeTab: AuthTab;
   email: string;
   setEmail: (v: string) => void;
+  recentEmails: string[];
+  addingNewEmail: boolean;
+  onSelectEmail: (email: string) => void;
+  onAddAccount: () => void;
+  onRemoveEmail: (email: string) => void;
   password: string;
   setPassword: (v: string) => void;
   confirmPassword: string;
@@ -26,6 +32,11 @@ export function LoginForm({
   activeTab,
   email,
   setEmail,
+  recentEmails,
+  addingNewEmail,
+  onSelectEmail,
+  onAddAccount,
+  onRemoveEmail,
   password,
   setPassword,
   confirmPassword,
@@ -58,7 +69,14 @@ export function LoginForm({
     if (!node) return;
     node.focus();
     node.select();
-  }, [activeTab]);
+  }, [activeTab, addingNewEmail]);
+
+  // On the Sign In tab, returning visitors with remembered accounts get
+  // a dropdown of those accounts (plus an "Add an account" action);
+  // everyone else (first-time visitors, "Add an account", the Create
+  // Account tab) keeps the plain free-text email input.
+  const showEmailDropdown =
+    activeTab === "signin" && recentEmails.length > 0 && !addingNewEmail;
 
   return (
     <>
@@ -67,15 +85,26 @@ export function LoginForm({
       </div>
 
       <form onSubmit={onSubmit} className={styles.form}>
-        <Input
-          ref={emailRef}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          type="email"
-          autoComplete="email"
-          disabled={loading}
-        />
+        {showEmailDropdown ? (
+          <LoginEmailSelect
+            value={email}
+            emails={recentEmails}
+            onSelect={onSelectEmail}
+            onAddAccount={onAddAccount}
+            onRemove={onRemoveEmail}
+            disabled={loading}
+          />
+        ) : (
+          <Input
+            ref={emailRef}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            type="email"
+            autoComplete="email"
+            disabled={loading}
+          />
+        )}
 
         <Input
           value={password}
