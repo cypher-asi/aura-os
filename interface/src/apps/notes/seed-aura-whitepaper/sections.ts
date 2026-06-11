@@ -35,24 +35,54 @@ export interface WhitepaperSection {
 
 /** Display name for a section key. Extend as new top-level parts land. */
 export const SECTION_LABELS: Readonly<Record<string, string>> = {
-  harness: "Harness",
+  harness: "AURA Harness",
 };
 
 export const WHITEPAPER_SECTIONS: WhitepaperSection[] = [
   {
-    title: "Overview",
+    title: "0. Overview",
     slug: "harness-overview",
     section: "harness",
     sortOrder: 0,
     excerpt:
       "The ten-layer stack, the strict downward-only dependency rule, and the AgentMode resolution chain.",
-    body: `# Overview
+    body: `# 0. Overview
 
-The Aura Harness architecture is organized into **ten layers**. Crates are named \`aura-<layer>-<name>\` and may depend only on crates whose layer is the same or lower.
+AURA Harness is a Rust agent runtime built as ten strictly-layered crates, from behavior-free primitives up to runnable composition roots. A single resolved \`AgentMode\` gates every external effect before the policy layer narrows it further.
+
+## Overview
+
+- Ten layers — \`core\`, \`store\`, \`config\`, \`model\`, \`context\`, \`plugin\`, \`exec\`, \`agent\`, \`fleet\`, \`surface\` — with every crate named \`aura-<layer>-<name>\`.
+- Strict **downward-only** dependency rule, enforced in CI by the layer-boundary test (one allowlisted exception: \`aura-tools\` depends on \`aura-kernel\`).
+- \`AgentMode\` (\`Agent\` / \`Plan\` / \`Ask\` / \`Debug\`) resolves deterministically: CLI flag, then TUI slash command, then SDK field, then daemon default, then fallback.
+- Foreground, local subagents via the \`task\` tool, with dispatch split across the exec / agent / fleet layers so every Cargo edge stays downward.
+- \`aura-runtime\` is the **sole Cargo surface** for external consumers; everyone else talks over the wire (\`POST /v1/run\`, \`WS /stream/:run_id\`).
+
+## Architecture
+
+Arrows point in the only allowed dependency direction: **downward**.
 
 ${F}text
-core  <  store  <  config  <  model  <  context  <
-plugin  <  exec  <  agent   <  fleet  <  surface
+surface  — CLI · TUI · SDK · HTTP/WS gateway · engine · domain HTTP · automaton · auth
+   │
+fleet    — registry · spawn · dispatch · quota · mailbox · daemon · subagent dispatcher
+   │
+agent    — deterministic kernel · AgentLoop · steering · subagent derivation
+   │
+exec     — tool catalog · runner · sandbox · policy · isolation · conflict locks
+   │        warn-only upward edge: aura-tools --> aura-kernel
+   │
+plugin   — manifest schema · in-process API · hooks · MCP · connectors
+   │
+context  — read-only prompt assembly · memory · compaction · skills
+   │
+model    — LLM provider trait · streaming completions
+   │
+config   — env vars + TOML config (single source of truth)
+   │
+store    — durable storage · sealed WriteStore (Invariant §10)
+   │
+core     — behavior-free IDs · capability enums · modes · wire types
 ${F}
 
 ## Layers, in dependency order
@@ -74,34 +104,7 @@ ${F}
 
 - A crate may depend on crates in the same layer or any lower layer. Upward edges fail CI via the layer-boundary test.
 - Every \`crates/<crate>/src/lib.rs\` carries a \`//! Layer: <layer>\` doc-comment that must match the known-crates table in the boundary test.
-- **One documented exception** remains: \`aura-tools -> aura-kernel\` is allowlisted as a Phase 10 follow-up (the deep fix is to relocate \`Executor\` / \`ExecuteContext\` / \`SpawnHook\` traits from the agent layer to the exec layer).
-
-## Layered dependency diagram
-
-Arrows point in the only allowed dependency direction: **downward**.
-
-${F}text
-surface  — CLI · TUI · SDK · HTTP/WS gateway · engine · domain HTTP · automaton · auth
-   │
-fleet    — registry · spawn · dispatch · quota · mailbox · daemon · subagent dispatcher
-   │
-agent    — deterministic kernel · AgentLoop · steering · subagent derivation
-   │
-exec     — tool catalog · runner · sandbox · policy · isolation · conflict locks
-   │        ⚠ warn-only upward edge: aura-tools ─ ─▶ aura-kernel
-   │
-plugin   — manifest schema · in-process API · hooks · MCP · connectors
-   │
-context  — read-only prompt assembly · memory · compaction · skills
-   │
-model    — LLM provider trait · streaming completions
-   │
-config   — env vars + TOML config (single source of truth)
-   │
-store    — durable storage · sealed WriteStore (Invariant §10)
-   │
-core     — behavior-free IDs · capability enums · modes · wire types
-${F}
+- **One documented exception** remains: \`aura-tools\` depends on \`aura-kernel\`, allowlisted as a Phase 10 follow-up (the deep fix is to relocate \`Executor\` / \`ExecuteContext\` / \`SpawnHook\` traits from the agent layer to the exec layer).
 
 ## AgentMode resolution priority
 
@@ -124,15 +127,36 @@ The v1 subagent model is foreground and local to one harness instance. A parent 
 \`aura-runtime\` is the **sole Cargo surface** for any external Rust consumer of the harness. External repos (\`aura-os\`, any future SDK consumer) interact with the harness exclusively over the wire — \`POST /v1/run\` for submission, \`WS /stream/:run_id\` for events, plus the management endpoints. No external \`Cargo.toml\` may depend on \`aura-engine\`, \`aura-domain-http\`, \`aura-agent-subagent\`, \`aura-fleet-subagent\`, \`aura-kernel\`, or any other lower-layer crate. This rule lets \`aura-runtime\`'s composition root evolve internally without dragging every external consumer through a coordinated migration.`,
   },
   {
-    title: "Core layer",
+    title: "1. Core",
     slug: "harness-core-layer",
     section: "harness",
     sortOrder: 1,
     excerpt:
       "Behavior-free crates: IDs, capability enums, modes, and wire types that every other layer reaches for.",
-    body: `# Core layer
+    body: `# 1. Core
 
-The foundation. Behavior-free crates that define the IDs, capability enums, modes, and wire types that every other layer reaches for. No I/O, no async runtime, no aura-* dependencies.
+The foundation layer: behavior-free crates that define the IDs, capability enums, modes, and wire types every other layer reaches for. No I/O, no async runtime, and no \`aura-*\` dependencies.
+
+## Overview
+
+- Strongly-typed ID newtypes and small share-by-value structs (\`aura-core-types\`).
+- The closed \`AgentMode\` enum plus \`ModeGate\` / \`ModeViolation\` and \`CapabilityProfile\` (\`aura-core-modes\`).
+- Privilege types and pure permission math — \`narrow\`, \`intersect\`, \`effective\` (\`aura-core-permissions\`).
+- Auth primitive data types and wire-protocol version primitives (\`aura-core-auth\`, \`aura-core-protocol\`).
+- Compatibility shell plus the serde wire API external clients depend on (\`aura-core\`, \`aura-protocol\`).
+
+## Architecture
+
+${F}text
+core
+ ├─ aura-core-types        IDs · share-by-value structs
+ ├─ aura-core-modes        AgentMode · ModeGate · CapabilityProfile
+ ├─ aura-core-permissions  Capability · permission math
+ ├─ aura-core-auth         AccessToken · StoredSession
+ ├─ aura-core-protocol     ProtocolVersion
+ ├─ aura-core (shell)      re-exports + larger domain types
+ └─ aura-protocol          RuntimeRequest · wire API
+${F}
 
 #### \`aura-core-types\`
 
@@ -163,15 +187,33 @@ Compatibility shell. Re-exports the split core crates and still hosts the larger
 Serde types for the wire API consumed by \`aura-runtime\` and external clients. Owns \`RuntimeRequest\` (canonical \`POST /v1/run\` body), \`RuntimeRunResponse\` (\`{ run_id, event_stream_url }\`), \`AgentPersona\`, \`InboundMessage\`, and \`OutboundMessage\`. Self-contained so external clients can depend on it without pulling in the runtime.`,
   },
   {
-    title: "Store layer",
+    title: "2. Store",
     slug: "harness-store-layer",
     section: "harness",
     sortOrder: 2,
     excerpt:
       "Durable persistence: the append-only record log and all RocksDB column families. Owns Invariant §10.",
-    body: `# Store layer
+    body: `# 2. Store
 
-Durable persistence. Owns the append-only record log and all RocksDB column families. **Invariant §10** lives here: the record-append surface (\`append_entry_atomic\`, \`append_entries_batch\`, …) lives on the sealed \`WriteStore\` trait, so only the kernel's \`Arc<dyn WriteStore>\` can commit a record entry. Non-kernel callers depend on \`Arc<dyn ReadStore>\`.
+Durable persistence: the append-only record log and all RocksDB column families. Owns **Invariant §10** — the sealed write surface that keeps record commits in the kernel's hands.
+
+## Overview
+
+- RocksDB-backed storage with three column families (\`record\`, \`agent_meta\`, \`inbox\`) and the atomic \`WriteBatch\` commit path (\`aura-store-db\`).
+- **Invariant §10**: the record-append surface (\`append_entry_atomic\`, \`append_entries_batch\`) lives on the sealed \`WriteStore\` trait, so only the kernel's \`Arc<dyn WriteStore>\` can commit; everyone else holds \`Arc<dyn ReadStore>\`.
+- Backend-independent append-only domain types and the \`RecordLog\` contract (\`aura-store-record\`).
+- Content-addressed snapshot trait with a v1 no-op stub (\`aura-store-snapshot\`).
+- A re-export shell for source-compatible imports (\`aura-store\`).
+
+## Architecture
+
+${F}text
+store
+ ├─ aura-store-db        RocksDB · column families · WriteStore impl
+ ├─ aura-store-record    RecordEntry · RecordKind · RecordLog trait
+ ├─ aura-store-snapshot  SnapshotStore (no-op v1)
+ └─ aura-store (shell)   re-exports aura-store-db
+${F}
 
 #### \`aura-store-db\`
 
@@ -190,30 +232,61 @@ Content-addressed snapshot store trait (\`SnapshotStore\`, \`SnapshotError\`, \`
 Re-export shell over \`aura-store-db\` so legacy \`aura_store_db::*\` imports keep compiling unchanged.`,
   },
   {
-    title: "Config layer",
+    title: "3. Config",
     slug: "harness-config-layer",
     section: "harness",
     sortOrder: 3,
     excerpt:
       "Configuration loading and the resolved configuration types — the single source of truth for env + TOML.",
-    body: `# Config layer
+    body: `# 3. Config
 
-Configuration loading and the resolved configuration types. The single source of truth for env vars and TOML config — every other crate reaches \`aura_config::loaded()\` rather than calling \`std::env::var\` directly.
+Configuration loading and the resolved configuration types: the single source of truth for env vars and TOML. Every other crate reaches \`aura_config::loaded()\` instead of calling \`std::env::var\` directly.
+
+## Overview
+
+- The \`AuraConfig\` aggregate plus per-subsystem \`AgentConfig\`, \`ReasonerConfig\`, and \`FleetConfig\`.
+- \`FleetConfig\` carries \`default_mode\` — the daemon rung of the \`AgentMode\` resolution chain.
+- The env loader for \`AURA_HOME\`, \`AURA_FLEET_DEFAULT_MODE\`, and retry / thinking budgets.
+- A single chokepoint so configuration never scatters into ad-hoc \`std::env::var\` reads.
+- Hosts the \`aura migrate\` stub.
+
+## Architecture
+
+${F}text
+config
+ └─ aura-config  AuraConfig · AgentConfig · ReasonerConfig · FleetConfig · env loader
+${F}
 
 #### \`aura-config\`
 
 \`AuraConfig\` aggregate plus the per-subsystem \`AgentConfig\`, \`ReasonerConfig\`, \`FleetConfig\` (carries \`default_mode\` — the daemon rung of the \`AgentMode\` resolution chain), and the env loader (\`AURA_HOME\`, \`AURA_FLEET_DEFAULT_MODE\`, retry/thinking budgets). Hosts the \`aura migrate\` stub.`,
   },
   {
-    title: "Model layer",
+    title: "4. Model",
     slug: "harness-model-layer",
     section: "harness",
     sortOrder: 4,
     excerpt:
       "The LLM provider abstraction: the ModelProvider trait, stream types, and the Anthropic-shaped client.",
-    body: `# Model layer
+    body: `# 4. Model
 
-LLM provider abstraction. Defines the \`ModelProvider\` trait, normalized message and stream types, and the (single) Anthropic-shaped router/proxy client. **Invariant §1** lives here: only \`KernelModelGateway\` (in the agent layer) may hold a \`ModelProvider\` for production code paths — automatons take \`P: RecordingModelProvider\`, a sealed marker trait that only the recording gateway implements.
+The LLM provider abstraction: the \`ModelProvider\` trait, normalized message and stream types, and the single Anthropic-shaped proxy client. Owns **Invariant §1**, which keeps live model access behind the kernel gateway.
+
+## Overview
+
+- The \`ModelProvider\` trait (\`complete\`, \`complete_streaming\`, \`health_check\`) and \`ModelRequest\` / \`ModelResponse\` shapes.
+- Normalized \`Message\` / \`ContentBlock\` / \`StopReason\` types plus the \`StreamEvent\` SSE family and \`StreamAccumulator\`.
+- The proxy-routed \`AnthropicProvider\` with retry and model-chain fallback, plus \`MockProvider\` for tests.
+- **Invariant §1**: only \`KernelModelGateway\` (agent layer) may hold a \`ModelProvider\` in production; automatons take \`P: RecordingModelProvider\`, a sealed marker trait only the recording gateway implements.
+- A re-export shell for source-compatible imports (\`aura-reasoner\`).
+
+## Architecture
+
+${F}text
+model
+ ├─ aura-model-reasoner  ModelProvider · StreamEvent · AnthropicProvider · MockProvider
+ └─ aura-reasoner (shell)  re-exports aura-model-reasoner
+${F}
 
 #### \`aura-model-reasoner\`
 
@@ -224,15 +297,34 @@ LLM provider abstraction. Defines the \`ModelProvider\` trait, normalized messag
 Re-export shell over \`aura-model-reasoner\` for source-compatible imports.`,
   },
   {
-    title: "Context layer",
+    title: "5. Context",
     slug: "harness-context-layer",
     section: "harness",
     sortOrder: 5,
     excerpt:
       "Read-only context assembly: prompt rendering, per-agent memory, history compaction, skill packages.",
-    body: `# Context layer
+    body: `# 5. Context
 
-Read-only context assembly. Everything that pulls signal *into* the prompt without producing side effects: prompt rendering, per-agent memory, message-history compaction, skill packages.
+Read-only context assembly: everything that pulls signal *into* the prompt without side effects. Prompt rendering, per-agent memory, message-history compaction, and skill packages.
+
+## Overview
+
+- Render-only construction of every model-facing string — system prompts, bootstrap blocks, steering injections, fix prompts (\`aura-context-prompts\`).
+- Per-agent long-term memory: fact / episodic / procedural stores, a two-stage write pipeline, deterministic retrieval, and consolidation, fronted by \`MemoryManager\` (\`aura-context-memory\`).
+- Pure compaction: history tier selection, pressure-gated redaction, cached tool-result summaries (\`aura-context-compaction\`) — it never calls a model itself.
+- A \`SKILL.md\` / \`AgentSkills\`-compatible skill system with layered loader precedence (\`aura-context-skills\`).
+- Memory and skill state live in dedicated column families, never the record log.
+
+## Architecture
+
+${F}text
+context
+ ├─ aura-context-prompts     SystemPromptBuilder · bootstrap · SteeringRenderer
+ ├─ aura-context-memory      MemoryManager · fact / episodic / procedural stores
+ ├─ aura-context-compaction  pure history / tool-surface / storage compaction
+ └─ aura-context-skills      SkillManager · SkillInstallStore
+       (+ legacy aura-{prompts,memory,compaction,skills} shells)
+${F}
 
 #### \`aura-context-prompts\`
 
@@ -253,15 +345,34 @@ Skill system wire-compatible with the Claude Code \`SKILL.md\` / \`AgentSkills\`
 Each surface also ships a legacy \`aura-{prompts,memory,compaction,skills}\` re-export shell.`,
   },
   {
-    title: "Plugin layer",
+    title: "6. Plugin",
     slug: "harness-plugin-layer",
     section: "harness",
     sortOrder: 6,
     excerpt:
       "The plugin runtime: contributor API, on-disk manifest/install pipeline, hooks, MCP, and connectors.",
-    body: `# Plugin layer
+    body: `# 6. Plugin
 
-The plugin runtime. Splits into a contributor API surface (first-party plugins shipped in-tree) and an on-disk manifest / install / cache / marketplace pipeline, plus the runtime surfaces — hooks, MCP, connectors.
+The plugin runtime: a contributor API for in-tree first-party plugins plus an on-disk manifest / install / cache / marketplace pipeline. Also owns the runtime surfaces — hooks, MCP, and connectors.
+
+## Overview
+
+- In-process contributor trait surface for compiled-in first-party plugins (\`aura-plugin-api\`) — not a dynamic loader.
+- Declarative manifest schema, install pipeline, \`AURA_HOME/plugins/\` cache layout, and marketplace lookup with a trust-prompt flow (\`aura-plugin-core\`).
+- Hook engine: a closed 10-event \`HookEvent\` taxonomy, \`HookEngine\` / \`HookOutcome\`, and sandboxed env scrubbing (\`aura-plugin-hooks\`).
+- Stdio MCP JSON-RPC client with a first-active-wins connection manager and per-request timeouts (\`aura-plugin-mcp\`).
+- Thread-safe registry of plugin-contributed external endpoints, last-wins (\`aura-plugin-connectors\`).
+
+## Architecture
+
+${F}text
+plugin
+ ├─ aura-plugin-api         PluginContributor · ContributionKind
+ ├─ aura-plugin-core        PluginManifest · install · marketplace
+ ├─ aura-plugin-hooks       HookEvent · HookEngine · HookOutcome
+ ├─ aura-plugin-mcp         McpClient · McpConnectionManager
+ └─ aura-plugin-connectors  ConnectorRegistry · ConnectorEntry
+${F}
 
 #### \`aura-plugin-api\`
 
@@ -284,17 +395,38 @@ Stdio MCP JSON-RPC client and a first-active-wins connection manager keyed by se
 Thread-safe registry of plugin-contributed external endpoints. \`ConnectorRegistry\`, \`ConnectorEntry\`, \`ConnectorError\`. Last-wins registration semantics.`,
   },
   {
-    title: "Exec layer",
+    title: "7. Exec",
     slug: "harness-exec-layer",
     section: "harness",
     sortOrder: 7,
     excerpt:
       "Tool execution surface: tool catalog, runner, sandbox primitives, conflict locks, and worktree isolation.",
-    body: `# Exec layer
+    body: `# 7. Exec
 
-Tool execution surface. Everything from the tool catalog down through sandbox primitives, conflict locks, and worktree isolation.
+The tool execution surface: everything from the tool catalog down through sandbox primitives, conflict locks, and worktree isolation.
 
-> **Warn-only edge:** \`aura-tools -> aura-kernel\` is the single remaining upward dependency in the workspace. The deep fix is to relocate \`Executor\` / \`ExecuteContext\` / \`SpawnHook\` traits to a new exec-layer home — tracked as a Phase 10 follow-up.
+## Overview
+
+- Domain-scoped advisory locks that reduce sibling collisions on shared resources (\`aura-exec-conflict\`).
+- Subagent workspace isolation via git worktrees, with a copy fallback (\`aura-exec-isolation\`).
+- Pure approval / verdict evaluation over resolved effective permissions, no model or store deps (\`aura-exec-policy\`).
+- OS-level containment: filesystem and process sandbox primitives (\`aura-exec-sandbox\`).
+- The tool catalog, resolver, and sandboxed FS / command / git / domain / \`task\` tools (\`aura-tools\`), surfaced through the \`aura-exec-tools\` / \`aura-exec-runner\` shells.
+
+## Architecture
+
+${F}text
+exec
+ ├─ aura-exec-conflict   ConflictRegistry · LockHandle
+ ├─ aura-exec-isolation  WorktreeIsolation · CopyIsolation
+ ├─ aura-exec-policy     evaluate · ToolApproval
+ ├─ aura-exec-sandbox    FsSandbox · ProcessSandbox
+ ├─ aura-exec-tools / aura-exec-runner  re-export shells
+ └─ aura-tools           ToolCatalog · ToolResolver · Executor impl
+       warn-only upward edge: aura-tools --> aura-kernel
+${F}
+
+> **Warn-only edge:** \`aura-tools\` depends on \`aura-kernel\` — the single remaining upward dependency in the workspace. The deep fix is to relocate \`Executor\` / \`ExecuteContext\` / \`SpawnHook\` traits to a new exec-layer home, tracked as a Phase 10 follow-up.
 
 #### \`aura-exec-conflict\`
 
@@ -328,15 +460,35 @@ Tool catalog, resolver, and sandboxed filesystem/command execution. Implements t
 - Catalog + resolver: \`ToolCatalog\`, \`ToolResolver\`, \`ToolProfile\` (\`Core\` / \`Agent\` / \`Engine\`), \`CatalogEntry\`.`,
   },
   {
-    title: "Agent layer",
+    title: "8. Agent",
     slug: "harness-agent-layer",
     section: "harness",
     sortOrder: 8,
     excerpt:
       "The deterministic core of a single agent: audited kernel, the multi-step turn loop, steering, subagents.",
-    body: `# Agent layer
+    body: `# 8. Agent
 
-The deterministic core of a single agent. The kernel records every reasoning call, every tool proposal, every policy decision, every effect. **Invariants §1 through §11** are all owned here.
+The deterministic core of a single agent: the kernel records every reasoning call, tool proposal, policy decision, and effect. **Invariants §1 through §11** are all owned here.
+
+## Overview
+
+- The deterministic kernel: builds context from the record window, calls the reasoner, enforces policy, dispatches via \`ExecutorRouter\`, and emits \`RecordEntry\`s — same record in, same output out (\`aura-agent-kernel\`).
+- The multi-step orchestration loop wrapping the kernel: streaming, blocking / stall detection, budget management, compaction orchestration, build verification, planning, self-review (\`aura-agent\`).
+- Stateful per-turn steering evaluators — \`RepeatedReadTracker\`, \`ImplementNow\`, \`EarlyOracle\` (\`aura-agent-steering\`).
+- Subagent derivation and the pure-data adapter layer: \`derive_subagent\` may only narrow a parent's mode, permissions, and model (\`aura-agent-subagent\`).
+- Key bridges — \`KernelToolGateway\`, \`KernelModelGateway\`, \`KernelDomainGateway\` — plus the \`aura-kernel\` and \`aura-agent-loop\` re-export shells.
+
+## Architecture
+
+${F}text
+agent
+ ├─ aura-agent-kernel    Kernel · ExecutorRouter · Policy · ContextBuilder
+ ├─ aura-agent           AgentLoop orchestration · gateways · compaction
+ ├─ aura-agent-steering  SteeringRegistry · TurnSteering
+ ├─ aura-agent-subagent  derive_subagent · SubagentSpec
+ ├─ aura-agent-loop (shell)  AgentLoop · TurnEvent · RunOptions
+ └─ aura-kernel (shell)      re-exports aura-agent-kernel
+${F}
 
 #### \`aura-agent-kernel\`
 
@@ -363,15 +515,36 @@ The multi-step orchestration loop and everything that wraps the kernel: streamin
 Re-export shell over \`aura-agent-kernel\` preserving historical \`aura_agent_kernel::*\` paths.`,
   },
   {
-    title: "Fleet layer",
+    title: "9. Fleet",
     slug: "harness-fleet-layer",
     section: "harness",
     sortOrder: 9,
     excerpt:
       "The multi-agent runtime: registry, spawn pipeline, dispatch, quota, mailbox, and the subagent dispatcher.",
-    body: `# Fleet layer
+    body: `# 9. Fleet
 
-The multi-agent runtime. Above the single-agent kernel: registry of live agents, spawn pipeline, dispatch, quota tracking, mailbox, the concrete subagent dispatcher, and the composition root that wires them together. **Invariant §12** (single writer per agent) crosses the agent/fleet boundary.
+The multi-agent runtime above the single-agent kernel: registry, spawn pipeline, dispatch, quota, mailbox, the concrete subagent dispatcher, and the daemon composition root. **Invariant §12** (single writer per agent) crosses the agent / fleet boundary.
+
+## Overview
+
+- In-memory directory of live and recently-terminated agents (\`aura-fleet-registry\`).
+- Concurrency and resource budgets with an RAII \`BudgetTicket\` that releases on drop (\`aura-fleet-quota\`).
+- The subagent spawn pipeline: idempotent dedupe, per-parent audit-append lease, \`derive_subagent\`, quota acquisition, and \`SpawnMode::{Wait, Detached, Batch}\` (\`aura-fleet-spawn\`).
+- Routing and transport: \`AgentJob\` dispatch into the spawner, plus a bounded backpressured mailbox (\`aura-fleet-dispatch\`, \`aura-fleet-mailbox\`).
+- The \`FleetDaemon\` composition root — also hosting \`resolve_session_mode\` — and the fail-closed \`FleetSubagentDispatcher\` (\`aura-fleet-daemon\`, \`aura-fleet-subagent\`).
+
+## Architecture
+
+${F}text
+fleet
+ ├─ aura-fleet-registry   FleetRegistry · AgentSlot · AgentState
+ ├─ aura-fleet-quota      QuotaPool · BudgetTicket
+ ├─ aura-fleet-spawn      FleetSpawner · ParentLeaseRegistry · SpawnMode
+ ├─ aura-fleet-dispatch   AgentJob routing
+ ├─ aura-fleet-mailbox    bounded MPSC AgentJob mailbox
+ ├─ aura-fleet-daemon     FleetDaemon · resolve_session_mode
+ └─ aura-fleet-subagent   FleetSubagentDispatcher (SubagentDispatchHook)
+${F}
 
 #### \`aura-fleet-registry\`
 
@@ -402,15 +575,35 @@ Composition root that wires registry, spawner, dispatcher, quota, and mailbox in
 Hosts the concrete \`FleetSubagentDispatcher\` impl of \`SubagentDispatchHook\`. Composes the spawner + registry + quota with the agent-layer registry and a surface-layer \`ChildRunner\`. Fail-closed; the only place the fleet wires spawn-mode outcomes into the task tool's response.`,
   },
   {
-    title: "Surface layer",
+    title: "10. Surface",
     slug: "harness-surface-layer",
     section: "harness",
     sortOrder: 10,
     excerpt:
       "Composition roots: CLI, TUI, SDK, the HTTP/WS gateway, the orchestration engine, domain HTTP, and auth.",
-    body: `# Surface layer
+    body: `# 10. Surface
 
-Composition roots. Each surface assembles dependencies from the lower layers into a runnable entry point (CLI, TUI, SDK, headless server, automaton host) or a side-effectful client.
+Composition roots: each surface assembles the lower layers into a runnable entry point — CLI, TUI, SDK, headless server, automaton host — or a side-effectful client.
+
+## Overview
+
+- The CLI composition root: clap \`Cli\` / \`Commands\` / \`RunArgs\`, the top-of-chain \`ModeFlag\`, and event-loop wiring (\`aura-surface-cli\`).
+- External SDK types for talking to a fleet daemon over \`aura-core-protocol\`, with pluggable transport (\`aura-surface-sdk\`).
+- The HTTP/WS **gateway** plus the \`aura-node\` composition root — the sole Cargo surface for external Rust consumers (\`aura-runtime\`).
+- The orchestration engine: per-agent single-writer scheduler (Invariant §12.a), worker, automaton bridge, and \`RuntimeChildRunner\` (\`aura-engine\`).
+- The HTTP \`DomainApi\` implementation (\`aura-domain-http\`), plus terminal / automaton / auth surfaces and their legacy shells.
+
+## Architecture
+
+${F}text
+surface
+ ├─ aura-surface-cli       clap Cli · ModeFlag · event loop
+ ├─ aura-surface-sdk       AuraClient · AuraSession · SessionConfig
+ ├─ aura-runtime           HTTP/WS gateway · aura-node root (external surface)
+ ├─ aura-engine            scheduler · worker · child_runner
+ ├─ aura-domain-http       HttpDomainApi · JwtDomainApi
+ └─ aura-terminal / aura-automaton / aura-auth (+ surface shells)
+${F}
 
 #### \`aura-surface-cli\`
 
@@ -449,7 +642,24 @@ The Ratatui-based terminal UI library; the long-running automaton workflows (\`C
       "How data moves through the system for interactive, run-kickoff, headless, and error-recovery paths.",
     body: `# User flows
 
-The same kernel/AgentLoop pipeline drives every front-end. Before any external effect, the resolved \`AgentMode\` gates the action; the policy layer then narrows further per-tool.
+The same kernel / \`AgentLoop\` pipeline drives every front-end. Before any external effect the resolved \`AgentMode\` gates the action, then the policy layer narrows further per tool.
+
+## Overview
+
+- **Interactive TUI** — a local event-loop session, the default \`cargo run\` / \`aura\` path.
+- **Run kickoff + WebSocket** — the two-step \`POST /v1/run\` then \`WS /stream/:run_id\` exchange used by \`aura-os\` and other wire clients.
+- **Headless node** — HTTP-submitted transactions processed by the engine's scheduler.
+- **Streaming error recovery** — a deterministic \`StreamReset\` fallback to a non-streaming completion.
+
+## Architecture
+
+${F}text
+input --> transaction --> AgentLoop <==> (model calls + tool execution)
+                              |                      |
+                              v                      v
+                          TurnEvents            RecordEntry
+                          (render)              (append-only log)
+${F}
 
 ## Flow 1: Interactive TUI session
 

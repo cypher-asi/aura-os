@@ -54,6 +54,56 @@ function ExternalLink(
   return <a {...props} target="_blank" rel="noopener noreferrer" />;
 }
 
+/** Public harness repo that the whitepaper's code references resolve to. */
+const HARNESS_REPO = "cypher-asi/aura-harness";
+
+/**
+ * Resolve an inline code token to a GitHub URL in the harness repo. Crate
+ * names (`aura-*`) map to their crate directory (resolves anonymously);
+ * everything else (files, functions, types) falls back to a repo-scoped
+ * code search.
+ */
+function codeHref(token: string): string {
+  const t = token.trim();
+  if (/^aura-[a-z0-9-]+$/.test(t)) {
+    return `https://github.com/${HARNESS_REPO}/tree/main/crates/${t}`;
+  }
+  return `https://github.com/search?q=${encodeURIComponent(
+    `repo:${HARNESS_REPO} ${t}`,
+  )}&type=code`;
+}
+
+/**
+ * Inline-code renderer: turns each `code` span into an external link to the
+ * harness repo (new tab). Fenced/indented code blocks — which react-markdown
+ * wraps in `<pre>` and which carry a `language-*` class or span multiple
+ * lines — render unchanged so the `rehype-highlight` diagram styling is
+ * preserved.
+ */
+function CodeRef({
+  className,
+  children,
+}: {
+  className?: string;
+  children?: ReactNode;
+}): React.ReactElement {
+  const text = extractText(children);
+  const isBlock = /\blanguage-/.test(className ?? "") || text.includes("\n");
+  if (isBlock) {
+    return <code className={className}>{children}</code>;
+  }
+  return (
+    <a
+      href={codeHref(text)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={styles.codeLink}
+    >
+      <code className={className}>{children}</code>
+    </a>
+  );
+}
+
 function HeadingWithId(
   Tag: "h1" | "h2" | "h3",
 ): (props: { children?: ReactNode }) => React.ReactElement {
@@ -64,18 +114,27 @@ function HeadingWithId(
 
 const MD_COMPONENTS: Components = {
   a: ExternalLink,
+  code: CodeRef,
   h1: HeadingWithId("h1"),
   h2: HeadingWithId("h2"),
   h3: HeadingWithId("h3"),
 };
 
-/** Title-case a section key for the nav group header (e.g. "harness"). */
+/** Display-name overrides for section keys (e.g. "harness"). */
+const SECTION_DISPLAY_LABELS: Readonly<Record<string, string>> = {
+  harness: "AURA Harness",
+};
+
+/** Resolve the nav group header for a section key (e.g. "harness"). */
 function sectionLabel(key: string): string {
   if (!key) return "General";
-  return key
-    .split(/[-_\s]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+  return (
+    SECTION_DISPLAY_LABELS[key] ??
+    key
+      .split(/[-_\s]+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ")
+  );
 }
 
 interface NavGroup {
@@ -197,7 +256,11 @@ export function OsView(): React.ReactElement {
   // Resolve the active section: the slug param, else the first section.
   const activeSlug = slug ?? allDocs[0]?.slug ?? null;
 
-  const { data: doc, error: docError } = useQuery({
+  const {
+    data: doc,
+    error: docError,
+    isLoading: docLoading,
+  } = useQuery({
     queryKey: ["marketing-os-doc", activeSlug],
     queryFn: () => fetchOsDoc(activeSlug as string),
     enabled: Boolean(activeSlug),
@@ -240,11 +303,7 @@ export function OsView(): React.ReactElement {
           <Link to="/os" className={styles.sidebarTitle}>
             {t("os.sidebarTitle", { defaultValue: "AURA OS" })}
           </Link>
-          {docsLoading ? (
-            <p className={styles.navState} aria-busy="true">
-              {t("os.loading", { defaultValue: "Loading…" })}
-            </p>
-          ) : groups.length === 0 ? (
+          {docsLoading ? null : groups.length === 0 ? (
             <p className={styles.navState}>
               {t("os.noSections", { defaultValue: "No sections yet." })}
             </p>
@@ -279,11 +338,7 @@ export function OsView(): React.ReactElement {
             </div>
           ) : (
             <div className={styles.markdownBody}>
-              {bodyLoading ? (
-                  <p className={styles.navState} aria-busy="true">
-                    {t("os.loading", { defaultValue: "Loading…" })}
-                  </p>
-                ) : body ? (
+              {bodyLoading || docLoading ? null : body ? (
                   <ReactMarkdown
                     remarkPlugins={MD_REMARK}
                     rehypePlugins={MD_REHYPE}

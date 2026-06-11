@@ -118,7 +118,7 @@
 .markdownBody {
   font-size: 15px;
   line-height: 1.7;
-  color: var(--os-fg-muted);
+  color: var(--os-fg);
 }
 
 .markdownBody :global(h1) {
@@ -184,7 +184,27 @@
   background: rgba(255, 255, 255, 0.06);
   border-radius: 4px;
   padding: 1px 5px;
-  color: #d7dbe0;
+  color: var(--os-fg-muted);
+}
+
+/*
+ * Code references (crate / file / function tokens) link out to the harness
+ * GitHub repo. They read as secondary code, not the accent-green used for
+ * prose links, so the surrounding primary-color text stays the focus.
+ */
+.codeLink,
+.codeLink:hover {
+  text-decoration: none;
+}
+
+.codeLink :global(code) {
+  color: var(--os-fg-muted);
+  transition: color 0.12s ease;
+}
+
+.codeLink:hover :global(code) {
+  color: var(--os-fg);
+  text-decoration: underline;
 }
 
 .markdownBody :global(pre) {
