@@ -186,17 +186,34 @@ export function MobilePublicMenu({
           draggable={false}
           data-aura-wordmark
         />
-        <button
-          type="button"
-          className={styles.closeButton}
-          aria-label={t("publicChat:mobileShell.closeMenu", {
-            defaultValue: "Close menu",
-          })}
-          onClick={onClose}
-          data-testid="mobile-public-menu-close"
-        >
-          <X size={24} aria-hidden="true" />
-        </button>
+        <div className={styles.headerActions}>
+          {/* Compact language selector — shows the 2-letter code (e.g.
+              "EN") and sits just left of the close button. */}
+          <select
+            className={styles.languageSelect}
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            aria-label={t("common:language", { defaultValue: "Language" })}
+            title={t("common:language", { defaultValue: "Language" })}
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.code.slice(0, 2).toUpperCase()}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={styles.closeButton}
+            aria-label={t("publicChat:mobileShell.closeMenu", {
+              defaultValue: "Close menu",
+            })}
+            onClick={onClose}
+            data-testid="mobile-public-menu-close"
+          >
+            <X size={24} aria-hidden="true" />
+          </button>
+        </div>
       </header>
 
       <nav
@@ -272,21 +289,6 @@ export function MobilePublicMenu({
       </nav>
 
       <div className={styles.footer}>
-        {/* Compact language selector — shows the 2-letter code (e.g.
-            "EN") and sits inline beside the auth pills. */}
-        <select
-          className={styles.languageSelect}
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          aria-label={t("common:language", { defaultValue: "Language" })}
-          title={t("common:language", { defaultValue: "Language" })}
-        >
-          {LANGUAGES.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.code.slice(0, 2).toUpperCase()}
-            </option>
-          ))}
-        </select>
         <Link
           to={{ pathname: "/login", search: signinSearch }}
           state={backgroundState}

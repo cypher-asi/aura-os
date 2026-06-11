@@ -56,6 +56,13 @@
   user-select: none;
 }
 
+/* Right-aligned header cluster: language code pill + close button. */
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .closeButton {
   width: 44px;
   height: 44px;
@@ -185,9 +192,8 @@
 
 .footer {
   flex-shrink: 0;
-  /* Single inline row: compact language code + the two auth pills. */
   display: grid;
-  grid-template-columns: auto 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: 8px;
   padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
@@ -195,18 +201,18 @@
 }
 
 /*
- * Compact language selector — a small all-caps "EN" pill that aligns
- * in height with the auth pills beside it. Native select arrow is
+ * Compact language selector — a small all-caps "EN" control that sits
+ * just left of the close button in the header. Native select arrow is
  * suppressed to keep the two-character footprint tight.
  */
 .languageSelect {
-  height: 44px;
-  padding: 0 8px;
-  border-radius: 999px;
+  height: 36px;
+  padding: 0 6px;
+  border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--color-text-primary) 22%, transparent);
   background: transparent;
   color: var(--color-text-primary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.04em;
   font-family: inherit;
