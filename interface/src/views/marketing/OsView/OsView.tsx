@@ -1,6 +1,8 @@
 import {
+  createContext,
   isValidElement,
   type ReactNode,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -54,22 +56,39 @@ function ExternalLink(
   return <a {...props} target="_blank" rel="noopener noreferrer" />;
 }
 
-/** Public harness repo that the whitepaper's code references resolve to. */
-const HARNESS_REPO = "cypher-asi/aura-harness";
+/**
+ * GitHub repo (org/name) each section group's code references resolve to,
+ * keyed by the section `blogType`. Defaults to the harness for unknown keys.
+ */
+const SECTION_REPOS: Readonly<Record<string, string>> = {
+  harness: "cypher-asi/aura-harness",
+  "aura-os": "cypher-asi/aura-os",
+  "aura-router": "cypher-asi/aura-router",
+  "aura-network": "cypher-asi/aura-network",
+  "aura-storage": "cypher-asi/aura-storage",
+  "z-billing": "cypher-asi/z-billing",
+};
+
+const DEFAULT_REPO = "cypher-asi/aura-harness";
 
 /**
- * Resolve an inline code token to a GitHub URL in the harness repo. Crate
- * names (`aura-*`) map to their crate directory (resolves anonymously);
- * everything else (files, functions, types) falls back to a repo-scoped
- * code search.
+ * Repo that the inline code references in the currently-rendered section point
+ * at. Set by `OsView` from the active doc's `blogType`; read by `CodeRef`.
  */
-function codeHref(token: string): string {
+const OsRepoContext = createContext<string>(DEFAULT_REPO);
+
+/**
+ * Resolve an inline code token to a GitHub URL in the given repo. Crate names
+ * (`aura-*`) map to their crate directory (resolves anonymously); everything
+ * else (files, functions, types) falls back to a repo-scoped code search.
+ */
+function codeHref(token: string, repo: string): string {
   const t = token.trim();
   if (/^aura-[a-z0-9-]+$/.test(t)) {
-    return `https://github.com/${HARNESS_REPO}/tree/main/crates/${t}`;
+    return `https://github.com/${repo}/tree/main/crates/${t}`;
   }
   return `https://github.com/search?q=${encodeURIComponent(
-    `repo:${HARNESS_REPO} ${t}`,
+    `repo:${repo} ${t}`,
   )}&type=code`;
 }
 
@@ -87,6 +106,7 @@ function CodeRef({
   className?: string;
   children?: ReactNode;
 }): React.ReactElement {
+  const repo = useContext(OsRepoContext);
   const text = extractText(children);
   const isBlock = /\blanguage-/.test(className ?? "") || text.includes("\n");
   if (isBlock) {
@@ -94,7 +114,7 @@ function CodeRef({
   }
   return (
     <a
-      href={codeHref(text)}
+      href={codeHref(text, repo)}
       target="_blank"
       rel="noopener noreferrer"
       className={styles.codeLink}
@@ -120,9 +140,14 @@ const MD_COMPONENTS: Components = {
   h3: HeadingWithId("h3"),
 };
 
-/** Display-name overrides for section keys (e.g. "harness"). */
+/** Display-name overrides for section keys (e.g. "harness" -> "AURA Harness"). */
 const SECTION_DISPLAY_LABELS: Readonly<Record<string, string>> = {
   harness: "AURA Harness",
+  "aura-os": "AURA OS",
+  "aura-router": "AURA Router",
+  "aura-network": "AURA Network",
+  "aura-storage": "AURA Storage",
+  "z-billing": "Z-Billing",
 };
 
 /** Resolve the nav group header for a section key (e.g. "harness"). */
@@ -340,13 +365,17 @@ export function OsView(): React.ReactElement {
           ) : (
             <div className={styles.markdownBody}>
               {bodyLoading || docLoading ? null : body ? (
-                  <ReactMarkdown
-                    remarkPlugins={MD_REMARK}
-                    rehypePlugins={MD_REHYPE}
-                    components={MD_COMPONENTS}
+                  <OsRepoContext.Provider
+                    value={SECTION_REPOS[doc?.blogType ?? ""] ?? DEFAULT_REPO}
                   >
-                    {body}
-                  </ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={MD_REMARK}
+                      rehypePlugins={MD_REHYPE}
+                      components={MD_COMPONENTS}
+                    >
+                      {body}
+                    </ReactMarkdown>
+                  </OsRepoContext.Provider>
                 ) : !docsLoading && allDocs.length === 0 ? (
                   <p className={styles.navState}>
                     {t("os.empty.body", {

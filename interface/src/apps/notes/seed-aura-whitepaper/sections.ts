@@ -1,45 +1,39 @@
 /**
  * Seed content for the AURA OS whitepaper CMS (the public `/os` page).
  *
- * The first part of the whitepaper is the **AURA Harness**, split into the ten
- * layers of the harness architecture (plus an overview, the architectural
- * invariants, and the user-flow diagrams). Each entry below becomes a
- * published note under the reserved
- * aura-whitepaper project; the `section` field doubles as the collapsible
- * left-nav group key on the public page, and `sortOrder` controls the
- * within-section order. Content is transcribed from
- * `../aura-harness/docs/architecture.md` and is fully editable afterwards
- * by sys admins in the Notes app.
+ * This file aggregates the per-repo section modules into the published
+ * `WHITEPAPER_SECTIONS` list. The first group is the **AURA Harness** (the
+ * core runtime, defined inline below); the remaining core repos
+ * (aura-os, aura-router, aura-network, aura-storage, z-billing) each
+ * contribute a `sections-<repo>.ts` module. Each entry becomes a published
+ * note under the reserved aura-whitepaper project; the `section` field is the
+ * collapsible left-nav group key, and `sortOrder` controls ordering both
+ * within a group and (by smallest value) between groups — AURA Harness uses
+ * the 0-band so it stays pinned at the top. Harness content is transcribed
+ * from `../aura-harness/docs/architecture.md`; all of it is editable by sys
+ * admins in the Notes app.
  */
 
-/**
- * Markdown fence token. Kept as a double-quoted constant so the section
- * bodies below can embed fenced code blocks (ASCII diagrams) via
- * interpolation without escaping every backtick.
- */
-const F = "```";
+import { F, type WhitepaperSection } from "./sections-types";
+import { AURA_OS_SECTIONS } from "./sections-aura-os";
+import { AURA_ROUTER_SECTIONS } from "./sections-aura-router";
+import { AURA_NETWORK_SECTIONS } from "./sections-aura-network";
+import { AURA_STORAGE_SECTIONS } from "./sections-aura-storage";
+import { Z_BILLING_SECTIONS } from "./sections-z-billing";
 
-export interface WhitepaperSection {
-  /** Human title; also the left-nav label. */
-  title: string;
-  /** URL slug (stable, kebab-case). */
-  slug: string;
-  /** Collapsible section group key (e.g. "harness"). */
-  section: string;
-  /** Within-section order (ascending). */
-  sortOrder: number;
-  /** Short summary (shown as the section lede / listing). */
-  excerpt: string;
-  /** Markdown body. */
-  body: string;
-}
+export type { WhitepaperSection } from "./sections-types";
 
-/** Display name for a section key. Extend as new top-level parts land. */
+/** Display name for each section group key (the collapsible left-nav header). */
 export const SECTION_LABELS: Readonly<Record<string, string>> = {
   harness: "AURA Harness",
+  "aura-os": "AURA OS",
+  "aura-router": "AURA Router",
+  "aura-network": "AURA Network",
+  "aura-storage": "AURA Storage",
+  "z-billing": "Z-Billing",
 };
 
-export const WHITEPAPER_SECTIONS: WhitepaperSection[] = [
+const HARNESS_SECTIONS: WhitepaperSection[] = [
   {
     title: "Overview",
     slug: "harness-overview",
@@ -1085,4 +1079,18 @@ ${F}text
                                                         RecordEntry -> RocksDB
 ${F}`,
   },
+];
+
+/**
+ * The published whitepaper: AURA Harness first (0-band sortOrder keeps it at
+ * the top of the left nav), then the other core repos. Re-running the seed is
+ * idempotent (matched by slug), so adding/reordering here heals in place.
+ */
+export const WHITEPAPER_SECTIONS: WhitepaperSection[] = [
+  ...HARNESS_SECTIONS,
+  ...AURA_OS_SECTIONS,
+  ...AURA_ROUTER_SECTIONS,
+  ...AURA_NETWORK_SECTIONS,
+  ...AURA_STORAGE_SECTIONS,
+  ...Z_BILLING_SECTIONS,
 ];
