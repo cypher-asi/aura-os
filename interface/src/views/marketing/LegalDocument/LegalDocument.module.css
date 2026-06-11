@@ -1,3 +1,23 @@
+/*
+ * Page wrapper for the `/terms` and `/privacy` routes. Publishes the
+ * `--marketing-section-bg` surface token and text-color tokens that the
+ * shared bottom sections (`ChangelogPreview`, `ProductCallToAction`,
+ * `MarketingFooter`) read, mirroring `ProductView`/`CodeView`. A
+ * `min-height: 100%` flex column lets `.productCtaSection` (`flex: 1`)
+ * absorb leftover space and pin the footer to the bottom on short
+ * viewports.
+ */
+.legalPage {
+  --marketing-section-bg: #000;
+  --color-text-primary: #f7f8fb;
+  --color-text-secondary: #a3a3a8;
+  --color-text-muted: rgba(255, 255, 255, 0.52);
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 .page {
   --legal-fg: #f0f1f4;
   --legal-fg-muted: #a7adb5;

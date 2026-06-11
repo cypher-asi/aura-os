@@ -1,6 +1,5 @@
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { PageHero } from "../PageHero";
 import { LegalDocument } from "../LegalDocument";
 
 const LEGAL_ENTITY = "CYPHER, INC.";
@@ -8,12 +7,12 @@ const GOVERNING_STATE = "Nevada";
 const CONTACT_EMAIL = "support@aura.ai";
 
 /**
- * Marketing `/terms` page. Renders the centered `PageHero` chrome above
- * the full Terms of Service document. The document body lives in the
- * `marketing` i18n namespace (`terms.*`), so the page is language-aware
- * across every supported locale. Page-level chrome (titlebar / sidebar /
- * scrollable column) is owned by the public-mode `AuraShell` +
- * `PublicMarketingPanel`.
+ * Marketing `/terms` page. Renders the standard public marketing page
+ * stack (hero, legal document body, changelog, CTA, footer) via the
+ * shared `LegalDocument`. The document body lives in the `marketing`
+ * i18n namespace (`terms.*`), so the page is language-aware across every
+ * supported locale. Page-level chrome (titlebar / sidebar / scrollable
+ * column) is owned by the public-mode `AuraShell` + `PublicMarketingPanel`.
  */
 export function TermsView(): ReactNode {
   const { t } = useTranslation("marketing");
@@ -30,22 +29,11 @@ export function TermsView(): ReactNode {
   }, [t]);
 
   return (
-    <>
-      <PageHero
-        label={t("terms.label", { defaultValue: "LEGAL" })}
-        headline={t("terms.headline", { defaultValue: "Terms of Service" })}
-        description={t("terms.description", {
-          defaultValue: "The terms that govern your access to and use of AURA.",
-        })}
-        preview={null}
-        centered
-      />
-      <LegalDocument
-        prefix="terms"
-        company={LEGAL_ENTITY}
-        state={GOVERNING_STATE}
-        email={CONTACT_EMAIL}
-      />
-    </>
+    <LegalDocument
+      prefix="terms"
+      company={LEGAL_ENTITY}
+      state={GOVERNING_STATE}
+      email={CONTACT_EMAIL}
+    />
   );
 }

@@ -1,5 +1,9 @@
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { PageHero } from "../PageHero";
+import { ChangelogPreview } from "../ChangelogPreview";
+import { ProductCallToAction } from "../ProductCallToAction";
+import { MarketingFooter } from "../MarketingFooter";
 import styles from "./LegalDocument.module.css";
 
 interface LegalSection {
@@ -10,7 +14,8 @@ interface LegalSection {
 interface LegalDocumentProps {
   /**
    * `marketing` namespace key prefix for this document, e.g. `"terms"`
-   * or `"privacy"`. The component reads `<prefix>.intro`,
+   * or `"privacy"`. The component reads `<prefix>.label`,
+   * `<prefix>.headline`, `<prefix>.description`, `<prefix>.intro`,
    * `<prefix>.effectiveDate`, `<prefix>.sections`, and the
    * `<prefix>.contact*` keys beneath it.
    */
@@ -23,11 +28,35 @@ interface LegalDocumentProps {
   readonly email: string;
 }
 
+/** Per-document hero fallbacks used when a locale catalog has no value. */
+const HERO_DEFAULTS: Record<
+  LegalDocumentProps["prefix"],
+  { headline: string; description: string }
+> = {
+  terms: {
+    headline: "Terms of Service",
+    description: "The terms that govern your access to and use of AURA.",
+  },
+  privacy: {
+    headline: "Privacy Policy",
+    description:
+      "How we handle your data, and the privacy-first principles behind AURA.",
+  },
+};
+
 /**
- * Shared renderer for the `/terms` and `/privacy` legal pages. The full
- * document body lives in the `marketing` i18n namespace as structured
- * `sections` (heading + paragraph array), so it flows through the
- * existing machine-translation pipeline into all locales.
+ * Shared renderer for the `/terms` and `/privacy` legal pages. Composes
+ * the standard public marketing page: the centered `PageHero`, the legal
+ * document body, then the shared `ChangelogPreview`, `ProductCallToAction`,
+ * and `MarketingFooter` bottom stack — so the legal routes behave like
+ * every other marketing page. The wrapper sets `--marketing-section-bg`
+ * and the text-color tokens those bottom sections read, and is a
+ * `min-height: 100%` flex column so the CTA absorbs slack and pins the
+ * footer to the bottom on short viewports.
+ *
+ * The full document body lives in the `marketing` i18n namespace as
+ * structured `sections` (heading + paragraph array), so it flows through
+ * the existing machine-translation pipeline into all locales.
  *
  * Proper nouns (company, governing-law state, contact email) and the
  * effective date are kept OUT of the translated strings via `{{company}}`
@@ -63,36 +92,56 @@ export function LegalDocument({
   const contactBody = fill(t(`${prefix}.contactBody`, { defaultValue: "" }));
 
   return (
-    <section className={styles.page}>
-      <div className={styles.document}>
-        {effectiveDate ? (
-          <p className={styles.effectiveDate}>{effectiveDate}</p>
-        ) : null}
-        {intro ? <p className={styles.intro}>{intro}</p> : null}
+    <div className={styles.legalPage}>
+      <PageHero
+        label={t(`${prefix}.label`, { defaultValue: "LEGAL" })}
+        headline={t(`${prefix}.headline`, {
+          defaultValue: HERO_DEFAULTS[prefix].headline,
+        })}
+        description={t(`${prefix}.description`, {
+          defaultValue: HERO_DEFAULTS[prefix].description,
+        })}
+        preview={null}
+        centered
+      />
 
-        {Array.isArray(sections)
-          ? sections.map((section, index) => (
-              <div key={section.heading ?? index} className={styles.section}>
-                <h2 className={styles.sectionHeading}>{fill(section.heading)}</h2>
-                {section.body.map((paragraph, paragraphIndex) => (
-                  <p key={paragraphIndex} className={styles.paragraph}>
-                    {fill(paragraph)}
-                  </p>
-                ))}
-              </div>
-            ))
-          : null}
+      <section className={styles.page}>
+        <div className={styles.document}>
+          {effectiveDate ? (
+            <p className={styles.effectiveDate}>{effectiveDate}</p>
+          ) : null}
+          {intro ? <p className={styles.intro}>{intro}</p> : null}
 
-        {contactBody ? (
-          <div className={styles.section}>
-            <h2 className={styles.sectionHeading}>{contactHeading}</h2>
-            <p className={styles.paragraph}>{contactBody}</p>
-            <a className={styles.contactEmail} href={`mailto:${email}`}>
-              {email}
-            </a>
-          </div>
-        ) : null}
-      </div>
-    </section>
+          {Array.isArray(sections)
+            ? sections.map((section, index) => (
+                <div key={section.heading ?? index} className={styles.section}>
+                  <h2 className={styles.sectionHeading}>
+                    {fill(section.heading)}
+                  </h2>
+                  {section.body.map((paragraph, paragraphIndex) => (
+                    <p key={paragraphIndex} className={styles.paragraph}>
+                      {fill(paragraph)}
+                    </p>
+                  ))}
+                </div>
+              ))
+            : null}
+
+          {contactBody ? (
+            <div className={styles.section}>
+              <h2 className={styles.sectionHeading}>{contactHeading}</h2>
+              <p className={styles.paragraph}>{contactBody}</p>
+              <a className={styles.contactEmail} href={`mailto:${email}`}>
+                {email}
+              </a>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <ChangelogPreview />
+      <ProductCallToAction />
+      <MarketingFooter />
+    </div>
   );
 }
