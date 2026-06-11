@@ -97,7 +97,9 @@
     inset 0 -3px 5px rgba(0, 0, 0, 0.45),
     0 5px 12px rgba(0, 0, 0, 0.75),
     0 1px 3px rgba(0, 0, 0, 0.6);
-  transition: left 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Long, symmetric ease-in-out so the knob glides gently across the
+     track rather than darting (easeInOutCubic). */
+  transition: left 900ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 /* Knob latched to the right end of the track when toggled. */
@@ -126,14 +128,15 @@
   justify-content: center;
   user-select: none;
   opacity: 1;
-  /* Fade the label back in once the knob has arrived. */
-  transition: opacity 550ms ease-out;
+  /* Long fade-in for the ON lettering once the knob has arrived. */
+  transition: opacity 900ms ease-out;
 }
 
-/* Fade out as the knob starts sliding (finishes just before it lands). */
+/* The lettering cuts out instantly the moment the switch is clicked; only
+   the re-entry on the other side is faded. */
 .alwaysOnLabel[data-hidden="true"] {
   opacity: 0;
-  transition: opacity 450ms ease-out;
+  transition: none;
 }
 
 /* Once the knob has landed on the right, the lettering re-enters on the
