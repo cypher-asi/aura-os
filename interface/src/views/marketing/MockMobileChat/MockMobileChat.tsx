@@ -1,10 +1,12 @@
 import {
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { TypingIndicator } from "../../public-chat/TypingIndicator";
 import { TerminalStream } from "../../public-chat/TerminalStream";
@@ -177,12 +179,38 @@ interface MockMobileChatProps {
 export function MockMobileChat({
   conversation,
 }: MockMobileChatProps): ReactNode {
+  const { t } = useTranslation("marketing");
   const [state, dispatch] = useReducer(playbackReducer, INITIAL_STATE);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const { frames } = conversation;
   const agent = AGENTS[conversation.agentId];
-  const inputPrompt = firstUserPrompt(conversation);
+  const messagePlaceholder = t("mobileChat.messagePlaceholder", {
+    defaultValue: "Message your agent…",
+  });
+  const agentName = t(`mobileChat.conversations.${conversation.id}.agentName`, {
+    defaultValue: agent.name,
+  });
+  const subtitle = t("mobileChat.subtitle", {
+    defaultValue: conversation.subtitle,
+  });
+  // Resolve message-frame copy through the catalog (keyed by conversation
+  // id + frame index); tool frames stay verbatim (code / identifiers).
+  const frames = useMemo(
+    () =>
+      conversation.frames.map((frame, index) =>
+        frame.kind === "message"
+          ? {
+              ...frame,
+              text: t(
+                `mobileChat.conversations.${conversation.id}.messages.${index}`,
+                { defaultValue: frame.text },
+              ),
+            }
+          : frame,
+      ),
+    [conversation.frames, conversation.id, t],
+  );
+  const inputPrompt = firstUserPrompt(frames, messagePlaceholder);
 
   useEffect(() => {
     if (state.phase === "composing") {
@@ -261,8 +289,8 @@ export function MockMobileChat({
           <agent.Icon className={styles.avatarIcon} strokeWidth={2.25} />
         </span>
         <span className={styles.headerText}>
-          <span className={styles.headerName}>{agent.name}</span>
-          <span className={styles.headerSubtitle}>{conversation.subtitle}</span>
+          <span className={styles.headerName}>{agentName}</span>
+          <span className={styles.headerSubtitle}>{subtitle}</span>
         </span>
       </header>
 
@@ -279,6 +307,7 @@ export function MockMobileChat({
 
       <ComposeInput
         prompt={inputPrompt}
+        placeholder={messagePlaceholder}
         active={state.phase === "composing"}
         onSent={() => dispatch({ type: "sendComposed", frames })}
       />
@@ -292,13 +321,16 @@ export function MockMobileChat({
  * the visitor would actually start the thread; falls back to a
  * generic prompt if the script opens on something else.
  */
-function firstUserPrompt(conversation: MobileConversation): string {
-  for (const frame of conversation.frames) {
+function firstUserPrompt(
+  frames: ReadonlyArray<MobileFrame>,
+  fallback: string,
+): string {
+  for (const frame of frames) {
     if (frame.from === "user" && frame.kind === "message") {
       return frame.text;
     }
   }
-  return "Message your agent…";
+  return fallback;
 }
 
 /** Idle beat before the input starts typing the next prompt. */
@@ -312,6 +344,8 @@ const COMPOSE_SEND_MS = 420;
 
 interface ComposeInputProps {
   readonly prompt: string;
+  /** Placeholder shown while the bar is idle / empty. */
+  readonly placeholder: string;
   /**
    * True only during the loop's `composing` phase. When it flips true
    * the bar types `prompt`, holds, pulses send, then calls `onSent`;
@@ -333,7 +367,12 @@ interface ComposeInputProps {
  * `composing` (after every bubble has faded out). Purely decorative —
  * the whole chat subtree is `aria-hidden`.
  */
-function ComposeInput({ prompt, active, onSent }: ComposeInputProps): ReactNode {
+function ComposeInput({
+  prompt,
+  placeholder,
+  active,
+  onSent,
+}: ComposeInputProps): ReactNode {
   const [shown, setShown] = useState<number>(0);
   const [isSending, setIsSending] = useState<boolean>(false);
   // Keep the latest callback without retriggering the typing effect.
@@ -390,7 +429,7 @@ function ComposeInput({ prompt, active, onSent }: ComposeInputProps): ReactNode 
       <span
         className={`${styles.inputField} ${hasText ? styles.inputFieldActive : ""}`}
       >
-        {hasText ? typed : "Message your agent…"}
+        {hasText ? typed : placeholder}
         {showCaret ? <span className={styles.composeCaret} /> : null}
       </span>
       <span

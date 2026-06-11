@@ -502,6 +502,8 @@ export function ProductScreenSection({
                     src={imageSrc}
                     alt={imageAlt ?? resolvedPlaceholderLabel}
                     className="productScreenSectionImage"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               </button>

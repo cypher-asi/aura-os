@@ -1,10 +1,57 @@
 {
+  "agentBuilder": {
+    "buildProgressAria": "Baufortschritt: {{step}}",
+    "configure": "KONFIGURIEREN",
+    "integrations": "Über 100 Integrationen",
+    "privateAgent": "IHR PRIVATVERTRETER",
+    "steps": {
+      "0": {
+        "description": "Erstellen Sie den Namen und den 3D-Avatar Ihres Agenten.",
+        "label": "Identität"
+      },
+      "1": {
+        "description": "Bauen Sie die Kernkompetenzen und Kenntnisse Ihres Agenten aus.",
+        "label": "Sachverstand"
+      },
+      "2": {
+        "description": "Gewähren Sie Ihrem Agenten sicheren Zugriff auf Ihre Daten.",
+        "label": "Integrationen"
+      },
+      "3": {
+        "description": "Verknüpfen Sie Ihren Agenten mit iMessage, Telegram und mehr.",
+        "label": "Verbindungen"
+      },
+      "4": {
+        "description": "Planen Sie die täglichen Aufgaben, die Ihr Agent für Sie ausführt.",
+        "label": "Automatisierungen"
+      },
+      "5": {
+        "description": "Bringen Sie Ihren Agenten zur Welt.",
+        "label": "Start"
+      }
+    }
+  },
+  "agentConsole": {
+    "next": "Nächste",
+    "previous": "Vorherige",
+    "states": {
+      "openSource": "Open Source",
+      "private": "Privat",
+      "secure": "Sicher",
+      "verifiable": "Überprüfbar"
+    }
+  },
+  "agentMarquee": {
+    "ariaLabel": "AURA-Agenten"
+  },
   "agents": {
     "buildDeviceAriaLabel": "Bauen Sie Ihren Agenten auf",
     "documentTitle": "AURA – Agenten",
-    "heroDescriptionLine1": "AURA-Agenten sind Experten auf jedem Gebiet",
-    "heroDescriptionLine2": "die funktionieren, während Sie schlafen.",
+    "heroDescription": "AURA-Agenten sind Experten auf allen Gebieten und arbeiten, während Sie schlafen.",
     "heroHeadline": "Alles delegieren."
+  },
+  "alwaysOn": {
+    "ariaLabel": "Immer an"
   },
   "blog": {
     "allPosts": "Alle Beiträge",
@@ -41,6 +88,140 @@
     "title": "Blog",
     "tocAriaLabel": "Inhaltsverzeichnis",
     "tocTitle": "Inhaltsverzeichnis"
+  },
+  "capabilities": {
+    "analytics": {
+      "0": "Dashboards und Berichte",
+      "1": "SQL und Abfragen",
+      "2": "Datenbereinigung",
+      "3": "Trenderkennung",
+      "4": "Prognosemodelle",
+      "5": "Kohortenanalyse",
+      "6": "KPI-Tracking",
+      "7": "Anomalieerkennung",
+      "8": "Visualisierungen",
+      "9": "Daten-Storytelling"
+    },
+    "coding": {
+      "0": "Full-Stack-Entwicklung",
+      "1": "Refaktorieren und optimieren",
+      "2": "Debuggen und reparieren",
+      "3": "Schreiben und führen Sie Tests durch",
+      "4": "Codeüberprüfung",
+      "5": "API-Integration",
+      "6": "Dokumentation",
+      "7": "Migrationen und Upgrades",
+      "8": "CI/CD-Pipelines",
+      "9": "Architekturdesign"
+    },
+    "creative": {
+      "0": "Schreiben von Geschichten und Drehbüchern",
+      "1": "Brainstorming im großen Maßstab",
+      "2": "Charakter- und Weltbildung",
+      "3": "Poesie und Texte",
+      "4": "Konzeptidee",
+      "5": "Benennung und Slogans",
+      "6": "Stimmungs- und Tonschwankungen",
+      "7": "Handlungsstruktur",
+      "8": "Dialogpolitur",
+      "9": "Pitchdecks"
+    },
+    "design": {
+      "0": "UI- und UX-Modelle",
+      "1": "Designsysteme",
+      "2": "Logos und Branding",
+      "3": "Farbe und Typografie",
+      "4": "Von Wireframes zu Prototypen",
+      "5": "Bildgenerierung und -bearbeitung",
+      "6": "Ikonographie",
+      "7": "Layout und Komposition",
+      "8": "Barrierefreiheitsprüfungen",
+      "9": "Exportfähige Assets"
+    },
+    "finance": {
+      "0": "Finanzmodellierung",
+      "1": "Budgets und Prognosen",
+      "2": "Kostenverfolgung",
+      "3": "Szenarioanalyse",
+      "4": "Rechnungsstellung und Abstimmung",
+      "5": "Bewertung & DCF",
+      "6": "Cashflow-Prognosen",
+      "7": "Investmentforschung",
+      "8": "Risikobewertung",
+      "9": "Berichterstattung und Compliance"
+    },
+    "legal": {
+      "0": "Vertragsgestaltung",
+      "1": "Klauselüberprüfung und Redlines",
+      "2": "Risikokennzeichnung",
+      "3": "Compliance-Prüfungen",
+      "4": "Rechtsrecherche",
+      "5": "Zusammenfassungen der Rechtsprechung",
+      "6": "NDA- und Vereinbarungsvorlagen",
+      "7": "Due Diligence",
+      "8": "Ausarbeitung von Richtlinien",
+      "9": "Erklärungen in einfacher Sprache"
+    },
+    "marketing": {
+      "0": "Kampagnenplanung",
+      "1": "E-Mail und Anzeigentext",
+      "2": "A/B-Tests",
+      "3": "Zielgruppensegmentierung",
+      "4": "SEO und Keyword-Recherche",
+      "5": "Landingpages",
+      "6": "Markenbotschaft",
+      "7": "Leistungsanalyse",
+      "8": "Funnel-Optimierung",
+      "9": "Inhaltsverteilung"
+    },
+    "research": {
+      "0": "Synthetisieren Sie Hunderte von Quellen",
+      "1": "Zitieren Sie jede Behauptung",
+      "2": "Literaturrezensionen",
+      "3": "Datenextraktion und Tabellen",
+      "4": "Statistische Analyse",
+      "5": "Hypothesentest",
+      "6": "PDF-Berichte und Whitepapers",
+      "7": "Faktencheck",
+      "8": "Wettbewerbslandschaften",
+      "9": "Peer-Review-Kritik"
+    },
+    "sales": {
+      "0": "Lead-Qualifizierung",
+      "1": "Pipeline-Management",
+      "2": "Personalisierte Kontaktaufnahme",
+      "3": "Folgesequenzen",
+      "4": "CRM-Updates",
+      "5": "Anrufzusammenfassungen und Notizen",
+      "6": "Angebotserstellung",
+      "7": "Bearbeitung von Einsprüchen",
+      "8": "Umsatzprognose",
+      "9": "Deal-Scoring"
+    },
+    "social": {
+      "0": "Planen und automatische Veröffentlichung",
+      "1": "Multiplattform-Workflows",
+      "2": "Antworten und engagieren",
+      "3": "Trendüberwachung",
+      "4": "Inhaltskalender",
+      "5": "Hashtag-Strategie",
+      "6": "Untertitelgenerierung",
+      "7": "Analysen und Erkenntnisse",
+      "8": "Influencer-Reichweite",
+      "9": "Community-Management"
+    },
+    "writing": {
+      "0": "Lange Artikel",
+      "1": "Passen Sie Ihre Stimme und Ihren Ton an",
+      "2": "Bearbeiten und Korrekturlesen",
+      "3": "Skizzen zu Entwürfen",
+      "4": "Technische Dokumentation",
+      "5": "SEO-bewusster Text",
+      "6": "Umschreiben und zusammenfassen",
+      "7": "Mehrsprachige Übersetzung",
+      "8": "Zitate und Referenzen",
+      "9": "Schlagzeilen und Hooks"
+    }
   },
   "changelog": {
     "chart": {
@@ -96,11 +277,28 @@
     "heroDescription": "Ein Frontier-Coding-System, das auf Sicherheit, Automatisierung und Überprüfbarkeit ausgelegt ist und zu 100 % Open Source ist.",
     "heroHeadline": "Codieren Sie, während Sie schlafen."
   },
+  "connectedConsole": {
+    "vibe": "STIMMUNG"
+  },
   "cta": {
     "ariaLabel": "Produkt-Call-to-Action",
     "download": "Herunterladen",
     "signUp": "Melden Sie sich an",
     "tagline": "Spüren Sie die AGI."
+  },
+  "disciplines": {
+    "analytics": "Analytik",
+    "coding": "Codierung",
+    "creative": "Kreativ",
+    "design": "Design",
+    "finance": "Finanzen",
+    "general": "Allgemein",
+    "legal": "Legal",
+    "marketing": "Marketing",
+    "research": "Forschung",
+    "sales": "Verkäufe",
+    "social": "Sozial",
+    "writing": "Schreiben"
   },
   "docs": {
     "docDocumentTitle": "AURA-Dokumente - {{title}}",
@@ -595,11 +793,96 @@
   },
   "footer": {
     "ariaLabel": "Fußzeile der Website",
+    "columns": {
+      "0": {
+        "heading": "Produkt",
+        "links": {
+          "0": "Agenten",
+          "1": "Code",
+          "2": "Betriebssystem"
+        }
+      },
+      "1": {
+        "heading": "Ressourcen",
+        "links": {
+          "0": "Preise",
+          "1": "Downloads",
+          "2": "Änderungsprotokoll",
+          "3": "Blog",
+          "4": "Dokumente"
+        }
+      },
+      "2": {
+        "heading": "Verbinden"
+      },
+      "3": {
+        "heading": "Legal",
+        "links": {
+          "0": "Nutzungsbedingungen",
+          "1": "Datenschutzrichtlinie"
+        }
+      }
+    },
     "copyright": "Urheberrecht © {{year}}",
     "navigationAriaLabel": "Fußzeilennavigation"
   },
+  "mobileChat": {
+    "conversations": {
+      "backend": {
+        "agentName": "Backend",
+        "messages": {
+          "0": "Warum ist /pricing heute langsam?",
+          "1": "Überprüfung des Abfrageplans – sieht aus wie ein fehlender Index.",
+          "3": "Einen Index für (Name) hinzufügen. Sollte auf ~5 ms sinken."
+        }
+      },
+      "frontend": {
+        "agentName": "Frontend",
+        "messages": {
+          "0": "Fügen Sie den Einstellungen einen Dunkelmodus-Schalter hinzu",
+          "1": "Darauf – Hinzufügen eines mit dem Theme-Store verkabelten Schalters.",
+          "3": "Erledigt. Möchten Sie, dass es standardmäßig dem Betriebssystem folgt?"
+        }
+      },
+      "reviewer": {
+        "agentName": "Rezensent",
+        "messages": {
+          "0": "Versenden Sie die Version, sobald CI grün ist",
+          "1": "Beobachten Sie jetzt die Pipeline.",
+          "3": "Alles grün. Die Veröffentlichung zusammenführen und markieren."
+        }
+      }
+    },
+    "messagePlaceholder": "Schreiben Sie Ihrem Agenten eine Nachricht...",
+    "subtitle": "online · auf Ihrer VM"
+  },
+  "mockChatInput": {
+    "examples": {
+      "0": "Refaktorieren Sie diese React-Komponente, aktualisieren Sie die Tests und öffnen Sie eine PR",
+      "1": "Planen Sie einen Wochenendausflug nach Lissabon und buchen Sie die Flüge",
+      "2": "Erstellen Sie ein warmes redaktionelles Foto einer winzigen Dschungelbibliothek in der Abenddämmerung",
+      "3": "Verwandeln Sie diese Produkt-Screenshots in ein 12-sekündiges Einführungsvideo",
+      "4": "Erstellen Sie ein 3D-Modell eines modularen Schreibtisch-Organizers mit Kabelklemmen",
+      "5": "Vergleichen Sie drei Kindertagesstätten in meiner Nähe und planen Sie Führungen für nächste Woche",
+      "6": "Finden Sie heraus, warum bei dieser Dashboard-Abfrage eine Zeitüberschreitung auftritt, und liefern Sie den Fix",
+      "7": "Entwerfen Sie ein Logosystem für mein Nachbarschaftskaffee-Nebenprojekt",
+      "8": "Machen Sie aus dieser groben Bildschirmaufnahme einen ruhigen Onboarding-Clip",
+      "9": "Modellieren Sie ein faltbares Reisestativ mit beschrifteten beweglichen Teilen",
+      "10": "Koordinieren Sie meinen grenzüberschreitenden Umzug mit Umzugsunternehmen, Versorgungsunternehmen und Flügen",
+      "11": "Überprüfen Sie den Authentifizierungsfluss auf Rennbedingungen und erstellen Sie einen Migrationsplan",
+      "12": "Erstellen Sie Kampagnenvisualisierungen für einen luxuriösen Elektro-Wohnmobil im Schnee",
+      "13": "Storyboard und Rendern eines Filmtrailers für ein KI-Musiktool",
+      "14": "Erstellen Sie ein spielbereites Raumschiff-Cockpit mit sauberer Topologie",
+      "15": "Erstellen Sie einen Einstellungsplan für ein fünfköpfiges Robotik-Forschungsteam",
+      "16": "Portieren Sie diesen Zahlungsdienst auf Warteschlangen, ohne Ereignisse zu löschen",
+      "17": "Visualisieren Sie eine Mars-Gewächshausstadt für eine Ausstellung in einem Wissenschaftsmuseum",
+      "18": "Erstellen Sie aus diesem technischen Prototyp ein Demovideo für Investoren",
+      "19": "Entwerfen Sie ein herstellbares Drohnen-Chassis mit Batteriezugang"
+    }
+  },
   "models": {
     "allModelsAriaLabel": "Alle Modelle",
+    "cardAria": "{{name}} von {{provider}}",
     "documentTitle": "AURA - Modelle",
     "empty": "Kein Modell entspricht den aktuellen Filtern. Versuchen Sie, die Suche zu löschen oder die Registerkarten zu wechseln.",
     "featured": "Hervorgehoben",
@@ -607,6 +890,20 @@
     "filterByModalityAriaLabel": "Nach Modalität filtern",
     "filterByStatusAriaLabel": "Nach Status filtern",
     "loadingCatalog": "Katalog wird geladen…",
+    "modeOptions": {
+      "3d": "3D",
+      "all": "Alle",
+      "image": "Bild",
+      "text": "Text",
+      "video": "Video"
+    },
+    "modeTitles": {
+      "3d": "3D-Modelle",
+      "all": "Alle Modelle",
+      "image": "Bildmodelle",
+      "text": "Textmodelle",
+      "video": "Videomodelle"
+    },
     "searchAriaLabel": "Modelle suchen",
     "searchPlaceholder": "Modelle suchen...",
     "stats": {
@@ -621,6 +918,11 @@
       "liveAriaLabel": "Status: Live",
       "soon": "Bald",
       "soonAriaLabel": "Status: Demnächst verfügbar"
+    },
+    "statusOptions": {
+      "all": "Alle",
+      "live": "Live",
+      "soon": "Bald"
     },
     "subtitle": "Die Grenzmodelle, die AURA antreiben, für Text, Bild, Video und 3D.",
     "summaryAriaLabel": "Zusammenfassung der Modelle"
@@ -640,6 +942,36 @@
       "heading": "Abschnitt nicht gefunden"
     },
     "sidebarTitle": "AURA OS"
+  },
+  "personas": {
+    "coordinator": {
+      "name": "Koordinator",
+      "role": "Team-Orchestrator"
+    },
+    "creator": {
+      "name": "Schöpfer",
+      "role": "Schöpfer"
+    },
+    "cypher-punk": {
+      "name": "Cypher Punk",
+      "role": "Sicherheitsbetreiber"
+    },
+    "giga-brain": {
+      "name": "Giga-Gehirn",
+      "role": "Forschungsleiter"
+    },
+    "researcher": {
+      "name": "Forscher",
+      "role": "Forschungsanalyst"
+    },
+    "solo-builder": {
+      "name": "Solo-Baumeister",
+      "role": "Indie-Ingenieur"
+    },
+    "vibecoder": {
+      "name": "Vibecoder",
+      "role": "Kreativer Programmierer"
+    }
   },
   "pricing": {
     "billingCycleAriaLabel": "Abrechnungszyklus",
@@ -853,6 +1185,37 @@
       "headline": "Entworfen für Ihre Menschlichkeit."
     }
   },
+  "skills": {
+    "coding-agent": "Code",
+    "gifgrep": "Bilder",
+    "goplaces": "Karten",
+    "healthcheck": "Gesundheit",
+    "himalaya": "E-Mail",
+    "nano-pdf": "PDFs",
+    "notion": "Notizen",
+    "openhue": "Lichter",
+    "skill-creator": "Erstellen",
+    "spotify-player": "Musik",
+    "summarize": "Zusammenfassen",
+    "taskflow": "Aufgaben",
+    "trello": "Bretter",
+    "video-frames": "Video",
+    "voice-call": "Anruf"
+  },
+  "specQuadrant": {
+    "activation": "AKTIVIERUNG",
+    "examples": {
+      "ads": "Anzeigen",
+      "email": "E-Mail",
+      "post": "Post",
+      "seo": "SEO"
+    },
+    "expertiseAria": "Sachverstand",
+    "featureHighlightsAria": "Feature-Highlights",
+    "intelligence": "INTELLIGENZ",
+    "online": "ONLINE",
+    "withoutLimits": "OHNE GRENZEN"
+  },
   "support": {
     "body": "Benötigen Sie Hilfe bei AURA? Wir sind für Sie da. Schicken Sie unserem Support-Team eine E-Mail und wir werden uns so schnell wie möglich bei Ihnen melden.",
     "headline": "Unterstützung",
@@ -997,5 +1360,33 @@
         "heading": "18. Anwendbares Recht und Streitbeilegung"
       }
     ]
+  },
+  "trust": {
+    "attestation": "Bescheinigung",
+    "insertTokens": "Token einfügen",
+    "marqueeTerms": {
+      "0": "Sandbox-VM",
+      "1": "Vertrauenswürdige Ausführung",
+      "2": "Beglaubigter Stiefel",
+      "3": "Vertrauliche Datenverarbeitung",
+      "4": "Verschlüsselter Speicher",
+      "5": "Isolierte Laufzeit"
+    },
+    "readouts": {
+      "harness": {
+        "description": "Alle Daten fließen über den maßgeschneiderten Kabelbaum von AURA. Jeder Schritt ist atomar, unveränderlich und geprüft.",
+        "title": "AURA-Laufzeitkabelbaum"
+      },
+      "router": {
+        "description": "Eine sichere Routing-Schicht vermittelt jede Anfrage über Open-Source- und Frontier-Modelle hinweg.",
+        "title": "AURA-Router"
+      },
+      "swarm": {
+        "description": "Eine isolierte vertrauenswürdige Ausführungsumgebung. Ihre Schlüssel verlassen es nie und der Gastgeber sieht nichts.",
+        "title": "AURA-Schwarm"
+      }
+    },
+    "uptime": "Betriebszeit",
+    "vmLabel": "VM"
   }
 }

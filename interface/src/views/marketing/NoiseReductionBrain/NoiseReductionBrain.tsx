@@ -1,5 +1,27 @@
 import { type ReactNode, useEffect, useRef } from "react";
+import {
+  observeSceneActivity,
+  prefersReducedMotion,
+} from "../scene-activity";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./shaders";
+
+/*
+ * The brain's fragment shader is by far the most expensive on the
+ * marketing pages (dozens of dependent texture taps per fragment for the
+ * bloom/aura/halo fields), so it renders below CSS resolution and lets
+ * the browser upscale — the fields are soft glows, so the downscale is
+ * invisible. Combined with the 1.5 DPR cap this is roughly a third of
+ * the old (2.0 DPR, full-res) fragment count.
+ */
+const RESOLUTION_SCALE = 0.75;
+const MAX_DPR = 1.5;
+
+/**
+ * Below this CSS width the wide outer halo is skipped entirely
+ * (`u_quality` 0): at small sizes it reads as a faint background wash but
+ * still costs ~28 texture taps per fragment.
+ */
+const LOW_QUALITY_MAX_WIDTH = 480;
 
 interface NoiseReductionBrainProps {
   /**
@@ -130,10 +152,13 @@ export function NoiseReductionBrain({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // No MSAA: the scene is a single full-screen triangle (no geometry
+    // edges to antialias), so requesting it only wastes memory/bandwidth.
     const gl = canvas.getContext("webgl2", {
-      antialias: true,
+      antialias: false,
       alpha: true,
       premultipliedAlpha: false,
+      powerPreference: "low-power",
     });
     if (!gl) return;
 
@@ -153,6 +178,7 @@ export function NoiseReductionBrain({
     const resolutionLoc = gl.getUniformLocation(program, "u_resolution");
     const texResolutionLoc = gl.getUniformLocation(program, "u_texResolution");
     const timeLoc = gl.getUniformLocation(program, "u_time");
+    const qualityLoc = gl.getUniformLocation(program, "u_quality");
     const texLoc = gl.getUniformLocation(program, "u_tex");
     const codeLoc = gl.getUniformLocation(program, "u_code");
     const codeResolutionLoc = gl.getUniformLocation(
@@ -220,6 +246,7 @@ export function NoiseReductionBrain({
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
+    let alive = true;
     let imageLoaded = false;
     let texWidth = 1;
     let texHeight = 1;
@@ -227,6 +254,7 @@ export function NoiseReductionBrain({
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.onload = () => {
+      if (!alive) return;
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.texImage2D(
@@ -240,28 +268,30 @@ export function NoiseReductionBrain({
       texWidth = image.naturalWidth || 1;
       texHeight = image.naturalHeight || 1;
       imageLoaded = true;
+      // The loop only spins once there is something to draw; (re)try now
+      // that the texture is ready.
+      syncLoop();
     };
     image.src = BRAIN_SRC;
 
     let width = 0;
     let height = 0;
+    let lowQuality = false;
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr =
+        Math.min(window.devicePixelRatio || 1, MAX_DPR) * RESOLUTION_SCALE;
       const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
       const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+      lowQuality = canvas.clientWidth > 0 &&
+        canvas.clientWidth < LOW_QUALITY_MAX_WIDTH;
       if (w === width && h === height) return;
       width = w;
       height = h;
       canvas.width = w;
       canvas.height = h;
       gl.viewport(0, 0, w, h);
+      if (rafId === null && imageLoaded) drawNow();
     };
-    resize();
-
-    // The RAF loop repaints every frame, so a resize is picked up on the
-    // next tick; no explicit redraw needed here.
-    const observer = new ResizeObserver(resize);
-    observer.observe(canvas);
 
     const start = performance.now();
     let rafId: number | null = null;
@@ -284,20 +314,56 @@ export function NoiseReductionBrain({
       gl.uniform2f(texResolutionLoc, texWidth, texHeight);
       gl.uniform2f(codeResolutionLoc, codeWidth, codeHeight);
       gl.uniform1f(timeLoc, timeSeconds);
+      gl.uniform1f(qualityLoc, lowQuality ? 0 : 1);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
+
+    const drawNow = () => draw((performance.now() - start) / 1000);
 
     const renderLoop = (now: number) => {
       draw((now - start) / 1000);
       rafId = requestAnimationFrame(renderLoop);
     };
 
-    // Always animate: this is an ambient, living readout, so we keep it
-    // looping rather than freezing to a single static frame.
-    rafId = requestAnimationFrame(renderLoop);
+    const stopLoop = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+
+    const reducedMotion = prefersReducedMotion();
+    let sceneActive = false;
+
+    // Run the loop only while visible (near viewport + tab shown) AND the
+    // brain texture has loaded; under reduced motion hold one static frame.
+    const syncLoop = () => {
+      if (!alive) return;
+      if (!sceneActive || !imageLoaded) {
+        stopLoop();
+        return;
+      }
+      if (reducedMotion) {
+        stopLoop();
+        drawNow();
+        return;
+      }
+      if (rafId === null) rafId = requestAnimationFrame(renderLoop);
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+
+    const detachActivity = observeSceneActivity(canvas, (active) => {
+      sceneActive = active;
+      syncLoop();
+    });
 
     return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
+      alive = false;
+      detachActivity();
+      stopLoop();
       observer.disconnect();
       image.onload = null;
       gl.deleteTexture(texture);

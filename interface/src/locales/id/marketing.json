@@ -1,10 +1,57 @@
 {
+  "agentBuilder": {
+    "buildProgressAria": "Membangun kemajuan: {{step}}",
+    "configure": "KONFIGURASI",
+    "integrations": "100+ Integrasi",
+    "privateAgent": "AGEN PRIBADI ANDA",
+    "steps": {
+      "0": {
+        "description": "Buat nama agen dan avatar 3D Anda.",
+        "label": "Identitas"
+      },
+      "1": {
+        "description": "Bangun keterampilan dan pengetahuan inti agen Anda.",
+        "label": "Keahlian"
+      },
+      "2": {
+        "description": "Berikan agen Anda akses aman ke data Anda.",
+        "label": "Integrasi"
+      },
+      "3": {
+        "description": "Tautkan agen Anda ke iMessage, Telegram, dan lainnya.",
+        "label": "Koneksi"
+      },
+      "4": {
+        "description": "Jadwalkan tugas harian yang dijalankan agen Anda untuk Anda.",
+        "label": "Otomatisasi"
+      },
+      "5": {
+        "description": "Lahirkan agen Anda ke dunia.",
+        "label": "Meluncurkan"
+      }
+    }
+  },
+  "agentConsole": {
+    "next": "Berikutnya",
+    "previous": "Sebelumnya",
+    "states": {
+      "openSource": "Sumber Terbuka",
+      "private": "Pribadi",
+      "secure": "Aman",
+      "verifiable": "Dapat diverifikasi"
+    }
+  },
+  "agentMarquee": {
+    "ariaLabel": "Agen AURA"
+  },
   "agents": {
     "buildDeviceAriaLabel": "Bangun agen Anda",
     "documentTitle": "AURA - Agen",
-    "heroDescriptionLine1": "Agen AURA ahli di segala bidang",
-    "heroDescriptionLine2": "yang berfungsi saat Anda tidur.",
+    "heroDescription": "Agen AURA ahli di segala bidang yang bekerja saat Anda tidur.",
     "heroHeadline": "Delegasikan segalanya."
+  },
+  "alwaysOn": {
+    "ariaLabel": "Selalu aktif"
   },
   "blog": {
     "allPosts": "Semua postingan",
@@ -40,6 +87,140 @@
     "title": "blog",
     "tocAriaLabel": "Daftar isi",
     "tocTitle": "Daftar isi"
+  },
+  "capabilities": {
+    "analytics": {
+      "0": "Dasbor & laporan",
+      "1": "SQL & kueri",
+      "2": "Pembersihan data",
+      "3": "Deteksi tren",
+      "4": "Model peramalan",
+      "5": "Analisis kelompok",
+      "6": "Pelacakan KPI",
+      "7": "Deteksi anomali",
+      "8": "Visualisasi",
+      "9": "Pengisahan data"
+    },
+    "coding": {
+      "0": "Pengembangan tumpukan penuh",
+      "1": "Refaktorisasi & optimalkan",
+      "2": "Debug & perbaiki",
+      "3": "Tulis & jalankan tes",
+      "4": "Tinjauan kode",
+      "5": "Integrasi API",
+      "6": "Dokumentasi",
+      "7": "Migrasi & peningkatan",
+      "8": "Saluran pipa CI/CD",
+      "9": "Desain arsitektur"
+    },
+    "creative": {
+      "0": "Penulisan cerita & naskah",
+      "1": "Lakukan brainstorming dalam skala besar",
+      "2": "Karakter & pembangunan dunia",
+      "3": "Puisi & lirik",
+      "4": "Ide konsep",
+      "5": "Penamaan & tagline",
+      "6": "Pergeseran suasana hati & nada",
+      "7": "Struktur alur",
+      "8": "Pemolesan dialog",
+      "9": "Dek promosi"
+    },
+    "design": {
+      "0": "Maket UI & UX",
+      "1": "Sistem desain",
+      "2": "Logo & merek",
+      "3": "Warna & tipografi",
+      "4": "Wireframe hingga prototipe",
+      "5": "Pembuatan & pengeditan gambar",
+      "6": "Ikonografi",
+      "7": "Tata letak & komposisi",
+      "8": "Pemeriksaan aksesibilitas",
+      "9": "Aset siap ekspor"
+    },
+    "finance": {
+      "0": "Pemodelan keuangan",
+      "1": "Anggaran & perkiraan",
+      "2": "Pelacakan biaya",
+      "3": "Analisis skenario",
+      "4": "Faktur & rekonsiliasi",
+      "5": "Penilaian & DCF",
+      "6": "Proyeksi arus kas",
+      "7": "Penelitian investasi",
+      "8": "Penilaian risiko",
+      "9": "Pelaporan & kepatuhan"
+    },
+    "legal": {
+      "0": "Penyusunan kontrak",
+      "1": "Tinjauan klausa & garis merah",
+      "2": "Penandaan risiko",
+      "3": "Pemeriksaan kepatuhan",
+      "4": "Penelitian hukum",
+      "5": "Ringkasan kasus hukum",
+      "6": "Templat NDA & perjanjian",
+      "7": "Uji tuntas",
+      "8": "Penyusunan kebijakan",
+      "9": "Penjelasan dengan bahasa sederhana"
+    },
+    "marketing": {
+      "0": "Perencanaan kampanye",
+      "1": "Email & salinan iklan",
+      "2": "pengujian A/B",
+      "3": "Segmentasi audiens",
+      "4": "SEO & riset kata kunci",
+      "5": "Halaman arahan",
+      "6": "Pesan merek",
+      "7": "Analisis kinerja",
+      "8": "Pengoptimalan corong",
+      "9": "Distribusi konten"
+    },
+    "research": {
+      "0": "Sintesis ratusan sumber",
+      "1": "Kutip setiap klaim",
+      "2": "Ulasan literatur",
+      "3": "Ekstraksi & tabel data",
+      "4": "Analisis statistik",
+      "5": "Pengujian hipotesis",
+      "6": "Laporan PDF & whitepaper",
+      "7": "Pengecekan fakta",
+      "8": "Bentang alam yang kompetitif",
+      "9": "Kritik tinjauan sejawat"
+    },
+    "sales": {
+      "0": "Kualifikasi memimpin",
+      "1": "Manajemen saluran pipa",
+      "2": "Penjangkauan yang dipersonalisasi",
+      "3": "Urutan tindak lanjut",
+      "4": "Pembaruan CRM",
+      "5": "Ringkasan & catatan panggilan",
+      "6": "Penyusunan proposal",
+      "7": "Penanganan keberatan",
+      "8": "Perkiraan pendapatan",
+      "9": "Penilaian kesepakatan"
+    },
+    "social": {
+      "0": "Jadwalkan & posting otomatis",
+      "1": "Alur kerja multi-platform",
+      "2": "Balas & libatkan",
+      "3": "Pemantauan tren",
+      "4": "Kalender konten",
+      "5": "Strategi hastag",
+      "6": "Pembuatan teks",
+      "7": "Analisis & wawasan",
+      "8": "Penjangkauan influencer",
+      "9": "Manajemen komunitas"
+    },
+    "writing": {
+      "0": "Artikel berdurasi panjang",
+      "1": "Cocokkan suara & nada Anda",
+      "2": "Edit & koreksi",
+      "3": "Garis besar ke draf",
+      "4": "Dokumentasi teknis",
+      "5": "Salinan sadar SEO",
+      "6": "Tulis ulang & padatkan",
+      "7": "Terjemahan multibahasa",
+      "8": "Kutipan & referensi",
+      "9": "Judul & pengait"
+    }
   },
   "changelog": {
     "chart": {
@@ -90,11 +271,28 @@
     "heroDescription": "Memanfaatkan pengkodean perbatasan yang dirancang untuk keamanan, otomatisasi, dan verifikasi yang 100% open source.",
     "heroHeadline": "Kode saat Anda tidur."
   },
+  "connectedConsole": {
+    "vibe": "ATMOSFER"
+  },
   "cta": {
     "ariaLabel": "Ajakan bertindak produk",
     "download": "Unduh",
     "signUp": "Mendaftar",
     "tagline": "Rasakan AGI-nya."
+  },
+  "disciplines": {
+    "analytics": "Analisis",
+    "coding": "Pengkodean",
+    "creative": "Kreatif",
+    "design": "Desain",
+    "finance": "Keuangan",
+    "general": "Umum",
+    "legal": "Legal",
+    "marketing": "Pemasaran",
+    "research": "Riset",
+    "sales": "Penjualan",
+    "social": "Sosial",
+    "writing": "Menulis"
   },
   "docs": {
     "docDocumentTitle": "Dokumen AURA - {{title}}",
@@ -582,11 +780,96 @@
   },
   "footer": {
     "ariaLabel": "Catatan kaki situs",
+    "columns": {
+      "0": {
+        "heading": "Produk",
+        "links": {
+          "0": "Agen",
+          "1": "Kode",
+          "2": "sistem operasi"
+        }
+      },
+      "1": {
+        "heading": "Sumber daya",
+        "links": {
+          "0": "Harga",
+          "1": "Unduhan",
+          "2": "log perubahan",
+          "3": "blog",
+          "4": "dokumen"
+        }
+      },
+      "2": {
+        "heading": "Menghubungkan"
+      },
+      "3": {
+        "heading": "Legal",
+        "links": {
+          "0": "Ketentuan Layanan",
+          "1": "Kebijakan Privasi"
+        }
+      }
+    },
     "copyright": "Hak Cipta © {{year}}",
     "navigationAriaLabel": "Navigasi catatan kaki"
   },
+  "mobileChat": {
+    "conversations": {
+      "backend": {
+        "agentName": "Bagian belakang",
+        "messages": {
+          "0": "Mengapa /pricing lambat hari ini?",
+          "1": "Memeriksa rencana kueri — sepertinya indeks hilang.",
+          "3": "Menambahkan indeks pada (nama). Seharusnya turun menjadi ~5ms."
+        }
+      },
+      "frontend": {
+        "agentName": "Bagian depan",
+        "messages": {
+          "0": "Tambahkan tombol mode gelap ke pengaturan",
+          "1": "Di atasnya — menambahkan sakelar yang dihubungkan ke toko tema.",
+          "3": "Selesai. Ingin mengikuti OS secara default?"
+        }
+      },
+      "reviewer": {
+        "agentName": "pengulas",
+        "messages": {
+          "0": "Kirimkan rilis setelah CI berwarna hijau",
+          "1": "Menonton saluran pipa sekarang.",
+          "3": "Semuanya hijau. Menggabungkan dan menandai rilis."
+        }
+      }
+    },
+    "messagePlaceholder": "Kirim pesan ke agen Anda…",
+    "subtitle": "online · di VM Anda"
+  },
+  "mockChatInput": {
+    "examples": {
+      "0": "Refaktorkan komponen React ini, perbarui pengujiannya, dan buka PR",
+      "1": "Rencanakan perjalanan akhir pekan ke Lisbon dan pesan penerbangannya",
+      "2": "Hasilkan foto editorial yang hangat dari perpustakaan hutan kecil saat senja",
+      "3": "Ubah tangkapan layar produk ini menjadi video peluncuran berdurasi 12 detik",
+      "4": "Buat model 3D pengatur meja modular dengan klip kabel",
+      "5": "Bandingkan tiga tempat penitipan anak di dekat saya dan jadwalkan tur minggu depan",
+      "6": "Temukan mengapa waktu kueri dasbor ini habis dan kirimkan perbaikannya",
+      "7": "Rancang sistem logo untuk proyek sampingan kopi di lingkungan saya",
+      "8": "Buat klip orientasi yang tenang dari rekaman layar kasar ini",
+      "9": "Modelkan tripod perjalanan yang dapat dilipat dengan label bagian yang bergerak",
+      "10": "Koordinasikan perpindahan lintas negara saya dengan penggerak, utilitas, dan penerbangan",
+      "11": "Audit alur autentikasi untuk kondisi balapan dan tulis rencana migrasi",
+      "12": "Buat visual kampanye untuk mobil kemping listrik mewah di salju",
+      "13": "Buat storyboard dan render cuplikan sinematik untuk alat musik AI",
+      "14": "Hasilkan kokpit pesawat ruang angkasa yang siap bermain dengan topologi yang bersih",
+      "15": "Buat rencana perekrutan untuk tim peneliti robotika yang beranggotakan lima orang",
+      "16": "Pindahkan layanan pembayaran ini ke antrean tanpa membatalkan acara",
+      "17": "Visualisasikan kota rumah kaca Mars untuk pameran museum sains",
+      "18": "Buat video demo investor dari prototipe teknis ini",
+      "19": "Rancang sasis drone yang dapat diproduksi dengan akses baterai"
+    }
+  },
   "models": {
     "allModelsAriaLabel": "Semua model",
+    "cardAria": "{{name}} oleh {{provider}}",
     "documentTitle": "AURA - Model",
     "empty": "Tidak ada model yang cocok dengan filter saat ini. Coba hapus pencarian atau ganti tab.",
     "featured": "Unggulan",
@@ -594,6 +877,20 @@
     "filterByModalityAriaLabel": "Filter berdasarkan modalitas",
     "filterByStatusAriaLabel": "Saring berdasarkan status",
     "loadingCatalog": "Memuat katalog…",
+    "modeOptions": {
+      "3d": "3D",
+      "all": "Semua",
+      "image": "Gambar",
+      "text": "Teks",
+      "video": "Video"
+    },
+    "modeTitles": {
+      "3d": "Model 3D",
+      "all": "Semua Model",
+      "image": "Model Gambar",
+      "text": "Model Teks",
+      "video": "Model Video"
+    },
     "searchAriaLabel": "Model pencarian",
     "searchPlaceholder": "Telusuri model...",
     "stats": {
@@ -608,6 +905,11 @@
       "liveAriaLabel": "Status: Langsung",
       "soon": "Segera",
       "soonAriaLabel": "Status: Segera hadir"
+    },
+    "statusOptions": {
+      "all": "Semua",
+      "live": "Hidup",
+      "soon": "Segera"
     },
     "subtitle": "Model terdepan yang memberdayakan AURA, di seluruh teks, gambar, video, dan 3D.",
     "summaryAriaLabel": "Ringkasan model"
@@ -627,6 +929,36 @@
       "heading": "Bagian tidak ditemukan"
     },
     "sidebarTitle": "OS AURA"
+  },
+  "personas": {
+    "coordinator": {
+      "name": "Koordinator",
+      "role": "Orkestra tim"
+    },
+    "creator": {
+      "name": "Pencipta",
+      "role": "Pencipta"
+    },
+    "cypher-punk": {
+      "name": "Cypher Punk",
+      "role": "Operator keamanan"
+    },
+    "giga-brain": {
+      "name": "Otak Giga",
+      "role": "Pimpinan penelitian"
+    },
+    "researcher": {
+      "name": "Peneliti",
+      "role": "Analis riset"
+    },
+    "solo-builder": {
+      "name": "Pembangun Tunggal",
+      "role": "Insinyur India"
+    },
+    "vibecoder": {
+      "name": "pembuat getaran",
+      "role": "Pembuat kode kreatif"
+    }
   },
   "pricing": {
     "billingCycleAriaLabel": "Siklus penagihan",
@@ -840,6 +1172,37 @@
       "headline": "Dirancang untuk kemanusiaan Anda."
     }
   },
+  "skills": {
+    "coding-agent": "Kode",
+    "gifgrep": "Gambar",
+    "goplaces": "Peta",
+    "healthcheck": "Kesehatan",
+    "himalaya": "E-mail",
+    "nano-pdf": "PDF",
+    "notion": "Catatan",
+    "openhue": "Lampu",
+    "skill-creator": "Membuat",
+    "spotify-player": "Musik",
+    "summarize": "Meringkaskan",
+    "taskflow": "Tugas",
+    "trello": "Papan",
+    "video-frames": "Video",
+    "voice-call": "Panggilan"
+  },
+  "specQuadrant": {
+    "activation": "PENGAKTIFAN",
+    "examples": {
+      "ads": "Iklan",
+      "email": "E-mail",
+      "post": "Pos",
+      "seo": "seo"
+    },
+    "expertiseAria": "Keahlian",
+    "featureHighlightsAria": "Sorotan fitur",
+    "intelligence": "INTELIJEN",
+    "online": "ON LINE",
+    "withoutLimits": "TANPA BATAS"
+  },
   "support": {
     "body": "Butuh bantuan dengan AURA? Kami di sini untuk Anda. Kirim email ke tim dukungan kami dan kami akan menghubungi Anda sesegera mungkin.",
     "headline": "Mendukung",
@@ -984,5 +1347,33 @@
         "heading": "18. Hukum yang Mengatur dan Penyelesaian Sengketa"
       }
     ]
+  },
+  "trust": {
+    "attestation": "Pengesahan",
+    "insertTokens": "Masukkan token",
+    "marqueeTerms": {
+      "0": "VM dengan kotak pasir",
+      "1": "Eksekusi Tepercaya",
+      "2": "Boot Terbukti",
+      "3": "Perhitungan Rahasia",
+      "4": "Memori Terenkripsi",
+      "5": "Waktu Proses Terisolasi"
+    },
+    "readouts": {
+      "harness": {
+        "description": "Semua data mengalir melalui custom harness AURA. Setiap langkah bersifat atomik, tidak dapat diubah, dan diaudit.",
+        "title": "Tali Kekang Waktu Proses AURA"
+      },
+      "router": {
+        "description": "Lapisan perutean aman yang menjadi perantara setiap permintaan di seluruh model open source dan frontier.",
+        "title": "Router AURA"
+      },
+      "swarm": {
+        "description": "Lingkungan eksekusi tepercaya yang terisolasi. Kunci Anda tidak pernah meninggalkannya dan tuan rumah tidak melihat apa pun.",
+        "title": "Kawanan AURA"
+      }
+    },
+    "uptime": "Waktu aktif",
+    "vmLabel": "VM"
   }
 }

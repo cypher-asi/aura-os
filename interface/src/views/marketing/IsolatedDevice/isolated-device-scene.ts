@@ -15,9 +15,22 @@ export interface IsolatedDeviceSceneOptions {
    * (or off the canvas entirely, reported as `null`).
    */
   onHoverChange?: (tier: DeviceTier | null) => void;
+  /**
+   * Fires once, right after the scene's first frame has been rendered, so the
+   * host can fade the device in only when it's actually on screen instead of
+   * letting the freshly-baked canvas pop in.
+   */
+  onReady?: () => void;
 }
 
 export interface IsolatedDeviceScene {
+  /**
+   * Drive the render loop from the host component's combined
+   * visibility signal (near viewport AND tab shown). Under OS-level
+   * reduced motion, activating renders a single static frame instead
+   * of starting the loop.
+   */
+  setActive(active: boolean): void;
   dispose(): void;
 }
 
@@ -354,7 +367,9 @@ function extrudeSlab(
  * noise (env-map reflections would amplify speckle).
  */
 function createBrushedTexture(base: string, streak: string): THREE.CanvasTexture {
-  const size = 1024;
+  // 512px is indistinguishable from 1024 under the matte roughness this
+  // texture is rendered with, at a quarter of the GPU memory.
+  const size = 512;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -507,8 +522,20 @@ export function createIsolatedDeviceScene(
   const width = host.clientWidth || 320;
   const height = host.clientHeight || 280;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Cap the pixel ratio harder on narrow (mobile) hosts, where the GPU is
+  // typically weakest and the smaller canvas hides the difference.
+  const targetPixelRatio = (): number =>
+    Math.min(
+      window.devicePixelRatio || 1,
+      (host.clientWidth || width) < 520 ? 1.5 : 2,
+    );
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true,
+    powerPreference: "low-power",
+  });
+  renderer.setPixelRatio(targetPixelRatio());
   renderer.setSize(width, height);
   // Transparent canvas: the metal card's own gradient shows through behind
   // the device, like the other marketing hardware props.
@@ -918,6 +945,12 @@ export function createIsolatedDeviceScene(
     ghost.position.y = yOffset;
     group.add(ghost);
   }
+  // The base line materials above are recipes only (each ghost renders its
+  // own clones); release them now instead of carrying them to dispose().
+  ghostStrongMaterial.dispose();
+  ghostMidMaterial.dispose();
+  ghostFaintMaterial.dispose();
+  ghostCornerMaterial.dispose();
 
   // Dashed connector columns between the devices: an upper run spanning the
   // gap from the main lid top to the upper ghost's bottom seam line, and a
@@ -1064,6 +1097,8 @@ export function createIsolatedDeviceScene(
   let hoveredTier: DeviceTier | null = null;
   let bandTopNdcY = 1;
   let bandBottomNdcY = -1;
+  // Scratch vector reused by every fitCamera call (resize observer).
+  const ndcProbe = new THREE.Vector3();
 
   function fitCamera(aspect: number): void {
     // Orthographic frustum fixed to the diamond's width; the vertical extent
@@ -1085,9 +1120,11 @@ export function createIsolatedDeviceScene(
     );
     camera.lookAt(0, CAMERA_TARGET_Y, 0);
     camera.updateProjectionMatrix();
-    bandTopNdcY = new THREE.Vector3(0, (DEVICE_H + GHOST_ABOVE_Y) / 2, 0)
+    bandTopNdcY = ndcProbe
+      .set(0, (DEVICE_H + GHOST_ABOVE_Y) / 2, 0)
       .project(camera).y;
-    bandBottomNdcY = new THREE.Vector3(0, (GHOST_BELOW_Y + DEVICE_H) / 2, 0)
+    bandBottomNdcY = ndcProbe
+      .set(0, (GHOST_BELOW_Y + DEVICE_H) / 2, 0)
       .project(camera).y;
   }
   fitCamera(width / height);
@@ -1116,10 +1153,12 @@ export function createIsolatedDeviceScene(
 
   // LED chase: each dot pulses with a phase offset down the strip, so a
   // bright "beep" runs left-to-right with a faint resting glow between hits.
-  // Always animating (paused only while the tab is hidden): like the hero
-  // console's `AuraScreenOrb`, the plasma screen is an ambient living
-  // readout, so it keeps looping rather than honoring reduced motion with a
-  // frozen frame.
+  // The loop runs only while the host component reports the scene active
+  // (near the viewport AND the tab visible, via `setActive`); under
+  // OS-level reduced motion the scene renders one static frame instead.
+  const reducedMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const clock = new THREE.Clock();
   let raf = 0;
   let running = false;
@@ -1171,27 +1210,41 @@ export function createIsolatedDeviceScene(
     raf = 0;
   }
 
-  const onVisibilityChange = (): void => {
-    if (document.hidden) stop();
-    else start();
-  };
-  document.addEventListener("visibilitychange", onVisibilityChange);
-
   const resizeObserver = new ResizeObserver(() => {
     const w = host.clientWidth || width;
     const h = host.clientHeight || height;
+    // Re-read the device pixel ratio: it changes when the window moves
+    // between monitors, and the cap depends on the host width.
+    renderer.setPixelRatio(targetPixelRatio());
     renderer.setSize(w, h);
     fitCamera(w / h);
     if (!running) renderFrame();
   });
   resizeObserver.observe(host);
 
-  start();
+  // Paint one frame immediately so the canvas is never blank between
+  // creation and the first `setActive(true)` loop tick, then tell the host
+  // the device is rendered so it can fade the stage in (mirrors the hero
+  // AuraScreenOrb's first-frame `onReady` entrance).
+  renderFrame();
+  options.onReady?.();
 
   return {
+    setActive(active: boolean): void {
+      if (!active) {
+        stop();
+        return;
+      }
+      if (reducedMotion) {
+        // A single settled frame: the plasma/LED/dash motion stays frozen
+        // but the device still reads fully rendered.
+        renderFrame();
+        return;
+      }
+      start();
+    },
     dispose(): void {
       stop();
-      document.removeEventListener("visibilitychange", onVisibilityChange);
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
       resizeObserver.disconnect();
@@ -1203,10 +1256,6 @@ export function createIsolatedDeviceScene(
       orbMaterial.dispose();
       baseMaterial.dispose();
       ventMaterial.dispose();
-      ghostStrongMaterial.dispose();
-      ghostMidMaterial.dispose();
-      ghostFaintMaterial.dispose();
-      ghostCornerMaterial.dispose();
       for (const logoMaterial of logoMaterials) logoMaterial.dispose();
       for (const logoTexture of logoTextures) logoTexture.dispose();
       dashMaterial.dispose();
@@ -1216,7 +1265,10 @@ export function createIsolatedDeviceScene(
       ventTexture.dispose();
       etchSeamTexture.dispose();
       etchDashTexture.dispose();
-      envRT.texture.dispose();
+      // Dispose the PMREM render target itself (which owns the texture),
+      // and the RoomEnvironment scene's geometries/materials.
+      envRT.dispose();
+      envScene.dispose();
       pmrem.dispose();
       renderer.dispose();
       renderer.forceContextLoss();

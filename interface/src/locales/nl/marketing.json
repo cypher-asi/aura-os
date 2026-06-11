@@ -1,10 +1,57 @@
 {
+  "agentBuilder": {
+    "buildProgressAria": "Bouw voortgang op: {{step}}",
+    "configure": "CONFIGUREER",
+    "integrations": "100+ Integraties",
+    "privateAgent": "UW PRIVÉ-AGENT",
+    "steps": {
+      "0": {
+        "description": "Maak de naam en 3D-avatar van uw agent aan.",
+        "label": "Identiteit"
+      },
+      "1": {
+        "description": "Ontwikkel de kernvaardigheden en kennis van uw agent.",
+        "label": "Expertise"
+      },
+      "2": {
+        "description": "Geef uw agent veilige toegang tot uw gegevens.",
+        "label": "Integraties"
+      },
+      "3": {
+        "description": "Koppel uw agent aan iMessage, Telegram en meer.",
+        "label": "Verbindingen"
+      },
+      "4": {
+        "description": "Plan de dagelijkse taken die uw agent voor u uitvoert.",
+        "label": "Automatiseringen"
+      },
+      "5": {
+        "description": "Laat uw agent ter wereld komen.",
+        "label": "Launch"
+      }
+    }
+  },
+  "agentConsole": {
+    "next": "Volgende",
+    "previous": "Vorig",
+    "states": {
+      "openSource": "Open bron",
+      "private": "Privé",
+      "secure": "Zeker",
+      "verifiable": "Verifieerbaar"
+    }
+  },
+  "agentMarquee": {
+    "ariaLabel": "AURA-agenten"
+  },
   "agents": {
     "buildDeviceAriaLabel": "Bouw uw agent",
     "documentTitle": "AURA - Agenten",
-    "heroDescriptionLine1": "AURA-agenten zijn experts op elk gebied",
-    "heroDescriptionLine2": "die werken terwijl u slaapt.",
+    "heroDescription": "AURA-agenten zijn experts op elk gebied en werken terwijl u slaapt.",
     "heroHeadline": "Delegeer alles."
+  },
+  "alwaysOn": {
+    "ariaLabel": "Altijd aan"
   },
   "blog": {
     "allPosts": "Alle berichten",
@@ -41,6 +88,140 @@
     "title": "Bloggen",
     "tocAriaLabel": "Inhoudsopgave",
     "tocTitle": "Inhoudsopgave"
+  },
+  "capabilities": {
+    "analytics": {
+      "0": "Dashboards & rapporten",
+      "1": "SQL en query's",
+      "2": "Gegevens opschonen",
+      "3": "Trenddetectie",
+      "4": "Prognosemodellen",
+      "5": "Cohortanalyse",
+      "6": "KPI-tracking",
+      "7": "Detectie van afwijkingen",
+      "8": "Visualisaties",
+      "9": "Gegevensverhalen vertellen"
+    },
+    "coding": {
+      "0": "Full-stack-ontwikkeling",
+      "1": "Herstructureren en optimaliseren",
+      "2": "Foutopsporing en oplossing",
+      "3": "Tests schrijven en uitvoeren",
+      "4": "Codebeoordeling",
+      "5": "API-integratie",
+      "6": "Documentatie",
+      "7": "Migraties en upgrades",
+      "8": "CI/CD-pijplijnen",
+      "9": "Architectuur ontwerp"
+    },
+    "creative": {
+      "0": "Verhaal- en scriptschrijven",
+      "1": "Brainstorm op schaal",
+      "2": "Karakter- en wereldopbouw",
+      "3": "Poëzie & teksten",
+      "4": "Conceptgedachte",
+      "5": "Naamgeving en slogan",
+      "6": "Stemmings- en toonveranderingen",
+      "7": "Plotstructuur",
+      "8": "Dialoog polijsten",
+      "9": "Pitch-decks"
+    },
+    "design": {
+      "0": "UI- en UX-mockups",
+      "1": "Ontwerp systemen",
+      "2": "Logo's en huisstijl",
+      "3": "Kleur & typografie",
+      "4": "Van wireframes tot prototypes",
+      "5": "Genereren en bewerken van afbeeldingen",
+      "6": "Iconografie",
+      "7": "Indeling & compositie",
+      "8": "Toegankelijkheidscontroles",
+      "9": "Exportklare activa"
+    },
+    "finance": {
+      "0": "Financiële modellering",
+      "1": "Budgetten & prognoses",
+      "2": "Kosten bijhouden",
+      "3": "Scenario-analyse",
+      "4": "Facturatie en afstemming",
+      "5": "Waardering & DCF",
+      "6": "Kasstroomprojecties",
+      "7": "Investeringsonderzoek",
+      "8": "Risicobeoordeling",
+      "9": "Rapportage en naleving"
+    },
+    "legal": {
+      "0": "Opstellen van contracten",
+      "1": "Clausuleoverzicht en rode lijnen",
+      "2": "Risicomarkering",
+      "3": "Nalevingscontroles",
+      "4": "Juridisch onderzoek",
+      "5": "Samenvattingen van de jurisprudentie",
+      "6": "NDA- en overeenkomstsjablonen",
+      "7": "Due diligence",
+      "8": "Beleid opstellen",
+      "9": "Duidelijke uitleggers"
+    },
+    "marketing": {
+      "0": "Campagneplanning",
+      "1": "E-mail en advertentietekst",
+      "2": "A/B-testen",
+      "3": "Segmentatie van het publiek",
+      "4": "SEO- en trefwoordonderzoek",
+      "5": "Landingspagina's",
+      "6": "Merkberichten",
+      "7": "Prestatieanalyse",
+      "8": "Trechteroptimalisatie",
+      "9": "Distributie van inhoud"
+    },
+    "research": {
+      "0": "Synthetiseer honderden bronnen",
+      "1": "Citeer elke bewering",
+      "2": "Literatuurrecensies",
+      "3": "Gegevensextractie en tabellen",
+      "4": "Statistische analyse",
+      "5": "Hypothese testen",
+      "6": "PDF-rapporten en whitepapers",
+      "7": "Factchecking",
+      "8": "Competitieve landschappen",
+      "9": "Peer-review kritiek"
+    },
+    "sales": {
+      "0": "Kwalificatie van leads",
+      "1": "Beheer van pijpleidingen",
+      "2": "Gepersonaliseerde outreach",
+      "3": "Vervolgreeksen",
+      "4": "CRM-updates",
+      "5": "Oproepoverzichten en notities",
+      "6": "Opstellen van voorstel",
+      "7": "Afhandeling van bezwaarschriften",
+      "8": "Omzetprognose",
+      "9": "Scoren van deals"
+    },
+    "social": {
+      "0": "Plannen en automatisch posten",
+      "1": "Workflows op meerdere platforms",
+      "2": "Reageer en doe mee",
+      "3": "Trendmonitoring",
+      "4": "Inhoud kalenders",
+      "5": "Hashtag-strategie",
+      "6": "Genereren van bijschriften",
+      "7": "Analyses en inzichten",
+      "8": "Bereik van influencers",
+      "9": "Gemeenschapsbeheer"
+    },
+    "writing": {
+      "0": "Lange artikelen",
+      "1": "Match uw stem en toon",
+      "2": "Bewerken en proeflezen",
+      "3": "Contouren voor concepten",
+      "4": "Technische documentatie",
+      "5": "SEO-bewuste kopie",
+      "6": "Herschrijf en condenseer",
+      "7": "Meertalige vertaling",
+      "8": "Citaties & referenties",
+      "9": "Koppen en haken"
+    }
   },
   "changelog": {
     "chart": {
@@ -96,11 +277,28 @@
     "heroDescription": "Een grensverleggend coderingsharnas ontworpen voor beveiliging, automatisering en verifieerbaarheid dat 100% open source is.",
     "heroHeadline": "Codeer terwijl u slaapt."
   },
+  "connectedConsole": {
+    "vibe": "STEMMING"
+  },
   "cta": {
     "ariaLabel": "Call-to-action voor producten",
     "download": "Downloaden",
     "signUp": "Aanmelden",
     "tagline": "Voel de AGI."
+  },
+  "disciplines": {
+    "analytics": "Analyses",
+    "coding": "Codering",
+    "creative": "Creatief",
+    "design": "Ontwerp",
+    "finance": "Financiën",
+    "general": "Algemeen",
+    "legal": "Legaal",
+    "marketing": "Marketing",
+    "research": "Onderzoek",
+    "sales": "Verkoop",
+    "social": "Sociaal",
+    "writing": "Schrijven"
   },
   "docs": {
     "docDocumentTitle": "AURA-documenten - {{title}}",
@@ -595,11 +793,96 @@
   },
   "footer": {
     "ariaLabel": "Voettekst van de site",
+    "columns": {
+      "0": {
+        "heading": "Product",
+        "links": {
+          "0": "Agenten",
+          "1": "Code",
+          "2": "Besturingssysteem"
+        }
+      },
+      "1": {
+        "heading": "Bronnen",
+        "links": {
+          "0": "Prijzen",
+          "1": "Downloads",
+          "2": "Wijzigingslog",
+          "3": "Bloggen",
+          "4": "Documenten"
+        }
+      },
+      "2": {
+        "heading": "Verbinden"
+      },
+      "3": {
+        "heading": "Legaal",
+        "links": {
+          "0": "Servicevoorwaarden",
+          "1": "Privacybeleid"
+        }
+      }
+    },
     "copyright": "Auteursrecht © {{year}}",
     "navigationAriaLabel": "Voettekstnavigatie"
   },
+  "mobileChat": {
+    "conversations": {
+      "backend": {
+        "agentName": "Achterkant",
+        "messages": {
+          "0": "Waarom is de prijsstelling vandaag traag?",
+          "1": "Het queryplan controleren: het lijkt op een ontbrekende index.",
+          "3": "Een index toevoegen aan (naam). Zou moeten dalen tot ~5ms."
+        }
+      },
+      "frontend": {
+        "agentName": "Frontend",
+        "messages": {
+          "0": "Voeg een schakelaar voor de donkere modus toe aan de instellingen",
+          "1": "Daarop - een schakelaar toevoegen die is aangesloten op de themawinkel.",
+          "3": "Klaar. Wilt u dat het standaard het besturingssysteem volgt?"
+        }
+      },
+      "reviewer": {
+        "agentName": "Recensent",
+        "messages": {
+          "0": "Verzend de release zodra CI groen is",
+          "1": "Ik kijk nu naar de pijpleiding.",
+          "3": "Allemaal groen. De release samenvoegen en taggen."
+        }
+      }
+    },
+    "messagePlaceholder": "Stuur een bericht naar uw agent...",
+    "subtitle": "online · op uw VM"
+  },
+  "mockChatInput": {
+    "examples": {
+      "0": "Refactoreer deze React-component, werk de tests bij en open een PR",
+      "1": "Plan een weekendje weg naar Lissabon en boek de vluchten",
+      "2": "Genereer een warme redactionele foto van een kleine junglebibliotheek in de schemering",
+      "3": "Verander deze productscreenshots in een lanceringsvideo van 12 seconden",
+      "4": "Maak een 3D-model van een modulaire bureau-organizer met kabelclips",
+      "5": "Vergelijk drie kinderdagverblijven bij mij in de buurt en plan volgende week rondleidingen",
+      "6": "Ontdek waarom er een time-out optreedt bij deze dashboardquery en verzend de oplossing",
+      "7": "Ontwerp een logosysteem voor mijn koffieproject in de buurt",
+      "8": "Maak een rustige introductieclip van deze ruwe schermopname",
+      "9": "Modelleer een opvouwbaar reisstatief met gelabelde bewegende delen",
+      "10": "Coördineer mijn verhuizing naar het buitenland met verhuizers, nutsbedrijven en vluchten",
+      "11": "Controleer de authenticatiestroom op raceomstandigheden en schrijf een migratieplan",
+      "12": "Maak campagnebeelden voor een luxe elektrische camper in de sneeuw",
+      "13": "Storyboard en render een filmische trailer voor een AI-muziektool",
+      "14": "Genereer een game-ready ruimteschipcockpit met een zuivere topologie",
+      "15": "Stel een wervingsplan op voor een robotica-onderzoeksteam van vijf personen",
+      "16": "Draag deze betalingsservice over naar wachtrijen zonder evenementen te laten vallen",
+      "17": "Visualiseer een Mars-kasstad voor een tentoonstelling in een wetenschapsmuseum",
+      "18": "Maak een demovideo voor investeerders van dit technische prototype",
+      "19": "Ontwerp een maakbaar drone-chassis met toegang tot de batterij"
+    }
+  },
   "models": {
     "allModelsAriaLabel": "Alle modellen",
+    "cardAria": "{{name}} door {{provider}}",
     "documentTitle": "AURA - Modellen",
     "empty": "Er zijn geen modellen die overeenkomen met de huidige filters. Probeer de zoekopdracht te wissen of tussen tabbladen te wisselen.",
     "featured": "Uitgelicht",
@@ -607,6 +890,20 @@
     "filterByModalityAriaLabel": "Filter op modaliteit",
     "filterByStatusAriaLabel": "Filter op status",
     "loadingCatalog": "Catalogus laden...",
+    "modeOptions": {
+      "3d": "3D",
+      "all": "Alle",
+      "image": "Afbeelding",
+      "text": "Tekst",
+      "video": "Video"
+    },
+    "modeTitles": {
+      "3d": "3D-modellen",
+      "all": "Alle modellen",
+      "image": "Afbeeldingsmodellen",
+      "text": "Tekstmodellen",
+      "video": "Videomodellen"
+    },
     "searchAriaLabel": "Zoek modellen",
     "searchPlaceholder": "Modellen zoeken...",
     "stats": {
@@ -621,6 +918,11 @@
       "liveAriaLabel": "Status: Leef",
       "soon": "Spoedig",
       "soonAriaLabel": "Status: Binnenkort beschikbaar"
+    },
+    "statusOptions": {
+      "all": "Alle",
+      "live": "Live",
+      "soon": "Spoedig"
     },
     "subtitle": "De grensmodellen die AURA aandrijven, voor tekst, afbeeldingen, video en 3D.",
     "summaryAriaLabel": "Modellen samenvatting"
@@ -640,6 +942,36 @@
       "heading": "Sectie niet gevonden"
     },
     "sidebarTitle": "AURA OS"
+  },
+  "personas": {
+    "coordinator": {
+      "name": "Coördinator",
+      "role": "Teamorkestrator"
+    },
+    "creator": {
+      "name": "Schepper",
+      "role": "Schepper"
+    },
+    "cypher-punk": {
+      "name": "Cypherpunk",
+      "role": "Beveiligingsoperator"
+    },
+    "giga-brain": {
+      "name": "Giga-brein",
+      "role": "Onderzoeksleider"
+    },
+    "researcher": {
+      "name": "Onderzoeker",
+      "role": "Onderzoeksanalist"
+    },
+    "solo-builder": {
+      "name": "Solo-bouwer",
+      "role": "Indie-ingenieur"
+    },
+    "vibecoder": {
+      "name": "Vibecoder",
+      "role": "Creatieve codeur"
+    }
   },
   "pricing": {
     "billingCycleAriaLabel": "Factureringscyclus",
@@ -853,6 +1185,37 @@
       "headline": "Ontworpen voor jouw menselijkheid."
     }
   },
+  "skills": {
+    "coding-agent": "Code",
+    "gifgrep": "Afbeeldingen",
+    "goplaces": "Kaarten",
+    "healthcheck": "Gezondheid",
+    "himalaya": "E-mail",
+    "nano-pdf": "PDF's",
+    "notion": "Opmerkingen",
+    "openhue": "Lichten",
+    "skill-creator": "Creëren",
+    "spotify-player": "Muziek",
+    "summarize": "Samenvatten",
+    "taskflow": "Taken",
+    "trello": "Planken",
+    "video-frames": "Video",
+    "voice-call": "Telefoongesprek"
+  },
+  "specQuadrant": {
+    "activation": "ACTIVERING",
+    "examples": {
+      "ads": "Advertenties",
+      "email": "E-mail",
+      "post": "Na",
+      "seo": "SEO"
+    },
+    "expertiseAria": "Expertise",
+    "featureHighlightsAria": "Kenmerkende hoogtepunten",
+    "intelligence": "INTELLIGENTIE",
+    "online": "ONLINE",
+    "withoutLimits": "ZONDER GRENZEN"
+  },
   "support": {
     "body": "Hulp nodig met Aura? Wij zijn er voor u. Stuur een e-mail naar ons ondersteuningsteam en we nemen zo snel mogelijk contact met u op.",
     "headline": "Steun",
@@ -997,5 +1360,33 @@
         "heading": "18. Toepasselijk recht en geschillenbeslechting"
       }
     ]
+  },
+  "trust": {
+    "attestation": "Attest",
+    "insertTokens": "Tokens invoegen",
+    "marqueeTerms": {
+      "0": "Gesandboxte VM",
+      "1": "Vertrouwde uitvoering",
+      "2": "Gecertificeerde opstart",
+      "3": "Vertrouwelijk rekenen",
+      "4": "Gecodeerd geheugen",
+      "5": "Geïsoleerde looptijd"
+    },
+    "readouts": {
+      "harness": {
+        "description": "Alle gegevens stromen via het aangepaste harnas van AURA. Elke stap is atomair, onveranderlijk en gecontroleerd.",
+        "title": "AURA Runtime-harnas"
+      },
+      "router": {
+        "description": "Een veilige routeringslaag die elk verzoek bemiddelt via open source- en frontier-modellen.",
+        "title": "AURA-router"
+      },
+      "swarm": {
+        "description": "Een geïsoleerde vertrouwde uitvoeringsomgeving. Je sleutels verlaten hem nooit en de gastheer ziet niets.",
+        "title": "AURA-zwerm"
+      }
+    },
+    "uptime": "Uptime",
+    "vmLabel": "VM"
   }
 }

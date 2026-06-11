@@ -27,8 +27,6 @@ import {
 import { usePublicGateShown, usePublicPageViewed } from "../use-public-shell-analytics";
 import { track } from "../../../lib/analytics";
 import { ComposePanel } from "../ComposePanel";
-import { ScreenOrbBackground } from "./ScreenOrbBackground";
-import { FlowFieldBackground } from "./FlowFieldBackground";
 import { CreateAgentButton } from "../CreateAgentButton";
 import { PersonaTickRail } from "../PersonaTickRail";
 import { PublicChatBubble } from "../PublicChatBubble";
@@ -49,6 +47,24 @@ import styles from "./PublicChatView.module.css";
  */
 const AgentsPageSections = lazy(
   () => import("../../marketing/ProductView/AgentsPageSections"),
+);
+
+/*
+ * The animated site backgrounds pull in three.js, which would otherwise
+ * land in the eager entry bundle (PublicChatView is statically imported by
+ * App.tsx). Lazy-loading them keeps ~150KB gzip of WebGL vendor code off
+ * the public landing page's critical path; the persona's solid
+ * `siteBackgroundColor` paints beneath them while the chunk loads.
+ */
+const ScreenOrbBackground = lazy(() =>
+  import("./ScreenOrbBackground").then((m) => ({
+    default: m.ScreenOrbBackground,
+  })),
+);
+const FlowFieldBackground = lazy(() =>
+  import("./FlowFieldBackground").then((m) => ({
+    default: m.FlowFieldBackground,
+  })),
 );
 
 /**
@@ -230,6 +246,39 @@ export function PublicChatView(): React.ReactElement {
   // the embedded agents content. Drives the nav foreground handoff
   // (persona pair <-> marketing dark pair) — see the nav-vars effect.
   const [inAgentsRegion, setInAgentsRegion] = useState(false);
+
+  // Whether the embedded `/agents` section stack should mount. The embed
+  // is heavy (WebGL scenes, videos, a changelog fetch), so it stays out of
+  // the landing page's first paint: it mounts on the visitor's first
+  // interaction (wheel/touch/key — i.e. before any scroll into it can
+  // happen) or, failing that, once the main thread goes idle, which still
+  // warms its media well before the persona cycle ends.
+  const [agentsEmbedReady, setAgentsEmbedReady] = useState(false);
+  useEffect(() => {
+    if (isChatPage || agentsEmbedReady) return;
+    let idleId: number | null = null;
+    const ready = (): void => setAgentsEmbedReady(true);
+    const events = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
+    for (const name of events) {
+      window.addEventListener(name, ready, { passive: true, once: true });
+    }
+    // Safari still lacks requestIdleCallback; fall back to a timeout.
+    const hasIdleCallback = typeof window.requestIdleCallback === "function";
+    if (hasIdleCallback) {
+      idleId = window.requestIdleCallback(ready, { timeout: 2_500 });
+    } else {
+      idleId = window.setTimeout(ready, 2_500);
+    }
+    return () => {
+      for (const name of events) {
+        window.removeEventListener(name, ready);
+      }
+      if (idleId !== null) {
+        if (hasIdleCallback) window.cancelIdleCallback(idleId);
+        else window.clearTimeout(idleId);
+      }
+    };
+  }, [isChatPage, agentsEmbedReady]);
 
   // Mirrors for the native wheel/scroll listeners, which live outside
   // the React render cycle. `activeIndexRef` tracks the committed
@@ -745,12 +794,16 @@ export function PublicChatView(): React.ReactElement {
         aria-hidden="true"
       >
         {committedPersona.theme.siteBackgroundOrb ? (
-          <ScreenOrbBackground key={committedPersona.id} />
+          <Suspense fallback={null}>
+            <ScreenOrbBackground key={committedPersona.id} />
+          </Suspense>
         ) : committedPersona.theme.siteBackgroundFlow ? (
-          <FlowFieldBackground
-            key={committedPersona.id}
-            baseColor={committedPersona.theme.siteBackgroundColor ?? "#2a0258"}
-          />
+          <Suspense fallback={null}>
+            <FlowFieldBackground
+              key={committedPersona.id}
+              baseColor={committedPersona.theme.siteBackgroundColor ?? "#2a0258"}
+            />
+          </Suspense>
         ) : committedPersona.theme.siteBackgroundUrl ? (
           <img
             src={committedPersona.theme.siteBackgroundUrl}
@@ -883,10 +936,18 @@ export function PublicChatView(): React.ReactElement {
               <CreateAgentButton source="public_chat" />
             </div>
           </div>
-          <div className={styles.agentsEmbed}>
-            <Suspense fallback={null}>
-              <AgentsPageSections />
-            </Suspense>
+          <div
+            className={styles.agentsEmbed}
+            // Reserve one viewport of height until the deferred sections
+            // mount so the scroll column's geometry (and the glide past
+            // the last persona) behaves identically either way.
+            style={agentsEmbedReady ? undefined : { minHeight: "100vh" }}
+          >
+            {agentsEmbedReady ? (
+              <Suspense fallback={null}>
+                <AgentsPageSections />
+              </Suspense>
+            ) : null}
           </div>
         </div>
       ) : null}

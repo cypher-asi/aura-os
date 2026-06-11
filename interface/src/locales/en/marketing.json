@@ -1,9 +1,57 @@
 {
+  "agentBuilder": {
+    "buildProgressAria": "Build progress: {{step}}",
+    "configure": "CONFIGURE",
+    "integrations": "100+ Integrations",
+    "privateAgent": "YOUR PRIVATE AGENT",
+    "steps": {
+      "0": {
+        "description": "Create your agent's name and 3D avatar.",
+        "label": "Identity"
+      },
+      "1": {
+        "description": "Build your agent's core skills and knowledge.",
+        "label": "Expertise"
+      },
+      "2": {
+        "description": "Grant your agent secure access to your data.",
+        "label": "Integrations"
+      },
+      "3": {
+        "description": "Link your agent to iMessage, Telegram, and more.",
+        "label": "Connections"
+      },
+      "4": {
+        "description": "Schedule the daily tasks your agent runs for you.",
+        "label": "Automations"
+      },
+      "5": {
+        "description": "Birth your agent into the world.",
+        "label": "Launch"
+      }
+    }
+  },
+  "agentConsole": {
+    "next": "Next",
+    "previous": "Previous",
+    "states": {
+      "openSource": "Open Source",
+      "private": "Private",
+      "secure": "Secure",
+      "verifiable": "Verifiable"
+    }
+  },
+  "agentMarquee": {
+    "ariaLabel": "AURA agents"
+  },
   "agents": {
     "buildDeviceAriaLabel": "Build your agent",
     "documentTitle": "AURA - Agents",
     "heroDescription": "AURA agents are experts in every field that work while you sleep.",
     "heroHeadline": "Delegate everything."
+  },
+  "alwaysOn": {
+    "ariaLabel": "Always on"
   },
   "blog": {
     "allPosts": "All posts",
@@ -40,6 +88,140 @@
     "title": "Blog",
     "tocAriaLabel": "Table of contents",
     "tocTitle": "Table of Contents"
+  },
+  "capabilities": {
+    "analytics": {
+      "0": "Dashboards & reports",
+      "1": "SQL & queries",
+      "2": "Data cleaning",
+      "3": "Trend detection",
+      "4": "Forecasting models",
+      "5": "Cohort analysis",
+      "6": "KPI tracking",
+      "7": "Anomaly detection",
+      "8": "Visualizations",
+      "9": "Data storytelling"
+    },
+    "coding": {
+      "0": "Full-stack development",
+      "1": "Refactor & optimize",
+      "2": "Debug & fix",
+      "3": "Write & run tests",
+      "4": "Code review",
+      "5": "API integration",
+      "6": "Documentation",
+      "7": "Migrations & upgrades",
+      "8": "CI/CD pipelines",
+      "9": "Architecture design"
+    },
+    "creative": {
+      "0": "Story & script writing",
+      "1": "Brainstorm at scale",
+      "2": "Character & world building",
+      "3": "Poetry & lyrics",
+      "4": "Concept ideation",
+      "5": "Naming & taglines",
+      "6": "Mood & tone shifts",
+      "7": "Plot structure",
+      "8": "Dialogue polishing",
+      "9": "Pitch decks"
+    },
+    "design": {
+      "0": "UI & UX mockups",
+      "1": "Design systems",
+      "2": "Logos & branding",
+      "3": "Color & typography",
+      "4": "Wireframes to prototypes",
+      "5": "Image generation & edits",
+      "6": "Iconography",
+      "7": "Layout & composition",
+      "8": "Accessibility checks",
+      "9": "Export-ready assets"
+    },
+    "finance": {
+      "0": "Financial modeling",
+      "1": "Budgets & forecasts",
+      "2": "Expense tracking",
+      "3": "Scenario analysis",
+      "4": "Invoicing & reconciliation",
+      "5": "Valuation & DCF",
+      "6": "Cash-flow projections",
+      "7": "Investment research",
+      "8": "Risk assessment",
+      "9": "Reporting & compliance"
+    },
+    "legal": {
+      "0": "Contract drafting",
+      "1": "Clause review & redlines",
+      "2": "Risk flagging",
+      "3": "Compliance checks",
+      "4": "Legal research",
+      "5": "Case-law summaries",
+      "6": "NDA & agreement templates",
+      "7": "Due diligence",
+      "8": "Policy drafting",
+      "9": "Plain-language explainers"
+    },
+    "marketing": {
+      "0": "Campaign planning",
+      "1": "Email & ad copy",
+      "2": "A/B testing",
+      "3": "Audience segmentation",
+      "4": "SEO & keyword research",
+      "5": "Landing pages",
+      "6": "Brand messaging",
+      "7": "Performance analytics",
+      "8": "Funnel optimization",
+      "9": "Content distribution"
+    },
+    "research": {
+      "0": "Synthesize hundreds of sources",
+      "1": "Cite every claim",
+      "2": "Literature reviews",
+      "3": "Data extraction & tables",
+      "4": "Statistical analysis",
+      "5": "Hypothesis testing",
+      "6": "PDF reports & whitepapers",
+      "7": "Fact-checking",
+      "8": "Competitive landscapes",
+      "9": "Peer-review critique"
+    },
+    "sales": {
+      "0": "Lead qualification",
+      "1": "Pipeline management",
+      "2": "Personalized outreach",
+      "3": "Follow-up sequences",
+      "4": "CRM updates",
+      "5": "Call summaries & notes",
+      "6": "Proposal drafting",
+      "7": "Objection handling",
+      "8": "Revenue forecasting",
+      "9": "Deal scoring"
+    },
+    "social": {
+      "0": "Schedule & auto-post",
+      "1": "Multi-platform workflows",
+      "2": "Reply & engage",
+      "3": "Trend monitoring",
+      "4": "Content calendars",
+      "5": "Hashtag strategy",
+      "6": "Caption generation",
+      "7": "Analytics & insights",
+      "8": "Influencer outreach",
+      "9": "Community management"
+    },
+    "writing": {
+      "0": "Long-form articles",
+      "1": "Match your voice & tone",
+      "2": "Edit & proofread",
+      "3": "Outlines to drafts",
+      "4": "Technical documentation",
+      "5": "SEO-aware copy",
+      "6": "Rewrite & condense",
+      "7": "Multilingual translation",
+      "8": "Citations & references",
+      "9": "Headlines & hooks"
+    }
   },
   "changelog": {
     "chart": {
@@ -95,11 +277,28 @@
     "heroDescription": "A frontier coding harness designed for security, automation and verifiability that is 100% open source.",
     "heroHeadline": "Code while you sleep."
   },
+  "connectedConsole": {
+    "vibe": "VIBE"
+  },
   "cta": {
     "ariaLabel": "Product call to action",
     "download": "Download",
     "signUp": "Sign Up",
     "tagline": "Feel the AGI."
+  },
+  "disciplines": {
+    "analytics": "Analytics",
+    "coding": "Coding",
+    "creative": "Creative",
+    "design": "Design",
+    "finance": "Finance",
+    "general": "General",
+    "legal": "Legal",
+    "marketing": "Marketing",
+    "research": "Research",
+    "sales": "Sales",
+    "social": "Social",
+    "writing": "Writing"
   },
   "docs": {
     "docDocumentTitle": "AURA Docs - {{title}}",
@@ -146,6 +345,400 @@
   },
   "expertise": {
     "documentTitle": "AURA - {{label}}",
+    "entries": {
+      "analytics": {
+        "headline": "Raw data into decision-ready insight.",
+        "heroBlurb": "Turn numbers into clear answers you can act on.",
+        "label": "Analytics",
+        "overview": "AURA analytics agents query, clean, and interpret data, then explain what it means in plain language. They surface the trend, the cause, and the recommended next step.",
+        "useCases": [
+          {
+            "description": "Answer a business question directly from the data.",
+            "title": "Ad-hoc analysis"
+          },
+          {
+            "description": "Generate recurring reports with narrative context.",
+            "title": "Reporting"
+          },
+          {
+            "description": "Flag unexpected shifts and explain likely drivers.",
+            "title": "Anomaly detection"
+          }
+        ]
+      },
+      "coding": {
+        "headline": "Ship features while you sleep.",
+        "heroBlurb": "From repo context to tested, reviewable PRs.",
+        "label": "Coding",
+        "overview": "AURA coding agents work from your repository's real context to implement features, fix bugs, and open tested pull requests. They run autonomously and hand back work that is ready to review.",
+        "useCases": [
+          {
+            "description": "Implement scoped features end to end with tests.",
+            "title": "Feature work"
+          },
+          {
+            "description": "Reproduce, fix, and verify with a clear PR.",
+            "title": "Bug fixes"
+          },
+          {
+            "description": "Apply consistent changes across the codebase safely.",
+            "title": "Refactors"
+          }
+        ]
+      },
+      "creative": {
+        "headline": "Sharper concepts, faster.",
+        "heroBlurb": "Brainstorm campaigns, concepts, and copy that land.",
+        "label": "Creative",
+        "overview": "AURA creative agents generate and pressure-test ideas, then build out the ones worth keeping. They move from blank page to a slate of directions you can react to in minutes.",
+        "useCases": [
+          {
+            "description": "Generate distinct directions with rationale for each.",
+            "title": "Campaign concepts"
+          },
+          {
+            "description": "Explore options against your brief and constraints.",
+            "title": "Naming & taglines"
+          },
+          {
+            "description": "Assemble references and copy into a shareable concept.",
+            "title": "Moodboards"
+          }
+        ]
+      },
+      "design": {
+        "headline": "From rough idea to polished interface.",
+        "heroBlurb": "Turn sketches and prompts into usable designs.",
+        "label": "Design",
+        "overview": "AURA design agents translate intent into structured, consistent interfaces, respecting your system and constraints. They iterate on layouts and components so you start from something real instead of a blank canvas.",
+        "useCases": [
+          {
+            "description": "Generate layout options against a brief and design system.",
+            "title": "UI exploration"
+          },
+          {
+            "description": "Produce consistent states and variations at speed.",
+            "title": "Component variants"
+          },
+          {
+            "description": "Flag accessibility and consistency issues early.",
+            "title": "Design review"
+          }
+        ]
+      },
+      "ecommerce-retail": {
+        "headline": "Private Intelligence for Retail",
+        "heroBlurb": "Private AI that scales your storefront without giving up your data.",
+        "label": "E-commerce & Retail",
+        "overview": "Retail runs on catalog, content, and customer data. AURA agents automate merchandising, support, and analysis while keeping customer information inside your perimeter.",
+        "useCases": [
+          {
+            "description": "Generate and maintain product copy at scale.",
+            "title": "Catalog & content"
+          },
+          {
+            "description": "Draft on-brand responses grounded in your policies.",
+            "title": "Customer support"
+          },
+          {
+            "description": "Surface trends and anomalies across sales data.",
+            "title": "Demand analysis"
+          }
+        ]
+      },
+      "education": {
+        "headline": "Private Intelligence for Education",
+        "heroBlurb": "Private AI that supports educators and protects student data.",
+        "label": "Education",
+        "overview": "Education depends on trust around student data. AURA agents support teaching, research, and administration while keeping records inside your perimeter and a human in the loop.",
+        "useCases": [
+          {
+            "description": "Draft and adapt lessons and assessments to your curriculum.",
+            "title": "Course materials"
+          },
+          {
+            "description": "Synthesize sources into citable summaries.",
+            "title": "Research support"
+          },
+          {
+            "description": "Automate routine workflows with an audit trail.",
+            "title": "Administration"
+          }
+        ]
+      },
+      "finance": {
+        "headline": "Model the numbers that matter.",
+        "heroBlurb": "Build budgets and forecasts, and surface the signal.",
+        "label": "Finance",
+        "overview": "AURA finance agents build and maintain models, reconcile data, and explain the drivers behind every figure. They keep forecasts current so planning is grounded in the latest reality.",
+        "useCases": [
+          {
+            "description": "Build and update driver-based models on demand.",
+            "title": "Forecasting"
+          },
+          {
+            "description": "Reconcile actuals against plan and explain variance.",
+            "title": "Budget tracking"
+          },
+          {
+            "description": "Compare outcomes across assumptions in minutes.",
+            "title": "Scenario planning"
+          }
+        ]
+      },
+      "finance-banking": {
+        "headline": "Private Intelligence for Finance",
+        "heroBlurb": "Private AI that risk teams trust, regulators accept, and clients rely on. No compromises on data — ever.",
+        "label": "Finance & Banking",
+        "overview": "Finance runs on trust, and trust runs on control of data. AURA brings autonomous agents to banks, funds, and fintechs without sending sensitive information to third-party models — anything that leaves your perimeter stays unidentifiable, and the harness is auditable end to end. Analysts, advisors, and operations teams delegate the slow work and keep the judgment, with every action verifiable and on the record.",
+        "useCases": [
+          {
+            "description": "Synthesize filings, market data, and news into decision-ready briefs with citations.",
+            "title": "Research & due diligence"
+          },
+          {
+            "description": "Screen transactions and documents against policy, flagging exceptions for review.",
+            "title": "Risk & compliance"
+          },
+          {
+            "description": "Build and maintain forecasts and scenarios that update as the numbers move.",
+            "title": "Financial modeling"
+          },
+          {
+            "description": "Generate portfolio and performance summaries in your voice, on schedule.",
+            "title": "Client reporting"
+          },
+          {
+            "description": "Reconcile data and automate back-office workflows with a full audit trail.",
+            "title": "Operations"
+          },
+          {
+            "description": "Draft on-brand client communications grounded in your own data.",
+            "title": "Advisory support"
+          }
+        ]
+      },
+      "healthcare": {
+        "headline": "Private Intelligence for Healthcare",
+        "heroBlurb": "Private AI that clinicians trust, regulators accept, and patients deserve. No compromises on data — ever.",
+        "label": "Healthcare",
+        "overview": "Healthcare demands privacy by default. AURA agents support clinical and operational teams while keeping protected data inside your perimeter, with a verifiable, auditable harness throughout.",
+        "useCases": [
+          {
+            "description": "Synthesize literature and trial data into citable summaries.",
+            "title": "Clinical research"
+          },
+          {
+            "description": "Draft and structure notes and reports for human review.",
+            "title": "Documentation"
+          },
+          {
+            "description": "Automate scheduling and back-office workflows with an audit trail.",
+            "title": "Operations"
+          }
+        ]
+      },
+      "legal": {
+        "headline": "Contracts, reviewed and explained.",
+        "heroBlurb": "Review documents and explain obligations clearly.",
+        "label": "Legal",
+        "overview": "AURA legal agents read contracts and policies, flag risk, and explain obligations in plain language. They accelerate review while keeping a human in the loop on every decision.",
+        "useCases": [
+          {
+            "description": "Flag risky clauses and deviations from your standards.",
+            "title": "Contract review"
+          },
+          {
+            "description": "Extract dates, duties, and renewals into a clear list.",
+            "title": "Obligation tracking"
+          },
+          {
+            "description": "Answer questions grounded in your own documents.",
+            "title": "Policy Q&A"
+          }
+        ]
+      },
+      "legal-services": {
+        "headline": "Private Intelligence for Legal",
+        "heroBlurb": "Private AI that firms trust and clients rely on. No compromises on confidentiality — ever.",
+        "label": "Legal",
+        "overview": "Legal work runs on confidentiality and precision. AURA agents accelerate review, research, and drafting while keeping privileged material inside your perimeter and a human in the loop.",
+        "useCases": [
+          {
+            "description": "Flag risk and deviations from your standards at speed.",
+            "title": "Contract review"
+          },
+          {
+            "description": "Pull and synthesize relevant authority with citations.",
+            "title": "Legal research"
+          },
+          {
+            "description": "Produce first drafts grounded in your templates and matter files.",
+            "title": "Drafting"
+          }
+        ]
+      },
+      "marketing": {
+        "headline": "Campaigns that stay on brand.",
+        "heroBlurb": "Plan, draft, and adapt content across every channel.",
+        "label": "Marketing",
+        "overview": "AURA marketing agents plan campaigns, produce on-brand content, and adapt it per channel while holding your voice. They turn a brief into a slate of assets and keep the calendar moving so your channels never go quiet.",
+        "useCases": [
+          {
+            "description": "Turn a brief into channels, themes, and a content calendar.",
+            "title": "Campaign planning"
+          },
+          {
+            "description": "Draft and repurpose assets across channels in your voice.",
+            "title": "Content production"
+          },
+          {
+            "description": "Turn campaign data into clear, actionable insight.",
+            "title": "Performance analysis"
+          }
+        ]
+      },
+      "marketing-media": {
+        "headline": "Private Intelligence for Marketing",
+        "heroBlurb": "Private AI that keeps your brand on voice and your data your own.",
+        "label": "Marketing & Media",
+        "overview": "Marketing teams move fast across many channels. AURA agents plan, draft, and adapt content on brand while keeping your audience and performance data under your control.",
+        "useCases": [
+          {
+            "description": "Generate and pressure-test directions against your brief.",
+            "title": "Campaign concepts"
+          },
+          {
+            "description": "Draft and repurpose across channels in your voice.",
+            "title": "Content production"
+          },
+          {
+            "description": "Turn campaign data into clear, actionable insight.",
+            "title": "Performance analysis"
+          }
+        ]
+      },
+      "real-estate": {
+        "headline": "Private Intelligence for Real Estate",
+        "heroBlurb": "Private AI that moves deals forward and keeps your data your own.",
+        "label": "Real Estate",
+        "overview": "Real estate runs on documents, listings, and market data. AURA agents accelerate diligence, drafting, and analysis while keeping client and deal information under your control.",
+        "useCases": [
+          {
+            "description": "Generate and maintain listings and marketing copy.",
+            "title": "Listing content"
+          },
+          {
+            "description": "Pull signals from documents and market data into one view.",
+            "title": "Deal diligence"
+          },
+          {
+            "description": "Produce first drafts grounded in your templates.",
+            "title": "Document drafting"
+          }
+        ]
+      },
+      "research": {
+        "headline": "Research that synthesizes, not just searches.",
+        "heroBlurb": "Agents that dig through sources and surface what actually matters.",
+        "label": "Research",
+        "overview": "AURA research agents read across documents, the web, and your own knowledge base, then synthesize findings into clear, citable answers. They keep working in the background so a deep review that used to take days lands while you focus on the decision.",
+        "useCases": [
+          {
+            "description": "Survey a field and summarize the state of the art with sources.",
+            "title": "Literature reviews"
+          },
+          {
+            "description": "Track competitors and distill moves into a running brief.",
+            "title": "Competitive analysis"
+          },
+          {
+            "description": "Pull signals from filings, news, and data rooms into one view.",
+            "title": "Due diligence"
+          }
+        ]
+      },
+      "sales": {
+        "headline": "More pipeline, less busywork.",
+        "heroBlurb": "Research accounts and draft outreach that moves deals.",
+        "label": "Sales",
+        "overview": "AURA sales agents research accounts, personalize outreach, and keep your pipeline current so reps spend time selling instead of typing. They draft on-voice messages grounded in your context and surface the next best action on every deal.",
+        "useCases": [
+          {
+            "description": "Build briefs on prospects from public and internal sources.",
+            "title": "Account research"
+          },
+          {
+            "description": "Personalize emails and sequences on your voice and offer.",
+            "title": "Outreach drafts"
+          },
+          {
+            "description": "Keep CRM records current and flag deals that need attention.",
+            "title": "Pipeline hygiene"
+          }
+        ]
+      },
+      "social": {
+        "headline": "On-voice social, on schedule.",
+        "heroBlurb": "Draft posts and calendars that stay on brand.",
+        "label": "Social",
+        "overview": "AURA social agents plan calendars, draft posts per channel, and adapt to each platform's format while holding your voice. They keep a steady cadence so your channels never go quiet.",
+        "useCases": [
+          {
+            "description": "Plan weeks of posts around themes and launches.",
+            "title": "Content calendars"
+          },
+          {
+            "description": "Adapt one idea to each platform's format and tone.",
+            "title": "Per-channel drafts"
+          },
+          {
+            "description": "Draft on-voice responses for review before they ship.",
+            "title": "Community replies"
+          }
+        ]
+      },
+      "technology-saas": {
+        "headline": "Private Intelligence for Technology",
+        "heroBlurb": "Private AI that ships product and keeps your codebase your own.",
+        "label": "Technology / SaaS",
+        "overview": "Technology teams build fast and guard their IP. AURA agents accelerate engineering, support, and analysis while keeping your code and customer data inside your perimeter.",
+        "useCases": [
+          {
+            "description": "Implement features and fixes from real repo context.",
+            "title": "Engineering"
+          },
+          {
+            "description": "Draft accurate responses grounded in your docs.",
+            "title": "Customer support"
+          },
+          {
+            "description": "Turn usage data into decision-ready insight.",
+            "title": "Product analytics"
+          }
+        ]
+      },
+      "writing": {
+        "headline": "Writing in your voice, at your pace.",
+        "heroBlurb": "Draft, edit, and polish prose that sounds like you.",
+        "label": "Writing",
+        "overview": "AURA writing agents learn your tone and constraints, then draft and revise long-form content end to end. From first outline to final edit, they keep the voice consistent and the facts grounded in your sources.",
+        "useCases": [
+          {
+            "description": "Turn an outline and notes into a finished piece.",
+            "title": "Long-form drafts"
+          },
+          {
+            "description": "Tighten structure, grammar, and tone without losing intent.",
+            "title": "Editing passes"
+          },
+          {
+            "description": "Reshape one source into posts, emails, and summaries.",
+            "title": "Repurposing"
+          }
+        ]
+      }
+    },
     "overview": "Overview",
     "overviewAriaLabel": "{{label}} overview",
     "previewAriaLabel": "{{label}} preview",
@@ -200,11 +793,96 @@
   },
   "footer": {
     "ariaLabel": "Site footer",
+    "columns": {
+      "0": {
+        "heading": "Product",
+        "links": {
+          "0": "Agents",
+          "1": "Code",
+          "2": "OS"
+        }
+      },
+      "1": {
+        "heading": "Resources",
+        "links": {
+          "0": "Pricing",
+          "1": "Downloads",
+          "2": "Changelog",
+          "3": "Blog",
+          "4": "Docs"
+        }
+      },
+      "2": {
+        "heading": "Connect"
+      },
+      "3": {
+        "heading": "Legal",
+        "links": {
+          "0": "Terms of Service",
+          "1": "Privacy Policy"
+        }
+      }
+    },
     "copyright": "Copyright © {{year}}",
     "navigationAriaLabel": "Footer navigation"
   },
+  "mobileChat": {
+    "conversations": {
+      "backend": {
+        "agentName": "Backend",
+        "messages": {
+          "0": "Why is /pricing slow today?",
+          "1": "Checking the query plan — looks like a missing index.",
+          "3": "Adding an index on (name). Should drop to ~5ms."
+        }
+      },
+      "frontend": {
+        "agentName": "Frontend",
+        "messages": {
+          "0": "Add a dark mode toggle to settings",
+          "1": "On it — adding a toggle wired to the theme store.",
+          "3": "Done. Want it to follow the OS by default?"
+        }
+      },
+      "reviewer": {
+        "agentName": "Reviewer",
+        "messages": {
+          "0": "Ship the release once CI is green",
+          "1": "Watching the pipeline now.",
+          "3": "All green. Merging and tagging the release."
+        }
+      }
+    },
+    "messagePlaceholder": "Message your agent…",
+    "subtitle": "online · on your VM"
+  },
+  "mockChatInput": {
+    "examples": {
+      "0": "Refactor this React component, update the tests, and open a PR",
+      "1": "Plan a weekend trip to Lisbon and book the flights",
+      "2": "Generate a warm editorial photo of a tiny jungle library at dusk",
+      "3": "Turn these product screenshots into a 12 second launch video",
+      "4": "Create a 3D model of a modular desk organizer with cable clips",
+      "5": "Compare three daycares near me and schedule tours next week",
+      "6": "Find why this dashboard query times out and ship the fix",
+      "7": "Design a logo system for my neighborhood coffee side project",
+      "8": "Make a calm onboarding clip from this rough screen recording",
+      "9": "Model a foldable travel tripod with labeled moving parts",
+      "10": "Coordinate my cross-country move with movers, utilities, and flights",
+      "11": "Audit the auth flow for race conditions and write a migration plan",
+      "12": "Create campaign visuals for a luxury electric camper van in snow",
+      "13": "Storyboard and render a cinematic trailer for an AI music tool",
+      "14": "Generate a game-ready spaceship cockpit with clean topology",
+      "15": "Build a hiring plan for a five-person robotics research team",
+      "16": "Port this payment service to queues without dropping events",
+      "17": "Visualize a Mars greenhouse city for a science museum exhibit",
+      "18": "Create an investor demo video from this technical prototype",
+      "19": "Design a manufacturable drone chassis with battery access"
+    }
+  },
   "models": {
     "allModelsAriaLabel": "All models",
+    "cardAria": "{{name}} by {{provider}}",
     "documentTitle": "AURA - Models",
     "empty": "No models match the current filters. Try clearing search or switching tabs.",
     "featured": "Featured",
@@ -212,6 +890,20 @@
     "filterByModalityAriaLabel": "Filter by modality",
     "filterByStatusAriaLabel": "Filter by status",
     "loadingCatalog": "Loading catalog…",
+    "modeOptions": {
+      "3d": "3D",
+      "all": "All",
+      "image": "Image",
+      "text": "Text",
+      "video": "Video"
+    },
+    "modeTitles": {
+      "3d": "3D Models",
+      "all": "All Models",
+      "image": "Image Models",
+      "text": "Text Models",
+      "video": "Video Models"
+    },
     "searchAriaLabel": "Search models",
     "searchPlaceholder": "Search models...",
     "stats": {
@@ -226,6 +918,11 @@
       "liveAriaLabel": "Status: Live",
       "soon": "Soon",
       "soonAriaLabel": "Status: Coming soon"
+    },
+    "statusOptions": {
+      "all": "All",
+      "live": "Live",
+      "soon": "Soon"
     },
     "subtitle": "The frontier models powering AURA, across text, image, video, and 3D.",
     "summaryAriaLabel": "Models summary"
@@ -245,6 +942,36 @@
       "heading": "Section not found"
     },
     "sidebarTitle": "AURA OS"
+  },
+  "personas": {
+    "coordinator": {
+      "name": "Coordinator",
+      "role": "Team orchestrator"
+    },
+    "creator": {
+      "name": "Creator",
+      "role": "Creator"
+    },
+    "cypher-punk": {
+      "name": "Cypher Punk",
+      "role": "Security operator"
+    },
+    "giga-brain": {
+      "name": "Giga Brain",
+      "role": "Research lead"
+    },
+    "researcher": {
+      "name": "Researcher",
+      "role": "Research analyst"
+    },
+    "solo-builder": {
+      "name": "Solo Builder",
+      "role": "Indie engineer"
+    },
+    "vibecoder": {
+      "name": "Vibecoder",
+      "role": "Creative coder"
+    }
   },
   "pricing": {
     "billingCycleAriaLabel": "Billing cycle",
@@ -458,6 +1185,37 @@
       "headline": "Designed for your humanity."
     }
   },
+  "skills": {
+    "coding-agent": "Code",
+    "gifgrep": "Images",
+    "goplaces": "Maps",
+    "healthcheck": "Health",
+    "himalaya": "Email",
+    "nano-pdf": "PDFs",
+    "notion": "Notes",
+    "openhue": "Lights",
+    "skill-creator": "Create",
+    "spotify-player": "Music",
+    "summarize": "Summarize",
+    "taskflow": "Tasks",
+    "trello": "Boards",
+    "video-frames": "Video",
+    "voice-call": "Call"
+  },
+  "specQuadrant": {
+    "activation": "ACTIVATION",
+    "examples": {
+      "ads": "Ads",
+      "email": "Email",
+      "post": "Post",
+      "seo": "SEO"
+    },
+    "expertiseAria": "Expertise",
+    "featureHighlightsAria": "Feature highlights",
+    "intelligence": "INTELLIGENCE",
+    "online": "ONLINE",
+    "withoutLimits": "WITHOUT LIMITS"
+  },
   "support": {
     "body": "Need help with AURA? We’re here for you. Email our support team and we’ll get back to you as soon as we can.",
     "headline": "Support",
@@ -602,5 +1360,33 @@
         "heading": "18. Governing Law and Dispute Resolution"
       }
     ]
+  },
+  "trust": {
+    "attestation": "Attestation",
+    "insertTokens": "Insert tokens",
+    "marqueeTerms": {
+      "0": "Sandboxed VM",
+      "1": "Trusted Execution",
+      "2": "Attested Boot",
+      "3": "Confidential Compute",
+      "4": "Encrypted Memory",
+      "5": "Isolated Runtime"
+    },
+    "readouts": {
+      "harness": {
+        "description": "All data flows through AURA's custom harness. Every step is atomic, immutable and audited.",
+        "title": "AURA Runtime Harness"
+      },
+      "router": {
+        "description": "A secure routing layer brokering every request across open source and frontier models.",
+        "title": "AURA Router"
+      },
+      "swarm": {
+        "description": "An isolated trusted execution environment. Your keys never leave it and the host sees nothing.",
+        "title": "AURA Swarm"
+      }
+    },
+    "uptime": "Uptime",
+    "vmLabel": "VM"
   }
 }

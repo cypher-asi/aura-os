@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { CardSection, MetalCard } from "../CardSection";
 import { NoiseReductionCard } from "./NoiseReductionCard";
 import "./SpecQuadrantSection.css";
@@ -13,8 +14,13 @@ import "./SpecQuadrantSection.css";
  * (regular 626px), matching the quadrant cards.
  */
 export function SpecQuadrantSection(): ReactNode {
+  const { t } = useTranslation("marketing");
   return (
-    <CardSection ariaLabel="Feature highlights">
+    <CardSection
+      ariaLabel={t("specQuadrant.featureHighlightsAria", {
+        defaultValue: "Feature highlights",
+      })}
+    >
       <MetalCard
         wide
         gradient={135}

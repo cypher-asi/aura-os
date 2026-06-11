@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import "./ConnectedConsoleDevice.css";
 
 /**
@@ -132,6 +133,7 @@ const GRILLE_HOLES: ReadonlyArray<{ readonly cx: number; readonly cy: number }> 
  * `cqw` like the `PhoneShell`.
  */
 export function ConnectedConsoleDevice(): ReactNode {
+  const { t } = useTranslation("marketing");
   const knobDialRef = useRef<HTMLDivElement>(null);
   // Which channel key is currently "pressed" (selected). The ZERO key is the
   // active channel by default; clicking any other key presses it instead.
@@ -205,7 +207,9 @@ export function ConnectedConsoleDevice(): ReactNode {
                 <span className="consoleKnobIndicator" />
               </div>
             </div>
-            <span className="consoleKnobLabel">VIBE</span>
+            <span className="consoleKnobLabel">
+              {t("connectedConsole.vibe", { defaultValue: "VIBE" })}
+            </span>
           </div>
 
           <svg

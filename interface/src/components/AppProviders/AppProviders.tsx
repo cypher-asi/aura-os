@@ -8,6 +8,7 @@ import { useLocation } from "react-router-dom";
 import { desktopApi } from "../../shared/api/desktop";
 import { preloadAppForPathname, resolveActiveApp } from "../../stores/app-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
+import { useEffectiveMode } from "../../stores/use-effective-mode";
 import { sanitizeRestorePath } from "../../utils/last-app-path";
 import { setLastApp } from "../../utils/storage";
 
@@ -19,6 +20,8 @@ function AppSync(): null {
   const { pathname, search, hash } = useLocation();
   const markAppVisited = useAppUIStore((s) => s.markAppVisited);
   const setPreviousPath = useAppUIStore((s) => s.setPreviousPath);
+  const effectiveMode = useEffectiveMode();
+  const isPublic = effectiveMode === "public";
 
   useEffect(() => {
     const restorePath = sanitizeRestorePath(`${pathname}${search}${hash}`);
@@ -33,11 +36,16 @@ function AppSync(): null {
     // Active app is derived from the pathname (see `useActiveApp`) — this
     // effect only handles the cross-cutting side-effects (prefetch, last-app
     // persistence, visited tracking) that belong to "entered a new app".
-    preloadAppForPathname(pathname);
+    // Logged-out visitors are on the public marketing surface: don't
+    // prefetch authenticated app modules (e.g. the Agents app for `/` or
+    // `/agents`) they cannot use.
+    if (!isPublic) {
+      preloadAppForPathname(pathname);
+    }
     const activeAppId = resolveActiveApp(pathname).id;
     markAppVisited(activeAppId);
     setLastApp(activeAppId);
-  }, [hash, pathname, search, markAppVisited, setPreviousPath]);
+  }, [hash, isPublic, pathname, search, markAppVisited, setPreviousPath]);
 
   return null;
 }

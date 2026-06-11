@@ -345,42 +345,37 @@
   transform: translateX(-50%);
   border-radius: 0.7cqw;
   background: linear-gradient(180deg, #f4faf2 0%, #f1f9d3 100%);
+  /* Peak emission baked once; the pulse below breathes via opacity only
+     (compositor-friendly) instead of re-painting the shadow stack and a
+     brightness() filter every frame. */
   box-shadow:
-    0 0 4px rgba(232, 205, 137, 1),
-    0 0 9px rgba(232, 205, 137, 0.95),
-    0 0 18px rgba(232, 205, 137, 0.85),
-    0 0 30px rgba(232, 205, 137, 0.65),
-    0 0 14px 2px rgba(153, 81, 25, 0.75),
-    0 0 26px 5px rgba(153, 81, 25, 0.5),
-    0 0 44px 9px rgba(153, 81, 25, 0.32);
+    0 0 6px rgba(232, 205, 137, 1),
+    0 0 13px rgba(232, 205, 137, 1),
+    0 0 26px rgba(232, 205, 137, 0.95),
+    0 0 42px rgba(232, 205, 137, 0.85),
+    0 0 16px 3px rgba(153, 81, 25, 0.8),
+    0 0 30px 6px rgba(153, 81, 25, 0.55),
+    0 0 48px 10px rgba(153, 81, 25, 0.35);
   animation: consoleKnobPulse 1.6s ease-in-out infinite;
 }
 
-/* Pulse the LED's emission: the core brightens while the surrounding neon halo
-   swells and intensifies, then settles back. */
+/* Pulse the LED's emission: dim toward the resting glow, swell back to the
+   baked peak, so the indicator throbs without per-frame repaints. */
 @keyframes consoleKnobPulse {
   0%,
   100% {
-    filter: brightness(1);
-    box-shadow:
-      0 0 3px rgba(232, 205, 137, 0.9),
-      0 0 7px rgba(232, 205, 137, 0.85),
-      0 0 13px rgba(232, 205, 137, 0.7),
-      0 0 22px rgba(232, 205, 137, 0.5),
-      0 0 14px 2px rgba(153, 81, 25, 0.6),
-      0 0 26px 5px rgba(153, 81, 25, 0.4),
-      0 0 44px 9px rgba(153, 81, 25, 0.25);
+    opacity: 0.72;
   }
   50% {
-    filter: brightness(1.4);
-    box-shadow:
-      0 0 6px rgba(232, 205, 137, 1),
-      0 0 13px rgba(232, 205, 137, 1),
-      0 0 26px rgba(232, 205, 137, 0.95),
-      0 0 42px rgba(232, 205, 137, 0.85),
-      0 0 16px 3px rgba(153, 81, 25, 0.8),
-      0 0 30px 6px rgba(153, 81, 25, 0.55),
-      0 0 48px 10px rgba(153, 81, 25, 0.35);
+    opacity: 1;
+  }
+}
+
+/* Reduced motion: hold the LED at a steady mid emission. */
+@media (prefers-reduced-motion: reduce) {
+  .consoleKnobIndicator {
+    animation: none;
+    opacity: 0.85;
   }
 }
 

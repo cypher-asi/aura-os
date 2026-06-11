@@ -55,6 +55,15 @@
   animation-play-state: paused;
 }
 
+/* Reduced motion: a static strip — the models are still readable, the
+   90s drift just never runs. */
+@media (prefers-reduced-motion: reduce) {
+  .modelMarqueeTrack {
+    animation: none;
+    will-change: auto;
+  }
+}
+
 @keyframes model-marquee-scroll {
   from {
     transform: translate3d(0, 0, 0);

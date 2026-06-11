@@ -1,9 +1,22 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
+  observeSceneActivity,
+  prefersReducedMotion,
+} from "../scene-activity";
+import {
   RADIAL_FRAGMENT_SHADER,
   SCREEN_FRAGMENT_SHADER,
   VERTEX_SHADER,
 } from "./shaders";
+
+/*
+ * The plasma is intrinsically soft (domain-warped fbm), so it survives
+ * being rendered below CSS resolution and upscaled by the browser with no
+ * visible quality loss. 0.75 linear scale ≈ 44% fewer fragments; combined
+ * with the 1.5 DPR cap that's roughly a third of the old (2.0 DPR) cost.
+ */
+const RESOLUTION_SCALE = 0.75;
+const MAX_DPR = 1.5;
 
 /**
  * Which fragment shader the orb paints:
@@ -92,10 +105,13 @@ export function AuraScreenOrb({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // No MSAA: the scene is a single full-screen triangle (no geometry
+    // edges to antialias), so requesting it only wastes memory/bandwidth.
     const gl = canvas.getContext("webgl2", {
-      antialias: true,
+      antialias: false,
       alpha: true,
       premultipliedAlpha: false,
+      powerPreference: "low-power",
     });
     if (!gl) return;
 
@@ -119,8 +135,10 @@ export function AuraScreenOrb({
 
     let width = 0;
     let height = 0;
+    let alive = true;
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr =
+        Math.min(window.devicePixelRatio || 1, MAX_DPR) * RESOLUTION_SCALE;
       const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
       const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
       if (w === width && h === height) return;
@@ -129,16 +147,16 @@ export function AuraScreenOrb({
       canvas.width = w;
       canvas.height = h;
       gl.viewport(0, 0, w, h);
+      // Resizing the drawing buffer clears it, and ResizeObserver fires
+      // after rAF but before paint, so repaint synchronously here —
+      // otherwise the cleared buffer is composited for a frame (flicker)
+      // while the loop runs, or a stale stretched frame shows while stopped.
+      if (painted) drawNow();
     };
-    resize();
-
-    // The RAF loop repaints every frame, so a resize is picked up on the
-    // next tick; no explicit redraw needed here.
-    const observer = new ResizeObserver(resize);
-    observer.observe(canvas);
 
     const start = performance.now();
     let rafId: number | null = null;
+    let painted = false;
 
     const draw = (timeSeconds: number) => {
       gl.useProgram(program);
@@ -148,25 +166,53 @@ export function AuraScreenOrb({
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
-    };
-
-    let painted = false;
-    const renderLoop = (now: number) => {
-      draw((now - start) / 1000);
-      // Reveal the orb only after the first real frame is on screen.
       if (!painted) {
         painted = true;
+        // Reveal the orb only after the first real frame is on screen.
         setReady(true);
       }
+    };
+
+    const drawNow = () => draw((performance.now() - start) / 1000);
+
+    const renderLoop = (now: number) => {
+      draw((now - start) / 1000);
       rafId = requestAnimationFrame(renderLoop);
     };
 
-    // Always animate: this is an ambient, living readout, so we keep it
-    // looping rather than freezing to a single static frame.
-    rafId = requestAnimationFrame(renderLoop);
+    const stopLoop = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+
+    const reducedMotion = prefersReducedMotion();
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+
+    // Animate only while the orb is actually visible (near the viewport
+    // AND the tab is shown); under reduced motion hold a single painted
+    // frame instead of looping.
+    const detachActivity = observeSceneActivity(canvas, (active) => {
+      if (!alive) return;
+      if (!active) {
+        stopLoop();
+        return;
+      }
+      if (reducedMotion) {
+        drawNow();
+        return;
+      }
+      if (rafId === null) rafId = requestAnimationFrame(renderLoop);
+    });
 
     return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
+      alive = false;
+      detachActivity();
+      stopLoop();
       observer.disconnect();
       gl.deleteVertexArray(vao);
       gl.deleteProgram(program);

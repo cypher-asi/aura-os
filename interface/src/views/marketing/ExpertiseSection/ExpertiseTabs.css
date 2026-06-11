@@ -62,7 +62,10 @@
      from the origin on mount. */
   opacity: 0;
   transform: translateX(0);
-  will-change: transform, width;
+  /* Only `transform` is a meaningful promotion hint — `width` is a
+     layout property, listing it in will-change buys nothing. The 2px
+     bar's width transition is a trivially small relayout. */
+  will-change: transform;
   transition:
     transform 320ms cubic-bezier(0.4, 0, 0.2, 1),
     width 320ms cubic-bezier(0.4, 0, 0.2, 1),

@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import { DeviceScreen } from "../../../components/DeviceScreen";
 import { AuraScreenOrb } from "../AuraScreenOrb";
@@ -28,10 +29,14 @@ import styles from "./AgentConsole.module.css";
  */
 const STATES = ["Private", "Secure", "Verifiable", "Open Source"] as const;
 
+/** Catalog keys paralleling `STATES`, used to resolve the overlaid label. */
+const STATE_KEYS = ["private", "secure", "verifiable", "openSource"] as const;
+
 /** Cadence of the unattended auto-advance through the states. */
 const AUTO_ROTATE_MS = 1000;
 
 export function AgentConsole(): ReactNode {
+  const { t } = useTranslation("marketing");
   const [active, setActive] = useState(0);
   // Bumped on every manual step so the auto-rotate effect re-arms with a fresh
   // full interval, keeping a click from being instantly overridden by a tick
@@ -69,7 +74,11 @@ export function AgentConsole(): ReactNode {
           <div className={styles.raised}>
             <DeviceScreen className={styles.screen}>
               <AuraScreenOrb className={styles.screenOrb} />
-              <span className={styles.screenLabel}>{STATES[active]}</span>
+              <span className={styles.screenLabel}>
+                {t(`agentConsole.states.${STATE_KEYS[active]}`, {
+                  defaultValue: STATES[active],
+                })}
+              </span>
             </DeviceScreen>
           </div>
 
@@ -91,13 +100,13 @@ export function AgentConsole(): ReactNode {
             <button
               type="button"
               className={styles.baseButton}
-              aria-label="Previous"
+              aria-label={t("agentConsole.previous", { defaultValue: "Previous" })}
               onClick={() => step(-1)}
             />
             <button
               type="button"
               className={`${styles.baseButton} ${styles.baseButtonRight}`}
-              aria-label="Next"
+              aria-label={t("agentConsole.next", { defaultValue: "Next" })}
               onClick={() => step(1)}
             />
           </div>

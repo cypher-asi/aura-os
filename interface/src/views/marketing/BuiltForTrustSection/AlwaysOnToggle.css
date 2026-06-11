@@ -138,10 +138,10 @@
   justify-content: center;
   user-select: none;
   opacity: 1;
-  /* Quick, smooth fade-in for the ON lettering on the now-open side — fires
-     as soon as the label has flipped (LABEL_FADE_OUT_MS), long before the
-     knob finishes its glide, so the lettering returns "sooner". */
-  transition: opacity 280ms ease-out;
+  /* Elongated, smooth fade-in for the ON lettering on the now-open side. It
+     fires as soon as the label has flipped (LABEL_FADE_OUT_MS) — sooner than
+     the knob lands — then drifts in slowly so the glow visibly builds. */
+  transition: opacity 800ms ease-out;
 }
 
 /* Smooth, quick fade-out the moment the switch is clicked; the label jumps

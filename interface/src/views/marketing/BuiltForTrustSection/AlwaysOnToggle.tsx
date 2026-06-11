@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import "./AlwaysOnToggle.css";
 
@@ -24,6 +25,7 @@ const LABEL_FADE_OUT_MS = 220;
  * starts on the left with "ON" on the right.
  */
 export function AlwaysOnToggle(): ReactNode {
+  const { t } = useTranslation("marketing");
   // `side` drives the knob and starts sliding immediately on click;
   // `labelSide` lags behind it so the "ON" lettering fades out in place on
   // its original side, then jumps to the now-open side and fades back in
@@ -53,7 +55,7 @@ export function AlwaysOnToggle(): ReactNode {
       <button
         type="button"
         className="alwaysOnSocket"
-        aria-label="Always on"
+        aria-label={t("alwaysOn.ariaLabel", { defaultValue: "Always on" })}
         onClick={toggle}
       >
         <Plate radius="999px" className="alwaysOnShell">

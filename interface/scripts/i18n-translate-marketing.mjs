@@ -20,7 +20,6 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { transform } from "esbuild";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = join(__dirname, "..", "src");
@@ -64,41 +63,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function readJson(file) {
   return JSON.parse(await readFile(file, "utf8"));
-}
-
-/** Load the expertise detail data by transpiling the TS data module. */
-async function loadExpertiseData() {
-  const file = join(
-    SRC,
-    "views",
-    "marketing",
-    "ExpertiseDetailView",
-    "expertiseData.ts",
-  );
-  const ts = await readFile(file, "utf8");
-  const { code } = await transform(ts, { loader: "ts", format: "esm" });
-  const dataUrl =
-    "data:text/javascript;base64," + Buffer.from(code).toString("base64");
-  const mod = await import(dataUrl);
-  return [...mod.CAPABILITIES, ...mod.INDUSTRIES];
-}
-
-/** Build the expertise.entries.<slug> subtree from the data module. */
-function buildExpertiseEntries(entries) {
-  const out = {};
-  for (const entry of entries) {
-    out[entry.slug] = {
-      label: entry.label,
-      headline: entry.headline,
-      heroBlurb: entry.heroBlurb,
-      overview: entry.overview,
-      useCases: entry.useCases.map((u) => ({
-        title: u.title,
-        description: u.description,
-      })),
-    };
-  }
-  return out;
 }
 
 const cache = new Map(); // `${tl}\u0000${text}` -> translated
@@ -273,11 +237,7 @@ async function main() {
   );
   const enNav = await readJson(join(LOCALES_DIR, "en", "nav.json"));
 
-  const expertiseEntries = buildExpertiseEntries(await loadExpertiseData());
-  const marketingSource = {
-    ...enMarketing,
-    expertise: { ...enMarketing.expertise, entries: expertiseEntries },
-  };
+  const marketingSource = enMarketing;
 
   for (const locale of locales) {
     const tl = GOOGLE_CODE[locale];

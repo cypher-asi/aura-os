@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import {
   CreateAgentButton,
@@ -122,6 +123,7 @@ interface ServiceDeviceCardProps {
 export function ServiceDeviceCard({
   hexGrille = false,
 }: ServiceDeviceCardProps = {}): ReactNode {
+  const { t } = useTranslation("marketing");
   const contentRef = useRef<HTMLDivElement>(null);
   const introVideoRef = useRef<HTMLVideoElement>(null);
   const loopVideoRef = useRef<HTMLVideoElement>(null);
@@ -427,8 +429,12 @@ export function ServiceDeviceCard({
     <>
     {hexGrille ? (
       <div className="madeForYouDeviceCaption" aria-hidden="true">
-        <span className="madeForYouPanelCaptionTitle">CONFIGURE</span>
-        <span className="madeForYouPanelCaptionSub">YOUR PRIVATE AGENT</span>
+        <span className="madeForYouPanelCaptionTitle">
+          {t("agentBuilder.configure", { defaultValue: "CONFIGURE" })}
+        </span>
+        <span className="madeForYouPanelCaptionSub">
+          {t("agentBuilder.privateAgent", { defaultValue: "YOUR PRIVATE AGENT" })}
+        </span>
       </div>
     ) : null}
     <Plate
@@ -484,7 +490,11 @@ export function ServiceDeviceCard({
                       >
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <span className="madeForYouSideLabel">{item.label}</span>
+                      <span className="madeForYouSideLabel">
+                        {t(`agentBuilder.steps.${index}.label`, {
+                          defaultValue: item.label,
+                        })}
+                      </span>
                       <span className="madeForYouSideIndicator">
                         {isAbove || isSelected ? (
                           <Check
@@ -529,7 +539,9 @@ export function ServiceDeviceCard({
               <p className="madeForYouStageText">
                 <TypewriterText
                   key={selectedIndex}
-                  text={progressStage?.description ?? ""}
+                  text={t(`agentBuilder.steps.${selectedIndex}.description`, {
+                    defaultValue: progressStage?.description ?? "",
+                  })}
                   speedMs={22}
                 />
               </p>
@@ -540,6 +552,12 @@ export function ServiceDeviceCard({
         <div className="personalAgentDeviceScreen" aria-hidden="true">
           {hexGrille ? (
             <>
+              {/*
+                `preload="none"`: both clips together are several MB and sit
+                far below the fold — fetching starts from the play() calls
+                the IntersectionObserver issues when the card scrolls in,
+                instead of at page load.
+              */}
               <video
                 ref={loopVideoRef}
                 className="personalAgentDeviceVideo personalAgentDeviceVideo--loop"
@@ -547,7 +565,7 @@ export function ServiceDeviceCard({
                 muted
                 loop
                 playsInline
-                preload="auto"
+                preload="none"
               />
               <video
                 ref={introVideoRef}
@@ -555,9 +573,20 @@ export function ServiceDeviceCard({
                 src={INTRO_VIDEO}
                 muted
                 playsInline
-                preload="auto"
+                preload="none"
                 data-visible={introVisible ? "true" : undefined}
                 onEnded={() => setIntroDone(true)}
+              />
+              {/*
+                Carries the breathing glow ring around the video circle.
+                The glow used to be an animated multi-layer box-shadow on
+                the <video> itself, which forced a large repaint every
+                frame; this overlay bakes the peak shadow once and breathes
+                via compositor-only opacity (see MadeForYouSection.css).
+              */}
+              <span
+                className="personalAgentDeviceVideoGlow"
+                aria-hidden="true"
               />
             </>
           ) : null}
@@ -599,7 +628,11 @@ export function ServiceDeviceCard({
                 </span>
                 <span className="personalAgentDeviceAsterisk">&#10033;</span>
               </div>
-              <span className="personalAgentDeviceLabel">100+ Integrations</span>
+              <span className="personalAgentDeviceLabel">
+                {t("agentBuilder.integrations", {
+                  defaultValue: "100+ Integrations",
+                })}
+              </span>
               <span className="personalAgentDeviceAsterisk">&#10033;</span>
             </div>
 
@@ -616,7 +649,12 @@ export function ServiceDeviceCard({
           aria-valuenow={progressPercent}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Build progress: ${progressStage?.label ?? ""}`}
+          aria-label={t("agentBuilder.buildProgressAria", {
+            defaultValue: `Build progress: ${progressStage?.label ?? ""}`,
+            step: t(`agentBuilder.steps.${selectedIndex}.label`, {
+              defaultValue: progressStage?.label ?? "",
+            }),
+          })}
         >
           <div
             className="madeForYouProgressTrack"

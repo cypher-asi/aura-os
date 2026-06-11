@@ -1,10 +1,57 @@
 {
+  "agentBuilder": {
+    "buildProgressAria": "Tiến độ xây dựng: {{step}}",
+    "configure": "CẤU HÌNH",
+    "integrations": "Hơn 100 tích hợp",
+    "privateAgent": "ĐẠI LÝ RIÊNG CỦA BẠN",
+    "steps": {
+      "0": {
+        "description": "Tạo tên đại lý và hình đại diện 3D của bạn.",
+        "label": "Danh tính"
+      },
+      "1": {
+        "description": "Xây dựng các kỹ năng và kiến ​​thức cốt lõi của đại lý của bạn.",
+        "label": "chuyên môn"
+      },
+      "2": {
+        "description": "Cấp cho đại lý của bạn quyền truy cập an toàn vào dữ liệu của bạn.",
+        "label": "Tích hợp"
+      },
+      "3": {
+        "description": "Liên kết đại lý của bạn với iMessage, Telegram, v.v.",
+        "label": "Kết nối"
+      },
+      "4": {
+        "description": "Lên lịch các công việc hàng ngày mà đại lý của bạn thực hiện cho bạn.",
+        "label": "Tự động hóa"
+      },
+      "5": {
+        "description": "Khai sinh đại lý của bạn vào thế giới.",
+        "label": "Phóng"
+      }
+    }
+  },
+  "agentConsole": {
+    "next": "Kế tiếp",
+    "previous": "Trước",
+    "states": {
+      "openSource": "Nguồn mở",
+      "private": "Riêng tư",
+      "secure": "Chắc chắn",
+      "verifiable": "Có thể kiểm chứng"
+    }
+  },
+  "agentMarquee": {
+    "ariaLabel": "đại lý AURA"
+  },
   "agents": {
     "buildDeviceAriaLabel": "Xây dựng đại lý của bạn",
     "documentTitle": "AURA - Đại lý",
-    "heroDescriptionLine1": "Đại lý AURA là chuyên gia trong mọi lĩnh vực",
-    "heroDescriptionLine2": "nó hoạt động trong khi bạn ngủ.",
+    "heroDescription": "Đại lý AURA là chuyên gia trong mọi lĩnh vực hoạt động trong khi bạn ngủ.",
     "heroHeadline": "Ủy quyền mọi thứ."
+  },
+  "alwaysOn": {
+    "ariaLabel": "Luôn bật"
   },
   "blog": {
     "allPosts": "Tất cả bài viết",
@@ -40,6 +87,140 @@
     "title": "Blog",
     "tocAriaLabel": "Mục lục",
     "tocTitle": "Mục lục"
+  },
+  "capabilities": {
+    "analytics": {
+      "0": "Trang tổng quan & báo cáo",
+      "1": "SQL & truy vấn",
+      "2": "Làm sạch dữ liệu",
+      "3": "Phát hiện xu hướng",
+      "4": "Mô hình dự báo",
+      "5": "Phân tích đoàn hệ",
+      "6": "Theo dõi KPI",
+      "7": "Phát hiện bất thường",
+      "8": "Trực quan hóa",
+      "9": "Kể chuyện dữ liệu"
+    },
+    "coding": {
+      "0": "Phát triển toàn diện",
+      "1": "Tái cấu trúc & tối ưu hóa",
+      "2": "Gỡ lỗi và sửa lỗi",
+      "3": "Viết và chạy thử nghiệm",
+      "4": "Đánh giá mã",
+      "5": "Tích hợp API",
+      "6": "Tài liệu",
+      "7": "Di chuyển và nâng cấp",
+      "8": "Đường ống CI/CD",
+      "9": "thiết kế kiến ​​trúc"
+    },
+    "creative": {
+      "0": "Viết truyện & viết kịch bản",
+      "1": "Động não ở quy mô lớn",
+      "2": "Xây dựng nhân vật và thế giới",
+      "3": "Thơ và lời bài hát",
+      "4": "Ý tưởng khái niệm",
+      "5": "Đặt tên và khẩu hiệu",
+      "6": "Thay đổi tâm trạng và giai điệu",
+      "7": "Cấu trúc cốt truyện",
+      "8": "Đánh bóng đối thoại",
+      "9": "Sàn sân"
+    },
+    "design": {
+      "0": "Mô hình UI & UX",
+      "1": "Hệ thống thiết kế",
+      "2": "Logo & thương hiệu",
+      "3": "Màu sắc và kiểu chữ",
+      "4": "Wireframes cho nguyên mẫu",
+      "5": "Tạo và chỉnh sửa hình ảnh",
+      "6": "Hình tượng học",
+      "7": "Bố cục & bố cục",
+      "8": "Kiểm tra khả năng truy cập",
+      "9": "Tài sản sẵn sàng xuất khẩu"
+    },
+    "finance": {
+      "0": "Mô hình tài chính",
+      "1": "Ngân sách và dự báo",
+      "2": "Theo dõi chi phí",
+      "3": "Phân tích kịch bản",
+      "4": "Lập hoá đơn và đối chiếu",
+      "5": "Định giá & DCF",
+      "6": "Dự báo dòng tiền",
+      "7": "Nghiên cứu đầu tư",
+      "8": "Đánh giá rủi ro",
+      "9": "Báo cáo và tuân thủ"
+    },
+    "legal": {
+      "0": "Soạn thảo hợp đồng",
+      "1": "Xem xét điều khoản và giới hạn lại",
+      "2": "Gắn cờ rủi ro",
+      "3": "Kiểm tra tuân thủ",
+      "4": "Nghiên cứu pháp lý",
+      "5": "Tóm tắt án lệ",
+      "6": "NDA và mẫu thỏa thuận",
+      "7": "Sự thẩm định",
+      "8": "Soạn thảo chính sách",
+      "9": "Người giải thích bằng ngôn ngữ đơn giản"
+    },
+    "marketing": {
+      "0": "Lập kế hoạch chiến dịch",
+      "1": "Email và bản sao quảng cáo",
+      "2": "Thử nghiệm A/B",
+      "3": "Phân khúc đối tượng",
+      "4": "Nghiên cứu từ khóa & SEO",
+      "5": "Trang đích",
+      "6": "Tin nhắn thương hiệu",
+      "7": "Phân tích hiệu suất",
+      "8": "Tối ưu hóa kênh",
+      "9": "Phân phối nội dung"
+    },
+    "research": {
+      "0": "Tổng hợp hàng trăm nguồn",
+      "1": "Trích dẫn mọi yêu cầu bồi thường",
+      "2": "Bình luận văn học",
+      "3": "Trích xuất dữ liệu & bảng",
+      "4": "Phân tích thống kê",
+      "5": "Kiểm tra giả thuyết",
+      "6": "Báo cáo PDF & sách trắng",
+      "7": "Kiểm tra thực tế",
+      "8": "Cảnh quan cạnh tranh",
+      "9": "Đánh giá ngang hàng"
+    },
+    "sales": {
+      "0": "Trình độ chuyên môn chính",
+      "1": "Quản lý đường ống",
+      "2": "Tiếp cận cá nhân",
+      "3": "Trình tự theo dõi",
+      "4": "Cập nhật CRM",
+      "5": "Tóm tắt cuộc gọi và ghi chú",
+      "6": "Soạn thảo đề xuất",
+      "7": "Xử lý phản đối",
+      "8": "Dự báo doanh thu",
+      "9": "Chấm điểm giao dịch"
+    },
+    "social": {
+      "0": "Lên lịch & tự động đăng bài",
+      "1": "Quy trình làm việc đa nền tảng",
+      "2": "Trả lời và tương tác",
+      "3": "Giám sát xu hướng",
+      "4": "Lịch nội dung",
+      "5": "Chiến lược gắn thẻ bắt đầu bằng #",
+      "6": "Tạo phụ đề",
+      "7": "Phân tích & thông tin chuyên sâu",
+      "8": "Tiếp cận người ảnh hưởng",
+      "9": "Quản lý cộng đồng"
+    },
+    "writing": {
+      "0": "Bài viết dài",
+      "1": "Phù hợp với giọng nói và giai điệu của bạn",
+      "2": "Chỉnh sửa và hiệu đính",
+      "3": "Đề cương cho bản nháp",
+      "4": "Tài liệu kỹ thuật",
+      "5": "Bản sao nhận biết SEO",
+      "6": "Viết lại và ngưng tụ",
+      "7": "Dịch đa ngôn ngữ",
+      "8": "Trích dẫn & tài liệu tham khảo",
+      "9": "Tiêu đề & câu chuyện hấp dẫn"
+    }
   },
   "changelog": {
     "chart": {
@@ -90,11 +271,28 @@
     "heroDescription": "Khai thác mã hóa biên giới được thiết kế để bảo mật, tự động hóa và xác minh là nguồn mở 100%.",
     "heroHeadline": "Viết mã trong khi bạn ngủ."
   },
+  "connectedConsole": {
+    "vibe": "RUNG CẢM"
+  },
   "cta": {
     "ariaLabel": "Lời kêu gọi hành động của sản phẩm",
     "download": "Tải xuống",
     "signUp": "Đăng ký",
     "tagline": "Hãy cảm nhận AGI."
+  },
+  "disciplines": {
+    "analytics": "Phân tích",
+    "coding": "Mã hóa",
+    "creative": "Sáng tạo",
+    "design": "Thiết kế",
+    "finance": "Tài chính",
+    "general": "Tổng quan",
+    "legal": "Hợp pháp",
+    "marketing": "Tiếp thị",
+    "research": "Nghiên cứu",
+    "sales": "Việc bán hàng",
+    "social": "Xã hội",
+    "writing": "Viết"
   },
   "docs": {
     "docDocumentTitle": "Tài liệu AURA - {{title}}",
@@ -582,11 +780,96 @@
   },
   "footer": {
     "ariaLabel": "Chân trang của trang web",
+    "columns": {
+      "0": {
+        "heading": "Sản phẩm",
+        "links": {
+          "0": "Đại lý",
+          "1": "Mã số",
+          "2": "hệ điều hành"
+        }
+      },
+      "1": {
+        "heading": "Tài nguyên",
+        "links": {
+          "0": "Định giá",
+          "1": "Tải xuống",
+          "2": "Nhật ký thay đổi",
+          "3": "Blog",
+          "4": "Tài liệu"
+        }
+      },
+      "2": {
+        "heading": "Kết nối"
+      },
+      "3": {
+        "heading": "Hợp pháp",
+        "links": {
+          "0": "Điều khoản dịch vụ",
+          "1": "Chính sách bảo mật"
+        }
+      }
+    },
     "copyright": "Bản quyền © {{year}}",
     "navigationAriaLabel": "Điều hướng chân trang"
   },
+  "mobileChat": {
+    "conversations": {
+      "backend": {
+        "agentName": "Phần phụ trợ",
+        "messages": {
+          "0": "Tại sao /giá chậm ngày hôm nay?",
+          "1": "Đang kiểm tra kế hoạch truy vấn - có vẻ như thiếu chỉ mục.",
+          "3": "Thêm chỉ mục trên (tên). Nên giảm xuống ~ 5ms."
+        }
+      },
+      "frontend": {
+        "agentName": "Giao diện người dùng",
+        "messages": {
+          "0": "Thêm chuyển đổi chế độ tối vào cài đặt",
+          "1": "Trên đó - thêm một nút chuyển đổi có dây vào cửa hàng chủ đề.",
+          "3": "Xong. Bạn muốn nó tuân theo hệ điều hành theo mặc định?"
+        }
+      },
+      "reviewer": {
+        "agentName": "Người đánh giá",
+        "messages": {
+          "0": "Gửi bản phát hành khi CI có màu xanh",
+          "1": "Đang xem đường ống bây giờ.",
+          "3": "Tất cả đều xanh. Hợp nhất và gắn thẻ phát hành."
+        }
+      }
+    },
+    "messagePlaceholder": "Nhắn tin cho đại lý của bạn…",
+    "subtitle": "trực tuyến · trên máy ảo của bạn"
+  },
+  "mockChatInput": {
+    "examples": {
+      "0": "Tái cấu trúc thành phần React này, cập nhật các bài kiểm tra và mở PR",
+      "1": "Lên kế hoạch cho chuyến đi cuối tuần tới Lisbon và đặt vé máy bay",
+      "2": "Tạo một bức ảnh biên tập ấm áp về một thư viện nhỏ trong rừng vào lúc hoàng hôn",
+      "3": "Biến những ảnh chụp màn hình sản phẩm này thành video giới thiệu sản phẩm dài 12 giây",
+      "4": "Tạo mô hình 3D của bộ sắp xếp bàn làm việc theo mô-đun có kẹp cáp",
+      "5": "So sánh ba nhà giữ trẻ gần tôi và lên lịch các chuyến tham quan vào tuần tới",
+      "6": "Tìm lý do tại sao truy vấn trang tổng quan này hết thời gian và gửi bản sửa lỗi",
+      "7": "Thiết kế hệ thống logo cho dự án quán cà phê khu phố của tôi",
+      "8": "Tạo một đoạn clip giới thiệu bình tĩnh từ bản ghi màn hình thô này",
+      "9": "Mô hình chân máy du lịch có thể gập lại với các bộ phận chuyển động được dán nhãn",
+      "10": "Điều phối việc di chuyển xuyên quốc gia của tôi với các công ty vận chuyển, tiện ích và chuyến bay",
+      "11": "Kiểm tra luồng xác thực để biết điều kiện tương tranh và viết kế hoạch di chuyển",
+      "12": "Tạo hình ảnh chiến dịch cho xe cắm trại điện sang trọng trong tuyết",
+      "13": "Bảng phân cảnh và kết xuất đoạn giới thiệu điện ảnh cho công cụ âm nhạc AI",
+      "14": "Tạo buồng lái tàu vũ trụ sẵn sàng cho trò chơi với cấu trúc liên kết rõ ràng",
+      "15": "Xây dựng kế hoạch tuyển dụng cho nhóm nghiên cứu robot gồm 5 người",
+      "16": "Chuyển dịch vụ thanh toán này vào hàng đợi mà không làm mất sự kiện",
+      "17": "Hình dung một thành phố nhà kính trên sao Hỏa để trưng bày tại bảo tàng khoa học",
+      "18": "Tạo video demo cho nhà đầu tư từ nguyên mẫu kỹ thuật này",
+      "19": "Thiết kế khung gầm máy bay không người lái có thể sản xuất được với khả năng tiếp cận pin"
+    }
+  },
   "models": {
     "allModelsAriaLabel": "Tất cả các mô hình",
+    "cardAria": "{{name}} qua {{provider}}",
     "documentTitle": "AURA - Người mẫu",
     "empty": "Không có mô hình nào phù hợp với bộ lọc hiện tại. Hãy thử xóa tìm kiếm hoặc chuyển tab.",
     "featured": "Nổi bật",
@@ -594,6 +877,20 @@
     "filterByModalityAriaLabel": "Lọc theo phương thức",
     "filterByStatusAriaLabel": "Lọc theo trạng thái",
     "loadingCatalog": "Đang tải danh mục…",
+    "modeOptions": {
+      "3d": "3D",
+      "all": "Tất cả",
+      "image": "Hình ảnh",
+      "text": "Chữ",
+      "video": "Băng hình"
+    },
+    "modeTitles": {
+      "3d": "Mô hình 3D",
+      "all": "Tất cả các mẫu",
+      "image": "Mô hình hình ảnh",
+      "text": "Mô hình văn bản",
+      "video": "Mô hình Video"
+    },
     "searchAriaLabel": "Tìm kiếm mô hình",
     "searchPlaceholder": "Tìm kiếm mô hình...",
     "stats": {
@@ -608,6 +905,11 @@
       "liveAriaLabel": "Trạng thái: Trực tiếp",
       "soon": "Sớm",
       "soonAriaLabel": "Tình trạng: Sắp có"
+    },
+    "statusOptions": {
+      "all": "Tất cả",
+      "live": "Sống",
+      "soon": "Sớm"
     },
     "subtitle": "Các mô hình biên giới cung cấp năng lượng cho AURA, trên văn bản, hình ảnh, video và 3D.",
     "summaryAriaLabel": "Tóm tắt mô hình"
@@ -627,6 +929,36 @@
       "heading": "Không tìm thấy phần"
     },
     "sidebarTitle": "Hệ điều hành AURA"
+  },
+  "personas": {
+    "coordinator": {
+      "name": "Điều phối viên",
+      "role": "Người điều phối nhóm"
+    },
+    "creator": {
+      "name": "Người sáng tạo",
+      "role": "Người sáng tạo"
+    },
+    "cypher-punk": {
+      "name": "Cypher Punk",
+      "role": "Nhà điều hành bảo mật"
+    },
+    "giga-brain": {
+      "name": "Bộ não khổng lồ",
+      "role": "Trưởng nhóm nghiên cứu"
+    },
+    "researcher": {
+      "name": "nhà nghiên cứu",
+      "role": "Nhà phân tích nghiên cứu"
+    },
+    "solo-builder": {
+      "name": "Người xây dựng đơn độc",
+      "role": "Kỹ sư độc lập"
+    },
+    "vibecoder": {
+      "name": "bộ mã hóa vibe",
+      "role": "Lập trình viên sáng tạo"
+    }
   },
   "pricing": {
     "billingCycleAriaLabel": "Chu kỳ thanh toán",
@@ -840,6 +1172,37 @@
       "headline": "Được thiết kế cho nhân loại của bạn."
     }
   },
+  "skills": {
+    "coding-agent": "Mã số",
+    "gifgrep": "Hình ảnh",
+    "goplaces": "Bản đồ",
+    "healthcheck": "Sức khỏe",
+    "himalaya": "E-mail",
+    "nano-pdf": "PDF",
+    "notion": "Ghi chú",
+    "openhue": "đèn",
+    "skill-creator": "Tạo nên",
+    "spotify-player": "Âm nhạc",
+    "summarize": "Tóm tắt",
+    "taskflow": "Nhiệm vụ",
+    "trello": "bảng",
+    "video-frames": "Băng hình",
+    "voice-call": "Gọi"
+  },
+  "specQuadrant": {
+    "activation": "KÍCH HOẠT",
+    "examples": {
+      "ads": "Quảng cáo",
+      "email": "E-mail",
+      "post": "Bưu kiện",
+      "seo": "SEO"
+    },
+    "expertiseAria": "chuyên môn",
+    "featureHighlightsAria": "Tính năng nổi bật",
+    "intelligence": "TRÍ TUỆ",
+    "online": "TRỰC TUYẾN",
+    "withoutLimits": "KHÔNG GIỚI HẠN"
+  },
   "support": {
     "body": "Cần trợ giúp với AURA? Chúng tôi ở đây vì bạn. Gửi email cho nhóm hỗ trợ của chúng tôi và chúng tôi sẽ liên hệ lại với bạn ngay khi có thể.",
     "headline": "Ủng hộ",
@@ -984,5 +1347,33 @@
         "heading": "18. Luật điều chỉnh và giải quyết tranh chấp"
       }
     ]
+  },
+  "trust": {
+    "attestation": "Chứng thực",
+    "insertTokens": "Chèn mã thông báo",
+    "marqueeTerms": {
+      "0": "VM được đóng hộp cát",
+      "1": "Thực thi đáng tin cậy",
+      "2": "Khởi động được chứng thực",
+      "3": "Tính toán bí mật",
+      "4": "Bộ nhớ được mã hóa",
+      "5": "Thời gian chạy riêng biệt"
+    },
+    "readouts": {
+      "harness": {
+        "description": "Tất cả dữ liệu đều chảy qua khai thác tùy chỉnh của AURA. Mỗi bước là nguyên tử, bất biến và được kiểm toán.",
+        "title": "Khai thác thời gian chạy AURA"
+      },
+      "router": {
+        "description": "Lớp định tuyến an toàn xử lý mọi yêu cầu trên các mô hình biên giới và nguồn mở.",
+        "title": "Bộ định tuyến AURA"
+      },
+      "swarm": {
+        "description": "Một môi trường thực thi đáng tin cậy bị cô lập. Chìa khóa của bạn không bao giờ rời khỏi nó và chủ nhà không nhìn thấy gì.",
+        "title": "Bầy AURA"
+      }
+    },
+    "uptime": "Thời gian hoạt động",
+    "vmLabel": "máy ảo"
   }
 }

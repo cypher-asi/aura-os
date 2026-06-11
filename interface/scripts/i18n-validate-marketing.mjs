@@ -23,10 +23,14 @@ function leaves(obj, path, acc) {
   if (obj && typeof obj === "object") for (const [k, v] of Object.entries(obj)) leaves(v, path ? `${path}.${k}` : k, acc);
 }
 
+/** Collapse i18next plural-suffixed keys to a single base for set comparison. */
+const pluralBase = (k) => k.replace(/_(zero|one|two|few|many|other)$/, "");
+
 let errors = 0;
 for (const ns of NS) {
   const en = JSON.parse(await readFile(join(LOCALES, "en", `${ns}.json`), "utf8"));
   const enLeaves = new Map(); { const a = []; leaves(en, "", a); for (const [k, v] of a) enLeaves.set(k, v); }
+  const enKeys = new Set([...enLeaves.keys()].map(pluralBase));
   for (const loc of TARGETS) {
     const file = join(LOCALES, loc, `${ns}.json`);
     if (!existsSync(file)) { console.error(`MISSING ${loc}/${ns}.json`); errors++; continue; }
@@ -36,6 +40,11 @@ for (const ns of NS) {
     const a = []; leaves(data, "", a);
     for (const [k, v] of a) {
       if (v === "") { console.error(`EMPTY ${loc}/${ns}: ${k}`); errors++; }
+    }
+    // Every en key (plural-collapsed) must be present in the locale.
+    const locKeys = new Set(a.map(([k]) => pluralBase(k)));
+    for (const k of enKeys) {
+      if (!locKeys.has(k)) { console.error(`MISSING KEY ${loc}/${ns}: ${k}`); errors++; }
     }
     // Placeholder integrity against en (skip plural-expanded keys not in en).
     for (const [k, v] of a) {

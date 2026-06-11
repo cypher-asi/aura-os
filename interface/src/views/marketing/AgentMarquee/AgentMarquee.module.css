@@ -202,19 +202,24 @@
   transform-origin: 50% 50%;
   /* No-op default; the `:hover` rule below sets the scale and the
      transition above interpolates between the two states.
-     `will-change: transform` promotes the card to its own
-     compositor layer up front so the in-between frames during
-     scale animate at GPU compositing speed instead of triggering
-     repaints; without it, the rounded `overflow: hidden` corners
-     can render with subpixel jaggies on Windows GPUs as the
-     scale transitions. `backface-visibility: hidden` is the
-     classic companion hint that makes some browsers also force a
-     stable 3D-rendering context, again sharpening the rounded
-     corners during the animation. */
-  will-change: transform;
+     `backface-visibility: hidden` makes some browsers force a
+     stable 3D-rendering context, sharpening the rounded corners
+     during the scale animation. */
   backface-visibility: hidden;
   transform: scale(1);
   background-color: #1a1a1d;
+}
+
+/* Promote cards to compositor layers only while the pointer is over the
+   marquee, so the in-between frames of the hover scale animate at GPU
+   compositing speed (and the rounded `overflow: hidden` corners avoid
+   subpixel jaggies on Windows GPUs). The strip-level :hover engages at
+   least a frame before any card-level hover transition can start, so the
+   promotion is always in place in time — while an idle (un-hovered)
+   marquee no longer holds 12+ permanent layers of VRAM. */
+.marquee:hover .card,
+.marquee:focus-within .card {
+  will-change: transform;
 }
 
 .card:hover,

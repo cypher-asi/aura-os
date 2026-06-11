@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import { SlidingPills, type SlidingPillItem } from "../../../components/SlidingPills";
 import { NoiseReductionBrain } from "../NoiseReductionBrain";
@@ -9,10 +10,6 @@ import {
   EXPERTISES,
   type Expertise,
 } from "./expertiseExamples";
-
-const EXPERTISE_PILLS: readonly SlidingPillItem<Expertise>[] = EXPERTISES.map(
-  (label) => ({ id: label, label }),
-);
 
 /**
  * Mini-UI for the spec bento below `ExpertiseSection`: a static recreation
@@ -177,12 +174,29 @@ export function NoiseReductionCard(): ReactNode {
   // bespoke code (left) / paint (right) flanks. Every other discipline renders
   // a typewriter capability list (left) + an example mockup (right) around the
   // same centered brain (see `expertiseContent.tsx`).
+  const { t } = useTranslation("marketing");
   const [expertise, setExpertise] = useState<Expertise>("General");
   const showGeneralFlanks = expertise === "General";
   // Narrow away `General` so the per-discipline content maps stay strongly
   // typed; `null` while General is active.
   const specialized = expertise === "General" ? null : expertise;
   const ExampleMockup = specialized ? EXAMPLE_COMPONENTS[specialized] : null;
+  // Discipline pill labels and the capability list are resolved through the
+  // marketing catalog (keyed by lowercased discipline); fall back to the
+  // hardcoded English when a key is missing.
+  const expertisePills: readonly SlidingPillItem<Expertise>[] = EXPERTISES.map(
+    (label) => ({
+      id: label,
+      label: t(`disciplines.${label.toLowerCase()}`, { defaultValue: label }),
+    }),
+  );
+  const specializedCapabilities = specialized
+    ? EXPERTISE_CAPABILITIES[specialized].map((capability, index) =>
+        t(`capabilities.${specialized.toLowerCase()}.${index}`, {
+          defaultValue: capability,
+        }),
+      )
+    : [];
 
   // Live ACTIVATION readout: a number floored at 0.01 that rapidly rises and
   // falls. Updated imperatively each frame (no re-render) so the digits flicker
@@ -357,8 +371,12 @@ export function NoiseReductionCard(): ReactNode {
           "CONFIGURE / YOUR PRIVATE AGENT" caption above the made-for-you
           device), lifted out of the device's control panel. */}
       <div className="nrCaption" aria-hidden="true">
-        <span className="nrCaptionTitle">INTELLIGENCE</span>
-        <span className="nrCaptionSub">WITHOUT LIMITS</span>
+        <span className="nrCaptionTitle">
+          {t("specQuadrant.intelligence", { defaultValue: "INTELLIGENCE" })}
+        </span>
+        <span className="nrCaptionSub">
+          {t("specQuadrant.withoutLimits", { defaultValue: "WITHOUT LIMITS" })}
+        </span>
       </div>
 
       <Plate className="nrCard">
@@ -414,7 +432,7 @@ export function NoiseReductionCard(): ReactNode {
               <div className="nrCapabilityField">
                 <CapabilityList
                   key={specialized}
-                  capabilities={EXPERTISE_CAPABILITIES[specialized]}
+                  capabilities={specializedCapabilities}
                 />
               </div>
             ) : null}
@@ -433,14 +451,16 @@ export function NoiseReductionCard(): ReactNode {
                   above the lighter controls/pill plate, flanking the knob. */}
               <div className="nrStatus" aria-hidden="true">
                 <span className="nrReduction">
-                  <span className="nrReductionLabel">ACTIVATION</span>
+                  <span className="nrReductionLabel">
+                    {t("specQuadrant.activation", { defaultValue: "ACTIVATION" })}
+                  </span>
                   <span className="nrReductionValue" ref={activationRef}>
                     0.01
                   </span>
                 </span>
                 <span className="nrActive">
                   <span className="nrActiveDot" />
-                  ONLINE
+                  {t("specQuadrant.online", { defaultValue: "ONLINE" })}
                 </span>
               </div>
 
@@ -483,10 +503,12 @@ export function NoiseReductionCard(): ReactNode {
               <div className="nrExpertise">
                 <div className="nrExpertiseCapsule">
                   <SlidingPills
-                    items={EXPERTISE_PILLS}
+                    items={expertisePills}
                     value={expertise}
                     onChange={setExpertise}
-                    ariaLabel="Expertise"
+                    ariaLabel={t("specQuadrant.expertiseAria", {
+                      defaultValue: "Expertise",
+                    })}
                     className="nrExpertisePills"
                     segmentClassName="nrExpertiseSegment"
                     indicatorClassName="nrExpertiseIndicator"

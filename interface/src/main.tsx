@@ -43,6 +43,8 @@ import { purgeLegacyChatHistoryFallback } from "./shared/lib/browser-db";
 import { bootstrapTaskStreamSubscriptions } from "./stores/task-stream-bootstrap";
 import { bootstrapProcessStreamSubscriptions } from "./stores/process-stream-bootstrap";
 import { bootstrapChatHistoryInvalidator } from "./stores/chat-history-invalidator-bootstrap";
+import { isLoggedInSync } from "./shared/lib/auth-token";
+import { useAuthStore } from "./stores/auth-store";
 import { initAnalytics, track } from "./lib/analytics";
 
 // Must run before any module that reads the host origin (e.g. host-store,
@@ -78,22 +80,41 @@ track("app_opened");
 // first batch of WS events slip past (a mount race that presents as
 // "task row appears, but body never fills in"). Registering here
 // guarantees the handlers are in place before the events socket opens.
-bootstrapTaskStreamSubscriptions();
-// Same pattern for process runs: snapshots the per-node live-output
-// stream into localStorage on terminal transitions so a mid-run reload
-// can rehydrate the "Live Output" panel without waiting for WS.
-bootstrapProcessStreamSubscriptions();
-// App-global chat-history cache invalidator. The mounted-panel
-// `useChatHistorySync` hook only force-refetches when the panel is
-// visible, which leaves cross-agent writes (`send_to_agent`) invisible
-// on the recipient's panel until a manual refresh: the WS event fires
-// while the recipient panel is unmounted, the cache stays warm under
-// `HISTORY_TTL_MS = 30s`, and the next navigation re-uses stale data.
-// This bootstrap installs a global subscriber that marks every
-// possibly-affected chat-history key stale on `user_message` /
-// `assistant_message_end`, so the next `fetchHistory` re-hits the
-// server. See `stores/chat-history-invalidator-bootstrap.ts`.
-bootstrapChatHistoryInvalidator();
+//
+// All three bootstraps are authenticated-shell concerns (the events
+// socket only opens for logged-in users), so public marketing visitors
+// skip them entirely. The mount-race guarantee is preserved: at logged-in
+// boot they run synchronously here, and after a fresh login they run from
+// the auth-store subscription before any WS socket connects.
+function bootstrapAuthedSubscriptions(): void {
+  bootstrapTaskStreamSubscriptions();
+  // Same pattern for process runs: snapshots the per-node live-output
+  // stream into localStorage on terminal transitions so a mid-run reload
+  // can rehydrate the "Live Output" panel without waiting for WS.
+  bootstrapProcessStreamSubscriptions();
+  // App-global chat-history cache invalidator. The mounted-panel
+  // `useChatHistorySync` hook only force-refetches when the panel is
+  // visible, which leaves cross-agent writes (`send_to_agent`) invisible
+  // on the recipient's panel until a manual refresh: the WS event fires
+  // while the recipient panel is unmounted, the cache stays warm under
+  // `HISTORY_TTL_MS = 30s`, and the next navigation re-uses stale data.
+  // This bootstrap installs a global subscriber that marks every
+  // possibly-affected chat-history key stale on `user_message` /
+  // `assistant_message_end`, so the next `fetchHistory` re-hits the
+  // server. See `stores/chat-history-invalidator-bootstrap.ts`.
+  bootstrapChatHistoryInvalidator();
+}
+
+if (isLoggedInSync()) {
+  bootstrapAuthedSubscriptions();
+} else {
+  const unsubscribe = useAuthStore.subscribe((state) => {
+    if (state.user !== null) {
+      unsubscribe();
+      bootstrapAuthedSubscriptions();
+    }
+  });
+}
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Missing #root element");

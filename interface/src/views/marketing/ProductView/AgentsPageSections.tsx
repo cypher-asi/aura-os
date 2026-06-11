@@ -78,17 +78,10 @@ export function AgentsPageSections(): ReactNode {
                 />
               </span>
             }
-            description={
-              <>
-                {t("agents.heroDescriptionLine1", {
-                  defaultValue: "AURA agents are experts in every field",
-                })}
-                <br />
-                {t("agents.heroDescriptionLine2", {
-                  defaultValue: "that work while you sleep.",
-                })}
-              </>
-            }
+            description={t("agents.heroDescription", {
+              defaultValue:
+                "AURA agents are experts in every field that work while you sleep.",
+            })}
             preview={null}
             centered
             headlineCta={<CreateAgentButton source="product_hero" />}

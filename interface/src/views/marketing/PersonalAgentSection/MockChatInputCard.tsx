@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import { DesktopChatInputBar } from "../../../features/chat-ui/ChatInputBar";
 import type { AgentMode } from "../../../constants/modes";
@@ -115,6 +116,7 @@ const START_MODE: AgentMode = "code";
 const FIRST_EXAMPLE_INDEX = 1;
 
 export function MockChatInputCard(): ReactNode {
+  const { t } = useTranslation("marketing");
   const [text, setText] = useState("");
   const [activeIndex, setActiveIndex] = useState(FIRST_EXAMPLE_INDEX);
   const [selectedMode, setSelectedMode] = useState<AgentMode>(START_MODE);
@@ -128,6 +130,9 @@ export function MockChatInputCard(): ReactNode {
 
   useEffect(() => {
     const example = MOCK_EXAMPLES[activeIndex];
+    const promptText = t(`mockChatInput.examples.${activeIndex}`, {
+      defaultValue: example.prompt,
+    });
     let cancelled = false;
     let typed = 0;
 
@@ -140,8 +145,8 @@ export function MockChatInputCard(): ReactNode {
     const tick = () => {
       if (cancelled) return;
       typed += 1;
-      setText(example.prompt.slice(0, typed));
-      if (typed < example.prompt.length) {
+      setText(promptText.slice(0, typed));
+      if (typed < promptText.length) {
         timer.current = setTimeout(tick, TYPE_MS);
         return;
       }
@@ -158,7 +163,7 @@ export function MockChatInputCard(): ReactNode {
       cancelled = true;
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [activeIndex]);
+  }, [activeIndex, t]);
 
   return (
     <Plate radius="999px" className="personalAgentChatMock">

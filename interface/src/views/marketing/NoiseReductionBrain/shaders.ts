@@ -42,6 +42,7 @@ out vec4 fragColor;
 uniform vec2 u_resolution;     // canvas size in device px
 uniform vec2 u_texResolution;  // brain image natural size
 uniform float u_time;
+uniform float u_quality;       // 1 = full effect, 0 = skip the wide halo
 uniform sampler2D u_tex;       // brain angiography (vessel mask)
 uniform sampler2D u_code;      // generated code/math glyph texture (left bg)
 uniform vec2 u_codeResolution; // code texture natural size
@@ -142,10 +143,13 @@ void main() {
 
   // Wide soft AURA: average the mask over expanding rings so the glow
   // blooms far beyond the vessels into the black glass, wrapping the whole
-  // brain in a luminous energy field.
+  // brain in a luminous energy field. Six directions per ring are enough:
+  // the four radii average together and the result is multiplied into
+  // already-soft fields, so the residual ring structure is invisible while
+  // costing ~40% fewer texture taps than the original ten directions.
   vec2 ap = 1.0 / u_texResolution;
   float aura = 0.0;
-  const int AURA_TAPS = 10;
+  const int AURA_TAPS = 6;
   for (int i = 0; i < AURA_TAPS; i++) {
     float a = (float(i) / float(AURA_TAPS)) * 6.2831853;
     vec2 dir = vec2(cos(a), sin(a));
@@ -162,22 +166,27 @@ void main() {
   // spreads far beyond the brain into the surrounding black, wrapping the
   // whole image in a luminous backdrop. Slower, deeper pulsation than the
   // tight aura so it reads as an ambient field breathing behind the brain.
-  float halo = 0.0;
-  const int HALO_TAPS = 14;
-  for (int i = 0; i < HALO_TAPS; i++) {
-    float a = (float(i) / float(HALO_TAPS)) * 6.2831853;
-    vec2 dir = vec2(cos(a), sin(a));
-    halo += maskAt(uv + dir * ap * 140.0);
-    halo += maskAt(uv + dir * ap * 210.0);
-    halo += maskAt(uv + dir * ap * 300.0);
-    halo += maskAt(uv + dir * ap * 410.0);
+  // Skipped entirely at low quality (small canvases) where it reads as a
+  // faint background wash but still dominates the per-fragment tap count.
+  float outerGlow = 0.0;
+  if (u_quality > 0.5) {
+    float halo = 0.0;
+    const int HALO_TAPS = 7;
+    for (int i = 0; i < HALO_TAPS; i++) {
+      float a = (float(i) / float(HALO_TAPS)) * 6.2831853;
+      vec2 dir = vec2(cos(a), sin(a));
+      halo += maskAt(uv + dir * ap * 140.0);
+      halo += maskAt(uv + dir * ap * 210.0);
+      halo += maskAt(uv + dir * ap * 300.0);
+      halo += maskAt(uv + dir * ap * 410.0);
+    }
+    halo /= float(HALO_TAPS * 4);
+    // Lift + soften so the halo reads as a broad cloud rather than rings.
+    halo = pow(clamp(halo * 2.2, 0.0, 1.0), 0.65);
+    // Deep, slow pulsation so the backdrop swells in and out.
+    float haloPulse = 0.45 + 0.55 * (0.5 + 0.5 * sin(t * 0.9));
+    outerGlow = halo * haloPulse;
   }
-  halo /= float(HALO_TAPS * 4);
-  // Lift + soften so the halo reads as a broad cloud rather than rings.
-  halo = pow(clamp(halo * 2.2, 0.0, 1.0), 0.65);
-  // Deep, slow pulsation so the backdrop swells in and out.
-  float haloPulse = 0.45 + 0.55 * (0.5 + 0.5 * sin(t * 0.9));
-  float outerGlow = halo * haloPulse;
 
   // Fast, churning flow field so the vasculature looks busy and restless.
   vec2 flowP = uv * 7.0;

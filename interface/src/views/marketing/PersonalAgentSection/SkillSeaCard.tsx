@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import { SkillIcon } from "../../../components/SkillShopModal/SkillIcon";
 
@@ -52,6 +53,7 @@ const SKILL_GROUPS: readonly (readonly SkillButton[])[] = [
 const FLASH_MS = 1500;
 
 export function SkillSeaCard(): ReactNode {
+  const { t } = useTranslation("marketing");
   // Which keycap is currently playing its gold click-flash, keyed by skill id.
   const [flashedId, setFlashedId] = useState<string | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -84,7 +86,11 @@ export function SkillSeaCard(): ReactNode {
                 <span className="personalAgentSkillDivider" />
               )}
               <div className="personalAgentSkillSection">
-                {group.map((skill) => (
+                {group.map((skill) => {
+                  const skillLabel = t(`skills.${skill.id}`, {
+                    defaultValue: skill.label,
+                  });
+                  return (
                   <div key={skill.id} className="personalAgentSkillSocket">
                     <button
                       type="button"
@@ -92,14 +98,15 @@ export function SkillSeaCard(): ReactNode {
                       className="personalAgentSkillBtn"
                       data-lit={skill.lit ? "true" : undefined}
                       data-flash={flashedId === skill.id ? "true" : undefined}
-                      aria-label={skill.label}
-                      title={skill.label}
+                      aria-label={skillLabel}
+                      title={skillLabel}
                       onClick={() => flashKey(skill.id)}
                     >
                       <SkillIcon name={skill.id} size={20} />
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </Fragment>
           ))}

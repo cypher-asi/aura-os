@@ -4,10 +4,18 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import type { DeviceTier } from "../IsolatedDevice/isolated-device-scene";
 import "./TrustDisplayPanel.css";
+
+/** Maps the WebGL stack tier to its readout catalog key. */
+const READOUT_KEY: Record<DeviceTier, string> = {
+  top: "router",
+  middle: "harness",
+  bottom: "swarm",
+};
 
 /** CD-transport frame rate the uptime readout counts in (M:SS:FF). */
 const FRAMES_PER_SECOND = 75;
@@ -95,6 +103,7 @@ export function TrustDisplayPanel({
   tier,
   centerX,
 }: TrustDisplayPanelProps): ReactNode {
+  const { t } = useTranslation("marketing");
   const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
@@ -112,6 +121,20 @@ export function TrustDisplayPanel({
   const litSegments = Math.floor(elapsedMs / 1000) % (SEGMENT_COUNT + 1);
 
   const readout = TIER_READOUTS[tier];
+  const readoutKey = READOUT_KEY[tier];
+  const readoutTitle = t(`trust.readouts.${readoutKey}.title`, {
+    defaultValue: readout.title,
+  });
+  const readoutDescription = t(`trust.readouts.${readoutKey}.description`, {
+    defaultValue: readout.description,
+  });
+  const marqueeText =
+    [0, 1, 2, 3, 4, 5]
+      .map((i) =>
+        t(`trust.marqueeTerms.${i}`, { defaultValue: "" }).toUpperCase(),
+      )
+      .filter(Boolean)
+      .join(" \u2022 ") + " \u2022";
 
   const panelStyle =
     centerX != null
@@ -139,11 +162,7 @@ export function TrustDisplayPanel({
                       />
                     </defs>
                     <text className="trustDiscTextRing">
-                      <textPath href="#trustDiscTextPath">
-                        SANDBOXED VM &#8226; TRUSTED EXECUTION &#8226; ATTESTED
-                        BOOT &#8226; CONFIDENTIAL COMPUTE &#8226; ENCRYPTED
-                        MEMORY &#8226; ISOLATED RUNTIME &#8226;
-                      </textPath>
+                      <textPath href="#trustDiscTextPath">{marqueeText}</textPath>
                     </text>
                   </svg>
                 </div>
@@ -156,7 +175,9 @@ export function TrustDisplayPanel({
             <div className="trustDiscSide">
               <div className="trustDiscPlate">
                 <span className="trustDiscPlateArrow" />
-                <span className="trustDiscPlateText">Insert tokens</span>
+                <span className="trustDiscPlateText">
+                  {t("trust.insertTokens", { defaultValue: "Insert tokens" })}
+                </span>
               </div>
               <div className="trustDiscLogoWell">
                 <span className="trustDiscLogoBadge">
@@ -177,11 +198,15 @@ export function TrustDisplayPanel({
         >
           <div className="trustDisplayRow">
             <div className="trustDisplayGroup">
-              <span className="trustDisplayLabel">VM</span>
+              <span className="trustDisplayLabel">
+                {t("trust.vmLabel", { defaultValue: "VM" })}
+              </span>
               <span className="trustDisplayDigits">03</span>
             </div>
             <div className="trustDisplayGroup trustDisplayGroup--end">
-              <span className="trustDisplayLabel">Uptime</span>
+              <span className="trustDisplayLabel">
+                {t("trust.uptime", { defaultValue: "Uptime" })}
+              </span>
               <span className="trustDisplayDigits trustDisplayDigits--uptime">
                 {formatUptime(elapsedMs)}
               </span>
@@ -189,7 +214,9 @@ export function TrustDisplayPanel({
           </div>
 
           <div className="trustDisplayGroup">
-            <span className="trustDisplayLabel">Attestation</span>
+            <span className="trustDisplayLabel">
+              {t("trust.attestation", { defaultValue: "Attestation" })}
+            </span>
             <div className="trustDisplaySegments">
               {Array.from({ length: SEGMENT_COUNT }, (_, index) => (
                 <span
@@ -204,10 +231,10 @@ export function TrustDisplayPanel({
           {/* Keyed on the tier so switching computers remounts the
               typewriters and the description re-types from scratch. */}
           <div className="trustDisplayReadout" key={tier}>
-            <span className="trustDisplayReadoutTitle">{readout.title}</span>
+            <span className="trustDisplayReadoutTitle">{readoutTitle}</span>
             <p className="trustDisplayReadoutLine">
               <TypewriterText
-                text={readout.description}
+                text={readoutDescription}
                 speedMs={12}
                 showCaret={false}
               />

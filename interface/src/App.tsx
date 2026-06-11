@@ -23,7 +23,6 @@ import { apps } from "./apps/registry";
 import { getInitialShellPath } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
 import { useEffectiveMode } from "./stores/use-effective-mode";
-import { ChatAppRoute } from "./apps/chat-app/components/ChatAppRoute";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
 import { hydrateStoredAuth, isLoggedInSync } from "./shared/lib/auth-token";
 import { preloadInitialShellApp } from "./lib/boot-shell";
@@ -80,6 +79,14 @@ const SupportView = lazy(() =>
 const SharedSessionView = lazy(() =>
   import("./views/public-chat/SharedSessionView").then((m) => ({
     default: m.SharedSessionView,
+  })),
+);
+// Lazy: ChatAppRoute drags the full ChatPanel bundle with it, which must
+// not land in the entry graph public marketing visitors download. The
+// authenticated chat surface loads it on first use instead.
+const ChatAppRoute = lazy(() =>
+  import("./apps/chat-app/components/ChatAppRoute").then((m) => ({
+    default: m.ChatAppRoute,
   })),
 );
 

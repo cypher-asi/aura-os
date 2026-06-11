@@ -232,6 +232,8 @@ export function MetalPlateScene(): ReactNode {
       alt=""
       className="featurePanelPlate"
       aria-hidden="true"
+      loading="lazy"
+      decoding="async"
     />
   );
 }

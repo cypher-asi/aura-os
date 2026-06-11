@@ -1,10 +1,12 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { DeviceScreen } from "../../../components/DeviceScreen";
+import { observeSceneActivity } from "../scene-activity";
 import {
   createIsolatedDeviceScene,
   isWebGLAvailable,
   type DeviceTier,
+  type IsolatedDeviceScene,
 } from "./isolated-device-scene";
 import "./IsolatedDevice.css";
 
@@ -45,6 +47,10 @@ export function IsolatedDevice({
   onHoverChange,
 }: IsolatedDeviceProps = {}): ReactNode {
   const hostRef = useRef<HTMLDivElement>(null);
+  // Drives the entrance fade: stays false until the scene reports its first
+  // frame is rendered, so the device eases in when ready instead of popping
+  // in as a freshly-baked canvas (mirrors the hero AuraScreenOrb).
+  const [ready, setReady] = useState(false);
   // Kept in a ref so a new callback identity never remounts the scene.
   const onHoverChangeRef = useRef(onHoverChange);
   useEffect(() => {
@@ -56,16 +62,45 @@ export function IsolatedDevice({
     if (!host || !isWebGLAvailable()) {
       return;
     }
-    const scene = createIsolatedDeviceScene(host, {
-      onHoverChange: (tier) => onHoverChangeRef.current?.(tier),
-    });
-    return () => scene.dispose();
+    // The scene is expensive to build (PMREM environment bake, procedural
+    // textures, provider-logo rasterization), so creation is deferred
+    // until the card first approaches the viewport; afterwards the same
+    // activity signal starts/stops its render loop so it never burns GPU
+    // offscreen or in a hidden tab.
+    let scene: IsolatedDeviceScene | null = null;
+    const detachActivity = observeSceneActivity(
+      host,
+      (active) => {
+        if (active && !scene) {
+          scene = createIsolatedDeviceScene(host, {
+            onHoverChange: (tier) => onHoverChangeRef.current?.(tier),
+            onReady: () => setReady(true),
+          });
+        }
+        scene?.setActive(active);
+      },
+      { rootMargin: "240px" },
+    );
+    return () => {
+      detachActivity();
+      scene?.dispose();
+      // Re-arm the entrance fade if the effect re-runs.
+      setReady(false);
+    };
   }, []);
 
   return (
     <Plate radius="38px" className="isolatedDevicePlate">
       <DeviceScreen className="isolatedDeviceScreen">
-        <div className="isolatedDevice" aria-hidden="true" ref={hostRef} />
+        <div
+          className="isolatedDevice"
+          aria-hidden="true"
+          ref={hostRef}
+          style={{
+            opacity: ready ? 1 : 0,
+            transition: "opacity 600ms ease-out",
+          }}
+        />
       </DeviceScreen>
     </Plate>
   );

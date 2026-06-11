@@ -291,6 +291,15 @@
   }
 }
 
+/* Reduced motion: hold the glow steady and park the needle at its rest
+   angle instead of looping forever. */
+@media (prefers-reduced-motion: reduce) {
+  .phoneShellLcdGlow,
+  .phoneShellLcdNeedle {
+    animation: none;
+  }
+}
+
 /* The gauge SVG occupies the upper region of the LCD; viewBox units map to a
    200x96 coordinate space scaled to fit the screen width. */
 .phoneShellLcdGauge {

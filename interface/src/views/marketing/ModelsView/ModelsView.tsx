@@ -79,7 +79,11 @@ function ModelCard({ entry, featured = false }: ModelCardProps): ReactNode {
   return (
     <article
       className={`modelsCard${featured ? " modelsCardFeatured" : ""}`}
-      aria-label={`${entry.name} by ${entry.provider}`}
+      aria-label={t("models.cardAria", {
+        defaultValue: `${entry.name} by ${entry.provider}`,
+        name: entry.name,
+        provider: entry.provider,
+      })}
     >
       <div className="modelsCardHeader">
         <span

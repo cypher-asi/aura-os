@@ -76,6 +76,24 @@
 }
 
 /*
+ * Offscreen containment for the long section stack. `content-visibility:
+ * auto` lets the browser skip layout/paint for sections far outside the
+ * viewport AND auto-pauses their CSS animations (the page carries ~20
+ * infinite keyframe loops — marquees, LED pulses, glow breathing — that
+ * would otherwise run for the whole session regardless of scroll
+ * position). `contain-intrinsic-size`'s `auto` keyword remembers each
+ * section's real rendered size after its first layout, so scrollbar
+ * geometry stays stable; 800px is only the pre-first-render estimate.
+ * The first child (the hero first-screen) is excluded — it's the LCP
+ * content and always starts in view. Browsers without support simply
+ * ignore both declarations.
+ */
+.productView > *:not(:first-child) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+}
+
+/*
  * Hero headline wrapper that pre-reserves the FINAL headline's
  * width and height before the typewriter has streamed any
  * characters into it. Without this reservation the centered hero

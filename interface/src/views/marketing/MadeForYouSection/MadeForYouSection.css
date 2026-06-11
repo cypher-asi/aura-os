@@ -523,59 +523,63 @@
   height: calc(100% - var(--video-inset) * 2);
   object-fit: cover;
   border-radius: 50%;
-  /* Glow ringing the video circle (sits over the frosted glass), reading as
-     the same light as the build-progress fill below. The inner layers stay
-     on the fill bar's own pale white-green body color (rather than the
-     amber halo tone) so the glow reads white-hot at the edge, warming only
-     in the outer falloff where a soft gold + faint amber-brown spill
-     carries into the glass ring. */
+}
+
+/* Glow ringing the video circle (sits over the frosted glass), reading as
+   the same light as the build-progress fill below. The inner layers stay
+   on the fill bar's own pale white-green body color (rather than the
+   amber halo tone) so the glow reads white-hot at the edge, warming only
+   in the outer falloff where a soft gold + faint amber-brown spill
+   carries into the glass ring.
+
+   The glow lives on this dedicated overlay (matching the video circle's
+   box exactly) rather than on the <video>: the PEAK shadow stack is baked
+   once and the 2.6s breathing animates only `opacity`, which runs on the
+   compositor — animating the box-shadow list itself forced a large
+   repaint every frame. The non-inset shadows paint strictly outside the
+   border box, so the overlay never obscures the clip. */
+.madeForYouDevice .personalAgentDeviceVideoGlow {
+  position: absolute;
+  --video-inset: calc(var(--screen-ring) + 1px + var(--video-gap, 6px));
+  top: var(--video-inset);
+  left: var(--video-inset);
+  width: calc(100% - var(--video-inset) * 2);
+  height: calc(100% - var(--video-inset) * 2);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
   box-shadow:
-    0 0 2px 1px rgba(244, 250, 242, 0.75),
-    0 0 4px rgba(244, 250, 242, 0.65),
-    0 0 8px rgba(244, 250, 242, 0.5),
-    0 0 12px rgba(241, 249, 211, 0.4),
-    0 0 18px rgba(232, 205, 137, 0.3),
-    0 0 12px 1px rgba(232, 205, 137, 0.25),
-    0 0 18px 3px rgba(153, 81, 25, 0.2),
-    0 0 26px 5px rgba(153, 81, 25, 0.12);
+    0 0 4px 2px rgba(244, 250, 242, 1),
+    0 0 8px 1px rgba(244, 250, 242, 0.95),
+    0 0 13px rgba(244, 250, 242, 0.8),
+    0 0 19px rgba(241, 249, 211, 0.68),
+    0 0 28px rgba(232, 205, 137, 0.55),
+    0 0 16px 3px rgba(232, 205, 137, 0.45),
+    0 0 26px 5px rgba(153, 81, 25, 0.38),
+    0 0 38px 8px rgba(153, 81, 25, 0.24);
   /* Subtle breathing synced to the 2.6s gold under-glass pulse beneath. */
   animation: madeForYouVideoGlowPulse 2.6s ease-in-out infinite;
 }
 
 /* Swell the white-hot rim and warm spill, then settle back to a clearly
    dimmer ember, so the disc visibly breathes (the trough drops to roughly
-   half the peak's strength; anything subtler is lost against the bright
-   frosted glass behind the glow). */
+   a fifth of the peak's strength, matching the old per-layer trough
+   alphas; anything subtler is lost against the bright frosted glass). */
 @keyframes madeForYouVideoGlowPulse {
   0%,
   100% {
-    box-shadow:
-      0 0 1px 0 rgba(244, 250, 242, 0.22),
-      0 0 3px rgba(244, 250, 242, 0.16),
-      0 0 6px rgba(244, 250, 242, 0.1),
-      0 0 10px rgba(241, 249, 211, 0.08),
-      0 0 16px rgba(232, 205, 137, 0.06),
-      0 0 10px 1px rgba(232, 205, 137, 0.05),
-      0 0 18px 2px rgba(153, 81, 25, 0.04),
-      0 0 26px 4px rgba(153, 81, 25, 0.02);
+    opacity: 0.2;
   }
   50% {
-    box-shadow:
-      0 0 4px 2px rgba(244, 250, 242, 1),
-      0 0 8px 1px rgba(244, 250, 242, 0.95),
-      0 0 13px rgba(244, 250, 242, 0.8),
-      0 0 19px rgba(241, 249, 211, 0.68),
-      0 0 28px rgba(232, 205, 137, 0.55),
-      0 0 16px 3px rgba(232, 205, 137, 0.45),
-      0 0 26px 5px rgba(153, 81, 25, 0.38),
-      0 0 38px 8px rgba(153, 81, 25, 0.24);
+    opacity: 1;
   }
 }
 
-/* Reduced motion: hold the video glow at its steady base brightness. */
+/* Reduced motion: hold the video glow at a steady mid brightness. */
 @media (prefers-reduced-motion: reduce) {
-  .madeForYouDevice .personalAgentDeviceVideo {
+  .madeForYouDevice .personalAgentDeviceVideoGlow {
     animation: none;
+    opacity: 0.6;
   }
 }
 
@@ -868,45 +872,32 @@
   /* Same pale white-green core and amber/gold halo as the progress bar fill
      below, so the indicator reads as the same emitted light. */
   background: linear-gradient(90deg, #f4faf2 0%, #f1f9d3 100%);
+  /* Peak emission baked once; the pulse below breathes via opacity only
+     (compositor-friendly) instead of re-painting the shadow stack and a
+     brightness() filter every frame. */
   box-shadow:
-    0 0 4px rgba(232, 205, 137, 1),
-    0 0 9px rgba(232, 205, 137, 0.95),
-    0 0 18px rgba(232, 205, 137, 0.85),
-    0 0 30px rgba(232, 205, 137, 0.65),
+    0 0 6px rgba(232, 205, 137, 1),
+    0 0 13px rgba(232, 205, 137, 1),
+    0 0 26px rgba(232, 205, 137, 0.95),
+    0 0 42px rgba(232, 205, 137, 0.85),
     /* Outer amber-brown halo matching the progress bar fill below. */
-    0 0 14px 2px rgba(153, 81, 25, 0.75),
-    0 0 26px 5px rgba(153, 81, 25, 0.5),
-    0 0 44px 9px rgba(153, 81, 25, 0.32);
+    0 0 16px 3px rgba(153, 81, 25, 0.8),
+    0 0 30px 6px rgba(153, 81, 25, 0.55),
+    0 0 48px 10px rgba(153, 81, 25, 0.35);
   /* Compose with the cursor-follow rotation (set inline on the dial parent). */
   transform: rotate(32deg);
   animation: madeForYouKnobPulse 1.6s ease-in-out infinite;
 }
 
-/* Pulse the LED's emission: the core brightens while the surrounding neon
-   halo swells and intensifies, then settles back. */
+/* Pulse the LED's emission: dim toward the resting glow, swell back to the
+   baked peak, so the indicator throbs without per-frame repaints. */
 @keyframes madeForYouKnobPulse {
   0%,
   100% {
-    filter: brightness(1);
-    box-shadow:
-      0 0 3px rgba(232, 205, 137, 0.9),
-      0 0 7px rgba(232, 205, 137, 0.85),
-      0 0 13px rgba(232, 205, 137, 0.7),
-      0 0 22px rgba(232, 205, 137, 0.5),
-      0 0 14px 2px rgba(153, 81, 25, 0.6),
-      0 0 26px 5px rgba(153, 81, 25, 0.4),
-      0 0 44px 9px rgba(153, 81, 25, 0.25);
+    opacity: 0.72;
   }
   50% {
-    filter: brightness(1.4);
-    box-shadow:
-      0 0 6px rgba(232, 205, 137, 1),
-      0 0 13px rgba(232, 205, 137, 1),
-      0 0 26px rgba(232, 205, 137, 0.95),
-      0 0 42px rgba(232, 205, 137, 0.85),
-      0 0 16px 3px rgba(153, 81, 25, 0.8),
-      0 0 30px 6px rgba(153, 81, 25, 0.55),
-      0 0 48px 10px rgba(153, 81, 25, 0.35);
+    opacity: 1;
   }
 }
 
@@ -1041,15 +1032,35 @@
    interior stays empty (no spinner); instead the OUTER glow is intensified and
    pulsates so the active step reads as a softly breathing beacon. */
 .madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn {
+  position: relative;
   border-color: #f1f9d3;
   background: transparent;
+  /* Static resting glow (the old pulse trough), plus the inner sheen. */
   box-shadow:
-    0 0 4px rgba(232, 205, 137, 0.55),
-    0 0 9px rgba(232, 205, 137, 0.4),
-    0 0 18px rgba(232, 205, 137, 0.28),
-    0 0 14px 3px rgba(153, 81, 25, 0.32),
-    0 0 26px 6px rgba(153, 81, 25, 0.2),
+    0 0 4px rgba(232, 205, 137, 0.5),
+    0 0 9px rgba(232, 205, 137, 0.36),
+    0 0 16px rgba(232, 205, 137, 0.24),
+    0 0 12px 2px rgba(153, 81, 25, 0.26),
+    0 0 22px 4px rgba(153, 81, 25, 0.16),
     inset 0 0 2px rgba(232, 205, 137, 0.22);
+}
+
+/* The breathing portion of the glow lives on a pseudo-element with the PEAK
+   shadow stack baked, pulsing via opacity only — animating the box-shadow
+   list itself repainted the row every frame. Stacked over the static
+   resting glow above, opacity 0 -> 1 sweeps trough -> peak. */
+.madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    0 0 8px rgba(232, 205, 137, 0.95),
+    0 0 17px rgba(232, 205, 137, 0.65),
+    0 0 30px rgba(232, 205, 137, 0.45),
+    0 0 20px 4px rgba(153, 81, 25, 0.5),
+    0 0 38px 8px rgba(153, 81, 25, 0.3);
   animation: madeForYouLensPulse 1.6s ease-in-out infinite;
 }
 
@@ -1058,37 +1069,19 @@
 @keyframes madeForYouLensPulse {
   0%,
   100% {
-    box-shadow:
-      0 0 4px rgba(232, 205, 137, 0.5),
-      0 0 9px rgba(232, 205, 137, 0.36),
-      0 0 16px rgba(232, 205, 137, 0.24),
-      0 0 12px 2px rgba(153, 81, 25, 0.26),
-      0 0 22px 4px rgba(153, 81, 25, 0.16),
-      inset 0 0 2px rgba(232, 205, 137, 0.2);
+    opacity: 0;
   }
   50% {
-    box-shadow:
-      0 0 8px rgba(232, 205, 137, 0.95),
-      0 0 17px rgba(232, 205, 137, 0.65),
-      0 0 30px rgba(232, 205, 137, 0.45),
-      0 0 20px 4px rgba(153, 81, 25, 0.5),
-      0 0 38px 8px rgba(153, 81, 25, 0.3),
-      inset 0 0 3px rgba(232, 205, 137, 0.3);
+    opacity: 1;
   }
 }
 
 /* Reduced motion: hold the selected ring at a steady intense glow instead of
    pulsating. */
 @media (prefers-reduced-motion: reduce) {
-  .madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn {
+  .madeForYouDevice .madeForYouSideRow--selected .madeForYouLensBtn::before {
     animation: none;
-    box-shadow:
-      0 0 7px rgba(232, 205, 137, 0.8),
-      0 0 15px rgba(232, 205, 137, 0.55),
-      0 0 26px rgba(232, 205, 137, 0.38),
-      0 0 18px 3px rgba(153, 81, 25, 0.42),
-      0 0 32px 6px rgba(153, 81, 25, 0.26),
-      inset 0 0 2px rgba(232, 205, 137, 0.26);
+    opacity: 0.55;
   }
 }
 

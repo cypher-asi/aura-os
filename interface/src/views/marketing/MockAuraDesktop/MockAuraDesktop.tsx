@@ -628,6 +628,7 @@ export function MockAuraDesktop(): ReactNode {
           aria-hidden="true"
           draggable={false}
           decoding="async"
+          loading="lazy"
         />
         <MockSidebar
           appView={appView}

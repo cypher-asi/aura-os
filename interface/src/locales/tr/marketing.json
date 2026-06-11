@@ -1,10 +1,57 @@
 {
+  "agentBuilder": {
+    "buildProgressAria": "Geliştirme ilerlemesi: {{step}}",
+    "configure": "YAPILANDIR",
+    "integrations": "100+ Entegrasyon",
+    "privateAgent": "ÖZEL AJANINIZ",
+    "steps": {
+      "0": {
+        "description": "Temsilcinizin adını ve 3D avatarını oluşturun.",
+        "label": "Kimlik"
+      },
+      "1": {
+        "description": "Temsilcinizin temel becerilerini ve bilgisini geliştirin.",
+        "label": "Uzmanlık"
+      },
+      "2": {
+        "description": "Temsilcinize verilerinize güvenli erişim izni verin.",
+        "label": "Entegrasyonlar"
+      },
+      "3": {
+        "description": "Temsilcinizi iMessage, Telegram ve daha fazlasına bağlayın.",
+        "label": "Bağlantılar"
+      },
+      "4": {
+        "description": "Temsilcinizin sizin için yürüttüğü günlük görevleri planlayın.",
+        "label": "Otomasyonlar"
+      },
+      "5": {
+        "description": "Temsilcinizi dünyaya doğurun.",
+        "label": "Öğle yemeği"
+      }
+    }
+  },
+  "agentConsole": {
+    "next": "Sonraki",
+    "previous": "Öncesi",
+    "states": {
+      "openSource": "Açık Kaynak",
+      "private": "Özel",
+      "secure": "Güvenli",
+      "verifiable": "Doğrulanabilir"
+    }
+  },
+  "agentMarquee": {
+    "ariaLabel": "AURA ajanları"
+  },
   "agents": {
     "buildDeviceAriaLabel": "Temsilcinizi oluşturun",
     "documentTitle": "AURA - Temsilciler",
-    "heroDescriptionLine1": "AURA temsilcileri her alanda uzmandır",
-    "heroDescriptionLine2": "uyurken işe yarar.",
+    "heroDescription": "AURA temsilcileri siz uyurken çalışan her alanda uzmandır.",
     "heroHeadline": "Her şeyi devredin."
+  },
+  "alwaysOn": {
+    "ariaLabel": "Her zaman açık"
   },
   "blog": {
     "allPosts": "Tüm gönderiler",
@@ -41,6 +88,140 @@
     "title": "Blog",
     "tocAriaLabel": "İçindekiler",
     "tocTitle": "İçindekiler"
+  },
+  "capabilities": {
+    "analytics": {
+      "0": "Kontrol panelleri ve raporlar",
+      "1": "SQL ve sorgular",
+      "2": "Veri temizleme",
+      "3": "Trend tespiti",
+      "4": "Tahmin modelleri",
+      "5": "Kohort analizi",
+      "6": "KPI takibi",
+      "7": "Anormallik tespiti",
+      "8": "Görselleştirmeler",
+      "9": "Veri hikayesi anlatımı"
+    },
+    "coding": {
+      "0": "Tam yığın geliştirme",
+      "1": "Yeniden düzenleme ve optimize etme",
+      "2": "Hata ayıklama ve düzeltme",
+      "3": "Testleri yaz ve çalıştır",
+      "4": "Kod incelemesi",
+      "5": "API entegrasyonu",
+      "6": "Dokümantasyon",
+      "7": "Taşımalar ve yükseltmeler",
+      "8": "CI/CD ardışık düzenleri",
+      "9": "Mimari tasarım"
+    },
+    "creative": {
+      "0": "Hikaye ve senaryo yazımı",
+      "1": "Geniş ölçekte beyin fırtınası",
+      "2": "Karakter ve dünya inşası",
+      "3": "Şiir ve şarkı sözleri",
+      "4": "Konsept fikri",
+      "5": "Adlandırma ve sloganlar",
+      "6": "Ruh hali ve ton değişimleri",
+      "7": "Arsa yapısı",
+      "8": "Diyalog parlatma",
+      "9": "Satış konuşması desteleri"
+    },
+    "design": {
+      "0": "UI ve UX maketleri",
+      "1": "Tasarım sistemleri",
+      "2": "Logolar ve markalama",
+      "3": "Renk ve tipografi",
+      "4": "Prototiplere tel çerçeveler",
+      "5": "Görüntü oluşturma ve düzenleme",
+      "6": "İkonografi",
+      "7": "Düzen ve kompozisyon",
+      "8": "Erişilebilirlik kontrolleri",
+      "9": "Dışa aktarmaya hazır varlıklar"
+    },
+    "finance": {
+      "0": "Finansal modelleme",
+      "1": "Bütçeler ve tahminler",
+      "2": "Gider takibi",
+      "3": "Senaryo analizi",
+      "4": "Faturalandırma ve mutabakat",
+      "5": "Değerleme ve DCF",
+      "6": "Nakit akışı tahminleri",
+      "7": "Yatırım araştırması",
+      "8": "Risk değerlendirmesi",
+      "9": "Raporlama ve uyumluluk"
+    },
+    "legal": {
+      "0": "Sözleşme taslağı hazırlama",
+      "1": "Madde incelemesi ve kırmızı çizgiler",
+      "2": "Risk işaretleme",
+      "3": "Uyumluluk kontrolleri",
+      "4": "Yasal araştırma",
+      "5": "İçtihat özetleri",
+      "6": "Gizlilik Sözleşmesi ve sözleşme şablonları",
+      "7": "Durum tespit süreci",
+      "8": "Politika taslağı hazırlama",
+      "9": "Sade dilli açıklayıcılar"
+    },
+    "marketing": {
+      "0": "Kampanya planlaması",
+      "1": "E-posta ve reklam kopyası",
+      "2": "A/B testi",
+      "3": "Kitle segmentasyonu",
+      "4": "SEO ve anahtar kelime araştırması",
+      "5": "Açılış sayfaları",
+      "6": "Marka mesajı",
+      "7": "Performans analitiği",
+      "8": "Huni optimizasyonu",
+      "9": "İçerik dağıtımı"
+    },
+    "research": {
+      "0": "Yüzlerce kaynağı sentezleyin",
+      "1": "Her iddiadan alıntı yapın",
+      "2": "Literatür incelemeleri",
+      "3": "Veri çıkarma ve tablolar",
+      "4": "İstatistiksel analiz",
+      "5": "Hipotez testi",
+      "6": "PDF raporları ve teknik incelemeler",
+      "7": "Doğruluk kontrolü",
+      "8": "Rekabetçi ortamlar",
+      "9": "Hakem değerlendirmesi eleştirisi"
+    },
+    "sales": {
+      "0": "Potansiyel müşteri yeterliliği",
+      "1": "Boru hattı yönetimi",
+      "2": "Kişiselleştirilmiş destek",
+      "3": "Takip dizileri",
+      "4": "CRM güncellemeleri",
+      "5": "Çağrı özetleri ve notları",
+      "6": "Teklif taslağı hazırlama",
+      "7": "İtirazların ele alınması",
+      "8": "Gelir tahmini",
+      "9": "Anlaşma puanlaması"
+    },
+    "social": {
+      "0": "Planlama ve otomatik yayınlama",
+      "1": "Çok platformlu iş akışları",
+      "2": "Yanıtla ve etkileşime geç",
+      "3": "Trend izleme",
+      "4": "İçerik takvimleri",
+      "5": "Hashtag stratejisi",
+      "6": "Altyazı oluşturma",
+      "7": "Analitik ve içgörüler",
+      "8": "Etkileyici desteği",
+      "9": "Topluluk yönetimi"
+    },
+    "writing": {
+      "0": "Uzun biçimli makaleler",
+      "1": "Sesinizi ve tonunuzu eşleştirin",
+      "2": "Düzenleme ve düzeltme",
+      "3": "Taslakların ana hatları",
+      "4": "Teknik dokümantasyon",
+      "5": "SEO uyumlu kopya",
+      "6": "Yeniden yaz ve yoğunlaştır",
+      "7": "Çok dilli çeviri",
+      "8": "Alıntılar ve referanslar",
+      "9": "Başlıklar ve kancalar"
+    }
   },
   "changelog": {
     "chart": {
@@ -96,11 +277,28 @@
     "heroDescription": "Güvenlik, otomasyon ve doğrulanabilirlik için %100 açık kaynak olarak tasarlanmış bir sınır kodlama donanımı.",
     "heroHeadline": "Uyurken kodlayın."
   },
+  "connectedConsole": {
+    "vibe": "TİTREŞİM"
+  },
   "cta": {
     "ariaLabel": "Ürün harekete geçirici mesaj",
     "download": "İndirmek",
     "signUp": "Üye olmak",
     "tagline": "AGI'yi hissedin."
+  },
+  "disciplines": {
+    "analytics": "Analitik",
+    "coding": "Kodlama",
+    "creative": "Yaratıcı",
+    "design": "Tasarım",
+    "finance": "Finans",
+    "general": "Genel",
+    "legal": "Yasal",
+    "marketing": "Pazarlama",
+    "research": "Araştırma",
+    "sales": "Satış",
+    "social": "Sosyal",
+    "writing": "Yazma"
   },
   "docs": {
     "docDocumentTitle": "AURA Belgeleri - {{title}}",
@@ -595,11 +793,96 @@
   },
   "footer": {
     "ariaLabel": "Site altbilgisi",
+    "columns": {
+      "0": {
+        "heading": "Ürün",
+        "links": {
+          "0": "Temsilciler",
+          "1": "Kod",
+          "2": "İşletim Sistemi"
+        }
+      },
+      "1": {
+        "heading": "Kaynaklar",
+        "links": {
+          "0": "Fiyatlandırma",
+          "1": "İndirilenler",
+          "2": "Değişiklik günlüğü",
+          "3": "Blog",
+          "4": "Dokümanlar"
+        }
+      },
+      "2": {
+        "heading": "Bağlamak"
+      },
+      "3": {
+        "heading": "Yasal",
+        "links": {
+          "0": "Hizmet Şartları",
+          "1": "Gizlilik Politikası"
+        }
+      }
+    },
     "copyright": "Telif hakkı © {{year}}",
     "navigationAriaLabel": "Alt bilgide gezinme"
   },
+  "mobileChat": {
+    "conversations": {
+      "backend": {
+        "agentName": "Arka uç",
+        "messages": {
+          "0": "/pricing bugün neden yavaş?",
+          "1": "Sorgu planı kontrol ediliyor; eksik bir indeks gibi görünüyor.",
+          "3": "(isim) üzerine bir dizin ekleniyor. ~5 ms'ye düşmesi gerekiyor."
+        }
+      },
+      "frontend": {
+        "agentName": "Başlangıç ​​aşaması",
+        "messages": {
+          "0": "Ayarlara karanlık mod geçişi ekleyin",
+          "1": "Üzerinde - tema mağazasına kablolu bir geçiş ekleme.",
+          "3": "Tamamlamak. Varsayılan olarak işletim sistemini takip etmesini ister misiniz?"
+        }
+      },
+      "reviewer": {
+        "agentName": "İnceleyen",
+        "messages": {
+          "0": "CI yeşil olduğunda sürümü gönderin",
+          "1": "Şimdi boru hattını izliyorum.",
+          "3": "Hepsi yeşil. Sürümü birleştirme ve etiketleme."
+        }
+      }
+    },
+    "messagePlaceholder": "Temsilcinize mesaj gönderin…",
+    "subtitle": "çevrimiçi · VM'nizde"
+  },
+  "mockChatInput": {
+    "examples": {
+      "0": "Bu React bileşenini yeniden düzenleyin, testleri güncelleyin ve bir PR açın",
+      "1": "Lizbon'a bir hafta sonu gezisi planlayın ve uçuş rezervasyonu yapın",
+      "2": "Alacakaranlıkta küçük bir orman kütüphanesinin sıcak bir editoryal fotoğrafını oluşturun",
+      "3": "Bu ürün ekran görüntülerini 12 saniyelik lansman videosuna dönüştürün",
+      "4": "Kablo klipsli modüler masa düzenleyicinin 3 boyutlu modelini oluşturun",
+      "5": "Yakınımdaki üç kreşi karşılaştırın ve gelecek hafta turlar planlayın",
+      "6": "Bu kontrol paneli sorgusunun neden zaman aşımına uğradığını öğrenin ve düzeltmeyi gönderin",
+      "7": "Mahallemin kahve tarafı projesi için bir logo sistemi tasarlayın",
+      "8": "Bu kaba ekran kaydından sakin bir başlangıç ​​klibi oluşturun",
+      "9": "Etiketli hareketli parçalara sahip katlanabilir bir seyahat tripodu modelleyin",
+      "10": "Ülkeler arası hareketimi nakliyeciler, kamu hizmetleri ve uçuşlarla koordine etmek",
+      "11": "Yarış koşulları için kimlik doğrulama akışını denetleyin ve bir geçiş planı yazın",
+      "12": "Karda lüks bir elektrikli karavan için kampanya görselleri oluşturun",
+      "13": "Yapay zeka müzik aracı için storyboard ve sinematik fragman oluşturma",
+      "14": "Temiz topolojiye sahip, oyuna hazır bir uzay gemisi kokpiti oluşturun",
+      "15": "Beş kişilik bir robotik araştırma ekibi için işe alım planı oluşturun",
+      "16": "Etkinlikleri bırakmadan bu ödeme hizmetini kuyruklara taşıyın",
+      "17": "Bir bilim müzesi sergisi için bir Mars sera şehrini görselleştirin",
+      "18": "Bu teknik prototipten bir yatırımcı demo videosu oluşturun",
+      "19": "Pil erişimine sahip üretilebilir bir drone şasisi tasarlayın"
+    }
+  },
   "models": {
     "allModelsAriaLabel": "Tüm modeller",
+    "cardAria": "{{name}} ile {{provider}}",
     "documentTitle": "AURA - Modeller",
     "empty": "Mevcut filtrelerle eşleşen model yok. Aramayı temizlemeyi veya sekmeleri değiştirmeyi deneyin.",
     "featured": "Öne Çıkanlar",
@@ -607,6 +890,20 @@
     "filterByModalityAriaLabel": "Modaliteye göre filtrele",
     "filterByStatusAriaLabel": "Duruma göre filtrele",
     "loadingCatalog": "Katalog yükleniyor…",
+    "modeOptions": {
+      "3d": "3 boyutlu",
+      "all": "Tüm",
+      "image": "Resim",
+      "text": "Metin",
+      "video": "Video"
+    },
+    "modeTitles": {
+      "3d": "3B Modeller",
+      "all": "Tüm Modeller",
+      "image": "Görüntü Modelleri",
+      "text": "Metin Modelleri",
+      "video": "Video Modelleri"
+    },
     "searchAriaLabel": "Modelleri ara",
     "searchPlaceholder": "Modelleri ara...",
     "stats": {
@@ -621,6 +918,11 @@
       "liveAriaLabel": "Durum: Canlı",
       "soon": "Yakında",
       "soonAriaLabel": "Durum: Yakında"
+    },
+    "statusOptions": {
+      "all": "Tüm",
+      "live": "Canlı",
+      "soon": "Yakında"
     },
     "subtitle": "Metin, resim, video ve 3D genelinde AURA'ya güç veren sınır modelleri.",
     "summaryAriaLabel": "Model özeti"
@@ -640,6 +942,36 @@
       "heading": "Bölüm bulunamadı"
     },
     "sidebarTitle": "AURA işletim sistemi"
+  },
+  "personas": {
+    "coordinator": {
+      "name": "Koordinatör",
+      "role": "Takım orkestratörü"
+    },
+    "creator": {
+      "name": "Yaratıcı",
+      "role": "Yaratıcı"
+    },
+    "cypher-punk": {
+      "name": "Şifre Punk",
+      "role": "Güvenlik operatörü"
+    },
+    "giga-brain": {
+      "name": "Giga Beyin",
+      "role": "Araştırma lideri"
+    },
+    "researcher": {
+      "name": "Araştırmacı",
+      "role": "Araştırma analisti"
+    },
+    "solo-builder": {
+      "name": "Yalnız İnşaatçı",
+      "role": "Bağımsız mühendis"
+    },
+    "vibecoder": {
+      "name": "Titreşim kodlayıcı",
+      "role": "Yaratıcı kodlayıcı"
+    }
   },
   "pricing": {
     "billingCycleAriaLabel": "Faturalandırma döngüsü",
@@ -853,6 +1185,37 @@
       "headline": "İnsanlığınız için tasarlandı."
     }
   },
+  "skills": {
+    "coding-agent": "Kod",
+    "gifgrep": "Görseller",
+    "goplaces": "Haritalar",
+    "healthcheck": "Sağlık",
+    "himalaya": "E-posta",
+    "nano-pdf": "PDF'ler",
+    "notion": "Notlar",
+    "openhue": "Işıklar",
+    "skill-creator": "Yaratmak",
+    "spotify-player": "Müzik",
+    "summarize": "Özetle",
+    "taskflow": "Görevler",
+    "trello": "Panolar",
+    "video-frames": "Video",
+    "voice-call": "Arama"
+  },
+  "specQuadrant": {
+    "activation": "AKTİVASYON",
+    "examples": {
+      "ads": "Reklamlar",
+      "email": "E-posta",
+      "post": "Postalamak",
+      "seo": "SEO"
+    },
+    "expertiseAria": "Uzmanlık",
+    "featureHighlightsAria": "Öne çıkan özellikler",
+    "intelligence": "İSTİHBARAT",
+    "online": "ÇEVRİMİÇİ",
+    "withoutLimits": "SINIRLAR OLMADAN"
+  },
   "support": {
     "body": "AURA konusunda yardıma mı ihtiyacınız var? Sizin için buradayız. Destek ekibimize e-posta gönderin; mümkün olan en kısa sürede size geri döneceğiz.",
     "headline": "Destek",
@@ -997,5 +1360,33 @@
         "heading": "18. Geçerli Kanun ve Uyuşmazlık Çözümü"
       }
     ]
+  },
+  "trust": {
+    "attestation": "Tasdik",
+    "insertTokens": "Jeton ekle",
+    "marqueeTerms": {
+      "0": "Korumalı alana alınmış sanal makine",
+      "1": "Güvenilir Yürütme",
+      "2": "Onaylanmış Önyükleme",
+      "3": "Gizli Bilgi İşlem",
+      "4": "Şifreli Bellek",
+      "5": "İzole Çalışma Zamanı"
+    },
+    "readouts": {
+      "harness": {
+        "description": "Tüm veriler AURA'nın özel donanımı üzerinden akar. Her adım atomiktir, değişmezdir ve denetlenir.",
+        "title": "AURA Çalışma Zamanı Donanımı"
+      },
+      "router": {
+        "description": "Açık kaynak ve sınır modelleri genelinde her isteğe aracılık eden güvenli bir yönlendirme katmanı.",
+        "title": "AURA Yönlendirici"
+      },
+      "swarm": {
+        "description": "Yalıtılmış bir güvenilir yürütme ortamı. Anahtarlarınız asla oradan ayrılmaz ve ev sahibi hiçbir şey görmez.",
+        "title": "AURA Sürüsü"
+      }
+    },
+    "uptime": "Çalışma süresi",
+    "vmLabel": "VM"
   }
 }

@@ -1,4 +1,5 @@
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { PERSONAS, type Persona } from "../../public-chat/personas";
 import styles from "./AgentMarquee.module.css";
 
@@ -39,9 +40,10 @@ import styles from "./AgentMarquee.module.css";
  *   announces both labels to screen readers without exposing a
  *   non-functional button (clicking the card is a deliberate
  *   no-op for now per the product brief).
- * - The track defers to `prefers-reduced-motion: reduce` and
- *   stops animating entirely for visitors who opt out of motion.
- *   See `AgentMarquee.module.css`.
+ * - `prefers-reduced-motion: reduce` is intentionally NOT honoured
+ *   for the scroll itself (the strip is the page hero's load-bearing
+ *   motion); hovering or focusing the strip pauses it. See the
+ *   rationale comment in `AgentMarquee.module.css`.
  *
  * The component reads `PERSONAS` directly because the product
  * page's marquee always shows the canonical roster. If a future
@@ -49,6 +51,7 @@ import styles from "./AgentMarquee.module.css";
  * is a one-line change.
  */
 export function AgentMarquee(): ReactElement {
+  const { t } = useTranslation("marketing");
   // Render the persona list TWICE so the CSS `translateX(-50%)`
   // keyframe slides the second copy into the position the first
   // copy started in for a seamless wrap. The `${persona.id}-${i}`
@@ -60,7 +63,7 @@ export function AgentMarquee(): ReactElement {
     <div
       className={styles.marquee}
       data-testid="agent-marquee"
-      aria-label="AURA agents"
+      aria-label={t("agentMarquee.ariaLabel", { defaultValue: "AURA agents" })}
     >
       <div className={styles.track}>
         {cards.map((persona, index) => (
@@ -79,7 +82,14 @@ interface AgentCardProps {
 }
 
 function AgentCard({ persona }: AgentCardProps): ReactElement {
+  const { t } = useTranslation("marketing");
   const { theme } = persona;
+  const personaName = t(`personas.${persona.id}.name`, {
+    defaultValue: persona.name,
+  });
+  const personaRole = t(`personas.${persona.id}.role`, {
+    defaultValue: persona.role,
+  });
   // Reuse the persona's avatar crop hint (a `background-position`
   // string already tuned to land the head/face inside the 18px
   // dock circle in `MockAuraApp`). The marquee card has a similar
@@ -94,7 +104,7 @@ function AgentCard({ persona }: AgentCardProps): ReactElement {
       className={styles.card}
       data-persona-id={persona.id}
       role="img"
-      aria-label={`${persona.name}, ${persona.role}`}
+      aria-label={`${personaName}, ${personaRole}`}
       tabIndex={0}
     >
       {theme.desktopBackgroundUrl ? (
@@ -113,12 +123,12 @@ function AgentCard({ persona }: AgentCardProps): ReactElement {
         // initial-letter chip mirrors the public chat's no-theme
         // avatar treatment for visual consistency.
         <div className={styles.portraitFallback} aria-hidden="true">
-          {persona.name.charAt(0)}
+          {personaName.charAt(0)}
         </div>
       )}
       <div className={styles.caption}>
-        <div className={styles.captionName}>{persona.name}</div>
-        <div className={styles.captionRole}>{persona.role}</div>
+        <div className={styles.captionName}>{personaName}</div>
+        <div className={styles.captionRole}>{personaRole}</div>
       </div>
     </div>
   );
