@@ -126,11 +126,11 @@
      border eating inward so the page size is unchanged. A matching bottom
      inset (+ safe area) frames the page on mobile where there is no taskbar. */
   margin: 0 5px calc(5px + env(safe-area-inset-bottom, 0px));
-  /* No top border / top rounding so the page sits flush beneath the bar with
-     no divider line; the shell frame stroke wraps only the sides + bottom. */
-  border-radius: 0 0 6px 6px;
+  /* Fully framed inset page: the shell stroke + 6px radius wrap all
+     four corners so the top-left/right inner corners round under the
+     transparent topbar to match the bottom ones. */
+  border-radius: 6px;
   border: 1px solid transparent;
-  border-top: 0;
   background:
     var(--color-bg, #0b0b0e) padding-box,
     linear-gradient(
