@@ -9,6 +9,7 @@ import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../../../shared/l
 import { isAuraCaptureSessionActive } from "../../../lib/screenshot-bridge";
 import { useAuthStore } from "../../../stores/auth-store";
 import { useOrgStore } from "../../../stores/org-store";
+import { clearLastStandaloneAgentId } from "../../../utils/storage";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
@@ -427,6 +428,12 @@ useAuthStore.subscribe((state) => {
 
   if (!userId) {
     hasEnsuredCeoHomeThisSession = false;
+    // Drop the cached last-used agent id so it can't leak into the next
+    // session: `AgentIndexRedirect` would otherwise redirect a freshly
+    // logged-in (possibly different) user to the previous user's agent,
+    // which isn't in their fleet — landing them on an empty, unselected
+    // chat surface.
+    clearLastStandaloneAgentId();
     useAgentStore.setState({
       agents: [],
       agentsStatus: "idle",

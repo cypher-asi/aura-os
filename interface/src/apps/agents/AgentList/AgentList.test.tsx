@@ -203,13 +203,23 @@ vi.mock("../../../api/client", () => ({
   },
 }));
 
-vi.mock("../stores", () => ({
-  LAST_AGENT_ID_KEY: "aura:lastAgentId",
-  useAgents: () => mocks.useAgents(),
-  useSelectedAgent: () => mocks.useSelectedAgent(),
-  useAgentStore: mocks.useAgentStore,
-  useSortedAgents: () => mocks.useSortedAgents(),
-}));
+vi.mock("../stores", async () => {
+  // Use the real `warmStandaloneAgentHistory` so the hover/click prefetch
+  // tests exercise the actual warm chain — it runs against the mocked
+  // chat-history / sessions-list / api stores declared below.
+  const warm = await vi.importActual<
+    typeof import("../stores/warm-standalone-agent-history")
+  >("../stores/warm-standalone-agent-history");
+  return {
+    LAST_AGENT_ID_KEY: "aura:lastAgentId",
+    useAgents: () => mocks.useAgents(),
+    useSelectedAgent: () => mocks.useSelectedAgent(),
+    useAgentStore: mocks.useAgentStore,
+    useSortedAgents: () => mocks.useSortedAgents(),
+    warmStandaloneAgentHistory: warm.warmStandaloneAgentHistory,
+    warmStandaloneAgentSession: warm.warmStandaloneAgentSession,
+  };
+});
 
 vi.mock("../../../stores/chat-history-store", () => ({
   useChatHistoryStore: mocks.useChatHistoryStore,

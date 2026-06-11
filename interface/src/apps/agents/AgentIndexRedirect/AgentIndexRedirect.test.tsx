@@ -18,6 +18,7 @@ vi.mock("../stores", () => ({
   LAST_AGENT_ID_KEY: "aura:lastAgentId",
   useAgents: () => mockUseAgents(),
   useSortedAgents: () => mockUseSortedAgents(),
+  warmStandaloneAgentHistory: vi.fn(),
 }));
 
 import { AgentIndexRedirect } from "./AgentIndexRedirect";

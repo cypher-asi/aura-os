@@ -3,7 +3,7 @@ import { useStandaloneAgentChat } from "../../../../hooks/use-standalone-agent-c
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { ChatPanel, type ChatPanelProps } from "../../../chat/components/ChatPanel";
 import { MobileChatPanel } from "../../../../mobile/chat/MobileChatPanel";
-import { LAST_AGENT_ID_KEY } from "../../stores";
+import { LAST_AGENT_ID_KEY, useAgents } from "../../stores";
 
 interface StandaloneAgentChatPanelProps {
   agentId: string;
@@ -35,14 +35,21 @@ export function StandaloneAgentChatPanel({
     freshCanvasPending,
   });
   const { isMobileLayout } = useAuraCapabilities();
+  const { agents } = useAgents();
 
   useEffect(() => {
+    // Only remember an id that resolves to a real agent: a stale/dead id
+    // (e.g. a bad deep link being recovered by `AgentChatRoute`) must not be
+    // re-persisted as the "last agent" or the next login would redirect back
+    // to it. Re-runs as `agents` settles so the legitimate first-visit case
+    // still persists once the fleet loads.
+    if (!agents.some((a) => a.agent_id === agentId)) return;
     try {
       localStorage.setItem(LAST_AGENT_ID_KEY, agentId);
     } catch {
       /* ignore */
     }
-  }, [agentId]);
+  }, [agentId, agents]);
 
   const panelProps: ChatPanelProps = {
     ...sharedChatProps,

@@ -4,24 +4,43 @@ import { PageEmptyState } from "@cypher-asi/zui";
 import { EmptyState } from "../../../components/EmptyState";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { clearLastStandaloneAgentId, getLastStandaloneAgentId } from "../../../utils/storage";
-import { useAgents, useSortedAgents } from "../stores";
+import { useAgents, useSortedAgents, warmStandaloneAgentHistory } from "../stores";
 
 export function AgentIndexRedirect() {
   const { agents, status } = useAgents();
   const sortedAgents = useSortedAgents();
-  const { isMobileLayout } = useAuraCapabilities();
+  const { isMobileLayout, remoteOnly } = useAuraCapabilities();
 
   // Fast path: if we have a cached last-used agent id, redirect before
-  // the `fetchAgents` network round-trip even completes. The downstream
-  // `AgentChatRoute` can happily load its own history in parallel with
-  // the agent list, so there's no reason to gate first paint on the
-  // list coming back. If the cached id is stale (agent was deleted
-  // remotely), the chat view will render an empty/error state and the
-  // user can pick another agent from the sidebar — same fallback as
-  // any other missing-agent navigation.
+  // the `fetchAgents` network round-trip even completes — the downstream
+  // chat view loads its own history in parallel with the agent list, so
+  // there's no reason to gate first paint on the list coming back.
+  //
+  // We only honour the cached id optimistically while the fleet is still
+  // loading. Once the list is ready we require the id to resolve to a real
+  // agent before redirecting; otherwise (a different user logged in, or the
+  // agent was deleted) the id would send the user to `/agents/<deadId>` —
+  // an unhighlighted sidebar + an empty "Select an agent" sidekick that
+  // reads as "no agent is selected". In that case we clear the stale id and
+  // fall through to the first sorted agent.
   const lastId = isMobileLayout ? null : getLastStandaloneAgentId();
-  if (lastId) {
+  const isFleetReady = status === "ready" || status === "error";
+  // In the browser, local agents are hidden, so a cached id pointing at one
+  // must not resolve — fall through to the first visible (remote) agent.
+  const lastIdResolves =
+    lastId != null &&
+    agents.some(
+      (a) =>
+        a.agent_id === lastId && !(remoteOnly && a.machine_type === "local"),
+    );
+  if (lastId && (!isFleetReady || lastIdResolves)) {
+    // Warm the destination history now so the chat surface doesn't flash its
+    // cold-load gate when it mounts a moment from now.
+    warmStandaloneAgentHistory(lastId);
     return <Navigate to={`/agents/${lastId}`} replace />;
+  }
+  if (lastId && isFleetReady && !lastIdResolves) {
+    clearLastStandaloneAgentId();
   }
 
   if (status === "idle" || status === "loading") {
@@ -49,6 +68,7 @@ export function AgentIndexRedirect() {
 
   const target = sortedAgents[0];
   if (target) {
+    warmStandaloneAgentHistory(target.agent_id);
     return <Navigate to={`/agents/${target.agent_id}`} replace />;
   }
 
