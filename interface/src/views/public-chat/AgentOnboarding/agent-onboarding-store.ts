@@ -100,6 +100,9 @@ interface AgentOnboardingState {
    * `useApplyAgentOnboarding` knows to configure the CEO with the draft.
    */
   pendingApply: boolean;
+  /** True while the Launch step's account-creation request is in flight, so the
+   *  footer "Create account" button can show progress and guard double-submits. */
+  launchSubmitting: boolean;
 
   open: (source?: string) => void;
   close: () => void;
@@ -115,6 +118,7 @@ interface AgentOnboardingState {
   toggleMessaging: (id: string) => void;
   toggleAutomation: (id: string) => void;
 
+  setLaunchSubmitting: (value: boolean) => void;
   /** Mark the draft ready to apply after authentication resolves. */
   markPendingApply: () => void;
   /** Read the draft and clear the pending flag + persisted state. */
@@ -147,9 +151,10 @@ export const useAgentOnboardingStore = create<AgentOnboardingState>()((set, get)
     currentStep: 0,
     draft: initial.draft,
     pendingApply: initial.pendingApply,
+    launchSubmitting: false,
 
-    open: (source) => set({ isOpen: true, source: source ?? null, currentStep: 0 }),
-    close: () => set({ isOpen: false }),
+    open: (source) => set({ isOpen: true, source: source ?? null, currentStep: 0, launchSubmitting: false }),
+    close: () => set({ isOpen: false, launchSubmitting: false }),
     next: () => set((s) => ({ currentStep: clampStep(s.currentStep + 1) })),
     back: () => set((s) => ({ currentStep: clampStep(s.currentStep - 1) })),
     goTo: (step) => set({ currentStep: clampStep(step) }),
@@ -183,6 +188,7 @@ export const useAgentOnboardingStore = create<AgentOnboardingState>()((set, get)
       persist();
     },
 
+    setLaunchSubmitting: (value) => set({ launchSubmitting: value }),
     markPendingApply: () => {
       set({ pendingApply: true });
       persist();

@@ -34,7 +34,7 @@ export function ConnectionsStep({
               Icon={provider.Icon}
               selected={selected.includes(provider.id)}
               disabled={!available}
-              badge={available ? undefined : "Coming soon"}
+              badge={available ? undefined : "Soon"}
               onSelect={() => onToggle(provider.id)}
             />
           );

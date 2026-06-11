@@ -22,14 +22,14 @@ import { ExpertiseStep } from "../ExpertiseStep";
 import { IntegrationsStep } from "../IntegrationsStep";
 import { ConnectionsStep } from "../ConnectionsStep";
 import { AutomationsStep } from "../AutomationsStep";
-import { LaunchStep } from "../LaunchStep";
+import { LaunchStep, LAUNCH_FORM_ID } from "../LaunchStep";
 import styles from "./AgentOnboardingModal.module.css";
 
 const STEP_LABELS: Record<OnboardingStepId, string> = {
   identity: "Identity",
   expertise: "Skills",
   integrations: "Integrations",
-  connections: "Connections",
+  connections: "Messaging",
   automations: "Automations",
   launch: "Launch",
 };
@@ -57,6 +57,8 @@ export function AgentOnboardingModal(): React.ReactElement | null {
   const next = useAgentOnboardingStore((s) => s.next);
   const back = useAgentOnboardingStore((s) => s.back);
   const goTo = useAgentOnboardingStore((s) => s.goTo);
+  const markPendingApply = useAgentOnboardingStore((s) => s.markPendingApply);
+  const launchSubmitting = useAgentOnboardingStore((s) => s.launchSubmitting);
   const setAvatar = useAgentOnboardingStore((s) => s.setAvatar);
   const setPersonality = useAgentOnboardingStore((s) => s.setPersonality);
   const toggleSkill = useAgentOnboardingStore((s) => s.toggleSkill);
@@ -152,15 +154,33 @@ export function AgentOnboardingModal(): React.ReactElement | null {
       </div>
       <div className={styles.content}>{renderStep()}</div>
       <div className={styles.footer}>
-        <Button variant="ghost" onClick={back} disabled={isFirst}>
+        <Button type="button" variant="ghost" onClick={back} disabled={isFirst}>
           Back
         </Button>
         {!isLaunch ? (
-          <Button variant="primary" onClick={next}>
+          <Button type="button" variant="primary" onClick={next}>
             Next
           </Button>
+        ) : isAuthenticated ? (
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              markPendingApply();
+              close();
+            }}
+          >
+            Create my agent
+          </Button>
         ) : (
-          <span />
+          <Button
+            type="submit"
+            form={LAUNCH_FORM_ID}
+            variant="primary"
+            disabled={launchSubmitting}
+          >
+            {launchSubmitting ? "Creating..." : "Create account"}
+          </Button>
         )}
       </div>
     </div>
