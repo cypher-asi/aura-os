@@ -157,10 +157,10 @@ const MARKETING_NAV_FG_COLOR_MUTED = "#c9c9cf";
 // never reflows as the shorter phrases stream in and out.
 const HERO_PHRASES = [
   "Your Private Agent.",
-  "Build Anything.",
-  "Imagine Anything.",
-  "Code Anything.",
-  "Just by Chatting.",
+  "Build anything.",
+  "Imagine anything.",
+  "Code anything.",
+  "Just by chatting.",
 ] as const;
 
 /**

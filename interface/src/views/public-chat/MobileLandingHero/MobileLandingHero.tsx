@@ -30,10 +30,10 @@ import styles from "./MobileLandingHero.module.css";
 // reserve so the centered box never reflows as phrases stream.
 const HERO_PHRASES = [
   "Your Private Agent.",
-  "Build Anything.",
-  "Imagine Anything.",
-  "Code Anything.",
-  "Just by Chatting.",
+  "Build anything.",
+  "Imagine anything.",
+  "Code anything.",
+  "Just by chatting.",
 ] as const;
 
 interface MobileLandingHeroProps {
