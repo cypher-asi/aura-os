@@ -294,7 +294,7 @@
   letter-spacing: -0.035em;
   /*
    * Keep the looping tagline on a single line. The `data-text` ghost
-   * reserves the width of the WIDEST phrase ("Your Private Agent."),
+   * reserves the width of the WIDEST phrase ("Your private agent."),
    * and once that phrase is fully typed the trailing typewriter caret
    * (an inline-block ~0.5em wide) overflows the reserved box and would
    * wrap onto a second line. `nowrap` (inherited by the absolutely-

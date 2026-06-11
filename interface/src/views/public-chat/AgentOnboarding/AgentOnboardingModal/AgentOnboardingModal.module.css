@@ -9,12 +9,21 @@
   font-size: 0.8rem;
 }
 
+/* Desktop: deepen the shared GlassModal fill into a neutral near-black glass
+   (drop the cool blue tint/glow) by overriding its color vars on the surface. */
+.surface {
+  --glass-modal-tint: rgba(255, 255, 255, 0.03);
+  --glass-modal-body-top: rgba(14, 15, 18, 0.82);
+  --glass-modal-body-bottom: rgba(0, 0, 0, 0.94);
+  --glass-modal-glow: rgba(0, 0, 0, 0.55);
+}
+
 .sheet {
-  /* Drawer manages its own height via defaultSize/maxSize; give it the same
-     black-glass fill as the desktop GlassModal surface. */
+  /* Drawer manages its own height via defaultSize/maxSize; match the desktop
+     neutral near-black glass fill (no blue tint). */
   background:
-    radial-gradient(120% 90% at 50% -10%, rgba(120, 170, 255, 0.1) 0%, transparent 55%),
-    rgba(8, 10, 16, 0.92);
+    radial-gradient(120% 90% at 50% -10%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
+    rgba(6, 7, 9, 0.94);
   backdrop-filter: blur(22px) saturate(1.2);
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
 }

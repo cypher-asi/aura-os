@@ -168,6 +168,19 @@
   transition: color 120ms ease, background-color 120ms ease;
 }
 
+/*
+ * Light mode: the portal menu paints on a near-white
+ * `--shell-chrome-background`, so the dark-tuned `#a3a3a8` item color
+ * drops to barely-legible. Swap to the theme's readable secondary
+ * slate (`#374151`). `[data-theme]` lives on `:root` and the menu is
+ * portaled to `document.body`, so this resolves correctly even though
+ * the menu renders outside the marketing wrapper. Hover / active states
+ * already use the theme-aware `--color-text-primary`.
+ */
+:global([data-theme='light']) .menuItem {
+  color: var(--color-text-secondary, #374151);
+}
+
 .menuItem:hover {
   color: var(--color-text-primary, inherit);
   background: var(--color-surface-hover);

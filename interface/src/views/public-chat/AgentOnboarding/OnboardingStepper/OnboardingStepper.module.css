@@ -51,11 +51,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex: 0 0 auto;
   border-radius: 999px;
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   font-weight: 600;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -75,7 +75,7 @@
 }
 
 .label {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.2;
   text-align: center;
@@ -87,9 +87,9 @@
 
 .connector {
   position: absolute;
-  top: 10px;
-  left: calc(50% + 13px);
-  right: calc(-50% + 13px);
+  top: 11px;
+  left: calc(50% + 14px);
+  right: calc(-50% + 14px);
   height: 1px;
   background: var(--color-border);
   z-index: 0;

@@ -229,6 +229,7 @@ export function AgentOnboardingModal(): React.ReactElement | null {
       centerTitle
       titleClassName={styles.modalTitle}
       modalClassName={styles.modal}
+      className={styles.surface}
     >
       {inner}
     </GlassModal>

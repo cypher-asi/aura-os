@@ -285,7 +285,7 @@ export const PERSONAS: ReadonlyArray<Persona> = [
       // luminous orb.
       siteForegroundColor: "#e6e8eb",
       siteForegroundColorMuted: "#c9c9cf",
-      // Dark hero tagline variant: the "Your Private Agent." headline
+      // Dark hero tagline variant: the "Your private agent." headline
       // sits over the brightest part of the warm plasma, where pure
       // white washes out — a near-black tagline reads with full
       // contrast while the nav/tick chrome stays light.

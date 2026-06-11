@@ -166,22 +166,46 @@
     padding: 64px 24px;
   }
 
-  .changelogPreviewGrid {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 0;
+  .changelogPreviewShell {
+    max-width: none;
+    margin: 0;
   }
 
-  /* Stacked: swap vertical separators for horizontal ones, like the
-     pricing plan grid's mobile layout. */
+  .changelogPreviewGrid {
+    display: flex;
+    grid-template-columns: none;
+    gap: 10px;
+    margin-right: -24px;
+    padding: 0 24px 4px 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .changelogPreviewGrid::before {
+    display: none;
+  }
+
+  /* Mobile: show a side-scroll row rather than stacking every item. Each card
+     is its own compact glass tile so the next card peeks in from the right. */
   .changelogPreviewCard {
-    min-height: 0;
-    padding: 24px 4px;
-    border-left: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex: 0 0 min(304px, 78vw);
+    min-height: 130px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.035);
+    scroll-snap-align: start;
   }
 
   .changelogPreviewCard:first-child {
-    border-top: 0;
-    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 16px;
   }
 }

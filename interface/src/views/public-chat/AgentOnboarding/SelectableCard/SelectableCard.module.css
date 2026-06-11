@@ -85,9 +85,9 @@
   color: var(--color-accent-contrast);
 }
 
-/* Info dot: always present (faint) for tiles with a description. The
-   description is hidden by default and only revealed on mouseover/focus of
-   this dot, or by tapping it on touch devices. */
+/* Info dot for tiles with a description. On hover-capable devices it stays
+   hidden until its card is hovered (or it is focused / its tip is open); on
+   touch devices it remains faintly visible so it stays tappable. */
 .info {
   position: absolute;
   top: -6px;
@@ -114,35 +114,48 @@
   border-color: var(--color-border-strong);
 }
 
-/* Description popover. Hidden by default; revealed only when the info dot is
-   hovered/focused (web) or toggled open via tap (mobile). */
+@media (hover: hover) {
+  .info {
+    opacity: 0;
+  }
+
+  .wrap:hover .info,
+  .info:hover,
+  .info:focus-visible,
+  .info[aria-expanded="true"] {
+    opacity: 1;
+  }
+}
+
+/* Description popover. Rendered in a body portal with fixed positioning (set
+   inline) so it is never clipped by the scrolling wizard content or stepper. */
 .tip {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(100% + 6px);
-  z-index: 3;
+  position: fixed;
+  z-index: 1200;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: rgba(12, 14, 20, 0.96);
+  background: rgba(8, 9, 12, 0.97);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.8);
   font-size: 0.76rem;
   line-height: 1.35;
   color: var(--color-text-secondary);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
   pointer-events: none;
+  animation: tipIn 0.12s ease both;
 }
 
-.info:hover ~ .tip,
-.info:focus-visible ~ .tip,
-.tip[data-open="true"] {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
+/* Anchor the popover's bottom edge above the card when placed above. */
+.tip[data-placement="above"] {
+  transform: translateY(-100%);
+}
+
+@keyframes tipIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
