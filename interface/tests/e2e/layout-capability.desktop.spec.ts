@@ -34,7 +34,7 @@ test("desktop browser projects root keeps desktop welcome layout", async ({ page
   await expect(page.getByRole("textbox", { name: "Search" })).toBeVisible();
   await expect(page.locator('[data-agent-surface="chat-input-bar"]').first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open host settings" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open host settings" })).toHaveCount(0);
 });
 
 test("desktop direct mobile organization route redirects back to projects", async ({ page }) => {

@@ -39,11 +39,6 @@ const DesktopWindowLayer = lazy(() =>
     default: module.DesktopWindowLayer,
   })),
 );
-const HostSettingsModal = lazy(() =>
-  import("../HostSettingsModal").then((module) => ({
-    default: module.HostSettingsModal,
-  })),
-);
 const ChangelogModal = lazy(() =>
   import("../ChangelogModal").then((module) => ({
     default: module.ChangelogModal,
@@ -125,18 +120,12 @@ export function AuraShell(): React.ReactElement {
   const authedSidebarCollapsed = useAppUIStore((s) => s.authedSidebarCollapsed);
   const toggleAuthedSidebar = useAppUIStore((s) => s.toggleAuthedSidebar);
   const {
-    hostSettingsOpen,
-    openHostSettings,
-    closeHostSettings,
     changelogModalOpen,
     closeChangelog,
     downloadsModalOpen,
     closeDownloads,
   } = useUIModalStore(
     useShallow((s) => ({
-      hostSettingsOpen: s.hostSettingsOpen,
-      openHostSettings: s.openHostSettings,
-      closeHostSettings: s.closeHostSettings,
       changelogModalOpen: s.changelogModalOpen,
       closeChangelog: s.closeChangelog,
       downloadsModalOpen: s.downloadsModalOpen,
@@ -290,7 +279,6 @@ export function AuraShell(): React.ReactElement {
           onToggleSplitScreen={
             isStandard && hasActiveSidekick ? handleToggleSplitScreen : undefined
           }
-          onOpenHostSettings={isStandard ? openHostSettings : undefined}
         />
         <div
           ref={desktopContentRef}
@@ -338,17 +326,6 @@ export function AuraShell(): React.ReactElement {
         </div>
         <BottomTaskbar mode={mode} />
       </div>
-      {isStandard && hostSettingsOpen ? (
-        <Suspense fallback={null}>
-          <HostSettingsModal
-            isOpen={hostSettingsOpen}
-            onClose={() => {
-              blurActiveElement();
-              closeHostSettings();
-            }}
-          />
-        </Suspense>
-      ) : null}
       {isStandard && changelogModalOpen ? (
         <Suspense fallback={null}>
           <ChangelogModal

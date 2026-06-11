@@ -1,7 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@cypher-asi/zui";
 import { SidebarDrawerToggle } from "./SidebarDrawerToggle";
 import { ShellTitlebar } from "../ShellTitlebar";
 import { MenuBar, MenuShortcuts } from "../MenuBar";
@@ -50,12 +48,11 @@ export interface AuraTitlebarProps {
   authedSidebarCollapsed?: boolean;
   /** Authenticated-only: toggle action for the authed left drawer. */
   onToggleAuthedSidebar?: () => void;
-  /** Authenticated only: sidekick & split-screen toggles + host settings. */
+  /** Authenticated only: sidekick & split-screen toggles. */
   sidekickCollapsed?: boolean;
   onToggleSidekick?: () => void;
   splitScreenActive?: boolean;
   onToggleSplitScreen?: () => void;
-  onOpenHostSettings?: () => void;
 }
 
 /**
@@ -88,9 +85,9 @@ export interface AuraTitlebarProps {
  *   `.center` cluster, so it no longer sits adjacent to the org
  *   selector.
  * - Trailing slot:
- *   - Authenticated: `UpdatePill` + optional host-settings button +
- *     `WindowControls` (with the sidekick / split-screen toggles
- *     plumbed through props). The referral CTA lives in the left
+ *   - Authenticated: `UpdatePill` + `WindowControls` (with the
+ *     sidekick / split-screen toggles plumbed through props). The
+ *     referral CTA lives in the left
  *     sidebar footer (`AuraSidebar`'s `AuthedSidebarFooter`) — not
  *     in the titlebar.
  *   - Public: Log In / Sign Up / Download pills + `WindowControls`.
@@ -148,7 +145,6 @@ export function AuraTitlebar(props: AuraTitlebarProps): React.ReactElement {
             onToggleSidekick={props.onToggleSidekick}
             splitScreenActive={props.splitScreenActive ?? false}
             onToggleSplitScreen={props.onToggleSplitScreen}
-            onOpenHostSettings={props.onOpenHostSettings}
           />
         )
       }
@@ -247,7 +243,6 @@ interface AuthedActionsProps {
   onToggleSidekick?: () => void;
   splitScreenActive: boolean;
   onToggleSplitScreen?: () => void;
-  onOpenHostSettings?: () => void;
 }
 
 function AuthedActions({
@@ -255,9 +250,8 @@ function AuthedActions({
   onToggleSidekick,
   splitScreenActive,
   onToggleSplitScreen,
-  onOpenHostSettings,
 }: AuthedActionsProps): React.ReactElement {
-  const { features, remoteOnly } = useAuraCapabilities();
+  const { remoteOnly } = useAuraCapabilities();
   return (
     <div
       className={styles.titleActions}
@@ -275,18 +269,6 @@ function AuthedActions({
         </Link>
       )}
       <UpdatePill />
-      {features.hostRetargeting && onOpenHostSettings && (
-        <Button
-          variant="ghost"
-          size="sm"
-          rounded="md"
-          iconOnly
-          aria-label="Open host settings"
-          onClick={onOpenHostSettings}
-        >
-          <Server size={14} strokeWidth={2} />
-        </Button>
-      )}
       <WindowControls
         sidekickCollapsed={sidekickCollapsed}
         // Pass through `undefined` (rather than substituting a no-op
