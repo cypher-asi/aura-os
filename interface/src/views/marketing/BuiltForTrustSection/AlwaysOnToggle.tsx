@@ -19,9 +19,12 @@ const SLIDE_MS = 280;
  * starts on the left with "ON" on the right.
  */
 export function AlwaysOnToggle(): ReactNode {
+  // `side` drives the knob and starts sliding immediately on click;
+  // `labelSide` lags behind it so the "ON" lettering fades out in place on
+  // its original side, and only jumps to the now-open side (and fades back
+  // in) once the knob has landed.
   const [side, setSide] = useState<"left" | "right">("left");
-  // The "ON" label fades out while the knob slides, then fades back in on
-  // the now-open side once the knob has arrived.
+  const [labelSide, setLabelSide] = useState<"left" | "right">("left");
   const [labelShown, setLabelShown] = useState(true);
   const timerRef = useRef<number | undefined>(undefined);
 
@@ -31,9 +34,13 @@ export function AlwaysOnToggle(): ReactNode {
 
   const toggle = () => {
     window.clearTimeout(timerRef.current);
+    const next = side === "left" ? "right" : "left";
     setLabelShown(false);
-    setSide((s) => (s === "left" ? "right" : "left"));
-    timerRef.current = window.setTimeout(() => setLabelShown(true), SLIDE_MS);
+    setSide(next);
+    timerRef.current = window.setTimeout(() => {
+      setLabelSide(next);
+      setLabelShown(true);
+    }, SLIDE_MS);
   };
 
   return (
@@ -45,7 +52,11 @@ export function AlwaysOnToggle(): ReactNode {
         onClick={toggle}
       >
         <Plate radius="999px" className="alwaysOnShell">
-          <div className="alwaysOnTrack" data-side={side}>
+          <div
+            className="alwaysOnTrack"
+            data-side={side}
+            data-label-side={labelSide}
+          >
             <span className="alwaysOnKnob" aria-hidden="true" />
             <span
               className="alwaysOnLabel"
