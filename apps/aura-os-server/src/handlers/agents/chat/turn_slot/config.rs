@@ -19,10 +19,12 @@ use std::time::Duration;
 /// ceiling was still doing was killing legitimately-slow long-session
 /// turns: on a large reused context the model's time-to-first-token
 /// (router cold-start + reprocessing a big prompt) routinely crosses
-/// 90s and surfaced a spurious `stream_stalled`. Raised to `180s` so a
-/// genuinely-warming turn is given room while a truly dead one still
-/// fails in a few minutes. Tune with `AURA_TURN_FIRST_EVENT_TIMEOUT_SECS`.
-pub const DEFAULT_FIRST_EVENT_TIMEOUT_SECS: u64 = 180;
+/// 90s and surfaced a spurious `stream_stalled`. Raised to `300s` so a
+/// slow cold start (router cold-start + waking a hibernated microVM +
+/// reprocessing a large reused context) is given room while a truly
+/// dead one still fails in a few minutes. Tune with
+/// `AURA_TURN_FIRST_EVENT_TIMEOUT_SECS`.
+pub const DEFAULT_FIRST_EVENT_TIMEOUT_SECS: u64 = 300;
 
 /// Default sliding-idle timeout when `AURA_TURN_MAX_TIMEOUT_SECS`
 /// is unset or invalid.
@@ -37,11 +39,14 @@ pub const DEFAULT_FIRST_EVENT_TIMEOUT_SECS: u64 = 180;
 /// genuinely hung turn surfaces in minutes instead of half an hour.
 /// Long-running tool calls — the previous justification for the 30
 /// min ceiling — are kept under this idle window by the harness-side
-/// tool heartbeat (Phase 6: `progress { stage: "tool_running", … }`
-/// every [`DEFAULT_TOOL_HEARTBEAT_INTERVAL_SECS`]). Power users with
-/// pathological tool latency can still raise the ceiling via
-/// `AURA_TURN_MAX_TIMEOUT_SECS`.
-pub const DEFAULT_MAX_IDLE_TIMEOUT_SECS: u64 = 180;
+/// tool heartbeat (`progress { stage: "tool_running", … }` every
+/// [`DEFAULT_TOOL_HEARTBEAT_INTERVAL_SECS`]). Until every long tool /
+/// model-thinking path emits that heartbeat, this is raised to `600s`
+/// (10 min) so a legitimately-slow but progressing turn is not killed
+/// mid-flight; a genuine hang still surfaces well before the old 30
+/// min ceiling. Power users with pathological tool latency can still
+/// raise it via `AURA_TURN_MAX_TIMEOUT_SECS`.
+pub const DEFAULT_MAX_IDLE_TIMEOUT_SECS: u64 = 600;
 
 /// Default tool-heartbeat cadence when
 /// `AURA_TURN_TOOL_HEARTBEAT_INTERVAL_SECS` is unset or invalid.

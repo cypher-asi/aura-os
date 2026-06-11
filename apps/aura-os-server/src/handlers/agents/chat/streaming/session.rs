@@ -20,6 +20,34 @@ use crate::state::{AppState, ChatSession, ChatSessionKey};
 use super::super::errors::{map_session_bridge_error, map_session_bridge_start_error};
 use super::super::turn_slot::{acquire_turn_slot, TurnSlotGuard};
 
+/// Default wall-clock cap for cold-opening a harness chat session when
+/// `AURA_COLD_OPEN_TIMEOUT_SECS` is unset or invalid.
+///
+/// Cold-open has to wake a possibly-hibernated remote microVM, complete
+/// the swarm HTTP handshake, connect the run WebSocket, and wait for
+/// `session_ready` — steps that nest their own ~90s ready poll and ~20s
+/// `session_ready` wait. The previous hard `60s` cap routinely 502'd a
+/// legitimate wake before those nested steps finished. `180s` covers the
+/// realistic worst case while still failing a genuinely dead harness in
+/// a few minutes. Tune with `AURA_COLD_OPEN_TIMEOUT_SECS` (`0`/invalid
+/// falls back to this default).
+const DEFAULT_COLD_OPEN_TIMEOUT_SECS: u64 = 180;
+
+/// Resolve the cold-open wall-clock cap from `AURA_COLD_OPEN_TIMEOUT_SECS`,
+/// cached after first read. Falls back to [`DEFAULT_COLD_OPEN_TIMEOUT_SECS`]
+/// when unset, unparsable, or zero.
+fn cold_open_timeout() -> std::time::Duration {
+    static CACHED: std::sync::OnceLock<std::time::Duration> = std::sync::OnceLock::new();
+    *CACHED.get_or_init(|| {
+        let secs = std::env::var("AURA_COLD_OPEN_TIMEOUT_SECS")
+            .ok()
+            .and_then(|raw| raw.trim().parse::<u64>().ok())
+            .filter(|n| *n > 0)
+            .unwrap_or(DEFAULT_COLD_OPEN_TIMEOUT_SECS);
+        std::time::Duration::from_secs(secs)
+    })
+}
+
 /// Result of `get_or_create_delegated_chat_session`: a freshly opened
 /// or reused chat session with its turn-slot guard already held by
 /// the orchestrator.
@@ -121,7 +149,8 @@ pub(super) async fn get_or_create_delegated_chat_session(
             turn,
         ))
     };
-    let started = match tokio::time::timeout(std::time::Duration::from_secs(60), open_fut).await {
+    let cold_open = cold_open_timeout();
+    let started = match tokio::time::timeout(cold_open, open_fut).await {
         Ok(result) => result.map_err(map_session_bridge_start_error(
             key,
             harness_mode,
@@ -131,11 +160,13 @@ pub(super) async fn get_or_create_delegated_chat_session(
             tracing::error!(
                 elapsed_ms = t0.elapsed().as_millis() as u64,
                 session_key = %key,
-                "chat cold-open TIMEOUT — open_session hung past 60s"
+                cold_open_secs = cold_open.as_secs(),
+                "chat cold-open TIMEOUT — open_session hung past cold-open cap"
             );
-            return Err(ApiError::bad_gateway(
-                "Harness did not open the session within 60s. Please retry or restart the harness.",
-            ));
+            return Err(ApiError::bad_gateway(format!(
+                "Harness did not open the session within {}s. Please retry or restart the harness.",
+                cold_open.as_secs(),
+            )));
         }
     };
     tracing::info!(
