@@ -1,4 +1,11 @@
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { IsolatedDevice } from "../IsolatedDevice/IsolatedDevice";
 import type { DeviceTier } from "../IsolatedDevice/isolated-device-scene";
 import { ServiceButtonRail } from "./ServiceButtonRail";
@@ -26,8 +33,10 @@ import "./TrustDeviceStage.css";
  */
 export function TrustDeviceStage(): ReactNode {
   const stageRef = useRef<HTMLDivElement>(null);
+  const deviceWrapRef = useRef<HTMLDivElement>(null);
   const { litLogos, activate } = useServicePulse(RAIL_LOGOS.length);
   const [activeTier, setActiveTier] = useState<DeviceTier>("middle");
+  const [panelCenterX, setPanelCenterX] = useState<number | null>(null);
 
   const handleHoverChange = useCallback((tier: DeviceTier | null) => {
     if (tier !== null) {
@@ -35,13 +44,49 @@ export function TrustDeviceStage(): ReactNode {
     }
   }, []);
 
+  // Center the display panel in the gap between the centered device's right
+  // edge and the stage's right edge. Measured from the live DOM (mirroring
+  // ServiceConnectionField) so it tracks the responsive device width and the
+  // WebGL canvas settling, rather than hard-coding the clamp geometry.
+  const measure = useCallback(() => {
+    const stage = stageRef.current;
+    const device = deviceWrapRef.current;
+    if (!stage || !device) {
+      return;
+    }
+    const stageRect = stage.getBoundingClientRect();
+    const deviceRect = device.getBoundingClientRect();
+    const deviceRight = deviceRect.right - stageRect.left;
+    setPanelCenterX((deviceRight + stageRect.width) / 2);
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+    const raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+  }, [measure]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [measure]);
+
   return (
     <div className="builtForTrustStage" ref={stageRef}>
       <ServiceConnectionField stageRef={stageRef} litLogos={litLogos} />
 
       <ServiceButtonRail litLogos={litLogos} onActivate={activate} />
 
-      <div className="builtForTrustDeviceWrap">
+      <div className="builtForTrustDeviceWrap" ref={deviceWrapRef}>
         <IsolatedDevice onHoverChange={handleHoverChange} />
         <span
           className="trustDevicePort"
@@ -51,7 +96,11 @@ export function TrustDeviceStage(): ReactNode {
         />
       </div>
 
-      <TrustDisplayPanel active={litLogos.size > 0} tier={activeTier} />
+      <TrustDisplayPanel
+        active={litLogos.size > 0}
+        tier={activeTier}
+        centerX={panelCenterX}
+      />
     </div>
   );
 }

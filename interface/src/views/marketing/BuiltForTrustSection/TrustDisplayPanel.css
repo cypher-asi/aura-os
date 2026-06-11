@@ -17,11 +17,12 @@
    (rather than resizing) keeps
    every fixed-px detail inside in proportion and leaves the layout box
    alone. The doubled class outranks the stage's positioning rule
-   regardless of CSS import order; right-center origin preserves the
-   right inset + vertical centering. */
+   regardless of CSS import order; center origin scales symmetrically around
+   the measured gap center so the panel stays centered between the device
+   and the card's right edge. */
 .builtForTrustStage .trustDisplayPanel.trustDisplayPanel {
-  transform: translateY(-50%) scale(1.19);
-  transform-origin: right center;
+  transform: translate(-50%, -50%) scale(1.19);
+  transform-origin: center;
 }
 
 /* Content-sized bezel: the disc tray and the equal-height screen below. */

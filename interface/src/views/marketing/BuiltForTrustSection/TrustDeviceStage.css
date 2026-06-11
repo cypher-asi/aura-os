@@ -29,12 +29,15 @@
 
 /* VFD readout panel mirrored on the device's right, vertically centered at
    the same height as the rail (see TrustDisplayPanel.css for the height
-   math) but wider. */
+   math) but wider. Horizontally centered in the gap between the centered
+   device and the card's right edge: the stage measures that midpoint and
+   feeds it in as --trust-panel-center-x (TrustDeviceStage.tsx); the 75%
+   fallback positions it for the first paint before measurement lands. */
 .builtForTrustStage .trustDisplayPanel {
   position: absolute;
   top: 50%;
-  right: clamp(16px, 6vw, 96px);
-  transform: translateY(-50%);
+  left: var(--trust-panel-center-x, 75%);
+  transform: translate(-50%, -50%);
 }
 
 /* Relative frame around the device so the left-edge nozzles anchor to it. */

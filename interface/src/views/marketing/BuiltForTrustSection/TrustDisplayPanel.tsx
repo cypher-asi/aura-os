@@ -1,4 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { Plate } from "../../../components/Plate";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import type { DeviceTier } from "../IsolatedDevice/isolated-device-scene";
@@ -56,6 +61,13 @@ interface TrustDisplayPanelProps {
    * (whichever was hovered last; the stage defaults it to "middle").
    */
   readonly tier: DeviceTier;
+  /**
+   * Stage-local x of the panel's horizontal center, measured by the stage as
+   * the midpoint between the centered device's right edge and the stage's
+   * right edge. `null` until the first measurement lands (the CSS fallback
+   * positions it until then).
+   */
+  readonly centerX?: number | null;
 }
 
 /**
@@ -81,6 +93,7 @@ interface TrustDisplayPanelProps {
 export function TrustDisplayPanel({
   active,
   tier,
+  centerX,
 }: TrustDisplayPanelProps): ReactNode {
   const [elapsedMs, setElapsedMs] = useState(0);
 
@@ -100,8 +113,13 @@ export function TrustDisplayPanel({
 
   const readout = TIER_READOUTS[tier];
 
+  const panelStyle =
+    centerX != null
+      ? ({ "--trust-panel-center-x": `${centerX}px` } as CSSProperties)
+      : undefined;
+
   return (
-    <Plate className="trustDisplayPanel" aria-hidden="true">
+    <Plate className="trustDisplayPanel" aria-hidden="true" style={panelStyle}>
       <div className="trustDisplayBezel">
         <div className="trustDiscWell">
           <div className="trustDiscChassis">
