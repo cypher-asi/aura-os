@@ -38,10 +38,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Same height as the desktop shell titlebar (`--shell-chrome-height`). */
-  height: var(--shell-chrome-height, 32px);
-  min-height: var(--shell-chrome-height, 32px);
-  padding: 0 8px 0 16px;
+  /* Standard mobile top-app-bar height (vs. the slim 32px desktop
+     titlebar) so the wordmark + hamburger get a comfortable touch
+     target and the bar reads as a native mobile header. */
+  height: 56px;
+  min-height: 56px;
+  padding: 0 10px 0 16px;
   /* Floats transparent on the shell backdrop, exactly like the desktop
      titlebar. No border below — the framed page sits flush beneath it. */
   background: transparent;
@@ -56,7 +58,7 @@
 }
 
 .logo {
-  height: 13px;
+  height: 16px;
   width: auto;
   display: block;
   user-select: none;
@@ -69,9 +71,9 @@
 }
 
 .menuButton {
-  width: 36px;
-  height: 28px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   border: none;
   background: transparent;
   color: var(--color-text-primary);
@@ -93,9 +95,9 @@
  * chat you're on is the only delete entry point.
  */
 .deleteButton {
-  width: 36px;
-  height: 28px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary, #c9c9cf);

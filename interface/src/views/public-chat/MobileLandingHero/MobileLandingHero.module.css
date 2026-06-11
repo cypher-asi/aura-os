@@ -2,19 +2,16 @@
  * MobileLandingHero — Creator-pinned hero for the mobile public
  * landing page.
  *
- * A centered column on the dark canvas: looping typewriter tagline,
- * static persona portrait card, the parent's composer slot, the
- * shared CTA pill, and a scroll hint pointing into the embedded
- * agents sections below. No WebGL, no video — the portrait is the
- * only asset this hero ships.
+ * A centered column over the persona's live WebGL page background
+ * (pinned by `MobilePublicChatView`): looping typewriter tagline
+ * centered above a persona portrait/video card, the shared CTA pill,
+ * and a scroll hint pointing into the embedded agents sections below.
  */
 
 .hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 18px;
   width: 100%;
   min-height: 100%;
   padding: 24px 20px 40px;
@@ -25,6 +22,34 @@
   background: transparent;
   color: var(--color-text-primary);
   position: relative;
+}
+
+/*
+ * Top zone — grows to fill the gap between the shell topbar and the
+ * card block and centers the tagline within it. Paired with the equal
+ * `.bottomSpacer` below the card block so the card stays centered in
+ * the viewport while the headline sits centered above it.
+ */
+.headlineZone {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.cardBlock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.bottomSpacer {
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 /*
@@ -78,69 +103,26 @@
   user-select: none;
 }
 
-.portraitCaption {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 14px;
-}
-
-.portraitName {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.portraitRole {
-  font-size: 12px;
-  color: var(--color-text-muted, #9aa0a6);
-}
-
 .ctaSlot {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-/*
- * Secondary entry into the dedicated chat page (`/chat`). The chat
- * composer no longer lives on the landing hero, so this link is the
- * on-page route to it (the hamburger menu carries the same target).
- */
-.chatLink {
-  display: inline-flex;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--color-text-primary);
-  text-decoration: none;
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-text-primary, #fff) 32%, transparent);
-  background: color-mix(in srgb, #000 24%, transparent);
-  backdrop-filter: blur(6px);
-  transition: border-color 120ms ease, background 120ms ease;
-}
-
-.chatLink:hover,
-.chatLink:focus-visible {
-  border-color: color-mix(in srgb, var(--color-text-primary, #fff) 60%, transparent);
-  background: color-mix(in srgb, #000 36%, transparent);
+  justify-content: center;
 }
 
 /*
  * Scroll hint — anchors to the hero's bottom edge and gently bobs to
  * suggest the agents story below. Purely decorative (aria-hidden).
+ * Painted near-black: it sits over the bright lower band of the warm
+ * plasma where a muted-grey arrow washes out, so a dark chevron reads
+ * with full contrast (a soft white halo keeps it legible if it ever
+ * drifts over a darker patch).
  */
 .scrollHint {
   position: absolute;
   bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  color: var(--color-text-muted, #9aa0a6);
+  color: #0a0a0a;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.55));
   animation: heroScrollHintBob 2.2s ease-in-out infinite;
 }
 

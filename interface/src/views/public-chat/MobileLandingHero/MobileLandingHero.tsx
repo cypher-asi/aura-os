@@ -1,5 +1,4 @@
 import { useMemo, type ReactNode } from "react";
-import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { CreateAgentButton } from "../CreateAgentButton";
@@ -72,77 +71,77 @@ export function MobileLandingHero({
       data-persona-id={persona.id}
       data-testid="mobile-landing-hero"
     >
-      <h1
-        className={styles.headline}
-        data-text={heroHeadline}
-        style={{ color: persona.theme.heroHeadlineColor ?? undefined }}
-      >
-        <TypewriterText
-          text={heroHeadline}
-          phrases={heroPhrases}
-          speedMs={45}
-        />
-      </h1>
-
-      {portraitUrl ? (
-        <figure className={styles.portraitCard}>
-          {portraitVideoUrl ? (
-            <video
-              className={styles.portraitImage}
-              src={portraitVideoUrl}
-              poster={portraitUrl}
-              autoPlay
-              loop
-              muted
-              playsInline
-              aria-hidden="true"
-              style={{
-                backgroundColor:
-                  persona.theme.desktopBackgroundColor ?? undefined,
-                objectPosition: portraitObjectPosition,
-              }}
-              data-testid="mobile-landing-hero-video"
-            />
-          ) : (
-            <img
-              src={portraitUrl}
-              alt={t("mobileChat.personaPortraitAlt", {
-                defaultValue: `${persona.name} agent portrait`,
-                name: persona.name,
-              })}
-              className={styles.portraitImage}
-              style={{
-                backgroundColor:
-                  persona.theme.desktopBackgroundColor ?? undefined,
-                objectPosition: portraitObjectPosition,
-              }}
-              draggable={false}
-              decoding="async"
-              fetchPriority="high"
-            />
-          )}
-          <figcaption className={styles.portraitCaption}>
-            <span className={styles.portraitName}>{persona.name}</span>
-            {/* The Creator's role string equals its name — skip the
-                duplicate rather than printing "Creator / Creator". */}
-            {persona.role !== persona.name ? (
-              <span className={styles.portraitRole}>{persona.role}</span>
-            ) : null}
-          </figcaption>
-        </figure>
-      ) : null}
-
-      {children}
-
-      <div className={styles.ctaSlot}>
-        <CreateAgentButton source="public_chat_mobile" />
-        <Link to="/chat" className={styles.chatLink}>
-          {t("mobileChat.openChat", { defaultValue: "Chat with Aura" })}
-        </Link>
+      {/* Headline zone — grows to fill the space between the shell
+          topbar and the portrait card so the tagline sits vertically
+          centered above the card. */}
+      <div className={styles.headlineZone}>
+        <h1
+          className={styles.headline}
+          data-text={heroHeadline}
+          style={{ color: persona.theme.heroHeadlineColor ?? undefined }}
+        >
+          <TypewriterText
+            text={heroHeadline}
+            phrases={heroPhrases}
+            speedMs={45}
+          />
+        </h1>
       </div>
 
+      <div className={styles.cardBlock}>
+        {portraitUrl ? (
+          <figure className={styles.portraitCard}>
+            {portraitVideoUrl ? (
+              <video
+                className={styles.portraitImage}
+                src={portraitVideoUrl}
+                poster={portraitUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                aria-hidden="true"
+                style={{
+                  backgroundColor:
+                    persona.theme.desktopBackgroundColor ?? undefined,
+                  objectPosition: portraitObjectPosition,
+                }}
+                data-testid="mobile-landing-hero-video"
+              />
+            ) : (
+              <img
+                src={portraitUrl}
+                alt={t("mobileChat.personaPortraitAlt", {
+                  defaultValue: `${persona.name} agent portrait`,
+                  name: persona.name,
+                })}
+                className={styles.portraitImage}
+                style={{
+                  backgroundColor:
+                    persona.theme.desktopBackgroundColor ?? undefined,
+                  objectPosition: portraitObjectPosition,
+                }}
+                draggable={false}
+                decoding="async"
+                fetchPriority="high"
+              />
+            )}
+          </figure>
+        ) : null}
+
+        {children}
+
+        <div className={styles.ctaSlot}>
+          <CreateAgentButton source="public_chat_mobile" />
+        </div>
+      </div>
+
+      {/* Mirror of the headline zone so the card block stays vertically
+          centered in the viewport. */}
+      <div className={styles.bottomSpacer} aria-hidden="true" />
+
       <div className={styles.scrollHint} aria-hidden="true">
-        <ChevronDown size={18} strokeWidth={2} />
+        <ChevronDown size={22} strokeWidth={2.5} />
       </div>
     </section>
   );
