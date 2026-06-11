@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 function parseArgs(argv) {
   const options = {
     dist: "interface/dist",
+    requireAnalytics: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -16,6 +17,15 @@ function parseArgs(argv) {
       if (!next) throw new Error("--dist requires a value");
       options.dist = next;
       index += 1;
+      continue;
+    }
+    // Release builds bake analytics config in at build time. When set, this
+    // asserts the Mixpanel token was actually inlined into the bundle and the
+    // app version is a real release version (not the "0.0.0" package.json
+    // fallback). Guards against CI regressions that silently ship a desktop
+    // frontend whose client SDK no-ops (zero DAU / engagement events).
+    if (arg === "--require-analytics") {
+      options.requireAnalytics = true;
       continue;
     }
     throw new Error(`unknown argument: ${arg}`);
@@ -94,7 +104,42 @@ function validateNoBrokenCssModuleExports(distDir) {
   }
 }
 
-function validateDistAssets(distDir) {
+export function validateAnalyticsBakedIn(distDir, env = process.env) {
+  const token = (env.VITE_MIXPANEL_TOKEN ?? "").trim();
+  if (!token) {
+    throw new Error(
+      "VITE_MIXPANEL_TOKEN is empty for a release build. The client analytics " +
+        "SDK no-ops without it (no session_active / engagement events). Set the " +
+        "VITE_MIXPANEL_TOKEN variable in the interface build step.",
+    );
+  }
+
+  const appVersion = (env.APP_VERSION ?? "").trim();
+  if (!appVersion || appVersion === "0.0.0") {
+    throw new Error(
+      `APP_VERSION must be a real release version, got "${appVersion || "(empty)"}". ` +
+        'A "0.0.0" / empty version means the build did not receive APP_VERSION and ' +
+        "analytics events would report the package.json fallback.",
+    );
+  }
+
+  const files = [];
+  walkFiles(distDir, files);
+  const tokenBaked = files.some(
+    (file) => file.endsWith(".js") && fs.readFileSync(file, "utf8").includes(token),
+  );
+  if (!tokenBaked) {
+    throw new Error(
+      "the Mixpanel token was not inlined into the built frontend. The token is " +
+        "set in the environment but did not reach the bundle (e.g. it was provided " +
+        "to the wrong job/step), so the shipped client SDK will no-op.",
+    );
+  }
+
+  return { appVersion, tokenBaked: true };
+}
+
+function validateDistAssets(distDir, options = {}) {
   const resolvedDist = path.resolve(distDir);
   const indexPath = path.join(resolvedDist, "index.html");
   if (!fs.existsSync(indexPath)) {
@@ -118,16 +163,22 @@ function validateDistAssets(distDir) {
 
   validateNoBrokenCssModuleExports(resolvedDist);
 
+  let analytics;
+  if (options.requireAnalytics) {
+    analytics = validateAnalyticsBakedIn(resolvedDist);
+  }
+
   return {
     dist: resolvedDist,
     checked: assetRefs.length,
+    ...(analytics ? { analytics } : {}),
   };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    const result = validateDistAssets(options.dist);
+    const result = validateDistAssets(options.dist, options);
     console.log(
       JSON.stringify(
         {
