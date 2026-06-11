@@ -19,6 +19,25 @@ pub struct MixpanelTracker {
     client: Client,
     seen_today: Arc<DashMap<String, ()>>,
     share_opens_seen_today: Arc<DashMap<String, ()>>,
+    /// Most recent non-empty client metadata seen per `user_id`. Lets a
+    /// header-less request that wins the daily `session_active` dedup
+    /// still report a real `app_version` / `platform` instead of
+    /// `"(not set)"`.
+    last_client_meta: Arc<DashMap<String, ClientMeta>>,
+}
+
+/// Cap on `last_client_meta` to bound memory. On overflow the map is
+/// cleared wholesale (cheap and rare); entries repopulate from each
+/// active user's next request.
+const MAX_CLIENT_META_ENTRIES: usize = 100_000;
+
+/// Last-known client metadata for a user, used as a fallback when the
+/// triggering request omits the `X-App-Version` / `X-App-Platform`
+/// headers.
+#[derive(Clone, Default)]
+struct ClientMeta {
+    app_version: Option<String>,
+    platform: Option<String>,
 }
 
 impl MixpanelTracker {
@@ -34,6 +53,7 @@ impl MixpanelTracker {
             client: Client::new(),
             seen_today: Arc::new(DashMap::new()),
             share_opens_seen_today: Arc::new(DashMap::new()),
+            last_client_meta: Arc::new(DashMap::new()),
         })
     }
 
@@ -66,6 +86,14 @@ impl MixpanelTracker {
         client_ip: Option<&str>,
         user_agent: Option<&str>,
     ) {
+        let version = sanitize_client_header(app_version);
+        let platform = sanitize_client_header(platform);
+
+        // Remember the latest non-empty metadata for this user *before*
+        // the daily dedup so a later header-less request can still recover
+        // a real version. Refreshes on every call, not just the first.
+        self.remember_client_meta(user_id, version.as_deref(), platform.as_deref());
+
         let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
         let key = format!("{user_id}:{today}");
 
@@ -79,11 +107,19 @@ impl MixpanelTracker {
         // today). Only runs when we actually insert a new entry.
         self.seen_today.retain(|k, _| k.ends_with(&today));
 
+        // Fall back to the user's last-known metadata when this request
+        // carried no `X-App-Version` / `X-App-Platform` (e.g. a native
+        // WebSocket / `<img>` ticket redeem). Keeps the daily event off
+        // the `"(not set)"` slice regardless of which request wins.
+        let meta = self.client_meta(user_id);
+        let version = version.or(meta.app_version);
+        let platform = platform.or(meta.platform);
+
         let mut properties = Map::new();
-        if let Some(version) = sanitize_client_header(app_version) {
+        if let Some(version) = version {
             properties.insert("app_version".to_string(), json!(version));
         }
-        if let Some(platform) = sanitize_client_header(platform) {
+        if let Some(platform) = platform {
             properties.insert("platform".to_string(), json!(platform));
         }
         if let Some(ip) = sanitize_client_header(client_ip) {
@@ -94,6 +130,37 @@ impl MixpanelTracker {
         }
 
         self.enqueue_event("session_active", user_id.to_string(), properties);
+    }
+
+    /// Record the latest non-empty client metadata for a user. Empty
+    /// updates are ignored so a header-less request never wipes a known
+    /// value. Clears the map wholesale if it grows past
+    /// [`MAX_CLIENT_META_ENTRIES`] to keep memory bounded.
+    fn remember_client_meta(&self, user_id: &str, version: Option<&str>, platform: Option<&str>) {
+        if version.is_none() && platform.is_none() {
+            return;
+        }
+        if self.last_client_meta.len() >= MAX_CLIENT_META_ENTRIES
+            && !self.last_client_meta.contains_key(user_id)
+        {
+            self.last_client_meta.clear();
+        }
+        let mut entry = self.last_client_meta.entry(user_id.to_string()).or_default();
+        if let Some(version) = version {
+            entry.app_version = Some(version.to_string());
+        }
+        if let Some(platform) = platform {
+            entry.platform = Some(platform.to_string());
+        }
+    }
+
+    /// Snapshot the last-known client metadata for a user (empty when the
+    /// user has never sent a versioned request).
+    fn client_meta(&self, user_id: &str) -> ClientMeta {
+        self.last_client_meta
+            .get(user_id)
+            .map(|entry| entry.clone())
+            .unwrap_or_default()
     }
 
     /// Fire a generic Mixpanel event with JSON-object properties.
@@ -296,6 +363,16 @@ async fn post_mixpanel_payload(client: Client, payload: Value, event: String) {
 mod tests {
     use super::*;
 
+    fn test_tracker() -> MixpanelTracker {
+        MixpanelTracker {
+            token: "token".to_string(),
+            client: Client::new(),
+            seen_today: Arc::new(DashMap::new()),
+            share_opens_seen_today: Arc::new(DashMap::new()),
+            last_client_meta: Arc::new(DashMap::new()),
+        }
+    }
+
     #[test]
     fn payload_merges_properties_without_overwriting_metadata_shape() {
         let payload = build_event_payload(
@@ -417,12 +494,7 @@ mod tests {
 
     #[test]
     fn share_open_dedupe_marks_only_once_per_day() {
-        let tracker = MixpanelTracker {
-            token: "token".to_string(),
-            client: Client::new(),
-            seen_today: Arc::new(DashMap::new()),
-            share_opens_seen_today: Arc::new(DashMap::new()),
-        };
+        let tracker = test_tracker();
         let token = "t_1234567890abcdef1234567890abcdef";
 
         assert!(tracker
@@ -434,5 +506,30 @@ mod tests {
         assert!(tracker
             .mark_share_opened_for_day(token, "2026-06-02")
             .is_some());
+    }
+
+    #[test]
+    fn last_known_client_meta_fills_missing_values() {
+        let tracker = test_tracker();
+
+        // A versioned request records the metadata...
+        tracker.remember_client_meta("user-1", Some("0.1.0-nightly.636.1"), Some("desktop"));
+        // ...and a later header-less request must not wipe it.
+        tracker.remember_client_meta("user-1", None, None);
+
+        let meta = tracker.client_meta("user-1");
+        assert_eq!(meta.app_version.as_deref(), Some("0.1.0-nightly.636.1"));
+        assert_eq!(meta.platform.as_deref(), Some("desktop"));
+
+        // Each field updates independently when only one is present.
+        tracker.remember_client_meta("user-1", Some("0.1.0-nightly.637.1"), None);
+        let meta = tracker.client_meta("user-1");
+        assert_eq!(meta.app_version.as_deref(), Some("0.1.0-nightly.637.1"));
+        assert_eq!(meta.platform.as_deref(), Some("desktop"));
+
+        // Unknown users have no metadata to fall back on.
+        let empty = tracker.client_meta("user-2");
+        assert!(empty.app_version.is_none());
+        assert!(empty.platform.is_none());
     }
 }

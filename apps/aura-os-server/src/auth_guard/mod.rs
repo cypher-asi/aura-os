@@ -96,24 +96,31 @@ pub(crate) async fn require_verified_session(
     // geolocates the event to the user's country rather than the server's,
     // and the `User-Agent` so the server can derive the same `$os` the
     // client SDK reports instead of `$os = "(not set)"`.
+    //
+    // Capture-mode tokens resolve to a synthetic `capture-demo-user`
+    // session used only to render changelog media. The headless renderer
+    // sends no `X-App-Version`, so counting it would inject a fake DAU
+    // user and a guaranteed `app_version = "(not set)"` slice — skip it.
     if let Some(ref mp) = state.mixpanel {
-        let app_version = req
-            .headers()
-            .get("x-app-version")
-            .and_then(|v| v.to_str().ok());
-        let platform = req
-            .headers()
-            .get("x-app-platform")
-            .and_then(|v| v.to_str().ok());
-        let user_agent = req.headers().get("user-agent").and_then(|v| v.to_str().ok());
-        let client_ip = client_ip_from_headers(req.headers());
-        mp.track_session_active(
-            &session.user_id,
-            app_version,
-            platform,
-            client_ip.as_deref(),
-            user_agent,
-        );
+        if !is_capture_access_token(&token) {
+            let app_version = req
+                .headers()
+                .get("x-app-version")
+                .and_then(|v| v.to_str().ok());
+            let platform = req
+                .headers()
+                .get("x-app-platform")
+                .and_then(|v| v.to_str().ok());
+            let user_agent = req.headers().get("user-agent").and_then(|v| v.to_str().ok());
+            let client_ip = client_ip_from_headers(req.headers());
+            mp.track_session_active(
+                &session.user_id,
+                app_version,
+                platform,
+                client_ip.as_deref(),
+                user_agent,
+            );
+        }
     }
 
     req.extensions_mut().insert(AuthJwt(token));
