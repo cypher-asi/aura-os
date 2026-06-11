@@ -6,6 +6,7 @@
     "lint:file-sizes": "node scripts/lint-file-sizes.mjs",
     "evals:validate": "node scripts/ci/validate-evals-registry.mjs",
     "status:probes": "node infra/evals/status/run-status-probes.mjs",
+    "status:desktop-release": "node infra/evals/status/run-desktop-release-probes.mjs",
     "status:snapshot": "node infra/evals/status/build-status-snapshot.mjs",
     "status:all": "npm run status:probes && npm run status:snapshot"
   }

@@ -45,6 +45,28 @@ npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_
 npm run status:snapshot
 ```
 
+`AURA_STATUS_API_BASE_URL` selects the Aura API/control-plane host for cloud
+probes. Point it at `https://api.aura.ai` when the goal is to measure the
+deployed Aura API. It does not prove that the packaged desktop binary, embedded
+server, local harness, or local-agent runtime are healthy.
+
+Desktop release observability is a separate lane. It launches the built desktop
+binary, waits for its embedded loopback server, logs in with the eval account,
+and runs desktop-local probes against that loopback server:
+
+```sh
+AURA_DESKTOP_BINARY=target/release/aura-os-desktop \
+AURA_STATUS_USER_EMAIL="$AURA_STATUS_USER_EMAIL" \
+AURA_STATUS_USER_PASSWORD="$AURA_STATUS_USER_PASSWORD" \
+npm run status:desktop-release
+```
+
+By default this covers the binary-local API, authenticated session, org/profile
+reads, workspace defaults, terminal list, local agent creation, and local agent
+runtime response. Release workflows run this on the macOS arm64 release leg
+when `AURA_STATUS_USER_EMAIL` and `AURA_STATUS_USER_PASSWORD` are configured,
+then upload the generated check JSON and desktop logs as artifacts.
+
 For end-to-end local verification, use the existing eval local stack in
 `infra/evals/local-stack/`. The observability page is not served from a sibling
 website repo; it is the Aura OS interface route in `interface/`. The
