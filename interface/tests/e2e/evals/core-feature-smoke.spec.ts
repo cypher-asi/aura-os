@@ -24,6 +24,7 @@ for (const scenario of scenarios) {
     // navigation to keep behaviour deterministic across runs.
     await page.addInitScript(() => {
       localStorage.setItem("aura-ui-mode", "standard");
+      localStorage.setItem("aura-sidekick-active-tab", "run");
     });
 
     await bootstrapScenarioPage(page, scenario);
