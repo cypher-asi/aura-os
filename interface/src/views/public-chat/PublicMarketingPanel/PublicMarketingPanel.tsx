@@ -43,9 +43,7 @@ const MARKETING_NAV_FG_COLOR_MUTED = "#c9c9cf";
  * `#090909` surface (matching `/agents` + `/code`), so they all preload
  * the same color:
  *   /agents, /code, /pricing, /blog, /changelog, /feedback, /models,
- *   /os, /download -> flat `#090909`
- *   /docs -> `--marketing-section-bg` (`#0f0f12`)
- *   /terms, /privacy keep the `#000` default.
+ *   /os, /download, /docs, /terms, /privacy -> flat `#090909`
  *
  * `.scrollColumn` carries a `background-color` transition (see
  * `PublicMarketingPanel.module.css`) so these per-route colors
@@ -59,9 +57,9 @@ const MARKETING_PATH_BG: Readonly<Record<string, string>> = {
   "/feedback": "#090909",
   "/blog": "#090909",
   "/os": "#090909",
-  "/docs": "#0f0f12",
-  "/terms": "#000",
-  "/privacy": "#000",
+  "/docs": "#090909",
+  "/terms": "#090909",
+  "/privacy": "#090909",
   "/pricing": "#090909",
   "/models": "#090909",
   "/download": "#090909",

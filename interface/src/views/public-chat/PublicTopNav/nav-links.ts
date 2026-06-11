@@ -33,14 +33,30 @@ export const PRIMARY_LINKS: ReadonlyArray<TopNavLink> = [
 ];
 
 /**
- * Routes grouped under `Resources`. `OS` moved here (from the primary
- * row) and sits at the bottom of the menu.
+ * Routes grouped under `Resources`. The desktop dropdown renders these
+ * as two side-by-side columns (see `PublicTopNav`): `Changelog` heads
+ * the left column and `Blog` heads the right. The mobile menu renders
+ * the combined `RESOURCE_LINKS` list (below) as a single flat group.
  */
-export const RESOURCE_LINKS: ReadonlyArray<TopNavLink> = [
-  { tKey: "blog", label: "Blog", to: "/blog" },
+export const RESOURCE_LINKS_PRIMARY: ReadonlyArray<TopNavLink> = [
   { tKey: "changelog", label: "Changelog", to: "/changelog" },
-  { tKey: "downloads", label: "Downloads", to: "/download" },
+  { tKey: "docs", label: "Docs", to: "/docs" },
   { tKey: "feedback", label: "Feedback", to: "/feedback" },
+  { tKey: "downloads", label: "Downloads", to: "/download" },
+];
+
+export const RESOURCE_LINKS_SECONDARY: ReadonlyArray<TopNavLink> = [
+  { tKey: "blog", label: "Blog", to: "/blog" },
   { tKey: "models", label: "Models", to: "/models" },
   { tKey: "os", label: "OS", to: "/os" },
+];
+
+/**
+ * Flat union of both columns, left column first. Single source of truth
+ * for the mobile `Resources` group and for the active-route detection
+ * shared by both nav surfaces.
+ */
+export const RESOURCE_LINKS: ReadonlyArray<TopNavLink> = [
+  ...RESOURCE_LINKS_PRIMARY,
+  ...RESOURCE_LINKS_SECONDARY,
 ];

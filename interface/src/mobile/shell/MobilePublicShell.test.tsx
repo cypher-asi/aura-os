@@ -193,6 +193,7 @@ describe("MobilePublicShell full-screen menu", () => {
     for (const label of [
       "Blog",
       "Changelog",
+      "Docs",
       "Downloads",
       "Feedback",
       "Models",

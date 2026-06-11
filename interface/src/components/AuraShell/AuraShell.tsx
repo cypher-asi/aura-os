@@ -67,6 +67,9 @@ const MARKETING_GRADIENT_PATHS = new Set<string>([
   "/feedback",
   "/models",
   "/download",
+  "/docs",
+  "/terms",
+  "/privacy",
 ]);
 
 function blurActiveElement(): void {
@@ -122,7 +125,8 @@ export function AuraShell(): React.ReactElement {
     isPublic &&
     (MARKETING_GRADIENT_PATHS.has(pathname) ||
       pathname.startsWith("/os/") ||
-      pathname.startsWith("/blog/"));
+      pathname.startsWith("/blog/") ||
+      pathname.startsWith("/docs/"));
 
   // Authed-side state. We call these hooks unconditionally because
   // their subscriptions are cheap store reads — `useAppUIStore`,
