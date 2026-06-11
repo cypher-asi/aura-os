@@ -915,10 +915,10 @@ async function runChecks(args) {
     }));
   }
 
-  if (selected("public-status-page")) {
-    checks.push(await probe("public-status-page", "public-website", "Public observability snapshot", args, async () => {
+  if (selected("public-observability-page")) {
+    checks.push(await probe("public-observability-page", "public-website", "Public observability snapshot", args, async () => {
       const base = args.publicBaseUrl || args.baseUrl;
-      const payload = await publicJson(base, "/status/status.json");
+      const payload = await publicJson(base, "/observability/status.json");
       return { evidence: { overall: payload?.overall, featureCount: payload?.features?.length ?? 0 } };
     }));
   }
@@ -938,7 +938,7 @@ async function runChecks(args) {
   if (selected("public-marketing-pages")) {
     checks.push(await probe("public-marketing-pages", "public-website", "Public marketing routes", args, async () => {
       const base = args.publicBaseUrl || args.baseUrl;
-      const routes = ["/agents", "/code", "/pricing", "/models", "/feedback", "/blog", "/download", "/observability", "/status"];
+      const routes = ["/agents", "/code", "/pricing", "/models", "/feedback", "/blog", "/download", "/observability"];
       const results = [];
       for (const route of routes) {
         const result = await publicText(base, route);

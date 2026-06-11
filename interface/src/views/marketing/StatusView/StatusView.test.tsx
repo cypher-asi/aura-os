@@ -117,6 +117,13 @@ describe("StatusView", () => {
       expect(screen.getByText("github-actions")).toBeInTheDocument();
     });
 
+    expect(fetch).toHaveBeenCalledWith(
+      "/observability/status.json",
+      expect.objectContaining({
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      }),
+    );
     expect(screen.getAllByText("Degraded").length).toBeGreaterThan(0);
     expect(screen.getByText("2/3 models returned the expected response")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Platform" })).toBeInTheDocument();

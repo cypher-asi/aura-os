@@ -322,7 +322,6 @@ function AppRoutes(): React.ReactElement {
                   </Suspense>
                 }
               />
-              <Route path="status" element={<Navigate to="/observability" replace />} />
             </Route>
             <Route
               path="invite/:token"
@@ -487,7 +486,6 @@ function AppRoutes(): React.ReactElement {
                   </Suspense>
                 }
               />
-              <Route path="status" element={<Navigate to="/observability" replace />} />
               <Route
                 path="blog"
                 element={
@@ -611,7 +609,6 @@ function AppRoutes(): React.ReactElement {
                 </Suspense>
               }
             />
-            <Route path="status" element={<Navigate to="/observability" replace />} />
             {/*
               Parallel authenticated share route. Reuses the SAME
               `SharedSessionView` but renders inside the normal authed

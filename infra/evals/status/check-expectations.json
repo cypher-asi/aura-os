@@ -241,7 +241,7 @@
       "description": "Eval artifact scan reports files and found counts.",
       "requiredEvidence": ["files"]
     },
-    "public-status-page": {
+    "public-observability-page": {
       "description": "Public observability snapshot JSON returns overall state and feature count.",
       "requiredEvidence": ["overall", "featureCount"],
       "assertions": [

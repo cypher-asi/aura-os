@@ -13,7 +13,7 @@ function parseArgs(argv) {
     checksDir: process.env.AURA_STATUS_CHECKS_DIR || path.join(repoRoot, "infra/evals/reports/status/checks"),
     checksFile: process.env.AURA_STATUS_CHECKS_FILE || "",
     registry: process.env.AURA_STATUS_FEATURES_FILE || path.join(__dirname, "features.json"),
-    out: process.env.AURA_STATUS_OUTPUT || path.join(repoRoot, "interface/public/status/status.json"),
+    out: process.env.AURA_STATUS_OUTPUT || path.join(repoRoot, "interface/public/observability/status.json"),
     reportOut: process.env.AURA_STATUS_REPORT_OUTPUT || path.join(repoRoot, "infra/evals/reports/status/status.json"),
     environment: process.env.AURA_STATUS_ENVIRONMENT || "unknown",
     source: process.env.AURA_STATUS_SOURCE || "aura-status",

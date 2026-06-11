@@ -57,7 +57,7 @@ export interface StatusSnapshot {
   readonly features: readonly StatusFeature[];
 }
 
-const STATUS_JSON_URL = "/status/status.json";
+const STATUS_JSON_URL = "/observability/status.json";
 
 export async function getStatusSnapshot(): Promise<StatusSnapshot> {
   const response = await fetch(STATUS_JSON_URL, {

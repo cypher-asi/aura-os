@@ -1,4 +1,4 @@
-name: Aura Feature Health
+name: Aura Observability
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  status:
+  observability:
     runs-on: ubuntu-latest
     environment: production
 
@@ -33,19 +33,19 @@ jobs:
           AURA_STATUS_ENVIRONMENT: production
         run: npm run status:probes
 
-      - name: Build public status snapshot
+      - name: Build public observability snapshot
         if: always()
         env:
           AURA_STATUS_ENVIRONMENT: production
           AURA_STATUS_SOURCE: github-actions
         run: npm run status:snapshot
 
-      - name: Upload status snapshot
+      - name: Upload observability snapshot
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: aura-feature-health
+          name: aura-observability
           path: |
-            interface/public/status/status.json
+            interface/public/observability/status.json
             infra/evals/reports/status/status.json
             infra/evals/reports/status/checks

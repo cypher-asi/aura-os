@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "title": "Aura Feature Health",
-  "description": "Public-facing feature health backed by Aura-owned live eval probes.",
-  "generatedAt": "2026-06-11T07:49:18.905Z",
+  "title": "Aura Observability",
+  "description": "Feature health backed by Aura-owned live eval probes.",
+  "generatedAt": "2026-06-11T21:56:01.223Z",
   "environment": "unknown",
   "source": "aura-status",
   "overall": "unknown",
@@ -769,7 +769,7 @@
       "label": "Public Website",
       "category": "website",
       "priority": 80,
-      "description": "Public Aura pages, status JSON, and marketing routes.",
+      "description": "Public Aura pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "Aura's public web surfaces are reachable.",
       "status": "unknown",
       "lastCheckedAt": null,
@@ -781,7 +781,7 @@
       "message": "No recent result",
       "checks": [
         {
-          "id": "public-status-page",
+          "id": "public-observability-page",
           "required": true,
           "status": "unknown",
           "featureStatus": "unknown",

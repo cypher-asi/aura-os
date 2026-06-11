@@ -250,7 +250,7 @@
       "description": "Public Aura pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "Aura's public web surfaces are reachable.",
       "checks": [
-        { "id": "public-status-page", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 2000, "outageLatencyMs": 8000 },
+        { "id": "public-observability-page", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 2000, "outageLatencyMs": 8000 },
         { "id": "public-models-page", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
         { "id": "public-marketing-pages", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 }
       ],

@@ -2,8 +2,7 @@
 
 Aura Observability turns live eval probes into a dashboard available from the
 Aura OS public-mode website and the authenticated desktop/web app at
-`/observability`. The legacy `/status` path redirects to `/observability` so
-existing links keep working.
+`/observability`.
 
 ## What It Measures
 
@@ -35,7 +34,7 @@ Current feature groups:
 - Desktop Runtime: workspace defaults and terminal session API.
 - Streams and Debug: active stream registry and debug project index.
 - Eval Artifacts: existing Playwright/benchmark eval summary artifacts.
-- Public Website: status JSON plus public marketing routes.
+- Public Website: observability snapshot JSON plus public marketing routes.
 
 ## Running Probes
 
@@ -85,7 +84,7 @@ For Aura OS public-mode page checks against the frontend dev server:
 ```sh
 node infra/evals/status/run-status-probes.mjs \
   --public-base-url http://127.0.0.1:4173 \
-  --checks public-status-page,public-models-page,public-marketing-pages \
+  --checks public-observability-page,public-models-page,public-marketing-pages \
   --out-dir /tmp/aura-status-checks \
   --environment local-dev
 ```
@@ -94,17 +93,17 @@ node infra/evals/status/run-status-probes.mjs \
 `infra/evals/reports/status/checks/`. `status:snapshot` reads those runs,
 applies `infra/evals/status/lib/status-policy.mjs`, and writes:
 
-- `interface/public/status/status.json`
+- `interface/public/observability/status.json`
 - `infra/evals/reports/status/status.json`
 
 The Aura OS React route at `/observability`
-(`interface/src/views/marketing/StatusView`) fetches `/status/status.json` and
+(`interface/src/views/marketing/StatusView`) fetches `/observability/status.json` and
 renders the snapshot. If the JSON is missing, the page falls back to an explicit
 unknown state.
 
 ## Publishing
 
-`.github/workflows/aura-feature-health.yml` runs every 30 minutes and can also
+`.github/workflows/aura-observability.yml` runs every 30 minutes and can also
 be triggered manually. It runs probes with production secrets, builds the
 snapshot even when probes fail, and uploads the generated JSON/check artifacts.
 
@@ -115,7 +114,7 @@ npm run status:probes -- --base-url "$AURA_STATUS_API_BASE_URL" --token "$AURA_S
 npm run status:snapshot -- --environment production --source github-actions
 ```
 
-The generated `interface/public/status/status.json` ships with the Aura OS
+The generated `interface/public/observability/status.json` ships with the Aura OS
 interface build, and the `/observability` route reads it directly. No
 external status-page service is required for the first version because the
 valuable part is the Aura-specific probe catalog and status policy. An external
