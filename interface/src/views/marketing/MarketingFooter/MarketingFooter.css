@@ -119,9 +119,22 @@
 }
 
 .marketingFooterCopyright {
-  color: var(--public-nav-fg-color-muted, #c9c9cf);
+  display: inline-flex;
+  align-items: center;
+  /* Negative left margin cancels the box's left padding so the text aligns
+     with the column headings above, while the padded background keeps its
+     breathing room. */
+  margin-left: -12px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: #0a0a0c;
+  color: color-mix(in srgb, var(--public-nav-fg-color, #e6e8eb) 78%, #fff);
   font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .marketingFooterCompany {

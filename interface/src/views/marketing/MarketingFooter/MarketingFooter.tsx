@@ -150,7 +150,7 @@ export function MarketingFooter(): React.ReactNode {
         <div className="marketingFooterBottom">
           <span className="marketingFooterCopyright">
             {t("footer.copyright", {
-              defaultValue: `Copyright ${new Date().getFullYear()}`,
+              defaultValue: `Copyright © ${new Date().getFullYear()}`,
               year: new Date().getFullYear(),
             })}
           </span>
