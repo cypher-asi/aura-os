@@ -2,17 +2,20 @@
   {
     "date": "2026-06-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.637.1",
-    "title": "Deterministic eval fixtures steady the nightly",
-    "intro": "A quiet nightly focused on test infrastructure: the end-to-end eval suites were nudged into a more predictable starting state so CI signal stays trustworthy across Linux, macOS, and Windows builds.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.638.1",
+    "title": "Public whitepaper, fully localized marketing, and chat performance fixes",
+    "intro": "A big day for the public surface of Aura: the /os whitepaper grew from a single Harness outline into a multi-repo reference with diagrams and GitHub-linked code, the marketing site picked up real Terms and Privacy pages plus translations into 19 languages, and the trust card's \"Always on.\" switch became a real animated control. Underneath, chat got noticeably snappier, long-running remote agent turns stopped timing out, and the dev server stopped locking itself into infinite error loops.",
+    "entryCount": 6,
     "highlights": [
-      "E2E eval suites now pin the Run sidekick tab for deterministic runs",
-      "Nightly 637.1 shipped across Linux, macOS (x64/arm64), and Windows"
+      "/os whitepaper expanded to cover five core repos with diagrams and GitHub-linked code refs",
+      "Full marketing site, Terms, and Privacy translated into 20 locales",
+      "Chat transcript no longer re-renders on every keystroke",
+      "Remote agent cold-starts and long turns stop hitting spurious 60s/180s timeouts",
+      "Login screen now remembers up to five recent accounts"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-06-11T16:25:29.562Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.637.1",
+    "rawCommitCount": 35,
+    "generatedAt": "2026-06-11T19:18:39.401Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.638.1",
     "path": "history/2026-06-11.json"
   },
   {

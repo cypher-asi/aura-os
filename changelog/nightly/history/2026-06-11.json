@@ -3,19 +3,53 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-11T16:25:29.562Z",
+  "generatedAt": "2026-06-11T19:18:39.401Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.637.1",
+  "version": "0.1.0-nightly.638.1",
   "date": "2026-06-11",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.637.1",
-  "lastIncludedSha": "34404cfd941b474901ee9de6b318533ff9e6ea29",
-  "previousProcessedSha": "440cf343d4bdeb3af3f5bb3ac11f404a73cfff87",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.638.1",
+  "lastIncludedSha": "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd",
+  "previousProcessedSha": "34404cfd941b474901ee9de6b318533ff9e6ea29",
   "commitShas": [
-    "34404cfd941b474901ee9de6b318533ff9e6ea29"
+    "34404cfd941b474901ee9de6b318533ff9e6ea29",
+    "ec007643cedd32d94903384b112267da942a2af1",
+    "4b5261665bdd1b70d88911448189c7e9a3da76d4",
+    "f3a817c0bb9dff9f47a35b71d07a9ea5bfc1a2f3",
+    "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8",
+    "b56275981e9c47ee7db11660fb0b836233a8d526",
+    "3d0bef18e76a0539205b002814b47400bc8a92c5",
+    "e84938ac9e9211e01a4db60c28827c0e5835b479",
+    "54f3e013adfaf19e53b477f0337cb23ca3206726",
+    "47a76dac980444d7317b4ff4b90fd905f463ba95",
+    "748c5b3c790870fad516e08b534f5ff5d049aafd",
+    "7d9aca56eb5ff2e7286eb0832d109e7d3d4576ee",
+    "cfb01e91e520019da7f51ffa16ea19a19bdfd897",
+    "a6a21a539e26b2e81966bebabf2aab378db6bfce",
+    "f942415669a437161ab69b9da462276a168c5a58",
+    "184024e87d0b0229a64b3513b4d65781a657dd3d",
+    "0d6155a4c040dc4a2b9264f8ed34886d982c47cf",
+    "886e305984850688d230805d45d859124e0cddf1",
+    "724ee647641520fe27c7548cedd5e983c326747d",
+    "49c23e0cd804e0cfbe2a35271da186f054a6b48f",
+    "b2296e3935b08b49ee774d958309aface669d878",
+    "a00528d314f85fbb3e517d6aae4d431f00f3e5de",
+    "fcab8fc1f2e46600362df38fcbe799ce829af374",
+    "880ad3caebe7c28dbbea5e821d7b2eef968587b7",
+    "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc",
+    "7ab441d858e2e0dc13b5bf2400991aaaf6f84147",
+    "95237c3257e04097a4f0daf0dadb28afa9677b6e",
+    "e29e90c7d7c9d2961296d002c9e5eeaefd3be032",
+    "7565b5eb60fb473a34f13ebe2677c0e42ee67326",
+    "46c231ecba0501e000ede359fe6c011c6f1fefd6",
+    "530311a7760e58d53a7e12240a02a183497b9dbf",
+    "8c12fa2512d77503eed26f80773b6a299230d3e5",
+    "599102e08f10ebb7d4affdcf53afbf29a3cb695c",
+    "166913cf4a8f1aede4e0e997bd6e9b9b31e34970",
+    "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 35,
+  "filteredCommitCount": 35,
   "rawCommits": [
     {
       "sha": "34404cfd941b474901ee9de6b318533ff9e6ea29",
@@ -53,36 +87,1546 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "ec007643cedd32d94903384b112267da942a2af1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T09:39:54-07:00",
+      "subject": "Use theme accent for selected mode label",
+      "body": "",
+      "parents": [
+        "34404cfd941b474901ee9de6b318533ff9e6ea29"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 9,
+        "deletions": 8
+      },
+      "committedAtMs": 1781195994000,
+      "cleanSubject": "Use theme accent for selected mode label",
+      "keywords": [
+        "theme",
+        "accent",
+        "selected",
+        "mode",
+        "label"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4b5261665bdd1b70d88911448189c7e9a3da76d4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T09:49:36-07:00",
+      "subject": "Make mode selector capsule theme-aware and soften selected glow",
+      "body": "",
+      "parents": [
+        "ec007643cedd32d94903384b112267da942a2af1"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 55,
+        "deletions": 25
+      },
+      "committedAtMs": 1781196576000,
+      "cleanSubject": "Make mode selector capsule theme-aware and soften selected glow",
+      "keywords": [
+        "make",
+        "mode",
+        "selector",
+        "capsule",
+        "theme",
+        "aware",
+        "soften",
+        "selected",
+        "glow"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f3a817c0bb9dff9f47a35b71d07a9ea5bfc1a2f3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T09:54:20-07:00",
+      "subject": "Raise remote-agent turn and cold-open timeouts",
+      "body": "Long but actively-progressing remote agent turns were tripping the sliding-idle turn_timeout (180s) and the hard 60s cold-open cap, surfacing as spurious stalls/502s when waking a hibernated microVM or running long tool/LLM work.\n\nRaise DEFAULT_MAX_IDLE_TIMEOUT_SECS 180->600 and DEFAULT_FIRST_EVENT_TIMEOUT_SECS 180->300, and make the cold-open cap configurable (AURA_COLD_OPEN_TIMEOUT_SECS, default 180) instead of a hardcoded 60s.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4b5261665bdd1b70d88911448189c7e9a3da76d4"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/streaming/session.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot/config.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 50,
+        "deletions": 14
+      },
+      "committedAtMs": 1781196860000,
+      "cleanSubject": "Raise remote-agent turn and cold-open timeouts",
+      "keywords": [
+        "raise",
+        "remote",
+        "agent",
+        "turn",
+        "cold",
+        "open",
+        "timeouts"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T09:59:02-07:00",
+      "subject": "fix(chat): stop full-transcript re-render on every keystroke",
+      "body": "The error agent/device context hook returned a fresh object literal each render. Threaded through ChatSurface into every React.memo'd MessageBubble, this defeated memoization so the whole transcript re-parsed markdown on every draft keystroke and streaming token, causing the recent app-wide messaging slowdown.\n\n- Memoize useErrorReportAgentInfo on its resolved primitive fields so the reference is stable across keystrokes.\n\n- Memoize ChatMessageList and stabilize the emptyState prop so draft input changes no longer re-run the transcript map.\n\n- Honor OS prefers-reduced-motion for the always-on attach-button halo/spin animations on every authenticated chat.\n\n- Restore the existing formatter tests and add memoization regression tests.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f3a817c0bb9dff9f47a35b71d07a9ea5bfc1a2f3"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/features/chat-ui/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatSurface.tsx",
+        "interface/src/hooks/use-error-report-agent-info.test.ts",
+        "interface/src/hooks/use-error-report-agent-info.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 143,
+        "deletions": 26
+      },
+      "committedAtMs": 1781197142000,
+      "cleanSubject": "stop full-transcript re-render on every keystroke",
+      "keywords": [
+        "stop",
+        "full",
+        "transcript",
+        "render",
+        "every",
+        "keystroke"
+      ],
+      "fileGroups": [
+        "interface/src/features",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b56275981e9c47ee7db11660fb0b836233a8d526",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:08:27-07:00",
+      "subject": "perf(agents): cut idle GPU cost of the 3D profile card",
+      "body": "The agent profile card ran a full THREE.js + UnrealBloom composite every frame for the entire time it was mounted, pausing only when the whole tab was backgrounded. On integrated GPUs and high-DPI displays this sustained GPU load could throttle the system and make the rest of the app feel slow.\n\n- Drop antialias on the renderer: it allocated a multisampled framebuffer that the EffectComposer bypasses, for zero visual gain.\n\n- Halt the render loop under prefers-reduced-motion once hover/flip transitions settle (idle is fully static there), instead of compositing bloom every frame.\n\n- Re-add an off-screen pause via IntersectionObserver, guarding the spurious 0x0 first-callback that previously could freeze a visible card; resume respects both tab visibility and on-screen state.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/profile-card-scene.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 68,
+        "deletions": 4
+      },
+      "committedAtMs": 1781197707000,
+      "cleanSubject": "perf(agents): cut idle GPU cost of the 3D profile card",
+      "keywords": [
+        "perf",
+        "agents",
+        "idle",
+        "cost",
+        "profile",
+        "card"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3d0bef18e76a0539205b002814b47400bc8a92c5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:10:19-07:00",
+      "subject": "fix(analytics): keep app_version on server session_active",
+      "body": "Server-emitted session_active is deduped to the first authenticated\nrequest per user per UTC day. A header-less request (native WebSocket /\n<img> ticket redeem, or the synthetic capture-demo-user) could win that\nslot and land the day's event on Mixpanel's app_version = \"(not set)\"\nslice.\n\n- Remember the latest non-empty X-App-Version / X-App-Platform per user\n  and fall back to it when the triggering request omits the headers, so\n  the daily session_active always carries a real version.\n- Skip session_active entirely for capture-mode tokens, which otherwise\n  add a fake DAU user with no version.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b56275981e9c47ee7db11660fb0b836233a8d526"
+      ],
+      "files": [
+        "apps/aura-os-server/src/auth_guard/mod.rs",
+        "apps/aura-os-server/src/mixpanel.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 129,
+        "deletions": 25
+      },
+      "committedAtMs": 1781197819000,
+      "cleanSubject": "keep app_version on server session_active",
+      "keywords": [
+        "keep",
+        "version",
+        "server",
+        "session",
+        "active"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "e84938ac9e9211e01a4db60c28827c0e5835b479",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:22:43-07:00",
+      "subject": "feat(os): restructure whitepaper sections and link code refs to GitHub",
+      "body": "Rework the public /os AURA OS whitepaper. Each section now leads with a\ntwo-line summary, an Overview bullet list, and an ASCII Architecture\ndiagram, with \"layer\" dropped from titles and the layers numbered 0-10\n(Overview = 0). Inline code references (crate/file/function tokens) now\nlink out to the public cypher-asi/aura-harness repo in a new tab: crate\nnames resolve to their crate directory, everything else to a repo-scoped\ncode search. Body text now uses the primary color with code in the\nsecondary color, and the nav group renders as \"AURA Harness\".\n\nContent changes require re-running the sys-admin \"Seed AURA OS whitepaper\"\nto publish; the renderer/CSS changes ship with the frontend build.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3d0bef18e76a0539205b002814b47400bc8a92c5"
+      ],
+      "files": [
+        "interface/src/apps/notes/seed-aura-whitepaper/sections.ts",
+        "interface/src/views/marketing/OsView/OsView.module.css",
+        "interface/src/views/marketing/OsView/OsView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 365,
+        "deletions": 80
+      },
+      "committedAtMs": 1781198563000,
+      "cleanSubject": "restructure whitepaper sections and link code refs to GitHub",
+      "keywords": [
+        "restructure",
+        "whitepaper",
+        "sections",
+        "link",
+        "code",
+        "refs",
+        "github"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "54f3e013adfaf19e53b477f0337cb23ca3206726",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:39:54-07:00",
+      "subject": "feat(os): add Invariants section and detailed internal diagrams",
+      "body": "Add a dedicated \"Invariants\" whitepaper section (the fifteen §1-§15\narchitectural invariants grouped by part, with the per-agent kernel\nmodel, policy pipeline, and append-path diagrams) before User flows in\nthe left nav. Give every layer section an \"## Internals\" ASCII diagram\nshowing its inner workings beyond the crate-relationship tree, add a\nrequest-lifecycle diagram to the overview, and upgrade the user-flow\nsections with detailed sequence diagrams (interactive, run kickoff,\nheadless, error recovery, data lifecycle).\n\nAlso make code-reference links discoverable with a subtle dotted\nunderline, since they otherwise read as plain code. Content changes\nrequire re-running the sys-admin \"Seed AURA OS whitepaper\"; the CSS\nships with the frontend build.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e84938ac9e9211e01a4db60c28827c0e5835b479"
+      ],
+      "files": [
+        "interface/src/apps/notes/seed-aura-whitepaper/sections.ts",
+        "interface/src/views/marketing/OsView/OsView.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 407,
+        "deletions": 13
+      },
+      "committedAtMs": 1781199594000,
+      "cleanSubject": "add Invariants section and detailed internal diagrams",
+      "keywords": [
+        "invariants",
+        "section",
+        "detailed",
+        "internal",
+        "diagrams"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "47a76dac980444d7317b4ff4b90fd905f463ba95",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:42:51-07:00",
+      "subject": "fix(marketing): center trust display panel in right gap",
+      "body": "Position the Built for trust mini-disc/LCD panel at the measured midpoint between the centered WebGL device and the card's right edge, instead of pinning it to the right edge.",
+      "parents": [
+        "54f3e013adfaf19e53b477f0337cb23ca3206726"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDeviceStage.css",
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDeviceStage.tsx",
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDisplayPanel.css",
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDisplayPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 83,
+        "deletions": 12
+      },
+      "committedAtMs": 1781199771000,
+      "cleanSubject": "center trust display panel in right gap",
+      "keywords": [
+        "center",
+        "trust",
+        "display",
+        "panel",
+        "right"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "748c5b3c790870fad516e08b534f5ff5d049aafd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:43:39-07:00",
+      "subject": "feat(os): read the whitepaper from prod in dev",
+      "body": "The /os whitepaper resolved against the same-origin/local server, which\nusually has no sections seeded, so dev showed the empty \"no sections\npublished yet\" state. Point os.ts at the prod-pinned public-content host\nin dev, exactly like the blog already does, so /os shows real production\ndata locally. Generalize the blog helpers (resolveBlogApiUrl ->\nresolvePublicContentApiUrl, getProdBlogHostOrigin ->\ngetProdPublicContentHostOrigin) since they now serve blog + whitepaper.\nProduction builds keep their same-origin / configured-host behavior.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "47a76dac980444d7317b4ff4b90fd905f463ba95"
+      ],
+      "files": [
+        "interface/src/api/marketing/blog.ts",
+        "interface/src/api/marketing/os.ts",
+        "interface/src/shared/lib/host-config.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 31,
+        "deletions": 25
+      },
+      "committedAtMs": 1781199819000,
+      "cleanSubject": "read the whitepaper from prod in dev",
+      "keywords": [
+        "read",
+        "whitepaper",
+        "from",
+        "prod"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7d9aca56eb5ff2e7286eb0832d109e7d3d4576ee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:44:27-07:00",
+      "subject": "fix(os): drop the \"0.\" prefix from the Overview title",
+      "body": "Overview is not a layer, so it now reads \"Overview\" instead of\n\"0. Overview\" in both the nav and the heading; layers stay numbered 1-10.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "748c5b3c790870fad516e08b534f5ff5d049aafd"
+      ],
+      "files": [
+        "interface/src/apps/notes/seed-aura-whitepaper/sections.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1781199867000,
+      "cleanSubject": "drop the \"0.\" prefix from the Overview title",
+      "keywords": [
+        "drop",
+        "prefix",
+        "from",
+        "overview",
+        "title"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cfb01e91e520019da7f51ffa16ea19a19bdfd897",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:45:49-07:00",
+      "subject": "fix(os): match the \"AURA Harness\" nav label case-insensitively",
+      "body": "Resolve the section display-label override against the lowercased key so\nthe left-nav group renders \"AURA Harness\" regardless of whether the\nstored blogType is \"harness\" or \"Harness\".\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7d9aca56eb5ff2e7286eb0832d109e7d3d4576ee"
+      ],
+      "files": [
+        "interface/src/views/marketing/OsView/OsView.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 1
+      },
+      "committedAtMs": 1781199949000,
+      "cleanSubject": "match the \"AURA Harness\" nav label case-insensitively",
+      "keywords": [
+        "match",
+        "aura",
+        "harness",
+        "label",
+        "case",
+        "insensitively"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a6a21a539e26b2e81966bebabf2aab378db6bfce",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:46:14-07:00",
+      "subject": "fix(marketing): stop WebGL page background flickering on resize",
+      "body": "The full-screen ScreenOrbBackground / FlowFieldBackground reallocated and\ncleared the WebGL drawing buffer inside a ResizeObserver but only repainted\nwhen the rAF loop was stopped (`if (!raf) renderFrame()`). Since raf is\nalways active while animating, the cleared (black) buffer got composited for\na frame before the next tick redrew it, producing a flicker on every resize\nstep. Repaint synchronously after each resize so the cleared buffer is never\nshown.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "cfb01e91e520019da7f51ffa16ea19a19bdfd897"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicChatView/FlowFieldBackground.tsx",
+        "interface/src/views/public-chat/PublicChatView/ScreenOrbBackground.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 10,
+        "deletions": 3
+      },
+      "committedAtMs": 1781199974000,
+      "cleanSubject": "stop WebGL page background flickering on resize",
+      "keywords": [
+        "stop",
+        "webgl",
+        "page",
+        "background",
+        "flickering",
+        "resize"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f942415669a437161ab69b9da462276a168c5a58",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:46:36-07:00",
+      "subject": "feat(marketing): make the \"Always on.\" toggle clickable",
+      "body": "The trust card switch now toggles on click: the knob slides to the other\nside and the \"ON\" label flips to the open side, but it stays lit either\nway (it is always on). Also tightened the card description so it wraps to\ntwo lines like its sibling cards.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a6a21a539e26b2e81966bebabf2aab378db6bfce"
+      ],
+      "files": [
+        "interface/src/locales/en/marketing.json",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.css",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.tsx",
+        "interface/src/views/marketing/BuiltForTrustSection/BuiltForTrustSection.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 423,
+        "deletions": 75
+      },
+      "committedAtMs": 1781199996000,
+      "cleanSubject": "make the \"Always on.\" toggle clickable",
+      "keywords": [
+        "make",
+        "always",
+        "toggle",
+        "clickable"
+      ],
+      "fileGroups": [
+        "interface/src/locales",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "184024e87d0b0229a64b3513b4d65781a657dd3d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:51:57-07:00",
+      "subject": "feat(marketing): sequence the \"Always on.\" toggle animation",
+      "body": "The knob now slides across first, then the \"ON\" label fades back in on the\nnow-open side (it fades out as the knob starts moving and snaps to the new\nside while hidden). Splits the label into a positioned/fading wrapper and\nan inner text element so the fade no longer fights the gold breathe glow.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f942415669a437161ab69b9da462276a168c5a58"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.css",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 57,
+        "deletions": 18
+      },
+      "committedAtMs": 1781200317000,
+      "cleanSubject": "sequence the \"Always on.\" toggle animation",
+      "keywords": [
+        "sequence",
+        "always",
+        "toggle",
+        "animation"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0d6155a4c040dc4a2b9264f8ed34886d982c47cf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T10:52:37-07:00",
+      "subject": "feat(i18n): translate public marketing UI into all supported locales",
+      "body": "Changing the site language did not change public marketing content\nbecause the marketing/publicChat namespaces only existed for English,\nso every non-English locale fell back to English.\n\n- Generate marketing.json + publicChat.json for all 19 non-English\n  locales (incl. expertise detail pages), and fill missing nav keys\n- Fill interpolated/plural English source keys in publicChat so they\n  translate instead of falling back\n- Route RotatingTagline through i18n (taglines.*) instead of hardcoded\n  English strings\n- Add scripts/i18n-translate-marketing.mjs (reproducible machine\n  translation) and scripts/i18n-validate-marketing.mjs (placeholder +\n  empty-value validation)\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "184024e87d0b0229a64b3513b4d65781a657dd3d"
+      ],
+      "files": [
+        "interface/scripts/i18n-translate-marketing.mjs",
+        "interface/scripts/i18n-validate-marketing.mjs",
+        "interface/src/components/BottomTaskbar/RotatingTagline.tsx",
+        "interface/src/locales/ar/marketing.json",
+        "interface/src/locales/ar/nav.json",
+        "interface/src/locales/ar/publicChat.json",
+        "interface/src/locales/de/marketing.json",
+        "interface/src/locales/de/nav.json",
+        "interface/src/locales/de/publicChat.json",
+        "interface/src/locales/en/publicChat.json",
+        "interface/src/locales/es/marketing.json",
+        "interface/src/locales/es/nav.json",
+        "interface/src/locales/es/publicChat.json",
+        "interface/src/locales/fr/marketing.json",
+        "interface/src/locales/fr/nav.json",
+        "interface/src/locales/fr/publicChat.json",
+        "interface/src/locales/hi/marketing.json",
+        "interface/src/locales/hi/nav.json",
+        "interface/src/locales/hi/publicChat.json",
+        "interface/src/locales/id/marketing.json",
+        "interface/src/locales/id/nav.json",
+        "interface/src/locales/id/publicChat.json",
+        "interface/src/locales/it/marketing.json",
+        "interface/src/locales/it/nav.json",
+        "interface/src/locales/it/publicChat.json",
+        "interface/src/locales/ja/marketing.json",
+        "interface/src/locales/ja/nav.json",
+        "interface/src/locales/ja/publicChat.json",
+        "interface/src/locales/ko/marketing.json",
+        "interface/src/locales/ko/nav.json",
+        "interface/src/locales/ko/publicChat.json",
+        "interface/src/locales/nl/marketing.json",
+        "interface/src/locales/nl/nav.json",
+        "interface/src/locales/nl/publicChat.json",
+        "interface/src/locales/pl/marketing.json",
+        "interface/src/locales/pl/nav.json",
+        "interface/src/locales/pl/publicChat.json",
+        "interface/src/locales/pt-BR/marketing.json",
+        "interface/src/locales/pt-BR/nav.json",
+        "interface/src/locales/pt-BR/publicChat.json",
+        "interface/src/locales/ru/marketing.json",
+        "interface/src/locales/ru/nav.json",
+        "interface/src/locales/ru/publicChat.json",
+        "interface/src/locales/th/marketing.json",
+        "interface/src/locales/th/nav.json",
+        "interface/src/locales/th/publicChat.json",
+        "interface/src/locales/tr/marketing.json",
+        "interface/src/locales/tr/nav.json",
+        "interface/src/locales/tr/publicChat.json",
+        "interface/src/locales/uk/marketing.json",
+        "interface/src/locales/uk/nav.json",
+        "interface/src/locales/uk/publicChat.json",
+        "interface/src/locales/vi/marketing.json",
+        "interface/src/locales/vi/nav.json",
+        "interface/src/locales/vi/publicChat.json",
+        "interface/src/locales/zh-Hans/marketing.json",
+        "interface/src/locales/zh-Hans/nav.json",
+        "interface/src/locales/zh-Hans/publicChat.json",
+        "interface/src/locales/zh-Hant/marketing.json",
+        "interface/src/locales/zh-Hant/nav.json",
+        "interface/src/locales/zh-Hant/publicChat.json"
+      ],
+      "stats": {
+        "fileCount": 61,
+        "insertions": 16753,
+        "deletions": 79
+      },
+      "committedAtMs": 1781200357000,
+      "cleanSubject": "translate public marketing UI into all supported locales",
+      "keywords": [
+        "translate",
+        "public",
+        "marketing",
+        "into",
+        "supported",
+        "locales"
+      ],
+      "fileGroups": [
+        "interface/scripts/i18n-translate-marketing.mjs",
+        "interface/scripts/i18n-validate-marketing.mjs",
+        "interface/src/components",
+        "interface/src/locales"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "886e305984850688d230805d45d859124e0cddf1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:06:56-07:00",
+      "subject": "feat(os): remember login emails in an account dropdown",
+      "body": "Persist previously-used login emails to localStorage and turn the Sign In\nemail field into a dropdown of remembered accounts with an \"Add an account\"\noption for entering a different email. Supports multiple accounts (capped at\n5, most-recent first) and lets users forget individual accounts.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0d6155a4c040dc4a2b9264f8ed34886d982c47cf"
+      ],
+      "files": [
+        "interface/src/constants.ts",
+        "interface/src/utils/storage.test.ts",
+        "interface/src/utils/storage.ts",
+        "interface/src/views/LoginView/LoginEmailSelect.module.css",
+        "interface/src/views/LoginView/LoginEmailSelect.tsx",
+        "interface/src/views/LoginView/LoginForm.test.tsx",
+        "interface/src/views/LoginView/LoginForm.tsx",
+        "interface/src/views/LoginView/LoginView.tsx",
+        "interface/src/views/LoginView/use-login-form.ts",
+        "interface/src/views/public-chat/LoginOverlay/LoginOverlay.tsx"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 664,
+        "deletions": 14
+      },
+      "committedAtMs": 1781201216000,
+      "cleanSubject": "remember login emails in an account dropdown",
+      "keywords": [
+        "remember",
+        "login",
+        "emails",
+        "account",
+        "dropdown"
+      ],
+      "fileGroups": [
+        "interface/src/constants.ts",
+        "interface/src/utils",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "724ee647641520fe27c7548cedd5e983c326747d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:10:28-07:00",
+      "subject": "style(marketing): restyle footer copyright as a column-aligned badge",
+      "body": "Render the copyright as a dark rounded badge with a heading-matched, slightly-lighter color and CYPHER, INC.-matched font, left-aligned with the footer column headings. Add the (c) symbol via the copyright string.",
+      "parents": [
+        "886e305984850688d230805d45d859124e0cddf1"
+      ],
+      "files": [
+        "interface/src/views/marketing/MarketingFooter/MarketingFooter.css",
+        "interface/src/views/marketing/MarketingFooter/MarketingFooter.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 15,
+        "deletions": 2
+      },
+      "committedAtMs": 1781201428000,
+      "cleanSubject": "style(marketing): restyle footer copyright as a column-aligned badge",
+      "keywords": [
+        "style",
+        "marketing",
+        "restyle",
+        "footer",
+        "copyright",
+        "column",
+        "aligned",
+        "badge"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "49c23e0cd804e0cfbe2a35271da186f054a6b48f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:15:11-07:00",
+      "subject": "fix(marketing): keep trust disc, verified cubes, and paint gallery animating",
+      "body": "These three ambient decorative animations were frozen under\nprefers-reduced-motion, unlike the page's other always-on motion (the\nWebGL brain, hero orb, and agent marquee). Remove the reduced-motion\nfreeze for the trust data disc, verified cubes, and General paint\ngallery, and promote each with will-change so they run efficiently as\ncompositor-only transform/opacity animations.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "724ee647641520fe27c7548cedd5e983c326747d"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDisplayPanel.css",
+        "interface/src/views/marketing/BuiltForTrustSection/VerifiedCubeScreen.css",
+        "interface/src/views/marketing/SpecQuadrantSection/SpecQuadrantSection.css"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 35,
+        "deletions": 15
+      },
+      "committedAtMs": 1781201711000,
+      "cleanSubject": "keep trust disc, verified cubes, and paint gallery animating",
+      "keywords": [
+        "keep",
+        "trust",
+        "disc",
+        "verified",
+        "cubes",
+        "paint",
+        "gallery",
+        "animating"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b2296e3935b08b49ee774d958309aface669d878",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:19:43-07:00",
+      "subject": "fix(interface): disable Vite 8 console forwarding in dev",
+      "body": "Vite 8 auto-enables console forwarding when the dev server is spawned by\nan AI agent; its forwarding transport can latch onto a websocket that\nnever connected, so every forwarded error throws, each throw is forwarded\nagain, and the page locks up in an infinite error loop before React\nmounts. Turning it off restores the normal human default.\n\nAlso includes the in-flight three.js manualChunks split (keeps three out\nof the entry-critical vendor chunk).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "49c23e0cd804e0cfbe2a35271da186f054a6b48f"
+      ],
+      "files": [
+        "interface/vite.config.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 14,
+        "deletions": 0
+      },
+      "committedAtMs": 1781201983000,
+      "cleanSubject": "disable Vite 8 console forwarding in dev",
+      "keywords": [
+        "disable",
+        "vite",
+        "console",
+        "forwarding"
+      ],
+      "fileGroups": [
+        "interface/vite.config.ts"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "a00528d314f85fbb3e517d6aae4d431f00f3e5de",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:22:26-07:00",
+      "subject": "fix(marketing): make the \"Always on.\" label fade clearly readable",
+      "body": "The ON lettering previously jumped to the new side the instant the switch\nwas clicked, while a very fast (110ms) fade-out was still running, so the\nwhole thing read as a blink. The label position is now keyed off a lagged\nlabel-side state: it fades out in place on its original side while the\nknob slides, then jumps across (while invisible) and fades back in once\nthe knob lands. Fade durations lengthened (200ms out / 320ms in).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b2296e3935b08b49ee774d958309aface669d878"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.css",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 35,
+        "deletions": 21
+      },
+      "committedAtMs": 1781202146000,
+      "cleanSubject": "make the \"Always on.\" label fade clearly readable",
+      "keywords": [
+        "make",
+        "always",
+        "label",
+        "fade",
+        "clearly",
+        "readable"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fcab8fc1f2e46600362df38fcbe799ce829af374",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:23:19-07:00",
+      "subject": "style(marketing): slow the Always-on toggle slide and label fades",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a00528d314f85fbb3e517d6aae4d431f00f3e5de"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.css",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 4,
+        "deletions": 4
+      },
+      "committedAtMs": 1781202199000,
+      "cleanSubject": "style(marketing): slow the Always-on toggle slide and label fades",
+      "keywords": [
+        "style",
+        "marketing",
+        "slow",
+        "always",
+        "toggle",
+        "slide",
+        "label",
+        "fades"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "880ad3caebe7c28dbbea5e821d7b2eef968587b7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:25:33-07:00",
+      "subject": "style(marketing): instant label cut-out, slower knob glide and ON fade-in",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fcab8fc1f2e46600362df38fcbe799ce829af374"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.css",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 9,
+        "deletions": 6
+      },
+      "committedAtMs": 1781202333000,
+      "cleanSubject": "style(marketing): instant label cut-out, slower knob glide and ON fade-in",
+      "keywords": [
+        "style",
+        "marketing",
+        "instant",
+        "label",
+        "slower",
+        "knob",
+        "glide",
+        "fade"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:28:12-07:00",
+      "subject": "feat(os): add whitepaper coverage for the core repos",
+      "body": "Extend the /os whitepaper beyond AURA Harness to the other core repos:\naura-os, aura-router, aura-network, aura-storage, and z-billing. Each\nbecomes its own collapsible left-nav group authored full harness-style\n(per-section summary, overview bullets, architecture diagram, internals\ndiagram), sourced from each repo's README/api docs and spec.\n\nRefactor the seed content into per-repo modules (sections-types.ts +\nsections-<repo>.ts) aggregated by sections.ts. AURA Harness keeps the\n0-band sortOrder so it stays pinned at the top; the other repos use\ndisjoint 100/200/300/400/500 bands.\n\nMake code-reference links repo-aware: OsView resolves the active\nsection's GitHub repo via SECTION_REPOS and an OsRepoContext that CodeRef\nreads, so inline code links point at the correct cypher-asi/<repo>. Add\nthe new display labels (AURA OS, AURA Router, AURA Network, AURA Storage,\nZ-Billing). aura-bridge is skipped (no source yet).\n\nContent requires re-running the sys-admin \"Seed AURA OS whitepaper\";\nthe renderer changes ship with the frontend build.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "880ad3caebe7c28dbbea5e821d7b2eef968587b7"
+      ],
+      "files": [
+        "interface/src/apps/notes/seed-aura-whitepaper/sections-aura-network.ts",
+        "interface/src/apps/notes/seed-aura-whitepaper/sections-aura-os.ts",
+        "interface/src/apps/notes/seed-aura-whitepaper/sections-aura-router.ts",
+        "interface/src/apps/notes/seed-aura-whitepaper/sections-aura-storage.ts",
+        "interface/src/apps/notes/seed-aura-whitepaper/sections-types.ts",
+        "interface/src/apps/notes/seed-aura-whitepaper/sections-z-billing.ts",
+        "interface/src/apps/notes/seed-aura-whitepaper/sections.ts",
+        "interface/src/views/marketing/OsView/OsView.tsx"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 2127,
+        "deletions": 50
+      },
+      "committedAtMs": 1781202492000,
+      "cleanSubject": "add whitepaper coverage for the core repos",
+      "keywords": [
+        "whitepaper",
+        "coverage",
+        "core",
+        "repos"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7ab441d858e2e0dc13b5bf2400991aaaf6f84147",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:28:23-07:00",
+      "subject": "perf(marketing): drive the Always-on knob with compositor transform",
+      "body": "Animating 'left' relayouts every frame on the main thread, which stutters visibly while the page's WebGL scenes are running. The knob now slides via translateX (travel computed in cqw units from the track's own width), so the glide is compositor-driven and stays smooth under load.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 15,
+        "deletions": 5
+      },
+      "committedAtMs": 1781202503000,
+      "cleanSubject": "perf(marketing): drive the Always-on knob with compositor transform",
+      "keywords": [
+        "perf",
+        "marketing",
+        "drive",
+        "always",
+        "knob",
+        "with",
+        "compositor",
+        "transform"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "95237c3257e04097a4f0daf0dadb28afa9677b6e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:34:04-07:00",
+      "subject": "style(marketing): smooth the Always-on toggle ON label fades",
+      "body": "Replace the instant label cut-out with a quick smooth fade-out, and\nre-enter the ON lettering on the open side after a short delay rather\nthan waiting for the full 900ms knob glide, so the label returns sooner\nand without the janky snap.",
+      "parents": [
+        "7ab441d858e2e0dc13b5bf2400991aaaf6f84147"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.css",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 18,
+        "deletions": 10
+      },
+      "committedAtMs": 1781202844000,
+      "cleanSubject": "style(marketing): smooth the Always-on toggle ON label fades",
+      "keywords": [
+        "style",
+        "marketing",
+        "smooth",
+        "always",
+        "toggle",
+        "label",
+        "fades"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e29e90c7d7c9d2961296d002c9e5eeaefd3be032",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:35:48-07:00",
+      "subject": "feat(marketing): add Terms of Service and Privacy Policy content",
+      "body": "Replace the placeholder /terms and /privacy heroes with full legal\ndocuments for CYPHER, INC. (Nevada), rendered via a shared\nLegalDocument component. Copy lives in the marketing i18n namespace as\nstructured sections, with company/state/email kept in interpolation\ntokens, and is machine-translated into all 20 supported locales.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "95237c3257e04097a4f0daf0dadb28afa9677b6e"
+      ],
+      "files": [
+        "interface/src/locales/ar/marketing.json",
+        "interface/src/locales/de/marketing.json",
+        "interface/src/locales/en/marketing.json",
+        "interface/src/locales/es/marketing.json",
+        "interface/src/locales/fr/marketing.json",
+        "interface/src/locales/hi/marketing.json",
+        "interface/src/locales/id/marketing.json",
+        "interface/src/locales/it/marketing.json",
+        "interface/src/locales/ja/marketing.json",
+        "interface/src/locales/ko/marketing.json",
+        "interface/src/locales/nl/marketing.json",
+        "interface/src/locales/pl/marketing.json",
+        "interface/src/locales/pt-BR/marketing.json",
+        "interface/src/locales/ru/marketing.json",
+        "interface/src/locales/th/marketing.json",
+        "interface/src/locales/tr/marketing.json",
+        "interface/src/locales/uk/marketing.json",
+        "interface/src/locales/vi/marketing.json",
+        "interface/src/locales/zh-Hans/marketing.json",
+        "interface/src/locales/zh-Hant/marketing.json",
+        "interface/src/views/marketing/LegalDocument/LegalDocument.module.css",
+        "interface/src/views/marketing/LegalDocument/LegalDocument.tsx",
+        "interface/src/views/marketing/LegalDocument/index.ts",
+        "interface/src/views/marketing/PrivacyView/PrivacyView.tsx",
+        "interface/src/views/marketing/TermsView/TermsView.tsx"
+      ],
+      "stats": {
+        "fileCount": 25,
+        "insertions": 4578,
+        "deletions": 140
+      },
+      "committedAtMs": 1781202948000,
+      "cleanSubject": "add Terms of Service and Privacy Policy content",
+      "keywords": [
+        "terms",
+        "service",
+        "privacy",
+        "policy",
+        "content"
+      ],
+      "fileGroups": [
+        "interface/src/locales",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7565b5eb60fb473a34f13ebe2677c0e42ee67326",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:40:12-07:00",
+      "subject": "style(marketing): match legal page body background to the hero",
+      "body": "The Terms and Privacy legal document section painted #0f0f12 beneath the\nblack PageHero, leaving a visible seam. Paint the body and the lazy-load\nscroll column #000 so the page reads as one continuous surface.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e29e90c7d7c9d2961296d002c9e5eeaefd3be032"
+      ],
+      "files": [
+        "interface/src/views/marketing/LegalDocument/LegalDocument.module.css",
+        "interface/src/views/public-chat/PublicMarketingPanel/PublicMarketingPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 12,
+        "deletions": 4
+      },
+      "committedAtMs": 1781203212000,
+      "cleanSubject": "style(marketing): match legal page body background to the hero",
+      "keywords": [
+        "style",
+        "marketing",
+        "match",
+        "legal",
+        "page",
+        "body",
+        "background",
+        "hero"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "46c231ecba0501e000ede359fe6c011c6f1fefd6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:43:35-07:00",
+      "subject": "feat(marketing): give legal pages the standard changelog/CTA/footer stack",
+      "body": "Fold the full marketing page composition into LegalDocument so /terms\nand /privacy render like every other public page: hero, legal body,\nthen the shared ChangelogPreview, ProductCallToAction, and\nMarketingFooter. The wrapper publishes the marketing surface and\ntext-color tokens and is a min-height flex column so the CTA pins the\nfooter to the bottom. The views are slimmed to just the title effect.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7565b5eb60fb473a34f13ebe2677c0e42ee67326"
+      ],
+      "files": [
+        "interface/src/views/marketing/LegalDocument/LegalDocument.module.css",
+        "interface/src/views/marketing/LegalDocument/LegalDocument.tsx",
+        "interface/src/views/marketing/PrivacyView/PrivacyView.tsx",
+        "interface/src/views/marketing/TermsView/TermsView.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 126,
+        "deletions": 81
+      },
+      "committedAtMs": 1781203415000,
+      "cleanSubject": "give legal pages the standard changelog/CTA/footer stack",
+      "keywords": [
+        "give",
+        "legal",
+        "pages",
+        "standard",
+        "changelog",
+        "footer",
+        "stack"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "530311a7760e58d53a7e12240a02a183497b9dbf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:43:46-07:00",
+      "subject": "fix(os): show the full /os left nav without its own scrollbar",
+      "body": "The whitepaper nav now lists every section across all repos, so the\nsidebar's max-height + overflow gave it a nested scrollbar. Drop the\nsticky positioning, max-height, and overflow so the whole nav renders in\nthe page flow and is reachable by scrolling the page.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "46c231ecba0501e000ede359fe6c011c6f1fefd6"
+      ],
+      "files": [
+        "interface/src/views/marketing/OsView/OsView.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 9
+      },
+      "committedAtMs": 1781203426000,
+      "cleanSubject": "show the full /os left nav without its own scrollbar",
+      "keywords": [
+        "show",
+        "full",
+        "left",
+        "without",
+        "scrollbar"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8c12fa2512d77503eed26f80773b6a299230d3e5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:48:03-07:00",
+      "subject": "fix(os): stop the brief \"no content yet\" flash on /os",
+      "body": "The empty-state branches rendered during the gap between a section's doc\nloading and its body fetch starting, flashing \"This section has no content\nyet.\" Gate the empty messages on each query's isFetched: render nothing\nuntil the docs/body queries have actually settled, and only show the empty\ntext once we're certain the content is empty. Also gates the sidebar\n\"No sections yet.\" the same way.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "530311a7760e58d53a7e12240a02a183497b9dbf"
+      ],
+      "files": [
+        "interface/src/views/marketing/OsView/OsView.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 7,
+        "deletions": 11
+      },
+      "committedAtMs": 1781203683000,
+      "cleanSubject": "stop the brief \"no content yet\" flash on /os",
+      "keywords": [
+        "stop",
+        "brief",
+        "content",
+        "flash"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "599102e08f10ebb7d4affdcf53afbf29a3cb695c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:54:28-07:00",
+      "subject": "fix(agents): auto-select a valid agent on login and warm chat history",
+      "body": "Post-login the standalone Agents view could land on /agents/<deadId>\nwhen the cached aura:lastAgentId belonged to a logged-out user or a\ndeleted agent, leaving an unhighlighted sidebar and an empty \"Select an\nagent\" sidekick that reads as \"no agent is selected\". Clear the cached id\non logout, validate it against the loaded fleet before the fast-path\nredirect, and bounce stale ids on the conversation route back to /agents\nso a real agent gets selected. Only persist last-agent ids that resolve.\n\nAlso warm the destination chat history on click and on the post-login\nauto-redirect (not just hover), so the first selection no longer flashes\nthe cold-load gate. Extracts the warm chain into warmStandaloneAgentHistory.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8c12fa2512d77503eed26f80773b6a299230d3e5"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentIndexRedirect/AgentIndexRedirect.test.tsx",
+        "interface/src/apps/agents/AgentIndexRedirect/AgentIndexRedirect.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.test.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.tsx",
+        "interface/src/apps/agents/components/StandaloneAgentChatPanel/StandaloneAgentChatPanel.tsx",
+        "interface/src/apps/agents/stores/agent-store.ts",
+        "interface/src/apps/agents/stores/index.ts",
+        "interface/src/apps/agents/stores/warm-standalone-agent-history.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 215,
+        "deletions": 90
+      },
+      "committedAtMs": 1781204068000,
+      "cleanSubject": "auto-select a valid agent on login and warm chat history",
+      "keywords": [
+        "auto",
+        "select",
+        "valid",
+        "agent",
+        "login",
+        "warm",
+        "chat",
+        "history"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "166913cf4a8f1aede4e0e997bd6e9b9b31e34970",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T11:56:14-07:00",
+      "subject": "feat(agents): hide local agents from the browser",
+      "body": "Local agents run on the user's machine and can't be used without the\ndesktop bridge, so filter machine_type === \"local\" out of the agent\nlist, favorites strip, and standalone redirect/deep-link resolution\nwhen remoteOnly. Includes the standalone stale-agent recovery and\nhistory warming for the /agents routes.",
+      "parents": [
+        "599102e08f10ebb7d4affdcf53afbf29a3cb695c"
+      ],
+      "files": [
+        "interface/src/apps/agents/stores/agent-selectors.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 17,
+        "deletions": 4
+      },
+      "committedAtMs": 1781204174000,
+      "cleanSubject": "hide local agents from the browser",
+      "keywords": [
+        "hide",
+        "local",
+        "agents",
+        "from",
+        "browser"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:00:00-07:00",
+      "subject": "feat(marketing): expand marketing views and i18n locale coverage",
+      "body": "Add marketing scene activity helpers and English i18n bootstrap script, refresh marketing section components/styles, and extend locale marketing strings across all supported languages.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "166913cf4a8f1aede4e0e997bd6e9b9b31e34970"
+      ],
+      "files": [
+        "interface/scripts/i18n-bootstrap-en.mjs",
+        "interface/scripts/i18n-translate-marketing.mjs",
+        "interface/scripts/i18n-validate-marketing.mjs",
+        "interface/src/App.tsx",
+        "interface/src/apps/chat-app/routes.tsx",
+        "interface/src/apps/projects/routes.tsx",
+        "interface/src/components/AppProviders/AppProviders.tsx",
+        "interface/src/locales/ar/marketing.json",
+        "interface/src/locales/de/marketing.json",
+        "interface/src/locales/en/marketing.json",
+        "interface/src/locales/es/marketing.json",
+        "interface/src/locales/fr/marketing.json",
+        "interface/src/locales/hi/marketing.json",
+        "interface/src/locales/id/marketing.json",
+        "interface/src/locales/it/marketing.json",
+        "interface/src/locales/ja/marketing.json",
+        "interface/src/locales/ko/marketing.json",
+        "interface/src/locales/nl/marketing.json",
+        "interface/src/locales/pl/marketing.json",
+        "interface/src/locales/pt-BR/marketing.json",
+        "interface/src/locales/ru/marketing.json",
+        "interface/src/locales/th/marketing.json",
+        "interface/src/locales/tr/marketing.json",
+        "interface/src/locales/uk/marketing.json",
+        "interface/src/locales/vi/marketing.json",
+        "interface/src/locales/zh-Hans/marketing.json",
+        "interface/src/locales/zh-Hant/marketing.json",
+        "interface/src/main.tsx",
+        "interface/src/views/marketing/AgentConsole/AgentConsole.tsx",
+        "interface/src/views/marketing/AgentMarquee/AgentMarquee.module.css",
+        "interface/src/views/marketing/AgentMarquee/AgentMarquee.tsx",
+        "interface/src/views/marketing/AuraScreenOrb/AuraScreenOrb.tsx",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.css",
+        "interface/src/views/marketing/BuiltForTrustSection/AlwaysOnToggle.tsx",
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDisplayPanel.tsx",
+        "interface/src/views/marketing/ConnectedConsoleDevice/ConnectedConsoleDevice.css",
+        "interface/src/views/marketing/ConnectedConsoleDevice/ConnectedConsoleDevice.tsx",
+        "interface/src/views/marketing/ExpertiseSection/ExpertiseTabs.css",
+        "interface/src/views/marketing/FeaturePanel/FeaturePanel.tsx",
+        "interface/src/views/marketing/IsolatedDevice/IsolatedDevice.tsx",
+        "interface/src/views/marketing/IsolatedDevice/isolated-device-scene.ts",
+        "interface/src/views/marketing/MadeForYouSection/MadeForYouSection.css",
+        "interface/src/views/marketing/MockAuraDesktop/MockAuraDesktop.tsx",
+        "interface/src/views/marketing/MockMobileChat/MockMobileChat.tsx",
+        "interface/src/views/marketing/ModelsView/ModelsView.tsx",
+        "interface/src/views/marketing/NoiseReductionBrain/NoiseReductionBrain.tsx",
+        "interface/src/views/marketing/NoiseReductionBrain/shaders.ts",
+        "interface/src/views/marketing/PersonalAgentSection/MockChatInputCard.tsx",
+        "interface/src/views/marketing/PersonalAgentSection/ModelMarquee.css",
+        "interface/src/views/marketing/PersonalAgentSection/ServiceDeviceCard.tsx",
+        "interface/src/views/marketing/PersonalAgentSection/SkillSeaCard.tsx",
+        "interface/src/views/marketing/PhoneShell/PhoneShell.css",
+        "interface/src/views/marketing/ProductScreenSection/ProductScreenSection.tsx",
+        "interface/src/views/marketing/ProductView/AgentsPageSections.tsx",
+        "interface/src/views/marketing/ProductView/ProductView.module.css",
+        "interface/src/views/marketing/SpecQuadrantSection/NoiseReductionCard.tsx",
+        "interface/src/views/marketing/SpecQuadrantSection/SpecQuadrantSection.tsx",
+        "interface/src/views/marketing/scene-activity.ts",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 59,
+        "insertions": 9574,
+        "deletions": 416
+      },
+      "committedAtMs": 1781204400000,
+      "cleanSubject": "expand marketing views and i18n locale coverage",
+      "keywords": [
+        "expand",
+        "marketing",
+        "views",
+        "i18n",
+        "locale",
+        "coverage"
+      ],
+      "fileGroups": [
+        "interface/scripts/i18n-bootstrap-en.mjs",
+        "interface/scripts/i18n-translate-marketing.mjs",
+        "interface/scripts/i18n-validate-marketing.mjs",
+        "interface/src/App.tsx",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/locales",
+        "interface/src/main.tsx",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.637.1",
+      "version": "0.1.0-nightly.638.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 63345270
+          "sizeBytes": 63851640
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 130161144
+          "sizeBytes": 130578936
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -92,29 +1636,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.637.1",
+      "version": "0.1.0-nightly.638.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.637.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.638.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 59295524
+          "sizeBytes": 59806161
         },
         {
-          "name": "AURA_0.1.0-nightly.637.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.638.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 58335527
+          "sizeBytes": 58840718
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -124,29 +1668,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.637.1",
+      "version": "0.1.0-nightly.638.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.637.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.638.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61367542
+          "sizeBytes": 61823755
         },
         {
-          "name": "AURA_0.1.0-nightly.637.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.638.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60422215
+          "sizeBytes": 60886383
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -156,17 +1700,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.637.1",
+      "version": "0.1.0-nightly.638.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 46967321
+          "sizeBytes": 47304722
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.637.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.638.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -175,38 +1719,245 @@
     }
   ],
   "rendered": {
-    "title": "Deterministic eval fixtures steady the nightly",
-    "intro": "A quiet nightly focused on test infrastructure: the end-to-end eval suites were nudged into a more predictable starting state so CI signal stays trustworthy across Linux, macOS, and Windows builds.",
+    "title": "Public whitepaper, fully localized marketing, and chat performance fixes",
+    "intro": "A big day for the public surface of Aura: the /os whitepaper grew from a single Harness outline into a multi-repo reference with diagrams and GitHub-linked code, the marketing site picked up real Terms and Privacy pages plus translations into 19 languages, and the trust card's \"Always on.\" switch became a real animated control. Underneath, chat got noticeably snappier, long-running remote agent turns stopped timing out, and the dev server stopped locking itself into infinite error loops.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:18 AM",
         "started_at": "2026-06-11T16:18:00.000Z",
-        "ended_at": "2026-06-11T16:18:00.000Z",
-        "title": "Deterministic starting state for sidekick eval suites",
-        "summary": "The core-feature smoke and workflow E2E eval specs now seed a known sidekick tab and stub transient remote probes so CI assertions don't drift between runs.",
+        "ended_at": "2026-06-11T16:49:36.000Z",
+        "title": "Theme-aware mode selector capsule",
+        "summary": "The input bar's mode selector now picks up the active theme accent instead of a hardcoded glow.",
         "items": [
           {
-            "text": "Eval scenarios in both core-feature-smoke and workflow-e2e specs now pre-seed localStorage with the Run sidekick tab active, removing a source of flakiness when the UI booted into a non-deterministic tab.",
+            "text": "Repainted the mode selector capsule and selected-mode label using the theme accent token, and softened the selected-state glow so it sits naturally in both light and dark themes.",
             "commit_shas": [
-              "34404cfd941b474901ee9de6b318533ff9e6ea29"
+              "ec007643cedd32d94903384b112267da942a2af1",
+              "4b5261665bdd1b70d88911448189c7e9a3da76d4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Transient remote state probes are mocked in the eval harness so CI assertions stay deterministic regardless of upstream availability.",
+            "text": "Stabilized the eval suite by seeding the Run sidekick tab and mocking transient remote state probes, so CI assertions stay deterministic across runs.",
             "commit_shas": [
               "34404cfd941b474901ee9de6b318533ff9e6ea29"
             ],
             "confidence": "medium"
           }
         ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "9:54 AM",
+        "started_at": "2026-06-11T16:54:20.000Z",
+        "ended_at": "2026-06-11T16:54:20.000Z",
+        "title": "Longer remote-agent turn and cold-open budgets",
+        "summary": "Remote agents waking from hibernation or doing long tool/LLM work no longer trip spurious idle and cold-open timeouts.",
+        "items": [
+          {
+            "text": "Raised the sliding idle turn timeout from 180s to 600s and the first-event timeout from 180s to 300s, and made the cold-open cap configurable via AURA_COLD_OPEN_TIMEOUT_SECS (default 180s) instead of a hardcoded 60s — eliminating the stalls and 502s that surfaced when waking a hibernated microVM.",
+            "commit_shas": [
+              "f3a817c0bb9dff9f47a35b71d07a9ea5bfc1a2f3"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "9:59 AM",
+        "started_at": "2026-06-11T16:59:02.000Z",
+        "ended_at": "2026-06-11T17:08:27.000Z",
+        "title": "Chat typing latency and idle GPU cost fixes",
+        "summary": "Two targeted performance fixes remove the recent app-wide messaging slowdown and stop the agent profile card from heating up integrated GPUs.",
+        "items": [
+          {
+            "text": "Stopped the full chat transcript from re-parsing markdown on every keystroke and streaming token by memoizing the error-report agent info hook and the ChatMessageList, restoring memoization across React.memo'd MessageBubbles.",
+            "commit_shas": [
+              "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Cut idle GPU cost of the 3D agent profile card by dropping a wasted multisampled framebuffer, halting the bloom render loop once hover/flip transitions settle under prefers-reduced-motion, and pausing the scene off-screen via IntersectionObserver.",
+            "commit_shas": [
+              "b56275981e9c47ee7db11660fb0b836233a8d526"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Honored the OS prefers-reduced-motion setting for the always-on attach-button halo and spin animations in authenticated chats.",
+            "commit_shas": [
+              "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "10:10 AM",
+        "started_at": "2026-06-11T17:10:19.000Z",
+        "ended_at": "2026-06-11T18:15:11.000Z",
+        "title": "Whitepaper rework, full marketing localization, and the Always-on trust card",
+        "summary": "The public /os whitepaper was restructured with diagrams and GitHub-linked code refs, the marketing site shipped in 19 new languages, and the trust card's switch became a real interaction.",
+        "items": [
+          {
+            "text": "Reworked the /os AURA Harness whitepaper around per-section summaries, Overview bullets, and ASCII architecture diagrams; renamed the nav group to \"AURA Harness\"; and turned inline crate/file/function tokens into GitHub links into cypher-asi/aura-harness.",
+            "commit_shas": [
+              "e84938ac9e9211e01a4db60c28827c0e5835b479",
+              "7d9aca56eb5ff2e7286eb0832d109e7d3d4576ee",
+              "cfb01e91e520019da7f51ffa16ea19a19bdfd897"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a dedicated Invariants section covering the fifteen §1–§15 architectural invariants, plus per-layer Internals diagrams, a request-lifecycle diagram, and detailed sequence diagrams for the interactive, run-kickoff, headless, error-recovery, and data-lifecycle flows.",
+            "commit_shas": [
+              "54f3e013adfaf19e53b477f0337cb23ca3206726"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Pointed the dev /os whitepaper at the prod public-content host so local development renders real seeded content instead of the empty state, generalizing the existing blog helpers to serve both surfaces.",
+            "commit_shas": [
+              "748c5b3c790870fad516e08b534f5ff5d049aafd"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Translated the public marketing and publicChat namespaces into all 19 non-English locales (including expertise detail pages and the rotating tagline), and added reproducible machine-translation and placeholder-validation scripts so the catalogs stay in sync with English.",
+            "commit_shas": [
+              "0d6155a4c040dc4a2b9264f8ed34886d982c47cf"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Turned the \"Always on.\" trust card switch into a clickable, sequenced animation — the knob slides and the ON label fades back in on the open side — and tightened the card copy so it wraps like its siblings.",
+            "commit_shas": [
+              "f942415669a437161ab69b9da462276a168c5a58",
+              "184024e87d0b0229a64b3513b4d65781a657dd3d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Polished the marketing surface: centered the trust display panel between the device and card edge, restyled the footer copyright as a column-aligned badge, stopped the full-screen WebGL backgrounds from flickering on resize, and let the trust disc, verified cubes, and paint gallery keep their ambient motion under prefers-reduced-motion.",
+            "commit_shas": [
+              "47a76dac980444d7317b4ff4b90fd905f463ba95",
+              "724ee647641520fe27c7548cedd5e983c326747d",
+              "a6a21a539e26b2e81966bebabf2aab378db6bfce",
+              "49c23e0cd804e0cfbe2a35271da186f054a6b48f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a remembered-accounts dropdown to the Sign In screen: previously-used emails are persisted to localStorage (capped at five, most-recent first) with an \"Add an account\" option and per-entry forget.",
+            "commit_shas": [
+              "886e305984850688d230805d45d859124e0cddf1"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed analytics' daily session_active so it always carries the real app_version and platform — falling back to the latest non-empty header per user and skipping capture-mode tokens entirely so they no longer pollute DAU with \"(not set)\".",
+            "commit_shas": [
+              "3d0bef18e76a0539205b002814b47400bc8a92c5"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "11:19 AM",
+        "started_at": "2026-06-11T18:19:43.000Z",
+        "ended_at": "2026-06-11T18:19:43.000Z",
+        "title": "Vite 8 dev console-forwarding loop disabled",
+        "summary": "Local development no longer locks up before React mounts when Vite is spawned by an AI agent.",
+        "items": [
+          {
+            "text": "Disabled Vite 8's auto-enabled console forwarding in dev, which had been latching onto a never-connected websocket and turning every forwarded error into an infinite re-forwarding loop. Also kept three.js out of the entry-critical vendor chunk via a manualChunks split.",
+            "commit_shas": [
+              "b2296e3935b08b49ee774d958309aface669d878"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "11:22 AM",
+        "started_at": "2026-06-11T18:22:26.000Z",
+        "ended_at": "2026-06-11T19:00:00.000Z",
+        "title": "Whitepaper covers five core repos, legal pages ship, and Agents view stops landing on dead agents",
+        "summary": "The /os whitepaper now spans the full AURA stack, /terms and /privacy got real localized content with the standard marketing chrome, and the standalone Agents view stops getting stuck on stale or local agents.",
+        "items": [
+          {
+            "text": "Extended the /os whitepaper beyond AURA Harness to aura-os, aura-router, aura-network, aura-storage, and z-billing — each rendered as its own collapsible nav group with per-section summaries, architecture and internals diagrams — and made inline code-ref links repo-aware so they resolve to the correct cypher-asi/<repo>.",
+            "commit_shas": [
+              "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tightened the /os reading experience: dropped the sidebar's nested scrollbar now that the nav lists every repo, stopped the brief \"no content yet\" flash by gating empty states on each query's isFetched.",
+            "commit_shas": [
+              "530311a7760e58d53a7e12240a02a183497b9dbf",
+              "8c12fa2512d77503eed26f80773b6a299230d3e5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Replaced the placeholder /terms and /privacy heroes with full CYPHER, INC. (Nevada) legal documents rendered through a shared LegalDocument component, machine-translated into all 20 locales, and folded into the standard hero / changelog preview / CTA / footer marketing stack with a matching black background.",
+            "commit_shas": [
+              "e29e90c7d7c9d2961296d002c9e5eeaefd3be032",
+              "7565b5eb60fb473a34f13ebe2677c0e42ee67326",
+              "46c231ecba0501e000ede359fe6c011c6f1fefd6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Refined the \"Always on.\" toggle animation across several passes: the ON label now smoothly fades in place while the knob glides on a compositor-driven translateX, returning sooner on the opposite side without the earlier snap.",
+            "commit_shas": [
+              "a00528d314f85fbb3e517d6aae4d431f00f3e5de",
+              "fcab8fc1f2e46600362df38fcbe799ce829af374",
+              "880ad3caebe7c28dbbea5e821d7b2eef968587b7",
+              "7ab441d858e2e0dc13b5bf2400991aaaf6f84147",
+              "95237c3257e04097a4f0daf0dadb28afa9677b6e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed the standalone Agents view so it no longer lands on a dead agent after login: cached last-agent IDs are cleared on logout, validated against the loaded fleet before redirecting, and stale IDs bounce back to /agents. The destination chat history is also warmed on click and post-login redirect to avoid the cold-load gate flash.",
+            "commit_shas": [
+              "599102e08f10ebb7d4affdcf53afbf29a3cb695c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hid local (desktop-bridge-only) agents from the browser's agent list, favorites strip, and standalone deep-link resolution when running remote-only, so the web client only surfaces agents it can actually use.",
+            "commit_shas": [
+              "166913cf4a8f1aede4e0e997bd6e9b9b31e34970"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Broadened the English marketing source catalog via a one-time i18n bootstrap script that pulls previously-hardcoded strings (including expertise entries and discipline pills) out of components, then re-translated the expanded catalog into every supported locale.",
+            "commit_shas": [
+              "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd"
+            ],
+            "confidence": "high"
+          }
+        ]
       }
     ],
     "highlights": [
-      "E2E eval suites now pin the Run sidekick tab for deterministic runs",
-      "Nightly 637.1 shipped across Linux, macOS (x64/arm64), and Windows"
+      "/os whitepaper expanded to cover five core repos with diagrams and GitHub-linked code refs",
+      "Full marketing site, Terms, and Privacy translated into 20 locales",
+      "Chat transcript no longer re-renders on every keystroke",
+      "Remote agent cold-starts and long turns stop hitting spurious 60s/180s timeouts",
+      "Login screen now remembers up to five recent accounts"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 35
   }
 }
