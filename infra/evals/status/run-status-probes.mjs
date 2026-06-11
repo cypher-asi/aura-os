@@ -473,7 +473,8 @@ async function runChecks(args) {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const { orgId } = await requireOrgId(args);
       const actions = await apiJson(args, "GET", `/api/orgs/${orgId}/tool-actions`);
-      return { evidence: { orgId, count: Array.isArray(actions) ? actions.length : null } };
+      const tools = Array.isArray(actions) ? actions : actions?.tools;
+      return { evidence: { orgId, count: Array.isArray(tools) ? tools.length : null } };
     }));
   }
 
