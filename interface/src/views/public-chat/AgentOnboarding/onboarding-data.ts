@@ -31,14 +31,12 @@ import {
   NotebookPen,
   Palette,
   Puzzle,
-  Scale,
   Search,
   Send,
   Server,
   Share2,
   Sparkles,
   Target,
-  Telescope,
   Terminal,
   Workflow,
 } from "lucide-react";
@@ -89,9 +87,7 @@ export const PERSONALITY_PRESETS: readonly PersonalityPreset[] = [
   { id: "analyst", name: "Sharp Analyst", description: "Precise, evidence-led, and skeptical. Backs claims with data and flags assumptions.", Icon: BarChart3 },
   { id: "creative", name: "Creative Spark", description: "Playful, imaginative, and bold. Offers unexpected angles and fresh ideas.", Icon: Sparkles },
   { id: "strategist", name: "Calm Strategist", description: "Measured, big-picture, and steady. Weighs trade-offs before acting.", Icon: Compass },
-  { id: "researcher", name: "Relentless Researcher", description: "Curious, thorough, and detail-obsessed. Digs until the answer is solid.", Icon: Telescope },
   { id: "builder", name: "Pragmatic Builder", description: "Hands-on, resourceful, and shipping-focused. Prefers working solutions over theory.", Icon: Hammer },
-  { id: "advisor", name: "Diplomatic Advisor", description: "Tactful, thoughtful, and balanced. Frames hard truths with care.", Icon: Scale },
 ];
 
 // ── Skills (organized by expertise) ──────────────────────────────────────────

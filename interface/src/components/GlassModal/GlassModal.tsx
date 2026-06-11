@@ -17,6 +17,10 @@ interface GlassModalProps {
   readonly glow?: boolean;
   /** Render the glass header row with title + close. Defaults to true. */
   readonly showHeader?: boolean;
+  /** Center the title across the header (close button stays pinned right). */
+  readonly centerTitle?: boolean;
+  /** Extra class on the title text (e.g. for uppercase / letter-spacing). */
+  readonly titleClassName?: string;
   /** Extra class on the glass surface (e.g. to set `--glass-modal-glow`). */
   readonly className?: string;
   /** Extra class on the outer modal box, used for sizing. */
@@ -42,6 +46,8 @@ export function GlassModal({
   size = "lg",
   glow = true,
   showHeader = true,
+  centerTitle = false,
+  titleClassName,
   className,
   modalClassName,
 }: GlassModalProps): React.ReactElement | null {
@@ -61,11 +67,12 @@ export function GlassModal({
       <div className={`${styles.surface} ${glow ? styles.glow : ""} ${className ?? ""}`}>
         <div className={styles.clip}>
           <div className={styles.glass} aria-hidden="true" />
+          <div className={styles.sheen} aria-hidden="true" />
           <div className={styles.inner}>
             {showHeader ? (
-              <div className={styles.header}>
+              <div className={`${styles.header} ${centerTitle ? styles.headerCentered : ""}`}>
                 <div className={styles.titleGroup}>
-                  <span className={styles.title}>{title}</span>
+                  <span className={`${styles.title} ${titleClassName ?? ""}`}>{title}</span>
                   {subtitle ? <span className={styles.subtitle}>{subtitle}</span> : null}
                 </div>
                 <div className={styles.headerRight}>

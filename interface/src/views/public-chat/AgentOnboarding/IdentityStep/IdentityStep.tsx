@@ -1,9 +1,8 @@
 import { useCallback, useRef, useState } from "react";
-import { Sparkles, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { ImageCropModal } from "../../../../components/ImageCropModal/ImageCropModal";
 import { SelectableCard } from "../SelectableCard";
 import type { OnboardingAvatar, PersonalityPreset } from "../onboarding-data";
-import { pickRandomPersonality } from "./pick-personality";
 import styles from "./IdentityStep.module.css";
 
 interface IdentityStepProps {
@@ -47,11 +46,6 @@ export function IdentityStep({
     },
     [onSelectAvatar],
   );
-
-  const handleGenerate = useCallback(() => {
-    const next = pickRandomPersonality(personalities, selectedPersonality);
-    if (next) onSelectPersonality(next.description);
-  }, [personalities, selectedPersonality, onSelectPersonality]);
 
   return (
     <div className={styles.step}>
@@ -100,18 +94,10 @@ export function IdentityStep({
       </section>
 
       <section className={styles.section} aria-labelledby="identity-personality-heading">
-        <div className={styles.sectionHeaderRow}>
-          <div>
-            <h3 id="identity-personality-heading" className={styles.sectionTitle}>
-              Personality
-            </h3>
-            <p className={styles.sectionHint}>How your agent communicates and makes decisions.</p>
-          </div>
-          <button type="button" className={styles.generateButton} onClick={handleGenerate}>
-            <Sparkles size={14} aria-hidden="true" />
-            Generate
-          </button>
-        </div>
+        <h3 id="identity-personality-heading" className={styles.sectionTitle}>
+          Personality
+        </h3>
+        <p className={styles.sectionHint}>How your agent communicates and makes decisions.</p>
         <div className={styles.personalityGrid}>
           {personalities.map((preset) => (
             <SelectableCard

@@ -189,6 +189,8 @@ export function AgentOnboardingModal(): React.ReactElement | null {
       onClose={close}
       title={MODAL_TITLE}
       size="lg"
+      centerTitle
+      titleClassName={styles.modalTitle}
       modalClassName={styles.modal}
     >
       {inner}

@@ -1,7 +1,7 @@
 .stepper {
   display: flex;
-  align-items: center;
-  gap: var(--space-1);
+  align-items: flex-start;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -9,28 +9,30 @@
 }
 
 .stepItem {
+  position: relative;
   display: flex;
-  align-items: center;
-  flex: 1 1 auto;
+  justify-content: center;
+  flex: 1 1 0;
   min-width: 0;
 }
 
 .step {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-2);
+  gap: 5px;
+  padding: 2px 4px;
   border: none;
   background: transparent;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   cursor: pointer;
+  width: 100%;
   min-width: 0;
   color: var(--color-text-secondary);
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .step:hover {
-  background: var(--color-surface-hover);
   color: var(--color-text-primary);
 }
 
@@ -44,14 +46,16 @@
 }
 
 .badge {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex: 0 0 auto;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.66rem;
   font-weight: 600;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -71,18 +75,24 @@
 }
 
 .label {
-  font-size: 0.875rem;
+  font-size: 0.62rem;
   font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .connector {
-  flex: 1 1 12px;
+  position: absolute;
+  top: 10px;
+  left: calc(50% + 13px);
+  right: calc(-50% + 13px);
   height: 1px;
-  min-width: 8px;
   background: var(--color-border);
+  z-index: 0;
 }
 
 .connector[data-done="true"] {

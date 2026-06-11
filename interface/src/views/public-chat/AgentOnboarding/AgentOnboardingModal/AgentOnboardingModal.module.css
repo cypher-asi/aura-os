@@ -3,6 +3,12 @@
   height: min(480px, 86vh);
 }
 
+.modalTitle {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+}
+
 .sheet {
   /* Drawer manages its own height via defaultSize/maxSize; give it the same
      black-glass fill as the desktop GlassModal surface. */

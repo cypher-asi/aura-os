@@ -85,8 +85,9 @@
   color: var(--color-accent-contrast);
 }
 
-/* Info dot: appears for tiles with a description. Tap to reveal on mobile;
-   the whole tile reveals on hover on web (see .wrap:hover .tip). */
+/* Info dot: always present (faint) for tiles with a description. The
+   description is hidden by default and only revealed on mouseover/focus of
+   this dot, or by tapping it on touch devices. */
 .info {
   position: absolute;
   top: -6px;
@@ -101,23 +102,20 @@
   background: var(--color-elevated);
   color: var(--color-text-secondary);
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.5;
   transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   z-index: 2;
 }
 
-.wrap:hover .info,
+.info:hover,
 .info:focus-visible {
   opacity: 1;
-}
-
-.info:hover {
   color: var(--color-text-primary);
   border-color: var(--color-border-strong);
 }
 
-/* Description popover. Shown on web hover of the tile, or when the info dot is
-   toggled open (tap on mobile). */
+/* Description popover. Hidden by default; revealed only when the info dot is
+   hovered/focused (web) or toggled open via tap (mobile). */
 .tip {
   position: absolute;
   left: 0;
@@ -141,26 +139,10 @@
   pointer-events: none;
 }
 
-.wrap:hover .tip,
+.info:hover ~ .tip,
+.info:focus-visible ~ .tip,
 .tip[data-open="true"] {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-}
-
-/* On touch devices, only reveal via the info dot (no sticky :hover state). */
-@media (hover: none) {
-  .info {
-    opacity: 1;
-  }
-
-  .wrap:hover .tip {
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  .tip[data-open="true"] {
-    opacity: 1;
-    visibility: visible;
-  }
 }

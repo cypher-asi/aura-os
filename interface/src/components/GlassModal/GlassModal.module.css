@@ -29,8 +29,8 @@
 /* Soft glow behind the surface plus a dark shadow for floating depth. */
 .glow {
   box-shadow:
-    0 0 90px -20px var(--glass-modal-glow, rgba(120, 170, 255, 0.28)),
-    0 30px 80px -28px rgba(0, 0, 0, 0.8);
+    0 0 100px -16px var(--glass-modal-glow, rgba(120, 170, 255, 0.3)),
+    0 40px 90px -30px rgba(0, 0, 0, 0.85);
 }
 
 /* Rounds and clips all content. clip-path is required so the backdrop-filter
@@ -44,17 +44,41 @@
   clip-path: inset(0 round var(--glass-modal-radius));
 }
 
-/* Black, see-through, blurred glass fill. */
+/* Black, see-through, blurred glass fill. Layered gradients give it depth: a
+   glossy top sheen, a cool top glow, and a dark body that deepens toward the
+   bottom so it reads as real polished black glass rather than a flat panel. */
 .glass {
   position: absolute;
   inset: 0;
   z-index: -1;
   border-radius: inherit;
   background:
-    radial-gradient(120% 90% at 50% -10%, rgba(120, 170, 255, 0.1) 0%, transparent 55%),
-    rgba(8, 10, 16, 0.66);
-  backdrop-filter: blur(22px) saturate(1.2);
-  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 16%),
+    radial-gradient(140% 70% at 50% -25%, rgba(130, 175, 255, 0.16) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(22, 26, 36, 0.72) 0%, rgba(5, 6, 11, 0.86) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -40px 80px -40px rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(30px) saturate(1.35);
+  -webkit-backdrop-filter: blur(30px) saturate(1.35);
+  pointer-events: none;
+}
+
+/* Diagonal glossy reflection streak, like light catching a glass surface. */
+.sheen {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    104deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(255, 255, 255, 0.11) 47%,
+    rgba(255, 255, 255, 0.02) 54%,
+    transparent 66%
+  );
+  mix-blend-mode: screen;
   pointer-events: none;
 }
 
@@ -68,9 +92,9 @@
   padding: 1px;
   background: linear-gradient(
     160deg,
-    rgba(255, 255, 255, 0.4) 0%,
-    rgba(255, 255, 255, 0.08) 35%,
-    rgba(0, 0, 0, 0.4) 100%
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.1) 30%,
+    rgba(0, 0, 0, 0.5) 100%
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -96,6 +120,18 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
+}
+
+.headerCentered {
+  position: relative;
+  justify-content: center;
+}
+
+.headerCentered .headerRight {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  transform: translateY(-50%);
 }
 
 .titleGroup {
