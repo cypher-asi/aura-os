@@ -15,8 +15,6 @@ function resolveBuildMeta(isDev: boolean) {
     // fall through to default
   }
 
-  const version = process.env.APP_VERSION || pkgVersion;
-
   let commit = process.env.APP_COMMIT;
   if (!commit) {
     try {
@@ -31,6 +29,31 @@ function resolveBuildMeta(isDev: boolean) {
     }
   }
   const shortCommit = commit ? commit.slice(0, 12) : "local";
+
+  // Version precedence: explicit APP_VERSION > a real package.json version >
+  // a git-derived version > a commit-stamped fallback. The git fallback keeps
+  // production deploys that forget to pass APP_VERSION (e.g. the Render web
+  // build) from reporting analytics under the meaningless `app_version =
+  // "0.0.0"` slice. Dev builds intentionally keep the "0.0.0" placeholder.
+  let version = process.env.APP_VERSION?.trim() || "";
+  if (!version && pkgVersion !== "0.0.0") {
+    version = pkgVersion;
+  }
+  if (!version && !isDev) {
+    try {
+      version = execSync("git describe --tags --always --dirty", {
+        cwd: __dirname,
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+        .toString()
+        .trim();
+    } catch {
+      // fall through to the commit-stamped fallback below
+    }
+  }
+  if (!version) {
+    version = !isDev && shortCommit !== "local" ? `0.0.0+${shortCommit}` : pkgVersion;
+  }
 
   const channel = process.env.APP_CHANNEL || (isDev ? "dev" : "stable");
   const buildTime = isDev ? "dev" : new Date().toISOString();

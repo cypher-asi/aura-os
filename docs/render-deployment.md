@@ -9,7 +9,7 @@ Single Web Service that builds both frontend and backend. The backend serves the
 | **Type** | Web Service |
 | **Repository** | `cypher-asi/aura-os` |
 | **Branch** | `main` |
-| **Build Command** | `cd interface && npm ci && npm run build && cd .. && cargo build --release -p aura-os-server` |
+| **Build Command** | `cd interface && npm ci && APP_VERSION="$RENDER_GIT_COMMIT" APP_CHANNEL=web npm run build && cd .. && cargo build --release -p aura-os-server` |
 | **Start Command** | `./target/release/aura-os-server` |
 | **Plan** | Starter ($7/mo) or higher |
 
@@ -41,6 +41,10 @@ Single Web Service that builds both frontend and backend. The backend serves the
 | `AURA_STORAGE_URL` | `https://aura-storage.onrender.com` |
 | `ORBIT_BASE_URL` | `https://orbit-sfvu.onrender.com` |
 | `INTERNAL_SERVICE_TOKEN` | (same value as other services) |
+| `MIXPANEL_TOKEN` | Mixpanel project token. Enables **server-side** analytics (`session_active` True DAU backstop + share events). The server logs a loud warning at startup if unset. |
+| `VITE_MIXPANEL_TOKEN` | Same Mixpanel token, consumed by the Vite build so the **web client** SDK sends engagement events. Without it the browser SDK silently no-ops. |
+
+`APP_VERSION` in the build command stamps a real version into the bundle so analytics events are not bucketed under `app_version = "0.0.0"`. `RENDER_GIT_COMMIT` is provided automatically by Render; if omitted, the build falls back to `git describe` and then to a commit-stamped version.
 
 ### Optional
 

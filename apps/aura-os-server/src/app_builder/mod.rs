@@ -498,9 +498,20 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         harness_broadcast_capacity,
         public_rate_limiter: crate::handlers::public::RateLimiter::new(),
         public_demo_agent_id: Arc::new(OnceCell::new()),
-        mixpanel: crate::mixpanel::MixpanelTracker::new(
-            &env_opt("MIXPANEL_TOKEN").unwrap_or_default(),
-        ),
+        mixpanel: {
+            let tracker =
+                crate::mixpanel::MixpanelTracker::new(&env_opt("MIXPANEL_TOKEN").unwrap_or_default());
+            if tracker.is_some() {
+                info!("server-side Mixpanel analytics enabled");
+            } else {
+                warn!(
+                    "MIXPANEL_TOKEN is not set: server-side analytics are DISABLED. \
+                     session_active (the True DAU backstop) and share events will not be \
+                     emitted. Set MIXPANEL_TOKEN to restore server-side tracking."
+                );
+            }
+            tracker
+        },
         channel_service,
         telegram_bot_username,
     })
