@@ -123,7 +123,7 @@ export function MobilePublicShell(): React.ReactElement {
             onClick={openMenu}
             data-testid="mobile-public-menu-open"
           >
-            <Menu size={22} aria-hidden="true" />
+            <Menu size={22} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
       </header>
