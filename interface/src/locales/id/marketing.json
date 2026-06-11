@@ -582,7 +582,7 @@
   },
   "footer": {
     "ariaLabel": "Catatan kaki situs",
-    "copyright": "Hak cipta © {{year}}",
+    "copyright": "Hak Cipta © {{year}}",
     "navigationAriaLabel": "Navigasi catatan kaki"
   },
   "models": {
@@ -669,10 +669,94 @@
     "yearly": "Tahunan"
   },
   "privacy": {
-    "description": "Kebijakan Privasi kami sedang diselesaikan dan akan segera dipublikasikan di sini.",
+    "contactBody": "Jika Anda memiliki pertanyaan tentang Kebijakan Privasi ini atau informasi pribadi Anda, hubungi {{company}} pada {{email}}.",
+    "contactHeading": "Hubungi kami",
+    "description": "Cara kami menangani data Anda, dan prinsip privasi di balik AURA.",
     "documentTitle": "AURA - Kebijakan Privasi",
+    "effectiveDate": "Tanggal efektif: 11 Juni 2026",
     "headline": "Kebijakan Privasi",
-    "label": "LEGAL"
+    "intro": "Kebijakan Privasi ini menjelaskan caranya {{company}} (\"{{company}}\",\"kami\", \"kita\", atau \"milik kami\") mengumpulkan, menggunakan, dan membagikan informasi saat Anda menggunakan aplikasi AURA, situs web, dan layanan terkait (secara kolektif disebut \"Layanan\"). AURA dibuat untuk mengutamakan privasi: sedapat mungkin, data Anda tetap berada di perangkat Anda sendiri dan tidak pernah digunakan untuk melatih model.",
+    "label": "LEGAL",
+    "sections": [
+      {
+        "body": [
+          "Kebijakan ini berlaku untuk informasi yang kami proses saat Anda menggunakan Layanan. Hal ini tidak berlaku untuk layanan pihak ketiga, model AI, atau integrasi yang Anda pilih untuk dihubungkan, yang diatur oleh kebijakan privasi mereka sendiri."
+        ],
+        "heading": "1. Ruang Lingkup"
+      },
+      {
+        "body": [
+          "Informasi akun, seperti nama, alamat email, dan detail autentikasi Anda saat Anda membuat akun.",
+          "Informasi penggunaan dan perangkat, seperti versi aplikasi, jenis perangkat, serta data diagnostik dan kinerja yang digunakan untuk mengoperasikan dan meningkatkan Layanan.",
+          "Konten yang Anda berikan, termasuk petunjuk, instruksi, file, dan Konten Pengguna lainnya yang Anda kirimkan. Jika arsitekturnya memungkinkan, konten ini diproses secara lokal di perangkat Anda.",
+          "Informasi pembayaran. Jika Anda membeli langganan, pemroses pembayaran kami mengumpulkan detail penagihan. Kami tidak menyimpan nomor kartu pembayaran lengkap."
+        ],
+        "heading": "2. Informasi yang Kami Kumpulkan"
+      },
+      {
+        "body": [
+          "Kami menggunakan informasi untuk menyediakan, memelihara, dan mengamankan Layanan; untuk mengautentikasi Anda dan mengelola akun Anda; untuk memproses pembayaran; untuk memberikan dukungan; untuk mendeteksi, mencegah, dan mengatasi penipuan, penyalahgunaan, dan masalah keamanan; dan untuk mematuhi kewajiban hukum.",
+          "Kami menggunakan data diagnostik dan penggunaan untuk memahami bagaimana kinerja Layanan dan untuk meningkatkannya."
+        ],
+        "heading": "3. Bagaimana Kami Menggunakan Informasi"
+      },
+      {
+        "body": [
+          "AURA dirancang agar data pribadi dan perusahaan Anda tetap berada di bawah kendali Anda. Agen berjalan di lingkungan yang terisolasi, dan sedapat mungkin Konten Pengguna Anda diproses di perangkat Anda sendiri, bukan dikirim ke server kami."
+        ],
+        "heading": "4. Pemrosesan Lokal-Pertama dan Pada Perangkat"
+      },
+      {
+        "body": [
+          "Saat Anda menggunakan fitur yang mengandalkan model AI, masukan yang diperlukan mungkin dikirim ke penyedia model yang relevan untuk menghasilkan Keluaran. Kami tidak menggunakan Konten Pengguna pribadi atau perusahaan Anda untuk melatih model, dan kami merancang Layanan sehingga data yang dikirim ke model terdepan diminimalkan dan, jika memungkinkan, tidak teridentifikasi.",
+          "Penyedia model pihak ketiga memproses data berdasarkan ketentuan dan kebijakan privasi mereka sendiri."
+        ],
+        "heading": "5. Model AI dan Penanganan Data"
+      },
+      {
+        "body": [
+          "Kami tidak menjual informasi pribadi Anda. Kami hanya membagikan informasi sebagai berikut: dengan penyedia layanan yang memproses data atas nama kami berdasarkan kewajiban kerahasiaan; dengan layanan dan model pihak ketiga yang Anda pilih untuk dihubungkan; untuk mematuhi hukum atau proses hukum yang sah; untuk melindungi hak, keselamatan, dan keamanan pengguna, masyarakat, atau {{company}}; dan sehubungan dengan merger, akuisisi, atau penjualan aset, sesuai dengan Kebijakan ini."
+        ],
+        "heading": "6. Cara Kami Berbagi Informasi"
+      },
+      {
+        "body": [
+          "Kami menyimpan informasi pribadi selama diperlukan untuk menyediakan Layanan dan untuk tujuan bisnis atau hukum yang sah. Kami menghapus atau menganonimkan informasi ketika tidak diperlukan lagi, sesuai dengan hukum yang berlaku."
+        ],
+        "heading": "7. Retensi Data"
+      },
+      {
+        "body": [
+          "Kami menggunakan langkah-langkah teknis dan organisasi, termasuk enkripsi dan lingkungan eksekusi yang terisolasi, untuk melindungi informasi. Tidak ada metode transmisi atau penyimpanan yang benar-benar aman, dan kami tidak dapat menjamin keamanan mutlak."
+        ],
+        "heading": "8. Keamanan"
+      },
+      {
+        "body": [
+          "Tergantung di mana Anda tinggal, Anda mungkin memiliki hak untuk mengakses, memperbaiki, menghapus, atau memindahkan informasi pribadi Anda, untuk menolak atau membatasi pemrosesan tertentu, dan untuk membatalkan persetujuan. Penduduk Wilayah Ekonomi Eropa, Inggris, dan California, antara lain, mungkin memiliki hak tambahan berdasarkan undang-undang seperti GDPR dan CCPA/CPRA.",
+          "Untuk menggunakan hak ini, hubungi kami di {{email}}. Kami akan merespons sebagaimana diwajibkan oleh hukum yang berlaku, dan kami tidak akan mendiskriminasi Anda dalam menjalankan hak Anda."
+        ],
+        "heading": "9. Hak dan Pilihan Anda"
+      },
+      {
+        "body": [
+          "Kami dapat memproses dan menyimpan informasi di negara selain negara tempat Anda tinggal. Jika diperlukan, kami menggunakan perlindungan yang sesuai untuk transfer informasi pribadi lintas batas."
+        ],
+        "heading": "10. Transfer Data Internasional"
+      },
+      {
+        "body": [
+          "Layanan ini tidak ditujukan kepada anak-anak di bawah umur yang diwajibkan oleh hukum yang berlaku, dan kami tidak dengan sengaja mengumpulkan informasi pribadi dari mereka. Jika Anda yakin ada anak yang memberikan informasi pribadi kepada kami, hubungi kami di {{email}} dan kami akan mengambil langkah yang tepat untuk menghapusnya."
+        ],
+        "heading": "11. Privasi Anak"
+      },
+      {
+        "body": [
+          "Kami dapat memperbarui Kebijakan Privasi ini dari waktu ke waktu. Jika kami melakukan perubahan penting, kami akan memperbarui tanggal efektif di atas dan, jika diperlukan, memberikan pemberitahuan tambahan. Penggunaan Layanan yang berkelanjutan oleh Anda setelah perubahan berlaku merupakan penerimaan terhadap Kebijakan yang diperbarui."
+        ],
+        "heading": "12. Perubahan Kebijakan ini"
+      }
+    ]
   },
   "productScreen": {
     "close": "Menutup",
@@ -692,7 +776,7 @@
       "ariaLabel": "Bagaimana AURA mendapatkan kepercayaan Anda",
       "cards": {
         "alwaysOn": {
-          "description": "Agen Anda terus bekerja sepanjang waktu, bahkan saat Anda pergi dan perangkat Anda mati.",
+          "description": "Agen Anda bekerja sepanjang waktu, bahkan saat perangkat Anda mati.",
           "title": "Selalu aktif."
         },
         "isolated": {
@@ -768,9 +852,137 @@
     "secure": "Aman."
   },
   "terms": {
-    "description": "Persyaratan Layanan kami sedang diselesaikan dan akan segera dipublikasikan di sini.",
+    "contactBody": "Jika Anda memiliki pertanyaan tentang Ketentuan ini, hubungi {{company}} pada {{email}}.",
+    "contactHeading": "Hubungi kami",
+    "description": "Ketentuan yang mengatur akses Anda dan penggunaan AURA.",
     "documentTitle": "AURA - Ketentuan Layanan",
+    "effectiveDate": "Tanggal efektif: 11 Juni 2026",
     "headline": "Ketentuan Layanan",
-    "label": "LEGAL"
+    "intro": "Ketentuan Layanan ini (\"Ketentuan\") merupakan perjanjian yang mengikat antara Anda dan {{company}} (\"{{company}}\", \"kami\", \"kita\", atau \"milik kami\") dan mengatur akses Anda ke dan penggunaan aplikasi AURA, situs web, dan layanan terkait (secara kolektif disebut \"Layanan\"). Harap membacanya dengan cermat. Dengan mengakses atau menggunakan Layanan, Anda setuju untuk terikat oleh Ketentuan ini.",
+    "label": "LEGAL",
+    "sections": [
+      {
+        "body": [
+          "Dengan membuat akun, mengakses, atau menggunakan Layanan, Anda mengonfirmasi bahwa Anda telah membaca, memahami, dan setuju untuk terikat oleh Ketentuan ini dan Kebijakan Privasi kami. Jika Anda tidak setuju, Anda tidak boleh menggunakan Layanan.",
+          "Jika Anda menggunakan Layanan atas nama suatu organisasi, Anda menyatakan bahwa Anda memiliki wewenang untuk mengikat organisasi tersebut dengan Ketentuan ini, dan \"Anda\" mengacu pada Anda dan organisasi tersebut."
+        ],
+        "heading": "1. Penerimaan Persyaratan"
+      },
+      {
+        "body": [
+          "Anda harus berusia minimal 18 tahun, atau usia dewasa di yurisdiksi Anda, untuk menggunakan Layanan. Dengan menggunakan Layanan, Anda menyatakan dan menjamin bahwa Anda memenuhi persyaratan ini dan bahwa Anda tidak dilarang menggunakan Layanan berdasarkan hukum yang berlaku."
+        ],
+        "heading": "2. Kelayakan"
+      },
+      {
+        "body": [
+          "AURA adalah lingkungan operasi sumber terbuka dan berfokus pada privasi untuk agen AI pribadi. Layanan ini memungkinkan Anda membuat, mengonfigurasi, dan menjalankan agen yang dapat melakukan tugas, terhubung ke layanan pihak ketiga yang Anda otorisasi, dan berinteraksi dengan model AI pihak ketiga.",
+          "Kami dapat menambah, mengubah, atau menghapus fitur kapan saja, dan kami dapat menerapkan batasan pada fitur tertentu atau membatasi akses ke bagian Layanan tanpa pemberitahuan atau tanggung jawab."
+        ],
+        "heading": "3. Deskripsi Layanan"
+      },
+      {
+        "body": [
+          "Anda bertanggung jawab untuk menjaga kerahasiaan kredensial akun Anda dan semua aktivitas yang terjadi pada akun Anda. Anda setuju untuk segera memberi tahu kami di {{email}} dari penggunaan tidak sah atas akun Anda.",
+          "Anda setuju untuk memberikan informasi yang akurat, terkini, dan lengkap serta selalu memperbaruinya."
+        ],
+        "heading": "4. Akun dan Keamanan"
+      },
+      {
+        "body": [
+          "Anda setuju untuk tidak menggunakan Layanan untuk melanggar hukum atau hak orang lain; untuk mengembangkan, menyebarkan, atau mengoperasikan agen untuk tujuan yang melanggar hukum, merugikan, menipu, atau kasar; untuk mencoba mendapatkan akses tidak sah ke sistem atau data apa pun; untuk mengganggu atau mengganggu integritas atau kinerja Layanan; atau untuk merekayasa balik atau menghindari batasan keamanan atau penggunaan apa pun kecuali sejauh diizinkan oleh lisensi atau undang-undang sumber terbuka yang berlaku.",
+          "Anda sepenuhnya bertanggung jawab atas tugas yang Anda perintahkan untuk dilakukan oleh agen Anda dan untuk memastikan bahwa penggunaan tersebut mematuhi semua hukum yang berlaku dan ketentuan pihak ketiga."
+        ],
+        "heading": "5. Penggunaan yang Dapat Diterima"
+      },
+      {
+        "body": [
+          "Anda memegang seluruh hak atas konten, data, perintah, dan instruksi yang Anda kirimkan ke Layanan (\"Konten Pengguna\"). Anda mengabulkan {{company}} lisensi terbatas dan non-eksklusif untuk memproses Konten Pengguna semata-mata untuk mengoperasikan dan menyediakan Layanan kepada Anda.",
+          "Anda menyatakan bahwa Anda mempunyai semua hak yang diperlukan untuk mengirimkan Konten Pengguna Anda dan bahwa konten tersebut tidak menyalahi atau melanggar hak pihak ketiga mana pun."
+        ],
+        "heading": "6. Konten Pengguna"
+      },
+      {
+        "body": [
+          "Layanan menggunakan kecerdasan buatan untuk menghasilkan tanggapan, tindakan, dan keluaran lainnya (“Keluaran”). Keluaran mungkin tidak akurat, tidak lengkap, atau tidak sesuai dengan tujuan Anda dan mungkin tidak mencerminkan pandangan Anda {{company}}. Anda bertanggung jawab untuk mengevaluasi Keluaran dan atas setiap keputusan atau tindakan yang Anda ambil berdasarkan keluaran tersebut.",
+          "Outputnya bukanlah nasihat profesional. Jangan mengandalkan Layanan untuk mendapatkan bimbingan hukum, medis, keuangan, atau profesional lainnya.",
+          "Sejauh diizinkan oleh hukum dan tunduk pada ketentuan model pihak ketiga, antara Anda dan {{company}}, Anda memiliki Output yang dihasilkan dari Konten Pengguna Anda."
+        ],
+        "heading": "7. Keluaran yang Dihasilkan AI"
+      },
+      {
+        "body": [
+          "AURA didistribusikan sebagai perangkat lunak sumber terbuka berdasarkan lisensi yang diidentifikasi dalam repositori sumbernya, termasuk Lisensi MIT jika berlaku. Penggunaan Anda atas komponen sumber terbuka tersebut diatur oleh lisensi tersebut, yang mengontrol jika terjadi konflik dengan Ketentuan ini sehubungan dengan perangkat lunak tersebut.",
+          "Tidak ada ketentuan apa pun dalam Ketentuan ini yang membatasi hak Anda berdasarkan, atau memberi Anda hak di luar, lisensi sumber terbuka yang berlaku."
+        ],
+        "heading": "8. Open Source dan Lisensi"
+      },
+      {
+        "body": [
+          "Layanan dapat berinteroperasi dengan layanan pihak ketiga, integrasi, dan model AI yang Anda pilih untuk dihubungkan atau digunakan. Penggunaan Anda atas pihak ketiga tersebut diatur oleh persyaratan dan kebijakan privasi mereka sendiri, dan {{company}} tidak bertanggung jawab atas ketersediaan, keakuratan, atau perilakunya.",
+          "Anda bertanggung jawab atas kredensial, kunci API, atau otorisasi apa pun yang Anda berikan untuk menghubungkan layanan pihak ketiga."
+        ],
+        "heading": "9. Layanan dan Model Pihak Ketiga"
+      },
+      {
+        "body": [
+          "Fitur tertentu mungkin memerlukan langganan berbayar. Dengan membeli langganan, Anda memberi otorisasi {{company}} atau pemroses pembayarannya akan membebankan biaya yang berlaku dan pajak apa pun ke metode pembayaran Anda secara berulang hingga Anda membatalkannya.",
+          "Biaya tidak dapat dikembalikan kecuali diwajibkan oleh hukum atau dinyatakan secara tegas pada saat pembelian. Anda dapat membatalkan kapan saja, dan pembatalan berlaku pada akhir periode penagihan saat ini.",
+          "Kami dapat mengubah harga secara prospektif dan akan memberikan pemberitahuan mengenai perubahan material sebagaimana diwajibkan oleh hukum."
+        ],
+        "heading": "10. Langganan, Penagihan, dan Pengembalian Dana"
+      },
+      {
+        "body": [
+          "Kecuali untuk Konten Pengguna, Output, dan komponen sumber terbuka, Layanan dan semua materi terkait, termasuk nama, logo, dan perangkat lunak AURA, dimiliki oleh {{company}} atau pemberi lisensinya dan dilindungi oleh undang-undang kekayaan intelektual. Ketentuan ini tidak memberi Anda hak apa pun untuk menggunakan merek dagang kami tanpa persetujuan tertulis sebelumnya dari kami."
+        ],
+        "heading": "11. Kekayaan Intelektual"
+      },
+      {
+        "body": [
+          "Pengumpulan dan penggunaan informasi pribadi kami sehubungan dengan Layanan dijelaskan dalam Kebijakan Privasi kami, yang dimasukkan ke dalam Ketentuan ini sebagai referensi."
+        ],
+        "heading": "12. Privasi"
+      },
+      {
+        "body": [
+          "LAYANAN DAN SELURUH KELUARAN DISEDIAKAN \"SEBAGAIMANA ADANYA\" DAN \"SEBAGAIMANA TERSEDIA\" TANPA JAMINAN APA PUN, BAIK TERSURAT, TERSIRAT, MAUPUN HUKUM, TERMASUK JAMINAN TERSIRAT ATAS KELAYAKAN UNTUK DIPERDAGANGKAN, KESESUAIAN UNTUK TUJUAN TERTENTU, HAK, DAN TIDAK ADA PELANGGARAN. {{company}} TIDAK MENJAMIN LAYANAN TIDAK AKAN TERGANGGU, AMAN, ATAU BEBAS DARI KESALAHAN."
+        ],
+        "heading": "13. Penafian"
+      },
+      {
+        "body": [
+          "SEJAUH DIIZINKAN OLEH HUKUM, {{company}} DAN AFILIASI, PEJABAT, KARYAWAN, DAN AGENNYA TIDAK AKAN BERTANGGUNG JAWAB ATAS KERUSAKAN TIDAK LANGSUNG, INSIDENTAL, KHUSUS, KONSEKUENSIAL, ATAU HUKUMAN, ATAU KEHILANGAN KEUNTUNGAN, DATA, ATAU NIKMAT BAIK, YANG TIMBUL DARI ATAU TERKAIT DENGAN PENGGUNAAN LAYANAN ANDA.",
+          "TOTAL TANGGUNG JAWAB KAMI ATAS KLAIM APA PUN YANG TIMBUL DARI ATAU TERKAIT DENGAN KETENTUAN ATAU LAYANAN INI TIDAK AKAN MELEBIHI JUMLAH YANG LEBIH BESAR DARI JUMLAH YANG ANDA BAYARKAN KEPADA KAMI DALAM DUA BELAS BULAN SEBELUM KLAIM ATAU SERIUS DOLAR AS (USD 100)."
+        ],
+        "heading": "14. Batasan Tanggung Jawab"
+      },
+      {
+        "body": [
+          "Anda setuju untuk mengganti kerugian dan tidak membahayakan {{company}} dan afiliasinya dari segala klaim, tanggung jawab, kerusakan, kerugian, dan pengeluaran, termasuk biaya hukum yang wajar, yang timbul dari atau terkait dengan Konten Pengguna Anda, penggunaan Layanan oleh Anda, atau pelanggaran Anda terhadap Ketentuan ini atau hukum yang berlaku."
+        ],
+        "heading": "15. Ganti Rugi"
+      },
+      {
+        "body": [
+          "Anda dapat berhenti menggunakan Layanan kapan saja. Kami dapat menangguhkan atau menghentikan akses Anda ke Layanan kapan saja, dengan atau tanpa sebab atau pemberitahuan, termasuk jika kami yakin Anda telah melanggar Ketentuan ini.",
+          "Setelah pengakhiran, ketentuan-ketentuan dalam Ketentuan ini yang menurut sifatnya harus tetap berlaku akan tetap berlaku, termasuk ketentuan kepemilikan, penafian, batasan tanggung jawab, dan ketentuan penyelesaian sengketa."
+        ],
+        "heading": "16. Penghentian"
+      },
+      {
+        "body": [
+          "Kami dapat mengubah Ketentuan ini dari waktu ke waktu. Jika kami melakukan perubahan penting, kami akan memperbarui tanggal efektif di atas dan, jika diperlukan, memberikan pemberitahuan tambahan. Penggunaan Layanan yang berkelanjutan oleh Anda setelah perubahan berlaku merupakan penerimaan terhadap Ketentuan yang direvisi."
+        ],
+        "heading": "17. Perubahan Layanan dan Ketentuan"
+      },
+      {
+        "body": [
+          "Ketentuan ini diatur oleh hukum Negara Bagian {{state}}, tanpa memperhatikan aturan konflik hukumnya. Tunduk pada hukum wajib yang berlaku, Anda setuju bahwa pengadilan negara bagian dan federal berlokasi di {{state}} akan memiliki yurisdiksi eksklusif atas perselisihan apa pun yang timbul dari atau terkait dengan Ketentuan atau Layanan ini, dan Anda menyetujui yurisdiksi pribadi di pengadilan tersebut.",
+          "Tidak ada ketentuan apa pun dalam bagian ini yang membatasi hak hukum yang tidak dapat diabaikan yang tersedia bagi Anda sebagai konsumen di negara tempat tinggal Anda."
+        ],
+        "heading": "18. Hukum yang Mengatur dan Penyelesaian Sengketa"
+      }
+    ]
   }
 }

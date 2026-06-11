@@ -1,0 +1,71 @@
+.page {
+  --legal-fg: #f0f1f4;
+  --legal-fg-muted: #a7adb5;
+  --legal-fg-faint: #6b7177;
+  --legal-accent: #7ee787;
+  --legal-border: rgba(255, 255, 255, 0.08);
+
+  background: #0f0f12;
+  color: var(--legal-fg);
+}
+
+.document {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 32px 120px;
+}
+
+.effectiveDate {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--legal-fg-faint);
+  margin: 0 0 24px;
+}
+
+.intro {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--legal-fg-muted);
+  margin: 0 0 16px;
+}
+
+.section {
+  margin-top: 40px;
+}
+
+.sectionHeading {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--legal-fg);
+  margin: 0 0 14px;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 88px;
+}
+
+.paragraph {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--legal-fg-muted);
+  margin: 0 0 14px;
+}
+
+.contactEmail {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--legal-accent);
+  text-decoration: none;
+}
+
+.contactEmail:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+  .document {
+    padding: 8px 20px 80px;
+  }
+}

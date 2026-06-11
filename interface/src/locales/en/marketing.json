@@ -2,8 +2,7 @@
   "agents": {
     "buildDeviceAriaLabel": "Build your agent",
     "documentTitle": "AURA - Agents",
-    "heroDescriptionLine1": "AURA agents are experts in every field",
-    "heroDescriptionLine2": "that work while you sleep.",
+    "heroDescription": "AURA agents are experts in every field that work while you sleep.",
     "heroHeadline": "Delegate everything."
   },
   "blog": {
@@ -288,10 +287,94 @@
     "yearly": "Yearly"
   },
   "privacy": {
-    "description": "Our Privacy Policy is being finalized and will be published here soon.",
+    "contactBody": "If you have questions about this Privacy Policy or your personal information, contact {{company}} at {{email}}.",
+    "contactHeading": "Contact us",
+    "description": "How we handle your data, and the privacy-first principles behind AURA.",
     "documentTitle": "AURA - Privacy Policy",
+    "effectiveDate": "Effective date: June 11, 2026",
     "headline": "Privacy Policy",
-    "label": "LEGAL"
+    "intro": "This Privacy Policy explains how {{company}} (\"{{company}}\", \"we\", \"us\", or \"our\") collects, uses, and shares information when you use the AURA applications, websites, and related services (collectively, the \"Service\"). AURA is built to be privacy-first: wherever possible, your data stays on your own devices and is never used to train models.",
+    "label": "LEGAL",
+    "sections": [
+      {
+        "body": [
+          "This Policy applies to information we process when you use the Service. It does not apply to third-party services, AI models, or integrations that you choose to connect, which are governed by their own privacy policies."
+        ],
+        "heading": "1. Scope"
+      },
+      {
+        "body": [
+          "Account information, such as your name, email address, and authentication details when you create an account.",
+          "Usage and device information, such as app version, device type, and diagnostic and performance data used to operate and improve the Service.",
+          "Content you provide, including prompts, instructions, files, and other User Content you submit. Where the architecture allows, this content is processed locally on your device.",
+          "Payment information. If you purchase a subscription, our payment processors collect billing details. We do not store full payment card numbers."
+        ],
+        "heading": "2. Information We Collect"
+      },
+      {
+        "body": [
+          "We use information to provide, maintain, and secure the Service; to authenticate you and manage your account; to process payments; to provide support; to detect, prevent, and address fraud, abuse, and security issues; and to comply with legal obligations.",
+          "We use diagnostic and usage data to understand how the Service performs and to improve it."
+        ],
+        "heading": "3. How We Use Information"
+      },
+      {
+        "body": [
+          "AURA is designed so that your personal and corporate data stays under your control. Agents run in isolated environments, and wherever possible your User Content is processed on your own devices rather than sent to our servers."
+        ],
+        "heading": "4. Local-First and On-Device Processing"
+      },
+      {
+        "body": [
+          "When you use features that rely on AI models, the necessary inputs may be sent to the relevant model provider to generate Output. We do not use your personal or corporate User Content to train models, and we design the Service so that data sent to frontier models is minimized and, where feasible, de-identified.",
+          "Third-party model providers process data under their own terms and privacy policies."
+        ],
+        "heading": "5. AI Models and Data Handling"
+      },
+      {
+        "body": [
+          "We do not sell your personal information. We share information only as follows: with service providers who process data on our behalf under confidentiality obligations; with third-party services and models you choose to connect; to comply with law or valid legal process; to protect the rights, safety, and security of users, the public, or {{company}}; and in connection with a merger, acquisition, or sale of assets, subject to this Policy."
+        ],
+        "heading": "6. How We Share Information"
+      },
+      {
+        "body": [
+          "We retain personal information for as long as needed to provide the Service and for legitimate business or legal purposes. We delete or anonymize information when it is no longer needed, subject to applicable law."
+        ],
+        "heading": "7. Data Retention"
+      },
+      {
+        "body": [
+          "We use technical and organizational measures, including encryption and isolated execution environments, to protect information. No method of transmission or storage is completely secure, and we cannot guarantee absolute security."
+        ],
+        "heading": "8. Security"
+      },
+      {
+        "body": [
+          "Depending on where you live, you may have rights to access, correct, delete, or port your personal information, to object to or restrict certain processing, and to withdraw consent. Residents of the European Economic Area, the United Kingdom, and California, among others, may have additional rights under laws such as the GDPR and the CCPA/CPRA.",
+          "To exercise these rights, contact us at {{email}}. We will respond as required by applicable law, and we will not discriminate against you for exercising your rights."
+        ],
+        "heading": "9. Your Rights and Choices"
+      },
+      {
+        "body": [
+          "We may process and store information in countries other than the one in which you reside. Where required, we use appropriate safeguards for cross-border transfers of personal information."
+        ],
+        "heading": "10. International Data Transfers"
+      },
+      {
+        "body": [
+          "The Service is not directed to children under the age required by applicable law, and we do not knowingly collect personal information from them. If you believe a child has provided us personal information, contact us at {{email}} and we will take appropriate steps to delete it."
+        ],
+        "heading": "11. Children's Privacy"
+      },
+      {
+        "body": [
+          "We may update this Privacy Policy from time to time. If we make material changes, we will update the effective date above and, where required, provide additional notice. Your continued use of the Service after changes take effect constitutes acceptance of the updated Policy."
+        ],
+        "heading": "12. Changes to this Policy"
+      }
+    ]
   },
   "productScreen": {
     "close": "Close",
@@ -387,9 +470,137 @@
     "secure": "Secure."
   },
   "terms": {
-    "description": "Our Terms of Service are being finalized and will be published here soon.",
+    "contactBody": "If you have questions about these Terms, contact {{company}} at {{email}}.",
+    "contactHeading": "Contact us",
+    "description": "The terms that govern your access to and use of AURA.",
     "documentTitle": "AURA - Terms of Service",
+    "effectiveDate": "Effective date: June 11, 2026",
     "headline": "Terms of Service",
-    "label": "LEGAL"
+    "intro": "These Terms of Service (the \"Terms\") form a binding agreement between you and {{company}} (\"{{company}}\", \"we\", \"us\", or \"our\") and govern your access to and use of the AURA applications, websites, and related services (collectively, the \"Service\"). Please read them carefully. By accessing or using the Service, you agree to be bound by these Terms.",
+    "label": "LEGAL",
+    "sections": [
+      {
+        "body": [
+          "By creating an account, accessing, or using the Service, you confirm that you have read, understood, and agree to be bound by these Terms and our Privacy Policy. If you do not agree, you may not use the Service.",
+          "If you are using the Service on behalf of an organization, you represent that you have authority to bind that organization to these Terms, and \"you\" refers to both you and that organization."
+        ],
+        "heading": "1. Acceptance of Terms"
+      },
+      {
+        "body": [
+          "You must be at least 18 years old, or the age of majority in your jurisdiction, to use the Service. By using the Service, you represent and warrant that you meet these requirements and that you are not barred from using the Service under any applicable law."
+        ],
+        "heading": "2. Eligibility"
+      },
+      {
+        "body": [
+          "AURA is an open-source, privacy-focused operating environment for personal AI agents. The Service lets you create, configure, and run agents that can perform tasks, connect to third-party services you authorize, and interact with third-party AI models.",
+          "We may add, change, or remove features at any time, and we may impose limits on certain features or restrict access to parts of the Service without notice or liability."
+        ],
+        "heading": "3. Description of the Service"
+      },
+      {
+        "body": [
+          "You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. You agree to notify us immediately at {{email}} of any unauthorized use of your account.",
+          "You agree to provide accurate, current, and complete information and to keep it up to date."
+        ],
+        "heading": "4. Accounts and Security"
+      },
+      {
+        "body": [
+          "You agree not to use the Service to violate any law or the rights of others; to develop, deploy, or operate agents for unlawful, harmful, deceptive, or abusive purposes; to attempt to gain unauthorized access to any system or data; to interfere with or disrupt the integrity or performance of the Service; or to reverse engineer or circumvent any security or usage limits except to the extent permitted by applicable open-source licenses or law.",
+          "You are solely responsible for the tasks you direct your agents to perform and for ensuring that such use complies with all applicable laws and third-party terms."
+        ],
+        "heading": "5. Acceptable Use"
+      },
+      {
+        "body": [
+          "You retain all rights in the content, data, prompts, and instructions you submit to the Service (\"User Content\"). You grant {{company}} a limited, non-exclusive license to process User Content solely to operate and provide the Service to you.",
+          "You represent that you have all rights necessary to submit your User Content and that it does not infringe or violate the rights of any third party."
+        ],
+        "heading": "6. User Content"
+      },
+      {
+        "body": [
+          "The Service uses artificial intelligence to generate responses, actions, and other output (\"Output\"). Output may be inaccurate, incomplete, or otherwise unsuitable for your purposes and may not reflect the views of {{company}}. You are responsible for evaluating Output and for any decisions or actions you take based on it.",
+          "Output is not professional advice. Do not rely on the Service for legal, medical, financial, or other professional guidance.",
+          "To the extent permitted by law and subject to third-party model terms, as between you and {{company}}, you own the Output generated from your User Content."
+        ],
+        "heading": "7. AI-Generated Output"
+      },
+      {
+        "body": [
+          "AURA is distributed as open-source software under the licenses identified in its source repositories, including the MIT License where applicable. Your use of those open-source components is governed by those licenses, which control in the event of any conflict with these Terms with respect to that software.",
+          "Nothing in these Terms limits your rights under, or grants you rights beyond, the applicable open-source licenses."
+        ],
+        "heading": "8. Open Source and Licenses"
+      },
+      {
+        "body": [
+          "The Service may interoperate with third-party services, integrations, and AI models that you choose to connect or use. Your use of those third parties is governed by their own terms and privacy policies, and {{company}} is not responsible for their availability, accuracy, or conduct.",
+          "You are responsible for any credentials, API keys, or authorizations you provide to connect third-party services."
+        ],
+        "heading": "9. Third-Party Services and Models"
+      },
+      {
+        "body": [
+          "Certain features may require a paid subscription. By purchasing a subscription, you authorize {{company}} or its payment processors to charge the applicable fees and any taxes to your payment method on a recurring basis until you cancel.",
+          "Fees are non-refundable except as required by law or as expressly stated at the time of purchase. You may cancel at any time, and cancellation takes effect at the end of the current billing period.",
+          "We may change pricing prospectively and will provide notice of material changes as required by law."
+        ],
+        "heading": "10. Subscriptions, Billing, and Refunds"
+      },
+      {
+        "body": [
+          "Except for User Content, Output, and open-source components, the Service and all related materials, including the AURA name, logos, and software, are owned by {{company}} or its licensors and are protected by intellectual property laws. These Terms do not grant you any right to use our trademarks without our prior written consent."
+        ],
+        "heading": "11. Intellectual Property"
+      },
+      {
+        "body": [
+          "Our collection and use of personal information in connection with the Service is described in our Privacy Policy, which is incorporated into these Terms by reference."
+        ],
+        "heading": "12. Privacy"
+      },
+      {
+        "body": [
+          "THE SERVICE AND ALL OUTPUT ARE PROVIDED \"AS IS\" AND \"AS AVAILABLE\" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, OR STATUTORY, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. {{company}} DOES NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE."
+        ],
+        "heading": "13. Disclaimers"
+      },
+      {
+        "body": [
+          "TO THE MAXIMUM EXTENT PERMITTED BY LAW, {{company}} AND ITS AFFILIATES, OFFICERS, EMPLOYEES, AND AGENTS WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, DATA, OR GOODWILL, ARISING OUT OF OR RELATED TO YOUR USE OF THE SERVICE.",
+          "OUR TOTAL LIABILITY FOR ANY CLAIM ARISING OUT OF OR RELATED TO THESE TERMS OR THE SERVICE WILL NOT EXCEED THE GREATER OF THE AMOUNTS YOU PAID TO US IN THE TWELVE MONTHS BEFORE THE CLAIM OR ONE HUNDRED U.S. DOLLARS (USD 100)."
+        ],
+        "heading": "14. Limitation of Liability"
+      },
+      {
+        "body": [
+          "You agree to indemnify and hold harmless {{company}} and its affiliates from any claims, liabilities, damages, losses, and expenses, including reasonable legal fees, arising out of or related to your User Content, your use of the Service, or your violation of these Terms or applicable law."
+        ],
+        "heading": "15. Indemnification"
+      },
+      {
+        "body": [
+          "You may stop using the Service at any time. We may suspend or terminate your access to the Service at any time, with or without cause or notice, including if we believe you have violated these Terms.",
+          "Upon termination, the provisions of these Terms that by their nature should survive will survive, including ownership provisions, disclaimers, limitations of liability, and dispute-resolution terms."
+        ],
+        "heading": "16. Termination"
+      },
+      {
+        "body": [
+          "We may modify these Terms from time to time. If we make material changes, we will update the effective date above and, where required, provide additional notice. Your continued use of the Service after changes take effect constitutes acceptance of the revised Terms."
+        ],
+        "heading": "17. Changes to the Service and Terms"
+      },
+      {
+        "body": [
+          "These Terms are governed by the laws of the State of {{state}}, without regard to its conflict-of-laws rules. Subject to any applicable mandatory law, you agree that the state and federal courts located in {{state}} will have exclusive jurisdiction over any dispute arising out of or relating to these Terms or the Service, and you consent to personal jurisdiction in those courts.",
+          "Nothing in this section limits any non-waivable statutory rights available to you as a consumer in your country of residence."
+        ],
+        "heading": "18. Governing Law and Dispute Resolution"
+      }
+    ]
   }
 }

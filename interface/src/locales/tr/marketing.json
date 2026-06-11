@@ -682,10 +682,94 @@
     "yearly": "Yıllık"
   },
   "privacy": {
-    "description": "Gizlilik Politikamız son halini alıyor ve yakında burada yayınlanacaktır.",
+    "contactBody": "Bu Gizlilik Politikası veya kişisel bilgileriniz hakkında sorularınız varsa, bizimle iletişime geçin. {{company}} en {{email}}.",
+    "contactHeading": "Bize Ulaşın",
+    "description": "Verilerinizi nasıl ele alıyoruz ve AURA'nın arkasındaki gizlilik öncelikli ilkeler.",
     "documentTitle": "AURA - Gizlilik Politikası",
+    "effectiveDate": "Yürürlük tarihi: 11 Haziran 2026",
     "headline": "Gizlilik Politikası",
-    "label": "YASAL"
+    "intro": "Bu Gizlilik Politikasında bunun nasıl yapılacağı açıklanmaktadır {{company}} (\"{{company}}\", \"biz\", \"bize\" veya \"bizim\"), AURA uygulamalarını, web sitelerini ve ilgili hizmetleri (toplu olarak \"Hizmet\") kullandığınızda bilgi toplar, kullanır ve paylaşır. AURA, gizlilik öncelikli olacak şekilde tasarlanmıştır: mümkün olan her yerde verileriniz kendi cihazlarınızda kalır ve hiçbir zaman modelleri eğitmek için kullanılmaz.",
+    "label": "YASAL",
+    "sections": [
+      {
+        "body": [
+          "Bu Politika, Hizmeti kullandığınızda işlediğimiz bilgiler için geçerlidir. Bağlanmayı seçtiğiniz ve kendi gizlilik politikalarına tabi olan üçüncü taraf hizmetleri, yapay zeka modelleri veya entegrasyonlar için geçerli değildir."
+        ],
+        "heading": "1. Kapsam"
+      },
+      {
+        "body": [
+          "Hesap oluşturduğunuzda adınız, e-posta adresiniz ve kimlik doğrulama ayrıntılarınız gibi hesap bilgileri.",
+          "Hizmeti çalıştırmak ve geliştirmek için kullanılan uygulama sürümü, cihaz türü ve teşhis ve performans verileri gibi kullanım ve cihaz bilgileri.",
+          "İstemler, talimatlar, dosyalar ve gönderdiğiniz diğer Kullanıcı İçeriği de dahil olmak üzere sağladığınız içerik. Mimarinin izin verdiği ölçüde bu içerik cihazınızda yerel olarak işlenir.",
+          "Ödeme bilgileri. Bir abonelik satın alırsanız ödeme işlemcilerimiz fatura ayrıntılarını toplar. Ödeme kartı numaralarının tamamını saklamıyoruz."
+        ],
+        "heading": "2. Topladığımız Bilgiler"
+      },
+      {
+        "body": [
+          "Bilgileri Hizmeti sağlamak, sürdürmek ve güvence altına almak için kullanırız; kimliğinizi doğrulamak ve hesabınızı yönetmek; ödemeleri işleme koymak; destek sağlamak; dolandırıcılık, suistimal ve güvenlik sorunlarını tespit etmek, önlemek ve ele almak; ve yasal yükümlülüklere uymak.",
+          "Hizmetin nasıl performans gösterdiğini anlamak ve onu geliştirmek için teşhis ve kullanım verilerini kullanırız."
+        ],
+        "heading": "3. Bilgileri Nasıl Kullanıyoruz"
+      },
+      {
+        "body": [
+          "AURA, kişisel ve kurumsal verilerinizin kontrolünüz altında kalması için tasarlandı. Aracılar yalıtılmış ortamlarda çalışır ve mümkün olan her durumda Kullanıcı İçeriğiniz sunucularımıza gönderilmek yerine kendi cihazlarınızda işlenir."
+        ],
+        "heading": "4. Yerel Öncelikli ve Cihaz Üzerinde İşleme"
+      },
+      {
+        "body": [
+          "Yapay zeka modellerine dayanan özellikleri kullandığınızda, Çıktı oluşturmak için gerekli girdiler ilgili model sağlayıcıya gönderilebilir. Kişisel veya kurumsal Kullanıcı İçeriğinizi modelleri eğitmek için kullanmıyoruz ve Hizmeti, sınır modellerine gönderilen veriler en aza indirilecek ve mümkün olduğunda kimlik bilgileri kaldırılacak şekilde tasarlıyoruz.",
+          "Üçüncü taraf model sağlayıcıları, verileri kendi koşulları ve gizlilik politikaları kapsamında işler."
+        ],
+        "heading": "5. Yapay Zeka Modelleri ve Veri İşleme"
+      },
+      {
+        "body": [
+          "Kişisel bilgilerinizi satmıyoruz. Bilgileri yalnızca şu şekilde paylaşırız: gizlilik yükümlülükleri kapsamında bizim adımıza veri işleyen hizmet sağlayıcılarla; bağlanmayı seçtiğiniz üçüncü taraf hizmetleri ve modelleriyle; yasaya veya geçerli yasal sürece uymak; Kullanıcıların, kamunun haklarını, emniyetini ve emniyetini korumak veya {{company}}; ve bu Politikaya tabi olarak varlıkların birleşmesi, satın alınması veya satışı ile bağlantılı olarak."
+        ],
+        "heading": "6. Bilgileri Nasıl Paylaşıyoruz"
+      },
+      {
+        "body": [
+          "Kişisel bilgileri, Hizmeti sağlamak için ve meşru ticari veya yasal amaçlar doğrultusunda ihtiyaç duyulan süre boyunca saklıyoruz. Geçerli yasalara tabi olarak, artık ihtiyaç duyulmadığında bilgileri siler veya anonimleştiririz."
+        ],
+        "heading": "7. Veri Saklama"
+      },
+      {
+        "body": [
+          "Bilgileri korumak için şifreleme ve izole yürütme ortamları da dahil olmak üzere teknik ve organizasyonel önlemler kullanıyoruz. Hiçbir iletim veya depolama yöntemi tamamen güvenli değildir ve mutlak güvenliği garanti edemeyiz."
+        ],
+        "heading": "8. Güvenlik"
+      },
+      {
+        "body": [
+          "Nerede yaşadığınıza bağlı olarak, kişisel bilgilerinize erişme, bunları düzeltme, silme veya taşıma, belirli işlemlere itiraz etme veya kısıtlama ve onayınızı geri çekme haklarınız olabilir. Diğerlerinin yanı sıra Avrupa Ekonomik Alanı, Birleşik Krallık ve Kaliforniya'da ikamet edenler, GDPR ve CCPA/CPRA gibi yasalar kapsamında ek haklara sahip olabilir.",
+          "Bu hakları kullanmak için bizimle şu adresten iletişime geçin: {{email}}. Yürürlükteki yasaların gerektirdiği şekilde yanıt vereceğiz ve haklarınızı kullandığınız için size karşı ayrımcılık yapmayacağız."
+        ],
+        "heading": "9. Haklarınız ve Seçenekleriniz"
+      },
+      {
+        "body": [
+          "Bilgileri ikamet ettiğiniz ülke dışındaki ülkelerde işleyebilir ve saklayabiliriz. Gerektiğinde kişisel bilgilerin sınır ötesi aktarımı için uygun önlemleri kullanırız."
+        ],
+        "heading": "10. Uluslararası Veri Aktarımları"
+      },
+      {
+        "body": [
+          "Hizmet, yürürlükteki yasaların gerektirdiği yaşın altındaki çocuklara yönelik değildir ve onlardan bilerek kişisel bilgi toplamıyoruz. Bir çocuğun bize kişisel bilgi verdiğini düşünüyorsanız bizimle şu adresten iletişime geçin: {{email}} ve onu silmek için uygun adımları atacağız."
+        ],
+        "heading": "11. Çocukların Gizliliği"
+      },
+      {
+        "body": [
+          "Bu Gizlilik Politikasını zaman zaman güncelleyebiliriz. Maddi değişiklikler yapmamız durumunda yukarıdaki yürürlük tarihini güncelleyeceğiz ve gerektiğinde ek bildirimde bulunacağız. Değişiklikler yürürlüğe girdikten sonra Hizmeti kullanmaya devam etmeniz, güncellenen Politikanın kabul edildiği anlamına gelir."
+        ],
+        "heading": "12. Bu Politikadaki Değişiklikler"
+      }
+    ]
   },
   "productScreen": {
     "close": "Kapalı",
@@ -705,7 +789,7 @@
       "ariaLabel": "AURA güveninizi nasıl kazanır?",
       "cards": {
         "alwaysOn": {
-          "description": "Temsilciniz, siz uzaktayken ve cihazlarınız kapalıyken bile günün her saati çalışmaya devam eder.",
+          "description": "Temsilciniz, cihazlarınız kapalıyken bile günün her saati çalışır.",
           "title": "Her zaman açık."
         },
         "isolated": {
@@ -781,9 +865,137 @@
     "secure": "Güvenli."
   },
   "terms": {
-    "description": "Hizmet Şartlarımız sonuçlandırılıyor ve yakında burada yayınlanacak.",
+    "contactBody": "Bu Şartlar hakkında sorularınız varsa bizimle iletişime geçin {{company}} en {{email}}.",
+    "contactHeading": "Bize Ulaşın",
+    "description": "AURA'ya erişiminizi ve kullanımınızı düzenleyen şartlar.",
     "documentTitle": "AURA - Hizmet Şartları",
+    "effectiveDate": "Yürürlük tarihi: 11 Haziran 2026",
     "headline": "Hizmet Şartları",
-    "label": "YASAL"
+    "intro": "Bu Hizmet Şartları (\"Şartlar\") sizinle aranızda bağlayıcı bir anlaşma oluşturur. {{company}} (\"{{company}}\", \"biz\", \"bize\" veya \"bizim\") ve AURA uygulamalarına, web sitelerine ve ilgili hizmetlere (topluca, \"Hizmet\") erişiminizi ve bunları kullanımınızı yönetir. Lütfen bunları dikkatlice okuyun. Hizmete erişerek veya Hizmeti kullanarak, bu Koşullara bağlı kalmayı kabul edersiniz.",
+    "label": "YASAL",
+    "sections": [
+      {
+        "body": [
+          "Bir hesap oluşturarak, Hizmete erişerek veya Hizmeti kullanarak, bu Koşulları ve Gizlilik Politikamızı okuduğunuzu, anladığınızı ve bunlara bağlı kalmayı kabul ettiğinizi onaylarsınız. Kabul etmiyorsanız Hizmeti kullanamazsınız.",
+          "Hizmeti bir kuruluş adına kullanıyorsanız, o kuruluşu bu Koşullara tabi kılma yetkisine sahip olduğunuzu ve \"siz\" hem sizi hem de söz konusu kuruluşu ifade eder."
+        ],
+        "heading": "1. Şartların Kabulü"
+      },
+      {
+        "body": [
+          "Hizmeti kullanabilmek için en az 18 yaşında veya yargı bölgenizdeki reşit olma yaşında olmanız gerekir. Hizmeti kullanarak, bu gereksinimleri karşıladığınızı ve geçerli herhangi bir yasa uyarınca Hizmeti kullanmanızın yasaklanmadığını beyan ve garanti edersiniz."
+        ],
+        "heading": "2. Uygunluk"
+      },
+      {
+        "body": [
+          "AURA, kişisel AI aracıları için açık kaynaklı, gizlilik odaklı bir işletim ortamıdır. Hizmet, görevleri gerçekleştirebilecek, yetkilendirdiğiniz üçüncü taraf hizmetlere bağlanabilecek ve üçüncü taraf yapay zeka modelleriyle etkileşimde bulunabilecek aracılar oluşturmanıza, yapılandırmanıza ve çalıştırmanıza olanak tanır.",
+          "Herhangi bir zamanda özellikleri ekleyebilir, değiştirebilir veya kaldırabiliriz ve bildirimde bulunmaksızın veya herhangi bir sorumluluk üstlenmeksizin belirli özelliklere sınırlamalar getirebilir veya Hizmetin bazı bölümlerine erişimi kısıtlayabiliriz."
+        ],
+        "heading": "3. Hizmetin Açıklaması"
+      },
+      {
+        "body": [
+          "Hesap kimlik bilgilerinizin gizliliğini korumaktan ve hesabınız altında gerçekleşen tüm faaliyetlerden siz sorumlusunuz. Bizi derhal şu ​​adresten bilgilendirmeyi kabul ediyorsunuz: {{email}} Hesabınızın izinsiz kullanımı.",
+          "Doğru, güncel ve eksiksiz bilgi sağlamayı ve bu bilgileri güncel tutmayı kabul edersiniz."
+        ],
+        "heading": "4. Hesaplar ve Güvenlik"
+      },
+      {
+        "body": [
+          "Hizmeti herhangi bir yasayı veya başkalarının haklarını ihlal edecek şekilde kullanmamayı kabul edersiniz; yasa dışı, zararlı, aldatıcı veya istismar edici amaçlarla aracılar geliştirmek, dağıtmak veya işletmek; herhangi bir sisteme veya verilere yetkisiz erişim sağlamaya çalışmak; Hizmetin bütünlüğüne veya performansına müdahale etmek veya bozmak; veya yürürlükteki açık kaynak lisansları veya yasaların izin verdiği kapsam dışında ters mühendislik yapmak veya herhangi bir güvenlik veya kullanım sınırını aşmak.",
+          "Temsilcilerinize gerçekleştirmeleri için yönlendirdiğiniz görevlerden ve söz konusu kullanımın yürürlükteki tüm yasalara ve üçüncü taraf şartlarına uygun olmasını sağlamaktan yalnızca siz sorumlusunuz."
+        ],
+        "heading": "5. Kabul Edilebilir Kullanım"
+      },
+      {
+        "body": [
+          "Hizmete gönderdiğiniz içeriğin, verilerin, istemlerin ve talimatların (\"Kullanıcı İçeriği\") tüm hakları size aittir. sen veriyorsun {{company}} Kullanıcı İçeriğini yalnızca Hizmeti işletmek ve size sunmak amacıyla işlemeye yönelik sınırlı, münhasır olmayan bir lisans.",
+          "Kullanıcı İçeriğinizi göndermek için gerekli tüm haklara sahip olduğunuzu ve içeriğinizin herhangi bir üçüncü tarafın haklarını ihlal etmediğini veya ihlal etmediğini beyan edersiniz."
+        ],
+        "heading": "6. Kullanıcı İçeriği"
+      },
+      {
+        "body": [
+          "Hizmet, yanıtlar, eylemler ve diğer çıktıları (\"Çıktı\") oluşturmak için yapay zekayı kullanır. Çıktı yanlış, eksik veya başka bir şekilde amaçlarınıza uygun olmayabilir ve tarafların görüşlerini yansıtmayabilir. {{company}}. Çıktıyı değerlendirmekten ve buna dayanarak aldığınız tüm kararlardan veya eylemlerden siz sorumlusunuz.",
+          "Çıktı profesyonel tavsiye değildir. Yasal, tıbbi, mali veya diğer profesyonel rehberlik için Hizmete güvenmeyin.",
+          "Yasaların izin verdiği ölçüde ve sizinle aranızda üçüncü taraf model şartlarına tabi olarak {{company}}, Kullanıcı İçeriğinizden oluşturulan Çıktının sahibi sizsiniz."
+        ],
+        "heading": "7. Yapay Zeka Tarafından Üretilen Çıktı"
+      },
+      {
+        "body": [
+          "AURA, uygun olduğu durumlarda MIT Lisansı da dahil olmak üzere, kaynak depolarında tanımlanan lisanslar kapsamında açık kaynaklı yazılım olarak dağıtılır. Bu açık kaynak bileşenlerini kullanımınız, söz konusu yazılımla ilgili olarak bu Şartlarla herhangi bir çelişki olması durumunda geçerli olan lisanslara tabidir.",
+          "Bu Şartlardaki hiçbir şey, geçerli açık kaynak lisansları kapsamındaki haklarınızı sınırlamaz veya size bunların ötesinde haklar vermez."
+        ],
+        "heading": "8. Açık Kaynak ve Lisanslar"
+      },
+      {
+        "body": [
+          "Hizmet, bağlanmayı veya kullanmayı seçtiğiniz üçüncü taraf hizmetleri, entegrasyonları ve yapay zeka modelleriyle birlikte çalışabilir. Bu üçüncü tarafları kullanımınız, onların kendi şartlarına ve gizlilik politikalarına tabidir ve {{company}} bunların kullanılabilirliğinden, doğruluğundan veya davranışlarından sorumlu değildir.",
+          "Üçüncü taraf hizmetlerine bağlanmak için sağladığınız tüm kimlik bilgilerinden, API anahtarlarından veya yetkilendirmelerden siz sorumlusunuz."
+        ],
+        "heading": "9. Üçüncü Taraf Hizmetleri ve Modelleri"
+      },
+      {
+        "body": [
+          "Bazı özellikler ücretli abonelik gerektirebilir. Bir abonelik satın alarak yetki vermiş olursunuz {{company}} veya ödeme işleyicileri, siz iptal edene kadar geçerli ücretleri ve her türlü vergiyi ödeme yönteminizden düzenli olarak tahsil edecektir.",
+          "Ücretler, yasaların gerektirdiği durumlar veya satın alma sırasında açıkça belirtilmediği sürece iade edilmez. İstediğiniz zaman iptal edebilirsiniz ve iptal, mevcut fatura döneminin sonunda geçerli olur.",
+          "Fiyatlandırmayı ileriye dönük olarak değiştirebiliriz ve yasaların gerektirdiği şekilde önemli değişiklikler konusunda bildirimde bulunacağız."
+        ],
+        "heading": "10. Abonelikler, Faturalandırma ve Geri Ödemeler"
+      },
+      {
+        "body": [
+          "Kullanıcı İçeriği, Çıktı ve açık kaynak bileşenleri dışında, Hizmet ve AURA adı, logoları ve yazılımı da dahil olmak üzere ilgili tüm materyaller, AURA'ya aittir. {{company}} veya lisans verenleri tarafından korunmaktadır ve fikri mülkiyet kanunları tarafından korunmaktadır. Bu Şartlar size önceden yazılı iznimiz olmadan ticari markalarımızı kullanma hakkı vermez."
+        ],
+        "heading": "11. Fikri Mülkiyet"
+      },
+      {
+        "body": [
+          "Hizmetle bağlantılı olarak kişisel bilgileri toplamamız ve kullanmamız, referans olarak bu Koşullara dahil edilen Gizlilik Politikamızda açıklanmıştır."
+        ],
+        "heading": "12. Gizlilik"
+      },
+      {
+        "body": [
+          "HİZMET VE TÜM ÇIKTILAR, TİCARİ ELVERİŞLİLİK, BELİRLİ BİR AMACA UYGUNLUK, BAŞLIK VE İHLAL ETMEME KONUSUNDA ZIMNİ GARANTİLER DAHİL OLMAK ÜZERE AÇIK, ZIMNİ VEYA YASAL HİÇBİR GARANTİ OLMAKSIZIN \"OLDUĞU GİBİ\" VE \"MEVCUT OLDUĞU GİBİ\" SAĞLANIR. {{company}} HİZMETİN KESİNTİSİZ, GÜVENLİ VEYA HATASIZ OLACAĞINI GARANTİ VERMEZ."
+        ],
+        "heading": "13. Sorumluluk reddi beyanları"
+      },
+      {
+        "body": [
+          "YASALARIN İZİN VERDİĞİ AZAMİ ÖLÇÜDE, {{company}} VE BAĞLI KURULUŞLARI, GÖREVLİLERİ, ÇALIŞANLARI VE TEMSİLCİLERİ, HİZMETİ KULLANMANIZDAN KAYNAKLANAN VEYA HİZMETİ KULLANMANIZDAN KAYNAKLANAN HERHANGİ BİR DOLAYLI, ARIZİ, ÖZEL, SONUÇ OLARAK ORTAYA ÇIKAN VEYA CEZAİ ZARARLARDAN VEYA HERHANGİ BİR KAR, VERİ VEYA İYİ NİYET KAYIPLARINDAN SORUMLU OLMAYACAKTIR.",
+          "BU ŞARTLAR VEYA HİZMETTEN KAYNAKLANAN VEYA HİZMETLE İLİŞKİLİ HERHANGİ BİR İDDİA İLE İLGİLİ TOPLAM YÜKÜMLÜLÜĞÜMÜZ, TALEPTEN ÖNCEKİ ON İKİ AY İÇİNDE BİZE ÖDEDİĞİNİZ TUTARDAN VEYA YÜZ ABD DOLARINDAN (100 ABD Doları) DAHA FAZLA OLMAYACAKTIR."
+        ],
+        "heading": "14. Sorumluluğun Sınırlandırılması"
+      },
+      {
+        "body": [
+          "Tazmin etmeyi ve zararsız tutmayı kabul edersiniz {{company}} ve bağlı şirketlerinin, Kullanıcı İçeriğiniz, Hizmeti kullanımınız veya bu Koşulları veya yürürlükteki yasaları ihlal etmenizden kaynaklanan veya bunlarla ilgili olan makul yasal ücretler de dahil olmak üzere her türlü iddia, yükümlülük, zarar, kayıp ve harcamalardan sorumlu olacağını garanti ederiz."
+        ],
+        "heading": "15. Tazminat"
+      },
+      {
+        "body": [
+          "İstediğiniz zaman Hizmeti kullanmayı bırakabilirsiniz. Bu Şartları ihlal ettiğinize inanmamız da dahil olmak üzere, herhangi bir zamanda, sebep veya bildirimde bulunarak veya bulunmaksızın, Hizmete erişiminizi askıya alabilir veya sonlandırabiliriz.",
+          "Feshin ardından, mülkiyet hükümleri, sorumluluk reddi beyanları, sorumluluk sınırlamaları ve anlaşmazlık çözümü koşulları da dahil olmak üzere, doğası gereği geçerliliğini sürdürmesi gereken bu Koşulların hükümleri geçerliliğini sürdürecektir."
+        ],
+        "heading": "16. Fesih"
+      },
+      {
+        "body": [
+          "Bu Şartları zaman zaman değiştirebiliriz. Maddi değişiklikler yapmamız durumunda yukarıdaki yürürlük tarihini güncelleyeceğiz ve gerektiğinde ek bildirimde bulunacağız. Değişiklikler yürürlüğe girdikten sonra Hizmeti kullanmaya devam etmeniz, revize edilen Koşulların kabul edildiği anlamına gelir."
+        ],
+        "heading": "17. Hizmet ve Şartlarda Değişiklikler"
+      },
+      {
+        "body": [
+          "Bu Şartlar, Bulunduğunuz Eyaletin kanunlarına tabidir. {{state}}, kanunlar ihtilafı kurallarına bakılmaksızın. Yürürlükteki zorunlu kanunlara tabi olarak, eyalet ve federal mahkemelerin {{state}} Bu Şartlar veya Hizmetten kaynaklanan veya bunlarla ilgili herhangi bir anlaşmazlık üzerinde münhasır yargı yetkisine sahip olacaksınız ve bu mahkemelerdeki kişisel yargı yetkisini kabul ediyorsunuz.",
+          "Bu bölümdeki hiçbir şey, ikamet ettiğiniz ülkede bir tüketici olarak sahip olduğunuz feragat edilemez yasal hakları sınırlamaz."
+        ],
+        "heading": "18. Geçerli Kanun ve Uyuşmazlık Çözümü"
+      }
+    ]
   }
 }

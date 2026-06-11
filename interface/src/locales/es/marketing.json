@@ -124,8 +124,8 @@
       "heading": "Página no encontrada"
     },
     "sidebarTitle": "Documentación",
-    "tocAriaLabel": "En esta página",
-    "tocTitle": "En esta página"
+    "tocAriaLabel": "En esta pagina",
+    "tocTitle": "En esta pagina"
   },
   "download": {
     "cards": {
@@ -695,10 +695,94 @@
     "yearly": "Anual"
   },
   "privacy": {
-    "description": "Nuestra Política de Privacidad se está ultimando y se publicará aquí pronto.",
+    "contactBody": "Si tiene preguntas sobre esta Política de Privacidad o su información personal, comuníquese con {{company}} en {{email}}.",
+    "contactHeading": "Contáctenos",
+    "description": "Cómo manejamos sus datos y los principios de privacidad detrás de AURA.",
     "documentTitle": "AURA - Política de Privacidad",
+    "effectiveDate": "Fecha de vigencia: 11 de junio de 2026",
     "headline": "política de privacidad",
-    "label": "LEGAL"
+    "intro": "Esta Política de Privacidad explica cómo {{company}} (\"{{company}}\", \"nosotros\", \"nos\" o \"nuestro\") recopila, utiliza y comparte información cuando usted utiliza las aplicaciones, los sitios web y los servicios relacionados de AURA (colectivamente, el \"Servicio\"). AURA está diseñado para priorizar la privacidad: siempre que sea posible, sus datos permanecen en sus propios dispositivos y nunca se utilizan para entrenar modelos.",
+    "label": "LEGAL",
+    "sections": [
+      {
+        "body": [
+          "Esta Política se aplica a la información que procesamos cuando utiliza el Servicio. No se aplica a servicios de terceros, modelos de IA o integraciones que usted elija conectar, los cuales se rigen por sus propias políticas de privacidad."
+        ],
+        "heading": "1. Alcance"
+      },
+      {
+        "body": [
+          "Información de la cuenta, como su nombre, dirección de correo electrónico y detalles de autenticación cuando crea una cuenta.",
+          "Información de uso y del dispositivo, como la versión de la aplicación, el tipo de dispositivo y los datos de diagnóstico y rendimiento utilizados para operar y mejorar el Servicio.",
+          "Contenido que usted proporciona, incluidos avisos, instrucciones, archivos y otro Contenido de usuario que envíe. Cuando la arquitectura lo permite, este contenido se procesa localmente en su dispositivo.",
+          "Información de pago. Si compra una suscripción, nuestros procesadores de pagos recopilan los detalles de facturación. No almacenamos números completos de tarjetas de pago."
+        ],
+        "heading": "2. Información que recopilamos"
+      },
+      {
+        "body": [
+          "Usamos información para proporcionar, mantener y asegurar el Servicio; para autenticarlo y administrar su cuenta; procesar pagos; brindar apoyo; detectar, prevenir y abordar fraudes, abusos y problemas de seguridad; y para cumplir con las obligaciones legales.",
+          "Utilizamos datos de diagnóstico y uso para comprender cómo funciona el Servicio y mejorarlo."
+        ],
+        "heading": "3. Cómo utilizamos la información"
+      },
+      {
+        "body": [
+          "AURA está diseñado para que tus datos personales y corporativos permanezcan bajo tu control. Los agentes se ejecutan en entornos aislados y, siempre que sea posible, su Contenido de usuario se procesa en sus propios dispositivos en lugar de enviarse a nuestros servidores."
+        ],
+        "heading": "4. Procesamiento local primero y en el dispositivo"
+      },
+      {
+        "body": [
+          "Cuando utiliza funciones que se basan en modelos de IA, las entradas necesarias pueden enviarse al proveedor del modelo correspondiente para generar resultados. No utilizamos su Contenido de usuario personal o corporativo para entrenar modelos y diseñamos el Servicio de manera que los datos enviados a modelos fronterizos se minimicen y, cuando sea posible, se anonimicen.",
+          "Los proveedores de modelos externos procesan datos según sus propios términos y políticas de privacidad."
+        ],
+        "heading": "5. Modelos de IA y manejo de datos"
+      },
+      {
+        "body": [
+          "No vendemos su información personal. Compartimos información únicamente de la siguiente manera: con proveedores de servicios que procesan datos en nuestro nombre bajo obligaciones de confidencialidad; con servicios y modelos de terceros que usted elija conectarse; para cumplir con la ley o un proceso legal válido; para proteger los derechos y la seguridad de los usuarios, el público o {{company}}; y en relación con una fusión, adquisición o venta de activos, sujeto a esta Política."
+        ],
+        "heading": "6. Cómo compartimos la información"
+      },
+      {
+        "body": [
+          "Conservamos información personal durante el tiempo necesario para proporcionar el Servicio y para fines comerciales o legales legítimos. Eliminamos o hacemos anónima la información cuando ya no es necesaria, sujeto a la ley aplicable."
+        ],
+        "heading": "7. Retención de datos"
+      },
+      {
+        "body": [
+          "Utilizamos medidas técnicas y organizativas, incluido el cifrado y entornos de ejecución aislados, para proteger la información. Ningún método de transmisión o almacenamiento es completamente seguro y no podemos garantizar una seguridad absoluta."
+        ],
+        "heading": "8. Seguridad"
+      },
+      {
+        "body": [
+          "Dependiendo de dónde viva, es posible que tenga derecho a acceder, corregir, eliminar o transferir su información personal, a oponerse o restringir cierto procesamiento y a retirar su consentimiento. Los residentes del Espacio Económico Europeo, el Reino Unido y California, entre otros, pueden tener derechos adicionales según leyes como el GDPR y la CCPA/CPRA.",
+          "Para ejercer estos derechos, póngase en contacto con nosotros en {{email}}. Responderemos según lo exige la ley aplicable y no lo discriminaremos por ejercer sus derechos."
+        ],
+        "heading": "9. Sus derechos y opciones"
+      },
+      {
+        "body": [
+          "Podemos procesar y almacenar información en países distintos de aquel en el que usted reside. Cuando sea necesario, utilizamos medidas de seguridad adecuadas para las transferencias transfronterizas de información personal."
+        ],
+        "heading": "10. Transferencias Internacionales de Datos"
+      },
+      {
+        "body": [
+          "El Servicio no está dirigido a niños menores de la edad requerida por la ley aplicable y no recopilamos información personal de ellos de manera intencionada. Si cree que un niño nos ha proporcionado información personal, contáctenos en {{email}} y tomaremos las medidas adecuadas para eliminarlo."
+        ],
+        "heading": "11. Privacidad de los niños"
+      },
+      {
+        "body": [
+          "Podemos actualizar esta Política de Privacidad de vez en cuando. Si realizamos cambios importantes, actualizaremos la fecha de vigencia anterior y, cuando sea necesario, proporcionaremos un aviso adicional. Su uso continuado del Servicio después de que los cambios entren en vigencia constituye la aceptación de la Política actualizada."
+        ],
+        "heading": "12. Cambios a esta Política"
+      }
+    ]
   },
   "productScreen": {
     "close": "Cerca",
@@ -718,7 +802,7 @@
       "ariaLabel": "Cómo AURA se gana su confianza",
       "cards": {
         "alwaysOn": {
-          "description": "Su agente sigue trabajando las 24 horas del día, incluso cuando usted está fuera y sus dispositivos están apagados.",
+          "description": "Su agente trabaja las 24 horas del día, incluso cuando sus dispositivos están apagados.",
           "title": "Siempre encendido."
         },
         "isolated": {
@@ -794,9 +878,137 @@
     "secure": "Seguro."
   },
   "terms": {
-    "description": "Nuestros Términos de servicio se están ultimando y se publicarán aquí pronto.",
+    "contactBody": "Si tiene preguntas sobre estos Términos, comuníquese con {{company}} en {{email}}.",
+    "contactHeading": "Contáctenos",
+    "description": "Los términos que rigen su acceso y uso de AURA.",
     "documentTitle": "AURA - Términos de servicio",
+    "effectiveDate": "Fecha de vigencia: 11 de junio de 2026",
     "headline": "Términos de servicio",
-    "label": "LEGAL"
+    "intro": "Estos Términos de servicio (los \"Términos\") forman un acuerdo vinculante entre usted y {{company}} (\"{{company}}\", \"nosotros\", \"nos\" o \"nuestro\") y rigen su acceso y uso de las aplicaciones, sitios web y servicios relacionados de AURA (colectivamente, el \"Servicio\"). Léalos detenidamente. Al acceder o utilizar el Servicio, acepta estar sujeto a estos Términos.",
+    "label": "LEGAL",
+    "sections": [
+      {
+        "body": [
+          "Al crear una cuenta, acceder o utilizar el Servicio, usted confirma que ha leído, comprendido y aceptado regirse por estos Términos y nuestra Política de Privacidad. Si no está de acuerdo, no podrá utilizar el Servicio.",
+          "Si utiliza el Servicio en nombre de una organización, declara que tiene autoridad para vincular a esa organización a estos Términos, y \"usted\" se refiere tanto a usted como a esa organización."
+        ],
+        "heading": "1. Aceptación de Términos"
+      },
+      {
+        "body": [
+          "Debe tener al menos 18 años, o la mayoría de edad en su jurisdicción, para utilizar el Servicio. Al utilizar el Servicio, usted declara y garantiza que cumple con estos requisitos y que ninguna ley aplicable le impide utilizar el Servicio."
+        ],
+        "heading": "2. Elegibilidad"
+      },
+      {
+        "body": [
+          "AURA es un entorno operativo de código abierto centrado en la privacidad para agentes personales de IA. El Servicio le permite crear, configurar y ejecutar agentes que pueden realizar tareas, conectarse a servicios de terceros que usted autorice e interactuar con modelos de IA de terceros.",
+          "Podemos agregar, cambiar o eliminar funciones en cualquier momento y podemos imponer límites a ciertas funciones o restringir el acceso a partes del Servicio sin previo aviso ni responsabilidad."
+        ],
+        "heading": "3. Descripción del Servicio"
+      },
+      {
+        "body": [
+          "Usted es responsable de mantener la confidencialidad de las credenciales de su cuenta y de toda la actividad que ocurra en su cuenta. Usted acepta notificarnos inmediatamente a {{email}} de cualquier uso no autorizado de su cuenta.",
+          "Usted acepta proporcionar información precisa, actual y completa y mantenerla actualizada."
+        ],
+        "heading": "4. Cuentas y seguridad"
+      },
+      {
+        "body": [
+          "Acepta no utilizar el Servicio para violar ninguna ley o los derechos de otros; desarrollar, implementar u operar agentes con fines ilegales, dañinos, engañosos o abusivos; intentar obtener acceso no autorizado a cualquier sistema o datos; interferir o alterar la integridad o el desempeño del Servicio; o realizar ingeniería inversa o eludir cualquier límite de seguridad o uso, excepto en la medida permitida por las licencias o la ley de código abierto aplicables.",
+          "Usted es el único responsable de las tareas que indique a sus agentes que realicen y de garantizar que dicho uso cumpla con todas las leyes aplicables y los términos de terceros."
+        ],
+        "heading": "5. Uso Aceptable"
+      },
+      {
+        "body": [
+          "Usted conserva todos los derechos sobre el contenido, los datos, las indicaciones y las instrucciones que envía al Servicio (\"Contenido de usuario\"). tu concedes {{company}} una licencia limitada y no exclusiva para procesar Contenido de usuario únicamente para operar y brindarle el Servicio.",
+          "Usted declara que tiene todos los derechos necesarios para enviar su Contenido de usuario y que no infringe ni viola los derechos de ningún tercero."
+        ],
+        "heading": "6. Contenido del usuario"
+      },
+      {
+        "body": [
+          "El Servicio utiliza inteligencia artificial para generar respuestas, acciones y otros resultados (\"Resultado\"). Los resultados pueden ser inexactos, incompletos o inadecuados para sus fines y pueden no reflejar las opiniones de {{company}}. Usted es responsable de evaluar el Producto y de cualquier decisión o acción que tome en base a él.",
+          "El resultado no es un consejo profesional. No confíe en el Servicio para obtener orientación legal, médica, financiera u otra orientación profesional.",
+          "En la medida permitida por la ley y sujeto a términos modelo de terceros, entre usted y {{company}}, usted es propietario de la Salida generada a partir de su Contenido de usuario."
+        ],
+        "heading": "7. Resultados generados por IA"
+      },
+      {
+        "body": [
+          "AURA se distribuye como software de código abierto bajo las licencias identificadas en sus repositorios de origen, incluida la licencia MIT cuando corresponda. Su uso de esos componentes de código abierto se rige por esas licencias, que controlan en caso de cualquier conflicto con estos Términos con respecto a ese software.",
+          "Nada en estos Términos limita sus derechos ni le otorga derechos más allá de las licencias de código abierto aplicables."
+        ],
+        "heading": "8. Código abierto y licencias"
+      },
+      {
+        "body": [
+          "El Servicio puede interoperar con servicios, integraciones y modelos de IA de terceros que usted elija conectar o utilizar. Su uso de esos terceros se rige por sus propios términos y políticas de privacidad, y {{company}} no es responsable de su disponibilidad, exactitud o conducta.",
+          "Usted es responsable de las credenciales, claves API o autorizaciones que proporcione para conectar servicios de terceros."
+        ],
+        "heading": "9. Servicios y modelos de terceros"
+      },
+      {
+        "body": [
+          "Ciertas funciones pueden requerir una suscripción paga. Al comprar una suscripción, usted autoriza {{company}} o sus procesadores de pagos para cargar las tarifas aplicables y cualquier impuesto a su método de pago de forma recurrente hasta que usted cancele.",
+          "Las tarifas no son reembolsables, excepto que lo exija la ley o que se indique expresamente en el momento de la compra. Puede cancelar en cualquier momento y la cancelación entra en vigor al final del período de facturación actual.",
+          "Podemos cambiar los precios de forma prospectiva y avisaremos de los cambios importantes según lo exige la ley."
+        ],
+        "heading": "10. Suscripciones, facturación y reembolsos"
+      },
+      {
+        "body": [
+          "Excepto el Contenido del usuario, los Resultados y los componentes de código abierto, el Servicio y todos los materiales relacionados, incluido el nombre, los logotipos y el software de AURA, son propiedad de {{company}} o sus licenciantes y están protegidos por las leyes de propiedad intelectual. Estos Términos no le otorgan ningún derecho a utilizar nuestras marcas comerciales sin nuestro consentimiento previo por escrito."
+        ],
+        "heading": "11. Propiedad intelectual"
+      },
+      {
+        "body": [
+          "Nuestra recopilación y uso de información personal en relación con el Servicio se describe en nuestra Política de Privacidad, que se incorpora a estos Términos por referencia."
+        ],
+        "heading": "12. Privacidad"
+      },
+      {
+        "body": [
+          "EL SERVICIO Y TODOS LOS RESULTADOS SE PROPORCIONAN \"TAL CUAL\" Y \"SEGÚN DISPONIBILIDAD\" SIN GARANTÍAS DE NINGÚN TIPO, YA SEA EXPRESA, IMPLÍCITA O LEGAL, INCLUYENDO GARANTÍAS IMPLÍCITAS DE COMERCIABILIDAD, IDONEIDAD PARA UN PROPÓSITO PARTICULAR, TÍTULO Y NO INFRACCIÓN. {{company}} NO GARANTIZA QUE EL SERVICIO SERÁ ININTERRUMPIDO, SEGURO O LIBRE DE ERRORES."
+        ],
+        "heading": "13. Descargos de responsabilidad"
+      },
+      {
+        "body": [
+          "EN LA MEDIDA MÁXIMA PERMITIDA POR LA LEY, {{company}} Y SUS AFILIADOS, FUNCIONARIOS, EMPLEADOS Y AGENTES NO SERÁN RESPONSABLES DE NINGÚN DAÑO INDIRECTO, INCIDENTAL, ESPECIAL, CONSECUENTE O PUNITIVO, NI DE CUALQUIER PÉRDIDA DE GANANCIAS, DATOS O VOLUNTAD COMERCIAL, QUE SURJA DE O ESTÉ RELACIONADO CON SU USO DEL SERVICIO.",
+          "NUESTRA RESPONSABILIDAD TOTAL POR CUALQUIER RECLAMACIÓN QUE SURJA O ESTÉ RELACIONADA CON ESTOS TÉRMINOS O EL SERVICIO NO EXCEDERÁ LA MAYOR DE LAS CANTIDADES QUE USTED NOS PAGÓ EN LOS DOCE MESES ANTES DEL RECLAMO O CIEN DÓLARES ESTADOUNIDENSES (USD 100)."
+        ],
+        "heading": "14. Limitación de responsabilidad"
+      },
+      {
+        "body": [
+          "Usted acepta indemnizar y eximir de responsabilidad {{company}} y sus afiliados de cualquier reclamo, responsabilidad, daño, pérdida y gasto, incluidos honorarios legales razonables, que surjan de o estén relacionados con su Contenido de usuario, su uso del Servicio o su violación de estos Términos o la ley aplicable."
+        ],
+        "heading": "15. Indemnización"
+      },
+      {
+        "body": [
+          "Puede dejar de utilizar el Servicio en cualquier momento. Podemos suspender o cancelar su acceso al Servicio en cualquier momento, con o sin causa o aviso, incluso si creemos que ha violado estos Términos.",
+          "Tras la terminación, las disposiciones de estos Términos que por su naturaleza deberían sobrevivir sobrevivirán, incluidas las disposiciones de propiedad, exenciones de responsabilidad, limitaciones de responsabilidad y términos de resolución de disputas."
+        ],
+        "heading": "16. Terminación"
+      },
+      {
+        "body": [
+          "Podemos modificar estos Términos de vez en cuando. Si realizamos cambios importantes, actualizaremos la fecha de vigencia anterior y, cuando sea necesario, proporcionaremos un aviso adicional. Su uso continuado del Servicio después de que los cambios entren en vigor constituye la aceptación de los Términos revisados."
+        ],
+        "heading": "17. Cambios en el Servicio y los Términos"
+      },
+      {
+        "body": [
+          "Estos Términos se rigen por las leyes del Estado de {{state}}, sin tener en cuenta sus normas sobre conflicto de leyes. Sujeto a cualquier ley obligatoria aplicable, usted acepta que los tribunales estatales y federales ubicados en {{state}} tendrá jurisdicción exclusiva sobre cualquier disputa que surja de o esté relacionada con estos Términos o el Servicio, y usted acepta la jurisdicción personal en esos tribunales.",
+          "Nada en esta sección limita los derechos legales irrenunciables disponibles para usted como consumidor en su país de residencia."
+        ],
+        "heading": "18. Ley aplicable y resolución de disputas"
+      }
+    ]
   }
 }

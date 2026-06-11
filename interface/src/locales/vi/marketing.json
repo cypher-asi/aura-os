@@ -669,10 +669,94 @@
     "yearly": "Hàng năm"
   },
   "privacy": {
-    "description": "Chính sách quyền riêng tư của chúng tôi đang được hoàn thiện và sẽ sớm được công bố tại đây.",
+    "contactBody": "Nếu bạn có thắc mắc về Chính sách quyền riêng tư này hoặc thông tin cá nhân của bạn, hãy liên hệ {{company}} Tại {{email}}.",
+    "contactHeading": "Liên hệ với chúng tôi",
+    "description": "Cách chúng tôi xử lý dữ liệu của bạn và các nguyên tắc ưu tiên quyền riêng tư đằng sau AURA.",
     "documentTitle": "AURA - Chính sách bảo mật",
+    "effectiveDate": "Ngày có hiệu lực: 11/06/2026",
     "headline": "Chính sách bảo mật",
-    "label": "HỢP PHÁP"
+    "intro": "Chính sách quyền riêng tư này giải thích cách {{company}} (\"{{company}}\", \"chúng tôi\", \"của chúng tôi\" hoặc \"của chúng tôi\") thu thập, sử dụng và chia sẻ thông tin khi bạn sử dụng các ứng dụng, trang web và dịch vụ liên quan của AURA (gọi chung là \"Dịch vụ\"). AURA được xây dựng để đặt quyền riêng tư lên hàng đầu: bất cứ khi nào có thể, dữ liệu của bạn sẽ được lưu giữ trên thiết bị của riêng bạn và không bao giờ được sử dụng để đào tạo các mô hình.",
+    "label": "HỢP PHÁP",
+    "sections": [
+      {
+        "body": [
+          "Chính sách này áp dụng cho thông tin chúng tôi xử lý khi bạn sử dụng Dịch vụ. Nó không áp dụng cho các dịch vụ, mô hình AI hoặc tiện ích tích hợp của bên thứ ba mà bạn chọn kết nối, những dịch vụ này được điều chỉnh bởi chính sách quyền riêng tư của riêng họ."
+        ],
+        "heading": "1. Phạm vi"
+      },
+      {
+        "body": [
+          "Thông tin tài khoản, chẳng hạn như tên, địa chỉ email và chi tiết xác thực khi bạn tạo tài khoản.",
+          "Thông tin về cách sử dụng và thiết bị, chẳng hạn như phiên bản ứng dụng, loại thiết bị cũng như dữ liệu chẩn đoán và hiệu suất được sử dụng để vận hành và cải thiện Dịch vụ.",
+          "Nội dung bạn cung cấp, bao gồm lời nhắc, hướng dẫn, tệp và Nội dung người dùng khác mà bạn gửi. Khi kiến ​​trúc cho phép, nội dung này sẽ được xử lý cục bộ trên thiết bị của bạn.",
+          "Thông tin thanh toán. Nếu bạn mua đăng ký, bộ xử lý thanh toán của chúng tôi sẽ thu thập chi tiết thanh toán. Chúng tôi không lưu trữ đầy đủ số thẻ thanh toán."
+        ],
+        "heading": "2. Thông tin chúng tôi thu thập"
+      },
+      {
+        "body": [
+          "Chúng tôi sử dụng thông tin để cung cấp, duy trì và bảo mật Dịch vụ; để xác thực bạn và quản lý tài khoản của bạn; để xử lý thanh toán; để cung cấp hỗ trợ; để phát hiện, ngăn chặn và giải quyết các vấn đề gian lận, lạm dụng và bảo mật; và tuân thủ các nghĩa vụ pháp lý.",
+          "Chúng tôi sử dụng dữ liệu chẩn đoán và sử dụng để hiểu cách Dịch vụ hoạt động và cải thiện Dịch vụ."
+        ],
+        "heading": "3. Cách chúng tôi sử dụng thông tin"
+      },
+      {
+        "body": [
+          "AURA được thiết kế sao cho dữ liệu cá nhân và doanh nghiệp của bạn luôn nằm trong tầm kiểm soát của bạn. Các đại lý hoạt động trong môi trường biệt lập và bất cứ khi nào có thể, Nội dung người dùng của bạn sẽ được xử lý trên thiết bị của riêng bạn thay vì gửi đến máy chủ của chúng tôi."
+        ],
+        "heading": "4. Xử lý cục bộ và trên thiết bị"
+      },
+      {
+        "body": [
+          "Khi bạn sử dụng các tính năng dựa trên mô hình AI, đầu vào cần thiết có thể được gửi đến nhà cung cấp mô hình liên quan để tạo Đầu ra. Chúng tôi không sử dụng Nội dung người dùng cá nhân hoặc doanh nghiệp của bạn để đào tạo các mô hình và chúng tôi thiết kế Dịch vụ sao cho dữ liệu gửi đến các mô hình biên giới được giảm thiểu và, nếu khả thi, sẽ được loại bỏ nhận dạng.",
+          "Các nhà cung cấp mô hình bên thứ ba xử lý dữ liệu theo các điều khoản và chính sách quyền riêng tư của riêng họ."
+        ],
+        "heading": "5. Mô hình AI và xử lý dữ liệu"
+      },
+      {
+        "body": [
+          "Chúng tôi không bán thông tin cá nhân của bạn. Chúng tôi chỉ chia sẻ thông tin như sau: với các nhà cung cấp dịch vụ xử lý dữ liệu thay mặt chúng tôi theo nghĩa vụ bảo mật; với các dịch vụ và mô hình của bên thứ ba mà bạn chọn kết nối; tuân thủ pháp luật hoặc quy trình pháp lý hợp lệ; để bảo vệ quyền, sự an toàn và bảo mật của người dùng, công chúng hoặc {{company}}; và liên quan đến việc sáp nhập, mua lại hoặc bán tài sản, tuân theo Chính sách này."
+        ],
+        "heading": "6. Cách chúng tôi chia sẻ thông tin"
+      },
+      {
+        "body": [
+          "Chúng tôi lưu giữ thông tin cá nhân trong khoảng thời gian cần thiết để cung cấp Dịch vụ và cho các mục đích kinh doanh hoặc pháp lý hợp pháp. Chúng tôi xóa hoặc ẩn danh thông tin khi không còn cần thiết nữa, tùy theo luật hiện hành."
+        ],
+        "heading": "7. Lưu giữ dữ liệu"
+      },
+      {
+        "body": [
+          "Chúng tôi sử dụng các biện pháp kỹ thuật và tổ chức, bao gồm mã hóa và môi trường thực thi biệt lập, để bảo vệ thông tin. Không có phương thức truyền tải hoặc lưu trữ nào là an toàn tuyệt đối và chúng tôi không thể đảm bảo tính bảo mật tuyệt đối."
+        ],
+        "heading": "8. Bảo mật"
+      },
+      {
+        "body": [
+          "Tùy thuộc vào nơi bạn sống, bạn có thể có quyền truy cập, chỉnh sửa, xóa hoặc chuyển thông tin cá nhân của mình, phản đối hoặc hạn chế một số hoạt động xử lý nhất định và rút lại sự đồng ý. Cư dân của Khu vực Kinh tế Châu Âu, Vương quốc Anh và California, cùng những nơi khác, có thể có các quyền bổ sung theo các luật như GDPR và CCPA/CPRA.",
+          "Để thực hiện các quyền này, hãy liên hệ với chúng tôi tại {{email}}. Chúng tôi sẽ phản hồi theo yêu cầu của luật hiện hành và chúng tôi sẽ không phân biệt đối xử với bạn khi thực hiện các quyền của mình."
+        ],
+        "heading": "9. Quyền và Lựa chọn của Bạn"
+      },
+      {
+        "body": [
+          "Chúng tôi có thể xử lý và lưu trữ thông tin ở các quốc gia khác ngoài quốc gia bạn cư trú. Khi được yêu cầu, chúng tôi sử dụng các biện pháp bảo vệ thích hợp để chuyển thông tin cá nhân xuyên biên giới."
+        ],
+        "heading": "10. Truyền dữ liệu quốc tế"
+      },
+      {
+        "body": [
+          "Dịch vụ không hướng tới trẻ em dưới độ tuổi theo yêu cầu của luật hiện hành và chúng tôi không cố ý thu thập thông tin cá nhân từ chúng. Nếu bạn tin rằng một đứa trẻ đã cung cấp cho chúng tôi thông tin cá nhân, hãy liên hệ với chúng tôi theo địa chỉ {{email}} và chúng tôi sẽ thực hiện các bước thích hợp để xóa nó."
+        ],
+        "heading": "11. Quyền riêng tư của trẻ em"
+      },
+      {
+        "body": [
+          "Thỉnh thoảng chúng tôi có thể cập nhật Chính sách quyền riêng tư này. Nếu chúng tôi thực hiện những thay đổi quan trọng, chúng tôi sẽ cập nhật ngày có hiệu lực ở trên và cung cấp thông báo bổ sung nếu cần. Việc bạn tiếp tục sử dụng Dịch vụ sau khi các thay đổi có hiệu lực đồng nghĩa với việc bạn chấp nhận Chính sách được cập nhật."
+        ],
+        "heading": "12. Những thay đổi đối với Chính sách này"
+      }
+    ]
   },
   "productScreen": {
     "close": "Đóng",
@@ -692,7 +776,7 @@
       "ariaLabel": "Cách AURA giành được sự tin tưởng của bạn",
       "cards": {
         "alwaysOn": {
-          "description": "Đại lý của bạn tiếp tục làm việc suốt ngày đêm, ngay cả khi bạn đi vắng và thiết bị của bạn tắt.",
+          "description": "Đại lý của bạn làm việc suốt ngày đêm, ngay cả khi thiết bị của bạn tắt.",
           "title": "Luôn bật."
         },
         "isolated": {
@@ -768,9 +852,137 @@
     "secure": "Chắc chắn."
   },
   "terms": {
-    "description": "Điều khoản dịch vụ của chúng tôi đang được hoàn thiện và sẽ sớm được công bố tại đây.",
+    "contactBody": "Nếu bạn có thắc mắc về các Điều khoản này, hãy liên hệ {{company}} Tại {{email}}.",
+    "contactHeading": "Liên hệ với chúng tôi",
+    "description": "Các điều khoản chi phối việc bạn truy cập và sử dụng AURA.",
     "documentTitle": "AURA - Điều khoản dịch vụ",
+    "effectiveDate": "Ngày có hiệu lực: 11/06/2026",
     "headline": "Điều khoản dịch vụ",
-    "label": "HỢP PHÁP"
+    "intro": "Các Điều khoản dịch vụ này (\"Điều khoản\") tạo thành một thỏa thuận ràng buộc giữa bạn và {{company}} (\"{{company}}\", \"chúng tôi\" hoặc \"của chúng tôi\") và chi phối việc bạn truy cập và sử dụng các ứng dụng, trang web và dịch vụ liên quan của AURA (gọi chung là \"Dịch vụ\"). Vui lòng đọc kỹ. Bằng cách truy cập hoặc sử dụng Dịch vụ, bạn đồng ý bị ràng buộc bởi các Điều khoản này.",
+    "label": "HỢP PHÁP",
+    "sections": [
+      {
+        "body": [
+          "Bằng cách tạo tài khoản, truy cập hoặc sử dụng Dịch vụ, bạn xác nhận rằng bạn đã đọc, hiểu và đồng ý bị ràng buộc bởi các Điều khoản này và Chính sách quyền riêng tư của chúng tôi. Nếu bạn không đồng ý, bạn không được sử dụng Dịch vụ.",
+          "Nếu bạn đang sử dụng Dịch vụ thay mặt cho một tổ chức, bạn tuyên bố rằng bạn có quyền ràng buộc tổ chức đó với các Điều khoản này và \"bạn\" ám chỉ cả bạn và tổ chức đó."
+        ],
+        "heading": "1. Chấp nhận các điều khoản"
+      },
+      {
+        "body": [
+          "Bạn phải ít nhất 18 tuổi hoặc độ tuổi trưởng thành trong khu vực pháp lý của bạn để sử dụng Dịch vụ. Bằng cách sử dụng Dịch vụ, bạn tuyên bố và đảm bảo rằng bạn đáp ứng các yêu cầu này và bạn không bị cấm sử dụng Dịch vụ theo bất kỳ luật hiện hành nào."
+        ],
+        "heading": "2. Đủ điều kiện"
+      },
+      {
+        "body": [
+          "AURA là môi trường hoạt động tập trung vào quyền riêng tư, nguồn mở dành cho các tác nhân AI cá nhân. Dịch vụ cho phép bạn tạo, định cấu hình và chạy các tác nhân có thể thực hiện các tác vụ, kết nối với các dịch vụ của bên thứ ba mà bạn ủy quyền và tương tác với các mô hình AI của bên thứ ba.",
+          "Chúng tôi có thể thêm, thay đổi hoặc xóa các tính năng bất cứ lúc nào và chúng tôi có thể áp đặt các giới hạn đối với một số tính năng nhất định hoặc hạn chế quyền truy cập vào các phần của Dịch vụ mà không cần thông báo hoặc chịu trách nhiệm pháp lý."
+        ],
+        "heading": "3. Mô tả Dịch vụ"
+      },
+      {
+        "body": [
+          "Bạn có trách nhiệm duy trì tính bảo mật của thông tin đăng nhập tài khoản của mình và cho tất cả hoạt động xảy ra trong tài khoản của bạn. Bạn đồng ý thông báo ngay cho chúng tôi tại {{email}} về bất kỳ việc sử dụng trái phép tài khoản của bạn.",
+          "Bạn đồng ý cung cấp thông tin chính xác, cập nhật và đầy đủ và luôn cập nhật thông tin đó."
+        ],
+        "heading": "4. Tài khoản và bảo mật"
+      },
+      {
+        "body": [
+          "Bạn đồng ý không sử dụng Dịch vụ để vi phạm bất kỳ luật nào hoặc quyền của người khác; để phát triển, triển khai hoặc vận hành các đại lý cho các mục đích bất hợp pháp, có hại, lừa đảo hoặc lạm dụng; để cố gắng truy cập trái phép vào bất kỳ hệ thống hoặc dữ liệu nào; can thiệp hoặc phá vỡ tính toàn vẹn hoặc hiệu suất của Dịch vụ; hoặc để đảo ngược kỹ thuật hoặc phá vỡ mọi giới hạn bảo mật hoặc sử dụng ngoại trừ trong phạm vi được luật pháp hoặc giấy phép nguồn mở hiện hành cho phép.",
+          "Bạn hoàn toàn chịu trách nhiệm về các nhiệm vụ mà bạn chỉ đạo đại lý của mình thực hiện và đảm bảo rằng việc sử dụng đó tuân thủ tất cả các luật hiện hành và điều khoản của bên thứ ba."
+        ],
+        "heading": "5. Sử dụng được chấp nhận"
+      },
+      {
+        "body": [
+          "Bạn giữ mọi quyền đối với nội dung, dữ liệu, lời nhắc và hướng dẫn mà bạn gửi tới Dịch vụ (\"Nội dung người dùng\"). Bạn cấp {{company}} giấy phép giới hạn, không độc quyền để xử lý Nội dung của Người dùng chỉ nhằm mục đích vận hành và cung cấp Dịch vụ cho bạn.",
+          "Bạn tuyên bố rằng bạn có tất cả các quyền cần thiết để gửi Nội dung người dùng của mình và nội dung đó không vi phạm quyền của bất kỳ bên thứ ba nào."
+        ],
+        "heading": "6. Nội dung người dùng"
+      },
+      {
+        "body": [
+          "Dịch vụ sử dụng trí tuệ nhân tạo để tạo phản hồi, hành động và đầu ra khác (\"Đầu ra\"). Đầu ra có thể không chính xác, không đầy đủ hoặc không phù hợp với mục đích của bạn và có thể không phản ánh quan điểm của {{company}}. Bạn chịu trách nhiệm đánh giá Kết quả đầu ra và mọi quyết định hoặc hành động bạn thực hiện dựa trên Kết quả đó.",
+          "Đầu ra không phải là lời khuyên chuyên nghiệp. Không dựa vào Dịch vụ để được hướng dẫn về pháp lý, y tế, tài chính hoặc chuyên môn khác.",
+          "Trong phạm vi được pháp luật cho phép và tuân theo các điều khoản mẫu của bên thứ ba, giữa bạn và {{company}}, bạn sở hữu Đầu ra được tạo từ Nội dung người dùng của bạn."
+        ],
+        "heading": "7. Đầu ra do AI tạo ra"
+      },
+      {
+        "body": [
+          "AURA được phân phối dưới dạng phần mềm nguồn mở theo các giấy phép được xác định trong kho nguồn của nó, bao gồm cả Giấy phép MIT nếu có. Việc bạn sử dụng các thành phần nguồn mở đó chịu sự điều chỉnh của các giấy phép đó. Giấy phép này sẽ kiểm soát trong trường hợp có bất kỳ xung đột nào với các Điều khoản này đối với phần mềm đó.",
+          "Không có nội dung nào trong các Điều khoản này giới hạn các quyền của bạn theo hoặc cấp cho bạn các quyền ngoài các giấy phép nguồn mở hiện hành."
+        ],
+        "heading": "8. Nguồn mở và giấy phép"
+      },
+      {
+        "body": [
+          "Dịch vụ có thể tương tác với các dịch vụ, tích hợp và mô hình AI của bên thứ ba mà bạn chọn kết nối hoặc sử dụng. Việc bạn sử dụng các bên thứ ba đó được điều chỉnh bởi các điều khoản và chính sách quyền riêng tư của riêng họ và {{company}} không chịu trách nhiệm về tính sẵn có, tính chính xác hoặc hành vi của họ.",
+          "Bạn chịu trách nhiệm về mọi thông tin xác thực, khóa API hoặc ủy quyền mà bạn cung cấp để kết nối các dịch vụ của bên thứ ba."
+        ],
+        "heading": "9. Dịch vụ và mô hình của bên thứ ba"
+      },
+      {
+        "body": [
+          "Một số tính năng có thể yêu cầu đăng ký trả phí. Bằng cách mua đăng ký, bạn ủy quyền {{company}} hoặc bộ xử lý thanh toán của họ để tính các khoản phí áp dụng và mọi khoản thuế đối với phương thức thanh toán của bạn theo định kỳ cho đến khi bạn hủy.",
+          "Phí không được hoàn lại trừ khi pháp luật yêu cầu hoặc được quy định rõ ràng tại thời điểm mua. Bạn có thể hủy bất kỳ lúc nào và việc hủy sẽ có hiệu lực vào cuối thời hạn thanh toán hiện tại.",
+          "Chúng tôi có thể thay đổi giá trong tương lai và sẽ cung cấp thông báo về những thay đổi quan trọng theo yêu cầu của pháp luật."
+        ],
+        "heading": "10. Đăng ký, thanh toán và hoàn tiền"
+      },
+      {
+        "body": [
+          "Ngoại trừ Nội dung người dùng, Đầu ra và các thành phần nguồn mở, Dịch vụ và tất cả các tài liệu liên quan, bao gồm tên, logo và phần mềm AURA, đều thuộc sở hữu của {{company}} hoặc người cấp phép của nó và được bảo vệ bởi luật sở hữu trí tuệ. Các Điều khoản này không cấp cho bạn bất kỳ quyền sử dụng nhãn hiệu nào của chúng tôi mà không có sự đồng ý trước bằng văn bản của chúng tôi."
+        ],
+        "heading": "11. Sở hữu trí tuệ"
+      },
+      {
+        "body": [
+          "Việc chúng tôi thu thập và sử dụng thông tin cá nhân liên quan đến Dịch vụ được mô tả trong Chính sách quyền riêng tư của chúng tôi, được đưa vào các Điều khoản này bằng cách tham chiếu."
+        ],
+        "heading": "12. Quyền riêng tư"
+      },
+      {
+        "body": [
+          "DỊCH VỤ VÀ TẤT CẢ ĐẦU RA ĐƯỢC CUNG CẤP \"NGUYÊN TRẠNG\" VÀ \"SẴN CÓ\" MÀ KHÔNG CÓ BẤT CỨ HÌNH THỨC BẢO ĐẢM NÀO, DÙ RÕ RÀNG, NGỤ Ý HAY THEO LUẬT ĐỊNH, BAO GỒM CÁC BẢO ĐẢM NGỤ Ý VỀ KHẢ NĂNG BÁN, SỰ PHÙ HỢP CHO MỘT MỤC ĐÍCH CỤ THỂ, TIÊU CHUẨN VÀ KHÔNG VI PHẠM. {{company}} KHÔNG BẢO ĐẢM RẰNG DỊCH VỤ SẼ KHÔNG BỊ GIÁN ĐOẠN, AN TOÀN HOẶC KHÔNG CÓ LỖI."
+        ],
+        "heading": "13. Tuyên bố miễn trừ trách nhiệm"
+      },
+      {
+        "body": [
+          "TRONG PHẠM VI TỐI ĐA ĐƯỢC LUẬT PHÁP CHO PHÉP, {{company}} VÀ CÁC LIÊN KẾT, VIÊN CHỨC, NHÂN VIÊN VÀ ĐẠI LÝ CỦA NÓ SẼ KHÔNG CHỊU TRÁCH NHIỆM VỀ BẤT KỲ THIỆT HẠI GIÁN TIẾP, NGẪU NHIÊN, ĐẶC BIỆT, DO HẬU QUẢ HOẶC TRỪNG PHẠT HOẶC BẤT KỲ MẤT MẤT LỢI NHUẬN, DỮ LIỆU HOẶC TÍN HIỆU TÍN HIỆU NÀO PHÁT SINH TỪ HOẶC LIÊN QUAN ĐẾN VIỆC SỬ DỤNG DỊCH VỤ CỦA BẠN.",
+          "TỔNG TRÁCH NHIỆM PHÁP LÝ CỦA CHÚNG TÔI ĐỐI VỚI BẤT KỲ KHIẾU NẠI NÀO PHÁT SINH TỪ HOẶC LIÊN QUAN ĐẾN CÁC ĐIỀU KHOẢN NÀY HOẶC DỊCH VỤ SẼ KHÔNG VƯỢT QUÁ SỐ TIỀN LỚN HƠN BẠN TRẢ CHO CHÚNG TÔI TRONG MƯỜI HAI THÁNG TRƯỚC KHI YÊU CẦU HOẶC MỘT TRĂM ĐÔ LA MỸ (100 USD)."
+        ],
+        "heading": "14. Giới hạn trách nhiệm pháp lý"
+      },
+      {
+        "body": [
+          "Bạn đồng ý bồi thường và giữ vô hại {{company}} và các chi nhánh của nó khỏi mọi khiếu nại, trách nhiệm pháp lý, thiệt hại, tổn thất và chi phí, bao gồm cả phí pháp lý hợp lý, phát sinh từ hoặc liên quan đến Nội dung người dùng của bạn, việc bạn sử dụng Dịch vụ hoặc vi phạm các Điều khoản này hoặc luật hiện hành."
+        ],
+        "heading": "15. Bồi thường"
+      },
+      {
+        "body": [
+          "Bạn có thể ngừng sử dụng Dịch vụ bất cứ lúc nào. Chúng tôi có thể tạm dừng hoặc chấm dứt quyền truy cập Dịch vụ của bạn bất cứ lúc nào, có hoặc không có lý do hoặc thông báo, kể cả khi chúng tôi tin rằng bạn đã vi phạm các Điều khoản này.",
+          "Sau khi chấm dứt, các quy định của các Điều khoản này mà về bản chất sẽ tồn tại, bao gồm các điều khoản về quyền sở hữu, tuyên bố từ chối trách nhiệm, giới hạn trách nhiệm pháp lý và điều khoản giải quyết tranh chấp."
+        ],
+        "heading": "16. Chấm dứt"
+      },
+      {
+        "body": [
+          "Đôi khi chúng tôi có thể sửa đổi các Điều khoản này. Nếu chúng tôi thực hiện những thay đổi quan trọng, chúng tôi sẽ cập nhật ngày có hiệu lực ở trên và cung cấp thông báo bổ sung nếu cần. Việc bạn tiếp tục sử dụng Dịch vụ sau khi các thay đổi có hiệu lực đồng nghĩa với việc bạn chấp nhận Điều khoản sửa đổi."
+        ],
+        "heading": "17. Thay đổi Dịch vụ và Điều khoản"
+      },
+      {
+        "body": [
+          "Các Điều khoản này được điều chỉnh bởi luật pháp của Bang {{state}}, mà không quan tâm đến các quy tắc xung đột pháp luật của nó. Theo bất kỳ luật bắt buộc hiện hành nào, bạn đồng ý rằng các tòa án tiểu bang và liên bang ở {{state}} sẽ có quyền tài phán độc quyền đối với mọi tranh chấp phát sinh từ hoặc liên quan đến các Điều khoản này hoặc Dịch vụ và bạn đồng ý với quyền tài phán cá nhân tại các tòa án đó.",
+          "Không có nội dung nào trong phần này giới hạn bất kỳ quyền theo luật định không thể từ bỏ nào dành cho bạn với tư cách là người tiêu dùng tại quốc gia cư trú của bạn."
+        ],
+        "heading": "18. Luật điều chỉnh và giải quyết tranh chấp"
+      }
+    ]
   }
 }

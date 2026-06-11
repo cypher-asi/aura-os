@@ -621,7 +621,7 @@
   },
   "footer": {
     "ariaLabel": "Stopka witryny",
-    "copyright": "Prawo autorskie © {{year}}",
+    "copyright": "Prawa autorskie © {{year}}",
     "navigationAriaLabel": "Nawigacja stopką"
   },
   "models": {
@@ -708,10 +708,94 @@
     "yearly": "Rocznie"
   },
   "privacy": {
-    "description": "Nasza Polityka prywatności jest w fazie finalizacji i wkrótce zostanie opublikowana tutaj.",
+    "contactBody": "Jeśli masz pytania dotyczące niniejszej Polityki prywatności lub Twoich danych osobowych, skontaktuj się z nami {{company}} Na {{email}}.",
+    "contactHeading": "Skontaktuj się z nami",
+    "description": "Jak postępujemy z Twoimi danymi i jakie zasady AURA stawiają na prywatność.",
     "documentTitle": "AURA - Polityka prywatności",
+    "effectiveDate": "Data wejścia w życie: 11 czerwca 2026 r",
     "headline": "Polityka prywatności",
-    "label": "PRAWNY"
+    "intro": "Niniejsza Polityka prywatności wyjaśnia, w jaki sposób {{company}} („{{company}}„, „my”, „nas” lub „nasz”) gromadzi, wykorzystuje i udostępnia informacje, gdy korzystasz z aplikacji, stron internetowych i powiązanych usług AURA (łącznie „Usługa”). Usługa AURA została stworzona z myślą o ochronie prywatności: tam, gdzie to możliwe, Twoje dane pozostają na Twoich urządzeniach i nigdy nie są wykorzystywane do uczenia modeli.",
+    "label": "PRAWNY",
+    "sections": [
+      {
+        "body": [
+          "Niniejsza Polityka dotyczy informacji, które przetwarzamy podczas korzystania z Usługi. Nie dotyczy to usług stron trzecich, modeli AI ani integracji, z którymi zdecydujesz się połączyć, które podlegają ich własnym politykom prywatności."
+        ],
+        "heading": "1. Zakres"
+      },
+      {
+        "body": [
+          "Informacje o koncie, takie jak imię i nazwisko, adres e-mail i dane uwierzytelniające, podawane podczas tworzenia konta.",
+          "Informacje o użytkowaniu i urządzeniu, takie jak wersja aplikacji, typ urządzenia oraz dane diagnostyczne i dotyczące wydajności wykorzystywane do obsługi i ulepszania Usługi.",
+          "Treści, które udostępniasz, w tym monity, instrukcje, pliki i inne przesyłane przez Ciebie Treści użytkownika. Jeśli architektura na to pozwala, treści te są przetwarzane lokalnie na Twoim urządzeniu.",
+          "Informacje o płatności. Jeśli zakupisz subskrypcję, nasi operatorzy płatności zbierają dane rozliczeniowe. Nie przechowujemy pełnych numerów kart płatniczych."
+        ],
+        "heading": "2. Informacje, które zbieramy"
+      },
+      {
+        "body": [
+          "Używamy informacji w celu świadczenia, utrzymywania i zabezpieczania Usługi; aby Cię uwierzytelnić i zarządzać Twoim kontem; do przetwarzania płatności; zapewnienie wsparcia; w celu wykrywania, zapobiegania i rozwiązywania problemów związanych z oszustwami, nadużyciami i bezpieczeństwem; oraz w celu wywiązania się z obowiązków prawnych.",
+          "Wykorzystujemy dane diagnostyczne i użytkowe, aby zrozumieć sposób działania Usługi i ją ulepszyć."
+        ],
+        "heading": "3. Jak wykorzystujemy informacje"
+      },
+      {
+        "body": [
+          "AURA została zaprojektowana tak, aby Twoje dane osobowe i firmowe pozostawały pod Twoją kontrolą. Agenci działają w izolowanych środowiskach, a tam, gdzie to możliwe, Treści użytkownika są przetwarzane na Twoich własnych urządzeniach, a nie wysyłane na nasze serwery."
+        ],
+        "heading": "4. Przetwarzanie lokalne i na urządzeniu"
+      },
+      {
+        "body": [
+          "W przypadku korzystania z funkcji opartych na modelach AI niezbędne dane wejściowe mogą zostać przesłane do odpowiedniego dostawcy modelu w celu wygenerowania danych wyjściowych. Nie wykorzystujemy Twoich osobistych ani firmowych Treści użytkownika do uczenia modeli i projektujemy Usługę w taki sposób, aby dane wysyłane do modeli granicznych były minimalizowane i, jeśli to możliwe, dezidentyfikowane.",
+          "Zewnętrzni dostawcy modeli przetwarzają dane zgodnie z własnymi warunkami i polityką prywatności."
+        ],
+        "heading": "5. Modele AI i przetwarzanie danych"
+      },
+      {
+        "body": [
+          "Nie sprzedajemy Twoich danych osobowych. Udostępniamy informacje wyłącznie w następujący sposób: usługodawcom, którzy przetwarzają dane w naszym imieniu w ramach obowiązków zachowania poufności; z usługami i modelami stron trzecich, które zdecydujesz się połączyć; w celu przestrzegania prawa lub obowiązującego procesu prawnego; w celu ochrony praw, bezpieczeństwa i ochrony użytkowników, społeczeństwa lub {{company}}; oraz w związku z fuzją, przejęciem lub sprzedażą aktywów podlegających niniejszej Polityce."
+        ],
+        "heading": "6. Jak udostępniamy informacje"
+      },
+      {
+        "body": [
+          "Przechowujemy dane osobowe tak długo, jak jest to konieczne do świadczenia Usługi oraz do uzasadnionych celów biznesowych lub prawnych. Usuwamy lub anonimizujemy informacje, gdy nie są już potrzebne, zgodnie z obowiązującym prawem."
+        ],
+        "heading": "7. Przechowywanie danych"
+      },
+      {
+        "body": [
+          "Aby chronić informacje, stosujemy środki techniczne i organizacyjne, w tym szyfrowanie i izolowane środowiska wykonawcze. Żadna metoda przesyłania lub przechowywania nie jest całkowicie bezpieczna i nie możemy zagwarantować całkowitego bezpieczeństwa."
+        ],
+        "heading": "8. Bezpieczeństwo"
+      },
+      {
+        "body": [
+          "W zależności od tego, gdzie mieszkasz, możesz mieć prawo dostępu do swoich danych osobowych, ich poprawiania, usuwania lub przenoszenia, sprzeciwu lub ograniczenia określonego przetwarzania oraz wycofania zgody. Mieszkańcy Europejskiego Obszaru Gospodarczego, Wielkiej Brytanii i Kalifornii mogą mieć dodatkowe prawa na mocy przepisów takich jak RODO i CCPA/CPRA.",
+          "Aby skorzystać z tych praw, skontaktuj się z nami pod adresem {{email}}. Zareagujemy zgodnie z wymogami obowiązującego prawa i nie będziemy dyskryminować Cię za korzystanie z Twoich praw."
+        ],
+        "heading": "9. Twoje prawa i wybory"
+      },
+      {
+        "body": [
+          "Możemy przetwarzać i przechowywać informacje w krajach innych niż ten, w którym mieszkasz. Tam, gdzie jest to wymagane, stosujemy odpowiednie zabezpieczenia w przypadku transgranicznego przekazywania danych osobowych."
+        ],
+        "heading": "10. Międzynarodowe przesyłanie danych"
+      },
+      {
+        "body": [
+          "Usługa nie jest skierowana do dzieci poniżej wieku wymaganego obowiązującymi przepisami prawa i nie zbieramy świadomie od nich danych osobowych. Jeśli uważasz, że dziecko przekazało nam dane osobowe, skontaktuj się z nami pod adresem {{email}} i podejmiemy odpowiednie kroki w celu jego usunięcia."
+        ],
+        "heading": "11. Prywatność dzieci"
+      },
+      {
+        "body": [
+          "Od czasu do czasu możemy aktualizować niniejszą Politykę prywatności. Jeśli dokonamy istotnych zmian, zaktualizujemy powyższą datę wejścia w życie i, w razie potrzeby, przekażemy dodatkowe powiadomienie. Dalsze korzystanie z Usługi po wejściu w życie zmian oznacza akceptację zaktualizowanej Polityki."
+        ],
+        "heading": "12. Zmiany niniejszej Polityki"
+      }
+    ]
   },
   "productScreen": {
     "close": "Zamknąć",
@@ -731,7 +815,7 @@
       "ariaLabel": "Jak AURA zdobywa Twoje zaufanie",
       "cards": {
         "alwaysOn": {
-          "description": "Twój agent pracuje przez całą dobę, nawet gdy Cię nie ma, a Twoje urządzenia są wyłączone.",
+          "description": "Twój agent działa przez całą dobę, nawet gdy Twoje urządzenia są wyłączone.",
           "title": "Zawsze włączone."
         },
         "isolated": {
@@ -807,9 +891,137 @@
     "secure": "Bezpieczny."
   },
   "terms": {
-    "description": "Nasze Warunki świadczenia usług są w trakcie finalizowania i zostaną wkrótce opublikowane tutaj.",
+    "contactBody": "Jeśli masz pytania dotyczące niniejszych Warunków, skontaktuj się z nami {{company}} Na {{email}}.",
+    "contactHeading": "Skontaktuj się z nami",
+    "description": "Warunki regulujące dostęp i korzystanie z usługi AURA.",
     "documentTitle": "AURA - Warunki korzystania z usługi",
+    "effectiveDate": "Data wejścia w życie: 11 czerwca 2026 r",
     "headline": "Warunki świadczenia usług",
-    "label": "PRAWNY"
+    "intro": "Niniejsze Warunki świadczenia usług („Warunki”) stanowią wiążącą umowę pomiędzy Tobą a {{company}} („{{company}}\", \"my\", \"nas\" lub \"nasz\") i regulują Twój dostęp do aplikacji, stron internetowych i powiązanych usług AURA oraz korzystanie z nich (łącznie zwane „Usługą\"). Przeczytaj je uważnie. Uzyskując dostęp do Usługi lub korzystając z niej, wyrażasz zgodę na przestrzeganie niniejszych Warunków.",
+    "label": "PRAWNY",
+    "sections": [
+      {
+        "body": [
+          "Tworząc konto, uzyskując dostęp do Usługi lub korzystając z niej, potwierdzasz, że przeczytałeś, zrozumiałeś i zgadzasz się na przestrzeganie niniejszych Warunków i naszej Polityki prywatności. Jeśli nie wyrażasz zgody, nie możesz korzystać z Usługi.",
+          "Jeśli korzystasz z Usługi w imieniu organizacji, oświadczasz, że masz uprawnienia do związania tej organizacji niniejszymi Warunkami, a określenie „ty” odnosi się zarówno do Ciebie, jak i tej organizacji."
+        ],
+        "heading": "1. Akceptacja Regulaminu"
+      },
+      {
+        "body": [
+          "Aby móc korzystać z Usługi, musisz mieć ukończone 18 lat lub być osobą pełnoletnią w swojej jurysdykcji. Korzystając z Usługi, oświadczasz i gwarantujesz, że spełniasz te wymagania i że nie masz zakazu korzystania z Usługi na mocy żadnego obowiązującego prawa."
+        ],
+        "heading": "2. Kwalifikowalność"
+      },
+      {
+        "body": [
+          "AURA to otwarte i zorientowane na prywatność środowisko operacyjne dla osobistych agentów AI. Usługa umożliwia tworzenie, konfigurowanie i uruchamianie agentów, którzy mogą wykonywać zadania, łączyć się z autoryzowanymi usługami stron trzecich i wchodzić w interakcję z modelami sztucznej inteligencji innych firm.",
+          "Możemy dodawać, zmieniać lub usuwać funkcje w dowolnym momencie, a także możemy nakładać ograniczenia na niektóre funkcje lub ograniczać dostęp do części Usługi bez powiadomienia i odpowiedzialności."
+        ],
+        "heading": "3. Opis Usługi"
+      },
+      {
+        "body": [
+          "Jesteś odpowiedzialny za zachowanie poufności danych uwierzytelniających do Twojego konta i za całą działalność wykonywaną na Twoim koncie. Wyrażasz zgodę na natychmiastowe powiadomienie nas o godz {{email}} o jakimkolwiek nieupoważnionym użyciu Twojego konta.",
+          "Zgadzasz się na podanie dokładnych, aktualnych i pełnych informacji oraz na ich aktualizowanie."
+        ],
+        "heading": "4. Konta i bezpieczeństwo"
+      },
+      {
+        "body": [
+          "Zgadzasz się nie korzystać z Usługi w celu naruszenia jakiegokolwiek prawa lub praw innych osób; opracowywania, wdrażania lub obsługi agentów w celach niezgodnych z prawem, szkodliwych, zwodniczych lub stanowiących nadużycie; podejmować prób uzyskania nieautoryzowanego dostępu do jakiegokolwiek systemu lub danych; zakłócać lub zakłócać integralność lub działanie Usługi; lub do inżynierii wstecznej lub obejścia jakichkolwiek ograniczeń bezpieczeństwa lub użytkowania, z wyjątkiem zakresu dozwolonego przez obowiązujące licencje lub prawo dotyczące oprogramowania typu open source.",
+          "Ponosisz wyłączną odpowiedzialność za zadania, które zlecasz swoim agentom, oraz za zapewnienie, że takie wykorzystanie jest zgodne ze wszystkimi obowiązującymi przepisami i warunkami stron trzecich."
+        ],
+        "heading": "5. Dopuszczalne użycie"
+      },
+      {
+        "body": [
+          "Zachowujesz wszelkie prawa do treści, danych, monitów i instrukcji przesyłanych do Usługi („Treści użytkownika”). Przyznajesz {{company}} ograniczoną, niewyłączną licencję na przetwarzanie Treści Użytkownika wyłącznie w celu obsługi i świadczenia Usługi na rzecz Użytkownika.",
+          "Oświadczasz, że posiadasz wszelkie prawa niezbędne do przesłania Treści użytkownika oraz że nie narusza to ani nie łamie praw osób trzecich."
+        ],
+        "heading": "6. Treści użytkownika"
+      },
+      {
+        "body": [
+          "Usługa wykorzystuje sztuczną inteligencję do generowania odpowiedzi, działań i innych wyników („Wyniki”). Wyniki mogą być niedokładne, niekompletne lub w inny sposób nieodpowiednie do Twoich celów i mogą nie odzwierciedlać poglądów {{company}}. Jesteś odpowiedzialny za ocenę Wyniku oraz za wszelkie decyzje i działania, które podejmujesz na tej podstawie.",
+          "Wynik nie jest profesjonalną poradą. Nie należy polegać na Usłudze w zakresie porad prawnych, medycznych, finansowych ani innych porad zawodowych.",
+          "W zakresie dozwolonym przez prawo i z zastrzeżeniem warunków modelowych stron trzecich, zawartych pomiędzy Tobą a {{company}}jesteś właścicielem Wyników wygenerowanych z Treści użytkownika."
+        ],
+        "heading": "7. Dane wyjściowe generowane przez sztuczną inteligencję"
+      },
+      {
+        "body": [
+          "AURA jest rozpowszechniana jako oprogramowanie typu open source na podstawie licencji określonych w jej repozytoriach źródłowych, w tym, w stosownych przypadkach, licencji MIT. Korzystanie z tych komponentów typu open source podlega tym licencjom, które mają zastosowanie w przypadku konfliktu z niniejszymi Warunkami w odniesieniu do tego oprogramowania.",
+          "Żadne z postanowień niniejszych Warunków nie ogranicza Twoich praw wynikających z obowiązujących licencji typu open source ani nie zapewnia ich poza nimi."
+        ],
+        "heading": "8. Otwarte oprogramowanie i licencje"
+      },
+      {
+        "body": [
+          "Usługa może współpracować z usługami, integracjami i modelami AI stron trzecich, z którymi zdecydujesz się połączyć lub z których skorzystasz. Korzystanie z usług tych stron trzecich podlega ich własnym warunkom i zasadom ochrony prywatności oraz {{company}} nie ponosi odpowiedzialności za ich dostępność, dokładność ani zachowanie.",
+          "Ponosisz odpowiedzialność za wszelkie dane uwierzytelniające, klucze API lub autoryzacje, które podajesz w celu łączenia się z usługami stron trzecich."
+        ],
+        "heading": "9. Usługi i modele stron trzecich"
+      },
+      {
+        "body": [
+          "Niektóre funkcje mogą wymagać płatnej subskrypcji. Kupując subskrypcję, autoryzujesz {{company}} lub jego podmiotom przetwarzającym płatności do okresowego pobierania odpowiednich opłat i podatków od Twojej metody płatności, aż do momentu anulowania.",
+          "Opłaty nie podlegają zwrotowi, chyba że jest to wymagane przez prawo lub wyraźnie określono w momencie zakupu. Możesz zrezygnować w dowolnym momencie, a anulowanie staje się skuteczne z końcem bieżącego okresu rozliczeniowego.",
+          "Możemy zmienić ceny w przyszłości i powiadomimy Cię o istotnych zmianach zgodnie z wymaganiami prawa."
+        ],
+        "heading": "10. Subskrypcje, rozliczenia i zwroty pieniędzy"
+      },
+      {
+        "body": [
+          "Z wyjątkiem Treści użytkownika, wyników i komponentów typu open source, Usługa i wszystkie powiązane materiały, w tym nazwa, logo i oprogramowanie AURA, są własnością firmy {{company}} lub jej licencjodawców i są chronione przepisami prawa własności intelektualnej. Niniejsze Warunki nie przyznają Ci żadnego prawa do używania naszych znaków towarowych bez naszej uprzedniej pisemnej zgody."
+        ],
+        "heading": "11. Własność intelektualna"
+      },
+      {
+        "body": [
+          "Gromadzenie i wykorzystywanie przez nas danych osobowych w związku z Usługą opisano w naszej Polityce prywatności, która jest włączona do niniejszych Warunków przez odniesienie."
+        ],
+        "heading": "12. Prywatność"
+      },
+      {
+        "body": [
+          "USŁUGA I WSZYSTKIE WYNIKI SĄ DOSTARCZANE „W STANIE, W JAKIM JEST” I „W MIARĘ DOSTĘPNOŚCI”, BEZ JAKICHKOLWIEK GWARANCJI, WYRAŹNYCH, DOROZUMIANYCH LUB USTAWOWYCH, W TYM DOROZUMIANYCH GWARANCJI WARTOŚCI HANDLOWEJ, PRZYDATNOŚCI DO OKREŚLONEGO CELU, TYTUŁU I NIENARUSZANIA. {{company}} NIE GWARANTUJE, ŻE USŁUGA BĘDZIE NIEPRZERWANA, BEZPIECZNA I WOLNA OD BŁĘDÓW."
+        ],
+        "heading": "13. Zastrzeżenia"
+      },
+      {
+        "body": [
+          "W MAKSYMALNYM ZAKRESIE DOZWOLONYM PRZEZ PRAWO, {{company}} ORAZ JEJ PODMIOTY STOWARZYSZONE, KIEROWNICY, PRACOWNICY I AGENCI NIE BĘDĄ ODPOWIEDZIALNI ZA JAKIEKOLWIEK SZKODY POŚREDNIE, PRZYPADKOWE, SPECJALNE, WYNIKOWE LUB KARNE ANI ZA JAKIEKOLWIEK UTRATĘ ZYSKÓW, DANYCH LUB WARTOŚCI WARTOŚCI WYNIKAJĄCYCH Z KORZYSTANIA Z USŁUGI LUB Z NIĄ ZWIĄZANYCH.",
+          "NASZA CAŁKOWITA ODPOWIEDZIALNOŚĆ ZA JAKIEKOLWIEK ROSZCZENIA WYNIKAJĄCE Z NINIEJSZYCH WARUNKÓW LUB USŁUGI LUB Z NAMI ZWIĄZANE NIE PRZEKROCZY WIĘKSZEJ Z KWOTY ZAPŁACONEJ NAM W CIĄGU DWUNAstu MIESIĘCY PRZED ZŁOŻENIEM ROSZCZENIA LUB STO DOLARÓW USA (100 USD)."
+        ],
+        "heading": "14. Ograniczenie odpowiedzialności"
+      },
+      {
+        "body": [
+          "Zgadzasz się zabezpieczyć i zachować nieszkodliwość {{company}} i jej podmioty stowarzyszone przed wszelkimi roszczeniami, zobowiązaniami, odszkodowaniami, stratami i wydatkami, w tym uzasadnionymi opłatami prawnymi, wynikającymi lub związanymi z Treściami użytkownika, korzystaniem przez Ciebie z Usługi lub naruszeniem przez Ciebie niniejszych Warunków lub obowiązującego prawa."
+        ],
+        "heading": "15. Odszkodowanie"
+      },
+      {
+        "body": [
+          "Możesz zaprzestać korzystania z Usługi w dowolnym momencie. Możemy zawiesić lub zakończyć Twój dostęp do Usługi w dowolnym momencie, z podaniem przyczyny lub powiadomieniem lub bez niej, także jeśli uznamy, że naruszyłeś niniejsze Warunki.",
+          "Po rozwiązaniu umowy postanowienia niniejszych Warunków, które ze swej natury powinny obowiązywać, pozostaną w mocy, w tym postanowienia dotyczące własności, zastrzeżenia, ograniczenia odpowiedzialności i warunki rozstrzygania sporów."
+        ],
+        "heading": "16. Zakończenie"
+      },
+      {
+        "body": [
+          "Od czasu do czasu możemy modyfikować niniejsze Warunki. Jeśli dokonamy istotnych zmian, zaktualizujemy powyższą datę wejścia w życie i, w razie potrzeby, przekażemy dodatkowe powiadomienie. Dalsze korzystanie z Usługi po wejściu w życie zmian oznacza akceptację zmienionych Warunków."
+        ],
+        "heading": "17. Zmiany w Serwisie i Regulaminie"
+      },
+      {
+        "body": [
+          "Niniejsze Warunki podlegają prawu stanu {{state}}, bez względu na obowiązujące w nim przepisy kolizyjne. Z zastrzeżeniem wszelkich obowiązujących przepisów prawa, użytkownik zgadza się, że sądy stanowe i federalne zlokalizowane w {{state}} będzie miał wyłączną jurysdykcję nad wszelkimi sporami wynikającymi z niniejszych Warunków lub Usługi lub z nimi związanymi, a Ty wyrażasz zgodę na osobistą jurysdykcję tych sądów.",
+          "Żadne z postanowień tej sekcji nie ogranicza jakichkolwiek niezbywalnych praw ustawowych przysługujących Tobie jako konsumentowi w Twoim kraju zamieszkania."
+        ],
+        "heading": "18. Prawo właściwe i rozstrzyganie sporów"
+      }
+    ]
   }
 }

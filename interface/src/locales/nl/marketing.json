@@ -595,7 +595,7 @@
   },
   "footer": {
     "ariaLabel": "Voettekst van de site",
-    "copyright": "Copyright © {{year}}",
+    "copyright": "Auteursrecht © {{year}}",
     "navigationAriaLabel": "Voettekstnavigatie"
   },
   "models": {
@@ -682,10 +682,94 @@
     "yearly": "Jaarlijks"
   },
   "privacy": {
-    "description": "Ons privacybeleid wordt momenteel afgerond en zal binnenkort hier worden gepubliceerd.",
+    "contactBody": "Als u vragen heeft over dit privacybeleid of uw persoonlijke gegevens, kunt u contact opnemen met {{company}} bij {{email}}.",
+    "contactHeading": "Neem contact met ons op",
+    "description": "Hoe wij omgaan met uw gegevens en de privacy-first-principes achter AURA.",
     "documentTitle": "AURA - Privacybeleid",
+    "effectiveDate": "Ingangsdatum: 11 juni 2026",
     "headline": "Privacybeleid",
-    "label": "JURIDISCH"
+    "intro": "In dit privacybeleid wordt uitgelegd hoe {{company}} (\"{{company}}\", \"wij\", \"ons\" of \"onze\") verzamelt, gebruikt en deelt informatie wanneer u de AURA-applicaties, websites en aanverwante diensten gebruikt (gezamenlijk de \"Service\"). AURA is gebouwd om privacy voorop te stellen: waar mogelijk blijven uw gegevens op uw eigen apparaten en worden ze nooit gebruikt om modellen te trainen.",
+    "label": "JURIDISCH",
+    "sections": [
+      {
+        "body": [
+          "Dit Beleid is van toepassing op informatie die wij verwerken wanneer u de Dienst gebruikt. Het is niet van toepassing op services van derden, AI-modellen of integraties waarmee u verbinding wilt maken, waarvoor hun eigen privacybeleid geldt."
+        ],
+        "heading": "1. Reikwijdte"
+      },
+      {
+        "body": [
+          "Accountgegevens, zoals uw naam, e-mailadres en authenticatiegegevens wanneer u een account aanmaakt.",
+          "Gebruiks- en apparaatinformatie, zoals app-versie, apparaattype en diagnostische en prestatiegegevens die worden gebruikt om de Service te bedienen en te verbeteren.",
+          "Inhoud die u verstrekt, inclusief aanwijzingen, instructies, bestanden en andere gebruikersinhoud die u indient. Waar de architectuur dit toelaat, wordt deze inhoud lokaal op uw apparaat verwerkt.",
+          "Betalingsinformatie. Als u een abonnement aanschaft, verzamelen onze betalingsverwerkers factuurgegevens. Wij slaan geen volledige betaalkaartnummers op."
+        ],
+        "heading": "2. Informatie die we verzamelen"
+      },
+      {
+        "body": [
+          "We gebruiken informatie om de Service te leveren, te onderhouden en te beveiligen; om u te authenticeren en uw account te beheren; om betalingen te verwerken; ondersteuning bieden; om fraude, misbruik en beveiligingsproblemen op te sporen, te voorkomen en aan te pakken; en om te voldoen aan wettelijke verplichtingen.",
+          "We gebruiken diagnostische en gebruiksgegevens om te begrijpen hoe de Dienst presteert en om deze te verbeteren."
+        ],
+        "heading": "3. Hoe we informatie gebruiken"
+      },
+      {
+        "body": [
+          "AURA is zo ontworpen dat uw persoonlijke en bedrijfsgegevens onder uw controle blijven. Agents draaien in geïsoleerde omgevingen en waar mogelijk wordt uw Gebruikersinhoud op uw eigen apparaten verwerkt in plaats van naar onze servers te worden verzonden."
+        ],
+        "heading": "4. Lokaal-eerst en verwerking op het apparaat"
+      },
+      {
+        "body": [
+          "Wanneer u functies gebruikt die afhankelijk zijn van AI-modellen, kan de benodigde invoer naar de relevante modelaanbieder worden verzonden om uitvoer te genereren. We gebruiken uw persoonlijke of zakelijke gebruikersinhoud niet om modellen te trainen, en we ontwerpen de service zo dat gegevens die naar grensmodellen worden verzonden, worden geminimaliseerd en, waar mogelijk, geanonimiseerd worden.",
+          "Externe modelaanbieders verwerken gegevens onder hun eigen voorwaarden en privacybeleid."
+        ],
+        "heading": "5. AI-modellen en gegevensverwerking"
+      },
+      {
+        "body": [
+          "Wij verkopen uw persoonlijke gegevens niet. Wij delen informatie alleen als volgt: met dienstverleners die namens ons gegevens verwerken onder vertrouwelijkheidsverplichtingen; met diensten en modellen van derden die u wilt verbinden; om te voldoen aan de wet of een geldig juridisch proces; om de rechten, veiligheid en beveiliging van gebruikers, het publiek, of {{company}}; en in verband met een fusie, overname of verkoop van activa, onderworpen aan dit beleid."
+        ],
+        "heading": "6. Hoe we informatie delen"
+      },
+      {
+        "body": [
+          "We bewaren persoonlijke gegevens zo lang als nodig is om de Dienst te verlenen en voor legitieme zakelijke of juridische doeleinden. We verwijderen of anonimiseren informatie wanneer deze niet langer nodig is, met inachtneming van de toepasselijke wetgeving."
+        ],
+        "heading": "7. Gegevensbewaring"
+      },
+      {
+        "body": [
+          "We gebruiken technische en organisatorische maatregelen, waaronder encryptie en geïsoleerde uitvoeringsomgevingen, om informatie te beschermen. Geen enkele methode van verzending of opslag is volledig veilig en we kunnen geen absolute veiligheid garanderen."
+        ],
+        "heading": "8. Beveiliging"
+      },
+      {
+        "body": [
+          "Afhankelijk van waar u woont, heeft u mogelijk het recht om uw persoonlijke gegevens in te zien, te corrigeren, te verwijderen of over te dragen, om bezwaar te maken tegen bepaalde verwerkingen of deze te beperken, en om uw toestemming in te trekken. Inwoners van onder meer de Europese Economische Ruimte, het Verenigd Koninkrijk en Californië kunnen aanvullende rechten hebben op grond van wetten zoals de AVG en de CCPA/CPRA.",
+          "Om deze rechten uit te oefenen, kunt u contact met ons opnemen via {{email}}. We zullen reageren zoals vereist door de toepasselijke wetgeving, en we zullen u niet discrimineren vanwege het uitoefenen van uw rechten."
+        ],
+        "heading": "9. Uw rechten en keuzes"
+      },
+      {
+        "body": [
+          "We kunnen informatie verwerken en opslaan in andere landen dan het land waar u woont. Waar nodig gebruiken wij passende waarborgen voor grensoverschrijdende overdracht van persoonlijke informatie."
+        ],
+        "heading": "10. Internationale gegevensoverdrachten"
+      },
+      {
+        "body": [
+          "De Dienst is niet gericht op kinderen die jonger zijn dan de leeftijd die vereist is door de toepasselijke wetgeving, en wij verzamelen niet bewust persoonlijke gegevens van hen. Als u denkt dat een kind ons persoonlijke gegevens heeft verstrekt, neem dan contact met ons op via {{email}} en wij zullen passende stappen ondernemen om deze te verwijderen."
+        ],
+        "heading": "11. Privacy van kinderen"
+      },
+      {
+        "body": [
+          "We kunnen dit privacybeleid van tijd tot tijd bijwerken. Als we materiële wijzigingen aanbrengen, zullen we de bovenstaande ingangsdatum bijwerken en, indien nodig, aanvullende kennisgeving doen. Als u de Service blijft gebruiken nadat de wijzigingen van kracht zijn geworden, betekent dit dat u akkoord gaat met het bijgewerkte Beleid."
+        ],
+        "heading": "12. Wijzigingen in dit beleid"
+      }
+    ]
   },
   "productScreen": {
     "close": "Dichtbij",
@@ -705,7 +789,7 @@
       "ariaLabel": "Hoe AURA uw vertrouwen verdient",
       "cards": {
         "alwaysOn": {
-          "description": "Uw agent blijft 24 uur per dag werken, zelfs als u weg bent en uw apparaten uitgeschakeld zijn.",
+          "description": "Uw agent werkt 24 uur per dag, zelfs als uw apparaten zijn uitgeschakeld.",
           "title": "Altijd aan."
         },
         "isolated": {
@@ -781,9 +865,137 @@
     "secure": "Zeker."
   },
   "terms": {
-    "description": "Onze Servicevoorwaarden worden momenteel afgerond en zullen binnenkort hier worden gepubliceerd.",
+    "contactBody": "Als u vragen heeft over deze Voorwaarden, kunt u contact opnemen met {{company}} bij {{email}}.",
+    "contactHeading": "Neem contact met ons op",
+    "description": "De voorwaarden die van toepassing zijn op uw toegang tot en gebruik van AURA.",
     "documentTitle": "AURA - Servicevoorwaarden",
+    "effectiveDate": "Ingangsdatum: 11 juni 2026",
     "headline": "Servicevoorwaarden",
-    "label": "JURIDISCH"
+    "intro": "Deze Servicevoorwaarden (de \"Voorwaarden\") vormen een bindende overeenkomst tussen u en {{company}} (\"{{company}}\", \"wij\", \"ons\" of \"onze\") en regelen uw toegang tot en gebruik van de AURA-applicaties, websites en gerelateerde diensten (gezamenlijk de \"Service\"). Lees ze aandachtig door. Door de Service te openen of te gebruiken, gaat u ermee akkoord gebonden te zijn aan deze Voorwaarden.",
+    "label": "JURIDISCH",
+    "sections": [
+      {
+        "body": [
+          "Door een account aan te maken, toegang te krijgen tot of gebruik te maken van de Dienst, bevestigt u dat u deze Voorwaarden en ons Privacybeleid heeft gelezen, begrepen en ermee akkoord gaat gebonden te zijn. Als u het er niet mee eens bent, mag u de Dienst niet gebruiken.",
+          "Als u de Service namens een organisatie gebruikt, verklaart u dat u bevoegd bent om die organisatie aan deze Voorwaarden te binden, en verwijst 'u' naar zowel u als die organisatie."
+        ],
+        "heading": "1. Acceptatie van voorwaarden"
+      },
+      {
+        "body": [
+          "U moet ten minste 18 jaar oud zijn, of meerderjarig in uw rechtsgebied, om de Dienst te kunnen gebruiken. Door de Service te gebruiken, verklaart en garandeert u dat u aan deze vereisten voldoet en dat het u niet is verboden de Service te gebruiken op grond van toepasselijke wetgeving."
+        ],
+        "heading": "2. Geschiktheid"
+      },
+      {
+        "body": [
+          "AURA is een open-source, privacygerichte werkomgeving voor persoonlijke AI-agenten. Met de Service kunt u agents maken, configureren en uitvoeren die taken kunnen uitvoeren, verbinding kunnen maken met services van derden die u autoriseert en kunnen communiceren met AI-modellen van derden.",
+          "We kunnen op elk moment functies toevoegen, wijzigen of verwijderen, en we kunnen beperkingen opleggen aan bepaalde functies of de toegang tot delen van de Dienst beperken zonder voorafgaande kennisgeving of aansprakelijkheid."
+        ],
+        "heading": "3. Beschrijving van de Dienst"
+      },
+      {
+        "body": [
+          "U bent verantwoordelijk voor het handhaven van de vertrouwelijkheid van uw accountgegevens en voor alle activiteiten die plaatsvinden onder uw account. U stemt ermee in om ons onmiddellijk op de hoogte te stellen via {{email}} van elk ongeoorloofd gebruik van uw account.",
+          "U gaat ermee akkoord nauwkeurige, actuele en volledige informatie te verstrekken en actueel te houden."
+        ],
+        "heading": "4. Accounts en beveiliging"
+      },
+      {
+        "body": [
+          "U stemt ermee in de Dienst niet te gebruiken om enige wet of de rechten van anderen te schenden; om agenten te ontwikkelen, in te zetten of te exploiteren voor onwettige, schadelijke, bedrieglijke of beledigende doeleinden; om te proberen ongeautoriseerde toegang te krijgen tot een systeem of gegevens; om de integriteit of prestaties van de Dienst te verstoren of te verstoren; of om beveiligings- of gebruikslimieten te reverse-engineeren of te omzeilen, behalve voor zover toegestaan ​​door toepasselijke open-sourcelicenties of wetgeving.",
+          "U bent als enige verantwoordelijk voor de taken die u uw agenten opdraagt ​​en om ervoor te zorgen dat dergelijk gebruik voldoet aan alle toepasselijke wetten en voorwaarden van derden."
+        ],
+        "heading": "5. Acceptabel gebruik"
+      },
+      {
+        "body": [
+          "U behoudt alle rechten op de inhoud, gegevens, aanwijzingen en instructies die u indient bij de Service (\"Gebruikersinhoud\"). Jij verleent {{company}} een beperkte, niet-exclusieve licentie om Gebruikersinhoud uitsluitend te verwerken en aan u te leveren.",
+          "U verklaart dat u over alle rechten beschikt die nodig zijn om uw Gebruikersinhoud in te dienen en dat deze de rechten van derden niet schendt of schendt."
+        ],
+        "heading": "6. Gebruikersinhoud"
+      },
+      {
+        "body": [
+          "De Dienst maakt gebruik van kunstmatige intelligentie om reacties, acties en andere output (\"Output\") te genereren. De uitvoer kan onnauwkeurig, onvolledig of anderszins ongeschikt zijn voor uw doeleinden en weerspiegelt mogelijk niet de mening van {{company}}. U bent verantwoordelijk voor het evalueren van de Output en voor alle beslissingen of acties die u op basis daarvan neemt.",
+          "Output is geen professioneel advies. Vertrouw niet op de Dienst voor juridische, medische, financiële of andere professionele begeleiding.",
+          "Voor zover toegestaan ​​door de wet en onderworpen aan modelvoorwaarden van derden, zoals tussen u en {{company}}, bent u eigenaar van de Output die is gegenereerd op basis van uw Gebruikersinhoud."
+        ],
+        "heading": "7. AI-gegenereerde output"
+      },
+      {
+        "body": [
+          "AURA wordt gedistribueerd als open-sourcesoftware onder de licenties die zijn vermeld in de bronrepository's, inclusief de MIT-licentie, indien van toepassing. Op uw gebruik van deze open-sourcecomponenten zijn de licenties van toepassing, die van toepassing zijn in het geval van een conflict met deze Voorwaarden met betrekking tot die software.",
+          "Niets in deze Voorwaarden beperkt uw rechten onder, of verleent u rechten die verder gaan dan de toepasselijke open-sourcelicenties."
+        ],
+        "heading": "8. Open Source en licenties"
+      },
+      {
+        "body": [
+          "De Dienst kan samenwerken met diensten, integraties en AI-modellen van derden die u wilt verbinden of gebruiken. Op uw gebruik van deze derden zijn hun eigen voorwaarden en privacybeleid van toepassing, en {{company}} is niet verantwoordelijk voor de beschikbaarheid, nauwkeurigheid of gedrag ervan.",
+          "U bent verantwoordelijk voor alle inloggegevens, API-sleutels of autorisaties die u verstrekt om verbinding te maken met services van derden."
+        ],
+        "heading": "9. Diensten en modellen van derden"
+      },
+      {
+        "body": [
+          "Voor bepaalde functies is mogelijk een betaald abonnement vereist. Door een abonnement aan te schaffen, geeft u toestemming {{company}} of zijn betalingsverwerkers om de toepasselijke kosten en eventuele belastingen op terugkerende basis in rekening te brengen op uw betalingsmethode totdat u annuleert.",
+          "Kosten kunnen niet worden gerestitueerd, behalve zoals vereist door de wet of zoals uitdrukkelijk vermeld op het moment van aankoop. U kunt op elk moment opzeggen en de opzegging wordt van kracht aan het einde van de huidige factureringsperiode.",
+          "We kunnen de prijzen in de toekomst wijzigen en zullen u op de hoogte stellen van materiële wijzigingen zoals vereist door de wet."
+        ],
+        "heading": "10. Abonnementen, facturering en restituties"
+      },
+      {
+        "body": [
+          "Met uitzondering van Gebruikersinhoud, Uitvoer en open-sourcecomponenten zijn de Service en alle gerelateerde materialen, inclusief de naam, logo's en software van AURA, eigendom van {{company}} of haar licentiegevers en worden beschermd door wetten op het gebied van intellectuele eigendom. Deze Voorwaarden verlenen u geen enkel recht om onze handelsmerken te gebruiken zonder onze voorafgaande schriftelijke toestemming."
+        ],
+        "heading": "11. Intellectuele eigendom"
+      },
+      {
+        "body": [
+          "Onze verzameling en gebruik van persoonlijke informatie in verband met de Dienst wordt beschreven in ons Privacybeleid, dat door middel van verwijzing in deze Voorwaarden is opgenomen."
+        ],
+        "heading": "12. Privacy"
+      },
+      {
+        "body": [
+          "DE DIENST EN ALLE UITVOER WORDEN GELEVERD \"AS IS\" EN \"ZOALS BESCHIKBAAR\" ZONDER ENIGE GARANTIES, EXPLICIET, IMPLICIET OF WETTELIJK, MET INBEGRIP VAN IMPLICIETE GARANTIES VAN VERKOOPBAARHEID, GESCHIKTHEID VOOR EEN BEPAALD DOEL, EIGENDOM EN NIET-INBREUK. {{company}} GARANDEERT NIET DAT DE DIENST ONONDERBROKEN, VEILIG OF FOUTLOOS ZAL ZIJN."
+        ],
+        "heading": "13. Disclaimers"
+      },
+      {
+        "body": [
+          "VOOR ZOVER MAXIMAAL TOEGESTAAN DOOR DE WET, {{company}} EN HAAR GELIEERDE ONDERNEMINGEN, FUNCTIONARISSEN, WERKNEMERS EN AGENTEN ZIJN NIET AANSPRAKELIJK VOOR ENIGE INDIRECTE, INCIDENTELE, SPECIALE, GEVOLGSCHADE OF PUNITIES, OF ENIG WINSTDERVING, GEGEVENS OF GOODWILL, VOORTVLOEIEND UIT OF VERBAND HOUDEND MET UW GEBRUIK VAN DE DIENST.",
+          "ONZE TOTALE AANSPRAKELIJKHEID VOOR ELKE CLAIM DIE VOORTVLOEIT UIT OF VERBAND HOUDT MET DEZE VOORWAARDEN OF DE DIENST ZAL NIET HOGER ZIJN DAN HET HOGERE BEDRAG DAT U AAN ONS HEBT BETAALD IN DE TWAALF MAANDEN VOOR DE CLAIM OF HONDERD AMERIKAANSE DOLLAR (USD 100)."
+        ],
+        "heading": "14. Beperking van aansprakelijkheid"
+      },
+      {
+        "body": [
+          "U stemt ermee in om te vrijwaren en schadeloos te stellen {{company}} en haar dochterondernemingen tegen eventuele claims, aansprakelijkheden, schade, verliezen en kosten, inclusief redelijke juridische kosten, die voortvloeien uit of verband houden met uw Gebruikersinhoud, uw gebruik van de Dienst of uw schending van deze Voorwaarden of de toepasselijke wetgeving."
+        ],
+        "heading": "15. Schadeloosstelling"
+      },
+      {
+        "body": [
+          "U kunt op elk moment stoppen met het gebruik van de Dienst. We kunnen uw toegang tot de Service op elk moment opschorten of beëindigen, met of zonder reden of kennisgeving, ook als we van mening zijn dat u deze Voorwaarden hebt geschonden.",
+          "Bij beëindiging blijven de bepalingen van deze Voorwaarden die naar hun aard zouden moeten blijven bestaan, inclusief eigendomsbepalingen, disclaimers, aansprakelijkheidsbeperkingen en voorwaarden voor geschillenbeslechting."
+        ],
+        "heading": "16. Beëindiging"
+      },
+      {
+        "body": [
+          "Wij kunnen deze Voorwaarden van tijd tot tijd wijzigen. Als we materiële wijzigingen aanbrengen, zullen we de bovenstaande ingangsdatum bijwerken en, indien nodig, aanvullende kennisgeving doen. Als u de Service blijft gebruiken nadat de wijzigingen van kracht zijn geworden, betekent dit dat u akkoord gaat met de herziene Voorwaarden."
+        ],
+        "heading": "17. Wijzigingen in de Dienst en Voorwaarden"
+      },
+      {
+        "body": [
+          "Op deze Voorwaarden is het recht van de staat van toepassing {{state}}, zonder rekening te houden met de collisieregels ervan. Met inachtneming van toepasselijke dwingende wetgeving gaat u ermee akkoord dat de staats- en federale rechtbanken gevestigd in {{state}} heeft de exclusieve jurisdictie over elk geschil dat voortvloeit uit of verband houdt met deze Voorwaarden of de Dienst, en u stemt in met de persoonlijke jurisdictie van die rechtbanken.",
+          "Niets in dit artikel beperkt de wettelijke rechten waarover u als consument in het land waar u woont beschikt en waar u als consument geen afstand van kunt doen."
+        ],
+        "heading": "18. Toepasselijk recht en geschillenbeslechting"
+      }
+    ]
   }
 }

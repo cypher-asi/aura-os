@@ -595,7 +595,7 @@
   },
   "footer": {
     "ariaLabel": "Fußzeile der Website",
-    "copyright": "Copyright © {{year}}",
+    "copyright": "Urheberrecht © {{year}}",
     "navigationAriaLabel": "Fußzeilennavigation"
   },
   "models": {
@@ -682,10 +682,94 @@
     "yearly": "Jährlich"
   },
   "privacy": {
-    "description": "Unsere Datenschutzrichtlinie wird derzeit fertiggestellt und in Kürze hier veröffentlicht.",
+    "contactBody": "Wenn Sie Fragen zu dieser Datenschutzrichtlinie oder Ihren persönlichen Daten haben, wenden Sie sich an {{company}} bei {{email}}.",
+    "contactHeading": "Kontaktieren Sie uns",
+    "description": "Wie wir mit Ihren Daten umgehen und die Datenschutzprinzipien hinter AURA.",
     "documentTitle": "AURA - Datenschutzrichtlinie",
+    "effectiveDate": "Datum des Inkrafttretens: 11. Juni 2026",
     "headline": "Datenschutzrichtlinie",
-    "label": "RECHTLICH"
+    "intro": "Diese Datenschutzrichtlinie erklärt, wie {{company}} (\"{{company}}„, „wir“, „uns“ oder „unser“) erfasst, nutzt und teilt Informationen, wenn Sie die AURA-Anwendungen, Websites und zugehörigen Dienste nutzen (gemeinsam der „Dienst“). Bei AURA steht der Datenschutz an erster Stelle: Wo immer möglich, bleiben Ihre Daten auf Ihren eigenen Geräten und werden niemals zum Trainieren von Modellen verwendet.",
+    "label": "RECHTLICH",
+    "sections": [
+      {
+        "body": [
+          "Diese Richtlinie gilt für Informationen, die wir verarbeiten, wenn Sie den Dienst nutzen. Sie gilt nicht für Dienste, KI-Modelle oder Integrationen Dritter, die Sie verbinden möchten und für die ihre eigenen Datenschutzrichtlinien gelten."
+        ],
+        "heading": "1. Geltungsbereich"
+      },
+      {
+        "body": [
+          "Kontoinformationen wie Ihr Name, Ihre E-Mail-Adresse und Authentifizierungsdaten, wenn Sie ein Konto erstellen.",
+          "Nutzungs- und Geräteinformationen wie App-Version, Gerätetyp sowie Diagnose- und Leistungsdaten, die zum Betrieb und zur Verbesserung des Dienstes verwendet werden.",
+          "Von Ihnen bereitgestellte Inhalte, einschließlich Eingabeaufforderungen, Anweisungen, Dateien und andere von Ihnen übermittelte Benutzerinhalte. Sofern es die Architektur zulässt, werden diese Inhalte lokal auf Ihrem Gerät verarbeitet.",
+          "Zahlungsinformationen. Wenn Sie ein Abonnement erwerben, erfassen unsere Zahlungsabwickler Rechnungsdaten. Wir speichern keine vollständigen Zahlungskartennummern."
+        ],
+        "heading": "2. Informationen, die wir sammeln"
+      },
+      {
+        "body": [
+          "Wir verwenden Informationen zur Bereitstellung, Wartung und Sicherung des Dienstes; um Sie zu authentifizieren und Ihr Konto zu verwalten; um Zahlungen abzuwickeln; Unterstützung leisten; um Betrug, Missbrauch und Sicherheitsprobleme zu erkennen, zu verhindern und zu beheben; und zur Einhaltung gesetzlicher Verpflichtungen.",
+          "Wir verwenden Diagnose- und Nutzungsdaten, um die Leistung des Dienstes zu verstehen und ihn zu verbessern."
+        ],
+        "heading": "3. Wie wir Informationen verwenden"
+      },
+      {
+        "body": [
+          "AURA ist so konzipiert, dass Ihre persönlichen und Unternehmensdaten unter Ihrer Kontrolle bleiben. Agenten werden in isolierten Umgebungen ausgeführt und Ihre Benutzerinhalte werden nach Möglichkeit auf Ihren eigenen Geräten verarbeitet und nicht an unsere Server gesendet."
+        ],
+        "heading": "4. Local-First- und On-Device-Verarbeitung"
+      },
+      {
+        "body": [
+          "Wenn Sie Funktionen verwenden, die auf KI-Modellen basieren, werden die erforderlichen Eingaben möglicherweise an den entsprechenden Modellanbieter gesendet, um eine Ausgabe zu generieren. Wir verwenden Ihre persönlichen oder geschäftlichen Benutzerinhalte nicht zum Trainieren von Modellen und gestalten den Dienst so, dass die an Frontier-Modelle gesendeten Daten minimiert und, soweit möglich, anonymisiert werden.",
+          "Drittanbieter von Modellen verarbeiten Daten gemäß ihren eigenen Bedingungen und Datenschutzrichtlinien."
+        ],
+        "heading": "5. KI-Modelle und Datenverarbeitung"
+      },
+      {
+        "body": [
+          "Wir verkaufen Ihre persönlichen Daten nicht. Wir geben Informationen nur wie folgt weiter: an Dienstleister, die in unserem Auftrag Daten im Rahmen von Geheimhaltungsverpflichtungen verarbeiten; mit Diensten und Modellen von Drittanbietern, die Sie verbinden möchten; um Gesetze oder gültige rechtliche Verfahren einzuhalten; um die Rechte, die Sicherheit und den Schutz der Benutzer, der Öffentlichkeit oder zu schützen {{company}}; und im Zusammenhang mit einer Fusion, einem Erwerb oder einem Verkauf von Vermögenswerten, die dieser Richtlinie unterliegen."
+        ],
+        "heading": "6. Wie wir Informationen weitergeben"
+      },
+      {
+        "body": [
+          "Wir bewahren personenbezogene Daten so lange auf, wie es für die Bereitstellung des Dienstes und für legitime geschäftliche oder rechtliche Zwecke erforderlich ist. Wir löschen oder anonymisieren Informationen, wenn sie nicht mehr benötigt werden, vorbehaltlich des geltenden Rechts."
+        ],
+        "heading": "7. Datenaufbewahrung"
+      },
+      {
+        "body": [
+          "Wir nutzen technische und organisatorische Maßnahmen, einschließlich Verschlüsselung und isolierter Ausführungsumgebungen, um Informationen zu schützen. Keine Übertragungs- oder Speichermethode ist absolut sicher und wir können keine absolute Sicherheit garantieren."
+        ],
+        "heading": "8. Sicherheit"
+      },
+      {
+        "body": [
+          "Abhängig von Ihrem Wohnort haben Sie möglicherweise das Recht, auf Ihre personenbezogenen Daten zuzugreifen, sie zu korrigieren, zu löschen oder zu übertragen, einer bestimmten Verarbeitung zu widersprechen oder sie einzuschränken und Ihre Einwilligung zu widerrufen. Einwohner des Europäischen Wirtschaftsraums, des Vereinigten Königreichs und Kaliforniens können unter Umständen zusätzliche Rechte gemäß Gesetzen wie der DSGVO und dem CCPA/CPRA haben.",
+          "Um diese Rechte auszuüben, kontaktieren Sie uns unter {{email}}. Wir werden gemäß den geltenden Gesetzen reagieren und Sie bei der Ausübung Ihrer Rechte nicht diskriminieren."
+        ],
+        "heading": "9. Ihre Rechte und Wahlmöglichkeiten"
+      },
+      {
+        "body": [
+          "Wir können Informationen in anderen Ländern als dem Land, in dem Sie wohnen, verarbeiten und speichern. Bei Bedarf nutzen wir geeignete Sicherheitsvorkehrungen für die grenzüberschreitende Übermittlung personenbezogener Daten."
+        ],
+        "heading": "10. Internationale Datenübertragungen"
+      },
+      {
+        "body": [
+          "Der Dienst richtet sich nicht an Kinder unter dem gesetzlich vorgeschriebenen Alter und wir erfassen wissentlich keine personenbezogenen Daten von ihnen. Wenn Sie glauben, dass ein Kind uns personenbezogene Daten zur Verfügung gestellt hat, kontaktieren Sie uns unter {{email}} und wir werden geeignete Schritte unternehmen, um es zu löschen."
+        ],
+        "heading": "11. Privatsphäre von Kindern"
+      },
+      {
+        "body": [
+          "Wir können diese Datenschutzrichtlinie von Zeit zu Zeit aktualisieren. Wenn wir wesentliche Änderungen vornehmen, aktualisieren wir das oben genannte Datum des Inkrafttretens und geben bei Bedarf zusätzliche Hinweise. Durch Ihre weitere Nutzung des Dienstes nach Inkrafttreten der Änderungen akzeptieren Sie die aktualisierte Richtlinie."
+        ],
+        "heading": "12. Änderungen dieser Richtlinie"
+      }
+    ]
   },
   "productScreen": {
     "close": "Schließen",
@@ -705,7 +789,7 @@
       "ariaLabel": "Wie AURA Ihr Vertrauen gewinnt",
       "cards": {
         "alwaysOn": {
-          "description": "Ihr Agent arbeitet rund um die Uhr, auch wenn Sie abwesend sind und Ihre Geräte ausgeschaltet sind.",
+          "description": "Ihr Agent ist rund um die Uhr im Einsatz, auch wenn Ihre Geräte ausgeschaltet sind.",
           "title": "Immer an."
         },
         "isolated": {
@@ -781,9 +865,137 @@
     "secure": "Sicher."
   },
   "terms": {
-    "description": "Unsere Nutzungsbedingungen werden derzeit fertiggestellt und in Kürze hier veröffentlicht.",
+    "contactBody": "Wenn Sie Fragen zu diesen Bedingungen haben, wenden Sie sich an {{company}} bei {{email}}.",
+    "contactHeading": "Kontaktieren Sie uns",
+    "description": "Die Bedingungen, die Ihren Zugriff auf und Ihre Nutzung von AURA regeln.",
     "documentTitle": "AURA – Nutzungsbedingungen",
+    "effectiveDate": "Datum des Inkrafttretens: 11. Juni 2026",
     "headline": "Nutzungsbedingungen",
-    "label": "RECHTLICH"
+    "intro": "Diese Nutzungsbedingungen (die „Bedingungen“) bilden eine verbindliche Vereinbarung zwischen Ihnen und {{company}} (\"{{company}}„, „wir“, „uns“ oder „unser“) und regeln Ihren Zugriff auf und Ihre Nutzung der AURA-Anwendungen, Websites und zugehörigen Dienste (zusammen der „Dienst“). Bitte lesen Sie sie sorgfältig durch. Durch den Zugriff auf oder die Nutzung des Dienstes erklären Sie sich damit einverstanden, an diese Bedingungen gebunden zu sein.",
+    "label": "RECHTLICH",
+    "sections": [
+      {
+        "body": [
+          "Indem Sie ein Konto erstellen, auf den Dienst zugreifen oder ihn nutzen, bestätigen Sie, dass Sie diese Bedingungen und unsere Datenschutzrichtlinie gelesen und verstanden haben und damit einverstanden sind, an sie gebunden zu sein. Wenn Sie nicht einverstanden sind, dürfen Sie den Dienst nicht nutzen.",
+          "Wenn Sie den Dienst im Namen einer Organisation nutzen, erklären Sie, dass Sie befugt sind, diese Organisation an diese Bedingungen zu binden, und „Sie“ bezieht sich sowohl auf Sie als auch auf diese Organisation."
+        ],
+        "heading": "1. Annahme der Bedingungen"
+      },
+      {
+        "body": [
+          "Um den Dienst nutzen zu können, müssen Sie mindestens 18 Jahre alt sein bzw. in Ihrem Land die Volljährigkeit erreicht haben. Durch die Nutzung des Dienstes erklären und garantieren Sie, dass Sie diese Anforderungen erfüllen und dass Ihnen die Nutzung des Dienstes nach geltendem Recht nicht untersagt ist."
+        ],
+        "heading": "2. Teilnahmeberechtigung"
+      },
+      {
+        "body": [
+          "AURA ist eine datenschutzorientierte Open-Source-Betriebsumgebung für persönliche KI-Agenten. Mit dem Dienst können Sie Agenten erstellen, konfigurieren und ausführen, die Aufgaben ausführen, eine Verbindung zu von Ihnen autorisierten Drittanbieterdiensten herstellen und mit KI-Modellen von Drittanbietern interagieren können.",
+          "Wir können jederzeit ohne Vorankündigung oder Haftung Funktionen hinzufügen, ändern oder entfernen und bestimmte Funktionen einschränken oder den Zugriff auf Teile des Dienstes beschränken."
+        ],
+        "heading": "3. Beschreibung des Dienstes"
+      },
+      {
+        "body": [
+          "Sie sind für die Wahrung der Vertraulichkeit Ihrer Kontodaten und aller Aktivitäten, die unter Ihrem Konto stattfinden, verantwortlich. Sie erklären sich damit einverstanden, uns unverzüglich unter zu benachrichtigen {{email}} vor unbefugter Nutzung Ihres Kontos.",
+          "Sie verpflichten sich, genaue, aktuelle und vollständige Informationen bereitzustellen und diese auf dem neuesten Stand zu halten."
+        ],
+        "heading": "4. Konten und Sicherheit"
+      },
+      {
+        "body": [
+          "Sie erklären sich damit einverstanden, den Dienst nicht zu nutzen, um gegen Gesetze oder die Rechte anderer zu verstoßen. Agenten für rechtswidrige, schädliche, irreführende oder missbräuchliche Zwecke zu entwickeln, einzusetzen oder zu betreiben; zu versuchen, sich unbefugten Zugriff auf ein System oder Daten zu verschaffen; um die Integrität oder Leistung des Dienstes zu beeinträchtigen oder zu stören; oder um Sicherheits- oder Nutzungsbeschränkungen zurückzuentwickeln oder zu umgehen, es sei denn, dies ist durch geltende Open-Source-Lizenzen oder Gesetze zulässig.",
+          "Sie tragen die alleinige Verantwortung für die Aufgaben, mit denen Sie Ihre Vertreter beauftragen, und dafür, sicherzustellen, dass diese Nutzung allen geltenden Gesetzen und Bedingungen Dritter entspricht."
+        ],
+        "heading": "5. Zulässige Nutzung"
+      },
+      {
+        "body": [
+          "Sie behalten alle Rechte an den Inhalten, Daten, Eingabeaufforderungen und Anweisungen, die Sie an den Dienst übermitteln („Benutzerinhalte“). Du gewährst {{company}} eine begrenzte, nicht exklusive Lizenz zur Verarbeitung von Benutzerinhalten ausschließlich zum Zweck des Betriebs und der Bereitstellung des Dienstes für Sie.",
+          "Sie versichern, dass Sie über alle für die Übermittlung Ihrer Benutzerinhalte erforderlichen Rechte verfügen und dass diese nicht die Rechte Dritter verletzen oder verletzen."
+        ],
+        "heading": "6. Benutzerinhalte"
+      },
+      {
+        "body": [
+          "Der Dienst nutzt künstliche Intelligenz, um Antworten, Aktionen und andere Ausgaben („Ausgaben“) zu generieren. Die Ausgabe kann ungenau, unvollständig oder anderweitig für Ihre Zwecke ungeeignet sein und spiegelt möglicherweise nicht die Ansichten von wider {{company}}. Sie sind für die Bewertung des Outputs und für alle darauf basierenden Entscheidungen oder Maßnahmen verantwortlich.",
+          "Ausgabe ist keine professionelle Beratung. Verlassen Sie sich nicht auf den Dienst, wenn es um rechtliche, medizinische, finanzielle oder andere professionelle Beratung geht.",
+          "Soweit gesetzlich zulässig und vorbehaltlich der Modellbedingungen Dritter, wie zwischen Ihnen und {{company}}, Sie sind Eigentümer der aus Ihren Benutzerinhalten generierten Ausgabe."
+        ],
+        "heading": "7. KI-generierte Ausgabe"
+      },
+      {
+        "body": [
+          "AURA wird als Open-Source-Software unter den in seinen Quellrepositorys angegebenen Lizenzen vertrieben, einschließlich gegebenenfalls der MIT-Lizenz. Ihre Nutzung dieser Open-Source-Komponenten unterliegt diesen Lizenzen, die im Falle eines Konflikts mit diesen Bedingungen in Bezug auf diese Software Vorrang haben.",
+          "Nichts in diesen Bedingungen schränkt Ihre Rechte im Rahmen der geltenden Open-Source-Lizenzen ein oder gewährt Ihnen darüber hinausgehende Rechte."
+        ],
+        "heading": "8. Open Source und Lizenzen"
+      },
+      {
+        "body": [
+          "Der Dienst kann mit Diensten, Integrationen und KI-Modellen Dritter zusammenarbeiten, die Sie verbinden oder nutzen möchten. Ihre Nutzung dieser Drittanbieter unterliegt deren eigenen Bedingungen und Datenschutzrichtlinien {{company}} ist nicht verantwortlich für deren Verfügbarkeit, Richtigkeit oder Verhalten.",
+          "Sie sind für alle Anmeldeinformationen, API-Schlüssel oder Autorisierungen verantwortlich, die Sie zur Verbindung mit Diensten Dritter bereitstellen."
+        ],
+        "heading": "9. Dienste und Modelle Dritter"
+      },
+      {
+        "body": [
+          "Für bestimmte Funktionen ist möglicherweise ein kostenpflichtiges Abonnement erforderlich. Mit dem Kauf eines Abonnements autorisieren Sie {{company}} oder seine Zahlungsabwickler, Ihre Zahlungsmethode regelmäßig mit den anfallenden Gebühren und etwaigen Steuern zu belasten, bis Sie stornieren.",
+          "Gebühren sind nicht erstattungsfähig, es sei denn, dies ist gesetzlich vorgeschrieben oder wird zum Zeitpunkt des Kaufs ausdrücklich angegeben. Sie können jederzeit kündigen und die Kündigung wird zum Ende des aktuellen Abrechnungszeitraums wirksam.",
+          "Wir können die Preise in Zukunft ändern und werden wesentliche Änderungen entsprechend den gesetzlichen Bestimmungen bekannt geben."
+        ],
+        "heading": "10. Abonnements, Abrechnung und Rückerstattungen"
+      },
+      {
+        "body": [
+          "Mit Ausnahme von Benutzerinhalten, Ausgaben und Open-Source-Komponenten sind der Dienst und alle zugehörigen Materialien, einschließlich des Namens AURA, der Logos und der Software, Eigentum von {{company}} oder seinen Lizenzgebern und sind durch Gesetze zum Schutz des geistigen Eigentums geschützt. Diese Bedingungen gewähren Ihnen kein Recht zur Nutzung unserer Marken ohne unsere vorherige schriftliche Zustimmung."
+        ],
+        "heading": "11. Geistiges Eigentum"
+      },
+      {
+        "body": [
+          "Unsere Erhebung und Verwendung personenbezogener Daten im Zusammenhang mit dem Dienst ist in unserer Datenschutzrichtlinie beschrieben, die durch Verweis in diese Bedingungen aufgenommen wird."
+        ],
+        "heading": "12. Datenschutz"
+      },
+      {
+        "body": [
+          "DER DIENST UND ALLE ERGEBNISSE WERDEN „WIE BESEHEN“ UND „WIE VERFÜGBAR“ ZUR VERFÜGUNG GESTELLT, OHNE JEGLICHE AUSDRÜCKLICHE, STILLSCHWEIGENDE ODER GESETZLICHE GEWÄHRLEISTUNGEN, EINSCHLIESSLICH STILLSCHWEIGENDER GEWÄHRLEISTUNGEN DER MARKTGÄNGIGKEIT, EIGNUNG FÜR EINEN BESTIMMTEN ZWECK, TITEL UND NICHTVERLETZUNG. {{company}} GARANTIERT NICHT, DASS DER DIENST UNUNTERBROCHEN, SICHER ODER FEHLERFREI IST."
+        ],
+        "heading": "13. Haftungsausschluss"
+      },
+      {
+        "body": [
+          "SOWEIT GESETZLICH ZULÄSSIG, {{company}} UND SEINE VERBUNDENEN UNTERNEHMEN, ANGESTELLTEN, MITARBEITER UND VERTRETER HAFTEN NICHT FÜR INDIREKTE, ZUFÄLLIGE, BESONDERE, FOLGE- ODER STRAFSCHÄDEN ODER JEGLICHE GEWINN-, DATEN- ODER GESELLSCHAFTSVERLUSTE, DIE SICH AUS IHRER NUTZUNG DES DIENSTES ERGEBEN ODER MIT IHRER NUTZUNG ZUSAMMENHÄNGEN.",
+          "UNSERE GESAMTHAFTUNG FÜR JEGLICHE ANSPRÜCHE, DIE SICH AUS DIESEN BEDINGUNGEN ODER DEM DIENST ERGEBEN ODER MIT IHNEN IN ZUSAMMENHANG STEHEN, ÜBERSTEIGT NICHT DEN HÖHEREN BETRAG, DEN SIE UNS IN DEN ZWÖLF MONATEN VOR DEM ANSPRUCH GEZAHLT HABEN, ODER EINHUNDERT US-DOLLAR (USD 100)."
+        ],
+        "heading": "14. Haftungsbeschränkung"
+      },
+      {
+        "body": [
+          "Sie erklären sich damit einverstanden, diese zu entschädigen und schadlos zu halten {{company}} und seine verbundenen Unternehmen von allen Ansprüchen, Verbindlichkeiten, Schäden, Verlusten und Ausgaben, einschließlich angemessener Anwaltskosten, die sich aus oder im Zusammenhang mit Ihren Benutzerinhalten, Ihrer Nutzung des Dienstes oder Ihrem Verstoß gegen diese Bedingungen oder geltendes Recht ergeben."
+        ],
+        "heading": "15. Entschädigung"
+      },
+      {
+        "body": [
+          "Sie können die Nutzung des Dienstes jederzeit beenden. Wir können Ihren Zugriff auf den Dienst jederzeit mit oder ohne Angabe von Gründen oder Vorankündigung aussetzen oder beenden, auch wenn wir der Ansicht sind, dass Sie gegen diese Bedingungen verstoßen haben.",
+          "Nach der Kündigung bleiben die Bestimmungen dieser Bedingungen, die ihrer Natur nach bestehen sollten, bestehen, einschließlich Eigentumsbestimmungen, Haftungsausschlüssen, Haftungsbeschränkungen und Streitbeilegungsbedingungen."
+        ],
+        "heading": "16. Kündigung"
+      },
+      {
+        "body": [
+          "Wir können diese Bedingungen von Zeit zu Zeit ändern. Wenn wir wesentliche Änderungen vornehmen, aktualisieren wir das oben genannte Datum des Inkrafttretens und geben bei Bedarf zusätzliche Hinweise. Durch Ihre fortgesetzte Nutzung des Dienstes nach Inkrafttreten der Änderungen akzeptieren Sie die überarbeiteten Bedingungen."
+        ],
+        "heading": "17. Änderungen des Dienstes und der Bedingungen"
+      },
+      {
+        "body": [
+          "Diese Bedingungen unterliegen den Gesetzen des Staates {{state}}, ohne Rücksicht auf seine Kollisionsnormen. Vorbehaltlich aller anwendbaren zwingenden Gesetze stimmen Sie zu, dass die Landes- und Bundesgerichte zuständig sind {{state}} Die ausschließliche Zuständigkeit für alle Streitigkeiten, die sich aus oder im Zusammenhang mit diesen Bedingungen oder dem Dienst ergeben, liegt bei Ihnen, und Sie stimmen der persönlichen Zuständigkeit dieser Gerichte zu.",
+          "Nichts in diesem Abschnitt schränkt die nicht verzichtbaren gesetzlichen Rechte ein, die Ihnen als Verbraucher in Ihrem Wohnsitzland zustehen."
+        ],
+        "heading": "18. Anwendbares Recht und Streitbeilegung"
+      }
+    ]
   }
 }
