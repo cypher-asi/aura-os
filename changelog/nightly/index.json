@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-06-11",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.637.1",
+    "title": "Deterministic eval fixtures steady the nightly",
+    "intro": "A quiet nightly focused on test infrastructure: the end-to-end eval suites were nudged into a more predictable starting state so CI signal stays trustworthy across Linux, macOS, and Windows builds.",
+    "entryCount": 1,
+    "highlights": [
+      "E2E eval suites now pin the Run sidekick tab for deterministic runs",
+      "Nightly 637.1 shipped across Linux, macOS (x64/arm64), and Windows"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-06-11T16:25:29.562Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.637.1",
+    "path": "history/2026-06-11.json"
+  },
+  {
     "date": "2026-06-10",
     "channel": "nightly",
     "version": "0.1.0-nightly.636.1",
