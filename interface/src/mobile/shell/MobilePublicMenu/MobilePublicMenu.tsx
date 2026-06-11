@@ -205,6 +205,11 @@ export function MobilePublicMenu({
           defaultValue: "Public sections",
         })}
       >
+        {/* Dedicated chat page — the public landing hero no longer
+            embeds the composer, so this is the menu's entry into it. */}
+        <NavLink to="/chat" className={navLinkClassName} onClick={onClose}>
+          {t("publicChat:mobileChat.chatNav", { defaultValue: "Chat" })}
+        </NavLink>
         {PRIMARY_LINKS.map((link) => (
           <NavLink
             key={link.tKey}

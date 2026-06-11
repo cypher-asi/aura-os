@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { CreateAgentButton } from "../CreateAgentButton";
@@ -29,7 +30,7 @@ import styles from "./MobileLandingHero.module.css";
 // The first/longest entry doubles as the headline's `data-text` width
 // reserve so the centered box never reflows as phrases stream.
 const HERO_PHRASES = [
-  "Your Private Agent.",
+  "Your private agent.",
   "Build anything.",
   "Imagine anything.",
   "Code anything.",
@@ -50,7 +51,7 @@ export function MobileLandingHero({
   const { t } = useTranslation("publicChat");
 
   const heroHeadline = t("chat.heroPhrases.privateAgent", {
-    defaultValue: "Your Private Agent.",
+    defaultValue: "Your private agent.",
   });
   const heroPhrases = useMemo(
     () =>
@@ -61,6 +62,9 @@ export function MobileLandingHero({
   );
 
   const portraitUrl = persona.theme.desktopBackgroundUrl;
+  const portraitVideoUrl = persona.theme.desktopBackgroundVideoUrl ?? null;
+  const portraitObjectPosition =
+    persona.theme.avatarObjectPosition ?? "50% 25%";
 
   return (
     <section
@@ -68,7 +72,11 @@ export function MobileLandingHero({
       data-persona-id={persona.id}
       data-testid="mobile-landing-hero"
     >
-      <h1 className={styles.headline} data-text={heroHeadline}>
+      <h1
+        className={styles.headline}
+        data-text={heroHeadline}
+        style={{ color: persona.theme.heroHeadlineColor ?? undefined }}
+      >
         <TypewriterText
           text={heroHeadline}
           phrases={heroPhrases}
@@ -78,23 +86,41 @@ export function MobileLandingHero({
 
       {portraitUrl ? (
         <figure className={styles.portraitCard}>
-          <img
-            src={portraitUrl}
-            alt={t("mobileChat.personaPortraitAlt", {
-              defaultValue: `${persona.name} agent portrait`,
-              name: persona.name,
-            })}
-            className={styles.portraitImage}
-            style={{
-              backgroundColor:
-                persona.theme.desktopBackgroundColor ?? undefined,
-              objectPosition:
-                persona.theme.avatarObjectPosition ?? "50% 25%",
-            }}
-            draggable={false}
-            decoding="async"
-            fetchPriority="high"
-          />
+          {portraitVideoUrl ? (
+            <video
+              className={styles.portraitImage}
+              src={portraitVideoUrl}
+              poster={portraitUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              aria-hidden="true"
+              style={{
+                backgroundColor:
+                  persona.theme.desktopBackgroundColor ?? undefined,
+                objectPosition: portraitObjectPosition,
+              }}
+              data-testid="mobile-landing-hero-video"
+            />
+          ) : (
+            <img
+              src={portraitUrl}
+              alt={t("mobileChat.personaPortraitAlt", {
+                defaultValue: `${persona.name} agent portrait`,
+                name: persona.name,
+              })}
+              className={styles.portraitImage}
+              style={{
+                backgroundColor:
+                  persona.theme.desktopBackgroundColor ?? undefined,
+                objectPosition: portraitObjectPosition,
+              }}
+              draggable={false}
+              decoding="async"
+              fetchPriority="high"
+            />
+          )}
           <figcaption className={styles.portraitCaption}>
             <span className={styles.portraitName}>{persona.name}</span>
             {/* The Creator's role string equals its name — skip the
@@ -110,6 +136,9 @@ export function MobileLandingHero({
 
       <div className={styles.ctaSlot}>
         <CreateAgentButton source="public_chat_mobile" />
+        <Link to="/chat" className={styles.chatLink}>
+          {t("mobileChat.openChat", { defaultValue: "Chat with Aura" })}
+        </Link>
       </div>
 
       <div className={styles.scrollHint} aria-hidden="true">

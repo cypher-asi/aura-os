@@ -60,6 +60,25 @@ const AgentsPageSections = lazy(
   () => import("../../marketing/ProductView/AgentsPageSections"),
 );
 
+/*
+ * Same WebGL page backgrounds the desktop landing pins behind its
+ * scroll column (`PublicChatView`). On mobile we pin them behind the
+ * Creator hero too, so scrolling the hero reveals the live plasma and
+ * the opaque agents sections slide up over it. Lazy so the three.js
+ * vendor chunk stays off the landing page's critical path; the
+ * persona's solid `siteBackgroundColor` paints while it loads.
+ */
+const ScreenOrbBackground = lazy(() =>
+  import("../PublicChatView/ScreenOrbBackground").then((m) => ({
+    default: m.ScreenOrbBackground,
+  })),
+);
+const FlowFieldBackground = lazy(() =>
+  import("../PublicChatView/FlowFieldBackground").then((m) => ({
+    default: m.FlowFieldBackground,
+  })),
+);
+
 // The Creator — `PERSONAS[0]`, the same default persona the desktop
 // carousel opens on — is the ONLY persona the mobile landing shows
 // before the visitor scrolls into the agents flow.
@@ -337,31 +356,64 @@ export function MobilePublicChatView(): React.ReactElement {
          * Landing scroll column — Creator hero viewport first, the
          * embedded `/agents` section stack below it. Scrolling past
          * the hero moves straight into the agents story without a
-         * route change, mirroring the desktop landing.
+         * route change, mirroring the desktop landing. The persona's
+         * WebGL page background stays pinned behind the column (a
+         * z-index 0 sibling), so the hero floats over the live plasma
+         * and the opaque agents sections cover it as they scroll up.
          */
-        <div
-          className={styles.landingScroll}
-          data-testid="mobile-public-landing-scroll"
-          data-public-home-scroll=""
-        >
-          <div className={styles.heroViewport}>
-            <MobileLandingHero persona={CREATOR_PERSONA}>
-              {composerForm}
-            </MobileLandingHero>
-          </div>
+        <>
           <div
-            className={styles.agentsEmbed}
-            // Reserve one viewport of height until the deferred
-            // sections mount so the column's geometry doesn't jump.
-            style={agentsEmbedReady ? undefined : { minHeight: "100dvh" }}
+            className={styles.siteBackground}
+            style={{
+              backgroundColor:
+                CREATOR_PERSONA.theme.siteBackgroundColor ?? undefined,
+            }}
+            aria-hidden="true"
           >
-            {agentsEmbedReady ? (
+            {CREATOR_PERSONA.theme.siteBackgroundOrb ? (
               <Suspense fallback={null}>
-                <AgentsPageSections />
+                <ScreenOrbBackground />
               </Suspense>
+            ) : CREATOR_PERSONA.theme.siteBackgroundFlow ? (
+              <Suspense fallback={null}>
+                <FlowFieldBackground
+                  baseColor={
+                    CREATOR_PERSONA.theme.siteBackgroundColor ?? "#2a0258"
+                  }
+                />
+              </Suspense>
+            ) : CREATOR_PERSONA.theme.siteBackgroundUrl ? (
+              <img
+                src={CREATOR_PERSONA.theme.siteBackgroundUrl}
+                className={styles.siteBackgroundImage}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+              />
             ) : null}
           </div>
-        </div>
+          <div
+            className={styles.landingScroll}
+            data-testid="mobile-public-landing-scroll"
+            data-public-home-scroll=""
+          >
+            <div className={styles.heroViewport}>
+              <MobileLandingHero persona={CREATOR_PERSONA} />
+            </div>
+            <div
+              className={styles.agentsEmbed}
+              // Reserve one viewport of height until the deferred
+              // sections mount so the column's geometry doesn't jump.
+              style={agentsEmbedReady ? undefined : { minHeight: "100dvh" }}
+            >
+              {agentsEmbedReady ? (
+                <Suspense fallback={null}>
+                  <AgentsPageSections />
+                </Suspense>
+              ) : null}
+            </div>
+          </div>
+        </>
       ) : (
         <>
           <div

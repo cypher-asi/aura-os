@@ -17,6 +17,7 @@
  */
 
 .root {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -27,9 +28,37 @@
   color: var(--color-text-primary);
 }
 
+/*
+ * Pinned persona page background — mirrors the desktop landing
+ * (`PublicChatView.module.css`). Sits at z-index 0 as a sibling of
+ * `.landingScroll`, so the live WebGL plasma stays put while the
+ * scroll column glides over it; the opaque `.agentsEmbed` sections
+ * cover it once the visitor scrolls past the hero. The
+ * `siteBackgroundColor` paints beneath the lazy WebGL chunk while it
+ * loads (and if WebGL is unavailable).
+ */
+.siteBackground {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.siteBackgroundImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
 /* ── Landing scroll column ──────────────────────────────────── */
 
 .landingScroll {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -37,6 +66,15 @@
   overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
+  /* Transparent so the pinned WebGL background shows through the
+     hero; the agents embed below carries its own opaque fill. */
+  background: transparent;
+  /* No visible scrollbar on mobile. */
+  scrollbar-width: none;
+}
+
+.landingScroll::-webkit-scrollbar {
+  display: none;
 }
 
 /*
@@ -53,6 +91,10 @@
 .agentsEmbed {
   flex-shrink: 0;
   min-height: 0;
+  /* Opaque so the marketing sections slide up over the pinned WebGL
+     hero background as the visitor scrolls past the fold, matching
+     the desktop landing's `.agentsEmbed`. */
+  background: #090909;
 }
 
 .transcript {
@@ -64,6 +106,12 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* No visible scrollbar on mobile. */
+  scrollbar-width: none;
+}
+
+.transcript::-webkit-scrollbar {
+  display: none;
 }
 
 .transcriptEmpty {

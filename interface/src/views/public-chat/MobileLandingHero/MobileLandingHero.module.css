@@ -19,13 +19,10 @@
   min-height: 100%;
   padding: 24px 20px 40px;
   text-align: center;
-  background:
-    radial-gradient(
-      120% 70% at 50% 0%,
-      color-mix(in srgb, #7c3aed 14%, transparent) 0%,
-      transparent 60%
-    ),
-    var(--color-bg-canvas, #0b0b0e);
+  /* Transparent — the persona's live WebGL plasma is pinned behind the
+     landing scroll column (`MobilePublicChatView`'s `.siteBackground`),
+     so the hero floats over it exactly like the desktop landing. */
+  background: transparent;
   color: var(--color-text-primary);
   position: relative;
 }
@@ -102,7 +99,36 @@
 
 .ctaSlot {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/*
+ * Secondary entry into the dedicated chat page (`/chat`). The chat
+ * composer no longer lives on the landing hero, so this link is the
+ * on-page route to it (the hamburger menu carries the same target).
+ */
+.chatLink {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text-primary, #fff) 32%, transparent);
+  background: color-mix(in srgb, #000 24%, transparent);
+  backdrop-filter: blur(6px);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.chatLink:hover,
+.chatLink:focus-visible {
+  border-color: color-mix(in srgb, var(--color-text-primary, #fff) 60%, transparent);
+  background: color-mix(in srgb, #000 36%, transparent);
 }
 
 /*
