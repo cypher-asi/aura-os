@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-11T19:18:39.401Z",
+  "generatedAt": "2026-06-11T23:54:17.645Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.638.1",
+  "version": "0.1.0-nightly.639.1",
   "date": "2026-06-11",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.638.1",
-  "lastIncludedSha": "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd",
-  "previousProcessedSha": "34404cfd941b474901ee9de6b318533ff9e6ea29",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.639.1",
+  "lastIncludedSha": "e909dedfe32a870d4a59823fa5542f15ef8dda66",
+  "previousProcessedSha": "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd",
   "commitShas": [
     "34404cfd941b474901ee9de6b318533ff9e6ea29",
     "ec007643cedd32d94903384b112267da942a2af1",
@@ -46,10 +46,59 @@
     "8c12fa2512d77503eed26f80773b6a299230d3e5",
     "599102e08f10ebb7d4affdcf53afbf29a3cb695c",
     "166913cf4a8f1aede4e0e997bd6e9b9b31e34970",
-    "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd"
+    "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd",
+    "e937b0f70681c886c9dafb20d6841edadc127972",
+    "21b7109cb5c322ea212f870bb2ce5ced937120d5",
+    "81ce6f5f20a4050f2adf4728fcc495c0820d45f8",
+    "69a71e75659d56473ea06ec09a4fa091f9444533",
+    "7d5c9d2478f55496d081ca4184327d93c82f4e69",
+    "41c60002c9255c1bcbf695a90056f3b5431789ee",
+    "074dca925c2f27ecba117d6b6e6aea7e750cd914",
+    "e6ffe9351c3495cbf64c6f969e7a31cea6bc2065",
+    "ae2e0cbfd6e231af1326f948390b7dde074307b1",
+    "641ce07d21fc69c68e9e861314c420dd463a553d",
+    "afdb0abdc4bb91f551984f310710dc75c8e56dfc",
+    "101aece3ea2f7c7d806d9ceba535ab4a913af942",
+    "e709bb6988897cd05359e52fe752b1cc0e48f9e2",
+    "a792833c473566caa1831ed7574ae009037ae49c",
+    "066fdd7eb334989f4b0abfd091d6538804785947",
+    "9389eb3653f2f3ac183bf72fec4a6fdc3bbe48ca",
+    "743979ecdf2ac3f9f1c6425e6e6be8fd6d79de12",
+    "29fbc11468d869a7869720b8835cbf52e68464af",
+    "fa244c33dd7d8f7123401901b30e121370a905d4",
+    "4e36250638423eefe2eef4f0f2edd1e78e319969",
+    "1cc948b4a92fd744c97076a1c16a67a41b7e14d7",
+    "bcf776cadee0ebd97ebb3aa791fb79511f98204c",
+    "79277795edf8a807c5e06c7bc6149a33730fbb3a",
+    "157557ae5e806d48807ee59c4509a5775d117cf3",
+    "87e883e068e26a71aca93978ba2aacb6ed32eddb",
+    "c1c63dc2f5033417c7a77655eff7607e2005033a",
+    "238c8c2712af0f55358a10b70e366eeec56be9cf",
+    "70188ec4db99c084c118b4e403ba665ec8a1c0a6",
+    "afc12be1458fe521d6bfcb106b4235f7dd18db03",
+    "af596ea53db5f574e21fd137c2223efe04146a8c",
+    "0c0fe4e3440a330a760a7e5999d1b27f7adfa9fe",
+    "98a99255fdbba19c79f884b18883695b1e5ea394",
+    "c1cb5e24b87652159b182d0dfa257585a156469f",
+    "d36f573b117a9dd5339fa4bf955f4798c19b950c",
+    "278133b9276feec829ea90aa65d0b712cfca86da",
+    "c94afcbd4667a56a6b8597462a30322c7977c32b",
+    "21a3ad0c4d83a9aad5ee8936f05fe63af83b7cad",
+    "9d3e281d6187b7a7b5f5516300b20935d13e70d4",
+    "8e128744caee3a16647a1beaea5203333a9e2f04",
+    "bba733a889c8da27d8439abdfc85bab96480a57d",
+    "3f0c9a4348a4c6e341fe248638b8ed1a7a86ad00",
+    "ed3e93aa64f89ce79f4792f07906dc2b9b8fd294",
+    "f30a66e64427d2611ddfe4329e05a8a039dfcd63",
+    "7684bcb6cf438e4086c83904fde423c2c8a8d601",
+    "c045d96066ced1c96a8feb83dc2ed28ce9044c41",
+    "d71299d5d8ee857cedfec9779e236a94586cebf6",
+    "0845a1c7cad6ec41ea88d56779578e781e4954d1",
+    "6e669ede4d7f75ca803fb8c0da1296aa4f5924f6",
+    "e909dedfe32a870d4a59823fa5542f15ef8dda66"
   ],
-  "rawCommitCount": 35,
-  "filteredCommitCount": 35,
+  "rawCommitCount": 84,
+  "filteredCommitCount": 84,
   "rawCommits": [
     {
       "sha": "34404cfd941b474901ee9de6b318533ff9e6ea29",
@@ -1597,6 +1646,2120 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "e937b0f70681c886c9dafb20d6841edadc127972",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:22:23-07:00",
+      "subject": "feat(shell): remove host settings button from the web titlebar",
+      "body": "The top-right host-retargeting button only surfaced on web (no desktop bridge). Drop it from the authenticated titlebar along with the now-dead HostSettingsModal wiring in AuraShell, and update the e2e specs that asserted or used it. Host retargeting stays available from the login page.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd"
+      ],
+      "files": [
+        "interface/src/components/AuraShell/AuraShell.test.tsx",
+        "interface/src/components/AuraShell/AuraShell.tsx",
+        "interface/src/components/AuraShell/AuraTitlebar.tsx",
+        "interface/tests/e2e/desktop-visual.spec.ts",
+        "interface/tests/e2e/layout-capability.desktop.spec.ts",
+        "interface/tests/e2e/responsive-unification.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 11,
+        "deletions": 57
+      },
+      "committedAtMs": 1781205743000,
+      "cleanSubject": "remove host settings button from the web titlebar",
+      "keywords": [
+        "remove",
+        "host",
+        "settings",
+        "button",
+        "from",
+        "titlebar"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "21b7109cb5c322ea212f870bb2ce5ced937120d5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:24:07-07:00",
+      "subject": "fix: center trust display panel against outer card edge",
+      "body": "The right CD panel on the agents page was centered between the device's right edge and the inset stage's right edge, landing ~25px left of true center because the stage is inset from the card by its 50px padding. Measure to the enclosing .metalCard right edge instead.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e937b0f70681c886c9dafb20d6841edadc127972"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDeviceStage.css",
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDeviceStage.tsx",
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDisplayPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 16,
+        "deletions": 10
+      },
+      "committedAtMs": 1781205847000,
+      "cleanSubject": "center trust display panel against outer card edge",
+      "keywords": [
+        "center",
+        "trust",
+        "display",
+        "panel",
+        "against",
+        "outer",
+        "card",
+        "edge"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "81ce6f5f20a4050f2adf4728fcc495c0820d45f8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:31:41-07:00",
+      "subject": "feat(onboarding): add agent onboarding wizard store",
+      "body": "",
+      "parents": [
+        "21b7109cb5c322ea212f870bb2ce5ced937120d5"
+      ],
+      "files": [
+        "interface/src/views/public-chat/AgentOnboarding/agent-onboarding-store.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 202,
+        "deletions": 0
+      },
+      "committedAtMs": 1781206301000,
+      "cleanSubject": "add agent onboarding wizard store",
+      "keywords": [
+        "agent",
+        "onboarding",
+        "wizard",
+        "store"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "69a71e75659d56473ea06ec09a4fa091f9444533",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:34:06-07:00",
+      "subject": "feat(onboarding): add curated onboarding data (avatars, skills, integrations, automations, messaging)",
+      "body": "",
+      "parents": [
+        "81ce6f5f20a4050f2adf4728fcc495c0820d45f8"
+      ],
+      "files": [
+        "interface/src/views/public-chat/AgentOnboarding/onboarding-data.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 297,
+        "deletions": 0
+      },
+      "committedAtMs": 1781206446000,
+      "cleanSubject": "add curated onboarding data (avatars, skills, integrations, automations, messaging)",
+      "keywords": [
+        "curated",
+        "onboarding",
+        "data",
+        "avatars",
+        "skills",
+        "integrations",
+        "automations",
+        "messaging"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7d5c9d2478f55496d081ca4184327d93c82f4e69",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:35:53-07:00",
+      "subject": "feat(onboarding): add presentational OnboardingStepper (desktop pills + mobile progress)",
+      "body": "",
+      "parents": [
+        "69a71e75659d56473ea06ec09a4fa091f9444533"
+      ],
+      "files": [
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingStepper/OnboardingStepper.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingStepper/OnboardingStepper.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingStepper/index.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 211,
+        "deletions": 0
+      },
+      "committedAtMs": 1781206553000,
+      "cleanSubject": "add presentational OnboardingStepper (desktop pills + mobile progress)",
+      "keywords": [
+        "presentational",
+        "onboardingstepper",
+        "desktop",
+        "pills",
+        "mobile",
+        "progress"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "41c60002c9255c1bcbf695a90056f3b5431789ee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:37:15-07:00",
+      "subject": "fix(os): keep whitepaper left nav pinned while reading column scrolls",
+      "body": "Make the /os sidebar position: sticky so the section nav stays visible regardless of how far the right-hand reading column is scrolled. The nav owns its own viewport-capped scroll with the scrollbar hidden, so the full section tree stays reachable while reading as static full-height content. Sticky is dropped on the mobile single-column layout so the nav flows above the content.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7d5c9d2478f55496d081ca4184327d93c82f4e69"
+      ],
+      "files": [
+        "interface/src/views/marketing/OsView/OsView.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 23,
+        "deletions": 2
+      },
+      "committedAtMs": 1781206635000,
+      "cleanSubject": "keep whitepaper left nav pinned while reading column scrolls",
+      "keywords": [
+        "keep",
+        "whitepaper",
+        "left",
+        "pinned",
+        "while",
+        "reading",
+        "column",
+        "scrolls"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "074dca925c2f27ecba117d6b6e6aea7e750cd914",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:39:55-07:00",
+      "subject": "feat(onboarding): add the six wizard step components and shared SelectableCard",
+      "body": "",
+      "parents": [
+        "41c60002c9255c1bcbf695a90056f3b5431789ee"
+      ],
+      "files": [
+        "interface/src/views/public-chat/AgentOnboarding/AutomationsStep/AutomationsStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/AutomationsStep/AutomationsStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/AutomationsStep/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/ConnectionsStep/ConnectionsStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/ConnectionsStep/ConnectionsStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/ConnectionsStep/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/ExpertiseStep/ExpertiseStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/ExpertiseStep/ExpertiseStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/ExpertiseStep/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/IntegrationsStep/IntegrationsStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/IntegrationsStep/IntegrationsStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/IntegrationsStep/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/LaunchStep/LaunchStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/LaunchStep/LaunchStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/LaunchStep/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/SelectableCard/SelectableCard.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/SelectableCard/SelectableCard.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/SelectableCard/index.ts"
+      ],
+      "stats": {
+        "fileCount": 21,
+        "insertions": 1019,
+        "deletions": 0
+      },
+      "committedAtMs": 1781206795000,
+      "cleanSubject": "add the six wizard step components and shared SelectableCard",
+      "keywords": [
+        "wizard",
+        "step",
+        "components",
+        "shared",
+        "selectablecard"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e6ffe9351c3495cbf64c6f969e7a31cea6bc2065",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:41:34-07:00",
+      "subject": "feat(onboarding): add AgentOnboardingModal orchestrator (Modal desktop / Drawer mobile)",
+      "body": "",
+      "parents": [
+        "074dca925c2f27ecba117d6b6e6aea7e750cd914"
+      ],
+      "files": [
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/index.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 244,
+        "deletions": 0
+      },
+      "committedAtMs": 1781206894000,
+      "cleanSubject": "add AgentOnboardingModal orchestrator (Modal desktop / Drawer mobile)",
+      "keywords": [
+        "agentonboardingmodal",
+        "orchestrator",
+        "modal",
+        "desktop",
+        "drawer",
+        "mobile"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ae2e0cbfd6e231af1326f948390b7dde074307b1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:43:00-07:00",
+      "subject": "fix(marketing): keep the model marquee scrolling under reduced motion",
+      "body": "A prior change added a `prefers-reduced-motion: reduce` rule that froze\nthe model strip whenever the OS requested reduced motion, while the\nsibling AgentMarquee directly above it kept scrolling. Drop the override\nso the strip stays in motion, matching AgentMarquee's documented\nalways-on convention (the models remain readable/clickable, so a\nreduced-motion visitor loses no content).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e6ffe9351c3495cbf64c6f969e7a31cea6bc2065"
+      ],
+      "files": [
+        "interface/src/views/marketing/PersonalAgentSection/ModelMarquee.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 8,
+        "deletions": 8
+      },
+      "committedAtMs": 1781206980000,
+      "cleanSubject": "keep the model marquee scrolling under reduced motion",
+      "keywords": [
+        "keep",
+        "model",
+        "marquee",
+        "scrolling",
+        "under",
+        "reduced",
+        "motion"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "641ce07d21fc69c68e9e861314c420dd463a553d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:44:19-07:00",
+      "subject": "feat(onboarding): apply onboarding draft to remote-only CEO agent after signup",
+      "body": "",
+      "parents": [
+        "ae2e0cbfd6e231af1326f948390b7dde074307b1"
+      ],
+      "files": [
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/apply-agent-onboarding.ts",
+        "interface/src/views/public-chat/AgentOnboarding/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/useApplyAgentOnboarding.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 150,
+        "deletions": 0
+      },
+      "committedAtMs": 1781207059000,
+      "cleanSubject": "apply onboarding draft to remote-only CEO agent after signup",
+      "keywords": [
+        "apply",
+        "onboarding",
+        "draft",
+        "remote",
+        "only",
+        "agent",
+        "after",
+        "signup"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "afdb0abdc4bb91f551984f310710dc75c8e56dfc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:47:06-07:00",
+      "subject": "feat(onboarding): open wizard from Create-agent CTA and mount modal globally",
+      "body": "",
+      "parents": [
+        "641ce07d21fc69c68e9e861314c420dd463a553d"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/onboarding-data.ts",
+        "interface/src/views/public-chat/CreateAgentButton/CreateAgentButton.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 14,
+        "deletions": 20
+      },
+      "committedAtMs": 1781207226000,
+      "cleanSubject": "open wizard from Create-agent CTA and mount modal globally",
+      "keywords": [
+        "open",
+        "wizard",
+        "from",
+        "create",
+        "agent",
+        "mount",
+        "modal",
+        "globally"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "101aece3ea2f7c7d806d9ceba535ab4a913af942",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:50:25-07:00",
+      "subject": "test(onboarding): cover store, apply util, stepper, and personality shuffle",
+      "body": "",
+      "parents": [
+        "afdb0abdc4bb91f551984f310710dc75c8e56dfc"
+      ],
+      "files": [
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.test.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingStepper/OnboardingStepper.test.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/agent-onboarding-store.test.ts",
+        "interface/src/views/public-chat/AgentOnboarding/apply-agent-onboarding.test.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 217,
+        "deletions": 0
+      },
+      "committedAtMs": 1781207425000,
+      "cleanSubject": "cover store, apply util, stepper, and personality shuffle",
+      "keywords": [
+        "cover",
+        "store",
+        "apply",
+        "util",
+        "stepper",
+        "personality",
+        "shuffle"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e709bb6988897cd05359e52fe752b1cc0e48f9e2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T12:52:14-07:00",
+      "subject": "refactor(onboarding): extract pickRandomPersonality to its own module for fast-refresh lint",
+      "body": "",
+      "parents": [
+        "101aece3ea2f7c7d806d9ceba535ab4a913af942"
+      ],
+      "files": [
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.test.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/pick-personality.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 21,
+        "deletions": 18
+      },
+      "committedAtMs": 1781207534000,
+      "cleanSubject": "extract pickRandomPersonality to its own module for fast-refresh lint",
+      "keywords": [
+        "extract",
+        "pickrandompersonality",
+        "module",
+        "fast",
+        "refresh",
+        "lint"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a792833c473566caa1831ed7574ae009037ae49c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T13:02:45-07:00",
+      "subject": "feat(agents): link deployed harness commit from env popup",
+      "body": "",
+      "parents": [
+        "e709bb6988897cd05359e52fe752b1cc0e48f9e2"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/swarm.rs",
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.module.css",
+        "interface/src/apps/agents/components/AgentEnvironment/StatusCard.tsx",
+        "interface/src/apps/agents/components/AgentEnvironment/useRemoteAgentVm.ts",
+        "interface/src/hooks/use-remote-agent-state.ts",
+        "interface/src/shared/types/entities/environment.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 42,
+        "deletions": 0
+      },
+      "committedAtMs": 1781208165000,
+      "cleanSubject": "link deployed harness commit from env popup",
+      "keywords": [
+        "link",
+        "deployed",
+        "harness",
+        "commit",
+        "from",
+        "popup"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "066fdd7eb334989f4b0abfd091d6538804785947",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T13:04:03-07:00",
+      "subject": "fix(agents): cap env popup width and ellipsize long error messages",
+      "body": "",
+      "parents": [
+        "a792833c473566caa1831ed7574ae009037ae49c"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.module.css",
+        "interface/src/apps/agents/components/AgentEnvironment/StatusCard.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 19,
+        "deletions": 1
+      },
+      "committedAtMs": 1781208243000,
+      "cleanSubject": "cap env popup width and ellipsize long error messages",
+      "keywords": [
+        "popup",
+        "width",
+        "ellipsize",
+        "long",
+        "error",
+        "messages"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9389eb3653f2f3ac183bf72fec4a6fdc3bbe48ca",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T13:14:08-07:00",
+      "subject": "feat(theme): add Shell color group to Custom colors pane",
+      "body": "Move the titlebar/taskbar chrome background token (--color-titlebar-bg) out of Surfaces into a dedicated Shell group so shell chrome colors are grouped distinctly in Settings > Theme > Custom colors.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "066fdd7eb334989f4b0abfd091d6538804785947"
+      ],
+      "files": [
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 1
+      },
+      "committedAtMs": 1781208848000,
+      "cleanSubject": "add Shell color group to Custom colors pane",
+      "keywords": [
+        "shell",
+        "color",
+        "group",
+        "custom",
+        "colors",
+        "pane"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "743979ecdf2ac3f9f1c6425e6e6be8fd6d79de12",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T13:41:44-07:00",
+      "subject": "feat(mobile-public): Creator landing hero, full-screen nav menu, and mobile-friendly agents flow",
+      "body": "Mobile public landing now mirrors the desktop story in a lighter form: a\nCreator-pinned hero (typewriter tagline, static portrait, inline composer,\nCTA) scrolls into the lazily-embedded /agents section stack. The topbar\nmoves the AURA wordmark to the left and the hamburger to the right, and the\nold slide-in drawer becomes a full-screen menu mirroring the desktop nav\nareas (Agents / Code / Pricing flat, Resources expandable) with a shared\nnav-links module as the single source of truth. Mobile-only CSS fixes keep\nthe agents sections inside the band (minmax(0,1fr) grid column, 4-up skill\nkeypad, full-width centered hero column). Also retires the TODO(thinking)\nmarkers in the public-chat surface in favor of plain protocol notes.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9389eb3653f2f3ac183bf72fec4a6fdc3bbe48ca"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.module.css",
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.tsx",
+        "interface/src/mobile/shell/MobilePublicMenu/index.ts",
+        "interface/src/mobile/shell/MobilePublicShell.module.css",
+        "interface/src/mobile/shell/MobilePublicShell.test.tsx",
+        "interface/src/mobile/shell/MobilePublicShell.tsx",
+        "interface/src/stores/public-chat-store.ts",
+        "interface/src/views/marketing/CardSection/CardSection.css",
+        "interface/src/views/marketing/PageHero/PageHero.css",
+        "interface/src/views/marketing/PersonalAgentSection/PersonalAgentSection.css",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.module.css",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.tsx",
+        "interface/src/views/public-chat/MobileLandingHero/index.ts",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.module.css",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.test.tsx",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.tsx",
+        "interface/src/views/public-chat/PublicChatBubble/PublicChatBubble.tsx",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.tsx",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.tsx",
+        "interface/src/views/public-chat/PublicTopNav/nav-links.ts"
+      ],
+      "stats": {
+        "fileCount": 20,
+        "insertions": 1274,
+        "deletions": 607
+      },
+      "committedAtMs": 1781210504000,
+      "cleanSubject": "Creator landing hero, full-screen nav menu, and mobile-friendly agents flow",
+      "keywords": [
+        "creator",
+        "landing",
+        "hero",
+        "full",
+        "screen",
+        "menu",
+        "mobile",
+        "friendly",
+        "agents",
+        "flow"
+      ],
+      "fileGroups": [
+        "interface/src/mobile",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "29fbc11468d869a7869720b8835cbf52e68464af",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T14:05:47-07:00",
+      "subject": "fix(agents): hide local agents across all web/mobile surfaces",
+      "body": "Local agents (machine_type === \"local\") can only run with a desktop\nbridge, but several surfaces beyond the main sidebar ignored the\nremoteOnly rule and leaked them into web/mobile: the project attach\npicker (desktop web), the mobile project roster, the project explorer\ntree, the project agent switcher, and menu agent cycling.\n\nCentralize the predicate in shared/lib/agent-runtime-visibility\n(isLocalAgent + filterRuntimeVisibleAgents) and apply it consistently so\nlocal agents are hidden and never selectable when there is no desktop\nbridge. Creation already forces machine_type \"remote\" when remoteOnly.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "743979ecdf2ac3f9f1c6425e6e6be8fd6d79de12"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentSelectorModal/AgentSelectorModal.test.tsx",
+        "interface/src/apps/agents/components/AgentSelectorModal/AgentSelectorModal.tsx",
+        "interface/src/apps/agents/components/ProjectAgentSwitcher/ProjectAgentSwitcher.tsx",
+        "interface/src/apps/agents/stores/agent-selectors.ts",
+        "interface/src/components/MenuBar/use-menu-actions.ts",
+        "interface/src/components/ProjectList/project-list-explorer-node.tsx",
+        "interface/src/components/ProjectList/project-list-projects-explorer.tsx",
+        "interface/src/components/ProjectList/useProjectListData.ts",
+        "interface/src/mobile/screens/ProjectAgentsScreen/ProjectAgentsScreen.tsx",
+        "interface/src/shared/lib/agent-runtime-visibility.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 127,
+        "deletions": 30
+      },
+      "committedAtMs": 1781211947000,
+      "cleanSubject": "hide local agents across all web/mobile surfaces",
+      "keywords": [
+        "hide",
+        "local",
+        "agents",
+        "across",
+        "mobile",
+        "surfaces"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/mobile",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fa244c33dd7d8f7123401901b30e121370a905d4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:07:38-07:00",
+      "subject": "feat(onboarding): glass agent wizard with compact selectable tiles",
+      "body": "Redesign the public \"Create your agent\" wizard around a reusable\nblack-glass modal and tighter, tab-like selectable tiles.\n\n- Add reusable GlassModal component (rounded, blurred, glowing glass\n  surface) and adopt it for the onboarding modal; give the mobile\n  Drawer a matching glass fill.\n- Shrink the desktop modal (~640x480) and tighten padding/grids to\n  avoid scrollbars.\n- Rebuild SelectableCard as a compact icon+label tile with the\n  description revealed on hover (web) / info-dot tap (mobile); reuse it\n  for personality too.\n- Add Lucide icons to personality presets and skills.\n- Trim onboarding avatars from 12 to the 7 curated personas.\n- Rename the \"Expertise\" stage to \"Skills\".",
+      "parents": [
+        "29fbc11468d869a7869720b8835cbf52e68464af"
+      ],
+      "files": [
+        "interface/src/components/GlassModal/GlassModal.module.css",
+        "interface/src/components/GlassModal/GlassModal.tsx",
+        "interface/src/components/GlassModal/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/AutomationsStep/AutomationsStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/ConnectionsStep/ConnectionsStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/ExpertiseStep/ExpertiseStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/ExpertiseStep/ExpertiseStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/IntegrationsStep/IntegrationsStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/SelectableCard/SelectableCard.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/SelectableCard/SelectableCard.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/onboarding-data.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 545,
+        "deletions": 180
+      },
+      "committedAtMs": 1781215658000,
+      "cleanSubject": "glass agent wizard with compact selectable tiles",
+      "keywords": [
+        "glass",
+        "agent",
+        "wizard",
+        "with",
+        "compact",
+        "selectable",
+        "tiles"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4e36250638423eefe2eef4f0f2edd1e78e319969",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:08:15-07:00",
+      "subject": "perf(marketing): render Delegate everything and Built for trust WebGL on large screens only",
+      "body": "Gate the hero AuraScreenOrb and the isolated-device WebGL scene behind\nuseAuraCapabilities().isMobileLayout so the heavy canvases never run on\nmobile/tablet. The device chrome (screen well, status label, plate frame)\nstill renders on small screens.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fa244c33dd7d8f7123401901b30e121370a905d4"
+      ],
+      "files": [
+        "interface/src/views/marketing/AgentConsole/AgentConsole.tsx",
+        "interface/src/views/marketing/IsolatedDevice/IsolatedDevice.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 13,
+        "deletions": 3
+      },
+      "committedAtMs": 1781215695000,
+      "cleanSubject": "perf(marketing): render Delegate everything and Built for trust WebGL on large screens only",
+      "keywords": [
+        "perf",
+        "marketing",
+        "render",
+        "delegate",
+        "everything",
+        "built",
+        "trust",
+        "webgl",
+        "large",
+        "screens",
+        "only"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1cc948b4a92fd744c97076a1c16a67a41b7e14d7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:20:39-07:00",
+      "subject": "fix(marketing): never show blog loading posts text",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4e36250638423eefe2eef4f0f2edd1e78e319969"
+      ],
+      "files": [
+        "interface/src/views/marketing/BlogView/BlogView.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 20
+      },
+      "committedAtMs": 1781216439000,
+      "cleanSubject": "never show blog loading posts text",
+      "keywords": [
+        "never",
+        "show",
+        "blog",
+        "loading",
+        "posts",
+        "text"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bcf776cadee0ebd97ebb3aa791fb79511f98204c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:21:34-07:00",
+      "subject": "fix(marketing): always animate Delegate everything and Built for trust WebGL",
+      "body": "The hero AuraScreenOrb and the isolated-device scene held a single static\nframe whenever the OS reduced-motion setting was on, so the plasma never\nlooped. Drop the reduced-motion gating from both render loops so the\nmarketing hardware scenes animate whenever visible on large screens.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1cc948b4a92fd744c97076a1c16a67a41b7e14d7"
+      ],
+      "files": [
+        "interface/src/views/marketing/AuraScreenOrb/AuraScreenOrb.tsx",
+        "interface/src/views/marketing/IsolatedDevice/isolated-device-scene.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 9,
+        "deletions": 27
+      },
+      "committedAtMs": 1781216494000,
+      "cleanSubject": "always animate Delegate everything and Built for trust WebGL",
+      "keywords": [
+        "always",
+        "animate",
+        "delegate",
+        "everything",
+        "built",
+        "trust",
+        "webgl"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "79277795edf8a807c5e06c7bc6149a33730fbb3a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:22:45-07:00",
+      "subject": "feat(onboarding): refine glass wizard polish and stepper legibility",
+      "body": "- Trim personalities from 8 to 6 and center the profile-picture grid.\n- Remove the personality \"Generate\" button.\n- Redesign the desktop stepper: stack the number above a smaller label\n  so all six stages are legible instead of truncated.\n- Center and uppercase the \"Create your agent\" title (new centerTitle /\n  titleClassName props on GlassModal).\n- Only reveal a tile's description on mouseover/focus of its info dot\n  (no longer shown on whole-tile hover); keep tap-to-reveal on mobile.\n- Strengthen the GlassModal surface into convincing black glass: glossy\n  top sheen, diagonal reflection, deeper body gradient, inner highlight.",
+      "parents": [
+        "bcf776cadee0ebd97ebb3aa791fb79511f98204c"
+      ],
+      "files": [
+        "interface/src/components/GlassModal/GlassModal.module.css",
+        "interface/src/components/GlassModal/GlassModal.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/IdentityStep/IdentityStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingStepper/OnboardingStepper.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/SelectableCard/SelectableCard.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/onboarding-data.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 112,
+        "deletions": 115
+      },
+      "committedAtMs": 1781216565000,
+      "cleanSubject": "refine glass wizard polish and stepper legibility",
+      "keywords": [
+        "refine",
+        "glass",
+        "wizard",
+        "polish",
+        "stepper",
+        "legibility"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "157557ae5e806d48807ee59c4509a5775d117cf3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:23:47-07:00",
+      "subject": "fix(public-chat): use sentence case for landing hero taglines",
+      "body": "The cycling hero phrases were title-cased (\"Code Anything.\"). Lowercase\nthe trailing words so they read as sentence case (\"Code anything.\") on\nboth the desktop PublicChatView hero and the MobileLandingHero.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "79277795edf8a807c5e06c7bc6149a33730fbb3a"
+      ],
+      "files": [
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.tsx",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 8,
+        "deletions": 8
+      },
+      "committedAtMs": 1781216627000,
+      "cleanSubject": "use sentence case for landing hero taglines",
+      "keywords": [
+        "sentence",
+        "case",
+        "landing",
+        "hero",
+        "taglines"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "87e883e068e26a71aca93978ba2aacb6ed32eddb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:30:03-07:00",
+      "subject": "feat(onboarding): messaging stage + footer create-account CTA",
+      "body": "- Rename the \"Connections\" stage to \"Messaging\" and shorten the\n  unavailable provider badge from \"Coming soon\" to \"Soon\".\n- Make the Launch step signup-only: hide the Sign In tab and move the\n  primary CTA into the modal footer (bottom right) as \"Create account\",\n  wired to the form via a `form` association with progress/disabled\n  state tracked through the onboarding store. Authenticated visitors get\n  a \"Create my agent\" footer button instead.\n- Add optional formId / hideTabs / hideSubmit props to the shared\n  LoginForm (non-breaking) to support the footer-driven submit.",
+      "parents": [
+        "157557ae5e806d48807ee59c4509a5775d117cf3"
+      ],
+      "files": [
+        "interface/src/views/LoginView/LoginForm.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/ConnectionsStep/ConnectionsStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/LaunchStep/LaunchStep.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/LaunchStep/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/agent-onboarding-store.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 111,
+        "deletions": 80
+      },
+      "committedAtMs": 1781217003000,
+      "cleanSubject": "messaging stage + footer create-account CTA",
+      "keywords": [
+        "messaging",
+        "stage",
+        "footer",
+        "create",
+        "account"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c1c63dc2f5033417c7a77655eff7607e2005033a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:33:01-07:00",
+      "subject": "style(onboarding): hover brightens button text instead of shifting bg",
+      "body": "Footer Back/Next/Create buttons and the modal close button no longer\nchange their background or dim on hover; they just light up the label\nto the primary text color.",
+      "parents": [
+        "87e883e068e26a71aca93978ba2aacb6ed32eddb"
+      ],
+      "files": [
+        "interface/src/components/GlassModal/GlassModal.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 33,
+        "deletions": 3
+      },
+      "committedAtMs": 1781217181000,
+      "cleanSubject": "style(onboarding): hover brightens button text instead of shifting bg",
+      "keywords": [
+        "style",
+        "onboarding",
+        "hover",
+        "brightens",
+        "button",
+        "text",
+        "instead",
+        "shifting"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "238c8c2712af0f55358a10b70e366eeec56be9cf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:35:50-07:00",
+      "subject": "style(marketing): black-glass phone DREAMS meter, drop orange glow",
+      "body": "Remove the pulsing orange radial glow under the VU-meter LCD on the\nagents-page phone mock and retint the LCD base to a neutral black-glass\ngradient so the screen reads as proper black glass.",
+      "parents": [
+        "c1c63dc2f5033417c7a77655eff7607e2005033a"
+      ],
+      "files": [
+        "interface/src/views/marketing/PhoneShell/PhoneShell.css",
+        "interface/src/views/marketing/PhoneShell/PhoneShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 5,
+        "deletions": 41
+      },
+      "committedAtMs": 1781217350000,
+      "cleanSubject": "style(marketing): black-glass phone DREAMS meter, drop orange glow",
+      "keywords": [
+        "style",
+        "marketing",
+        "black",
+        "glass",
+        "phone",
+        "dreams",
+        "meter",
+        "drop",
+        "orange",
+        "glow"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "70188ec4db99c084c118b4e403ba665ec8a1c0a6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:36:25-07:00",
+      "subject": "style(marketing): unify public pages on black shell with risen glass",
+      "body": "Give pricing, blog, changelog, downloads, feedback, models, and os the same diagonal gradient outer-shell frame as agents/code, flatten their content surfaces to a solid #090909 (removing the blue/pink/purple/slate glows), and restyle the frosted banner/plan-grid panels as elevated 'risen black glass' (translucent near-black fill, lit top-bevel highlight, soft elevation shadow). Feedback banner text flipped to light for the dark surface.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "238c8c2712af0f55358a10b70e366eeec56be9cf"
+      ],
+      "files": [
+        "interface/src/components/AuraShell/AuraShell.module.css",
+        "interface/src/components/AuraShell/AuraShell.tsx",
+        "interface/src/views/marketing/BannerCard/BannerCard.css",
+        "interface/src/views/marketing/BannerCard/BannerCard.tsx",
+        "interface/src/views/marketing/BlogView/BlogView.module.css",
+        "interface/src/views/marketing/ChangelogView/ChangelogView.css",
+        "interface/src/views/marketing/FeedbackView/FeedbackView.css",
+        "interface/src/views/marketing/ModelsView/ModelsView.css",
+        "interface/src/views/marketing/OsView/OsView.module.css",
+        "interface/src/views/marketing/PricingView/PricingView.css",
+        "interface/src/views/public-chat/PublicMarketingPanel/PublicMarketingPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 122,
+        "deletions": 147
+      },
+      "committedAtMs": 1781217385000,
+      "cleanSubject": "style(marketing): unify public pages on black shell with risen glass",
+      "keywords": [
+        "style",
+        "marketing",
+        "unify",
+        "public",
+        "pages",
+        "black",
+        "shell",
+        "with",
+        "risen",
+        "glass"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "afc12be1458fe521d6bfcb106b4235f7dd18db03",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:43:18-07:00",
+      "subject": "feat(marketing): two-column Resources nav with Docs + black shell on docs/legal",
+      "body": "Render the desktop Resources dropdown as two columns (Changelog heads the left column, Blog the right) and add the Docs page to the menu. Extend the black-shell color convention (gradient outer-shell frame + flat #090909 surface) to /docs, /terms, and /privacy.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "70188ec4db99c084c118b4e403ba665ec8a1c0a6"
+      ],
+      "files": [
+        "interface/src/components/AuraShell/AuraShell.module.css",
+        "interface/src/components/AuraShell/AuraShell.tsx",
+        "interface/src/locales/en/nav.json",
+        "interface/src/mobile/shell/MobilePublicShell.test.tsx",
+        "interface/src/views/marketing/DocsView/DocsView.module.css",
+        "interface/src/views/marketing/LegalDocument/LegalDocument.module.css",
+        "interface/src/views/public-chat/PublicMarketingPanel/PublicMarketingPanel.tsx",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.test.tsx",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.tsx",
+        "interface/src/views/public-chat/PublicTopNav/nav-links.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 86,
+        "deletions": 35
+      },
+      "committedAtMs": 1781217798000,
+      "cleanSubject": "two-column Resources nav with Docs + black shell on docs/legal",
+      "keywords": [
+        "column",
+        "resources",
+        "with",
+        "docs",
+        "black",
+        "shell",
+        "legal"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/locales",
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "af596ea53db5f574e21fd137c2223efe04146a8c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:47:25-07:00",
+      "subject": "fix(mobile): frame public shell, static WebGL posters, marketing section reflow",
+      "body": "Mobile-only fixes for the public webpage: give MobilePublicShell a framed shell perimeter (lighter top bar + thin gradient border around the page); show captured static posters for the AgentConsole orb and IsolatedDevice screens that were blank with WebGL disabled on phones; de-jank the Intelligence card (in-flow status row, 12 domains in a 3-col/4-row grid); fix the chat-input mock collapsing into a circle; reflow the 'Create your agent' device into a clean vertical stack; and make the hamburger nav background jet black.",
+      "parents": [
+        "afc12be1458fe521d6bfcb106b4235f7dd18db03"
+      ],
+      "files": [
+        "interface/public/agent-console-orb.png",
+        "interface/public/isolated-device.png",
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.module.css",
+        "interface/src/mobile/shell/MobilePublicShell.module.css",
+        "interface/src/views/marketing/AgentConsole/AgentConsole.module.css",
+        "interface/src/views/marketing/AgentConsole/AgentConsole.tsx",
+        "interface/src/views/marketing/IsolatedDevice/IsolatedDevice.css",
+        "interface/src/views/marketing/IsolatedDevice/IsolatedDevice.tsx",
+        "interface/src/views/marketing/MadeForYouSection/MadeForYouSection.css",
+        "interface/src/views/marketing/PersonalAgentSection/PersonalAgentSection.css",
+        "interface/src/views/marketing/SpecQuadrantSection/SpecQuadrantSection.css"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 345,
+        "deletions": 24
+      },
+      "committedAtMs": 1781218045000,
+      "cleanSubject": "frame public shell, static WebGL posters, marketing section reflow",
+      "keywords": [
+        "frame",
+        "public",
+        "shell",
+        "static",
+        "webgl",
+        "posters",
+        "marketing",
+        "section",
+        "reflow"
+      ],
+      "fileGroups": [
+        "interface/public/agent-console-orb.png",
+        "interface/public/isolated-device.png",
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "0c0fe4e3440a330a760a7e5999d1b27f7adfa9fe",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:51:51-07:00",
+      "subject": "style(mobile): match public shell frame to desktop shell",
+      "body": "Use the shared --desktop-shell-backdrop, 5px side inset, 6px corner radius, and --shell-stroke gradient border with a transparent floating top bar so the mobile public shell reads identically to the desktop large-screen shell.",
+      "parents": [
+        "af596ea53db5f574e21fd137c2223efe04146a8c"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 20,
+        "deletions": 18
+      },
+      "committedAtMs": 1781218311000,
+      "cleanSubject": "style(mobile): match public shell frame to desktop shell",
+      "keywords": [
+        "style",
+        "mobile",
+        "match",
+        "public",
+        "shell",
+        "frame",
+        "desktop"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "98a99255fdbba19c79f884b18883695b1e5ea394",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T15:55:39-07:00",
+      "subject": "style(mobile): drop topbar divider line, match desktop titlebar height",
+      "body": "Set the mobile public topbar to --shell-chrome-height (32px, same as the desktop titlebar) and remove the line below it: the framed page now sits flush beneath the bar with the shell stroke wrapping only the sides and bottom.",
+      "parents": [
+        "0c0fe4e3440a330a760a7e5999d1b27f7adfa9fe"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 13,
+        "deletions": 9
+      },
+      "committedAtMs": 1781218539000,
+      "cleanSubject": "style(mobile): drop topbar divider line, match desktop titlebar height",
+      "keywords": [
+        "style",
+        "mobile",
+        "drop",
+        "topbar",
+        "divider",
+        "line",
+        "match",
+        "desktop",
+        "titlebar",
+        "height"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c1cb5e24b87652159b182d0dfa257585a156469f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:04:33-07:00",
+      "subject": "feat(mobile): desktop-style WebGL landing, move chat to /chat",
+      "body": "Pin the persona's live WebGL plasma behind the mobile public landing (matching desktop) and play the persona's character video in the hero card. Drop the inline chat composer from the main page; reach the dedicated /chat page via an on-page link and a hamburger-menu row.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "98a99255fdbba19c79f884b18883695b1e5ea394"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.tsx",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.module.css",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.tsx",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.module.css",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 206,
+        "deletions": 46
+      },
+      "committedAtMs": 1781219073000,
+      "cleanSubject": "desktop-style WebGL landing, move chat to /chat",
+      "keywords": [
+        "desktop",
+        "style",
+        "webgl",
+        "landing",
+        "move",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d36f573b117a9dd5339fa4bf955f4798c19b950c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:06:49-07:00",
+      "subject": "fix(mobile): hide scrollbars on touch surfaces",
+      "body": "Stamp a global [data-mobile-layout=true] rule that removes native scrollbars (scrollbar-width + ::-webkit-scrollbar) and hide the custom OverlayScrollbar thumb on mobile, where scrolling is drag-driven.",
+      "parents": [
+        "c1cb5e24b87652159b182d0dfa257585a156469f"
+      ],
+      "files": [
+        "interface/src/components/OverlayScrollbar/OverlayScrollbar.module.css",
+        "interface/src/index.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 21,
+        "deletions": 0
+      },
+      "committedAtMs": 1781219209000,
+      "cleanSubject": "hide scrollbars on touch surfaces",
+      "keywords": [
+        "hide",
+        "scrollbars",
+        "touch",
+        "surfaces"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/index.css"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "278133b9276feec829ea90aa65d0b712cfca86da",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:06:58-07:00",
+      "subject": "fix(mobile): render MadeForYou terminal feed inside its LCD",
+      "body": "The mobile reflow set .madeForYouTerminalScreen to position:static, so its absolutely-positioned .madeForYouTerminalScroll text escaped to the device-content ancestor and painted over the step list. Make the terminal screen position:relative so the feed anchors inside the LCD box.",
+      "parents": [
+        "d36f573b117a9dd5339fa4bf955f4798c19b950c"
+      ],
+      "files": [
+        "interface/src/views/marketing/MadeForYouSection/MadeForYouSection.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 2
+      },
+      "committedAtMs": 1781219218000,
+      "cleanSubject": "render MadeForYou terminal feed inside its LCD",
+      "keywords": [
+        "render",
+        "madeforyou",
+        "terminal",
+        "feed",
+        "inside"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c94afcbd4667a56a6b8597462a30322c7977c32b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:09:11-07:00",
+      "subject": "style(mobile): refine public landing hero + taller topbar",
+      "body": "Drop the persona caption and the on-page Chat link from the landing hero (the hamburger menu keeps the /chat entry), center the tagline in the space above the card, and darken the scroll-hint chevron for contrast over the bright plasma. Bump the mobile public topbar to a standard 56px header with larger touch targets.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "278133b9276feec829ea90aa65d0b712cfca86da"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicShell.module.css",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.module.css",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 117,
+        "deletions": 134
+      },
+      "committedAtMs": 1781219351000,
+      "cleanSubject": "style(mobile): refine public landing hero + taller topbar",
+      "keywords": [
+        "style",
+        "mobile",
+        "refine",
+        "public",
+        "landing",
+        "hero",
+        "taller",
+        "topbar"
+      ],
+      "fileGroups": [
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "21a3ad0c4d83a9aad5ee8936f05fe63af83b7cad",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:10:54-07:00",
+      "subject": "style(mobile): round top inner corners of public shell page frame",
+      "body": "Wrap the shell stroke and 6px radius around all four corners so the top-left/right inner corners round beneath the transparent topbar, matching the bottom corners.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c94afcbd4667a56a6b8597462a30322c7977c32b"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 4
+      },
+      "committedAtMs": 1781219454000,
+      "cleanSubject": "style(mobile): round top inner corners of public shell page frame",
+      "keywords": [
+        "style",
+        "mobile",
+        "round",
+        "inner",
+        "corners",
+        "public",
+        "shell",
+        "page",
+        "frame"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9d3e281d6187b7a7b5f5516300b20935d13e70d4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:11:15-07:00",
+      "subject": "style(mobile): thinner hamburger icon stroke in public topbar",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "21a3ad0c4d83a9aad5ee8936f05fe63af83b7cad"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1781219475000,
+      "cleanSubject": "style(mobile): thinner hamburger icon stroke in public topbar",
+      "keywords": [
+        "style",
+        "mobile",
+        "thinner",
+        "hamburger",
+        "icon",
+        "stroke",
+        "public",
+        "topbar"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8e128744caee3a16647a1beaea5203333a9e2f04",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:12:40-07:00",
+      "subject": "style(mobile): center landing CTA between card and shell bottom",
+      "body": "Move the 'Create your agent' pill into a flex zone mirroring the headline zone, so it centers vertically between the portrait card's bottom edge and the bottom of the shell (card stays centered between the two equal zones).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9d3e281d6187b7a7b5f5516300b20935d13e70d4"
+      ],
+      "files": [
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.module.css",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 57,
+        "deletions": 54
+      },
+      "committedAtMs": 1781219560000,
+      "cleanSubject": "style(mobile): center landing CTA between card and shell bottom",
+      "keywords": [
+        "style",
+        "mobile",
+        "center",
+        "landing",
+        "between",
+        "card",
+        "shell",
+        "bottom"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bba733a889c8da27d8439abdfc85bab96480a57d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:13:58-07:00",
+      "subject": "fix(mobile): drop mock chat model picker below the input",
+      "body": "On the marketing 'Always on' mock at phone width, the reused real input bar is so narrow that the inline model picker overlapped the typed prompt. Scoped to .personalAgentChatMock on mobile, move the picker to its own bottom-right row, pin attach/send to the top, and free the full prompt width.",
+      "parents": [
+        "8e128744caee3a16647a1beaea5203333a9e2f04"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/InputBarShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 36,
+        "deletions": 0
+      },
+      "committedAtMs": 1781219638000,
+      "cleanSubject": "drop mock chat model picker below the input",
+      "keywords": [
+        "drop",
+        "mock",
+        "chat",
+        "model",
+        "picker",
+        "below",
+        "input"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3f0c9a4348a4c6e341fe248638b8ed1a7a86ad00",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:15:25-07:00",
+      "subject": "style(mobile): compact EN language selector beside auth pills in menu",
+      "body": "Replace the full-width 'Language' label + dropdown in the mobile public menu footer with a compact all-caps two-letter language code (e.g. EN) that sits inline beside the Log In / Sign Up pills.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bba733a889c8da27d8439abdfc85bab96480a57d"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.module.css",
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 58,
+        "deletions": 73
+      },
+      "committedAtMs": 1781219725000,
+      "cleanSubject": "style(mobile): compact EN language selector beside auth pills in menu",
+      "keywords": [
+        "style",
+        "mobile",
+        "compact",
+        "language",
+        "selector",
+        "beside",
+        "auth",
+        "pills",
+        "menu"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ed3e93aa64f89ce79f4792f07906dc2b9b8fd294",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:17:16-07:00",
+      "subject": "fix(mobile): collapse skill keypad to a 4x4 grid",
+      "body": "On mobile, flatten the three divider-separated skill groups into a single 16-key group so the panel reads as a tidy 4-across x 4-down keypad (no dividers). Desktop keeps the grouped layout.",
+      "parents": [
+        "3f0c9a4348a4c6e341fe248638b8ed1a7a86ad00"
+      ],
+      "files": [
+        "interface/src/views/marketing/PersonalAgentSection/SkillSeaCard.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 9,
+        "deletions": 1
+      },
+      "committedAtMs": 1781219836000,
+      "cleanSubject": "collapse skill keypad to a 4x4 grid",
+      "keywords": [
+        "collapse",
+        "skill",
+        "keypad",
+        "grid"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f30a66e64427d2611ddfe4329e05a8a039dfcd63",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:17:55-07:00",
+      "subject": "style(mobile): move EN language selector into menu header left of close",
+      "body": "Relocate the compact two-letter language code from the menu footer to a header action cluster just left of the X close button; footer returns to the two auth pills.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ed3e93aa64f89ce79f4792f07906dc2b9b8fd294"
+      ],
+      "files": [
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.module.css",
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 42,
+        "deletions": 34
+      },
+      "committedAtMs": 1781219875000,
+      "cleanSubject": "style(mobile): move EN language selector into menu header left of close",
+      "keywords": [
+        "style",
+        "mobile",
+        "move",
+        "language",
+        "selector",
+        "into",
+        "menu",
+        "header",
+        "left",
+        "close"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7684bcb6cf438e4086c83904fde423c2c8a8d601",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:22:37-07:00",
+      "subject": "fix(mobile): lay trust service rail horizontally below the computer",
+      "body": "On phones the service button rail no longer fits beside the WebGL computer, so stack the stage into a column (computer on top, rail below) and flip the rail well from a vertical column to a horizontal bar sized to fit all eight keys in one row. Nozzles (which fed the now-hidden connection mesh) are dropped.",
+      "parents": [
+        "f30a66e64427d2611ddfe4329e05a8a039dfcd63"
+      ],
+      "files": [
+        "interface/src/views/marketing/BuiltForTrustSection/ServiceButtonRail.css",
+        "interface/src/views/marketing/BuiltForTrustSection/TrustDeviceStage.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 38,
+        "deletions": 11
+      },
+      "committedAtMs": 1781220157000,
+      "cleanSubject": "lay trust service rail horizontally below the computer",
+      "keywords": [
+        "trust",
+        "service",
+        "rail",
+        "horizontally",
+        "below",
+        "computer"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c045d96066ced1c96a8feb83dc2ed28ce9044c41",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:24:46-07:00",
+      "subject": "fix(marketing): share docs/os layout and pin docs content to prod in dev",
+      "body": "The /docs page rendered empty in local dev because it fetched from the\nlocal aura-os-server, which has no AURA_STORAGE_INTERNAL_TOKEN configured\nand returns 502; the swallowed error showed \"No pages yet.\" Switch docs\nto resolvePublicContentApiUrl so it reads published content from prod in\ndev, matching /os.\n\nExtract the near-identical OsView and DocsView into a shared, generic\nMarkdownDocSite component (plus one stylesheet and a markdown utils file)\nso both sites share the same structure and layout. Enable the right-hand\n\"On this page\" TOC on /os as well; whitepaper sections already embed the\nsubheadings it renders from.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7684bcb6cf438e4086c83904fde423c2c8a8d601"
+      ],
+      "files": [
+        "interface/src/api/marketing/docs.ts",
+        "interface/src/locales/en/marketing.json",
+        "interface/src/views/marketing/DocsView/DocsView.module.css",
+        "interface/src/views/marketing/DocsView/DocsView.tsx",
+        "interface/src/views/marketing/OsView/OsView.module.css",
+        "interface/src/views/marketing/OsView/OsView.tsx",
+        "interface/src/views/marketing/shared/MarkdownDocSite.module.css",
+        "interface/src/views/marketing/shared/MarkdownDocSite.tsx",
+        "interface/src/views/marketing/shared/markdown.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 754,
+        "deletions": 1070
+      },
+      "committedAtMs": 1781220286000,
+      "cleanSubject": "share docs/os layout and pin docs content to prod in dev",
+      "keywords": [
+        "share",
+        "docs",
+        "layout",
+        "content",
+        "prod"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/locales",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d71299d5d8ee857cedfec9779e236a94586cebf6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:30:45-07:00",
+      "subject": "fix(mobile): make privacy feature cards narrower and smaller",
+      "body": "On phones the stacked Private/Verifiable/Open Source cards read too wide and tall. Narrow the column to 300px, shrink the engraved shape, and size the metal/glass rows to content (glass auto) so each card is a compact tile that still fits its full description.",
+      "parents": [
+        "c045d96066ced1c96a8feb83dc2ed28ce9044c41"
+      ],
+      "files": [
+        "interface/src/views/marketing/FeaturePanel/FeaturePanel.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 21,
+        "deletions": 0
+      },
+      "committedAtMs": 1781220645000,
+      "cleanSubject": "make privacy feature cards narrower and smaller",
+      "keywords": [
+        "make",
+        "privacy",
+        "feature",
+        "cards",
+        "narrower",
+        "smaller"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0845a1c7cad6ec41ea88d56779578e781e4954d1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:36:15-07:00",
+      "subject": "fix(titlebar): keep window draggable beside the centered nav",
+      "body": "The public top nav was centered with `left: 50%` + `translateX(-50%)`.\nChromium/WebView2 compute `-webkit-app-region` draggable regions from\nthe untransformed layout box and ignore CSS transforms, so the nav's\nno-drag rect was offset from where it renders. Blink also skips\nrecomputing the region on some resizes, so after a mobile->desktop\nlayout swap the stale hole parked beside the menu, creating a dead\nzone where window dragging silently failed.\n\nCenter the slot transform-free (full-width box + `justify-content:\ncenter`) so the layout box matches the visual position and resizing\nre-centers via real layout. Visually identical across all\n`.titlebar-center` consumers.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d71299d5d8ee857cedfec9779e236a94586cebf6"
+      ],
+      "files": [
+        "interface/src/index.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 23,
+        "deletions": 2
+      },
+      "committedAtMs": 1781220975000,
+      "cleanSubject": "keep window draggable beside the centered nav",
+      "keywords": [
+        "keep",
+        "window",
+        "draggable",
+        "beside",
+        "centered"
+      ],
+      "fileGroups": [
+        "interface/src/index.css"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6e669ede4d7f75ca803fb8c0da1296aa4f5924f6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:36:49-07:00",
+      "subject": "fix(analytics): bake Mixpanel token into desktop release frontend",
+      "body": "The June 4-5 desktop release CI refactor split the frontend build into a\nstandalone `build-interface` job and routed the shipped dist through it via\nthe prebuilt-frontend path. That job never received VITE_MIXPANEL_TOKEN\n(it lived on the old `build-app`/`package` job, which no longer builds the\nfrontend), so every desktop + stable build since shipped a client whose\nMixpanel SDK silently no-ops. True DAU and Engaged DAU collapsed and the\ndesktop app_version slice fell back to the package.json \"0.0.0\".\n\n- Inject VITE_MIXPANEL_TOKEN into the `build-interface` build step in both\n  release-nightly and release-stable so the token is baked into the bundle.\n- Drop the now-inert VITE_MIXPANEL_TOKEN from the `package` job env.\n- Add a `--require-analytics` guardrail to desktop-frontend-assets-validate\n  that fails the build if the token is not inlined or app_version is the\n  \"0.0.0\" fallback, preventing a silent regression.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0845a1c7cad6ec41ea88d56779578e781e4954d1"
+      ],
+      "files": [
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release/desktop-frontend-assets-validate.mjs",
+        "infra/scripts/release/desktop-frontend-assets-validate.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 123,
+        "deletions": 6
+      },
+      "committedAtMs": 1781221009000,
+      "cleanSubject": "bake Mixpanel token into desktop release frontend",
+      "keywords": [
+        "bake",
+        "mixpanel",
+        "token",
+        "into",
+        "desktop",
+        "release",
+        "frontend"
+      ],
+      "fileGroups": [
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "e909dedfe32a870d4a59823fa5542f15ef8dda66",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T16:38:33-07:00",
+      "subject": "fix(public): polish mobile onboarding and changelog",
+      "body": "Move public chrome controls into clearer clusters, improve onboarding modal/card behavior, and make the mobile changelog a side-scrolling rail.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6e669ede4d7f75ca803fb8c0da1296aa4f5924f6"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/GlassModal/GlassModal.module.css",
+        "interface/src/locales/en/publicChat.json",
+        "interface/src/views/marketing/ChangelogPreview/ChangelogPreview.css",
+        "interface/src/views/marketing/PricingView/PricingView.css",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingStepper/OnboardingStepper.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/SelectableCard/SelectableCard.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/SelectableCard/SelectableCard.tsx",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.module.css",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.tsx",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.module.css",
+        "interface/src/views/public-chat/personas.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 228,
+        "deletions": 81
+      },
+      "committedAtMs": 1781221113000,
+      "cleanSubject": "polish mobile onboarding and changelog",
+      "keywords": [
+        "polish",
+        "mobile",
+        "onboarding",
+        "changelog"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/locales",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1604,29 +3767,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.638.1",
+      "version": "0.1.0-nightly.639.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 63851640
+          "sizeBytes": 63983070
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 130578936
+          "sizeBytes": 130722296
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1636,29 +3799,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.638.1",
+      "version": "0.1.0-nightly.639.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.638.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.639.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 59806161
+          "sizeBytes": 59984091
         },
         {
-          "name": "AURA_0.1.0-nightly.638.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.639.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 58840718
+          "sizeBytes": 58971763
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1668,29 +3831,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.638.1",
+      "version": "0.1.0-nightly.639.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.638.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.639.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61823755
+          "sizeBytes": 61987746
         },
         {
-          "name": "AURA_0.1.0-nightly.638.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.639.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60886383
+          "sizeBytes": 61042047
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1700,17 +3863,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.638.1",
+      "version": "0.1.0-nightly.639.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47304722
+          "sizeBytes": 47482076
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.638.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.639.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1719,8 +3882,8 @@
     }
   ],
   "rendered": {
-    "title": "Public whitepaper, fully localized marketing, and chat performance fixes",
-    "intro": "A big day for the public surface of Aura: the /os whitepaper grew from a single Harness outline into a multi-repo reference with diagrams and GitHub-linked code, the marketing site picked up real Terms and Privacy pages plus translations into 19 languages, and the trust card's \"Always on.\" switch became a real animated control. Underneath, chat got noticeably snappier, long-running remote agent turns stopped timing out, and the dev server stopped locking itself into infinite error loops.",
+    "title": "Agent onboarding wizard, whitepaper expansion, and a mobile public site",
+    "intro": "Today's nightly is a heavy marketing and onboarding day: a brand-new black-glass \"Create your agent\" wizard lands on the public site, the /os whitepaper grows to cover five core repos, the full public marketing surface gets translated into 19 locales with proper Terms and Privacy pages, and the mobile public experience is rebuilt around a Creator landing and full-screen nav. Underneath, chat performance, remote-agent timeouts, and desktop analytics all got real reliability fixes.",
     "entries": [
       {
         "batch_id": "entry-1",
@@ -1728,10 +3891,10 @@
         "started_at": "2026-06-11T16:18:00.000Z",
         "ended_at": "2026-06-11T16:49:36.000Z",
         "title": "Theme-aware mode selector capsule",
-        "summary": "The input bar's mode selector now picks up the active theme accent instead of a hardcoded glow.",
+        "summary": "The input bar's mode selector now picks up the active theme accent and rides a softened selected glow, with eval fixtures stabilized to keep CI deterministic.",
         "items": [
           {
-            "text": "Repainted the mode selector capsule and selected-mode label using the theme accent token, and softened the selected-state glow so it sits naturally in both light and dark themes.",
+            "text": "Repainted the mode selector capsule and selected-mode label against the theme accent token, softening the selected glow so it adapts to custom themes instead of a hardcoded color.",
             "commit_shas": [
               "ec007643cedd32d94903384b112267da942a2af1",
               "4b5261665bdd1b70d88911448189c7e9a3da76d4"
@@ -1739,11 +3902,11 @@
             "confidence": "high"
           },
           {
-            "text": "Stabilized the eval suite by seeding the Run sidekick tab and mocking transient remote state probes, so CI assertions stay deterministic across runs.",
+            "text": "Stabilized project eval fixtures by seeding the Run sidekick tab and mocking transient remote state probes so smoke and workflow specs stop flaking.",
             "commit_shas": [
               "34404cfd941b474901ee9de6b318533ff9e6ea29"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -1752,11 +3915,11 @@
         "time_label": "9:54 AM",
         "started_at": "2026-06-11T16:54:20.000Z",
         "ended_at": "2026-06-11T16:54:20.000Z",
-        "title": "Longer remote-agent turn and cold-open budgets",
-        "summary": "Remote agents waking from hibernation or doing long tool/LLM work no longer trip spurious idle and cold-open timeouts.",
+        "title": "Longer remote agent turn and cold-open timeouts",
+        "summary": "Long but actively-progressing remote agent turns no longer trip the idle and cold-open caps, eliminating a class of spurious stalls and 502s when waking hibernated microVMs.",
         "items": [
           {
-            "text": "Raised the sliding idle turn timeout from 180s to 600s and the first-event timeout from 180s to 300s, and made the cold-open cap configurable via AURA_COLD_OPEN_TIMEOUT_SECS (default 180s) instead of a hardcoded 60s — eliminating the stalls and 502s that surfaced when waking a hibernated microVM.",
+            "text": "Raised the sliding-idle turn timeout from 180s to 600s and the first-event timeout from 180s to 300s, and made the cold-open cap configurable via AURA_COLD_OPEN_TIMEOUT_SECS (default 180s, up from a hardcoded 60s), so long tool and LLM work stops being killed mid-turn.",
             "commit_shas": [
               "f3a817c0bb9dff9f47a35b71d07a9ea5bfc1a2f3"
             ],
@@ -1769,25 +3932,25 @@
         "time_label": "9:59 AM",
         "started_at": "2026-06-11T16:59:02.000Z",
         "ended_at": "2026-06-11T17:08:27.000Z",
-        "title": "Chat typing latency and idle GPU cost fixes",
-        "summary": "Two targeted performance fixes remove the recent app-wide messaging slowdown and stop the agent profile card from heating up integrated GPUs.",
+        "title": "Chat keystroke lag and 3D profile card GPU cost fixed",
+        "summary": "Two performance regressions that were making the app feel sluggish are gone: every chat keystroke no longer re-renders the full transcript, and the agent profile card stops burning GPU while idle.",
         "items": [
           {
-            "text": "Stopped the full chat transcript from re-parsing markdown on every keystroke and streaming token by memoizing the error-report agent info hook and the ChatMessageList, restoring memoization across React.memo'd MessageBubbles.",
+            "text": "Stopped the full chat transcript from re-parsing markdown on every draft keystroke and streaming token by memoizing the error-report agent info hook and stabilizing the message list's emptyState prop, restoring memoization across React.memo'd MessageBubbles.",
             "commit_shas": [
               "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8"
             ],
             "confidence": "high"
           },
           {
-            "text": "Cut idle GPU cost of the 3D agent profile card by dropping a wasted multisampled framebuffer, halting the bloom render loop once hover/flip transitions settle under prefers-reduced-motion, and pausing the scene off-screen via IntersectionObserver.",
+            "text": "Cut idle GPU cost of the 3D agent profile card by dropping the unused antialiased framebuffer, halting the render loop under prefers-reduced-motion once transitions settle, and pausing off-screen cards via IntersectionObserver.",
             "commit_shas": [
               "b56275981e9c47ee7db11660fb0b836233a8d526"
             ],
             "confidence": "high"
           },
           {
-            "text": "Honored the OS prefers-reduced-motion setting for the always-on attach-button halo and spin animations in authenticated chats.",
+            "text": "Honored prefers-reduced-motion for the always-on attach-button halo and spin animations in authenticated chat.",
             "commit_shas": [
               "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8"
             ],
@@ -1800,67 +3963,41 @@
         "time_label": "10:10 AM",
         "started_at": "2026-06-11T17:10:19.000Z",
         "ended_at": "2026-06-11T18:15:11.000Z",
-        "title": "Whitepaper rework, full marketing localization, and the Always-on trust card",
-        "summary": "The public /os whitepaper was restructured with diagrams and GitHub-linked code refs, the marketing site shipped in 19 new languages, and the trust card's switch became a real interaction.",
+        "title": "Whitepaper, legal i18n, and the Always-on trust toggle",
+        "summary": "A broad public-site push: the /os whitepaper gains Invariants and per-layer internals diagrams, the full marketing surface is translated into 19 locales, and the Built for Trust card gets a real interactive Always-on toggle. Login also remembers previously-used emails.",
         "items": [
           {
-            "text": "Reworked the /os AURA Harness whitepaper around per-section summaries, Overview bullets, and ASCII architecture diagrams; renamed the nav group to \"AURA Harness\"; and turned inline crate/file/function tokens into GitHub links into cypher-asi/aura-harness.",
+            "text": "Reworked the /os whitepaper with per-section summaries, Overview bullets, ASCII architecture and internals diagrams, a request-lifecycle diagram, detailed user-flow sequence diagrams, and an Invariants section enumerating the §1–§15 architectural invariants; inline code references now link out to the public cypher-asi/aura-harness repo.",
             "commit_shas": [
               "e84938ac9e9211e01a4db60c28827c0e5835b479",
+              "54f3e013adfaf19e53b477f0337cb23ca3206726",
               "7d9aca56eb5ff2e7286eb0832d109e7d3d4576ee",
               "cfb01e91e520019da7f51ffa16ea19a19bdfd897"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a dedicated Invariants section covering the fifteen §1–§15 architectural invariants, plus per-layer Internals diagrams, a request-lifecycle diagram, and detailed sequence diagrams for the interactive, run-kickoff, headless, error-recovery, and data-lifecycle flows.",
-            "commit_shas": [
-              "54f3e013adfaf19e53b477f0337cb23ca3206726"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Pointed the dev /os whitepaper at the prod public-content host so local development renders real seeded content instead of the empty state, generalizing the existing blog helpers to serve both surfaces.",
-            "commit_shas": [
-              "748c5b3c790870fad516e08b534f5ff5d049aafd"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Translated the public marketing and publicChat namespaces into all 19 non-English locales (including expertise detail pages and the rotating tagline), and added reproducible machine-translation and placeholder-validation scripts so the catalogs stay in sync with English.",
+            "text": "Translated the public marketing and publicChat surfaces into all 19 non-English locales (including expertise detail pages), routed the rotating tagline through i18n instead of hardcoded English, and added reproducible translate/validate scripts so changing the site language now actually changes the content.",
             "commit_shas": [
               "0d6155a4c040dc4a2b9264f8ed34886d982c47cf"
             ],
             "confidence": "high"
           },
           {
-            "text": "Turned the \"Always on.\" trust card switch into a clickable, sequenced animation — the knob slides and the ON label fades back in on the open side — and tightened the card copy so it wraps like its siblings.",
-            "commit_shas": [
-              "f942415669a437161ab69b9da462276a168c5a58",
-              "184024e87d0b0229a64b3513b4d65781a657dd3d"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Polished the marketing surface: centered the trust display panel between the device and card edge, restyled the footer copyright as a column-aligned badge, stopped the full-screen WebGL backgrounds from flickering on resize, and let the trust disc, verified cubes, and paint gallery keep their ambient motion under prefers-reduced-motion.",
+            "text": "Shipped a clickable, sequenced Always-on toggle on the Built for Trust card (knob slides, ON label fades to the open side), centered the trust display panel against the device, and stopped the WebGL page background from flickering black on every resize step.",
             "commit_shas": [
               "47a76dac980444d7317b4ff4b90fd905f463ba95",
-              "724ee647641520fe27c7548cedd5e983c326747d",
+              "f942415669a437161ab69b9da462276a168c5a58",
+              "184024e87d0b0229a64b3513b4d65781a657dd3d",
               "a6a21a539e26b2e81966bebabf2aab378db6bfce",
               "49c23e0cd804e0cfbe2a35271da186f054a6b48f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a remembered-accounts dropdown to the Sign In screen: previously-used emails are persisted to localStorage (capped at five, most-recent first) with an \"Add an account\" option and per-entry forget.",
+            "text": "Added a remembered-accounts dropdown on the Sign In email field (up to five recent emails with an Add an account option and per-entry forget), and kept analytics honest by retaining the last X-App-Version per user so the daily server-side session_active never lands on (not set).",
             "commit_shas": [
-              "886e305984850688d230805d45d859124e0cddf1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed analytics' daily session_active so it always carries the real app_version and platform — falling back to the latest non-empty header per user and skipping capture-mode tokens entirely so they no longer pollute DAU with \"(not set)\".",
-            "commit_shas": [
+              "886e305984850688d230805d45d859124e0cddf1",
               "3d0bef18e76a0539205b002814b47400bc8a92c5"
             ],
             "confidence": "high"
@@ -1872,11 +4009,11 @@
         "time_label": "11:19 AM",
         "started_at": "2026-06-11T18:19:43.000Z",
         "ended_at": "2026-06-11T18:19:43.000Z",
-        "title": "Vite 8 dev console-forwarding loop disabled",
-        "summary": "Local development no longer locks up before React mounts when Vite is spawned by an AI agent.",
+        "title": "Disabled Vite 8 console forwarding in dev",
+        "summary": "An infinite error loop that could lock up the dev page before React mounted is fixed by turning off Vite 8's agent-triggered console forwarding.",
         "items": [
           {
-            "text": "Disabled Vite 8's auto-enabled console forwarding in dev, which had been latching onto a never-connected websocket and turning every forwarded error into an infinite re-forwarding loop. Also kept three.js out of the entry-critical vendor chunk via a manualChunks split.",
+            "text": "Disabled Vite 8's auto-enabled console forwarding when the dev server is spawned by an AI agent, which had been latching onto a non-connecting websocket and re-forwarding every thrown error until the page froze; also split three.js into its own manualChunks bundle so it stays out of the entry-critical vendor chunk.",
             "commit_shas": [
               "b2296e3935b08b49ee774d958309aface669d878"
             ],
@@ -1888,27 +4025,67 @@
         "batch_id": "entry-6",
         "time_label": "11:22 AM",
         "started_at": "2026-06-11T18:22:26.000Z",
-        "ended_at": "2026-06-11T19:00:00.000Z",
-        "title": "Whitepaper covers five core repos, legal pages ship, and Agents view stops landing on dead agents",
-        "summary": "The /os whitepaper now spans the full AURA stack, /terms and /privacy got real localized content with the standard marketing chrome, and the standalone Agents view stops getting stuck on stale or local agents.",
+        "ended_at": "2026-06-11T23:38:33.000Z",
+        "title": "Black-glass agent onboarding, mobile public site, and Mixpanel restored on desktop",
+        "summary": "The headline thread of the day: a new \"Create your agent\" wizard built around a reusable GlassModal, a full mobile public site rebuild with a Creator hero and full-screen menu, whitepaper coverage extended to five core repos, Terms and Privacy content, and a critical fix that restores Mixpanel analytics in desktop release builds.",
         "items": [
           {
-            "text": "Extended the /os whitepaper beyond AURA Harness to aura-os, aura-router, aura-network, aura-storage, and z-billing — each rendered as its own collapsible nav group with per-section summaries, architecture and internals diagrams — and made inline code-ref links repo-aware so they resolve to the correct cypher-asi/<repo>.",
+            "text": "Shipped the public Create-your-agent onboarding wizard: six-stage flow (Identity, Skills, Integrations, Messaging, Automations, Launch) built on a new reusable black-glass GlassModal with compact icon+label selectable tiles, hover/info-dot descriptions, a desktop pill stepper and mobile progress, signup-only Launch step with a footer Create account CTA, and post-signup application of the draft to a remote-only CEO agent.",
             "commit_shas": [
-              "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc"
+              "81ce6f5f20a4050f2adf4728fcc495c0820d45f8",
+              "69a71e75659d56473ea06ec09a4fa091f9444533",
+              "7d5c9d2478f55496d081ca4184327d93c82f4e69",
+              "074dca925c2f27ecba117d6b6e6aea7e750cd914",
+              "e6ffe9351c3495cbf64c6f969e7a31cea6bc2065",
+              "641ce07d21fc69c68e9e861314c420dd463a553d",
+              "afdb0abdc4bb91f551984f310710dc75c8e56dfc",
+              "fa244c33dd7d8f7123401901b30e121370a905d4",
+              "79277795edf8a807c5e06c7bc6149a33730fbb3a",
+              "87e883e068e26a71aca93978ba2aacb6ed32eddb",
+              "c1c63dc2f5033417c7a77655eff7607e2005033a",
+              "101aece3ea2f7c7d806d9ceba535ab4a913af942"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tightened the /os reading experience: dropped the sidebar's nested scrollbar now that the nav lists every repo, stopped the brief \"no content yet\" flash by gating empty states on each query's isFetched.",
+            "text": "Rebuilt the mobile public site around a Creator-pinned landing hero with the persona's live WebGL plasma, a full-screen hamburger menu mirroring the desktop nav, a framed shell perimeter matching the desktop shell, static WebGL posters where canvases are disabled, and a long tail of mobile-only reflows (4×4 skill keypad, horizontal trust service rail, narrower privacy cards, EN language code in the menu header).",
             "commit_shas": [
+              "743979ecdf2ac3f9f1c6425e6e6be8fd6d79de12",
+              "4e36250638423eefe2eef4f0f2edd1e78e319969",
+              "af596ea53db5f574e21fd137c2223efe04146a8c",
+              "0c0fe4e3440a330a760a7e5999d1b27f7adfa9fe",
+              "98a99255fdbba19c79f884b18883695b1e5ea394",
+              "c1cb5e24b87652159b182d0dfa257585a156469f",
+              "d36f573b117a9dd5339fa4bf955f4798c19b950c",
+              "278133b9276feec829ea90aa65d0b712cfca86da",
+              "c94afcbd4667a56a6b8597462a30322c7977c32b",
+              "21a3ad0c4d83a9aad5ee8936f05fe63af83b7cad",
+              "9d3e281d6187b7a7b5f5516300b20935d13e70d4",
+              "8e128744caee3a16647a1beaea5203333a9e2f04",
+              "bba733a889c8da27d8439abdfc85bab96480a57d",
+              "3f0c9a4348a4c6e341fe248638b8ed1a7a86ad00",
+              "ed3e93aa64f89ce79f4792f07906dc2b9b8fd294",
+              "f30a66e64427d2611ddfe4329e05a8a039dfcd63",
+              "7684bcb6cf438e4086c83904fde423c2c8a8d601",
+              "d71299d5d8ee857cedfec9779e236a94586cebf6",
+              "e909dedfe32a870d4a59823fa5542f15ef8dda66"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Extended the /os whitepaper beyond AURA Harness to aura-os, aura-router, aura-network, aura-storage, and z-billing — each a collapsible nav group with summaries, architecture and internals diagrams, and repo-aware code links — and unified /os and /docs onto a shared MarkdownDocSite with an \"On this page\" TOC, pinned in dev to the prod content host.",
+            "commit_shas": [
+              "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc",
               "530311a7760e58d53a7e12240a02a183497b9dbf",
-              "8c12fa2512d77503eed26f80773b6a299230d3e5"
+              "8c12fa2512d77503eed26f80773b6a299230d3e5",
+              "41c60002c9255c1bcbf695a90056f3b5431789ee",
+              "c045d96066ced1c96a8feb83dc2ed28ce9044c41",
+              "afc12be1458fe521d6bfcb106b4235f7dd18db03"
             ],
             "confidence": "high"
           },
           {
-            "text": "Replaced the placeholder /terms and /privacy heroes with full CYPHER, INC. (Nevada) legal documents rendered through a shared LegalDocument component, machine-translated into all 20 locales, and folded into the standard hero / changelog preview / CTA / footer marketing stack with a matching black background.",
+            "text": "Replaced the placeholder /terms and /privacy with full CYPHER, INC. legal documents rendered via a shared LegalDocument component, machine-translated into all 20 supported locales, and folded them into the standard marketing page stack (hero, body, changelog preview, CTA, footer) on a continuous black surface.",
             "commit_shas": [
               "e29e90c7d7c9d2961296d002c9e5eeaefd3be032",
               "7565b5eb60fb473a34f13ebe2677c0e42ee67326",
@@ -1917,34 +4094,40 @@
             "confidence": "high"
           },
           {
-            "text": "Refined the \"Always on.\" toggle animation across several passes: the ON label now smoothly fades in place while the knob glides on a compositor-driven translateX, returning sooner on the opposite side without the earlier snap.",
+            "text": "Restored desktop analytics by injecting VITE_MIXPANEL_TOKEN into the new standalone build-interface job in both release-nightly and release-stable workflows, and added a --require-analytics guardrail to desktop-frontend-assets-validate that fails the build if the token isn't inlined or app_version falls back to 0.0.0 — preventing another silent DAU collapse.",
             "commit_shas": [
+              "6e669ede4d7f75ca803fb8c0da1296aa4f5924f6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened the standalone Agents view: clear the cached last-agent id on logout, validate it against the loaded fleet before redirecting, warm the destination chat history on click and post-login redirect, and centralize a remoteOnly predicate so local (desktop-bridge-only) agents are hidden from every web and mobile surface — sidebar, project picker, mobile roster, explorer tree, switcher, and menu cycling.",
+            "commit_shas": [
+              "599102e08f10ebb7d4affdcf53afbf29a3cb695c",
+              "166913cf4a8f1aede4e0e997bd6e9b9b31e34970",
+              "29fbc11468d869a7869720b8835cbf52e68464af"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Kept the window draggable beside the centered public top nav on desktop by centering the slot transform-free so Chromium/WebView2 compute the no-drag rect from the real layout box, eliminating a dead-zone bug after mobile→desktop layout swaps; also removed the dead host-settings button from the authenticated web titlebar.",
+            "commit_shas": [
+              "0845a1c7cad6ec41ea88d56779578e781e4954d1",
+              "e937b0f70681c886c9dafb20d6841edadc127972"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a Shell color group to Settings → Theme → Custom colors for titlebar/taskbar chrome, linked the deployed harness commit from the agent environment popup with ellipsized long error messages, and finished the Always-on toggle by driving the knob via compositor transform so it stays smooth under WebGL load.",
+            "commit_shas": [
+              "9389eb3653f2f3ac183bf72fec4a6fdc3bbe48ca",
+              "a792833c473566caa1831ed7574ae009037ae49c",
+              "066fdd7eb334989f4b0abfd091d6538804785947",
+              "7ab441d858e2e0dc13b5bf2400991aaaf6f84147",
               "a00528d314f85fbb3e517d6aae4d431f00f3e5de",
               "fcab8fc1f2e46600362df38fcbe799ce829af374",
               "880ad3caebe7c28dbbea5e821d7b2eef968587b7",
-              "7ab441d858e2e0dc13b5bf2400991aaaf6f84147",
-              "95237c3257e04097a4f0daf0dadb28afa9677b6e"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed the standalone Agents view so it no longer lands on a dead agent after login: cached last-agent IDs are cleared on logout, validated against the loaded fleet before redirecting, and stale IDs bounce back to /agents. The destination chat history is also warmed on click and post-login redirect to avoid the cold-load gate flash.",
-            "commit_shas": [
-              "599102e08f10ebb7d4affdcf53afbf29a3cb695c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Hid local (desktop-bridge-only) agents from the browser's agent list, favorites strip, and standalone deep-link resolution when running remote-only, so the web client only surfaces agents it can actually use.",
-            "commit_shas": [
-              "166913cf4a8f1aede4e0e997bd6e9b9b31e34970"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Broadened the English marketing source catalog via a one-time i18n bootstrap script that pulls previously-hardcoded strings (including expertise entries and discipline pills) out of components, then re-translated the expanded catalog into every supported locale.",
-            "commit_shas": [
-              "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd"
+              "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc"
             ],
             "confidence": "high"
           }
@@ -1952,12 +4135,13 @@
       }
     ],
     "highlights": [
-      "/os whitepaper expanded to cover five core repos with diagrams and GitHub-linked code refs",
-      "Full marketing site, Terms, and Privacy translated into 20 locales",
-      "Chat transcript no longer re-renders on every keystroke",
-      "Remote agent cold-starts and long turns stop hitting spurious 60s/180s timeouts",
-      "Login screen now remembers up to five recent accounts"
+      "New black-glass agent onboarding wizard",
+      "Whitepaper expanded to five core repos",
+      "Public marketing translated into 19 locales",
+      "Mobile public site rebuilt with Creator hero and full-screen nav",
+      "Chat keystroke lag and 3D card GPU cost fixed",
+      "Mixpanel token restored in desktop release builds"
     ],
-    "raw_commit_count": 35
+    "raw_commit_count": 84
   }
 }

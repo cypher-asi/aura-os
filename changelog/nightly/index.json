@@ -2,20 +2,21 @@
   {
     "date": "2026-06-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.638.1",
-    "title": "Public whitepaper, fully localized marketing, and chat performance fixes",
-    "intro": "A big day for the public surface of Aura: the /os whitepaper grew from a single Harness outline into a multi-repo reference with diagrams and GitHub-linked code, the marketing site picked up real Terms and Privacy pages plus translations into 19 languages, and the trust card's \"Always on.\" switch became a real animated control. Underneath, chat got noticeably snappier, long-running remote agent turns stopped timing out, and the dev server stopped locking itself into infinite error loops.",
+    "version": "0.1.0-nightly.639.1",
+    "title": "Agent onboarding wizard, whitepaper expansion, and a mobile public site",
+    "intro": "Today's nightly is a heavy marketing and onboarding day: a brand-new black-glass \"Create your agent\" wizard lands on the public site, the /os whitepaper grows to cover five core repos, the full public marketing surface gets translated into 19 locales with proper Terms and Privacy pages, and the mobile public experience is rebuilt around a Creator landing and full-screen nav. Underneath, chat performance, remote-agent timeouts, and desktop analytics all got real reliability fixes.",
     "entryCount": 6,
     "highlights": [
-      "/os whitepaper expanded to cover five core repos with diagrams and GitHub-linked code refs",
-      "Full marketing site, Terms, and Privacy translated into 20 locales",
-      "Chat transcript no longer re-renders on every keystroke",
-      "Remote agent cold-starts and long turns stop hitting spurious 60s/180s timeouts",
-      "Login screen now remembers up to five recent accounts"
+      "New black-glass agent onboarding wizard",
+      "Whitepaper expanded to five core repos",
+      "Public marketing translated into 19 locales",
+      "Mobile public site rebuilt with Creator hero and full-screen nav",
+      "Chat keystroke lag and 3D card GPU cost fixed",
+      "Mixpanel token restored in desktop release builds"
     ],
-    "rawCommitCount": 35,
-    "generatedAt": "2026-06-11T19:18:39.401Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.638.1",
+    "rawCommitCount": 84,
+    "generatedAt": "2026-06-11T23:54:17.645Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.639.1",
     "path": "history/2026-06-11.json"
   },
   {
