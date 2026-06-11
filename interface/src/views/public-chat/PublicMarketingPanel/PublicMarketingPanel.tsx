@@ -59,8 +59,8 @@ const MARKETING_PATH_BG: Readonly<Record<string, string>> = {
   "/blog": "#0f0f12",
   "/os": "#000",
   "/docs": "#0f0f12",
-  "/terms": "#0f0f12",
-  "/privacy": "#0f0f12",
+  "/terms": "#000",
+  "/privacy": "#000",
   "/pricing": "#22272e",
   "/models": "#16191d",
 };
@@ -151,6 +151,14 @@ export function PublicMarketingPanel(): React.ReactElement {
     (pathname.startsWith("/docs/") ? MARKETING_PATH_BG["/docs"] : undefined) ??
     DEFAULT_MARKETING_BG;
 
+  // Keep the `/os` whitepaper view mounted across `/os/:slug` navigation so its
+  // left-nav (collapse state + scroll position) survives section clicks instead
+  // of remounting. The OS view reads the slug param reactively, so only the
+  // reading column needs to swap. Every other route keeps the per-pathname
+  // remount (and the scroll-column reset above still runs on every pathname).
+  const outletKey =
+    pathname === "/os" || pathname.startsWith("/os/") ? "os" : pathname;
+
   return (
     <div className={styles.root}>
       <div
@@ -163,7 +171,7 @@ export function PublicMarketingPanel(): React.ReactElement {
         // for React Router, so it never resets on its own.
         data-marketing-scroll-column=""
       >
-        <Outlet key={pathname} />
+        <Outlet key={outletKey} />
       </div>
       <OverlayScrollbar scrollRef={scrollRef} />
     </div>
