@@ -2,8 +2,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import "./AlwaysOnToggle.css";
 
-/** Knob slide duration (kept in sync with the CSS transition). */
-const SLIDE_MS = 900;
+/**
+ * How long the "ON" lettering takes to fade out before it flips to the
+ * now-open side and fades back in. Decoupled from the knob's 900ms CSS
+ * glide so the label re-enters well before the knob lands ("sooner").
+ * Kept in sync with the CSS fade-out duration.
+ */
+const LABEL_FADE_OUT_MS = 220;
 
 /**
  * Media for the "Always on." trust card: a skeuomorphic toggle switch in
@@ -21,8 +26,8 @@ const SLIDE_MS = 900;
 export function AlwaysOnToggle(): ReactNode {
   // `side` drives the knob and starts sliding immediately on click;
   // `labelSide` lags behind it so the "ON" lettering fades out in place on
-  // its original side, and only jumps to the now-open side (and fades back
-  // in) once the knob has landed.
+  // its original side, then jumps to the now-open side and fades back in
+  // once it has faded out (LABEL_FADE_OUT_MS) — sooner than the knob lands.
   const [side, setSide] = useState<"left" | "right">("left");
   const [labelSide, setLabelSide] = useState<"left" | "right">("left");
   const [labelShown, setLabelShown] = useState(true);
@@ -40,7 +45,7 @@ export function AlwaysOnToggle(): ReactNode {
     timerRef.current = window.setTimeout(() => {
       setLabelSide(next);
       setLabelShown(true);
-    }, SLIDE_MS);
+    }, LABEL_FADE_OUT_MS);
   };
 
   return (

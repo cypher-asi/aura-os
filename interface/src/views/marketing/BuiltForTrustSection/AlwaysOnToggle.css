@@ -138,15 +138,18 @@
   justify-content: center;
   user-select: none;
   opacity: 1;
-  /* Long fade-in for the ON lettering once the knob has arrived. */
-  transition: opacity 900ms ease-out;
+  /* Quick, smooth fade-in for the ON lettering on the now-open side — fires
+     as soon as the label has flipped (LABEL_FADE_OUT_MS), long before the
+     knob finishes its glide, so the lettering returns "sooner". */
+  transition: opacity 280ms ease-out;
 }
 
-/* The lettering cuts out instantly the moment the switch is clicked; only
-   the re-entry on the other side is faded. */
+/* Smooth, quick fade-out the moment the switch is clicked; the label jumps
+   to the other side while invisible, then fades back in. Kept in sync with
+   LABEL_FADE_OUT_MS in AlwaysOnToggle.tsx. */
 .alwaysOnLabel[data-hidden="true"] {
   opacity: 0;
-  transition: none;
+  transition: opacity 220ms ease-in;
 }
 
 /* Once the knob has landed on the right, the lettering re-enters on the
