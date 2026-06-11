@@ -116,7 +116,6 @@ export function PhoneShell({
     >
       <div className="phoneShellDeck" aria-hidden="true">
         <div className="phoneShellLcd">
-          <div className="phoneShellLcdGlow" />
           <svg
             className="phoneShellLcdGauge"
             viewBox="0 0 200 96"
