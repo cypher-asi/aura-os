@@ -3,7 +3,7 @@ import {
   CalendarDays,
   Coffee,
   FileText,
-  Github,
+  GitBranch,
   Hash,
   Inbox,
   type LucideIcon,
@@ -15,7 +15,6 @@ import {
   Search,
   Send,
   Share2,
-  Slack,
 } from "lucide-react";
 import { PERSONAS } from "../personas";
 import catalogData from "../../../data/skill-shop-catalog.json";
@@ -253,8 +252,8 @@ export interface OnboardingIntegration {
 export const ONBOARDING_INTEGRATIONS: readonly OnboardingIntegration[] = [
   { id: "gmail", label: "Gmail", description: "Search, draft, and send email.", Icon: Mail, tier: "primary" },
   { id: "google_calendar", label: "Google Calendar", description: "Review and create calendar events.", Icon: CalendarDays, tier: "primary" },
-  { id: "github", label: "GitHub", description: "Repos, issues, and pull requests.", Icon: Github, tier: "standard" },
-  { id: "slack", label: "Slack", description: "Messages across your workspace.", Icon: Slack, tier: "standard" },
+  { id: "github", label: "GitHub", description: "Repos, issues, and pull requests.", Icon: GitBranch, tier: "standard" },
+  { id: "slack", label: "Slack", description: "Messages across your workspace.", Icon: MessagesSquare, tier: "standard" },
   { id: "notion", label: "Notion", description: "Docs and knowledge base.", Icon: FileText, tier: "standard" },
   { id: "brave_search", label: "Brave Search", description: "Private web search.", Icon: Search, tier: "standard" },
 ];

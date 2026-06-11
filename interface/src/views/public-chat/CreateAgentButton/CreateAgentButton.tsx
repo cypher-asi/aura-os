@@ -1,7 +1,7 @@
-import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
 import { track } from "../../../lib/analytics";
+import { useAgentOnboardingStore } from "../AgentOnboarding/agent-onboarding-store";
 import styles from "./CreateAgentButton.module.css";
 
 /**
@@ -60,18 +60,16 @@ interface CreateAgentButtonProps {
  *     is published so the default violet paints — which matches
  *     the spec since the product page has no persona context.
  *
- * The button always navigates to `/login?tab=register`. There is
- * no `onClick` prop today because every consumer wants the same
- * destination; if a future surface needs a custom destination the
- * navigator + path can be lifted to props.
+ * The button always opens the agent onboarding wizard (which ends in
+ * `/login?tab=register` account creation). There is no `onClick` prop
+ * today because every consumer wants the same behavior; if a future
+ * surface needs a custom action it can be lifted to props.
  */
 export function CreateAgentButton({
   className,
   source = "public_landing",
 }: CreateAgentButtonProps = {}): React.ReactElement {
   const { t } = useTranslation("publicChat");
-  const navigate = useNavigate();
-  const location = useLocation();
   const buttonClassName = className
     ? `${styles.ctaButton} ${className}`
     : styles.ctaButton;
@@ -80,20 +78,15 @@ export function CreateAgentButton({
       type="button"
       className={buttonClassName}
       data-agent-surface="public-landing-cta"
-      // Stash the current location as `state.backgroundLocation`
-      // so `AppRoutes` keeps the underlying surface (Product /
-      // Pricing / Changelog / Feedback / Chat) mounted
-      // while `AuraShell` overlays the `LoginOverlay` on top.
-      // Without this state the public page would unmount and
-      // `PublicChatView` would flash in behind the modal.
+      // Open the multi-step agent onboarding wizard. The wizard walks
+      // the visitor through building their agent and ends in the
+      // existing account-creation flow (see `AgentOnboarding`).
       onClick={() => {
         track("public_create_agent_clicked", { source });
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent(CREATE_AGENT_CLICK_EVENT));
         }
-        navigate("/login?tab=register", {
-          state: { backgroundLocation: location },
-        });
+        useAgentOnboardingStore.getState().open(source);
       }}
     >
       <span className={styles.ctaLabel}>

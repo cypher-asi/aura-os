@@ -18,6 +18,7 @@ import { PublicChatView } from "./views/public-chat/PublicChatView";
 import { MobilePublicChatView } from "./views/public-chat/MobilePublicChatView";
 import { PublicMarketingPanel } from "./views/public-chat/PublicMarketingPanel";
 import { LoginOverlay } from "./views/public-chat/LoginOverlay";
+import { AgentOnboardingModal } from "./views/public-chat/AgentOnboarding/AgentOnboardingModal";
 import { CaptureLoginView } from "./views/CaptureLoginView";
 import { apps } from "./apps/registry";
 import { getInitialShellPath } from "./utils/last-app-path";
@@ -603,6 +604,7 @@ function AppRoutes(): React.ReactElement {
       </Route>
     </Routes>
     {showLoginOverlay && <LoginOverlay />}
+    <AgentOnboardingModal />
     </>
   );
 }
