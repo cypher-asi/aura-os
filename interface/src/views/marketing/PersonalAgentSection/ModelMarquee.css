@@ -55,14 +55,14 @@
   animation-play-state: paused;
 }
 
-/* Reduced motion: a static strip — the models are still readable, the
-   90s drift just never runs. */
-@media (prefers-reduced-motion: reduce) {
-  .modelMarqueeTrack {
-    animation: none;
-    will-change: auto;
-  }
-}
+/* `prefers-reduced-motion: reduce` is intentionally NOT honoured on the
+   drift — it stays on regardless of the OS preference. This mirrors the
+   sibling `AgentMarquee.module.css`, which carries the load-bearing
+   justification: a frozen strip on first paint reads as broken, and the
+   models stay fully readable (and clickable) while it scrolls, so a
+   reduced-motion visitor loses no content. Honouring the preference here
+   (added briefly, then reverted) left this strip frozen while the agent
+   marquee directly above it kept scrolling — visibly inconsistent. */
 
 @keyframes model-marquee-scroll {
   from {
