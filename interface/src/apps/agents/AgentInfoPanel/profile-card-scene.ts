@@ -524,7 +524,11 @@ export function createProfileCardScene(
   const width = host.clientWidth || 320;
   const height = host.clientHeight || 420;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  // `antialias` is intentionally off: once an EffectComposer is in use the
+  // renderer's own MSAA framebuffer is bypassed (see the composer setup below),
+  // so enabling it only allocated a multisampled default framebuffer for no
+  // visual gain. Edge smoothing comes from the bloom/output passes instead.
+  const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(width, height);
   // Keep the canvas transparent so the themed backdrop painted by CSS behind
@@ -1365,6 +1369,9 @@ export function createProfileCardScene(
   const clock = new THREE.Clock();
   let raf = 0;
   let running = false;
+  // Below this delta a lerp is visually converged; used to halt the loop under
+  // reduced motion once all transforms have settled to their static idle pose.
+  const SETTLE_EPSILON = 1e-3;
 
   function renderFrame(): void {
     composer.render();
@@ -1417,6 +1424,32 @@ export function createProfileCardScene(
     }
 
     renderFrame();
+
+    // Under reduced motion the idle pose is fully static (idleAmp === 0), so
+    // once any hover-tilt or flip transition has settled there is nothing left
+    // to animate. Halt the loop instead of running a full bloom composite every
+    // frame; the pointer handlers and flip toggle restart it on demand. (Normal
+    // motion keeps looping — its idle float and CRT flicker are continuous.)
+    if (reducedMotion && !hovering) {
+      const settled =
+        flipTarget === (flipped ? Math.PI : 0) &&
+        Math.abs(group.rotation.y) < SETTLE_EPSILON &&
+        Math.abs(group.rotation.x) < SETTLE_EPSILON &&
+        Math.abs(group.position.y) < SETTLE_EPSILON &&
+        Math.abs(cardGroup.rotation.y - flipTarget) < SETTLE_EPSILON &&
+        Math.abs(plateGroup.position.y - plateTarget) < SETTLE_EPSILON;
+      if (settled) {
+        // Snap the subtle bloom / emissive / light fades to their idle targets
+        // (matching the lerp targets above) so nothing freezes mid-transition,
+        // paint one final frame, then stop.
+        bloom.strength = 0.26;
+        screenMaterial.emissiveIntensity = 1.15;
+        backScreenMaterial.emissiveIntensity = 1.15;
+        accentLight.intensity = 3.5;
+        renderFrame();
+        stop();
+      }
+    }
   }
 
   function start(): void {
@@ -1432,13 +1465,43 @@ export function createProfileCardScene(
     raf = 0;
   }
 
-  // Pause only while the tab is backgrounded. (A previous IntersectionObserver
-  // pause could permanently freeze a visible card on a spurious first report.)
+  // Pause the render loop whenever the card is not actually visible: either the
+  // browser tab is backgrounded, or the card has scrolled / been tabbed out of
+  // view. `onScreen` tracks the IntersectionObserver state so resuming on tab
+  // focus never restarts the loop for an off-screen card.
+  let onScreen = true;
+  const resume = (): void => {
+    if (!document.hidden && onScreen) start();
+  };
   const onVisibilityChange = (): void => {
     if (document.hidden) stop();
-    else start();
+    else resume();
   };
   document.addEventListener("visibilitychange", onVisibilityChange);
+
+  // Stop rendering while the card is outside the viewport. An earlier version of
+  // this pause could permanently freeze a visible card when the observer's first
+  // callback reported a not-yet-laid-out (0x0) element as off-screen, so we only
+  // pause when the host has real layout. A genuinely visible card is therefore
+  // never frozen on mount, and pointer interaction restarts the loop regardless.
+  const intersectionObserver = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      if (entry.isIntersecting) {
+        onScreen = true;
+        resume();
+      } else {
+        const rect = entry.boundingClientRect;
+        if (rect.width > 0 && rect.height > 0) {
+          onScreen = false;
+          stop();
+        }
+      }
+    },
+    { threshold: 0 },
+  );
+  intersectionObserver.observe(host);
 
   const resizeObserver = new ResizeObserver(() => {
     const w = host.clientWidth || width;
@@ -1497,6 +1560,7 @@ export function createProfileCardScene(
     dispose(): void {
       stop();
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      intersectionObserver.disconnect();
       resizeObserver.disconnect();
       host.removeEventListener("pointermove", onPointerMove);
       host.removeEventListener("pointerleave", onPointerLeave);
