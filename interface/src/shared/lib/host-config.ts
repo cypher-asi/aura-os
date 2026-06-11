@@ -144,24 +144,25 @@ export function resolveControlPlaneUrl(path: string): string {
   return cloud ? `${cloud}${path}` : resolveApiUrl(path);
 }
 
-// Prod origin that serves the public blog. Mirrors the control-plane host
-// convention (`VITE_NATIVE_DEFAULT_HOST`, which release builds bake to
+// Prod origin that serves the public marketing content (blog, the AURA OS
+// whitepaper, docs). Mirrors the control-plane host convention
+// (`VITE_NATIVE_DEFAULT_HOST`, which release builds bake to
 // `https://api.aura.ai`); falls back to that same origin so local web dev,
 // where the env var is unset, still has a target.
-export function getProdBlogHostOrigin(): string | null {
+export function getProdPublicContentHostOrigin(): string | null {
   return getControlPlaneHostOrigin() ?? normalizeHostOrigin("https://api.aura.ai");
 }
 
-// Resolve the public blog endpoint. The local server usually has no storage
-// configured, so the blog is empty in any dev build; point it at the prod
-// blog instead. This intentionally ignores the configured/bootstrap host
-// (native dev shells always set one via `?host=`), since the blog is public
-// content that should always come from prod during development. Production
-// builds keep their normal same-origin / configured-host behavior, which on
-// prod/native already resolves to the prod blog.
-export function resolveBlogApiUrl(path: string): string {
+// Resolve a public marketing content endpoint (blog, whitepaper, docs). The
+// local server usually has no storage configured, so this content is empty in
+// any dev build; point it at prod instead. This intentionally ignores the
+// configured/bootstrap host (native dev shells always set one via `?host=`),
+// since it is public content that should always come from prod during
+// development. Production builds keep their normal same-origin / configured-
+// host behavior, which on prod/native already resolves to the prod host.
+export function resolvePublicContentApiUrl(path: string): string {
   if (import.meta.env.DEV) {
-    const prod = getProdBlogHostOrigin();
+    const prod = getProdPublicContentHostOrigin();
     if (prod) return `${prod}${path}`;
   }
   return resolveApiUrl(path);

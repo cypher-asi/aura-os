@@ -1,13 +1,14 @@
 /**
  * Browser-side client for the public marketing `/os` whitepaper site.
  *
- * Mirrors `api/marketing/blog.ts`, but resolves against the configured /
- * same-origin `aura-os-server` (via `resolveApiUrl`) rather than the
- * prod-pinned blog host: the whitepaper content lives on whichever server
- * the app is talking to (local in dev, same-origin in prod), so it is
- * visible as soon as a sys admin seeds it. No JWT is attached. The markdown
- * BODY is NOT part of the JSON payload — it lives at the section's public
- * S3 `bodyUrl`, fetched separately with `fetchOsBody`.
+ * Mirrors `api/marketing/blog.ts`: resolves via `resolvePublicContentApiUrl`,
+ * which is prod-pinned in dev. The local server usually has no whitepaper
+ * seeded, so dev builds read the published whitepaper from prod
+ * (`https://api.aura.ai`) instead of the empty local/same-origin server;
+ * production builds keep their normal same-origin / configured-host behavior.
+ * No JWT is attached. The markdown BODY is NOT part of the JSON payload — it
+ * lives at the section's public S3 `bodyUrl`, fetched separately with
+ * `fetchOsBody`.
  *
  * Endpoint contract:
  *   - GET `/api/public/os`        -> array of published whitepaper sections
@@ -15,7 +16,7 @@
  *   - GET `/api/public/os/:slug`  -> single published section (404 if none).
  */
 
-import { resolveApiUrl } from "../../shared/lib/host-config";
+import { resolvePublicContentApiUrl } from "../../shared/lib/host-config";
 
 /**
  * Public, camelCase projection of a published whitepaper section. The
@@ -57,7 +58,7 @@ export class OsDocNotFoundError extends Error {
  * render the empty branch rather than an error screen.
  */
 export async function fetchOsDocs(): Promise<OsDoc[]> {
-  const url = resolveApiUrl("/api/public/os");
+  const url = resolvePublicContentApiUrl("/api/public/os");
 
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -82,7 +83,9 @@ export async function fetchOsDocs(): Promise<OsDoc[]> {
  * on 404 and a generic `Error` on any other non-OK response.
  */
 export async function fetchOsDoc(slug: string): Promise<OsDoc> {
-  const url = resolveApiUrl(`/api/public/os/${encodeURIComponent(slug)}`);
+  const url = resolvePublicContentApiUrl(
+    `/api/public/os/${encodeURIComponent(slug)}`,
+  );
   const res = await fetch(url, { cache: "no-store" });
   if (res.status === 404) {
     throw new OsDocNotFoundError(slug);
