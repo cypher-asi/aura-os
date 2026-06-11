@@ -248,8 +248,11 @@ export function FlowFieldBackground({
 
     const resizeObserver = new ResizeObserver(() => {
       resize();
-      // Repaint immediately so a resize is reflected even between frames.
-      if (!raf) renderFrame();
+      // Repaint synchronously: resizing the drawing buffer clears it, and
+      // ResizeObserver fires after rAF but before paint, so without an
+      // immediate redraw the cleared (black) buffer gets composited for a
+      // frame — a visible flicker on every resize step.
+      renderFrame();
     });
     resizeObserver.observe(parent);
     document.addEventListener("visibilitychange", onVisibility);
