@@ -39,17 +39,19 @@
   width: 100%;
 }
 
-.cardBlock {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-}
-
-.bottomSpacer {
+/*
+ * CTA zone — mirror of `.headlineZone`. The portrait card sits between
+ * the two equal flex zones (so it stays vertically centered), the
+ * tagline centers in the zone above it, and the CTA centers in this
+ * zone below it (between the card's bottom edge and the shell bottom).
+ */
+.ctaZone {
   flex: 1 1 0;
   min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 /*
@@ -85,6 +87,7 @@
 
 .portraitCard {
   margin: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   width: min(72vw, 300px);

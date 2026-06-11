@@ -88,57 +88,57 @@ export function MobileLandingHero({
         </h1>
       </div>
 
-      <div className={styles.cardBlock}>
-        {portraitUrl ? (
-          <figure className={styles.portraitCard}>
-            {portraitVideoUrl ? (
-              <video
-                className={styles.portraitImage}
-                src={portraitVideoUrl}
-                poster={portraitUrl}
-                autoPlay
-                loop
-                muted
-                playsInline
-                aria-hidden="true"
-                style={{
-                  backgroundColor:
-                    persona.theme.desktopBackgroundColor ?? undefined,
-                  objectPosition: portraitObjectPosition,
-                }}
-                data-testid="mobile-landing-hero-video"
-              />
-            ) : (
-              <img
-                src={portraitUrl}
-                alt={t("mobileChat.personaPortraitAlt", {
-                  defaultValue: `${persona.name} agent portrait`,
-                  name: persona.name,
-                })}
-                className={styles.portraitImage}
-                style={{
-                  backgroundColor:
-                    persona.theme.desktopBackgroundColor ?? undefined,
-                  objectPosition: portraitObjectPosition,
-                }}
-                draggable={false}
-                decoding="async"
-                fetchPriority="high"
-              />
-            )}
-          </figure>
-        ) : null}
+      {portraitUrl ? (
+        <figure className={styles.portraitCard}>
+          {portraitVideoUrl ? (
+            <video
+              className={styles.portraitImage}
+              src={portraitVideoUrl}
+              poster={portraitUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              aria-hidden="true"
+              style={{
+                backgroundColor:
+                  persona.theme.desktopBackgroundColor ?? undefined,
+                objectPosition: portraitObjectPosition,
+              }}
+              data-testid="mobile-landing-hero-video"
+            />
+          ) : (
+            <img
+              src={portraitUrl}
+              alt={t("mobileChat.personaPortraitAlt", {
+                defaultValue: `${persona.name} agent portrait`,
+                name: persona.name,
+              })}
+              className={styles.portraitImage}
+              style={{
+                backgroundColor:
+                  persona.theme.desktopBackgroundColor ?? undefined,
+                objectPosition: portraitObjectPosition,
+              }}
+              draggable={false}
+              decoding="async"
+              fetchPriority="high"
+            />
+          )}
+        </figure>
+      ) : null}
 
-        {children}
+      {children}
 
+      {/* CTA zone — mirrors the headline zone, growing to fill the
+          space between the card and the bottom of the shell so the
+          "Create your agent" pill sits vertically centered below the
+          card. */}
+      <div className={styles.ctaZone}>
         <div className={styles.ctaSlot}>
           <CreateAgentButton source="public_chat_mobile" />
         </div>
       </div>
-
-      {/* Mirror of the headline zone so the card block stays vertically
-          centered in the viewport. */}
-      <div className={styles.bottomSpacer} aria-hidden="true" />
 
       <div className={styles.scrollHint} aria-hidden="true">
         <ChevronDown size={22} strokeWidth={2.5} />
