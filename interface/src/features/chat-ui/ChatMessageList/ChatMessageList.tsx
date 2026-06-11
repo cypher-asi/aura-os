@@ -1,4 +1,5 @@
 import {
+  memo,
   type ReactNode,
   type RefObject,
   useLayoutEffect,
@@ -78,8 +79,13 @@ const EMPTY_TIMELINE: NonNullable<
  * grows (streaming tokens, a new message arriving while pinned) — a case
  * the native scroll-anchoring algorithm doesn't cover, since it only
  * compensates for size changes above the anchor.
+ *
+ * Wrapped in `React.memo` (see export below) so draft-input keystrokes in
+ * the parent `ChatSurface` don't re-run the whole transcript map; the
+ * component still re-renders on its own stream-store subscription during
+ * live streaming.
  */
-export function ChatMessageList({
+function ChatMessageListImpl({
   messages,
   streamKey,
   scrollRef,
@@ -372,3 +378,6 @@ export function ChatMessageList({
     </>
   );
 }
+
+export const ChatMessageList = memo(ChatMessageListImpl);
+ChatMessageList.displayName = "ChatMessageList";

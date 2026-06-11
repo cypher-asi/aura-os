@@ -1033,6 +1033,21 @@ button.attachRing::after {
   }
 }
 
+/* These two compositor loops run continuously on every authenticated
+   chat. The in-app Motion toggle already collapses them via
+   `[data-motion="reduced"]` in index.css; honor the OS-level setting too
+   so users who only set `prefers-reduced-motion` aren't paying for the
+   halo pulse / rim spin on every chat. */
+@media (prefers-reduced-motion: reduce) {
+  button.attachRing {
+    animation: none;
+  }
+
+  button.attachRing::after {
+    animation: none;
+  }
+}
+
 /* Marketing-only variant of the bottom-left "+" attach button: instead of
    the chrome `attachRing` disc, the button becomes a small recessed well
    carrying the same WebGL energy field as the AgentConsole hero pill

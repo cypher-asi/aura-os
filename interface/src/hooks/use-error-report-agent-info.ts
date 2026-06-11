@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import type { RemoteVmState } from "../shared/types";
 import { formatClientDevice } from "../shared/lib/device-info";
 import { useAvatarState } from "./use-avatar-state";
@@ -76,14 +78,26 @@ export function useErrorReportAgentInfo({
     ? formatRemoteMachine(remoteState, agentId)
     : envInfo?.hostname?.trim() || clientDevice;
 
-  return {
-    name: agentName?.trim() || null,
-    machineType: resolvedMachineType,
-    status: status ?? null,
-    clientDevice,
-    agentMachine,
-    ip,
-  };
+  const name = agentName?.trim() || null;
+  const resolvedStatus = status ?? null;
+
+  // Memoize on the resolved primitive fields. This hook's consumer
+  // (`ChatSurface`) re-renders on every keystroke as the draft changes,
+  // and the result is threaded into every `React.memo`'d `MessageBubble`.
+  // Returning a fresh object literal each render broke that memoization
+  // and re-parsed the entire transcript's markdown per keystroke/token;
+  // a stable reference keeps the bubbles from re-rendering.
+  return useMemo(
+    () => ({
+      name,
+      machineType: resolvedMachineType,
+      status: resolvedStatus,
+      clientDevice,
+      agentMachine,
+      ip,
+    }),
+    [name, resolvedMachineType, resolvedStatus, clientDevice, agentMachine, ip],
+  );
 }
 
 /**

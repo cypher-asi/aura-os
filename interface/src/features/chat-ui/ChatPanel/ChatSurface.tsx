@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type AnimationEventHandler,
@@ -635,21 +636,28 @@ export function ChatSurface({
     queue.length === 0 &&
     !shouldHideThreadForInitialReveal;
 
-  const emptyState = errorMessage ? (
-    <div className={styles.emptyState}>
-      <AlertCircle size={40} />
-      <Text variant="muted" size="sm">
-        {errorMessage}
-      </Text>
-    </div>
-  ) : historyResolved && emptyMessage ? (
-    <div className={styles.emptyState}>
-      <MessageSquare size={40} />
-      <Text variant="muted" size="sm">
-        {emptyMessage}
-      </Text>
-    </div>
-  ) : null;
+  // Memoized so a stable reference is handed to the memoized
+  // `ChatMessageList`; otherwise a fresh element each render (e.g. on
+  // every draft keystroke) would defeat the list's `React.memo`.
+  const emptyState = useMemo(
+    () =>
+      errorMessage ? (
+        <div className={styles.emptyState}>
+          <AlertCircle size={40} />
+          <Text variant="muted" size="sm">
+            {errorMessage}
+          </Text>
+        </div>
+      ) : historyResolved && emptyMessage ? (
+        <div className={styles.emptyState}>
+          <MessageSquare size={40} />
+          <Text variant="muted" size="sm">
+            {emptyMessage}
+          </Text>
+        </div>
+      ) : null,
+    [errorMessage, historyResolved, emptyMessage],
+  );
 
   return (
     <div

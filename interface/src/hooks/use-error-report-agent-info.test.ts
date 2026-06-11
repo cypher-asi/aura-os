@@ -1,6 +1,26 @@
-import { describe, expect, it } from "vitest";
-import { formatErrorReportAgentInfo } from "./use-error-report-agent-info";
+import { renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import {
+  formatErrorReportAgentInfo,
+  useErrorReportAgentInfo,
+} from "./use-error-report-agent-info";
 import { formatClientDevice } from "../shared/lib/device-info";
+
+// The hook composes three data hooks; pin them to fixed values so the
+// memoization tests below isolate the behavior of the returned object.
+// `formatErrorReportAgentInfo` / `formatClientDevice` are pure and don't
+// touch these hooks, so the mocks don't affect their suites.
+vi.mock("./use-avatar-state", () => ({
+  useAvatarState: () => ({ status: "idle" }),
+}));
+vi.mock("./use-environment-info", () => ({
+  useEnvironmentInfo: () => ({
+    data: { hostname: "studio", os: "macOS", ip: "10.0.0.2" },
+  }),
+}));
+vi.mock("./use-remote-agent-state", () => ({
+  useRemoteAgentState: () => ({ data: null }),
+}));
 
 describe("formatErrorReportAgentInfo", () => {
   it("formats a fully-populated local agent", () => {
@@ -81,5 +101,56 @@ describe("formatClientDevice", () => {
     expect(label.length).toBeGreaterThan(0);
     // jsdom has no desktop/native globals, so it resolves to the web build.
     expect(label.startsWith("Web")).toBe(true);
+  });
+});
+
+describe("useErrorReportAgentInfo", () => {
+  // Regression guard: this hook lives in `ChatSurface`, which re-renders on
+  // every draft keystroke, and its result is threaded into every
+  // `React.memo`'d `MessageBubble`. Returning a fresh object each render
+  // broke that memo and re-parsed the whole transcript per keystroke.
+  it("returns a referentially-stable object across re-renders with unchanged inputs", () => {
+    const { result, rerender } = renderHook(
+      (props) => useErrorReportAgentInfo(props),
+      {
+        initialProps: {
+          agentId: "agent-1",
+          agentName: "Scout",
+          machineType: "local" as const,
+        },
+      },
+    );
+
+    const first = result.current;
+    rerender({
+      agentId: "agent-1",
+      agentName: "Scout",
+      machineType: "local" as const,
+    });
+
+    expect(result.current).toBe(first);
+  });
+
+  it("returns a new object when a relevant input changes", () => {
+    const { result, rerender } = renderHook(
+      (props) => useErrorReportAgentInfo(props),
+      {
+        initialProps: {
+          agentId: "agent-1",
+          agentName: "Scout",
+          machineType: "local" as const,
+        },
+      },
+    );
+
+    const first = result.current;
+    rerender({
+      agentId: "agent-1",
+      agentName: "Navigator",
+      machineType: "local" as const,
+    });
+
+    expect(result.current).not.toBe(first);
+    expect(result.current.name).toBe("Navigator");
   });
 });
