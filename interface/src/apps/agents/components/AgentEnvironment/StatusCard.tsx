@@ -232,7 +232,12 @@ function RemoteStatusContent({
       {remoteErrorMessage && !remoteStateError && (
         <div className={styles.statusRow}>
           <span className={styles.statusLabel}>Error</span>
-          <span className={styles.statusValue}>{remoteErrorMessage}</span>
+          <span
+            className={`${styles.statusValue} ${styles.statusValueTruncate}`}
+            title={remoteErrorMessage}
+          >
+            {remoteErrorMessage}
+          </span>
         </div>
       )}
       {recoveryNotice && !remoteStateError && (
