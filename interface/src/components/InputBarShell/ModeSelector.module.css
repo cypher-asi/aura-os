@@ -30,18 +30,35 @@
 /*
  * Two-tier inset capsule. The outer capsule is a recessed well: a
  * dark→light vertical gradient ring on the outside (the double-background
- * border-box technique) plus a hard black ring and a top-heavy inner
- * shadow so the surface reads as a panel that sits *underneath* the
- * inner control. Generous padding leaves that panel visible as a margin
- * all the way around the inner pills. The inner `.pills` capsule then
- * floats on top of the well with its own black border and a soft drop
- * shadow.
+ * border-box technique) plus a ring and a top-heavy inner shadow so the
+ * surface reads as a panel that sits *underneath* the inner control.
+ * Generous padding leaves that panel visible as a margin all the way
+ * around the inner pills. The inner `.pills` capsule then floats on top
+ * of the well with its own border and a soft drop shadow.
+ *
+ * Theme-aware: the capsule fill, bevel ring and recess shadows are driven
+ * by per-theme variables. Light-mode values are the defaults here; the
+ * original dark spec lives under [data-theme="dark"] below. `<html>`
+ * always carries an explicit data-theme (stamped in index.html), so the
+ * dark override is guaranteed to apply in dark mode.
  */
 .outerCapsule {
-  --capsule-bg-top: #16181c;
-  --capsule-bg-bottom: #2a2e36;
-  --capsule-bevel-dark: #14161a;
-  --capsule-bevel-light: #3a3f48;
+  /* Light-mode defaults. */
+  --capsule-bg-top: #dcdce1;
+  --capsule-bg-bottom: #eeeef1;
+  --capsule-bevel-dark: #c2c2c8;
+  --capsule-bevel-light: #ffffff;
+  --capsule-inset-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(0, 0, 0, 0.12),
+    inset 0 1px 2px rgba(0, 0, 0, 0.08);
+  --pills-bg: rgba(255, 255, 255, 0.55);
+  --pills-border: rgba(0, 0, 0, 0.1);
+  --pills-inset-shadow:
+    inset 0 5px 9px rgba(0, 0, 0, 0.12),
+    inset 0 2px 4px rgba(0, 0, 0, 0.08),
+    inset 0 -5px 9px rgba(0, 0, 0, 0.1),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.07);
   display: inline-flex;
   align-items: center;
   padding: 4px;
@@ -63,29 +80,42 @@
         var(--capsule-bevel-light)
       )
       border-box;
-  /* Hard black ring + soft top-heavy inner shadow = recessed panel underneath. */
-  box-shadow:
+  /* Ring + soft top-heavy inner shadow = recessed panel underneath. */
+  box-shadow: var(--capsule-inset-shadow);
+}
+
+/* Dark-mode spec: the original recessed metallic well. */
+:global([data-theme="dark"]) .outerCapsule {
+  --capsule-bg-top: #16181c;
+  --capsule-bg-bottom: #2a2e36;
+  --capsule-bevel-dark: #14161a;
+  --capsule-bevel-light: #3a3f48;
+  --capsule-inset-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.5),
     inset 0 2px 4px rgba(0, 0, 0, 0.3),
     inset 0 1px 2px rgba(0, 0, 0, 0.18);
-}
-
-.pills {
-  /* Black glass: a dark translucent fill plus a backdrop blur so the
-     content behind the capsule is frosted rather than fully hidden. */
-  background: rgba(8, 10, 14, 0.55);
-  backdrop-filter: blur(10px) saturate(120%);
-  -webkit-backdrop-filter: blur(10px) saturate(120%);
-  padding: 0;
-  gap: 2px;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  /* Recessed inner capsule: inner shadow on both top and bottom edges,
-     weighted heavier on top. */
-  box-shadow:
+  --pills-bg: rgba(8, 10, 14, 0.55);
+  --pills-border: rgba(0, 0, 0, 0.5);
+  --pills-inset-shadow:
     inset 0 5px 9px rgba(0, 0, 0, 0.38),
     inset 0 2px 4px rgba(0, 0, 0, 0.26),
     inset 0 -5px 9px rgba(0, 0, 0, 0.32),
     inset 0 -2px 4px rgba(0, 0, 0, 0.22);
+}
+
+.pills {
+  /* Glass: a translucent fill (dark in dark mode, light in light mode)
+     plus a backdrop blur so the content behind the capsule is frosted
+     rather than fully hidden. */
+  background: var(--pills-bg);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  padding: 0;
+  gap: 2px;
+  border: 1px solid var(--pills-border);
+  /* Recessed inner capsule: inner shadow on both top and bottom edges,
+     weighted heavier on top. */
+  box-shadow: var(--pills-inset-shadow);
 }
 
 /*
@@ -141,10 +171,10 @@
   -webkit-text-fill-color: var(--color-accent);
   color: var(--color-accent);
   text-shadow:
-    0 0 4px color-mix(in srgb, var(--color-accent) 90%, transparent),
-    0 0 9px color-mix(in srgb, var(--color-accent) 70%, transparent),
-    0 0 16px color-mix(in srgb, var(--color-accent) 50%, transparent),
-    0 0 26px color-mix(in srgb, var(--color-accent) 35%, transparent);
+    0 0 3px color-mix(in srgb, var(--color-accent) 80%, transparent),
+    0 0 7px color-mix(in srgb, var(--color-accent) 55%, transparent),
+    0 0 12px color-mix(in srgb, var(--color-accent) 38%, transparent),
+    0 0 20px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
 @media (max-width: 640px) {
