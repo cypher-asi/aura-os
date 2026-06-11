@@ -41,13 +41,13 @@ export const SECTION_LABELS: Readonly<Record<string, string>> = {
 
 export const WHITEPAPER_SECTIONS: WhitepaperSection[] = [
   {
-    title: "0. Overview",
+    title: "Overview",
     slug: "harness-overview",
     section: "harness",
     sortOrder: 0,
     excerpt:
       "The ten-layer stack, the strict downward-only dependency rule, and the AgentMode resolution chain.",
-    body: `# 0. Overview
+    body: `# Overview
 
 AURA Harness is a Rust agent runtime built as ten strictly-layered crates, from behavior-free primitives up to runnable composition roots. A single resolved \`AgentMode\` gates every external effect before the policy layer narrows it further.
 
