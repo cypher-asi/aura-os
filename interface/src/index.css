@@ -303,14 +303,35 @@ html[data-mobile-client="true"] select {
   -webkit-app-region: no-drag;
 }
 
+/*
+ * Centered title slot (public marketing nav / authed wordmark).
+ *
+ * Centering is done with a full-width absolutely-positioned box plus
+ * `justify-content: center` — deliberately NOT `left: 50%` +
+ * `transform: translateX(-50%)`. Chromium / WebView2 compute the
+ * `-webkit-app-region` draggable region from each element's
+ * *untransformed* layout box and ignore CSS transforms entirely
+ * (crbug.com/803361 and electron/electron#7605). With a translate-based
+ * center, the nav's `titlebar-no-drag` rect lands at its pre-transform
+ * position (left edge pinned to the window center) rather than where the
+ * nav visually renders — and because Blink also skips recomputing the
+ * region on some resizes, that offset hole drifts further off after a
+ * mobile↔desktop layout swap, leaving a non-draggable dead zone beside
+ * the visible menu. A transform-free flex center keeps the layout box and
+ * the visual position identical, so the drag/no-drag regions always match
+ * the menu. The box is full-width but stays drag-through: it carries no
+ * app-region and `pointer-events: none`, so only its centered nav child
+ * (which re-enables both) ever affects hit-testing.
+ */
 .titlebar-center {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   top: 0;
   bottom: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   pointer-events: none;
 }
 
