@@ -1,9 +1,13 @@
 /*
  * MobilePublicChatView — single-column mobile public chat surface.
  *
- * Layout: column flex, the hero / transcript expands to fill, the
+ * Landing (`/`): a vertical scroll column — the Creator-pinned
+ * `MobileLandingHero` fills the first viewport, and the embedded
+ * `/agents` marketing section stack mounts below it.
+ *
+ * Chat (`/chat`): column flex, transcript expands to fill, the
  * composer sticks at the bottom. The page background and any
- * surrounding chrome (topbar, drawer) are owned by `MobilePublicShell`;
+ * surrounding chrome (topbar, menu) are owned by `MobilePublicShell`;
  * this stylesheet stays scoped to the chat-content rectangle.
  *
  * Borrows numbers from dom's overwritten `LoggedOutShell.module.css`
@@ -23,34 +27,32 @@
   color: var(--color-text-primary);
 }
 
-.heroSlot {
+/* ── Landing scroll column ──────────────────────────────────── */
+
+.landingScroll {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 32px 20px;
-  gap: 12px;
 }
 
-.heroHeading {
-  margin: 0;
-  font-size: 22px;
-  line-height: 1.25;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  letter-spacing: -0.01em;
-  max-width: 320px;
+/*
+ * First viewport of the landing column — the hero owns exactly the
+ * visible body height so the agents embed starts one full scroll
+ * below the fold, mirroring the desktop hero/embed geometry.
+ */
+.heroViewport {
+  flex-shrink: 0;
+  height: 100%;
+  min-height: 100%;
 }
 
-.heroBlurb {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--color-text-muted, #9aa0a6);
-  max-width: 280px;
+.agentsEmbed {
+  flex-shrink: 0;
+  min-height: 0;
 }
 
 .transcript {
@@ -117,6 +119,20 @@
   border-top: 1px solid color-mix(in srgb, var(--color-border, #334155) 60%, transparent);
   background: color-mix(in srgb, var(--color-bg-elevated, #111827) 92%, transparent);
   backdrop-filter: blur(14px);
+}
+
+/*
+ * Landing-hero placement: the same composer renders as a free-
+ * standing centered pill inside `MobileLandingHero` instead of a
+ * full-width bottom bar — no top border, no elevated backdrop, and
+ * no safe-area padding (the hero owns the spacing).
+ */
+.composerHero {
+  width: min(100%, 340px);
+  padding: 0;
+  border-top: none;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .composerLabel {

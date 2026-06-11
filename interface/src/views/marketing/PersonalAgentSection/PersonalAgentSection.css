@@ -597,7 +597,10 @@
 
   .personalAgentSkillSection {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    /* Four-up on mobile (vs two-up per side column on desktop): the
+       three stacked groups would otherwise tower several viewports
+       tall on a phone. ~70px keycaps stay comfortably tappable. */
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
     flex: 0 0 auto;
   }

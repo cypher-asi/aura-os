@@ -1,0 +1,135 @@
+/*
+ * MobileLandingHero — Creator-pinned hero for the mobile public
+ * landing page.
+ *
+ * A centered column on the dark canvas: looping typewriter tagline,
+ * static persona portrait card, the parent's composer slot, the
+ * shared CTA pill, and a scroll hint pointing into the embedded
+ * agents sections below. No WebGL, no video — the portrait is the
+ * only asset this hero ships.
+ */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  min-height: 100%;
+  padding: 24px 20px 40px;
+  text-align: center;
+  background:
+    radial-gradient(
+      120% 70% at 50% 0%,
+      color-mix(in srgb, #7c3aed 14%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--color-bg-canvas, #0b0b0e);
+  color: var(--color-text-primary);
+  position: relative;
+}
+
+/*
+ * Same `data-text` ghost technique as the desktop hero headline
+ * (`PublicChatView.module.css`): the ::before reserves the width and
+ * height of the longest phrase so the looping typewriter never
+ * reflows the column as it types and erases.
+ */
+.headline {
+  display: inline-block;
+  position: relative;
+  margin: 0;
+  font-size: clamp(24px, 7vw, 32px);
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.headline::before {
+  content: attr(data-text);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.headline > span {
+  position: absolute;
+  inset: 0;
+  display: block;
+  text-align: inherit;
+}
+
+.portraitCard {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(72vw, 300px);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-border, #334155) 70%, transparent);
+  background: color-mix(in srgb, var(--color-bg-elevated, #111827) 90%, transparent);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.portraitImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  user-select: none;
+}
+
+.portraitCaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.portraitName {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.portraitRole {
+  font-size: 12px;
+  color: var(--color-text-muted, #9aa0a6);
+}
+
+.ctaSlot {
+  display: flex;
+  justify-content: center;
+}
+
+/*
+ * Scroll hint — anchors to the hero's bottom edge and gently bobs to
+ * suggest the agents story below. Purely decorative (aria-hidden).
+ */
+.scrollHint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-text-muted, #9aa0a6);
+  animation: heroScrollHintBob 2.2s ease-in-out infinite;
+}
+
+@keyframes heroScrollHintBob {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollHint {
+    animation: none;
+  }
+}

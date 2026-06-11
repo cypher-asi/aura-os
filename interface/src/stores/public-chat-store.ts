@@ -335,21 +335,14 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
     persistFromGet(get);
     return messageId;
   },
-  // TODO(thinking): the public-chat SSE protocol currently emits only
-  // `text_delta` / `limit` / `error` frames (see
-  // `interface/src/api/public-chat.ts::dispatchPublicSseFrame`).
-  // Surfacing the standard Brain "Thinking..." Block on public-chat
-  // assistant turns — the Phase 1 synthetic placeholder in
-  // `ActivityTimeline` already does the rest as soon as a real
-  // `thinking_delta` event lands in the timeline — requires:
-  //   (a) the public-chat backend to forward `thinking_delta` (and
-  //       optionally tool-call events) over the same SSE stream, and
-  //   (b) a new `appendAssistantThinking(...)` reducer here that
-  //       populates a per-message `thinkingText` / `timeline` field,
-  //       plumbed through `PublicChatBubble` into `LLMOutput`'s
-  //       `thinkingText` / `timeline` props.
-  // Out of scope for the Phase 3 bubble-replacement; see
-  // `plans/thinking_block_audit.md` Section E for the full plan.
+  // Note: the public-chat SSE protocol emits only `text_delta` /
+  // `limit` / `error` frames (see
+  // `interface/src/api/public-chat.ts::dispatchPublicSseFrame`), so
+  // there is no thinking/tool timeline to reduce here. Surfacing the
+  // Brain "Thinking..." Block on public-chat turns is a backend
+  // protocol change (forwarding `thinking_delta` over this stream)
+  // plus a matching `appendAssistantThinking(...)` reducer — see
+  // `plans/thinking_block_audit.md` Section E for the full design.
   appendAssistantToken: (sessionId, messageId, deltaText, mode) => {
     set((s) => {
       const existing = s.sessions[sessionId];

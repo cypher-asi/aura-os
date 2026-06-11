@@ -1,10 +1,11 @@
 /**
  * Behavioural tests for `MobilePublicChatView`.
  *
- * The mobile public surface is intentionally minimal — a centered
- * "What do you want to create?" hero on the landing route and a
- * scrollable transcript + sticky composer on `/chat`. These tests
- * pin that contract and the SSE dispatch wiring.
+ * The mobile public surface lands on a Creator-pinned hero
+ * (`MobileLandingHero`) with the composer inline, scrolling into the
+ * lazily-embedded `/agents` sections; `/chat` is a scrollable
+ * transcript + sticky composer. These tests pin that contract and
+ * the SSE dispatch wiring.
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -81,14 +82,21 @@ afterEach(() => {
 });
 
 describe("MobilePublicChatView", () => {
-  it("renders the 'What do you want to create?' hero on the landing route", () => {
+  it("renders the Creator landing hero with the inline composer on the landing route", () => {
     renderView("/");
     expect(screen.getByTestId("mobile-public-chat-view")).toBeInTheDocument();
-    // The placeholder string lives both in the heading and on the input.
-    const headings = screen.getAllByText("What do you want to create?");
-    expect(headings.length).toBeGreaterThanOrEqual(1);
+    // Creator-pinned hero (the first / default persona).
+    const hero = screen.getByTestId("mobile-landing-hero");
+    expect(hero).toHaveAttribute("data-persona-id", "creator");
+    // Composer renders inside the hero viewport, not as a bottom bar.
     const input = screen.getByRole("textbox", { name: "Message Aura" });
     expect(input).toHaveAttribute("placeholder", "What do you want to create?");
+    expect(hero.contains(input)).toBe(true);
+    // The heavy /agents embed stays unmounted until first interaction
+    // or idle — neither has happened yet at first paint.
+    expect(
+      screen.getByTestId("mobile-public-landing-scroll"),
+    ).toBeInTheDocument();
   });
 
   it("submits the composer, navigates to /chat?session=<id>, and renders the streamed reply", async () => {

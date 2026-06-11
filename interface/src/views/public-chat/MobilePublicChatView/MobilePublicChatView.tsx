@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  lazy,
   useCallback,
   useEffect,
   useRef,
@@ -22,6 +24,8 @@ import {
 import { usePublicGateShown, usePublicPageViewed } from "../use-public-shell-analytics";
 import { track } from "../../../lib/analytics";
 import { PublicChatBubble } from "../PublicChatBubble";
+import { MobileLandingHero } from "../MobileLandingHero";
+import { PERSONAS } from "../personas";
 import styles from "./MobilePublicChatView.module.css";
 
 /**
@@ -29,18 +33,37 @@ import styles from "./MobilePublicChatView.module.css";
  *
  * Mounts at `/` and `/chat` when the layout is mobile and the
  * effective UI mode is `public`. Distinct from the desktop
- * `PublicChatView` — this surface intentionally drops the
- * decorative `MockAuraApp`, persona swap, persona tick rail, and
- * site-wallpaper system. On mobile the visitor lands on a single
- * "What do you want to create?" composer; once they submit, the
- * route flips to `/chat?session=<id>` and the same composer becomes
- * a sticky bottom input below a scrollable transcript.
+ * `PublicChatView` — this surface intentionally drops the heavy
+ * decorative machinery (`MockAuraApp`, persona swap carousel,
+ * persona tick rail, WebGL site backgrounds). The landing route
+ * mirrors the desktop story in a lighter form: a Creator-pinned
+ * `MobileLandingHero` (typewriter tagline, static portrait, composer,
+ * CTA) that scrolls into the same lazily-embedded `/agents` section
+ * stack. Once the visitor submits the composer, the route flips to
+ * `/chat?session=<id>` and the composer becomes a sticky bottom
+ * input below a scrollable transcript.
  *
  * State sharing: backed by the same [`usePublicChatStore`] and the
  * same [`streamPublicChat`] SSE client as the desktop surface, so
  * sessions and history are continuous across resize / device
  * switches mid-session.
  */
+
+/*
+ * Same lazy `/agents` embed as the desktop landing (`PublicChatView`):
+ * the section stack is heavy (WebGL scenes, videos, a changelog
+ * fetch), so it stays out of the landing page's first paint and
+ * mounts on the visitor's first interaction — or once the main
+ * thread goes idle.
+ */
+const AgentsPageSections = lazy(
+  () => import("../../marketing/ProductView/AgentsPageSections"),
+);
+
+// The Creator — `PERSONAS[0]`, the same default persona the desktop
+// carousel opens on — is the ONLY persona the mobile landing shows
+// before the visitor scrolls into the agents flow.
+const CREATOR_PERSONA = PERSONAS[0];
 
 const PUBLIC_CHAT_PATH = "/chat";
 
@@ -98,6 +121,38 @@ export function MobilePublicChatView(): React.ReactElement {
   const [isSending, setIsSending] = useState(false);
   const streamRef = useRef<PublicChatStreamHandle | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
+
+  // Whether the embedded `/agents` section stack should mount below
+  // the hero. Same deferral contract as the desktop landing: first
+  // interaction (touch/wheel/key/pointer — i.e. before any scroll
+  // into it can happen) or main-thread idle, whichever comes first,
+  // keeps the heavy chunk off the landing page's first paint.
+  const [agentsEmbedReady, setAgentsEmbedReady] = useState(false);
+  useEffect(() => {
+    if (isChatPage || agentsEmbedReady) return;
+    let idleId: number | null = null;
+    const ready = (): void => setAgentsEmbedReady(true);
+    const events = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
+    for (const name of events) {
+      window.addEventListener(name, ready, { passive: true, once: true });
+    }
+    // Safari still lacks requestIdleCallback; fall back to a timeout.
+    const hasIdleCallback = typeof window.requestIdleCallback === "function";
+    if (hasIdleCallback) {
+      idleId = window.requestIdleCallback(ready, { timeout: 2_500 });
+    } else {
+      idleId = window.setTimeout(ready, 2_500);
+    }
+    return () => {
+      for (const name of events) {
+        window.removeEventListener(name, ready);
+      }
+      if (idleId !== null) {
+        if (hasIdleCallback) window.cancelIdleCallback(idleId);
+        else window.clearTimeout(idleId);
+      }
+    };
+  }, [isChatPage, agentsEmbedReady]);
 
   const activeSession =
     activeSessionId != null ? sessions[activeSessionId] ?? null : null;
@@ -230,87 +285,121 @@ export function MobilePublicChatView(): React.ReactElement {
     ],
   );
 
+  // One composer instance, placed differently per mode: centered
+  // inside the hero on the landing route, sticky bottom bar on
+  // `/chat`. Hoisted so both placements share the exact same form.
+  const composerForm = (
+    <form
+      className={
+        isChatPage ? styles.composer : `${styles.composer} ${styles.composerHero}`
+      }
+      onSubmit={handleSubmit}
+    >
+      <label className={styles.composerLabel} htmlFor="mobile-public-chat-input">
+        {t("chat.inputLabel", { defaultValue: "Message Aura" })}
+      </label>
+      <input
+        id="mobile-public-chat-input"
+        className={styles.composerInput}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        placeholder={composerPlaceholder}
+        disabled={isSending}
+        autoComplete="off"
+        autoCorrect="on"
+        spellCheck="true"
+        enterKeyHint="send"
+      />
+      <button
+        type="submit"
+        className={styles.composerSend}
+        disabled={isSending || draft.trim().length === 0}
+        aria-label={
+          isSending
+            ? t("chat.sending", { defaultValue: "Sending" })
+            : t("chat.send", { defaultValue: "Send" })
+        }
+      >
+        <ArrowUp size={18} strokeWidth={2.4} aria-hidden="true" />
+      </button>
+      {sendError ? (
+        <p className={styles.composerError} role="alert">
+          {sendError}
+        </p>
+      ) : null}
+    </form>
+  );
+
   return (
     <div className={styles.root} data-testid="mobile-public-chat-view">
       {!isChatPage ? (
-        <div className={styles.heroSlot}>
-          <h1 className={styles.heroHeading}>{composerPlaceholder}</h1>
-          <p className={styles.heroBlurb}>
-            {t("mobileChat.heroBlurb", {
-              defaultValue: "Send Aura a prompt and start building.",
-            })}
-          </p>
+        /*
+         * Landing scroll column — Creator hero viewport first, the
+         * embedded `/agents` section stack below it. Scrolling past
+         * the hero moves straight into the agents story without a
+         * route change, mirroring the desktop landing.
+         */
+        <div
+          className={styles.landingScroll}
+          data-testid="mobile-public-landing-scroll"
+          data-public-home-scroll=""
+        >
+          <div className={styles.heroViewport}>
+            <MobileLandingHero persona={CREATOR_PERSONA}>
+              {composerForm}
+            </MobileLandingHero>
+          </div>
+          <div
+            className={styles.agentsEmbed}
+            // Reserve one viewport of height until the deferred
+            // sections mount so the column's geometry doesn't jump.
+            style={agentsEmbedReady ? undefined : { minHeight: "100dvh" }}
+          >
+            {agentsEmbedReady ? (
+              <Suspense fallback={null}>
+                <AgentsPageSections />
+              </Suspense>
+            ) : null}
+          </div>
         </div>
       ) : (
-        <div
-          ref={transcriptRef}
-          className={styles.transcript}
-          aria-live="polite"
-          aria-label={t("chat.transcriptAriaLabel", {
-            defaultValue: "Chat transcript",
-          })}
-          data-testid="mobile-public-chat-transcript"
-        >
-          {activeSession && activeSession.turns.length > 0 ? (
-            activeSession.turns.map((message, idx) => {
-              // Same in-flight detection as the desktop surface: the
-              // last assistant message while `streamPublicChat` is
-              // still appending deltas gets `isStreaming=true` so
-              // `LLMOutput` runs in live-stream mode.
-              const isLastAssistantTurn =
-                isSending &&
-                message.role === "assistant" &&
-                idx === activeSession.turns.length - 1;
-              return (
-                <PublicChatBubble
-                  key={message.id}
-                  message={message}
-                  isStreaming={isLastAssistantTurn}
-                />
-              );
-            })
-          ) : (
-            <div className={styles.transcriptEmpty} aria-hidden="true">
-              {composerPlaceholder}
-            </div>
-          )}
-        </div>
+        <>
+          <div
+            ref={transcriptRef}
+            className={styles.transcript}
+            aria-live="polite"
+            aria-label={t("chat.transcriptAriaLabel", {
+              defaultValue: "Chat transcript",
+            })}
+            data-testid="mobile-public-chat-transcript"
+          >
+            {activeSession && activeSession.turns.length > 0 ? (
+              activeSession.turns.map((message, idx) => {
+                // Same in-flight detection as the desktop surface: the
+                // last assistant message while `streamPublicChat` is
+                // still appending deltas gets `isStreaming=true` so
+                // `LLMOutput` runs in live-stream mode.
+                const isLastAssistantTurn =
+                  isSending &&
+                  message.role === "assistant" &&
+                  idx === activeSession.turns.length - 1;
+                return (
+                  <PublicChatBubble
+                    key={message.id}
+                    message={message}
+                    isStreaming={isLastAssistantTurn}
+                  />
+                );
+              })
+            ) : (
+              <div className={styles.transcriptEmpty} aria-hidden="true">
+                {composerPlaceholder}
+              </div>
+            )}
+          </div>
+          {composerForm}
+        </>
       )}
-
-      <form className={styles.composer} onSubmit={handleSubmit}>
-        <label className={styles.composerLabel} htmlFor="mobile-public-chat-input">
-          {t("chat.inputLabel", { defaultValue: "Message Aura" })}
-        </label>
-        <input
-          id="mobile-public-chat-input"
-          className={styles.composerInput}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={composerPlaceholder}
-          disabled={isSending}
-          autoComplete="off"
-          autoCorrect="on"
-          spellCheck="true"
-          enterKeyHint="send"
-        />
-        <button
-          type="submit"
-          className={styles.composerSend}
-          disabled={isSending || draft.trim().length === 0}
-          aria-label={
-            isSending
-              ? t("chat.sending", { defaultValue: "Sending" })
-              : t("chat.send", { defaultValue: "Send" })
-          }
-        >
-          <ArrowUp size={18} strokeWidth={2.4} aria-hidden="true" />
-        </button>
-        {sendError ? (
-          <p className={styles.composerError} role="alert">
-            {sendError}
-          </p>
-        ) : null}
-      </form>
     </div>
   );
 }

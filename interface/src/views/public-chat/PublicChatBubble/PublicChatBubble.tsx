@@ -28,7 +28,7 @@ import styles from "./PublicChatBubble.module.css";
  * synthetic Brain "Thinking..." Block injected by `ActivityTimeline`
  * never fires here (its `hasAnyTool` gate is always `false`).
  * Surfacing real thinking blocks in public chat is a separate
- * backend protocol change tracked by the `TODO(thinking)` marker in
+ * backend protocol change — see the protocol note in
  * `interface/src/stores/public-chat-store.ts`.
  */
 interface PublicChatBubbleProps {

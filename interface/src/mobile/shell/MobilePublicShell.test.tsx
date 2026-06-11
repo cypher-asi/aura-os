@@ -155,3 +155,67 @@ describe("MobilePublicShell trash affordance", () => {
     expect(screen.getByTestId("outlet-content")).toBeInTheDocument();
   });
 });
+
+describe("MobilePublicShell full-screen menu", () => {
+  it("opens the menu from the hamburger and closes it from the X", async () => {
+    const user = userEvent.setup();
+    renderShell("/");
+
+    const menu = screen.getByTestId("mobile-public-menu");
+    expect(menu).toHaveAttribute("aria-hidden", "true");
+
+    await user.click(screen.getByTestId("mobile-public-menu-open"));
+    expect(menu).toHaveAttribute("aria-hidden", "false");
+
+    await user.click(screen.getByTestId("mobile-public-menu-close"));
+    expect(menu).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("mirrors the desktop nav areas: flat primary links plus an expandable Resources group", async () => {
+    const user = userEvent.setup();
+    renderShell("/");
+    await user.click(screen.getByTestId("mobile-public-menu-open"));
+
+    // Flat primary rows, same as desktop's PRIMARY_LINKS.
+    expect(screen.getByRole("link", { name: "Agents" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Code" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Pricing" })).toBeInTheDocument();
+
+    // Resources is the only chevron group; sub-links hidden until tapped.
+    const resources = screen.getByRole("button", { name: "Resources" });
+    expect(resources).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByRole("link", { name: "Changelog" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(resources);
+    expect(resources).toHaveAttribute("aria-expanded", "true");
+    for (const label of [
+      "Blog",
+      "Changelog",
+      "Downloads",
+      "Feedback",
+      "Models",
+      "OS",
+    ]) {
+      expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it("closes the menu when a nav row is selected", async () => {
+    const user = userEvent.setup();
+    renderShell("/");
+    await user.click(screen.getByTestId("mobile-public-menu-open"));
+
+    await user.click(screen.getByRole("link", { name: "Agents" }));
+
+    expect(screen.getByTestId("mobile-public-menu")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(screen.getByTestId("location-probe")).toHaveAttribute(
+      "data-pathname",
+      "/agents",
+    );
+  });
+});

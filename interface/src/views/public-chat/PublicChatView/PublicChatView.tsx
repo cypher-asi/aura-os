@@ -968,7 +968,7 @@ export function PublicChatView(): React.ReactElement {
                 // applies the live-streaming chrome (and, once the
                 // backend forwards `thinking_delta` for public chat,
                 // the Phase 1 synthetic Brain "Thinking..." Block will
-                // surface here automatically — see TODO(thinking) in
+                // surface here automatically — see the protocol note in
                 // `public-chat-store.ts`).
                 const isLastAssistantTurn =
                   isSending &&

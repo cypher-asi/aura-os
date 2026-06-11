@@ -2,15 +2,14 @@
  * MobilePublicShell — public-mode mobile chrome.
  *
  * Layout: column flex with a fixed-height topbar above and the
- * route `<Outlet />` filling the remaining height. The drawer is
- * absolutely positioned with a 280px width — same number dom used
- * in his overwritten `LoggedOutShell.module.css` mobile pass
- * (commit 30dc4c6f7) so the drawer feels familiar.
+ * route `<Outlet />` filling the remaining height. The AURA
+ * wordmark anchors the left edge (linking home) and the hamburger
+ * sits on the right; the full-screen `MobilePublicMenu` overlay
+ * (z-index 80, own stylesheet) paints above everything when open.
  *
  * z-index ladder:
- *   topbar:     10
- *   backdrop:   60
- *   drawer:     65
+ *   topbar:        10
+ *   menu overlay:  80 (MobilePublicMenu.module.css)
  * (Body / Outlet sits at the default 0; overlay routes / login
  *  modal handle their own stacking via React-Router state.)
  */
@@ -28,11 +27,11 @@
 }
 
 .topbar {
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   height: 52px;
-  padding: 0 8px;
+  padding: 0 8px 0 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border, #334155) 50%, transparent);
   background: color-mix(in srgb, var(--color-bg-elevated, #111827) 92%, transparent);
   backdrop-filter: blur(14px);
@@ -40,9 +39,29 @@
   flex-shrink: 0;
 }
 
+.logoLink {
+  display: inline-flex;
+  align-items: center;
+  /* Keep a generous tap target around the small wordmark. */
+  min-height: 44px;
+}
+
+.logo {
+  height: 13px;
+  width: auto;
+  display: block;
+  user-select: none;
+}
+
+.topbarActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .menuButton {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -51,7 +70,6 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  margin-left: 4px;
 }
 
 .menuButton:hover,
@@ -59,29 +77,15 @@
   background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
 }
 
-.wordmark {
-  text-align: center;
-  font-size: 15px;
-  letter-spacing: 0.18em;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  text-decoration: none;
-}
-
-.topbarSpacer {
-  display: block;
-}
-
 /*
- * Trash button — mirrors `.menuButton` on the opposite side of the
- * topbar grid so the two icons feel balanced. Only mounts when the
+ * Trash button — sits beside the hamburger. Only mounts when the
  * visitor is on `/chat?session=<id>` with a real session, since the
  * mobile public shell has no separate session list — deleting the
  * chat you're on is the only delete entry point.
  */
 .deleteButton {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -90,8 +94,6 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  margin-right: 4px;
-  margin-left: auto;
 }
 
 .deleteButton:hover,
@@ -106,205 +108,4 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-/* ── Drawer ──────────────────────────────────────────────── */
-
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 180ms ease;
-}
-
-.backdropOpen {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.drawer {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: min(280px, 86vw);
-  z-index: 65;
-  background: color-mix(in srgb, var(--color-bg-elevated, #111827) 96%, var(--color-bg-canvas, #0b0b0e));
-  border-right: 1px solid color-mix(in srgb, var(--color-border, #334155) 60%, transparent);
-  display: flex;
-  flex-direction: column;
-  transform: translateX(-100%);
-  transition: transform 200ms ease;
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-.drawerOpen {
-  transform: translateX(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .backdrop,
-  .drawer {
-    transition: none;
-  }
-}
-
-.drawerHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 52px;
-  padding: 0 12px 0 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border, #334155) 40%, transparent);
-}
-
-.drawerTitle {
-  font-size: 15px;
-  letter-spacing: 0.18em;
-  font-weight: 600;
-}
-
-.drawerClose {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary, #c9c9cf);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.drawerClose:hover,
-.drawerClose:focus-visible {
-  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
-  color: var(--color-text-primary);
-}
-
-.drawerNav {
-  display: flex;
-  flex-direction: column;
-  padding: 12px 8px;
-  gap: 2px;
-}
-
-.drawerLink {
-  display: block;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-secondary, #c9c9cf);
-  text-decoration: none;
-  transition: background 120ms ease, color 120ms ease;
-}
-
-.drawerLink:hover,
-.drawerLink:focus-visible {
-  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
-  color: var(--color-text-primary);
-}
-
-.drawerLinkActive,
-.drawerLinkActive:hover {
-  background: color-mix(in srgb, #7c3aed 22%, transparent);
-  color: var(--color-text-primary);
-}
-
-.drawerDivider {
-  margin: 8px 16px;
-  height: 1px;
-  background: color-mix(in srgb, var(--color-border, #334155) 50%, transparent);
-}
-
-.drawerAuth {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-  margin-top: auto;
-}
-
-/*
- * Language picker in the public drawer. A native <select> gives the
- * platform's own scrollable language list (good for long option sets)
- * and inherits OS-level input affordances on mobile.
- */
-.languageRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 0;
-}
-
-.languageLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.languageSelect {
-  flex: 0 1 auto;
-  max-width: 60%;
-  height: 40px;
-  padding: 0 10px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--color-text-primary) 22%, transparent);
-  background: transparent;
-  color: var(--color-text-primary);
-  font-size: 14px;
-  font-family: inherit;
-}
-
-/*
- * Auth pills — same visual language as desktop's `PublicActions`
- * in `AuraTitlebar.tsx` (Log In secondary, Sign Up primary), sized
- * for tap-friendly mobile targets.
- */
-.authPill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  border: 1px solid transparent;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.authPillSecondary {
-  color: var(--color-text-primary);
-  border-color: color-mix(in srgb, var(--color-text-primary) 22%, transparent);
-  background: transparent;
-}
-
-.authPillSecondary:hover,
-.authPillSecondary:focus-visible {
-  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
-}
-
-.authPillPrimary {
-  color: var(--color-bg-canvas, #0b0b0e);
-  background: var(--color-text-primary, #ffffff);
-}
-
-.authPillPrimary:hover,
-.authPillPrimary:focus-visible {
-  background: color-mix(in srgb, var(--color-text-primary) 92%, transparent);
 }

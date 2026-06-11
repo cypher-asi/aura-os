@@ -117,7 +117,12 @@
 @media (max-width: 768px) {
   .cardSectionGrid,
   .cardSectionGridCols3 {
-    grid-template-columns: 1fr;
+    /* `minmax(0, 1fr)` (not bare `1fr` = `minmax(auto, 1fr)`) so a
+       cell's intrinsic min-content — e.g. the model marquee's
+       max-content track in the personal-agent card — can never force
+       the single column wider than the band. The cell's own
+       overflow rules then clip the strip as intended. */
+    grid-template-columns: minmax(0, 1fr);
     /* Tighter 16px gutter on mobile; rounded band is inherited. */
     width: calc(100vw - 32px);
     margin-inline: calc(50% - 50vw + 16px);

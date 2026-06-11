@@ -721,6 +721,12 @@
 
   .pageHeroContent {
     gap: 20px;
+    /* `--marketing-content-max-width` tracks the desktop MockAuraApp
+       wallpaper width (a viewport percentage), which collapses the
+       centered hero column to ~230px on phones and wraps the
+       description into a sliver. Phones have no mock-desktop to
+       align with, so let the hero use the full padded width. */
+    max-width: 100%;
   }
 
   .pageHeroHeadline {
