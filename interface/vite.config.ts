@@ -115,6 +115,13 @@ export default defineConfig(({ mode, command }) => {
             if (id.includes("/@xyflow/")) {
               return "diagram-vendor";
             }
+            // Keep three.js out of the catch-all vendor chunk: it is only
+            // needed by lazily-mounted WebGL scenes (marketing device
+            // props, persona backgrounds, aura3d), so it must not ride
+            // along with the entry-critical vendor graph.
+            if (id.includes("/node_modules/three/")) {
+              return "three-vendor";
+            }
             if (id.includes("/highlight.js/") && !id.endsWith(".css") && !id.includes("/styles/")) {
               return "highlight-vendor";
             }
@@ -136,6 +143,13 @@ export default defineConfig(({ mode, command }) => {
     server: {
       port: 5173,
       allowedHosts,
+      // Vite 8 auto-enables console forwarding when the dev server is
+      // spawned by an AI agent, but its forwarding transport can latch onto
+      // a websocket that never connected; every forwarded error then throws,
+      // each throw is forwarded again (unhandledErrors), and the page locks
+      // up in an infinite error loop before React mounts. Off = the normal
+      // human default, so nothing changes for regular `npm run dev`.
+      forwardConsole: false,
       hmr: {
         protocol: "ws",
         host: "127.0.0.1",
