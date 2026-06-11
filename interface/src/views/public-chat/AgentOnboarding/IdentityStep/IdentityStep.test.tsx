@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickRandomPersonality } from "./IdentityStep";
+import { pickRandomPersonality } from "./pick-personality";
 import { PERSONALITY_PRESETS } from "../onboarding-data";
 
 describe("pickRandomPersonality", () => {

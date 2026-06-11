@@ -1,1 +1,2 @@
-export { IdentityStep, pickRandomPersonality } from "./IdentityStep";
+export { IdentityStep } from "./IdentityStep";
+export { pickRandomPersonality } from "./pick-personality";

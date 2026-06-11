@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Sparkles, Upload } from "lucide-react";
 import { ImageCropModal } from "../../../../components/ImageCropModal/ImageCropModal";
 import type { OnboardingAvatar, PersonalityPreset } from "../onboarding-data";
+import { pickRandomPersonality } from "./pick-personality";
 import styles from "./IdentityStep.module.css";
 
 interface IdentityStepProps {
@@ -11,22 +12,6 @@ interface IdentityStepProps {
   readonly personalities: readonly PersonalityPreset[];
   readonly selectedPersonality: string;
   readonly onSelectPersonality: (description: string) => void;
-}
-
-/**
- * Pick a personality preset different from the current one. Pure + RNG is
- * injectable so the "Generate" behaviour is deterministic under test.
- */
-export function pickRandomPersonality(
-  presets: readonly PersonalityPreset[],
-  currentDescription: string,
-  rng: () => number = Math.random,
-): PersonalityPreset | null {
-  if (presets.length === 0) return null;
-  const others = presets.filter((p) => p.description !== currentDescription);
-  const pool = others.length > 0 ? others : presets;
-  const index = Math.min(pool.length - 1, Math.floor(rng() * pool.length));
-  return pool[index];
 }
 
 export function IdentityStep({
