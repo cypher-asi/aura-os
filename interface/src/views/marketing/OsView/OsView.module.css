@@ -23,10 +23,23 @@
 /* ---- Left nav ------------------------------------------------------- */
 
 /* The nav lists every section across all repos, so it can exceed the
-   viewport. Keep it in the page flow (no inner scrollbar, no sticky cutoff)
-   so the whole tree is reachable by scrolling the page. */
+   viewport. Pin it with `position: sticky` so it stays visible no matter
+   how far the reading column on the right is scrolled. It owns its own
+   vertical scroll (capped to the viewport) so the full tree stays
+   reachable, but the scrollbar is hidden so the nav reads as static
+   full-height content. */
 .sidebar {
   align-self: start;
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .sidebarTitle {
@@ -298,5 +311,13 @@
     grid-template-columns: 1fr;
     gap: 24px;
     padding: 40px 20px 80px;
+  }
+
+  /* Single-column on mobile: drop the sticky pin so the nav flows above
+     the content instead of overlapping it. */
+  .sidebar {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
