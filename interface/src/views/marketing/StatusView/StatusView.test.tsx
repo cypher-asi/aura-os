@@ -6,8 +6,8 @@ import type { StatusSnapshot } from "../../../api/marketing/status";
 
 const FIXTURE_SNAPSHOT: StatusSnapshot = {
   schemaVersion: 1,
-  title: "Aura Feature Health",
-  description: "Public-facing feature health backed by Aura-owned live eval probes.",
+  title: "Aura Observability",
+  description: "Feature health backed by Aura-owned live eval probes.",
   generatedAt: "2026-06-10T12:00:00.000Z",
   environment: "production",
   source: "github-actions",
@@ -93,7 +93,7 @@ const FIXTURE_SNAPSHOT: StatusSnapshot = {
 
 describe("StatusView", () => {
   beforeEach(() => {
-    vi.stubGlobal(
+  vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
@@ -110,7 +110,7 @@ describe("StatusView", () => {
     render(<StatusView />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Aura Feature Health" }),
+      screen.getByRole("heading", { level: 1, name: "Aura Observability" }),
     ).toBeInTheDocument();
 
     await waitFor(() => {

@@ -48,7 +48,7 @@ const RESOURCE_LINKS: ReadonlyArray<TopNavLink> = [
   { tKey: "downloads", label: "Downloads", to: "/download" },
   { tKey: "feedback", label: "Feedback", to: "/feedback" },
   { tKey: "models", label: "Models", to: "/models" },
-  { tKey: "status", label: "Status", to: "/status" },
+  { tKey: "observability", label: "Observability", to: "/observability" },
   { tKey: "os", label: "OS", to: "/os" },
 ];
 

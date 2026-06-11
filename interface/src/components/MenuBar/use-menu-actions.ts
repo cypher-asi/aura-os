@@ -14,7 +14,7 @@ import type { MenuActionKey } from "./menu-config";
 
 const AURA_WEBSITE = "https://aura.ai";
 const AURA_DOWNLOADS = "https://aura.ai/download";
-const AURA_STATUS = "https://aura.ai/status";
+const AURA_OBSERVABILITY = "https://aura.ai/observability";
 
 function nextIndex(currentIndex: number, length: number, direction: 1 | -1): number {
   if (length === 0) return -1;
@@ -187,11 +187,11 @@ export function useMenuActions(): {
 
   const handleStatus = useCallback(() => {
     if (isAuthenticated) {
-      navigate("/status");
+      navigate("/observability");
       return;
     }
     if (typeof window === "undefined") return;
-    window.open(AURA_STATUS, "_blank", "noopener,noreferrer");
+    window.open(AURA_OBSERVABILITY, "_blank", "noopener,noreferrer");
   }, [isAuthenticated, navigate]);
 
   const handleGettingStarted = useCallback(() => {

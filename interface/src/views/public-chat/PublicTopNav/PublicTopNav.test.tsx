@@ -2,8 +2,8 @@
  * Smoke test for `PublicTopNav`. Pins the primary marketing links
  * (Agents / Code / Pricing) and their hrefs, asserts the Home link was
  * removed (the logo owns "home"), verifies the Resources dropdown
- * reveals Blog / Changelog / Feedback / Models / Status / OS, and checks that
- * the Expertise dropdown is hidden by default (gated behind a flag).
+ * reveals Blog / Changelog / Feedback / Models / Observability / OS, and checks
+ * that the Expertise dropdown is hidden by default (gated behind a flag).
  */
 
 import { render, screen } from "@testing-library/react";
@@ -55,7 +55,7 @@ describe("PublicTopNav", () => {
     );
   });
 
-  it("opens the Resources dropdown to reveal Blog / Changelog / Feedback / Models / Status / OS", async () => {
+  it("opens the Resources dropdown to reveal Blog / Changelog / Feedback / Models / Observability / OS", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={["/agents"]}>
@@ -83,8 +83,8 @@ describe("PublicTopNav", () => {
       screen.getByRole("menuitem", { name: "Models" }),
     ).toHaveAttribute("href", "/models");
     expect(
-      screen.getByRole("menuitem", { name: "Status" }),
-    ).toHaveAttribute("href", "/status");
+      screen.getByRole("menuitem", { name: "Observability" }),
+    ).toHaveAttribute("href", "/observability");
     expect(
       screen.getByRole("menuitem", { name: "OS" }),
     ).toHaveAttribute("href", "/os");
@@ -116,7 +116,7 @@ describe("PublicTopNav", () => {
 
   it("marks Resources active when on one of its grouped routes", () => {
     render(
-      <MemoryRouter initialEntries={["/status"]}>
+      <MemoryRouter initialEntries={["/observability"]}>
         <PublicTopNav />
       </MemoryRouter>,
     );

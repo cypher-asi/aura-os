@@ -242,7 +242,7 @@
       "requiredEvidence": ["files"]
     },
     "public-status-page": {
-      "description": "Public status JSON returns overall state and feature count.",
+      "description": "Public observability snapshot JSON returns overall state and feature count.",
       "requiredEvidence": ["overall", "featureCount"],
       "assertions": [
         { "path": "overall", "oneOf": ["operational", "degraded", "partial_outage", "major_outage", "unknown", "maintenance"] },

@@ -314,6 +314,15 @@ function AppRoutes(): React.ReactElement {
               <Route index element={<LastAppRedirect />} />
               {renderRoutes(shellAppRoutes)}
               <Route path="chat" element={<ChatRouteSwitch />} />
+              <Route
+                path="observability"
+                element={
+                  <Suspense fallback={null}>
+                    <StatusView />
+                  </Suspense>
+                }
+              />
+              <Route path="status" element={<Navigate to="/observability" replace />} />
             </Route>
             <Route
               path="invite/:token"
@@ -471,13 +480,14 @@ function AppRoutes(): React.ReactElement {
                 }
               />
               <Route
-                path="status"
+                path="observability"
                 element={
                   <Suspense fallback={null}>
                     <StatusView />
                   </Suspense>
                 }
               />
+              <Route path="status" element={<Navigate to="/observability" replace />} />
               <Route
                 path="blog"
                 element={
@@ -594,13 +604,14 @@ function AppRoutes(): React.ReactElement {
               }
             />
             <Route
-              path="status"
+              path="observability"
               element={
                 <Suspense fallback={null}>
                   <StatusView />
                 </Suspense>
               }
             />
+            <Route path="status" element={<Navigate to="/observability" replace />} />
             {/*
               Parallel authenticated share route. Reuses the SAME
               `SharedSessionView` but renders inside the normal authed

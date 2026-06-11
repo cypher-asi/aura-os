@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "title": "Aura Feature Health",
-  "description": "Public-facing feature health backed by Aura-owned live eval probes.",
+  "title": "Aura Observability",
+  "description": "Feature health backed by Aura-owned live eval probes.",
   "features": [
     {
       "id": "core-api",
@@ -247,7 +247,7 @@
       "label": "Public Website",
       "category": "website",
       "priority": 80,
-      "description": "Public Aura pages, status JSON, and marketing routes.",
+      "description": "Public Aura pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "Aura's public web surfaces are reachable.",
       "checks": [
         { "id": "public-status-page", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 2000, "outageLatencyMs": 8000 },

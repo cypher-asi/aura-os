@@ -1,7 +1,9 @@
-# Aura Feature Health
+# Aura Observability
 
-Aura Feature Health turns live eval probes into the Aura OS public-mode status
-page at `/status`.
+Aura Observability turns live eval probes into a dashboard available from the
+Aura OS public-mode website and the authenticated desktop/web app at
+`/observability`. The legacy `/status` path redirects to `/observability` so
+existing links keep working.
 
 ## What It Measures
 
@@ -45,8 +47,8 @@ npm run status:snapshot
 ```
 
 For end-to-end local verification, use the existing eval local stack in
-`infra/evals/local-stack/`. The status page is not served from a sibling website
-repo; it is the Aura OS interface public-mode route in `interface/`. The
+`infra/evals/local-stack/`. The observability page is not served from a sibling
+website repo; it is the Aura OS interface route in `interface/`. The
 recommended default for feature health is the hybrid stack: Aura OS, the public
 frontend, and the harness run locally, while zOS auth, the router, billing, and
 swarm-backed dependencies stay pointed at deployed services.
@@ -95,9 +97,10 @@ applies `infra/evals/status/lib/status-policy.mjs`, and writes:
 - `interface/public/status/status.json`
 - `infra/evals/reports/status/status.json`
 
-The Aura OS public-mode React route at `interface/src/views/marketing/StatusView`
-fetches `/status/status.json` and renders the snapshot. If the JSON is missing,
-the page falls back to an explicit unknown state.
+The Aura OS React route at `/observability`
+(`interface/src/views/marketing/StatusView`) fetches `/status/status.json` and
+renders the snapshot. If the JSON is missing, the page falls back to an explicit
+unknown state.
 
 ## Publishing
 
@@ -113,7 +116,7 @@ npm run status:snapshot -- --environment production --source github-actions
 ```
 
 The generated `interface/public/status/status.json` ships with the Aura OS
-interface build, and the public-mode `/status` route reads it directly. No
+interface build, and the `/observability` route reads it directly. No
 external status-page service is required for the first version because the
 valuable part is the Aura-specific probe catalog and status policy. An external
 service only adds value if we later need subscriber notifications, incident

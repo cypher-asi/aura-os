@@ -252,7 +252,7 @@ export function buildStatusSnapshot({ registry, checks = [], generatedAt = new D
 
   return {
     schemaVersion: 1,
-    title: registry.title ?? "Aura Feature Health",
+    title: registry.title ?? "Aura Observability",
     description: registry.description ?? "",
     generatedAt: normalizedGeneratedAt,
     environment,
