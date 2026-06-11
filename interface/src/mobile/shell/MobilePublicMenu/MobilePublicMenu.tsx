@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { ChevronDown, Globe, X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { track } from "../../../lib/analytics";
 import { useLanguageStore } from "../../../stores/language-store";
@@ -272,48 +272,43 @@ export function MobilePublicMenu({
       </nav>
 
       <div className={styles.footer}>
-        <label className={styles.languageRow}>
-          <span className={styles.languageLabel}>
-            <Globe size={16} aria-hidden="true" />
-            {t("common:language", { defaultValue: "Language" })}
-          </span>
-          <select
-            className={styles.languageSelect}
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            aria-label={t("common:language", { defaultValue: "Language" })}
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.nativeName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className={styles.auth}>
-          <Link
-            to={{ pathname: "/login", search: signinSearch }}
-            state={backgroundState}
-            className={`${styles.authPill} ${styles.authPillSecondary}`}
-            onClick={() => {
-              onClose();
-              track("public_login_clicked", { source: "mobile_menu" });
-            }}
-          >
-            {t("auth:logIn", { defaultValue: "Log In" })}
-          </Link>
-          <Link
-            to={{ pathname: "/login", search: signupSearch }}
-            state={backgroundState}
-            className={`${styles.authPill} ${styles.authPillPrimary}`}
-            onClick={() => {
-              onClose();
-              track("public_signup_clicked", { source: "mobile_menu" });
-            }}
-          >
-            {t("auth:signUp", { defaultValue: "Sign Up" })}
-          </Link>
-        </div>
+        {/* Compact language selector — shows the 2-letter code (e.g.
+            "EN") and sits inline beside the auth pills. */}
+        <select
+          className={styles.languageSelect}
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          aria-label={t("common:language", { defaultValue: "Language" })}
+          title={t("common:language", { defaultValue: "Language" })}
+        >
+          {LANGUAGES.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.code.slice(0, 2).toUpperCase()}
+            </option>
+          ))}
+        </select>
+        <Link
+          to={{ pathname: "/login", search: signinSearch }}
+          state={backgroundState}
+          className={`${styles.authPill} ${styles.authPillSecondary}`}
+          onClick={() => {
+            onClose();
+            track("public_login_clicked", { source: "mobile_menu" });
+          }}
+        >
+          {t("auth:logIn", { defaultValue: "Log In" })}
+        </Link>
+        <Link
+          to={{ pathname: "/login", search: signupSearch }}
+          state={backgroundState}
+          className={`${styles.authPill} ${styles.authPillPrimary}`}
+          onClick={() => {
+            onClose();
+            track("public_signup_clicked", { source: "mobile_menu" });
+          }}
+        >
+          {t("auth:signUp", { defaultValue: "Sign Up" })}
+        </Link>
       </div>
     </div>
   );

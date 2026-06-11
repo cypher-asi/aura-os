@@ -185,46 +185,36 @@
 
 .footer {
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  /* Single inline row: compact language code + the two auth pills. */
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  align-items: center;
+  gap: 8px;
   padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid color-mix(in srgb, var(--color-border, #334155) 40%, transparent);
 }
 
-.languageRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.languageLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
+/*
+ * Compact language selector — a small all-caps "EN" pill that aligns
+ * in height with the auth pills beside it. Native select arrow is
+ * suppressed to keep the two-character footprint tight.
+ */
 .languageSelect {
-  flex: 0 1 auto;
-  max-width: 60%;
-  height: 40px;
-  padding: 0 10px;
-  border-radius: 10px;
+  height: 44px;
+  padding: 0 8px;
+  border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--color-text-primary) 22%, transparent);
   background: transparent;
   color: var(--color-text-primary);
   font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   font-family: inherit;
-}
-
-.auth {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  text-align: center;
+  text-align-last: center;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .authPill {
