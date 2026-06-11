@@ -169,6 +169,7 @@
   box-shadow:
     0 8px 20px rgba(0, 0, 0, 0.6),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  will-change: transform, opacity;
   animation: nrPop 4s ease-in-out infinite;
 }
 
@@ -351,36 +352,47 @@
 }
 
 .nrActiveDot {
+  position: relative;
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  /* Golden accent, with a pulsating layered glow. */
+  /* Golden accent with the resting glow baked on the dot itself. */
   background: var(--nr-gold);
+  box-shadow:
+    0 0 4px var(--nr-gold),
+    0 0 8px color-mix(in srgb, var(--nr-gold) 45%, transparent);
+}
+
+/* The pulsating portion of the glow: the PEAK shadow baked on a pseudo-
+   element breathing via opacity only (compositor-friendly), instead of
+   animating the box-shadow list itself, which repainted every frame. */
+.nrActiveDot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    0 0 8px var(--nr-gold),
+    0 0 16px var(--nr-gold),
+    0 0 26px color-mix(in srgb, var(--nr-gold) 60%, transparent);
   animation: nrActiveDotPulse 1.8s ease-in-out infinite;
 }
 
 @keyframes nrActiveDotPulse {
   0%,
   100% {
-    box-shadow:
-      0 0 4px var(--nr-gold),
-      0 0 8px color-mix(in srgb, var(--nr-gold) 45%, transparent);
+    opacity: 0;
   }
   50% {
-    box-shadow:
-      0 0 8px var(--nr-gold),
-      0 0 16px var(--nr-gold),
-      0 0 26px color-mix(in srgb, var(--nr-gold) 60%, transparent);
+    opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nrActiveDot {
+  .nrActiveDot::before {
     animation: none;
-    box-shadow:
-      0 0 6px var(--nr-gold),
-      0 0 12px var(--nr-gold),
-      0 0 20px color-mix(in srgb, var(--nr-gold) 55%, transparent);
+    opacity: 0.6;
   }
 }
 

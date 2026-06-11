@@ -118,11 +118,15 @@
     0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-/* Face + curved text rotate together as one platter. */
+/* Face + curved text rotate together as one platter. `will-change`
+   guarantees the complex gradient face below is painted once into its
+   own compositor layer and then only rotated, instead of risking
+   re-rasterization during the infinite spin. */
 .trustDiscSpinner {
   position: absolute;
   inset: 0;
   border-radius: 50%;
+  will-change: transform;
   animation: trustDiscSpin 14s linear infinite;
 }
 

@@ -74,11 +74,14 @@
   perspective: 700px;
 }
 
-/* Gentle pitch oscillation so the tumble never reads as a flat spin. */
+/* Gentle pitch oscillation so the tumble never reads as a flat spin.
+   `will-change: transform` promotes the layer so the preserve-3d
+   rotation only transforms instead of re-rasterizing each frame. */
 .verifiedCubeTilt {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
+  will-change: transform;
   animation: verifiedCubePitch 9s ease-in-out infinite alternate;
 }
 
@@ -87,6 +90,7 @@
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
+  will-change: transform;
   animation: verifiedCubeYaw 16s linear infinite;
 }
 
