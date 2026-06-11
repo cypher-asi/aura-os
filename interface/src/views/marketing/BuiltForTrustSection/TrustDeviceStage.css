@@ -85,17 +85,35 @@
 }
 
 @media (max-width: 768px) {
+  /* Phone: there's no room for the rail beside the computer, so stack the
+     computer visual over a HORIZONTAL button bar instead of the desktop
+     "rail pinned to the device's left" layout. */
   .builtForTrustStage {
-    --trust-rail-key: 44px;
-    --trust-rail-gap: 9px;
-    --trust-rail-pad: 9px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+    /* Sized so all eight keys fit one clean horizontal row inside the
+       ~302px stage (8 x 30 + 7 x 5 + padding + plate rim). */
+    --trust-rail-key: 30px;
+    --trust-rail-gap: 5px;
+    --trust-rail-pad: 6px;
   }
 
+  /* Rail drops out of its absolute far-left pin into normal flow, below the
+     computer visual (order: 2), laid out as a horizontal bar. */
   .builtForTrustStage .serviceButtonRail {
-    left: 8px;
+    position: static;
+    top: auto;
+    left: auto;
+    transform: none;
+    order: 2;
   }
 
-  /* The gap is too tight on phones; keep nozzles, drop the mesh. */
+  .builtForTrustDeviceWrap {
+    order: 1;
+  }
+
+  /* The gap is too tight on phones; keep the bar, drop the mesh + readout. */
   .builtForTrustStage .serviceConnectionField {
     display: none;
   }
