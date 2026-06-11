@@ -56,6 +56,10 @@
  */
 .alwaysOnTrack {
   position: relative;
+  /* Size container so the knob's slide distance can be expressed in cqw
+     units (see .alwaysOnKnob): the travel is computed from the track's own
+     width, with no magic pixel constant to drift out of sync. */
+  container-type: inline-size;
   /* 3px socket + 4px track + 31px knob: the original 72px device stack
      scaled down 30%. Knob (31px) + 4px top/bottom padding = 39px tall. */
   height: 39px;
@@ -97,14 +101,20 @@
     inset 0 -3px 5px rgba(0, 0, 0, 0.45),
     0 5px 12px rgba(0, 0, 0, 0.75),
     0 1px 3px rgba(0, 0, 0, 0.6);
-  /* Long, symmetric ease-in-out so the knob glides gently across the
-     track rather than darting (easeInOutCubic). */
-  transition: left 900ms cubic-bezier(0.65, 0, 0.35, 1);
+  transform: translateX(0);
+  /* Long, symmetric ease-in-out (easeInOutCubic) on TRANSFORM, not `left`:
+     transform runs on the compositor, so the glide stays smooth even while
+     the page's WebGL scenes are loading the main thread — animating `left`
+     relayouts every frame and visibly stutters here. */
+  transition: transform 900ms cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
 }
 
-/* Knob latched to the right end of the track when toggled. */
+/* Knob latched to the right end of the track when toggled. Travel = the
+   track's content width (100cqw) minus the knob's own 31px; the 6px side
+   insets cancel out since the knob starts at the left inset. */
 .alwaysOnTrack[data-side="right"] .alwaysOnKnob {
-  left: calc(100% - 31px - 6px);
+  transform: translateX(calc(100cqw - 31px));
 }
 
 /*
