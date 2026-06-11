@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} 以下から生成されます: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "メッセージを送信できません"
+    },
+    "heroPhrases": {
+      "privateAgent": "あなたのプライベートエージェント。"
+    },
+    "inputLabel": "メッセージオーラ",
+    "inputPlaceholder": "アウラに何でも聞いてください...",
+    "send": "送信",
+    "sending": "送信中",
+    "transcriptAriaLabel": "チャットの記録"
+  },
+  "compose": {
+    "startConversationAriaLabel": "新しい会話を開始する"
+  },
+  "createAgent": {
+    "label": "エージェントを作成する"
+  },
+  "login": {
+    "close": "近い",
+    "closeLoginAriaLabel": "ログインを閉じる",
+    "heading": "AURAにログイン"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "何を作りたいですか？",
+    "heroBlurb": "Aura にプロンプ​​トを送信し、構築を開始します。"
+  },
+  "personas": {
+    "railAriaLabel": "エージェントのペルソナ"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "チャットを削除」{{title}}」",
+    "noConversations": "まだ会話はありません",
+    "noMatchingChats": "一致するチャットはありません"
+  },
+  "sharedSession": {
+    "ariaLabel": "共有された会話",
+    "empty": {
+      "body": "この共有会話には表示するメッセージはありません。",
+      "heading": "この会話は空です"
+    },
+    "error": {
+      "body": "この共有会話を読み込むことができませんでした。後でもう一度試してください。",
+      "heading": "何か問題が発生しました"
+    },
+    "loading": "共有会話を読み込んでいます…",
+    "unavailable": {
+      "body": "会話が共有されていないか、リンクが間違っている可能性があります。",
+      "heading": "この共有リンクは使用できません"
+    }
+  }
+}

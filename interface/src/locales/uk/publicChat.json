@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} створено з: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Неможливо надіслати повідомлення"
+    },
+    "heroPhrases": {
+      "privateAgent": "Ваш приватний агент."
+    },
+    "inputLabel": "Аура повідомлення",
+    "inputPlaceholder": "Запитайте Ауру будь-що...",
+    "send": "Надіслати",
+    "sending": "Відправка",
+    "transcriptAriaLabel": "Стенограма чату"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Почніть нову розмову"
+  },
+  "createAgent": {
+    "label": "Створіть свого агента"
+  },
+  "login": {
+    "close": "Закрити",
+    "closeLoginAriaLabel": "Закрити вхід",
+    "heading": "Увійти в AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Що ви хочете створити?",
+    "heroBlurb": "Надішліть Aura підказку та почніть будувати."
+  },
+  "personas": {
+    "railAriaLabel": "Персони агента"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Видалити чат\"{{title}}\"",
+    "noConversations": "Розмов ще немає",
+    "noMatchingChats": "Немає відповідних чатів"
+  },
+  "sharedSession": {
+    "ariaLabel": "Спільна розмова",
+    "empty": {
+      "body": "У цій спільній бесіді немає повідомлень для показу.",
+      "heading": "Ця розмова порожня"
+    },
+    "error": {
+      "body": "Не вдалося завантажити цю спільну бесіду. Спробуйте пізніше.",
+      "heading": "Щось пішло не так"
+    },
+    "loading": "Завантаження спільної розмови…",
+    "unavailable": {
+      "body": "Можливо, доступ до розмови закрито або посилання неправильне.",
+      "heading": "Це посилання для спільного доступу недоступне"
+    }
+  }
+}

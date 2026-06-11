@@ -1,0 +1,776 @@
+{
+  "agents": {
+    "buildDeviceAriaLabel": "Bangun agen Anda",
+    "documentTitle": "AURA - Agen",
+    "heroDescriptionLine1": "Agen AURA ahli di segala bidang",
+    "heroDescriptionLine2": "yang berfungsi saat Anda tidur.",
+    "heroHeadline": "Delegasikan segalanya."
+  },
+  "blog": {
+    "allPosts": "Semua postingan",
+    "breadcrumbAriaLabel": "Remah roti",
+    "documentTitle": "AURA - Blog",
+    "empty": {
+      "body": "Blog sudah terhubung, tetapi belum ada postingan yang dipublikasikan.",
+      "heading": "Belum ada postingan."
+    },
+    "latest": "Terbaru",
+    "loading": "Memuat…",
+    "loadingPost": "Memuat postingan…",
+    "loadingPosts": "Memuat postingan…",
+    "moreFromBlog": "Selengkapnya dari blog",
+    "morePosts": "Lebih banyak postingan",
+    "navigationAriaLabel": "Navigasi blog",
+    "noContent": "Postingan ini belum memiliki konten.",
+    "noOtherPosts": "Belum ada postingan lain.",
+    "notFound": {
+      "backLink": "← Kembali ke blog",
+      "body": "Postingan yang Anda cari tidak ada atau tidak dipublikasikan.",
+      "heading": "Postingan tidak ditemukan"
+    },
+    "postDocumentTitle": "AURA- {{title}}",
+    "readTime_other": "{{count}} min baca",
+    "recentPostsAriaLabel": "Postingan terbaru",
+    "table": {
+      "author": "Pengarang",
+      "date": "Tanggal",
+      "title": "Judul",
+      "type": "Jenis"
+    },
+    "title": "blog",
+    "tocAriaLabel": "Daftar isi",
+    "tocTitle": "Daftar isi"
+  },
+  "changelog": {
+    "chart": {
+      "ariaLabel": "Rilis per hari seiring waktu",
+      "barTitle_other": "{{date}}: {{count}} rilis",
+      "caption": "Rilis per hari",
+      "captionWithCount_other": "{{count}} rilis · {{date}}"
+    },
+    "commitsLiveTitle_other": "Hidup total {{count}} Repositori AURA",
+    "currentVersion": "Versi saat ini",
+    "dailyUpdate": "Pembaruan Harian",
+    "documentTitle": "AURA - Catatan Perubahan",
+    "download": "Unduh",
+    "downloadVersionAriaLabel": "Unduh AURA {{version}} untuk sistem operasi Anda",
+    "downloadVersionTitle": "Klik untuk mengunduh build untuk sistem operasi Anda",
+    "empty": {
+      "body": "Umpan rilis terhubung, namun belum ada entri log perubahan yang dipublikasikan.",
+      "heading": "Belum ada entri log perubahan."
+    },
+    "entriesAriaLabel": "Entri log perubahan aura",
+    "entry": {
+      "commitCount_other": "{{count}} berkomitmen",
+      "releaseCount_other": "{{count}} rilis"
+    },
+    "github": "GitHub",
+    "openScreenshotAriaLabel": "Buka tangkapan layar untuk {{title}}",
+    "releasedAgo": "Dilepaskan {{relativeTime}}",
+    "releasedRecently": "Dirilis baru-baru ini",
+    "sources": "Sumber",
+    "stats": {
+      "allTimeCommits": "Komitmen sepanjang masa",
+      "allTimeReleases": "Rilisan sepanjang masa",
+      "commitsThisMonth": "Berkomitmen bulan ini",
+      "releasesThisMonth": "Rilis bulan ini"
+    },
+    "summaryAriaLabel": "Ringkasan log perubahan",
+    "title": "log perubahan"
+  },
+  "changelogPreview": {
+    "ariaLabel": "Entri log perubahan terbaru",
+    "ctaLabel": "Lihat apa yang baru di AURA",
+    "heading": "log perubahan",
+    "releaseUpdate": "Rilis pembaruan"
+  },
+  "code": {
+    "deviceAriaLabel": "Desktop pengkodean AURA",
+    "documentTitle": "AURA - Kode",
+    "heroDescription": "Memanfaatkan pengkodean perbatasan yang dirancang untuk keamanan, otomatisasi, dan verifikasi yang 100% open source.",
+    "heroHeadline": "Kode saat Anda tidur."
+  },
+  "cta": {
+    "ariaLabel": "Ajakan bertindak produk",
+    "download": "Unduh",
+    "signUp": "Mendaftar",
+    "tagline": "Rasakan AGI-nya."
+  },
+  "docs": {
+    "docDocumentTitle": "Dokumen AURA - {{title}}",
+    "documentTitle": "AURA - Dokumen",
+    "empty": {
+      "body": "Situs dokumentasi terhubung, tetapi belum ada halaman yang dipublikasikan."
+    },
+    "loading": "Memuat…",
+    "navigationAriaLabel": "Navigasi dokumentasi",
+    "noContent": "Halaman ini belum memiliki konten.",
+    "noPages": "Belum ada halaman.",
+    "notFound": {
+      "backButton": "Kembali ke ikhtisar",
+      "body": "Halaman dokumentasi ini belum ada atau belum diterbitkan.",
+      "heading": "Halaman tidak ditemukan"
+    },
+    "sidebarTitle": "Dokumentasi",
+    "tocAriaLabel": "Di halaman ini",
+    "tocTitle": "Di halaman ini"
+  },
+  "download": {
+    "cards": {
+      "linux": {
+        "description": "AppImage portabel untuk desktop Linux, cocok untuk diunduh dan diluncurkan langsung.",
+        "meta": "x86_64 Gambar Aplikasi"
+      },
+      "mac-apple-silicon": {
+        "description": "Versi asli untuk Mac M1, M2, M3, dan M4.",
+        "meta": "Direkomendasikan untuk sebagian besar Mac"
+      },
+      "mac-intel": {
+        "description": "Pembuatan desktop untuk Mac berbasis x86 serta perangkat keras MacBook Pro dan iMac versi lama.",
+        "meta": "Hanya untuk Mac Silicon sebelum Apple"
+      },
+      "windows": {
+        "description": "Penginstal Windows yang ditandatangani dengan runtime desktop terbaru dan dukungan pembaru.",
+        "meta": "pemasang x64"
+      }
+    },
+    "cta": "Unduh",
+    "documentTitle": "Unduh — AURA",
+    "headline": "Unduh AURA untuk setiap platform desktop utama.",
+    "loading": "Memuat..."
+  },
+  "expertise": {
+    "documentTitle": "AURA- {{label}}",
+    "entries": {
+      "analytics": {
+        "headline": "Data mentah menjadi wawasan siap mengambil keputusan.",
+        "heroBlurb": "Ubah angka menjadi jawaban jelas yang dapat Anda tindak lanjuti.",
+        "label": "Analisis",
+        "overview": "Agen analitik AURA menanyakan, membersihkan, dan menafsirkan data, lalu menjelaskan artinya dalam bahasa sederhana. Mereka mengungkap tren, penyebabnya, dan rekomendasi langkah selanjutnya.",
+        "useCases": [
+          {
+            "description": "Jawab pertanyaan bisnis langsung dari data.",
+            "title": "Analisis ad-hoc"
+          },
+          {
+            "description": "Hasilkan laporan berulang dengan konteks naratif.",
+            "title": "Pelaporan"
+          },
+          {
+            "description": "Tandai perubahan yang tidak terduga dan jelaskan kemungkinan penyebabnya.",
+            "title": "Deteksi anomali"
+          }
+        ]
+      },
+      "coding": {
+        "headline": "Kirim fitur saat Anda tidur.",
+        "heroBlurb": "Dari konteks repo hingga PR yang teruji dan dapat ditinjau.",
+        "label": "Pengkodean",
+        "overview": "Agen pengkodean AURA bekerja dari konteks nyata repositori Anda untuk mengimplementasikan fitur, memperbaiki bug, dan membuka permintaan penarikan yang diuji. Mereka berjalan secara mandiri dan menyerahkan kembali pekerjaan yang siap untuk ditinjau.",
+        "useCases": [
+          {
+            "description": "Menerapkan fitur cakupan secara menyeluruh dengan pengujian.",
+            "title": "Fitur kerja"
+          },
+          {
+            "description": "Reproduksi, perbaiki, dan verifikasi dengan PR yang jelas.",
+            "title": "Perbaikan bug"
+          },
+          {
+            "description": "Terapkan perubahan yang konsisten di seluruh basis kode dengan aman.",
+            "title": "Refaktor"
+          }
+        ]
+      },
+      "creative": {
+        "headline": "Konsep yang lebih tajam, lebih cepat.",
+        "heroBlurb": "Lakukan brainstorming kampanye, konsep, dan tirulah hal tersebut.",
+        "label": "Kreatif",
+        "overview": "Agen kreatif AURA menghasilkan dan menguji ide-ide, lalu membangun ide-ide yang layak dipertahankan. Mereka berpindah dari halaman kosong ke serangkaian petunjuk arah yang dapat Anda tanggapi dalam hitungan menit.",
+        "useCases": [
+          {
+            "description": "Hasilkan arah yang berbeda dengan alasan untuk masing-masing arah.",
+            "title": "Konsep kampanye"
+          },
+          {
+            "description": "Jelajahi opsi yang sesuai dengan arahan dan batasan Anda.",
+            "title": "Penamaan & tagline"
+          },
+          {
+            "description": "Kumpulkan referensi dan salin ke dalam konsep yang dapat dibagikan.",
+            "title": "papan suasana hati"
+          }
+        ]
+      },
+      "design": {
+        "headline": "Dari ide kasar hingga antarmuka yang disempurnakan.",
+        "heroBlurb": "Ubah sketsa dan petunjuk menjadi desain yang dapat digunakan.",
+        "label": "Desain",
+        "overview": "Agen desain AURA menerjemahkan maksud ke dalam antarmuka yang terstruktur dan konsisten, dengan menghormati sistem dan batasan Anda. Mereka mengulangi tata letak dan komponen sehingga Anda memulai dari sesuatu yang nyata, bukan kanvas kosong.",
+        "useCases": [
+          {
+            "description": "Hasilkan opsi tata letak terhadap sistem singkat dan desain.",
+            "title": "Eksplorasi UI"
+          },
+          {
+            "description": "Menghasilkan keadaan dan variasi yang konsisten dengan kecepatan.",
+            "title": "Varian komponen"
+          },
+          {
+            "description": "Tandai masalah aksesibilitas dan konsistensi sejak dini.",
+            "title": "Tinjauan desain"
+          }
+        ]
+      },
+      "ecommerce-retail": {
+        "headline": "Intelijen Pribadi untuk Ritel",
+        "heroBlurb": "AI pribadi yang menskalakan etalase Anda tanpa menyerahkan data Anda.",
+        "label": "E-niaga & Ritel",
+        "overview": "Ritel berjalan berdasarkan katalog, konten, dan data pelanggan. Agen AURA mengotomatiskan merchandising, dukungan, dan analisis sekaligus menjaga informasi pelanggan tetap dalam jangkauan Anda.",
+        "useCases": [
+          {
+            "description": "Menghasilkan dan memelihara salinan produk dalam skala besar.",
+            "title": "Katalog & konten"
+          },
+          {
+            "description": "Draf tanggapan merek didasarkan pada kebijakan Anda.",
+            "title": "Dukungan pelanggan"
+          },
+          {
+            "description": "Tampilkan tren dan anomali di seluruh data penjualan.",
+            "title": "Analisis permintaan"
+          }
+        ]
+      },
+      "education": {
+        "headline": "Intelijen Swasta untuk Pendidikan",
+        "heroBlurb": "AI Pribadi yang mendukung pendidik dan melindungi data siswa.",
+        "label": "Pendidikan",
+        "overview": "Pendidikan bergantung pada kepercayaan seputar data siswa. Agen AURA mendukung pengajaran, penelitian, dan administrasi sambil menyimpan catatan di dalam perimeter Anda dan manusia yang selalu memantaunya.",
+        "useCases": [
+          {
+            "description": "Buat draf dan sesuaikan pelajaran dan penilaian dengan kurikulum Anda.",
+            "title": "Materi kursus"
+          },
+          {
+            "description": "Sintesiskan sumber-sumber menjadi ringkasan yang dapat dikutip.",
+            "title": "Dukungan penelitian"
+          },
+          {
+            "description": "Otomatiskan alur kerja rutin dengan jejak audit.",
+            "title": "Administrasi"
+          }
+        ]
+      },
+      "finance": {
+        "headline": "Modelkan angka-angka yang penting.",
+        "heroBlurb": "Buat anggaran dan prakiraan, serta tunjukkan sinyalnya.",
+        "label": "Keuangan",
+        "overview": "Agen keuangan AURA membangun dan memelihara model, merekonsiliasi data, dan menjelaskan pendorong di balik setiap angka. Mereka menjaga perkiraan tetap terkini sehingga perencanaan didasarkan pada kenyataan terkini.",
+        "useCases": [
+          {
+            "description": "Bangun dan perbarui model berbasis driver sesuai permintaan.",
+            "title": "Peramalan"
+          },
+          {
+            "description": "Rekonsiliasi fakta-fakta dengan rencana dan jelaskan perbedaannya.",
+            "title": "Pelacakan anggaran"
+          },
+          {
+            "description": "Bandingkan hasil seluruh asumsi dalam hitungan menit.",
+            "title": "Perencanaan skenario"
+          }
+        ]
+      },
+      "finance-banking": {
+        "headline": "Intelijen Swasta untuk Keuangan",
+        "heroBlurb": "AI pribadi yang dipercaya oleh tim risiko, diterima oleh regulator, dan diandalkan oleh klien. Tidak ada kompromi pada data — selamanya.",
+        "label": "Keuangan & Perbankan",
+        "overview": "Keuangan bergantung pada kepercayaan, dan kepercayaan bergantung pada kendali data. AURA menghadirkan agen otonom ke bank, dana, dan fintech tanpa mengirimkan informasi sensitif ke model pihak ketiga — apa pun yang membuat perimeter Anda tetap tidak dapat diidentifikasi, dan pemanfaatannya dapat diaudit secara menyeluruh. Analis, penasihat, dan tim operasi mendelegasikan pekerjaan yang lambat dan menjaga penilaian, dengan setiap tindakan dapat diverifikasi dan dicatat.",
+        "useCases": [
+          {
+            "description": "Sintesiskan pengajuan, data pasar, dan berita ke dalam laporan singkat yang siap mengambil keputusan dengan kutipan.",
+            "title": "Penelitian & uji tuntas"
+          },
+          {
+            "description": "Menyaring transaksi dan dokumen berdasarkan kebijakan, menandai pengecualian untuk ditinjau.",
+            "title": "Risiko & kepatuhan"
+          },
+          {
+            "description": "Bangun dan pertahankan prakiraan dan skenario yang diperbarui seiring dengan pergerakan angka.",
+            "title": "Pemodelan keuangan"
+          },
+          {
+            "description": "Hasilkan ringkasan portofolio dan kinerja dalam suara Anda, sesuai jadwal.",
+            "title": "Pelaporan klien"
+          },
+          {
+            "description": "Rekonsiliasi data dan otomatisasi alur kerja back-office dengan jejak audit lengkap.",
+            "title": "Operasi"
+          },
+          {
+            "description": "Draf komunikasi klien merek berdasarkan data Anda sendiri.",
+            "title": "Dukungan penasehat"
+          }
+        ]
+      },
+      "healthcare": {
+        "headline": "Intelijen Swasta untuk Layanan Kesehatan",
+        "heroBlurb": "AI swasta yang dipercaya oleh dokter, diterima oleh regulator, dan layak diterima oleh pasien. Tidak ada kompromi pada data — selamanya.",
+        "label": "Kesehatan",
+        "overview": "Layanan kesehatan menuntut privasi secara default. Agen AURA mendukung tim klinis dan operasional sekaligus menjaga data terlindungi di dalam perimeter Anda, dengan sistem yang dapat diverifikasi dan diaudit secara menyeluruh.",
+        "useCases": [
+          {
+            "description": "Sintesis literatur dan data uji coba menjadi ringkasan yang dapat dikutip.",
+            "title": "Penelitian klinis"
+          },
+          {
+            "description": "Draf dan struktur catatan dan laporan untuk ditinjau manusia.",
+            "title": "Dokumentasi"
+          },
+          {
+            "description": "Otomatiskan penjadwalan dan alur kerja back-office dengan jejak audit.",
+            "title": "Operasi"
+          }
+        ]
+      },
+      "legal": {
+        "headline": "Kontrak, ditinjau dan dijelaskan.",
+        "heroBlurb": "Tinjau dokumen dan jelaskan kewajiban dengan jelas.",
+        "label": "Legal",
+        "overview": "Agen hukum AURA membaca kontrak dan kebijakan, menandai risiko, dan menjelaskan kewajiban dalam bahasa yang sederhana. Mereka mempercepat peninjauan sekaligus menjaga manusia tetap mengetahui setiap keputusan.",
+        "useCases": [
+          {
+            "description": "Tandai klausul berisiko dan penyimpangan dari standar Anda.",
+            "title": "Tinjauan kontrak"
+          },
+          {
+            "description": "Ekstrak tanggal, tugas, dan pembaruan ke dalam daftar yang jelas.",
+            "title": "Pelacakan kewajiban"
+          },
+          {
+            "description": "Jawab pertanyaan berdasarkan dokumen Anda sendiri.",
+            "title": "Tanya Jawab Kebijakan"
+          }
+        ]
+      },
+      "legal-services": {
+        "headline": "Intelijen Swasta untuk Hukum",
+        "heroBlurb": "AI pribadi yang dipercaya oleh perusahaan dan diandalkan oleh klien. Tidak ada kompromi pada kerahasiaan — selamanya.",
+        "label": "Legal",
+        "overview": "Pekerjaan hukum dijalankan berdasarkan kerahasiaan dan ketepatan. Agen AURA mempercepat peninjauan, penelitian, dan penyusunan sambil tetap menjaga materi istimewa tetap berada di dalam batas Anda dan manusia dalam lingkarannya.",
+        "useCases": [
+          {
+            "description": "Tandai risiko dan penyimpangan dari standar Anda dengan cepat.",
+            "title": "Tinjauan kontrak"
+          },
+          {
+            "description": "Tarik dan sintesis otoritas yang relevan dengan kutipan.",
+            "title": "Penelitian hukum"
+          },
+          {
+            "description": "Hasilkan draf pertama berdasarkan templat dan file penting Anda.",
+            "title": "Penyusunan"
+          }
+        ]
+      },
+      "marketing": {
+        "headline": "Kampanye yang tetap pada merek.",
+        "heroBlurb": "Rencanakan, buat draf, dan sesuaikan konten di setiap saluran.",
+        "label": "Pemasaran",
+        "overview": "Agen pemasaran AURA merencanakan kampanye, memproduksi konten sesuai merek, dan menyesuaikannya per saluran sambil tetap mempertahankan pendapat Anda. Mereka mengubah laporan singkat menjadi serangkaian aset dan membuat kalender terus berjalan sehingga saluran Anda tidak pernah sepi.",
+        "useCases": [
+          {
+            "description": "Ubah ringkasan menjadi saluran, tema, dan kalender konten.",
+            "title": "Perencanaan kampanye"
+          },
+          {
+            "description": "Draf dan gunakan kembali aset di seluruh saluran dengan suara Anda.",
+            "title": "Produksi konten"
+          },
+          {
+            "description": "Ubah data kampanye menjadi wawasan yang jelas dan dapat ditindaklanjuti.",
+            "title": "Analisis kinerja"
+          }
+        ]
+      },
+      "marketing-media": {
+        "headline": "Intelijen Pribadi untuk Pemasaran",
+        "heroBlurb": "AI Pribadi yang menjaga merek Anda tetap pada suara dan data Anda sendiri.",
+        "label": "Pemasaran & Media",
+        "overview": "Tim pemasaran bergerak cepat di banyak saluran. Agen AURA merencanakan, menyusun, dan mengadaptasi konten pada merek sambil menjaga data audiens dan kinerja di bawah kendali Anda.",
+        "useCases": [
+          {
+            "description": "Hasilkan dan uji tekanan terhadap arahan Anda.",
+            "title": "Konsep kampanye"
+          },
+          {
+            "description": "Buat draf dan gunakan kembali seluruh saluran dengan suara Anda.",
+            "title": "Produksi konten"
+          },
+          {
+            "description": "Ubah data kampanye menjadi wawasan yang jelas dan dapat ditindaklanjuti.",
+            "title": "Analisis kinerja"
+          }
+        ]
+      },
+      "real-estate": {
+        "headline": "Intelijen Pribadi untuk Real Estat",
+        "heroBlurb": "AI Pribadi yang memajukan kesepakatan dan menjaga data Anda tetap milik Anda.",
+        "label": "Real Estat",
+        "overview": "Real estat dijalankan berdasarkan dokumen, listingan, dan data pasar. Agen AURA mempercepat ketekunan, penyusunan, dan analisis sekaligus menjaga informasi klien dan kesepakatan di bawah kendali Anda.",
+        "useCases": [
+          {
+            "description": "Menghasilkan dan memelihara daftar dan salinan pemasaran.",
+            "title": "Daftar konten"
+          },
+          {
+            "description": "Tarik sinyal dari dokumen dan data pasar ke dalam satu tampilan.",
+            "title": "Ketekunan dalam menangani"
+          },
+          {
+            "description": "Hasilkan draf pertama berdasarkan template Anda.",
+            "title": "Penyusunan dokumen"
+          }
+        ]
+      },
+      "research": {
+        "headline": "Penelitian yang mensintesis, bukan sekedar penelusuran.",
+        "heroBlurb": "Agen yang menggali sumber dan mengungkap hal yang sebenarnya penting.",
+        "label": "Riset",
+        "overview": "Agen riset AURA membaca seluruh dokumen, web, dan basis pengetahuan Anda, lalu menyatukan temuan menjadi jawaban yang jelas dan dapat dikutip. Mereka terus bekerja di latar belakang sehingga peninjauan mendalam yang biasanya memakan waktu berhari-hari terhenti saat Anda fokus pada keputusan.",
+        "useCases": [
+          {
+            "description": "Survei suatu bidang dan rangkum keadaan terkini beserta sumbernya.",
+            "title": "Ulasan literatur"
+          },
+          {
+            "description": "Lacak pesaing dan saring gerakan menjadi ringkasan singkat.",
+            "title": "Analisis kompetitif"
+          },
+          {
+            "description": "Tarik sinyal dari arsip, berita, dan ruang data ke dalam satu tampilan.",
+            "title": "Uji tuntas"
+          }
+        ]
+      },
+      "sales": {
+        "headline": "Lebih banyak saluran pipa, lebih sedikit kesibukan.",
+        "heroBlurb": "Teliti akun dan draf penjangkauan yang menggerakkan kesepakatan.",
+        "label": "Penjualan",
+        "overview": "Agen penjualan AURA meneliti akun, mempersonalisasi penjangkauan, dan terus memperbarui saluran Anda sehingga perwakilan menghabiskan waktu untuk menjual daripada mengetik. Mereka menyusun pesan suara berdasarkan konteks Anda dan menampilkan tindakan terbaik berikutnya pada setiap kesepakatan.",
+        "useCases": [
+          {
+            "description": "Buat ringkasan tentang prospek dari sumber publik dan internal.",
+            "title": "Riset akun"
+          },
+          {
+            "description": "Personalisasikan email dan urutan suara dan penawaran Anda.",
+            "title": "Draf penjangkauan"
+          },
+          {
+            "description": "Selalu perbarui catatan CRM dan tandai kesepakatan yang memerlukan perhatian.",
+            "title": "Kebersihan pipa"
+          }
+        ]
+      },
+      "social": {
+        "headline": "Sosial on-voice, sesuai jadwal.",
+        "heroBlurb": "Draf postingan dan kalender yang sesuai dengan merek.",
+        "label": "Sosial",
+        "overview": "Agen sosial AURA merencanakan kalender, menyusun postingan per saluran, dan beradaptasi dengan format setiap platform sambil menahan suara Anda. Mereka menjaga irama tetap sehingga saluran Anda tidak pernah sepi.",
+        "useCases": [
+          {
+            "description": "Rencanakan postingan berminggu-minggu seputar tema dan peluncuran.",
+            "title": "Kalender konten"
+          },
+          {
+            "description": "Sesuaikan satu ide dengan format dan gaya masing-masing platform.",
+            "title": "Draf per saluran"
+          },
+          {
+            "description": "Draf tanggapan melalui suara untuk ditinjau sebelum dikirim.",
+            "title": "Balasan komunitas"
+          }
+        ]
+      },
+      "technology-saas": {
+        "headline": "Intelijen Swasta untuk Teknologi",
+        "heroBlurb": "AI pribadi yang mengirimkan produk dan menjaga basis kode Anda tetap milik Anda.",
+        "label": "Teknologi / SaaS",
+        "overview": "Tim teknologi membangun dengan cepat dan menjaga IP mereka. Agen AURA mempercepat rekayasa, dukungan, dan analisis sekaligus menjaga kode dan data pelanggan Anda tetap berada di dalam batas Anda.",
+        "useCases": [
+          {
+            "description": "Menerapkan fitur dan perbaikan dari konteks repo nyata.",
+            "title": "Rekayasa"
+          },
+          {
+            "description": "Draf tanggapan akurat didasarkan pada dokumen Anda.",
+            "title": "Dukungan pelanggan"
+          },
+          {
+            "description": "Ubah data penggunaan menjadi wawasan yang siap mengambil keputusan.",
+            "title": "Analisis produk"
+          }
+        ]
+      },
+      "writing": {
+        "headline": "Menulis dengan suara Anda, sesuai kecepatan Anda.",
+        "heroBlurb": "Buat draf, edit, dan sempurnakan prosa yang terdengar seperti Anda.",
+        "label": "Menulis",
+        "overview": "Agen penulis AURA mempelajari nada dan batasan Anda, lalu menyusun dan merevisi konten panjang secara menyeluruh. Dari garis besar pertama hingga pengeditan akhir, mereka menjaga konsistensi suara dan fakta berdasarkan sumber Anda.",
+        "useCases": [
+          {
+            "description": "Ubah kerangka dan catatan menjadi karya jadi.",
+            "title": "Draf bentuk panjang"
+          },
+          {
+            "description": "Kencangkan struktur, tata bahasa, dan nada tanpa kehilangan niat.",
+            "title": "Mengedit pass"
+          },
+          {
+            "description": "Bentuk ulang satu sumber menjadi postingan, email, dan ringkasan.",
+            "title": "Penggunaan kembali"
+          }
+        ]
+      }
+    },
+    "overview": "Ringkasan",
+    "overviewAriaLabel": "{{label}} ringkasan",
+    "previewAriaLabel": "{{label}} pratinjau",
+    "requestDemo": "Minta demo",
+    "useCases": "Kasus penggunaan",
+    "useCasesAriaLabel": "{{label}} kasus penggunaan"
+  },
+  "feedback": {
+    "card": {
+      "anonymousAuthor": "Anonim",
+      "commentCount_other": "{{count}} komentar",
+      "time": {
+        "daysAgo_other": "{{count}}hari yang lalu",
+        "hoursAgo_other": "{{count}}jam yang lalu",
+        "minutesAgo_other": "{{count}}m yang lalu",
+        "monthsAgo_other": "{{count}}bulan lalu",
+        "secondsAgo_other": "{{count}}s lalu",
+        "yearsAgo_other": "{{count}}kamu yang lalu"
+      },
+      "voteScoreAriaLabel": "Skor suara"
+    },
+    "documentTitle": "AURA - Umpan Balik",
+    "empty": {
+      "body": "Tidak ada postingan feedback AURA yang cocok dengan filter saat ini.",
+      "heading": "Belum ada tanggapan."
+    },
+    "entriesAriaLabel": "Entri umpan balik",
+    "filters": {
+      "ariaLabel": "Filter umpan balik",
+      "sections": {
+        "status": "Status",
+        "trending": "Sedang tren",
+        "type": "Jenis"
+      },
+      "toggle": "Filter"
+    },
+    "stats": {
+      "participants": "Peserta",
+      "resolved": "Item Terselesaikan",
+      "submitted": "Barang Dikirim"
+    },
+    "subtitle": "Pengguna kami mengirimkan masukan dan AURA secara mandiri meningkatkan dirinya sendiri.",
+    "summaryAriaLabel": "Ringkasan umpan balik",
+    "title": "Masukan"
+  },
+  "footer": {
+    "ariaLabel": "Catatan kaki situs",
+    "copyright": "Hak cipta © {{year}}",
+    "navigationAriaLabel": "Navigasi catatan kaki"
+  },
+  "models": {
+    "allModelsAriaLabel": "Semua model",
+    "documentTitle": "AURA - Model",
+    "empty": "Tidak ada model yang cocok dengan filter saat ini. Coba hapus pencarian atau ganti tab.",
+    "featured": "Unggulan",
+    "featuredAriaLabel": "Model unggulan",
+    "filterByModalityAriaLabel": "Filter berdasarkan modalitas",
+    "filterByStatusAriaLabel": "Saring berdasarkan status",
+    "loadingCatalog": "Memuat katalog…",
+    "searchAriaLabel": "Model pencarian",
+    "searchPlaceholder": "Telusuri model...",
+    "stats": {
+      "image": "Gambar",
+      "text": "Teks",
+      "threeD": "3D",
+      "total": "Jumlah Model",
+      "video": "Video"
+    },
+    "status": {
+      "live": "Hidup",
+      "liveAriaLabel": "Status: Langsung",
+      "soon": "Segera",
+      "soonAriaLabel": "Status: Segera hadir"
+    },
+    "subtitle": "Model terdepan yang memberdayakan AURA, di seluruh teks, gambar, video, dan 3D.",
+    "summaryAriaLabel": "Ringkasan model"
+  },
+  "os": {
+    "docDocumentTitle": "OS AURA - {{title}}",
+    "documentTitle": "AURA - OS",
+    "empty": {
+      "body": "Whitepaper AURA OS telah terhubung, namun belum ada bagian yang dipublikasikan."
+    },
+    "navigationAriaLabel": "Navigasi kertas putih",
+    "noContent": "Bagian ini belum memiliki konten.",
+    "noSections": "Belum ada bagian.",
+    "notFound": {
+      "backButton": "Kembali ke ikhtisar",
+      "body": "Bagian whitepaper ini belum ada atau belum diterbitkan.",
+      "heading": "Bagian tidak ditemukan"
+    },
+    "sidebarTitle": "OS AURA"
+  },
+  "pricing": {
+    "billingCycleAriaLabel": "Siklus penagihan",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "documentTitle": "AURA - Harga",
+    "downloadCta": "Unduh",
+    "heroDescription": "Mulailah dengan model sumber terbuka lokal secara gratis, lalu bayar hanya untuk model terdepan yang Anda gunakan.",
+    "heroHeadline": "Mulai dari gratis.",
+    "monthly": "Bulanan",
+    "plans": {
+      "free": {
+        "description": "Memulai secara gratis:",
+        "features": {
+          "0": "Tidak diperlukan kartu kredit",
+          "1": "Model sumber terbuka lokal",
+          "2": "Bayar sesuai pemakaian untuk model perbatasan"
+        },
+        "name": "Bebas"
+      },
+      "pro": {
+        "description": "Semuanya Gratis, ditambah:",
+        "features": {
+          "0": "Kredit bulanan senilai $20",
+          "1": "Agen jarak jauh"
+        },
+        "name": "Pro",
+        "priceNote": "$10/bln untuk pelanggan Zero Pro OG"
+      },
+      "sage": {
+        "description": "Semuanya di Pro, ditambah:",
+        "features": {
+          "0": "Penggunaan 20x pada model frontier",
+          "1": "Akses prioritas ke fitur baru"
+        },
+        "name": "Sage"
+      }
+    },
+    "plansLabel": "Paket Individu",
+    "yearly": "Tahunan"
+  },
+  "privacy": {
+    "description": "Kebijakan Privasi kami sedang diselesaikan dan akan segera dipublikasikan di sini.",
+    "documentTitle": "AURA - Kebijakan Privasi",
+    "headline": "Kebijakan Privasi",
+    "label": "LEGAL"
+  },
+  "productScreen": {
+    "close": "Menutup",
+    "closeFullscreenAriaLabel": "Tutup gambar layar penuh",
+    "openFullscreenAriaLabel": "Buka gambar layar penuh: {{label}}",
+    "placeholderLabel": "Pengganti gambar"
+  },
+  "sections": {
+    "agentChat": {
+      "ariaLabel": "Ngobrol dengan agen Anda dari mana saja",
+      "description": "Agen AURA Anda selalu aktif. Ikuti percakapan di ponsel, laptop, atau desktop Anda. Mereka mengingat semuanya dan membawa alat yang sama.",
+      "headlineLine1": "Ngobrol dengan agen Anda.",
+      "headlineLine2": "Dari mana saja.",
+      "phoneAriaLabel": "Obrolan seluler dengan {{agentName}} agen"
+    },
+    "builtForTrust": {
+      "ariaLabel": "Bagaimana AURA mendapatkan kepercayaan Anda",
+      "cards": {
+        "alwaysOn": {
+          "description": "Agen Anda terus bekerja sepanjang waktu, bahkan saat Anda pergi dan perangkat Anda mati.",
+          "title": "Selalu aktif."
+        },
+        "isolated": {
+          "description": "Setiap agen berjalan di VM sandbox-nya sendiri, yang sepenuhnya tertutup dari sistem Anda dan agen lainnya.",
+          "title": "Terisolasi secara default."
+        },
+        "verifiable": {
+          "description": "Setiap lingkungan dibuktikan sebelum dijalankan, sehingga Anda selalu dapat memverifikasi apa yang Anda percayai.",
+          "title": "Tepercaya dan dapat diverifikasi."
+        }
+      },
+      "headline": "Dibangun untuk kepercayaan.",
+      "subhead": "Agen AURA berjalan di mesin virtual terisolasi dalam lingkungan eksekusi tepercaya."
+    },
+    "expertise": {
+      "headline": "Keahlian tanpa ego.",
+      "subheadLine1": "Agen AURA ahli dalam segala disiplin ilmu.",
+      "subheadLine2": "Dari coding, sains, hingga kreativitas."
+    },
+    "madeForYou": {
+      "headline": "Agen dibuat untuk Anda.",
+      "subhead": "Rancang dan luncurkan agen Anda dalam 30 detik."
+    },
+    "personalAgent": {
+      "ariaLabel": "Apa yang bisa dilakukan agen Anda",
+      "cards": {
+        "alwaysOn": {
+          "description": "Minta atau arahkan agen Anda untuk melakukan hampir semua hal. Ini akan mulai bekerja dan melaporkan kembali bila diperlukan.",
+          "title": "Selalu aktif."
+        },
+        "connected": {
+          "description": "AURA terhubung dengan aman ke layanan Anda sehingga ia mengetahui segalanya tentang Anda. Data Anda tidak pernah meninggalkan komputer Anda yang aman dan tidak pernah dilatih.",
+          "title": "Terhubung dengan segalanya."
+        },
+        "domains": {
+          "description": "Agen Anda jenius di semua bidang. Ini dapat membantu tugas-tugas sederhana dalam hidup, proyek kreatif, hingga desain dan pengkodean tingkat lanjut.",
+          "title": "Cerdas di semua domain."
+        }
+      },
+      "headline": "Setiap model. Setiap modus.",
+      "subhead": "AURA adalah agen pribadi Anda yang mendukung Anda dalam segala hal mulai dari tugas ringan hingga pekerjaan berat."
+    },
+    "privacy": {
+      "features": {
+        "openSource": {
+          "description": "AURA adalah 100% open source di bawah lisensi MIT. Lakukan fork kapan saja, tanpa penguncian vendor dan tanpa pamrih.",
+          "tag": "Lisensi MIT",
+          "title": "Sumber Terbuka"
+        },
+        "private": {
+          "description": "AURA tidak pernah melihat atau melatih data pribadi atau perusahaan Anda. Apa pun yang dikirim ke model perbatasan tetap tidak dapat diidentifikasi.",
+          "tag": "Enkripsi PQ",
+          "title": "Pribadi"
+        },
+        "verifiable": {
+          "description": "Harness dan kernel AURA dibangun dari awal dengan keamanan, verifikasi, dan kebijakan sebagai warga negara kelas satu.",
+          "tag": "Eksekusi Tepercaya",
+          "title": "Dapat diverifikasi"
+        }
+      },
+      "headline": "Dirancang untuk kemanusiaan Anda."
+    }
+  },
+  "support": {
+    "body": "Butuh bantuan dengan AURA? Kami di sini untuk Anda. Kirim email ke tim dukungan kami dan kami akan menghubungi Anda sesegera mungkin.",
+    "headline": "Mendukung",
+    "note": "Untuk pertanyaan akun atau penagihan, harap sertakan alamat email yang terkait dengan akun AURA Anda."
+  },
+  "taglines": {
+    "decentralized": "Terdesentralisasi.",
+    "openSource": "Sumber Terbuka.",
+    "private": "Pribadi.",
+    "secure": "Aman."
+  },
+  "terms": {
+    "description": "Persyaratan Layanan kami sedang diselesaikan dan akan segera dipublikasikan di sini.",
+    "documentTitle": "AURA - Ketentuan Layanan",
+    "headline": "Ketentuan Layanan",
+    "label": "LEGAL"
+  }
+}

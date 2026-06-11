@@ -1,0 +1,789 @@
+{
+  "agents": {
+    "buildDeviceAriaLabel": "Bauen Sie Ihren Agenten auf",
+    "documentTitle": "AURA – Agenten",
+    "heroDescriptionLine1": "AURA-Agenten sind Experten auf jedem Gebiet",
+    "heroDescriptionLine2": "die funktionieren, während Sie schlafen.",
+    "heroHeadline": "Alles delegieren."
+  },
+  "blog": {
+    "allPosts": "Alle Beiträge",
+    "breadcrumbAriaLabel": "Semmelbrösel",
+    "documentTitle": "AURA - Blog",
+    "empty": {
+      "body": "Der Blog ist verbunden, es wurden jedoch noch keine Beiträge veröffentlicht.",
+      "heading": "Noch keine Beiträge."
+    },
+    "latest": "Letzte",
+    "loading": "Laden…",
+    "loadingPost": "Beitrag wird geladen…",
+    "loadingPosts": "Beiträge werden geladen…",
+    "moreFromBlog": "Mehr aus dem Blog",
+    "morePosts": "Weitere Beiträge",
+    "navigationAriaLabel": "Blog-Navigation",
+    "noContent": "Dieser Beitrag hat noch keinen Inhalt.",
+    "noOtherPosts": "Noch keine weiteren Beiträge.",
+    "notFound": {
+      "backLink": "← Zurück zum Blog",
+      "body": "Der gesuchte Beitrag existiert nicht oder wurde nicht veröffentlicht.",
+      "heading": "Beitrag nicht gefunden"
+    },
+    "postDocumentTitle": "AURA - {{title}}",
+    "readTime_one": "{{count}} Min. gelesen",
+    "readTime_other": "{{count}} Min. gelesen",
+    "recentPostsAriaLabel": "Aktuelle Beiträge",
+    "table": {
+      "author": "Autor",
+      "date": "Datum",
+      "title": "Titel",
+      "type": "Typ"
+    },
+    "title": "Blog",
+    "tocAriaLabel": "Inhaltsverzeichnis",
+    "tocTitle": "Inhaltsverzeichnis"
+  },
+  "changelog": {
+    "chart": {
+      "ariaLabel": "Veröffentlichungen pro Tag im Zeitverlauf",
+      "barTitle_one": "{{date}}: 1 Veröffentlichung",
+      "barTitle_other": "{{date}}: {{count}} Veröffentlichungen",
+      "caption": "Veröffentlichungen pro Tag",
+      "captionWithCount_one": "1 Veröffentlichung · {{date}}",
+      "captionWithCount_other": "{{count}} Veröffentlichungen · {{date}}"
+    },
+    "commitsLiveTitle_one": "Live total quer {{count}} AURA-Repository",
+    "commitsLiveTitle_other": "Live total quer {{count}} AURA-Repositorys",
+    "currentVersion": "Aktuelle Version",
+    "dailyUpdate": "Tägliches Update",
+    "documentTitle": "AURA – Änderungsprotokoll",
+    "download": "Herunterladen",
+    "downloadVersionAriaLabel": "Laden Sie AURA herunter {{version}} für Ihr Betriebssystem",
+    "downloadVersionTitle": "Klicken Sie hier, um den Build für Ihr Betriebssystem herunterzuladen",
+    "empty": {
+      "body": "Der Release-Feed ist verbunden, es wurden jedoch noch keine veröffentlichten Changelog-Einträge gefunden.",
+      "heading": "Noch keine Changelog-Einträge."
+    },
+    "entriesAriaLabel": "Aura-Änderungsprotokolleinträge",
+    "entry": {
+      "commitCount_one": "1 Commit",
+      "commitCount_other": "{{count}} begeht",
+      "releaseCount_one": "1 Veröffentlichung",
+      "releaseCount_other": "{{count}} Veröffentlichungen"
+    },
+    "github": "GitHub",
+    "openScreenshotAriaLabel": "Screenshot öffnen für {{title}}",
+    "releasedAgo": "Freigegeben {{relativeTime}}",
+    "releasedRecently": "Kürzlich veröffentlicht",
+    "sources": "Quellen",
+    "stats": {
+      "allTimeCommits": "Allzeit-Commits",
+      "allTimeReleases": "Allzeitveröffentlichungen",
+      "commitsThisMonth": "Verpflichtungen in diesem Monat",
+      "releasesThisMonth": "Veröffentlichungen diesen Monat"
+    },
+    "summaryAriaLabel": "Zusammenfassung des Änderungsprotokolls",
+    "title": "Änderungsprotokoll"
+  },
+  "changelogPreview": {
+    "ariaLabel": "Aktuelle Changelog-Einträge",
+    "ctaLabel": "Sehen Sie, was es Neues in AURA gibt",
+    "heading": "Änderungsprotokoll",
+    "releaseUpdate": "Release-Update"
+  },
+  "code": {
+    "deviceAriaLabel": "Der AURA-Codierungsdesktop",
+    "documentTitle": "AURA - Code",
+    "heroDescription": "Ein Frontier-Coding-System, das auf Sicherheit, Automatisierung und Überprüfbarkeit ausgelegt ist und zu 100 % Open Source ist.",
+    "heroHeadline": "Codieren Sie, während Sie schlafen."
+  },
+  "cta": {
+    "ariaLabel": "Produkt-Call-to-Action",
+    "download": "Herunterladen",
+    "signUp": "Melden Sie sich an",
+    "tagline": "Spüren Sie die AGI."
+  },
+  "docs": {
+    "docDocumentTitle": "AURA-Dokumente - {{title}}",
+    "documentTitle": "AURA – Dokumente",
+    "empty": {
+      "body": "Die Dokumentationsseite ist verbunden, es wurden jedoch noch keine Seiten veröffentlicht."
+    },
+    "loading": "Laden…",
+    "navigationAriaLabel": "Dokumentationsnavigation",
+    "noContent": "Diese Seite hat noch keinen Inhalt.",
+    "noPages": "Noch keine Seiten.",
+    "notFound": {
+      "backButton": "Zurück zur Übersicht",
+      "body": "Diese Dokumentationsseite existiert nicht oder ist noch nicht veröffentlicht.",
+      "heading": "Seite nicht gefunden"
+    },
+    "sidebarTitle": "Dokumentation",
+    "tocAriaLabel": "Auf dieser Seite",
+    "tocTitle": "Auf dieser Seite"
+  },
+  "download": {
+    "cards": {
+      "linux": {
+        "description": "Tragbares AppImage für Linux-Desktops, geeignet zum direkten Herunterladen und Starten.",
+        "meta": "x86_64 AppImage"
+      },
+      "mac-apple-silicon": {
+        "description": "Nativer Build für M1-, M2-, M3- und M4-Macs.",
+        "meta": "Empfohlen für die meisten Macs"
+      },
+      "mac-intel": {
+        "description": "Desktop-Build für x86-basierte Macs und ältere MacBook Pro- und iMac-Hardware.",
+        "meta": "Nur für Macs vor Apple Silicon"
+      },
+      "windows": {
+        "description": "Signiertes Windows-Installationsprogramm mit der neuesten Desktop-Runtime- und Updater-Unterstützung.",
+        "meta": "x64-Installationsprogramm"
+      }
+    },
+    "cta": "Herunterladen",
+    "documentTitle": "Herunterladen – AURA",
+    "headline": "Laden Sie AURA für jede große Desktop-Plattform herunter.",
+    "loading": "Laden..."
+  },
+  "expertise": {
+    "documentTitle": "AURA - {{label}}",
+    "entries": {
+      "analytics": {
+        "headline": "Rohdaten in entscheidungsreife Erkenntnisse umwandeln.",
+        "heroBlurb": "Verwandeln Sie Zahlen in klare Antworten, auf die Sie reagieren können.",
+        "label": "Analytik",
+        "overview": "AURA-Analyseagenten fragen Daten ab, bereinigen und interpretieren sie und erklären dann im Klartext, was sie bedeuten. Sie zeigen den Trend, die Ursache und den empfohlenen nächsten Schritt auf.",
+        "useCases": [
+          {
+            "description": "Beantworten Sie eine Geschäftsfrage direkt aus den Daten.",
+            "title": "Ad-hoc-Analyse"
+          },
+          {
+            "description": "Erstellen Sie wiederkehrende Berichte mit narrativem Kontext.",
+            "title": "Berichterstattung"
+          },
+          {
+            "description": "Markieren Sie unerwartete Veränderungen und erläutern Sie die wahrscheinlichen Auslöser.",
+            "title": "Anomalieerkennung"
+          }
+        ]
+      },
+      "coding": {
+        "headline": "Versenden Sie Funktionen, während Sie schlafen.",
+        "heroBlurb": "Vom Repo-Kontext bis hin zu getesteten, überprüfbaren PRs.",
+        "label": "Codierung",
+        "overview": "AURA-Coding-Agents arbeiten im realen Kontext Ihres Repositorys, um Funktionen zu implementieren, Fehler zu beheben und getestete Pull-Anfragen zu öffnen. Sie arbeiten autonom und geben Arbeit zurück, die zur Überprüfung bereit ist.",
+        "useCases": [
+          {
+            "description": "Implementieren Sie bereichsbezogene Funktionen durchgängig mit Tests.",
+            "title": "Feature-Arbeit"
+          },
+          {
+            "description": "Reproduzieren, reparieren und überprüfen Sie mit einer klaren PR.",
+            "title": "Fehlerbehebungen"
+          },
+          {
+            "description": "Wenden Sie konsistente Änderungen sicher auf die gesamte Codebasis an.",
+            "title": "Refaktoren"
+          }
+        ]
+      },
+      "creative": {
+        "headline": "Präzisere Konzepte, schneller.",
+        "heroBlurb": "Brainstormen Sie Kampagnen und Konzepte und kopieren Sie diese.",
+        "label": "Kreativ",
+        "overview": "Die Kreativagenten von AURA entwickeln und testen Ideen und bauen dann diejenigen aus, die es wert sind, behalten zu werden. Sie bewegen sich von einer leeren Seite zu einer Liste mit Anweisungen, auf die Sie innerhalb von Minuten reagieren können.",
+        "useCases": [
+          {
+            "description": "Erstellen Sie unterschiedliche Anweisungen mit Begründung für jede.",
+            "title": "Kampagnenkonzepte"
+          },
+          {
+            "description": "Entdecken Sie Optionen im Hinblick auf Ihre Vorgaben und Einschränkungen.",
+            "title": "Benennung und Slogans"
+          },
+          {
+            "description": "Stellen Sie Referenzen zusammen und kopieren Sie sie in ein gemeinsam nutzbares Konzept.",
+            "title": "Moodboards"
+          }
+        ]
+      },
+      "design": {
+        "headline": "Von der groben Idee bis zur ausgefeilten Schnittstelle.",
+        "heroBlurb": "Verwandeln Sie Skizzen und Eingabeaufforderungen in brauchbare Designs.",
+        "label": "Design",
+        "overview": "AURA-Designagenten übersetzen Absichten in strukturierte, konsistente Schnittstellen und respektieren dabei Ihr System und Ihre Einschränkungen. Sie durchlaufen Layouts und Komponenten, sodass Sie mit etwas Realem und nicht mit einer leeren Leinwand beginnen.",
+        "useCases": [
+          {
+            "description": "Generieren Sie Layoutoptionen anhand eines Briefing- und Designsystems.",
+            "title": "UI-Erkundung"
+          },
+          {
+            "description": "Erstellen Sie schnell konsistente Zustände und Variationen.",
+            "title": "Komponentenvarianten"
+          },
+          {
+            "description": "Erkennen Sie Barrierefreiheits- und Konsistenzprobleme frühzeitig.",
+            "title": "Designüberprüfung"
+          }
+        ]
+      },
+      "ecommerce-retail": {
+        "headline": "Private Intelligence für den Einzelhandel",
+        "heroBlurb": "Private KI, die Ihre Storefront skaliert, ohne Ihre Daten preiszugeben.",
+        "label": "E-Commerce und Einzelhandel",
+        "overview": "Der Einzelhandel basiert auf Katalog-, Inhalts- und Kundendaten. AURA-Agenten automatisieren Merchandising, Support und Analyse und behalten gleichzeitig die Kundeninformationen innerhalb Ihrer Reichweite.",
+        "useCases": [
+          {
+            "description": "Generieren und pflegen Sie Produktkopien im großen Maßstab.",
+            "title": "Katalog & Inhalt"
+          },
+          {
+            "description": "Entwerfen Sie markengerechte Antworten, die auf Ihren Richtlinien basieren.",
+            "title": "Kundenbetreuung"
+          },
+          {
+            "description": "Entdecken Sie Trends und Anomalien in den Verkaufsdaten.",
+            "title": "Bedarfsanalyse"
+          }
+        ]
+      },
+      "education": {
+        "headline": "Private Intelligence für Bildung",
+        "heroBlurb": "Private KI, die Lehrkräfte unterstützt und Schülerdaten schützt.",
+        "label": "Ausbildung",
+        "overview": "Bildung hängt vom Vertrauen in die Daten der Schüler ab. AURA-Agenten unterstützen Lehre, Forschung und Verwaltung und halten gleichzeitig Aufzeichnungen innerhalb Ihres Perimeters und einen Menschen auf dem Laufenden.",
+        "useCases": [
+          {
+            "description": "Entwerfen Sie Lektionen und Beurteilungen und passen Sie sie an Ihren Lehrplan an.",
+            "title": "Kursmaterialien"
+          },
+          {
+            "description": "Fassen Sie Quellen zu zitierfähigen Zusammenfassungen zusammen.",
+            "title": "Forschungsunterstützung"
+          },
+          {
+            "description": "Automatisieren Sie Routineabläufe mit einem Audit-Trail.",
+            "title": "Verwaltung"
+          }
+        ]
+      },
+      "finance": {
+        "headline": "Modellieren Sie die Zahlen, auf die es ankommt.",
+        "heroBlurb": "Erstellen Sie Budgets und Prognosen und verbreiten Sie das Signal.",
+        "label": "Finanzen",
+        "overview": "AURA-Finanzagenten erstellen und pflegen Modelle, gleichen Daten ab und erläutern die Treiber hinter jeder Zahl. Sie halten die Prognosen auf dem neuesten Stand, sodass die Planung auf der neuesten Realität basiert.",
+        "useCases": [
+          {
+            "description": "Erstellen und aktualisieren Sie treiberbasierte Modelle nach Bedarf.",
+            "title": "Prognose"
+          },
+          {
+            "description": "Gleichen Sie Ist-Werte mit Plan ab und erklären Sie Abweichungen.",
+            "title": "Budgetverfolgung"
+          },
+          {
+            "description": "Vergleichen Sie die Ergebnisse verschiedener Annahmen in wenigen Minuten.",
+            "title": "Szenarioplanung"
+          }
+        ]
+      },
+      "finance-banking": {
+        "headline": "Private Intelligence für Finanzen",
+        "heroBlurb": "Private KI, der Risikoteams vertrauen, die Aufsichtsbehörden akzeptieren und auf die sich Kunden verlassen. Keine Kompromisse bei den Daten – niemals.",
+        "label": "Finanzen und Bankwesen",
+        "overview": "Finanzen basieren auf Vertrauen, und Vertrauen basiert auf der Kontrolle von Daten. AURA bringt autonome Agenten zu Banken, Fonds und Fintechs, ohne sensible Informationen an Drittmodelle zu senden – alles, was Ihren Perimeter verlässt, bleibt unidentifizierbar und die Gesamtheit ist durchgängig überprüfbar. Analysten, Berater und Betriebsteams delegieren die langsame Arbeit und behalten das Urteil, wobei jede Aktion überprüfbar und aktenkundig ist.",
+        "useCases": [
+          {
+            "description": "Fassen Sie Einreichungen, Marktdaten und Nachrichten in entscheidungsbereiten Kurzbriefen mit Zitaten zusammen.",
+            "title": "Recherche und Due Diligence"
+          },
+          {
+            "description": "Überprüfen Sie Transaktionen und Dokumente anhand der Richtlinien und kennzeichnen Sie Ausnahmen zur Überprüfung.",
+            "title": "Risiko & Compliance"
+          },
+          {
+            "description": "Erstellen und pflegen Sie Prognosen und Szenarien, die sich an die Zahlen ändern.",
+            "title": "Finanzmodellierung"
+          },
+          {
+            "description": "Erstellen Sie Portfolio- und Leistungszusammenfassungen termingerecht mit Ihrer Stimme.",
+            "title": "Kundenberichterstattung"
+          },
+          {
+            "description": "Gleichen Sie Daten ab und automatisieren Sie Backoffice-Workflows mit einem vollständigen Prüfpfad.",
+            "title": "Operationen"
+          },
+          {
+            "description": "Entwerfen Sie markengerechte Kundenkommunikation basierend auf Ihren eigenen Daten.",
+            "title": "Beratende Unterstützung"
+          }
+        ]
+      },
+      "healthcare": {
+        "headline": "Private Intelligence für das Gesundheitswesen",
+        "heroBlurb": "Private KI, der Ärzte vertrauen, die Aufsichtsbehörden akzeptieren und die Patienten verdienen. Keine Kompromisse bei den Daten – niemals.",
+        "label": "Gesundheitspflege",
+        "overview": "Das Gesundheitswesen verlangt standardmäßig Privatsphäre. AURA-Agenten unterstützen klinische und operative Teams und bewahren gleichzeitig geschützte Daten innerhalb Ihres Perimeters auf, mit einer überprüfbaren, prüfbaren Durchgängigkeit.",
+        "useCases": [
+          {
+            "description": "Fassen Sie Literatur und Studiendaten zu zitierfähigen Zusammenfassungen zusammen.",
+            "title": "Klinische Forschung"
+          },
+          {
+            "description": "Entwerfen und strukturieren Sie Notizen und Berichte zur menschlichen Überprüfung.",
+            "title": "Dokumentation"
+          },
+          {
+            "description": "Automatisieren Sie Planungs- und Backoffice-Workflows mit einem Audit-Trail.",
+            "title": "Operationen"
+          }
+        ]
+      },
+      "legal": {
+        "headline": "Verträge, überprüft und erklärt.",
+        "heroBlurb": "Überprüfen Sie Dokumente und erläutern Sie Verpflichtungen klar und deutlich.",
+        "label": "Legal",
+        "overview": "Die Rechtsberater von AURA lesen Verträge und Richtlinien, weisen auf Risiken hin und erläutern Verpflichtungen in einfacher Sprache. Sie beschleunigen die Überprüfung und halten gleichzeitig einen Menschen über jede Entscheidung auf dem Laufenden.",
+        "useCases": [
+          {
+            "description": "Markieren Sie riskante Klauseln und Abweichungen von Ihren Standards.",
+            "title": "Vertragsprüfung"
+          },
+          {
+            "description": "Extrahieren Sie Termine, Aufgaben und Verlängerungen in einer übersichtlichen Liste.",
+            "title": "Verpflichtungsverfolgung"
+          },
+          {
+            "description": "Beantworten Sie Fragen anhand Ihrer eigenen Dokumente.",
+            "title": "Fragen und Antworten zur Richtlinie"
+          }
+        ]
+      },
+      "legal-services": {
+        "headline": "Private Intelligence für die Rechtsabteilung",
+        "heroBlurb": "Private KI, der Unternehmen vertrauen und auf die sich Kunden verlassen. Keine Kompromisse bei der Vertraulichkeit – niemals.",
+        "label": "Legal",
+        "overview": "Bei der juristischen Arbeit kommt es auf Vertraulichkeit und Präzision an. AURA-Agenten beschleunigen die Überprüfung, Recherche und Ausarbeitung, während sie gleichzeitig vertrauliches Material innerhalb Ihres Perimeters und einen Menschen auf dem Laufenden halten.",
+        "useCases": [
+          {
+            "description": "Melden Sie Risiken und Abweichungen von Ihren Standards schnell.",
+            "title": "Vertragsprüfung"
+          },
+          {
+            "description": "Ermitteln und synthetisieren Sie relevante Autorität anhand von Zitaten.",
+            "title": "Rechtsrecherche"
+          },
+          {
+            "description": "Erstellen Sie erste Entwürfe auf der Grundlage Ihrer Vorlagen und Sachverhaltsdateien.",
+            "title": "Abfassung"
+          }
+        ]
+      },
+      "marketing": {
+        "headline": "Kampagnen, die der Marke treu bleiben.",
+        "heroBlurb": "Planen, entwerfen und passen Sie Inhalte für alle Kanäle an.",
+        "label": "Marketing",
+        "overview": "AURA-Marketingagenten planen Kampagnen, produzieren markengerechte Inhalte und passen diese pro Kanal an, während sie Ihre Meinung vertreten. Sie verwandeln ein Briefing in eine Liste mit Assets und halten den Kalender in Bewegung, sodass auf Ihren Kanälen nie Stillstand herrscht.",
+        "useCases": [
+          {
+            "description": "Verwandeln Sie ein Briefing in Kanäle, Themen und einen Inhaltskalender.",
+            "title": "Kampagnenplanung"
+          },
+          {
+            "description": "Mit Ihrer Stimme können Sie Assets kanalübergreifend entwerfen und wiederverwenden.",
+            "title": "Content-Produktion"
+          },
+          {
+            "description": "Verwandeln Sie Kampagnendaten in klare, umsetzbare Erkenntnisse.",
+            "title": "Leistungsanalyse"
+          }
+        ]
+      },
+      "marketing-media": {
+        "headline": "Private Intelligence für Marketing",
+        "heroBlurb": "Private KI, die dafür sorgt, dass Ihre Marke sprachgesteuert bleibt und Ihre Daten Ihre eigenen bleiben.",
+        "label": "Marketing & Medien",
+        "overview": "Marketingteams bewegen sich schnell über viele Kanäle hinweg. AURA-Agenten planen, entwerfen und passen Inhalte an die Marke an und behalten dabei die Kontrolle über Ihr Publikum und Ihre Leistungsdaten.",
+        "useCases": [
+          {
+            "description": "Erstellen Sie Anweisungen und testen Sie diese anhand Ihres Briefings.",
+            "title": "Kampagnenkonzepte"
+          },
+          {
+            "description": "Entwerfen und verwenden Sie Ihre Stimme kanalübergreifend neu.",
+            "title": "Content-Produktion"
+          },
+          {
+            "description": "Verwandeln Sie Kampagnendaten in klare, umsetzbare Erkenntnisse.",
+            "title": "Leistungsanalyse"
+          }
+        ]
+      },
+      "real-estate": {
+        "headline": "Private Intelligence für Immobilien",
+        "heroBlurb": "Private KI, die Geschäfte vorantreibt und Ihre Daten für sich behält.",
+        "label": "Immobilie",
+        "overview": "Immobilien basieren auf Dokumenten, Angeboten und Marktdaten. AURA-Agenten beschleunigen die Prüfung, Ausarbeitung und Analyse und behalten gleichzeitig die Kontrolle über Kunden- und Geschäftsinformationen.",
+        "useCases": [
+          {
+            "description": "Erstellen und pflegen Sie Angebote und Marketingtexte.",
+            "title": "Inhalte auflisten"
+          },
+          {
+            "description": "Ziehen Sie Signale aus Dokumenten und Marktdaten in eine Ansicht.",
+            "title": "Handeln Sie gewissenhaft"
+          },
+          {
+            "description": "Erstellen Sie erste Entwürfe auf der Grundlage Ihrer Vorlagen.",
+            "title": "Dokumentenerstellung"
+          }
+        ]
+      },
+      "research": {
+        "headline": "Forschung, die zusammenfasst, nicht nur sucht.",
+        "heroBlurb": "Agenten, die Quellen durchforsten und ans Licht bringen, worauf es wirklich ankommt.",
+        "label": "Forschung",
+        "overview": "AURA-Rechercheagenten lesen Dokumente, das Internet und Ihre eigene Wissensdatenbank und fassen die Ergebnisse dann in klare, zitierfähige Antworten zusammen. Sie arbeiten im Hintergrund weiter, sodass eine gründliche Überprüfung, die früher Tage dauerte, landet, während Sie sich auf die Entscheidung konzentrieren.",
+        "useCases": [
+          {
+            "description": "Untersuchen Sie ein Feld und fassen Sie den Stand der Technik mit Quellen zusammen.",
+            "title": "Literaturrezensionen"
+          },
+          {
+            "description": "Verfolgen Sie die Konkurrenten und destillieren Sie die Bewegungen in einem Laufbriefing.",
+            "title": "Wettbewerbsanalyse"
+          },
+          {
+            "description": "Ziehen Sie Signale aus Ablagen, Nachrichten und Datenräumen in einer Ansicht zusammen.",
+            "title": "Due Diligence"
+          }
+        ]
+      },
+      "sales": {
+        "headline": "Mehr Pipeline, weniger Arbeit.",
+        "heroBlurb": "Recherchieren Sie Konten und entwerfen Sie eine Kontaktaufnahme, die Geschäfte vorantreibt.",
+        "label": "Verkäufe",
+        "overview": "AURA-Vertriebsmitarbeiter recherchieren Konten, personalisieren die Kontaktaufnahme und halten Ihre Pipeline auf dem neuesten Stand, damit die Vertriebsmitarbeiter Zeit mit Verkaufen statt mit Tippen verbringen. Sie entwerfen On-Voice-Nachrichten, die auf Ihren Kontext abgestimmt sind, und zeigen bei jedem Geschäft die nächstbeste Aktion auf.",
+        "useCases": [
+          {
+            "description": "Erstellen Sie Briefings über Interessenten aus öffentlichen und internen Quellen.",
+            "title": "Kontorecherche"
+          },
+          {
+            "description": "Personalisieren Sie E-Mails und Sequenzen mit Ihrer Stimme und Ihrem Angebot.",
+            "title": "Outreach-Entwürfe"
+          },
+          {
+            "description": "Halten Sie CRM-Datensätze auf dem neuesten Stand und kennzeichnen Sie Geschäfte, die Ihrer Aufmerksamkeit bedürfen.",
+            "title": "Rohrleitungshygiene"
+          }
+        ]
+      },
+      "social": {
+        "headline": "On-Voice-Social, termingerecht.",
+        "heroBlurb": "Entwerfen Sie Beiträge und Kalender, die der Marke entsprechen.",
+        "label": "Sozial",
+        "overview": "AURA-Social-Agents planen Kalender, entwerfen Beiträge pro Kanal und passen sich an das Format jeder Plattform an, während sie Ihre Stimme behalten. Sie sorgen für einen gleichmäßigen Rhythmus, sodass Ihre Kanäle niemals still werden.",
+        "useCases": [
+          {
+            "description": "Planen Sie wochenlange Beiträge zu Themen und Produkteinführungen.",
+            "title": "Inhaltskalender"
+          },
+          {
+            "description": "Passen Sie eine Idee an das Format und den Ton jeder Plattform an.",
+            "title": "Entwürfe pro Kanal"
+          },
+          {
+            "description": "Entwerfen Sie Sprachantworten zur Überprüfung, bevor sie versendet werden.",
+            "title": "Community-Antworten"
+          }
+        ]
+      },
+      "technology-saas": {
+        "headline": "Private Intelligence für Technologie",
+        "heroBlurb": "Private KI, die Produkte versendet und Ihre Codebasis aufrechterhält.",
+        "label": "Technologie / SaaS",
+        "overview": "Technologieteams bauen schnell auf und schützen ihr geistiges Eigentum. AURA-Agenten beschleunigen Engineering, Support und Analyse und halten gleichzeitig Ihren Code und Ihre Kundendaten innerhalb Ihres Perimeters.",
+        "useCases": [
+          {
+            "description": "Implementieren Sie Funktionen und Korrekturen aus dem echten Repo-Kontext.",
+            "title": "Maschinenbau"
+          },
+          {
+            "description": "Entwerfen Sie präzise Antworten auf der Grundlage Ihrer Dokumente.",
+            "title": "Kundenbetreuung"
+          },
+          {
+            "description": "Verwandeln Sie Nutzungsdaten in entscheidungsreife Erkenntnisse.",
+            "title": "Produktanalyse"
+          }
+        ]
+      },
+      "writing": {
+        "headline": "Schreiben Sie mit Ihrer Stimme und in Ihrem Tempo.",
+        "heroBlurb": "Entwerfen, bearbeiten und verfeinern Sie Prosa, die nach Ihnen klingt.",
+        "label": "Schreiben",
+        "overview": "AURA-Schreibagenten lernen Ihren Ton und Ihre Einschränkungen kennen und entwerfen und überarbeiten dann ausführliche Inhalte von Anfang bis Ende. Von der ersten Gliederung bis zur endgültigen Bearbeitung sorgen sie dafür, dass die Stimme konsistent ist und die Fakten auf Ihren Quellen basieren.",
+        "useCases": [
+          {
+            "description": "Verwandeln Sie eine Gliederung und Notizen in ein fertiges Stück.",
+            "title": "Lange Entwürfe"
+          },
+          {
+            "description": "Straffen Sie Struktur, Grammatik und Ton, ohne die Absicht zu verlieren.",
+            "title": "Bearbeitung von Pässen"
+          },
+          {
+            "description": "Wandeln Sie eine Quelle in Beiträge, E-Mails und Zusammenfassungen um.",
+            "title": "Umnutzung"
+          }
+        ]
+      }
+    },
+    "overview": "Überblick",
+    "overviewAriaLabel": "{{label}} Überblick",
+    "previewAriaLabel": "{{label}} Vorschau",
+    "requestDemo": "Fordern Sie eine Demo an",
+    "useCases": "Anwendungsfälle",
+    "useCasesAriaLabel": "{{label}} Anwendungsfälle"
+  },
+  "feedback": {
+    "card": {
+      "anonymousAuthor": "Anonym",
+      "commentCount_one": "1 Kommentar",
+      "commentCount_other": "{{count}} Kommentare",
+      "time": {
+        "daysAgo_one": "{{count}}vor d",
+        "daysAgo_other": "{{count}}vor d",
+        "hoursAgo_one": "{{count}}vor h",
+        "hoursAgo_other": "{{count}}vor h",
+        "minutesAgo_one": "{{count}}vor m",
+        "minutesAgo_other": "{{count}}vor m",
+        "monthsAgo_one": "{{count}}vor Mo",
+        "monthsAgo_other": "{{count}}vor Mo",
+        "secondsAgo_one": "{{count}}Es ist her",
+        "secondsAgo_other": "{{count}}Es ist her",
+        "yearsAgo_one": "{{count}}vor y",
+        "yearsAgo_other": "{{count}}vor y"
+      },
+      "voteScoreAriaLabel": "Abstimmungsergebnis"
+    },
+    "documentTitle": "AURA – Feedback",
+    "empty": {
+      "body": "Keine AURA-Feedbackbeiträge entsprechen den aktuellen Filtern.",
+      "heading": "Noch keine Rückmeldung."
+    },
+    "entriesAriaLabel": "Feedback-Einträge",
+    "filters": {
+      "ariaLabel": "Feedback-Filter",
+      "sections": {
+        "status": "Status",
+        "trending": "Im Trend",
+        "type": "Typ"
+      },
+      "toggle": "Filter"
+    },
+    "stats": {
+      "participants": "Teilnehmer",
+      "resolved": "Gelöste Elemente",
+      "submitted": "Eingereichte Artikel"
+    },
+    "subtitle": "Unsere Nutzer geben Feedback und AURA verbessert sich selbstständig.",
+    "summaryAriaLabel": "Feedback-Zusammenfassung",
+    "title": "Rückmeldung"
+  },
+  "footer": {
+    "ariaLabel": "Fußzeile der Website",
+    "copyright": "Copyright © {{year}}",
+    "navigationAriaLabel": "Fußzeilennavigation"
+  },
+  "models": {
+    "allModelsAriaLabel": "Alle Modelle",
+    "documentTitle": "AURA - Modelle",
+    "empty": "Kein Modell entspricht den aktuellen Filtern. Versuchen Sie, die Suche zu löschen oder die Registerkarten zu wechseln.",
+    "featured": "Hervorgehoben",
+    "featuredAriaLabel": "Ausgewählte Modelle",
+    "filterByModalityAriaLabel": "Nach Modalität filtern",
+    "filterByStatusAriaLabel": "Nach Status filtern",
+    "loadingCatalog": "Katalog wird geladen…",
+    "searchAriaLabel": "Modelle suchen",
+    "searchPlaceholder": "Modelle suchen...",
+    "stats": {
+      "image": "Bild",
+      "text": "Text",
+      "threeD": "3D",
+      "total": "Gesamtmodelle",
+      "video": "Video"
+    },
+    "status": {
+      "live": "Live",
+      "liveAriaLabel": "Status: Live",
+      "soon": "Bald",
+      "soonAriaLabel": "Status: Demnächst verfügbar"
+    },
+    "subtitle": "Die Grenzmodelle, die AURA antreiben, für Text, Bild, Video und 3D.",
+    "summaryAriaLabel": "Zusammenfassung der Modelle"
+  },
+  "os": {
+    "docDocumentTitle": "AURA OS - {{title}}",
+    "documentTitle": "AURA - OS",
+    "empty": {
+      "body": "Das AURA OS-Whitepaper ist verlinkt, es wurden jedoch noch keine Abschnitte veröffentlicht."
+    },
+    "navigationAriaLabel": "Whitepaper-Navigation",
+    "noContent": "Dieser Abschnitt hat noch keinen Inhalt.",
+    "noSections": "Noch keine Abschnitte.",
+    "notFound": {
+      "backButton": "Zurück zur Übersicht",
+      "body": "Dieser Teil des Whitepapers existiert nicht oder wurde noch nicht veröffentlicht.",
+      "heading": "Abschnitt nicht gefunden"
+    },
+    "sidebarTitle": "AURA OS"
+  },
+  "pricing": {
+    "billingCycleAriaLabel": "Abrechnungszyklus",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "documentTitle": "AURA – Preise",
+    "downloadCta": "Herunterladen",
+    "heroDescription": "Beginnen Sie mit kostenlosen lokalen Open-Source-Modellen und zahlen Sie dann nur für die Grenzmodelle, die Sie verwenden.",
+    "heroHeadline": "Ab kostenlos.",
+    "monthly": "Monatlich",
+    "plans": {
+      "free": {
+        "description": "Kostenlos starten:",
+        "features": {
+          "0": "Keine Kreditkarte erforderlich",
+          "1": "Lokale Open-Source-Modelle",
+          "2": "Pay-as-you-go für Grenzmodelle"
+        },
+        "name": "Frei"
+      },
+      "pro": {
+        "description": "Alles kostenlos, plus:",
+        "features": {
+          "0": "Monatliches Guthaben im Wert von 20 $",
+          "1": "Remote-Agenten"
+        },
+        "name": "Profi",
+        "priceNote": "10 $/Monat für Zero Pro OG-Abonnenten"
+      },
+      "sage": {
+        "description": "Alles in Pro, plus:",
+        "features": {
+          "0": "20-fache Nutzung bei Grenzmodellen",
+          "1": "Vorrangiger Zugriff auf neue Funktionen"
+        },
+        "name": "Salbei"
+      }
+    },
+    "plansLabel": "Individuelle Pläne",
+    "yearly": "Jährlich"
+  },
+  "privacy": {
+    "description": "Unsere Datenschutzrichtlinie wird derzeit fertiggestellt und in Kürze hier veröffentlicht.",
+    "documentTitle": "AURA - Datenschutzrichtlinie",
+    "headline": "Datenschutzrichtlinie",
+    "label": "RECHTLICH"
+  },
+  "productScreen": {
+    "close": "Schließen",
+    "closeFullscreenAriaLabel": "Vollbild schließen",
+    "openFullscreenAriaLabel": "Vollbildbild öffnen: {{label}}",
+    "placeholderLabel": "Bildplatzhalter"
+  },
+  "sections": {
+    "agentChat": {
+      "ariaLabel": "Chatten Sie von überall aus mit Ihren Agenten",
+      "description": "Ihre AURA-Agenten sind immer erreichbar. Nehmen Sie ein Gespräch auf Ihrem Telefon, Ihrem Laptop oder Ihrem Desktop auf. Sie erinnern sich an alles und bringen die gleichen Werkzeuge mit.",
+      "headlineLine1": "Chatten Sie mit Ihren Agenten.",
+      "headlineLine2": "Von überall.",
+      "phoneAriaLabel": "Mobiler Chat mit dem {{agentName}} Agent"
+    },
+    "builtForTrust": {
+      "ariaLabel": "Wie AURA Ihr Vertrauen gewinnt",
+      "cards": {
+        "alwaysOn": {
+          "description": "Ihr Agent arbeitet rund um die Uhr, auch wenn Sie abwesend sind und Ihre Geräte ausgeschaltet sind.",
+          "title": "Immer an."
+        },
+        "isolated": {
+          "description": "Jeder Agent läuft in einer eigenen Sandbox-VM, die vollständig von Ihrem System und anderen Agenten abgeschottet ist.",
+          "title": "Standardmäßig isoliert."
+        },
+        "verifiable": {
+          "description": "Jede Umgebung wird vor ihrer Ausführung zertifiziert, sodass Sie jederzeit überprüfen können, worauf Sie vertrauen.",
+          "title": "Vertrauenswürdig und überprüfbar."
+        }
+      },
+      "headline": "Gebaut für Vertrauen.",
+      "subhead": "AURA-Agenten werden in isolierten virtuellen Maschinen in vertrauenswürdigen Ausführungsumgebungen ausgeführt."
+    },
+    "expertise": {
+      "headline": "Expertise ohne Ego.",
+      "subheadLine1": "AURA-Agenten sind Experten in allen Disziplinen.",
+      "subheadLine2": "Von der Codierung über die Wissenschaft bis zur Kreativität."
+    },
+    "madeForYou": {
+      "headline": "Agenten, die für Sie gemacht sind.",
+      "subhead": "Entwerfen und starten Sie Ihren Agenten in 30 Sekunden."
+    },
+    "personalAgent": {
+      "ariaLabel": "Was Ihr Agent tun kann",
+      "cards": {
+        "alwaysOn": {
+          "description": "Bitten oder weisen Sie Ihren Agenten an, fast alles zu tun. Es wird sich an die Arbeit machen und bei Bedarf Bericht erstatten.",
+          "title": "Immer an."
+        },
+        "connected": {
+          "description": "AURA stellt eine sichere Verbindung zu Ihren Diensten her, sodass es alles über Sie weiß. Ihre Daten verlassen niemals Ihren eigenen sicheren Computer und werden niemals verarbeitet.",
+          "title": "Mit allem verbunden."
+        },
+        "domains": {
+          "description": "Ihr Agent ist in allen Bereichen ein Genie. Es kann bei einfachen Aufgaben des Lebens, bei kreativen Projekten und bei fortgeschrittenem Design und Programmieren hilfreich sein.",
+          "title": "Intelligent in allen Bereichen."
+        }
+      },
+      "headline": "Jedes Modell. Jeder Modus.",
+      "subhead": "AURA ist Ihr persönlicher Agent, der Sie bei allem unterstützt, von leichten Aufgaben bis hin zu intensiver Arbeit."
+    },
+    "privacy": {
+      "features": {
+        "openSource": {
+          "description": "AURA ist zu 100 % Open Source unter der MIT-Lizenz. Forken Sie es jederzeit, ohne Anbieterbindung und ohne Bedingungen.",
+          "tag": "MIT-Lizenz",
+          "title": "Open Source"
+        },
+        "private": {
+          "description": "AURA hat niemals Zugriff auf Ihre persönlichen oder geschäftlichen Daten oder verarbeitet diese. Alles, was an Frontier-Modelle gesendet wird, bleibt unidentifizierbar.",
+          "tag": "PQ-Verschlüsselung",
+          "title": "Privat"
+        },
+        "verifiable": {
+          "description": "Der AURA-Harness und -Kernel sind von Grund auf mit Sicherheit, Verifizierung und Richtlinien als erstklassige Bürger ausgestattet.",
+          "tag": "Vertrauenswürdige Ausführung",
+          "title": "Überprüfbar"
+        }
+      },
+      "headline": "Entworfen für Ihre Menschlichkeit."
+    }
+  },
+  "support": {
+    "body": "Benötigen Sie Hilfe bei AURA? Wir sind für Sie da. Schicken Sie unserem Support-Team eine E-Mail und wir werden uns so schnell wie möglich bei Ihnen melden.",
+    "headline": "Unterstützung",
+    "note": "Bei Konto- oder Rechnungsfragen geben Sie bitte die mit Ihrem AURA-Konto verknüpfte E-Mail-Adresse an."
+  },
+  "taglines": {
+    "decentralized": "Dezentral.",
+    "openSource": "Open Source.",
+    "private": "Privat.",
+    "secure": "Sicher."
+  },
+  "terms": {
+    "description": "Unsere Nutzungsbedingungen werden derzeit fertiggestellt und in Kürze hier veröffentlicht.",
+    "documentTitle": "AURA – Nutzungsbedingungen",
+    "headline": "Nutzungsbedingungen",
+    "label": "RECHTLICH"
+  }
+}

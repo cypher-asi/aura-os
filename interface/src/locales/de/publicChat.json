@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} generiert aus: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Nachricht kann nicht gesendet werden"
+    },
+    "heroPhrases": {
+      "privateAgent": "Ihr Privatagent."
+    },
+    "inputLabel": "Nachrichtenaura",
+    "inputPlaceholder": "Frag Aura etwas ...",
+    "send": "Schicken",
+    "sending": "Senden",
+    "transcriptAriaLabel": "Chat-Transkript"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Beginnen Sie ein neues Gespräch"
+  },
+  "createAgent": {
+    "label": "Erstellen Sie Ihren Agenten"
+  },
+  "login": {
+    "close": "Schließen",
+    "closeLoginAriaLabel": "Anmeldung schließen",
+    "heading": "Melden Sie sich bei AURA an"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Was möchten Sie erstellen?",
+    "heroBlurb": "Senden Sie Aura eine Aufforderung und beginnen Sie mit dem Aufbau."
+  },
+  "personas": {
+    "railAriaLabel": "Agentenpersönlichkeiten"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Chat löschen \"{{title}}\"",
+    "noConversations": "Noch keine Gespräche",
+    "noMatchingChats": "Keine passenden Chats"
+  },
+  "sharedSession": {
+    "ariaLabel": "Geteiltes Gespräch",
+    "empty": {
+      "body": "In dieser geteilten Konversation sind keine Nachrichten vorhanden, die angezeigt werden können.",
+      "heading": "Dieses Gespräch ist leer"
+    },
+    "error": {
+      "body": "Wir konnten diese geteilte Konversation nicht laden. Bitte versuchen Sie es später noch einmal.",
+      "heading": "Etwas ist schief gelaufen"
+    },
+    "loading": "Geteilte Konversation wird geladen…",
+    "unavailable": {
+      "body": "Möglicherweise wurde die Konversation nicht geteilt oder der Link ist falsch.",
+      "heading": "Dieser Freigabelink ist nicht verfügbar"
+    }
+  }
+}

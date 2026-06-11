@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} ولدت من: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "غير قادر على إرسال الرسالة"
+    },
+    "heroPhrases": {
+      "privateAgent": "وكيلك الخاص."
+    },
+    "inputLabel": "هالة الرسالة",
+    "inputPlaceholder": "اسأل هالة أي شيء...",
+    "send": "يرسل",
+    "sending": "إرسال",
+    "transcriptAriaLabel": "نص الدردشة"
+  },
+  "compose": {
+    "startConversationAriaLabel": "ابدأ محادثة جديدة"
+  },
+  "createAgent": {
+    "label": "أنشئ وكيلك"
+  },
+  "login": {
+    "close": "يغلق",
+    "closeLoginAriaLabel": "إغلاق تسجيل الدخول",
+    "heading": "تسجيل الدخول إلى أورا"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "ماذا تريد أن تخلق؟",
+    "heroBlurb": "أرسل رسالة إلى Aura وابدأ في البناء."
+  },
+  "personas": {
+    "railAriaLabel": "شخصيات الوكيل"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "حذف الدردشة\"{{title}}\"",
+    "noConversations": "لا توجد محادثات حتى الآن",
+    "noMatchingChats": "لا توجد محادثات مطابقة"
+  },
+  "sharedSession": {
+    "ariaLabel": "محادثة مشتركة",
+    "empty": {
+      "body": "لا توجد رسائل لإظهارها في هذه المحادثة المشتركة.",
+      "heading": "هذه المحادثة فارغة"
+    },
+    "error": {
+      "body": "لم نتمكن من تحميل هذه المحادثة المشتركة. يرجى المحاولة مرة أخرى لاحقا.",
+      "heading": "حدث خطأ ما"
+    },
+    "loading": "جارٍ تحميل المحادثة المشتركة…",
+    "unavailable": {
+      "body": "ربما لم تتم مشاركة المحادثة أو أن الرابط غير صحيح.",
+      "heading": "رابط المشاركة هذا غير متوفر"
+    }
+  }
+}

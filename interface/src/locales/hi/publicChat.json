@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} से उत्पन्न: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "संदेश भेजने में असमर्थ"
+    },
+    "heroPhrases": {
+      "privateAgent": "आपका निजी एजेंट."
+    },
+    "inputLabel": "संदेश आभा",
+    "inputPlaceholder": "आभा से कुछ भी पूछें...",
+    "send": "भेजना",
+    "sending": "भेजा जा रहा है",
+    "transcriptAriaLabel": "चैट प्रतिलेख"
+  },
+  "compose": {
+    "startConversationAriaLabel": "एक नई बातचीत शुरू करें"
+  },
+  "createAgent": {
+    "label": "अपना एजेंट बनाएं"
+  },
+  "login": {
+    "close": "बंद करना",
+    "closeLoginAriaLabel": "लॉगिन बंद करें",
+    "heading": "ऑरा में लॉग इन करें"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "आप क्या बनाना चाहते हैं?",
+    "heroBlurb": "ऑरा को एक संकेत भेजें और निर्माण शुरू करें।"
+  },
+  "personas": {
+    "railAriaLabel": "एजेंट व्यक्तित्व"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "चैट हटाएं\"{{title}}\"",
+    "noConversations": "अभी तक कोई बातचीत नहीं",
+    "noMatchingChats": "कोई मेल खाती चैट नहीं"
+  },
+  "sharedSession": {
+    "ariaLabel": "साझा बातचीत",
+    "empty": {
+      "body": "इस साझा वार्तालाप में दिखाने के लिए कोई संदेश नहीं हैं।",
+      "heading": "यह बातचीत खोखली है"
+    },
+    "error": {
+      "body": "हम इस साझा वार्तालाप को लोड नहीं कर सके. कृपया बाद में पुन: प्रयास करें।",
+      "heading": "कुछ गलत हो गया"
+    },
+    "loading": "साझा वार्तालाप लोड हो रहा है...",
+    "unavailable": {
+      "body": "हो सकता है कि बातचीत साझा न की गई हो या लिंक ग़लत हो.",
+      "heading": "यह शेयर लिंक अनुपलब्ध है"
+    }
+  }
+}

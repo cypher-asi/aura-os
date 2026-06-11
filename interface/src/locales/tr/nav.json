@@ -1,12 +1,16 @@
 {
-  "os": "OS",
-  "chat": "Sohbet",
   "agents": "Aracılar",
-  "code": "Kod",
-  "pricing": "Fiyatlandırma",
   "blog": "Blog",
+  "capabilities": "Yetenekler",
   "changelog": "Değişiklikler",
+  "chat": "Sohbet",
+  "code": "Kod",
+  "downloads": "İndirilenler",
+  "expertise": "Uzmanlık",
   "feedback": "Geri bildirim",
+  "industries": "Endüstriler",
   "models": "Modeller",
+  "os": "OS",
+  "pricing": "Fiyatlandırma",
   "resources": "Kaynaklar"
 }

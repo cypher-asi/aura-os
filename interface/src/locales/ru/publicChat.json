@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} создано из: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Невозможно отправить сообщение"
+    },
+    "heroPhrases": {
+      "privateAgent": "Ваш частный агент."
+    },
+    "inputLabel": "Сообщение Аура",
+    "inputPlaceholder": "Спроси Ауру о чём угодно...",
+    "send": "Отправлять",
+    "sending": "Отправка",
+    "transcriptAriaLabel": "Стенограмма чата"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Начать новый разговор"
+  },
+  "createAgent": {
+    "label": "Создайте своего агента"
+  },
+  "login": {
+    "close": "Закрывать",
+    "closeLoginAriaLabel": "Закрыть вход",
+    "heading": "Войти в АУРА"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Что вы хотите создать?",
+    "heroBlurb": "Отправьте Aura приглашение и начните строить."
+  },
+  "personas": {
+    "railAriaLabel": "Персонажи агентов"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Удалить чат\"{{title}}\"",
+    "noConversations": "Пока нет разговоров",
+    "noMatchingChats": "Нет подходящих чатов"
+  },
+  "sharedSession": {
+    "ariaLabel": "Общий разговор",
+    "empty": {
+      "body": "В этом общем чате нет сообщений для отображения.",
+      "heading": "Этот разговор пуст"
+    },
+    "error": {
+      "body": "Не удалось загрузить этот общий чат. Пожалуйста, повторите попытку позже.",
+      "heading": "Что-то пошло не так"
+    },
+    "loading": "Загрузка общего разговора…",
+    "unavailable": {
+      "body": "Возможно, общий доступ к беседе закрыт или ссылка неверна.",
+      "heading": "Эта ссылка для общего доступа недоступна"
+    }
+  }
+}

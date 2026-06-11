@@ -1,0 +1,802 @@
+{
+  "agents": {
+    "buildDeviceAriaLabel": "Construye tu agente",
+    "documentTitle": "AURA - Agentes",
+    "heroDescriptionLine1": "Los agentes de AURA son expertos en todos los campos.",
+    "heroDescriptionLine2": "que funcionan mientras duermes.",
+    "heroHeadline": "Delega todo."
+  },
+  "blog": {
+    "allPosts": "Todas las publicaciones",
+    "breadcrumbAriaLabel": "Migaja de pan",
+    "documentTitle": "AURA-Blog",
+    "empty": {
+      "body": "El blog está conectado, pero aún no se han publicado publicaciones.",
+      "heading": "Aún no hay publicaciones."
+    },
+    "latest": "El último",
+    "loading": "Cargando…",
+    "loadingPost": "Cargando publicación…",
+    "loadingPosts": "Cargando publicaciones…",
+    "moreFromBlog": "Más del blog",
+    "morePosts": "Más publicaciones",
+    "navigationAriaLabel": "Navegación de blogs",
+    "noContent": "Esta publicación aún no tiene contenido.",
+    "noOtherPosts": "No hay otras publicaciones todavía.",
+    "notFound": {
+      "backLink": "← Volver al blog",
+      "body": "La publicación que estás buscando no existe o no está publicada.",
+      "heading": "Publicación no encontrada"
+    },
+    "postDocumentTitle": "AURA- {{title}}",
+    "readTime_many": "{{count}} lectura mínima",
+    "readTime_one": "{{count}} lectura mínima",
+    "readTime_other": "{{count}} lectura mínima",
+    "recentPostsAriaLabel": "Publicaciones recientes",
+    "table": {
+      "author": "Autor",
+      "date": "Fecha",
+      "title": "Título",
+      "type": "Tipo"
+    },
+    "title": "Blog",
+    "tocAriaLabel": "Tabla de contenido",
+    "tocTitle": "Tabla de contenido"
+  },
+  "changelog": {
+    "chart": {
+      "ariaLabel": "Lanzamientos por día a lo largo del tiempo",
+      "barTitle_many": "{{date}}: {{count}} lanzamientos",
+      "barTitle_one": "{{date}}: 1 versión",
+      "barTitle_other": "{{date}}: {{count}} lanzamientos",
+      "caption": "Lanzamientos por día",
+      "captionWithCount_many": "{{count}} lanzamientos · {{date}}",
+      "captionWithCount_one": "1 lanzamiento · {{date}}",
+      "captionWithCount_other": "{{count}} lanzamientos · {{date}}"
+    },
+    "commitsLiveTitle_many": "Total en vivo en todo {{count}} repositorios AURA",
+    "commitsLiveTitle_one": "Total en vivo en todo {{count}} repositorio AURA",
+    "commitsLiveTitle_other": "Total en vivo en todo {{count}} repositorios AURA",
+    "currentVersion": "Versión actual",
+    "dailyUpdate": "Actualización diaria",
+    "documentTitle": "AURA - Registro de cambios",
+    "download": "Descargar",
+    "downloadVersionAriaLabel": "Descargar Aura {{version}} para su sistema operativo",
+    "downloadVersionTitle": "Haga clic para descargar la compilación para su sistema operativo.",
+    "empty": {
+      "body": "La fuente de lanzamiento está conectada, pero aún no se encontraron entradas del registro de cambios publicadas.",
+      "heading": "Aún no hay entradas en el registro de cambios."
+    },
+    "entriesAriaLabel": "Entradas del registro de cambios de Aura",
+    "entry": {
+      "commitCount_many": "{{count}} se compromete",
+      "commitCount_one": "1 compromiso",
+      "commitCount_other": "{{count}} se compromete",
+      "releaseCount_many": "{{count}} lanzamientos",
+      "releaseCount_one": "1 lanzamiento",
+      "releaseCount_other": "{{count}} lanzamientos"
+    },
+    "github": "GitHub",
+    "openScreenshotAriaLabel": "Abrir captura de pantalla para {{title}}",
+    "releasedAgo": "Liberado {{relativeTime}}",
+    "releasedRecently": "Publicado recientemente",
+    "sources": "Fuentes",
+    "stats": {
+      "allTimeCommits": "Compromisos de todos los tiempos",
+      "allTimeReleases": "Lanzamientos de todos los tiempos",
+      "commitsThisMonth": "Se compromete este mes",
+      "releasesThisMonth": "Lanzamientos este mes"
+    },
+    "summaryAriaLabel": "Resumen del registro de cambios",
+    "title": "Registro de cambios"
+  },
+  "changelogPreview": {
+    "ariaLabel": "Entradas recientes del registro de cambios",
+    "ctaLabel": "Mira las novedades de AURA",
+    "heading": "Registro de cambios",
+    "releaseUpdate": "Actualización de lanzamiento"
+  },
+  "code": {
+    "deviceAriaLabel": "El escritorio de codificación AURA",
+    "documentTitle": "AURA - Código",
+    "heroDescription": "Un arnés de codificación de vanguardia diseñado para seguridad, automatización y verificabilidad que es 100% de código abierto.",
+    "heroHeadline": "Codifica mientras duermes."
+  },
+  "cta": {
+    "ariaLabel": "Llamado a la acción del producto",
+    "download": "Descargar",
+    "signUp": "Inscribirse",
+    "tagline": "Siente el AGI."
+  },
+  "docs": {
+    "docDocumentTitle": "Documentos AURA - {{title}}",
+    "documentTitle": "AURA - Documentos",
+    "empty": {
+      "body": "El sitio de documentación está conectado, pero aún no se han publicado páginas."
+    },
+    "loading": "Cargando…",
+    "navigationAriaLabel": "Navegación de documentación",
+    "noContent": "Esta página aún no tiene contenido.",
+    "noPages": "Aún no hay páginas.",
+    "notFound": {
+      "backButton": "Volver a la descripción general",
+      "body": "Esta página de documentación no existe o aún no está publicada.",
+      "heading": "Página no encontrada"
+    },
+    "sidebarTitle": "Documentación",
+    "tocAriaLabel": "En esta página",
+    "tocTitle": "En esta página"
+  },
+  "download": {
+    "cards": {
+      "linux": {
+        "description": "AppImage portátil para escritorios Linux, adecuado para descarga e inicio directo.",
+        "meta": "Imagen de aplicación x86_64"
+      },
+      "mac-apple-silicon": {
+        "description": "Compilación nativa para Mac M1, M2, M3 y M4.",
+        "meta": "Recomendado para la mayoría de Mac"
+      },
+      "mac-intel": {
+        "description": "Compilación de escritorio para Mac basadas en x86 y hardware MacBook Pro e iMac más antiguo.",
+        "meta": "Solo para Mac anteriores a Apple Silicon"
+      },
+      "windows": {
+        "description": "Instalador de Windows firmado con el último tiempo de ejecución de escritorio y compatibilidad con actualizadores.",
+        "meta": "instalador x64"
+      }
+    },
+    "cta": "Descargar",
+    "documentTitle": "Descargar — AURA",
+    "headline": "Descargue AURA para todas las principales plataformas de escritorio.",
+    "loading": "Cargando..."
+  },
+  "expertise": {
+    "documentTitle": "AURA- {{label}}",
+    "entries": {
+      "analytics": {
+        "headline": "Datos sin procesar en información lista para tomar decisiones.",
+        "heroBlurb": "Convierta los números en respuestas claras sobre las que pueda actuar.",
+        "label": "Analítica",
+        "overview": "Los agentes de análisis de AURA consultan, limpian e interpretan datos y luego explican lo que significan en un lenguaje sencillo. Muestran la tendencia, la causa y el siguiente paso recomendado.",
+        "useCases": [
+          {
+            "description": "Responda una pregunta comercial directamente a partir de los datos.",
+            "title": "Análisis ad hoc"
+          },
+          {
+            "description": "Generar informes recurrentes con contexto narrativo.",
+            "title": "Informes"
+          },
+          {
+            "description": "Señale cambios inesperados y explique los posibles impulsores.",
+            "title": "Detección de anomalías"
+          }
+        ]
+      },
+      "coding": {
+        "headline": "Envía funciones mientras duermes.",
+        "heroBlurb": "Desde el contexto del repositorio hasta los RP probados y revisables.",
+        "label": "Codificación",
+        "overview": "Los agentes de codificación de AURA trabajan desde el contexto real de su repositorio para implementar funciones, corregir errores y abrir solicitudes de extracción probadas. Funcionan de forma autónoma y devuelven el trabajo que está listo para revisar.",
+        "useCases": [
+          {
+            "description": "Implemente funciones de alcance de principio a fin con pruebas.",
+            "title": "Trabajo destacado"
+          },
+          {
+            "description": "Reproduzca, corrija y verifique con un PR claro.",
+            "title": "Corrección de errores"
+          },
+          {
+            "description": "Aplique cambios consistentes en todo el código base de forma segura.",
+            "title": "Refactorizadores"
+          }
+        ]
+      },
+      "creative": {
+        "headline": "Conceptos más claros, más rápido.",
+        "heroBlurb": "Piense en campañas, conceptos y copie ese terreno.",
+        "label": "Creativo",
+        "overview": "Los agentes creativos de AURA generan y prueban ideas, luego desarrollan aquellas que vale la pena conservar. Pasan de una página en blanco a una lista de instrucciones a las que puedes reaccionar en minutos.",
+        "useCases": [
+          {
+            "description": "Generar direcciones distintas con fundamentos para cada una.",
+            "title": "Conceptos de campaña"
+          },
+          {
+            "description": "Explore opciones según sus instrucciones y limitaciones.",
+            "title": "Nombres y eslóganes"
+          },
+          {
+            "description": "Reúna referencias y cópielas en un concepto que se pueda compartir.",
+            "title": "Moodboards"
+          }
+        ]
+      },
+      "design": {
+        "headline": "De una idea aproximada a una interfaz pulida.",
+        "heroBlurb": "Convierta bocetos e indicaciones en diseños utilizables.",
+        "label": "Diseño",
+        "overview": "Los agentes de diseño de AURA traducen la intención en interfaces estructuradas y consistentes, respetando su sistema y sus limitaciones. Repiten diseños y componentes para que usted comience desde algo real en lugar de un lienzo en blanco.",
+        "useCases": [
+          {
+            "description": "Generar opciones de diseño frente a un sistema de resumen y diseño.",
+            "title": "exploración de la interfaz de usuario"
+          },
+          {
+            "description": "Produzca estados consistentes y variaciones a la velocidad.",
+            "title": "Variantes de componentes"
+          },
+          {
+            "description": "Señale los problemas de accesibilidad y coherencia con antelación.",
+            "title": "Revisión de diseño"
+          }
+        ]
+      },
+      "ecommerce-retail": {
+        "headline": "Inteligencia privada para el comercio minorista",
+        "heroBlurb": "IA privada que escala tu tienda sin renunciar a tus datos.",
+        "label": "Comercio electrónico y venta al por menor",
+        "overview": "El comercio minorista se basa en catálogos, contenidos y datos de clientes. Los agentes de AURA automatizan la comercialización, el soporte y el análisis mientras mantienen la información del cliente dentro de su perímetro.",
+        "useCases": [
+          {
+            "description": "Genere y mantenga copias del producto a escala.",
+            "title": "Catálogo y contenido"
+          },
+          {
+            "description": "Redacte respuestas de marca basadas en sus políticas.",
+            "title": "Atención al cliente"
+          },
+          {
+            "description": "Tendencias superficiales y anomalías en los datos de ventas.",
+            "title": "Análisis de la demanda"
+          }
+        ]
+      },
+      "education": {
+        "headline": "Inteligencia privada para la educación",
+        "heroBlurb": "IA privada que apoya a los educadores y protege los datos de los estudiantes.",
+        "label": "Educación",
+        "overview": "La educación depende de la confianza en torno a los datos de los estudiantes. Los agentes de AURA apoyan la enseñanza, la investigación y la administración mientras mantienen registros dentro de su perímetro y un humano al tanto.",
+        "useCases": [
+          {
+            "description": "Redacte y adapte lecciones y evaluaciones a su plan de estudios.",
+            "title": "Materiales del curso"
+          },
+          {
+            "description": "Sintetizar las fuentes en resúmenes citables.",
+            "title": "Apoyo a la investigación"
+          },
+          {
+            "description": "Automatice los flujos de trabajo de rutina con un seguimiento de auditoría.",
+            "title": "Administración"
+          }
+        ]
+      },
+      "finance": {
+        "headline": "Modele los números que importan.",
+        "heroBlurb": "Cree presupuestos y previsiones, y saque a la luz la señal.",
+        "label": "Finanzas",
+        "overview": "Los agentes financieros de AURA crean y mantienen modelos, concilian datos y explican los factores detrás de cada cifra. Mantienen los pronósticos actualizados para que la planificación se base en la realidad más reciente.",
+        "useCases": [
+          {
+            "description": "Cree y actualice modelos basados ​​en controladores según demanda.",
+            "title": "Previsión"
+          },
+          {
+            "description": "Concilie los datos reales con el plan y explique la variación.",
+            "title": "Seguimiento del presupuesto"
+          },
+          {
+            "description": "Compare los resultados entre supuestos en minutos.",
+            "title": "Planificación de escenarios"
+          }
+        ]
+      },
+      "finance-banking": {
+        "headline": "Inteligencia privada para las finanzas",
+        "heroBlurb": "IA privada en la que confían los equipos de riesgo, que los reguladores aceptan y en la que confían los clientes. No se comprometen los datos, nunca.",
+        "label": "Finanzas y Banca",
+        "overview": "Las finanzas se basan en la confianza y la confianza se basa en el control de los datos. AURA lleva agentes autónomos a bancos, fondos y fintechs sin enviar información confidencial a modelos de terceros: todo lo que sale de su perímetro permanece no identificable y el arnés se puede auditar de extremo a extremo. Los analistas, asesores y equipos de operaciones delegan el trabajo lento y mantienen el juicio, con cada acción verificable y registrada.",
+        "useCases": [
+          {
+            "description": "Sintetice presentaciones, datos de mercado y noticias en resúmenes con citas listos para tomar decisiones.",
+            "title": "Investigación y diligencia debida"
+          },
+          {
+            "description": "Verifique transacciones y documentos según la política, marcando excepciones para su revisión.",
+            "title": "Riesgo y cumplimiento"
+          },
+          {
+            "description": "Cree y mantenga pronósticos y escenarios que se actualicen a medida que cambian los números.",
+            "title": "Modelado financiero"
+          },
+          {
+            "description": "Genere resúmenes de cartera y desempeño en su voz, a tiempo.",
+            "title": "Informes de clientes"
+          },
+          {
+            "description": "Concilie datos y automatice los flujos de trabajo administrativos con un seguimiento de auditoría completo.",
+            "title": "Operaciones"
+          },
+          {
+            "description": "Redacte comunicaciones con el cliente sobre la marca basadas en sus propios datos.",
+            "title": "Apoyo consultivo"
+          }
+        ]
+      },
+      "healthcare": {
+        "headline": "Inteligencia privada para la salud",
+        "heroBlurb": "IA privada en la que los médicos confían, los reguladores aceptan y los pacientes merecen. No se comprometen los datos, nunca.",
+        "label": "Cuidado de la salud",
+        "overview": "La atención sanitaria exige privacidad por defecto. Los agentes de AURA apoyan a los equipos clínicos y operativos mientras mantienen los datos protegidos dentro de su perímetro, con un arnés verificable y auditable en todo momento.",
+        "useCases": [
+          {
+            "description": "Sintetizar la literatura y los datos de los ensayos en resúmenes citables.",
+            "title": "Investigación clínica"
+          },
+          {
+            "description": "Redactar y estructurar notas e informes para revisión humana.",
+            "title": "Documentación"
+          },
+          {
+            "description": "Automatice la programación y los flujos de trabajo administrativos con un seguimiento de auditoría.",
+            "title": "Operaciones"
+          }
+        ]
+      },
+      "legal": {
+        "headline": "Contratos, revisados ​​y explicados.",
+        "heroBlurb": "Revisar documentos y explicar las obligaciones con claridad.",
+        "label": "Legal",
+        "overview": "Los agentes legales de AURA leen contratos y pólizas, señalan riesgos y explican obligaciones en un lenguaje sencillo. Aceleran la revisión y al mismo tiempo mantienen a un ser humano informado sobre cada decisión.",
+        "useCases": [
+          {
+            "description": "Señale cláusulas riesgosas y desviaciones de sus estándares.",
+            "title": "Revisión de contrato"
+          },
+          {
+            "description": "Extraiga fechas, deberes y renovaciones en una lista clara.",
+            "title": "Seguimiento de obligaciones"
+          },
+          {
+            "description": "Responda preguntas basadas en sus propios documentos.",
+            "title": "Preguntas y respuestas sobre políticas"
+          }
+        ]
+      },
+      "legal-services": {
+        "headline": "Inteligencia Privada para Asuntos Jurídicos",
+        "heroBlurb": "IA privada en la que las empresas confían y en la que confían los clientes. No hay compromisos en materia de confidencialidad, nunca.",
+        "label": "Legal",
+        "overview": "El trabajo jurídico se basa en la confidencialidad y la precisión. Los agentes de AURA aceleran la revisión, la investigación y la redacción mientras mantienen el material privilegiado dentro de su perímetro y a un ser humano informado.",
+        "useCases": [
+          {
+            "description": "Señale riesgos y desviaciones de sus estándares rápidamente.",
+            "title": "Revisión de contrato"
+          },
+          {
+            "description": "Extraiga y sintetice la autoridad relevante con citas.",
+            "title": "investigación jurídica"
+          },
+          {
+            "description": "Produzca primeros borradores basados ​​en sus plantillas y archivos de materia.",
+            "title": "Redacción"
+          }
+        ]
+      },
+      "marketing": {
+        "headline": "Campañas que se mantienen en la marca.",
+        "heroBlurb": "Planifique, redacte y adapte contenido en todos los canales.",
+        "label": "Marketing",
+        "overview": "Los agentes de marketing de AURA planifican campañas, producen contenido de marca y lo adaptan por canal mientras mantienen su voz. Convierten un resumen en una lista de activos y mantienen el calendario en movimiento para que sus canales nunca se queden en silencio.",
+        "useCases": [
+          {
+            "description": "Convierta un resumen en canales, temas y un calendario de contenido.",
+            "title": "Planificación de campaña"
+          },
+          {
+            "description": "Redacte y reutilice recursos en todos los canales con su voz.",
+            "title": "Producción de contenido"
+          },
+          {
+            "description": "Convierta los datos de la campaña en información clara y procesable.",
+            "title": "Análisis de desempeño"
+          }
+        ]
+      },
+      "marketing-media": {
+        "headline": "Inteligencia privada para marketing",
+        "heroBlurb": "IA privada que mantiene tu marca en voz y tus datos propios.",
+        "label": "Marketing y Medios",
+        "overview": "Los equipos de marketing se mueven rápidamente en muchos canales. Los agentes de AURA planifican, redactan y adaptan el contenido de la marca mientras mantienen su audiencia y los datos de rendimiento bajo su control.",
+        "useCases": [
+          {
+            "description": "Genere y pruebe las instrucciones con respecto a su informe.",
+            "title": "Conceptos de campaña"
+          },
+          {
+            "description": "Redacte y reutilice todos los canales con su voz.",
+            "title": "Producción de contenido"
+          },
+          {
+            "description": "Convierta los datos de la campaña en información clara y procesable.",
+            "title": "Análisis de desempeño"
+          }
+        ]
+      },
+      "real-estate": {
+        "headline": "Inteligencia Privada para Bienes Raíces",
+        "heroBlurb": "IA privada que hace avanzar los acuerdos y mantiene sus datos como suyos.",
+        "label": "Bienes raíces",
+        "overview": "Los bienes raíces se basan en documentos, listados y datos de mercado. Los agentes de AURA aceleran la diligencia, la redacción y el análisis mientras mantienen la información del cliente y del trato bajo su control.",
+        "useCases": [
+          {
+            "description": "Generar y mantener listados y textos de marketing.",
+            "title": "Contenido del listado"
+          },
+          {
+            "description": "Obtenga señales de documentos y datos de mercado en una sola vista.",
+            "title": "Diligencia del trato"
+          },
+          {
+            "description": "Produzca primeros borradores basados ​​en sus plantillas.",
+            "title": "Redacción de documentos"
+          }
+        ]
+      },
+      "research": {
+        "headline": "Investigación que sintetiza, no sólo busca.",
+        "heroBlurb": "Agentes que investigan las fuentes y sacan a la luz lo que realmente importa.",
+        "label": "Investigación",
+        "overview": "Los agentes de investigación de AURA leen documentos, la web y su propia base de conocimientos, y luego sintetizan los hallazgos en respuestas claras y citables. Continúan trabajando en segundo plano, por lo que llega una revisión profunda que solía llevar días mientras usted se concentra en la decisión.",
+        "useCases": [
+          {
+            "description": "Examinar un campo y resumir el estado del arte con fuentes.",
+            "title": "Reseñas de literatura"
+          },
+          {
+            "description": "Realice un seguimiento de los competidores y destile los movimientos en un informe de ejecución.",
+            "title": "Análisis competitivo"
+          },
+          {
+            "description": "Obtenga señales de archivos, noticias y salas de datos en una sola vista.",
+            "title": "debida diligencia"
+          }
+        ]
+      },
+      "sales": {
+        "headline": "Más canalización, menos trabajo pesado.",
+        "heroBlurb": "Investiga cuentas y elabora borradores de divulgación que impulsen acuerdos.",
+        "label": "Ventas",
+        "overview": "Los agentes de ventas de AURA investigan cuentas, personalizan el alcance y mantienen actualizado su canal para que los representantes dediquen tiempo a vender en lugar de escribir. Redactan mensajes de voz basados ​​en su contexto y muestran la siguiente mejor acción en cada acuerdo.",
+        "useCases": [
+          {
+            "description": "Cree resúmenes sobre prospectos a partir de fuentes públicas e internas.",
+            "title": "Investigación de cuentas"
+          },
+          {
+            "description": "Personalice correos electrónicos y secuencias con su voz y oferta.",
+            "title": "Borradores de divulgación"
+          },
+          {
+            "description": "Mantenga los registros de CRM actualizados y marque las ofertas que necesitan atención.",
+            "title": "Higiene de tuberías"
+          }
+        ]
+      },
+      "social": {
+        "headline": "Social en voz, a tiempo.",
+        "heroBlurb": "Borradores de publicaciones y calendarios que se mantengan en la marca.",
+        "label": "Social",
+        "overview": "Los agentes sociales de AURA planifican calendarios, redactan publicaciones por canal y se adaptan al formato de cada plataforma manteniendo la voz. Mantienen una cadencia constante para que tus canales nunca se queden en silencio.",
+        "useCases": [
+          {
+            "description": "Planifique semanas de publicaciones sobre temas y lanzamientos.",
+            "title": "Calendarios de contenido"
+          },
+          {
+            "description": "Adapta una idea al formato y tono de cada plataforma.",
+            "title": "Borradores por canal"
+          },
+          {
+            "description": "Redacte respuestas de voz para revisarlas antes de enviarlas.",
+            "title": "Respuestas de la comunidad"
+          }
+        ]
+      },
+      "technology-saas": {
+        "headline": "Inteligencia privada para la tecnología",
+        "heroBlurb": "IA privada que envía productos y mantiene su código base como propio.",
+        "label": "Tecnología/SaaS",
+        "overview": "Los equipos de tecnología crean rápidamente y protegen su propiedad intelectual. Los agentes de AURA aceleran la ingeniería, el soporte y el análisis mientras mantienen su código y los datos de sus clientes dentro de su perímetro.",
+        "useCases": [
+          {
+            "description": "Implemente funciones y correcciones desde el contexto real del repositorio.",
+            "title": "Ingeniería"
+          },
+          {
+            "description": "Redacte respuestas precisas basadas en sus documentos.",
+            "title": "Atención al cliente"
+          },
+          {
+            "description": "Convierta los datos de uso en información útil para tomar decisiones.",
+            "title": "Análisis de productos"
+          }
+        ]
+      },
+      "writing": {
+        "headline": "Escribiendo con tu voz, a tu ritmo.",
+        "heroBlurb": "Redacte, edite y pula una prosa que suene a usted.",
+        "label": "Escribiendo",
+        "overview": "Los agentes de redacción de AURA aprenden su tono y sus limitaciones, luego redactan y revisan el contenido extenso de principio a fin. Desde el primer esquema hasta la edición final, mantienen la voz coherente y los hechos basados ​​en sus fuentes.",
+        "useCases": [
+          {
+            "description": "Convierte un esquema y notas en una pieza terminada.",
+            "title": "Borradores de formato largo"
+          },
+          {
+            "description": "Afina la estructura, la gramática y el tono sin perder la intención.",
+            "title": "Pases de edición"
+          },
+          {
+            "description": "Transforme una fuente en publicaciones, correos electrónicos y resúmenes.",
+            "title": "Reutilización"
+          }
+        ]
+      }
+    },
+    "overview": "Descripción general",
+    "overviewAriaLabel": "{{label}} descripción general",
+    "previewAriaLabel": "{{label}} avance",
+    "requestDemo": "Solicitar una demostración",
+    "useCases": "Casos de uso",
+    "useCasesAriaLabel": "{{label}} casos de uso"
+  },
+  "feedback": {
+    "card": {
+      "anonymousAuthor": "Anónimo",
+      "commentCount_many": "{{count}} comentarios",
+      "commentCount_one": "1 comentario",
+      "commentCount_other": "{{count}} comentarios",
+      "time": {
+        "daysAgo_many": "{{count}}hace d",
+        "daysAgo_one": "{{count}}hace d",
+        "daysAgo_other": "{{count}}hace d",
+        "hoursAgo_many": "{{count}}hace h",
+        "hoursAgo_one": "{{count}}hace h",
+        "hoursAgo_other": "{{count}}hace h",
+        "minutesAgo_many": "{{count}}hace m",
+        "minutesAgo_one": "{{count}}hace m",
+        "minutesAgo_other": "{{count}}hace m",
+        "monthsAgo_many": "{{count}}hace meses",
+        "monthsAgo_one": "{{count}}hace meses",
+        "monthsAgo_other": "{{count}}hace meses",
+        "secondsAgo_many": "{{count}}hace s",
+        "secondsAgo_one": "{{count}}hace s",
+        "secondsAgo_other": "{{count}}hace s",
+        "yearsAgo_many": "{{count}}hace ya",
+        "yearsAgo_one": "{{count}}hace ya",
+        "yearsAgo_other": "{{count}}hace ya"
+      },
+      "voteScoreAriaLabel": "puntuación de votación"
+    },
+    "documentTitle": "AURA - Comentarios",
+    "empty": {
+      "body": "Ninguna publicación de comentarios de AURA coincide con los filtros actuales.",
+      "heading": "Aún no hay comentarios."
+    },
+    "entriesAriaLabel": "Entradas de comentarios",
+    "filters": {
+      "ariaLabel": "Filtros de comentarios",
+      "sections": {
+        "status": "Estado",
+        "trending": "Tendencia",
+        "type": "Tipo"
+      },
+      "toggle": "Filtros"
+    },
+    "stats": {
+      "participants": "Participantes",
+      "resolved": "Elementos resueltos",
+      "submitted": "Artículos enviados"
+    },
+    "subtitle": "Nuestros usuarios envían comentarios y AURA se mejora de forma autónoma.",
+    "summaryAriaLabel": "Resumen de comentarios",
+    "title": "Comentario"
+  },
+  "footer": {
+    "ariaLabel": "Pie de página del sitio",
+    "copyright": "Derechos de autor © {{year}}",
+    "navigationAriaLabel": "Navegación de pie de página"
+  },
+  "models": {
+    "allModelsAriaLabel": "Todos los modelos",
+    "documentTitle": "AURA - Modelos",
+    "empty": "Ningún modelo coincide con los filtros actuales. Intente borrar la búsqueda o cambiar de pestaña.",
+    "featured": "Presentado",
+    "featuredAriaLabel": "Modelos destacados",
+    "filterByModalityAriaLabel": "Filtrar por modalidad",
+    "filterByStatusAriaLabel": "Filtrar por estado",
+    "loadingCatalog": "Cargando catálogo…",
+    "searchAriaLabel": "Buscar modelos",
+    "searchPlaceholder": "Buscar modelos...",
+    "stats": {
+      "image": "Imagen",
+      "text": "Texto",
+      "threeD": "3D",
+      "total": "Modelos totales",
+      "video": "Video"
+    },
+    "status": {
+      "live": "Vivir",
+      "liveAriaLabel": "Estado: En vivo",
+      "soon": "Pronto",
+      "soonAriaLabel": "Estado: Próximamente"
+    },
+    "subtitle": "Los modelos de frontera que impulsan AURA, en texto, imagen, vídeo y 3D.",
+    "summaryAriaLabel": "Resumen de modelos"
+  },
+  "os": {
+    "docDocumentTitle": "AURA SO - {{title}}",
+    "documentTitle": "AURA - SO",
+    "empty": {
+      "body": "El documento técnico de AURA OS está conectado, pero aún no se han publicado secciones."
+    },
+    "navigationAriaLabel": "Navegación del documento técnico",
+    "noContent": "Esta sección aún no tiene contenido.",
+    "noSections": "Aún no hay secciones.",
+    "notFound": {
+      "backButton": "Volver a la descripción general",
+      "body": "Esta parte del documento técnico no existe o aún no está publicada.",
+      "heading": "Sección no encontrada"
+    },
+    "sidebarTitle": "SO AURA"
+  },
+  "pricing": {
+    "billingCycleAriaLabel": "ciclo de facturación",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "documentTitle": "AURA - Precios",
+    "downloadCta": "Descargar",
+    "heroDescription": "Comience con modelos locales de código abierto de forma gratuita y luego pague solo por los modelos fronterizos que utilice.",
+    "heroHeadline": "Empezando gratis.",
+    "monthly": "Mensual",
+    "plans": {
+      "free": {
+        "description": "Comience gratis:",
+        "features": {
+          "0": "No se requiere tarjeta de crédito",
+          "1": "Modelos locales de código abierto",
+          "2": "Pago por uso para modelos de frontera"
+        },
+        "name": "Gratis"
+      },
+      "pro": {
+        "description": "Todo Gratis, más:",
+        "features": {
+          "0": "$20 en créditos mensuales",
+          "1": "Agentes remotos"
+        },
+        "name": "Pro",
+        "priceNote": "$10/mes para suscriptores de Zero Pro OG"
+      },
+      "sage": {
+        "description": "Todo en Pro, más:",
+        "features": {
+          "0": "Uso 20 veces mayor en modelos fronterizos",
+          "1": "Acceso prioritario a nuevas funciones."
+        },
+        "name": "Sabio"
+      }
+    },
+    "plansLabel": "Planes individuales",
+    "yearly": "Anual"
+  },
+  "privacy": {
+    "description": "Nuestra Política de Privacidad se está ultimando y se publicará aquí pronto.",
+    "documentTitle": "AURA - Política de Privacidad",
+    "headline": "política de privacidad",
+    "label": "LEGAL"
+  },
+  "productScreen": {
+    "close": "Cerca",
+    "closeFullscreenAriaLabel": "Cerrar imagen en pantalla completa",
+    "openFullscreenAriaLabel": "Abrir imagen en pantalla completa: {{label}}",
+    "placeholderLabel": "Marcador de posición de imagen"
+  },
+  "sections": {
+    "agentChat": {
+      "ariaLabel": "Chatea con tus agentes desde cualquier lugar",
+      "description": "Tus agentes de AURA están siempre activos. Continúe una conversación en su teléfono, computadora portátil o computadora de escritorio. Recuerdan todo y traen consigo las mismas herramientas.",
+      "headlineLine1": "Chatea con tus agentes.",
+      "headlineLine2": "Desde cualquier lugar.",
+      "phoneAriaLabel": "Chat móvil con el {{agentName}} agente"
+    },
+    "builtForTrust": {
+      "ariaLabel": "Cómo AURA se gana su confianza",
+      "cards": {
+        "alwaysOn": {
+          "description": "Su agente sigue trabajando las 24 horas del día, incluso cuando usted está fuera y sus dispositivos están apagados.",
+          "title": "Siempre encendido."
+        },
+        "isolated": {
+          "description": "Cada agente se ejecuta en su propia máquina virtual protegida, completamente aislada de su sistema y de otros agentes.",
+          "title": "Aislado por defecto."
+        },
+        "verifiable": {
+          "description": "Cada entorno se certifica antes de ejecutarse, por lo que siempre puedes verificar en qué confías.",
+          "title": "Confiable y verificable."
+        }
+      },
+      "headline": "Construido para la confianza.",
+      "subhead": "Los agentes AURA se ejecutan en máquinas virtuales aisladas dentro de entornos de ejecución confiables."
+    },
+    "expertise": {
+      "headline": "Experiencia sin ego.",
+      "subheadLine1": "Los agentes de AURA son expertos en todas las disciplinas.",
+      "subheadLine2": "Desde la codificación hasta la ciencia y la creatividad."
+    },
+    "madeForYou": {
+      "headline": "Agentes hechos para ti.",
+      "subhead": "Diseña y lanza tu agente en 30 segundos."
+    },
+    "personalAgent": {
+      "ariaLabel": "Qué puede hacer su agente",
+      "cards": {
+        "alwaysOn": {
+          "description": "Pídale o indique a su agente que haga casi cualquier cosa. Se pondrá a trabajar e informará cuando sea necesario.",
+          "title": "Siempre encendido."
+        },
+        "connected": {
+          "description": "AURA se conecta de forma segura a tus servicios para saber todo sobre ti. Sus datos nunca salen de su computadora segura y nunca reciben capacitación.",
+          "title": "Conectado a todo."
+        },
+        "domains": {
+          "description": "Su agente es un genio en todos los ámbitos. Puede ayudar con las tareas simples de la vida, con proyectos creativos y con diseño y codificación avanzados.",
+          "title": "Inteligente en todos los ámbitos."
+        }
+      },
+      "headline": "Cada modelo. Cada modo.",
+      "subhead": "AURA es su agente personal que lo apoya en todo, desde tareas ligeras hasta trabajos profundos."
+    },
+    "privacy": {
+      "features": {
+        "openSource": {
+          "description": "AURA es 100% de código abierto bajo licencia MIT. Hágalo en cualquier momento, sin depender de ningún proveedor y sin condiciones.",
+          "tag": "Licencia MIT",
+          "title": "Código abierto"
+        },
+        "private": {
+          "description": "AURA nunca visualiza ni entrena sus datos personales o corporativos. Todo lo que se envía a modelos fronterizos permanece inidentificable.",
+          "tag": "Cifrado PQ",
+          "title": "Privado"
+        },
+        "verifiable": {
+          "description": "El arnés y el núcleo de AURA se construyen desde cero con seguridad, verificación y políticas como ciudadanos de primera clase.",
+          "tag": "Ejecución confiable",
+          "title": "Verifiable"
+        }
+      },
+      "headline": "Diseñado para tu humanidad."
+    }
+  },
+  "support": {
+    "body": "¿Necesitas ayuda con AURA? Estamos aquí para ti. Envíe un correo electrónico a nuestro equipo de soporte y nos comunicaremos con usted lo antes posible.",
+    "headline": "Apoyo",
+    "note": "Si tiene preguntas sobre cuenta o facturación, incluya la dirección de correo electrónico asociada con su cuenta AURA."
+  },
+  "taglines": {
+    "decentralized": "Descentralizado.",
+    "openSource": "Código abierto.",
+    "private": "Privado.",
+    "secure": "Seguro."
+  },
+  "terms": {
+    "description": "Nuestros Términos de servicio se están ultimando y se publicarán aquí pronto.",
+    "documentTitle": "AURA - Términos de servicio",
+    "headline": "Términos de servicio",
+    "label": "LEGAL"
+  }
+}

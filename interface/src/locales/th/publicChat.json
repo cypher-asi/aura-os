@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} สร้างขึ้นจาก: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "ไม่สามารถส่งข้อความได้"
+    },
+    "heroPhrases": {
+      "privateAgent": "ตัวแทนส่วนตัวของคุณ"
+    },
+    "inputLabel": "ส่งข้อความถึงออร่า",
+    "inputPlaceholder": "ถามออร่าได้ทุกอย่าง...",
+    "send": "ส่ง",
+    "sending": "กำลังส่ง",
+    "transcriptAriaLabel": "บันทึกการแชท"
+  },
+  "compose": {
+    "startConversationAriaLabel": "เริ่มการสนทนาใหม่"
+  },
+  "createAgent": {
+    "label": "สร้างตัวแทนของคุณ"
+  },
+  "login": {
+    "close": "ปิด",
+    "closeLoginAriaLabel": "ปิดการเข้าสู่ระบบ",
+    "heading": "เข้าสู่ระบบ AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "คุณต้องการสร้างอะไร?",
+    "heroBlurb": "ส่งออร่าแจ้งเตือนและเริ่มสร้าง"
+  },
+  "personas": {
+    "railAriaLabel": "บุคลิกตัวแทน"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "ลบแชท\"{{title}}\"",
+    "noConversations": "ยังไม่มีการสนทนา",
+    "noMatchingChats": "ไม่มีการแชทที่ตรงกัน"
+  },
+  "sharedSession": {
+    "ariaLabel": "การสนทนาที่ใช้ร่วมกัน",
+    "empty": {
+      "body": "ไม่มีข้อความที่จะแสดงในการสนทนาที่แชร์นี้",
+      "heading": "การสนทนานี้ว่างเปล่า"
+    },
+    "error": {
+      "body": "เราไม่สามารถโหลดการสนทนาที่แชร์นี้ โปรดลองอีกครั้งในภายหลัง",
+      "heading": "มีบางอย่างผิดพลาด"
+    },
+    "loading": "กำลังโหลดการสนทนาที่แชร์...",
+    "unavailable": {
+      "body": "การสนทนาอาจถูกยกเลิกการแชร์หรือลิงก์ไม่ถูกต้อง",
+      "heading": "ลิงก์แชร์นี้ไม่พร้อมใช้งาน"
+    }
+  }
+}

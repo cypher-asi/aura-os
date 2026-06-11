@@ -1,12 +1,16 @@
 {
-  "os": "OS",
-  "chat": "चैट",
   "agents": "एजेंट",
-  "code": "कोड",
-  "pricing": "मूल्य",
   "blog": "ब्लॉग",
+  "capabilities": "क्षमताओं",
   "changelog": "बदलाव सूची",
+  "chat": "चैट",
+  "code": "कोड",
+  "downloads": "डाउनलोड",
+  "expertise": "विशेषज्ञता",
   "feedback": "प्रतिक्रिया",
+  "industries": "इंडस्ट्रीज",
   "models": "मॉडल",
+  "os": "OS",
+  "pricing": "मूल्य",
   "resources": "संसाधन"
 }

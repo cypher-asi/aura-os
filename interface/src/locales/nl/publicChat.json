@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} gegenereerd uit: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Kan bericht niet verzenden"
+    },
+    "heroPhrases": {
+      "privateAgent": "Uw privéagent."
+    },
+    "inputLabel": "Bericht Aura",
+    "inputPlaceholder": "Vraag Aura alles...",
+    "send": "Versturen",
+    "sending": "Verzenden",
+    "transcriptAriaLabel": "Chattranscriptie"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Begin een nieuw gesprek"
+  },
+  "createAgent": {
+    "label": "Creëer uw agent"
+  },
+  "login": {
+    "close": "Dichtbij",
+    "closeLoginAriaLabel": "Inloggen sluiten",
+    "heading": "Log in op AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Wat wil je creëren?",
+    "heroBlurb": "Stuur Aura een melding en begin met bouwen."
+  },
+  "personas": {
+    "railAriaLabel": "Persona's van agenten"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Chat verwijderen \"{{title}}\"",
+    "noConversations": "Nog geen gesprekken",
+    "noMatchingChats": "Geen overeenkomende chats"
+  },
+  "sharedSession": {
+    "ariaLabel": "Gedeeld gesprek",
+    "empty": {
+      "body": "Er zijn geen berichten om te tonen in dit gedeelde gesprek.",
+      "heading": "Dit gesprek is leeg"
+    },
+    "error": {
+      "body": "We kunnen dit gedeelde gesprek niet laden. Probeer het later opnieuw.",
+      "heading": "Er is iets misgegaan"
+    },
+    "loading": "Gedeeld gesprek laden…",
+    "unavailable": {
+      "body": "Het gesprek is mogelijk niet meer gedeeld of de link is onjuist.",
+      "heading": "Deze deellink is niet beschikbaar"
+    }
+  }
+}

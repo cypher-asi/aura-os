@@ -1,0 +1,776 @@
+{
+  "agents": {
+    "buildDeviceAriaLabel": "Xây dựng đại lý của bạn",
+    "documentTitle": "AURA - Đại lý",
+    "heroDescriptionLine1": "Đại lý AURA là chuyên gia trong mọi lĩnh vực",
+    "heroDescriptionLine2": "nó hoạt động trong khi bạn ngủ.",
+    "heroHeadline": "Ủy quyền mọi thứ."
+  },
+  "blog": {
+    "allPosts": "Tất cả bài viết",
+    "breadcrumbAriaLabel": "vụn bánh mì",
+    "documentTitle": "AURA - Blog",
+    "empty": {
+      "body": "Blog đã được kết nối nhưng chưa có bài viết nào được đăng.",
+      "heading": "Chưa có bài viết nào"
+    },
+    "latest": "Mới nhất",
+    "loading": "Đang tải…",
+    "loadingPost": "Đang tải bài đăng…",
+    "loadingPosts": "Đang tải bài đăng…",
+    "moreFromBlog": "Thêm từ blog",
+    "morePosts": "Thêm bài viết",
+    "navigationAriaLabel": "Điều hướng blog",
+    "noContent": "Bài đăng này chưa có nội dung.",
+    "noOtherPosts": "Chưa có bài viết nào khác",
+    "notFound": {
+      "backLink": "← Quay lại blog",
+      "body": "Bài viết bạn đang tìm kiếm không tồn tại hoặc chưa được đăng.",
+      "heading": "Không tìm thấy bài đăng"
+    },
+    "postDocumentTitle": "AURA - {{title}}",
+    "readTime_other": "{{count}} đọc tối thiểu",
+    "recentPostsAriaLabel": "Bài viết gần đây",
+    "table": {
+      "author": "Tác giả",
+      "date": "Ngày",
+      "title": "Tiêu đề",
+      "type": "Kiểu"
+    },
+    "title": "Blog",
+    "tocAriaLabel": "Mục lục",
+    "tocTitle": "Mục lục"
+  },
+  "changelog": {
+    "chart": {
+      "ariaLabel": "Phát hành mỗi ngày theo thời gian",
+      "barTitle_other": "{{date}}: {{count}} phát hành",
+      "caption": "Số phát hành mỗi ngày",
+      "captionWithCount_other": "{{count}} phát hành · {{date}}"
+    },
+    "commitsLiveTitle_other": "Tổng số trực tiếp trên {{count}} kho AURA",
+    "currentVersion": "Phiên bản hiện tại",
+    "dailyUpdate": "Cập nhật hàng ngày",
+    "documentTitle": "AURA - Nhật ký thay đổi",
+    "download": "Tải xuống",
+    "downloadVersionAriaLabel": "Tải xuống AURA {{version}} cho hệ điều hành của bạn",
+    "downloadVersionTitle": "Nhấp để tải xuống bản dựng cho hệ điều hành của bạn",
+    "empty": {
+      "body": "Nguồn cấp dữ liệu phát hành đã được kết nối nhưng chưa tìm thấy mục nhật ký thay đổi nào được xuất bản.",
+      "heading": "Chưa có mục nhật ký thay đổi nào."
+    },
+    "entriesAriaLabel": "Mục nhật ký thay đổi của Aura",
+    "entry": {
+      "commitCount_other": "{{count}} cam kết",
+      "releaseCount_other": "{{count}} phát hành"
+    },
+    "github": "GitHub",
+    "openScreenshotAriaLabel": "Mở ảnh chụp màn hình cho {{title}}",
+    "releasedAgo": "Phát hành {{relativeTime}}",
+    "releasedRecently": "Được phát hành gần đây",
+    "sources": "Nguồn",
+    "stats": {
+      "allTimeCommits": "Cam kết mọi thời đại",
+      "allTimeReleases": "Phát hành mọi thời đại",
+      "commitsThisMonth": "Cam kết trong tháng này",
+      "releasesThisMonth": "Phát hành trong tháng này"
+    },
+    "summaryAriaLabel": "Tóm tắt nhật ký thay đổi",
+    "title": "Nhật ký thay đổi"
+  },
+  "changelogPreview": {
+    "ariaLabel": "Các mục nhật ký thay đổi gần đây",
+    "ctaLabel": "Xem có gì mới trong AURA",
+    "heading": "Nhật ký thay đổi",
+    "releaseUpdate": "Phát hành bản cập nhật"
+  },
+  "code": {
+    "deviceAriaLabel": "Máy tính để bàn mã hóa AURA",
+    "documentTitle": "AURA - Mã",
+    "heroDescription": "Khai thác mã hóa biên giới được thiết kế để bảo mật, tự động hóa và xác minh là nguồn mở 100%.",
+    "heroHeadline": "Viết mã trong khi bạn ngủ."
+  },
+  "cta": {
+    "ariaLabel": "Lời kêu gọi hành động của sản phẩm",
+    "download": "Tải xuống",
+    "signUp": "Đăng ký",
+    "tagline": "Hãy cảm nhận AGI."
+  },
+  "docs": {
+    "docDocumentTitle": "Tài liệu AURA - {{title}}",
+    "documentTitle": "AURA - Tài liệu",
+    "empty": {
+      "body": "Trang tài liệu được kết nối nhưng chưa có trang nào được xuất bản."
+    },
+    "loading": "Đang tải…",
+    "navigationAriaLabel": "Điều hướng tài liệu",
+    "noContent": "Trang này chưa có nội dung.",
+    "noPages": "Chưa có trang nào.",
+    "notFound": {
+      "backButton": "Quay lại tổng quan",
+      "body": "Trang tài liệu này không tồn tại hoặc chưa được xuất bản.",
+      "heading": "Không tìm thấy trang"
+    },
+    "sidebarTitle": "Tài liệu",
+    "tocAriaLabel": "Trên trang này",
+    "tocTitle": "Trên trang này"
+  },
+  "download": {
+    "cards": {
+      "linux": {
+        "description": "AppImage di động dành cho máy tính để bàn Linux, thích hợp để tải xuống và khởi chạy trực tiếp.",
+        "meta": "Hình ảnh ứng dụng x86_64"
+      },
+      "mac-apple-silicon": {
+        "description": "Bản dựng gốc dành cho máy Mac M1, M2, M3 và M4.",
+        "meta": "Được đề xuất cho hầu hết các máy Mac"
+      },
+      "mac-intel": {
+        "description": "Bản dựng máy tính để bàn dành cho máy Mac dựa trên x86 và phần cứng MacBook Pro và iMac cũ hơn.",
+        "meta": "Chỉ dành cho máy Mac Silicon trước Apple"
+      },
+      "windows": {
+        "description": "Trình cài đặt Windows đã được ký với thời gian chạy trên máy tính để bàn và hỗ trợ cập nhật mới nhất.",
+        "meta": "trình cài đặt x64"
+      }
+    },
+    "cta": "Tải xuống",
+    "documentTitle": "Tải xuống — AURA",
+    "headline": "Tải xuống AURA cho mọi nền tảng máy tính để bàn chính.",
+    "loading": "Đang tải..."
+  },
+  "expertise": {
+    "documentTitle": "AURA - {{label}}",
+    "entries": {
+      "analytics": {
+        "headline": "Dữ liệu thô thành cái nhìn sâu sắc sẵn sàng cho quyết định.",
+        "heroBlurb": "Biến các con số thành câu trả lời rõ ràng để bạn có thể hành động.",
+        "label": "Phân tích",
+        "overview": "Tác nhân phân tích AURA truy vấn, làm sạch và giải thích dữ liệu, sau đó giải thích ý nghĩa của nó bằng ngôn ngữ đơn giản. Họ đưa ra xu hướng, nguyên nhân và bước tiếp theo được đề xuất.",
+        "useCases": [
+          {
+            "description": "Trả lời câu hỏi kinh doanh trực tiếp từ dữ liệu.",
+            "title": "Phân tích đặc biệt"
+          },
+          {
+            "description": "Tạo báo cáo định kỳ với bối cảnh tường thuật.",
+            "title": "Báo cáo"
+          },
+          {
+            "description": "Gắn cờ những thay đổi bất ngờ và giải thích các nguyên nhân có thể xảy ra.",
+            "title": "Phát hiện bất thường"
+          }
+        ]
+      },
+      "coding": {
+        "headline": "Vận chuyển các tính năng trong khi bạn ngủ.",
+        "heroBlurb": "Từ bối cảnh repo đến các PR đã được kiểm tra và có thể xem xét.",
+        "label": "Mã hóa",
+        "overview": "Tác nhân mã hóa AURA hoạt động từ ngữ cảnh thực của kho lưu trữ của bạn để triển khai các tính năng, sửa lỗi và mở các yêu cầu kéo đã được thử nghiệm. Họ thực hiện một cách tự chủ và giao lại công việc đã sẵn sàng để xem xét.",
+        "useCases": [
+          {
+            "description": "Triển khai các tính năng có phạm vi từ đầu đến cuối bằng các thử nghiệm.",
+            "title": "công việc nổi bật"
+          },
+          {
+            "description": "Tái sản xuất, sửa chữa và xác minh bằng PR rõ ràng.",
+            "title": "Sửa lỗi"
+          },
+          {
+            "description": "Áp dụng các thay đổi nhất quán trên cơ sở mã một cách an toàn.",
+            "title": "Trình tái cấu trúc"
+          }
+        ]
+      },
+      "creative": {
+        "headline": "Khái niệm sắc nét hơn, nhanh hơn.",
+        "heroBlurb": "Động não các chiến dịch, ý tưởng và sao chép vùng đất đó.",
+        "label": "Sáng tạo",
+        "overview": "Các tác nhân sáng tạo của AURA tạo ra và thử nghiệm các ý tưởng, sau đó xây dựng những ý tưởng đáng lưu giữ. Họ chuyển từ trang trống sang một bảng hướng dẫn mà bạn có thể phản hồi trong vài phút.",
+        "useCases": [
+          {
+            "description": "Tạo ra các hướng đi riêng biệt với cơ sở lý luận cho từng hướng.",
+            "title": "Khái niệm chiến dịch"
+          },
+          {
+            "description": "Khám phá các lựa chọn dựa trên bản tóm tắt và ràng buộc của bạn.",
+            "title": "Đặt tên và khẩu hiệu"
+          },
+          {
+            "description": "Tập hợp các tài liệu tham khảo và sao chép thành một khái niệm có thể chia sẻ.",
+            "title": "Bảng tâm trạng"
+          }
+        ]
+      },
+      "design": {
+        "headline": "Từ ý tưởng thô đến giao diện bóng bẩy.",
+        "heroBlurb": "Biến các bản phác thảo và lời nhắc thành các thiết kế có thể sử dụng được.",
+        "label": "Thiết kế",
+        "overview": "Các tác nhân thiết kế AURA chuyển ý định thành các giao diện có cấu trúc, nhất quán, tôn trọng hệ thống và các ràng buộc của bạn. Chúng lặp lại các bố cục và thành phần để bạn bắt đầu từ thứ gì đó thực tế thay vì một khung vẽ trống.",
+        "useCases": [
+          {
+            "description": "Tạo các tùy chọn bố cục dựa trên hệ thống thiết kế và tóm tắt.",
+            "title": "Khám phá giao diện người dùng"
+          },
+          {
+            "description": "Tạo ra các trạng thái nhất quán và các biến thể ở tốc độ.",
+            "title": "Các biến thể thành phần"
+          },
+          {
+            "description": "Gắn cờ sớm các vấn đề về khả năng truy cập và tính nhất quán.",
+            "title": "Đánh giá thiết kế"
+          }
+        ]
+      },
+      "ecommerce-retail": {
+        "headline": "Trí tuệ riêng cho ngành bán lẻ",
+        "heroBlurb": "AI riêng giúp mở rộng mặt tiền cửa hàng của bạn mà không làm mất dữ liệu của bạn.",
+        "label": "Thương mại điện tử & Bán lẻ",
+        "overview": "Hoạt động bán lẻ dựa trên danh mục, nội dung và dữ liệu khách hàng. Các đại lý AURA tự động hóa việc bán hàng, hỗ trợ và phân tích trong khi vẫn lưu giữ thông tin khách hàng trong phạm vi của bạn.",
+        "useCases": [
+          {
+            "description": "Tạo và duy trì bản sao sản phẩm trên quy mô lớn.",
+            "title": "Danh mục & nội dung"
+          },
+          {
+            "description": "Dự thảo các phản hồi về thương hiệu dựa trên chính sách của bạn.",
+            "title": "Hỗ trợ khách hàng"
+          },
+          {
+            "description": "Xu hướng bề mặt và sự bất thường trên dữ liệu bán hàng.",
+            "title": "Phân tích nhu cầu"
+          }
+        ]
+      },
+      "education": {
+        "headline": "Trí tuệ tư nhân cho giáo dục",
+        "heroBlurb": "AI riêng tư hỗ trợ các nhà giáo dục và bảo vệ dữ liệu của học sinh.",
+        "label": "Giáo dục",
+        "overview": "Giáo dục phụ thuộc vào sự tin cậy xung quanh dữ liệu của sinh viên. Các đại lý AURA hỗ trợ giảng dạy, nghiên cứu và quản lý trong khi lưu giữ hồ sơ trong phạm vi chu vi của bạn và con người trong vòng lặp.",
+        "useCases": [
+          {
+            "description": "Soạn thảo và điều chỉnh các bài học cũng như đánh giá cho chương trình giảng dạy của bạn.",
+            "title": "Tài liệu khóa học"
+          },
+          {
+            "description": "Tổng hợp các nguồn thành các bản tóm tắt có thể trích dẫn.",
+            "title": "Hỗ trợ nghiên cứu"
+          },
+          {
+            "description": "Tự động hóa quy trình công việc thường lệ với quy trình kiểm tra.",
+            "title": "Sự quản lý"
+          }
+        ]
+      },
+      "finance": {
+        "headline": "Lập mô hình các con số quan trọng.",
+        "heroBlurb": "Xây dựng ngân sách và dự báo, đồng thời đưa ra tín hiệu.",
+        "label": "Tài chính",
+        "overview": "Các đại lý tài chính AURA xây dựng và duy trì các mô hình, đối chiếu dữ liệu và giải thích các động lực đằng sau mỗi con số. Họ luôn cập nhật các dự báo để việc lập kế hoạch được căn cứ vào thực tế mới nhất.",
+        "useCases": [
+          {
+            "description": "Xây dựng và cập nhật các mô hình dựa trên trình điều khiển theo yêu cầu.",
+            "title": "Dự báo"
+          },
+          {
+            "description": "Đối chiếu thực tế với kế hoạch và giải thích sự khác biệt.",
+            "title": "Theo dõi ngân sách"
+          },
+          {
+            "description": "So sánh kết quả giữa các giả định trong vài phút.",
+            "title": "Lập kế hoạch kịch bản"
+          }
+        ]
+      },
+      "finance-banking": {
+        "headline": "Tình báo tư nhân cho tài chính",
+        "heroBlurb": "AI riêng tư được các nhóm xử lý rủi ro tin tưởng, cơ quan quản lý chấp nhận và khách hàng tin cậy. Không có sự thỏa hiệp về dữ liệu - bao giờ hết.",
+        "label": "Tài chính & Ngân hàng",
+        "overview": "Tài chính chạy dựa trên niềm tin và niềm tin chạy trên việc kiểm soát dữ liệu. AURA mang các tác nhân tự trị đến các ngân hàng, quỹ và công ty fintech mà không gửi thông tin nhạy cảm đến các mô hình của bên thứ ba — bất kỳ thứ gì khiến phạm vi của bạn không thể xác định được và hoạt động khai thác có thể được kiểm tra từ đầu đến cuối. Các nhà phân tích, cố vấn và nhóm vận hành ủy thác công việc chậm chạp và đưa ra phán quyết, với mọi hành động đều có thể xác minh được và được ghi vào hồ sơ.",
+        "useCases": [
+          {
+            "description": "Tổng hợp hồ sơ, dữ liệu thị trường và tin tức thành bản tóm tắt sẵn sàng đưa ra quyết định kèm theo trích dẫn.",
+            "title": "Nghiên cứu và thẩm định"
+          },
+          {
+            "description": "Sàng lọc các giao dịch và tài liệu theo chính sách, gắn cờ các trường hợp ngoại lệ để xem xét.",
+            "title": "Rủi ro & tuân thủ"
+          },
+          {
+            "description": "Xây dựng và duy trì các dự báo và kịch bản cập nhật khi các con số di chuyển.",
+            "title": "Mô hình tài chính"
+          },
+          {
+            "description": "Tạo danh mục đầu tư và tóm tắt hiệu suất bằng giọng nói của bạn, đúng tiến độ.",
+            "title": "Báo cáo khách hàng"
+          },
+          {
+            "description": "Điều chỉnh dữ liệu và tự động hóa quy trình làm việc tại văn phòng với quy trình kiểm tra đầy đủ.",
+            "title": "Hoạt động"
+          },
+          {
+            "description": "Dự thảo thông tin liên lạc với khách hàng về thương hiệu dựa trên dữ liệu của riêng bạn.",
+            "title": "Hỗ trợ tư vấn"
+          }
+        ]
+      },
+      "healthcare": {
+        "headline": "Trí tuệ riêng cho chăm sóc sức khỏe",
+        "heroBlurb": "AI riêng tư mà bác sĩ lâm sàng tin tưởng, cơ quan quản lý chấp nhận và bệnh nhân xứng đáng được hưởng. Không có sự thỏa hiệp về dữ liệu - bao giờ hết.",
+        "label": "Chăm sóc sức khỏe",
+        "overview": "Chăm sóc sức khỏe đòi hỏi sự riêng tư theo mặc định. Các đại lý AURA hỗ trợ các nhóm lâm sàng và vận hành trong khi vẫn lưu giữ dữ liệu được bảo vệ trong phạm vi của bạn bằng một hệ thống khai thác có thể kiểm chứng, kiểm tra xuyên suốt.",
+        "useCases": [
+          {
+            "description": "Tổng hợp tài liệu và dữ liệu thử nghiệm thành các bản tóm tắt có thể trích dẫn được.",
+            "title": "Nghiên cứu lâm sàng"
+          },
+          {
+            "description": "Dự thảo và cấu trúc các ghi chú và báo cáo để con người xem xét.",
+            "title": "Tài liệu"
+          },
+          {
+            "description": "Tự động hóa việc lập kế hoạch và quy trình làm việc tại văn phòng bằng quy trình kiểm tra.",
+            "title": "Hoạt động"
+          }
+        ]
+      },
+      "legal": {
+        "headline": "Hợp đồng, xem xét và giải thích.",
+        "heroBlurb": "Xem xét hồ sơ và giải thích nghĩa vụ rõ ràng.",
+        "label": "Hợp pháp",
+        "overview": "Đại diện pháp lý của AURA đọc các hợp đồng và chính sách, đánh dấu rủi ro và giải thích các nghĩa vụ bằng ngôn ngữ đơn giản. Họ tăng tốc quá trình xem xét trong khi vẫn luôn cập nhật cho con người về mọi quyết định.",
+        "useCases": [
+          {
+            "description": "Gắn cờ các điều khoản rủi ro và sai lệch so với tiêu chuẩn của bạn.",
+            "title": "Xem xét hợp đồng"
+          },
+          {
+            "description": "Trích xuất ngày, nhiệm vụ và gia hạn vào một danh sách rõ ràng.",
+            "title": "Theo dõi nghĩa vụ"
+          },
+          {
+            "description": "Trả lời các câu hỏi dựa trên tài liệu của riêng bạn.",
+            "title": "Hỏi đáp về chính sách"
+          }
+        ]
+      },
+      "legal-services": {
+        "headline": "Tình báo tư nhân cho pháp lý",
+        "heroBlurb": "AI riêng tư mà các công ty tin tưởng và khách hàng tin cậy. Không thỏa hiệp về tính bảo mật - bao giờ hết.",
+        "label": "Hợp pháp",
+        "overview": "Công việc pháp lý chạy trên tính bảo mật và chính xác. Các đặc vụ AURA tăng tốc quá trình xem xét, nghiên cứu và soạn thảo trong khi vẫn giữ tài liệu đặc quyền bên trong phạm vi của bạn và con người trong vòng lặp.",
+        "useCases": [
+          {
+            "description": "Đánh dấu rủi ro và những sai lệch so với tiêu chuẩn của bạn một cách nhanh chóng.",
+            "title": "Xem xét hợp đồng"
+          },
+          {
+            "description": "Kéo và tổng hợp các cơ quan có liên quan với các trích dẫn.",
+            "title": "Nghiên cứu pháp lý"
+          },
+          {
+            "description": "Tạo các bản nháp đầu tiên dựa trên các mẫu và tệp quan trọng của bạn.",
+            "title": "soạn thảo"
+          }
+        ]
+      },
+      "marketing": {
+        "headline": "Các chiến dịch duy trì thương hiệu.",
+        "heroBlurb": "Lập kế hoạch, soạn thảo và điều chỉnh nội dung trên mọi kênh.",
+        "label": "Tiếp thị",
+        "overview": "Các đại lý tiếp thị của AURA lập kế hoạch cho các chiến dịch, sản xuất nội dung phù hợp với thương hiệu và điều chỉnh nội dung đó cho mỗi kênh trong khi vẫn giữ được tiếng nói của bạn. Họ biến bản tóm tắt thành một bản tóm tắt nội dung và giữ cho lịch luôn hoạt động để các kênh của bạn không bao giờ im lặng.",
+        "useCases": [
+          {
+            "description": "Biến bản tóm tắt thành các kênh, chủ đề và lịch nội dung.",
+            "title": "Lập kế hoạch chiến dịch"
+          },
+          {
+            "description": "Soạn thảo và tái sử dụng nội dung trên các kênh bằng giọng nói của bạn.",
+            "title": "Sản xuất nội dung"
+          },
+          {
+            "description": "Biến dữ liệu chiến dịch thành thông tin chi tiết rõ ràng, có thể hành động.",
+            "title": "Phân tích hiệu suất"
+          }
+        ]
+      },
+      "marketing-media": {
+        "headline": "Trí tuệ riêng cho tiếp thị",
+        "heroBlurb": "AI riêng giúp giữ cho thương hiệu của bạn được thể hiện và dữ liệu của bạn là của riêng bạn.",
+        "label": "Tiếp thị & Truyền thông",
+        "overview": "Đội ngũ tiếp thị di chuyển nhanh chóng trên nhiều kênh. Các đại lý AURA lập kế hoạch, soạn thảo và điều chỉnh nội dung về thương hiệu trong khi vẫn kiểm soát được đối tượng và dữ liệu hiệu suất của bạn.",
+        "useCases": [
+          {
+            "description": "Tạo và kiểm tra áp lực các hướng dẫn đối với bản tóm tắt của bạn.",
+            "title": "Khái niệm chiến dịch"
+          },
+          {
+            "description": "Soạn thảo và sử dụng lại các kênh bằng giọng nói của bạn.",
+            "title": "Sản xuất nội dung"
+          },
+          {
+            "description": "Biến dữ liệu chiến dịch thành thông tin chi tiết rõ ràng, có thể hành động.",
+            "title": "Phân tích hiệu suất"
+          }
+        ]
+      },
+      "real-estate": {
+        "headline": "Trí tuệ riêng cho bất động sản",
+        "heroBlurb": "AI riêng tư giúp thúc đẩy các giao dịch và giữ dữ liệu của bạn là của riêng bạn.",
+        "label": "Bất động sản",
+        "overview": "Bất động sản chạy trên các tài liệu, danh sách và dữ liệu thị trường. Các đại lý AURA đẩy nhanh quá trình thẩm định, soạn thảo và phân tích trong khi vẫn giữ thông tin khách hàng và giao dịch trong tầm kiểm soát của bạn.",
+        "useCases": [
+          {
+            "description": "Tạo và duy trì danh sách và bản sao tiếp thị.",
+            "title": "Nội dung niêm yết"
+          },
+          {
+            "description": "Kéo tín hiệu từ tài liệu và dữ liệu thị trường vào một chế độ xem.",
+            "title": "Siêng năng giao dịch"
+          },
+          {
+            "description": "Tạo bản nháp đầu tiên dựa trên mẫu của bạn.",
+            "title": "Soạn thảo văn bản"
+          }
+        ]
+      },
+      "research": {
+        "headline": "Nghiên cứu tổng hợp chứ không chỉ tìm kiếm.",
+        "heroBlurb": "Các đại lý đào sâu các nguồn và tìm ra những gì thực sự quan trọng.",
+        "label": "Nghiên cứu",
+        "overview": "Các tác nhân nghiên cứu của AURA đọc trên các tài liệu, trang web và cơ sở kiến ​​thức của riêng bạn, sau đó tổng hợp các phát hiện thành các câu trả lời rõ ràng, có thể trích dẫn. Họ tiếp tục làm việc ở chế độ nền nên việc đánh giá sâu thường mất nhiều ngày mới diễn ra trong khi bạn tập trung vào quyết định.",
+        "useCases": [
+          {
+            "description": "Khảo sát một lĩnh vực và tóm tắt hiện trạng bằng các nguồn.",
+            "title": "Bình luận văn học"
+          },
+          {
+            "description": "Theo dõi các đối thủ cạnh tranh và chắt lọc các bước đi thành một bản tóm tắt đang chạy.",
+            "title": "Phân tích cạnh tranh"
+          },
+          {
+            "description": "Kéo tín hiệu từ các phòng hồ sơ, tin tức và dữ liệu vào một chế độ xem.",
+            "title": "Sự thẩm định"
+          }
+        ]
+      },
+      "sales": {
+        "headline": "Nhiều đường ống hơn, công việc ít bận rộn hơn.",
+        "heroBlurb": "Nghiên cứu các tài khoản và dự thảo tiếp cận để thúc đẩy các giao dịch.",
+        "label": "Việc bán hàng",
+        "overview": "Đại lý bán hàng AURA nghiên cứu tài khoản, cá nhân hóa hoạt động tiếp cận và cập nhật quy trình bán hàng của bạn để các đại diện dành thời gian bán hàng thay vì nhập văn bản. Họ soạn thảo tin nhắn bằng giọng nói dựa trên ngữ cảnh của bạn và đưa ra hành động tốt nhất tiếp theo cho mỗi giao dịch.",
+        "useCases": [
+          {
+            "description": "Xây dựng bản tóm tắt về triển vọng từ các nguồn công khai và nội bộ.",
+            "title": "Nghiên cứu tài khoản"
+          },
+          {
+            "description": "Cá nhân hóa email và trình tự trên giọng nói và ưu đãi của bạn.",
+            "title": "dự thảo tiếp cận cộng đồng"
+          },
+          {
+            "description": "Lưu giữ hồ sơ CRM hiện tại và gắn cờ các giao dịch cần chú ý.",
+            "title": "Vệ sinh đường ống"
+          }
+        ]
+      },
+      "social": {
+        "headline": "Trên mạng xã hội bằng giọng nói, đúng tiến độ.",
+        "heroBlurb": "Dự thảo bài viết và lịch vẫn còn trên thương hiệu.",
+        "label": "Xã hội",
+        "overview": "Các tác nhân xã hội AURA lên lịch, soạn thảo bài đăng trên mỗi kênh và điều chỉnh cho phù hợp với định dạng của từng nền tảng trong khi vẫn giữ được tiếng nói của bạn. Chúng giữ nhịp điệu ổn định để các kênh của bạn không bao giờ im lặng.",
+        "useCases": [
+          {
+            "description": "Lập kế hoạch đăng bài trong tuần xoay quanh các chủ đề và lần ra mắt.",
+            "title": "Lịch nội dung"
+          },
+          {
+            "description": "Điều chỉnh một ý tưởng cho phù hợp với định dạng và giai điệu của từng nền tảng.",
+            "title": "Bản nháp trên mỗi kênh"
+          },
+          {
+            "description": "Dự thảo phản hồi bằng giọng nói để xem xét trước khi gửi.",
+            "title": "Phản hồi của cộng đồng"
+          }
+        ]
+      },
+      "technology-saas": {
+        "headline": "Trí tuệ riêng cho công nghệ",
+        "heroBlurb": "AI riêng vận chuyển sản phẩm và giữ cơ sở mã của riêng bạn.",
+        "label": "Công nghệ / SaaS",
+        "overview": "Nhóm công nghệ xây dựng nhanh chóng và bảo vệ IP của họ. Các đại lý AURA tăng tốc kỹ thuật, hỗ trợ và phân tích trong khi vẫn giữ mã và dữ liệu khách hàng trong phạm vi của bạn.",
+        "useCases": [
+          {
+            "description": "Triển khai các tính năng và bản sửa lỗi từ bối cảnh kho lưu trữ thực.",
+            "title": "Kỹ thuật"
+          },
+          {
+            "description": "Soạn thảo các câu trả lời chính xác dựa trên tài liệu của bạn.",
+            "title": "Hỗ trợ khách hàng"
+          },
+          {
+            "description": "Biến dữ liệu sử dụng thành thông tin chi tiết sẵn sàng cho quyết định.",
+            "title": "Phân tích sản phẩm"
+          }
+        ]
+      },
+      "writing": {
+        "headline": "Viết bằng giọng nói của bạn, theo tốc độ của bạn.",
+        "heroBlurb": "Soạn thảo, chỉnh sửa và trau chuốt văn xuôi giống bạn.",
+        "label": "Viết",
+        "overview": "Các tác nhân viết AURA tìm hiểu giọng điệu và những hạn chế của bạn, sau đó soạn thảo và sửa đổi nội dung dạng dài từ đầu đến cuối. Từ bản phác thảo đầu tiên cho đến lần chỉnh sửa cuối cùng, chúng giữ cho giọng nói nhất quán và sự thật có cơ sở dựa trên nguồn của bạn.",
+        "useCases": [
+          {
+            "description": "Biến dàn ý và ghi chú thành một tác phẩm hoàn chỉnh.",
+            "title": "Bản nháp dài"
+          },
+          {
+            "description": "Thắt chặt cấu trúc, ngữ pháp và giọng điệu mà không làm mất ý định.",
+            "title": "Thẻ chỉnh sửa"
+          },
+          {
+            "description": "Định hình lại một nguồn thành các bài đăng, email và tóm tắt.",
+            "title": "Tái sử dụng"
+          }
+        ]
+      }
+    },
+    "overview": "Tổng quan",
+    "overviewAriaLabel": "{{label}} Tổng quan",
+    "previewAriaLabel": "{{label}} xem trước",
+    "requestDemo": "Yêu cầu bản demo",
+    "useCases": "Trường hợp sử dụng",
+    "useCasesAriaLabel": "{{label}} trường hợp sử dụng"
+  },
+  "feedback": {
+    "card": {
+      "anonymousAuthor": "Vô danh",
+      "commentCount_other": "{{count}} bình luận",
+      "time": {
+        "daysAgo_other": "{{count}}ngày trước",
+        "hoursAgo_other": "{{count}}giờ trước",
+        "minutesAgo_other": "{{count}}cách đây vài phút",
+        "monthsAgo_other": "{{count}}cách đây vài tháng",
+        "secondsAgo_other": "{{count}}cách đây",
+        "yearsAgo_other": "{{count}}năm trước"
+      },
+      "voteScoreAriaLabel": "Điểm bình chọn"
+    },
+    "documentTitle": "AURA - Phản hồi",
+    "empty": {
+      "body": "Không có bài đăng phản hồi AURA nào phù hợp với các bộ lọc hiện tại.",
+      "heading": "Chưa có phản hồi nào."
+    },
+    "entriesAriaLabel": "Mục phản hồi",
+    "filters": {
+      "ariaLabel": "Bộ lọc phản hồi",
+      "sections": {
+        "status": "Trạng thái",
+        "trending": "Xu hướng",
+        "type": "Kiểu"
+      },
+      "toggle": "Bộ lọc"
+    },
+    "stats": {
+      "participants": "Người tham gia",
+      "resolved": "Các mục đã được giải quyết",
+      "submitted": "Các mục đã gửi"
+    },
+    "subtitle": "Người dùng của chúng tôi gửi phản hồi và AURA tự động cải thiện.",
+    "summaryAriaLabel": "Tóm tắt phản hồi",
+    "title": "Nhận xét"
+  },
+  "footer": {
+    "ariaLabel": "Chân trang của trang web",
+    "copyright": "Bản quyền © {{year}}",
+    "navigationAriaLabel": "Điều hướng chân trang"
+  },
+  "models": {
+    "allModelsAriaLabel": "Tất cả các mô hình",
+    "documentTitle": "AURA - Người mẫu",
+    "empty": "Không có mô hình nào phù hợp với bộ lọc hiện tại. Hãy thử xóa tìm kiếm hoặc chuyển tab.",
+    "featured": "Nổi bật",
+    "featuredAriaLabel": "Mô hình nổi bật",
+    "filterByModalityAriaLabel": "Lọc theo phương thức",
+    "filterByStatusAriaLabel": "Lọc theo trạng thái",
+    "loadingCatalog": "Đang tải danh mục…",
+    "searchAriaLabel": "Tìm kiếm mô hình",
+    "searchPlaceholder": "Tìm kiếm mô hình...",
+    "stats": {
+      "image": "Hình ảnh",
+      "text": "Chữ",
+      "threeD": "3D",
+      "total": "Tổng số mô hình",
+      "video": "Băng hình"
+    },
+    "status": {
+      "live": "Sống",
+      "liveAriaLabel": "Trạng thái: Trực tiếp",
+      "soon": "Sớm",
+      "soonAriaLabel": "Tình trạng: Sắp có"
+    },
+    "subtitle": "Các mô hình biên giới cung cấp năng lượng cho AURA, trên văn bản, hình ảnh, video và 3D.",
+    "summaryAriaLabel": "Tóm tắt mô hình"
+  },
+  "os": {
+    "docDocumentTitle": "Hệ điều hành AURA - {{title}}",
+    "documentTitle": "AURA - Hệ điều hành",
+    "empty": {
+      "body": "Sách trắng của AURA OS đã được kết nối nhưng chưa có phần nào được xuất bản."
+    },
+    "navigationAriaLabel": "Điều hướng sách trắng",
+    "noContent": "Phần này chưa có nội dung.",
+    "noSections": "Chưa có phần nào.",
+    "notFound": {
+      "backButton": "Quay lại tổng quan",
+      "body": "Phần này của sách trắng không tồn tại hoặc chưa được xuất bản.",
+      "heading": "Không tìm thấy phần"
+    },
+    "sidebarTitle": "Hệ điều hành AURA"
+  },
+  "pricing": {
+    "billingCycleAriaLabel": "Chu kỳ thanh toán",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "documentTitle": "AURA - Giá cả",
+    "downloadCta": "Tải xuống",
+    "heroDescription": "Bắt đầu với các mô hình nguồn mở cục bộ miễn phí, sau đó chỉ trả tiền cho các mô hình biên giới mà bạn sử dụng.",
+    "heroHeadline": "Bắt đầu từ miễn phí.",
+    "monthly": "hàng tháng",
+    "plans": {
+      "free": {
+        "description": "Bắt đầu miễn phí:",
+        "features": {
+          "0": "Không cần thẻ tín dụng",
+          "1": "Các mô hình nguồn mở cục bộ",
+          "2": "Trả tiền khi bạn sử dụng cho các mô hình biên giới"
+        },
+        "name": "Miễn phí"
+      },
+      "pro": {
+        "description": "Mọi thứ đều miễn phí, cộng thêm:",
+        "features": {
+          "0": "khoản tín dụng hàng tháng trị giá $20",
+          "1": "Đại lý từ xa"
+        },
+        "name": "chuyên nghiệp",
+        "priceNote": "$10/tháng cho người đăng ký Zero Pro OG"
+      },
+      "sage": {
+        "description": "Mọi thứ trong Pro, cộng thêm:",
+        "features": {
+          "0": "Mức sử dụng gấp 20 lần trên các mẫu Frontier",
+          "1": "Ưu tiên truy cập vào các tính năng mới"
+        },
+        "name": "cây xô thơm"
+      }
+    },
+    "plansLabel": "Kế hoạch cá nhân",
+    "yearly": "Hàng năm"
+  },
+  "privacy": {
+    "description": "Chính sách quyền riêng tư của chúng tôi đang được hoàn thiện và sẽ sớm được công bố tại đây.",
+    "documentTitle": "AURA - Chính sách bảo mật",
+    "headline": "Chính sách bảo mật",
+    "label": "HỢP PHÁP"
+  },
+  "productScreen": {
+    "close": "Đóng",
+    "closeFullscreenAriaLabel": "Đóng hình ảnh toàn màn hình",
+    "openFullscreenAriaLabel": "Mở hình ảnh toàn màn hình: {{label}}",
+    "placeholderLabel": "Trình giữ chỗ hình ảnh"
+  },
+  "sections": {
+    "agentChat": {
+      "ariaLabel": "Trò chuyện với đại lý của bạn từ mọi nơi",
+      "description": "Đại lý AURA của bạn luôn sẵn sàng. Bắt đầu cuộc trò chuyện trên điện thoại, máy tính xách tay hoặc máy tính để bàn của bạn. Họ ghi nhớ mọi thứ và mang theo những công cụ tương tự bên mình.",
+      "headlineLine1": "Trò chuyện với đại lý của bạn.",
+      "headlineLine2": "Từ bất cứ đâu.",
+      "phoneAriaLabel": "Trò chuyện trên thiết bị di động với {{agentName}} đại lý"
+    },
+    "builtForTrust": {
+      "ariaLabel": "Cách AURA giành được sự tin tưởng của bạn",
+      "cards": {
+        "alwaysOn": {
+          "description": "Đại lý của bạn tiếp tục làm việc suốt ngày đêm, ngay cả khi bạn đi vắng và thiết bị của bạn tắt.",
+          "title": "Luôn bật."
+        },
+        "isolated": {
+          "description": "Mỗi tác nhân chạy trong máy ảo có hộp cát riêng, được cách ly hoàn toàn với hệ thống của bạn và các tác nhân khác.",
+          "title": "Bị cô lập theo mặc định."
+        },
+        "verifiable": {
+          "description": "Mọi môi trường đều được chứng thực trước khi chạy, vì vậy bạn luôn có thể xác minh những gì bạn tin tưởng.",
+          "title": "Đáng tin cậy và có thể kiểm chứng."
+        }
+      },
+      "headline": "Được xây dựng cho sự tin tưởng.",
+      "subhead": "Tác nhân AURA chạy trong các máy ảo biệt lập trong môi trường thực thi đáng tin cậy."
+    },
+    "expertise": {
+      "headline": "Chuyên môn không có cái tôi.",
+      "subheadLine1": "Đại lý AURA là chuyên gia trong mọi lĩnh vực.",
+      "subheadLine2": "Từ mã hóa đến khoa học đến sáng tạo."
+    },
+    "madeForYou": {
+      "headline": "Đại lý được thực hiện cho bạn.",
+      "subhead": "Thiết kế và ra mắt đại lý của bạn trong 30 giây."
+    },
+    "personalAgent": {
+      "ariaLabel": "Đại lý của bạn có thể làm gì",
+      "cards": {
+        "alwaysOn": {
+          "description": "Yêu cầu hoặc chỉ đạo người đại diện của bạn làm hầu hết mọi việc. Nó sẽ đi làm và báo cáo lại khi cần thiết.",
+          "title": "Luôn bật."
+        },
+        "connected": {
+          "description": "AURA kết nối an toàn với các dịch vụ của bạn để nó biết mọi thứ về bạn. Dữ liệu của bạn không bao giờ rời khỏi máy tính an toàn của riêng bạn và không bao giờ được đào tạo.",
+          "title": "Kết nối với mọi thứ."
+        },
+        "domains": {
+          "description": "Đại lý của bạn là một thiên tài trong tất cả các lĩnh vực. Nó có thể trợ giúp thực hiện các nhiệm vụ đơn giản trong cuộc sống, các dự án sáng tạo, thiết kế và mã hóa nâng cao.",
+          "title": "Thông minh trong mọi lĩnh vực."
+        }
+      },
+      "headline": "Mỗi mô hình. Mọi chế độ.",
+      "subhead": "AURA là người đại diện cá nhân của riêng bạn, hỗ trợ bạn mọi việc từ công việc nhẹ nhàng đến công việc chuyên sâu."
+    },
+    "privacy": {
+      "features": {
+        "openSource": {
+          "description": "AURA là nguồn mở 100% theo giấy phép MIT. Phân nhánh nó bất cứ lúc nào, không có sự ràng buộc của nhà cung cấp và không có sự ràng buộc nào.",
+          "tag": "Giấy phép MIT",
+          "title": "Nguồn mở"
+        },
+        "private": {
+          "description": "AURA không bao giờ xem hoặc đào tạo dữ liệu cá nhân hoặc công ty của bạn. Bất cứ điều gì được gửi đến các mô hình biên giới đều không thể xác định được.",
+          "tag": "Mã hóa PQ",
+          "title": "Riêng tư"
+        },
+        "verifiable": {
+          "description": "Khai thác và hạt nhân AURA được xây dựng từ đầu với tính bảo mật, xác minh và chính sách như những công dân hạng nhất.",
+          "tag": "Thực thi đáng tin cậy",
+          "title": "Có thể kiểm chứng"
+        }
+      },
+      "headline": "Được thiết kế cho nhân loại của bạn."
+    }
+  },
+  "support": {
+    "body": "Cần trợ giúp với AURA? Chúng tôi ở đây vì bạn. Gửi email cho nhóm hỗ trợ của chúng tôi và chúng tôi sẽ liên hệ lại với bạn ngay khi có thể.",
+    "headline": "Ủng hộ",
+    "note": "Đối với các câu hỏi về tài khoản hoặc thanh toán, vui lòng bao gồm địa chỉ email được liên kết với tài khoản AURA của bạn."
+  },
+  "taglines": {
+    "decentralized": "Phi tập trung.",
+    "openSource": "Nguồn mở.",
+    "private": "Riêng tư.",
+    "secure": "Chắc chắn."
+  },
+  "terms": {
+    "description": "Điều khoản dịch vụ của chúng tôi đang được hoàn thiện và sẽ sớm được công bố tại đây.",
+    "documentTitle": "AURA - Điều khoản dịch vụ",
+    "headline": "Điều khoản dịch vụ",
+    "label": "HỢP PHÁP"
+  }
+}

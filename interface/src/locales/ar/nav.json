@@ -1,12 +1,16 @@
 {
-  "os": "OS",
-  "chat": "الدردشة",
   "agents": "الوكلاء",
-  "code": "الكود",
-  "pricing": "الأسعار",
   "blog": "المدونة",
+  "capabilities": "القدرات",
   "changelog": "سجل التغييرات",
+  "chat": "الدردشة",
+  "code": "الكود",
+  "downloads": "التنزيلات",
+  "expertise": "خبرة",
   "feedback": "الملاحظات",
+  "industries": "الصناعات",
   "models": "النماذج",
+  "os": "OS",
+  "pricing": "الأسعار",
   "resources": "الموارد"
 }

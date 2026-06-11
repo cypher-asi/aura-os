@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} şuradan oluşturuldu: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Mesaj gönderilemiyor"
+    },
+    "heroPhrases": {
+      "privateAgent": "Özel Temsilciniz."
+    },
+    "inputLabel": "Mesaj Aurası",
+    "inputPlaceholder": "Aura'ya bir şey sor...",
+    "send": "Göndermek",
+    "sending": "Gönderiliyor",
+    "transcriptAriaLabel": "Sohbet metni"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Yeni bir görüşme başlat"
+  },
+  "createAgent": {
+    "label": "Temsilcinizi oluşturun"
+  },
+  "login": {
+    "close": "Kapalı",
+    "closeLoginAriaLabel": "Girişi kapat",
+    "heading": "AURA'ya giriş yapın"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Ne yaratmak istiyorsunuz?",
+    "heroBlurb": "Aura'ya bir uyarı gönderin ve inşa etmeye başlayın."
+  },
+  "personas": {
+    "railAriaLabel": "Temsilci kişilikleri"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Sohbeti sil \"{{title}}\"",
+    "noConversations": "Henüz görüşme yok",
+    "noMatchingChats": "Eşleşen sohbet yok"
+  },
+  "sharedSession": {
+    "ariaLabel": "Paylaşılan görüşme",
+    "empty": {
+      "body": "Bu paylaşılan görüşmede gösterilecek mesaj yok.",
+      "heading": "Bu konuşma boş"
+    },
+    "error": {
+      "body": "Bu paylaşılan görüşmeyi yükleyemedik. Lütfen daha sonra tekrar deneyin.",
+      "heading": "Bir şeyler ters gitti"
+    },
+    "loading": "Paylaşılan görüşme yükleniyor…",
+    "unavailable": {
+      "body": "Görüşme paylaşılmamış olabilir veya bağlantı yanlış olabilir.",
+      "heading": "Bu paylaşım bağlantısı kullanılamıyor"
+    }
+  }
+}

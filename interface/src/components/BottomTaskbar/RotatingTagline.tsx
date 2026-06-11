@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./RotatingTagline.module.css";
 
 /**
@@ -16,11 +17,16 @@ import styles from "./RotatingTagline.module.css";
  * each interval remounts them, which replays the CSS slide
  * keyframes cleanly without any teardown bookkeeping.
  */
-const TAGLINES = ["Private.", "Secure.", "Decentralized.", "Open Source."] as const;
-
 const ROTATE_MS = 2500;
 
 export function RotatingTagline(): React.ReactElement {
+  const { t } = useTranslation("marketing");
+  const TAGLINES = [
+    t("taglines.private", { defaultValue: "Private." }),
+    t("taglines.secure", { defaultValue: "Secure." }),
+    t("taglines.decentralized", { defaultValue: "Decentralized." }),
+    t("taglines.openSource", { defaultValue: "Open Source." }),
+  ];
   const [tick, setTick] = useState(0);
 
   useEffect(() => {

@@ -1,1 +1,57 @@
-{}
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} generated from: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Unable to send message"
+    },
+    "heroPhrases": {
+      "privateAgent": "Your Private Agent."
+    },
+    "inputLabel": "Message Aura",
+    "inputPlaceholder": "Ask Aura anything...",
+    "send": "Send",
+    "sending": "Sending",
+    "transcriptAriaLabel": "Chat transcript"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Start a new conversation"
+  },
+  "createAgent": {
+    "label": "Create your agent"
+  },
+  "login": {
+    "close": "Close",
+    "closeLoginAriaLabel": "Close login",
+    "heading": "Login to AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "What do you want to create?",
+    "heroBlurb": "Send Aura a prompt and start building."
+  },
+  "personas": {
+    "railAriaLabel": "Agent personas"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Delete chat \"{{title}}\"",
+    "noConversations": "No conversations yet",
+    "noMatchingChats": "No matching chats"
+  },
+  "sharedSession": {
+    "ariaLabel": "Shared conversation",
+    "empty": {
+      "body": "There are no messages to show in this shared conversation.",
+      "heading": "This conversation is empty"
+    },
+    "error": {
+      "body": "We couldn't load this shared conversation. Please try again later.",
+      "heading": "Something went wrong"
+    },
+    "loading": "Loading shared conversation…",
+    "unavailable": {
+      "body": "The conversation may have been unshared or the link is incorrect.",
+      "heading": "This share link is unavailable"
+    }
+  }
+}

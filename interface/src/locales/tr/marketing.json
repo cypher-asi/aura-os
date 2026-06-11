@@ -1,0 +1,789 @@
+{
+  "agents": {
+    "buildDeviceAriaLabel": "Temsilcinizi oluşturun",
+    "documentTitle": "AURA - Temsilciler",
+    "heroDescriptionLine1": "AURA temsilcileri her alanda uzmandır",
+    "heroDescriptionLine2": "uyurken işe yarar.",
+    "heroHeadline": "Her şeyi devredin."
+  },
+  "blog": {
+    "allPosts": "Tüm gönderiler",
+    "breadcrumbAriaLabel": "Ekmek kırıntısı",
+    "documentTitle": "AURA - Blog",
+    "empty": {
+      "body": "Blog bağlandı ancak henüz yayınlanmadı.",
+      "heading": "Henüz gönderi yok."
+    },
+    "latest": "En sonuncu",
+    "loading": "Yükleniyor…",
+    "loadingPost": "Gönderi yükleniyor…",
+    "loadingPosts": "Gönderiler yükleniyor…",
+    "moreFromBlog": "Blogdan daha fazlası",
+    "morePosts": "Daha fazla gönderi",
+    "navigationAriaLabel": "Blogda gezinme",
+    "noContent": "Bu yazının henüz içeriği yok.",
+    "noOtherPosts": "Henüz başka yazı yok.",
+    "notFound": {
+      "backLink": "← Bloga geri dön",
+      "body": "Aradığınız yazı mevcut değil veya yayınlanmadı.",
+      "heading": "Gönderi bulunamadı"
+    },
+    "postDocumentTitle": "AURA- {{title}}",
+    "readTime_one": "{{count}} dk okuma",
+    "readTime_other": "{{count}} dk okuma",
+    "recentPostsAriaLabel": "Son gönderiler",
+    "table": {
+      "author": "Yazar",
+      "date": "Tarih",
+      "title": "Başlık",
+      "type": "Tip"
+    },
+    "title": "Blog",
+    "tocAriaLabel": "İçindekiler",
+    "tocTitle": "İçindekiler"
+  },
+  "changelog": {
+    "chart": {
+      "ariaLabel": "Zaman içinde günlük sürümler",
+      "barTitle_one": "{{date}}: 1 sürüm",
+      "barTitle_other": "{{date}}: {{count}} yayınlar",
+      "caption": "Günlük sürümler",
+      "captionWithCount_one": "1 sürüm · {{date}}",
+      "captionWithCount_other": "{{count}} sürümler · {{date}}"
+    },
+    "commitsLiveTitle_one": "Genel olarak canlı toplam {{count}} AURA deposu",
+    "commitsLiveTitle_other": "Genel olarak canlı toplam {{count}} AURA depoları",
+    "currentVersion": "Güncel sürüm",
+    "dailyUpdate": "Günlük Güncelleme",
+    "documentTitle": "AURA - Değişiklik Günlüğü",
+    "download": "İndirmek",
+    "downloadVersionAriaLabel": "AURA'yı indirin {{version}} işletim sisteminiz için",
+    "downloadVersionTitle": "İşletim sisteminize uygun yapıyı indirmek için tıklayın",
+    "empty": {
+      "body": "Sürüm akışı bağlandı ancak henüz yayınlanmış değişiklik günlüğü girişi bulunamadı.",
+      "heading": "Henüz değişiklik günlüğü girişi yok."
+    },
+    "entriesAriaLabel": "Aura değişiklik günlüğü girişleri",
+    "entry": {
+      "commitCount_one": "1 taahhüt",
+      "commitCount_other": "{{count}} taahhüt eder",
+      "releaseCount_one": "1 sürüm",
+      "releaseCount_other": "{{count}} yayınlar"
+    },
+    "github": "GitHub",
+    "openScreenshotAriaLabel": "Şunun için ekran görüntüsünü aç: {{title}}",
+    "releasedAgo": "Piyasaya sürülmüş {{relativeTime}}",
+    "releasedRecently": "Yakın zamanda yayınlandı",
+    "sources": "Kaynaklar",
+    "stats": {
+      "allTimeCommits": "Tüm zamanların taahhütleri",
+      "allTimeReleases": "Tüm zamanların yayınları",
+      "commitsThisMonth": "Bu ay taahhüt ediliyor",
+      "releasesThisMonth": "Bu ay çıkanlar"
+    },
+    "summaryAriaLabel": "Değişiklik günlüğü özeti",
+    "title": "Değişiklik günlüğü"
+  },
+  "changelogPreview": {
+    "ariaLabel": "Son değişiklik günlüğü girişleri",
+    "ctaLabel": "AURA'daki yeniliklere bakın",
+    "heading": "Değişiklik günlüğü",
+    "releaseUpdate": "Güncellemeyi yayınla"
+  },
+  "code": {
+    "deviceAriaLabel": "AURA kodlama masaüstü",
+    "documentTitle": "AURA - Kod",
+    "heroDescription": "Güvenlik, otomasyon ve doğrulanabilirlik için %100 açık kaynak olarak tasarlanmış bir sınır kodlama donanımı.",
+    "heroHeadline": "Uyurken kodlayın."
+  },
+  "cta": {
+    "ariaLabel": "Ürün harekete geçirici mesaj",
+    "download": "İndirmek",
+    "signUp": "Üye olmak",
+    "tagline": "AGI'yi hissedin."
+  },
+  "docs": {
+    "docDocumentTitle": "AURA Belgeleri - {{title}}",
+    "documentTitle": "AURA - Dokümanlar",
+    "empty": {
+      "body": "Dokümantasyon sitesi bağlı ancak henüz hiçbir sayfa yayınlanmadı."
+    },
+    "loading": "Yükleniyor…",
+    "navigationAriaLabel": "Belgelerde gezinme",
+    "noContent": "Bu sayfanın henüz içeriği yok.",
+    "noPages": "Henüz sayfa yok.",
+    "notFound": {
+      "backButton": "Genel bakışa geri dön",
+      "body": "Bu dokümantasyon sayfası mevcut değil veya henüz yayınlanmadı.",
+      "heading": "Sayfa bulunamadı"
+    },
+    "sidebarTitle": "Dokümantasyon",
+    "tocAriaLabel": "Bu sayfada",
+    "tocTitle": "Bu sayfada"
+  },
+  "download": {
+    "cards": {
+      "linux": {
+        "description": "Doğrudan indirmeye ve başlatmaya uygun, Linux masaüstü bilgisayarlar için Taşınabilir AppImage.",
+        "meta": "x86_64 Uygulama Resmi"
+      },
+      "mac-apple-silicon": {
+        "description": "M1, M2, M3 ve M4 Mac'ler için yerel yapı.",
+        "meta": "Çoğu Mac için önerilir"
+      },
+      "mac-intel": {
+        "description": "x86 tabanlı Mac'ler ve daha eski MacBook Pro ve iMac donanımları için masaüstü yapısı.",
+        "meta": "Yalnızca Apple Silicon öncesi Mac'ler için"
+      },
+      "windows": {
+        "description": "En son masaüstü çalışma zamanı ve güncelleyici desteğine sahip imzalı Windows yükleyicisi.",
+        "meta": "x64 yükleyici"
+      }
+    },
+    "cta": "İndirmek",
+    "documentTitle": "İndir — AURA",
+    "headline": "Tüm büyük masaüstü platformları için AURA'yı indirin.",
+    "loading": "Yükleniyor..."
+  },
+  "expertise": {
+    "documentTitle": "AURA- {{label}}",
+    "entries": {
+      "analytics": {
+        "headline": "Ham verilerden karar almaya hazır içgörüler.",
+        "heroBlurb": "Sayıları, üzerinde işlem yapabileceğiniz net yanıtlara dönüştürün.",
+        "label": "Analitik",
+        "overview": "AURA analiz aracıları verileri sorgular, temizler ve yorumlar, ardından bunların ne anlama geldiğini sade bir dille açıklar. Trendi, nedenini ve önerilen bir sonraki adımı ortaya çıkarıyorlar.",
+        "useCases": [
+          {
+            "description": "Bir iş sorusunu doğrudan verilerden yanıtlayın.",
+            "title": "Özel analiz"
+          },
+          {
+            "description": "Anlatım bağlamına sahip yinelenen raporlar oluşturun.",
+            "title": "Raporlama"
+          },
+          {
+            "description": "Beklenmeyen değişimleri işaretleyin ve olası etkenleri açıklayın.",
+            "title": "Anormallik tespiti"
+          }
+        ]
+      },
+      "coding": {
+        "headline": "Siz uyurken özellikleri gönderin.",
+        "heroBlurb": "Repo bağlamından test edilmiş, incelenebilir PR'lere kadar.",
+        "label": "Kodlama",
+        "overview": "AURA kodlama aracıları, özellikleri uygulamak, hataları düzeltmek ve test edilmiş çekme isteklerini açmak için deponuzun gerçek bağlamından çalışır. Bağımsız olarak çalışırlar ve incelenmeye hazır işleri geri verirler.",
+        "useCases": [
+          {
+            "description": "Kapsamlı özellikleri testlerle uçtan uca uygulayın.",
+            "title": "Özellik çalışması"
+          },
+          {
+            "description": "Net bir PR ile çoğaltın, düzeltin ve doğrulayın.",
+            "title": "Hata düzeltmeleri"
+          },
+          {
+            "description": "Tutarlı değişiklikleri kod tabanında güvenli bir şekilde uygulayın.",
+            "title": "Yeniden Düzenleyiciler"
+          }
+        ]
+      },
+      "creative": {
+        "headline": "Daha keskin konseptler, daha hızlı.",
+        "heroBlurb": "Kampanyalar, kavramlar üzerinde beyin fırtınası yapın ve bu araziyi kopyalayın.",
+        "label": "Yaratıcı",
+        "overview": "AURA yaratıcı ajanları fikirler üretir ve baskı testlerine tabi tutar, ardından saklamaya değer olanları oluşturur. Boş sayfadan dakikalar içinde tepki verebileceğiniz bir talimat listesine geçerler.",
+        "useCases": [
+          {
+            "description": "Her biri için gerekçeleri olan farklı talimatlar oluşturun.",
+            "title": "Kampanya konseptleri"
+          },
+          {
+            "description": "Özetinize ve kısıtlamalarınıza göre seçenekleri keşfedin.",
+            "title": "Adlandırma ve sloganlar"
+          },
+          {
+            "description": "Referansları birleştirin ve paylaşılabilir bir konsepte kopyalayın.",
+            "title": "Moodboard'lar"
+          }
+        ]
+      },
+      "design": {
+        "headline": "Kaba fikirden gösterişli arayüze.",
+        "heroBlurb": "Eskizleri ve yönlendirmeleri kullanılabilir tasarımlara dönüştürün.",
+        "label": "Tasarım",
+        "overview": "AURA tasarım aracıları, sisteminize ve kısıtlamalarınıza saygı göstererek amacınızı yapılandırılmış, tutarlı arayüzlere dönüştürür. Düzenleri ve bileşenleri yineliyorlar, böylece boş bir tuval yerine gerçek bir şeyden başlıyorsunuz.",
+        "useCases": [
+          {
+            "description": "Özet ve tasarım sistemine göre yerleşim seçenekleri oluşturun.",
+            "title": "Kullanıcı arayüzü keşfi"
+          },
+          {
+            "description": "Hızla tutarlı durumlar ve varyasyonlar üretin.",
+            "title": "Bileşen çeşitleri"
+          },
+          {
+            "description": "Erişilebilirlik ve tutarlılık sorunlarını erkenden işaretleyin.",
+            "title": "Tasarım incelemesi"
+          }
+        ]
+      },
+      "ecommerce-retail": {
+        "headline": "Perakende için Özel İstihbarat",
+        "heroBlurb": "Verilerinizden vazgeçmeden vitrininizi ölçeklendiren özel yapay zeka.",
+        "label": "E-ticaret ve Perakende",
+        "overview": "Perakende katalog, içerik ve müşteri verilerine göre çalışır. AURA temsilcileri, müşteri bilgilerini kendi çevrenizde tutarken satış, destek ve analizi otomatikleştirir.",
+        "useCases": [
+          {
+            "description": "Geniş ölçekte ürün kopyası oluşturun ve koruyun.",
+            "title": "Katalog ve içerik"
+          },
+          {
+            "description": "Politikalarınıza dayalı olarak markaya yönelik yanıtların taslağını hazırlayın.",
+            "title": "Müşteri desteği"
+          },
+          {
+            "description": "Satış verilerindeki eğilimleri ve anormallikleri ortaya çıkarın.",
+            "title": "Talep analizi"
+          }
+        ]
+      },
+      "education": {
+        "headline": "Eğitim için Özel İstihbarat",
+        "heroBlurb": "Eğitimcileri destekleyen ve öğrenci verilerini koruyan özel yapay zeka.",
+        "label": "Eğitim",
+        "overview": "Eğitim, öğrenci verilerine duyulan güvene bağlıdır. AURA temsilcileri, kayıtları çevrenizde ve döngüde bir insanı tutarken öğretimi, araştırmayı ve yönetimi destekler.",
+        "useCases": [
+          {
+            "description": "Dersleri ve değerlendirmeleri müfredatınıza göre tasarlayın ve uyarlayın.",
+            "title": "Kurs materyalleri"
+          },
+          {
+            "description": "Kaynakları alıntı yapılabilir özetler halinde sentezleyin.",
+            "title": "Araştırma desteği"
+          },
+          {
+            "description": "Bir denetim takibi ile rutin iş akışlarını otomatikleştirin.",
+            "title": "Yönetim"
+          }
+        ]
+      },
+      "finance": {
+        "headline": "Önemli olan sayıları modelleyin.",
+        "heroBlurb": "Bütçeler ve tahminler oluşturun ve sinyali ortaya çıkarın.",
+        "label": "Finans",
+        "overview": "AURA finans temsilcileri modeller oluşturur ve bakımını yapar, verileri uzlaştırır ve her rakamın arkasındaki etkenleri açıklar. Planlamanın en son gerçekliğe dayanması için tahminleri güncel tutuyorlar.",
+        "useCases": [
+          {
+            "description": "Talep üzerine sürücü tabanlı modeller oluşturun ve güncelleyin.",
+            "title": "Tahmin"
+          },
+          {
+            "description": "Gerçekleşenleri planla uzlaştırın ve sapmaları açıklayın.",
+            "title": "Bütçe takibi"
+          },
+          {
+            "description": "Dakikalar içinde sonuçları varsayımlara göre karşılaştırın.",
+            "title": "Senaryo planlama"
+          }
+        ]
+      },
+      "finance-banking": {
+        "headline": "Finans için Özel İstihbarat",
+        "heroBlurb": "Risk ekiplerinin güvendiği, düzenleyicilerin kabul ettiği ve müşterilerin güvendiği özel yapay zeka. Verilerden asla ödün verilmez.",
+        "label": "Finans ve Bankacılık",
+        "overview": "Finans güven üzerine çalışır ve güven de verilerin kontrolü ile çalışır. AURA, üçüncü taraf modellere hassas bilgiler göndermeden otonom aracıları bankalara, fonlara ve fintech'lere getirir; çevrenizden çıkan her şey tanımlanamaz durumda kalır ve donanım uçtan uca denetlenebilir. Analistler, danışmanlar ve operasyon ekipleri yavaş çalışmayı devreder ve her eylem doğrulanabilir ve kayıt altında olacak şekilde kararları saklarlar.",
+        "useCases": [
+          {
+            "description": "Başvuruları, piyasa verilerini ve haberleri alıntılarla birlikte karara hazır özetler halinde sentezleyin.",
+            "title": "Araştırma ve durum tespiti"
+          },
+          {
+            "description": "İşlemleri ve belgeleri politikaya göre tarayın, istisnaları incelenmek üzere işaretleyin.",
+            "title": "Risk ve uyumluluk"
+          },
+          {
+            "description": "Rakamlar ilerledikçe güncellenen tahminler ve senaryolar oluşturun ve sürdürün.",
+            "title": "Finansal modelleme"
+          },
+          {
+            "description": "Portföy ve performans özetlerini kendi sesinizde, zamanında oluşturun.",
+            "title": "Müşteri raporlaması"
+          },
+          {
+            "description": "Tam denetim takibiyle verileri uzlaştırın ve arka ofis iş akışlarını otomatikleştirin.",
+            "title": "Operasyonlar"
+          },
+          {
+            "description": "Kendi verilerinize dayanarak markaya özel müşteri iletişimleri taslağı hazırlayın.",
+            "title": "Danışmanlık desteği"
+          }
+        ]
+      },
+      "healthcare": {
+        "headline": "Sağlık Hizmetlerinde Özel İstihbarat",
+        "heroBlurb": "Klinisyenlerin güvendiği, düzenleyicilerin kabul ettiği ve hastaların hak ettiği özel yapay zeka. Verilerden asla ödün verilmez.",
+        "label": "Sağlık hizmeti",
+        "overview": "Sağlık hizmetleri varsayılan olarak gizlilik gerektirir. AURA temsilcileri, doğrulanabilir ve denetlenebilir bir donanımla, korunan verileri çevrenizde tutarken klinik ve operasyonel ekipleri destekler.",
+        "useCases": [
+          {
+            "description": "Literatür ve deneme verilerini alıntı yapılabilir özetler halinde sentezleyin.",
+            "title": "Klinik araştırma"
+          },
+          {
+            "description": "İnsanların incelemesi için notların ve raporların taslağını ve yapısını oluşturun.",
+            "title": "Dokümantasyon"
+          },
+          {
+            "description": "Bir denetim takibi ile planlamayı ve arka ofis iş akışlarını otomatikleştirin.",
+            "title": "Operasyonlar"
+          }
+        ]
+      },
+      "legal": {
+        "headline": "Sözleşmeler gözden geçirildi ve açıklandı.",
+        "heroBlurb": "Belgeleri inceleyin ve yükümlülükleri net bir şekilde açıklayın.",
+        "label": "Yasal",
+        "overview": "AURA hukuk temsilcileri sözleşmeleri ve politikaları okur, riski işaretler ve yükümlülükleri sade bir dille açıklar. İnsanı her karardan haberdar ederken incelemeyi hızlandırırlar.",
+        "useCases": [
+          {
+            "description": "Riskli maddeleri ve standartlarınızdan sapmaları işaretleyin.",
+            "title": "Sözleşme incelemesi"
+          },
+          {
+            "description": "Tarihleri, görevleri ve yenilemeleri net bir listeye çıkarın.",
+            "title": "Yükümlülük takibi"
+          },
+          {
+            "description": "Kendi belgelerinize dayanan soruları yanıtlayın.",
+            "title": "Politika Soru-Cevap"
+          }
+        ]
+      },
+      "legal-services": {
+        "headline": "Hukuk için Özel İstihbarat",
+        "heroBlurb": "Firmaların güvendiği ve müşterilerin güvendiği özel yapay zeka. Gizlilikten asla ödün verilmez.",
+        "label": "Yasal",
+        "overview": "Yasal çalışmalar gizlilik ve kesinlik esasına göre yürütülür. AURA temsilcileri, ayrıcalıklı materyali çevrenizde ve bir insanı döngünün içinde tutarken incelemeyi, araştırmayı ve taslak hazırlamayı hızlandırır.",
+        "useCases": [
+          {
+            "description": "Riskleri ve standartlarınızdan sapmaları hızla işaretleyin.",
+            "title": "Sözleşme incelemesi"
+          },
+          {
+            "description": "İlgili otoriteyi alıntılarla çekin ve sentezleyin.",
+            "title": "Yasal araştırma"
+          },
+          {
+            "description": "Şablonlarınıza ve konu dosyalarınıza dayalı ilk taslakları üretin.",
+            "title": "Taslak hazırlama"
+          }
+        ]
+      },
+      "marketing": {
+        "headline": "Markaya sadık kalan kampanyalar.",
+        "heroBlurb": "Her kanaldaki içeriği planlayın, taslak haline getirin ve uyarlayın.",
+        "label": "Pazarlama",
+        "overview": "AURA pazarlama temsilcileri kampanyaları planlar, markaya özel içerik üretir ve sesinizi duyurmadan bunu kanala göre uyarlar. Özeti bir varlık listesine dönüştürürler ve takviminizin hareket etmesini sağlarlar, böylece kanallarınız asla sessiz kalmaz.",
+        "useCases": [
+          {
+            "description": "Özeti kanallara, temalara ve içerik takvimine dönüştürün.",
+            "title": "Kampanya planlaması"
+          },
+          {
+            "description": "Varlıkları kendi sesinizde kanallar arasında tasarlayın ve yeniden kullanın.",
+            "title": "İçerik üretimi"
+          },
+          {
+            "description": "Kampanya verilerini net, eyleme dönüştürülebilir içgörülere dönüştürün.",
+            "title": "Performans analizi"
+          }
+        ]
+      },
+      "marketing-media": {
+        "headline": "Pazarlama için Özel İstihbarat",
+        "heroBlurb": "Markanızı ses ve verilerinizin size ait olmasını sağlayan özel yapay zeka.",
+        "label": "Pazarlama ve Medya",
+        "overview": "Pazarlama ekipleri birçok kanalda hızlı hareket eder. AURA temsilcileri, hedef kitlenizi ve performans verilerinizi kontrolünüz altında tutarken markaya ilişkin içeriği planlar, taslak haline getirir ve uyarlar.",
+        "useCases": [
+          {
+            "description": "Özetinize göre talimatlar oluşturun ve basınç testi yapın.",
+            "title": "Kampanya konseptleri"
+          },
+          {
+            "description": "Sesinizle kanallar arasında taslak oluşturun ve yeniden kullanın.",
+            "title": "İçerik üretimi"
+          },
+          {
+            "description": "Kampanya verilerini net, eyleme dönüştürülebilir içgörülere dönüştürün.",
+            "title": "Performans analizi"
+          }
+        ]
+      },
+      "real-estate": {
+        "headline": "Gayrimenkulde Özel İstihbarat",
+        "heroBlurb": "Anlaşmaları ileriye taşıyan ve verilerinizin size ait olmasını sağlayan özel yapay zeka.",
+        "label": "Gayrimenkul",
+        "overview": "Gayrimenkul belgeler, listeler ve piyasa verileriyle çalışır. AURA temsilcileri, müşteri ve anlaşma bilgilerini kontrolünüz altında tutarken titizlik, taslak hazırlama ve analizi hızlandırır.",
+        "useCases": [
+          {
+            "description": "Listeleri ve pazarlama kopyasını oluşturun ve sürdürün.",
+            "title": "İçerik listeleme"
+          },
+          {
+            "description": "Belgelerden ve piyasa verilerinden sinyalleri tek bir görünüme çekin.",
+            "title": "Anlaşma titizliği"
+          },
+          {
+            "description": "Şablonlarınıza dayalı ilk taslakları üretin.",
+            "title": "Belge taslağı hazırlama"
+          }
+        ]
+      },
+      "research": {
+        "headline": "Sadece arama yapan değil, sentezleyen araştırma.",
+        "heroBlurb": "Kaynakları araştıran ve asıl önemli olanı ortaya çıkaran ajanlar.",
+        "label": "Araştırma",
+        "overview": "AURA araştırma temsilcileri belgeleri, web'i ve kendi bilgi tabanınızı okur, ardından bulguları net, alıntı yapılabilir yanıtlar halinde sentezler. Arka planda çalışmaya devam ediyorlar, bu nedenle siz karara odaklanırken günler süren derin bir inceleme tamamlanır.",
+        "useCases": [
+          {
+            "description": "Bir alanı araştırın ve en son teknolojiyi kaynaklarla birlikte özetleyin.",
+            "title": "Literatür incelemeleri"
+          },
+          {
+            "description": "Rakipleri takip edin ve hareketleri kısa bir özete dönüştürün.",
+            "title": "Rekabetçi analiz"
+          },
+          {
+            "description": "Başvurulardan, haberlerden ve veri odalarından gelen sinyalleri tek bir görünüme çekin.",
+            "title": "Durum tespit süreci"
+          }
+        ]
+      },
+      "sales": {
+        "headline": "Daha fazla boru hattı, daha az yoğun iş.",
+        "heroBlurb": "Anlaşmaları harekete geçiren hesapları ve taslak sosyal yardımları araştırın.",
+        "label": "Satış",
+        "overview": "AURA satış temsilcileri hesapları araştırır, erişimi kişiselleştirir ve satış hattınızı güncel tutar; böylece temsilciler yazmak yerine satış yapmaya zaman harcar. Bağlamınıza dayalı olarak sesli mesajlar hazırlarlar ve her anlaşmada bir sonraki en iyi eylemi ortaya çıkarırlar.",
+        "useCases": [
+          {
+            "description": "Kamu ve iç kaynaklardan potansiyel müşteriler hakkında özetler oluşturun.",
+            "title": "Hesap araştırması"
+          },
+          {
+            "description": "Sesinizde ve teklifinizde e-postaları ve dizileri kişiselleştirin.",
+            "title": "Sosyal yardım taslakları"
+          },
+          {
+            "description": "CRM kayıtlarını güncel tutun ve dikkat edilmesi gereken anlaşmaları işaretleyin.",
+            "title": "Boru hattı hijyeni"
+          }
+        ]
+      },
+      "social": {
+        "headline": "Sesli sosyal, programa uygun.",
+        "heroBlurb": "Markaya sadık kalan taslak gönderiler ve takvimler.",
+        "label": "Sosyal",
+        "overview": "AURA sosyal temsilcileri takvimleri planlar, kanal başına gönderi taslağı hazırlar ve sesinizi duyurmadan her platformun formatına uyum sağlar. Kanallarınızın asla sessiz kalmaması için sabit bir tempo tutuyorlar.",
+        "useCases": [
+          {
+            "description": "Temalar ve lansmanlarla ilgili haftalarca yayın planlayın.",
+            "title": "İçerik takvimleri"
+          },
+          {
+            "description": "Bir fikri her platformun formatına ve tonuna uyarlayın.",
+            "title": "Kanal başına taslaklar"
+          },
+          {
+            "description": "Gönderilmeden önce incelenmek üzere sesli yanıtların taslağını hazırlayın.",
+            "title": "Topluluk yanıtları"
+          }
+        ]
+      },
+      "technology-saas": {
+        "headline": "Teknoloji için Özel İstihbarat",
+        "heroBlurb": "Ürün gönderen ve kod tabanınızı kendinize ait tutan özel yapay zeka.",
+        "label": "Teknoloji / SaaS",
+        "overview": "Teknoloji ekipleri hızlı bir şekilde oluşturur ve IP'lerini korur. AURA temsilcileri, kodunuzu ve müşteri verilerinizi çevrenizde tutarken mühendislik, destek ve analizi hızlandırır.",
+        "useCases": [
+          {
+            "description": "Gerçek repo bağlamından özellikler ve düzeltmeler uygulayın.",
+            "title": "Mühendislik"
+          },
+          {
+            "description": "Dokümanlarınıza dayalı doğru yanıtların taslağını oluşturun.",
+            "title": "Müşteri desteği"
+          },
+          {
+            "description": "Kullanım verilerini karar vermeye hazır içgörülere dönüştürün.",
+            "title": "Ürün analitiği"
+          }
+        ]
+      },
+      "writing": {
+        "headline": "Kendi sesinizde, kendi hızınızda yazın.",
+        "heroBlurb": "Size benzeyen metinleri tasarlayın, düzenleyin ve cilalayın.",
+        "label": "Yazma",
+        "overview": "AURA yazma aracıları üslubunuzu ve kısıtlamalarınızı öğrenir, ardından uzun biçimli içeriği uçtan uca taslak haline getirir ve revize eder. İlk taslaktan son düzenlemeye kadar söylemin tutarlı olmasını ve gerçeklerin kaynaklarınıza dayanmasını sağlarlar.",
+        "useCases": [
+          {
+            "description": "Taslağı ve notları bitmiş bir parçaya dönüştürün.",
+            "title": "Uzun biçimli taslaklar"
+          },
+          {
+            "description": "Niyetinizi kaybetmeden yapıyı, dilbilgisini ve üslubu sıkılaştırın.",
+            "title": "Geçişleri düzenleme"
+          },
+          {
+            "description": "Bir kaynağı gönderiler, e-postalar ve özetler halinde yeniden şekillendirin.",
+            "title": "Yeniden kullanım"
+          }
+        ]
+      }
+    },
+    "overview": "Genel Bakış",
+    "overviewAriaLabel": "{{label}} genel bakış",
+    "previewAriaLabel": "{{label}} önizleme",
+    "requestDemo": "Demo talep edin",
+    "useCases": "Kullanım durumları",
+    "useCasesAriaLabel": "{{label}} kullanım durumları"
+  },
+  "feedback": {
+    "card": {
+      "anonymousAuthor": "Anonim",
+      "commentCount_one": "1 yorum",
+      "commentCount_other": "{{count}} yorumlar",
+      "time": {
+        "daysAgo_one": "{{count}}gün önce",
+        "daysAgo_other": "{{count}}gün önce",
+        "hoursAgo_one": "{{count}}saat önce",
+        "hoursAgo_other": "{{count}}saat önce",
+        "minutesAgo_one": "{{count}}m önce",
+        "minutesAgo_other": "{{count}}m önce",
+        "monthsAgo_one": "{{count}}ay önce",
+        "monthsAgo_other": "{{count}}ay önce",
+        "secondsAgo_one": "{{count}}önce",
+        "secondsAgo_other": "{{count}}önce",
+        "yearsAgo_one": "{{count}}sen önce",
+        "yearsAgo_other": "{{count}}sen önce"
+      },
+      "voteScoreAriaLabel": "Oy puanı"
+    },
+    "documentTitle": "AURA - Geribildirim",
+    "empty": {
+      "body": "Mevcut filtrelerle eşleşen AURA geri bildirim gönderisi yok.",
+      "heading": "Henüz geri bildirim yok."
+    },
+    "entriesAriaLabel": "Geri bildirim girişleri",
+    "filters": {
+      "ariaLabel": "Geri bildirim filtreleri",
+      "sections": {
+        "status": "Durum",
+        "trending": "Trend olan",
+        "type": "Tip"
+      },
+      "toggle": "Filtreler"
+    },
+    "stats": {
+      "participants": "Katılımcılar",
+      "resolved": "Çözülen Öğeler",
+      "submitted": "Gönderilen Öğeler"
+    },
+    "subtitle": "Kullanıcılarımız geri bildirimde bulunur ve AURA otomatik olarak kendini geliştirir.",
+    "summaryAriaLabel": "Geri bildirim özeti",
+    "title": "Geri bildirim"
+  },
+  "footer": {
+    "ariaLabel": "Site altbilgisi",
+    "copyright": "Telif hakkı © {{year}}",
+    "navigationAriaLabel": "Alt bilgide gezinme"
+  },
+  "models": {
+    "allModelsAriaLabel": "Tüm modeller",
+    "documentTitle": "AURA - Modeller",
+    "empty": "Mevcut filtrelerle eşleşen model yok. Aramayı temizlemeyi veya sekmeleri değiştirmeyi deneyin.",
+    "featured": "Öne Çıkanlar",
+    "featuredAriaLabel": "Öne çıkan modeller",
+    "filterByModalityAriaLabel": "Modaliteye göre filtrele",
+    "filterByStatusAriaLabel": "Duruma göre filtrele",
+    "loadingCatalog": "Katalog yükleniyor…",
+    "searchAriaLabel": "Modelleri ara",
+    "searchPlaceholder": "Modelleri ara...",
+    "stats": {
+      "image": "Resim",
+      "text": "Metin",
+      "threeD": "3 boyutlu",
+      "total": "Toplam Modeller",
+      "video": "Video"
+    },
+    "status": {
+      "live": "Canlı",
+      "liveAriaLabel": "Durum: Canlı",
+      "soon": "Yakında",
+      "soonAriaLabel": "Durum: Yakında"
+    },
+    "subtitle": "Metin, resim, video ve 3D genelinde AURA'ya güç veren sınır modelleri.",
+    "summaryAriaLabel": "Model özeti"
+  },
+  "os": {
+    "docDocumentTitle": "AURA işletim sistemi - {{title}}",
+    "documentTitle": "AURA-İşletim Sistemi",
+    "empty": {
+      "body": "AURA OS teknik incelemesi bağlı ancak henüz hiçbir bölüm yayınlanmadı."
+    },
+    "navigationAriaLabel": "Teknik incelemede gezinme",
+    "noContent": "Bu bölümde henüz içerik bulunmamaktadır.",
+    "noSections": "Henüz bölüm yok.",
+    "notFound": {
+      "backButton": "Genel bakışa geri dön",
+      "body": "Teknik incelemenin bu kısmı mevcut değil veya henüz yayınlanmadı.",
+      "heading": "Bölüm bulunamadı"
+    },
+    "sidebarTitle": "AURA işletim sistemi"
+  },
+  "pricing": {
+    "billingCycleAriaLabel": "Faturalandırma döngüsü",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "documentTitle": "AURA - Fiyatlandırma",
+    "downloadCta": "İndirmek",
+    "heroDescription": "Ücretsiz olarak yerel açık kaynak modelleriyle başlayın, ardından yalnızca kullandığınız sınır modelleri için ödeme yapın.",
+    "heroHeadline": "Ücretsiz olarak başlıyor.",
+    "monthly": "Aylık",
+    "plans": {
+      "free": {
+        "description": "Ücretsiz başlayın:",
+        "features": {
+          "0": "Kredi kartına gerek yok",
+          "1": "Yerel açık kaynak modelleri",
+          "2": "Sınır modelleri için kullandıkça öde"
+        },
+        "name": "Özgür"
+      },
+      "pro": {
+        "description": "Her şey Ücretsiz, artı:",
+        "features": {
+          "0": "20$ değerinde aylık kredi",
+          "1": "Uzak aracılar"
+        },
+        "name": "Profesyonel",
+        "priceNote": "Zero Pro OG aboneleri için ayda 10 ABD doları"
+      },
+      "sage": {
+        "description": "Pro'daki her şeye ek olarak:",
+        "features": {
+          "0": "Sınır modellerinde 20 kat kullanım",
+          "1": "Yeni özelliklere öncelikli erişim"
+        },
+        "name": "Adaçayı"
+      }
+    },
+    "plansLabel": "Bireysel Planlar",
+    "yearly": "Yıllık"
+  },
+  "privacy": {
+    "description": "Gizlilik Politikamız son halini alıyor ve yakında burada yayınlanacaktır.",
+    "documentTitle": "AURA - Gizlilik Politikası",
+    "headline": "Gizlilik Politikası",
+    "label": "YASAL"
+  },
+  "productScreen": {
+    "close": "Kapalı",
+    "closeFullscreenAriaLabel": "Tam ekran resmi kapat",
+    "openFullscreenAriaLabel": "Tam ekran resmi aç: {{label}}",
+    "placeholderLabel": "Resim yer tutucusu"
+  },
+  "sections": {
+    "agentChat": {
+      "ariaLabel": "Temsilcilerinizle her yerden sohbet edin",
+      "description": "AURA temsilcileriniz her zaman açıktır. Telefonunuzda, dizüstü bilgisayarınızda veya masaüstü bilgisayarınızda bir görüşme başlatın. Her şeyi hatırlıyorlar ve aynı araçları yanlarında getiriyorlar.",
+      "headlineLine1": "Temsilcilerinizle sohbet edin.",
+      "headlineLine2": "Her yerden.",
+      "phoneAriaLabel": "ile mobil sohbet {{agentName}} ajan"
+    },
+    "builtForTrust": {
+      "ariaLabel": "AURA güveninizi nasıl kazanır?",
+      "cards": {
+        "alwaysOn": {
+          "description": "Temsilciniz, siz uzaktayken ve cihazlarınız kapalıyken bile günün her saati çalışmaya devam eder.",
+          "title": "Her zaman açık."
+        },
+        "isolated": {
+          "description": "Her aracı, sisteminizden ve diğer aracılardan tamamen yalıtılmış, kendi sanal alanlı VM'sinde çalışır.",
+          "title": "Varsayılan olarak yalıtılmıştır."
+        },
+        "verifiable": {
+          "description": "Her ortam çalıştırılmadan önce onaylanır, böylece neye güvendiğinizi her zaman doğrulayabilirsiniz.",
+          "title": "Güvenilir ve doğrulanabilir."
+        }
+      },
+      "headline": "Güven için tasarlandı.",
+      "subhead": "AURA aracıları, güvenilir yürütme ortamlarındaki yalıtılmış sanal makinelerde çalışır."
+    },
+    "expertise": {
+      "headline": "Ego olmadan uzmanlık.",
+      "subheadLine1": "AURA temsilcileri her disiplinde uzmandır.",
+      "subheadLine2": "Kodlamadan bilime ve yaratıcılığa."
+    },
+    "madeForYou": {
+      "headline": "Ajanlar sizin için tasarlandı.",
+      "subhead": "Temsilcinizi 30 saniye içinde tasarlayın ve başlatın."
+    },
+    "personalAgent": {
+      "ariaLabel": "Temsilcinizin yapabilecekleri",
+      "cards": {
+        "alwaysOn": {
+          "description": "Temsilcinizden neredeyse her şeyi yapmasını isteyin veya yönlendirin. Gerektiğinde çalışmaya başlayacak ve rapor verecektir.",
+          "title": "Her zaman açık."
+        },
+        "connected": {
+          "description": "AURA, hizmetlerinize güvenli bir şekilde bağlanarak hakkınızdaki her şeyi bilir. Verileriniz hiçbir zaman kendi güvenli bilgisayarınızdan ayrılmaz ve üzerinde eğitim yapılmaz.",
+          "title": "Her şeye bağlı."
+        },
+        "domains": {
+          "description": "Temsilciniz her alanda bir dahidir. Yaşamdaki basit görevlerde, yaratıcı projelerde, ileri düzey tasarım ve kodlamada yardımcı olabilir.",
+          "title": "Tüm alanlarda akıllı."
+        }
+      },
+      "headline": "Her model. Her mod.",
+      "subhead": "AURA, hafif görevlerden derin çalışmalara kadar her konuda sizi destekleyen kişisel temsilcinizdir."
+    },
+    "privacy": {
+      "features": {
+        "openSource": {
+          "description": "AURA, MIT lisansı altında %100 açık kaynaktır. Satıcıya sıfır bağlılıkla ve herhangi bir koşula bağlı olmadan istediğiniz zaman çatallayın.",
+          "tag": "MİT Lisansı",
+          "title": "Açık Kaynak"
+        },
+        "private": {
+          "description": "AURA asla kişisel veya kurumsal verilerinizi görüntülemez veya bunlar üzerinde eğitim vermez. Sınır modellerine gönderilen herhangi bir şey tanımlanamayacak şekilde kalır.",
+          "tag": "PQ Şifreleme",
+          "title": "Özel"
+        },
+        "verifiable": {
+          "description": "AURA donanımı ve çekirdeği, birinci sınıf vatandaşlar olarak sıfırdan güvenlik, doğrulama ve politika ile oluşturulmuştur.",
+          "tag": "Güvenilir Yürütme",
+          "title": "Doğrulanabilir"
+        }
+      },
+      "headline": "İnsanlığınız için tasarlandı."
+    }
+  },
+  "support": {
+    "body": "AURA konusunda yardıma mı ihtiyacınız var? Sizin için buradayız. Destek ekibimize e-posta gönderin; mümkün olan en kısa sürede size geri döneceğiz.",
+    "headline": "Destek",
+    "note": "Hesap veya faturalandırmayla ilgili sorularınız için lütfen AURA hesabınızla ilişkili e-posta adresini ekleyin."
+  },
+  "taglines": {
+    "decentralized": "Merkezi olmayan.",
+    "openSource": "Açık Kaynak.",
+    "private": "Özel.",
+    "secure": "Güvenli."
+  },
+  "terms": {
+    "description": "Hizmet Şartlarımız sonuçlandırılıyor ve yakında burada yayınlanacak.",
+    "documentTitle": "AURA - Hizmet Şartları",
+    "headline": "Hizmet Şartları",
+    "label": "YASAL"
+  }
+}

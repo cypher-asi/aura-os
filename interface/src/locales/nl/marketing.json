@@ -1,0 +1,789 @@
+{
+  "agents": {
+    "buildDeviceAriaLabel": "Bouw uw agent",
+    "documentTitle": "AURA - Agenten",
+    "heroDescriptionLine1": "AURA-agenten zijn experts op elk gebied",
+    "heroDescriptionLine2": "die werken terwijl u slaapt.",
+    "heroHeadline": "Delegeer alles."
+  },
+  "blog": {
+    "allPosts": "Alle berichten",
+    "breadcrumbAriaLabel": "Broodkruimel",
+    "documentTitle": "AURA - Blog",
+    "empty": {
+      "body": "De blog is verbonden, maar er zijn nog geen berichten gepubliceerd.",
+      "heading": "Nog geen berichten."
+    },
+    "latest": "Nieuwste",
+    "loading": "Laden…",
+    "loadingPost": "Bericht laden…",
+    "loadingPosts": "Berichten laden…",
+    "moreFromBlog": "Meer van de blog",
+    "morePosts": "Meer berichten",
+    "navigationAriaLabel": "Blognavigatie",
+    "noContent": "Dit bericht heeft nog geen inhoud.",
+    "noOtherPosts": "Nog geen andere berichten.",
+    "notFound": {
+      "backLink": "← Terug naar de blog",
+      "body": "Het bericht dat je zoekt bestaat niet of is niet gepubliceerd.",
+      "heading": "Bericht niet gevonden"
+    },
+    "postDocumentTitle": "AURA - {{title}}",
+    "readTime_one": "{{count}} min gelezen",
+    "readTime_other": "{{count}} min gelezen",
+    "recentPostsAriaLabel": "Recente berichten",
+    "table": {
+      "author": "Auteur",
+      "date": "Datum",
+      "title": "Titel",
+      "type": "Type"
+    },
+    "title": "Bloggen",
+    "tocAriaLabel": "Inhoudsopgave",
+    "tocTitle": "Inhoudsopgave"
+  },
+  "changelog": {
+    "chart": {
+      "ariaLabel": "Releases per dag in de loop van de tijd",
+      "barTitle_one": "{{date}}: 1 uitgave",
+      "barTitle_other": "{{date}}: {{count}} releases",
+      "caption": "Uitgaven per dag",
+      "captionWithCount_one": "1 uitgave · {{date}}",
+      "captionWithCount_other": "{{count}} releases · {{date}}"
+    },
+    "commitsLiveTitle_one": "Leef totaal aan de overkant {{count}} AURA-opslagplaats",
+    "commitsLiveTitle_other": "Leef totaal aan de overkant {{count}} AURA-opslagplaatsen",
+    "currentVersion": "Huidige versie",
+    "dailyUpdate": "Dagelijkse update",
+    "documentTitle": "AURA - Wijzigingslog",
+    "download": "Downloaden",
+    "downloadVersionAriaLabel": "AURA downloaden {{version}} voor uw besturingssysteem",
+    "downloadVersionTitle": "Klik om de build voor uw besturingssysteem te downloaden",
+    "empty": {
+      "body": "De releasefeed is verbonden, maar er zijn nog geen gepubliceerde changelog-items gevonden.",
+      "heading": "Nog geen changelog-vermeldingen."
+    },
+    "entriesAriaLabel": "Aura changelog-vermeldingen",
+    "entry": {
+      "commitCount_one": "1 toezegging",
+      "commitCount_other": "{{count}} pleegt",
+      "releaseCount_one": "1 uitgave",
+      "releaseCount_other": "{{count}} releases"
+    },
+    "github": "GitHub",
+    "openScreenshotAriaLabel": "Schermafbeelding openen voor {{title}}",
+    "releasedAgo": "Uitgegeven {{relativeTime}}",
+    "releasedRecently": "Onlangs uitgebracht",
+    "sources": "Bronnen",
+    "stats": {
+      "allTimeCommits": "All-time verplichtingen",
+      "allTimeReleases": "Uitgaven aller tijden",
+      "commitsThisMonth": "Deze maand vastgelegd",
+      "releasesThisMonth": "Komt deze maand uit"
+    },
+    "summaryAriaLabel": "Samenvatting van de changelog",
+    "title": "Wijzigingslog"
+  },
+  "changelogPreview": {
+    "ariaLabel": "Recente changelog-vermeldingen",
+    "ctaLabel": "Ontdek wat er nieuw is in AURA",
+    "heading": "Wijzigingslog",
+    "releaseUpdate": "Release-update"
+  },
+  "code": {
+    "deviceAriaLabel": "De AURA-coderingsdesktop",
+    "documentTitle": "AURA-Code",
+    "heroDescription": "Een grensverleggend coderingsharnas ontworpen voor beveiliging, automatisering en verifieerbaarheid dat 100% open source is.",
+    "heroHeadline": "Codeer terwijl u slaapt."
+  },
+  "cta": {
+    "ariaLabel": "Call-to-action voor producten",
+    "download": "Downloaden",
+    "signUp": "Aanmelden",
+    "tagline": "Voel de AGI."
+  },
+  "docs": {
+    "docDocumentTitle": "AURA-documenten - {{title}}",
+    "documentTitle": "AURA - Documenten",
+    "empty": {
+      "body": "De documentatiesite is verbonden, maar er zijn nog geen pagina's gepubliceerd."
+    },
+    "loading": "Laden…",
+    "navigationAriaLabel": "Documentatie navigatie",
+    "noContent": "Deze pagina heeft nog geen inhoud.",
+    "noPages": "Nog geen pagina's.",
+    "notFound": {
+      "backButton": "Terug naar het overzicht",
+      "body": "Deze documentatiepagina bestaat niet of is nog niet gepubliceerd.",
+      "heading": "Pagina niet gevonden"
+    },
+    "sidebarTitle": "Documentatie",
+    "tocAriaLabel": "Op deze pagina",
+    "tocTitle": "Op deze pagina"
+  },
+  "download": {
+    "cards": {
+      "linux": {
+        "description": "Portable AppImage voor Linux-desktops, geschikt voor direct downloaden en starten.",
+        "meta": "x86_64 AppAfbeelding"
+      },
+      "mac-apple-silicon": {
+        "description": "Native build voor M1-, M2-, M3- en M4-Macs.",
+        "meta": "Aanbevolen voor de meeste Macs"
+      },
+      "mac-intel": {
+        "description": "Desktopversie voor x86-gebaseerde Macs en oudere MacBook Pro- en iMac-hardware.",
+        "meta": "Alleen voor pre-Apple Silicon Macs"
+      },
+      "windows": {
+        "description": "Ondertekend Windows-installatieprogramma met de nieuwste ondersteuning voor desktopruntime en updater.",
+        "meta": "x64 installatieprogramma"
+      }
+    },
+    "cta": "Downloaden",
+    "documentTitle": "Downloaden - AURA",
+    "headline": "Download AURA voor elk groot desktopplatform.",
+    "loading": "Laden..."
+  },
+  "expertise": {
+    "documentTitle": "AURA - {{label}}",
+    "entries": {
+      "analytics": {
+        "headline": "Ruwe data naar beslissingsklaar inzicht.",
+        "heroBlurb": "Zet cijfers om in duidelijke antwoorden waar u actie op kunt ondernemen.",
+        "label": "Analyses",
+        "overview": "AURA-analyseagenten bevragen, zuiveren en interpreteren gegevens en leggen vervolgens in duidelijke taal uit wat dit betekent. Ze brengen de trend, de oorzaak en de aanbevolen volgende stap naar voren.",
+        "useCases": [
+          {
+            "description": "Beantwoord een zakelijke vraag rechtstreeks vanuit de data.",
+            "title": "Ad-hocanalyse"
+          },
+          {
+            "description": "Genereer terugkerende rapporten met verhalende context.",
+            "title": "Rapportage"
+          },
+          {
+            "description": "Markeer onverwachte verschuivingen en leg mogelijke drijfveren uit.",
+            "title": "Detectie van afwijkingen"
+          }
+        ]
+      },
+      "coding": {
+        "headline": "Verzend functies terwijl u slaapt.",
+        "heroBlurb": "Van repo-context tot geteste, reviewbare PR’s.",
+        "label": "Codering",
+        "overview": "AURA-codeeragenten werken vanuit de echte context van uw repository om functies te implementeren, bugs op te lossen en geteste pull-aanvragen te openen. Ze werken autonoom en leveren werk terug dat klaar is om te worden beoordeeld.",
+        "useCases": [
+          {
+            "description": "Implementeer scoped-functies van begin tot eind met tests.",
+            "title": "Feature werk"
+          },
+          {
+            "description": "Reproduceer, repareer en verifieer met een duidelijke PR.",
+            "title": "Bugfixes"
+          },
+          {
+            "description": "Pas consistente wijzigingen veilig toe in de hele codebase.",
+            "title": "Refactoren"
+          }
+        ]
+      },
+      "creative": {
+        "headline": "Scherpere concepten, sneller.",
+        "heroBlurb": "Brainstorm over campagnes, concepten en kopieer dat land.",
+        "label": "Creatief",
+        "overview": "De creatieve agenten van AURA genereren ideeën en testen deze op de proef, en bouwen vervolgens de ideeën uit die de moeite waard zijn om te behouden. Ze gaan van een blanco pagina naar een reeks aanwijzingen waarop u binnen enkele minuten kunt reageren.",
+        "useCases": [
+          {
+            "description": "Genereer verschillende richtingen met een onderbouwing voor elke richting.",
+            "title": "Campagneconcepten"
+          },
+          {
+            "description": "Verken de opties op basis van uw opdracht en beperkingen.",
+            "title": "Naamgeving en slogan"
+          },
+          {
+            "description": "Verzamel referenties en kopieer ze tot een deelbaar concept.",
+            "title": "Moodboards"
+          }
+        ]
+      },
+      "design": {
+        "headline": "Van ruw idee tot gepolijste interface.",
+        "heroBlurb": "Zet schetsen en aanwijzingen om in bruikbare ontwerpen.",
+        "label": "Ontwerp",
+        "overview": "AURA-ontwerpagenten vertalen de intentie naar gestructureerde, consistente interfaces, met respect voor uw systeem en beperkingen. Ze herhalen de lay-outs en componenten, zodat u begint met iets echts in plaats van met een leeg canvas.",
+        "useCases": [
+          {
+            "description": "Genereer lay-outopties op basis van een opdracht- en ontwerpsysteem.",
+            "title": "UI-verkenning"
+          },
+          {
+            "description": "Produceer consistente toestanden en variaties op snelheid.",
+            "title": "Componentvarianten"
+          },
+          {
+            "description": "Markeer problemen met toegankelijkheid en consistentie vroegtijdig.",
+            "title": "Ontwerp beoordeling"
+          }
+        ]
+      },
+      "ecommerce-retail": {
+        "headline": "Private Intelligence voor de detailhandel",
+        "heroBlurb": "Privé-AI die uw winkel schaalt zonder uw gegevens op te geven.",
+        "label": "E-commerce en detailhandel",
+        "overview": "Retail draait op catalogus-, inhoud- en klantgegevens. AURA-agenten automatiseren merchandising, ondersteuning en analyse terwijl ze klantinformatie binnen uw bereik houden.",
+        "useCases": [
+          {
+            "description": "Genereer en onderhoud productkopieën op schaal.",
+            "title": "Catalogus & inhoud"
+          },
+          {
+            "description": "Stel merkgerichte reacties op, gebaseerd op uw beleid.",
+            "title": "Klantenondersteuning"
+          },
+          {
+            "description": "Ontdek trends en afwijkingen in verkoopgegevens.",
+            "title": "Analyse van de vraag"
+          }
+        ]
+      },
+      "education": {
+        "headline": "Particuliere inlichtingen voor het onderwijs",
+        "heroBlurb": "Privé-AI die docenten ondersteunt en leerlinggegevens beschermt.",
+        "label": "Onderwijs",
+        "overview": "Onderwijs is afhankelijk van vertrouwen rond leerlinggegevens. AURA-agenten ondersteunen onderwijs, onderzoek en administratie terwijl ze binnen uw perimeter gegevens bijhouden en een mens op de hoogte houden.",
+        "useCases": [
+          {
+            "description": "Ontwerp lessen en beoordelingen en pas deze aan uw curriculum aan.",
+            "title": "Cursusmateriaal"
+          },
+          {
+            "description": "Synthetiseer bronnen in citeerbare samenvattingen.",
+            "title": "Onderzoeksondersteuning"
+          },
+          {
+            "description": "Automatiseer routinematige workflows met een audittrail.",
+            "title": "Administratie"
+          }
+        ]
+      },
+      "finance": {
+        "headline": "Modelleer de getallen die er toe doen.",
+        "heroBlurb": "Stel budgetten en prognoses op en breng het signaal naar boven.",
+        "label": "Financiën",
+        "overview": "AURA-financieringsagenten bouwen en onderhouden modellen, stemmen gegevens af en leggen de drijfveren achter elk cijfer uit. Ze houden de voorspellingen actueel, zodat de planning gebaseerd is op de nieuwste realiteit.",
+        "useCases": [
+          {
+            "description": "Bouw en update op stuurprogramma's gebaseerde modellen op aanvraag.",
+            "title": "Voorspellingen"
+          },
+          {
+            "description": "Stem de werkelijke cijfers af op het plan en verklaar de variantie.",
+            "title": "Budgetbewaking"
+          },
+          {
+            "description": "Vergelijk binnen enkele minuten de uitkomsten van alle aannames.",
+            "title": "Scenarioplanning"
+          }
+        ]
+      },
+      "finance-banking": {
+        "headline": "Privé-inlichtingen voor financiën",
+        "heroBlurb": "Private AI die risicoteams vertrouwen, toezichthouders accepteren en klanten vertrouwen. Geen compromissen op het gebied van data – nooit.",
+        "label": "Financiën en bankwezen",
+        "overview": "Financiën draait op vertrouwen, en vertrouwen draait op controle over gegevens. AURA brengt autonome agenten naar banken, fondsen en fintechs zonder gevoelige informatie naar modellen van derden te sturen. Alles dat uw grenzen verlaat, blijft niet-identificeerbaar en het harnas is van begin tot eind controleerbaar. Analisten, adviseurs en operationele teams delegeren het trage werk en behouden het oordeel, waarbij elke actie verifieerbaar en vastgelegd is.",
+        "useCases": [
+          {
+            "description": "Synthetiseer dossiers, marktgegevens en nieuws in besluitklare samenvattingen met citaten.",
+            "title": "Onderzoek en due diligence"
+          },
+          {
+            "description": "Screen transacties en documenten op basis van het beleid en markeer uitzonderingen ter beoordeling.",
+            "title": "Risico & naleving"
+          },
+          {
+            "description": "Bouw en onderhoud prognoses en scenario's die worden bijgewerkt naarmate de cijfers veranderen.",
+            "title": "Financiële modellering"
+          },
+          {
+            "description": "Genereer portfolio- en prestatieoverzichten in uw stem, op tijd.",
+            "title": "Klantrapportage"
+          },
+          {
+            "description": "Stem gegevens af en automatiseer backoffice-workflows met een volledig audittraject.",
+            "title": "Operaties"
+          },
+          {
+            "description": "Stel on-brand klantcommunicatie op, gebaseerd op uw eigen gegevens.",
+            "title": "Adviserende ondersteuning"
+          }
+        ]
+      },
+      "healthcare": {
+        "headline": "Private Intelligence voor de gezondheidszorg",
+        "heroBlurb": "Particuliere AI die artsen vertrouwen, toezichthouders accepteren en patiënten verdienen. Geen compromissen op het gebied van data – nooit.",
+        "label": "Gezondheidszorg",
+        "overview": "De gezondheidszorg eist standaard privacy. AURA-agenten ondersteunen klinische en operationele teams terwijl ze beschermde gegevens binnen uw perimeter houden, met overal een verifieerbaar, controleerbaar harnas.",
+        "useCases": [
+          {
+            "description": "Synthetiseer literatuur- en onderzoeksgegevens in citeerbare samenvattingen.",
+            "title": "Klinisch onderzoek"
+          },
+          {
+            "description": "Ontwerp en structureer notities en rapporten voor menselijke beoordeling.",
+            "title": "Documentatie"
+          },
+          {
+            "description": "Automatiseer planning en backofficeworkflows met een audittrail.",
+            "title": "Operaties"
+          }
+        ]
+      },
+      "legal": {
+        "headline": "Contracten beoordeeld en uitgelegd.",
+        "heroBlurb": "Controleer documenten en leg de verplichtingen duidelijk uit.",
+        "label": "Legaal",
+        "overview": "Juridische agenten van AURA lezen contracten en beleid, signaleren risico's en leggen verplichtingen in duidelijke taal uit. Ze versnellen de beoordeling en houden een mens op de hoogte van elke beslissing.",
+        "useCases": [
+          {
+            "description": "Markeer risicovolle clausules en afwijkingen van uw normen.",
+            "title": "Contractbeoordeling"
+          },
+          {
+            "description": "Verzamel data, plichten en verlengingen in een duidelijke lijst.",
+            "title": "Verplichtingen volgen"
+          },
+          {
+            "description": "Beantwoord vragen op basis van uw eigen documenten.",
+            "title": "Beleidsvragen en antwoorden"
+          }
+        ]
+      },
+      "legal-services": {
+        "headline": "Privé-inlichtingen voor juridische zaken",
+        "heroBlurb": "Private AI waarop bedrijven vertrouwen en waar klanten op vertrouwen. Geen compromissen op het gebied van vertrouwelijkheid – nooit.",
+        "label": "Legaal",
+        "overview": "Juridisch werk draait om vertrouwelijkheid en precisie. AURA-agenten versnellen beoordeling, onderzoek en opstellen, terwijl ze bevoorrecht materiaal binnen uw perimeter houden en een mens op de hoogte houden.",
+        "useCases": [
+          {
+            "description": "Markeer risico's en afwijkingen van uw normen snel.",
+            "title": "Contractbeoordeling"
+          },
+          {
+            "description": "Haal relevante autoriteit op en synthetiseer deze met citaten.",
+            "title": "Juridisch onderzoek"
+          },
+          {
+            "description": "Maak de eerste concepten op basis van uw sjablonen en dossierbestanden.",
+            "title": "Opstellen"
+          }
+        ]
+      },
+      "marketing": {
+        "headline": "Campagnes die bij het merk blijven.",
+        "heroBlurb": "Plan, stel content op en pas deze aan voor elk kanaal.",
+        "label": "Marketing",
+        "overview": "AURA-marketingagenten plannen campagnes, produceren on-brand content en passen deze per kanaal aan, terwijl ze uw stem vasthouden. Ze zetten een opdracht om in een reeks items en houden de agenda in beweging, zodat uw kanalen nooit stil vallen.",
+        "useCases": [
+          {
+            "description": "Zet een opdracht om in kanalen, thema's en een contentkalender.",
+            "title": "Campagneplanning"
+          },
+          {
+            "description": "Ontwerp en hergebruik assets op verschillende kanalen met uw stem.",
+            "title": "Inhoud productie"
+          },
+          {
+            "description": "Zet campagnegegevens om in duidelijke, bruikbare inzichten.",
+            "title": "Prestatieanalyse"
+          }
+        ]
+      },
+      "marketing-media": {
+        "headline": "Privé-intelligentie voor marketing",
+        "heroBlurb": "Privé-AI die ervoor zorgt dat uw merk zichtbaar blijft en uw gegevens eigen blijven.",
+        "label": "Marketing & Media",
+        "overview": "Marketingteams bewegen snel over vele kanalen. AURA-agenten plannen, opstellen en passen inhoud voor uw merk aan, terwijl u uw doelgroep- en prestatiegegevens onder uw controle houdt.",
+        "useCases": [
+          {
+            "description": "Genereer en test aanwijzingen op basis van uw opdracht.",
+            "title": "Campagneconcepten"
+          },
+          {
+            "description": "Ontwerp en herbestem met uw stem voor alle kanalen.",
+            "title": "Inhoud productie"
+          },
+          {
+            "description": "Zet campagnegegevens om in duidelijke, bruikbare inzichten.",
+            "title": "Prestatieanalyse"
+          }
+        ]
+      },
+      "real-estate": {
+        "headline": "Private Intelligence voor onroerend goed",
+        "heroBlurb": "Privé-AI die deals vooruit helpt en uw gegevens eigen houdt.",
+        "label": "Vastgoed",
+        "overview": "Onroerend goed draait op documenten, lijsten en marktgegevens. AURA-agenten versnellen de zorgvuldigheid, het opstellen en de analyse, terwijl u klant- en dealinformatie onder uw controle houdt.",
+        "useCases": [
+          {
+            "description": "Genereer en onderhoud vermeldingen en marketingteksten.",
+            "title": "Inhoud vermelden"
+          },
+          {
+            "description": "Breng signalen uit documenten en marktgegevens samen in één weergave.",
+            "title": "Handel zorgvuldig"
+          },
+          {
+            "description": "Maak de eerste concepten op basis van uw sjablonen.",
+            "title": "Opstellen van documenten"
+          }
+        ]
+      },
+      "research": {
+        "headline": "Onderzoek dat synthetiseert, en niet alleen zoekt.",
+        "heroBlurb": "Agenten die bronnen doorzoeken en naar boven halen wat er werkelijk toe doet.",
+        "label": "Onderzoek",
+        "overview": "AURA-onderzoeksagenten lezen documenten, het internet en uw eigen kennisbank door en synthetiseren de bevindingen vervolgens in duidelijke, citeerbare antwoorden. Ze blijven op de achtergrond werken, dus een diepgaande beoordeling die vroeger dagen in beslag nam, komt terecht terwijl jij je concentreert op de beslissing.",
+        "useCases": [
+          {
+            "description": "Onderzoek een veld en vat de stand van zaken samen met bronnen.",
+            "title": "Literatuurrecensies"
+          },
+          {
+            "description": "Volg concurrenten en destilleer bewegingen in een hardloopopdracht.",
+            "title": "Concurrentieanalyse"
+          },
+          {
+            "description": "Breng signalen uit dossiers, nieuws en datarooms samen in één weergave.",
+            "title": "Due diligence"
+          }
+        ]
+      },
+      "sales": {
+        "headline": "Meer pijplijn, minder druk werk.",
+        "heroBlurb": "Onderzoek accounts en stel een outreach op die deals tot stand brengt.",
+        "label": "Verkoop",
+        "overview": "AURA-verkoopagenten onderzoeken accounts, personaliseren het bereik en houden uw pijplijn actueel, zodat vertegenwoordigers tijd besteden aan verkopen in plaats van typen. Ze stellen on-voice berichten op die zijn gebaseerd op uw context en brengen voor elke deal de beste actie naar voren.",
+        "useCases": [
+          {
+            "description": "Maak briefings over prospects uit publieke en interne bronnen.",
+            "title": "Accountonderzoek"
+          },
+          {
+            "description": "Personaliseer e-mails en reeksen op basis van uw stem en aanbod.",
+            "title": "Outreach-concepten"
+          },
+          {
+            "description": "Houd CRM-records actueel en markeer deals die aandacht behoeven.",
+            "title": "Hygiëne van pijpleidingen"
+          }
+        ]
+      },
+      "social": {
+        "headline": "On-voice sociaal, op schema.",
+        "heroBlurb": "Ontwerp berichten en kalenders die bij het merk blijven.",
+        "label": "Sociaal",
+        "overview": "Sociale agenten van AURA plannen agenda's, stellen berichten per kanaal op en passen zich aan het formaat van elk platform aan terwijl ze uw stem vasthouden. Ze houden een constante cadans aan, zodat uw kanalen nooit stil worden.",
+        "useCases": [
+          {
+            "description": "Plan weken vol berichten rond thema's en lanceringen.",
+            "title": "Inhoud kalenders"
+          },
+          {
+            "description": "Pas één idee aan het formaat en de toon van elk platform aan.",
+            "title": "Concepten per kanaal"
+          },
+          {
+            "description": "Stel on-voice-reacties op ter beoordeling voordat ze worden verzonden.",
+            "title": "Community-antwoorden"
+          }
+        ]
+      },
+      "technology-saas": {
+        "headline": "Privé-inlichtingen voor technologie",
+        "heroBlurb": "Privé-AI die producten verzendt en uw codebase eigen houdt.",
+        "label": "Technologie / SaaS",
+        "overview": "Technologieteams bouwen snel en bewaken hun IP. AURA-agenten versnellen de engineering, ondersteuning en analyse terwijl ze uw code en klantgegevens binnen uw perimeter houden.",
+        "useCases": [
+          {
+            "description": "Implementeer functies en oplossingen vanuit de echte repositorycontext.",
+            "title": "Engineering"
+          },
+          {
+            "description": "Stel nauwkeurige antwoorden op, gebaseerd op uw documenten.",
+            "title": "Klantenondersteuning"
+          },
+          {
+            "description": "Zet gebruiksgegevens om in inzicht dat gereed is voor beslissingen.",
+            "title": "Productanalyse"
+          }
+        ]
+      },
+      "writing": {
+        "headline": "Schrijf met uw stem, in uw tempo.",
+        "heroBlurb": "Ontwerp, bewerk en polijst proza ​​dat op jou lijkt.",
+        "label": "Schrijven",
+        "overview": "AURA-schrijfagenten leren uw toon en beperkingen kennen, en stellen vervolgens lange inhoud van begin tot eind op en herzien deze. Van de eerste schets tot de uiteindelijke bewerking zorgen ze ervoor dat de stem consistent blijft en dat de feiten gebaseerd zijn op uw bronnen.",
+        "useCases": [
+          {
+            "description": "Verander een overzicht en aantekeningen in een voltooid stuk.",
+            "title": "Lange concepten"
+          },
+          {
+            "description": "Verbeter de structuur, grammatica en toon zonder de intentie te verliezen.",
+            "title": "Bewerkingspassen"
+          },
+          {
+            "description": "Vorm één bron om in berichten, e-mails en samenvattingen.",
+            "title": "Herbestemming"
+          }
+        ]
+      }
+    },
+    "overview": "Overzicht",
+    "overviewAriaLabel": "{{label}} overzicht",
+    "previewAriaLabel": "{{label}} voorbeeld",
+    "requestDemo": "Vraag een demo aan",
+    "useCases": "Gebruiksgevallen",
+    "useCasesAriaLabel": "{{label}} gebruiksgevallen"
+  },
+  "feedback": {
+    "card": {
+      "anonymousAuthor": "Anoniem",
+      "commentCount_one": "1 opmerking",
+      "commentCount_other": "{{count}} opmerkingen",
+      "time": {
+        "daysAgo_one": "{{count}}d geleden",
+        "daysAgo_other": "{{count}}d geleden",
+        "hoursAgo_one": "{{count}}u geleden",
+        "hoursAgo_other": "{{count}}u geleden",
+        "minutesAgo_one": "{{count}}m geleden",
+        "minutesAgo_other": "{{count}}m geleden",
+        "monthsAgo_one": "{{count}}ma geleden",
+        "monthsAgo_other": "{{count}}ma geleden",
+        "secondsAgo_one": "{{count}}geleden",
+        "secondsAgo_other": "{{count}}geleden",
+        "yearsAgo_one": "{{count}}j geleden",
+        "yearsAgo_other": "{{count}}j geleden"
+      },
+      "voteScoreAriaLabel": "Stemscore"
+    },
+    "documentTitle": "AURA - Feedback",
+    "empty": {
+      "body": "Er zijn geen AURA-feedbackposts die overeenkomen met de huidige filters.",
+      "heading": "Nog geen feedback."
+    },
+    "entriesAriaLabel": "Feedbackinzendingen",
+    "filters": {
+      "ariaLabel": "Feedbackfilters",
+      "sections": {
+        "status": "Status",
+        "trending": "Populair",
+        "type": "Type"
+      },
+      "toggle": "Filters"
+    },
+    "stats": {
+      "participants": "Deelnemers",
+      "resolved": "Punten opgelost",
+      "submitted": "Ingezonden artikelen"
+    },
+    "subtitle": "Onze gebruikers geven feedback en AURA verbetert zichzelf autonoom.",
+    "summaryAriaLabel": "Feedbackoverzicht",
+    "title": "Feedback"
+  },
+  "footer": {
+    "ariaLabel": "Voettekst van de site",
+    "copyright": "Copyright © {{year}}",
+    "navigationAriaLabel": "Voettekstnavigatie"
+  },
+  "models": {
+    "allModelsAriaLabel": "Alle modellen",
+    "documentTitle": "AURA - Modellen",
+    "empty": "Er zijn geen modellen die overeenkomen met de huidige filters. Probeer de zoekopdracht te wissen of tussen tabbladen te wisselen.",
+    "featured": "Uitgelicht",
+    "featuredAriaLabel": "Uitgelichte modellen",
+    "filterByModalityAriaLabel": "Filter op modaliteit",
+    "filterByStatusAriaLabel": "Filter op status",
+    "loadingCatalog": "Catalogus laden...",
+    "searchAriaLabel": "Zoek modellen",
+    "searchPlaceholder": "Modellen zoeken...",
+    "stats": {
+      "image": "Afbeelding",
+      "text": "Tekst",
+      "threeD": "3D",
+      "total": "Totaal modellen",
+      "video": "Video"
+    },
+    "status": {
+      "live": "Live",
+      "liveAriaLabel": "Status: Leef",
+      "soon": "Spoedig",
+      "soonAriaLabel": "Status: Binnenkort beschikbaar"
+    },
+    "subtitle": "De grensmodellen die AURA aandrijven, voor tekst, afbeeldingen, video en 3D.",
+    "summaryAriaLabel": "Modellen samenvatting"
+  },
+  "os": {
+    "docDocumentTitle": "AURA-besturingssysteem - {{title}}",
+    "documentTitle": "AURA-OS",
+    "empty": {
+      "body": "De AURA OS whitepaper is aangesloten, maar er zijn nog geen secties gepubliceerd."
+    },
+    "navigationAriaLabel": "Whitepaper-navigatie",
+    "noContent": "Deze sectie heeft nog geen inhoud.",
+    "noSections": "Nog geen secties.",
+    "notFound": {
+      "backButton": "Terug naar het overzicht",
+      "body": "Dit deel van de whitepaper bestaat niet of is nog niet gepubliceerd.",
+      "heading": "Sectie niet gevonden"
+    },
+    "sidebarTitle": "AURA OS"
+  },
+  "pricing": {
+    "billingCycleAriaLabel": "Factureringscyclus",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "documentTitle": "AURA - Prijzen",
+    "downloadCta": "Downloaden",
+    "heroDescription": "Begin gratis met lokale open source-modellen en betaal vervolgens alleen voor de frontier-modellen die u gebruikt.",
+    "heroHeadline": "Vanaf gratis.",
+    "monthly": "Maandelijks",
+    "plans": {
+      "free": {
+        "description": "Ga gratis aan de slag:",
+        "features": {
+          "0": "Geen creditcard vereist",
+          "1": "Lokale open source-modellen",
+          "2": "Pay-as-you-go voor frontier-modellen"
+        },
+        "name": "Vrij"
+      },
+      "pro": {
+        "description": "Alles gratis, plus:",
+        "features": {
+          "0": "$ 20 aan maandelijkse tegoeden",
+          "1": "Agenten op afstand"
+        },
+        "name": "Pro",
+        "priceNote": "$ 10/maand voor Zero Pro OG-abonnees"
+      },
+      "sage": {
+        "description": "Alles in Pro, plus:",
+        "features": {
+          "0": "20x gebruik op frontier-modellen",
+          "1": "Prioritaire toegang tot nieuwe functies"
+        },
+        "name": "Verstandig"
+      }
+    },
+    "plansLabel": "Individuele plannen",
+    "yearly": "Jaarlijks"
+  },
+  "privacy": {
+    "description": "Ons privacybeleid wordt momenteel afgerond en zal binnenkort hier worden gepubliceerd.",
+    "documentTitle": "AURA - Privacybeleid",
+    "headline": "Privacybeleid",
+    "label": "JURIDISCH"
+  },
+  "productScreen": {
+    "close": "Dichtbij",
+    "closeFullscreenAriaLabel": "Sluit de afbeelding op volledig scherm",
+    "openFullscreenAriaLabel": "Afbeelding op volledig scherm openen: {{label}}",
+    "placeholderLabel": "Tijdelijke aanduiding voor afbeelding"
+  },
+  "sections": {
+    "agentChat": {
+      "ariaLabel": "Chat overal met uw agenten",
+      "description": "Uw AURA-agenten staan ​​altijd aan. Neem een ​​gesprek op uw telefoon, uw laptop of uw desktop. Ze onthouden alles en nemen hetzelfde gereedschap mee.",
+      "headlineLine1": "Chat met uw agenten.",
+      "headlineLine2": "Van waar dan ook.",
+      "phoneAriaLabel": "Mobiel chatten met de {{agentName}} tussenpersoon"
+    },
+    "builtForTrust": {
+      "ariaLabel": "Hoe AURA uw vertrouwen verdient",
+      "cards": {
+        "alwaysOn": {
+          "description": "Uw agent blijft 24 uur per dag werken, zelfs als u weg bent en uw apparaten uitgeschakeld zijn.",
+          "title": "Altijd aan."
+        },
+        "isolated": {
+          "description": "Elke agent draait in zijn eigen VM in een sandbox, volledig afgesloten van uw systeem en andere agenten.",
+          "title": "Standaard geïsoleerd."
+        },
+        "verifiable": {
+          "description": "Elke omgeving wordt getest voordat deze wordt uitgevoerd, zodat u altijd kunt verifiëren waar u op vertrouwt.",
+          "title": "Vertrouwd en verifieerbaar."
+        }
+      },
+      "headline": "Gebouwd voor vertrouwen.",
+      "subhead": "AURA-agents draaien in geïsoleerde virtuele machines binnen vertrouwde uitvoeringsomgevingen."
+    },
+    "expertise": {
+      "headline": "Deskundigheid zonder ego.",
+      "subheadLine1": "AURA-agenten zijn experts in elke discipline.",
+      "subheadLine2": "Van coderen tot wetenschap tot creativiteit."
+    },
+    "madeForYou": {
+      "headline": "Agenten die voor u zijn gemaakt.",
+      "subhead": "Ontwerp en start uw agent in 30 seconden."
+    },
+    "personalAgent": {
+      "ariaLabel": "Wat uw makelaar kan doen",
+      "cards": {
+        "alwaysOn": {
+          "description": "Vraag of geef uw agent opdracht om bijna alles te doen. Deze gaat aan de slag en rapporteert indien nodig.",
+          "title": "Altijd aan."
+        },
+        "connected": {
+          "description": "AURA maakt veilig verbinding met uw diensten, zodat zij alles over u weet. Uw gegevens verlaten nooit uw eigen beveiligde computer en er wordt nooit op getraind.",
+          "title": "Verbonden met alles."
+        },
+        "domains": {
+          "description": "Uw agent is een genie op alle domeinen. Het kan helpen bij de eenvoudige taken van het leven, bij creatieve projecten en bij geavanceerd ontwerp en coderen.",
+          "title": "Intelligent in alle domeinen."
+        }
+      },
+      "headline": "Elk model. Elke modus.",
+      "subhead": "AURA is uw eigen persoonlijke agent die u ondersteunt bij alles, van lichte taken tot diepgaand werk."
+    },
+    "privacy": {
+      "features": {
+        "openSource": {
+          "description": "AURA is 100% open source onder de MIT-licentie. U kunt het op elk gewenst moment doen, zonder enige leveranciersafhankelijkheid en zonder verplichtingen.",
+          "tag": "MIT-licentie",
+          "title": "Open bron"
+        },
+        "private": {
+          "description": "AURA bekijkt of traint nooit uw persoonlijke of bedrijfsgegevens. Alles wat naar grensmodellen wordt gestuurd, blijft niet-identificeerbaar.",
+          "tag": "PQ-codering",
+          "title": "Privé"
+        },
+        "verifiable": {
+          "description": "Het AURA-harnas en de kernel zijn vanaf de basis opgebouwd met beveiliging, verificatie en beleid als eersteklas burgers.",
+          "tag": "Vertrouwde uitvoering",
+          "title": "Verifieerbaar"
+        }
+      },
+      "headline": "Ontworpen voor jouw menselijkheid."
+    }
+  },
+  "support": {
+    "body": "Hulp nodig met Aura? Wij zijn er voor u. Stuur een e-mail naar ons ondersteuningsteam en we nemen zo snel mogelijk contact met u op.",
+    "headline": "Steun",
+    "note": "Voor account- of factureringsvragen verzoeken wij u het e-mailadres op te geven dat aan uw AURA-account is gekoppeld."
+  },
+  "taglines": {
+    "decentralized": "Gedecentraliseerd.",
+    "openSource": "Open bron.",
+    "private": "Privé.",
+    "secure": "Zeker."
+  },
+  "terms": {
+    "description": "Onze Servicevoorwaarden worden momenteel afgerond en zullen binnenkort hier worden gepubliceerd.",
+    "documentTitle": "AURA - Servicevoorwaarden",
+    "headline": "Servicevoorwaarden",
+    "label": "JURIDISCH"
+  }
+}

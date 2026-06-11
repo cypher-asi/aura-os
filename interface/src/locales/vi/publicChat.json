@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} được tạo ra từ: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Không thể gửi tin nhắn"
+    },
+    "heroPhrases": {
+      "privateAgent": "Đại lý riêng của bạn."
+    },
+    "inputLabel": "Hào quang tin nhắn",
+    "inputPlaceholder": "Hãy hỏi Aura bất cứ điều gì...",
+    "send": "Gửi",
+    "sending": "Đang gửi",
+    "transcriptAriaLabel": "Bản ghi cuộc trò chuyện"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Bắt đầu cuộc trò chuyện mới"
+  },
+  "createAgent": {
+    "label": "Tạo đại lý của bạn"
+  },
+  "login": {
+    "close": "Đóng",
+    "closeLoginAriaLabel": "Đóng đăng nhập",
+    "heading": "Đăng nhập vào AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Bạn muốn tạo ra cái gì?",
+    "heroBlurb": "Gửi lời nhắc cho Aura và bắt đầu xây dựng."
+  },
+  "personas": {
+    "railAriaLabel": "nhân vật đặc vụ"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Xóa trò chuyện \"{{title}}\"",
+    "noConversations": "Chưa có cuộc trò chuyện nào",
+    "noMatchingChats": "Không có cuộc trò chuyện phù hợp"
+  },
+  "sharedSession": {
+    "ariaLabel": "Cuộc trò chuyện được chia sẻ",
+    "empty": {
+      "body": "Không có tin nhắn nào để hiển thị trong cuộc trò chuyện được chia sẻ này.",
+      "heading": "Cuộc trò chuyện này trống"
+    },
+    "error": {
+      "body": "Chúng tôi không thể tải cuộc trò chuyện được chia sẻ này. Vui lòng thử lại sau.",
+      "heading": "Đã xảy ra lỗi"
+    },
+    "loading": "Đang tải cuộc trò chuyện được chia sẻ…",
+    "unavailable": {
+      "body": "Cuộc trò chuyện có thể đã không được chia sẻ hoặc liên kết không chính xác.",
+      "heading": "Liên kết chia sẻ này không có sẵn"
+    }
+  }
+}

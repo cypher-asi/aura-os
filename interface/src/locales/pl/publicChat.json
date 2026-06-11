@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} wygenerowane z: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Nie można wysłać wiadomości"
+    },
+    "heroPhrases": {
+      "privateAgent": "Twój prywatny agent."
+    },
+    "inputLabel": "Wiadomość Aura",
+    "inputPlaceholder": "Zapytaj Aurę o cokolwiek...",
+    "send": "Wysłać",
+    "sending": "Przesyłka",
+    "transcriptAriaLabel": "Zapis czatu"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Rozpocznij nową rozmowę"
+  },
+  "createAgent": {
+    "label": "Stwórz swojego agenta"
+  },
+  "login": {
+    "close": "Zamknąć",
+    "closeLoginAriaLabel": "Zamknij logowanie",
+    "heading": "Zaloguj się do AURY"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Co chcesz stworzyć?",
+    "heroBlurb": "Wyślij Aura monit i rozpocznij budowanie."
+  },
+  "personas": {
+    "railAriaLabel": "Osoby agenta"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Usuń czat ”{{title}}\"",
+    "noConversations": "Nie ma jeszcze żadnych rozmów",
+    "noMatchingChats": "Brak pasujących czatów"
+  },
+  "sharedSession": {
+    "ariaLabel": "Wspólna rozmowa",
+    "empty": {
+      "body": "W tej udostępnionej rozmowie nie ma żadnych wiadomości do pokazania.",
+      "heading": "Ta rozmowa jest pusta"
+    },
+    "error": {
+      "body": "Nie udało się wczytać tej udostępnionej rozmowy. Spróbuj ponownie później.",
+      "heading": "Coś poszło nie tak"
+    },
+    "loading": "Ładowanie udostępnionej rozmowy…",
+    "unavailable": {
+      "body": "Udostępnienie rozmowy mogło zostać wycofane lub link jest nieprawidłowy.",
+      "heading": "Ten link do udostępniania jest niedostępny"
+    }
+  }
+}

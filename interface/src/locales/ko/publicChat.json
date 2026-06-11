@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} 다음에서 생성됨: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "메시지를 보낼 수 없습니다"
+    },
+    "heroPhrases": {
+      "privateAgent": "귀하의 개인 에이전트."
+    },
+    "inputLabel": "메시지 아우라",
+    "inputPlaceholder": "아우라에게 무엇이든 물어보세요...",
+    "send": "보내다",
+    "sending": "배상",
+    "transcriptAriaLabel": "채팅 내용"
+  },
+  "compose": {
+    "startConversationAriaLabel": "새로운 대화를 시작하세요"
+  },
+  "createAgent": {
+    "label": "에이전트 만들기"
+  },
+  "login": {
+    "close": "닫다",
+    "closeLoginAriaLabel": "로그인 닫기",
+    "heading": "AURA에 로그인하세요"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "무엇을 만들고 싶나요?",
+    "heroBlurb": "Aura에게 메시지를 보내고 구축을 시작하세요."
+  },
+  "personas": {
+    "railAriaLabel": "상담원 페르소나"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "채팅 삭제 \"{{title}}\"",
+    "noConversations": "아직 대화가 없습니다.",
+    "noMatchingChats": "일치하는 채팅이 없습니다."
+  },
+  "sharedSession": {
+    "ariaLabel": "공유된 대화",
+    "empty": {
+      "body": "이 공유 대화에는 표시할 메시지가 없습니다.",
+      "heading": "이 대화는 비어 있습니다."
+    },
+    "error": {
+      "body": "공유된 대화를 로드할 수 없습니다. 나중에 다시 시도해 주세요.",
+      "heading": "문제가 발생했습니다."
+    },
+    "loading": "공유 대화 로드 중…",
+    "unavailable": {
+      "body": "대화가 공유되지 않았거나 링크가 잘못되었을 수 있습니다.",
+      "heading": "이 공유 링크를 사용할 수 없습니다."
+    }
+  }
+}

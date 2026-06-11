@@ -1,0 +1,776 @@
+{
+  "agents": {
+    "buildDeviceAriaLabel": "建立您的代理",
+    "documentTitle": "AURA - 特工",
+    "heroDescriptionLine1": "AURA 代理商是各个领域的专家",
+    "heroDescriptionLine2": "当你睡觉时工作。",
+    "heroHeadline": "委托一切。"
+  },
+  "blog": {
+    "allPosts": "所有帖子",
+    "breadcrumbAriaLabel": "面包屑",
+    "documentTitle": "AURA - 博客",
+    "empty": {
+      "body": "博客已连接，但尚未发布任何帖子。",
+      "heading": "还没有帖子。"
+    },
+    "latest": "最新的",
+    "loading": "加载中…",
+    "loadingPost": "正在加载帖子...",
+    "loadingPosts": "正在加载帖子...",
+    "moreFromBlog": "更多来自博客",
+    "morePosts": "更多帖子",
+    "navigationAriaLabel": "博客导航",
+    "noContent": "这篇文章还没有内容。",
+    "noOtherPosts": "还没有其他帖子。",
+    "notFound": {
+      "backLink": "← 返回博客",
+      "body": "您要查找的帖子不存在或未发布。",
+      "heading": "找不到帖子"
+    },
+    "postDocumentTitle": "光环- {{title}}",
+    "readTime_other": "{{count}} 最小阅读量",
+    "recentPostsAriaLabel": "最近的帖子",
+    "table": {
+      "author": "作者",
+      "date": "日期",
+      "title": "标题",
+      "type": "类型"
+    },
+    "title": "博客",
+    "tocAriaLabel": "目录",
+    "tocTitle": "目录"
+  },
+  "changelog": {
+    "chart": {
+      "ariaLabel": "随着时间的推移每天的发布量",
+      "barTitle_other": "{{date}}: {{count}} 发布",
+      "caption": "每日发布数量",
+      "captionWithCount_other": "{{count}} 发布· {{date}}"
+    },
+    "commitsLiveTitle_other": "实时总计 {{count}} AURA 存储库",
+    "currentVersion": "当前版本",
+    "dailyUpdate": "每日更新",
+    "documentTitle": "AURA - 变更日志",
+    "download": "下载",
+    "downloadVersionAriaLabel": "下载AURA {{version}} 对于您的操作系统",
+    "downloadVersionTitle": "单击下载适合您的操作系统的版本",
+    "empty": {
+      "body": "发布源已连接，但尚未找到已发布的变更日志条目。",
+      "heading": "尚无变更日志条目。"
+    },
+    "entriesAriaLabel": "Aura 变更日志条目",
+    "entry": {
+      "commitCount_other": "{{count}} 提交",
+      "releaseCount_other": "{{count}} 发布"
+    },
+    "github": "GitHub",
+    "openScreenshotAriaLabel": "打开屏幕截图 {{title}}",
+    "releasedAgo": "已发布 {{relativeTime}}",
+    "releasedRecently": "最近发布",
+    "sources": "来源",
+    "stats": {
+      "allTimeCommits": "所有时间的提交",
+      "allTimeReleases": "所有时间发布",
+      "commitsThisMonth": "本月承诺",
+      "releasesThisMonth": "本月发布"
+    },
+    "summaryAriaLabel": "变更日志摘要",
+    "title": "变更日志"
+  },
+  "changelogPreview": {
+    "ariaLabel": "最近的变更日志条目",
+    "ctaLabel": "查看 AURA 的新功能",
+    "heading": "变更日志",
+    "releaseUpdate": "发布更新"
+  },
+  "code": {
+    "deviceAriaLabel": "AURA 编码桌面",
+    "documentTitle": "AURA - 代码",
+    "heroDescription": "专为安全性、自动化和可验证性而设计的前沿编码工具，100% 开源。",
+    "heroHeadline": "睡觉时编码。"
+  },
+  "cta": {
+    "ariaLabel": "产品号召性用语",
+    "download": "下载",
+    "signUp": "报名",
+    "tagline": "感受 AGI。"
+  },
+  "docs": {
+    "docDocumentTitle": "AURA 文档 - {{title}}",
+    "documentTitle": "AURA - 文档",
+    "empty": {
+      "body": "文档站点已连接，但尚未发布任何页面。"
+    },
+    "loading": "加载中…",
+    "navigationAriaLabel": "文档导航",
+    "noContent": "该页面还没有内容。",
+    "noPages": "还没有页面。",
+    "notFound": {
+      "backButton": "返回概述",
+      "body": "此文档页面不存在或尚未发布。",
+      "heading": "找不到页面"
+    },
+    "sidebarTitle": "文档",
+    "tocAriaLabel": "在此页面上",
+    "tocTitle": "在此页面上"
+  },
+  "download": {
+    "cards": {
+      "linux": {
+        "description": "适用于 Linux 桌面的便携式 AppImage，适合直接下载和启动。",
+        "meta": "x86_64 应用程序映像"
+      },
+      "mac-apple-silicon": {
+        "description": "适用于 M1、M2、M3 和 M4 Mac 的本机构建。",
+        "meta": "推荐用于大多数 Mac"
+      },
+      "mac-intel": {
+        "description": "适用于基于 x86 的 Mac 以及较旧的 MacBook Pro 和 iMac 硬件的桌面构建。",
+        "meta": "仅适用于 Apple Silicon Mac 之前的版本"
+      },
+      "windows": {
+        "description": "具有最新桌面运行时和更新程序支持的签名 Windows 安装程序。",
+        "meta": "x64 安装程序"
+      }
+    },
+    "cta": "下载",
+    "documentTitle": "下载 — AURA",
+    "headline": "下载适用于每个主要桌面平台的 AURA。",
+    "loading": "加载中..."
+  },
+  "expertise": {
+    "documentTitle": "光环- {{label}}",
+    "entries": {
+      "analytics": {
+        "headline": "将原始数据转化为可供决策的洞察力。",
+        "heroBlurb": "将数字转化为您可以采取行动的明确答案。",
+        "label": "分析",
+        "overview": "AURA 分析代理查询、清理和解释数据，然后用简单的语言解释其含义。它们揭示了趋势、原因以及建议的下一步行动。",
+        "useCases": [
+          {
+            "description": "直接从数据回答业务问题。",
+            "title": "临时分析"
+          },
+          {
+            "description": "生成带有叙述性上下文的重复报告。",
+            "title": "报告"
+          },
+          {
+            "description": "标记意外的变化并解释可能的驱动因素。",
+            "title": "异常检测"
+          }
+        ]
+      },
+      "coding": {
+        "headline": "在您睡觉时发布功能。",
+        "heroBlurb": "从存储库上下文到经过测试、可审查的 PR。",
+        "label": "编码",
+        "overview": "AURA 编码代理在存储库的真实上下文中工作，以实现功能、修复错误并打开经过测试的拉取请求。他们自主运行并交回准备审查的工作。",
+        "useCases": [
+          {
+            "description": "通过测试端到端地实现范围内的功能。",
+            "title": "特色作品"
+          },
+          {
+            "description": "通过清晰的 PR 进行复制、修复和验证。",
+            "title": "错误修复"
+          },
+          {
+            "description": "在整个代码库中安全地应用一致的更改。",
+            "title": "重构"
+          }
+        ]
+      },
+      "creative": {
+        "headline": "概念更清晰，速度更快。",
+        "heroBlurb": "集思广益，讨论活动、概念，然后复制。",
+        "label": "有创造力的",
+        "overview": "AURA 创意代理产生想法并进行压力测试，然后构建出值得保留的想法。它们从空白页面变成一系列指示，您可以在几分钟内做出反应。",
+        "useCases": [
+          {
+            "description": "生成不同的方向并为每个方向提供理由。",
+            "title": "活动概念"
+          },
+          {
+            "description": "根据您的简介和限制探索选项。",
+            "title": "命名和标语"
+          },
+          {
+            "description": "汇集参考文献并复制成可共享的概念。",
+            "title": "情绪板"
+          }
+        ]
+      },
+      "design": {
+        "headline": "从粗略的想法到精美的界面。",
+        "heroBlurb": "将草图和提示转化为可用的设计。",
+        "label": "设计",
+        "overview": "AURA 设计代理将意图转化为结构化、一致的界面，尊重您的系统和约束。它们迭代布局和组件，因此您可以从真实的东西而不是空白的画布开始。",
+        "useCases": [
+          {
+            "description": "根据概要和设计系统生成布局选项。",
+            "title": "用户界面探索"
+          },
+          {
+            "description": "快速产生一致的状态和变化。",
+            "title": "组件变体"
+          },
+          {
+            "description": "尽早标记可访问性和一致性问题。",
+            "title": "设计评审"
+          }
+        ]
+      },
+      "ecommerce-retail": {
+        "headline": "零售业私人情报",
+        "heroBlurb": "私人人工智能可以在不放弃数据的情况下扩展您的店面。",
+        "label": "电子商务与零售",
+        "overview": "零售以目录、内容和客户数据为基础。 AURA 代理自动执行推销、支持和分析，同时将客户信息保留在您的范围内。",
+        "useCases": [
+          {
+            "description": "大规模生成和维护产品副本。",
+            "title": "目录及内容"
+          },
+          {
+            "description": "根据您的政策起草品牌回应。",
+            "title": "客户支持"
+          },
+          {
+            "description": "销售数据的表面趋势和异常情况。",
+            "title": "需求分析"
+          }
+        ]
+      },
+      "education": {
+        "headline": "教育领域的私人情报",
+        "heroBlurb": "支持教育工作者并保护学生数据的私人人工智能。",
+        "label": "教育",
+        "overview": "教育取决于对学生数据的信任。 AURA 代理支持教学、研究和管理，同时将记录保留在您的范围内并由人员参与其中。",
+        "useCases": [
+          {
+            "description": "根据您的课程起草和调整课程和评估。",
+            "title": "课程资料"
+          },
+          {
+            "description": "将来源综合成可引用的摘要。",
+            "title": "研究支持"
+          },
+          {
+            "description": "通过审计跟踪自动化日常工作流程。",
+            "title": "行政"
+          }
+        ]
+      },
+      "finance": {
+        "headline": "对重要的数字进行建模。",
+        "heroBlurb": "制定预算和预测，并揭示信号。",
+        "label": "金融",
+        "overview": "AURA 财务代理构建和维护模型、协调数据并解释每个数据背后的驱动因素。他们保持最新的预测，因此规划是基于最新的现实。",
+        "useCases": [
+          {
+            "description": "按需构建和更新基于驱动程序的模型。",
+            "title": "预测"
+          },
+          {
+            "description": "将实际情况与计划进行核对并解释差异。",
+            "title": "预算跟踪"
+          },
+          {
+            "description": "在几分钟内比较不同假设的结果。",
+            "title": "场景规划"
+          }
+        ]
+      },
+      "finance-banking": {
+        "headline": "金融私人情报",
+        "heroBlurb": "风险团队信任、监管机构接受、客户依赖的私人人工智能。永远不会对数据妥协。",
+        "label": "金融与银行",
+        "overview": "金融运行于信任，信任运行于对数据的控制。 AURA 为银行、基金和金融科技公司带来了自主代理，而无需将敏感信息发送给第三方模型——任何离开你的边界的东西都无法被识别，而且该工具是端到端可审计的。分析师、顾问和运营团队将缓慢的工作委托给他人并保留判断力，每项行动都可验证并记录在案。",
+        "useCases": [
+          {
+            "description": "将文件、市场数据和新闻综合成带有引文的决策简报。",
+            "title": "研究与尽职调查"
+          },
+          {
+            "description": "根据政策筛选交易和文件，标记例外情况以供审查。",
+            "title": "风险与合规"
+          },
+          {
+            "description": "构建并维护随着数字变化而更新的预测和场景。",
+            "title": "财务建模"
+          },
+          {
+            "description": "按计划用您的声音生成投资组合和绩效摘要。",
+            "title": "客户报告"
+          },
+          {
+            "description": "通过完整的审计跟踪来协调数据并自动化后台工作流程。",
+            "title": "运营"
+          },
+          {
+            "description": "根据您自己的数据起草品牌客户沟通信息。",
+            "title": "咨询支持"
+          }
+        ]
+      },
+      "healthcare": {
+        "headline": "医疗保健私人情报",
+        "heroBlurb": "临床医生信任、监管机构接受、患者应得的私人人工智能。永远不会对数据妥协。",
+        "label": "卫生保健",
+        "overview": "医疗保健默认要求隐私。 AURA 代理为临床和运营团队提供支持，同时将受保护的数据保留在您的范围内，并在整个过程中提供可验证、可审计的安全带。",
+        "useCases": [
+          {
+            "description": "将文献和试验数据综合成可引用的摘要。",
+            "title": "临床研究"
+          },
+          {
+            "description": "草拟并构建注释和报告以供人工审核。",
+            "title": "文档"
+          },
+          {
+            "description": "通过审计跟踪自动化调度和后台工作流程。",
+            "title": "运营"
+          }
+        ]
+      },
+      "legal": {
+        "headline": "合同，经过审查和解释。",
+        "heroBlurb": "审查文件并清楚地解释义务。",
+        "label": "合法的",
+        "overview": "AURA 法律代理人阅读合同和政策、标记风险并以通俗易懂的语言解释义务。他们加快审查速度，同时让人们了解每一个决定。",
+        "useCases": [
+          {
+            "description": "标记有风险的条款和偏离标准的条款。",
+            "title": "合同审查"
+          },
+          {
+            "description": "将日期、职责和续订提取到清晰的列表中。",
+            "title": "义务追踪"
+          },
+          {
+            "description": "回答基于您自己的文档的问题。",
+            "title": "政策问答"
+          }
+        ]
+      },
+      "legal-services": {
+        "headline": "法律私人情报",
+        "heroBlurb": "公司信任和客户依赖的私人人工智能。在保密性上绝不妥协。",
+        "label": "合法的",
+        "overview": "法律工作以保密性和精确性为基础。 AURA 代理加速审查、研究和起草，同时将特权材料保留在您的范围内并让人员参与其中。",
+        "useCases": [
+          {
+            "description": "快速标记风险和偏离标准的情况。",
+            "title": "合同审查"
+          },
+          {
+            "description": "通过引用拉取并综合相关权威。",
+            "title": "法律研究"
+          },
+          {
+            "description": "生成基于模板和事项文件的初稿。",
+            "title": "起草"
+          }
+        ]
+      },
+      "marketing": {
+        "headline": "坚持品牌的活动。",
+        "heroBlurb": "跨每个渠道规划、起草和调整内容。",
+        "label": "营销",
+        "overview": "AURA 营销代理计划营销活动、制作品牌内容并根据渠道进行调整，同时保留您的声音。他们将简报变成一系列资产，并保持日历不断变化，让您的频道永远不会安静。",
+        "useCases": [
+          {
+            "description": "将简报转变为频道、主题和内容日历。",
+            "title": "活动策划"
+          },
+          {
+            "description": "用您的声音跨渠道起草和重新利用资产。",
+            "title": "内容制作"
+          },
+          {
+            "description": "将营销活动数据转化为清晰、可操作的见解。",
+            "title": "性能分析"
+          }
+        ]
+      },
+      "marketing-media": {
+        "headline": "营销私人情报",
+        "heroBlurb": "私人人工智能可以让您的品牌在声音和数据上保持专属。",
+        "label": "营销与媒体",
+        "overview": "营销团队在多个渠道中快速行动。 AURA 代理计划、起草和调整品牌内容，同时让您的受众和表现数据处于您的控制之下。",
+        "useCases": [
+          {
+            "description": "根据您的简介生成并进行压力测试指示。",
+            "title": "活动概念"
+          },
+          {
+            "description": "在您的声音中跨渠道起草和重新利用。",
+            "title": "内容制作"
+          },
+          {
+            "description": "将营销活动数据转化为清晰、可操作的见解。",
+            "title": "性能分析"
+          }
+        ]
+      },
+      "real-estate": {
+        "headline": "房地产私人情报",
+        "heroBlurb": "私人人工智能可以推动交易并保留您自己的数据。",
+        "label": "房地产",
+        "overview": "房地产的运行依赖于文件、清单和市场数据。 AURA 代理加速尽职调查、起草和分析，同时让客户和交易信息处于您的控制之下。",
+        "useCases": [
+          {
+            "description": "生成并维护列表和营销文案。",
+            "title": "列表内容"
+          },
+          {
+            "description": "将文档和市场数据中的信号提取到一个视图中。",
+            "title": "交易尽职调查"
+          },
+          {
+            "description": "根据您的模板生成初稿。",
+            "title": "文件起草"
+          }
+        ]
+      },
+      "research": {
+        "headline": "综合研究，而不仅仅是搜索。",
+        "heroBlurb": "挖掘资源并揭示真正重要内容的代理。",
+        "label": "研究",
+        "overview": "AURA 研究代理阅读文档、网络和您自己的知识库，然后将发现综合为清晰、可引用的答案。他们一直在后台工作，因此在您专注于决策时，过去需要几天时间才能进行的深入审查。",
+        "useCases": [
+          {
+            "description": "调查一个领域并通过来源总结最新技术。",
+            "title": "文献综述"
+          },
+          {
+            "description": "跟踪竞争对手并将动作提炼成运行摘要。",
+            "title": "竞品分析"
+          },
+          {
+            "description": "将文件、新闻和数据室中的信号集中到一个视图中。",
+            "title": "尽职调查"
+          }
+        ]
+      },
+      "sales": {
+        "headline": "更多管道，更少忙碌。",
+        "heroBlurb": "研究账目并起草推动交易的推广活动。",
+        "label": "销售量",
+        "overview": "AURA 销售代理研究客户、个性化外展并保持渠道最新，以便销售代表将时间花在销售而不是打字上。他们根据您的具体情况起草语音消息，并针对每笔交易提出下一个最佳行动。",
+        "useCases": [
+          {
+            "description": "从公共和内部来源构建有关潜在客户的简介。",
+            "title": "账户研究"
+          },
+          {
+            "description": "根据您的声音和报价个性化电子邮件和序列。",
+            "title": "外展草案"
+          },
+          {
+            "description": "保持 CRM 记录处于最新状态并标记需要关注的交易。",
+            "title": "管道卫生"
+          }
+        ]
+      },
+      "social": {
+        "headline": "语音社交，按计划进行。",
+        "heroBlurb": "起草保留品牌的帖子和日历。",
+        "label": "社会的",
+        "overview": "AURA 社交代理计划日历、起草每个频道的帖子，并在保持您的声音的同时适应每个平台的格式。他们保持稳定的节奏，因此您的频道永远不会安静。",
+        "useCases": [
+          {
+            "description": "围绕主题和发布计划几周的帖子。",
+            "title": "内容日历"
+          },
+          {
+            "description": "让一种想法适应每个平台的格式和基调。",
+            "title": "每通道草稿"
+          },
+          {
+            "description": "在发货前起草语音回复以供审核。",
+            "title": "社区回复"
+          }
+        ]
+      },
+      "technology-saas": {
+        "headline": "技术私人情报",
+        "heroBlurb": "私人人工智能可以交付产品并保留您自己的代码库。",
+        "label": "技术/SaaS",
+        "overview": "技术团队快速构建并保护其知识产权。 AURA 代理可加速工程、支持和分析，同时将您的代码和客户数据保留在您的范围内。",
+        "useCases": [
+          {
+            "description": "从真实的回购上下文中实现功能和修复。",
+            "title": "工程"
+          },
+          {
+            "description": "根据您的文档起草准确的答复。",
+            "title": "客户支持"
+          },
+          {
+            "description": "将使用数据转化为决策洞察力。",
+            "title": "产品分析"
+          }
+        ]
+      },
+      "writing": {
+        "headline": "用您的声音、按照您的节奏写作。",
+        "heroBlurb": "起草、编辑和润色听起来像您的散文。",
+        "label": "写作",
+        "overview": "AURA 写作代理会了解您的语气和限制，然后端到端地起草和修改长篇内容。从最初的大纲到最终的编辑，他们保持声音的一致性和基于来源的事实。",
+        "useCases": [
+          {
+            "description": "将大纲和注释变成成品。",
+            "title": "长草稿"
+          },
+          {
+            "description": "收紧结构、语法和语气，同时又不失去意图。",
+            "title": "编辑通行证"
+          },
+          {
+            "description": "将一种来源重塑为帖子、电子邮件和摘要。",
+            "title": "重新利用"
+          }
+        ]
+      }
+    },
+    "overview": "概述",
+    "overviewAriaLabel": "{{label}} 概述",
+    "previewAriaLabel": "{{label}} 预览",
+    "requestDemo": "请求演示",
+    "useCases": "使用案例",
+    "useCasesAriaLabel": "{{label}} 用例"
+  },
+  "feedback": {
+    "card": {
+      "anonymousAuthor": "匿名的",
+      "commentCount_other": "{{count}} 评论",
+      "time": {
+        "daysAgo_other": "{{count}}几天前",
+        "hoursAgo_other": "{{count}}小时前",
+        "minutesAgo_other": "{{count}}米前",
+        "monthsAgo_other": "{{count}}莫前",
+        "secondsAgo_other": "{{count}}过去",
+        "yearsAgo_other": "{{count}}年前"
+      },
+      "voteScoreAriaLabel": "投票分数"
+    },
+    "documentTitle": "AURA - 反馈",
+    "empty": {
+      "body": "没有 AURA 反馈帖子与当前过滤器匹配。",
+      "heading": "还没有反馈。"
+    },
+    "entriesAriaLabel": "反馈条目",
+    "filters": {
+      "ariaLabel": "反馈过滤器",
+      "sections": {
+        "status": "地位",
+        "trending": "流行趋势",
+        "type": "类型"
+      },
+      "toggle": "过滤器"
+    },
+    "stats": {
+      "participants": "参加者",
+      "resolved": "已解决的项目",
+      "submitted": "提交的项目"
+    },
+    "subtitle": "我们的用户提交反馈，AURA 会自主改进。",
+    "summaryAriaLabel": "反馈汇总",
+    "title": "反馈"
+  },
+  "footer": {
+    "ariaLabel": "网站页脚",
+    "copyright": "版权 © {{year}}",
+    "navigationAriaLabel": "页脚导航"
+  },
+  "models": {
+    "allModelsAriaLabel": "所有型号",
+    "documentTitle": "AURA - 模型",
+    "empty": "没有与当前过滤器匹配的型号。尝试清除搜索或切换选项卡。",
+    "featured": "精选",
+    "featuredAriaLabel": "特色型号",
+    "filterByModalityAriaLabel": "按方式过滤",
+    "filterByStatusAriaLabel": "按状态过滤",
+    "loadingCatalog": "正在加载目录...",
+    "searchAriaLabel": "搜索型号",
+    "searchPlaceholder": "搜索型号...",
+    "stats": {
+      "image": "图像",
+      "text": "文本",
+      "threeD": "3D",
+      "total": "型号总数",
+      "video": "视频"
+    },
+    "status": {
+      "live": "居住",
+      "liveAriaLabel": "状态：直播",
+      "soon": "很快",
+      "soonAriaLabel": "状态：即将推出"
+    },
+    "subtitle": "跨文本、图像、视频和 3D 为 AURA 提供支持的前沿模型。",
+    "summaryAriaLabel": "型号汇总"
+  },
+  "os": {
+    "docDocumentTitle": "AURA 操作系统 - {{title}}",
+    "documentTitle": "AURA-操作系统",
+    "empty": {
+      "body": "AURA OS 白皮书已连接，但尚未发布任何章节。"
+    },
+    "navigationAriaLabel": "白皮书导航",
+    "noContent": "本节还没有内容。",
+    "noSections": "还没有章节。",
+    "notFound": {
+      "backButton": "返回概述",
+      "body": "白皮书的这一部分不存在或尚未发布。",
+      "heading": "未找到部分"
+    },
+    "sidebarTitle": "奥拉操作系统"
+  },
+  "pricing": {
+    "billingCycleAriaLabel": "计费周期",
+    "cadenceMonthly": "/mo.",
+    "cadenceYearly": "/yr.",
+    "documentTitle": "AURA - 定价",
+    "downloadCta": "下载",
+    "heroDescription": "从免费的本地开源模型开始，然后只需为您使用的前沿模型付费。",
+    "heroHeadline": "免费开始。",
+    "monthly": "每月",
+    "plans": {
+      "free": {
+        "description": "免费开始：",
+        "features": {
+          "0": "无需信用卡",
+          "1": "本地开源模型",
+          "2": "前沿模型按需付费"
+        },
+        "name": "自由的"
+      },
+      "pro": {
+        "description": "一切都是免费的，另外：",
+        "features": {
+          "0": "每月价值 20 美元的积分",
+          "1": "远程代理"
+        },
+        "name": "专业版",
+        "priceNote": "Zero Pro OG 订阅者每月 10 美元"
+      },
+      "sage": {
+        "description": "专业版中的一切，加上：",
+        "features": {
+          "0": "前沿型号的使用率达到 20 倍",
+          "1": "优先使用新功能"
+        },
+        "name": "圣人"
+      }
+    },
+    "plansLabel": "个人计划",
+    "yearly": "每年"
+  },
+  "privacy": {
+    "description": "我们的隐私政策正在最终确定，并将很快在此发布。",
+    "documentTitle": "AURA - 隐私政策",
+    "headline": "隐私政策",
+    "label": "合法的"
+  },
+  "productScreen": {
+    "close": "关闭",
+    "closeFullscreenAriaLabel": "关闭全屏图像",
+    "openFullscreenAriaLabel": "打开全屏图像： {{label}}",
+    "placeholderLabel": "图片占位符"
+  },
+  "sections": {
+    "agentChat": {
+      "ariaLabel": "随时随地与您的代理聊天",
+      "description": "您的 AURA 代理始终在线。在手机、笔记本电脑或台式机上接听对话。他们记得一切并随身携带相同的工具。",
+      "headlineLine1": "与您的代理聊天。",
+      "headlineLine2": "来自任何地方。",
+      "phoneAriaLabel": "移动聊天与 {{agentName}} 代理人"
+    },
+    "builtForTrust": {
+      "ariaLabel": "AURA 如何赢得您的信任",
+      "cards": {
+        "alwaysOn": {
+          "description": "即使您不在且设备已关闭，您的代理仍会全天候工作。",
+          "title": "始终开启。"
+        },
+        "isolated": {
+          "description": "每个代理都在自己的沙盒虚拟机中运行，与您的系统和其他代理完全隔离。",
+          "title": "默认隔离。"
+        },
+        "verifiable": {
+          "description": "每个环境在运行之前都会经过验证，因此您始终可以验证您所信任的环境。",
+          "title": "值得信赖且可验证。"
+        }
+      },
+      "headline": "为信任而生。",
+      "subhead": "AURA 代理在可信执行环境中的隔离虚拟机中运行。"
+    },
+    "expertise": {
+      "headline": "没有自我的专业知识。",
+      "subheadLine1": "AURA 代理是各个学科的专家。",
+      "subheadLine2": "从编码到科学再到创造力。"
+    },
+    "madeForYou": {
+      "headline": "代理为您打造。",
+      "subhead": "在 30 秒内设计并启动您的代理。"
+    },
+    "personalAgent": {
+      "ariaLabel": "您的代理人可以做什么",
+      "cards": {
+        "alwaysOn": {
+          "description": "要求或指示您的代理人做几乎任何事情。它将开始工作并在必要时返回报告。",
+          "title": "始终开启。"
+        },
+        "connected": {
+          "description": "AURA 安全地连接到您的服务，因此它了解您的一切。您的数据永远不会离开您自己的安全计算机，也不会受到训练。",
+          "title": "与一切相连。"
+        },
+        "domains": {
+          "description": "您的经纪人是各个领域的天才。它可以帮助完成生活中的简单任务、创意项目、高级设计和编码。",
+          "title": "在所有领域都智能。"
+        }
+      },
+      "headline": "每个型号。每种模式。",
+      "subhead": "AURA 是您自己的私人代理，为您提供从轻松任务到深度工作的一切支持。"
+    },
+    "privacy": {
+      "features": {
+        "openSource": {
+          "description": "AURA 在 MIT 许可下 100% 开源。随时分叉，零供应商锁定，无任何附加条件。",
+          "tag": "麻省理工学院许可证",
+          "title": "开源"
+        },
+        "private": {
+          "description": "AURA 绝不会查看或训练您的个人或公司数据。发送到前沿模型的任何内容都无法识别。",
+          "tag": "PQ-加密",
+          "title": "私人的"
+        },
+        "verifiable": {
+          "description": "AURA 线束和内核是从头开始构建的，其安全性、验证和政策都是一等公民。",
+          "tag": "可信执行",
+          "title": "可验证"
+        }
+      },
+      "headline": "专为您的人性而设计。"
+    }
+  },
+  "support": {
+    "body": "需要 AURA 方面的帮助吗？我们随时为您服务。给我们的支持团队发送电子邮件，我们会尽快回复您。",
+    "headline": "支持",
+    "note": "对于帐户或账单问题，请提供与您的 AURA 帐户关联的电子邮件地址。"
+  },
+  "taglines": {
+    "decentralized": "去中心化。",
+    "openSource": "开源。",
+    "private": "私人的。",
+    "secure": "安全的。"
+  },
+  "terms": {
+    "description": "我们的服务条款正在最终确定，并将很快在此发布。",
+    "documentTitle": "AURA - 服务条款",
+    "headline": "服务条款",
+    "label": "合法的"
+  }
+}

@@ -1,12 +1,16 @@
 {
-  "os": "OS",
-  "chat": "Trò chuyện",
   "agents": "Tác nhân",
-  "code": "Mã",
-  "pricing": "Giá",
   "blog": "Blog",
+  "capabilities": "Khả năng",
   "changelog": "Nhật ký thay đổi",
+  "chat": "Trò chuyện",
+  "code": "Mã",
+  "downloads": "Tải xuống",
+  "expertise": "chuyên môn",
   "feedback": "Phản hồi",
+  "industries": "ngành công nghiệp",
   "models": "Mô hình",
+  "os": "OS",
+  "pricing": "Giá",
   "resources": "Tài nguyên"
 }

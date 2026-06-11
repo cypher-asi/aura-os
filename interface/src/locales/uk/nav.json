@@ -1,12 +1,16 @@
 {
-  "os": "OS",
-  "chat": "Чат",
   "agents": "Агенти",
-  "code": "Код",
-  "pricing": "Ціни",
   "blog": "Блог",
+  "capabilities": "Можливості",
   "changelog": "Журнал змін",
+  "chat": "Чат",
+  "code": "Код",
+  "downloads": "Завантаження",
+  "expertise": "Експертиза",
   "feedback": "Відгуки",
+  "industries": "Галузі промисловості",
   "models": "Моделі",
+  "os": "OS",
+  "pricing": "Ціни",
   "resources": "Ресурси"
 }

@@ -1,12 +1,16 @@
 {
-  "chat": "チャット",
   "agents": "エージェント",
+  "blog": "ブログ",
+  "capabilities": "能力",
+  "changelog": "変更履歴",
+  "chat": "チャット",
   "code": "コード",
+  "downloads": "ダウンロード",
+  "expertise": "専門知識",
+  "feedback": "フィードバック",
+  "industries": "産業",
+  "models": "モデル",
   "os": "OS",
   "pricing": "料金",
-  "blog": "ブログ",
-  "changelog": "変更履歴",
-  "feedback": "フィードバック",
-  "models": "モデル",
   "resources": "リソース"
 }

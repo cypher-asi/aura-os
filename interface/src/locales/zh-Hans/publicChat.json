@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} 生成自： {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "无法发送消息"
+    },
+    "heroPhrases": {
+      "privateAgent": "您的私人代理。"
+    },
+    "inputLabel": "消息光环",
+    "inputPlaceholder": "有什么问题可以问奥拉...",
+    "send": "发送",
+    "sending": "发送",
+    "transcriptAriaLabel": "聊天记录"
+  },
+  "compose": {
+    "startConversationAriaLabel": "开始新的对话"
+  },
+  "createAgent": {
+    "label": "创建您的代理"
+  },
+  "login": {
+    "close": "关闭",
+    "closeLoginAriaLabel": "关闭登录",
+    "heading": "登录 AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "你想创造什么？",
+    "heroBlurb": "向 Aura 发送提示并开始构建。"
+  },
+  "personas": {
+    "railAriaLabel": "代理角色"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "删除聊天记录”{{title}}”",
+    "noConversations": "还没有对话",
+    "noMatchingChats": "没有匹配的聊天记录"
+  },
+  "sharedSession": {
+    "ariaLabel": "共享对话",
+    "empty": {
+      "body": "此共享对话中没有可显示的消息。",
+      "heading": "此对话为空"
+    },
+    "error": {
+      "body": "我们无法加载此共享对话。请稍后重试。",
+      "heading": "出了点问题"
+    },
+    "loading": "正在加载共享对话...",
+    "unavailable": {
+      "body": "对话可能已取消共享或链接不正确。",
+      "heading": "该分享链接不可用"
+    }
+  }
+}

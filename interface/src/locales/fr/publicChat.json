@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} généré à partir de : {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Impossible d'envoyer le message"
+    },
+    "heroPhrases": {
+      "privateAgent": "Votre agent privé."
+    },
+    "inputLabel": "Aura des messages",
+    "inputPlaceholder": "Demandez n'importe quoi à Aura...",
+    "send": "Envoyer",
+    "sending": "Envoi",
+    "transcriptAriaLabel": "Transcription du chat"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Démarrer une nouvelle conversation"
+  },
+  "createAgent": {
+    "label": "Créez votre mandataire"
+  },
+  "login": {
+    "close": "Fermer",
+    "closeLoginAriaLabel": "Fermer la connexion",
+    "heading": "Connectez-vous à AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Que veux-tu créer ?",
+    "heroBlurb": "Envoyez une invite à Aura et commencez à construire."
+  },
+  "personas": {
+    "railAriaLabel": "Personnages d'agent"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Supprimer le chat \"{{title}}\"",
+    "noConversations": "Aucune conversation pour l'instant",
+    "noMatchingChats": "Aucune discussion correspondante"
+  },
+  "sharedSession": {
+    "ariaLabel": "Conversation partagée",
+    "empty": {
+      "body": "Il n'y a aucun message à afficher dans cette conversation partagée.",
+      "heading": "Cette conversation est vide"
+    },
+    "error": {
+      "body": "Nous n'avons pas pu charger cette conversation partagée. Veuillez réessayer plus tard.",
+      "heading": "Quelque chose s'est mal passé"
+    },
+    "loading": "Chargement de la conversation partagée…",
+    "unavailable": {
+      "body": "La conversation n'a peut-être pas été partagée ou le lien est incorrect.",
+      "heading": "Ce lien de partage n'est pas disponible"
+    }
+  }
+}

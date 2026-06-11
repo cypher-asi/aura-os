@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} gerado a partir de: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Não foi possível enviar mensagem"
+    },
+    "heroPhrases": {
+      "privateAgent": "Seu agente privado."
+    },
+    "inputLabel": "Mensagem Aura",
+    "inputPlaceholder": "Pergunte qualquer coisa a Aura...",
+    "send": "Enviar",
+    "sending": "Enviando",
+    "transcriptAriaLabel": "Transcrição do bate-papo"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Inicie uma nova conversa"
+  },
+  "createAgent": {
+    "label": "Crie seu agente"
+  },
+  "login": {
+    "close": "Fechar",
+    "closeLoginAriaLabel": "Fechar login",
+    "heading": "Faça login na AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "O que você deseja criar?",
+    "heroBlurb": "Envie um aviso para Aura e comece a construir."
+  },
+  "personas": {
+    "railAriaLabel": "Personagens de agente"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Excluir bate-papo \"{{title}}\"",
+    "noConversations": "Ainda não há conversas",
+    "noMatchingChats": "Nenhum bate-papo correspondente"
+  },
+  "sharedSession": {
+    "ariaLabel": "Conversa compartilhada",
+    "empty": {
+      "body": "Não há mensagens para mostrar nesta conversa compartilhada.",
+      "heading": "Esta conversa está vazia"
+    },
+    "error": {
+      "body": "Não foi possível carregar esta conversa compartilhada. Por favor, tente novamente mais tarde.",
+      "heading": "Algo deu errado"
+    },
+    "loading": "Carregando conversa compartilhada…",
+    "unavailable": {
+      "body": "A conversa pode não ter sido compartilhada ou o link está incorreto.",
+      "heading": "Este link de compartilhamento não está disponível"
+    }
+  }
+}

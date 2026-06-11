@@ -1,0 +1,57 @@
+{
+  "bubble": {
+    "mediaGeneratedFrom": "{{mode}} dihasilkan dari: {{prompt}}"
+  },
+  "chat": {
+    "errors": {
+      "unableToSend": "Tidak dapat mengirim pesan"
+    },
+    "heroPhrases": {
+      "privateAgent": "Agen Pribadi Anda."
+    },
+    "inputLabel": "Pesan Aura",
+    "inputPlaceholder": "Tanyakan apa saja pada Aura...",
+    "send": "Mengirim",
+    "sending": "Mengirim",
+    "transcriptAriaLabel": "Transkrip obrolan"
+  },
+  "compose": {
+    "startConversationAriaLabel": "Mulailah percakapan baru"
+  },
+  "createAgent": {
+    "label": "Buat agen Anda"
+  },
+  "login": {
+    "close": "Menutup",
+    "closeLoginAriaLabel": "Tutup login",
+    "heading": "Masuk ke AURA"
+  },
+  "mobileChat": {
+    "composerPlaceholder": "Apa yang ingin Anda buat?",
+    "heroBlurb": "Kirimkan pesan kepada Aura dan mulailah membangun."
+  },
+  "personas": {
+    "railAriaLabel": "Persona agen"
+  },
+  "sessions": {
+    "deleteChatAriaLabel": "Hapus obrolan \"{{title}}\"",
+    "noConversations": "Belum ada percakapan",
+    "noMatchingChats": "Tidak ada obrolan yang cocok"
+  },
+  "sharedSession": {
+    "ariaLabel": "Percakapan bersama",
+    "empty": {
+      "body": "Tidak ada pesan untuk ditampilkan dalam percakapan bersama ini.",
+      "heading": "Percakapan ini kosong"
+    },
+    "error": {
+      "body": "Kami tidak dapat memuat percakapan bersama ini. Silakan coba lagi nanti.",
+      "heading": "Ada yang tidak beres"
+    },
+    "loading": "Memuat percakapan bersama…",
+    "unavailable": {
+      "body": "Percakapan mungkin belum dibagikan atau tautannya salah.",
+      "heading": "Tautan berbagi ini tidak tersedia"
+    }
+  }
+}

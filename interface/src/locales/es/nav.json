@@ -1,12 +1,16 @@
 {
-  "os": "OS",
-  "chat": "Chat",
   "agents": "Agentes",
-  "code": "Código",
-  "pricing": "Precios",
   "blog": "Blog",
+  "capabilities": "Capacidades",
   "changelog": "Novedades",
+  "chat": "Chat",
+  "code": "Código",
+  "downloads": "Descargas",
+  "expertise": "Pericia",
   "feedback": "Comentarios",
+  "industries": "Industrias",
   "models": "Modelos",
+  "os": "OS",
+  "pricing": "Precios",
   "resources": "Recursos"
 }

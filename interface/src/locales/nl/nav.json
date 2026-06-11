@@ -1,12 +1,16 @@
 {
-  "os": "OS",
-  "chat": "Chat",
   "agents": "Agenten",
-  "code": "Code",
-  "pricing": "Prijzen",
   "blog": "Blog",
+  "capabilities": "Mogelijkheden",
   "changelog": "Wijzigingen",
+  "chat": "Chat",
+  "code": "Code",
+  "downloads": "Downloads",
+  "expertise": "Expertise",
   "feedback": "Feedback",
+  "industries": "Industrieën",
   "models": "Modellen",
+  "os": "OS",
+  "pricing": "Prijzen",
   "resources": "Bronnen"
 }
