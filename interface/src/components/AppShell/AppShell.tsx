@@ -15,6 +15,7 @@ import { useAura3DStore } from "../../stores/aura3d-store";
 import { DEFAULT_IMAGE_MODEL_ID } from "../../constants/models";
 import { useOnboardingStore } from "../../features/onboarding/onboarding-store";
 import { useOnboardingTaskWatcher } from "../../features/onboarding/useOnboardingTaskWatcher";
+import { useApplyAgentOnboarding } from "../../views/public-chat/AgentOnboarding/useApplyAgentOnboarding";
 import { useShallow } from "zustand/react/shallow";
 import { AuraShell } from "../AuraShell";
 import { ForcedUpgradeOverlay } from "../ForcedUpgrade";
@@ -446,6 +447,7 @@ function useOnboardingHydration() {
 function AppContent() {
   useOnboardingHydration();
   useOnboardingTaskWatcher();
+  useApplyAgentOnboarding();
   const uiMode = useUIModeStore((s) => s.mode);
 
   const {
