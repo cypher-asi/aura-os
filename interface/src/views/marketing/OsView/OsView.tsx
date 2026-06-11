@@ -271,7 +271,7 @@ export function OsView(): React.ReactElement {
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
 
-  const { data: docs, isLoading: docsLoading } = useQuery({
+  const { data: docs, isFetched: docsFetched } = useQuery({
     queryKey: ["marketing-os"],
     queryFn: fetchOsDocs,
   });
@@ -282,11 +282,7 @@ export function OsView(): React.ReactElement {
   // Resolve the active section: the slug param, else the first section.
   const activeSlug = slug ?? allDocs[0]?.slug ?? null;
 
-  const {
-    data: doc,
-    error: docError,
-    isLoading: docLoading,
-  } = useQuery({
+  const { data: doc, error: docError } = useQuery({
     queryKey: ["marketing-os-doc", activeSlug],
     queryFn: () => fetchOsDoc(activeSlug as string),
     enabled: Boolean(activeSlug),
@@ -294,7 +290,7 @@ export function OsView(): React.ReactElement {
   });
 
   const bodyUrl = doc?.bodyUrl;
-  const { data: body, isLoading: bodyLoading } = useQuery({
+  const { data: body, isFetched: bodyFetched } = useQuery({
     queryKey: ["marketing-os-body", bodyUrl],
     queryFn: () => fetchOsBody(bodyUrl as string),
     enabled: Boolean(bodyUrl),
@@ -329,7 +325,7 @@ export function OsView(): React.ReactElement {
           <Link to="/os" className={styles.sidebarTitle}>
             {t("os.sidebarTitle", { defaultValue: "AURA OS" })}
           </Link>
-          {docsLoading ? null : groups.length === 0 ? (
+          {!docsFetched ? null : groups.length === 0 ? (
             <p className={styles.navState}>
               {t("os.noSections", { defaultValue: "No sections yet." })}
             </p>
@@ -364,7 +360,7 @@ export function OsView(): React.ReactElement {
             </div>
           ) : (
             <div className={styles.markdownBody}>
-              {bodyLoading || docLoading ? null : body ? (
+              {body ? (
                   <OsRepoContext.Provider
                     value={SECTION_REPOS[doc?.blogType ?? ""] ?? DEFAULT_REPO}
                   >
@@ -376,14 +372,14 @@ export function OsView(): React.ReactElement {
                       {body}
                     </ReactMarkdown>
                   </OsRepoContext.Provider>
-                ) : !docsLoading && allDocs.length === 0 ? (
+                ) : !docsFetched ? null : allDocs.length === 0 ? (
                   <p className={styles.navState}>
                     {t("os.empty.body", {
                       defaultValue:
                         "The AURA OS whitepaper is connected, but no sections have been published yet.",
                     })}
                   </p>
-                ) : (
+                ) : !bodyFetched ? null : (
                   <p className={styles.navState}>
                     {t("os.noContent", {
                       defaultValue: "This section has no content yet.",
