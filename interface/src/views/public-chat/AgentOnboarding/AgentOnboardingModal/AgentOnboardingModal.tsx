@@ -154,17 +154,32 @@ export function AgentOnboardingModal(): React.ReactElement | null {
       </div>
       <div className={styles.content}>{renderStep()}</div>
       <div className={styles.footer}>
-        <Button type="button" variant="ghost" onClick={back} disabled={isFirst}>
+        <Button
+          type="button"
+          variant="ghost"
+          dimUnselected={false}
+          className={styles.navBtn}
+          onClick={back}
+          disabled={isFirst}
+        >
           Back
         </Button>
         {!isLaunch ? (
-          <Button type="button" variant="primary" onClick={next}>
+          <Button
+            type="button"
+            variant="primary"
+            dimUnselected={false}
+            className={styles.navBtnPrimary}
+            onClick={next}
+          >
             Next
           </Button>
         ) : isAuthenticated ? (
           <Button
             type="button"
             variant="primary"
+            dimUnselected={false}
+            className={styles.navBtnPrimary}
             onClick={() => {
               markPendingApply();
               close();
@@ -177,6 +192,8 @@ export function AgentOnboardingModal(): React.ReactElement | null {
             type="submit"
             form={LAUNCH_FORM_ID}
             variant="primary"
+            dimUnselected={false}
+            className={styles.navBtnPrimary}
             disabled={launchSubmitting}
           >
             {launchSubmitting ? "Creating..." : "Create account"}

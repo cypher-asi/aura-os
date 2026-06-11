@@ -50,6 +50,20 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Footer buttons: hover should only brighten the label, never shift the
+   button background (doubled class beats zui's variant hover specificity). */
+.navBtn.navBtn:hover:not(:disabled) {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-text-primary);
+}
+
+.navBtnPrimary.navBtnPrimary:hover:not(:disabled) {
+  background-color: var(--color-elevated);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
 @media (max-width: 680px) {
   .content {
     padding: var(--space-3);
