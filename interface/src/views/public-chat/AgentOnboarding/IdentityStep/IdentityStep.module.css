@@ -1,7 +1,7 @@
 .step {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .section {
@@ -32,8 +32,8 @@
 
 .avatarGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: var(--space-2);
   margin-top: var(--space-2);
 }
 
@@ -42,8 +42,8 @@
   position: relative;
   aspect-ratio: 1 / 1;
   border: 2px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
   cursor: pointer;
   overflow: hidden;
   padding: 0;
@@ -120,57 +120,17 @@
 
 .personalityGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-2);
   margin-top: var(--space-2);
-}
-
-.personalityCard {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: left;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.personalityCard:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface-hover);
-}
-
-.personalityCard:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.personalityCard[data-selected="true"] {
-  border-color: var(--color-accent);
-  box-shadow: inset 0 0 0 1px var(--color-accent);
-}
-
-.personalityName {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.personalityDescription {
-  font-size: 0.8rem;
-  line-height: 1.35;
-  color: var(--color-text-secondary);
 }
 
 @media (max-width: 680px) {
   .avatarGrid {
-    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
   }
 
   .personalityGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }

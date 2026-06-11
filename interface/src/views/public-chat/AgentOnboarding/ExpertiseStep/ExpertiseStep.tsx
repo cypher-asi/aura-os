@@ -27,7 +27,7 @@ export function ExpertiseStep({
 
   return (
     <div className={styles.step}>
-      <nav className={styles.rail} aria-label="Expertise categories">
+      <nav className={styles.rail} aria-label="Skill categories">
         {groups.map((group) => {
           const count = selectedCountFor(group);
           return (
@@ -52,6 +52,7 @@ export function ExpertiseStep({
             <SelectableCard
               title={skill.label}
               description={skill.description}
+              Icon={skill.Icon}
               selected={selectedSkills.includes(skill.name)}
               onSelect={() => onToggleSkill(skill.name)}
             />

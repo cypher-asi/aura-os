@@ -1,7 +1,7 @@
 .step {
   display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: var(--space-4);
+  grid-template-columns: 150px 1fr;
+  gap: var(--space-3);
   align-items: start;
 }
 
@@ -69,8 +69,8 @@
 }
 
 .skillList {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: var(--space-2);
 }
 

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Sparkles, Upload } from "lucide-react";
 import { ImageCropModal } from "../../../../components/ImageCropModal/ImageCropModal";
+import { SelectableCard } from "../SelectableCard";
 import type { OnboardingAvatar, PersonalityPreset } from "../onboarding-data";
 import { pickRandomPersonality } from "./pick-personality";
 import styles from "./IdentityStep.module.css";
@@ -113,17 +114,14 @@ export function IdentityStep({
         </div>
         <div className={styles.personalityGrid}>
           {personalities.map((preset) => (
-            <button
+            <SelectableCard
               key={preset.id}
-              type="button"
-              className={styles.personalityCard}
-              data-selected={preset.description === selectedPersonality}
-              aria-pressed={preset.description === selectedPersonality}
-              onClick={() => onSelectPersonality(preset.description)}
-            >
-              <span className={styles.personalityName}>{preset.name}</span>
-              <span className={styles.personalityDescription}>{preset.description}</span>
-            </button>
+              title={preset.name}
+              description={preset.description}
+              Icon={preset.Icon}
+              selected={preset.description === selectedPersonality}
+              onSelect={() => onSelectPersonality(preset.description)}
+            />
           ))}
         </div>
       </section>

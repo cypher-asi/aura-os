@@ -1,20 +1,46 @@
 import {
+  AlignLeft,
+  BarChart3,
+  Bell,
+  BookOpen,
+  Brain,
   CalendarCheck,
   CalendarDays,
+  Camera,
+  CircleDot,
+  Code2,
   Coffee,
+  Compass,
+  File,
   FileText,
   GitBranch,
+  Globe,
+  Hammer,
   Hash,
+  HeartHandshake,
+  Image,
   Inbox,
+  LayoutGrid,
+  ListTodo,
   type LucideIcon,
   Mail,
   MessageCircle,
   MessageSquare,
   MessagesSquare,
   Newspaper,
+  NotebookPen,
+  Palette,
+  Puzzle,
+  Scale,
   Search,
   Send,
+  Server,
   Share2,
+  Sparkles,
+  Target,
+  Telescope,
+  Terminal,
+  Workflow,
 } from "lucide-react";
 import { PERSONAS } from "../personas";
 import catalogData from "../../../data/skill-shop-catalog.json";
@@ -37,27 +63,15 @@ export interface OnboardingAvatar {
   readonly icon: string;
 }
 
-function gradientAvatar(id: string, label: string, from: string, to: string): OnboardingAvatar {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs><rect width="128" height="128" rx="28" fill="url(#g)"/></svg>`;
-  return { id, label, icon: `data:image/svg+xml,${encodeURIComponent(svg)}` };
-}
-
 /**
- * 12 default avatars: the 7 curated persona portraits (`interface/public/personas/`)
- * plus 5 gradient tiles so visitors always have a full grid even before uploading.
+ * 7 default avatars: the curated persona portraits (`interface/public/personas/`).
+ * Visitors can also upload their own via the Upload tile in `IdentityStep`.
  */
-export const ONBOARDING_AVATARS: readonly OnboardingAvatar[] = [
-  ...PERSONAS.map((p) => ({
-    id: p.id,
-    label: p.name,
-    icon: p.theme.desktopBackgroundUrl ?? "",
-  })).filter((a) => a.icon !== ""),
-  gradientAvatar("aurora", "Aurora", "#7c3aed", "#2dd4bf"),
-  gradientAvatar("ember", "Ember", "#f97316", "#db2777"),
-  gradientAvatar("tide", "Tide", "#0ea5e9", "#6366f1"),
-  gradientAvatar("moss", "Moss", "#22c55e", "#0d9488"),
-  gradientAvatar("dusk", "Dusk", "#6366f1", "#0f172a"),
-];
+export const ONBOARDING_AVATARS: readonly OnboardingAvatar[] = PERSONAS.map((p) => ({
+  id: p.id,
+  label: p.name,
+  icon: p.theme.desktopBackgroundUrl ?? "",
+})).filter((a) => a.icon !== "");
 
 // ── Personalities ───────────────────────────────────────────────────────────
 
@@ -66,17 +80,18 @@ export interface PersonalityPreset {
   readonly name: string;
   /** Applied verbatim to `agent.personality`. */
   readonly description: string;
+  readonly Icon: LucideIcon;
 }
 
 export const PERSONALITY_PRESETS: readonly PersonalityPreset[] = [
-  { id: "operator", name: "Focused Operator", description: "Direct, efficient, and outcome-driven. Cuts to the point and keeps work moving." },
-  { id: "collaborator", name: "Warm Collaborator", description: "Friendly, encouraging, and patient. Explains its thinking and checks in often." },
-  { id: "analyst", name: "Sharp Analyst", description: "Precise, evidence-led, and skeptical. Backs claims with data and flags assumptions." },
-  { id: "creative", name: "Creative Spark", description: "Playful, imaginative, and bold. Offers unexpected angles and fresh ideas." },
-  { id: "strategist", name: "Calm Strategist", description: "Measured, big-picture, and steady. Weighs trade-offs before acting." },
-  { id: "researcher", name: "Relentless Researcher", description: "Curious, thorough, and detail-obsessed. Digs until the answer is solid." },
-  { id: "builder", name: "Pragmatic Builder", description: "Hands-on, resourceful, and shipping-focused. Prefers working solutions over theory." },
-  { id: "advisor", name: "Diplomatic Advisor", description: "Tactful, thoughtful, and balanced. Frames hard truths with care." },
+  { id: "operator", name: "Focused Operator", description: "Direct, efficient, and outcome-driven. Cuts to the point and keeps work moving.", Icon: Target },
+  { id: "collaborator", name: "Warm Collaborator", description: "Friendly, encouraging, and patient. Explains its thinking and checks in often.", Icon: HeartHandshake },
+  { id: "analyst", name: "Sharp Analyst", description: "Precise, evidence-led, and skeptical. Backs claims with data and flags assumptions.", Icon: BarChart3 },
+  { id: "creative", name: "Creative Spark", description: "Playful, imaginative, and bold. Offers unexpected angles and fresh ideas.", Icon: Sparkles },
+  { id: "strategist", name: "Calm Strategist", description: "Measured, big-picture, and steady. Weighs trade-offs before acting.", Icon: Compass },
+  { id: "researcher", name: "Relentless Researcher", description: "Curious, thorough, and detail-obsessed. Digs until the answer is solid.", Icon: Telescope },
+  { id: "builder", name: "Pragmatic Builder", description: "Hands-on, resourceful, and shipping-focused. Prefers working solutions over theory.", Icon: Hammer },
+  { id: "advisor", name: "Diplomatic Advisor", description: "Tactful, thoughtful, and balanced. Frames hard truths with care.", Icon: Scale },
 ];
 
 // ── Skills (organized by expertise) ──────────────────────────────────────────
@@ -101,7 +116,36 @@ export interface OnboardingSkill {
   readonly description: string;
   readonly category: string;
   readonly sourceUrl: string;
+  readonly Icon: LucideIcon;
 }
+
+/** Per-skill icons; falls back to a generic puzzle piece for any unmapped name. */
+const SKILL_ICONS: Readonly<Record<string, LucideIcon>> = {
+  "coding-agent": Code2,
+  github: GitBranch,
+  "gh-issues": CircleDot,
+  tmux: Terminal,
+  "node-connect": Server,
+  tavily: Globe,
+  summarize: AlignLeft,
+  oracle: Brain,
+  weather: CalendarCheck,
+  notion: FileText,
+  obsidian: BookOpen,
+  "bear-notes": NotebookPen,
+  slack: MessagesSquare,
+  discord: MessageCircle,
+  himalaya: Mail,
+  wacli: MessageSquare,
+  gifgrep: Image,
+  canvas: Palette,
+  peekaboo: Camera,
+  "nano-pdf": File,
+  "things-mac": ListTodo,
+  trello: LayoutGrid,
+  "apple-reminders": Bell,
+  taskflow: Workflow,
+};
 
 export interface ExpertiseGroup {
   /**
@@ -131,6 +175,7 @@ function resolveSkills(seeds: readonly SkillSeed[]): readonly OnboardingSkill[] 
       description: seed.description,
       category: entry.category,
       sourceUrl: entry.source_url,
+      Icon: SKILL_ICONS[seed.name] ?? Puzzle,
     });
   }
   return resolved;

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Button, Drawer, Modal } from "@cypher-asi/zui";
+import { Button, Drawer } from "@cypher-asi/zui";
+import { GlassModal } from "../../../../components/GlassModal";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useAuth } from "../../../../stores/auth-store";
 import {
@@ -26,7 +27,7 @@ import styles from "./AgentOnboardingModal.module.css";
 
 const STEP_LABELS: Record<OnboardingStepId, string> = {
   identity: "Identity",
-  expertise: "Expertise",
+  expertise: "Skills",
   integrations: "Integrations",
   connections: "Connections",
   automations: "Automations",
@@ -174,8 +175,8 @@ export function AgentOnboardingModal(): React.ReactElement | null {
         title={MODAL_TITLE}
         className={styles.sheet}
         showMinimizedBar={false}
-        defaultSize={720}
-        maxSize={920}
+        defaultSize={560}
+        maxSize={760}
       >
         {inner}
       </Drawer>
@@ -183,16 +184,14 @@ export function AgentOnboardingModal(): React.ReactElement | null {
   }
 
   return (
-    <Modal
+    <GlassModal
       isOpen={isOpen}
       onClose={close}
       title={MODAL_TITLE}
       size="lg"
-      noPadding
-      fullHeight
-      className={styles.modal}
+      modalClassName={styles.modal}
     >
       {inner}
-    </Modal>
+    </GlassModal>
   );
 }
