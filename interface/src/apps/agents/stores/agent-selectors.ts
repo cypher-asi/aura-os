@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useAgentStore } from "./agent-store";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
@@ -67,14 +68,20 @@ export function useSelectedAgent(): SelectedAgentSlice {
 export function useSortedAgents(): Agent[] {
   const agents = useAgentStore((s) => s.agents);
   const pinnedIds = useAgentStore((s) => s.pinnedAgentIds);
+  // Local agents run on the user's machine and can't be used from the browser,
+  // so hide them entirely when there's no desktop bridge.
+  const { remoteOnly } = useAuraCapabilities();
   return useMemo(() => {
-    return [...agents].sort((a, b) => {
+    const visible = remoteOnly
+      ? agents.filter((a) => a.machine_type !== "local")
+      : agents;
+    return [...visible].sort((a, b) => {
       const aPinned = a.is_pinned || pinnedIds.has(a.agent_id);
       const bPinned = b.is_pinned || pinnedIds.has(b.agent_id);
       if (aPinned !== bPinned) return aPinned ? -1 : 1;
       return b.updated_at.localeCompare(a.updated_at);
     });
-  }, [agents, pinnedIds]);
+  }, [agents, pinnedIds, remoteOnly]);
 }
 
 export function useSuperAgent(): Agent | null {
@@ -94,8 +101,14 @@ export function useIsAgentFavorite(agentId: string): boolean {
 export function useFavoriteAgents(): Agent[] {
   const agents = useAgentStore((s) => s.agents);
   const favoriteIds = useAgentStore((s) => s.favoriteAgentIds);
+  const { remoteOnly } = useAuraCapabilities();
   return useMemo(
-    () => agents.filter((a) => favoriteIds.has(a.agent_id)),
-    [agents, favoriteIds],
+    () =>
+      agents.filter(
+        (a) =>
+          favoriteIds.has(a.agent_id) &&
+          !(remoteOnly && a.machine_type === "local"),
+      ),
+    [agents, favoriteIds, remoteOnly],
   );
 }
