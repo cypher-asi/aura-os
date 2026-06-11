@@ -1,7 +1,7 @@
 # Aura Feature Health
 
-Aura Feature Health turns live eval probes into a public status-page snapshot at
-`/status`.
+Aura Feature Health turns live eval probes into the Aura OS public-mode status
+page at `/status`.
 
 ## What It Measures
 
@@ -45,10 +45,11 @@ npm run status:snapshot
 ```
 
 For end-to-end local verification, use the existing eval local stack in
-`infra/evals/local-stack/`. The recommended default for feature health is the
-hybrid stack: Aura OS, the public frontend, and the harness run locally, while
-zOS auth, the router, billing, and swarm-backed dependencies stay pointed at
-deployed services.
+`infra/evals/local-stack/`. The status page is not served from a sibling website
+repo; it is the Aura OS interface public-mode route in `interface/`. The
+recommended default for feature health is the hybrid stack: Aura OS, the public
+frontend, and the harness run locally, while zOS auth, the router, billing, and
+swarm-backed dependencies stay pointed at deployed services.
 
 ```sh
 cp infra/evals/local-stack/stack.env.example infra/evals/local-stack/stack.env
@@ -58,7 +59,7 @@ source infra/evals/local-stack/.runtime/evals.env
 source infra/evals/local-stack/.runtime/auth.env
 npm run status:probes -- \
   --base-url http://127.0.0.1:3190 \
-  --public-base-url http://127.0.0.1:4317 \
+  --public-base-url http://127.0.0.1:4173 \
   --token "$AURA_EVAL_ACCESS_TOKEN" \
   --environment local-hybrid
 npm run status:snapshot -- --environment local-hybrid --source local-stack
@@ -77,11 +78,11 @@ if added). Run a deeper media sweep with:
 npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_ACCESS_TOKEN" --include-expensive
 ```
 
-For website-only checks against a frontend dev server:
+For Aura OS public-mode page checks against the frontend dev server:
 
 ```sh
 node infra/evals/status/run-status-probes.mjs \
-  --base-url http://127.0.0.1:5173 \
+  --public-base-url http://127.0.0.1:4173 \
   --checks public-status-page,public-models-page,public-marketing-pages \
   --out-dir /tmp/aura-status-checks \
   --environment local-dev
@@ -94,8 +95,9 @@ applies `infra/evals/status/lib/status-policy.mjs`, and writes:
 - `interface/public/status/status.json`
 - `infra/evals/reports/status/status.json`
 
-The public React page fetches `/status/status.json` and renders the snapshot.
-If the JSON is missing, the page falls back to an explicit unknown state.
+The Aura OS public-mode React route at `interface/src/views/marketing/StatusView`
+fetches `/status/status.json` and renders the snapshot. If the JSON is missing,
+the page falls back to an explicit unknown state.
 
 ## Publishing
 
@@ -110,9 +112,9 @@ npm run status:probes -- --base-url "$AURA_STATUS_API_BASE_URL" --token "$AURA_S
 npm run status:snapshot -- --environment production --source github-actions
 ```
 
-Then publish the generated `interface/public/status/status.json` with the Aura
-website build artifact. No external status-page service is required for the
-first version because the valuable part is the Aura-specific probe catalog and
-status policy. An external service only adds value if we later need subscriber
-notifications, incident timelines, or multi-region uptime checks independent of
-Aura's deploy pipeline.
+The generated `interface/public/status/status.json` ships with the Aura OS
+interface build, and the public-mode `/status` route reads it directly. No
+external status-page service is required for the first version because the
+valuable part is the Aura-specific probe catalog and status policy. An external
+service only adds value if we later need subscriber notifications, incident
+timelines, or multi-region uptime checks independent of Aura's deploy pipeline.
