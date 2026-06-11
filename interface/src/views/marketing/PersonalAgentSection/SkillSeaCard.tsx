@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } fr
 import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import { SkillIcon } from "../../../components/SkillShopModal/SkillIcon";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 
 /**
  * Mini-UI for the "Intelligent in all domains" quadrant: the shared
@@ -54,6 +55,13 @@ const FLASH_MS = 1500;
 
 export function SkillSeaCard(): ReactNode {
   const { t } = useTranslation("marketing");
+  // Mobile collapses the three divider-separated groups into a single tidy
+  // 4x4 keypad (the mobile section CSS lays a group out as `repeat(4, 1fr)`,
+  // so one 16-key group reads as 4 across x 4 down with no dividers).
+  const { isMobileLayout } = useAuraCapabilities();
+  const groups = isMobileLayout
+    ? [SKILL_GROUPS.flat().slice(0, 16)]
+    : SKILL_GROUPS;
   // Which keycap is currently playing its gold click-flash, keyed by skill id.
   const [flashedId, setFlashedId] = useState<string | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,7 +88,7 @@ export function SkillSeaCard(): ReactNode {
     <Plate className="personalAgentSkillPlate" aria-hidden="true">
       <div className="personalAgentSkillPanel">
         <div className="personalAgentSkillWell">
-          {SKILL_GROUPS.map((group, groupIndex) => (
+          {groups.map((group, groupIndex) => (
             <Fragment key={groupIndex}>
               {groupIndex > 0 && (
                 <span className="personalAgentSkillDivider" />
