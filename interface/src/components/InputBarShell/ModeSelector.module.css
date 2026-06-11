@@ -130,20 +130,21 @@
 }
 
 /*
- * Selected label: neon blue with layered blue halos that widen and fade
- * outward, so the active mode reads as lit tube text.
+ * Selected label: the theme accent color with layered accent halos that
+ * widen and fade outward, so the active mode reads as lit tube text and
+ * tracks the user's chosen accent.
  */
 .modeSegment[aria-checked="true"] {
   font-weight: 500;
   letter-spacing: 0.06em;
   background: none;
-  -webkit-text-fill-color: #4db8ff;
-  color: #4db8ff;
+  -webkit-text-fill-color: var(--color-accent);
+  color: var(--color-accent);
   text-shadow:
-    0 0 4px rgba(77, 184, 255, 0.9),
-    0 0 9px rgba(56, 169, 255, 0.7),
-    0 0 16px rgba(40, 150, 255, 0.5),
-    0 0 26px rgba(30, 130, 255, 0.35);
+    0 0 4px color-mix(in srgb, var(--color-accent) 90%, transparent),
+    0 0 9px color-mix(in srgb, var(--color-accent) 70%, transparent),
+    0 0 16px color-mix(in srgb, var(--color-accent) 50%, transparent),
+    0 0 26px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 
 @media (max-width: 640px) {
