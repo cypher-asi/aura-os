@@ -20,11 +20,14 @@
   width: 100%;
   height: 100dvh;
   min-height: 100dvh;
-  /* Outer shell backdrop: a lighter charcoal frame the bordered page floats
-     on. Lighter at the very top (behind the bar) easing darker toward the
-     bottom so the top bar reads as a distinctly-coloured shell header and the
-     thin perimeter gutter frames the darker page below — the "shell" look. */
-  background: linear-gradient(180deg, #202022 0%, #141416 100%);
+  /* Outer shell backdrop — the SAME gradient the desktop shell paints behind
+     its contained "screen" (`--desktop-shell-backdrop`), so the mobile public
+     surface reads as the same framed shell as the large screen. The top bar
+     floats transparent on it and the bordered page sits inset on top. */
+  background: var(
+    --desktop-shell-backdrop,
+    linear-gradient(to bottom right, #0c0c0e 0%, #1b1b1d 100%)
+  );
   color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
@@ -37,11 +40,9 @@
   justify-content: space-between;
   height: 52px;
   padding: 0 8px 0 16px;
-  /* Transparent so the lighter shell backdrop shows through — this is the
-     "different color for the top" that frames the darker bordered page below.
-     A hairline under the bar separates it from the framed page. */
+  /* Floats transparent on the shell backdrop, exactly like the desktop
+     titlebar — the framed page's own top border below is the dividing line. */
   background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   z-index: 10;
   flex-shrink: 0;
 }
@@ -114,17 +115,18 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  /* Framed page: a near-black screen inset from the shell on the sides +
-     bottom, with rounded corners and a 1px gradient stroke perimeter (the
-     same `--shell-stroke-top -> side -> bottom` recipe the desktop `.body`
-     uses). The stroke is painted as a `border-box` background behind a
-     transparent 1px border; `box-sizing: border-box` keeps the border eating
-     inward so the page size is unchanged. */
-  margin: 0 8px calc(8px + env(safe-area-inset-bottom, 0px));
-  border-radius: 16px;
+  /* Framed "screen" inset on the shell backdrop — identical geometry +
+     stroke to the desktop `.body`: a 5px side inset, the tight 6px corner
+     radius, and a 1px transparent border filled with the shared
+     `--shell-stroke-top -> side -> bottom` gradient via `border-box` (the
+     page fill paints the padding box). `box-sizing: border-box` keeps the
+     border eating inward so the page size is unchanged. A matching bottom
+     inset (+ safe area) frames the page on mobile where there is no taskbar. */
+  margin: 0 5px calc(5px + env(safe-area-inset-bottom, 0px));
+  border-radius: 6px;
   border: 1px solid transparent;
   background:
-    var(--color-bg-canvas, #0b0b0e) padding-box,
+    var(--color-bg, #0b0b0e) padding-box,
     linear-gradient(
         to bottom,
         var(--shell-stroke-top, #424242) 0%,
