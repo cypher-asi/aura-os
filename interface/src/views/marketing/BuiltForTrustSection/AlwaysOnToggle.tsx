@@ -3,7 +3,7 @@ import { Plate } from "../../../components/Plate";
 import "./AlwaysOnToggle.css";
 
 /** Knob slide duration (kept in sync with the CSS transition). */
-const SLIDE_MS = 280;
+const SLIDE_MS = 600;
 
 /**
  * Media for the "Always on." trust card: a skeuomorphic toggle switch in
