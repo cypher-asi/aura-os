@@ -129,7 +129,8 @@ const SECTION_DISPLAY_LABELS: Readonly<Record<string, string>> = {
 function sectionLabel(key: string): string {
   if (!key) return "General";
   return (
-    SECTION_DISPLAY_LABELS[key] ??
+    // Case-insensitive so a stored `blogType` of "harness"/"Harness" both map.
+    SECTION_DISPLAY_LABELS[key.toLowerCase()] ??
     key
       .split(/[-_\s]+/)
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
