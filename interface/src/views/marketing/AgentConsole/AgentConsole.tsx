@@ -2,6 +2,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plate } from "../../../components/Plate";
 import { DeviceScreen } from "../../../components/DeviceScreen";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { AuraScreenOrb } from "../AuraScreenOrb";
 import styles from "./AgentConsole.module.css";
 
@@ -37,6 +38,9 @@ const AUTO_ROTATE_MS = 1000;
 
 export function AgentConsole(): ReactNode {
   const { t } = useTranslation("marketing");
+  // The WebGL orb is heavy; only mount it on large (non-mobile) screens. The
+  // black-glass screen well + state label still render on mobile.
+  const { isMobileLayout } = useAuraCapabilities();
   const [active, setActive] = useState(0);
   // Bumped on every manual step so the auto-rotate effect re-arms with a fresh
   // full interval, keeping a click from being instantly overridden by a tick
@@ -73,7 +77,9 @@ export function AgentConsole(): ReactNode {
 
           <div className={styles.raised}>
             <DeviceScreen className={styles.screen}>
-              <AuraScreenOrb className={styles.screenOrb} />
+              {!isMobileLayout && (
+                <AuraScreenOrb className={styles.screenOrb} />
+              )}
               <span className={styles.screenLabel}>
                 {t(`agentConsole.states.${STATE_KEYS[active]}`, {
                   defaultValue: STATES[active],
