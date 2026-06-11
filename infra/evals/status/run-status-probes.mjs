@@ -28,6 +28,8 @@ function parseArgs(argv) {
     baseUrl: process.env.AURA_STATUS_API_BASE_URL || "http://127.0.0.1:3190",
     publicBaseUrl: process.env.AURA_STATUS_PUBLIC_BASE_URL || "",
     token: process.env.AURA_STATUS_ACCESS_TOKEN || process.env.AURA_EVAL_ACCESS_TOKEN || "",
+    userEmail: process.env.AURA_STATUS_USER_EMAIL || "",
+    userPassword: process.env.AURA_STATUS_USER_PASSWORD || "",
     outDir: process.env.AURA_STATUS_CHECKS_DIR || path.join(repoRoot, "infra/evals/reports/status/checks"),
     expectationsFile: process.env.AURA_STATUS_EXPECTATIONS_FILE || path.join(__dirname, "check-expectations.json"),
     expectations: null,
@@ -47,6 +49,8 @@ function parseArgs(argv) {
     if (arg === "--base-url") args.baseUrl = next();
     else if (arg === "--public-base-url") args.publicBaseUrl = next();
     else if (arg === "--token") args.token = next();
+    else if (arg === "--user-email") args.userEmail = next();
+    else if (arg === "--user-password") args.userPassword = next();
     else if (arg === "--out-dir") args.outDir = path.resolve(next());
     else if (arg === "--expectations") args.expectationsFile = path.resolve(next());
     else if (arg === "--environment") args.environment = next();
@@ -113,6 +117,31 @@ async function fetchWithTimeout(url, init = {}, timeoutMs = DEFAULT_TIMEOUT_MS) 
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function loginForAccessToken(args) {
+  if (!args.userEmail || !args.userPassword) return "";
+  const response = await fetchWithTimeout(
+    `${args.baseUrl}/api/auth/login`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: args.userEmail,
+        password: args.userPassword,
+      }),
+    },
+    DEFAULT_TIMEOUT_MS,
+  );
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`POST /api/auth/login failed with ${response.status}: ${text}`);
+  }
+  const payload = text ? JSON.parse(text) : null;
+  if (typeof payload?.access_token !== "string" || payload.access_token.length === 0) {
+    throw new Error("POST /api/auth/login did not return access_token");
+  }
+  return payload.access_token;
 }
 
 function authHeaders(args, extra = {}) {
@@ -1020,6 +1049,10 @@ async function writeRun(args, checks) {
 
 const args = parseArgs(process.argv.slice(2));
 args.expectations = await loadExpectations(args);
+if (!args.token && args.userEmail && args.userPassword) {
+  args.token = await loginForAccessToken(args);
+  process.stdout.write("resolved access token via /api/auth/login\n");
+}
 const checks = await runChecks(args);
 const outPath = await writeRun(args, checks);
 for (const check of checks) {

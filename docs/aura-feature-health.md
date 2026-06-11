@@ -114,6 +114,12 @@ npm run status:probes -- --base-url "$AURA_STATUS_API_BASE_URL" --token "$AURA_S
 npm run status:snapshot -- --environment production --source github-actions
 ```
 
+`AURA_STATUS_ACCESS_TOKEN` is optional when
+`AURA_STATUS_USER_EMAIL` and `AURA_STATUS_USER_PASSWORD` are present. In that
+case the probe runner logs into `AURA_STATUS_API_BASE_URL` with
+`POST /api/auth/login` and uses the returned `access_token` in-memory for the
+run.
+
 The generated `interface/public/observability/status.json` ships with the Aura OS
 interface build, and the `/observability` route reads it directly. No
 external status-page service is required for the first version because the
