@@ -34,7 +34,7 @@ export function useProjectListData(appIdOverride?: string) {
   } = useProjectsList();
 
   const searchQuery = useAppUIStore((s) => s.sidebarQueries[appId] ?? "");
-  const { isMobileLayout } = useAuraCapabilities();
+  const { isMobileLayout, remoteOnly } = useAuraCapabilities();
   const { automatingProjectId, automatingAgentInstanceId } = useLoopStatus(
     agentInstanceId,
     projectId,
@@ -72,6 +72,7 @@ export function useProjectListData(appIdOverride?: string) {
       openNewProjectModal,
       searchQuery,
       isMobileLayout,
+      remoteOnly,
       automatingProjectId,
       automatingAgentInstanceId,
       pendingCreateAgentHandoff,
@@ -93,6 +94,7 @@ export function useProjectListData(appIdOverride?: string) {
       openNewProjectModal,
       searchQuery,
       isMobileLayout,
+      remoteOnly,
       automatingProjectId,
       automatingAgentInstanceId,
       pendingCreateAgentHandoff,

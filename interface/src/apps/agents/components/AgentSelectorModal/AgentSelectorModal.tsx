@@ -4,6 +4,7 @@ import type { AgentInstance } from "../../../../shared/types";
 import { AgentSelectorList } from "./AgentSelectorList";
 import { useAgentSelectorData } from "./useAgentSelectorData";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
+import { filterRuntimeVisibleAgents } from "../../../../shared/lib/agent-runtime-visibility";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import styles from "./AgentSelectorModal.module.css";
 
@@ -22,7 +23,7 @@ export function AgentSelectorModal({
   onCreated,
   isTransitioning = false,
 }: AgentSelectorModalProps) {
-  const { isMobileLayout } = useAuraCapabilities();
+  const { isMobileLayout, remoteOnly } = useAuraCapabilities();
   const agentsByProject = useProjectsListStore((state) => state.agentsByProject);
   const assignedProjectAgents = agentsByProject[projectId] ?? [];
   const {
@@ -41,15 +42,14 @@ export function AgentSelectorModal({
   );
 
   // The picker hides agents that are already attached to the project so
-  // every fleet row in the list is a real, additive choice. The mobile
-  // layout further restricts to remote agents — local agents need a
-  // local launcher present and are not addable from the phone shell.
+  // every fleet row in the list is a real, additive choice. Local
+  // agents need a desktop bridge to run, so they're dropped whenever
+  // we're remote-only (web/mobile) or on a mobile layout — they're not
+  // addable without a local launcher present.
   const visibleAgents = useMemo(() => {
-    const pool = isMobileLayout
-      ? agents.filter((agent) => agent.machine_type === "remote")
-      : agents;
+    const pool = filterRuntimeVisibleAgents(agents, remoteOnly || isMobileLayout);
     return pool.filter((agent) => !assignedAgentIds.has(agent.agent_id));
-  }, [agents, assignedAgentIds, isMobileLayout]);
+  }, [agents, assignedAgentIds, isMobileLayout, remoteOnly]);
 
   const isBusy = Boolean(creating) || isTransitioning;
   const [query, setQuery] = useState("");

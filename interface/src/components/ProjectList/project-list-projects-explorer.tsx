@@ -19,6 +19,7 @@ import {
   getPreferredProjectAgent,
   isUserFacingAgentInstance,
 } from "./project-list-shared";
+import { isLocalAgent } from "../../shared/lib/agent-runtime-visibility";
 import { useExplorerMenus } from "./useExplorerMenus";
 import {
   ARCHIVED_ROOT_NODE_ID,
@@ -77,7 +78,9 @@ function buildArchivedRootNode(
       (agents ?? [])
         .filter(
           (agent) =>
-            agent.status === "archived" && isUserFacingAgentInstance(agent),
+            agent.status === "archived" &&
+            isUserFacingAgentInstance(agent) &&
+            !(context.remoteOnly && isLocalAgent(agent)),
         )
         .map((agent) => ({ projectId, agent })),
     )
@@ -126,6 +129,7 @@ function useProjectExplorerData(
       automatingProjectId: data.automatingProjectId,
       automatingAgentInstanceId: data.automatingAgentInstanceId,
       isMobileLayout: data.isMobileLayout,
+      remoteOnly: data.remoteOnly,
       streamingAgentInstanceIds: data.sidekick.streamingAgentInstanceIds,
       archivingAgentInstanceIds: data.actions.archivingAgentInstanceIds,
       handleQuickAddAgent: data.actions.handleQuickAddAgent,

@@ -5,6 +5,7 @@ import { Avatar } from "../Avatar";
 import { ProjectsPlusButton } from "../ProjectsPlusButton";
 import type { useProjectListData } from "./useProjectListData";
 import { isUserFacingAgentInstance, resolveStatus } from "./project-list-shared";
+import { isLocalAgent } from "../../shared/lib/agent-runtime-visibility";
 import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 import { agentDisplayName } from "../../lib/derive-project-agent-title";
 
@@ -29,6 +30,12 @@ export interface ProjectExplorerBuildContext {
   automatingProjectId: string | null;
   automatingAgentInstanceId: string | null;
   isMobileLayout: boolean;
+  /**
+   * True when there's no desktop bridge (web/mobile). Local agent
+   * instances can't run without a local launcher, so they're dropped
+   * from the project tree in this mode.
+   */
+  remoteOnly: boolean;
   /**
    * Snapshot of every agent instance currently mid-turn (chat or
    * loop) on this client. Use `.includes(agent_instance_id)` to
@@ -209,7 +216,10 @@ function buildProjectChildren(
   // each click stacked another duplicate row in the project sidebar
   // because the ephemeral row clones the template's name verbatim.
   const activeAgents = projectAgents.filter(
-    (agent) => agent.status !== "archived" && isUserFacingAgentInstance(agent),
+    (agent) =>
+      agent.status !== "archived" &&
+      isUserFacingAgentInstance(agent) &&
+      !(context.remoteOnly && isLocalAgent(agent)),
   );
 
   const children: ExplorerNode[] = [

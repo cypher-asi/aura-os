@@ -7,6 +7,8 @@ import { useAppUIStore } from "../../stores/app-ui-store";
 import { useOnboardingStore } from "../../features/onboarding/onboarding-store";
 import { useAuth } from "../../stores/auth-store";
 import { useLogout } from "../../stores/use-logout";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { filterRuntimeVisibleAgents } from "../../shared/lib/agent-runtime-visibility";
 import { windowCommand } from "../../lib/windowCommand";
 import { zoomIn, zoomOut, resetZoom } from "../../lib/zoom";
 import { track } from "../../lib/analytics";
@@ -46,10 +48,16 @@ function cycleAgent(
   ctx: AgentRouteContext,
   direction: 1 | -1,
   navigate: ReturnType<typeof useNavigate>,
+  remoteOnly: boolean,
 ): void {
   if (ctx.standaloneMatch) {
     const currentId = ctx.standaloneMatch.params.agentId;
-    const agents = useAgentStore.getState().agents;
+    // Cycle over the same runtime-visible fleet the sidebar shows, so
+    // a hotkey can't land on a local agent that's hidden on web/mobile.
+    const agents = filterRuntimeVisibleAgents(
+      useAgentStore.getState().agents,
+      remoteOnly,
+    );
     if (!currentId || agents.length === 0) return;
     const idx = agents.findIndex((agent) => agent.agent_id === currentId);
     const next = nextIndex(idx, agents.length, direction);
@@ -63,7 +71,10 @@ function cycleAgent(
     const projectId = ctx.projectMatch.params.projectId;
     const currentInstanceId = ctx.projectMatch.params.agentInstanceId;
     if (!projectId || !currentInstanceId) return;
-    const agents = useProjectsListStore.getState().agentsByProject[projectId] ?? [];
+    const agents = filterRuntimeVisibleAgents(
+      useProjectsListStore.getState().agentsByProject[projectId] ?? [],
+      remoteOnly,
+    );
     if (agents.length === 0) return;
     const idx = agents.findIndex((agent) => agent.agent_instance_id === currentInstanceId);
     const next = nextIndex(idx, agents.length, direction);
@@ -81,14 +92,23 @@ export function useAgentNavigationContext(): AgentRouteContext {
   return { pathname: location.pathname, standaloneMatch, projectMatch };
 }
 
-export function isAgentCyclingAvailable(ctx: AgentRouteContext): boolean {
+export function isAgentCyclingAvailable(
+  ctx: AgentRouteContext,
+  remoteOnly: boolean,
+): boolean {
   if (ctx.standaloneMatch) {
-    return useAgentStore.getState().agents.length > 1;
+    return (
+      filterRuntimeVisibleAgents(useAgentStore.getState().agents, remoteOnly)
+        .length > 1
+    );
   }
   if (ctx.projectMatch) {
     const projectId = ctx.projectMatch.params.projectId;
     if (!projectId) return false;
-    const agents = useProjectsListStore.getState().agentsByProject[projectId] ?? [];
+    const agents = filterRuntimeVisibleAgents(
+      useProjectsListStore.getState().agentsByProject[projectId] ?? [],
+      remoteOnly,
+    );
     return agents.length > 1;
   }
   return false;
@@ -104,6 +124,7 @@ export function useMenuActions(): {
   const navigate = useNavigate();
   const agentContext = useAgentNavigationContext();
   const { isAuthenticated } = useAuth();
+  const { remoteOnly } = useAuraCapabilities();
   const logout = useLogout();
 
   const handleNewAgent = useCallback(() => {
@@ -142,12 +163,12 @@ export function useMenuActions(): {
   }, []);
 
   const handlePreviousAgent = useCallback(() => {
-    cycleAgent(agentContext, -1, navigate);
-  }, [agentContext, navigate]);
+    cycleAgent(agentContext, -1, navigate, remoteOnly);
+  }, [agentContext, navigate, remoteOnly]);
 
   const handleNextAgent = useCallback(() => {
-    cycleAgent(agentContext, 1, navigate);
-  }, [agentContext, navigate]);
+    cycleAgent(agentContext, 1, navigate, remoteOnly);
+  }, [agentContext, navigate, remoteOnly]);
 
   const handleToggleFullscreen = useCallback(() => {
     if (typeof window !== "undefined" && typeof window.ipc?.postMessage === "function") {
@@ -248,14 +269,14 @@ export function useMenuActions(): {
   const isItemDisabled = useCallback(
     (key: MenuActionKey): boolean => {
       if (key === "view.previousAgent" || key === "view.nextAgent") {
-        return !isAgentCyclingAvailable(agentContext);
+        return !isAgentCyclingAvailable(agentContext, remoteOnly);
       }
       if (key === "file.logout") {
         return !isAuthenticated;
       }
       return false;
     },
-    [agentContext, isAuthenticated],
+    [agentContext, isAuthenticated, remoteOnly],
   );
 
   return { actions, agentContext, isItemDisabled };

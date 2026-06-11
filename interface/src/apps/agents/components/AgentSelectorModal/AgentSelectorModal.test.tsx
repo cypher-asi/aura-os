@@ -160,6 +160,23 @@ describe("AgentSelectorModal", () => {
     expect(screen.getAllByText("Remote Agent").length).toBeGreaterThan(0);
   });
 
+  it("hides local agents when remote-only (web/mobile, no desktop bridge)", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false, remoteOnly: true });
+
+    render(
+      <AgentSelectorModal
+        isOpen
+        projectId="project-1"
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Local Agent")).not.toBeInTheDocument();
+    // Standard + Remote = 2.
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+  });
+
   it("hides agents already attached to the project", () => {
     mockUseProjectsListStore.mockReturnValue({
       agentsByProject: {
