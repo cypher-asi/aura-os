@@ -2,21 +2,21 @@
   {
     "date": "2026-06-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.639.1",
-    "title": "Agent onboarding wizard, whitepaper expansion, and a mobile public site",
-    "intro": "Today's nightly is a heavy marketing and onboarding day: a brand-new black-glass \"Create your agent\" wizard lands on the public site, the /os whitepaper grows to cover five core repos, the full public marketing surface gets translated into 19 locales with proper Terms and Privacy pages, and the mobile public experience is rebuilt around a Creator landing and full-screen nav. Underneath, chat performance, remote-agent timeouts, and desktop analytics all got real reliability fixes.",
+    "version": "0.1.0-nightly.640.1",
+    "title": "Agent onboarding wizard, marketing site overhaul, and analytics rescue",
+    "intro": "A heavy day across the public surface: a new black-glass \"Create your agent\" wizard, a full marketing site rebuild in 20 locales with real legal pages and a multi-repo whitepaper, a top-to-bottom mobile public shell, and an analytics fix that restores accurate DAU after weeks of silently-broken desktop telemetry.",
     "entryCount": 6,
     "highlights": [
-      "New black-glass agent onboarding wizard",
-      "Whitepaper expanded to five core repos",
-      "Public marketing translated into 19 locales",
-      "Mobile public site rebuilt with Creator hero and full-screen nav",
-      "Chat keystroke lag and 3D card GPU cost fixed",
-      "Mixpanel token restored in desktop release builds"
+      "New 6-step glass agent onboarding wizard",
+      "Public marketing site translated into 19 new locales",
+      "Whitepaper expanded to cover all core AURA repos",
+      "Mobile public landing rebuilt around a Creator hero",
+      "Desktop analytics restored: real app_version and authenticated DAU",
+      "Long remote-agent turns no longer trip spurious timeouts"
     ],
-    "rawCommitCount": 84,
-    "generatedAt": "2026-06-11T23:54:17.645Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.639.1",
+    "rawCommitCount": 86,
+    "generatedAt": "2026-06-12T00:36:31.455Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.640.1",
     "path": "history/2026-06-11.json"
   },
   {
