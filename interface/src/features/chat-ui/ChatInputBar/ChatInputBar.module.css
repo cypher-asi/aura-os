@@ -169,12 +169,9 @@
 }
 
 /* Multi-line state: the same `<ModelPicker>` is rendered inside the
-   shell's `containerBottom` slot (a footer row below the textarea,
-   above the info bar). This wrapper just left-aligns the picker so
-   it sits flush past the bottom-left attach button — the shell's
-   `.containerBottomRow` already supplies the 32px corner padding
-   that clears the absolutely-positioned attach (+) and send (↑)
-   buttons. */
+   shell's `containerBottom` slot (the bottom controls row below the
+   textarea, between the attach and send buttons which the shell lays
+   out as flex siblings). This wrapper just left-aligns the picker. */
 .bottomChromeRow {
   display: flex;
   align-items: center;

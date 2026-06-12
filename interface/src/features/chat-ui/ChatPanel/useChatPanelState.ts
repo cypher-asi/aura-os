@@ -16,7 +16,7 @@ import {
 import type { GenerationMode } from "../../../constants/models";
 import { availableModelsForAdapter } from "../../../constants/models";
 import { useDemoRecordStore } from "../../../stores/demo-record-store";
-import { useChatDraft, useChatUI } from "../../../stores/chat-ui-store";
+import { useChatUI, useChatUIStore } from "../../../stores/chat-ui-store";
 import { useConversationSnapshot } from "../../../hooks/use-conversation-snapshot";
 import { useLoadOlderMessages } from "../../../hooks/use-load-older-messages";
 import { useChatViewStore, useThreadView } from "../../../stores/chat-view-store";
@@ -96,7 +96,15 @@ export function useChatPanelState({
   sendDisabled = false,
 }: UseChatPanelStateOptions) {
   const wireProjectId = llmProjectId ?? selectedProjectId;
-  const [input, setInput] = useChatDraft(streamKey);
+  // Imperative draft writes only. The live draft subscription lives in
+  // the input bar wrapper (`DraftedInputBar`), so typing re-renders the
+  // bar alone instead of the whole chat surface + transcript.
+  const setDraft = useCallback(
+    (value: string) => {
+      useChatUIStore.getState().setDraft(streamKey, value);
+    },
+    [streamKey],
+  );
   const [attachments, setAttachments] = useState<AttachmentItem[]>(EMPTY_ATTACHMENTS);
   const [commands, setCommands] = useState<SlashCommand[]>(EMPTY_COMMANDS);
   // Co-located with `commands` so the `/record_demo` send intercept can
@@ -303,7 +311,7 @@ export function useChatPanelState({
       if (sendDisabledRef.current) {
         return;
       }
-      setInput("");
+      setDraft("");
       const apiAttachments = buildApiAttachments(atts) ?? [];
       const userCommandIds = commandsRef.current.map((c) => c.id);
 
@@ -425,7 +433,7 @@ export function useChatPanelState({
         }
       }
     },
-    [buildApiAttachments, streamKey],
+    [buildApiAttachments, setDraft, streamKey],
   );
 
   // Per-turn regenerate. Finds the user prompt immediately preceding the
@@ -490,10 +498,10 @@ export function useChatPanelState({
   const handleQueueEdit = useCallback(
     (item: QueuedMessage) => {
       useMessageQueueStore.getState().remove(streamKey, item.id);
-      setInput(item.content);
+      setDraft(item.content);
       requestAnimationFrame(() => inputBarRef.current?.focus());
     },
-    [streamKey],
+    [setDraft, streamKey],
   );
 
   const handleQueueRemove = useCallback(
@@ -538,8 +546,6 @@ export function useChatPanelState({
   );
 
   return {
-    input,
-    setInput,
     attachments,
     setAttachments,
     commands,

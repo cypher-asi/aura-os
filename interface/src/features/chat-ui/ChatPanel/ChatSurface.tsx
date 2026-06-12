@@ -21,6 +21,7 @@ import {
 import { MessageQueue } from "../MessageQueue";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
+import { DraftedInputBar } from "./DraftedInputBar";
 import { useChatPanelState } from "./useChatPanelState";
 import { findLatestGeneratedImage } from "./latest-generated-image";
 import { useChatUIStore } from "../../../stores/chat-ui-store";
@@ -185,8 +186,6 @@ export function ChatSurface({
   sessionBoundaries,
 }: ChatSurfaceProps) {
   const {
-    input,
-    setInput,
     attachments,
     setAttachments,
     commands,
@@ -306,7 +305,7 @@ export function ChatSurface({
 
   const handleNewChat = useCallback(() => {
     if (!onNewChat) return;
-    setInput("");
+    useChatUIStore.getState().setDraft(streamKey, "");
     setAttachments([]);
     setCommands([]);
     useMessageQueueStore.getState().clear(streamKey);
@@ -325,7 +324,6 @@ export function ChatSurface({
     onNewChat,
     setAttachments,
     setCommands,
-    setInput,
     streamKey,
   ]);
 
@@ -785,10 +783,9 @@ export function ChatSurface({
           onRetry={handleRetryLastSend}
         />
 
-        <InputBarComponent
+        <DraftedInputBar
+          InputBarComponent={InputBarComponent}
           ref={inputBarRef}
-          input={input}
-          onInputChange={setInput}
           onSend={handleSend}
           onStop={onStop}
           streamKey={streamKey}

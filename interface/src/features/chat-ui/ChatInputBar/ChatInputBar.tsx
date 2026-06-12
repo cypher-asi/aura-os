@@ -1177,6 +1177,11 @@ export const DesktopChatInputBar = memo(
       hasPicker && !isMultiLine && !councilActive && !hasCommandChips;
     const showPickerInBottomRow =
       hasPicker && (isMultiLine || councilActive || hasCommandChips);
+    // State-independent version of `showPickerInline` for the shell's
+    // wrap measurement: "would the picker sit inline if the prompt were
+    // a single line?" must not vary with `isMultiLine` itself, or the
+    // measurement reference would shift with the state it drives.
+    const reserveInlineEnd = hasPicker && !councilActive && !hasCommandChips;
     // One ModelPicker per council member, each bound to its own slot
     // (slot 0 is the synthesizer). Every slot reuses `renderModelMenuList`
     // including the council count row so the AURA Council control stays
@@ -1481,6 +1486,7 @@ export const DesktopChatInputBar = memo(
         containerBottom={containerBottom}
         inputRowStart={inputRowStart}
         inputRowEnd={inputRowEnd}
+        reserveInlineEnd={reserveInlineEnd}
         infoBarStart={infoBarStart}
         infoBarEnd={infoBarEnd}
         onMultiLineChange={setIsMultiLine}

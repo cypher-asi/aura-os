@@ -1,11 +1,9 @@
 import {
   forwardRef,
   memo,
-  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
-  useState,
   type ClipboardEvent,
   type DragEvent,
   type HTMLAttributes,
@@ -16,6 +14,7 @@ import {
 } from "react";
 import { ArrowUp } from "lucide-react";
 import styles from "./InputBarShell.module.css";
+import { useInputAutosize } from "./useInputAutosize";
 
 export interface InputBarShellHandle {
   focus: () => void;
@@ -130,10 +129,28 @@ export interface InputBarShellProps {
    * making it a flex child; consumers own padding and layout.
    */
   containerBottom?: ReactNode;
-  /** Slot rendered inside the input row at the start (e.g. attach button). */
+  /**
+   * Slot rendered at the start of the controls (e.g. attach button).
+   * Single-line: anchored in the input row's bottom-left corner.
+   * Multi-line: rendered as the first item of the bottom controls row.
+   */
   inputRowStart?: ReactNode;
-  /** Slot rendered inside the input row at the end, before send/stop. */
+  /**
+   * Slot rendered inside the input row at the end, before send/stop.
+   * Only shown while single-line; multi-line consumers relocate their
+   * end-content into `containerBottom` (see `onMultiLineChange`).
+   */
   inputRowEnd?: ReactNode;
+  /**
+   * Whether the wrap measurement should reserve the inline end-slot's
+   * width. The single/multi-line decision is always measured against the
+   * SINGLE-LINE layout, so this must stay constant across the multi-line
+   * flip — pass the state-independent "would the consumer show inline
+   * end content while single-line?" answer here (e.g. chat passes
+   * `hasPicker && !councilActive`). Defaults to `inputRowEnd != null`,
+   * which is correct for consumers that never relocate the slot.
+   */
+  reserveInlineEnd?: boolean;
   /** Slot rendered at the start of the info bar (e.g. agent env, orbit). */
   infoBarStart?: ReactNode;
   /** Slot rendered at the end of the info bar (e.g. project, model picker). */
@@ -190,6 +207,7 @@ function InputBarShellInner(
     containerBottom,
     inputRowStart,
     inputRowEnd,
+    reserveInlineEnd,
     infoBarStart,
     infoBarEnd,
     sendAriaLabel = "Send",
@@ -201,217 +219,18 @@ function InputBarShellInner(
   ref: Ref<InputBarShellHandle>,
 ) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const singleLineHeightRef = useRef<number | null>(null);
-  const isMultiLineRef = useRef(false);
-  const [isMultiLine, setIsMultiLine] = useState(false);
-  // Counter that suppresses the next N `ResizeObserver`-driven multi-line
-  // re-evaluations. Armed every time `autoResize` actually toggles
-  // `isMultiLine`, because the resulting `data-multiline` CSS swap is
-  // what changes the textarea's content width — that width change is
-  // about to fire `ResizeObserver`, and if our anti-osc prediction was
-  // off by a sub-pixel at the wrap boundary the new measurement would
-  // reverse the toggle on the next frame and the picker would bounce
-  // inline↔footer forever. Real layout-driven width changes (window
-  // resize, sidebar collapse, panel resize) come through the `window`
-  // `resize` handler or a subsequent `ResizeObserver` fire after the
-  // lockout disarms, so they still get a full evaluation.
-  const transitionLockoutRef = useRef(0);
+  const contentMirrorRef = useRef<HTMLDivElement>(null);
+  const baselineMirrorRef = useRef<HTMLDivElement>(null);
+  const isMultiLine = useInputAutosize(
+    { textareaRef, contentMirrorRef, baselineMirrorRef },
+    value,
+  );
 
   useImperativeHandle(ref, () => ({
     focus: () => textareaRef.current?.focus(),
     blur: () => textareaRef.current?.blur(),
     getTextarea: () => textareaRef.current,
   }));
-
-  // Just keeps the inline `height` in sync with the textarea's current
-  // `scrollHeight` (capped). Used by the `ResizeObserver` callback while
-  // the transition lockout is active so the textarea still grows/shrinks
-  // to fit the new layout, but the multi-line decision is preserved.
-  const applyHeightOnly = useCallback(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const cap = Math.min(window.innerHeight * 0.7, 800);
-    el.style.height = Math.min(el.scrollHeight, cap) + "px";
-  }, []);
-
-  const autoResize = useCallback(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    // Cap the inline height to match the CSS max-height so the textarea's
-    // own scrollbar engages for long messages (and native caret-follow on
-    // Arrow keys keeps working).
-    const cap = Math.min(window.innerHeight * 0.7, 800);
-    const naturalHeight = el.scrollHeight;
-    el.style.height = Math.min(naturalHeight, cap) + "px";
-
-    // Capture the single-line baseline lazily from computed styles so
-    // the threshold tracks the current font-size / line-height (which
-    // changes between desktop and mobile via the @media override on
-    // `.textarea`). Falls back to 32px (the default control height).
-    if (singleLineHeightRef.current == null) {
-      const cs = getComputedStyle(el);
-      const lineHeight = parseFloat(cs.lineHeight);
-      const padTop = parseFloat(cs.paddingTop);
-      const padBottom = parseFloat(cs.paddingBottom);
-      if (Number.isFinite(lineHeight)) {
-        singleLineHeightRef.current = lineHeight + padTop + padBottom;
-      }
-    }
-    const baseline = singleLineHeightRef.current ?? 32;
-    // 4px tolerance covers sub-pixel rounding on HiDPI screens where
-    // scrollHeight can land at e.g. 32.5px for a single-line textarea.
-    const naturalMulti = naturalHeight > baseline + 4;
-    let multi = naturalMulti;
-
-    // Anti-oscillation: when the picker drops into the footer row in
-    // multi-line state, the shell releases the textarea's inline-picker
-    // padding-right reserve (~220px → 32px), which makes the same text
-    // fit on a single line at the new wider width. A naive measurement
-    // would then flip multi-line back to false on the very next
-    // keystroke, the picker would slide back inline, the padding would
-    // return, and the text would re-wrap — a per-character oscillation
-    // that destroys backspace UX. Re-measure with the inline padding
-    // simulated to answer "would the prompt still wrap if we showed
-    // the picker inline?", and only collapse to single-line when the
-    // answer is no.
-    if (isMultiLineRef.current && !naturalMulti) {
-      const prevInlinePaddingRight = el.style.paddingRight;
-      // Wrap the `min(...)` in `calc(...)` so JSDOM's CSSOM (which
-      // rejects bare `min()` in inline-style assignments) accepts it
-      // for the test harness; real browsers parse both forms
-      // identically. The expression mirrors the
-      // `.inputRowHasEnd .textarea` rule in InputBarShell.module.css.
-      el.style.paddingRight = "calc(min(220px, 42%))";
-      el.style.height = "auto";
-      const narrowHeight = el.scrollHeight;
-      el.style.paddingRight = prevInlinePaddingRight;
-      el.style.height = Math.min(naturalHeight, cap) + "px";
-      multi = narrowHeight > baseline + 4;
-    }
-
-    // Symmetric anti-oscillation for the single → multi direction. The
-    // inline padding-right reserve makes a prompt at the wrap boundary
-    // appear to need a second line at single-line layout (~220px reserve
-    // shrinks the content area), but the act of switching to multi-line
-    // releases that reserve and the same prompt now fits on one line —
-    // sub-pixel rounding in the narrow re-measurement above (or in the
-    // ResizeObserver-driven autoResize that runs after the layout swap)
-    // can then flip the state back to single-line, and the cycle
-    // repeats per frame. The centered empty-thread wrapper anchors with
-    // `bottom: 50%; transform: translateY(50%)`, so the ~44px height
-    // delta translates to a visible up-and-down jitter of the entire
-    // bar. Mirror the multi → single check: only flip into multi-line
-    // when the prompt still wraps at the wider multi-line padding-right
-    // of 32px. If the wide layout fits on one line, stay single-line
-    // — the textarea will still autogrow to show the wrapped second
-    // line at the narrow width, but the picker, info bar, and wrapper
-    // height stay stable.
-    if (!isMultiLineRef.current && naturalMulti) {
-      const prevInlinePaddingRight = el.style.paddingRight;
-      el.style.paddingRight = "32px";
-      el.style.height = "auto";
-      const wideHeight = el.scrollHeight;
-      el.style.paddingRight = prevInlinePaddingRight;
-      el.style.height = Math.min(naturalHeight, cap) + "px";
-      multi = wideHeight > baseline + 4;
-    }
-
-    if (isMultiLineRef.current !== multi) {
-      // Arm the lockout BEFORE flipping the ref so the upcoming
-      // `data-multiline` swap's `ResizeObserver` fire treats itself as
-      // a self-induced reflow and skips re-evaluating the multi-line
-      // decision.
-      transitionLockoutRef.current = 1;
-    }
-    isMultiLineRef.current = multi;
-    setIsMultiLine((prev) => (prev === multi ? prev : multi));
-  }, []);
-
-  useEffect(() => {
-    autoResize();
-  }, [value, autoResize]);
-
-  useEffect(() => {
-    const onResize = () => {
-      // Width changes can rewrap the textarea (long line that fit at
-      // wide widths now wraps), so re-measure the multi-line state too.
-      // Reset the baseline when the font-size media-query crosses the
-      // 900px / 640px breakpoints so the threshold tracks the new
-      // line-height.
-      singleLineHeightRef.current = null;
-      autoResize();
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [autoResize]);
-
-  // Watch for textarea width changes that aren't viewport-driven —
-  // e.g. when `[data-multiline="true"]` swaps the textarea's
-  // padding-right reserve, or when the inline `inputRowEnd` slot
-  // appears/disappears, the textarea grows/shrinks horizontally and
-  // its wrap state can change. Re-measure so the inline height
-  // assignment and the multi-line flag stay coherent with the
-  // current layout (and so the height we set in the previous pass
-  // doesn't strand empty pixels at the bottom of a now-shorter
-  // textarea).
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    let lastWidth = el.clientWidth;
-    let frame: number | null = null;
-    let needsHeightOnly = false;
-    let needsFullResize = false;
-    const scheduleResize = (heightOnly: boolean) => {
-      if (heightOnly) {
-        needsHeightOnly = true;
-      } else {
-        needsFullResize = true;
-      }
-      if (frame != null) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = null;
-        const runFullResize = needsFullResize;
-        needsFullResize = false;
-        const runHeightOnly = needsHeightOnly;
-        needsHeightOnly = false;
-        if (runFullResize) {
-          autoResize();
-        } else if (runHeightOnly) {
-          applyHeightOnly();
-        }
-      });
-    };
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const width = entry.contentRect.width;
-        if (Math.abs(width - lastWidth) > 0.5) {
-          lastWidth = width;
-          if (transitionLockoutRef.current > 0) {
-            // This fire is the consequence of our own `data-multiline`
-            // swap toggling the textarea's `padding-right`. Re-running
-            // the full `autoResize` here is what causes the per-frame
-            // picker bounce at the wrap boundary, because the new
-            // measurement at the just-swapped layout can disagree with
-            // the anti-osc prediction by a sub-pixel. Consume the
-            // lockout and only update the inline height.
-            transitionLockoutRef.current--;
-            scheduleResize(true);
-          } else {
-            scheduleResize(false);
-          }
-        }
-      }
-    });
-    ro.observe(el);
-    return () => {
-      if (frame != null) {
-        window.cancelAnimationFrame(frame);
-      }
-      ro.disconnect();
-    };
-  }, [autoResize, applyHeightOnly]);
 
   useEffect(() => {
     onMultiLineChange?.(isMultiLine);
@@ -448,12 +267,65 @@ function InputBarShellInner(
     .filter(Boolean)
     .join(" ");
 
+  const showInlineEnd = !isMultiLine && inputRowEnd != null;
+
   const inputRowClassName = [
     styles.inputRow,
-    inputRowEnd ? styles.inputRowHasEnd : "",
+    showInlineEnd ? styles.inputRowHasEnd : "",
   ]
     .filter(Boolean)
     .join(" ");
+
+  // The wrap-measurement mirrors keep the single-line layout's insets in
+  // every state, so the reserve flag must not depend on `isMultiLine`
+  // (see `reserveInlineEnd` prop docs).
+  const mirrorClassName = [
+    styles.sizeMirror,
+    (reserveInlineEnd ?? inputRowEnd != null) ? styles.sizeMirrorHasEnd : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const sendStopButton = isStreaming ? (
+    <button
+      type="button"
+      className={`${styles.sendButton} ${styles.stopButton}`}
+      onClick={onStop}
+      aria-label={stopAriaLabel}
+      title={stopTitle}
+    >
+      <span className={styles.stopIcon} />
+    </button>
+  ) : (
+    <button
+      type="button"
+      className={styles.sendButton}
+      onClick={() => {
+        if (canSubmit) onSubmit();
+      }}
+      disabled={!canSubmit}
+      aria-label={sendAriaLabel}
+    >
+      <ArrowUp size={16} />
+    </button>
+  );
+
+  // Multi-line: every control lives in the bottom row — start slot
+  // (attach), the consumer's `containerBottom` content (model picker,
+  // chips), then send/stop right-aligned — and the textarea above gets
+  // the full container width. Single-line keeps the corner-anchored
+  // controls and only renders the bottom row when the consumer filled
+  // the slot (e.g. council fan-out, command chips).
+  const bottomRow =
+    isMultiLine || containerBottom ? (
+      <div className={styles.containerBottomRow}>
+        {isMultiLine ? inputRowStart : null}
+        {containerBottom ? (
+          <div className={styles.containerBottomSlot}>{containerBottom}</div>
+        ) : null}
+        {isMultiLine ? sendStopButton : null}
+      </div>
+    ) : null;
 
   return (
     <div
@@ -481,7 +353,7 @@ function InputBarShellInner(
         {pill ? null : modeBar}
         {containerTop}
         <div className={inputRowClassName}>
-          {inputRowStart}
+          {isMultiLine ? null : inputRowStart}
           <textarea
             autoComplete="off"
             {...textareaProps}
@@ -495,36 +367,31 @@ function InputBarShellInner(
             disabled={disabled}
             rows={1}
           />
-          {inputRowEnd ? (
+          {/* Hidden wrap-measurement mirrors (see useInputAutosize). The
+              trailing zero-width space makes a trailing newline measure
+              as a second line, matching where the textarea's caret sits. */}
+          <div
+            ref={contentMirrorRef}
+            className={mirrorClassName}
+            data-autosize-mirror="content"
+            aria-hidden="true"
+          >
+            {`${value}\u200b`}
+          </div>
+          <div
+            ref={baselineMirrorRef}
+            className={mirrorClassName}
+            data-autosize-mirror="baseline"
+            aria-hidden="true"
+          >
+            {"\u200b"}
+          </div>
+          {showInlineEnd ? (
             <div className={styles.inputRowEnd}>{inputRowEnd}</div>
           ) : null}
-          {isStreaming ? (
-            <button
-              type="button"
-              className={`${styles.sendButton} ${styles.stopButton}`}
-              onClick={onStop}
-              aria-label={stopAriaLabel}
-              title={stopTitle}
-            >
-              <span className={styles.stopIcon} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={styles.sendButton}
-              onClick={() => {
-                if (canSubmit) onSubmit();
-              }}
-              disabled={!canSubmit}
-              aria-label={sendAriaLabel}
-            >
-              <ArrowUp size={16} />
-            </button>
-          )}
+          {isMultiLine ? null : sendStopButton}
         </div>
-        {containerBottom ? (
-          <div className={styles.containerBottomRow}>{containerBottom}</div>
-        ) : null}
+        {bottomRow}
       </div>
       {(infoBarStart || infoBarEnd) && (
         <div className={styles.inputInfoBar}>

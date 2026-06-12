@@ -290,9 +290,48 @@
 }
 
 @media (pointer: coarse), (max-width: 900px) {
-  .textarea {
+  .textarea,
+  .sizeMirror {
     font-size: 16px;
   }
+}
+
+/* Hidden wrap-measurement mirrors (see useInputAutosize). They replicate
+   the textarea's typography and — crucially — the SINGLE-LINE layout's
+   horizontal insets in every state: the multi-line padding overrides
+   below deliberately do not apply here, so the wrap decision is always
+   measured against the same reference layout and cannot oscillate when
+   the real textarea's padding swaps. Vertical padding is zero so the
+   mirror height is a pure line count x line-height. */
+.sizeMirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 0 32px;
+}
+
+.inputContainerPill .sizeMirror {
+  padding-left: 50px;
+  padding-right: 50px;
+}
+
+/* Mirrors `.inputRowHasEnd .textarea`'s inline-picker reserve. The
+   compound selector outranks the pill rule above on source order so the
+   reserve wins in pill mode too (matching the real cascade, where
+   `.inputRowHasEnd .textarea` comes after `.inputContainerPill
+   .textarea`). */
+.sizeMirror.sizeMirrorHasEnd {
+  padding-right: min(220px, 42%);
 }
 
 .textarea::placeholder {
@@ -318,19 +357,6 @@
   max-width: min(170px, calc(100% - 86px));
   min-width: 0;
   align-items: center;
-}
-
-/* When the textarea has wrapped to a second visual row, the inline
-   `inputRowEnd` slot reads as a floating pill anchored to the middle
-   of a tall block of text — visually messy and it steals horizontal
-   space the user needs for the prompt itself. Consumers that want the
-   adaptive layout (chat) move the picker into the `containerBottom`
-   slot when multi-line; we hide the absolute slot here and restore
-   the textarea's full width by dropping the `padding-right` reservation
-   the single-line layout uses. The corner inset (~32px) still keeps
-   wrapped lines clear of the send-button hit target. */
-.inputContainer[data-multiline="true"] .inputRowEnd {
-  display: none;
 }
 
 /* Push the inline picker slot clear of the enlarged 34.5px send disc
@@ -377,6 +403,14 @@
     padding-left: 16px;
   }
 
+  /* Keep the wrap mirrors aligned with the mock's textarea insets above
+     (16px left after the dropped attach disc, 50px send clearance). */
+  :global(.personalAgentChatMock) .inputContainerPill .sizeMirror,
+  :global(.personalAgentChatMock) .inputContainerPill .sizeMirror.sizeMirrorHasEnd {
+    padding-left: 16px;
+    padding-right: 50px;
+  }
+
   :global(.personalAgentChatMock) .inputContainerPill .inputRowEnd {
     top: auto;
     bottom: 8px;
@@ -386,91 +420,77 @@
     justify-content: flex-end;
   }
 
-  /* Multi-line (growing) state on the marketing mock: match the clean
-     desktop multi-line layout. The model picker drops into the bottom
-     row (moved there by ChatInputBar) and the send disc re-anchors to
-     the container bottom so it's BOTTOM-ALIGNED with that picker, while
-     the prompt grows above. `position: static` on the input row drops it
-     as the buttons' positioning context so they fall back to the
-     relative `.inputContainer` (its bottom edge) like desktop. */
-  :global(.personalAgentChatMock)
-    .inputContainerPill[data-multiline="true"]
-    .inputRow {
-    position: static;
-  }
-
-  :global(.personalAgentChatMock)
-    .inputContainerPill[data-multiline="true"]
-    .sendButton {
-    top: auto;
-    bottom: 6px;
-    transform: none;
-  }
-
   /* Left-align the dropped model picker with the prompt text (16px, the
-     textarea's left padding) instead of the 50px disc-clearance inset, so
-     it reads as bottom-left aligned under the text. The right inset stays
-     wide to clear the bottom-anchored send disc. */
+     textarea's left padding) so it reads as bottom-left aligned under
+     the text. */
   :global(.personalAgentChatMock) .inputContainerPill .containerBottomRow {
     padding-left: 16px;
   }
 }
 
-.inputContainer[data-multiline="true"] .inputRowHasEnd .textarea {
-  padding-right: 32px;
+/* Multi-line: the prompt owns the full container width with equal
+   insets on both sides; every control (attach, picker, send) lives in
+   the bottom row, so no corner-button clearance is needed. */
+.inputContainer[data-multiline="true"] .textarea {
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
-/* Bottom row inside the rounded container, used by consumers via the
-   `containerBottom` slot. Padding clears the absolutely-positioned
-   attach (`+`, left: 2px, w: 24px) and send (`↑`, right: 2px, w: 24px)
-   corner buttons so footer chrome (e.g. the model picker in
-   multi-line state) sits between them rather than under them. */
+/* Bottom row inside the rounded container. Single-line consumers fill
+   it via the `containerBottom` slot only (council fan-out, command
+   chips) and the side padding clears the absolutely-positioned corner
+   buttons. In the multi-line state the shell also renders the start
+   slot (attach) and the send/stop button here as normal flex children. */
 .containerBottomRow {
   display: flex;
   align-items: center;
   width: 100%;
   /* Match the corner buttons' 24px height + 6px bottom inset so the
-     picker text and the [+] / [↑] glyphs share a single horizontal
-     baseline when the buttons re-anchor to the container in the
-     multi-line state below. */
+     picker text and the [+] / [↑] glyphs share a horizontal baseline. */
   min-height: 24px;
   padding: 0 32px 6px 32px;
 }
 
 /* In pill mode the corner discs are enlarged to 34.5px (inset 7.75px),
    so widen the footer row's horizontal padding to 50px on both sides
-   to keep the model picker clear of the bottom-anchored attach/send
-   discs in the multi-line state. */
+   to keep the model picker clear of the corner discs. */
 .inputContainerPill .containerBottomRow {
   padding-left: 50px;
   padding-right: 50px;
 }
 
-/* Multi-line state alignment (desktop only): re-anchor the corner
-   buttons to the rounded container itself so they sit at the bottom
-   edge — flush with the picker in `.containerBottomRow` — instead of
-   clinging to the bottom of the (now tall) input row above it.
+/* The consumer's `containerBottom` content claims the row's free width
+   so the trailing send/stop button is pushed flush right. */
+.containerBottomSlot {
+  flex: 1;
+  min-width: 0;
+}
 
-   `position: static` on the input row drops it as a positioning
-   context, so the buttons fall back to `.inputContainer` (which is
-   already `position: relative`). The `bottom: 6px` inset matches the
-   bottom row's `padding-bottom: 6px`, putting the 24px buttons in
-   the same vertical band as the picker (centers all align at 18px
-   from the container bottom). The `inputRowEnd` slot is already
-   hidden in multi-line, so it's not affected by this re-anchoring.
+/* Controls rendered inside the bottom row are normal flex children —
+   strip the corner-anchored absolute positioning they carry from the
+   single-line layout. */
+.containerBottomRow .attachButton,
+.containerBottomRow .sendButton {
+  position: static;
+  transform: none;
+  flex-shrink: 0;
+}
 
-   Scoped to >640px so the mobile 44x44 pill buttons keep their
-   `bottom: 0` flush-to-edge layout and don't overlap the picker
-   text in the bottom row. */
-@media (min-width: 641px) {
-  .inputContainer[data-multiline="true"] .inputRow {
-    position: static;
-  }
+.containerBottomRow .sendButton {
+  margin-left: auto;
+}
 
-  .inputContainer[data-multiline="true"] .attachButton,
-  .inputContainer[data-multiline="true"] .sendButton {
-    bottom: 6px;
-  }
+/* Multi-line bottom row hosts the controls itself, so drop the
+   corner-clearance padding down to the buttons' own edge insets and
+   bottom-align everything (the slot may stack chips above the picker). */
+.inputContainer[data-multiline="true"] .containerBottomRow {
+  align-items: flex-end;
+  gap: 6px;
+  padding: 0 4px 4px;
+}
+
+.inputContainerPill[data-multiline="true"] .containerBottomRow {
+  padding: 0 7.75px 7.75px;
 }
 
 /* Attach (`+`) and send (arrow) corner buttons share the same shared
@@ -1034,6 +1054,17 @@
   }
 
   .inputRowHasEnd .textarea {
+    padding-right: min(220px, 48%);
+  }
+
+  /* Keep the wrap-measurement mirrors in lockstep with the mobile
+     textarea metrics above (horizontal insets only — see .sizeMirror). */
+  .sizeMirror {
+    padding: 0 48px;
+    line-height: 1.38;
+  }
+
+  .sizeMirror.sizeMirrorHasEnd {
     padding-right: min(220px, 48%);
   }
 

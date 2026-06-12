@@ -19,6 +19,7 @@ const mockUseScrollAnchorV2 = scrollAnchorMocks.useScrollAnchorV2;
 const mockEnqueue = vi.fn();
 const mockDequeue = vi.fn();
 const mockRemove = vi.fn();
+const mockSetDraft = vi.fn();
 const mockChatUI: {
   selectedMode: "code" | "plan" | "image" | "3d" | "video";
   selectedModel: string | null;
@@ -85,16 +86,14 @@ vi.mock("../../../constants/models", () => ({
   availableModelsForAdapter: () => [],
 }));
 
-vi.mock("../../../stores/chat-ui-store", async () => {
-  const { useState } = await import("react");
-  return {
-    useChatUI: () => mockChatUI,
-    // Stand-in for the real per-streamKey draft store. Tests don't
-    // exercise cross-session draft persistence — they just need a
-    // setState-shaped pair so `useChatPanelState`'s input still works.
-    useChatDraft: () => useState(""),
-  };
-});
+vi.mock("../../../stores/chat-ui-store", () => ({
+  useChatUI: () => mockChatUI,
+  // The hook only writes drafts imperatively (clear-on-send, queue
+  // edit); the live draft subscription lives in `DraftedInputBar`.
+  useChatUIStore: {
+    getState: () => ({ setDraft: mockSetDraft }),
+  },
+}));
 
 vi.mock("../../../stores/message-queue-store", () => ({
   useMessageQueueStore: {
@@ -125,6 +124,7 @@ describe("useChatPanelState", () => {
     mockEnqueue.mockReset();
     mockDequeue.mockReset();
     mockRemove.mockReset();
+    mockSetDraft.mockReset();
     mockChatUI.init.mockReset();
     mockChatUI.syncAvailableModels.mockReset();
     mockChatUI.setSelectedMode.mockReset();

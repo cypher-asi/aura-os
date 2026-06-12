@@ -91,6 +91,30 @@ function makeFileList(file: File): FileList {
   } as unknown as FileList;
 }
 
+/**
+ * Stubs the heights of the shell's hidden wrap-measurement mirrors (see
+ * `useInputAutosize`): the "content" mirror renders the prompt at the
+ * single-line layout's width, the "baseline" mirror renders one line.
+ * JSDOM runs no layout, so `scrollHeight` is shadowed per mirror kind.
+ * `heights` is read live on every measurement, letting tests mutate it
+ * between rerenders. Returns a restore function.
+ */
+function stubMirrorHeights(heights: { content: number; baseline: number }) {
+  Object.defineProperty(HTMLDivElement.prototype, "scrollHeight", {
+    configurable: true,
+    get(this: HTMLDivElement) {
+      const kind = this.getAttribute("data-autosize-mirror");
+      if (kind === "content") return heights.content;
+      if (kind === "baseline") return heights.baseline;
+      return 0;
+    },
+  });
+  return () => {
+    delete (HTMLDivElement.prototype as { scrollHeight?: unknown })
+      .scrollHeight;
+  };
+}
+
 function withMockDataTransfer(fileList: FileList, run: () => void) {
   const originalDataTransfer = globalThis.DataTransfer;
 
@@ -376,21 +400,13 @@ describe("ChatInputBar", () => {
     expect(screen.getAllByText("Opus 4.8")[0]).toBeInTheDocument();
   });
 
-  it("relocates the model picker into the bottom chrome row when the textarea wraps to multi-line", async () => {
-    // The shell measures multi-line state via `textarea.scrollHeight` against
-    // a single-line baseline (~32px); JSDOM doesn't run real layout, so stub
-    // the property to simulate a textarea tall enough to clear the threshold.
-    // 80px is unambiguously > the 36px (32 + 4) cutoff in `autoResize`.
-    const originalDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "scrollHeight",
-    );
-    Object.defineProperty(HTMLTextAreaElement.prototype, "scrollHeight", {
-      configurable: true,
-      get() {
-        return 80;
-      },
-    });
+  it("relocates the model picker and send button into the bottom row when the prompt wraps", () => {
+    // The shell decides single/multi-line by comparing two hidden mirror
+    // divs (see useInputAutosize): the content mirror renders the prompt
+    // at the single-line layout's width, the baseline mirror renders a
+    // single line. JSDOM runs no layout, so stub the heights: 40px
+    // content vs 20px baseline reads as "wrapped to a second line".
+    const restoreMirrors = stubMirrorHeights({ content: 40, baseline: 20 });
 
     try {
       mockSelectedModel = "aura-claude-opus-4-6";
@@ -420,56 +436,29 @@ describe("ChatInputBar", () => {
       expect(trigger?.textContent).toMatch(/Opus 4\.6/);
       // The single-line slot must be empty (no inline picker present).
       expect(container.querySelector(".inputRowEnd")).toBeNull();
+      // The send button moves out of the input row and becomes a flex
+      // child of the shell's bottom controls row, after the picker.
+      const shellBottomRow = container.querySelector(".containerBottomRow");
+      expect(shellBottomRow).not.toBeNull();
+      expect(
+        shellBottomRow!.querySelector('button[aria-label="Send"]'),
+      ).not.toBeNull();
+      expect(
+        container.querySelector('.inputRow button[aria-label="Send"]'),
+      ).toBeNull();
     } finally {
-      if (originalDescriptor) {
-        Object.defineProperty(
-          HTMLTextAreaElement.prototype,
-          "scrollHeight",
-          originalDescriptor,
-        );
-      } else {
-        // @ts-expect-error - delete a custom getter we installed above
-        delete HTMLTextAreaElement.prototype.scrollHeight;
-      }
+      restoreMirrors();
     }
   });
 
-  it("stays in the multi-line layout while the prompt would still wrap if the picker were inline", () => {
+  it("stays in the multi-line layout while the prompt would still wrap in the single-line layout", () => {
     // Regression: backspacing a still-wrapping prompt used to flip the
     // picker back inline because the wider multi-line layout briefly let
-    // the text fit on one line. The shell now re-measures with the
-    // single-line padding-right reserve to confirm the prompt would
-    // truly fit before collapsing — otherwise an entire keystroke loop
-    // pad↔wrap↔unpad happens per character.
-    //
-    // Stub `scrollHeight` to mirror the wrap behavior. JSDOM doesn't run
-    // layout, so we synthesize "would this text wrap?" from two signals
-    // the shell controls during measurement:
-    //   1. The shell applies an inline `padding-right: min(220px, 42%)`
-    //      while doing its anti-oscillation re-measurement → wrap (80px).
-    //   2. Otherwise we mirror what real CSS would do based on whether
-    //      the parent input row has the `.inputRowHasEnd` class (the
-    //      proxied CSS-module name): if it does, the inline-picker
-    //      padding-right is reserved and the prompt wraps (80px); if it
-    //      doesn't (multi-line state hides the inline slot), the prompt
-    //      gets the full width and fits on one line (32px).
-    const originalDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "scrollHeight",
-    );
-    Object.defineProperty(HTMLTextAreaElement.prototype, "scrollHeight", {
-      configurable: true,
-      get(this: HTMLTextAreaElement) {
-        const inline = this.style.paddingRight ?? "";
-        if (inline.includes("220") || inline.includes("42%")) return 80;
-        if (
-          this.parentElement?.className.includes("inputRowHasEnd")
-        ) {
-          return 80;
-        }
-        return 32;
-      },
-    });
+    // the text fit on one line. The mirrors always keep the single-line
+    // layout's insets, so the decision cannot be affected by the
+    // relocated controls — as long as the content mirror reports a
+    // wrapped height, the layout must hold.
+    const restoreMirrors = stubMirrorHeights({ content: 40, baseline: 20 });
 
     try {
       mockSelectedModel = "aura-claude-opus-4-6";
@@ -478,12 +467,10 @@ describe("ChatInputBar", () => {
       const { container, rerender } = render(
         <ChatInputBar {...makeProps({ input: longPrompt })} />,
       );
-      // Initial render lands in multi-line because narrow padding wraps.
       expect(container.querySelector(".bottomChromeRow")).not.toBeNull();
 
-      // Simulate one backspace. Layout-only scrollHeight at the now-wide
-      // textarea would say single-line, but narrow re-measurement keeps
-      // it multi-line.
+      // Simulate one backspace; the prompt still wraps at the
+      // single-line reference width, so the layout must not flap.
       rerender(
         <ChatInputBar
           {...makeProps({ input: longPrompt.slice(0, -1) })}
@@ -492,107 +479,47 @@ describe("ChatInputBar", () => {
       expect(container.querySelector(".bottomChromeRow")).not.toBeNull();
       expect(container.querySelector(".inputRowEnd")).toBeNull();
     } finally {
-      if (originalDescriptor) {
-        Object.defineProperty(
-          HTMLTextAreaElement.prototype,
-          "scrollHeight",
-          originalDescriptor,
-        );
-      } else {
-        // @ts-expect-error - delete the custom getter we installed above
-        delete HTMLTextAreaElement.prototype.scrollHeight;
-      }
+      restoreMirrors();
     }
   });
 
-  it("stays in the single-line layout when the prompt would still fit if the picker dropped to the footer", () => {
-    // Regression: at the wrap boundary, a prompt that wraps at single-line
-    // padding-right (220px reserve) but would fit at multi-line padding
-    // (32px reserve) used to cause the entire input bar to jitter
-    // vertically in the centered empty-thread state. Flipping to multi-line
-    // widened the textarea (dropped the picker reserve), the prompt fit on
-    // one line, the bar collapsed back, the picker re-appeared, the
-    // textarea narrowed, the prompt wrapped — per-frame oscillation. The
-    // centered wrapper's `bottom: 50%; transform: translateY(50%)`
-    // anchoring made the ~44px height delta visible as a fast up/down
-    // shift of the whole bar. The shell now re-measures with the
-    // multi-line padding-right reserve before entering multi-line and
-    // only flips when the prompt would still wrap at the wider width.
-    //
-    // Stub `scrollHeight` to mirror the boundary behavior:
-    //   1. Wide simulation (inline `padding-right: 32px`, the new
-    //      single→multi anti-osc branch) → fits (32px).
-    //   2. Narrow simulation (inline `padding-right: min(220px, 42%)`,
-    //      the existing multi→single anti-osc branch) → wraps (80px).
-    //   3. Otherwise mirror real CSS based on whether the parent input
-    //      row carries `.inputRowHasEnd`: single-line layout reserves
-    //      the inline picker padding → wraps (80px); multi-line layout
-    //      releases it → fits (32px).
-    const originalDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "scrollHeight",
-    );
-    Object.defineProperty(HTMLTextAreaElement.prototype, "scrollHeight", {
-      configurable: true,
-      get(this: HTMLTextAreaElement) {
-        const inline = this.style.paddingRight ?? "";
-        if (inline === "32px") return 32;
-        if (inline.includes("220") || inline.includes("42%")) return 80;
-        if (this.parentElement?.className.includes("inputRowHasEnd")) {
-          return 80;
-        }
-        return 32;
-      },
-    });
+  it("collapses back to the single-line layout once the prompt fits one line again", () => {
+    const heights = { content: 40, baseline: 20 };
+    const restoreMirrors = stubMirrorHeights(heights);
 
     try {
       mockSelectedModel = "aura-claude-opus-4-6";
-      const boundaryPrompt =
-        "A prompt right at the wrap boundary that fits when the picker drops";
-      const { container } = render(
-        <ChatInputBar {...makeProps({ input: boundaryPrompt })} />,
+      const { container, rerender } = render(
+        <ChatInputBar
+          {...makeProps({ input: "a prompt long enough to wrap" })}
+        />,
       );
+      expect(container.querySelector(".bottomChromeRow")).not.toBeNull();
+      expect(
+        container.querySelector('.inputRow button[aria-label="Send"]'),
+      ).toBeNull();
 
-      expect(container.querySelector(".inputRowEnd")).not.toBeNull();
+      // The shortened prompt fits one line at the single-line reference
+      // width: controls return inline (picker slot + corner send).
+      heights.content = 20;
+      rerender(<ChatInputBar {...makeProps({ input: "short" })} />);
       expect(container.querySelector(".bottomChromeRow")).toBeNull();
+      expect(container.querySelector(".inputRowEnd")).not.toBeNull();
+      expect(
+        container.querySelector('.inputRow button[aria-label="Send"]'),
+      ).not.toBeNull();
     } finally {
-      if (originalDescriptor) {
-        Object.defineProperty(
-          HTMLTextAreaElement.prototype,
-          "scrollHeight",
-          originalDescriptor,
-        );
-      } else {
-        // @ts-expect-error - delete the custom getter we installed above
-        delete HTMLTextAreaElement.prototype.scrollHeight;
-      }
+      restoreMirrors();
     }
   });
 
-  it("does not flap the model picker when the ResizeObserver fires after a multi-line toggle", () => {
-    // Regression for the per-frame picker bounce that the centered
-    // empty-thread state surfaces as a fast vertical jitter of the
-    // entire input bar. At specific prompt lengths (e.g. the
-    // 100-character "Build a modern marketing website..." prompt) the
-    // anti-oscillation prediction in `autoResize` can disagree with
-    // the actual layout by a sub-pixel: the narrow simulation says
-    // "would fit single-line" while the actual narrow CSS layout
-    // wraps (or vice-versa for the wide simulation). Pre-fix, the
-    // `data-multiline` swap fired `ResizeObserver`, autoResize re-ran
-    // at the new layout, the disagreement flipped the state back, the
-    // CSS swapped again, `ResizeObserver` fired again — picker bounces
-    // inline↔footer forever. Post-fix, the transition lockout
-    // consumes exactly one `ResizeObserver` fire after every state
-    // toggle so the self-induced reflow cannot undo the toggle.
-    //
-    // We can't reproduce the sub-pixel disagreement directly in
-    // JSDOM (no real layout), so we install a `ResizeObserver` mock
-    // that captures the callback + asymmetric `scrollHeight` stubs
-    // where the simulation values are intentionally inconsistent
-    // with the "actual" values for the same padding-right. Without
-    // the lockout, the manual `ResizeObserver` fire below would flip
-    // the picker back to the inline slot; with the lockout, the
-    // picker stays in the bottom chrome row.
+  it("keeps the multi-line layout when the ResizeObserver fires after the state swap", () => {
+    // Regression guard for the historical picker bounce: flipping to
+    // multi-line swaps the textarea's padding, which fires the
+    // ResizeObserver, which re-measures. The mirrors are unaffected by
+    // the swap (they keep the single-line insets), so the re-measure
+    // must re-confirm the multi-line state instead of reversing it —
+    // no lockout machinery required.
     let capturedCallback: ResizeObserverCallback | null = null;
     let observedTarget: HTMLTextAreaElement | null = null;
     class MockResizeObserver {
@@ -607,35 +534,16 @@ describe("ChatInputBar", () => {
     }
     const originalRO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
     (globalThis as { ResizeObserver?: unknown }).ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
-
-    const originalDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "scrollHeight",
-    );
-    Object.defineProperty(HTMLTextAreaElement.prototype, "scrollHeight", {
-      configurable: true,
-      get(this: HTMLTextAreaElement) {
-        const inline = this.style.paddingRight ?? "";
-        // Wide simulation (anti-osc single→multi branch) says wraps,
-        // so the initial render enters multi-line.
-        if (inline === "32px") return 80;
-        // Narrow simulation (anti-osc multi→single branch) says FITS.
-        // This is the asymmetry that pre-fix triggers the loop: at the
-        // multi-line layout, naturalMulti=false and the narrow sim
-        // agrees → state flips back to single → cycle repeats.
-        if (inline.includes("220") || inline.includes("42%")) return 32;
-        // Actual single-line layout (inputRow has .inputRowHasEnd
-        // because the picker is inline) → wraps. Drives the initial
-        // single→multi transition.
-        if (this.parentElement?.className.includes("inputRowHasEnd")) {
-          return 80;
-        }
-        // Actual multi-line layout (no .inputRowHasEnd because the
-        // picker dropped to the footer) → fits. This is what the
-        // `ResizeObserver` callback measures after the state swap.
-        return 32;
-      },
-    });
+    // The hook batches ResizeObserver-driven re-measures through
+    // requestAnimationFrame; run them synchronously so the assertion
+    // below observes the post-fire state.
+    const rafSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+    const restoreMirrors = stubMirrorHeights({ content: 40, baseline: 20 });
 
     try {
       mockSelectedModel = "aura-claude-opus-4-6";
@@ -645,17 +553,11 @@ describe("ChatInputBar", () => {
         <ChatInputBar {...makeProps({ input: longPrompt })} />,
       );
 
-      // The initial render lands in multi-line because both the actual
-      // narrow layout and the wide simulation say "wraps".
       expect(container.querySelector(".bottomChromeRow")).not.toBeNull();
       expect(container.querySelector(".inputRowEnd")).toBeNull();
 
-      // Simulate the `ResizeObserver` fire that the `data-multiline`
-      // CSS swap would trigger in a real browser. Pre-fix this fire
-      // would re-run autoResize, see naturalMulti=false at the wide
-      // actual layout, narrow-sim would (incorrectly) say "fits", and
-      // the picker would slide back to the inline slot. Post-fix the
-      // transition lockout swallows the fire.
+      // Simulate the ResizeObserver fire the `data-multiline` padding
+      // swap would trigger in a real browser.
       expect(capturedCallback).not.toBeNull();
       expect(observedTarget).not.toBeNull();
       const entry = {
@@ -671,16 +573,8 @@ describe("ChatInputBar", () => {
       expect(container.querySelector(".bottomChromeRow")).not.toBeNull();
       expect(container.querySelector(".inputRowEnd")).toBeNull();
     } finally {
-      if (originalDescriptor) {
-        Object.defineProperty(
-          HTMLTextAreaElement.prototype,
-          "scrollHeight",
-          originalDescriptor,
-        );
-      } else {
-        // @ts-expect-error - delete the custom getter we installed above
-        delete HTMLTextAreaElement.prototype.scrollHeight;
-      }
+      restoreMirrors();
+      rafSpy.mockRestore();
       if (originalRO) {
         (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver = originalRO;
       } else {
@@ -690,9 +584,10 @@ describe("ChatInputBar", () => {
   });
 
   it("keeps the model picker inline near the send button when the textarea fits on one line", () => {
-    // Default JSDOM behavior: scrollHeight is 0, well under the 36px multi-line
-    // threshold, so the picker stays in the absolutely-positioned `inputRowEnd`
-    // slot to the left of the send button (single-line layout).
+    // Default JSDOM behavior: every mirror's scrollHeight is 0, so the
+    // content mirror never exceeds the baseline and the picker stays in
+    // the absolutely-positioned `inputRowEnd` slot to the left of the
+    // send button (single-line layout).
     mockSelectedModel = "aura-claude-opus-4-6";
     const { container } = render(
       <ChatInputBar {...makeProps({ input: "short prompt" })} />,
