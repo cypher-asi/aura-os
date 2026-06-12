@@ -237,20 +237,26 @@
 .blockBodyWrap {
   display: grid;
   grid-template-rows: 0fr;
-  height: 0;
   overflow: hidden;
   transition: grid-template-rows 160ms ease, opacity 160ms ease;
   opacity: 0;
   border-top: 0 solid transparent;
 }
 
+/*
+ * No `height: 0` here on purpose: height is not animatable from `auto`,
+ * so a hard `height: 0` on the collapsed state used to snap the body
+ * shut instantly while grid-template-rows was still mid-transition —
+ * expand animated but collapse didn't. The 0fr row plus the child's
+ * min-height: 0 already collapse the wrapper to zero height, and both
+ * directions ride the same grid-rows transition.
+ */
 .blockBodyWrap > * {
   min-height: 0;
 }
 
 .blockBodyWrapExpanded {
   grid-template-rows: 1fr;
-  height: auto;
   opacity: 1;
   border-top: 1px solid var(--color-border);
 }
