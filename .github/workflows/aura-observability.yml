@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   observability:
@@ -25,13 +25,13 @@ jobs:
         id: probes
         continue-on-error: true
         env:
-          AURA_STATUS_API_BASE_URL: ${{ secrets.AURA_STATUS_API_BASE_URL }}
-          AURA_STATUS_PUBLIC_BASE_URL: ${{ secrets.AURA_STATUS_PUBLIC_BASE_URL }}
+          AURA_STATUS_API_BASE_URL: ${{ secrets.AURA_STATUS_API_BASE_URL || vars.AURA_STATUS_API_BASE_URL || 'https://api.aura.ai' }}
+          AURA_STATUS_PUBLIC_BASE_URL: ${{ secrets.AURA_STATUS_PUBLIC_BASE_URL || vars.AURA_STATUS_PUBLIC_BASE_URL || 'https://aura.ai' }}
           AURA_STATUS_ACCESS_TOKEN: ${{ secrets.AURA_STATUS_ACCESS_TOKEN }}
           AURA_STATUS_USER_EMAIL: ${{ secrets.AURA_STATUS_USER_EMAIL }}
           AURA_STATUS_USER_PASSWORD: ${{ secrets.AURA_STATUS_USER_PASSWORD }}
-          AURA_STATUS_MODEL_IDS: ${{ vars.AURA_STATUS_MODEL_IDS }}
-          AURA_STATUS_IMAGE_MODEL: ${{ vars.AURA_STATUS_IMAGE_MODEL }}
+          AURA_STATUS_MODEL_IDS: ${{ secrets.AURA_STATUS_MODEL_IDS || vars.AURA_STATUS_MODEL_IDS }}
+          AURA_STATUS_IMAGE_MODEL: ${{ secrets.AURA_STATUS_IMAGE_MODEL || vars.AURA_STATUS_IMAGE_MODEL }}
           AURA_STATUS_ENVIRONMENT: production
         run: npm run status:probes
 
@@ -41,6 +41,24 @@ jobs:
           AURA_STATUS_ENVIRONMENT: production
           AURA_STATUS_SOURCE: github-actions
         run: npm run status:snapshot
+
+      - uses: actions/checkout@v5
+        if: always()
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Publish public observability snapshot
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p pages/observability
+          cp interface/public/observability/status.json pages/observability/status.json
+          bash infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "Update observability status snapshot" \
+            observability/status.json
 
       - name: Upload observability snapshot
         if: always()
