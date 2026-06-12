@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-12T01:29:09.569Z",
+  "generatedAt": "2026-06-12T03:49:32.247Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.642.1",
+  "version": "0.1.0-nightly.643.1",
   "date": "2026-06-11",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.642.1",
-  "lastIncludedSha": "69782efb674702c4f77cbf75ebea03a30032a39e",
-  "previousProcessedSha": "5bd0ba0698bdbbb52b213c81e43fcd3135e50269",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.643.1",
+  "lastIncludedSha": "e95237d0a835932069d6b9bdebc3d69d8f04f107",
+  "previousProcessedSha": "69782efb674702c4f77cbf75ebea03a30032a39e",
   "commitShas": [
     "34404cfd941b474901ee9de6b318533ff9e6ea29",
     "ec007643cedd32d94903384b112267da942a2af1",
@@ -99,10 +99,11 @@
     "7790077e80a0a4539920139fad83a30f1ebe2879",
     "262e2cfc2943f77950c6f1cfcbd985a65a4e2756",
     "5bd0ba0698bdbbb52b213c81e43fcd3135e50269",
-    "69782efb674702c4f77cbf75ebea03a30032a39e"
+    "69782efb674702c4f77cbf75ebea03a30032a39e",
+    "e95237d0a835932069d6b9bdebc3d69d8f04f107"
   ],
-  "rawCommitCount": 88,
-  "filteredCommitCount": 88,
+  "rawCommitCount": 89,
+  "filteredCommitCount": 89,
   "rawCommits": [
     {
       "sha": "34404cfd941b474901ee9de6b318533ff9e6ea29",
@@ -3993,6 +3994,70 @@
         "Interface",
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "e95237d0a835932069d6b9bdebc3d69d8f04f107",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-11T23:38:36-04:00",
+      "subject": "Fix observability eval status reporting (#50)",
+      "body": "* fix(observability): harden status eval snapshots\n\n* fix(observability): split public and desktop probes\n\n* fix(observability): merge public and desktop status lanes\n\n* fix(observability): use AURA brand casing",
+      "parents": [
+        "69782efb674702c4f77cbf75ebea03a30032a39e"
+      ],
+      "files": [
+        ".github/workflows/aura-observability.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "apps/aura-os-server/src/handlers/agents/crud/create.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "crates/aura-os-agents/src/service/shadow.rs",
+        "crates/aura-os-agents/src/service/tests.rs",
+        "docs/aura-feature-health.md",
+        "infra/evals/status/build-status-snapshot.mjs",
+        "infra/evals/status/features.json",
+        "infra/evals/status/lib/status-policy.mjs",
+        "infra/evals/status/lib/status-policy.test.mjs",
+        "infra/evals/status/run-desktop-release-probes.mjs",
+        "infra/evals/status/run-status-probes.mjs",
+        "interface/public/observability/status.json",
+        "interface/src/views/marketing/StatusView/StatusView.test.tsx",
+        "interface/src/views/marketing/StatusView/StatusView.tsx"
+      ],
+      "stats": {
+        "fileCount": 17,
+        "insertions": 431,
+        "deletions": 120
+      },
+      "committedAtMs": 1781235516000,
+      "cleanSubject": "Fix observability eval status reporting (#50)",
+      "keywords": [
+        "observability",
+        "eval",
+        "status",
+        "reporting"
+      ],
+      "fileGroups": [
+        ".github/workflows/aura-observability.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "apps/aura-os-server/src",
+        "crates/aura-os-agents/src",
+        "docs/aura-feature-health.md",
+        "infra/evals/status",
+        "interface/public/observability",
+        "interface/src/views"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure",
+        "Core Rust",
+        "Interface",
+        "Docs"
+      ]
     }
   ],
   "batchCount": 6,
@@ -4000,29 +4065,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.642.1",
+      "version": "0.1.0-nightly.643.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 63982958
+          "sizeBytes": 64000534
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 130738680
+          "sizeBytes": 130755064
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -4032,29 +4097,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.642.1",
+      "version": "0.1.0-nightly.643.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.642.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.643.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 59980255
+          "sizeBytes": 60013788
         },
         {
-          "name": "AURA_0.1.0-nightly.642.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.643.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 58979955
+          "sizeBytes": 59001695
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4064,29 +4129,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.642.1",
+      "version": "0.1.0-nightly.643.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.642.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.643.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61973140
+          "sizeBytes": 62025095
         },
         {
-          "name": "AURA_0.1.0-nightly.642.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.643.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61024896
+          "sizeBytes": 61055111
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4096,17 +4161,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.642.1",
+      "version": "0.1.0-nightly.643.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47429900
+          "sizeBytes": 47443714
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.642.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.643.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -4115,8 +4180,8 @@
     }
   ],
   "rendered": {
-    "title": "Agent onboarding wizard, marketing site overhaul, and analytics recovery",
-    "intro": "A big day across the public surface and reliability stack: a new black-glass \"Create your agent\" wizard, a top-to-bottom rebuild of the mobile and marketing experience, a full whitepaper for the core repos, and a series of fixes that restore accurate DAU analytics and resilience for long-running remote agent turns.",
+    "title": "Agent onboarding wizard, mobile public site, and the new feature health page",
+    "intro": "A heavy day across the marketing surface and public product story: a new black-glass agent onboarding wizard, a from-scratch mobile public site, full localization of the marketing UI, real Terms and Privacy pages, an expanded /os whitepaper, and a brand-new feature health status page wired to scheduled probes. Behind the scenes, chat rendering and the agent profile card got significantly faster, remote agent turns no longer time out spuriously, and analytics finally report a real app_version and authenticated DAU.",
     "entries": [
       {
         "batch_id": "entry-1",
@@ -4124,10 +4189,10 @@
         "started_at": "2026-06-11T16:18:00.000Z",
         "ended_at": "2026-06-11T16:49:36.000Z",
         "title": "Theme-aware mode selector capsule",
-        "summary": "The input bar's mode selector now follows the active theme and ships with calmer selected-state styling.",
+        "summary": "The input bar's mode selector now follows the active theme accent and ships with deterministic eval fixtures.",
         "items": [
           {
-            "text": "Repainted the mode selector capsule to draw from the active theme accent and softened the selected glow, so the picker no longer clashes with custom themes.",
+            "text": "Reworked the mode selector capsule to pull from the theme accent and softened the selected-state glow, so the selected mode label and capsule respect custom themes.",
             "commit_shas": [
               "ec007643cedd32d94903384b112267da942a2af1",
               "4b5261665bdd1b70d88911448189c7e9a3da76d4"
@@ -4135,7 +4200,7 @@
             "confidence": "high"
           },
           {
-            "text": "Stabilized the project eval suite by seeding the Run sidekick tab and mocking transient remote probes, keeping CI assertions deterministic.",
+            "text": "Stabilized project eval fixtures by seeding the Run sidekick tab and mocking transient remote-state probes so CI assertions stop flaking.",
             "commit_shas": [
               "34404cfd941b474901ee9de6b318533ff9e6ea29"
             ],
@@ -4148,11 +4213,11 @@
         "time_label": "9:54 AM",
         "started_at": "2026-06-11T16:54:20.000Z",
         "ended_at": "2026-06-11T16:54:20.000Z",
-        "title": "Longer remote-agent turn and cold-open windows",
-        "summary": "Remote agents waking from hibernation or running long tool/LLM work no longer trip spurious stalls and 502s.",
+        "title": "Remote agent turns survive long tool and cold-start work",
+        "summary": "Lifted the sliding-idle and cold-open caps that were turning long-but-progressing remote turns into spurious stalls and 502s.",
         "items": [
           {
-            "text": "Raised the sliding idle turn timeout from 180s to 600s and the first-event timeout from 180s to 300s, and made the cold-open cap configurable via AURA_COLD_OPEN_TIMEOUT_SECS (default 180s, up from a hardcoded 60s) so microVM wake-ups have room to finish.",
+            "text": "Raised the default idle turn timeout from 180s to 600s and the first-event timeout from 180s to 300s, and made the microVM cold-open cap configurable via AURA_COLD_OPEN_TIMEOUT_SECS (default 180s instead of a hardcoded 60s), so waking a hibernated VM or running a long LLM/tool turn no longer aborts mid-flight.",
             "commit_shas": [
               "f3a817c0bb9dff9f47a35b71d07a9ea5bfc1a2f3"
             ],
@@ -4165,18 +4230,18 @@
         "time_label": "9:59 AM",
         "started_at": "2026-06-11T16:59:02.000Z",
         "ended_at": "2026-06-11T17:08:27.000Z",
-        "title": "Chat transcript and 3D profile card performance fixes",
-        "summary": "Two targeted perf fixes addressed the recent app-wide messaging slowdown and idle GPU burn from the agent profile card.",
+        "title": "Chat transcript and 3D profile card stop burning frames",
+        "summary": "Two targeted performance fixes addressed the app-wide messaging slowdown and the idle GPU cost of the agent profile card.",
         "items": [
           {
-            "text": "Stopped the full chat transcript from re-rendering on every keystroke by stabilizing the error-report agent info hook and memoizing ChatMessageList, eliminating per-token markdown re-parsing across memoized message bubbles.",
+            "text": "Fixed the full-transcript re-render that fired on every keystroke and streaming token by memoizing the error-report agent info hook and stabilizing ChatMessageList's empty-state prop, restoring smooth typing in long chats. Also honors prefers-reduced-motion for the attach-button halo.",
             "commit_shas": [
               "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8"
             ],
             "confidence": "high"
           },
           {
-            "text": "Cut idle GPU cost of the 3D agent profile card by dropping unused antialias allocation, pausing the render loop under prefers-reduced-motion once transitions settle, and resuming via IntersectionObserver so off-screen cards no longer composite bloom every frame.",
+            "text": "Cut idle GPU load on the 3D agent profile card by dropping unused antialiasing, halting the render loop under reduced motion once transitions settle, and pausing off-screen via IntersectionObserver — so integrated GPUs and high-DPI displays no longer throttle the rest of the app.",
             "commit_shas": [
               "b56275981e9c47ee7db11660fb0b836233a8d526"
             ],
@@ -4189,11 +4254,11 @@
         "time_label": "10:10 AM",
         "started_at": "2026-06-11T17:10:19.000Z",
         "ended_at": "2026-06-11T17:10:19.000Z",
-        "title": "Server session_active keeps a real app_version",
-        "summary": "Header-less requests can no longer poison the daily DAU event with a missing app version.",
+        "title": "session_active keeps a real app_version",
+        "summary": "Closed a gap where the daily server-side session_active event could land on an empty app_version slice in Mixpanel.",
         "items": [
           {
-            "text": "The server now caches the latest X-App-Version and X-App-Platform per user and falls back to them when the request that wins the daily session_active slot omits the headers, and skips the event entirely for capture-mode tokens so synthetic users no longer inflate DAU on the (not set) version slice.",
+            "text": "Remember the latest non-empty X-App-Version / X-App-Platform per user and fall back to it when a header-less request (native WebSocket or ticket redeem) wins the day's session_active slot, and skip the event entirely for capture-mode tokens so they no longer add a fake DAU user with no version.",
             "commit_shas": [
               "3d0bef18e76a0539205b002814b47400bc8a92c5"
             ],
@@ -4206,49 +4271,43 @@
         "time_label": "10:22 AM",
         "started_at": "2026-06-11T17:22:43.000Z",
         "ended_at": "2026-06-11T18:15:11.000Z",
-        "title": "Whitepaper expansion, global marketing translations, and remembered logins",
-        "summary": "The /os whitepaper got a structural rebuild and richer diagrams, the public marketing UI now translates into all supported locales, and Sign In remembers previously-used accounts.",
+        "title": "Whitepaper, legal pages, and the marketing UI go fully localized",
+        "summary": "The public marketing surface got its biggest content drop in a while: a restructured /os whitepaper, an Always-on trust card, remembered login emails, and translations for every supported locale.",
         "items": [
           {
-            "text": "Restructured the /os whitepaper around per-section summaries, ASCII architecture and internals diagrams, an Invariants section with the §1–§15 architectural rules, and detailed sequence diagrams for the user flows; inline code tokens now link out to the public cypher-asi repos.",
+            "text": "Restructured the /os AURA OS whitepaper around per-section summaries, Overview bullets, ASCII architecture diagrams, a new Invariants section, internals diagrams, and user-flow sequence diagrams, with inline code tokens linking out to the cypher-asi/aura-harness repo. Dev now reads the whitepaper from prod so /os shows real content locally.",
             "commit_shas": [
               "e84938ac9e9211e01a4db60c28827c0e5835b479",
               "54f3e013adfaf19e53b477f0337cb23ca3206726",
+              "748c5b3c790870fad516e08b534f5ff5d049aafd",
               "7d9aca56eb5ff2e7286eb0832d109e7d3d4576ee",
               "cfb01e91e520019da7f51ffa16ea19a19bdfd897"
             ],
             "confidence": "high"
           },
           {
-            "text": "Pointed /os at the prod-pinned public-content host in dev so the whitepaper renders real production content locally instead of an empty seed.",
-            "commit_shas": [
-              "748c5b3c790870fad516e08b534f5ff5d049aafd"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Translated the public marketing and publicChat namespaces into all 19 non-English locales, routed the rotating tagline through i18n, and added reproducible translate/validate scripts so changing site language now actually changes marketing copy.",
+            "text": "Translated the public marketing and publicChat surfaces into all 19 non-English locales (Arabic through Traditional Chinese), routed the rotating tagline through i18n, and added reproducible translate/validate scripts so the site language now actually changes the marketing content.",
             "commit_shas": [
               "0d6155a4c040dc4a2b9264f8ed34886d982c47cf"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a remembered-accounts dropdown to Sign In, with up to five accounts persisted to localStorage and a per-account forget action.",
+            "text": "Login now remembers previously-used emails as a dropdown of up to five accounts (most-recent first) with an Add-an-account option and per-account forget, replacing the single-field email input.",
             "commit_shas": [
               "886e305984850688d230805d45d859124e0cddf1"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished marketing motion and layout: the Always on toggle is now clickable with a sequenced knob-and-label animation, the trust display panel centers in its gap, WebGL backgrounds no longer flicker on resize, the footer copyright became a column-aligned badge, and trust/verified/paint ambient animations are unfrozen under reduced motion.",
+            "text": "Made the Built-for-trust 'Always on.' toggle a clickable, sequenced switch, recentered the trust display panel against the WebGL device, killed the WebGL background flicker on resize, and unfroze the trust disc, verified cubes, and paint gallery under reduced motion.",
             "commit_shas": [
               "47a76dac980444d7317b4ff4b90fd905f463ba95",
               "f942415669a437161ab69b9da462276a168c5a58",
               "184024e87d0b0229a64b3513b4d65781a657dd3d",
               "a6a21a539e26b2e81966bebabf2aab378db6bfce",
-              "724ee647641520fe27c7548cedd5e983c326747d",
-              "49c23e0cd804e0cfbe2a35271da186f054a6b48f"
+              "49c23e0cd804e0cfbe2a35271da186f054a6b48f",
+              "724ee647641520fe27c7548cedd5e983c326747d"
             ],
             "confidence": "high"
           }
@@ -4258,12 +4317,12 @@
         "batch_id": "entry-6",
         "time_label": "11:19 AM",
         "started_at": "2026-06-11T18:19:43.000Z",
-        "ended_at": "2026-06-12T01:20:26.000Z",
-        "title": "Agent onboarding wizard, mobile landing rebuild, and analytics restoration",
-        "summary": "A new public Create-your-agent wizard, a desktop-parity mobile public site, full Terms/Privacy/Docs content, the new Aura status page, and a critical recovery of Mixpanel analytics for desktop and web.",
+        "ended_at": "2026-06-12T03:38:36.000Z",
+        "title": "Agent onboarding wizard, mobile public site, and an Aura status page",
+        "summary": "The afternoon shipped three big public-facing threads — a six-step agent onboarding wizard, a from-scratch mobile public site, and a feature health status page — alongside whitepaper expansion to all core repos and a long tail of analytics and reliability fixes.",
         "items": [
           {
-            "text": "Shipped a six-step Create-your-agent onboarding wizard built on a new reusable black-glass modal: identity, skills, integrations, messaging, automations, and launch, with curated avatars and personalities, a compact tile picker, a footer Create-account CTA wired to LoginForm, and a global mount that opens from the Create-agent button.",
+            "text": "Shipped the new public 'Create your agent' onboarding wizard: a six-stage flow (Identity, Skills, Integrations, Messaging, Automations, Launch) built around a reusable black-glass modal, compact selectable tiles with hover/tap-revealed descriptions, a six-step stepper, curated personas/skills/integrations, and a footer Create-account CTA that applies the draft to a remote-only CEO agent after signup. Opens from the Create-agent CTA and is mounted globally.",
             "commit_shas": [
               "81ce6f5f20a4050f2adf4728fcc495c0820d45f8",
               "69a71e75659d56473ea06ec09a4fa091f9444533",
@@ -4273,59 +4332,70 @@
               "641ce07d21fc69c68e9e861314c420dd463a553d",
               "afdb0abdc4bb91f551984f310710dc75c8e56dfc",
               "101aece3ea2f7c7d806d9ceba535ab4a913af942",
+              "e937b0f70681c886c9dafb20d6841edadc127972",
               "fa244c33dd7d8f7123401901b30e121370a905d4",
               "79277795edf8a807c5e06c7bc6149a33730fbb3a",
               "87e883e068e26a71aca93978ba2aacb6ed32eddb",
-              "c1c63dc2f5033417c7a77655eff7607e2005033a"
+              "c1c63dc2f5033417c7a77655eff7607e2005033a",
+              "e909dedfe32a870d4a59823fa5542f15ef8dda66"
             ],
             "confidence": "high"
           },
           {
-            "text": "Rebuilt the mobile public site around a Creator-pinned landing hero with live WebGL plasma and persona video, a full-screen hamburger menu sharing nav-links with desktop, a framed shell that matches the desktop chrome, static posters for hardware scenes on phones, and reflowed agents sections (4×4 skill keypad, stacked trust rail, narrower privacy cards).",
+            "text": "Rebuilt the mobile public site: a Creator-pinned landing hero with the live WebGL plasma and persona character video, a full-screen hamburger menu that mirrors the desktop nav, a framed shell that matches the desktop chrome, static WebGL posters where canvases are disabled, a side-scrolling mobile changelog, and dozens of mobile-only reflow fixes for marketing sections (skill keypad, trust rail, model picker, terminal feed). The inline composer moved to /chat.",
             "commit_shas": [
               "743979ecdf2ac3f9f1c6425e6e6be8fd6d79de12",
-              "c1cb5e24b87652159b182d0dfa257585a156469f",
               "af596ea53db5f574e21fd137c2223efe04146a8c",
               "0c0fe4e3440a330a760a7e5999d1b27f7adfa9fe",
               "98a99255fdbba19c79f884b18883695b1e5ea394",
-              "21a3ad0c4d83a9aad5ee8936f05fe63af83b7cad",
-              "c94afcbd4667a56a6b8597462a30322c7977c32b",
-              "8e128744caee3a16647a1beaea5203333a9e2f04",
-              "ed3e93aa64f89ce79f4792f07906dc2b9b8fd294",
-              "7684bcb6cf438e4086c83904fde423c2c8a8d601",
-              "0845a1c7cad6ec41ea88d56779578e781e4954d1",
+              "c1cb5e24b87652159b182d0dfa257585a156469f",
+              "d36f573b117a9dd5339fa4bf955f4798c19b950c",
               "278133b9276feec829ea90aa65d0b712cfca86da",
+              "c94afcbd4667a56a6b8597462a30322c7977c32b",
+              "21a3ad0c4d83a9aad5ee8936f05fe63af83b7cad",
+              "9d3e281d6187b7a7b5f5516300b20935d13e70d4",
+              "8e128744caee3a16647a1beaea5203333a9e2f04",
               "bba733a889c8da27d8439abdfc85bab96480a57d",
               "3f0c9a4348a4c6e341fe248638b8ed1a7a86ad00",
               "f30a66e64427d2611ddfe4329e05a8a039dfcd63",
-              "d36f573b117a9dd5339fa4bf955f4798c19b950c",
-              "6e669ede4d7f75ca803fb8c0da1296aa4f5924f6"
+              "7684bcb6cf438e4086c83904fde423c2c8a8d601",
+              "ed3e93aa64f89ce79f4792f07906dc2b9b8fd294"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Launched the Aura feature health status page: a new /status view backed by a scheduled aura-observability GitHub workflow that runs every 30 minutes, hits a single observability route plus desktop release probes, and publishes a public status.json snapshot. Includes hardened probe shape, split-then-merged public/desktop lanes, and consistent AURA brand casing.",
+            "commit_shas": [
+              "5bd0ba0698bdbbb52b213c81e43fcd3135e50269",
+              "69782efb674702c4f77cbf75ebea03a30032a39e",
+              "e95237d0a835932069d6b9bdebc3d69d8f04f107"
             ],
             "confidence": "high"
           },
           {
-            "text": "Replaced placeholder /terms and /privacy with full CYPHER, INC. legal documents rendered via a shared LegalDocument, machine-translated into all 20 supported locales, and slotted into the standard hero/CTA/footer stack so they match every other public page.",
+            "text": "Added real Terms of Service and Privacy Policy pages for CYPHER, INC. via a shared LegalDocument component, machine-translated into all 20 locales, and folded them into the standard marketing page composition (hero, body, ChangelogPreview, CTA, footer). The black-shell color convention now extends to /terms, /privacy, and /docs.",
             "commit_shas": [
               "e29e90c7d7c9d2961296d002c9e5eeaefd3be032",
               "7565b5eb60fb473a34f13ebe2677c0e42ee67326",
-              "46c231ecba0501e000ede359fe6c011c6f1fefd6"
+              "46c231ecba0501e000ede359fe6c011c6f1fefd6",
+              "70188ec4db99c084c118b4e403ba665ec8a1c0a6",
+              "afc12be1458fe521d6bfcb106b4235f7dd18db03"
             ],
             "confidence": "high"
           },
           {
-            "text": "Extended the /os whitepaper to cover aura-os, aura-router, aura-network, aura-storage, and z-billing with full harness-style sections and repo-aware code links, unified /docs and /os onto a shared MarkdownDocSite layout with an On this page TOC, and pinned /docs at prod content in dev to stop the empty-state flash.",
+            "text": "Extended the /os whitepaper beyond AURA Harness to aura-os, aura-router, aura-network, aura-storage, and z-billing, each with its own collapsible nav group and repo-aware code-reference links. The sidebar now stays pinned while reading, the empty-state flash is gone, and /docs and /os share a single MarkdownDocSite layout with an 'On this page' TOC, both pinned to prod content in dev.",
             "commit_shas": [
               "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc",
               "530311a7760e58d53a7e12240a02a183497b9dbf",
               "8c12fa2512d77503eed26f80773b6a299230d3e5",
               "41c60002c9255c1bcbf695a90056f3b5431789ee",
-              "c045d96066ced1c96a8feb83dc2ed28ce9044c41",
-              "af596ea53db5f574e21fd137c2223efe04146a8c"
+              "c045d96066ced1c96a8feb83dc2ed28ce9044c41"
             ],
             "confidence": "high"
           },
           {
-            "text": "Restored Mixpanel analytics across desktop and web: VITE_MIXPANEL_TOKEN is now baked into the build-interface job for both nightly and stable releases (with a --require-analytics guardrail that fails the build if missing), the web build derives a real APP_VERSION from git when one isn't passed, server-emitted session_active now always stamps is_authenticated=true, and a loud startup warning fires when MIXPANEL_TOKEN is unset.",
+            "text": "Restored analytics integrity end-to-end: re-injected VITE_MIXPANEL_TOKEN into the desktop build-interface step (it had silently dropped out in the June 4–5 CI refactor, leaving the SDK no-op since), added a --require-analytics guardrail that fails the build if the token isn't baked in or app_version is the '0.0.0' fallback, derived a real app_version from git describe for the Render web build, logged a loud server warning when MIXPANEL_TOKEN is unset, and stamped is_authenticated=true on server-emitted session_active so True DAU breakdowns stop dropping backstop users.",
             "commit_shas": [
               "6e669ede4d7f75ca803fb8c0da1296aa4f5924f6",
               "7790077e80a0a4539920139fad83a30f1ebe2879",
@@ -4334,48 +4404,22 @@
             "confidence": "high"
           },
           {
-            "text": "Added the Aura feature health status page, the scheduled aura-observability workflow that runs probes every 30 minutes and publishes a public status.json, desktop release observability probes wired into the release workflows, and a follow-up fix to keep the live snapshot publishing.",
-            "commit_shas": [
-              "5bd0ba0698bdbbb52b213c81e43fcd3135e50269",
-              "69782efb674702c4f77cbf75ebea03a30032a39e"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Tightened agent runtime visibility and post-login routing: local agents are now hidden from every web and mobile surface (project picker, mobile roster, explorer tree, switcher, menu cycling), and the standalone Agents view validates the cached last-agent id, clears it on logout, and warms chat history on click so the first selection no longer flashes the cold-load gate.",
+            "text": "Hardened the standalone Agents experience: auto-select a valid agent on login by clearing the cached lastAgentId for logged-out or deleted agents, warm chat history on click and post-login redirect to skip the cold-load gate, hide local (machine_type=\"local\") agents from every web/mobile surface (sidebar, project picker, agent switcher, menu cycling) since they need the desktop bridge, link the deployed harness commit from the env popup, and drop the dead host-settings button from the web titlebar.",
             "commit_shas": [
               "599102e08f10ebb7d4affdcf53afbf29a3cb695c",
               "166913cf4a8f1aede4e0e997bd6e9b9b31e34970",
-              "29fbc11468d869a7869720b8835cbf52e68464af"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Unified the public site on a black-shell visual system with risen-glass panels across pricing, blog, changelog, downloads, feedback, models, os, docs, terms, and privacy, added Docs to a two-column Resources nav, retired the dead web titlebar host-settings button, and fixed a Chromium drag-region bug that left a dead zone beside the centered nav.",
-            "commit_shas": [
-              "70188ec4db99c084c118b4e403ba665ec8a1c0a6",
-              "afc12be1458fe521d6bfcb106b4235f7dd18db03",
-              "e937b0f70681c886c9dafb20d6841edadc127972",
-              "0845a1c7cad6ec41ea88d56779578e781e4954d1",
-              "1cc948b4a92fd744c97076a1c16a67a41b7e14d7",
-              "bcf776cadee0ebd97ebb3aa791fb79511f98204c",
-              "238c8c2712af0f55358a10b70e366eeec56be9cf",
-              "21b7109cb5c322ea212f870bb2ce5ced937120d5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Killed a Vite 8 dev-server lock-up where AI-spawned dev servers auto-enabled console forwarding into a never-connected websocket, looping errors before React could mount; forwarding is now disabled and the three.js manualChunks split keeps three.js out of the entry-critical vendor chunk.",
-            "commit_shas": [
-              "b2296e3935b08b49ee774d958309aface669d878"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Surfaced deployed harness commit links inside the agent environment popup, with a capped width and ellipsized error messages so long errors no longer blow out the layout.",
-            "commit_shas": [
+              "29fbc11468d869a7869720b8835cbf52e68464af",
               "a792833c473566caa1831ed7574ae009037ae49c",
-              "066fdd7eb334989f4b0abfd091d6538804785947"
+              "066fdd7eb334989f4b0abfd091d6538804785947",
+              "e937b0f70681c886c9dafb20d6841edadc127972"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Disabled Vite 8's auto console forwarding in dev to prevent an infinite error loop that locked the page before React mounted, and fixed a titlebar drag dead zone caused by transform-based centering of the public nav by switching to a transform-free centered slot.",
+            "commit_shas": [
+              "b2296e3935b08b49ee774d958309aface669d878",
+              "0845a1c7cad6ec41ea88d56779578e781e4954d1"
             ],
             "confidence": "high"
           }
@@ -4383,12 +4427,15 @@
       }
     ],
     "highlights": [
-      "New agent onboarding wizard with black-glass modal",
-      "Full marketing site refresh, mobile landing, and 19-locale translations",
-      "Terms, Privacy, and core-repo whitepaper now live",
-      "Mixpanel analytics restored across desktop and web",
-      "Long remote-agent turns no longer trip false timeouts"
+      "New black-glass agent onboarding wizard",
+      "Mobile public site with framed shell and WebGL landing",
+      "Public marketing UI translated into 19 locales",
+      "Terms, Privacy, and an /os whitepaper for all core repos",
+      "Aura feature health status page wired to scheduled probes",
+      "Faster chat transcript rendering and lighter agent profile card",
+      "Analytics: real app_version and authenticated session_active restored",
+      "Remote agent turns no longer trip spurious 180s/60s timeouts"
     ],
-    "raw_commit_count": 88
+    "raw_commit_count": 89
   }
 }
