@@ -19,6 +19,12 @@ const DEFAULT_MODELS = [
 const EXPECTED_RUNTIME_PHRASE = "hello from aura";
 const DEFAULT_PUBLISHED_STATUS_JSON_URL = "https://cypher-asi.github.io/aura-os/observability/status.json";
 const PUBLISHED_STATUS_MAX_AGE_MINUTES = 180;
+const LIVE_STATUS_SNAPSHOT_SOURCES = new Set([
+  "github-actions",
+  "desktop-nightly-release",
+  "desktop-stable-release",
+]);
+
 function parseArgs(argv) {
   const args = {
     baseUrl: process.env.AURA_STATUS_API_BASE_URL || "http://127.0.0.1:3190",
@@ -186,7 +192,7 @@ function statusSnapshotEvidence(payload) {
     totalsFeatures: payload?.totals?.features ?? null,
     unknownFeatureCount,
     snapshotAgeMinutes,
-    hasLiveSource: payload?.source === "github-actions",
+    hasLiveSource: LIVE_STATUS_SNAPSHOT_SOURCES.has(payload?.source),
     hasNonUnknownFeatureData: featureCount > 0 && unknownFeatureCount < featureCount,
   };
 }

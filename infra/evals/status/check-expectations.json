@@ -241,7 +241,7 @@
         { "path": "schemaVersion", "equals": 1 },
         { "path": "overall", "oneOf": ["operational", "degraded", "partial_outage", "major_outage", "maintenance"] },
         { "path": "generatedAtPresent", "equals": true },
-        { "path": "source", "equals": "github-actions" },
+        { "path": "source", "oneOf": ["github-actions", "desktop-nightly-release", "desktop-stable-release"] },
         { "path": "featureCount", "min": 1 },
         { "path": "totalsFeatures", "min": 1 },
         { "path": "snapshotAgeMinutes", "max": 180 },
