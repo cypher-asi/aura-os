@@ -48,8 +48,7 @@ jobs:
             marketplace-agents,harness-health,active-streams,debug-projects,
             feedback-list,bug-reports-mine,feed-list,leaderboard,platform-stats,
             remote-agent-create,remote-agent-state,remote-agent-runtime,
-            image-generation-stream,model3d-generation-stream,video-generation-stream,
-            live-benchmark-hello-world,eval-summary-artifacts,
+            image-generation-stream,eval-summary-artifacts,
             public-setup,public-chat-stream,public-feedback-api,
             public-blog-api,public-x402-models,public-x402-payment-challenge,
             public-observability-page,public-models-page,public-marketing-pages

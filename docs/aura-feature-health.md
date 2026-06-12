@@ -48,7 +48,8 @@ npm run status:snapshot
 `AURA_STATUS_API_BASE_URL` selects the AURA API/control-plane host for cloud
 probes. Point it at `https://api.aura.ai` when the goal is to measure the
 deployed AURA API. It does not prove that the packaged desktop binary, embedded
-server, local harness, or local-agent runtime are healthy.
+server, local harness, local-agent runtime, or desktop-local model matrix are
+healthy.
 
 Desktop release observability is a separate lane. This is the only path that
 proves the packaged local harness path, because the harness is bundled with the
@@ -70,6 +71,11 @@ runtime response, and the local model matrix. Release workflows run this on the
 macOS arm64 release leg when `AURA_STATUS_USER_EMAIL` and
 `AURA_STATUS_USER_PASSWORD` are configured, then upload the generated check JSON
 and desktop logs as artifacts.
+
+The scheduled public observability workflow intentionally excludes
+desktop-loopback checks and generation modes that require a bundled harness
+runtime. It preserves fresh desktop-release check results from the previous
+published snapshot, then layers deployed API and public website probes on top.
 
 For end-to-end local verification, use the existing eval local stack in
 `infra/evals/local-stack/`. The observability page is not served from a sibling
