@@ -468,9 +468,20 @@ export function LeftMenuTree({
                 className={`${styles.projectDragOverlayInner} ${activeDraggedEntry.selected ? styles.projectHeaderSelected : ""}`}
               >
                 <span
-                  className={`${styles.projectLabel} ${activeDraggedEntry.selected ? styles.projectMainButtonSelected : ""}`}
+                  className={`${styles.projectMainButton} ${activeDraggedEntry.selected ? styles.projectMainButtonSelected : ""}`}
                 >
-                  {activeDraggedEntry.label}
+                  {(() => {
+                    const overlayIcon =
+                      activeDraggedEntry.expanded && activeDraggedEntry.expandedIcon
+                        ? activeDraggedEntry.expandedIcon
+                        : activeDraggedEntry.icon;
+                    return overlayIcon ? (
+                      <span className={styles.projectIcon} aria-hidden="true">
+                        {overlayIcon}
+                      </span>
+                    ) : null;
+                  })()}
+                  <span className={styles.projectLabel}>{activeDraggedEntry.label}</span>
                 </span>
                 <ChevronRight
                   size={14}

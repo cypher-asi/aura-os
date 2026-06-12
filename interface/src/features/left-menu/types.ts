@@ -41,6 +41,9 @@ export interface LeftMenuGroupEntry {
   kind: "group";
   id: string;
   label: string;
+  icon?: ReactNode;
+  /** Icon shown instead of `icon` while the group is expanded. */
+  expandedIcon?: ReactNode;
   suffix?: ReactNode;
   variant?: "default" | "section";
   expanded: boolean;

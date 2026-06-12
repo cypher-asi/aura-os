@@ -125,6 +125,8 @@ function LeftMenuGroup({
     rootReorderState?.onPointerDown(event, entry.id);
   };
 
+  const groupIcon = entry.expanded && entry.expandedIcon ? entry.expandedIcon : entry.icon;
+
   return (
     <section className={isSection ? styles.sectionGroup : styles.projectGroup}>
       <div
@@ -143,6 +145,11 @@ function LeftMenuGroup({
           onKeyDown={handleProjectKeyDown}
           onPointerDown={handlePointerDown}
         >
+          {!isSection && groupIcon ? (
+            <span className={styles.projectIcon} aria-hidden="true">
+              {groupIcon}
+            </span>
+          ) : null}
           <span
             className={isSection ? styles.sectionLabel : styles.projectLabel}
             data-inline-rename-label

@@ -209,6 +209,21 @@
   color: var(--color-text-primary);
 }
 
+.projectIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.projectMainButtonSelected .projectIcon {
+  color: var(--color-text-primary);
+}
+
 .projectLabel {
   min-width: 0;
   overflow: hidden;
