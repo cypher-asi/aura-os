@@ -41,6 +41,26 @@ export type ToolMarkerSegment =
       gate: PseudoGateLabel;
       body: string;
       raw: string;
+    }
+  // Compaction dialect emitted by the server when it renders persisted
+  // tool activity back into flat assistant text on a cold-start history
+  // rebuild (`render_block_into` in
+  // `apps/aura-os-server/src/handlers/agents/chat/compaction.rs`). A
+  // `tool_use` carries the tool name + JSON input; a `tool_result` /
+  // `tool_error` carries the (possibly truncated) result body. They are
+  // hoisted into real `ToolCallEntry`s so e.g. `list_tasks` renders
+  // through the shared Block registry instead of as literal text.
+  | {
+      kind: "compact-tool-use";
+      name: string;
+      input: Record<string, unknown>;
+      raw: string;
+    }
+  | {
+      kind: "compact-tool-result";
+      isError: boolean;
+      content: string;
+      raw: string;
     };
 
 // Argument capture uses `[^\]\r\n]*?` (lazy, single-line, marker-bounded)
@@ -63,6 +83,36 @@ const PSEUDO_TOOL_MARKER_RE =
 const PSEUDO_GATE_PREFIXES: readonly string[] = PSEUDO_GATE_LABELS.map(
   (label) => `[${label}:`,
 );
+
+// Compaction-dialect openers. The trailing space is part of the literal
+// the server emits (`[tool_use <name> ...`).
+const COMPACT_USE_PREFIX = "[tool_use ";
+const COMPACT_RESULT_PREFIX = "[tool_result ";
+const COMPACT_ERROR_PREFIX = "[tool_error ";
+const COMPACT_PREFIXES: readonly string[] = [
+  COMPACT_USE_PREFIX,
+  COMPACT_RESULT_PREFIX,
+  COMPACT_ERROR_PREFIX,
+];
+
+// Every recognized marker opener across all dialects. A compaction
+// marker's body is matched greedily (its JSON can contain `]` and
+// newlines), so we bound that greed at the next opener of any dialect to
+// stop one marker from swallowing the next.
+const ALL_MARKER_OPENERS: readonly string[] = [
+  ...COMPACT_PREFIXES,
+  "[tool:",
+  ...PSEUDO_GATE_PREFIXES,
+];
+
+// Prefixes used only to detect an in-flight (not-yet-closed) compaction
+// marker tail while streaming. Omits the trailing space so a half-typed
+// `[tool_use` is hidden before the space even arrives.
+const COMPACT_TRIM_PREFIXES: readonly string[] = [
+  "[tool_use",
+  "[tool_result",
+  "[tool_error",
+];
 
 const TOOL_ALIAS_MAP: Record<string, string> = {
   read: "read_file",
@@ -97,6 +147,10 @@ export function trimIncompleteToolMarkerTail(text: string): string {
     const idx = text.lastIndexOf(prefix);
     if (idx !== -1) candidates.push(idx);
   }
+  for (const prefix of COMPACT_TRIM_PREFIXES) {
+    const idx = text.lastIndexOf(prefix);
+    if (idx !== -1) candidates.push(idx);
+  }
   if (candidates.length === 0) return text;
 
   const lastMarkerStart = Math.max(...candidates);
@@ -114,7 +168,111 @@ export function trimIncompleteToolMarkerTail(text: string): string {
 interface RawMatch {
   index: number;
   length: number;
-  segment: Extract<ToolMarkerSegment, { kind: "tool" } | { kind: "pseudo-tool" }>;
+  segment: Extract<
+    ToolMarkerSegment,
+    | { kind: "tool" }
+    | { kind: "pseudo-tool" }
+    | { kind: "compact-tool-use" }
+    | { kind: "compact-tool-result" }
+  >;
+}
+
+function nextMarkerOpener(text: string, from: number): number {
+  let best = -1;
+  for (const opener of ALL_MARKER_OPENERS) {
+    const idx = text.indexOf(opener, from);
+    if (idx !== -1 && (best === -1 || idx < best)) best = idx;
+  }
+  return best;
+}
+
+// Locate the `]` that closes a compaction marker whose body may itself
+// contain `]` and newlines. Marker parts are newline-joined, so the real
+// close is a `]` that ends a line (followed by `\n` or the region end);
+// fall back to the last `]` in the region when no line-closing bracket is
+// found (e.g. a trailing marker concatenated without a newline).
+function findCompactClose(
+  text: string,
+  contentStart: number,
+  regionEnd: number,
+): number {
+  for (let p = regionEnd - 1; p >= contentStart; p--) {
+    if (text[p] !== "]") continue;
+    const after = p + 1;
+    if (after >= regionEnd || text[after] === "\n") return p;
+  }
+  const fallback = text.lastIndexOf("]", regionEnd - 1);
+  return fallback >= contentStart ? fallback : -1;
+}
+
+function parseCompactUseInner(
+  inner: string,
+): { name: string; input: Record<string, unknown> } | null {
+  const m = /^(\S+)\s+input=([\s\S]*)$/.exec(inner.trim());
+  if (!m) return null;
+  const name = m[1];
+  // The input is single-line JSON from `serde_json::to_string`, but a
+  // long blob may have been truncated to `...[truncated N bytes]` and no
+  // longer parse. Degrade to an empty/raw input rather than dropping the
+  // whole marker so the tool card still renders.
+  try {
+    const parsed: unknown = JSON.parse(m[2]);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return { name, input: parsed as Record<string, unknown> };
+    }
+    return { name, input: { raw_input: m[2] } };
+  } catch {
+    return { name, input: {} };
+  }
+}
+
+function collectCompactionMatches(text: string): RawMatch[] {
+  const matches: RawMatch[] = [];
+  for (const prefix of COMPACT_PREFIXES) {
+    let from = 0;
+    let start: number;
+    while ((start = text.indexOf(prefix, from)) !== -1) {
+      const contentStart = start + prefix.length;
+      const nextOpener = nextMarkerOpener(text, contentStart);
+      const regionEnd = nextOpener === -1 ? text.length : nextOpener;
+      const close = findCompactClose(text, contentStart, regionEnd);
+      if (close === -1) {
+        // No closing bracket yet (still streaming) — leave as text.
+        from = contentStart;
+        continue;
+      }
+      const raw = text.slice(start, close + 1);
+      const inner = text.slice(contentStart, close);
+      if (prefix === COMPACT_USE_PREFIX) {
+        const parsed = parseCompactUseInner(inner);
+        if (parsed) {
+          matches.push({
+            index: start,
+            length: raw.length,
+            segment: {
+              kind: "compact-tool-use",
+              name: parsed.name,
+              input: parsed.input,
+              raw,
+            },
+          });
+        }
+      } else {
+        matches.push({
+          index: start,
+          length: raw.length,
+          segment: {
+            kind: "compact-tool-result",
+            isError: prefix === COMPACT_ERROR_PREFIX,
+            content: inner.trim(),
+            raw,
+          },
+        });
+      }
+      from = close + 1;
+    }
+  }
+  return matches;
 }
 
 function collectMatches(text: string): RawMatch[] {
@@ -148,6 +306,10 @@ function collectMatches(text: string): RawMatch[] {
         raw: m[0],
       },
     });
+  }
+
+  for (const match of collectCompactionMatches(text)) {
+    matches.push(match);
   }
 
   matches.sort((a, b) => a.index - b.index);
@@ -232,6 +394,11 @@ interface PseudoEntryMeta {
   isResult: boolean;
 }
 
+interface CompactEntryMeta {
+  isResult: boolean;
+  isError: boolean;
+}
+
 function pseudoToToolCall(
   segment: Extract<ToolMarkerSegment, { kind: "pseudo-tool" }>,
   id: string,
@@ -261,6 +428,7 @@ export function expandToolMarkersInTimeline(
   const expandedTimeline: TimelineItem[] = [];
   const expandedToolCalls = [...toolCalls];
   const pseudoMeta = new Map<string, PseudoEntryMeta>();
+  const compactMeta = new Map<string, CompactEntryMeta>();
 
   for (const item of timeline) {
     if (item.kind !== "text") {
@@ -302,6 +470,46 @@ export function expandToolMarkersInTimeline(
         return;
       }
 
+      if (segment.kind === "compact-tool-use") {
+        const id = uniqueToolId(
+          `${item.id}-tooluse-${index}-${segment.name}`,
+          usedIds,
+        );
+        expandedToolCalls.push({
+          id,
+          name: segment.name,
+          input: segment.input,
+          isError: false,
+          pending: false,
+        });
+        compactMeta.set(id, { isResult: false, isError: false });
+        expandedTimeline.push({
+          kind: "tool",
+          toolCallId: id,
+          id: `${item.id}-tooluse-item-${index}`,
+        });
+        return;
+      }
+
+      if (segment.kind === "compact-tool-result") {
+        const id = uniqueToolId(`${item.id}-toolresult-${index}`, usedIds);
+        expandedToolCalls.push({
+          id,
+          name: "tool_result",
+          input: {},
+          result: segment.content,
+          isError: segment.isError,
+          pending: false,
+        });
+        compactMeta.set(id, { isResult: true, isError: segment.isError });
+        expandedTimeline.push({
+          kind: "tool",
+          toolCallId: id,
+          id: `${item.id}-toolresult-item-${index}`,
+        });
+        return;
+      }
+
       const id = uniqueToolId(`${item.id}-tool-${index}-${segment.name}`, usedIds);
       expandedToolCalls.push({
         id,
@@ -319,7 +527,16 @@ export function expandToolMarkersInTimeline(
     });
   }
 
-  return mergePseudoPairs(expandedTimeline, expandedToolCalls, pseudoMeta);
+  const pseudoMerged = mergePseudoPairs(
+    expandedTimeline,
+    expandedToolCalls,
+    pseudoMeta,
+  );
+  return mergeCompactionPairs(
+    pseudoMerged.timeline,
+    pseudoMerged.toolCalls,
+    compactMeta,
+  );
 }
 
 /**
@@ -366,6 +583,71 @@ function mergePseudoPairs(
     const rightMeta = pseudoMeta.get(right.toolCallId);
     if (!rightMeta || !rightMeta.isResult) continue;
     if (rightMeta.gate !== leftMeta.gate) continue;
+    const rightEntry = toolCallById.get(right.toolCallId);
+    if (!rightEntry) continue;
+
+    leftEntry.result = rightEntry.result;
+    leftEntry.isError = rightEntry.isError;
+    removedIds.add(rightEntry.id);
+    i = j;
+  }
+
+  if (removedIds.size === 0) {
+    return { timeline, toolCalls };
+  }
+
+  const filteredTimeline = timeline.filter(
+    (item) => item.kind !== "tool" || !removedIds.has(item.toolCallId),
+  );
+  const filteredToolCalls = toolCalls.filter((tc) => !removedIds.has(tc.id));
+
+  return { timeline: filteredTimeline, toolCalls: filteredToolCalls };
+}
+
+/**
+ * Fold a compaction `tool_use` entry together with the `tool_result` /
+ * `tool_error` entry that immediately follows it (separated only by
+ * whitespace text) into a single tool-call entry: the `tool_use` keeps
+ * its name + input and absorbs the result body + error flag from the
+ * pairing entry, whose timeline item and tool-call entry are dropped.
+ * Unpaired entries (an orphan use, or a result with no preceding use)
+ * survive on their own.
+ */
+function mergeCompactionPairs(
+  timeline: TimelineItem[],
+  toolCalls: ToolCallEntry[],
+  compactMeta: Map<string, CompactEntryMeta>,
+): { timeline: TimelineItem[]; toolCalls: ToolCallEntry[] } {
+  if (compactMeta.size === 0) {
+    return { timeline, toolCalls };
+  }
+
+  const toolCallById = new Map(toolCalls.map((tc) => [tc.id, tc]));
+  const removedIds = new Set<string>();
+
+  for (let i = 0; i < timeline.length; i++) {
+    const left = timeline[i];
+    if (left.kind !== "tool") continue;
+    const leftMeta = compactMeta.get(left.toolCallId);
+    if (!leftMeta || leftMeta.isResult) continue;
+    const leftEntry = toolCallById.get(left.toolCallId);
+    if (!leftEntry) continue;
+
+    let j = i + 1;
+    while (j < timeline.length) {
+      const next = timeline[j];
+      if (next.kind === "text" && next.content.trim().length === 0) {
+        j++;
+        continue;
+      }
+      break;
+    }
+    if (j >= timeline.length) continue;
+
+    const right = timeline[j];
+    if (right.kind !== "tool") continue;
+    const rightMeta = compactMeta.get(right.toolCallId);
+    if (!rightMeta || !rightMeta.isResult) continue;
     const rightEntry = toolCallById.get(right.toolCallId);
     if (!rightEntry) continue;
 

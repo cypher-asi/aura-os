@@ -323,3 +323,126 @@ describe("pseudo-tool gate markers", () => {
     ).toBe("preamble");
   });
 });
+
+describe("compaction-dialect tool markers", () => {
+  it("pairs a tool_use with its following tool_result into one entry", () => {
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        id: "t1",
+        content:
+          '[tool_use list_tasks input={}]\n[tool_result {"ok":true,"tasks":[{"title":"1.0 Refactor"}]}]',
+      },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline);
+
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0]).toMatchObject({
+      name: "list_tasks",
+      input: {},
+      result: '{"ok":true,"tasks":[{"title":"1.0 Refactor"}]}',
+      isError: false,
+      pending: false,
+    });
+    const toolItems = result.timeline.filter((item) => item.kind === "tool");
+    expect(toolItems).toHaveLength(1);
+  });
+
+  it("parses tool_use input JSON into the entry input", () => {
+    const segments = splitTextByToolMarkers(
+      '[tool_use read_file input={"path":"src/db.rs"}]',
+    );
+
+    expect(segments).toEqual([
+      expect.objectContaining({
+        kind: "compact-tool-use",
+        name: "read_file",
+        input: { path: "src/db.rs" },
+      }),
+    ]);
+  });
+
+  it("flags a tool_error result with isError", () => {
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        id: "t1",
+        content: "[tool_use run_command input={}]\n[tool_error boom failed]",
+      },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline);
+
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0]).toMatchObject({
+      name: "run_command",
+      result: "boom failed",
+      isError: true,
+    });
+  });
+
+  it("degrades a truncated tool_use input to empty args but keeps the card", () => {
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        id: "t1",
+        content:
+          '[tool_use list_tasks input={"a":"bbbb... [truncated 42 bytes]]\n[tool_result {"tasks":[]}]',
+      },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline);
+
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0]).toMatchObject({
+      name: "list_tasks",
+      input: {},
+      result: '{"tasks":[]}',
+    });
+  });
+
+  it("preserves prose surrounding compaction markers", () => {
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        id: "t1",
+        content:
+          "Before\n[tool_use list_specs input={}]\n[tool_result {\"specs\":[]}]\nAfter",
+      },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline);
+
+    expect(result.timeline).toMatchObject([
+      { kind: "text", content: "Before\n" },
+      { kind: "tool", toolCallId: result.toolCalls[0].id },
+      { kind: "text", content: "\nAfter" },
+    ]);
+  });
+
+  it("keeps an orphan tool_use (no result) as a result-less card", () => {
+    const timeline: TimelineItem[] = [
+      { kind: "text", id: "t1", content: "[tool_use list_tasks input={}]" },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline);
+
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0]).toMatchObject({
+      name: "list_tasks",
+      pending: false,
+    });
+    expect(result.toolCalls[0].result).toBeUndefined();
+  });
+
+  it("trims an incomplete compaction tool marker tail while streaming", () => {
+    expect(trimIncompleteToolMarkerTail("Before\n[tool_use lis")).toBe("Before");
+    expect(
+      trimIncompleteToolMarkerTail('[tool_result {"tasks":'),
+    ).toBe("");
+    expect(
+      trimIncompleteToolMarkerTail("[tool_use list_tasks input={}]"),
+    ).toBe("[tool_use list_tasks input={}]");
+  });
+});
