@@ -220,14 +220,11 @@ describe("stream/handlers — shared snapshots and reset", () => {
       return writes![writes!.length - 1] as TimelineItem[];
     }
 
-    it("renders trailing tool cards immediately even when the preceding text is still revealing", () => {
-      // The previous behavior held back tool/thinking rows that arrived
-      // after a still-revealing text segment, producing two visible
-      // defects: pop-in (rows appeared all at once when the text caught
-      // up) and blink-out (a new text_delta extending content past the
-      // reveal cursor briefly hid every later row). The fix lets tools
-      // render in real stream order; only the text content within the
-      // text row itself is character-revealed.
+    it("holds back trailing tool cards until the preceding text finishes revealing", () => {
+      // Strict ordering: a tool that sits *below* a still-typing
+      // paragraph must not render before that paragraph has fully
+      // revealed. The tool that sits *above* the paragraph (with no
+      // unrevealed text before it) still renders normally.
       const refs = makeRefs();
       const setters = makeSetters();
 
@@ -244,7 +241,30 @@ describe("stream/handlers — shared snapshots and reset", () => {
       expect(lastPublishedTimeline(setters)).toEqual([
         { kind: "tool", toolCallId: "a", id: "tl-1" },
         { kind: "text", content: "hel", id: "tl-2" },
-        { kind: "tool", toolCallId: "b", id: "tl-3" },
+      ]);
+    });
+
+    it("keeps a tool above a still-typing later paragraph visible (no blink-out)", () => {
+      // Rows above a fully-revealed paragraph stay stable even while a
+      // later paragraph is mid-reveal — this is the case the old global
+      // `textPending` flag got wrong by hiding the tool.
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      refs.streamBuffer.current = "donelater";
+      refs.displayedTextLength.current = 6;
+      refs.timeline.current = [
+        { kind: "text", content: "done", id: "tl-1" },
+        { kind: "tool", toolCallId: "a", id: "tl-2" },
+        { kind: "text", content: "later", id: "tl-3" },
+      ];
+
+      syncDisplayedTimeline(refs, setters);
+
+      expect(lastPublishedTimeline(setters)).toEqual([
+        { kind: "text", content: "done", id: "tl-1" },
+        { kind: "tool", toolCallId: "a", id: "tl-2" },
+        { kind: "text", content: "la", id: "tl-3" },
       ]);
     });
 
@@ -269,12 +289,11 @@ describe("stream/handlers — shared snapshots and reset", () => {
       ]);
     });
 
-    it("publishes items both before and after the unrevealed text segment", () => {
-      // With the textPending deferral removed, a second still-revealing
-      // text item no longer hides the tool that follows it. The text
-      // row itself shows whatever portion the reveal cursor has reached
-      // (here: only "b" pending, so the second text segment renders
-      // empty and is dropped), but the trailing tool still renders.
+    it("stops at the first unrevealed text segment", () => {
+      // Strict ordering: once the reveal cursor reaches a text segment
+      // it has not finished (here the second segment "b"), nothing below
+      // it renders — including the trailing tool. The row above the
+      // unrevealed segment still shows because its text fully revealed.
       const refs = makeRefs();
       const setters = makeSetters();
 
@@ -292,11 +311,10 @@ describe("stream/handlers — shared snapshots and reset", () => {
       expect(lastPublishedTimeline(setters)).toEqual([
         { kind: "text", content: "a", id: "tl-1" },
         { kind: "tool", toolCallId: "a", id: "tl-2" },
-        { kind: "tool", toolCallId: "b", id: "tl-4" },
       ]);
     });
 
-    it("renders a thinking card that arrives after partially-revealed text", () => {
+    it("holds back a thinking card behind still-revealing text", () => {
       const refs = makeRefs();
       const setters = makeSetters();
 
@@ -311,7 +329,6 @@ describe("stream/handlers — shared snapshots and reset", () => {
 
       expect(lastPublishedTimeline(setters)).toEqual([
         { kind: "text", content: "he", id: "tl-1" },
-        { kind: "thinking", id: "tl-2", text: "later thought" },
       ]);
     });
 

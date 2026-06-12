@@ -63,23 +63,28 @@ function buildDisplayedTimeline(
   refs: StreamRefs,
   visibleText: string,
 ): TimelineItem[] {
-  // Render the timeline in actual stream order. Text segments are still
-  // revealed character-by-character against the rAF cursor, but tool and
-  // thinking rows always appear at their real position the moment they
-  // land. The prior `textPending` short-circuit (hold back non-text rows
-  // behind any still-typing paragraph) caused two visible defects:
-  //   * pop-in — tool rows blocked by a typing paragraph appeared all
-  //     at once when the text finally caught up.
-  //   * blink-out — every `text_delta` that extended the trailing text
-  //     beyond the reveal cursor flipped textPending back on, hiding
-  //     already-visible tool rows below it for a frame.
-  // Letting tool rows render in real order is honest and stable; the
-  // word reveal still preserves the "typing" feel for prose.
+  // Strict, in-order reveal. The timeline is rendered in real stream
+  // order, but nothing below a still-typing paragraph is allowed to
+  // appear before that paragraph has finished its word-by-word reveal.
+  // We walk the timeline against the global reveal cursor and stop the
+  // moment we reach a `text` segment that is not yet fully revealed —
+  // every later row (tool, thinking, or another paragraph) stays hidden
+  // until the cursor catches up.
+  //
+  // This is a *positional* gate, which is what makes it correct where
+  // the prior global `textPending` flag was not. `textPending` asked
+  // "is any text anywhere unrevealed?" and hid all non-text rows, so a
+  // `text_delta` extending the trailing paragraph would blink out tool
+  // rows that sat *above* it and were already correctly revealed. By
+  // stopping at the first unrevealed text segment instead, rows above a
+  // fully-revealed paragraph stay stable (no blink-out) while rows below
+  // a still-typing one are held back (no jumping ahead of the text).
   const displayedTimeline: TimelineItem[] = [];
   let remainingVisibleText = visibleText;
 
   for (const item of refs.timeline.current) {
     if (item.kind === "text") {
+      const fullyRevealed = remainingVisibleText.length >= item.content.length;
       const visibleSegment = remainingVisibleText.slice(
         0,
         Math.min(item.content.length, remainingVisibleText.length),
@@ -88,6 +93,7 @@ function buildDisplayedTimeline(
       if (visibleSegment.length > 0) {
         displayedTimeline.push({ ...item, content: visibleSegment });
       }
+      if (!fullyRevealed) break;
       continue;
     }
 
