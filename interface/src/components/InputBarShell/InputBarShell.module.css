@@ -21,7 +21,7 @@
   /* Horizontal padding matches the chat transcript's `.messageArea`
      (16px / --space-4) and `right` is flush so the centered input
      container lines up exactly with the centered `.messageContent`
-     column (both max-width 680px, margin auto). */
+     column (both capped at --chat-column-max-width, margin auto). */
   padding: 0 var(--space-4) var(--space-3);
   z-index: 10;
   /* No painted backdrop or top-fade: the floating input sits over the
@@ -61,7 +61,7 @@
    only renders while the wrapper is centered (it unmounts as the bar
    docks on first send). */
 .centeredHeading {
-  max-width: 680px;
+  max-width: var(--chat-column-max-width);
   margin: 0 auto calc(var(--space-8) * 1.5);
   text-align: center;
   font-size: 28px;
@@ -115,7 +115,7 @@
   border-radius: 14px;
   background: transparent;
   padding: 0;
-  max-width: 680px;
+  max-width: var(--chat-column-max-width);
   margin-left: auto;
   margin-right: auto;
 }
@@ -609,7 +609,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 4px 0;
-  max-width: 680px;
+  max-width: var(--chat-column-max-width);
   margin-left: auto;
   margin-right: auto;
 }

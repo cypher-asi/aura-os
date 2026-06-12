@@ -852,13 +852,14 @@
   gap: 2px;
   /* Shrink the bordered wrapper to its content (collapse chevron + mode
      pills + new-chat "+") so the box hugs the controls rather than
-     spanning the full width of the input pill below it. The 680px cap
-     still keeps it from out-growing the input on very wide layouts, and
-     `margin: 0 auto` keeps the cluster centred above the pill. */
+     spanning the full width of the input pill below it. The shared
+     column cap still keeps it from out-growing the input on very wide
+     layouts, and `margin: 0 auto` keeps the cluster centred above the
+     pill. */
   width: fit-content;
   min-width: 0;
   padding: 2px;
-  max-width: 680px;
+  max-width: var(--chat-column-max-width);
   margin: 0 auto;
   border: 1px solid var(--color-border-strong);
   /* Open the bottom edge so the wrapper reads as a tab over the input

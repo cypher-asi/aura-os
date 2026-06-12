@@ -162,6 +162,14 @@
   --attach-ring-plate: linear-gradient(180deg, #232323, #141414);
 
   /*
+   * Shared cap for the centered LLM chat column. Every surface that must
+   * stay center-aligned with the transcript (input bar, message queue,
+   * prompt suggestions, mode pills) reads this token so they widen and
+   * shrink together.
+   */
+  --chat-column-max-width: 1040px;
+
+  /*
    * Frame ring each bottom-taskbar pill sits on (shows as a ~1.75px
    * outline around the pill). Near-black by default; flipped to a soft
    * gray under [data-theme='light'] so the ring reads as a subtle edge

@@ -1,5 +1,5 @@
 .queueContainer {
-  max-width: 680px;
+  max-width: var(--chat-column-max-width);
   margin: 0 auto;
   width: 100%;
   padding: 0 0 8px;

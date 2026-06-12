@@ -269,7 +269,7 @@
 
 .messageContent {
   width: 100%;
-  max-width: 680px;
+  max-width: var(--chat-column-max-width);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -420,7 +420,7 @@
 
 .pinnedStreamingIndicatorInner {
   width: 100%;
-  max-width: 680px;
+  max-width: var(--chat-column-max-width);
   display: flex;
   justify-content: flex-start;
   /* Match `.bubble` horizontal padding so the shimmering phase label
