@@ -64,9 +64,22 @@ export function useConversationSnapshot({
 
   const streamMessages = useStreamEvents(streamKey);
 
+  // Registry of persisted event_id -> on-screen clientId, recorded by the
+  // projector when a history row supersedes a stream row. Keeping it here
+  // (instead of deriving from the stream every projection) means the React
+  // keys of just-persisted bubbles stay stable even after the caught-up
+  // clear path empties the stream store — otherwise the just-sent user
+  // bubble would remount (visible flash/jump) when its temp- row drops.
+  // Keyed per transcript so switching threads starts a fresh registry.
+  const clientIdAliases = useMemo(
+    () => new Map<string, string>(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- transcriptKey intentionally resets the registry
+    [transcriptKey],
+  );
+
   const messages = useMemo(
-    () => projectConversation(historyMessages ?? [], streamMessages),
-    [historyMessages, streamMessages],
+    () => projectConversation(historyMessages ?? [], streamMessages, clientIdAliases),
+    [historyMessages, streamMessages, clientIdAliases],
   );
 
   // Read the trailing-message preview the chat-history-store carries

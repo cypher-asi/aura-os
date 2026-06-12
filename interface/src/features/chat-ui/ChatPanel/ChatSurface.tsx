@@ -360,6 +360,14 @@ export function ChatSurface({
     isStreamingRef.current = isStreaming;
   }, [isStreaming]);
 
+  // Live mirror of the pin-to-bottom state so the measurement effect
+  // below can re-pin without re-subscribing its observers on every
+  // follow-state flip.
+  const isAutoFollowingRef = useRef(isAutoFollowing);
+  useEffect(() => {
+    isAutoFollowingRef.current = isAutoFollowing;
+  }, [isAutoFollowing]);
+
   // Keep the pinned cooking indicator (and the chat scroll reserve)
   // anchored to the LIVE input bar height instead of a static ~103px
   // estimate. Without this, activating AURA Council adds the multi-slot
@@ -387,8 +395,28 @@ export function ChatSurface({
     let lastIndicatorBottom: number | null = null;
     let lastClearance: number | null = null;
     let lastMaskCutoff: number | null = null;
+    // If `--chat-input-clearance` changes while the user is pinned to the
+    // bottom, the `.messageArea` padding-bottom change would visibly shift
+    // the last bubble relative to the input (most noticeably when sending
+    // clears a multi-line draft and the bar shrinks). Re-pin in the same
+    // frame so the bubble stays anchored.
+    const repinIfFollowing = () => {
+      const el = messageAreaRef.current;
+      if (!el) return;
+      if (!isAutoFollowingRef.current) return;
+      if (getUserUnpinnedAt() > 0) return;
+      el.scrollTop = el.scrollHeight;
+    };
     const apply = () => {
       frame = null;
+      // Empty-thread centered state: the wrapper includes the hero
+      // heading and floats at the lane's vertical center, so both the
+      // height and the pill position would produce wildly wrong
+      // clearance/mask values. The transcript is empty in this state, so
+      // the CSS fallbacks are fine — skip and re-measure once the bar
+      // docks (data-centered flips + the dock transition ends; both are
+      // observed below).
+      if (inputBar.dataset.centered === "true") return;
       const height = inputBar.getBoundingClientRect().height;
       if (height <= 0) return;
       const bottom = Math.round(height + GAP_PX);
@@ -400,18 +428,27 @@ export function ChatSurface({
       if (lastClearance !== clearance) {
         area.style.setProperty("--chat-input-clearance", `${clearance}px`);
         lastClearance = clearance;
+        repinIfFollowing();
       }
       // Clip the transcript at the actual input pill's vertical midline
       // (not the whole input section). Measured from the panel bottom so
       // the mask in `.messageArea` cuts content exactly through the middle
-      // of the rounded pill, tracking it as it grows.
+      // of the rounded pill, tracking it as it grows. While the bar is
+      // mid-flight in the centered→docked transition the pill sits far
+      // above its final position, so a cutoff larger than the bar's own
+      // clearance is a mid-animation artifact — skip it; the transitionend
+      // listener below re-measures once the pill settles.
       if (pill) {
         const areaRect = area.getBoundingClientRect();
         const pillRect = pill.getBoundingClientRect();
         const midFromBottom = Math.round(
           areaRect.bottom - (pillRect.top + pillRect.height / 2),
         );
-        if (midFromBottom > 0 && lastMaskCutoff !== midFromBottom) {
+        if (
+          midFromBottom > 0 &&
+          midFromBottom <= clearance &&
+          lastMaskCutoff !== midFromBottom
+        ) {
           area.style.setProperty("--chat-input-mask-cutoff", `${midFromBottom}px`);
           lastMaskCutoff = midFromBottom;
         }
@@ -424,16 +461,32 @@ export function ChatSurface({
     scheduleApply();
     const ro = new ResizeObserver(scheduleApply);
     ro.observe(inputBar);
+    // The centered→docked dock animates `bottom`/`transform` (260ms in
+    // InputBarShell.module.css) without changing the wrapper's size, so
+    // the ResizeObserver alone would leave the pill-midline mask stale at
+    // a mid-flight value. Re-measure when the centered flag flips and
+    // again when the position transition finishes.
+    const mo = new MutationObserver(scheduleApply);
+    mo.observe(inputBar, { attributes: true, attributeFilter: ["data-centered"] });
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target !== inputBar) return;
+      if (event.propertyName === "bottom" || event.propertyName === "transform") {
+        scheduleApply();
+      }
+    };
+    inputBar.addEventListener("transitionend", onTransitionEnd);
     return () => {
       if (frame != null) {
         window.cancelAnimationFrame(frame);
       }
       ro.disconnect();
+      mo.disconnect();
+      inputBar.removeEventListener("transitionend", onTransitionEnd);
       area.style.removeProperty("--streaming-indicator-bottom");
       area.style.removeProperty("--chat-input-clearance");
       area.style.removeProperty("--chat-input-mask-cutoff");
     };
-  }, [isMobileLayout, streamKey]);
+  }, [isMobileLayout, streamKey, messageAreaRef, getUserUnpinnedAt]);
 
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);

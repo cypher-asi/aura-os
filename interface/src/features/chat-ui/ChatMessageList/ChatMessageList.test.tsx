@@ -414,6 +414,46 @@ describe("ChatMessageList", () => {
     expect(persistedWrapper).toBe(placeholderWrapper);
   });
 
+  // Regression test for the "just-sent user bubble flashes/jumps right
+  // after send" report. The optimistic `temp-...` user row is replaced
+  // by the persisted history row when the refetch lands; the projector
+  // (`conversation-projector`) carries the temp row's `clientId` onto
+  // the persisted row, so React must keep the bubble's DOM node alive
+  // across the swap instead of unmounting + remounting it.
+  it("does not remount the just-sent user bubble when persisted history replaces the optimistic temp- row", () => {
+    const scrollRef = makeScrollRef();
+
+    const { rerender } = render(
+      <ChatMessageList
+        messages={[
+          makeMessage("temp-user-1", "first prompt", "user", "temp-user-1"),
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+      />,
+    );
+
+    const optimisticWrapper =
+      screen.getByTestId("bubble-temp-user-1").parentElement;
+    expect(optimisticWrapper).not.toBeNull();
+
+    rerender(
+      <ChatMessageList
+        messages={[
+          // Persisted row from history, with the optimistic row's
+          // clientId carried over by the projector alias registry.
+          makeMessage("evt-user-1", "first prompt", "user", "temp-user-1"),
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+      />,
+    );
+
+    const persistedWrapper =
+      screen.getByTestId("bubble-evt-user-1").parentElement;
+    expect(persistedWrapper).toBe(optimisticWrapper);
+  });
+
   // Regression test for the "previous assistant flickers when I send a
   // new message" report. The old position-based "assistant-tail" key
   // changed from "assistant-tail" -> a_old.id the moment a new user

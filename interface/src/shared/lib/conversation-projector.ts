@@ -24,6 +24,18 @@ import type { DisplaySessionEvent } from "../types/stream";
  *      finalized assistant rows that haven't been persisted yet) is
  *      appended after the history tail in stream order.
  *
+ *   4. When a history row supersedes a stream row (id match or the
+ *      optimistic-user dedup), the output history row inherits the
+ *      stream row's `clientId`. The stream row was rendered first, so
+ *      its `clientId` is the React key already on screen — keeping it
+ *      prevents the bubble from remounting (and visibly flashing /
+ *      resizing) the moment the persisted row lands. The mapping is
+ *      recorded in the caller-owned `clientIdAliases` registry so the
+ *      identity survives the stream store's caught-up clear (which
+ *      empties `stream` after the turn persists — without the
+ *      registry, the next projection would flip the React key back to
+ *      the persisted `event_id` and remount the bubble after all).
+ *
  * No anchor rules, no backstop hacks: the upstream invariants
  * (stable `clientId`, `handleEventSaved` preserves `clientId` across
  * the persisted-id swap) make the dedup deterministic.
@@ -31,9 +43,10 @@ import type { DisplaySessionEvent } from "../types/stream";
 export function projectConversation(
   history: readonly DisplaySessionEvent[],
   stream: readonly DisplaySessionEvent[],
+  clientIdAliases?: Map<string, string>,
 ): DisplaySessionEvent[] {
   if (stream.length === 0) {
-    return history.length === 0 ? EMPTY : history.slice();
+    return applyAliases(history, clientIdAliases);
   }
   if (history.length === 0) {
     return stream.slice();
@@ -52,26 +65,58 @@ export function projectConversation(
 
   const liveOnly: DisplaySessionEvent[] = [];
   for (const message of stream) {
-    if (historyIds.has(message.id)) continue;
+    if (historyIds.has(message.id)) {
+      recordAlias(clientIdAliases, message.id, message.clientId ?? message.id);
+      continue;
+    }
     if (
       trailingPendingUser !== null &&
       message.role === "user" &&
       isOptimisticUser(message) &&
       messagesContentEqual(message, trailingPendingUser)
     ) {
+      recordAlias(
+        clientIdAliases,
+        trailingPendingUser.id,
+        message.clientId ?? message.id,
+      );
       continue;
     }
     liveOnly.push(message);
   }
 
+  const projectedHistory = applyAliases(history, clientIdAliases);
+
   if (liveOnly.length === 0) {
-    return history.slice();
+    return projectedHistory;
   }
 
-  return [...history, ...liveOnly];
+  return [...projectedHistory, ...liveOnly];
 }
 
 const EMPTY: DisplaySessionEvent[] = [];
+
+function recordAlias(
+  aliases: Map<string, string> | undefined,
+  persistedId: string,
+  clientId: string,
+): void {
+  if (!aliases || aliases.has(persistedId)) return;
+  aliases.set(persistedId, clientId);
+}
+
+function applyAliases(
+  history: readonly DisplaySessionEvent[],
+  aliases: Map<string, string> | undefined,
+): DisplaySessionEvent[] {
+  if (history.length === 0) return EMPTY;
+  if (!aliases || aliases.size === 0) return history.slice();
+  return history.map((m) => {
+    const alias = aliases.get(m.id);
+    if (alias === undefined || alias === m.clientId) return m;
+    return { ...m, clientId: alias };
+  });
+}
 
 function isOptimisticUser(message: DisplaySessionEvent): boolean {
   return message.id.startsWith("temp-");

@@ -82,4 +82,48 @@ describe("projectConversation", () => {
     const stream = [makeUser("evt-user", "trimmed   ")];
     expect(projectConversation(history, stream)).toEqual(history);
   });
+
+  describe("clientId aliases (stable React identity across persist)", () => {
+    it("carries the optimistic temp- clientId onto the persisted user row", () => {
+      const aliases = new Map<string, string>();
+      const history = [makeUser("evt-user", "first prompt")];
+      const stream = [makeUser("temp-1", "first prompt")];
+      const result = projectConversation(history, stream, aliases);
+      expect(result.map((m) => m.id)).toEqual(["evt-user"]);
+      expect(result[0].clientId).toBe("temp-1");
+    });
+
+    it("carries the stream clientId onto an id-matched history row", () => {
+      const aliases = new Map<string, string>();
+      const history = [makeUser("u1", "hi"), makeAssistant("evt-a1", "hello")];
+      const stream = [
+        { ...makeAssistant("evt-a1", "hello"), clientId: "stream-1" },
+      ];
+      const result = projectConversation(history, stream, aliases);
+      expect(result.map((m) => m.clientId)).toEqual(["u1", "stream-1"]);
+    });
+
+    it("keeps the aliased clientId after the stream store is cleared", () => {
+      const aliases = new Map<string, string>();
+      const history = [makeUser("evt-user", "first prompt")];
+      projectConversation(history, [makeUser("temp-1", "first prompt")], aliases);
+      // Caught-up clear path: stream events drop, history is authoritative.
+      const result = projectConversation(history, [], aliases);
+      expect(result[0].clientId).toBe("temp-1");
+    });
+
+    it("does not rewrite history rows when no alias was recorded", () => {
+      const aliases = new Map<string, string>();
+      const history = [makeUser("u1", "hi"), makeAssistant("a1", "hello")];
+      const result = projectConversation(history, [], aliases);
+      expect(result).toEqual(history);
+    });
+
+    it("a fresh registry leaves the persisted clientId untouched", () => {
+      const history = [makeUser("evt-user", "first prompt")];
+      projectConversation(history, [makeUser("temp-1", "first prompt")], new Map());
+      const result = projectConversation(history, [], new Map());
+      expect(result[0].clientId).toBe("evt-user");
+    });
+  });
 });
