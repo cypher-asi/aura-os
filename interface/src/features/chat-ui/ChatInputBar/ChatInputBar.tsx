@@ -1302,6 +1302,7 @@ export const DesktopChatInputBar = memo(
             <button
               type="button"
               className={styles.projectButton}
+              title={selectedProjectName ?? "General"}
               onClick={
                 projects.length > 0 && onProjectChange
                   ? () => setProjectMenuOpen((v) => !v)
@@ -1314,7 +1315,9 @@ export const DesktopChatInputBar = memo(
               }
             >
               <FolderOpen size={10} />
-              {selectedProjectName ?? "General"}
+              <span className={styles.projectButtonLabel}>
+                {selectedProjectName ?? "General"}
+              </span>
               {projects.length > 0 && onProjectChange && (
                 <ChevronDown size={10} />
               )}

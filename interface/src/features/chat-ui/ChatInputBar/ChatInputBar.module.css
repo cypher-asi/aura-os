@@ -1263,6 +1263,9 @@ button.attachOrb::after {
 
 .projectMenuWrap {
   position: relative;
+  /* Shrinkable so a long project name yields to its row neighbours
+     instead of pushing them out; the label span ellipsizes. */
+  min-width: 0;
 }
 
 .projectButton {
@@ -1279,9 +1282,22 @@ button.attachOrb::after {
   cursor: pointer;
   transition: color 0.15s ease;
   white-space: nowrap;
-  max-width: 160px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.projectButton > svg {
+  flex-shrink: 0;
+}
+
+/* The button is a flex container, so `text-overflow` on it can't
+   ellipsize the bare text node — it just hard-clips. The name lives
+   in this span instead, which truncates properly. */
+.projectButtonLabel {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .projectButton:hover {

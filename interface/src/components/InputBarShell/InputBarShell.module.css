@@ -622,6 +622,10 @@
   align-items: center;
   gap: 6px;
   margin-left: auto;
+  /* Shrinkable so the min-width:0 chain reaches the project chip's
+     label and long names ellipsize instead of overflowing the bar. */
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .infoBarStart {
