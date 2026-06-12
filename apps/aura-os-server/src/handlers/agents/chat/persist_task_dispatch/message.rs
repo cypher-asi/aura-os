@@ -11,7 +11,7 @@ use super::super::event_bus::publish_assistant_message_end_event;
 use super::super::persist::ChatPersistCtx;
 use super::super::persist_task::{
     flush_text_segment, log_stream_summary, message_id_for_synth, message_id_str, persist_event,
-    PersistTaskState,
+    scrub_tool_markup, PersistTaskState,
 };
 
 pub(super) async fn handle_message_start(
@@ -89,9 +89,17 @@ pub(super) async fn handle_message_end(
     model: Option<&str>,
 ) {
     flush_text_segment(state);
+    let (full_text, scrubbed_markup) = scrub_tool_markup(&state.full_text);
+    if scrubbed_markup {
+        warn!(
+            session_id = %ctx.session_id,
+            message_id = %end.message_id,
+            "Scrubbed leaked tool-call markup from assistant text before persist"
+        );
+    }
     let payload = json!({
         "message_id": &end.message_id,
-        "text": &state.full_text,
+        "text": full_text,
         "thinking": if state.thinking_buf.is_empty() {
             Value::Null
         } else {

@@ -14,6 +14,7 @@ use super::super::persist::ChatPersistCtx;
 use super::super::persist_task_dispatch::{coerce_tool_use_input_to_object, handle_outbound};
 use super::auto_fork::maybe_spawn_auto_fork_marker;
 use super::persist_event::persist_event;
+use super::scrub_tool_markup;
 use super::state::{
     flush_text_segment, log_stream_summary, message_id_for_synth, message_id_str, PersistTaskState,
 };
@@ -215,9 +216,10 @@ async fn finalize_if_needed(
     }
     flush_text_segment(state);
     let orphan_tool_uses = normalize_and_collect_orphan_tool_uses(&mut state.content_blocks);
+    let (full_text, _) = scrub_tool_markup(&state.full_text);
     let end_payload = json!({
         "message_id": message_id_for_synth(state),
-        "text": &state.full_text,
+        "text": full_text,
         "thinking": if state.thinking_buf.is_empty() {
             Value::Null
         } else {

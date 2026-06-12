@@ -95,6 +95,33 @@ const COMPACT_PREFIXES: readonly string[] = [
   COMPACT_ERROR_PREFIX,
 ];
 
+// Anthropic XML tool-call syntax that occasionally leaks into the
+// assistant *text* stream instead of arriving as a native `tool_use`
+// event (the model emits the markup inside a text content block). We
+// recognize a well-formed `<invoke name="...">...</invoke>` block — and
+// the hybrid `[tool_use <name> ... name="...">...</invoke>` shape the
+// model sometimes mangles it into — so it renders through the Block
+// registry instead of as raw text. The opener is either the real XML
+// `<invoke name="...">` or the hybrid `[tool_use <name> ...>` (bounded
+// to a single line and forbidden from crossing a `]`, so it can never
+// swallow a real `[tool_use ... input={...}]` compaction marker).
+const XML_INVOKE_RE =
+  /(?:<invoke\b[^>]*?\bname="([^"]+)"[^>]*>|\[tool_use\s+([A-Za-z0-9_.:-]+)[^\]\r\n]*?>)([\s\S]*?)<\/invoke>/gi;
+const XML_PARAM_RE =
+  /<parameter\b[^>]*?\bname="([^"]+)"[^>]*>([\s\S]*?)<\/parameter>/gi;
+
+// Residue scrubbing. After well-formed markup has been hoisted into tool
+// cards, any leftover XML tool tags (e.g. the `<function_calls>` wrapper,
+// or an orphan tag from a malformed block) must be stripped so they never
+// reach markdown as literal text. `HYBRID_TOOL_USE_RESIDUE_RE` catches a
+// dangling hybrid opener that has an XML `name="..."` attribute and a
+// closing `>` but no `]` — i.e. one that is *not* a valid compaction
+// marker (those carry `input={...}` and a `]`, never a `>` before it).
+const TOOL_MARKUP_RESIDUE_RE =
+  /<\/?(?:function_calls|invoke|parameter)\b[^>]*?\/?>/gi;
+const HYBRID_TOOL_USE_RESIDUE_RE =
+  /\[tool_use\s+[A-Za-z0-9_.:-]+[^\]\r\n]*?name="[^"]*"[^\]\r\n>]*>/gi;
+
 // Every recognized marker opener across all dialects. A compaction
 // marker's body is matched greedily (its JSON can contain `]` and
 // newlines), so we bound that greed at the next opener of any dialect to
@@ -103,6 +130,8 @@ const ALL_MARKER_OPENERS: readonly string[] = [
   ...COMPACT_PREFIXES,
   "[tool:",
   ...PSEUDO_GATE_PREFIXES,
+  "<invoke",
+  "<function_calls",
 ];
 
 // Prefixes used only to detect an in-flight (not-yet-closed) compaction
@@ -136,6 +165,23 @@ function normalizeArg(arg: string | undefined): string | undefined {
 }
 
 export function trimIncompleteToolMarkerTail(text: string): string {
+  // XML-style tool markup (Anthropic `<invoke>` / `<function_calls>`):
+  // hide an unclosed block until it is terminated by `</invoke>` /
+  // `</function_calls>`, so a half-streamed tag never flashes as literal
+  // text before the timeline expansion can hoist it into a tool card. Any
+  // opener that appears after the last close tag belongs to an in-flight
+  // block, so we trim from the earliest such opener.
+  const lastXmlClose = Math.max(
+    text.lastIndexOf("</invoke>"),
+    text.lastIndexOf("</function_calls>"),
+  );
+  const xmlOpeners = ["<function_calls", "<invoke"]
+    .map((prefix) => text.indexOf(prefix, lastXmlClose + 1))
+    .filter((idx) => idx !== -1);
+  if (xmlOpeners.length > 0) {
+    return text.slice(0, Math.min(...xmlOpeners)).trimEnd();
+  }
+
   // Find the latest opening of any recognized marker prefix. While the
   // LLM is mid-token we don't want to flash a half-typed `[tool:` or
   // `[auto-build:` to the user, so if the trailing fragment cannot yet
@@ -205,25 +251,90 @@ function findCompactClose(
   return fallback >= contentStart ? fallback : -1;
 }
 
+function parseXmlAttributes(s: string): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const re = /([A-Za-z0-9_.:-]+)="([^"]*)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    out[m[1]] = m[2];
+  }
+  return out;
+}
+
 function parseCompactUseInner(
   inner: string,
 ): { name: string; input: Record<string, unknown> } | null {
-  const m = /^(\S+)\s+input=([\s\S]*)$/.exec(inner.trim());
-  if (!m) return null;
-  const name = m[1];
-  // The input is single-line JSON from `serde_json::to_string`, but a
-  // long blob may have been truncated to `...[truncated N bytes]` and no
-  // longer parse. Degrade to an empty/raw input rather than dropping the
-  // whole marker so the tool card still renders.
-  try {
-    const parsed: unknown = JSON.parse(m[2]);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return { name, input: parsed as Record<string, unknown> };
+  const trimmed = inner.trim();
+  const m = /^(\S+)\s+input=([\s\S]*)$/.exec(trimmed);
+  if (m) {
+    const name = m[1];
+    // The input is single-line JSON from `serde_json::to_string`, but a
+    // long blob may have been truncated to `...[truncated N bytes]` and no
+    // longer parse. Degrade to an empty/raw input rather than dropping the
+    // whole marker so the tool card still renders.
+    try {
+      const parsed: unknown = JSON.parse(m[2]);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return { name, input: parsed as Record<string, unknown> };
+      }
+      return { name, input: { raw_input: m[2] } };
+    } catch {
+      return { name, input: {} };
     }
-    return { name, input: { raw_input: m[2] } };
-  } catch {
-    return { name, input: {} };
   }
+
+  // No `input=<JSON>` payload. This is a malformed / hybrid marker (e.g.
+  // `[tool_use read_file name="Nav.tsx"]`). Salvage the leading token as
+  // the tool name and any `key="value"` attributes as input so the card
+  // still renders instead of leaking the raw marker as text.
+  const nameMatch = /^([A-Za-z0-9_.:-]+)([\s\S]*)$/.exec(trimmed);
+  if (!nameMatch) return null;
+  return { name: nameMatch[1], input: parseXmlAttributes(nameMatch[2]) };
+}
+
+function parseXmlInvokeInput(body: string): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  XML_PARAM_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = XML_PARAM_RE.exec(body)) !== null) {
+    out[m[1]] = m[2].trim();
+  }
+  return out;
+}
+
+function collectXmlInvokeMatches(text: string): RawMatch[] {
+  const matches: RawMatch[] = [];
+  XML_INVOKE_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = XML_INVOKE_RE.exec(text)) !== null) {
+    const rawName = m[1] ?? m[2];
+    if (!rawName) continue;
+    matches.push({
+      index: m.index,
+      length: m[0].length,
+      segment: {
+        kind: "compact-tool-use",
+        name: normalizeToolMarkerName(rawName.trim()),
+        input: parseXmlInvokeInput(m[3] ?? ""),
+        raw: m[0],
+      },
+    });
+  }
+  return matches;
+}
+
+/**
+ * Strip leftover tool-call markup from a text fragment so a malformed or
+ * partially-recognized marker never renders as literal text. Runs only
+ * on residual text (after well-formed markers have been hoisted into
+ * tool cards), so it cannot corrupt a valid compaction marker.
+ */
+export function scrubToolMarkup(text: string): string {
+  if (!text.includes("<") && !text.includes("[tool_use")) return text;
+  return text
+    .replace(HYBRID_TOOL_USE_RESIDUE_RE, "")
+    .replace(TOOL_MARKUP_RESIDUE_RE, "")
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 function collectCompactionMatches(text: string): RawMatch[] {
@@ -309,6 +420,10 @@ function collectMatches(text: string): RawMatch[] {
   }
 
   for (const match of collectCompactionMatches(text)) {
+    matches.push(match);
+  }
+
+  for (const match of collectXmlInvokeMatches(text)) {
     matches.push(match);
   }
 
@@ -438,16 +553,25 @@ export function expandToolMarkersInTimeline(
 
     const segments = splitTextByToolMarkers(item.content);
     if (!segments) {
-      expandedTimeline.push(item);
+      // No recognized markers, but the text may still carry leftover
+      // tool markup (an orphan `</invoke>`, a `<function_calls>` wrapper,
+      // a dangling hybrid opener). Scrub it so nothing raw renders.
+      const scrubbed = scrubToolMarkup(item.content);
+      if (scrubbed === item.content) {
+        expandedTimeline.push(item);
+      } else if (scrubbed.trim().length > 0) {
+        expandedTimeline.push({ ...item, content: scrubbed });
+      }
       continue;
     }
 
     segments.forEach((segment, index) => {
       if (segment.kind === "text") {
-        if (segment.content.trim().length > 0) {
+        const scrubbed = scrubToolMarkup(segment.content);
+        if (scrubbed.trim().length > 0) {
           expandedTimeline.push({
             kind: "text",
-            content: segment.content,
+            content: scrubbed,
             id: `${item.id}-text-${index}`,
           });
         }

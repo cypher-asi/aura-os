@@ -69,9 +69,13 @@ pub(crate) fn flush_text_segment(state: &mut PersistTaskState) {
     if state.text_segment.is_empty() {
         return;
     }
+    // Strip any leaked tool-call markup before the segment becomes a
+    // persisted text content block (which is what cold-start compaction
+    // re-feeds to the model). See `super::scrub_tool_markup`.
+    let (text, _) = super::scrub_tool_markup(&state.text_segment);
     state.content_blocks.push(json!({
         "type": "text",
-        "text": &state.text_segment,
+        "text": text,
     }));
     state.text_segment.clear();
 }

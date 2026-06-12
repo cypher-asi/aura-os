@@ -16,9 +16,11 @@ use crate::stability_metrics::StabilityMetrics;
 mod auto_fork;
 mod persist_event;
 mod run_loop;
+mod sanitize;
 mod state;
 
 pub(crate) use persist_event::persist_event;
+pub(super) use sanitize::scrub_tool_markup;
 pub(super) use state::{
     flush_text_segment, log_stream_summary, message_id_for_synth, message_id_str,
     reset_per_turn_state, PersistTaskState,

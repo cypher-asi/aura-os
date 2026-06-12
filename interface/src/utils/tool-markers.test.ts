@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   expandToolMarkersInTimeline,
+  scrubToolMarkup,
   splitTextByToolMarkers,
   trimIncompleteToolMarkerTail,
 } from "./tool-markers";
@@ -444,5 +445,103 @@ describe("compaction-dialect tool markers", () => {
     expect(
       trimIncompleteToolMarkerTail("[tool_use list_tasks input={}]"),
     ).toBe("[tool_use list_tasks input={}]");
+  });
+});
+
+describe("leaked XML / hybrid tool-call markup", () => {
+  it("expands a well-formed <invoke> block into a tool entry", () => {
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        id: "t1",
+        content:
+          'I will read it.\n<function_calls>\n<invoke name="read_file">\n<parameter name="path">src/Nav.tsx</parameter>\n</invoke>\n</function_calls>',
+      },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline);
+
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0]).toMatchObject({
+      name: "read_file",
+      input: { path: "src/Nav.tsx" },
+      isError: false,
+      pending: false,
+    });
+    // No raw markup survives in the text timeline.
+    const textContent = result.timeline
+      .filter((item) => item.kind === "text")
+      .map((item) => (item.kind === "text" ? item.content : ""))
+      .join("");
+    expect(textContent).not.toMatch(/invoke|function_calls|parameter/);
+    expect(textContent).toContain("I will read it.");
+  });
+
+  it("renders the reported hybrid marker as a tool block, not raw text", () => {
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        id: "t1",
+        content:
+          'I\'ll inspect the nav. [tool_use read_file name="Nav.tsx"> </invoke>',
+      },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline);
+
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0]).toMatchObject({
+      name: "read_file",
+      pending: false,
+    });
+    const textContent = result.timeline
+      .filter((item) => item.kind === "text")
+      .map((item) => (item.kind === "text" ? item.content : ""))
+      .join("");
+    expect(textContent).not.toMatch(/tool_use|invoke/);
+    expect(textContent).toContain("I'll inspect the nav.");
+  });
+
+  it("scrubs orphan tool tags that have no parseable invoke block", () => {
+    expect(scrubToolMarkup("done </invoke>")).toBe("done ");
+    expect(scrubToolMarkup("<function_calls>\nthinking")).toBe("\nthinking");
+    expect(
+      scrubToolMarkup('leftover [tool_use read_file name="Nav.tsx"> tail'),
+    ).toBe("leftover  tail");
+  });
+
+  it("leaves valid compaction markers untouched when scrubbing", () => {
+    const marker = '[tool_use read_file input={"path":"src/db.rs"}]';
+    expect(scrubToolMarkup(marker)).toBe(marker);
+  });
+
+  it("does not let the hybrid opener swallow a real compaction marker", () => {
+    const segments = splitTextByToolMarkers(
+      '[tool_use list_tasks input={"name":"x"}]',
+    );
+
+    expect(segments).toEqual([
+      expect.objectContaining({
+        kind: "compact-tool-use",
+        name: "list_tasks",
+        input: { name: "x" },
+      }),
+    ]);
+  });
+
+  it("hides an in-flight XML invoke block while streaming", () => {
+    expect(
+      trimIncompleteToolMarkerTail('Before\n<invoke name="read_file">'),
+    ).toBe("Before");
+    expect(
+      trimIncompleteToolMarkerTail("Before\n<function_calls>\n<invoke "),
+    ).toBe("Before");
+    expect(
+      trimIncompleteToolMarkerTail(
+        'Before <invoke name="read_file"><parameter name="path">x</parameter></invoke>',
+      ),
+    ).toBe(
+      'Before <invoke name="read_file"><parameter name="path">x</parameter></invoke>',
+    );
   });
 });
