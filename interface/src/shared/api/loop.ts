@@ -26,6 +26,14 @@ export interface LoopsFilter {
 export interface LoopStatusResponse {
   running: boolean;
   paused: boolean;
+  /**
+   * Wire label for the loop's lifecycle state. Notable value:
+   * `"detached"` — a harness automaton from a previous server process
+   * is still running but this server has no registry entry / event
+   * forwarder for it. The AutomationBar reacts by re-adopting the run
+   * via `POST /loop/start` so the UI reattaches automatically.
+   */
+  loop_state?: string | null;
   project_id: ProjectId | null;
   agent_instance_id?: string | null;
   active_agent_instances?: string[];

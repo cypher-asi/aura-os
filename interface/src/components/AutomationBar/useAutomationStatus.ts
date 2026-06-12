@@ -208,6 +208,43 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
     [projectId, boundLoopId],
   );
 
+  // Project we already attempted a detached-loop reattach for, so a
+  // failing `POST /loop/start` can't retrigger on every status fetch.
+  const reattachAttemptedFor = useRef<string | null>(null);
+
+  /**
+   * The server reported `loop_state: "detached"`: a harness automaton
+   * from a previous server process is still running, but the current
+   * process has no registry entry or event forwarder for it (both are
+   * in-memory and died with the restart). Re-adopt it through the
+   * ordinary `POST /loop/start` conflict path — the backend hits the
+   * harness 409, adopts the existing run, reattaches the WS stream,
+   * and re-emits `loop_opened` so every live surface lights back up.
+   */
+  const reattachDetachedLoop = useCallback(
+    (agentInstanceId: string) => {
+      if (reattachAttemptedFor.current === projectId) return;
+      reattachAttemptedFor.current = projectId;
+      api.startLoop(projectId, agentInstanceId, selectedModel)
+        .then((res) => {
+          if (res.agent_instance_id) {
+            setBoundLoopId(projectId, res.agent_instance_id);
+          }
+          dispatch({
+            type: "statusFetched",
+            agents: res.active_agent_instances ?? [],
+            paused: Boolean(res.paused),
+          });
+          hydrateUiFromLoopStartResponse(res, projectId);
+          rehydrateLoopActivityForProject(projectId);
+        })
+        .catch((err) => {
+          console.error("Failed to reattach detached dev loop", err);
+        });
+    },
+    [projectId, selectedModel, setBoundLoopId],
+  );
+
   const fetchLoopStatus = useCallback(() => {
     api.getLoopStatus(projectId)
       .then((res) => {
@@ -221,9 +258,14 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         // of sync with the spinning nav icon. Any missed
         // `task_started` events are effectively replayed here.
         hydrateUiFromLoopStartResponse(res, projectId);
+        const detachedId =
+          res.agent_instance_id ?? res.active_agent_instances?.[0] ?? null;
+        if (res.loop_state === "detached" && detachedId) {
+          reattachDetachedLoop(detachedId);
+        }
       })
       .catch(() => {});
-  }, [projectId]);
+  }, [projectId, reattachDetachedLoop]);
 
   useEffect(() => { fetchLoopStatus(); }, [fetchLoopStatus]);
 

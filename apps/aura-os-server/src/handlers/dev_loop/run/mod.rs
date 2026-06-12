@@ -190,7 +190,17 @@ async fn bootstrap_automation(
 )> {
     let session_id = materialize_run_session(req, prep, &started.automaton_id).await;
     replace_registry_entry(&req.state, req.project_id, req.agent_instance_id).await;
-    let recovered = recover_orphan_tasks(&req.state, req.project_id, &prep.forwarder_jwt).await;
+    // Skip the orphan sweep when adopting a run that is still alive on
+    // the harness: its `in_progress` task rows belong to the running
+    // scheduler, and flipping them back to `ready` here would fight
+    // the very loop we are reattaching to (double-claimed tasks,
+    // duplicate work). Cold starts keep the sweep — there is no live
+    // scheduler, so any `in_progress` row is by definition orphaned.
+    let recovered = if started.adopted {
+        0
+    } else {
+        recover_orphan_tasks(&req.state, req.project_id, &prep.forwarder_jwt).await
+    };
     if recovered > 0 {
         tracing::info!(
             project_id = %req.project_id,

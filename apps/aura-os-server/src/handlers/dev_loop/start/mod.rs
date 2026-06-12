@@ -17,7 +17,7 @@ use crate::state::AppState;
 use super::types::StartContext;
 
 pub(super) use params::{build_start_params, StartParamsInputs};
-pub(super) use start_or_adopt::{map_start_error, start_or_adopt};
+pub(super) use start_or_adopt::{map_start_error, run_status_indicates_active, start_or_adopt};
 
 pub(super) async fn resolve_start_context(
     state: &AppState,

@@ -97,6 +97,20 @@ async fn register_automation(inputs: RegisterInputs<'_>) {
         timeout: LOOP_STREAM_TIMEOUT,
     })
     .await;
+    // Persist the run handle so a restarted server can rediscover this
+    // harness run and let the UI reattach instead of going headless.
+    // Automation only: ephemeral single-task runs are short-lived and
+    // their executor row is deleted with them.
+    super::super::run_handles::save(
+        &req.state,
+        &super::super::run_handles::RunHandle {
+            automaton_id: started.automaton_id.clone(),
+            project_id: req.project_id,
+            agent_instance_id: req.agent_instance_id,
+            harness_base_url: prep.start.harness_base_url.clone(),
+            saved_at: chrono::Utc::now(),
+        },
+    );
     tracing::info!(
         target: "aura::automation",
         project_id = %req.project_id,

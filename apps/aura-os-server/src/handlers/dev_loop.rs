@@ -8,6 +8,7 @@ mod limits;
 mod progress;
 mod registry;
 mod run;
+mod run_handles;
 mod session;
 mod signals;
 mod start;

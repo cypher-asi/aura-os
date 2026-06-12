@@ -46,7 +46,49 @@ pub(super) async fn control_loop(
         })
         .await;
     }
+    if matches!(action, ControlAction::Stop) {
+        stop_detached_runs(state, project_id, only_agent).await;
+    }
     Ok(Json(status_response(state, project_id, only_agent).await))
+}
+
+/// Stop harness runs known only through persisted run handles (no
+/// live registry entry in this process — e.g. a loop left running on
+/// the harness across a server restart). Without this sweep, Stop on
+/// a detached loop is a registry no-op and the harness keeps working;
+/// the next `/loop/status` probe would then resurrect it in the UI.
+async fn stop_detached_runs(
+    state: &AppState,
+    project_id: ProjectId,
+    only_agent: Option<AgentInstanceId>,
+) {
+    for handle in super::run_handles::list_for_project(state, project_id) {
+        if only_agent.is_some_and(|wanted| wanted != handle.agent_instance_id) {
+            continue;
+        }
+        let has_live_entry = state
+            .automaton_registry
+            .lock()
+            .await
+            .contains_key(&(project_id, handle.agent_instance_id));
+        if has_live_entry {
+            // The registry path above already dispatched the stop and
+            // `abort_and_remove` dropped the handle.
+            continue;
+        }
+        if let Err(error) = LocalHarness::new(handle.harness_base_url.clone())
+            .stop_run(&handle.automaton_id, None)
+            .await
+        {
+            warn!(
+                automaton_id = %handle.automaton_id,
+                harness_base_url = %handle.harness_base_url,
+                error = %error,
+                "failed to stop detached harness run (clearing handle anyway)"
+            );
+        }
+        super::run_handles::remove(state, project_id, handle.agent_instance_id);
+    }
 }
 
 /// Inputs for [`control_target`]. Bundled so the helper signature

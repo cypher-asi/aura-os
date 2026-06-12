@@ -797,6 +797,15 @@ async fn run_forwarder_teardown(runtime: ForwarderRuntimeState, completion: RunC
     alive.store(false, Ordering::SeqCst);
     credits::remove_matching_registry_entry(&state, project_id, agent_instance_id, &automaton_id)
         .await;
+    // Drop the persisted run handle for this run only (matched by
+    // automaton_id): a displaced forwarder must not delete the handle
+    // a newer run has already re-saved for the same slot.
+    super::super::run_handles::remove_matching(
+        &state,
+        project_id,
+        agent_instance_id,
+        &automaton_id,
+    );
     let insufficient_credits_reason = completion
         .failure_message()
         .filter(|message| is_insufficient_credits_failure(message));

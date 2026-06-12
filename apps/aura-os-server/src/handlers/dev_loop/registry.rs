@@ -117,6 +117,11 @@ pub(super) async fn abort_and_remove(
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
 ) {
+    // Explicit stop / displacement invalidates the persisted run
+    // handle regardless of whether a live registry entry exists --
+    // otherwise a restarted server would keep "rediscovering" a loop
+    // the user already stopped.
+    super::run_handles::remove(state, project_id, agent_instance_id);
     let Some(entry) = state
         .automaton_registry
         .lock()

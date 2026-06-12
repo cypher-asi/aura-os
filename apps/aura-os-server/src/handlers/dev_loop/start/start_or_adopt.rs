@@ -69,6 +69,14 @@ async fn automaton_status_is_active(
     let Ok(status) = client.run_status(automaton_id, auth_token).await else {
         return false;
     };
+    run_status_indicates_active(&status)
+}
+
+/// Interpret a `GET /v1/run/:id/status` body as "the run is still
+/// alive". Unknown shapes default to active so we never stomp a run
+/// we cannot positively classify. Shared with the run-handle
+/// detached-loop probe so both callers agree on the taxonomy.
+pub(crate) fn run_status_indicates_active(status: &serde_json::Value) -> bool {
     status
         .get("running")
         .and_then(|v| v.as_bool())
