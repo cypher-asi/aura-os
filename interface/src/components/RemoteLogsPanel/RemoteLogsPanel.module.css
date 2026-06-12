@@ -1,0 +1,101 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.title {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  background: var(--color-overlay-light);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-muted);
+}
+
+.refreshBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.notice {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.pane {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--color-elevated) 92%, var(--color-inverse) 8%);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.time {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.sourceBadge {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.sourceBadge[data-source="live"] {
+  color: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 50%, transparent);
+}
+
+.sourceBadge[data-source="snapshot"] {
+  color: var(--color-status-purple);
+  border-color: color-mix(in srgb, var(--color-status-purple) 50%, transparent);
+}
+
+.text {
+  color: var(--color-text-primary);
+  min-width: 0;
+}

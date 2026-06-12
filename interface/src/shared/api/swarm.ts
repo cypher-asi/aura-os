@@ -1,4 +1,4 @@
-import type { RemoteVmState } from "../types"
+import type { RemoteVmLogs, RemoteVmState } from "../types"
 import type { DirEntry } from "./desktop"
 import { apiFetch } from "./core"
 
@@ -19,6 +19,11 @@ export type LifecycleAction = "hibernate" | "stop" | "restart" | "wake" | "start
 export const swarmApi = {
   getRemoteAgentState: (agentId: string) =>
     apiFetch<RemoteVmState>(`/api/agents/${agentId}/remote_agent/state`),
+
+  getRemoteAgentLogs: (agentId: string, tail?: number) =>
+    apiFetch<RemoteVmLogs>(
+      `/api/agents/${agentId}/remote_agent/logs${tail ? `?tail=${tail}` : ""}`,
+    ),
 
   remoteAgentAction: (agentId: string, action: LifecycleAction) =>
     apiFetch<LifecycleActionResult>(

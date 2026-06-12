@@ -9,6 +9,7 @@ import { api } from "../../api/client";
 import { useRemoteAgentState } from "../../hooks/use-remote-agent-state";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";
 import { formatAdapterLabel, formatAuthSourceLabel, formatRunsOnLabel } from "../../apps/agents/AgentInfoPanel/agent-info-utils";
+import { RemoteLogsPanel } from "../../components/RemoteLogsPanel";
 import type { HarnessSkill, HarnessSkillInstallation } from "../../shared/types";
 import styles from "./ProjectAgentDetailsView.module.css";
 
@@ -351,6 +352,16 @@ export function ProjectAgentDetailsView() {
                 ) : (
                   <Text size="sm" variant="muted">No remote runtime details available yet.</Text>
                 )}
+              </div>
+            ) : null}
+
+            {selectedProjectAgent.machine_type === "remote" ? (
+              <div className={styles.subsection}>
+                <div className={styles.cardHeaderCopy}>
+                  <Text size="sm" weight="medium">VM logs</Text>
+                  <Text size="xs" variant="muted">Live tail plus snapshots captured when the VM hibernated or stopped</Text>
+                </div>
+                <RemoteLogsPanel agentId={selectedProjectAgent.agent_id} />
               </div>
             ) : null}
           </>

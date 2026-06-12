@@ -39,6 +39,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
             get(swarm::get_remote_agent_state),
         )
         .route(
+            "/api/agents/:agent_id/remote_agent/logs",
+            get(swarm::get_remote_agent_logs),
+        )
+        .route(
             "/api/agents/:agent_id/remote_agent/files",
             post(remote_files::list_remote_directory),
         )

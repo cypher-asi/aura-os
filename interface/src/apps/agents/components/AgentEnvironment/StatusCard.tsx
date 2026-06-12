@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useState,
   type CSSProperties,
   type Dispatch,
   type MouseEvent as ReactMouseEvent,
@@ -9,6 +10,7 @@ import type { RemoteVmState } from "../../../../shared/types"
 import type { LifecycleAction } from "../../../../shared/api/swarm"
 import { VmStatusBadge } from "../../../../components/VmStatusBadge"
 import { ReportBugButton } from "../../../../components/ReportBugButton"
+import { RemoteLogsPanel } from "../../../../components/RemoteLogsPanel"
 import styles from "./AgentEnvironment.module.css"
 import {
   formatUptime,
@@ -150,6 +152,7 @@ function RemoteStatusContent({
   handleAction,
 }: RemoteStatusContentProps) {
   const hasRemoteError = !!remoteStateError || !!remoteErrorMessage
+  const [showLogs, setShowLogs] = useState(false)
   return (
     <>
       <div className={styles.statusRow}>
@@ -256,6 +259,19 @@ function RemoteStatusContent({
           setShowActions={setShowActions}
           handleAction={handleAction}
         />
+      )}
+      {!remoteStateError && agentId && (
+        <>
+          <div className={styles.actionsRow}>
+            <button
+              className={styles.manageBtn}
+              onClick={(e) => { e.stopPropagation(); setShowLogs(v => !v) }}
+            >
+              {showLogs ? "Hide logs" : "Logs"}
+            </button>
+          </div>
+          {showLogs && <RemoteLogsPanel agentId={agentId} />}
+        </>
       )}
       {hasRemoteError && (
         <div className={styles.actionsRow}>

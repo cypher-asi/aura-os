@@ -6,6 +6,21 @@ export interface EnvironmentInfo {
   cwd: string;
 }
 
+/** A single VM/platform log entry from the swarm gateway. */
+export interface RemoteVmLogEntry {
+  /** RFC3339 timestamp of the log line. */
+  timestamp: string
+  /** Raw log line. */
+  line: string
+  /** "live" = running pod stdout; "snapshot" = final tail captured on a previous pod's termination. */
+  source: "live" | "snapshot"
+}
+
+export interface RemoteVmLogs {
+  /** Merged live-tail + snapshot entries, oldest first. */
+  logs: RemoteVmLogEntry[]
+}
+
 export interface RemoteVmState {
   state: string
   uptime_seconds: number

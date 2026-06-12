@@ -1,4 +1,4 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::{Deserialize, Serialize};
 
@@ -55,6 +55,92 @@ pub(crate) struct RemoteAgentStateResponse {
     pub endpoint: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
+}
+
+/// A single merged VM/platform log entry from the swarm gateway: the
+/// live pod tail interleaved with stored termination snapshots.
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct RemoteAgentLogEntry {
+    pub timestamp: String,
+    pub line: String,
+    /// `"live"` (running pod stdout) or `"snapshot"` (final tail captured
+    /// when a previous pod was terminated).
+    pub source: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct RemoteAgentLogsResponse {
+    pub logs: Vec<RemoteAgentLogEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct RemoteAgentLogsQuery {
+    /// Keep only the last N merged entries (gateway default 100).
+    pub tail: Option<u32>,
+    /// RFC3339 timestamp; only entries at or after it.
+    pub since: Option<String>,
+}
+
+/// Proxy `GET /v1/agents/:id/logs` on the swarm gateway: per-VM platform
+/// logs (boot, attestation, health, harness lifecycle) as a merged
+/// live-tail + termination-snapshot list.
+pub(crate) async fn get_remote_agent_logs(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(agent_id): Path<String>,
+    Query(query): Query<RemoteAgentLogsQuery>,
+) -> ApiResult<Json<RemoteAgentLogsResponse>> {
+    let network = state.require_network_client()?;
+    let net_agent = network
+        .get_agent(&agent_id, &jwt)
+        .await
+        .map_err(map_network_error)?;
+
+    let machine_type = net_agent.machine_type.as_deref().unwrap_or("local");
+    if HarnessMode::from_machine_type(machine_type) != HarnessMode::Swarm {
+        return Err(ApiError::bad_request("agent is not a remote agent"));
+    }
+
+    let base_url = state
+        .swarm_base_url
+        .as_deref()
+        .ok_or_else(|| ApiError::service_unavailable("swarm gateway is not configured"))?;
+
+    let url = format!("{}/v1/agents/{}/logs", base_url, agent_id);
+
+    let mut request = network
+        .http_client()
+        .get(&url)
+        .header("Authorization", format!("Bearer {jwt}"));
+    if let Some(tail) = query.tail {
+        request = request.query(&[("tail", tail.to_string())]);
+    }
+    if let Some(since) = query.since.as_deref() {
+        request = request.query(&[("since", since)]);
+    }
+
+    let resp = request
+        .send()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("swarm gateway unreachable: {e}")))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(match status {
+            404 => ApiError::not_found("remote agent not found on swarm gateway"),
+            401 => ApiError::unauthorized("swarm gateway rejected auth token"),
+            400 => ApiError::bad_request(format!("swarm gateway rejected request: {body}")),
+            _ => ApiError::bad_gateway(format!("swarm gateway returned {status}: {body}")),
+        });
+    }
+
+    let logs: RemoteAgentLogsResponse = resp
+        .json()
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to parse gateway response: {e}")))?;
+
+    Ok(Json(logs))
 }
 
 pub(crate) async fn get_remote_agent_state(
