@@ -34,7 +34,7 @@ function parseArgs(argv) {
     expectationsFile: process.env.AURA_STATUS_EXPECTATIONS_FILE || path.join(__dirname, "check-expectations.json"),
     expectations: null,
     environment: process.env.AURA_STATUS_ENVIRONMENT || "local",
-    checks: null,
+    checks: (process.env.AURA_STATUS_CHECKS || "").split(",").map((v) => v.trim()).filter(Boolean),
     models: (process.env.AURA_STATUS_MODEL_IDS || "").split(",").map((v) => v.trim()).filter(Boolean),
     keepEntities: process.env.AURA_STATUS_KEEP_ENTITIES === "1",
     includeExpensive: process.env.AURA_STATUS_INCLUDE_EXPENSIVE === "1",
@@ -54,7 +54,7 @@ function parseArgs(argv) {
     else if (arg === "--out-dir") args.outDir = path.resolve(next());
     else if (arg === "--expectations") args.expectationsFile = path.resolve(next());
     else if (arg === "--environment") args.environment = next();
-    else if (arg === "--checks") args.checks = new Set(next().split(",").map((v) => v.trim()).filter(Boolean));
+    else if (arg === "--checks") args.checks = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--models") args.models = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--keep-entities") args.keepEntities = true;
     else if (arg === "--include-expensive") args.includeExpensive = true;
@@ -68,6 +68,7 @@ function parseArgs(argv) {
   args.baseUrl = args.baseUrl.replace(/\/+$/, "");
   args.publicBaseUrl = args.publicBaseUrl.replace(/\/+$/, "");
   if (args.models.length === 0) args.models = DEFAULT_MODELS;
+  args.checks = args.checks.length > 0 ? new Set(args.checks) : null;
   return args;
 }
 

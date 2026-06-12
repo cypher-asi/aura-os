@@ -67,9 +67,23 @@ impl AgentService {
         agent.permissions = shadow.permissions;
     }
 
+    fn preserve_shadow_org_if_missing(&self, agent: &mut Agent) {
+        if agent.org_id.is_some() {
+            return;
+        }
+        let shadow = match self.get_agent_local(&agent.agent_id) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        if shadow.org_id.is_some() {
+            agent.org_id = shadow.org_id;
+        }
+    }
+
     /// Persist an agent to the local shadow store.
     pub fn save_agent_shadow(&self, agent: &Agent) -> Result<(), AgentError> {
         let mut patched = agent.clone();
+        self.preserve_shadow_org_if_missing(&mut patched);
         self.preserve_shadow_permissions_if_empty(&mut patched);
         let payload = serde_json::to_vec(&patched).map_err(|e| AgentError::Parse(e.to_string()))?;
         self.store
@@ -104,6 +118,7 @@ impl AgentService {
             // let an empty-permissions projection clobber a non-empty
             // shadow row, even on the hot batched GET-list path.
             let mut patched = (*agent).clone();
+            self.preserve_shadow_org_if_missing(&mut patched);
             self.preserve_shadow_permissions_if_empty(&mut patched);
             let payload =
                 serde_json::to_vec(&patched).map_err(|e| AgentError::Parse(e.to_string()))?;

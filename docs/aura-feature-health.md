@@ -50,9 +50,12 @@ probes. Point it at `https://api.aura.ai` when the goal is to measure the
 deployed Aura API. It does not prove that the packaged desktop binary, embedded
 server, local harness, or local-agent runtime are healthy.
 
-Desktop release observability is a separate lane. It launches the built desktop
-binary, waits for its embedded loopback server, logs in with the eval account,
-and runs desktop-local probes against that loopback server:
+Desktop release observability is a separate lane. This is the only path that
+proves the packaged local harness path, because the harness is bundled with the
+desktop binary rather than the public website or deployed API. The release probe
+launches the built desktop binary, waits for its embedded loopback server, logs
+in with the eval account, and runs desktop-local probes against that loopback
+server:
 
 ```sh
 AURA_DESKTOP_BINARY=target/release/aura-os-desktop \
@@ -128,6 +131,11 @@ unknown state.
 `.github/workflows/aura-observability.yml` runs every 30 minutes and can also
 be triggered manually. It runs probes with production secrets, builds the
 snapshot even when probes fail, and uploads the generated JSON/check artifacts.
+This scheduled workflow uses `AURA_STATUS_CHECKS` to restrict itself to checks
+that can be truthfully exercised against deployed website/API surfaces. It does
+not run desktop-loopback checks such as `local-agent-runtime`,
+`workspace-defaults`, `terminal-list`, or the local `model-matrix`; those belong
+to `status:desktop-release`.
 
 The core production commands are:
 

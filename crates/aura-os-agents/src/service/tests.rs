@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use aura_os_core::{Agent, AgentId, AgentPermissions, AgentScope, Capability};
+use aura_os_core::{Agent, AgentId, AgentPermissions, AgentScope, Capability, OrgId};
 use aura_os_store::SettingsStore;
 
 use super::AgentService;
@@ -300,6 +300,42 @@ fn save_agent_shadows_if_changed_preserves_non_empty_permissions_on_empty_input(
         .permissions
         .capabilities
         .contains(&Capability::SpawnAgent));
+}
+
+#[test]
+fn save_agent_shadow_preserves_org_when_network_projection_omits_it() {
+    let (service, _dir) = open_service();
+    let mut seeded = sample_agent("Atlas");
+    seeded.org_id = Some(OrgId::new());
+    service.save_agent_shadow(&seeded).unwrap();
+
+    let mut clobbered = seeded.clone();
+    clobbered.name = "Atlas Prime".into();
+    clobbered.org_id = None;
+    service.save_agent_shadow(&clobbered).unwrap();
+
+    let reloaded = service.get_agent_local(&seeded.agent_id).unwrap();
+    assert_eq!(reloaded.name, "Atlas Prime");
+    assert_eq!(reloaded.org_id, seeded.org_id);
+}
+
+#[test]
+fn save_agent_shadows_if_changed_preserves_org_when_network_projection_omits_it() {
+    let (service, _dir) = open_service();
+    let mut seeded = sample_agent("Atlas");
+    seeded.org_id = Some(OrgId::new());
+    service.save_agent_shadow(&seeded).unwrap();
+
+    let mut clobbered = seeded.clone();
+    clobbered.name = "Atlas Prime".into();
+    clobbered.org_id = None;
+    service
+        .save_agent_shadows_if_changed(&[&clobbered])
+        .expect("batched save with missing-org guard");
+
+    let reloaded = service.get_agent_local(&seeded.agent_id).unwrap();
+    assert_eq!(reloaded.name, "Atlas Prime");
+    assert_eq!(reloaded.org_id, seeded.org_id);
 }
 
 #[test]
