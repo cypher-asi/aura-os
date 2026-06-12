@@ -163,7 +163,11 @@ export function MobilePublicMenu({
     <div
       id="mobile-public-menu"
       role="dialog"
-      aria-modal="true"
+      // Only claim modality while actually open — a closed, inert overlay
+      // isn't a modal, and the global `:has([aria-modal="true"])` scroll
+      // lock (index.css) must not see the closed menu or it would pin
+      // html/body to `overflow: hidden` on every mobile public route.
+      aria-modal={open ? "true" : undefined}
       aria-label={t("publicChat:mobileShell.publicNavigation", {
         defaultValue: "Public navigation",
       })}

@@ -266,8 +266,15 @@ html, body, #root {
   text-size-adjust: 100%;
 }
 
-html:has([role="dialog"][aria-modal="true"]),
-body:has([role="dialog"][aria-modal="true"]) {
+/* Lock document scroll while a modal dialog is OPEN. The `:not` guard
+   excludes dialogs that stay mounted while closed (e.g. the mobile
+   public menu keeps rendering with `aria-hidden="true"` so its fade can
+   animate) — without it, a closed-but-mounted dialog would pin
+   html/body to `overflow: hidden` permanently, which on the mobile
+   public surface defeated `.aura-public-doc-scroll` below and forced
+   iOS onto its janky non-compositor scroll path. */
+html:has([role="dialog"][aria-modal="true"]:not([aria-hidden="true"])),
+body:has([role="dialog"][aria-modal="true"]:not([aria-hidden="true"])) {
   overflow: hidden;
 }
 
@@ -301,6 +308,19 @@ html.aura-public-doc-scroll #root {
   height: auto;
   min-height: 100%;
   overflow: visible;
+}
+
+/* Dark canvas behind the doc-scroll surface. The shell is sized with
+   `100dvh`, which lags a frame behind iOS browser-chrome animations
+   (address-bar collapse/expand) and bottom overscroll — both expose the
+   document background at the viewport's bottom edge. The default
+   `var(--color-bg)` is white in light theme, which read as a flashing
+   white line; pin it to the marketing surface color (`#090909`, matching
+   `MARKETING_PATH_BG` in PublicMarketingPanel.tsx) so any exposed strip
+   blends into the page. */
+html.aura-public-doc-scroll,
+html.aura-public-doc-scroll body {
+  background: #090909;
 }
 
 html[data-mobile-client="true"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
