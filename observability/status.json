@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-06-12T12:57:57.931Z",
+  "generatedAt": "2026-06-12T13:02:27.978Z",
   "environment": "production",
-  "source": "desktop-nightly-release",
-  "overall": "partial_outage",
+  "source": "github-actions",
+  "overall": "major_outage",
   "totals": {
     "features": 17,
-    "operational": 3,
-    "degraded": 1,
+    "operational": 12,
+    "degraded": 3,
     "partialOutage": 1,
-    "majorOutage": 0,
-    "unknown": 12,
+    "majorOutage": 1,
+    "unknown": 0,
     "maintenance": 0
   },
   "features": [
@@ -25,11 +25,11 @@
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
       "lastCheckedAt": "2026-06-12T12:57:37.036Z",
-      "checksPassed": 2,
+      "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
-      "checksUnknown": 1,
-      "latencyP95Ms": 10,
+      "checksUnknown": 0,
+      "latencyP95Ms": 95,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -76,12 +76,20 @@
         {
           "id": "system-info",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:45.847Z",
+          "latencyMs": 95,
+          "evidence": {
+            "keys": [
+              "os",
+              "architecture",
+              "hostname",
+              "ip",
+              "cwd"
+            ]
+          }
         }
       ]
     },
@@ -92,24 +100,26 @@
       "priority": 15,
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
-      "status": "unknown",
+      "status": "operational",
       "lastCheckedAt": "2026-06-12T12:57:37.265Z",
-      "checksPassed": 2,
+      "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
-      "checksUnknown": 1,
-      "latencyP95Ms": 112,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 448,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "auth-validate",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:45.752Z",
+          "latencyMs": 448,
+          "evidence": {
+            "userIdPresent": true
+          }
         },
         {
           "id": "orgs-list",
@@ -157,74 +167,101 @@
       "priority": 18,
       "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
       "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T13:02:24.758Z",
+      "checksPassed": 6,
       "checksTotal": 6,
       "checksFailed": 0,
-      "checksUnknown": 6,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 4334,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "public-setup",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:19.736Z",
+          "latencyMs": 95,
+          "evidence": {
+            "tokenPresent": true,
+            "turnCount": 0,
+            "limit": 3
+          }
         },
         {
           "id": "public-chat-stream",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:24.070Z",
+          "latencyMs": 4334,
+          "evidence": {
+            "frameTypes": [
+              "text_delta",
+              "text_delta",
+              "limit",
+              "message"
+            ],
+            "textSample": "aura public ok"
+          }
         },
         {
           "id": "public-feedback-api",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:24.273Z",
+          "latencyMs": 203,
+          "evidence": {
+            "count": 100
+          }
         },
         {
           "id": "public-blog-api",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:24.432Z",
+          "latencyMs": 159,
+          "evidence": {
+            "count": 7
+          }
         },
         {
           "id": "public-x402-models",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:24.516Z",
+          "latencyMs": 85,
+          "evidence": {
+            "object": "list",
+            "modelCount": 1
+          }
         },
         {
           "id": "public-x402-payment-challenge",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:24.758Z",
+          "latencyMs": 241,
+          "evidence": {
+            "status": 402,
+            "payToPresent": true,
+            "network": "eip155:8453",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "amount": "20000",
+            "acceptsCount": 1,
+            "paymentRequiredHeaderPresent": true
+          }
         }
       ]
     },
@@ -278,43 +315,43 @@
       "priority": 30,
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
-      "status": "unknown",
-      "lastCheckedAt": null,
+      "status": "major_outage",
+      "lastCheckedAt": "2026-06-12T12:59:22.351Z",
       "checksPassed": 0,
       "checksTotal": 3,
-      "checksFailed": 0,
-      "checksUnknown": 3,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksFailed": 3,
+      "checksUnknown": 0,
+      "latencyP95Ms": 149882,
+      "message": "pod stuck unscheduled for 145s (Unschedulable): 0/5 nodes are available: 5 Insufficient cpu. preemption: 0/5 nodes are available: 5 No preemption victims found for incoming pod.",
       "checks": [
         {
           "id": "remote-agent-create",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
+          "status": "fail",
+          "featureStatus": "partial_outage",
+          "message": "pod stuck unscheduled for 145s (Unschedulable): 0/5 nodes are available: 5 Insufficient cpu. preemption: 0/5 nodes are available: 5 No preemption victims found for incoming pod.",
+          "checkedAt": "2026-06-12T12:54:24.338Z",
+          "latencyMs": 149882,
           "evidence": {}
         },
         {
           "id": "remote-agent-state",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
+          "status": "fail",
+          "featureStatus": "partial_outage",
+          "message": "pod stuck unscheduled for 145s (Unschedulable): 0/5 nodes are available: 5 Insufficient cpu. preemption: 0/5 nodes are available: 5 No preemption victims found for incoming pod.",
+          "checkedAt": "2026-06-12T12:56:53.396Z",
+          "latencyMs": 149058,
           "evidence": {}
         },
         {
           "id": "remote-agent-runtime",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
+          "status": "fail",
+          "featureStatus": "degraded",
+          "message": "pod stuck unscheduled for 146s (Unschedulable): 0/5 nodes are available: 5 Insufficient cpu. preemption: 0/5 nodes are available: 5 No preemption victims found for incoming pod.",
+          "checkedAt": "2026-06-12T12:59:22.351Z",
+          "latencyMs": 148955,
           "evidence": {}
         }
       ]
@@ -326,54 +363,98 @@
       "priority": 35,
       "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
       "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T12:51:50.653Z",
+      "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
-      "checksUnknown": 4,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 1567,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "project-crud",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:47.938Z",
+          "latencyMs": 748,
+          "evidence": {
+            "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
+            "projectId": "cc5f9bee-561f-473d-acdd-410f68a3eb49",
+            "listed": true,
+            "projectName": "AURA Status Project 1781268707310"
+          }
         },
         {
           "id": "spec-task-crud",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:49.505Z",
+          "latencyMs": 1567,
+          "evidence": {
+            "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
+            "projectId": "3e5fa81f-05bd-4f6b-bf61-f699d3a70adc",
+            "specId": "88fffe63-eca2-4d74-8d10-6d921855652d",
+            "taskId": "f0e20817-19dd-4b85-ae4a-7fe91abd2a4d",
+            "specHashPresent": true,
+            "taskCount": 1
+          }
         },
         {
           "id": "project-stats",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:50.132Z",
+          "latencyMs": 627,
+          "evidence": {
+            "projectId": "bc975154-d98d-425b-bd61-5f1d46e4f8e7",
+            "keys": [
+              "total_tasks",
+              "pending_tasks",
+              "ready_tasks",
+              "in_progress_tasks",
+              "blocked_tasks",
+              "done_tasks",
+              "failed_tasks",
+              "completion_percentage",
+              "total_tokens",
+              "total_events",
+              "total_agents",
+              "total_sessions",
+              "total_time_seconds",
+              "lines_changed",
+              "total_specs",
+              "contributors",
+              "estimated_cost_usd"
+            ]
+          }
         },
         {
           "id": "loop-status",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:50.653Z",
+          "latencyMs": 521,
+          "evidence": {
+            "projectId": "cef1a76e-4388-4823-b859-a626eab75200",
+            "status": null,
+            "keys": [
+              "running",
+              "paused",
+              "loop_state",
+              "project_id",
+              "active_agent_instances",
+              "active_tasks"
+            ]
+          }
         }
       ]
     },
@@ -384,34 +465,41 @@
       "priority": 38,
       "description": "Process workflow lists, process creation, default ignition node creation, and cleanup.",
       "publicSummary": "Process workflows can be listed and created.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T12:51:51.951Z",
+      "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
-      "checksUnknown": 2,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 1073,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "process-list",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:50.878Z",
+          "latencyMs": 225,
+          "evidence": {
+            "processes": 0,
+            "folders": 0
+          }
         },
         {
           "id": "process-crud",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:51.951Z",
+          "latencyMs": 1073,
+          "evidence": {
+            "projectId": "ade1d4a7-0896-4581-8954-0bbaaee5063e",
+            "processId": "8c885eaf-ca19-4b27-aa2d-3d3b640ade43",
+            "nodeCount": 1
+          }
         }
       ]
     },
@@ -476,44 +564,116 @@
       "priority": 45,
       "description": "Image, 3D, and video generation stream routers, progress frames, completion payloads, and artifact URLs.",
       "publicSummary": "Media generation streams can complete with generated artifacts.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "degraded",
+      "lastCheckedAt": "2026-06-12T13:02:19.641Z",
+      "checksPassed": 1,
       "checksTotal": 3,
-      "checksFailed": 0,
-      "checksUnknown": 3,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksFailed": 2,
+      "checksUnknown": 0,
+      "latencyP95Ms": 172425,
+      "message": "Latency 172425ms exceeded warning threshold",
       "checks": [
         {
           "id": "image-generation-stream",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "degraded",
+          "message": "Latency 172425ms exceeded warning threshold",
+          "checkedAt": "2026-06-12T13:02:14.776Z",
+          "latencyMs": 172425,
+          "evidence": {
+            "frameTypes": [
+              "generation_start",
+              "generation_start",
+              "generation_progress",
+              "generation_progress",
+              "message",
+              "generation_progress",
+              "generation_progress",
+              "message",
+              "generation_progress",
+              "generation_progress",
+              "message",
+              "generation_progress",
+              "generation_progress",
+              "message",
+              "generation_progress",
+              "generation_progress",
+              "message",
+              "generation_progress",
+              "generation_progress",
+              "generation_progress",
+              "generation_completed",
+              "message"
+            ],
+            "imageUrlPresent": true
+          }
         },
         {
           "id": "model3d-generation-stream",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "fail",
+          "featureStatus": "degraded",
+          "message": "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.; Missing expected evidence: frameTypes",
+          "checkedAt": "2026-06-12T13:02:17.510Z",
+          "latencyMs": 2734,
+          "evidence": {
+            "frames": [
+              {
+                "event": "generation_start",
+                "data": {
+                  "mode": "3d"
+                },
+                "raw": "{\"mode\":\"3d\"}"
+              },
+              {
+                "event": "generation_error",
+                "data": {
+                  "code": "SESSION_OPEN_FAILED",
+                  "message": "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration."
+                },
+                "raw": "{\"code\":\"SESSION_OPEN_FAILED\",\"message\":\"agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.\"}"
+              },
+              {
+                "event": "message",
+                "data": null,
+                "raw": ""
+              }
+            ]
+          }
         },
         {
           "id": "video-generation-stream",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "fail",
+          "featureStatus": "degraded",
+          "message": "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.; Missing expected evidence: frameTypes",
+          "checkedAt": "2026-06-12T13:02:19.641Z",
+          "latencyMs": 2131,
+          "evidence": {
+            "frames": [
+              {
+                "event": "generation_start",
+                "data": {
+                  "mode": "video"
+                },
+                "raw": "{\"mode\":\"video\"}"
+              },
+              {
+                "event": "generation_error",
+                "data": {
+                  "code": "SESSION_OPEN_FAILED",
+                  "message": "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration."
+                },
+                "raw": "{\"code\":\"SESSION_OPEN_FAILED\",\"message\":\"agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.\"}"
+              },
+              {
+                "event": "message",
+                "data": null,
+                "raw": ""
+              }
+            ]
+          }
         }
       ]
     },
@@ -524,24 +684,39 @@
       "priority": 50,
       "description": "End-to-end spec generation, task extraction, autonomous loop execution, and artifact validation.",
       "publicSummary": "AURA can turn requirements into tasks and complete a small validated build.",
-      "status": "unknown",
-      "lastCheckedAt": null,
+      "status": "degraded",
+      "lastCheckedAt": "2026-06-12T13:02:26.692Z",
       "checksPassed": 0,
       "checksTotal": 2,
       "checksFailed": 0,
-      "checksUnknown": 2,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 1,
+      "latencyP95Ms": 0,
+      "message": "0/3 live benchmark artifacts found",
       "checks": [
         {
           "id": "live-benchmark-hello-world",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "warn",
+          "featureStatus": "degraded",
+          "message": "0/3 live benchmark artifacts found",
+          "checkedAt": "2026-06-12T13:02:26.692Z",
+          "latencyMs": 0,
+          "evidence": {
+            "files": [
+              {
+                "file": "interface/test-results/aura-evals-summary.json",
+                "exists": false
+              },
+              {
+                "file": "interface/test-results/live-benchmark-summary.json",
+                "exists": false
+              },
+              {
+                "file": "infra/evals/reports/baselines/live-benchmark-summary.json",
+                "exists": false
+              }
+            ]
+          }
         },
         {
           "id": "harness-fixture-suite",
@@ -562,34 +737,41 @@
       "priority": 55,
       "description": "Marketplace agent catalog and harness bootstrap health.",
       "publicSummary": "Marketplace and bootstrap services are reachable.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T12:51:53.154Z",
+      "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
-      "checksUnknown": 2,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 965,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "marketplace-agents",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:52.916Z",
+          "latencyMs": 965,
+          "evidence": {
+            "count": 12
+          }
         },
         {
           "id": "harness-health",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:53.154Z",
+          "latencyMs": 238,
+          "evidence": {
+            "reachable": true,
+            "url": "https://aura-harness-latest.onrender.com",
+            "latencyMs": 63,
+            "status": 200
+          }
         }
       ]
     },
@@ -600,54 +782,75 @@
       "priority": 60,
       "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
       "publicSummary": "Integrations and billing surfaces are responding.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T12:51:47.190Z",
+      "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
-      "checksUnknown": 4,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 347,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "org-integrations-list",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:46.453Z",
+          "latencyMs": 347,
+          "evidence": {
+            "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
+            "count": 0
+          }
         },
         {
           "id": "org-tool-actions-list",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:46.755Z",
+          "latencyMs": 302,
+          "evidence": {
+            "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
+            "count": 3
+          }
         },
         {
           "id": "billing-status",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:46.915Z",
+          "latencyMs": 160,
+          "evidence": {
+            "keys": [
+              "is_subscribed",
+              "monthly_credits",
+              "plan"
+            ],
+            "subscriptionKnown": true,
+            "plan": "mortal"
+          }
         },
         {
           "id": "credits-balance",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:47.190Z",
+          "latencyMs": 275,
+          "evidence": {
+            "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
+            "keys": [
+              "balance_cents",
+              "balance_formatted",
+              "plan"
+            ]
+          }
         }
       ]
     },
@@ -658,64 +861,83 @@
       "priority": 65,
       "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
       "publicSummary": "Community and feedback data surfaces are responding.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T12:51:54.456Z",
+      "checksPassed": 5,
       "checksTotal": 5,
       "checksFailed": 0,
-      "checksUnknown": 5,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 316,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "feedback-list",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:53.653Z",
+          "latencyMs": 287,
+          "evidence": {
+            "count": 50
+          }
         },
         {
           "id": "bug-reports-mine",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:53.755Z",
+          "latencyMs": 103,
+          "evidence": {
+            "count": 0
+          }
         },
         {
           "id": "feed-list",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:54.014Z",
+          "latencyMs": 258,
+          "evidence": {
+            "count": 50
+          }
         },
         {
           "id": "leaderboard",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:54.330Z",
+          "latencyMs": 316,
+          "evidence": {
+            "count": 50
+          }
         },
         {
           "id": "platform-stats",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:54.456Z",
+          "latencyMs": 126,
+          "evidence": {
+            "present": true,
+            "keys": [
+              "daily_active_users",
+              "total_users",
+              "new_signups",
+              "projects_created",
+              "total_input_tokens",
+              "total_output_tokens",
+              "total_revenue_usd"
+            ]
+          }
         }
       ]
     },
@@ -768,34 +990,40 @@
       "priority": 70,
       "description": "Stream reattachment registry and debug run index.",
       "publicSummary": "Stream and debug inspection endpoints are reachable.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T12:51:53.366Z",
+      "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
-      "checksUnknown": 2,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 109,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "active-streams",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:53.263Z",
+          "latencyMs": 109,
+          "evidence": {
+            "count": 0
+          }
         },
         {
           "id": "debug-projects",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T12:51:53.366Z",
+          "latencyMs": 103,
+          "evidence": {
+            "keys": [
+              "projects"
+            ]
+          }
         }
       ]
     },
@@ -807,23 +1035,48 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "status": "operational",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "lastCheckedAt": "2026-06-12T13:02:26.693Z",
+      "checksPassed": 1,
       "checksTotal": 1,
       "checksFailed": 0,
-      "checksUnknown": 1,
-      "latencyP95Ms": null,
+      "checksUnknown": 0,
+      "latencyP95Ms": 1,
       "message": "All required checks are passing.",
       "checks": [
         {
           "id": "eval-summary-artifacts",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "3/4 eval summary artifacts found",
+          "checkedAt": "2026-06-12T13:02:26.693Z",
+          "latencyMs": 1,
+          "evidence": {
+            "files": [
+              {
+                "file": "interface/test-results/aura-evals-summary.json",
+                "exists": false
+              },
+              {
+                "file": "infra/evals/reports/baselines/smoke-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T12:51:38.614Z",
+                "size": 2796
+              },
+              {
+                "file": "infra/evals/reports/baselines/chat-core-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T12:51:38.614Z",
+                "size": 11513
+              },
+              {
+                "file": "infra/evals/reports/baselines/workflow-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T12:51:38.614Z",
+                "size": 2219
+              }
+            ]
+          }
         }
       ]
     },
@@ -834,44 +1087,92 @@
       "priority": 80,
       "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "AURA's public web surfaces are reachable.",
-      "status": "unknown",
-      "lastCheckedAt": null,
-      "checksPassed": 0,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T13:02:26.692Z",
+      "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
-      "checksUnknown": 3,
-      "latencyP95Ms": null,
-      "message": "No recent result",
+      "checksUnknown": 0,
+      "latencyP95Ms": 1409,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "public-observability-page",
           "required": true,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:25.050Z",
+          "latencyMs": 292,
+          "evidence": {
+            "overall": "unknown",
+            "featureCount": 17
+          }
         },
         {
           "id": "public-models-page",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:25.283Z",
+          "latencyMs": 233,
+          "evidence": {
+            "status": 200
+          }
         },
         {
           "id": "public-marketing-pages",
           "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T13:02:26.692Z",
+          "latencyMs": 1409,
+          "evidence": {
+            "results": [
+              {
+                "route": "/agents",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/code",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/pricing",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/models",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/feedback",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/blog",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/download",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/observability",
+                "status": 200,
+                "hasRoot": true
+              }
+            ]
+          }
         }
       ]
     }
