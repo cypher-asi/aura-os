@@ -1,16 +1,17 @@
 {
-  "agents": "Agen",
-  "blog": "Blog",
-  "capabilities": "Kemampuan",
-  "changelog": "Catatan perubahan",
   "chat": "Obrolan",
+  "agents": "Agen",
   "code": "Kode",
-  "downloads": "Unduhan",
-  "expertise": "Keahlian",
-  "feedback": "Masukan",
-  "industries": "Industri",
-  "models": "Model",
   "os": "OS",
   "pricing": "Harga",
-  "resources": "Sumber daya"
+  "blog": "Blog",
+  "changelog": "Catatan perubahan",
+  "downloads": "Unduhan",
+  "feedback": "Masukan",
+  "models": "Model",
+  "observability": "Observability",
+  "resources": "Sumber daya",
+  "expertise": "Keahlian",
+  "capabilities": "Kemampuan",
+  "industries": "Industri"
 }

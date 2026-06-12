@@ -13,10 +13,13 @@ use aura_os_harness::{
 use crate::dto::{AgentRuntimeTestResponse, CouncilRequestBody};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::errors::map_harness_error_to_api;
+use crate::handlers::agents::session_identity::{
+    validate_session_identity, SessionIdentityRequirements,
+};
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
-use crate::state::{AppState, AuthJwt};
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 struct RuntimeOutcome {
     text: String,
@@ -26,6 +29,7 @@ struct RuntimeOutcome {
 pub(crate) async fn test_agent_runtime(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(auth_session): AuthSession,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<AgentRuntimeTestResponse>> {
     let agent = state
@@ -44,7 +48,8 @@ pub(crate) async fn test_agent_runtime(
 
     let model = effective_model(&agent, None);
 
-    let outcome = run_harness_test(&state, &agent, &jwt, model.clone()).await?;
+    let outcome =
+        run_harness_test(&state, &agent, &jwt, &auth_session.user_id, model.clone()).await?;
 
     Ok(Json(AgentRuntimeTestResponse {
         ok: true,
@@ -199,6 +204,7 @@ async fn run_harness_test(
     state: &AppState,
     agent: &Agent,
     jwt: &str,
+    user_id: &str,
     model: Option<String>,
 ) -> ApiResult<RuntimeOutcome> {
     let installed_tools = if let Some(org_id) = agent.org_id.as_ref() {
@@ -221,11 +227,19 @@ async fn run_harness_test(
         agent_name: Some(agent.name.clone()),
         model: model.clone(),
         token: Some(jwt.to_string()),
+        aura_org_id: agent.org_id.as_ref().map(ToString::to_string),
+        aura_session_id: Some(uuid::Uuid::new_v4().to_string()),
+        user_id: Some(user_id.to_string()),
         provider_overrides: session_model_overrides(model.as_deref()),
         installed_tools,
         installed_integrations,
         ..Default::default()
     };
+    validate_session_identity(
+        &config,
+        SessionIdentityRequirements::CHAT,
+        "runtime_request",
+    )?;
 
     let session = state
         .harness_for(agent.harness_mode())

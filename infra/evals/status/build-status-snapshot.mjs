@@ -1,0 +1,111 @@
+#!/usr/bin/env node
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { buildStatusSnapshot } from "./lib/status-policy.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..", "..", "..");
+
+function parseArgs(argv) {
+  const args = {
+    checksDir: process.env.AURA_STATUS_CHECKS_DIR || path.join(repoRoot, "infra/evals/reports/status/checks"),
+    checksFile: process.env.AURA_STATUS_CHECKS_FILE || "",
+    registry: process.env.AURA_STATUS_FEATURES_FILE || path.join(__dirname, "features.json"),
+    out: process.env.AURA_STATUS_OUTPUT || path.join(repoRoot, "interface/public/observability/status.json"),
+    reportOut: process.env.AURA_STATUS_REPORT_OUTPUT || path.join(repoRoot, "infra/evals/reports/status/status.json"),
+    environment: process.env.AURA_STATUS_ENVIRONMENT || "unknown",
+    source: process.env.AURA_STATUS_SOURCE || "aura-status",
+  };
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    const next = () => {
+      i += 1;
+      if (i >= argv.length) throw new Error(`Missing value for ${arg}`);
+      return argv[i];
+    };
+    if (arg === "--checks-dir") args.checksDir = path.resolve(next());
+    else if (arg === "--checks-file") args.checksFile = path.resolve(next());
+    else if (arg === "--registry") args.registry = path.resolve(next());
+    else if (arg === "--out") args.out = path.resolve(next());
+    else if (arg === "--report-out") args.reportOut = path.resolve(next());
+    else if (arg === "--environment") args.environment = next();
+    else if (arg === "--source") args.source = next();
+    else if (arg === "--help") {
+      process.stdout.write("Usage: node infra/evals/status/build-status-snapshot.mjs [--checks-dir DIR] [--checks-file FILE] [--out FILE]\n");
+      process.exit(0);
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+  return args;
+}
+
+async function readJson(filePath) {
+  return JSON.parse(await fs.readFile(filePath, "utf8"));
+}
+
+async function walkJsonFiles(dir) {
+  let entries;
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const files = [];
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await walkJsonFiles(entryPath));
+    } else if (entry.isFile() && entry.name.endsWith(".json")) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+}
+
+async function readChecks(args) {
+  if (args.checksFile) {
+    const payload = await readJson(args.checksFile);
+    return Array.isArray(payload) ? payload : payload.checks ?? [];
+  }
+
+  const files = await walkJsonFiles(args.checksDir);
+  const checks = [];
+  for (const file of files) {
+    try {
+      const payload = await readJson(file);
+      if (Array.isArray(payload)) checks.push(...payload);
+      else if (Array.isArray(payload.checks)) checks.push(...payload.checks);
+      else if (payload.checkId) checks.push(payload);
+    } catch {
+      // Ignore unrelated JSON artifacts.
+    }
+  }
+  return checks;
+}
+
+async function writeJson(filePath, payload) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+const args = parseArgs(process.argv.slice(2));
+const registry = await readJson(args.registry);
+const checks = await readChecks(args);
+const snapshot = buildStatusSnapshot({
+  registry,
+  checks,
+  environment: args.environment,
+  source: args.source,
+});
+
+await writeJson(args.out, snapshot);
+if (args.reportOut && path.resolve(args.reportOut) !== path.resolve(args.out)) {
+  await writeJson(args.reportOut, snapshot);
+}
+
+process.stdout.write(`${path.relative(repoRoot, args.out)}\n`);
+if (args.reportOut) process.stdout.write(`${path.relative(repoRoot, args.reportOut)}\n`);

@@ -1,16 +1,17 @@
 {
-  "agents": "エージェント",
-  "blog": "ブログ",
-  "capabilities": "能力",
-  "changelog": "変更履歴",
   "chat": "チャット",
+  "agents": "エージェント",
   "code": "コード",
-  "downloads": "ダウンロード",
-  "expertise": "専門知識",
-  "feedback": "フィードバック",
-  "industries": "産業",
-  "models": "モデル",
   "os": "OS",
   "pricing": "料金",
-  "resources": "リソース"
+  "blog": "ブログ",
+  "changelog": "変更履歴",
+  "downloads": "ダウンロード",
+  "feedback": "フィードバック",
+  "models": "モデル",
+  "observability": "Observability",
+  "resources": "リソース",
+  "expertise": "専門知識",
+  "capabilities": "能力",
+  "industries": "産業"
 }
