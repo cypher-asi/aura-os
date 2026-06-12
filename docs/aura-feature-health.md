@@ -1,7 +1,7 @@
-# Aura Observability
+# AURA Observability
 
-Aura Observability turns live eval probes into a dashboard available from the
-Aura OS public-mode website and the authenticated desktop/web app at
+AURA Observability turns live eval probes into a dashboard available from the
+AURA OS public-mode website and the authenticated desktop/web app at
 `/observability`.
 
 ## What It Measures
@@ -25,7 +25,7 @@ Current feature groups:
 - Remote Agents: swarm-backed agent creation, state polling, and runtime response.
 - Projects, Specs, and Tasks: project CRUD, spec CRUD, task CRUD, project stats, and loop status.
 - Processes: workflow lists, process creation, default node creation, and cleanup.
-- Model Responses: curated model matrix through the Aura runtime path.
+- Model Responses: curated model matrix through the AURA runtime path.
 - Media Generation: image generation by default, with optional 3D and video stream probes.
 - Autonomous Build Loop: benchmark and harness fixture outputs.
 - Marketplace and Bootstrap: marketplace catalog and harness bootstrap health.
@@ -45,14 +45,17 @@ npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_
 npm run status:snapshot
 ```
 
-`AURA_STATUS_API_BASE_URL` selects the Aura API/control-plane host for cloud
+`AURA_STATUS_API_BASE_URL` selects the AURA API/control-plane host for cloud
 probes. Point it at `https://api.aura.ai` when the goal is to measure the
-deployed Aura API. It does not prove that the packaged desktop binary, embedded
+deployed AURA API. It does not prove that the packaged desktop binary, embedded
 server, local harness, or local-agent runtime are healthy.
 
-Desktop release observability is a separate lane. It launches the built desktop
-binary, waits for its embedded loopback server, logs in with the eval account,
-and runs desktop-local probes against that loopback server:
+Desktop release observability is a separate lane. This is the only path that
+proves the packaged local harness path, because the harness is bundled with the
+desktop binary rather than the public website or deployed API. The release probe
+launches the built desktop binary, waits for its embedded loopback server, logs
+in with the eval account, and runs desktop-local probes against that loopback
+server:
 
 ```sh
 AURA_DESKTOP_BINARY=target/release/aura-os-desktop \
@@ -62,15 +65,16 @@ npm run status:desktop-release
 ```
 
 By default this covers the binary-local API, authenticated session, org/profile
-reads, workspace defaults, terminal list, local agent creation, and local agent
-runtime response. Release workflows run this on the macOS arm64 release leg
-when `AURA_STATUS_USER_EMAIL` and `AURA_STATUS_USER_PASSWORD` are configured,
-then upload the generated check JSON and desktop logs as artifacts.
+reads, workspace defaults, terminal list, local agent creation, local agent
+runtime response, and the local model matrix. Release workflows run this on the
+macOS arm64 release leg when `AURA_STATUS_USER_EMAIL` and
+`AURA_STATUS_USER_PASSWORD` are configured, then upload the generated check JSON
+and desktop logs as artifacts.
 
 For end-to-end local verification, use the existing eval local stack in
 `infra/evals/local-stack/`. The observability page is not served from a sibling
-website repo; it is the Aura OS interface route in `interface/`. The
-recommended default for feature health is the hybrid stack: Aura OS, the public
+website repo; it is the AURA OS interface route in `interface/`. The
+recommended default for feature health is the hybrid stack: AURA OS, the public
 frontend, and the harness run locally, while zOS auth, the router, billing, and
 swarm-backed dependencies stay pointed at deployed services.
 
@@ -101,7 +105,7 @@ if added). Run a deeper media sweep with:
 npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_ACCESS_TOKEN" --include-expensive
 ```
 
-For Aura OS public-mode page checks against the frontend dev server:
+For AURA OS public-mode page checks against the frontend dev server:
 
 ```sh
 node infra/evals/status/run-status-probes.mjs \
@@ -118,7 +122,7 @@ applies `infra/evals/status/lib/status-policy.mjs`, and writes:
 - `interface/public/observability/status.json`
 - `infra/evals/reports/status/status.json`
 
-The Aura OS React route at `/observability`
+The AURA OS React route at `/observability`
 (`interface/src/views/marketing/StatusView`) fetches `/observability/status.json` and
 renders the snapshot. If the JSON is missing, the page falls back to an explicit
 unknown state.
@@ -128,6 +132,18 @@ unknown state.
 `.github/workflows/aura-observability.yml` runs every 30 minutes and can also
 be triggered manually. It runs probes with production secrets, builds the
 snapshot even when probes fail, and uploads the generated JSON/check artifacts.
+This scheduled workflow uses `AURA_STATUS_CHECKS` to restrict itself to checks
+that can be truthfully exercised against deployed website/API surfaces. It does
+not run desktop-loopback checks such as `local-agent-runtime`,
+`workspace-defaults`, `terminal-list`, or the local `model-matrix`; those belong
+to `status:desktop-release`.
+
+The browser/API and desktop lanes publish to the same public path:
+`/observability/status.json`. Each lane first reads the previously published
+snapshot from `gh-pages`, carries forward still-fresh checks from the other
+lane, overlays the checks it just ran, and republishes the merged snapshot. This
+keeps `/observability` as one dashboard while preserving the correct execution
+environment for each eval.
 
 The core production commands are:
 
@@ -142,9 +158,9 @@ case the probe runner logs into `AURA_STATUS_API_BASE_URL` with
 `POST /api/auth/login` and uses the returned `access_token` in-memory for the
 run.
 
-The generated `interface/public/observability/status.json` ships with the Aura OS
+The generated `interface/public/observability/status.json` ships with the AURA OS
 interface build, and the `/observability` route reads it directly. No
 external status-page service is required for the first version because the
-valuable part is the Aura-specific probe catalog and status policy. An external
+valuable part is the AURA-specific probe catalog and status policy. An external
 service only adds value if we later need subscriber notifications, incident
-timelines, or multi-region uptime checks independent of Aura's deploy pipeline.
+timelines, or multi-region uptime checks independent of AURA's deploy pipeline.

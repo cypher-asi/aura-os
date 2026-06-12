@@ -1,4 +1,4 @@
-name: Aura Observability
+name: AURA Observability
 
 on:
   schedule:
@@ -33,14 +33,33 @@ jobs:
           AURA_STATUS_MODEL_IDS: ${{ secrets.AURA_STATUS_MODEL_IDS || vars.AURA_STATUS_MODEL_IDS }}
           AURA_STATUS_IMAGE_MODEL: ${{ secrets.AURA_STATUS_IMAGE_MODEL || vars.AURA_STATUS_IMAGE_MODEL }}
           AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_CHECKS: >-
+            api-health,auth-session,auth-validate,system-info,
+            orgs-list,user-profile,org-integrations-list,org-tool-actions-list,
+            billing-status,credits-balance,project-crud,spec-task-crud,
+            project-stats,loop-status,process-list,process-crud,
+            marketplace-agents,harness-health,active-streams,debug-projects,
+            feedback-list,bug-reports-mine,feed-list,leaderboard,platform-stats,
+            remote-agent-create,remote-agent-state,remote-agent-runtime,
+            image-generation-stream,live-benchmark-hello-world,eval-summary-artifacts,
+            public-setup,public-chat-stream,public-feedback-api,public-models-api,
+            public-blog-api,public-x402-models,public-x402-payment-challenge,
+            public-observability-page,public-models-page,public-marketing-pages
         run: npm run status:probes
 
       - name: Build public observability snapshot
         if: always()
         env:
+          AURA_STATUS_PREVIOUS_SNAPSHOT: infra/evals/reports/status/previous/status.json
           AURA_STATUS_ENVIRONMENT: production
           AURA_STATUS_SOURCE: github-actions
-        run: npm run status:snapshot
+        shell: bash
+        run: |
+          mkdir -p infra/evals/reports/status/previous
+          git fetch origin +gh-pages:refs/remotes/origin/gh-pages || true
+          git show origin/gh-pages:observability/status.json \
+            > infra/evals/reports/status/previous/status.json || true
+          npm run status:snapshot
 
       - uses: actions/checkout@v5
         if: always()

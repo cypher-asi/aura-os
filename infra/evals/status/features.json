@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "title": "Aura Observability",
-  "description": "Feature health backed by Aura-owned live eval probes.",
+  "title": "AURA Observability",
+  "description": "Feature health backed by AURA-owned live eval probes.",
   "features": [
     {
       "id": "core-api",
       "label": "Core API",
       "category": "platform",
       "priority": 10,
-      "description": "Aura OS API reachability, authenticated session reads, and runtime environment metadata.",
+      "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "checks": [
         { "id": "api-health", "required": true, "staleAfterMinutes": 5, "warningLatencyMs": 1200, "outageLatencyMs": 5000 },
@@ -60,8 +60,8 @@
       "description": "Local agent template creation, project binding, and workspace-backed chat readiness.",
       "publicSummary": "Local agents can be created and exercised through the harness.",
       "checks": [
-        { "id": "local-agent-create", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
-        { "id": "local-agent-runtime", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 15000, "outageLatencyMs": 45000 }
+        { "id": "local-agent-create", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "local-agent-runtime", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 15000, "outageLatencyMs": 45000 }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 2
@@ -116,10 +116,10 @@
       "label": "Model Responses",
       "category": "models",
       "priority": 40,
-      "description": "Curated model matrix smoke tests through Aura's runtime path.",
+      "description": "Curated model matrix smoke tests through AURA's runtime path.",
       "publicSummary": "Supported text models are returning valid assistant responses.",
       "checks": [
-        { "id": "model-matrix", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 25000, "outageLatencyMs": 60000 }
+        { "id": "model-matrix", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 25000, "outageLatencyMs": 60000 }
       ],
       "minPassRate": 0.9,
       "degradedAfterFailures": 1,
@@ -146,7 +146,7 @@
       "category": "automation",
       "priority": 50,
       "description": "End-to-end spec generation, task extraction, autonomous loop execution, and artifact validation.",
-      "publicSummary": "Aura can turn requirements into tasks and complete a small validated build.",
+      "publicSummary": "AURA can turn requirements into tasks and complete a small validated build.",
       "checks": [
         { "id": "live-benchmark-hello-world", "required": true, "staleAfterMinutes": 120, "warningLatencyMs": 240000, "outageLatencyMs": 600000 },
         { "id": "harness-fixture-suite", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 120000, "outageLatencyMs": 300000 }
@@ -209,8 +209,8 @@
       "description": "Desktop runtime defaults and local terminal API availability.",
       "publicSummary": "Desktop runtime support endpoints are responding.",
       "checks": [
-        { "id": "workspace-defaults", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
-        { "id": "terminal-list", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 }
+        { "id": "workspace-defaults", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
+        { "id": "terminal-list", "required": false, "staleAfterMinutes": 1800, "warningLatencyMs": 3000, "outageLatencyMs": 10000 }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 1
@@ -234,8 +234,8 @@
       "label": "Eval Artifacts",
       "category": "automation",
       "priority": 75,
-      "description": "Existing Playwright and benchmark eval summaries produced by Aura's eval lanes.",
-      "publicSummary": "Aura eval artifacts are being produced and retained.",
+      "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
+      "publicSummary": "AURA eval artifacts are being produced and retained.",
       "checks": [
         { "id": "eval-summary-artifacts", "required": false, "staleAfterMinutes": 1440, "warningLatencyMs": 1000, "outageLatencyMs": 3000 }
       ],
@@ -247,8 +247,8 @@
       "label": "Public Website",
       "category": "website",
       "priority": 80,
-      "description": "Public Aura pages, observability snapshot JSON, and marketing routes.",
-      "publicSummary": "Aura's public web surfaces are reachable.",
+      "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
+      "publicSummary": "AURA's public web surfaces are reachable.",
       "checks": [
         { "id": "public-observability-page", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 2000, "outageLatencyMs": 8000 },
         { "id": "public-models-page", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },

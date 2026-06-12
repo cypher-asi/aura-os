@@ -16,9 +16,6 @@ use crate::handlers::agents::chat::errors::map_harness_error_to_api;
 use crate::handlers::agents::session_identity::{
     validate_session_identity, SessionIdentityRequirements,
 };
-use crate::handlers::agents::workspace_tools::{
-    installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
-};
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 struct RuntimeOutcome {
@@ -207,19 +204,6 @@ async fn run_harness_test(
     user_id: &str,
     model: Option<String>,
 ) -> ApiResult<RuntimeOutcome> {
-    let installed_tools = if let Some(org_id) = agent.org_id.as_ref() {
-        let tools = installed_workspace_app_tools(state, org_id, jwt).await;
-        (!tools.is_empty()).then_some(tools)
-    } else {
-        None
-    };
-    let installed_integrations = if let Some(org_id) = agent.org_id.as_ref() {
-        let integrations =
-            installed_workspace_integrations_for_org_with_token(state, org_id, jwt).await;
-        (!integrations.is_empty()).then_some(integrations)
-    } else {
-        None
-    };
     let config = SessionConfig {
         agent_system_prompt: Some(agent.system_prompt.clone()),
         agent_id: Some(aura_os_core::harness_agent_id(&agent.agent_id, None, None)),
@@ -231,8 +215,6 @@ async fn run_harness_test(
         aura_session_id: Some(uuid::Uuid::new_v4().to_string()),
         user_id: Some(user_id.to_string()),
         provider_overrides: session_model_overrides(model.as_deref()),
-        installed_tools,
-        installed_integrations,
         ..Default::default()
     };
     validate_session_identity(

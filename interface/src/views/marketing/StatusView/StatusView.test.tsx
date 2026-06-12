@@ -8,8 +8,8 @@ const PUBLISHED_STATUS_URL = "https://cypher-asi.github.io/aura-os/observability
 
 const FIXTURE_SNAPSHOT: StatusSnapshot = {
   schemaVersion: 1,
-  title: "Aura Observability",
-  description: "Feature health backed by Aura-owned live eval probes.",
+  title: "AURA Observability",
+  description: "Feature health backed by AURA-owned live eval probes.",
   generatedAt: "2026-06-10T12:00:00.000Z",
   environment: "production",
   source: "github-actions",
@@ -112,7 +112,7 @@ describe("StatusView", () => {
     render(<StatusView />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Aura Observability" }),
+      screen.getByRole("heading", { level: 1, name: "AURA Observability" }),
     ).toBeInTheDocument();
 
     await waitFor(() => {

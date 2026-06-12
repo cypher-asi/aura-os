@@ -12,6 +12,7 @@ function parseArgs(argv) {
   const args = {
     checksDir: process.env.AURA_STATUS_CHECKS_DIR || path.join(repoRoot, "infra/evals/reports/status/checks"),
     checksFile: process.env.AURA_STATUS_CHECKS_FILE || "",
+    previousSnapshot: process.env.AURA_STATUS_PREVIOUS_SNAPSHOT || "",
     registry: process.env.AURA_STATUS_FEATURES_FILE || path.join(__dirname, "features.json"),
     out: process.env.AURA_STATUS_OUTPUT || path.join(repoRoot, "interface/public/observability/status.json"),
     reportOut: process.env.AURA_STATUS_REPORT_OUTPUT || path.join(repoRoot, "infra/evals/reports/status/status.json"),
@@ -28,18 +29,20 @@ function parseArgs(argv) {
     };
     if (arg === "--checks-dir") args.checksDir = path.resolve(next());
     else if (arg === "--checks-file") args.checksFile = path.resolve(next());
+    else if (arg === "--previous-snapshot") args.previousSnapshot = path.resolve(next());
     else if (arg === "--registry") args.registry = path.resolve(next());
     else if (arg === "--out") args.out = path.resolve(next());
     else if (arg === "--report-out") args.reportOut = path.resolve(next());
     else if (arg === "--environment") args.environment = next();
     else if (arg === "--source") args.source = next();
     else if (arg === "--help") {
-      process.stdout.write("Usage: node infra/evals/status/build-status-snapshot.mjs [--checks-dir DIR] [--checks-file FILE] [--out FILE]\n");
+      process.stdout.write("Usage: node infra/evals/status/build-status-snapshot.mjs [--checks-dir DIR] [--checks-file FILE] [--previous-snapshot FILE] [--out FILE]\n");
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
+  if (args.previousSnapshot) args.previousSnapshot = path.resolve(args.previousSnapshot);
   return args;
 }
 
@@ -67,21 +70,65 @@ async function walkJsonFiles(dir) {
 }
 
 async function readChecks(args) {
+  const checks = [];
+  if (args.previousSnapshot) {
+    try {
+      checks.push(...checksFromSnapshot(await readJson(args.previousSnapshot)));
+    } catch {
+      // A missing previous public snapshot is expected on first publish.
+    }
+  }
+
   if (args.checksFile) {
     const payload = await readJson(args.checksFile);
-    return Array.isArray(payload) ? payload : payload.checks ?? [];
+    if (Array.isArray(payload)) return [...checks, ...payload];
+    if (Array.isArray(payload.checks)) {
+      return [...checks, ...payload.checks.map((check) => ({
+        ...check,
+        runGeneratedAt: payload.generatedAt ?? check.runGeneratedAt,
+      }))];
+    }
+    return checks;
   }
 
   const files = await walkJsonFiles(args.checksDir);
-  const checks = [];
   for (const file of files) {
     try {
       const payload = await readJson(file);
       if (Array.isArray(payload)) checks.push(...payload);
-      else if (Array.isArray(payload.checks)) checks.push(...payload.checks);
+      else if (Array.isArray(payload.checks)) {
+        checks.push(...payload.checks.map((check) => ({
+          ...check,
+          runGeneratedAt: payload.generatedAt ?? check.runGeneratedAt,
+        })));
+      }
       else if (payload.checkId) checks.push(payload);
     } catch {
       // Ignore unrelated JSON artifacts.
+    }
+  }
+  return checks;
+}
+
+function checksFromSnapshot(snapshot) {
+  if (!Array.isArray(snapshot?.features)) return [];
+  const checks = [];
+  for (const feature of snapshot.features) {
+    for (const check of feature?.checks ?? []) {
+      if (!check?.id || !check?.checkedAt || check.status === "unknown") continue;
+      checks.push({
+        checkId: check.id,
+        featureId: feature.id ?? null,
+        label: check.id,
+        status: check.status,
+        message: check.message ?? "",
+        startedAt: check.checkedAt,
+        endedAt: check.checkedAt,
+        runGeneratedAt: check.checkedAt,
+        latencyMs: check.latencyMs ?? null,
+        environment: snapshot.environment ?? null,
+        evidence: check.evidence ?? {},
+      });
     }
   }
   return checks;

@@ -42,6 +42,7 @@ export function normalizeCheckResult(raw, generatedAt) {
   const status = Object.values(CHECK_STATUS).includes(raw?.status) ? raw.status : CHECK_STATUS.FAIL;
   const endedAt = normalizeIsoDate(raw?.endedAt, normalizeIsoDate(raw?.checkedAt, generatedAt));
   const startedAt = normalizeIsoDate(raw?.startedAt, endedAt);
+  const runGeneratedAt = normalizeIsoDate(raw?.runGeneratedAt, null);
   const latencyMs = Number.isFinite(Number(raw?.latencyMs)) ? Math.max(0, Number(raw.latencyMs)) : null;
 
   return {
@@ -52,6 +53,7 @@ export function normalizeCheckResult(raw, generatedAt) {
     message: typeof raw?.message === "string" ? raw.message : "",
     startedAt,
     endedAt,
+    runGeneratedAt,
     latencyMs,
     environment: typeof raw?.environment === "string" ? raw.environment : null,
     evidence: raw?.evidence && typeof raw.evidence === "object" ? raw.evidence : {},
@@ -82,7 +84,8 @@ function checkVerdict(check, config, generatedAt) {
   }
 
   const staleAfterMinutes = Number(config.staleAfterMinutes ?? 15);
-  const ageMinutes = minutesBetween(check.endedAt, generatedAt);
+  const freshnessAnchorAt = check.runGeneratedAt ?? check.endedAt;
+  const ageMinutes = minutesBetween(freshnessAnchorAt, generatedAt);
   if (ageMinutes > staleAfterMinutes) {
     return {
       status: FEATURE_STATUS.UNKNOWN,
@@ -252,7 +255,7 @@ export function buildStatusSnapshot({ registry, checks = [], generatedAt = new D
 
   return {
     schemaVersion: 1,
-    title: registry.title ?? "Aura Observability",
+    title: registry.title ?? "AURA Observability",
     description: registry.description ?? "",
     generatedAt: normalizedGeneratedAt,
     environment,

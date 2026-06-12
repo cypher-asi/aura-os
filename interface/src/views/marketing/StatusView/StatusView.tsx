@@ -40,8 +40,8 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const FALLBACK_SNAPSHOT: StatusSnapshot = {
   schemaVersion: 1,
-  title: "Aura Observability",
-  description: "Live evals and feature health backed by Aura-owned probes.",
+  title: "AURA Observability",
+  description: "Live evals and feature health backed by AURA-owned probes.",
   generatedAt: new Date(0).toISOString(),
   environment: "unknown",
   source: "not-published",
@@ -261,7 +261,7 @@ export function StatusView(): ReactNode {
       <section className="statusHero" aria-labelledby="status-title">
         <div className="statusHeroCopy">
           <span className="statusEyebrow">Live evals</span>
-          <h1 id="status-title">Aura Observability</h1>
+          <h1 id="status-title">AURA Observability</h1>
           <p>
             Runtime probes exercise agent creation, remote runtimes, model
             responses, media generation, and public routes.

@@ -34,7 +34,7 @@ function parseArgs(argv) {
     expectationsFile: process.env.AURA_STATUS_EXPECTATIONS_FILE || path.join(__dirname, "check-expectations.json"),
     expectations: null,
     environment: process.env.AURA_STATUS_ENVIRONMENT || "local",
-    checks: null,
+    checks: (process.env.AURA_STATUS_CHECKS || "").split(",").map((v) => v.trim()).filter(Boolean),
     models: (process.env.AURA_STATUS_MODEL_IDS || "").split(",").map((v) => v.trim()).filter(Boolean),
     keepEntities: process.env.AURA_STATUS_KEEP_ENTITIES === "1",
     includeExpensive: process.env.AURA_STATUS_INCLUDE_EXPENSIVE === "1",
@@ -54,7 +54,7 @@ function parseArgs(argv) {
     else if (arg === "--out-dir") args.outDir = path.resolve(next());
     else if (arg === "--expectations") args.expectationsFile = path.resolve(next());
     else if (arg === "--environment") args.environment = next();
-    else if (arg === "--checks") args.checks = new Set(next().split(",").map((v) => v.trim()).filter(Boolean));
+    else if (arg === "--checks") args.checks = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--models") args.models = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--keep-entities") args.keepEntities = true;
     else if (arg === "--include-expensive") args.includeExpensive = true;
@@ -68,6 +68,7 @@ function parseArgs(argv) {
   args.baseUrl = args.baseUrl.replace(/\/+$/, "");
   args.publicBaseUrl = args.publicBaseUrl.replace(/\/+$/, "");
   if (args.models.length === 0) args.models = DEFAULT_MODELS;
+  args.checks = args.checks.length > 0 ? new Set(args.checks) : null;
   return args;
 }
 
@@ -177,6 +178,16 @@ async function publicText(baseUrl, endpoint) {
   const text = await response.text();
   if (!response.ok) throw new Error(`GET ${endpoint} failed with ${response.status}: ${text}`);
   return { status: response.status, text };
+}
+
+function collectionCount(payload, keys = []) {
+  if (Array.isArray(payload)) return payload.length;
+  for (const key of keys) {
+    const value = payload?.[key];
+    if (Array.isArray(value)) return value.length;
+    if (Number.isFinite(Number(value))) return Number(value);
+  }
+  return null;
 }
 
 async function apiSse(args, endpoint, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
@@ -304,8 +315,8 @@ async function requireOrgId(args) {
 async function createProject(args, track, orgId) {
   const project = await apiJson(args, "POST", "/api/projects", {
     org_id: orgId,
-    name: `Aura Status Project ${Date.now()}`,
-    description: "Temporary project created by Aura feature health probes.",
+    name: `AURA Status Project ${Date.now()}`,
+    description: "Temporary project created by AURA feature health probes.",
   });
   const projectId = extractId(project, ["project_id", "id"]);
   track("project", projectId, `/api/projects/${projectId}`);
@@ -315,7 +326,7 @@ async function createProject(args, track, orgId) {
 async function createSpec(args, projectId, title = "Status Probe Spec") {
   const spec = await apiJson(args, "POST", `/api/projects/${projectId}/specs`, {
     title,
-    markdown_contents: "## Goal\nVerify Aura status probe persistence.\n\n## Acceptance\nThe check can create and read a spec.\n",
+    markdown_contents: "## Goal\nVerify AURA status probe persistence.\n\n## Acceptance\nThe check can create and read a spec.\n",
     order_index: 0,
   });
   const specId = extractId(spec, ["spec_id", "id"]);
@@ -327,7 +338,7 @@ async function createTask(args, projectId, specId) {
   const task = await apiJson(args, "POST", `/api/projects/${projectId}/tasks`, {
     title: "Status probe task",
     spec_id: specId,
-    description: "Temporary task created by Aura feature health probes.",
+    description: "Temporary task created by AURA feature health probes.",
     status: "backlog",
     order_index: 0,
     skip_auto_decompose: true,
@@ -366,7 +377,7 @@ async function createAgent(args, track, machineType, model = null, orgId = null)
     name: `aura-status-${machineType}-${Date.now()}`,
     role: "status-probe",
     personality: "Small, deterministic health-check agent.",
-    system_prompt: "You are an Aura status probe. Reply exactly as requested.",
+    system_prompt: "You are an AURA status probe. Reply exactly as requested.",
     skills: [],
     icon: null,
     machine_type: machineType,
@@ -583,7 +594,7 @@ async function runChecks(args) {
         const { projectId } = await createProject(args, track, orgId);
         const process = await apiJson(args, "POST", "/api/processes", {
           name: `Status Probe Process ${Date.now()}`,
-          description: "Temporary process created by Aura feature health probes.",
+          description: "Temporary process created by AURA feature health probes.",
           project_id: projectId,
           tags: ["aura-status-probe"],
         });
@@ -599,7 +610,7 @@ async function runChecks(args) {
     checks.push(await probe("marketplace-agents", "marketplace-bootstrap", "Marketplace agents catalog", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const agents = await apiJson(args, "GET", "/api/marketplace/agents");
-      return { evidence: { count: Array.isArray(agents) ? agents.length : null } };
+      return { evidence: { count: collectionCount(agents, ["total", "agents"]) } };
     }));
   }
 
@@ -615,7 +626,7 @@ async function runChecks(args) {
     checks.push(await probe("active-streams", "streams-debug", "Active stream registry", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const streams = await apiJson(args, "GET", "/api/streams/active");
-      return { evidence: { count: Array.isArray(streams) ? streams.length : null } };
+      return { evidence: { count: collectionCount(streams, ["streams"]) } };
     }));
   }
 
@@ -807,7 +818,7 @@ async function runChecks(args) {
     checks.push(await probe("model3d-generation-stream", "media-generation", "3D generation stream", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const frames = await apiSse(args, "/api/generate/3d/stream", {
-        prompt: "A simple cube for an Aura status probe",
+        prompt: "A simple cube for an AURA status probe",
         image_data: process.env.AURA_STATUS_3D_SOURCE_IMAGE || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
       }, 240_000);
       const completed = frames.find((frame) => frame.event === "generation_completed" || frame.event === "completed");
@@ -825,7 +836,7 @@ async function runChecks(args) {
     checks.push(await probe("video-generation-stream", "media-generation", "Video generation stream", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const frames = await apiSse(args, "/api/generate/video/stream", {
-        prompt: "A one second Aura status pulse animation",
+        prompt: "A one second AURA status pulse animation",
         model: process.env.AURA_STATUS_VIDEO_MODEL || "veo-3.1-fast",
         durationSeconds: 1,
         aspectRatio: "16:9",
@@ -881,7 +892,7 @@ async function runChecks(args) {
   if (selected("public-models-api")) {
     checks.push(await probe("public-models-api", "public-experience", "Public models API", args, async () => {
       const models = await publicJson(args.baseUrl, "/api/public/models");
-      return { evidence: { count: Array.isArray(models) ? models.length : null } };
+      return { evidence: { count: collectionCount(models, ["models", "data"]) } };
     }));
   }
 
@@ -949,7 +960,10 @@ async function runChecks(args) {
     checks.push(await probe("public-observability-page", "public-website", "Public observability snapshot", args, async () => {
       const base = args.publicBaseUrl || args.baseUrl;
       const payload = await publicJson(base, "/observability/status.json");
-      return { evidence: { overall: payload?.overall, featureCount: payload?.features?.length ?? 0 } };
+      const featureCount = Array.isArray(payload?.features)
+        ? payload.features.length
+        : Object.keys(payload?.features ?? {}).length;
+      return { evidence: { overall: payload?.overall, featureCount } };
     }));
   }
 
