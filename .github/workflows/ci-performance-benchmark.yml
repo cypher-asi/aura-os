@@ -150,13 +150,13 @@ jobs:
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
-      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
-      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
-      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
-      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
-      Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
-      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
-      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
+      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL || 'https://aura-network.onrender.com' }}
+      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL || 'https://aura-storage.onrender.com' }}
+      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL || 'https://aura-integrations.onrender.com' }}
+      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL || 'https://aura-router.onrender.com' }}
+      Z_BILLING_URL: ${{ vars.Z_BILLING_URL || 'https://z-billing.onrender.com' }}
+      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL || 'https://orbit-sfvu.onrender.com' }}
+      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL || 'http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com' }}
       REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
       VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
