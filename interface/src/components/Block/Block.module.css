@@ -195,6 +195,26 @@
   flex-shrink: 0;
 }
 
+/*
+ * Keep the copy affordance invisible until the row is engaged — a copy
+ * icon on every line is visual noise when scanning a transcript. Opacity
+ * (not display) so the header layout never shifts, and focus-within so
+ * keyboard users tabbing to the button still see it. Scoped to
+ * hover-capable devices; on touch there is no hover, so the icon stays
+ * visible.
+ */
+@media (hover: hover) {
+  .blockCopy {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .blockHeader:hover .blockCopy,
+  .blockHeader:focus-within .blockCopy {
+    opacity: 1;
+  }
+}
+
 .blockChevron {
   display: flex;
   align-items: center;
