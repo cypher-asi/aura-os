@@ -128,7 +128,7 @@
   padding: 5px 12px;
   border-radius: 7px;
   background: #0a0a0c;
-  color: color-mix(in srgb, var(--public-nav-fg-color, #e6e8eb) 78%, #fff);
+  color: var(--public-nav-fg-color-muted, #c9c9cf);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;

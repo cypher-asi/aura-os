@@ -8,6 +8,7 @@ import { UpdatePill } from "../UpdateBanner";
 import { PublicTopNav } from "../../views/public-chat/PublicTopNav";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useAppUIStore } from "../../stores/app-ui-store";
+import { useUIModalStore } from "../../stores/ui-modal-store";
 import { track } from "../../lib/analytics";
 import type { UIMode } from "../../stores/ui-mode-store";
 import styles from "./AuraShell.module.css";
@@ -258,15 +259,16 @@ function AuthedActions({
       onDoubleClick={(e) => e.stopPropagation()}
     >
       {remoteOnly && (
-        <Link
-          to="/download"
+        <button
+          type="button"
           className={`${styles.authPill} ${styles.authPillSecondary} ${styles.authedDownloadPill}`}
-          onClick={() =>
-            track("public_download_clicked", { source: "authed_titlebar" })
-          }
+          onClick={() => {
+            track("public_download_clicked", { source: "authed_titlebar" });
+            useUIModalStore.getState().openDownloads();
+          }}
         >
           Download
-        </Link>
+        </button>
       )}
       <UpdatePill />
       <WindowControls

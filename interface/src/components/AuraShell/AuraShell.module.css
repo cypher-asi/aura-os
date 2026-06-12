@@ -452,6 +452,12 @@
   border: 1px solid transparent;
   box-sizing: border-box;
   transition: opacity 120ms ease;
+  /* Reset native <button> chrome so the authed Download pill matches
+     the `<a>`-based auth pills exactly. */
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .authPill:hover {
@@ -490,6 +496,7 @@
  */
 .authedDownloadPill {
   margin-right: 8px;
+  text-transform: uppercase;
 }
 
 /*
