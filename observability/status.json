@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-06-12T17:32:39.867Z",
+  "generatedAt": "2026-06-12T17:43:14.638Z",
   "environment": "production",
   "source": "desktop-nightly-release",
   "overall": "partial_outage",
@@ -24,12 +24,12 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-12T17:32:24.184Z",
+      "lastCheckedAt": "2026-06-12T17:43:00.170Z",
       "checksPassed": 2,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 1,
-      "latencyP95Ms": 8,
+      "latencyP95Ms": 7,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -38,11 +38,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T17:32:24.175Z",
-          "latencyMs": 2,
+          "checkedAt": "2026-06-12T17:43:00.162Z",
+          "latencyMs": 1,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-06-12T17:32:24.175368+00:00"
+            "timestamp": "2026-06-12T17:43:00.162538+00:00"
           }
         },
         {
@@ -51,8 +51,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T17:32:24.184Z",
-          "latencyMs": 8,
+          "checkedAt": "2026-06-12T17:43:00.170Z",
+          "latencyMs": 7,
           "evidence": {
             "userPresent": true,
             "keys": [
@@ -93,12 +93,12 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "unknown",
-      "lastCheckedAt": "2026-06-12T17:32:24.386Z",
+      "lastCheckedAt": "2026-06-12T17:43:00.364Z",
       "checksPassed": 2,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 1,
-      "latencyP95Ms": 99,
+      "latencyP95Ms": 94,
       "message": "No recent result",
       "checks": [
         {
@@ -117,8 +117,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T17:32:24.292Z",
-          "latencyMs": 99,
+          "checkedAt": "2026-06-12T17:43:00.270Z",
+          "latencyMs": 94,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "orgCount": 1
@@ -130,7 +130,7 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T17:32:24.386Z",
+          "checkedAt": "2026-06-12T17:43:00.364Z",
           "latencyMs": 94,
           "evidence": {
             "userIdPresent": true,
@@ -236,13 +236,13 @@
       "description": "Local agent template creation, project binding, and workspace-backed chat readiness.",
       "publicSummary": "Local agents can be created and exercised through the harness.",
       "status": "partial_outage",
-      "lastCheckedAt": "2026-06-12T17:32:29.165Z",
+      "lastCheckedAt": "2026-06-12T17:43:04.521Z",
       "checksPassed": 1,
       "checksTotal": 2,
       "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 2475,
-      "message": "POST /api/agents/52dc69be-1c5e-4c09-9d74-8ed903cdb868/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"message\\\":\\\"'claude-opus-4-8' does not support tool types: computer_20250124. Did you mean one of bash_20250124, bash_code_execution_20250825, code_execution_20250522, code_execution_20250825, code_execution_20260120, memory_20250818, python_with_tools_code_execution_20250825, python_with_tools_code_execution_20260120, text_editor_20250728, text_editor_code_execution_20250825, tool_search_tool_bm25_20251119, tool_search_tool_regex_20251119, web_fetch_20250910, web_fetch_20260209, web_fetch_20260309, web_search_20250305, web_search_20260209?\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}",
+      "latencyP95Ms": 2164,
+      "message": "POST /api/agents/cb261f71-4528-4f2e-9c66-62dc4118b22b/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"message\\\":\\\"'claude-opus-4-8' does not support tool types: computer_20250124. Did you mean one of bash_20250124, bash_code_execution_20250825, code_execution_20250522, code_execution_20250825, code_execution_20260120, memory_20250818, python_with_tools_code_execution_20250825, python_with_tools_code_execution_20260120, text_editor_20250728, text_editor_code_execution_20250825, tool_search_tool_bm25_20251119, tool_search_tool_regex_20251119, web_fetch_20250910, web_fetch_20260209, web_fetch_20260309, web_search_20250305, web_search_20260209?\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}",
       "checks": [
         {
           "id": "local-agent-create",
@@ -250,11 +250,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T17:32:26.690Z",
-          "latencyMs": 2296,
+          "checkedAt": "2026-06-12T17:43:02.357Z",
+          "latencyMs": 1986,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "agentId": "3636ac2c-f026-4cab-bf16-e8b2567acafc",
+            "agentId": "e667f817-fe87-459f-8f6c-ece88a0d9c03",
             "machineType": "local",
             "environment": "local_host"
           }
@@ -264,9 +264,9 @@
           "required": true,
           "status": "fail",
           "featureStatus": "partial_outage",
-          "message": "POST /api/agents/52dc69be-1c5e-4c09-9d74-8ed903cdb868/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"message\\\":\\\"'claude-opus-4-8' does not support tool types: computer_20250124. Did you mean one of bash_20250124, bash_code_execution_20250825, code_execution_20250522, code_execution_20250825, code_execution_20260120, memory_20250818, python_with_tools_code_execution_20250825, python_with_tools_code_execution_20260120, text_editor_20250728, text_editor_code_execution_20250825, tool_search_tool_bm25_20251119, tool_search_tool_regex_20251119, web_fetch_20250910, web_fetch_20260209, web_fetch_20260309, web_search_20250305, web_search_20260209?\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-06-12T17:32:29.165Z",
-          "latencyMs": 2475,
+          "message": "POST /api/agents/cb261f71-4528-4f2e-9c66-62dc4118b22b/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"message\\\":\\\"'claude-opus-4-8' does not support tool types: computer_20250124. Did you mean one of bash_20250124, bash_code_execution_20250825, code_execution_20250522, code_execution_20250825, code_execution_20260120, memory_20250818, python_with_tools_code_execution_20250825, python_with_tools_code_execution_20260120, text_editor_20250728, text_editor_code_execution_20250825, tool_search_tool_bm25_20251119, tool_search_tool_regex_20251119, web_fetch_20250910, web_fetch_20260209, web_fetch_20260309, web_search_20250305, web_search_20260209?\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}",
+          "checkedAt": "2026-06-12T17:43:04.521Z",
+          "latencyMs": 2164,
           "evidence": {}
         }
       ]
@@ -423,12 +423,12 @@
       "description": "Curated model matrix smoke tests through AURA's runtime path.",
       "publicSummary": "Supported text models are returning valid assistant responses.",
       "status": "degraded",
-      "lastCheckedAt": "2026-06-12T17:32:38.821Z",
+      "lastCheckedAt": "2026-06-12T17:43:13.419Z",
       "checksPassed": 0,
       "checksTotal": 1,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 9656,
+      "latencyP95Ms": 8898,
       "message": "1/2 models returned the expected response",
       "checks": [
         {
@@ -437,8 +437,8 @@
           "status": "warn",
           "featureStatus": "degraded",
           "message": "1/2 models returned the expected response",
-          "checkedAt": "2026-06-12T17:32:38.821Z",
-          "latencyMs": 9656,
+          "checkedAt": "2026-06-12T17:43:13.419Z",
+          "latencyMs": 8898,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "passed": 1,
@@ -449,7 +449,7 @@
                 "ok": false,
                 "provider": null,
                 "resolvedModel": null,
-                "error": "POST /api/agents/b3717e64-d850-4437-8021-eb166b989e92/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"message\\\":\\\"'claude-sonnet-4-6' does not support tool types: computer_20250124. Did you mean one of bash_20250124, bash_code_execution_20250825, code_execution_20250522, code_execution_20250825, code_execution_20260120, memory_20250818, python_with_tools_code_execution_20250825, python_with_tools_code_execution_20260120, text_editor_20250728, text_editor_code_execution_20250825, tool_search_tool_bm25_20251119, tool_search_tool_regex_20251119, web_fetch_20250910, web_fetch_20260209, web_fetch_20260309, web_search_20250305, web_search_20260209?\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
+                "error": "POST /api/agents/8d28af40-bf72-43ac-9e73-2d1f79b5cb4a/runtime/test failed with 502: {\"error\":\"harness runtime test failed (llm_error): API error (status 400): 400 Bad Request - {\\\"error\\\":{\\\"message\\\":\\\"'claude-sonnet-4-6' does not support tool types: computer_20250124. Did you mean one of bash_20250124, bash_code_execution_20250825, code_execution_20250522, code_execution_20250825, code_execution_20260120, memory_20250818, python_with_tools_code_execution_20250825, python_with_tools_code_execution_20260120, text_editor_20250728, text_editor_code_execution_20250825, tool_search_tool_bm25_20251119, tool_search_tool_regex_20251119, web_fetch_20250910, web_fetch_20260209, web_fetch_20260309, web_search_20250305, web_search_20260209?\\\",\\\"type\\\":\\\"invalid_request_error\\\"},\\\"type\\\":\\\"error\\\"}\",\"code\":\"bad_gateway\",\"details\":null}"
               },
               {
                 "model": "aura-gpt-5-5",
@@ -662,12 +662,12 @@
       "description": "Desktop runtime defaults and local terminal API availability.",
       "publicSummary": "Desktop runtime support endpoints are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-12T17:32:24.393Z",
+      "lastCheckedAt": "2026-06-12T17:43:00.371Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 9,
+      "latencyP95Ms": 7,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -676,8 +676,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T17:32:24.193Z",
-          "latencyMs": 9,
+          "checkedAt": "2026-06-12T17:43:00.176Z",
+          "latencyMs": 6,
           "evidence": {
             "workspaceRootPresent": true
           }
@@ -688,8 +688,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T17:32:24.393Z",
-          "latencyMs": 8,
+          "checkedAt": "2026-06-12T17:43:00.371Z",
+          "latencyMs": 7,
           "evidence": {
             "count": 0
           }
