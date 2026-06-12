@@ -1,0 +1,101 @@
+/* Info-bar project chip + dropdown menu. Trigger metrics deliberately
+   mirror the model picker's `.modelButton` and the context-usage pill —
+   the three sit on the same info row, so any drift in padding /
+   border-radius / gap / vertical alignment makes the bar look
+   misaligned. Keep these in lockstep. */
+
+.projectMenuWrap {
+  position: relative;
+  /* Shrinkable so a long project name yields to its row neighbours
+     instead of pushing them out; the label span ellipsizes. */
+  min-width: 0;
+}
+
+.projectButton {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.projectButton > svg {
+  flex-shrink: 0;
+}
+
+/* The button is a flex container, so `text-overflow` on it can't
+   ellipsize the bare text node — it just hard-clips. The name lives
+   in this span instead, which truncates properly. */
+.projectButtonLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectButton:hover {
+  color: var(--color-text-primary);
+  opacity: 1;
+}
+
+.projectMenu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 160px;
+  max-width: 240px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px var(--color-backdrop-light);
+}
+
+.projectMenuItem {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+
+.projectMenuItem:hover {
+  background: var(--color-overlay-light);
+  color: var(--color-text-primary);
+}
+
+.projectMenuItemActive {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+/* The mobile bar shows just the model picker; hide the chat-only chip. */
+@media (max-width: 640px) {
+  .projectMenuWrap {
+    display: none;
+  }
+}

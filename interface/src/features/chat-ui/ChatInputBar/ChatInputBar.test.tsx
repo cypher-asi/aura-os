@@ -11,6 +11,30 @@ vi.mock("./ChatInputBar.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 
+// The extracted slot components carry their own CSS modules; proxy them
+// to their literal class names too so structural queries keep working.
+vi.mock("./AttachmentPreviews/AttachmentPreviews.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+vi.mock("./AttachControl/AttachControl.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+vi.mock("./AgentInfoBar/AgentInfoBar.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+vi.mock("./ChatModeBar/ChatModeBar.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+vi.mock("./InputStatusHints/InputStatusHints.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+vi.mock("./ModelControls/ModelControls.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+vi.mock("./ProjectPicker/ProjectPicker.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+
 vi.mock("../../../components/InputBarShell/InputBarShell.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));

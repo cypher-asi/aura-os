@@ -1,0 +1,22 @@
+/* Agent environment + orbit status wrappers on the info bar. */
+
+.environmentWrap,
+.orbitWrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.infoDivider {
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+/* The mobile bar shows just the model picker; hide the chat-only
+   info-bar chrome on narrow viewports. */
+@media (max-width: 640px) {
+  .environmentWrap,
+  .orbitWrap,
+  .infoDivider {
+    display: none;
+  }
+}

@@ -1,0 +1,43 @@
+/* Phase 3 server-side `progress: queued` SSE event surfaces here as
+   an inline hint on the input bar — visually distinct from the
+   running spinner / streaming indicator so the user reads it as "your
+   send is next in line" rather than "the agent is stuck". Auto-clears
+   once the harness emits the first text/tool delta (progressText is
+   wiped upstream by handleTextDelta / handleThinkingDelta). The same
+   chip chrome doubles as the send-disabled explanation. */
+.queuedHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 14px 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: color-mix(in srgb, var(--color-text-primary) 85%, transparent);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  width: fit-content;
+}
+
+.queuedHintDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0.85;
+  animation: queuedHintPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes queuedHintPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.95; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .queuedHintDot { animation: none; opacity: 0.85; }
+}
+
+.queuedHintLabel {
+  white-space: nowrap;
+}

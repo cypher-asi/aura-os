@@ -1,0 +1,42 @@
+/* Model picker rendered inside the input row's `inputRowEnd` slot
+   (just left of the send button). `margin-left: auto` keeps the
+   picker hugged to the right edge of the slot so it stays adjacent
+   to the send button even when other items share the slot. */
+.inlineModelPicker {
+  margin-left: auto;
+}
+
+/* Multi-line state: the same `<ModelPicker>` is rendered inside the
+   shell's `containerBottom` slot (the bottom controls row below the
+   textarea, between the attach and send buttons which the shell lays
+   out as flex siblings). This wrapper just left-aligns the picker. */
+.bottomChromeRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+}
+
+.bottomChromeRow .inlineModelPicker {
+  margin-left: 0;
+}
+
+/* AURA Council fan-out: the bottom row holds one model picker per
+   member, wrapping to additional lines when the strip runs out of
+   width so up to four slots stay usable on a narrow chat surface. */
+.councilSlotsRow {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.councilSlot {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.councilSlot .inlineModelPicker {
+  margin-left: 0;
+}

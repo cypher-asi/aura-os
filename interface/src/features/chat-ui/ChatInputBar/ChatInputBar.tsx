@@ -5,17 +5,9 @@ import {
   forwardRef,
   memo,
   useCallback,
-  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
-import {
-  Plus,
-  X,
-  FileText,
-  ChevronDown,
-  FolderOpen,
-} from "lucide-react";
 import { track } from "../../../lib/analytics";
 import { ContextUsageIndicator, type ContextBucketRowId } from "./ContextUsageIndicator";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
@@ -27,33 +19,15 @@ import { useSidekickStore } from "../../../stores/sidekick-store";
 import type { ContextContentsResponse } from "../../../shared/api/agents";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
-import type {
-  GenerationMode,
-  ModelEffort,
-  ModelVendor,
-} from "../../../constants/models";
-import {
-  IMAGE_QUALITY_OPTIONS,
-  modelLabelWithEffort,
-  modelSupportsQuality,
-} from "../../../constants/models";
+import type { GenerationMode } from "../../../constants/models";
+import { modelSupportsQuality } from "../../../constants/models";
 import { isGenerationCommand } from "../../../constants/commands";
 import {
   AGENT_MODE_DESCRIPTORS,
   type AgentMode,
 } from "../../../constants/modes";
-import { AgentEnvironment } from "../../../apps/agents/components/AgentEnvironment";
-import { OrbitStatusIndicator } from "../../../components/OrbitStatusIndicator";
 import {
   InputBarShell,
-  inputBarShellStyles,
-  ModelPicker,
-  ModelMenuRow,
-  ModelMenuGroup,
-  ModelMenuScroll,
-  CouncilCountRow,
-  CouncilMechanismRow,
-  ModeSelector,
   type InputBarShellHandle,
 } from "../../../components/InputBarShell";
 import { SlashCommandMenu } from "./SlashCommandMenu";
@@ -63,6 +37,13 @@ import { useInputTriggers } from "./useInputTriggers";
 import { useModelSelection } from "./useModelSelection";
 import { CommandChips } from "./CommandChips";
 import { DemoRecordSettings } from "./DemoRecordSettings";
+import { AttachmentPreviews } from "./AttachmentPreviews";
+import { AttachControl } from "./AttachControl";
+import { AgentInfoBar } from "./AgentInfoBar";
+import { ChatModeBar } from "./ChatModeBar";
+import { InputStatusHints } from "./InputStatusHints";
+import { ModelControls } from "./ModelControls";
+import { ProjectPicker } from "./ProjectPicker";
 import { useChatUI } from "../../../stores/chat-ui-store";
 import type { SlashCommand } from "../../../constants/commands";
 import type { Project } from "../../../shared/types";
@@ -248,38 +229,6 @@ export interface ChatInputBarProps {
   attachAccent?: ReactNode;
 }
 
-function AttachmentPreviews({
-  attachments,
-  onRemove,
-}: {
-  attachments: AttachmentItem[];
-  onRemove: (id: string) => void;
-}) {
-  if (attachments.length === 0) return null;
-  return (
-    <div className={styles.attachmentPreviews}>
-      {attachments.map((a) => (
-        <div key={a.id} className={styles.attachmentThumb} style={a.uploading ? { opacity: 0.5 } : undefined}>
-          {a.preview ? (
-            <img src={a.preview} alt="" className={styles.attachmentThumbImg} />
-          ) : (
-            <FileText size={20} className={styles.attachmentFileIcon} />
-          )}
-          <span className={styles.attachmentName}>{a.name}</span>
-          <button
-            type="button"
-            className={styles.attachmentRemove}
-            onClick={() => onRemove(a.id)}
-            aria-label="Remove attachment"
-          >
-            <X size={12} />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export const DesktopChatInputBar = memo(
   forwardRef<ChatInputBarHandle, ChatInputBarProps>(function DesktopChatInputBar(
     {
@@ -406,25 +355,6 @@ export const DesktopChatInputBar = memo(
       [onFetchContextContents, streamKey],
     );
     const [isDragOver, setIsDragOver] = useState(false);
-    // Collapses the mode-selector pills from the top mode bar, leaving the
-    // balanced chevron (left) / new-chat "+" (right) affordances in place.
-    const [modesCollapsed, setModesCollapsed] = useState(false);
-    // Collapsed vendor sections in the chat model picker. Empty = all
-    // expanded (the default whenever the picker opens).
-    const [collapsedVendors, setCollapsedVendors] = useState<Set<ModelVendor>>(
-      () => new Set(),
-    );
-    const [projectMenuOpen, setProjectMenuOpen] = useState(false);
-    // Which inline picker (model vs image-quality) is currently open.
-    // Holding a single value here keeps the two dropdowns mutually
-    // exclusive so opening one closes the other.
-    const [openPicker, setOpenPicker] = useState<"model" | "quality" | null>(
-      null,
-    );
-    // Which AURA Council slot picker (if any) is open, so only one slot
-    // menu is mounted at a time when the council fans out into multiple
-    // bottom-row pickers (Task B). `null` = none open.
-    const [openCouncilSlot, setOpenCouncilSlot] = useState<number | null>(null);
     // Driven by `<InputBarShell onMultiLineChange>` — flips to true the
     // moment the textarea wraps to a second visual row. Used to relocate
     // the model picker from the inline `inputRowEnd` slot (next to the
@@ -438,9 +368,7 @@ export const DesktopChatInputBar = memo(
       DEFAULT_DEMO_RECORD_OPTIONS,
     );
     const canUseMentions = Boolean(workspacePath);
-    const projectMenuRef = useRef<HTMLDivElement>(null);
     const shellRef = useRef<InputBarShellHandle>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     useImperativeHandle(ref, () => ({
       focus: () => shellRef.current?.focus(),
       isFocused: () => document.activeElement === shellRef.current?.getTextarea(),
@@ -502,24 +430,9 @@ export const DesktopChatInputBar = memo(
       refreshNonce: mentionRefreshNonce,
     });
 
-    useEffect(() => {
-      if (!projectMenuOpen) return;
-      const onClickOutside = (e: MouseEvent) => {
-        if (
-          projectMenuRef.current &&
-          !projectMenuRef.current.contains(e.target as Node)
-        ) {
-          setProjectMenuOpen(false);
-        }
-      };
-      document.addEventListener("mousedown", onClickOutside);
-      return () => document.removeEventListener("mousedown", onClickOutside);
-    }, [projectMenuOpen]);
-
     const selectedProject = projects.find(
       (p) => p.project_id === selectedProjectId,
     );
-    const selectedProjectName = selectedProject?.name;
 
     // Drive the mode-derived UI state (model list filter, info-bar
     // hint copy, send pipeline) from the per-stream mode store. Slash
@@ -605,18 +518,6 @@ export const DesktopChatInputBar = memo(
       setSelectedModel: chatUI.setSelectedModel,
       setImageQuality: chatUI.setImageQuality,
     });
-    const toggleVendor = useCallback((vendor: ModelVendor) => {
-      setCollapsedVendors((prev) => {
-        const next = new Set(prev);
-        if (next.has(vendor)) {
-          next.delete(vendor);
-        } else {
-          next.add(vendor);
-        }
-        return next;
-      });
-    }, []);
-
     const excludeIds = new Set(selectedCommands.map((c) => c.id));
 
     const handleCommandRemove = useCallback(
@@ -675,133 +576,31 @@ export const DesktopChatInputBar = memo(
       onSend(input, undefined, undefined);
     }, [input, onSend, selectedModel, selectedMode, sendDisabled]);
 
-    // Parametrized model-menu renderer shared by the single model
-    // picker and (Task B) the per-slot council pickers. `activeModelId`
-    // / `activeEffort` drive the row highlight, `onSelect` writes the
-    // pick, and `includeCouncilRow` prepends the AURA Council count row
-    // at the very top of the menu (single picker only — slot menus are
-    // single-select and must not recurse the count row into themselves).
-    const renderModelMenuList = useCallback(
-      (
-        close: () => void,
-        cfg: {
-          activeModelId: string | null;
-          activeEffort: ModelEffort | null;
-          onSelect: (modelId: string, effort?: ModelEffort) => void;
-          includeCouncilRow: boolean;
-        },
-      ) => {
-        const councilRow = cfg.includeCouncilRow ? (
-          <CouncilCountRow
-            key="__council_count__"
-            count={councilCount}
-            onSelect={(n) => setCouncilCount(streamKey, n)}
-          />
-        ) : null;
-        // Combine-mechanism picker sits directly under the count row and
-        // is only relevant once the council fans out (`count > 1`).
-        const mechanismRow =
-          cfg.includeCouncilRow && councilCount > 1 ? (
-            <CouncilMechanismRow
-              key="__council_mechanism__"
-              mechanism={councilMechanism}
-              onSelect={(m) => setCouncilMechanism(streamKey, m)}
-            />
-          ) : null;
-        if (shouldUseCondensedAuraMenu) {
-          return (
-            <ModelMenuScroll
-              lockWidth
-              data-agent-surface="model-picker"
-              data-agent-proof="chat-model-picker-visible"
-            >
-              {councilRow}
-              {mechanismRow}
-              {vendorGroups.map((group) => (
-                <ModelMenuGroup
-                  key={group.vendor}
-                  label={group.label}
-                  collapsed={collapsedVendors.has(group.vendor)}
-                  onToggle={() => toggleVendor(group.vendor)}
-                >
-                  {group.models.map((m) => (
-                    <ModelMenuRow
-                      key={m.id}
-                      model={m}
-                      isActive={m.id === cfg.activeModelId}
-                      activeEffort={cfg.activeEffort}
-                      onSelect={(id, effort) => {
-                        cfg.onSelect(id, effort);
-                        close();
-                      }}
-                    />
-                  ))}
-                </ModelMenuGroup>
-              ))}
-            </ModelMenuScroll>
-          );
-        }
-        return (
-          <ModelMenuScroll
-            data-agent-surface="model-picker"
-            data-agent-proof="chat-model-picker-visible"
-          >
-            {councilRow}
-            {mechanismRow}
-            {sortedModelsForMode.map((m) => {
-              const isComingSoon = m.id.startsWith("dreamina-seedance");
-              return (
-                <ModelMenuRow
-                  key={m.id}
-                  model={m}
-                  isActive={m.id === cfg.activeModelId}
-                  activeEffort={cfg.activeEffort}
-                  disabled={isComingSoon}
-                  labelSuffix={isComingSoon ? " (coming soon)" : undefined}
-                  onSelect={(id, effort) => {
-                    cfg.onSelect(id, effort);
-                    close();
-                  }}
-                />
-              );
-            })}
-          </ModelMenuScroll>
-        );
-      },
-      [
-        shouldUseCondensedAuraMenu,
-        vendorGroups,
-        collapsedVendors,
-        toggleVendor,
-        sortedModelsForMode,
-        councilCount,
-        setCouncilCount,
-        councilMechanism,
-        setCouncilMechanism,
-        streamKey,
-      ],
-    );
-
-    const renderModelMenuItems = useCallback(
-      (close: () => void) =>
-        renderModelMenuList(close, {
-          activeModelId: selectedModel,
-          activeEffort: selectedEffort,
-          onSelect: (id, effort) => onModelChange(id, effort),
-          includeCouncilRow: true,
-        }),
-      [renderModelMenuList, selectedModel, selectedEffort, onModelChange],
-    );
-
-    // Expand every vendor section each time the picker reopens, so a
-    // user who collapsed sections last time still sees the full list.
-    // `ModelPicker` itself keeps the caret focused in the textarea via
-    // mousedown preventDefault, so we deliberately do NOT blur the
-    // shell here — switching models should leave the user's typing
-    // position intact.
-    const handleModelPickerOpen = useCallback(() => {
-      setCollapsedVendors(new Set());
-    }, []);
+    // Shared props for every `ModelControls` placement (inline /
+    // bottom / mobile bar). The object literal is recreated per render,
+    // but each individual prop is referentially stable while typing, so
+    // the memoized `ModelControls` bails out of keystroke re-renders.
+    const modelControlsProps = {
+      streamKey,
+      adapterType,
+      defaultModel,
+      generationMode,
+      selectedModel,
+      selectedEffort,
+      imageQuality,
+      councilCount,
+      councilModels,
+      councilMechanism,
+      setCouncilCount,
+      setCouncilModel,
+      setCouncilMechanism,
+      sortedModelsForMode,
+      vendorGroups,
+      shouldUseCondensedAuraMenu,
+      isModelPickerInteractive,
+      onModelChange,
+      onImageQualityChange,
+    };
 
     const containerTop = (
       <>
@@ -821,17 +620,6 @@ export const DesktopChatInputBar = memo(
             onClose={handleMentionClose}
           />
         )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="*/*"
-          multiple
-          className={inputBarShellStyles.fileInputHidden}
-          onChange={(e) => {
-            addFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
         <AttachmentPreviews
           attachments={attachments}
           onRemove={handleRemove}
@@ -843,190 +631,40 @@ export const DesktopChatInputBar = memo(
             onPickBackground={handlePickDemoBackground}
           />
         ) : null}
-        {isQueued ? (
-          <div
-            className={styles.queuedHint}
-            role="status"
-            aria-live="polite"
-            data-agent-surface="chat-input-queued-hint"
-          >
-            <span className={styles.queuedHintDot} aria-hidden="true" />
-            <span className={styles.queuedHintLabel}>
-              {queuedHint ?? "Queued behind current turn\u2026"}
-            </span>
-          </div>
-        ) : null}
-        {sendDisabled ? (
-          <div
-            className={styles.queuedHint}
-            role="status"
-            aria-live="polite"
-            data-agent-surface="chat-input-disabled-hint"
-          >
-            <span className={styles.queuedHintLabel}>
-              {sendDisabledReason ?? "This is a local agent and can only be used in the desktop app."}
-            </span>
-          </div>
-        ) : null}
+        <InputStatusHints
+          isQueued={isQueued}
+          queuedHint={queuedHint}
+          sendDisabled={sendDisabled}
+          sendDisabledReason={sendDisabledReason}
+        />
         {modelsForMode.length > 0 ? (
-          <div className={inputBarShellStyles.mobileModelBar}>
-            <span className={inputBarShellStyles.mobileModelLabel}>Model</span>
-            <ModelPicker
-              selectedLabel={modelLabelWithEffort(
-                selectedModel ?? "",
-                selectedEffort,
-                adapterType,
-                defaultModel,
-              )}
-              isInteractive={isModelPickerInteractive}
-              renderMenu={renderModelMenuItems}
-              className={inputBarShellStyles.mobileModelMenuWrap}
-              buttonClassName={inputBarShellStyles.mobileModelButton}
-              showChevron={isModelPickerInteractive}
-            />
-          </div>
+          <ModelControls placement="mobileBar" {...modelControlsProps} />
         ) : null}
       </>
     );
 
-    const attachButton = (
-      <button
-        type="button"
-        className={
-          attachAccent
-            ? `${inputBarShellStyles.attachButton} ${styles.attachOrb}`
-            : inputBarShellStyles.attachButton
-        }
-        onClick={() => fileInputRef.current?.click()}
-        disabled={!canAddMore || sendDisabled}
-        aria-label="Attach file"
-      >
-        {attachAccent ? (
-          <span className={styles.attachOrbField} aria-hidden="true">
-            {attachAccent}
-          </span>
-        ) : null}
-        <Plus size={23} strokeWidth={1} />
-      </button>
+    const inputRowStart = (
+      <AttachControl
+        isThreeDMode={isThreeDMode}
+        pinnedSourceImage={isThreeDMode ? pinnedSourceImage : null}
+        onClearPinnedSource={handleClearPinnedSource}
+        isStatic={isStatic}
+        attachAccent={attachAccent}
+        canAttach={canAddMore && !sendDisabled}
+        onFilesPicked={addFiles}
+      />
     );
 
-    const keepStaticAttachAccentInThreeD = isStatic && attachAccent != null;
-
-    // In 3D mode the attach affordance is replaced by the auto-derived
-    // "Source for 3D" thumb (rendered inline at the start of the input
-    // row when an image is pinned). Keeping it inline — instead of
-    // stacking it above the textarea — preserves the input row's
-    // height so the pinned `ChatStreamingIndicator` ("Generating 3D
-    // model...") remains visible. Static marketing mocks keep their
-    // decorative attach-accent well in every mode so the left-side "+"
-    // area does not jump while the demo cycles.
-    const inputRowStart =
-      generationMode === "3d" ? (
-        has3DSource && pinnedSourceImage ? (
-          <div
-            className={`${inputBarShellStyles.attachButton} ${styles.sourceImageInline}`}
-            data-agent-surface="chat-input-3d-source-thumb"
-            data-agent-proof="3d-source-image-ready"
-            title={pinnedSourceImage.prompt || "Source for 3D generation"}
-          >
-            <img
-              className={styles.sourceImageInlineImg}
-              src={pinnedSourceImage.imageUrl}
-              alt={pinnedSourceImage.prompt || "Source for 3D generation"}
-            />
-            <button
-              type="button"
-              className={styles.sourceImageInlineRemove}
-              onClick={handleClearPinnedSource}
-              aria-label="Remove source image"
-            >
-              <X size={9} />
-            </button>
-          </div>
-        ) : keepStaticAttachAccentInThreeD ? (
-          attachButton
-        ) : null
-      ) : attachButton;
-
-    // The model picker has two homes depending on the textarea's
-    // visual height:
+    // The model picker cluster has two homes depending on the
+    // textarea's visual height:
     //   - Single-line: rendered inline inside `inputRowEnd`, hugged to
     //     the send button so the active model is glanceable next to
     //     the typing target.
-    //   - Multi-line: dropped into `containerBottom` (a footer row
-    //     inside the rounded container), left-aligned past the attach
-    //     button — matches the reference layout in the design and
-    //     frees the full input width for the prompt.
-    // Slash-command chips always stay inline in `inputRowEnd` because
-    // they read as part of the prompt itself, not as global chrome.
+    //   - Multi-line (or council fan-out / command chips): dropped into
+    //     `containerBottom` so the prompt can use the full input width.
     const hasModelPicker = modelsForMode.length > 0;
-    const modelPickerNode = hasModelPicker ? (
-      <ModelPicker
-        selectedLabel={modelLabelWithEffort(
-          selectedModel ?? "",
-          selectedEffort,
-          adapterType,
-          defaultModel,
-        )}
-        isInteractive={isModelPickerInteractive}
-        renderMenu={renderModelMenuItems}
-        onOpen={handleModelPickerOpen}
-        open={openPicker === "model"}
-        onOpenChange={(o) => setOpenPicker(o ? "model" : null)}
-        triggerProps={{ "data-agent-action": "open-model-picker" }}
-        className={styles.inlineModelPicker}
-      />
-    ) : null;
-
-    // Image-quality picker: only meaningful in Image mode for models
-    // that expose a quality knob (GPT Image). Sits next to the model
-    // picker and reuses the same dropdown chrome.
     const showQualityPicker =
       generationMode === "image" && modelSupportsQuality(selectedModel);
-    const activeQualityLabel =
-      IMAGE_QUALITY_OPTIONS.find((q) => q.id === imageQuality)?.label ??
-      imageQuality;
-    const renderQualityMenuItems = useCallback(
-      (close: () => void) => (
-        <div
-          className={inputBarShellStyles.modelMenu}
-          data-agent-surface="image-quality-picker"
-          data-agent-proof="image-quality-picker-visible"
-        >
-          {IMAGE_QUALITY_OPTIONS.map((q) => (
-            <button
-              key={q.id}
-              type="button"
-              className={`${inputBarShellStyles.modelMenuItem} ${
-                q.id === imageQuality
-                  ? inputBarShellStyles.modelMenuItemActive
-                  : ""
-              }`}
-              onClick={() => {
-                onImageQualityChange(q.id);
-                close();
-              }}
-            >
-              <span className={inputBarShellStyles.modelMenuItemLabel}>
-                {q.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      ),
-      [imageQuality, onImageQualityChange],
-    );
-    const qualityPickerNode = showQualityPicker ? (
-      <ModelPicker
-        selectedLabel={`Quality: ${activeQualityLabel}`}
-        isInteractive
-        renderMenu={renderQualityMenuItems}
-        open={openPicker === "quality"}
-        onOpenChange={(o) => setOpenPicker(o ? "quality" : null)}
-        triggerProps={{ "data-agent-action": "open-quality-picker" }}
-        className={styles.inlineModelPicker}
-      />
-    ) : null;
     const hasPicker = hasModelPicker || showQualityPicker;
     // When the council fans out (>1 member) we always drop the pickers
     // into the bottom row so the N model slots get a full-width strip to
@@ -1047,57 +685,8 @@ export const DesktopChatInputBar = memo(
     // a single line?" must not vary with `isMultiLine` itself, or the
     // measurement reference would shift with the state it drives.
     const reserveInlineEnd = hasPicker && !councilActive && !hasCommandChips;
-    // One ModelPicker per council member, each bound to its own slot
-    // (slot 0 is the synthesizer). Every slot reuses `renderModelMenuList`
-    // including the council count row so the AURA Council control stays
-    // reachable from any model selector once the council has fanned out
-    // into multiple slots.
-    const councilSlotNodes =
-      councilActive && hasModelPicker
-        ? Array.from({ length: councilCount }, (_, slot) => {
-            const member = councilModels[slot];
-            const slotModelId = member?.id ?? selectedModel ?? "";
-            const slotEffort = member?.effort ?? null;
-            return (
-              <div key={slot} className={styles.councilSlot}>
-                <ModelPicker
-                  selectedLabel={modelLabelWithEffort(
-                    slotModelId,
-                    slotEffort,
-                    adapterType,
-                    defaultModel,
-                  )}
-                  isInteractive={isModelPickerInteractive}
-                  renderMenu={(close) =>
-                    renderModelMenuList(close, {
-                      activeModelId: slotModelId,
-                      activeEffort: slotEffort,
-                      onSelect: (id, effort) =>
-                        setCouncilModel(streamKey, slot, id, effort),
-                      includeCouncilRow: true,
-                    })
-                  }
-                  onOpen={handleModelPickerOpen}
-                  open={openCouncilSlot === slot}
-                  onOpenChange={(o) => setOpenCouncilSlot(o ? slot : null)}
-                  triggerProps={{
-                    "data-agent-action": "open-council-slot",
-                    "data-council-slot": slot,
-                  }}
-                  className={styles.inlineModelPicker}
-                />
-              </div>
-            );
-          })
-        : null;
-    // Chips no longer live in the inline slot; the slot now only carries
-    // the single-line model/quality picker hugged to the send button.
-    const hasInputRowEnd = showPickerInline;
-    const inputRowEnd = hasInputRowEnd ? (
-      <>
-        {showPickerInline ? modelPickerNode : null}
-        {showPickerInline ? qualityPickerNode : null}
-      </>
+    const inputRowEnd = showPickerInline ? (
+      <ModelControls placement="inline" {...modelControlsProps} />
     ) : null;
     // Bottom region stacks the tags row above the model ("LLM") row so a
     // tag like `/Record Demo` sits on its own line with full text, one
@@ -1113,104 +702,27 @@ export const DesktopChatInputBar = memo(
             />
           ) : null}
           {showPickerInBottomRow ? (
-            <div
-              className={
-                councilActive
-                  ? `${styles.bottomChromeRow} ${styles.councilSlotsRow}`
-                  : styles.bottomChromeRow
-              }
-              data-agent-surface={councilActive ? "council-slots" : undefined}
-            >
-              {councilActive ? councilSlotNodes : modelPickerNode}
-              {qualityPickerNode}
-            </div>
+            <ModelControls placement="bottom" {...modelControlsProps} />
           ) : null}
         </div>
       ) : null;
 
-    // Only render the "·" divider when the orbit indicator on the
-    // right will actually paint something. `OrbitStatusIndicator`
-    // returns null whenever there is no project, so without this gate
-    // we end up with a hanging dot between two invisible neighbours
-    // (the inert AgentEnvironment placeholder on the left and the
-    // null orbit indicator on the right) — most visibly on the
-    // logged-out chat surface and "General" / projectless chats.
-    const showInfoDivider = selectedProject != null;
     const infoBarStart = (
-      <>
-        <span className={styles.environmentWrap}>
-          <AgentEnvironment
-            machineType={machineType}
-            agentId={templateAgentId ?? agentId}
-            workspacePath={workspacePath}
-          />
-        </span>
-        {showInfoDivider ? (
-          <span className={styles.infoDivider} aria-hidden="true">
-            ·
-          </span>
-        ) : null}
-        <span className={styles.orbitWrap}>
-          <OrbitStatusIndicator project={selectedProject} />
-        </span>
-      </>
+      <AgentInfoBar
+        machineType={machineType}
+        agentId={templateAgentId ?? agentId}
+        workspacePath={workspacePath}
+        project={selectedProject}
+      />
     );
 
-    // Hide the project chip entirely when there is nothing to scope
-    // to AND no projects to switch into. On the public (logged-out)
-    // chat surface neither `projects` nor `onProjectChange` are
-    // wired, so `usePublicChat` previously rendered a static
-    // "General" pill that was both inert and slightly misleading
-    // ("General" is an authenticated-shell concept). Authenticated
-    // chats keep the chip even with no current selection so the
-    // visitor can still choose a project from the dropdown.
-    const showProjectChip = projects.length > 0 || selectedProject != null;
     const infoBarEnd = (
       <>
-        {showProjectChip ? (
-          <div className={styles.projectMenuWrap} ref={projectMenuRef}>
-            <button
-              type="button"
-              className={styles.projectButton}
-              title={selectedProjectName ?? "General"}
-              onClick={
-                projects.length > 0 && onProjectChange
-                  ? () => setProjectMenuOpen((v) => !v)
-                  : undefined
-              }
-              style={
-                projects.length > 0 && onProjectChange
-                  ? undefined
-                  : { cursor: "default" }
-              }
-            >
-              <FolderOpen size={10} />
-              <span className={styles.projectButtonLabel}>
-                {selectedProjectName ?? "General"}
-              </span>
-              {projects.length > 0 && onProjectChange && (
-                <ChevronDown size={10} />
-              )}
-            </button>
-            {projectMenuOpen && projects.length > 0 && onProjectChange && (
-              <div className={styles.projectMenu}>
-                {projects.map((p) => (
-                  <button
-                    key={p.project_id}
-                    type="button"
-                    className={`${styles.projectMenuItem} ${p.project_id === selectedProjectId ? styles.projectMenuItemActive : ""}`}
-                    onClick={() => {
-                      onProjectChange(p.project_id);
-                      setProjectMenuOpen(false);
-                    }}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
+        <ProjectPicker
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onProjectChange={onProjectChange}
+        />
         {contextUsage != null && contextUsage.utilization > 0 ? (
           <ContextUsageIndicator
             utilization={contextUsage.utilization}
@@ -1228,54 +740,12 @@ export const DesktopChatInputBar = memo(
       </>
     );
 
-    const modeBar = onNewChat ? (
-      <div className={styles.modeBarRow}>
-        <button
-          type="button"
-          className={styles.modeCollapseButton}
-          onClick={() => setModesCollapsed((v) => !v)}
-          title={modesCollapsed ? "Show modes" : "Hide modes"}
-          aria-label={modesCollapsed ? "Show modes" : "Hide modes"}
-          aria-expanded={!modesCollapsed}
-          data-agent-action="toggle-modes"
-        >
-          <ChevronDown
-            size={16}
-            strokeWidth={1.5}
-            className={
-              modesCollapsed
-                ? `${styles.modeChevron} ${styles.modeChevronCollapsed}`
-                : styles.modeChevron
-            }
-          />
-        </button>
-        {modesCollapsed ? null : (
-          <ModeSelector
-            selectedMode={selectedMode}
-            onChange={onModeChange}
-            onSelect={onSelectedModeOverrideChange ? onModeSelect : undefined}
-            className={styles.modeSelectorFlex}
-          />
-        )}
-        <button
-          type="button"
-          className={styles.modeNewChatButton}
-          onClick={onNewChat}
-          title="Start a new chat"
-          aria-label="Start new chat"
-          data-agent-action="start-new-chat"
-        >
-          {/* Match the bottom-left attach button's glyph so both `+`
-              affordances on the LLM input are visually identical. */}
-          <Plus size={16} strokeWidth={1} />
-        </button>
-      </div>
-    ) : (
-      <ModeSelector
+    const modeBar = (
+      <ChatModeBar
         selectedMode={selectedMode}
-        onChange={onModeChange}
-        onSelect={onSelectedModeOverrideChange ? onModeSelect : undefined}
-        className={styles.modeSelectorDetached}
+        onModeChange={onModeChange}
+        onModeSelect={onSelectedModeOverrideChange ? onModeSelect : undefined}
+        onNewChat={onNewChat}
       />
     );
 

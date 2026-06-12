@@ -1,0 +1,172 @@
+/* Mode-row "+" new-chat button. Wraps `<ModeSelector>` and a small
+   icon button so the "+" sits at the right end of the mode row,
+   visually directly above the send button. A 3-track grid pairs the
+   right-side `+` (24px) with an equal-width phantom track on the
+   left so the centred pills inside `<ModeSelector>` stay visually
+   centred against the full bar — without the `+` shifting them
+   off-axis. The 2px horizontal padding mirrors the send button's
+   `right: 2px` inset in `InputBarShell.module.css` and the attach
+   button's `left: 2px`, so all four corner buttons share a 2px
+   inset from the rounded-container edges. */
+.modeBarRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /* Shrink the bordered wrapper to its content (collapse chevron + mode
+     pills + new-chat "+") so the box hugs the controls rather than
+     spanning the full width of the input pill below it. The shared
+     column cap still keeps it from out-growing the input on very wide
+     layouts, and `margin: 0 auto` keeps the cluster centred above the
+     pill. */
+  width: fit-content;
+  min-width: 0;
+  padding: 2px;
+  max-width: var(--chat-column-max-width);
+  margin: 0 auto;
+  border: 1px solid var(--color-border-strong);
+  /* Open the bottom edge so the wrapper reads as a tab over the input
+     pill rather than a fully-closed box with a square bottom line. */
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  /* Opaque fill so the transcript scrolling above the input never bleeds
+     through the tab. The previous `color-mix(... transparent)` gradient
+     composited to `--color-bg` over the panel anyway, so a solid
+     `--color-bg` keeps the exact same look while fully occluding content. */
+  background: var(--color-bg);
+}
+
+/* Top-left collapse chevron mirrors the top-right new-chat "+" so the
+   two affordances are visually balanced on either side of the centred
+   mode pills. Same 24x24 hit target and shared icon-button hover plate. */
+.modeCollapseButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  line-height: 0;
+  transition: color 0.1s ease;
+}
+
+.modeCollapseButton::before {
+  content: "";
+  position: absolute;
+  inset: var(--icon-hover-inset);
+  border-radius: var(--icon-hover-radius);
+  background: transparent;
+  transition: background var(--transition-fast);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.modeCollapseButton > * {
+  position: relative;
+  z-index: 1;
+}
+
+.modeCollapseButton:hover {
+  color: var(--color-text-primary);
+}
+
+.modeCollapseButton:hover::before {
+  background: var(--icon-hover-bg);
+}
+
+.modeChevron {
+  display: block;
+  transition: transform 0.18s ease;
+}
+
+.modeChevronCollapsed {
+  transform: rotate(-90deg);
+}
+
+.modeSelectorFlex {
+  min-width: 0;
+}
+
+/* Standalone (no "+" new-chat button) selector: drop the ModeSelector's
+   own divider so the detached selector reads as separate chrome above
+   the pill, matching the `.modeBarRow .modeSelectorFlex` suppression.
+   `!important` because this class and ModeSelector's own `.root`
+   border-bottom share single-class specificity, so without it the
+   surviving rule depends on stylesheet load order (and the divider
+   leaks back in as a thin line above the input). */
+.modeSelectorDetached {
+  border-bottom: none !important;
+  /* Detached selector floats as its own chrome above the pill, so give
+     it breathing room rather than letting it sit flush on the input. */
+  margin-bottom: 12px;
+}
+
+/* The ModeSelector ships with its own `.root` border-bottom for the
+   standalone case (no `onNewChat`); when nested inside `.modeBarRow`
+   the row owns the divider, so suppress the child border to keep a
+   single 1px line. Higher specificity than ModeSelector's `.root`. */
+.modeBarRow .modeSelectorFlex {
+  border-bottom: none;
+  /* Hug the chevron / "+" tightly — drop the wide centring padding the
+     selector uses when it stands alone so the row reads as one compact
+     cluster rather than three widely-spaced controls. */
+  padding: 0 4px;
+}
+
+/* Top-right new-chat "+" mirrors the bottom-left attach "+" in
+   InputBarShell so both `+` affordances on the LLM input are visually
+   indistinguishable: same 24x24 hit target, same shared icon-button
+   inner-plate hover (driven by --icon-hover-* tokens in
+   styles/tokens.css), same Plus glyph size/strokeWidth in the TSX. */
+.modeNewChatButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Vertically center on the mode-bar row instead of inheriting the
+     parent's `align-items: stretch` fallback (which collapses to
+     `flex-start` once we pin an explicit 24px height to match the
+     attach button). */
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  line-height: 0;
+  transition: color 0.1s ease;
+}
+
+.modeNewChatButton::before {
+  content: "";
+  position: absolute;
+  inset: var(--icon-hover-inset);
+  border-radius: var(--icon-hover-radius);
+  background: transparent;
+  transition: background var(--transition-fast);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.modeNewChatButton > * {
+  position: relative;
+  z-index: 1;
+}
+
+.modeNewChatButton > svg {
+  display: block;
+}
+
+.modeNewChatButton:hover {
+  color: var(--color-text-primary);
+}
+
+.modeNewChatButton:hover::before {
+  background: var(--icon-hover-bg);
+}
