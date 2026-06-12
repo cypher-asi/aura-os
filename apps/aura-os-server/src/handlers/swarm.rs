@@ -45,6 +45,10 @@ pub(crate) struct RemoteAgentStateResponse {
     pub memory_mb: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runtime_version: Option<String>,
+    /// Git commit of the harness build running in the pod, reported by the
+    /// swarm gateway (sourced from the harness /health endpoint).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub harness_git_sha: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub isolation: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

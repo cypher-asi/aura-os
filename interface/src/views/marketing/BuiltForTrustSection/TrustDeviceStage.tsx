@@ -45,9 +45,12 @@ export function TrustDeviceStage(): ReactNode {
   }, []);
 
   // Center the display panel in the gap between the centered device's right
-  // edge and the stage's right edge. Measured from the live DOM (mirroring
-  // ServiceConnectionField) so it tracks the responsive device width and the
-  // WebGL canvas settling, rather than hard-coding the clamp geometry.
+  // edge and the OUTER card panel's right edge. The stage (.builtForTrustStage)
+  // is inset from the card by its 50px padding, so centering against the stage
+  // edge lands the panel short of true center; we resolve the enclosing
+  // .metalCard and measure to its right edge instead. Measured from the live
+  // DOM (mirroring ServiceConnectionField) so it tracks the responsive device
+  // width and the WebGL canvas settling, rather than hard-coding the geometry.
   const measure = useCallback(() => {
     const stage = stageRef.current;
     const device = deviceWrapRef.current;
@@ -56,8 +59,10 @@ export function TrustDeviceStage(): ReactNode {
     }
     const stageRect = stage.getBoundingClientRect();
     const deviceRect = device.getBoundingClientRect();
+    const outerRect = (stage.closest(".metalCard") ?? stage).getBoundingClientRect();
     const deviceRight = deviceRect.right - stageRect.left;
-    setPanelCenterX((deviceRight + stageRect.width) / 2);
+    const outerRight = outerRect.right - stageRect.left;
+    setPanelCenterX((deviceRight + outerRight) / 2);
   }, []);
 
   useLayoutEffect(() => {

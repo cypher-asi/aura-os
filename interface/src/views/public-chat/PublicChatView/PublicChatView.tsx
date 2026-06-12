@@ -156,11 +156,11 @@ const MARKETING_NAV_FG_COLOR_MUTED = "#c9c9cf";
 // the `.heroHeadline` `data-text` width reserve so the centered box
 // never reflows as the shorter phrases stream in and out.
 const HERO_PHRASES = [
-  "Your Private Agent.",
-  "Build Anything.",
-  "Imagine Anything.",
-  "Code Anything.",
-  "Just by Chatting.",
+  "Your private agent.",
+  "Build anything.",
+  "Imagine anything.",
+  "Code anything.",
+  "Just by chatting.",
 ] as const;
 
 /**
@@ -303,7 +303,7 @@ export function PublicChatView(): React.ReactElement {
   const activeSession =
     activeSessionId != null ? sessions[activeSessionId] ?? null : null;
   const heroHeadline = t("chat.heroPhrases.privateAgent", {
-    defaultValue: "Your Private Agent.",
+    defaultValue: "Your private agent.",
   });
   const heroPhrases = useMemo(
     () =>
@@ -325,7 +325,7 @@ export function PublicChatView(): React.ReactElement {
   // watching a fresh "New chat" row spawn on top of the one they
   // just removed.
 
-  // Vertically center the "Your Private Agent." tagline in the band
+  // Vertically center the "Your private agent." tagline in the band
   // between the shell top bar (the hero slot's top edge) and the top of
   // the mock desktop widget. The widget is sized off its container via
   // container queries, so its top edge moves with viewport size/aspect
@@ -968,7 +968,7 @@ export function PublicChatView(): React.ReactElement {
                 // applies the live-streaming chrome (and, once the
                 // backend forwards `thinking_delta` for public chat,
                 // the Phase 1 synthetic Brain "Thinking..." Block will
-                // surface here automatically — see TODO(thinking) in
+                // surface here automatically — see the protocol note in
                 // `public-chat-store.ts`).
                 const isLastAssistantTurn =
                   isSending &&

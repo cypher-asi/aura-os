@@ -16,41 +16,14 @@ import {
   type ExpertiseEntry,
 } from "../../marketing/ExpertiseDetailView/expertiseData";
 import { isMarketingExpertiseEnabled } from "../../../shared/lib/featureFlags";
+import {
+  PRIMARY_LINKS,
+  RESOURCE_LINKS,
+  RESOURCE_LINKS_PRIMARY,
+  RESOURCE_LINKS_SECONDARY,
+  type TopNavLink,
+} from "./nav-links";
 import styles from "./PublicTopNav.module.css";
-
-interface TopNavLink {
-  /** i18n key in the `nav` namespace. */
-  tKey: string;
-  /** English fallback label. */
-  label: string;
-  to: string;
-}
-
-/**
- * Primary marketing links, rendered left-to-right in the centered
- * top bar. `Expertise` and `Resources` are not in this list — they
- * open dropdowns instead of navigating to a single route. `Pricing`
- * sits beside `Code`; `OS` moved into the `Resources` dropdown.
- */
-const PRIMARY_LINKS: ReadonlyArray<TopNavLink> = [
-  { tKey: "agents", label: "Agents", to: "/agents" },
-  { tKey: "code", label: "Code", to: "/code" },
-  { tKey: "pricing", label: "Pricing", to: "/pricing" },
-];
-
-/**
- * Routes grouped under the `Resources` dropdown. `OS` moved here (from
- * the primary row) and sits at the bottom of the menu.
- */
-const RESOURCE_LINKS: ReadonlyArray<TopNavLink> = [
-  { tKey: "blog", label: "Blog", to: "/blog" },
-  { tKey: "changelog", label: "Changelog", to: "/changelog" },
-  { tKey: "downloads", label: "Downloads", to: "/download" },
-  { tKey: "feedback", label: "Feedback", to: "/feedback" },
-  { tKey: "models", label: "Models", to: "/models" },
-  { tKey: "observability", label: "Observability", to: "/observability" },
-  { tKey: "os", label: "OS", to: "/os" },
-];
 
 /**
  * A single hover/click dropdown in the top nav: a `<button>` trigger
@@ -240,6 +213,36 @@ function ExpertiseColumn({
   );
 }
 
+/** Renders one column of `Resources` menu links. */
+function ResourceColumn({
+  links,
+  currentPath,
+}: {
+  readonly links: readonly TopNavLink[];
+  readonly currentPath: string;
+}): React.ReactElement {
+  const { t } = useTranslation("nav");
+  return (
+    <div className={styles.menuSection}>
+      {links.map((link) => (
+        <NavLink
+          key={link.tKey}
+          to={link.to}
+          role="menuitem"
+          className={({ isActive }) =>
+            `${styles.menuItem} ${isActive ? styles.menuItemActive : ""}`
+          }
+          onClick={() => {
+            if (currentPath === link.to) scrollMarketingColumnToTop();
+          }}
+        >
+          {t(link.tKey, { defaultValue: link.label })}
+        </NavLink>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Public-mode marketing navigation, mounted in the centered title
  * slot of `AuraTitlebar` (replacing the old left-sidebar
@@ -310,22 +313,13 @@ export function PublicTopNav(): React.ReactElement {
         label={t("resources", { defaultValue: "Resources" })}
         ariaLabel="Resources"
         active={resourcesActive}
+        menuClassName={styles.menuColumns}
       >
-        {RESOURCE_LINKS.map((link) => (
-          <NavLink
-            key={link.tKey}
-            to={link.to}
-            role="menuitem"
-            className={({ isActive }) =>
-              `${styles.menuItem} ${isActive ? styles.menuItemActive : ""}`
-            }
-            onClick={() => {
-              if (pathname === link.to) scrollMarketingColumnToTop();
-            }}
-          >
-            {t(link.tKey, { defaultValue: link.label })}
-          </NavLink>
-        ))}
+        <ResourceColumn links={RESOURCE_LINKS_PRIMARY} currentPath={pathname} />
+        <ResourceColumn
+          links={RESOURCE_LINKS_SECONDARY}
+          currentPath={pathname}
+        />
       </NavDropdown>
     </nav>
   );

@@ -1,33 +1,52 @@
 .page {
-  --docs-bg: #0f0f12;
-  --docs-fg: #f0f1f4;
-  --docs-fg-muted: #a7adb5;
-  --docs-fg-faint: #6b7177;
-  --docs-accent: #7ee787;
-  --docs-border: rgba(255, 255, 255, 0.08);
+  --doc-bg: #090909;
+  --doc-fg: #e6e8eb;
+  --doc-fg-muted: #9aa0a6;
+  --doc-fg-faint: #6b7177;
+  --doc-accent: #7ee787;
+  --doc-border: rgba(255, 255, 255, 0.08);
 
   min-height: 100%;
-  background: var(--docs-bg);
-  color: var(--docs-fg);
+  background: var(--doc-bg);
+  color: var(--doc-fg);
 }
 
+/* Two-column reading layout (left nav + content). */
 .layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 200px;
+  grid-template-columns: 248px minmax(0, 1fr);
   gap: 48px;
-  max-width: 1240px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 72px 32px 120px;
 }
 
+/* Three-column layout when the right "On this page" TOC is enabled. */
+.layoutWithToc {
+  grid-template-columns: 240px minmax(0, 1fr) 200px;
+  max-width: 1240px;
+}
+
 /* ---- Left nav ------------------------------------------------------- */
 
+/* The nav lists every section across all repos, so it can exceed the
+   viewport. Pin it with `position: sticky` so it stays visible no matter
+   how far the reading column on the right is scrolled. It owns its own
+   vertical scroll (capped to the viewport) so the full tree stays
+   reachable, but the scrollbar is hidden so the nav reads as static
+   full-height content. */
 .sidebar {
-  position: sticky;
-  top: 72px;
   align-self: start;
-  max-height: calc(100vh - 120px);
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .sidebarTitle {
@@ -36,13 +55,13 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--docs-fg-faint);
+  color: var(--doc-fg-faint);
   text-decoration: none;
   margin-bottom: 20px;
 }
 
 .sidebarTitle:hover {
-  color: var(--docs-fg-muted);
+  color: var(--doc-fg-muted);
 }
 
 .nav {
@@ -67,12 +86,12 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: var(--docs-fg);
+  color: var(--doc-fg);
   text-align: left;
 }
 
 .navGroupHeader svg {
-  color: var(--docs-fg-faint);
+  color: var(--doc-fg-faint);
   flex-shrink: 0;
 }
 
@@ -90,23 +109,23 @@
   padding: 4px 0;
   font-size: 13px;
   line-height: 1.4;
-  color: var(--docs-fg-muted);
+  color: var(--doc-fg-muted);
   text-decoration: none;
   transition: color 0.12s ease;
 }
 
 .navLink:hover {
-  color: var(--docs-fg);
+  color: var(--doc-fg);
 }
 
 .navLinkActive,
 .navLinkActive:hover {
-  color: var(--docs-accent);
+  color: var(--doc-accent);
 }
 
 .navState {
   font-size: 13px;
-  color: var(--docs-fg-muted);
+  color: var(--doc-fg-muted);
 }
 
 /* ---- Content -------------------------------------------------------- */
@@ -118,13 +137,13 @@
 .markdownBody {
   font-size: 15px;
   line-height: 1.7;
-  color: var(--docs-fg-muted);
+  color: var(--doc-fg);
 }
 
 .markdownBody :global(h1) {
   font-size: 30px;
   font-weight: 600;
-  color: var(--docs-fg);
+  color: var(--doc-fg);
   margin: 0 0 24px;
   letter-spacing: -0.01em;
   scroll-margin-top: 88px;
@@ -133,7 +152,7 @@
 .markdownBody :global(h2) {
   font-size: 21px;
   font-weight: 600;
-  color: var(--docs-fg);
+  color: var(--doc-fg);
   margin: 40px 0 14px;
   scroll-margin-top: 88px;
 }
@@ -141,7 +160,7 @@
 .markdownBody :global(h3) {
   font-size: 17px;
   font-weight: 600;
-  color: var(--docs-fg);
+  color: var(--doc-fg);
   margin: 28px 0 10px;
   scroll-margin-top: 88px;
 }
@@ -149,7 +168,7 @@
 .markdownBody :global(h4) {
   font-size: 15px;
   font-weight: 600;
-  color: var(--docs-fg);
+  color: var(--doc-fg);
   margin: 22px 0 8px;
 }
 
@@ -168,7 +187,7 @@
 }
 
 .markdownBody :global(a) {
-  color: var(--docs-accent);
+  color: var(--doc-accent);
   text-decoration: none;
 }
 
@@ -177,7 +196,7 @@
 }
 
 .markdownBody :global(strong) {
-  color: var(--docs-fg);
+  color: var(--doc-fg);
   font-weight: 600;
 }
 
@@ -187,12 +206,38 @@
   background: rgba(255, 255, 255, 0.06);
   border-radius: 4px;
   padding: 1px 5px;
-  color: #d7dbe0;
+  color: var(--doc-fg-muted);
+}
+
+/*
+ * Code references (crate / file / function tokens) link out to a GitHub
+ * repo. They read as secondary code, not the accent-green used for prose
+ * links, so the surrounding primary-color text stays the focus.
+ */
+.codeLink,
+.codeLink:hover {
+  text-decoration: none;
+}
+
+.codeLink :global(code) {
+  color: var(--doc-fg-muted);
+  /* Subtle dotted underline so code references read as clickable links
+     without adopting the loud accent-green of prose links. */
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: currentColor;
+  text-underline-offset: 2px;
+  transition: color 0.12s ease;
+}
+
+.codeLink:hover :global(code) {
+  color: var(--doc-fg);
+  text-decoration-style: solid;
 }
 
 .markdownBody :global(pre) {
   background: #0c0c10;
-  border: 1px solid var(--docs-border);
+  border: 1px solid var(--doc-border);
   border-radius: 8px;
   padding: 16px;
   overflow-x: auto;
@@ -211,8 +256,8 @@
 .markdownBody :global(blockquote) {
   margin: 0 0 16px;
   padding: 4px 16px;
-  border-left: 3px solid var(--docs-border);
-  color: var(--docs-fg-muted);
+  border-left: 3px solid var(--doc-border);
+  color: var(--doc-fg-muted);
 }
 
 .markdownBody :global(table) {
@@ -224,21 +269,21 @@
 
 .markdownBody :global(th),
 .markdownBody :global(td) {
-  border: 1px solid var(--docs-border);
+  border: 1px solid var(--doc-border);
   padding: 8px 12px;
   text-align: left;
   vertical-align: top;
 }
 
 .markdownBody :global(th) {
-  color: var(--docs-fg);
+  color: var(--doc-fg);
   font-weight: 600;
   background: rgba(255, 255, 255, 0.03);
 }
 
 .markdownBody :global(hr) {
   border: none;
-  border-top: 1px solid var(--docs-border);
+  border-top: 1px solid var(--doc-border);
   margin: 32px 0;
 }
 
@@ -261,7 +306,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--docs-fg-faint);
+  color: var(--doc-fg-faint);
   margin: 0 0 12px;
 }
 
@@ -272,7 +317,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border-left: 1px solid var(--docs-border);
+  border-left: 1px solid var(--doc-border);
 }
 
 .tocItemSub {
@@ -286,19 +331,19 @@
   border-left: 1px solid transparent;
   font-size: 12.5px;
   line-height: 1.4;
-  color: var(--docs-fg-muted);
+  color: var(--doc-fg-muted);
   text-decoration: none;
   transition: color 0.12s ease, border-color 0.12s ease;
 }
 
 .tocLink:hover {
-  color: var(--docs-fg);
+  color: var(--doc-fg);
 }
 
 .tocLinkActive,
 .tocLinkActive:hover {
-  color: var(--docs-accent);
-  border-left-color: var(--docs-accent);
+  color: var(--doc-accent);
+  border-left-color: var(--doc-accent);
 }
 
 /* ---- Not found ------------------------------------------------------ */
@@ -306,33 +351,33 @@
 .notFound h1 {
   font-size: 26px;
   font-weight: 600;
-  color: var(--docs-fg);
+  color: var(--doc-fg);
   margin: 0 0 12px;
 }
 
 .notFound p {
   font-size: 15px;
-  color: var(--docs-fg-muted);
+  color: var(--doc-fg-muted);
   margin: 0 0 20px;
 }
 
 .notFoundLink {
   background: none;
-  border: 1px solid var(--docs-border);
+  border: 1px solid var(--doc-border);
   border-radius: 6px;
   padding: 8px 14px;
   font-size: 14px;
-  color: var(--docs-accent);
+  color: var(--doc-accent);
   cursor: pointer;
 }
 
 .notFoundLink:hover {
-  border-color: var(--docs-accent);
+  border-color: var(--doc-accent);
 }
 
 /* Drop the right TOC column first, then the left nav on narrow widths. */
 @media (max-width: 1080px) {
-  .layout {
+  .layoutWithToc {
     grid-template-columns: 240px minmax(0, 1fr);
     gap: 40px;
   }
@@ -349,8 +394,11 @@
     padding: 40px 20px 80px;
   }
 
+  /* Single-column on mobile: drop the sticky pin so the nav flows above
+     the content instead of overlapping it. */
   .sidebar {
     position: static;
     max-height: none;
+    overflow-y: visible;
   }
 }

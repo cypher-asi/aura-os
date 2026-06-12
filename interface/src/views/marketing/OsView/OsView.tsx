@@ -1,19 +1,6 @@
-import {
-  createContext,
-  isValidElement,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { createContext, type ReactElement, type ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
-import ReactMarkdown, { type Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { type Components } from "react-markdown";
 
 import {
   fetchOsBody,
@@ -22,39 +9,9 @@ import {
   type OsDoc,
   OsDocNotFoundError,
 } from "../../../api/marketing/os";
-import styles from "./OsView.module.css";
-
-const MD_REMARK = [remarkGfm];
-const MD_REHYPE = [rehypeHighlight];
-
-/** Deterministic heading slug used to assign `id`s to rendered headings. */
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
-
-function extractText(node: ReactNode): string {
-  if (node == null || typeof node === "boolean") return "";
-  if (typeof node === "string" || typeof node === "number") return String(node);
-  if (Array.isArray(node)) return node.map(extractText).join("");
-  if (isValidElement(node)) {
-    return extractText((node.props as { children?: ReactNode }).children);
-  }
-  return "";
-}
-
-function ExternalLink(
-  props: React.AnchorHTMLAttributes<HTMLAnchorElement>,
-): React.ReactElement {
-  const href = props.href ?? "";
-  // In-page anchors stay in-document; everything else opens in a new tab.
-  if (href.startsWith("#")) return <a {...props} />;
-  return <a {...props} target="_blank" rel="noopener noreferrer" />;
-}
+import { MarkdownDocSite } from "../shared/MarkdownDocSite";
+import { extractText } from "../shared/markdown";
+import styles from "../shared/MarkdownDocSite.module.css";
 
 /**
  * GitHub repo (org/name) each section group's code references resolve to,
@@ -124,21 +81,7 @@ function CodeRef({
   );
 }
 
-function HeadingWithId(
-  Tag: "h1" | "h2" | "h3",
-): (props: { children?: ReactNode }) => React.ReactElement {
-  return function Heading({ children }): React.ReactElement {
-    return <Tag id={slugify(extractText(children))}>{children}</Tag>;
-  };
-}
-
-const MD_COMPONENTS: Components = {
-  a: ExternalLink,
-  code: CodeRef,
-  h1: HeadingWithId("h1"),
-  h2: HeadingWithId("h2"),
-  h3: HeadingWithId("h3"),
-};
+const MD_COMPONENTS: Components = { code: CodeRef };
 
 /** Display-name overrides for section keys (e.g. "harness" -> "AURA Harness"). */
 const SECTION_DISPLAY_LABELS: Readonly<Record<string, string>> = {
@@ -163,233 +106,68 @@ function sectionLabel(key: string): string {
   );
 }
 
-interface NavGroup {
-  readonly key: string;
-  readonly label: string;
-  readonly docs: readonly OsDoc[];
-}
-
-/**
- * Group published sections by their `blogType` key into ordered nav
- * groups. Groups are ordered by the smallest `sortOrder` they contain;
- * entries within a group are ordered by `sortOrder` ascending.
- */
-function buildNavGroups(docs: readonly OsDoc[]): NavGroup[] {
-  const byKey = new Map<string, OsDoc[]>();
-  for (const doc of docs) {
-    const key = doc.blogType || "";
-    const list = byKey.get(key) ?? [];
-    list.push(doc);
-    byKey.set(key, list);
-  }
-  const groups: NavGroup[] = [];
-  for (const [key, list] of byKey) {
-    const sorted = [...list].sort((a, b) => a.sortOrder - b.sortOrder);
-    groups.push({ key, label: sectionLabel(key), docs: sorted });
-  }
-  groups.sort((a, b) => a.docs[0].sortOrder - b.docs[0].sortOrder);
-  return groups;
-}
-
-function OsNav({
-  groups,
-  activeSlug,
-}: {
-  groups: readonly NavGroup[];
-  activeSlug: string | null;
-}): React.ReactElement {
-  const { t } = useTranslation("marketing");
-  // All groups expanded by default; clicking a header collapses it.
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-
-  const toggle = (key: string): void => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
+function wrapMarkdown(node: ReactElement, doc: OsDoc): ReactElement {
   return (
-    <nav
-      className={styles.nav}
-      aria-label={t("os.navigationAriaLabel", {
-        defaultValue: "Whitepaper navigation",
-      })}
-    >
-      {groups.map((group) => {
-        const isCollapsed = collapsed.has(group.key);
-        return (
-          <div key={group.key} className={styles.navGroup}>
-            <button
-              type="button"
-              className={styles.navGroupHeader}
-              aria-expanded={!isCollapsed}
-              onClick={() => toggle(group.key)}
-            >
-              {isCollapsed ? (
-                <ChevronRight size={13} aria-hidden="true" />
-              ) : (
-                <ChevronDown size={13} aria-hidden="true" />
-              )}
-              <span>{group.label}</span>
-            </button>
-            {!isCollapsed ? (
-              <ul className={styles.navList}>
-                {group.docs.map((doc) => (
-                  <li key={doc.id}>
-                    <Link
-                      to={`/os/${doc.slug}`}
-                      className={`${styles.navLink} ${
-                        doc.slug === activeSlug ? styles.navLinkActive : ""
-                      }`}
-                    >
-                      {doc.title}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        );
-      })}
-    </nav>
+    <OsRepoContext.Provider value={SECTION_REPOS[doc.blogType] ?? DEFAULT_REPO}>
+      {node}
+    </OsRepoContext.Provider>
   );
 }
 
 /**
- * Public `/os` AURA OS whitepaper. Renders a collapsible left-hand nav of
- * the published sections (grouped by section key) beside a markdown
- * reading column. The active section is read from `/os/:slug` (defaulting
- * to the first section). The markdown body is not part of the section
- * JSON, so it is fetched separately from the section's public S3
- * `bodyUrl`. Page chrome is owned by the public-mode `PublicMarketingPanel`.
+ * Public `/os` AURA OS whitepaper. A thin wrapper over the shared
+ * {@link MarkdownDocSite}: collapsible left-hand nav of published sections
+ * (grouped by section key) beside a markdown reading column, with inline
+ * code references linking out to the relevant GitHub repo.
  */
 export function OsView(): React.ReactElement {
   const { t } = useTranslation("marketing");
-  const { slug } = useParams<{ slug?: string }>();
-  const navigate = useNavigate();
-
-  const { data: docs, isFetched: docsFetched } = useQuery({
-    queryKey: ["marketing-os"],
-    queryFn: fetchOsDocs,
-  });
-
-  const allDocs = useMemo<readonly OsDoc[]>(() => docs ?? [], [docs]);
-  const groups = useMemo(() => buildNavGroups(allDocs), [allDocs]);
-
-  // Resolve the active section: the slug param, else the first section.
-  const activeSlug = slug ?? allDocs[0]?.slug ?? null;
-
-  const { data: doc, error: docError } = useQuery({
-    queryKey: ["marketing-os-doc", activeSlug],
-    queryFn: () => fetchOsDoc(activeSlug as string),
-    enabled: Boolean(activeSlug),
-    retry: false,
-  });
-
-  const bodyUrl = doc?.bodyUrl;
-  const { data: body, isFetched: bodyFetched } = useQuery({
-    queryKey: ["marketing-os-body", bodyUrl],
-    queryFn: () => fetchOsBody(bodyUrl as string),
-    enabled: Boolean(bodyUrl),
-  });
-
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = doc
-      ? t("os.docDocumentTitle", {
-          defaultValue: `AURA OS - ${doc.title}`,
-          title: doc.title,
-        })
-      : t("os.documentTitle", { defaultValue: "AURA - OS" });
-    return () => {
-      document.title = previousTitle;
-    };
-  }, [doc, t]);
-
-  // Scroll the reading column back to the top when the section changes.
-  useEffect(() => {
-    window.requestAnimationFrame(() => {
-      document
-        .querySelector("[data-os-content]")
-        ?.scrollTo?.({ top: 0, behavior: "auto" });
-    });
-  }, [activeSlug]);
 
   return (
-    <section className={styles.page}>
-      <div className={styles.layout}>
-        <aside className={styles.sidebar}>
-          <Link to="/os" className={styles.sidebarTitle}>
-            {t("os.sidebarTitle", { defaultValue: "AURA OS" })}
-          </Link>
-          {!docsFetched ? null : groups.length === 0 ? (
-            <p className={styles.navState}>
-              {t("os.noSections", { defaultValue: "No sections yet." })}
-            </p>
-          ) : (
-            <OsNav groups={groups} activeSlug={activeSlug} />
-          )}
-        </aside>
-
-        <article className={styles.content} data-os-content>
-          {docError instanceof OsDocNotFoundError ? (
-            <div className={styles.notFound}>
-              <h1>
-                {t("os.notFound.heading", {
-                  defaultValue: "Section not found",
-                })}
-              </h1>
-              <p>
-                {t("os.notFound.body", {
-                  defaultValue:
-                    "This part of the whitepaper doesn't exist or isn't published yet.",
-                })}
-              </p>
-              <button
-                type="button"
-                className={styles.notFoundLink}
-                onClick={() => navigate("/os")}
-              >
-                {t("os.notFound.backButton", {
-                  defaultValue: "Back to the overview",
-                })}
-              </button>
-            </div>
-          ) : (
-            <div className={styles.markdownBody}>
-              {body ? (
-                  <OsRepoContext.Provider
-                    value={SECTION_REPOS[doc?.blogType ?? ""] ?? DEFAULT_REPO}
-                  >
-                    <ReactMarkdown
-                      remarkPlugins={MD_REMARK}
-                      rehypePlugins={MD_REHYPE}
-                      components={MD_COMPONENTS}
-                    >
-                      {body}
-                    </ReactMarkdown>
-                  </OsRepoContext.Provider>
-                ) : !docsFetched ? null : allDocs.length === 0 ? (
-                  <p className={styles.navState}>
-                    {t("os.empty.body", {
-                      defaultValue:
-                        "The AURA OS whitepaper is connected, but no sections have been published yet.",
-                    })}
-                  </p>
-                ) : !bodyFetched ? null : (
-                  <p className={styles.navState}>
-                    {t("os.noContent", {
-                      defaultValue: "This section has no content yet.",
-                    })}
-                  </p>
-                )}
-            </div>
-          )}
-        </article>
-      </div>
-    </section>
+    <MarkdownDocSite<OsDoc>
+      basePath="/os"
+      queryKeyPrefix="marketing-os"
+      fetchList={fetchOsDocs}
+      fetchDoc={fetchOsDoc}
+      fetchBody={fetchOsBody}
+      isNotFoundError={(err) => err instanceof OsDocNotFoundError}
+      sectionLabel={sectionLabel}
+      markdownComponents={MD_COMPONENTS}
+      wrapMarkdown={wrapMarkdown}
+      showToc
+      documentTitle={t("os.documentTitle", { defaultValue: "AURA - OS" })}
+      getDocDocumentTitle={(title) =>
+        t("os.docDocumentTitle", {
+          defaultValue: `AURA OS - ${title}`,
+          title,
+        })
+      }
+      text={{
+        sidebarTitle: t("os.sidebarTitle", { defaultValue: "AURA OS" }),
+        navigationAriaLabel: t("os.navigationAriaLabel", {
+          defaultValue: "Whitepaper navigation",
+        }),
+        emptyNav: t("os.noSections", { defaultValue: "No sections yet." }),
+        emptyBody: t("os.empty.body", {
+          defaultValue:
+            "The AURA OS whitepaper is connected, but no sections have been published yet.",
+        }),
+        noContent: t("os.noContent", {
+          defaultValue: "This section has no content yet.",
+        }),
+        notFoundHeading: t("os.notFound.heading", {
+          defaultValue: "Section not found",
+        }),
+        notFoundBody: t("os.notFound.body", {
+          defaultValue:
+            "This part of the whitepaper doesn't exist or isn't published yet.",
+        }),
+        notFoundBack: t("os.notFound.backButton", {
+          defaultValue: "Back to the overview",
+        }),
+        tocAriaLabel: t("os.tocAriaLabel", { defaultValue: "On this page" }),
+        tocTitle: t("os.tocTitle", { defaultValue: "On this page" }),
+      }}
+    />
   );
 }

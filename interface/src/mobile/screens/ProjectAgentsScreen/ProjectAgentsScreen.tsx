@@ -6,6 +6,8 @@ import { Avatar } from "../../../components/Avatar";
 import { selectOverlayDrawerOpen, useMobileDrawerStore } from "../../../stores/mobile-drawer-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useSidekickStore } from "../../../stores/sidekick-store";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
+import { filterRuntimeVisibleAgents } from "../../../shared/lib/agent-runtime-visibility";
 import { formatChatTime } from "../../../shared/utils/format";
 import {
   projectAgentAttachRoute,
@@ -44,10 +46,15 @@ export function MobileProjectAgentsScreen() {
     projectId ? s.projects.find((candidate) => candidate.project_id === projectId) ?? null : null
   ));
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const { remoteOnly } = useAuraCapabilities();
 
   const agents = useMemo<AgentInstance[]>(
-    () => (projectId ? agentsByProject[projectId] ?? [] : []),
-    [agentsByProject, projectId],
+    () =>
+      filterRuntimeVisibleAgents(
+        projectId ? agentsByProject[projectId] ?? [] : [],
+        remoteOnly,
+      ),
+    [agentsByProject, projectId, remoteOnly],
   );
   const loading = projectId ? loadingAgentsByProject[projectId] === true : false;
   const rememberedAgentId = projectId ? getLastAgent(projectId) : null;

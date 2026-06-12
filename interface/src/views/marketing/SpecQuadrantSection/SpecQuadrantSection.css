@@ -654,24 +654,64 @@
   }
 
   .nrPanel {
-    padding: 14px 14px 0;
+    padding: 14px;
   }
 
+  /* Mobile drops the fixed-height landscape dome plate: the controls flow as a
+     simple vertical stack (readout, knob, then the discipline grid) so nothing
+     overlaps and the panel grows to fit. */
   .nrControls {
-    margin: -15px -14px -7px;
-    padding: 14px 14px 16px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
   }
 
+  /* No knob-centered dome on mobile — the stacked controls sit straight on the
+     dark panel, so the masked lighter plate is unnecessary (and its fixed
+     geometry was what the wrapped pills overflowed). */
+  .nrControls::before {
+    display: none;
+  }
+
+  /* In-flow readout row above the knob (was absolutely pinned into the dome
+     band, which overlapped the wrapped pills on a phone). */
   .nrStatus {
-    bottom: 93px;
-    left: 18px;
-    right: 18px;
+    position: static;
+    bottom: auto;
+    left: auto;
+    right: auto;
   }
 
-  /* The discipline pills wrap to several rows on the narrow mobile plate and
-     already fill the band, so skip the desktop vertical-centering lift (it
-     would push them up into the knob / readout row). */
+  .nrKnobWrap {
+    margin: 4px 0 0;
+  }
+
+  /* 12 disciplines as a tidy 3-column x 4-row grid filling the panel width. */
   .nrExpertise {
     transform: none;
+    margin-top: 0;
+  }
+
+  .nrExpertiseCapsule {
+    width: 100%;
+    border-radius: 18px;
+  }
+
+  .nrExpertise .nrExpertisePills {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+    gap: 4px;
+    flex-wrap: unset;
+    border-radius: 14px;
+  }
+
+  .nrExpertise .nrExpertiseSegment {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    padding: 9px 6px;
   }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { DeviceScreen } from "../../../components/DeviceScreen";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { observeSceneActivity } from "../scene-activity";
 import {
   createIsolatedDeviceScene,
@@ -47,6 +48,9 @@ export function IsolatedDevice({
   onHoverChange,
 }: IsolatedDeviceProps = {}): ReactNode {
   const hostRef = useRef<HTMLDivElement>(null);
+  // The WebGL scene is heavy; only run it on large (non-mobile) screens. The
+  // device frame (Plate + DeviceScreen well) still renders on mobile.
+  const { isMobileLayout } = useAuraCapabilities();
   // Drives the entrance fade: stays false until the scene reports its first
   // frame is rendered, so the device eases in when ready instead of popping
   // in as a freshly-baked canvas (mirrors the hero AuraScreenOrb).
@@ -59,7 +63,7 @@ export function IsolatedDevice({
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!host || !isWebGLAvailable()) {
+    if (!host || isMobileLayout || !isWebGLAvailable()) {
       return;
     }
     // The scene is expensive to build (PMREM environment bake, procedural
@@ -87,20 +91,31 @@ export function IsolatedDevice({
       // Re-arm the entrance fade if the effect re-runs.
       setReady(false);
     };
-  }, []);
+  }, [isMobileLayout]);
 
   return (
     <Plate radius="38px" className="isolatedDevicePlate">
       <DeviceScreen className="isolatedDeviceScreen">
-        <div
-          className="isolatedDevice"
-          aria-hidden="true"
-          ref={hostRef}
-          style={{
-            opacity: ready ? 1 : 0,
-            transition: "opacity 600ms ease-out",
-          }}
-        />
+        {isMobileLayout ? (
+          <img
+            src="/isolated-device.png"
+            alt=""
+            aria-hidden="true"
+            className="isolatedDevicePoster"
+            decoding="async"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className="isolatedDevice"
+            aria-hidden="true"
+            ref={hostRef}
+            style={{
+              opacity: ready ? 1 : 0,
+              transition: "opacity 600ms ease-out",
+            }}
+          />
+        )}
       </DeviceScreen>
     </Plate>
   );

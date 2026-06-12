@@ -63,8 +63,11 @@ const TOKEN_GROUPS: { label: string; tokens: EditableToken[] }[] = [
       "--color-elevated-tint",
       "--color-sidebar-bg",
       "--color-sidekick-bg",
-      "--color-titlebar-bg",
     ],
+  },
+  {
+    label: "Shell",
+    tokens: ["--color-titlebar-bg"],
   },
   {
     label: "Accent",

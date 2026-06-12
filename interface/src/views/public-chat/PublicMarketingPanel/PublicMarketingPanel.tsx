@@ -39,31 +39,31 @@ const MARKETING_NAV_FG_COLOR_MUTED = "#c9c9cf";
  * place while the chunk loads.
  *
  * These values mirror each view's first painted surface and must stay
- * in sync with their CSS:
- *   /agents, /code -> `--marketing-section-bg` (`#090909`)
- *   /changelog, /feedback -> `--marketing-section-bg` (`#0f0f12`)
- *   /pricing -> `.pricingPage` (`#22272e`)
- *   /models  -> `.modelsPage` (`#16191d`)
- *   /download is transparent, so it keeps the `#000` default.
+ * in sync with their CSS. The primary marketing pages now share a flat
+ * `#090909` surface (matching `/agents` + `/code`), so they all preload
+ * the same color:
+ *   /agents, /code, /pricing, /blog, /changelog, /feedback, /models,
+ *   /os, /download, /docs, /terms, /privacy -> flat `#090909`
  *
  * `.scrollColumn` carries a `background-color` transition (see
  * `PublicMarketingPanel.module.css`) so these per-route colors
  * crossfade as the visitor navigates, in step with the shell-frame
- * gradient fade on `/agents` and `/code` (`AuraShell.module.css`).
+ * gradient fade (`AuraShell.module.css`).
  */
 const MARKETING_PATH_BG: Readonly<Record<string, string>> = {
   "/agents": "#090909",
   "/code": "#090909",
-  "/changelog": "#0f0f12",
-  "/feedback": "#0f0f12",
-  "/blog": "#0f0f12",
-  "/os": "#000",
-  "/docs": "#0f0f12",
-  "/terms": "#000",
-  "/privacy": "#000",
-  "/pricing": "#22272e",
-  "/models": "#16191d",
-  "/observability": "#101316",
+  "/changelog": "#090909",
+  "/feedback": "#090909",
+  "/blog": "#090909",
+  "/os": "#090909",
+  "/docs": "#090909",
+  "/terms": "#090909",
+  "/privacy": "#090909",
+  "/pricing": "#090909",
+  "/models": "#090909",
+  "/download": "#090909",
+  "/observability": "#090909",
 };
 
 const DEFAULT_MARKETING_BG = "#000";

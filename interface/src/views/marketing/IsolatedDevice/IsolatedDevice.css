@@ -34,6 +34,18 @@
   height: 100%;
 }
 
+/* Static poster shown on mobile in place of the WebGL scene (the scene is
+   skipped on phones — see IsolatedDevice.tsx). A captured still of the live
+   device stack so the well reads filled instead of an empty black screen. */
+.isolatedDevicePoster {
+  display: block;
+  width: clamp(240px, 60vw, 340px);
+  aspect-ratio: 1 / 1.95;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
 @media (max-width: 768px) {
   .isolatedDevice {
     width: clamp(240px, 60vw, 340px);

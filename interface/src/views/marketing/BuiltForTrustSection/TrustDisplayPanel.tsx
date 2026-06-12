@@ -71,9 +71,9 @@ interface TrustDisplayPanelProps {
   readonly tier: DeviceTier;
   /**
    * Stage-local x of the panel's horizontal center, measured by the stage as
-   * the midpoint between the centered device's right edge and the stage's
-   * right edge. `null` until the first measurement lands (the CSS fallback
-   * positions it until then).
+   * the midpoint between the centered device's right edge and the outer card
+   * panel's right edge. `null` until the first measurement lands (the CSS
+   * fallback positions it until then).
    */
   readonly centerX?: number | null;
 }

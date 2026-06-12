@@ -298,8 +298,8 @@ test("modal flows lock the background document across form factors", async ({ pa
   await page.goto("/projects/proj-1/agents/agent-inst-1");
 
   if (factor === "desktop") {
-    await page.getByRole("button", { name: "Open host settings" }).click();
-    await expect(page.getByRole("heading", { name: "Host Connection" })).toBeVisible();
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   } else {
     await page.getByRole("button", { name: "Open project navigation", exact: true }).click();
     await expect(page.getByRole("tree", { name: "Project navigation" })).toBeVisible();

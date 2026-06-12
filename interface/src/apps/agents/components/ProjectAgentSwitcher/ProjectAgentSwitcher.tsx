@@ -1,6 +1,8 @@
 import { Modal } from "@cypher-asi/zui";
 import type { AgentInstance } from "../../../../shared/types";
 import { MobileProjectAgentSwitcherSheet } from "../../../../mobile/chat/MobileProjectAgentSwitcherSheet";
+import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
+import { filterRuntimeVisibleAgents } from "../../../../shared/lib/agent-runtime-visibility";
 import styles from "./ProjectAgentSwitcher.module.css";
 
 interface ProjectAgentSwitcherProps {
@@ -25,12 +27,16 @@ export function ProjectAgentSwitcher({
   onClose,
   onSwitchAgent,
 }: ProjectAgentSwitcherProps) {
+  const { remoteOnly } = useAuraCapabilities();
+  // Local agents can't run without a desktop bridge, so they're not
+  // valid switch targets on web/mobile.
+  const visibleAgents = filterRuntimeVisibleAgents(agents, remoteOnly);
   if (!isOpen) return null;
   if (isMobile) {
     return (
       <MobileProjectAgentSwitcherSheet
         isOpen
-        agents={agents}
+        agents={visibleAgents}
         currentAgentInstanceId={currentAgentInstanceId}
         onClose={onClose}
         onSwitchAgent={onSwitchAgent}
@@ -45,7 +51,7 @@ export function ProjectAgentSwitcher({
           <span className={styles.meta}>Switch who you are chatting with.</span>
         </div>
         <div className={styles.list}>
-          {agents.map((agent) => {
+          {visibleAgents.map((agent) => {
             const isCurrent = agent.agent_instance_id === currentAgentInstanceId;
             return (
               <button

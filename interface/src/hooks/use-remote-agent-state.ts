@@ -57,6 +57,7 @@ export function useRemoteAgentState(agentId: string | undefined) {
         error_message: c.error_message,
         endpoint: prev?.endpoint,
         runtime_version: prev?.runtime_version,
+        harness_git_sha: prev?.harness_git_sha,
         isolation: prev?.isolation,
         cpu_millicores: prev?.cpu_millicores,
         memory_mb: prev?.memory_mb,

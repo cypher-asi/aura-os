@@ -26,15 +26,16 @@ interface BannerCardProps {
 
 /**
  * Reusable outer chrome for marketing "banner" surfaces — a single
- * elevated card sitting one notch above the off-black
- * `--marketing-section-bg` (`#0f0f12`) page surface.
+ * "risen black glass" card lifted off the flat `#090909`
+ * (`--marketing-section-bg`) page surface.
  *
  * Owns three things and nothing else:
- *   1. Surface — `#141417` base with a top-down white wash gradient
- *      so the card reads as one notch lighter than the section bg
- *      without introducing a new shade.
- *   2. Elevation — soft drop shadow modeled on the landing-page
- *      `MockAuraApp` desktop card, trimmed down for smaller cards.
+ *   1. Surface — a near-black translucent fill (`rgba(18,18,21,0.55)`)
+ *      under a top-down white wash, so the card reads one notch lighter
+ *      than the page without introducing a new shade.
+ *   2. Elevation — an inset top-bevel highlight (the "risen" lit edge)
+ *      plus soft drop + contact shadows so the slab floats above the
+ *      page.
  *   3. Spacing — 28px/32px padding (22px on narrow viewports) and a
  *      28px (22px on narrow) flex-column gap between direct
  *      children, so consumers can drop a `<header>` + `<body>` pair

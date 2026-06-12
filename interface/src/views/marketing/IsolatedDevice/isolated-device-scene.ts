@@ -26,9 +26,8 @@ export interface IsolatedDeviceSceneOptions {
 export interface IsolatedDeviceScene {
   /**
    * Drive the render loop from the host component's combined
-   * visibility signal (near viewport AND tab shown). Under OS-level
-   * reduced motion, activating renders a single static frame instead
-   * of starting the loop.
+   * visibility signal (near viewport AND tab shown). The scene animates
+   * whenever active, regardless of the OS reduced-motion setting.
    */
   setActive(active: boolean): void;
   dispose(): void;
@@ -1154,11 +1153,7 @@ export function createIsolatedDeviceScene(
   // LED chase: each dot pulses with a phase offset down the strip, so a
   // bright "beep" runs left-to-right with a faint resting glow between hits.
   // The loop runs only while the host component reports the scene active
-  // (near the viewport AND the tab visible, via `setActive`); under
-  // OS-level reduced motion the scene renders one static frame instead.
-  const reducedMotion =
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // (near the viewport AND the tab visible, via `setActive`).
   const clock = new THREE.Clock();
   let raf = 0;
   let running = false;
@@ -1235,12 +1230,8 @@ export function createIsolatedDeviceScene(
         stop();
         return;
       }
-      if (reducedMotion) {
-        // A single settled frame: the plasma/LED/dash motion stays frozen
-        // but the device still reads fully rendered.
-        renderFrame();
-        return;
-      }
+      // Always run the loop while active — the marketing hardware scenes
+      // animate regardless of the OS reduced-motion setting.
       start();
     },
     dispose(): void {

@@ -114,6 +114,21 @@
   z-index: 1;
 }
 
+/* Static poster shown on mobile in place of the WebGL energy field (the orb
+   is skipped on phones — see AgentConsole.tsx). A captured still of the live
+   field so the screen reads filled instead of an empty black well. */
+.screenPoster {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Active state name painted over the (light) energy field. Dark, slightly
    transparent ink so it stays legible against the bright plasma. Sits above
    the orb but is non-interactive so it never eats button/pointer events. */

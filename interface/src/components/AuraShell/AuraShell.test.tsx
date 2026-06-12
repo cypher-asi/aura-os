@@ -125,13 +125,9 @@ vi.mock("../DesktopShell/BackgroundLayer", () => ({
   BackgroundLayer: () => <div data-testid="background-layer-stub" />,
 }));
 
-// HostSettingsModal and the agents window layer are lazy-imported by
-// AuraShell. They never render in these tests (no `hostSettingsOpen`
-// flag, no open desktop windows) so a no-op stub is sufficient and
-// avoids dragging the full module graph in.
-vi.mock("../HostSettingsModal", () => ({
-  HostSettingsModal: () => null,
-}));
+// The agents window layer is lazy-imported by AuraShell. It never
+// renders in these tests (no open desktop windows) so a no-op stub is
+// sufficient and avoids dragging the full module graph in.
 vi.mock("../../apps/agents/components/AgentWindow", () => ({
   DesktopWindowLayer: () => null,
 }));

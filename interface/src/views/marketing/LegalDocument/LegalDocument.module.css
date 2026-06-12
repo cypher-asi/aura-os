@@ -8,7 +8,7 @@
  * viewports.
  */
 .legalPage {
-  --marketing-section-bg: #000;
+  --marketing-section-bg: #090909;
   --color-text-primary: #f7f8fb;
   --color-text-secondary: #a3a3a8;
   --color-text-muted: rgba(255, 255, 255, 0.52);
@@ -25,7 +25,7 @@
   --legal-accent: #7ee787;
   --legal-border: rgba(255, 255, 255, 0.08);
 
-  background: var(--marketing-section-bg, #000);
+  background: var(--marketing-section-bg, #090909);
   color: var(--legal-fg);
 }
 

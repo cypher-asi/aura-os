@@ -1,0 +1,161 @@
+.wrap {
+  position: relative;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2);
+  padding-right: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.card[data-selected="true"] {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.card:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary);
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+/* Info dot for tiles with a description. On hover-capable devices it stays
+   hidden until its card is hovered (or it is focused / its tip is open); on
+   touch devices it remains faintly visible so it stays tappable. */
+.info {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-elevated);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  z-index: 2;
+}
+
+.info:hover,
+.info:focus-visible {
+  opacity: 1;
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+}
+
+@media (hover: hover) {
+  .info {
+    opacity: 0;
+  }
+
+  .wrap:hover .info,
+  .info:hover,
+  .info:focus-visible,
+  .info[aria-expanded="true"] {
+    opacity: 1;
+  }
+}
+
+/* Description popover. Rendered in a body portal with fixed positioning (set
+   inline) so it is never clipped by the scrolling wizard content or stepper. */
+.tip {
+  position: fixed;
+  z-index: 1200;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: rgba(8, 9, 12, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.8);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+  animation: tipIn 0.12s ease both;
+}
+
+/* Anchor the popover's bottom edge above the card when placed above. */
+.tip[data-placement="above"] {
+  transform: translateY(-100%);
+}
+
+@keyframes tipIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

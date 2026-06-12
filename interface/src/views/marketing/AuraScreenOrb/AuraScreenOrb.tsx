@@ -1,8 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import {
-  observeSceneActivity,
-  prefersReducedMotion,
-} from "../scene-activity";
+import { observeSceneActivity } from "../scene-activity";
 import {
   RADIAL_FRAGMENT_SHADER,
   SCREEN_FRAGMENT_SHADER,
@@ -187,23 +184,17 @@ export function AuraScreenOrb({
       }
     };
 
-    const reducedMotion = prefersReducedMotion();
-
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    // Animate only while the orb is actually visible (near the viewport
-    // AND the tab is shown); under reduced motion hold a single painted
-    // frame instead of looping.
+    // Animate while the orb is actually visible (near the viewport AND the
+    // tab is shown). The orb animates regardless of the OS reduced-motion
+    // setting.
     const detachActivity = observeSceneActivity(canvas, (active) => {
       if (!alive) return;
       if (!active) {
         stopLoop();
-        return;
-      }
-      if (reducedMotion) {
-        drawNow();
         return;
       }
       if (rafId === null) rafId = requestAnimationFrame(renderLoop);

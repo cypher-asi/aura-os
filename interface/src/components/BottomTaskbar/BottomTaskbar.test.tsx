@@ -679,7 +679,7 @@ describe("BottomTaskbar", () => {
   });
 
   describe("Public mode", () => {
-    it("renders the sidebar toggle and theme toggle in the public left cluster and the tagline centered in the bar", () => {
+    it("renders the sidebar toggle in the public left cluster, the theme toggle left of the language selector on the right, and the tagline centered", () => {
       const { container } = render(<BottomTaskbar mode="public" />);
 
       const bar = container.querySelector(
@@ -688,12 +688,13 @@ describe("BottomTaskbar", () => {
       expect(bar).not.toBeNull();
       expect(bar).toHaveAttribute("data-ui-mode", "public");
 
-      // The left cluster (`.publicLeft`) now leads with the sidebar
-      // drawer toggle (relocated from the titlebar) followed by the
-      // theme toggle in its own `.themePill`. The rotating tagline
-      // lives in the absolutely-centered `.publicCenter` wrapper, and
-      // the "Powered by THE GRID" chip is the sole occupant of
-      // `.publicRight`. Credits, Settings, Apps, Desktop, the profile
+      // The left cluster (`.publicLeft`) leads with the sidebar drawer
+      // toggle (relocated from the titlebar) followed by the Chat link.
+      // The rotating tagline lives in the absolutely-centered
+      // `.publicCenter` wrapper. The right cluster (`.publicRight`)
+      // carries the theme toggle (`.themePill`), then the language
+      // selector (`.langPill`), then the "Powered by THE GRID" chip
+      // (`.poweredPill`). Credits, Settings, Apps, Desktop, the profile
       // rail, and the clock are all gated behind `AuthedBottomTaskbar`
       // which doesn't mount.
       const themeToggle = screen.getByRole("button", { name: /switch theme/i });
@@ -705,24 +706,39 @@ describe("BottomTaskbar", () => {
       const sidebarToggle = screen.getByRole("button", { name: "Toggle sidebar" });
       expect(publicLeft).toContainElement(sidebarToggle);
 
-      const themePill = container.querySelector(".themePill");
-      expect(themePill).not.toBeNull();
-      expect(themePill).toContainElement(themeToggle);
-      expect(publicLeft).toContainElement(themePill as HTMLElement);
-
       const publicCenter = container.querySelector(".publicCenter");
       expect(publicCenter).not.toBeNull();
       const taglineBubble = container.querySelector(".taglineBubble");
       expect(taglineBubble).not.toBeNull();
       expect(publicCenter).toContainElement(taglineBubble as HTMLElement);
 
-      // The "Powered by THE GRID" chip stays anchored on the right in
-      // its own `.poweredPill` inside `.publicRight`.
+      // The theme toggle now lives in `.publicRight`, immediately to the
+      // left of the language selector, ahead of the "Powered by THE GRID"
+      // chip.
       const publicRight = container.querySelector(".publicRight");
       expect(publicRight).not.toBeNull();
+      const themePill = container.querySelector(".themePill");
+      expect(themePill).not.toBeNull();
+      expect(themePill).toContainElement(themeToggle);
+      expect(publicRight).toContainElement(themePill as HTMLElement);
+
+      const langPill = container.querySelector(".langPill");
+      expect(langPill).not.toBeNull();
+      expect(publicRight).toContainElement(langPill as HTMLElement);
+
       const poweredPill = container.querySelector(".poweredPill");
       expect(poweredPill).not.toBeNull();
       expect(publicRight).toContainElement(poweredPill as HTMLElement);
+
+      // Order within `.publicRight`: theme toggle -> language -> powered.
+      expect(
+        themePill!.compareDocumentPosition(langPill as HTMLElement) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        (langPill as HTMLElement).compareDocumentPosition(poweredPill as HTMLElement) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
 
       // The theme toggle must not be wrapped inside the tagline bubble.
       expect(taglineBubble).not.toContainElement(themeToggle);

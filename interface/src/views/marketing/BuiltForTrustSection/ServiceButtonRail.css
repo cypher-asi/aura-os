@@ -172,18 +172,27 @@
 }
 
 /* Mobile key size / gap / padding come from the --trust-rail-* overrides
-   on .builtForTrustStage (TrustDeviceStage.css). */
+   on .builtForTrustStage (TrustDeviceStage.css). The rail also flips from a
+   vertical column to a horizontal bar that sits below the computer visual. */
 @media (max-width: 768px) {
-  .serviceButtonNozzle {
-    right: -13px;
+  .serviceButtonRailWell {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .serviceButtonSocket {
-    border-radius: 13px;
+    border-radius: 11px;
   }
 
   .serviceButtonKey svg {
-    width: 18px;
-    height: 18px;
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Nozzles fed the connection mesh on the device's left; that mesh is
+     hidden on mobile and the bar is horizontal now, so drop them. */
+  .serviceButtonNozzle {
+    display: none;
   }
 }

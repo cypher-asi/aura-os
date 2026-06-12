@@ -1,0 +1,201 @@
+/* Make the zui Modal box invisible and non-clipping (doubled class beats zui's
+   single-class .modal) so the floating glass surface and its glow show instead
+   of the default modal box. */
+.box.box {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.content.content {
+  overflow: visible;
+}
+
+/* Hide zui's default header; GlassModal renders its own header inside glass. */
+.hiddenHeader.hiddenHeader {
+  display: none;
+}
+
+/* Radius tokens are 0 in this design system, so use an explicit radius. */
+.surface {
+  --glass-modal-radius: 24px;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: var(--glass-modal-radius);
+}
+
+/* Soft glow behind the surface plus a dark shadow for floating depth. */
+.glow {
+  box-shadow:
+    0 0 100px -16px var(--glass-modal-glow, rgba(120, 170, 255, 0.3)),
+    0 40px 90px -30px rgba(0, 0, 0, 0.85);
+}
+
+/* Rounds and clips all content. clip-path is required so the backdrop-filter
+   glass layer does not escape the rounded clip and render square corners. */
+.clip {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  clip-path: inset(0 round var(--glass-modal-radius));
+}
+
+/* Black, see-through, blurred glass fill. Layered gradients give it depth: a
+   glossy top sheen, a cool top glow, and a dark body that deepens toward the
+   bottom so it reads as real polished black glass rather than a flat panel. */
+.glass {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 16%),
+    radial-gradient(140% 70% at 50% -25%, var(--glass-modal-tint, rgba(130, 175, 255, 0.16)) 0%, transparent 55%),
+    linear-gradient(
+      180deg,
+      var(--glass-modal-body-top, rgba(22, 26, 36, 0.72)) 0%,
+      var(--glass-modal-body-bottom, rgba(5, 6, 11, 0.86)) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -40px 80px -40px rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(30px) saturate(1.35);
+  -webkit-backdrop-filter: blur(30px) saturate(1.35);
+  pointer-events: none;
+}
+
+/* Diagonal glossy reflection streak, like light catching a glass surface. */
+.sheen {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    104deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(255, 255, 255, 0.11) 47%,
+    rgba(255, 255, 255, 0.02) 54%,
+    transparent 66%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Top-lit translucent gradient rim. Lives outside .clip so it is rounded only
+   by its own mask, not also by the clip-path (double rounding aliases corners). */
+.border {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--glass-modal-radius);
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.1) 30%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.headerCentered {
+  position: relative;
+  justify-content: center;
+}
+
+.headerCentered .headerRight {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  transform: translateY(-50%);
+}
+
+.titleGroup {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.close:hover {
+  color: var(--color-text-primary);
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.footer {
+  flex: 0 0 auto;
+}

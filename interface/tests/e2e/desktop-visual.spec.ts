@@ -51,7 +51,6 @@ test("capture desktop projects root and execution chrome", async ({ page }, test
   await page.goto("/projects");
   await expect(page.getByRole("tree", { name: "Projects" })).toBeVisible();
   await expect(page.locator('[data-agent-surface="chat-input-bar"]').first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open host settings" })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-projects-root.png`,
     fullPage: true,

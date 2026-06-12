@@ -3,23 +3,10 @@
   min-height: calc(100vh - var(--marketing-taskbar-safe-offset));
   min-height: calc(100dvh - var(--marketing-taskbar-safe-offset));
   padding: 120px clamp(20px, 5vw, 56px) 80px;
-  /* Off-black surface tint matching the `/product` page sections
-     (see the `--marketing-section-bg` rationale in
-     `ProductView.module.css`). The token isn't inherited here
-     because `ChangelogView` isn't wrapped by `.productView`, so
-     reference it explicitly with the same `#0f0f12` fallback.
-
-     A purple top-anchored glow sits above the dark base so the
-     frosted summary banner has something colorful to blur through;
-     it fades to transparent before the changelog entries so the
-     long content list stays on the readable dark surface. */
-  background:
-    radial-gradient(
-      120% 80% at 50% -10%,
-      rgba(108, 30, 180, 0.55) 0%,
-      rgba(60, 14, 110, 0) 48%
-    ),
-    var(--marketing-section-bg, #0f0f12);
+  /* Flat off-black surface matching `/agents` + `/code`
+     (`--marketing-section-bg`); the gradient outer-shell frame is
+     painted by `AuraShell` `.shell::before`. */
+  background: #090909;
 }
 
 .changelogPageShell {
@@ -38,23 +25,12 @@
    uniform with the left/right/bottom padding instead of the asymmetric
    28px/32px BannerCard default.
 
-   The background overrides BannerCard's default near-black slab with a
-   deep-purple radial gradient (matches the swatch the design surfaced
-   from the marketing card refresh). Brightest point sits in the
-   upper-right so the Current Version block reads against the highest
-   contrast region, while the lower-left fades to nearly-black so the
-   stats grid + chart sit on the darker corner. */
+   The surface itself (the "risen black glass" fill, border, and
+   elevation shadow) is inherited from `.bannerCard`. */
 .changelogStatsCard {
   margin-bottom: 64px;
   padding: 32px;
-  background:
-    radial-gradient(
-      ellipse 120% 110% at 72% 38%,
-      rgba(62, 14, 114, 0.55) 0%,
-      rgba(49, 10, 98, 0.5) 35%,
-      rgba(34, 6, 80, 0.45) 65%,
-      rgba(23, 3, 56, 0.42) 100%
-    );
+  /* Inherits the shared "risen black glass" surface from `.bannerCard`. */
 }
 
 @media (max-width: 768px) {

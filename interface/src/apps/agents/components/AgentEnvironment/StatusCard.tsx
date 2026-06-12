@@ -16,6 +16,9 @@ import {
   type RecoveryNotice,
 } from "./helpers"
 
+/** GitHub repo the deployed harness build is sourced from. */
+const HARNESS_REPO_URL = "https://github.com/cypher-asi/aura-harness"
+
 interface StatusCardProps {
   isLocal: boolean
   isRemote: boolean
@@ -185,6 +188,23 @@ function RemoteStatusContent({
           <span className={styles.statusValue}>{vmState.runtime_version}</span>
         </div>
       )}
+      {vmState?.harness_git_sha && (
+        <div className={styles.statusRow}>
+          <span className={styles.statusLabel}>Harness</span>
+          <span className={styles.statusValue}>
+            <a
+              className={styles.commitLink}
+              href={`${HARNESS_REPO_URL}/commit/${vmState.harness_git_sha}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={vmState.harness_git_sha}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {vmState.harness_git_sha.slice(0, 7)}
+            </a>
+          </span>
+        </div>
+      )}
       {vmState && (vmState.cpu_millicores || vmState.memory_mb) && (
         <div className={styles.statusRow}>
           <span className={styles.statusLabel}>Resources</span>
@@ -212,7 +232,12 @@ function RemoteStatusContent({
       {remoteErrorMessage && !remoteStateError && (
         <div className={styles.statusRow}>
           <span className={styles.statusLabel}>Error</span>
-          <span className={styles.statusValue}>{remoteErrorMessage}</span>
+          <span
+            className={`${styles.statusValue} ${styles.statusValueTruncate}`}
+            title={remoteErrorMessage}
+          >
+            {remoteErrorMessage}
+          </span>
         </div>
       )}
       {recoveryNotice && !remoteStateError && (

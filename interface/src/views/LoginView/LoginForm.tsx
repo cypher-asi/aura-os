@@ -26,6 +26,12 @@ interface LoginFormProps {
   onTabChange: (id: string) => void;
   onSubmit: (e: FormEvent) => void;
   onForgotPassword: () => void;
+  /** Associates an external submit button (e.g. a modal footer) with this form. */
+  formId?: string;
+  /** Hide the Sign In / Create Account tab switcher. */
+  hideTabs?: boolean;
+  /** Hide the built-in submit button (the caller provides its own). */
+  hideSubmit?: boolean;
 }
 
 export function LoginForm({
@@ -50,6 +56,9 @@ export function LoginForm({
   onTabChange,
   onSubmit,
   onForgotPassword,
+  formId,
+  hideTabs = false,
+  hideSubmit = false,
 }: LoginFormProps) {
   const emailRef = useRef<HTMLInputElement>(null);
 
@@ -80,11 +89,13 @@ export function LoginForm({
 
   return (
     <>
-      <div className={styles.tabs}>
-        <Tabs tabs={AUTH_TABS} value={activeTab} onChange={onTabChange} />
-      </div>
+      {!hideTabs && (
+        <div className={styles.tabs}>
+          <Tabs tabs={AUTH_TABS} value={activeTab} onChange={onTabChange} />
+        </div>
+      )}
 
-      <form onSubmit={onSubmit} className={styles.form}>
+      <form id={formId} onSubmit={onSubmit} className={styles.form}>
         {showEmailDropdown ? (
           <LoginEmailSelect
             value={email}
@@ -156,23 +167,25 @@ export function LoginForm({
 
         {error && <div className={styles.error}>{error}</div>}
 
-        <Button
-          type="submit"
-          variant="primary"
-          className={styles.submit}
-          disabled={loading}
-          icon={
-            loading ? (
-              <Spinner size="sm" className={styles.spinnerWhite} />
-            ) : undefined
-          }
-        >
-          {loading
-            ? "Please wait..."
-            : activeTab === "signin"
-              ? "Sign In"
-              : "Create Account"}
-        </Button>
+        {!hideSubmit && (
+          <Button
+            type="submit"
+            variant="primary"
+            className={styles.submit}
+            disabled={loading}
+            icon={
+              loading ? (
+                <Spinner size="sm" className={styles.spinnerWhite} />
+              ) : undefined
+            }
+          >
+            {loading
+              ? "Please wait..."
+              : activeTab === "signin"
+                ? "Sign In"
+                : "Create Account"}
+          </Button>
+        )}
       </form>
     </>
   );

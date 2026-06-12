@@ -11,17 +11,10 @@
      starts at the same vertical position as those siblings. */
   padding: 120px 32px 0;
   box-sizing: border-box;
-  /* Hot-pink top-anchored glow above the dark base so the frosted
-     summary banner has something colorful to blur through; it fades
-     to transparent before the model catalog so that grid stays on the
-     readable dark surface. */
-  background:
-    radial-gradient(
-      120% 80% at 50% -10%,
-      rgba(245, 84, 159, 0.5) 0%,
-      rgba(213, 31, 108, 0) 48%
-    ),
-    #16191d;
+  /* Flat off-black surface matching `/agents` + `/code`
+     (`--marketing-section-bg`); the gradient outer-shell frame is
+     painted by `AuraShell` `.shell::before`. */
+  background: #090909;
 }
 
 /* Mirror `.feedbackPage`'s public-mode offset: the logged-out shell
@@ -46,10 +39,8 @@
   gap: 28px;
 }
 
-/* Gradient summary banner. Mirrors the Changelog/Feedback BannerCard
-   pattern: shared `ellipse 120% 110% at 72% 38%` radial geometry,
-   here in the user-provided hot-pink swatch (~#ec2d7e) with white
-   text like the Changelog card. */
+/* Summary banner. Uses the shared `BannerCard` "risen black glass"
+   surface (white text) like the Changelog / Feedback banners. */
 .modelsBannerWrap {
   width: 100%;
   max-width: 960px;
@@ -59,12 +50,7 @@
 .modelsStatsCard {
   padding: 32px;
   color: #fff;
-  background: radial-gradient(
-    ellipse 120% 110% at 72% 38%,
-    rgba(245, 84, 159, 0.55) 0%,
-    rgba(236, 45, 126, 0.5) 45%,
-    rgba(213, 31, 108, 0.45) 100%
-  );
+  /* Inherits the shared "risen black glass" surface from `.bannerCard`. */
 }
 
 .modelsStatsCardHeader {

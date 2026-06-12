@@ -353,6 +353,27 @@
   .featurePanel {
     padding: clamp(8px, 1.5vh, 20px) 24px 64px;
   }
+
+  /* Phones: the stacked privacy cards read too wide and tall. Narrow the
+     column and shrink each card — a compact metal section (smaller engraved
+     shape) with the glass section sized to its copy so nothing clips. */
+  .featurePanelGrid {
+    max-width: 300px;
+    gap: 18px;
+  }
+
+  .featurePanelItem,
+  .featurePanelItem--media {
+    min-height: 0;
+    /* Metal section: a compact floor that holds the shape + title, growing if
+       needed; glass section: auto so the description never clips. */
+    grid-template-rows: minmax(160px, auto) auto;
+    border-radius: 18px;
+  }
+
+  .featurePanelSceneShape {
+    max-width: 96px;
+  }
 }
 
 @media (max-width: 480px) {

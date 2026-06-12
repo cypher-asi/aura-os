@@ -37,8 +37,12 @@
 }
 
 /*
- * Dark-mode diagonal gradient for the public `/agents` and `/code`
- * marketing routes. CSS `transition` can't interpolate a gradient
+ * Dark-mode diagonal gradient for the public marketing routes
+ * (`/agents`, `/code`, `/pricing`, `/blog`, `/changelog`, `/feedback`,
+ * `/models`, `/os`, `/download`, `/docs`, `/terms`, `/privacy` — flagged
+ * via `data-public-surface`,
+ * whose value stays `"agents-code"` for back-compat). CSS `transition`
+ * can't interpolate a gradient
  * `background-image`, so the shell keeps its solid `var(--color-bg)`
  * base and this pseudo layers the gradient on top, fading its
  * OPACITY as the route changes. `.shell` sets `isolation: isolate`,

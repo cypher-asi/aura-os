@@ -85,10 +85,11 @@ export function BottomTaskbar({ mode }: BottomTaskbarProps): React.ReactElement 
  * `--shell-chrome-outer-height` row in every mode) wrapping two
  * independent floating-pill clusters split to opposite edges by the
  * bar's `justify-content: space-between`. The left cluster
- * (`.publicLeft`) carries the Chat link (`.chatPill`, far left), the
- * theme toggle (`.themePill`) and the rotating tagline bubble
+ * (`.publicLeft`) carries the sidebar toggle and the Chat link
+ * (`.chatPill`, far left); the center holds the rotating tagline bubble
  * (`.taglineBubble`); the right cluster (`.publicRight`) carries the
- * "Powered by THE GRID" chip (`.poweredPill`). Deliberately does NOT
+ * theme toggle (`.themePill`), the language selector (`.langPill`), and
+ * the "Powered by THE GRID" chip (`.poweredPill`). Deliberately does NOT
  * call any
  * auth-required hooks (`useUIModalStore`, `useActiveApp`,
  * `useAppUIStore`, `useDesktopContextMenu`, `useNavigate`-driven
@@ -116,9 +117,6 @@ function PublicBottomTaskbar(): React.ReactElement {
         <div className={styles.chatPill}>
           <PublicChatTaskbarButton />
         </div>
-        <div className={styles.themePill}>
-          <ThemeToggleButton />
-        </div>
       </div>
       <div className={styles.publicCenter}>
         <div className={styles.taglineBubble}>
@@ -126,6 +124,9 @@ function PublicBottomTaskbar(): React.ReactElement {
         </div>
       </div>
       <div className={styles.publicRight}>
+        <div className={styles.themePill}>
+          <ThemeToggleButton />
+        </div>
         <div className={styles.langPill}>
           <LanguageDropdownButton />
         </div>

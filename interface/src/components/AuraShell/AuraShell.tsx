@@ -39,11 +39,6 @@ const DesktopWindowLayer = lazy(() =>
     default: module.DesktopWindowLayer,
   })),
 );
-const HostSettingsModal = lazy(() =>
-  import("../HostSettingsModal").then((module) => ({
-    default: module.HostSettingsModal,
-  })),
-);
 const ChangelogModal = lazy(() =>
   import("../ChangelogModal").then((module) => ({
     default: module.ChangelogModal,
@@ -54,6 +49,28 @@ const DownloadsModal = lazy(() =>
     default: module.DownloadsModal,
   })),
 );
+
+/**
+ * Public marketing routes that paint the dark-mode diagonal gradient
+ * outer-shell frame (`.shell::before`). Originally just `/agents` +
+ * `/code` + `/os`; now every primary marketing page shares the frame so
+ * they read as one consistent surface. `/os` and `/blog` `:slug`
+ * children are matched by prefix in `publicGradientSurface` below.
+ */
+const MARKETING_GRADIENT_PATHS = new Set<string>([
+  "/agents",
+  "/code",
+  "/os",
+  "/pricing",
+  "/blog",
+  "/changelog",
+  "/feedback",
+  "/models",
+  "/download",
+  "/docs",
+  "/terms",
+  "/privacy",
+]);
 
 function blurActiveElement(): void {
   const active = document.activeElement;
@@ -99,16 +116,17 @@ export function AuraShell(): React.ReactElement {
   // host settings entry. Public mode strips all of it.
   const isStandard = mode === "standard";
 
-  // The public marketing /agents, /code, and /os routes paint a dark-mode
+  // Every primary public marketing page paints the same dark-mode
   // diagonal gradient on the shell frame (see `.shell::before` in
   // AuraShell.module.css). Flag them so the CSS can fade it in/out.
+  // `/os` and `/blog` also have `:slug` children that share the frame.
   const { pathname } = useLocation();
   const publicGradientSurface =
     isPublic &&
-    (pathname === "/agents" ||
-      pathname === "/code" ||
-      pathname === "/os" ||
-      pathname.startsWith("/os/"));
+    (MARKETING_GRADIENT_PATHS.has(pathname) ||
+      pathname.startsWith("/os/") ||
+      pathname.startsWith("/blog/") ||
+      pathname.startsWith("/docs/"));
 
   // Authed-side state. We call these hooks unconditionally because
   // their subscriptions are cheap store reads — `useAppUIStore`,
@@ -125,18 +143,12 @@ export function AuraShell(): React.ReactElement {
   const authedSidebarCollapsed = useAppUIStore((s) => s.authedSidebarCollapsed);
   const toggleAuthedSidebar = useAppUIStore((s) => s.toggleAuthedSidebar);
   const {
-    hostSettingsOpen,
-    openHostSettings,
-    closeHostSettings,
     changelogModalOpen,
     closeChangelog,
     downloadsModalOpen,
     closeDownloads,
   } = useUIModalStore(
     useShallow((s) => ({
-      hostSettingsOpen: s.hostSettingsOpen,
-      openHostSettings: s.openHostSettings,
-      closeHostSettings: s.closeHostSettings,
       changelogModalOpen: s.changelogModalOpen,
       closeChangelog: s.closeChangelog,
       downloadsModalOpen: s.downloadsModalOpen,
@@ -290,7 +302,6 @@ export function AuraShell(): React.ReactElement {
           onToggleSplitScreen={
             isStandard && hasActiveSidekick ? handleToggleSplitScreen : undefined
           }
-          onOpenHostSettings={isStandard ? openHostSettings : undefined}
         />
         <div
           ref={desktopContentRef}
@@ -338,17 +349,6 @@ export function AuraShell(): React.ReactElement {
         </div>
         <BottomTaskbar mode={mode} />
       </div>
-      {isStandard && hostSettingsOpen ? (
-        <Suspense fallback={null}>
-          <HostSettingsModal
-            isOpen={hostSettingsOpen}
-            onClose={() => {
-              blurActiveElement();
-              closeHostSettings();
-            }}
-          />
-        </Suspense>
-      ) : null}
       {isStandard && changelogModalOpen ? (
         <Suspense fallback={null}>
           <ChangelogModal

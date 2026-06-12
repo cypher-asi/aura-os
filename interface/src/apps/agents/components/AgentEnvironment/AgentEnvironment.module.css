@@ -87,6 +87,8 @@
   border-radius: 6px;
   padding: 10px 12px;
   min-width: 220px;
+  /* Long values (e.g. scheduler error messages) must not stretch the card. */
+  max-width: 320px;
   box-shadow: 0 4px 12px var(--color-backdrop-light);
   display: flex;
   flex-direction: column;
@@ -119,6 +121,30 @@
 .statusValue {
   color: var(--color-text-primary);
   word-break: break-all;
+}
+
+/* Single-line value that ellipsizes instead of wrapping; full text is
+   available via the title tooltip. */
+.statusValueTruncate {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: normal;
+}
+
+.commitLink {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono, monospace);
+  text-decoration: underline;
+  text-decoration-color: var(--color-text-muted);
+  text-underline-offset: 2px;
+}
+
+.commitLink:hover {
+  color: var(--color-accent, var(--color-text-primary));
+  text-decoration-color: currentColor;
 }
 
 .recoveryNotice {

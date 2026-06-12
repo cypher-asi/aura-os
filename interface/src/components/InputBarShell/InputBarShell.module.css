@@ -340,6 +340,42 @@
   right: 50px;
 }
 
+/* Marketing "Always on" mock on a phone: the reused real input bar is so
+   narrow here that the inline model picker (sitting over the textarea's
+   right) overlaps the typed prompt. Drop it to its own row hugged to the
+   bottom-right, pin the attach/send discs to the top so they stay aligned
+   with the single-line prompt, and free the full prompt width. Scoped to
+   the mock via the global `.personalAgentChatMock` ancestor so the real
+   app's input bar is untouched. */
+@media (max-width: 768px) {
+  :global(.personalAgentChatMock) .inputContainerPill .inputRow {
+    min-height: 78px;
+  }
+
+  :global(.personalAgentChatMock)
+    .inputContainerPill:not([data-multiline="true"]) .attachButton,
+  :global(.personalAgentChatMock)
+    .inputContainerPill:not([data-multiline="true"]) .sendButton {
+    top: 8px;
+    bottom: auto;
+    transform: none;
+  }
+
+  :global(.personalAgentChatMock) .inputRowHasEnd .textarea {
+    /* Model moved below — the prompt only has to clear the send disc. */
+    padding-right: 50px;
+  }
+
+  :global(.personalAgentChatMock) .inputContainerPill .inputRowEnd {
+    top: auto;
+    bottom: 8px;
+    right: 12px;
+    transform: none;
+    max-width: calc(100% - 24px);
+    justify-content: flex-end;
+  }
+}
+
 .inputContainer[data-multiline="true"] .inputRowHasEnd .textarea {
   padding-right: 32px;
 }

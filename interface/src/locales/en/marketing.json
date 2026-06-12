@@ -941,7 +941,9 @@
       "body": "This part of the whitepaper doesn't exist or isn't published yet.",
       "heading": "Section not found"
     },
-    "sidebarTitle": "AURA OS"
+    "sidebarTitle": "AURA OS",
+    "tocAriaLabel": "On this page",
+    "tocTitle": "On this page"
   },
   "personas": {
     "coordinator": {

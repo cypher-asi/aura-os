@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useAgentStore } from "./agent-store";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
+import { filterRuntimeVisibleAgents, isLocalAgent } from "../../../shared/lib/agent-runtime-visibility";
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
@@ -72,9 +73,7 @@ export function useSortedAgents(): Agent[] {
   // so hide them entirely when there's no desktop bridge.
   const { remoteOnly } = useAuraCapabilities();
   return useMemo(() => {
-    const visible = remoteOnly
-      ? agents.filter((a) => a.machine_type !== "local")
-      : agents;
+    const visible = filterRuntimeVisibleAgents(agents, remoteOnly);
     return [...visible].sort((a, b) => {
       const aPinned = a.is_pinned || pinnedIds.has(a.agent_id);
       const bPinned = b.is_pinned || pinnedIds.has(b.agent_id);
@@ -107,7 +106,7 @@ export function useFavoriteAgents(): Agent[] {
       agents.filter(
         (a) =>
           favoriteIds.has(a.agent_id) &&
-          !(remoteOnly && a.machine_type === "local"),
+          !(remoteOnly && isLocalAgent(a)),
       ),
     [agents, favoriteIds, remoteOnly],
   );

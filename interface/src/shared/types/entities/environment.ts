@@ -17,6 +17,8 @@ export interface RemoteVmState {
   cpu_millicores?: number
   memory_mb?: number
   runtime_version?: string
+  /** Git commit of the deployed harness build, reported by the swarm gateway. */
+  harness_git_sha?: string
   isolation?: string
   endpoint?: string
   created_at?: string

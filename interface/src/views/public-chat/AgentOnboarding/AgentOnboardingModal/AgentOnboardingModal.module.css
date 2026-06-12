@@ -1,0 +1,80 @@
+.modal {
+  width: min(640px, 92vw);
+  height: min(480px, 86vh);
+}
+
+.modalTitle {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+}
+
+/* Desktop: deepen the shared GlassModal fill into a neutral near-black glass
+   (drop the cool blue tint/glow) by overriding its color vars on the surface. */
+.surface {
+  --glass-modal-tint: rgba(255, 255, 255, 0.03);
+  --glass-modal-body-top: rgba(14, 15, 18, 0.82);
+  --glass-modal-body-bottom: rgba(0, 0, 0, 0.94);
+  --glass-modal-glow: rgba(0, 0, 0, 0.55);
+}
+
+.sheet {
+  /* Drawer manages its own height via defaultSize/maxSize; match the desktop
+     neutral near-black glass fill (no blue tint). */
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
+    rgba(6, 7, 9, 0.94);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.stepperRow {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+}
+
+.footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Footer buttons: hover should only brighten the label, never shift the
+   button background (doubled class beats zui's variant hover specificity). */
+.navBtn.navBtn:hover:not(:disabled) {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-text-primary);
+}
+
+.navBtnPrimary.navBtnPrimary:hover:not(:disabled) {
+  background-color: var(--color-elevated);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 680px) {
+  .content {
+    padding: var(--space-3);
+  }
+}

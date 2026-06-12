@@ -64,10 +64,15 @@ jobs:
           APP_VERSION: ${{ steps.version.outputs.version }}
           APP_COMMIT: ${{ github.sha }}
           APP_CHANNEL: stable
+          # The shipped desktop frontend is built here and consumed by the
+          # `package` job via the prebuilt-frontend path, so the Mixpanel
+          # token must be baked in at *this* step. Without it the client SDK
+          # silently no-ops (no session_active / engagement events).
+          VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
         run: |
           npm ci
           npm run build
-          node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist
+          node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist --require-analytics
 
       - name: Upload interface dist
         uses: actions/upload-artifact@v5
@@ -225,7 +230,9 @@ jobs:
       SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
       REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
-      VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+      # NOTE: This job no longer builds the frontend (it consumes the
+      # prebuilt dist from `build-interface`), so VITE_MIXPANEL_TOKEN is not
+      # needed here. The token is baked in the `build-interface` job instead.
       Z_BILLING_API_KEY: ${{ secrets.Z_BILLING_API_KEY }}
     strategy:
       fail-fast: false
