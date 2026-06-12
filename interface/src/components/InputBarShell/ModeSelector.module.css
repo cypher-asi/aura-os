@@ -160,21 +160,17 @@
 }
 
 /*
- * Selected label: the theme accent color with layered accent halos that
- * widen and fade outward, so the active mode reads as lit tube text and
- * tracks the user's chosen accent.
+ * Selected label: the theme-aware glow token (pure white + white halo in
+ * dark mode, black + black halo in light mode) so the active mode reads as
+ * lit tube text and stays legible regardless of theme.
  */
 .modeSegment[aria-checked="true"] {
   font-weight: 500;
   letter-spacing: 0.06em;
   background: none;
-  -webkit-text-fill-color: var(--color-accent);
-  color: var(--color-accent);
-  text-shadow:
-    0 0 3px color-mix(in srgb, var(--color-accent) 80%, transparent),
-    0 0 7px color-mix(in srgb, var(--color-accent) 55%, transparent),
-    0 0 12px color-mix(in srgb, var(--color-accent) 38%, transparent),
-    0 0 20px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  -webkit-text-fill-color: var(--color-text-glow);
+  color: var(--color-text-glow);
+  text-shadow: var(--text-glow-shadow);
 }
 
 @media (max-width: 640px) {
