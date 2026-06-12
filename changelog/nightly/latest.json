@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-12T04:34:36.923Z",
+  "generatedAt": "2026-06-12T06:25:03.536Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.644.1",
+  "version": "0.1.0-nightly.645.1",
   "date": "2026-06-11",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.644.1",
-  "lastIncludedSha": "5829bc6adb0a648d9d4c5da49054136167cb8a30",
-  "previousProcessedSha": "e95237d0a835932069d6b9bdebc3d69d8f04f107",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.645.1",
+  "lastIncludedSha": "60e8254c4104845de44db2b4ae28ea7666d1ad05",
+  "previousProcessedSha": "5829bc6adb0a648d9d4c5da49054136167cb8a30",
   "commitShas": [
     "34404cfd941b474901ee9de6b318533ff9e6ea29",
     "ec007643cedd32d94903384b112267da942a2af1",
@@ -103,10 +103,15 @@
     "e95237d0a835932069d6b9bdebc3d69d8f04f107",
     "b7ca563938c5f43654b3cf0f5c7e5daeec8a54a9",
     "df00ed14f5ea5389b7714dfd96fd6cd9122e6157",
-    "c97538f33800c609d7d6b6cd22b6b1e4c116bb1c"
+    "c97538f33800c609d7d6b6cd22b6b1e4c116bb1c",
+    "798ffe5a185c4067493a9dff5c52f01c0cc72353",
+    "1a8d07ace0a8ce702b7b3c78b7bc8b6e4a6ee36d",
+    "4d1a0dafb7f119c8f9b31f199220d744e35c0622",
+    "fe2fe5709032459c3a5eee148b6628114a8517d6",
+    "60e8254c4104845de44db2b4ae28ea7666d1ad05"
   ],
-  "rawCommitCount": 93,
-  "filteredCommitCount": 92,
+  "rawCommitCount": 98,
+  "filteredCommitCount": 97,
   "rawCommits": [
     {
       "sha": "34404cfd941b474901ee9de6b318533ff9e6ea29",
@@ -4247,6 +4252,238 @@
       "fileGroups": [],
       "primaryArea": "Other",
       "areas": []
+    },
+    {
+      "sha": "798ffe5a185c4067493a9dff5c52f01c0cc72353",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T22:19:45-07:00",
+      "subject": "style(input-bar): use theme-aware glow for selected mode label",
+      "body": "Swap the selected mode pill's purple accent glow for the shared --color-text-glow / --text-glow-shadow tokens so the active label renders white in dark mode and black in light mode.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5829bc6adb0a648d9d4c5da49054136167cb8a30"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 10
+      },
+      "committedAtMs": 1781241585000,
+      "cleanSubject": "style(input-bar): use theme-aware glow for selected mode label",
+      "keywords": [
+        "style",
+        "input",
+        "theme",
+        "aware",
+        "glow",
+        "selected",
+        "mode",
+        "label"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1a8d07ace0a8ce702b7b3c78b7bc8b6e4a6ee36d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T22:22:15-07:00",
+      "subject": "fix(public): unblock document scroll on mobile marketing routes",
+      "body": "The closed-but-mounted MobilePublicMenu still advertised\naria-modal=\"true\", so the global modal scroll-lock :has() rule pinned\nhtml/body to overflow:hidden on every mobile public route - defeating\nthe doc-scroll mode (no iOS address-bar collapse) and forcing the\njanky non-compositor scroll path. Scope the lock to visible dialogs,\ndrop aria-modal while the menu is closed, and paint a dark canvas\nbehind the doc-scroll surface so dvh lag no longer flashes white at\nthe bottom edge.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "798ffe5a185c4067493a9dff5c52f01c0cc72353"
+      ],
+      "files": [
+        "interface/src/index.css",
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 27,
+        "deletions": 3
+      },
+      "committedAtMs": 1781241735000,
+      "cleanSubject": "unblock document scroll on mobile marketing routes",
+      "keywords": [
+        "unblock",
+        "document",
+        "scroll",
+        "mobile",
+        "marketing",
+        "routes"
+      ],
+      "fileGroups": [
+        "interface/src/index.css",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4d1a0dafb7f119c8f9b31f199220d744e35c0622",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T22:42:12-07:00",
+      "subject": "fix(deps): resolve dependabot security alerts across all manifests",
+      "body": "- interface: react-router-dom 7.13.1 -> 7.17.0 (turbo-stream RCE, DoS,\n  XSS, open redirect), hono 4.12.25, qs 6.15.2, js-yaml override\n  ^4.1.1, esbuild override ^0.25.0 for i18next-parser's nested copy\n- promptfoo evals: promptfoo 0.121.3 -> 0.121.15 plus npm audit fix\n  (protobufjs critical RCE, axios, hono, xmldom, mathjs, simple-git,\n  basic-ftp and friends); lockfile now audits clean\n- rust: jsonwebtoken 9 -> 10 (type-confusion auth bypass) pinned to\n  the rust_crypto backend, openssl 0.10.80, tar 0.4.46\n- fastlane gems (ios + android): jwt 2.10.3 (empty-key HMAC bypass),\n  addressable 2.9.0 (ReDoS)\n\nRemaining open alert: glib 0.18 unsoundness (Linux-only) is blocked\nby the wry/webkit2gtk 0.18 windowing stack and needs a major desktop\nstack upgrade to clear.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1a8d07ace0a8ce702b7b3c78b7bc8b6e4a6ee36d"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "infra/evals/promptfoo/package-lock.json",
+        "infra/evals/promptfoo/package.json",
+        "interface/android/Gemfile.lock",
+        "interface/ios/Gemfile.lock",
+        "interface/package-lock.json",
+        "interface/package.json"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 2242,
+        "deletions": 3742
+      },
+      "committedAtMs": 1781242932000,
+      "cleanSubject": "resolve dependabot security alerts across all manifests",
+      "keywords": [
+        "resolve",
+        "dependabot",
+        "security",
+        "alerts",
+        "across",
+        "manifests"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "infra/evals/promptfoo",
+        "interface/android/Gemfile.lock",
+        "interface/ios/Gemfile.lock",
+        "interface/package-lock.json",
+        "interface/package.json"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Android",
+        "iOS"
+      ]
+    },
+    {
+      "sha": "fe2fe5709032459c3a5eee148b6628114a8517d6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T22:49:02-07:00",
+      "subject": "style(chat): widen chat column cap to 1040px via shared token",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4d1a0dafb7f119c8f9b31f199220d744e35c0622"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/InputBarShell.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.module.css",
+        "interface/src/features/chat-ui/MessageQueue/MessageQueue.module.css",
+        "interface/src/features/chat-ui/PromptSuggestions/PromptSuggestions.module.css",
+        "interface/src/index.css"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 21,
+        "deletions": 12
+      },
+      "committedAtMs": 1781243342000,
+      "cleanSubject": "style(chat): widen chat column cap to 1040px via shared token",
+      "keywords": [
+        "style",
+        "chat",
+        "widen",
+        "column",
+        "1040px",
+        "shared",
+        "token"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/features",
+        "interface/src/index.css"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "60e8254c4104845de44db2b4ae28ea7666d1ad05",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-11T22:59:08-07:00",
+      "subject": "feat(chat): calmer, plain-language agent activity feedback",
+      "body": "Non-fatal tool failures no longer render red. A new three-tier severity\n(done / attention / error) maps soft failures (is_error or non-zero exit\nthe agent absorbed) to a quiet amber dot with muted exit-code text,\nreserving red for hard failures (retry budget exhausted). Command rows\nlead with a plain-language description (Check git remotes, Run tests),\nfinished commands collapse to one line with detail a click away, and\nsubagent cards show what they accomplished instead of repeating the\nprompt once complete.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fe2fe5709032459c3a5eee148b6628114a8517d6"
+      ],
+      "files": [
+        "interface/src/components/Block/Block.module.css",
+        "interface/src/components/Block/Block.tsx",
+        "interface/src/components/Block/registry.tsx",
+        "interface/src/components/Block/renderers/CommandBlock.tsx",
+        "interface/src/components/Block/renderers/FileBlock.tsx",
+        "interface/src/components/Block/renderers/GenericToolBlock.tsx",
+        "interface/src/components/Block/renderers/ListBlock.tsx",
+        "interface/src/components/Block/renderers/SpecBlock.tsx",
+        "interface/src/components/Block/renderers/renderers.module.css",
+        "interface/src/components/SubAgentBlock/SubAgentBlock.tsx",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/utils/derive-activity.test.ts",
+        "interface/src/utils/derive-activity.ts",
+        "interface/src/utils/tool-severity.test.ts",
+        "interface/src/utils/tool-severity.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 437,
+        "deletions": 35
+      },
+      "committedAtMs": 1781243948000,
+      "cleanSubject": "calmer, plain-language agent activity feedback",
+      "keywords": [
+        "calmer",
+        "plain",
+        "language",
+        "agent",
+        "activity",
+        "feedback"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -4254,29 +4491,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.644.1",
+      "version": "0.1.0-nightly.645.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64004970
+          "sizeBytes": 64382354
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 130746872
+          "sizeBytes": 131062264
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -4286,29 +4523,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.644.1",
+      "version": "0.1.0-nightly.645.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.644.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.645.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60009251
+          "sizeBytes": 60343522
         },
         {
-          "name": "AURA_0.1.0-nightly.644.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.645.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59003860
+          "sizeBytes": 59325604
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4318,29 +4555,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.644.1",
+      "version": "0.1.0-nightly.645.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.644.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.645.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62038786
+          "sizeBytes": 62345333
         },
         {
-          "name": "AURA_0.1.0-nightly.644.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.645.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61060026
+          "sizeBytes": 61441315
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4350,17 +4587,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.644.1",
+      "version": "0.1.0-nightly.645.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47456689
+          "sizeBytes": 47688480
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.644.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.645.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -4369,19 +4606,19 @@
     }
   ],
   "rendered": {
-    "title": "Agent onboarding wizard, public site overhaul, and analytics rescue",
-    "intro": "A heavy day on the public surface: a brand-new guided agent onboarding wizard, full marketing site translation into 19 languages, Terms and Privacy content, mobile public landing, an expanded /os whitepaper across the core repos, and a new feature health status page. Under the hood, the team fixed a chat typing slowdown, tamed remote-agent timeouts, restored Mixpanel analytics on desktop builds, and shipped an observability pipeline.",
+    "title": "Public site overhaul, agent onboarding wizard, and analytics rescue",
+    "intro": "A heavy day centered on the public web experience: a full-screen mobile landing, a new glass-styled agent onboarding wizard, a translated marketing surface across 19 locales, and real Terms/Privacy pages. Alongside that, server-side analytics got patched after a silent regression, a feature health status page went live, and chat performance and tone were both quieted down.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:18 AM",
         "started_at": "2026-06-11T16:18:00.000Z",
         "ended_at": "2026-06-11T16:49:36.000Z",
-        "title": "Theme-aware mode selector capsule",
-        "summary": "The input bar's mode selector now respects the active theme accent with a softer selected state.",
+        "title": "Theme-aware mode selector in the input bar",
+        "summary": "The chat mode selector picks up theme tokens instead of a hardcoded purple accent, and eval fixtures were stabilized to keep CI deterministic.",
         "items": [
           {
-            "text": "Repainted the mode selector capsule and selected label to pull from the theme accent, and softened the selected glow so it no longer overpowers the input bar.",
+            "text": "Recolored the mode selector capsule and selected-label to use the theme accent and a softer glow, so it reads correctly across light and dark themes.",
             "commit_shas": [
               "ec007643cedd32d94903384b112267da942a2af1",
               "4b5261665bdd1b70d88911448189c7e9a3da76d4"
@@ -4389,7 +4626,7 @@
             "confidence": "high"
           },
           {
-            "text": "Stabilized the Run sidekick and workflow eval fixtures so CI assertions stop flaking on transient remote-state probes.",
+            "text": "Stabilized project eval fixtures by seeding the Run sidekick tab and mocking transient remote-state probes so e2e assertions stay deterministic.",
             "commit_shas": [
               "34404cfd941b474901ee9de6b318533ff9e6ea29"
             ],
@@ -4402,11 +4639,11 @@
         "time_label": "9:54 AM",
         "started_at": "2026-06-11T16:54:20.000Z",
         "ended_at": "2026-06-11T16:54:20.000Z",
-        "title": "Longer-running remote agent turns no longer time out",
-        "summary": "Server-side timeouts were raised so actively-progressing remote agent turns and microVM cold opens stop surfacing as spurious stalls.",
+        "title": "Longer timeouts for waking remote agents",
+        "summary": "Remote agent turns no longer trip spurious 502s when a hibernated microVM is waking up or a long tool call is actively making progress.",
         "items": [
           {
-            "text": "Raised the idle turn timeout from 180s to 600s and the first-event timeout from 180s to 300s, and made the microVM cold-open cap configurable via AURA_COLD_OPEN_TIMEOUT_SECS (default 180s, up from a hardcoded 60s), eliminating false 502s when waking hibernated agents or running long tool/LLM work.",
+            "text": "Raised the idle turn timeout from 180s to 600s and the first-event timeout from 180s to 300s, and made the cold-open cap configurable via AURA_COLD_OPEN_TIMEOUT_SECS (default 180s) instead of a hardcoded 60s, eliminating the false stalls operators were seeing on hibernated microVMs.",
             "commit_shas": [
               "f3a817c0bb9dff9f47a35b71d07a9ea5bfc1a2f3"
             ],
@@ -4419,18 +4656,18 @@
         "time_label": "9:59 AM",
         "started_at": "2026-06-11T16:59:02.000Z",
         "ended_at": "2026-06-11T17:08:27.000Z",
-        "title": "Chat typing slowdown and idle GPU drain fixed",
-        "summary": "Two targeted perf fixes restored snappy keystrokes in chat and stopped the agent profile card from quietly throttling the system.",
+        "title": "Chat transcript and agent profile card stop wasting cycles",
+        "summary": "Two perf fixes target the recent app-wide messaging slowdown and the 3D profile card's sustained GPU draw.",
         "items": [
           {
-            "text": "Stopped re-parsing the entire transcript on every keystroke by memoizing the error-agent context hook and stabilizing the ChatMessageList empty-state prop, undoing the app-wide messaging slowdown; also honors prefers-reduced-motion on the attach-button halo.",
+            "text": "Stopped the full chat transcript from re-rendering and re-parsing markdown on every keystroke by memoizing the error-agent context hook and the ChatMessageList component, and honored prefers-reduced-motion for the always-on attach-button halo.",
             "commit_shas": [
               "ae002b8a2631511ce28fa5cb37f926bc97fb7ab8"
             ],
             "confidence": "high"
           },
           {
-            "text": "Cut the idle GPU cost of the 3D agent profile card by dropping unused antialias, halting the bloom render loop once hover/flip transitions settle under reduced motion, and pausing off-screen via IntersectionObserver.",
+            "text": "Cut the 3D agent profile card's idle GPU cost: dropped a wasted multisampled framebuffer, halted the render loop under reduced-motion once transitions settle, and re-added IntersectionObserver-based off-screen pausing so integrated GPUs aren't throttled by an unused card.",
             "commit_shas": [
               "b56275981e9c47ee7db11660fb0b836233a8d526"
             ],
@@ -4442,82 +4679,48 @@
         "batch_id": "entry-4",
         "time_label": "10:10 AM",
         "started_at": "2026-06-11T17:10:19.000Z",
-        "ended_at": "2026-06-11T17:10:19.000Z",
-        "title": "Daily session_active events keep their real app_version",
-        "summary": "Server-emitted analytics no longer land on Mixpanel's '(not set)' app_version slice.",
+        "ended_at": "2026-06-12T05:22:15.000Z",
+        "title": "Public marketing site rebuilt for mobile, i18n, legal, and onboarding",
+        "summary": "The bulk of the day reshapes the public web surface: a new mobile landing and nav, the full marketing UI translated into 19 locales, real Terms/Privacy pages, a multi-step agent onboarding wizard, an expanded /os whitepaper across the core repos, and a critical analytics fix that had been silently breaking DAU.",
         "items": [
           {
-            "text": "Server-side session_active now remembers the latest X-App-Version and X-App-Platform headers per user and falls back to them when a triggering request omits them, and skips the event entirely for capture-mode tokens — so daily DAU events always carry a real version instead of a fake user with no version.",
+            "text": "Restored Mixpanel analytics for shipped builds: re-injected VITE_MIXPANEL_TOKEN into the desktop release's build-interface job (it had been lost in a June 4 CI split, silently no-op'ing the client SDK since), derived a real app_version from git describe for the Render web build instead of the package.json 0.0.0 fallback, stamped is_authenticated on server-emitted session_active so True DAU breakdowns stop bucketing as (not set), kept app_version on header-less server sessions, and added a desktop asset validator that fails the build if the token isn't inlined.",
             "commit_shas": [
+              "6e669ede4d7f75ca803fb8c0da1296aa4f5924f6",
+              "7790077e80a0a4539920139fad83a30f1ebe2879",
+              "262e2cfc2943f77950c6f1cfcbd985a65a4e2756",
               "3d0bef18e76a0539205b002814b47400bc8a92c5"
             ],
             "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-5",
-        "time_label": "10:22 AM",
-        "started_at": "2026-06-11T17:22:43.000Z",
-        "ended_at": "2026-06-11T18:15:11.000Z",
-        "title": "Whitepaper, legal pages, and full marketing translations land",
-        "summary": "A wave of public-site work: an expanded /os whitepaper, an interactive 'Always on.' toggle, remembered login emails, and machine translations for all non-English locales.",
-        "items": [
+          },
           {
-            "text": "Reworked the /os whitepaper with two-line section summaries, ASCII architecture diagrams, an Invariants section, request-lifecycle and user-flow sequence diagrams, and GitHub-linked inline code references; dev now pulls content from prod so /os is no longer blank locally.",
+            "text": "Shipped a public Aura feature health status page at /status, driven by a scheduled GitHub Actions observability workflow that runs public and desktop release probes every 30 minutes and publishes a live status.json snapshot the marketing StatusView reads.",
             "commit_shas": [
-              "e84938ac9e9211e01a4db60c28827c0e5835b479",
-              "54f3e013adfaf19e53b477f0337cb23ca3206726",
-              "748c5b3c790870fad516e08b534f5ff5d049aafd",
-              "7d9aca56eb5ff2e7286eb0832d109e7d3d4576ee",
-              "cfb01e91e520019da7f51ffa16ea19a19bdfd897"
+              "5bd0ba0698bdbbb52b213c81e43fcd3135e50269",
+              "69782efb674702c4f77cbf75ebea03a30032a39e",
+              "e95237d0a835932069d6b9bdebc3d69d8f04f107"
             ],
             "confidence": "high"
           },
           {
-            "text": "Translated the public marketing and publicChat UI into all 19 non-English locales — previously every non-English visitor silently fell back to English — and routed the rotating tagline through i18n, with reproducible translate/validate scripts checked in.",
+            "text": "Translated the entire public marketing and publicChat surface into all 19 non-English locales (previously every language fell back to English), routed the rotating hero tagline through i18n, and added reproducible translate and validation scripts so future changes stay in sync.",
             "commit_shas": [
-              "0d6155a4c040dc4a2b9264f8ed34886d982c47cf"
+              "0d6155a4c040dc4a2b9264f8ed34886d982c47cf",
+              "99a0e6d03d212cc1de5f5cbe6ec1bad0a6fc6edd"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a remembered-accounts dropdown to the Sign In email field, persisting up to five recent emails in localStorage with an 'Add an account' option and per-account removal.",
+            "text": "Replaced the /terms and /privacy placeholders with full CYPHER, INC. legal documents rendered via a shared LegalDocument component, machine-translated into all 20 locales, and folded into the standard marketing page stack with hero, changelog preview, CTA, and footer.",
             "commit_shas": [
-              "886e305984850688d230805d45d859124e0cddf1"
+              "e29e90c7d7c9d2961296d002c9e5eeaefd3be032",
+              "7565b5eb60fb473a34f13ebe2677c0e42ee67326",
+              "46c231ecba0501e000ede359fe6c011c6f1fefd6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished the 'Built for trust' card: the 'Always on.' switch is now clickable with a sequenced knob-slide and label-fade animation, the trust display panel centers correctly in the right gap, and the trust disc, verified cubes, and paint gallery animate even under reduced motion.",
-            "commit_shas": [
-              "47a76dac980444d7317b4ff4b90fd905f463ba95",
-              "f942415669a437161ab69b9da462276a168c5a58",
-              "184024e87d0b0229a64b3513b4d65781a657dd3d",
-              "49c23e0cd804e0cfbe2a35271da186f054a6b48f",
-              "724ee647641520fe27c7548cedd5e983c326747d"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed the marketing WebGL background flicker on every resize by repainting synchronously after the ResizeObserver clears the drawing buffer.",
-            "commit_shas": [
-              "a6a21a539e26b2e81966bebabf2aab378db6bfce"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-6",
-        "time_label": "11:19 AM",
-        "started_at": "2026-06-11T18:19:43.000Z",
-        "ended_at": "2026-06-12T04:26:49.000Z",
-        "title": "Agent onboarding wizard, mobile public site, and observability go live",
-        "summary": "The day's largest batch shipped the new public 'Create your agent' wizard, a mobile-friendly public landing, Terms/Privacy content, an Aura feature health page, and restored analytics on desktop builds.",
-        "items": [
-          {
-            "text": "Launched the public agent onboarding wizard — six steps (Identity, Skills, Integrations, Messaging, Automations, Launch) in a reusable black-glass modal with compact selectable tiles, info-dot descriptions, a desktop-pills/mobile-progress stepper, and a footer 'Create account' CTA wired through the onboarding store; the draft applies to a remote-only CEO agent after signup.",
+            "text": "Launched a six-step Create-your-agent onboarding wizard (identity, skills, integrations, messaging, automations, launch) wrapped in a new reusable GlassModal, with compact selectable tiles, a footer Create-account CTA, persona presets, and a portal-based mobile sheet so it works correctly under the mobile shell.",
             "commit_shas": [
               "81ce6f5f20a4050f2adf4728fcc495c0820d45f8",
               "69a71e75659d56473ea06ec09a4fa091f9444533",
@@ -4530,104 +4733,140 @@
               "79277795edf8a807c5e06c7bc6149a33730fbb3a",
               "87e883e068e26a71aca93978ba2aacb6ed32eddb",
               "c1c63dc2f5033417c7a77655eff7607e2005033a",
-              "b7ca563938c5f43654b3cf0f5c7e5daeec8a54a9"
+              "b7ca563938c5f43654b3cf0f5c7e5daeec8a54a9",
+              "101aece3ea2f7c7d806d9ceba535ab4a913af942",
+              "e937b0f70681c886c9dafb20d6841edadc127972"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Rebuilt the mobile public site with a Creator-pinned landing hero, persona WebGL plasma background, full-screen hamburger menu mirroring the desktop nav, framed shell with rounded corners, static WebGL posters where canvases are disabled, and dozens of mobile-specific reflow fixes (skill keypad, trust rail, privacy cards, chat-input model picker, terminal feed clipping).",
+            "text": "Rebuilt the mobile public landing with a Creator-pinned hero (typewriter tagline, live WebGL plasma background, character video, CTA pill), a full-screen hamburger menu mirroring the desktop nav, a framed shell perimeter matching the desktop chrome, captured static posters where WebGL is gated off, and routed the chat composer to a dedicated /chat page.",
             "commit_shas": [
               "743979ecdf2ac3f9f1c6425e6e6be8fd6d79de12",
               "af596ea53db5f574e21fd137c2223efe04146a8c",
               "0c0fe4e3440a330a760a7e5999d1b27f7adfa9fe",
-              "98a99255fdbba19c79f884b18883695b1e5ea394",
               "c1cb5e24b87652159b182d0dfa257585a156469f",
-              "d36f573b117a9dd5339fa4bf955f4798c19b950c",
-              "278133b9276feec829ea90aa65d0b712cfca86da",
               "c94afcbd4667a56a6b8597462a30322c7977c32b",
-              "21a3ad0c4d83a9aad5ee8936f05fe63af83b7cad",
-              "9d3e281d6187b7a7b5f5516300b20935d13e70d4",
               "8e128744caee3a16647a1beaea5203333a9e2f04",
-              "bba733a889c8da27d8439abdfc85bab96480a57d",
               "3f0c9a4348a4c6e341fe248638b8ed1a7a86ad00",
-              "ed3e93aa64f89ce79f4792f07906dc2b9b8fd294",
               "f30a66e64427d2611ddfe4329e05a8a039dfcd63",
               "7684bcb6cf438e4086c83904fde423c2c8a8d601",
-              "d71299d5d8ee857cedfec9779e236a94586cebf6"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Replaced the placeholder /terms and /privacy heroes with full CYPHER, INC. legal documents rendered via a shared LegalDocument component, machine-translated into all 20 locales, and wrapped them in the standard hero + changelog + CTA + footer stack on a continuous black surface.",
-            "commit_shas": [
-              "e29e90c7d7c9d2961296d002c9e5eeaefd3be032",
-              "7565b5eb60fb473a34f13ebe2677c0e42ee67326",
-              "46c231ecba0501e000ede359fe6c011c6f1fefd6"
+              "1a8d07ace0a8ce702b7b3c78b7bc8b6e4a6ee36d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Shipped the new public Aura feature health status page backed by a scheduled GitHub Actions observability workflow that runs probes every 30 minutes, publishes a snapshot to /observability/status.json, and feeds the /status view; later passes hardened the snapshot, split public vs desktop lanes, and added release-time desktop probes.",
+            "text": "Extended the public /os whitepaper from AURA Harness to aura-os, aura-router, aura-network, aura-storage, and z-billing with per-repo collapsible nav groups, added an Invariants section and internals diagrams, made inline code references link out to the right cypher-asi repo, unified /os and /docs on a shared MarkdownDocSite layout with an On-this-page TOC, and pinned both to prod content in dev so locally seeded servers don't show empty states.",
             "commit_shas": [
-              "5bd0ba0698bdbbb52b213c81e43fcd3135e50269",
-              "69782efb674702c4f77cbf75ebea03a30032a39e",
-              "e95237d0a835932069d6b9bdebc3d69d8f04f107"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Expanded /os whitepaper coverage to aura-os, aura-router, aura-network, aura-storage, and z-billing as repo-aware collapsible nav groups, and unified /os and /docs onto a shared MarkdownDocSite layout with an 'On this page' TOC; /docs now reads from prod in dev so it stops rendering empty.",
-            "commit_shas": [
+              "e84938ac9e9211e01a4db60c28827c0e5835b479",
+              "54f3e013adfaf19e53b477f0337cb23ca3206726",
               "6df99cbe22187bd6c75c09fdeff2c2fd3a7c1edc",
-              "c045d96066ced1c96a8feb83dc2ed28ce9044c41",
-              "41c60002c9255c1bcbf695a90056f3b5431789ee",
+              "748c5b3c790870fad516e08b534f5ff5d049aafd",
+              "7d9aca56eb5ff2e7286eb0832d109e7d3d4576ee",
+              "cfb01e91e520019da7f51ffa16ea19a19bdfd897",
+              "530311a7760e58d53a7e12240a02a183497b9dbf",
               "8c12fa2512d77503eed26f80773b6a299230d3e5",
-              "afc12be1458fe521d6bfcb106b4235f7dd18db03"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Restored Mixpanel analytics on desktop and stable builds — the June CI refactor had stopped baking VITE_MIXPANEL_TOKEN into the frontend, silently collapsing True DAU; the token is now injected into the build-interface job, web builds derive a real APP_VERSION from git, the server logs loudly when MIXPANEL_TOKEN is unset, server-emitted session_active stamps is_authenticated=true, and a desktop-frontend-assets validator guards against silent regressions.",
-            "commit_shas": [
-              "6e669ede4d7f75ca803fb8c0da1296aa4f5924f6",
-              "7790077e80a0a4539920139fad83a30f1ebe2879",
-              "262e2cfc2943f77950c6f1cfcbd985a65a4e2756"
+              "41c60002c9255c1bcbf695a90056f3b5431789ee",
+              "c045d96066ced1c96a8feb83dc2ed28ce9044c41"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tightened the standalone Agents experience: auto-selects a valid agent on login (clearing stale cached ids on logout and bouncing dead ones), warms chat history on click and post-login redirect, and consistently hides local-only agents from every web/mobile surface (project pickers, mobile roster, explorer, menu cycling) since they require the desktop bridge.",
+            "text": "Polished the Built-for-trust card with a clickable, animated Always on toggle (compositor-driven knob slide, sequenced label fade), a centered LCD display panel, an unfrozen trust disc and verified cubes under reduced motion, and a horizontal service rail on phones.",
+            "commit_shas": [
+              "47a76dac980444d7317b4ff4b90fd905f463ba95",
+              "f942415669a437161ab69b9da462276a168c5a58",
+              "184024e87d0b0229a64b3513b4d65781a657dd3d",
+              "b2296e3935b08b49ee774d958309aface669d878",
+              "fcab8fc1f2e46600362df38fcbe799ce829af374",
+              "880ad3caebe7c28dbbea5e821d7b2eef968587b7",
+              "7ab441d858e2e0dc13b5bf2400991aaaf6f84147",
+              "95237c3257e04097a4f0daf0dadb28afa9677b6e",
+              "49c23e0cd804e0cfbe2a35271da186f054a6b48f",
+              "21b7109cb5c322ea212f870bb2ce5ced937120d5",
+              "7684bcb6cf438e4086c83904fde423c2c8a8d601"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened the agents experience for web and mobile: hid machine_type=local agents across every surface that bypassed the remote-only rule (project picker, mobile roster, explorer tree, project switcher, menu cycling), auto-selected a valid agent on login while warming chat history, and added a deployed-harness commit link to the env popup.",
             "commit_shas": [
               "599102e08f10ebb7d4affdcf53afbf29a3cb695c",
               "166913cf4a8f1aede4e0e997bd6e9b9b31e34970",
-              "29fbc11468d869a7869720b8835cbf52e68464af"
+              "29fbc11468d869a7869720b8835cbf52e68464af",
+              "a792833c473566caa1831ed7574ae009037ae49c",
+              "066fdd7eb334989f4b0abfd091d6538804785947"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reskinned the public marketing shell with a black-glass treatment: pricing, blog, changelog, downloads, feedback, models, os, docs, and legal pages now share the diagonal-gradient outer shell and flat #090909 surface, the Resources dropdown becomes two columns with a new Docs entry, and the agents-page phone mock drops its orange glow for neutral black glass.",
+            "text": "Added a remembered-accounts dropdown to the login email field (up to 5, most recent first, forgettable), removed the web-only host settings button from the authenticated titlebar, and rerouted the authed Download pill to the in-app Downloads modal.",
+            "commit_shas": [
+              "886e305984850688d230805d45d859124e0cddf1",
+              "e937b0f70681c886c9dafb20d6841edadc127972",
+              "df00ed14f5ea5389b7714dfd96fd6cd9122e6157"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Unified the public pages on a black shell with risen-glass panels (pricing, blog, changelog, downloads, feedback, models, os, docs, terms, privacy), added a two-column Resources nav with Docs, fixed window-drag dead zones beside the centered titlebar nav, and stopped a Vite 8 dev-server infinite error loop when launched by an AI agent.",
             "commit_shas": [
               "70188ec4db99c084c118b4e403ba665ec8a1c0a6",
-              "af596ea53db5f574e21fd137c2223efe04146a8c",
-              "238c8c2712af0f55358a10b70e366eeec56be9cf",
-              "afc12be1458fe521d6bfcb106b4235f7dd18db03"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed a subtle dead-zone where window dragging silently failed beside the centered titlebar nav — Chromium computes app-region from the untransformed layout box, so the nav is now centered without a CSS transform.",
-            "commit_shas": [
-              "0845a1c7cad6ec41ea88d56779578e781e4954d1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Worked around a Vite 8 dev-server infinite error loop by disabling its agent-spawned console forwarding, and gated heavy marketing WebGL scenes (AuraScreenOrb, isolated device) to large screens only while keeping them animating regardless of reduced-motion.",
-            "commit_shas": [
+              "afc12be1458fe521d6bfcb106b4235f7dd18db03",
+              "0845a1c7cad6ec41ea88d56779578e781e4954d1",
               "b2296e3935b08b49ee774d958309aface669d878",
+              "1a8d07ace0a8ce702b7b3c78b7bc8b6e4a6ee36d"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Gated the heavy AuraScreenOrb and IsolatedDevice WebGL canvases to large screens, removed reduced-motion freezes that had left those scenes static, and stopped the WebGL page background from flickering black on every resize step.",
+            "commit_shas": [
               "4e36250638423eefe2eef4f0f2edd1e78e319969",
               "1cc948b4a92fd744c97076a1c16a67a41b7e14d7",
+              "a6a21a539e26b2e81966bebabf2aab378db6bfce",
               "ae2e0cbfd6e231af1326f948390b7dde074307b1"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "10:42 PM",
+        "started_at": "2026-06-12T05:42:12.000Z",
+        "ended_at": "2026-06-12T05:42:12.000Z",
+        "title": "Security alerts cleared across every manifest",
+        "summary": "A sweep through Dependabot alerts on the JS, Rust, and Fastlane stacks closes a batch of known RCE, auth-bypass, and ReDoS issues.",
+        "items": [
+          {
+            "text": "Upgraded react-router-dom to 7.17.0 (turbo-stream RCE, DoS, XSS, open redirect), bumped jsonwebtoken to 10 (type-confusion auth bypass) on the rust_crypto backend, refreshed promptfoo to 0.121.15 (protobufjs critical RCE and friends), and pulled jwt 2.10.3 plus addressable 2.9.0 into the iOS and Android Fastlane gems; the only remaining open alert is the Linux-only glib 0.18 unsoundness blocked by the wry/webkit2gtk stack.",
+            "commit_shas": [
+              "4d1a0dafb7f119c8f9b31f199220d744e35c0622"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "10:49 PM",
+        "started_at": "2026-06-12T05:49:02.000Z",
+        "ended_at": "2026-06-12T05:59:08.000Z",
+        "title": "Calmer agent activity feed and a wider chat column",
+        "summary": "Late-night chat work introduces a three-tier severity for tool output and widens the chat reading column.",
+        "items": [
+          {
+            "text": "Made agent activity feedback plain-language and less alarming: a new done/attention/error severity routes soft tool failures to a quiet amber dot instead of red, command rows lead with a readable description (Check git remotes, Run tests) and collapse to one line when finished, and subagent cards show what they accomplished instead of repeating the prompt.",
+            "commit_shas": [
+              "60e8254c4104845de44db2b4ae28ea7666d1ad05"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Widened the chat column cap to 1040px via a shared token across the input bar, message queue, and prompt suggestions.",
+            "commit_shas": [
+              "fe2fe5709032459c3a5eee148b6628114a8517d6"
             ],
             "confidence": "high"
           }
@@ -4635,13 +4874,13 @@
       }
     ],
     "highlights": [
-      "New guided agent onboarding wizard with black-glass UI",
-      "Marketing UI translated into all 19 supported locales",
-      "Terms of Service and Privacy Policy now live",
-      "Mobile public landing with full-screen nav and WebGL hero",
-      "Public Aura feature health status page launches",
-      "Mixpanel analytics restored on desktop builds"
+      "Public marketing translated into 19 locales",
+      "New agent onboarding wizard with glass modal UI",
+      "Mobile public landing rebuilt around a Creator hero and full-screen menu",
+      "Mixpanel analytics restored on desktop and web builds",
+      "Aura feature health status page goes live",
+      "Chat transcript no longer re-renders on every keystroke"
     ],
-    "raw_commit_count": 92
+    "raw_commit_count": 97
   }
 }

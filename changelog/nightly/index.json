@@ -2,21 +2,21 @@
   {
     "date": "2026-06-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.644.1",
-    "title": "Agent onboarding wizard, public site overhaul, and analytics rescue",
-    "intro": "A heavy day on the public surface: a brand-new guided agent onboarding wizard, full marketing site translation into 19 languages, Terms and Privacy content, mobile public landing, an expanded /os whitepaper across the core repos, and a new feature health status page. Under the hood, the team fixed a chat typing slowdown, tamed remote-agent timeouts, restored Mixpanel analytics on desktop builds, and shipped an observability pipeline.",
+    "version": "0.1.0-nightly.645.1",
+    "title": "Public site overhaul, agent onboarding wizard, and analytics rescue",
+    "intro": "A heavy day centered on the public web experience: a full-screen mobile landing, a new glass-styled agent onboarding wizard, a translated marketing surface across 19 locales, and real Terms/Privacy pages. Alongside that, server-side analytics got patched after a silent regression, a feature health status page went live, and chat performance and tone were both quieted down.",
     "entryCount": 6,
     "highlights": [
-      "New guided agent onboarding wizard with black-glass UI",
-      "Marketing UI translated into all 19 supported locales",
-      "Terms of Service and Privacy Policy now live",
-      "Mobile public landing with full-screen nav and WebGL hero",
-      "Public Aura feature health status page launches",
-      "Mixpanel analytics restored on desktop builds"
+      "Public marketing translated into 19 locales",
+      "New agent onboarding wizard with glass modal UI",
+      "Mobile public landing rebuilt around a Creator hero and full-screen menu",
+      "Mixpanel analytics restored on desktop and web builds",
+      "Aura feature health status page goes live",
+      "Chat transcript no longer re-renders on every keystroke"
     ],
-    "rawCommitCount": 93,
-    "generatedAt": "2026-06-12T04:34:36.923Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.644.1",
+    "rawCommitCount": 98,
+    "generatedAt": "2026-06-12T06:25:03.536Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.645.1",
     "path": "history/2026-06-11.json"
   },
   {
