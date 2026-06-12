@@ -220,6 +220,14 @@ export interface ChatInputBarProps {
   attachAccent?: ReactNode;
 }
 
+// Stable module-level defaults: inline `= []` destructure defaults
+// would mint a fresh array identity on every render whenever a caller
+// leaves the prop undefined (marketing mocks, project-less chats),
+// defeating the memoized slot components below on each keystroke.
+const EMPTY_ATTACHMENTS: AttachmentItem[] = [];
+const EMPTY_COMMANDS: SlashCommand[] = [];
+const EMPTY_PROJECTS: Project[] = [];
+
 export const DesktopChatInputBar = memo(
   forwardRef<ChatInputBarHandle, ChatInputBarProps>(function DesktopChatInputBar(
     {
@@ -237,14 +245,14 @@ export const DesktopChatInputBar = memo(
       machineType,
       templateAgentId,
       agentId,
-      attachments = [],
+      attachments = EMPTY_ATTACHMENTS,
       onAttachmentsChange,
       onRemoveAttachment,
-      selectedCommands = [],
+      selectedCommands = EMPTY_COMMANDS,
       onCommandsChange,
       demoRecordOptions,
       onDemoRecordOptionsChange,
-      projects = [],
+      projects = EMPTY_PROJECTS,
       selectedProjectId,
       onProjectChange,
       workspacePath,
