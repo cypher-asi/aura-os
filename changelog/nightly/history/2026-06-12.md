@@ -1,47 +1,44 @@
-# Observability probes get honest, scoped, and release-aware
+# Status probes get honest, scoped, and release-aware
 
 - Date: `2026-06-12`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.652.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.652.1
+- Version: `0.1.0-nightly.653.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.653.1
 
-Today was an infrastructure-heavy day focused on making Aura's status observability trustworthy. The team tightened how health probes run, removed checks that weren't telling the truth, locked down the permissions those probes use, and hardened the release pipeline against flaky GitHub API calls and missing service URLs.
+Today's nightly is an observability and release-plumbing day. The team tightened how Aura's status probes run, what permissions they request, and how releases trigger health checks — plus made desktop CI more resilient to missing configuration and flaky GitHub API calls.
 
-## 12:10 AM — Complete health-check coverage and resilient artifact polling
+## 12:10 AM — Full health-check coverage and resilient artifact polling
 
-The observability suite was expanded to cover the full set of release-critical probes, and CI artifact polling stopped failing on transient GitHub API errors.
+Early-morning fixes broadened the observability check set and hardened the CI artifact wait script against transient GitHub failures.
 
-- Expanded the desktop release observability suite to run the full check list — including 3D and video generation streams — so release health reports reflect the real product surface. (`71be72f`)
-- Gated observability publishing on whether the probes actually ran, preventing empty or misleading status snapshots when credentials are missing. (`71be72f`)
-- Made the GitHub artifact-wait script retry on network failures, 429s, and 5xx responses instead of aborting the release on a single flaky API call. (`5f1e3a7`)
+- Expanded the observability suite to include 3D and video generation streams alongside the existing image stream, and gated desktop release probe publishing on whether the probes actually ran so missing credentials no longer poison the snapshot. (`71be72f`)
+- CI artifact polling (`wait-gh-artifacts.mjs`) now retries on network errors, 429s, and 5xx responses from the GitHub API instead of failing the whole release wait on a single blip. (`5f1e3a7`)
 
-## 1:16 AM — Default service URLs for desktop and release workflows
+## 1:16 AM — Default service URLs for desktop CI workflows
 
-Release and validation workflows now ship with safe fallback URLs for every Aura backend service, so builds no longer break when a repository variable is unset.
+Desktop validation, performance benchmarks, and nightly/stable release workflows now fall back to known-good service URLs when repository variables are unset.
 
-- Added default values for AURA_NETWORK_URL, AURA_STORAGE_URL, AURA_INTEGRATIONS_URL, AURA_ROUTER_URL, Z_BILLING_URL, ORBIT_BASE_URL, and SWARM_BASE_URL across the nightly release, stable release, desktop validation, and performance benchmark workflows. (`f82c98f`)
+- Added inline defaults for AURA_NETWORK_URL, AURA_STORAGE_URL, AURA_INTEGRATIONS_URL, AURA_ROUTER_URL, Z_BILLING_URL, ORBIT_BASE_URL, and SWARM_BASE_URL across desktop-validate, performance benchmark, and nightly/stable release workflows, so forks and fresh environments can run end-to-end without pre-seeding every variable. (`f82c98f`)
 
-## 5:56 AM — Observability re-runs automatically after each desktop release
+## 5:56 AM — Observability refreshes automatically after each desktop release
 
-The observability workflow now triggers on successful desktop nightly and stable releases, and the release pipeline itself was simplified to produce snapshots directly instead of merging against gh-pages.
+The status suite now reruns on successful Desktop Nightly and Stable releases, and the per-release snapshot was simplified to drop fragile gh-pages merging.
 
-- Wired the observability workflow to run on completion of Desktop Nightly Release and Desktop Stable Release, so post-release health is refreshed without waiting for the next cron tick. (`45c287f`)
-- Replaced the gh-pages merge dance in release workflows with a direct desktop observability snapshot, removing a fragile git fetch step from the critical release path. (`45c287f`)
-- Made per-model runtime probes capture errors individually so one failing model no longer aborts the rest of the suite. (`45c287f`)
+- Wired the observability workflow to trigger on successful completion of Desktop Nightly Release and Desktop Stable Release runs, so the public status page reflects the new build within minutes instead of waiting for the 30-minute cron. (`45c287f`)
+- Replaced the merged-with-previous-snapshot dance (which fetched gh-pages mid-release) with a straight `npm run status:snapshot`, and made per-model runtime probe failures recoverable so one bad model no longer aborts the whole sweep. (`45c287f`)
 
-## 10:28 AM — Truthful, least-privilege status probes
+## 10:28 AM — Truthful, least-privilege status probes end-to-end
 
-Status probes were rewritten to only report what they can actually verify, to run with the minimum permissions needed, and to forward agent permissions correctly through the runtime.
+An afternoon thread reshaped how status probes report and authenticate: probes only claim features they actually exercise, run with minimal permissions, and the agent-create path now preserves those scoped permissions through the network round-trip.
 
-- Removed the model3d, video, live-benchmark, and harness-fixture checks from the observability run because they couldn't be verified truthfully, and updated feature health docs to match. (`1d96402`)
-- Status probe agents are now created with capability-less, org-scoped permissions instead of a full-access capability set — first by zeroing capabilities, then by extracting a dedicated, tested statusProbeAgentPermissions helper that requires an org id. (`573e753`, `086a496`)
-- Runtime session config on the server now forwards agent permissions into the harness session, with regression tests ensuring scoped, zero-capability permissions are preserved end to end. (`1d96402`, `086a496`)
-- Locked the status check registry so the probe runner cannot expose check IDs that aren't declared, catching drift between the runner and the registered feature list. (`086a496`)
+- Status probes no longer advertise 3D, video, live-benchmark, or harness-fixture checks they couldn't verify; the observability workflow and feature registry were pruned to match, and the runtime handler now forwards agent permissions into the session config so probe results reflect the real authorization path. (`1d96402`)
+- Status probe agents now request zero capabilities instead of the previous full-access bundle (spawnAgent, controlAgent, invokeProcess, generateMedia, readAllProjects, writeAllProjects, …), and a new `statusProbeAgentPermissions` helper scopes them to a single org with explicit tests. (`573e753`, `086a496`)
+- Hardened agent creation so that when aura-network's response drops or rewrites the submitted permissions, the server logs a warning and falls back to the originally requested scoped, zero-capability permissions — preventing probes (and other scoped agents) from silently being upgraded. (`115a761`)
 
 ## Highlights
 
-- Status probes now run with minimal, org-scoped permissions
-- Observability suite re-runs automatically after every desktop release
-- CI artifact polling survives transient GitHub API failures
-- Release workflows fall back to safe default service URLs
+- Status probes now run with least-privilege permissions
+- Observability suite re-runs automatically after each desktop release
+- Desktop CI falls back to default service URLs when vars are unset
+- Artifact polling survives transient GitHub API failures
 

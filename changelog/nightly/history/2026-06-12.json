@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-12T18:45:22.992Z",
+  "generatedAt": "2026-06-12T19:27:44.815Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.652.1",
+  "version": "0.1.0-nightly.653.1",
   "date": "2026-06-12",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.652.1",
-  "lastIncludedSha": "086a496d3f8339f9ded299895452fadfbeac7fc7",
-  "previousProcessedSha": "573e75312a3ade82e382f64076e553be70204cc8",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.653.1",
+  "lastIncludedSha": "115a7619155803bdeacabb4e7666dcde4392ce36",
+  "previousProcessedSha": "086a496d3f8339f9ded299895452fadfbeac7fc7",
   "commitShas": [
     "71be72fff9a600927540318abbac9106745fa4ce",
     "5f1e3a72659fb52e5a6b49944c9d346fce8dc9be",
@@ -18,10 +18,11 @@
     "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f",
     "1d96402f6878e418482bbba07075890729113398",
     "573e75312a3ade82e382f64076e553be70204cc8",
-    "086a496d3f8339f9ded299895452fadfbeac7fc7"
+    "086a496d3f8339f9ded299895452fadfbeac7fc7",
+    "115a7619155803bdeacabb4e7666dcde4392ce36"
   ],
-  "rawCommitCount": 7,
-  "filteredCommitCount": 7,
+  "rawCommitCount": 8,
+  "filteredCommitCount": 8,
   "rawCommits": [
     {
       "sha": "71be72fff9a600927540318abbac9106745fa4ce",
@@ -318,6 +319,41 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "115a7619155803bdeacabb4e7666dcde4392ce36",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-12T15:17:48-04:00",
+      "subject": "fix(observability): preserve create permissions (#57)",
+      "body": "",
+      "parents": [
+        "086a496d3f8339f9ded299895452fadfbeac7fc7"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/crud/create.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 49,
+        "deletions": 7
+      },
+      "committedAtMs": 1781291868000,
+      "cleanSubject": "preserve create permissions (#57)",
+      "keywords": [
+        "preserve",
+        "create",
+        "permissions"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 4,
@@ -325,29 +361,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.652.1",
+      "version": "0.1.0-nightly.653.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64610186
+          "sizeBytes": 64587652
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131279352
+          "sizeBytes": 131275256
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -357,29 +393,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.652.1",
+      "version": "0.1.0-nightly.653.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.652.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.653.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60555977
+          "sizeBytes": 60556268
         },
         {
-          "name": "AURA_0.1.0-nightly.652.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.653.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59529420
+          "sizeBytes": 59542195
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -389,29 +425,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.652.1",
+      "version": "0.1.0-nightly.653.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.652.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.653.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62562972
+          "sizeBytes": 62560160
         },
         {
-          "name": "AURA_0.1.0-nightly.652.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.653.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61660309
+          "sizeBytes": 61657225
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -421,17 +457,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.652.1",
+      "version": "0.1.0-nightly.653.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47842850
+          "sizeBytes": 47851585
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.652.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.653.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -440,33 +476,26 @@
     }
   ],
   "rendered": {
-    "title": "Observability probes get honest, scoped, and release-aware",
-    "intro": "Today was an infrastructure-heavy day focused on making Aura's status observability trustworthy. The team tightened how health probes run, removed checks that weren't telling the truth, locked down the permissions those probes use, and hardened the release pipeline against flaky GitHub API calls and missing service URLs.",
+    "title": "Status probes get honest, scoped, and release-aware",
+    "intro": "Today's nightly is an observability and release-plumbing day. The team tightened how Aura's status probes run, what permissions they request, and how releases trigger health checks — plus made desktop CI more resilient to missing configuration and flaky GitHub API calls.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "12:10 AM",
         "started_at": "2026-06-12T07:10:49.000Z",
         "ended_at": "2026-06-12T07:22:46.000Z",
-        "title": "Complete health-check coverage and resilient artifact polling",
-        "summary": "The observability suite was expanded to cover the full set of release-critical probes, and CI artifact polling stopped failing on transient GitHub API errors.",
+        "title": "Full health-check coverage and resilient artifact polling",
+        "summary": "Early-morning fixes broadened the observability check set and hardened the CI artifact wait script against transient GitHub failures.",
         "items": [
           {
-            "text": "Expanded the desktop release observability suite to run the full check list — including 3D and video generation streams — so release health reports reflect the real product surface.",
+            "text": "Expanded the observability suite to include 3D and video generation streams alongside the existing image stream, and gated desktop release probe publishing on whether the probes actually ran so missing credentials no longer poison the snapshot.",
             "commit_shas": [
               "71be72fff9a600927540318abbac9106745fa4ce"
             ],
             "confidence": "high"
           },
           {
-            "text": "Gated observability publishing on whether the probes actually ran, preventing empty or misleading status snapshots when credentials are missing.",
-            "commit_shas": [
-              "71be72fff9a600927540318abbac9106745fa4ce"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Made the GitHub artifact-wait script retry on network failures, 429s, and 5xx responses instead of aborting the release on a single flaky API call.",
+            "text": "CI artifact polling (`wait-gh-artifacts.mjs`) now retries on network errors, 429s, and 5xx responses from the GitHub API instead of failing the whole release wait on a single blip.",
             "commit_shas": [
               "5f1e3a72659fb52e5a6b49944c9d346fce8dc9be"
             ],
@@ -479,11 +508,11 @@
         "time_label": "1:16 AM",
         "started_at": "2026-06-12T08:16:46.000Z",
         "ended_at": "2026-06-12T08:16:46.000Z",
-        "title": "Default service URLs for desktop and release workflows",
-        "summary": "Release and validation workflows now ship with safe fallback URLs for every Aura backend service, so builds no longer break when a repository variable is unset.",
+        "title": "Default service URLs for desktop CI workflows",
+        "summary": "Desktop validation, performance benchmarks, and nightly/stable release workflows now fall back to known-good service URLs when repository variables are unset.",
         "items": [
           {
-            "text": "Added default values for AURA_NETWORK_URL, AURA_STORAGE_URL, AURA_INTEGRATIONS_URL, AURA_ROUTER_URL, Z_BILLING_URL, ORBIT_BASE_URL, and SWARM_BASE_URL across the nightly release, stable release, desktop validation, and performance benchmark workflows.",
+            "text": "Added inline defaults for AURA_NETWORK_URL, AURA_STORAGE_URL, AURA_INTEGRATIONS_URL, AURA_ROUTER_URL, Z_BILLING_URL, ORBIT_BASE_URL, and SWARM_BASE_URL across desktop-validate, performance benchmark, and nightly/stable release workflows, so forks and fresh environments can run end-to-end without pre-seeding every variable.",
             "commit_shas": [
               "f82c98fbc6d982bc52e3452d873be802be7f293d"
             ],
@@ -496,25 +525,18 @@
         "time_label": "5:56 AM",
         "started_at": "2026-06-12T12:56:07.000Z",
         "ended_at": "2026-06-12T12:56:07.000Z",
-        "title": "Observability re-runs automatically after each desktop release",
-        "summary": "The observability workflow now triggers on successful desktop nightly and stable releases, and the release pipeline itself was simplified to produce snapshots directly instead of merging against gh-pages.",
+        "title": "Observability refreshes automatically after each desktop release",
+        "summary": "The status suite now reruns on successful Desktop Nightly and Stable releases, and the per-release snapshot was simplified to drop fragile gh-pages merging.",
         "items": [
           {
-            "text": "Wired the observability workflow to run on completion of Desktop Nightly Release and Desktop Stable Release, so post-release health is refreshed without waiting for the next cron tick.",
+            "text": "Wired the observability workflow to trigger on successful completion of Desktop Nightly Release and Desktop Stable Release runs, so the public status page reflects the new build within minutes instead of waiting for the 30-minute cron.",
             "commit_shas": [
               "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Replaced the gh-pages merge dance in release workflows with a direct desktop observability snapshot, removing a fragile git fetch step from the critical release path.",
-            "commit_shas": [
-              "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Made per-model runtime probes capture errors individually so one failing model no longer aborts the rest of the suite.",
+            "text": "Replaced the merged-with-previous-snapshot dance (which fetched gh-pages mid-release) with a straight `npm run status:snapshot`, and made per-model runtime probe failures recoverable so one bad model no longer aborts the whole sweep.",
             "commit_shas": [
               "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f"
             ],
@@ -526,19 +548,19 @@
         "batch_id": "entry-4",
         "time_label": "10:28 AM",
         "started_at": "2026-06-12T17:28:00.000Z",
-        "ended_at": "2026-06-12T18:27:32.000Z",
-        "title": "Truthful, least-privilege status probes",
-        "summary": "Status probes were rewritten to only report what they can actually verify, to run with the minimum permissions needed, and to forward agent permissions correctly through the runtime.",
+        "ended_at": "2026-06-12T19:17:48.000Z",
+        "title": "Truthful, least-privilege status probes end-to-end",
+        "summary": "An afternoon thread reshaped how status probes report and authenticate: probes only claim features they actually exercise, run with minimal permissions, and the agent-create path now preserves those scoped permissions through the network round-trip.",
         "items": [
           {
-            "text": "Removed the model3d, video, live-benchmark, and harness-fixture checks from the observability run because they couldn't be verified truthfully, and updated feature health docs to match.",
+            "text": "Status probes no longer advertise 3D, video, live-benchmark, or harness-fixture checks they couldn't verify; the observability workflow and feature registry were pruned to match, and the runtime handler now forwards agent permissions into the session config so probe results reflect the real authorization path.",
             "commit_shas": [
               "1d96402f6878e418482bbba07075890729113398"
             ],
             "confidence": "high"
           },
           {
-            "text": "Status probe agents are now created with capability-less, org-scoped permissions instead of a full-access capability set — first by zeroing capabilities, then by extracting a dedicated, tested statusProbeAgentPermissions helper that requires an org id.",
+            "text": "Status probe agents now request zero capabilities instead of the previous full-access bundle (spawnAgent, controlAgent, invokeProcess, generateMedia, readAllProjects, writeAllProjects, …), and a new `statusProbeAgentPermissions` helper scopes them to a single org with explicit tests.",
             "commit_shas": [
               "573e75312a3ade82e382f64076e553be70204cc8",
               "086a496d3f8339f9ded299895452fadfbeac7fc7"
@@ -546,29 +568,21 @@
             "confidence": "high"
           },
           {
-            "text": "Runtime session config on the server now forwards agent permissions into the harness session, with regression tests ensuring scoped, zero-capability permissions are preserved end to end.",
+            "text": "Hardened agent creation so that when aura-network's response drops or rewrites the submitted permissions, the server logs a warning and falls back to the originally requested scoped, zero-capability permissions — preventing probes (and other scoped agents) from silently being upgraded.",
             "commit_shas": [
-              "1d96402f6878e418482bbba07075890729113398",
-              "086a496d3f8339f9ded299895452fadfbeac7fc7"
+              "115a7619155803bdeacabb4e7666dcde4392ce36"
             ],
             "confidence": "high"
-          },
-          {
-            "text": "Locked the status check registry so the probe runner cannot expose check IDs that aren't declared, catching drift between the runner and the registered feature list.",
-            "commit_shas": [
-              "086a496d3f8339f9ded299895452fadfbeac7fc7"
-            ],
-            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Status probes now run with minimal, org-scoped permissions",
-      "Observability suite re-runs automatically after every desktop release",
-      "CI artifact polling survives transient GitHub API failures",
-      "Release workflows fall back to safe default service URLs"
+      "Status probes now run with least-privilege permissions",
+      "Observability suite re-runs automatically after each desktop release",
+      "Desktop CI falls back to default service URLs when vars are unset",
+      "Artifact polling survives transient GitHub API failures"
     ],
-    "raw_commit_count": 7
+    "raw_commit_count": 8
   }
 }

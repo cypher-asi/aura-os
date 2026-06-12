@@ -2,19 +2,19 @@
   {
     "date": "2026-06-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.652.1",
-    "title": "Observability probes get honest, scoped, and release-aware",
-    "intro": "Today was an infrastructure-heavy day focused on making Aura's status observability trustworthy. The team tightened how health probes run, removed checks that weren't telling the truth, locked down the permissions those probes use, and hardened the release pipeline against flaky GitHub API calls and missing service URLs.",
+    "version": "0.1.0-nightly.653.1",
+    "title": "Status probes get honest, scoped, and release-aware",
+    "intro": "Today's nightly is an observability and release-plumbing day. The team tightened how Aura's status probes run, what permissions they request, and how releases trigger health checks — plus made desktop CI more resilient to missing configuration and flaky GitHub API calls.",
     "entryCount": 4,
     "highlights": [
-      "Status probes now run with minimal, org-scoped permissions",
-      "Observability suite re-runs automatically after every desktop release",
-      "CI artifact polling survives transient GitHub API failures",
-      "Release workflows fall back to safe default service URLs"
+      "Status probes now run with least-privilege permissions",
+      "Observability suite re-runs automatically after each desktop release",
+      "Desktop CI falls back to default service URLs when vars are unset",
+      "Artifact polling survives transient GitHub API failures"
     ],
-    "rawCommitCount": 7,
-    "generatedAt": "2026-06-12T18:45:22.992Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.652.1",
+    "rawCommitCount": 8,
+    "generatedAt": "2026-06-12T19:27:44.815Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.653.1",
     "path": "history/2026-06-12.json"
   },
   {
