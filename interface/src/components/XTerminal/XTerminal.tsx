@@ -102,7 +102,16 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
     });
 
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
+    // Explicit activate handler: the addon's default handler calls
+    // window.open() with NO url and assigns popup.location.href afterwards.
+    // The wry desktop shell intercepts the new-window request at the first
+    // step — while the URL is still about:blank — and asks the OS to open
+    // "about:blank", which on Windows pops the "Get an app to open this
+    // 'about' link" dialog. Passing the URI directly to window.open makes
+    // the shell receive the real link and hand it to the default browser.
+    const webLinksAddon = new WebLinksAddon((_event, uri) => {
+      window.open(uri, "_blank", "noopener,noreferrer");
+    });
 
     xterm.loadAddon(fitAddon);
     xterm.loadAddon(webLinksAddon);

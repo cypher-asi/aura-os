@@ -22,6 +22,7 @@ const testState = vi.hoisted(() => ({
   proposedDimensions: { cols: 80, rows: 24 } as { cols: number; rows: number } | undefined,
   resizeObserverCallback: null as ResizeObserverCallback | null,
   rafCallbacks: [] as FrameRequestCallback[],
+  capturedLinkHandlers: [] as Array<((event: MouseEvent, uri: string) => void) | null>,
 }));
 
 vi.mock("@xterm/xterm", () => {
@@ -72,7 +73,13 @@ vi.mock("@xterm/addon-fit", () => ({
     }
   },
 }));
-vi.mock("@xterm/addon-web-links", () => ({ WebLinksAddon: class {} }));
+vi.mock("@xterm/addon-web-links", () => ({
+  WebLinksAddon: class {
+    constructor(handler?: (event: MouseEvent, uri: string) => void) {
+      testState.capturedLinkHandlers.push(handler ?? null);
+    }
+  },
+}));
 vi.mock("@xterm/addon-webgl", () => ({
   WebglAddon: class {
     onContextLoss(): void {}
@@ -131,6 +138,7 @@ beforeEach(() => {
   testState.proposedDimensions = { cols: 80, rows: 24 };
   testState.resizeObserverCallback = null;
   testState.rafCallbacks.length = 0;
+  testState.capturedLinkHandlers.length = 0;
   vi.stubGlobal(
     "requestAnimationFrame",
     vi.fn((callback: FrameRequestCallback) => {
@@ -189,6 +197,32 @@ describe("XTerminal theme syncing", () => {
     });
 
     expect((term!.options.theme as { background: string }).background).toBe("#fafafa");
+  });
+});
+
+describe("XTerminal link opening", () => {
+  it("passes an explicit handler to WebLinksAddon that opens the clicked URI", async () => {
+    // Regression guard: the addon's DEFAULT handler calls window.open()
+    // with no URL and assigns popup.location.href afterwards. The wry
+    // desktop shell intercepts the new-window request while the URL is
+    // still about:blank and forwards "about:blank" to the OS, which on
+    // Windows shows a "Get an app to open this 'about' link" dialog.
+    // The handler must hand the real URI to window.open directly.
+    const { XTerminal } = await import("./XTerminal");
+    const hook = makeHook();
+    render(<XTerminal terminal={hook} visible focused />);
+
+    const handler = testState.capturedLinkHandlers.at(-1);
+    expect(handler).toBeTypeOf("function");
+
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    handler!(new MouseEvent("click"), "http://localhost:3000");
+    expect(openSpy).toHaveBeenCalledWith(
+      "http://localhost:3000",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    openSpy.mockRestore();
   });
 });
 

@@ -16,6 +16,26 @@ use crate::ui::icon::IconData;
 
 const INITIAL_BLANK_PAGE_URL: &str = "about:blank";
 
+/// Forward a webview new-window request to the OS default browser, but only
+/// for real external links. Page scripts that call `window.open()` without a
+/// URL (e.g. xterm's web-links addon used to) surface here as `about:blank`;
+/// handing that to the OS makes Windows show a "Get an app to open this
+/// 'about' link" picker dialog. `that_detached` avoids blocking the webview
+/// callback thread on platforms where the launcher waits (Linux `xdg-open`).
+pub(crate) fn open_external_uri(uri: &str) {
+    let lowered = uri.trim().to_ascii_lowercase();
+    let allowed = lowered.starts_with("http://")
+        || lowered.starts_with("https://")
+        || lowered.starts_with("mailto:");
+    if !allowed {
+        warn!(%uri, "ignoring new-window request with non-external scheme");
+        return;
+    }
+    if let Err(err) = open::that_detached(uri) {
+        warn!(%uri, %err, "failed to open external link in OS browser");
+    }
+}
+
 pub(crate) fn ipc_handler(
     proxy: EventLoopProxy<UserEvent>,
     window_id: WindowId,
@@ -114,7 +134,7 @@ pub(crate) fn create_main_webview(
         .with_initialization_script(initialization_script)
         .with_ipc_handler(ipc_handler(proxy, main_window_id))
         .with_new_window_req_handler(|uri, _features| {
-            let _ = open::that(&uri);
+            open_external_uri(&uri);
             wry::NewWindowResponse::Deny
         });
 
@@ -177,7 +197,7 @@ pub(crate) fn open_secondary_main_window<E: 'static>(
         .with_initialization_script(initialization_script)
         .with_ipc_handler(ipc)
         .with_new_window_req_handler(|uri, _features| {
-            let _ = open::that(&uri);
+            open_external_uri(&uri);
             wry::NewWindowResponse::Deny
         });
 
@@ -236,7 +256,7 @@ pub(crate) fn open_demo_window<E: 'static>(
         .with_initialization_script(initialization_script)
         .with_ipc_handler(ipc)
         .with_new_window_req_handler(|uri, _features| {
-            let _ = open::that(&uri);
+            open_external_uri(&uri);
             wry::NewWindowResponse::Deny
         });
 

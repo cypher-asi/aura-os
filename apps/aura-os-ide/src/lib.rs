@@ -1,7 +1,26 @@
 use tao::event_loop::EventLoopWindowTarget;
 use tao::window::{Icon, Window, WindowBuilder, WindowId};
-use tracing::info;
+use tracing::{info, warn};
 use wry::{WebContext, WebView, WebViewBuilder};
+
+/// Forward a webview new-window request to the OS default browser, but only
+/// for real external links. Page scripts that call `window.open()` without a
+/// URL surface here as `about:blank`; handing that to the OS makes Windows
+/// show a "Get an app to open this 'about' link" picker dialog. Mirrors the
+/// helper in the `aura-os-desktop` crate.
+fn open_external_uri(uri: &str) {
+    let lowered = uri.trim().to_ascii_lowercase();
+    let allowed = lowered.starts_with("http://")
+        || lowered.starts_with("https://")
+        || lowered.starts_with("mailto:");
+    if !allowed {
+        warn!(%uri, "ignoring new-window request with non-external scheme");
+        return;
+    }
+    if let Err(err) = open::that_detached(uri) {
+        warn!(%uri, %err, "failed to open external link in OS browser");
+    }
+}
 
 fn filename_from_path(path: &str) -> &str {
     path.rsplit(['/', '\\']).next().unwrap_or(path)
@@ -112,7 +131,7 @@ pub fn open_ide_window<E: 'static>(
         .with_initialization_script(&combined_script)
         .with_ipc_handler(ipc)
         .with_new_window_req_handler(|uri, _features| {
-            let _ = open::that(&uri);
+            open_external_uri(&uri);
             wry::NewWindowResponse::Deny
         })
         .build(&window)?;
