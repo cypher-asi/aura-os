@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-06-12T07:13:25.660Z",
+  "generatedAt": "2026-06-12T07:24:57.585Z",
   "environment": "production",
   "source": "desktop-nightly-release",
   "overall": "major_outage",
@@ -24,7 +24,7 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-12T07:13:22.614Z",
+      "lastCheckedAt": "2026-06-12T07:24:54.586Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
@@ -38,11 +38,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T07:13:22.605Z",
-          "latencyMs": 1,
+          "checkedAt": "2026-06-12T07:24:54.578Z",
+          "latencyMs": 2,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-06-12T07:13:22.605527+00:00"
+            "timestamp": "2026-06-12T07:24:54.578286+00:00"
           }
         },
         {
@@ -51,7 +51,7 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T07:13:22.614Z",
+          "checkedAt": "2026-06-12T07:24:54.586Z",
           "latencyMs": 8,
           "evidence": {
             "userPresent": true,
@@ -76,7 +76,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:05.203Z",
           "latencyMs": 109,
           "evidence": {
@@ -99,7 +99,7 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "partial_outage",
-      "lastCheckedAt": "2026-06-12T07:13:22.637Z",
+      "lastCheckedAt": "2026-06-12T07:24:54.607Z",
       "checksPassed": 0,
       "checksTotal": 3,
       "checksFailed": 3,
@@ -112,7 +112,7 @@
           "required": true,
           "status": "fail",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:05.094Z",
           "latencyMs": 562,
           "evidence": {
@@ -126,7 +126,7 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "GET /api/orgs failed with 503: {\"error\":\"aura-network is not configured\",\"code\":\"service_unavailable\",\"details\":null}",
-          "checkedAt": "2026-06-12T07:13:22.630Z",
+          "checkedAt": "2026-06-12T07:24:54.600Z",
           "latencyMs": 7,
           "evidence": {}
         },
@@ -136,7 +136,7 @@
           "status": "fail",
           "featureStatus": "degraded",
           "message": "GET /api/users/me failed with 503: {\"error\":\"aura-network is not configured\",\"code\":\"service_unavailable\",\"details\":null}",
-          "checkedAt": "2026-06-12T07:13:22.637Z",
+          "checkedAt": "2026-06-12T07:24:54.607Z",
           "latencyMs": 7,
           "evidence": {}
         }
@@ -156,14 +156,14 @@
       "checksFailed": 0,
       "checksUnknown": 6,
       "latencyP95Ms": 999,
-      "message": "Last result is 95m old",
+      "message": "Last result is 107m old",
       "checks": [
         {
           "id": "public-setup",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:14.527Z",
           "latencyMs": 261,
           "evidence": {
@@ -177,7 +177,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:15.526Z",
           "latencyMs": 999,
           "evidence": {
@@ -195,7 +195,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:15.839Z",
           "latencyMs": 313,
           "evidence": {
@@ -207,7 +207,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:16.085Z",
           "latencyMs": 145,
           "evidence": {
@@ -219,7 +219,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:16.196Z",
           "latencyMs": 111,
           "evidence": {
@@ -232,7 +232,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:16.311Z",
           "latencyMs": 115,
           "evidence": {
@@ -255,12 +255,12 @@
       "description": "Local agent template creation, project binding, and workspace-backed chat readiness.",
       "publicSummary": "Local agents can be created and exercised through the harness.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-06-12T07:13:22.658Z",
+      "lastCheckedAt": "2026-06-12T07:24:54.628Z",
       "checksPassed": 0,
       "checksTotal": 2,
       "checksFailed": 2,
       "checksUnknown": 0,
-      "latencyP95Ms": 8,
+      "latencyP95Ms": 7,
       "message": "GET /api/orgs failed with 503: {\"error\":\"aura-network is not configured\",\"code\":\"service_unavailable\",\"details\":null}",
       "checks": [
         {
@@ -269,8 +269,8 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "GET /api/orgs failed with 503: {\"error\":\"aura-network is not configured\",\"code\":\"service_unavailable\",\"details\":null}",
-          "checkedAt": "2026-06-12T07:13:22.651Z",
-          "latencyMs": 8,
+          "checkedAt": "2026-06-12T07:24:54.621Z",
+          "latencyMs": 7,
           "evidence": {}
         },
         {
@@ -279,8 +279,8 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "GET /api/orgs failed with 503: {\"error\":\"aura-network is not configured\",\"code\":\"service_unavailable\",\"details\":null}",
-          "checkedAt": "2026-06-12T07:13:22.658Z",
-          "latencyMs": 6,
+          "checkedAt": "2026-06-12T07:24:54.628Z",
+          "latencyMs": 7,
           "evidence": {}
         }
       ]
@@ -299,14 +299,14 @@
       "checksFailed": 3,
       "checksUnknown": 3,
       "latencyP95Ms": 149505,
-      "message": "Last result is 103m old",
+      "message": "Last result is 115m old",
       "checks": [
         {
           "id": "remote-agent-create",
           "required": true,
           "status": "fail",
           "featureStatus": "unknown",
-          "message": "Last result is 103m old",
+          "message": "Last result is 115m old",
           "checkedAt": "2026-06-12T05:30:23.362Z",
           "latencyMs": 129400,
           "evidence": {}
@@ -316,7 +316,7 @@
           "required": true,
           "status": "fail",
           "featureStatus": "unknown",
-          "message": "Last result is 101m old",
+          "message": "Last result is 112m old",
           "checkedAt": "2026-06-12T05:32:52.867Z",
           "latencyMs": 149505,
           "evidence": {}
@@ -326,7 +326,7 @@
           "required": false,
           "status": "fail",
           "featureStatus": "unknown",
-          "message": "Last result is 98m old",
+          "message": "Last result is 110m old",
           "checkedAt": "2026-06-12T05:35:22.363Z",
           "latencyMs": 149496,
           "evidence": {}
@@ -347,14 +347,14 @@
       "checksFailed": 0,
       "checksUnknown": 4,
       "latencyP95Ms": 1401,
-      "message": "Last result is 105m old",
+      "message": "Last result is 117m old",
       "checks": [
         {
           "id": "project-crud",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:07.331Z",
           "latencyMs": 737,
           "evidence": {
@@ -369,7 +369,7 @@
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:08.732Z",
           "latencyMs": 1401,
           "evidence": {
@@ -386,7 +386,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:09.322Z",
           "latencyMs": 590,
           "evidence": {
@@ -417,7 +417,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:09.811Z",
           "latencyMs": 489,
           "evidence": {
@@ -449,14 +449,14 @@
       "checksFailed": 0,
       "checksUnknown": 2,
       "latencyP95Ms": 1103,
-      "message": "Last result is 105m old",
+      "message": "Last result is 117m old",
       "checks": [
         {
           "id": "process-list",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:10.235Z",
           "latencyMs": 424,
           "evidence": {
@@ -469,7 +469,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:11.338Z",
           "latencyMs": 1103,
           "evidence": {
@@ -488,7 +488,7 @@
       "description": "Curated model matrix smoke tests through AURA's runtime path.",
       "publicSummary": "Supported text models are returning valid assistant responses.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-06-12T07:13:22.665Z",
+      "lastCheckedAt": "2026-06-12T07:24:54.635Z",
       "checksPassed": 0,
       "checksTotal": 1,
       "checksFailed": 1,
@@ -502,7 +502,7 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "GET /api/orgs failed with 503: {\"error\":\"aura-network is not configured\",\"code\":\"service_unavailable\",\"details\":null}",
-          "checkedAt": "2026-06-12T07:13:22.665Z",
+          "checkedAt": "2026-06-12T07:24:54.635Z",
           "latencyMs": 7,
           "evidence": {}
         }
@@ -522,14 +522,14 @@
       "checksFailed": 0,
       "checksUnknown": 3,
       "latencyP95Ms": 171903,
-      "message": "Last result is 95m old",
+      "message": "Last result is 107m old",
       "checks": [
         {
           "id": "image-generation-stream",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:14.266Z",
           "latencyMs": 171903,
           "evidence": {
@@ -628,7 +628,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 324m old",
+          "message": "Last result is 336m old",
           "checkedAt": "2026-06-12T01:49:01.913Z",
           "latencyMs": 0,
           "evidence": {
@@ -674,14 +674,14 @@
       "checksFailed": 0,
       "checksUnknown": 2,
       "latencyP95Ms": 1072,
-      "message": "Last result is 105m old",
+      "message": "Last result is 117m old",
       "checks": [
         {
           "id": "marketplace-agents",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:12.410Z",
           "latencyMs": 1072,
           "evidence": {
@@ -693,7 +693,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:12.664Z",
           "latencyMs": 254,
           "evidence": {
@@ -719,14 +719,14 @@
       "checksFailed": 0,
       "checksUnknown": 4,
       "latencyP95Ms": 425,
-      "message": "Last result is 105m old",
+      "message": "Last result is 117m old",
       "checks": [
         {
           "id": "org-integrations-list",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:05.863Z",
           "latencyMs": 425,
           "evidence": {
@@ -739,7 +739,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:06.165Z",
           "latencyMs": 302,
           "evidence": {
@@ -752,7 +752,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:06.320Z",
           "latencyMs": 155,
           "evidence": {
@@ -770,7 +770,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:06.594Z",
           "latencyMs": 274,
           "evidence": {
@@ -798,14 +798,14 @@
       "checksFailed": 0,
       "checksUnknown": 5,
       "latencyP95Ms": 324,
-      "message": "Last result is 105m old",
+      "message": "Last result is 117m old",
       "checks": [
         {
           "id": "feedback-list",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:13.109Z",
           "latencyMs": 220,
           "evidence": {
@@ -817,7 +817,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:13.221Z",
           "latencyMs": 112,
           "evidence": {
@@ -829,7 +829,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:13.495Z",
           "latencyMs": 274,
           "evidence": {
@@ -841,7 +841,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:13.819Z",
           "latencyMs": 324,
           "evidence": {
@@ -853,7 +853,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:13.962Z",
           "latencyMs": 143,
           "evidence": {
@@ -879,12 +879,12 @@
       "description": "Desktop runtime defaults and local terminal API availability.",
       "publicSummary": "Desktop runtime support endpoints are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-12T07:13:22.644Z",
+      "lastCheckedAt": "2026-06-12T07:24:54.614Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 9,
+      "latencyP95Ms": 7,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -893,8 +893,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T07:13:22.623Z",
-          "latencyMs": 9,
+          "checkedAt": "2026-06-12T07:24:54.593Z",
+          "latencyMs": 7,
           "evidence": {
             "workspaceRootPresent": true
           }
@@ -905,7 +905,7 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-12T07:13:22.644Z",
+          "checkedAt": "2026-06-12T07:24:54.614Z",
           "latencyMs": 7,
           "evidence": {
             "count": 0
@@ -927,14 +927,14 @@
       "checksFailed": 0,
       "checksUnknown": 2,
       "latencyP95Ms": 114,
-      "message": "Last result is 105m old",
+      "message": "Last result is 117m old",
       "checks": [
         {
           "id": "active-streams",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:12.775Z",
           "latencyMs": 111,
           "evidence": {
@@ -946,7 +946,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 105m old",
+          "message": "Last result is 117m old",
           "checkedAt": "2026-06-12T05:28:12.889Z",
           "latencyMs": 114,
           "evidence": {
@@ -1024,14 +1024,14 @@
       "checksFailed": 0,
       "checksUnknown": 3,
       "latencyP95Ms": 1377,
-      "message": "Last result is 95m old",
+      "message": "Last result is 107m old",
       "checks": [
         {
           "id": "public-observability-page",
           "required": true,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:16.698Z",
           "latencyMs": 387,
           "evidence": {
@@ -1044,7 +1044,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:16.867Z",
           "latencyMs": 169,
           "evidence": {
@@ -1056,7 +1056,7 @@
           "required": false,
           "status": "pass",
           "featureStatus": "unknown",
-          "message": "Last result is 95m old",
+          "message": "Last result is 107m old",
           "checkedAt": "2026-06-12T05:38:18.244Z",
           "latencyMs": 1377,
           "evidence": {
