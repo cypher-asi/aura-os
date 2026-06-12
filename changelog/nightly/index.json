@@ -2,23 +2,21 @@
   {
     "date": "2026-06-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.643.1",
-    "title": "Agent onboarding wizard, mobile public site, and the new feature health page",
-    "intro": "A heavy day across the marketing surface and public product story: a new black-glass agent onboarding wizard, a from-scratch mobile public site, full localization of the marketing UI, real Terms and Privacy pages, an expanded /os whitepaper, and a brand-new feature health status page wired to scheduled probes. Behind the scenes, chat rendering and the agent profile card got significantly faster, remote agent turns no longer time out spuriously, and analytics finally report a real app_version and authenticated DAU.",
+    "version": "0.1.0-nightly.644.1",
+    "title": "Agent onboarding wizard, public site overhaul, and analytics rescue",
+    "intro": "A heavy day on the public surface: a brand-new guided agent onboarding wizard, full marketing site translation into 19 languages, Terms and Privacy content, mobile public landing, an expanded /os whitepaper across the core repos, and a new feature health status page. Under the hood, the team fixed a chat typing slowdown, tamed remote-agent timeouts, restored Mixpanel analytics on desktop builds, and shipped an observability pipeline.",
     "entryCount": 6,
     "highlights": [
-      "New black-glass agent onboarding wizard",
-      "Mobile public site with framed shell and WebGL landing",
-      "Public marketing UI translated into 19 locales",
-      "Terms, Privacy, and an /os whitepaper for all core repos",
-      "Aura feature health status page wired to scheduled probes",
-      "Faster chat transcript rendering and lighter agent profile card",
-      "Analytics: real app_version and authenticated session_active restored",
-      "Remote agent turns no longer trip spurious 180s/60s timeouts"
+      "New guided agent onboarding wizard with black-glass UI",
+      "Marketing UI translated into all 19 supported locales",
+      "Terms of Service and Privacy Policy now live",
+      "Mobile public landing with full-screen nav and WebGL hero",
+      "Public Aura feature health status page launches",
+      "Mixpanel analytics restored on desktop builds"
     ],
-    "rawCommitCount": 89,
-    "generatedAt": "2026-06-12T03:49:32.247Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.643.1",
+    "rawCommitCount": 93,
+    "generatedAt": "2026-06-12T04:34:36.923Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.644.1",
     "path": "history/2026-06-11.json"
   },
   {
