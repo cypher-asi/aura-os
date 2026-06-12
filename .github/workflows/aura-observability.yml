@@ -51,7 +51,8 @@ jobs:
             image-generation-stream,eval-summary-artifacts,
             public-setup,public-chat-stream,public-feedback-api,
             public-blog-api,public-x402-models,public-x402-payment-challenge,
-            public-observability-page,public-models-page,public-marketing-pages
+            published-observability-snapshot,public-observability-page,
+            public-models-page,public-marketing-pages
         run: npm run status:probes
 
       - name: Build public observability snapshot

@@ -512,7 +512,7 @@ jobs:
           AURA_STATUS_ENVIRONMENT: desktop-stable-${{ matrix.target }}-${{ matrix.arch }}
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_DESKTOP_LOG_DIR: desktop-observability-logs
-          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime,model-matrix
+          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime,local-agent-permissions,model-matrix
         shell: bash
         run: |
           if [ -z "$AURA_STATUS_USER_EMAIL" ] || [ -z "$AURA_STATUS_USER_PASSWORD" ]; then
