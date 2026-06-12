@@ -498,8 +498,17 @@ async function getProjectStats() {
   return { result };
 }
 
-async function startDevLoop() {
-  const loopStatus = await api(`/api/projects/${projectId}/loop/start${currentAgentLoopQuery()}`, {
+function resolveLoopModel(args) {
+  return optionalTrimmedString(args?.model) ?? optionalTrimmedString(process.env.AURA_MCP_MODEL);
+}
+
+async function startDevLoop(args) {
+  let query = currentAgentLoopQuery();
+  const model = resolveLoopModel(args);
+  if (model) {
+    query += `&model=${encodeURIComponent(model)}`;
+  }
+  const loopStatus = await api(`/api/projects/${projectId}/loop/start${query}`, {
     method: "POST",
   });
   return { loop_status: loopStatus };

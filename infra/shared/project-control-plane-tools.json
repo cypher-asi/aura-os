@@ -376,13 +376,18 @@
   {
     "name": "start_dev_loop",
     "description": "Start the Aura project dev loop",
-    "promptSignature": "start_dev_loop()",
+    "promptSignature": "start_dev_loop(model?)",
     "savedEvent": "loop_started",
     "savedPayloadKey": "loop_status",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
-      "properties": {}
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Model identifier to run the dev loop with (e.g. the model the calling agent is using). Falls back to the AURA_MCP_MODEL env / agent default when omitted."
+        }
+      }
     }
   },
   {
