@@ -62,19 +62,10 @@ function parseArgs(argv) {
   return args;
 }
 
-function fullAccessAgentPermissions() {
+function statusProbeAgentPermissions() {
   return {
     scope: { orgs: [], projects: [], agent_ids: [] },
-    capabilities: [
-      "spawnAgent",
-      "controlAgent",
-      "readAgent",
-      "listAgents",
-      "invokeProcess",
-      "generateMedia",
-      "readAllProjects",
-      "writeAllProjects",
-    ].map((type) => ({ type })),
+    capabilities: [],
   };
 }
 
@@ -375,7 +366,7 @@ async function createAgent(args, track, machineType, model = null, orgId = null)
     environment,
     auth_source: "aura_managed",
     default_model: model,
-    permissions: fullAccessAgentPermissions(),
+    permissions: statusProbeAgentPermissions(),
     tags: ["aura-status-probe"],
   }, { timeoutMs: machineType === "remote" ? DEFAULT_REMOTE_TIMEOUT_MS : DEFAULT_TIMEOUT_MS });
   track("agent", agent.agent_id, `/api/agents/${agent.agent_id}`);
