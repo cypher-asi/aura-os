@@ -1,24 +1,29 @@
-# Sturdier observability probes and CI artifact polling
+# Health probes broaden and release pipelines get safer defaults
 
 - Date: `2026-06-12`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.647.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.647.1
+- Version: `0.1.0-nightly.648.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.648.1
 
-A quiet nightly focused entirely on release plumbing: the observability probe suite was realigned to cover the features that actually ship, and the GitHub artifact poller learned how to ride out transient API hiccups instead of failing the build.
+A quiet night focused entirely on release plumbing: observability probes were rescoped to cover the right surface area, the artifact-waiter learned to ride out transient GitHub API failures, and desktop release workflows now fall back to known service URLs when repository variables are missing.
 
-## 12:10 AM — Tighter release observability and resilient artifact polling
+## 12:10 AM — Observability probes rescoped and artifact waiter hardened against API blips
 
-Health checks were realigned to the features Aura actually ships, the desktop release probe pipeline stopped uploading empty artifacts when secrets were missing, and the GitHub artifact waiter now survives transient API failures.
+Health checks were realigned to the surface area that actually ships, and the CI artifact poller now survives transient GitHub API failures instead of failing the run.
 
-- Expanded the observability probe matrix to include model3d-generation-stream and video-generation-stream while trimming stale entries, so nightly and stable health checks reflect the current feature surface. (`71be72f`)
-- Gated the macOS aarch64 desktop observability upload, snapshot, and gh-pages publish steps on a new ran=true output, so skipped probe runs (missing AURA_STATUS_USER_EMAIL/PASSWORD) no longer push empty artifacts in the nightly and stable release workflows. (`71be72f`)
-- Pinned the release package job to the production environment on both nightly and stable pipelines, ensuring signing and publishing run with the intended secret scope. (`71be72f`)
-- Taught scripts/ci/wait-gh-artifacts.mjs to recognize a RetryableGitHubApiError for network failures and 429/5xx responses, so artifact polling now logs and retries instead of aborting the release run. (`5f1e3a7`)
+- Expanded the observability probe set to include model3d-generation-stream and video-generation-stream while trimming probes that no longer reflected shipped behavior, and gated desktop release observability steps on whether credentials were actually present so skipped probes no longer publish empty artifacts or snapshots. (`71be72f`)
+- Pinned the nightly and stable release `package` jobs to the production environment so signing secrets and release variables resolve from the right scope. (`71be72f`)
+- Taught the GitHub artifact waiter to classify network errors, 429s, and 5xx responses as retryable and keep polling instead of aborting the workflow, with deduped status logging so the CI output stays readable during outages. (`5f1e3a7`)
+
+## 1:16 AM — Desktop CI and release workflows fall back to default service URLs
+
+Desktop validation, performance benchmarks, and both nightly and stable release pipelines now substitute known-good service endpoints when repository variables are unset, preventing empty URLs from silently breaking builds.
+
+- Added inline fallbacks for AURA_NETWORK_URL, AURA_STORAGE_URL, AURA_INTEGRATIONS_URL, AURA_ROUTER_URL, Z_BILLING_URL, ORBIT_BASE_URL, and SWARM_BASE_URL across the desktop-validate, performance-benchmark, release-nightly, and release-stable workflows, including the cached values used by the nightly packager. (`f82c98f`)
 
 ## Highlights
 
 - Observability probes now cover 3D and video generation streams
-- Desktop release probes only upload artifacts when they actually ran
-- CI artifact polling retries through 5xx and 429 responses
+- Artifact polling retries through GitHub API blips
+- Desktop CI and release workflows have safe default service URLs
 
