@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0-nightly.648.1",
-  "url": "https://github.com/cypher-asi/aura-os/releases/download/v0.1.0-nightly.648.1/aura-os-desktop_0.1.0-nightly.648.1_x86_64.AppImage",
-  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIGNhcmdvLXBhY2thZ2VyIHNlY3JldCBrZXkKUlVUSFhQYVV5cTUycTFHc1R3c3FSZldzbEY5NHNXMlJ2RFh2S2h3UHBaYTUxY2Vla2k1Z2V0aGlaZWdsQUFJbG9XQXRxSm5WOHBFSnhtd05sb0trajRBbTBtb0IwL0FINEFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgxMjUyNjg0CWZpbGU6YXVyYS1vcy1kZXNrdG9wXzAuMS4wLW5pZ2h0bHkuNjQ4LjFfeDg2XzY0LkFwcEltYWdlCjNDeGJBMmdLNm1OUk9tSnd3SGJxT0VTNllQVThMZFVvK2RDbHprMGpmd3B4bGhoQzREUzNTSmFubjJJazJtQnVubW1kcTVEV0JYUUtBeW5aYU80NUJBPT0K",
+  "version": "0.1.0-nightly.649.1",
+  "url": "https://github.com/cypher-asi/aura-os/releases/download/v0.1.0-nightly.649.1/aura-os-desktop_0.1.0-nightly.649.1_x86_64.AppImage",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIGNhcmdvLXBhY2thZ2VyIHNlY3JldCBrZXkKUlVUSFhQYVV5cTUycTgvaWs1SENEQkl1TVllazliYThIVnM4emRKNzJCSEVzVGpQakJETVI3OC9nMS9LYmphS002Unp3OXE3ZmwrR2hlZlMxOTVNZGI2MmxRTFlUalhqTkFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgxMjY5MTUwCWZpbGU6YXVyYS1vcy1kZXNrdG9wXzAuMS4wLW5pZ2h0bHkuNjQ5LjFfeDg2XzY0LkFwcEltYWdlCi9mSS9Ncmd4UU85Yk15SHN0N0ZzZXVXeGExSEFWMC9YZUQvb3ViSStaY3VHMlg5MWNpREhMWTNLK3hBUkYvMVlSTEphU1J2T3ZRQlNIc1QxK0JmMUN3PT0K",
   "format": "appimage"
 }
