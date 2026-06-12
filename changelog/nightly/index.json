@@ -2,18 +2,18 @@
   {
     "date": "2026-06-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.648.1",
-    "title": "Health probes broaden and release pipelines get safer defaults",
-    "intro": "A quiet night focused entirely on release plumbing: observability probes were rescoped to cover the right surface area, the artifact-waiter learned to ride out transient GitHub API failures, and desktop release workflows now fall back to known service URLs when repository variables are missing.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.649.1",
+    "title": "Sharper observability signal and steadier release CI",
+    "intro": "Today's nightly focused on the plumbing behind Aura's release pipeline: the desktop release workflow now produces a more honest health snapshot, CI gets safer defaults for service URLs, and artifact polling shrugs off transient GitHub API hiccups instead of failing the run.",
+    "entryCount": 3,
     "highlights": [
-      "Observability probes now cover 3D and video generation streams",
-      "Artifact polling retries through GitHub API blips",
-      "Desktop CI and release workflows have safe default service URLs"
+      "Observability suite now covers 3D and video generation probes",
+      "Desktop releases trigger a fresh full-suite status refresh",
+      "CI artifact polling tolerates GitHub API flakiness"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-06-12T08:30:52.571Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.648.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-06-12T13:03:57.269Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.649.1",
     "path": "history/2026-06-12.json"
   },
   {

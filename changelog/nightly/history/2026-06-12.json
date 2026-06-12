@@ -3,21 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-12T08:30:52.571Z",
+  "generatedAt": "2026-06-12T13:03:57.269Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.648.1",
+  "version": "0.1.0-nightly.649.1",
   "date": "2026-06-12",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.648.1",
-  "lastIncludedSha": "f82c98fbc6d982bc52e3452d873be802be7f293d",
-  "previousProcessedSha": "5f1e3a72659fb52e5a6b49944c9d346fce8dc9be",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.649.1",
+  "lastIncludedSha": "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f",
+  "previousProcessedSha": "f82c98fbc6d982bc52e3452d873be802be7f293d",
   "commitShas": [
     "71be72fff9a600927540318abbac9106745fa4ce",
     "5f1e3a72659fb52e5a6b49944c9d346fce8dc9be",
-    "f82c98fbc6d982bc52e3452d873be802be7f293d"
+    "f82c98fbc6d982bc52e3452d873be802be7f293d",
+    "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 3,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "71be72fff9a600927540318abbac9106745fa4ce",
@@ -147,36 +148,80 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-12T08:56:07-04:00",
+      "subject": "fix(observability): refresh full suite after releases (#53)",
+      "body": "",
+      "parents": [
+        "f82c98fbc6d982bc52e3452d873be802be7f293d"
+      ],
+      "files": [
+        ".github/workflows/aura-observability.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/evals/status/run-status-probes.mjs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 33,
+        "deletions": 28
+      },
+      "committedAtMs": 1781268967000,
+      "cleanSubject": "refresh full suite after releases (#53)",
+      "keywords": [
+        "refresh",
+        "full",
+        "suite",
+        "after",
+        "releases"
+      ],
+      "fileGroups": [
+        ".github/workflows/aura-observability.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/evals/status"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.648.1",
+      "version": "0.1.0-nightly.649.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64607652
+          "sizeBytes": 64608330
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131271160
+          "sizeBytes": 131275256
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -186,29 +231,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.648.1",
+      "version": "0.1.0-nightly.649.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.648.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.649.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60552725
+          "sizeBytes": 60557632
         },
         {
-          "name": "AURA_0.1.0-nightly.648.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.649.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59534606
+          "sizeBytes": 59532551
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -218,29 +263,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.648.1",
+      "version": "0.1.0-nightly.649.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.648.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.649.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62560126
+          "sizeBytes": 62564107
         },
         {
-          "name": "AURA_0.1.0-nightly.648.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.649.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61664399
+          "sizeBytes": 61662884
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -250,17 +295,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.648.1",
+      "version": "0.1.0-nightly.649.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47838351
+          "sizeBytes": 47839945
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.648.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.649.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -269,33 +314,33 @@
     }
   ],
   "rendered": {
-    "title": "Health probes broaden and release pipelines get safer defaults",
-    "intro": "A quiet night focused entirely on release plumbing: observability probes were rescoped to cover the right surface area, the artifact-waiter learned to ride out transient GitHub API failures, and desktop release workflows now fall back to known service URLs when repository variables are missing.",
+    "title": "Sharper observability signal and steadier release CI",
+    "intro": "Today's nightly focused on the plumbing behind Aura's release pipeline: the desktop release workflow now produces a more honest health snapshot, CI gets safer defaults for service URLs, and artifact polling shrugs off transient GitHub API hiccups instead of failing the run.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "12:10 AM",
         "started_at": "2026-06-12T07:10:49.000Z",
         "ended_at": "2026-06-12T07:22:46.000Z",
-        "title": "Observability probes rescoped and artifact waiter hardened against API blips",
-        "summary": "Health checks were realigned to the surface area that actually ships, and the CI artifact poller now survives transient GitHub API failures instead of failing the run.",
+        "title": "Expanded health probes and resilient artifact polling",
+        "summary": "The observability suite was rescoped to cover the generation surfaces that actually matter, and the CI script that waits on GitHub artifacts learned to ride out transient API failures.",
         "items": [
           {
-            "text": "Expanded the observability probe set to include model3d-generation-stream and video-generation-stream while trimming probes that no longer reflected shipped behavior, and gated desktop release observability steps on whether credentials were actually present so skipped probes no longer publish empty artifacts or snapshots.",
+            "text": "Reshaped the scheduled observability run to drop redundant probes and add 3D model and video generation streams alongside image generation, keeping the public status page focused on the surfaces users actually hit.",
             "commit_shas": [
               "71be72fff9a600927540318abbac9106745fa4ce"
             ],
             "confidence": "high"
           },
           {
-            "text": "Pinned the nightly and stable release `package` jobs to the production environment so signing secrets and release variables resolve from the right scope.",
+            "text": "Gated desktop release observability publishing on whether credentials were present, so missing AURA_STATUS_USER_EMAIL/PASSWORD now cleanly skip artifact upload and snapshot publish instead of producing empty or misleading status data.",
             "commit_shas": [
               "71be72fff9a600927540318abbac9106745fa4ce"
             ],
             "confidence": "high"
           },
           {
-            "text": "Taught the GitHub artifact waiter to classify network errors, 429s, and 5xx responses as retryable and keep polling instead of aborting the workflow, with deduped status logging so the CI output stays readable during outages.",
+            "text": "Hardened the GitHub artifact wait script to retry on network errors, 429s, and 5xx responses via a new RetryableGitHubApiError path, so flaky API calls no longer fail release runs outright.",
             "commit_shas": [
               "5f1e3a72659fb52e5a6b49944c9d346fce8dc9be"
             ],
@@ -308,13 +353,51 @@
         "time_label": "1:16 AM",
         "started_at": "2026-06-12T08:16:46.000Z",
         "ended_at": "2026-06-12T08:16:46.000Z",
-        "title": "Desktop CI and release workflows fall back to default service URLs",
-        "summary": "Desktop validation, performance benchmarks, and both nightly and stable release pipelines now substitute known-good service endpoints when repository variables are unset, preventing empty URLs from silently breaking builds.",
+        "title": "Safe default service URLs for desktop CI",
+        "summary": "Desktop validation, performance benchmarks, and both release workflows now fall back to known-good service endpoints when repo variables are unset.",
         "items": [
           {
-            "text": "Added inline fallbacks for AURA_NETWORK_URL, AURA_STORAGE_URL, AURA_INTEGRATIONS_URL, AURA_ROUTER_URL, Z_BILLING_URL, ORBIT_BASE_URL, and SWARM_BASE_URL across the desktop-validate, performance-benchmark, release-nightly, and release-stable workflows, including the cached values used by the nightly packager.",
+            "text": "Added default fallbacks for AURA_NETWORK_URL, AURA_STORAGE_URL, AURA_INTEGRATIONS_URL, AURA_ROUTER_URL, Z_BILLING_URL, ORBIT_BASE_URL and SWARM_BASE_URL across desktop-validate, performance benchmark, and nightly/stable release workflows, so missing repo vars no longer silently break desktop CI.",
             "commit_shas": [
               "f82c98fbc6d982bc52e3452d873be802be7f293d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Propagated the same defaults into the cached CACHE_* environment used by the nightly packager, keeping packaged builds aligned with the URLs CI actually validated against.",
+            "commit_shas": [
+              "f82c98fbc6d982bc52e3452d873be802be7f293d"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "5:56 AM",
+        "started_at": "2026-06-12T12:56:07.000Z",
+        "ended_at": "2026-06-12T12:56:07.000Z",
+        "title": "Post-release observability refresh and per-model probe isolation",
+        "summary": "Desktop nightly and stable releases now automatically trigger a fresh observability sweep on success, and a single failing model no longer aborts the rest of the runtime probe pass.",
+        "items": [
+          {
+            "text": "Wired the observability workflow to run on completion of Desktop Nightly Release and Desktop Stable Release (only on success), so the public status page reflects the new build instead of waiting for the next half-hour cron tick.",
+            "commit_shas": [
+              "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Dropped the gh-pages snapshot merge step from desktop release workflows in favor of a clean status:snapshot, simplifying the publish path now that the scheduled job owns the full refresh.",
+            "commit_shas": [
+              "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Wrapped per-model runtime probes in try/catch so an individual model failure is recorded as a failed result with its error message rather than aborting the entire suite mid-run.",
+            "commit_shas": [
+              "45c287f6a8b378b2eecdc1fd5f2fc0f1d717d71f"
             ],
             "confidence": "high"
           }
@@ -322,10 +405,10 @@
       }
     ],
     "highlights": [
-      "Observability probes now cover 3D and video generation streams",
-      "Artifact polling retries through GitHub API blips",
-      "Desktop CI and release workflows have safe default service URLs"
+      "Observability suite now covers 3D and video generation probes",
+      "Desktop releases trigger a fresh full-suite status refresh",
+      "CI artifact polling tolerates GitHub API flakiness"
     ],
-    "raw_commit_count": 3
+    "raw_commit_count": 4
   }
 }
