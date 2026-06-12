@@ -74,17 +74,26 @@ function launchCommand(args) {
   return { command: args.binary, argv: [] };
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url);
-  const text = await response.text();
-  if (!response.ok) throw new Error(`${url} returned ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
+async function fetchJson(url, timeoutMs = 2000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error(`request timed out after ${timeoutMs}ms`)), timeoutMs);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`${url} returned ${response.status}: ${text}`);
+    return text ? JSON.parse(text) : null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function waitForDesktopReady(args, child) {
   const deadline = Date.now() + args.timeoutMs;
   let lastError = "";
   while (Date.now() < deadline) {
+    if (child.auraStartError) {
+      throw new Error(`desktop failed to start: ${child.auraStartError.message}`);
+    }
     if (child.exitCode != null) {
       throw new Error(`desktop exited before becoming ready with code ${child.exitCode}`);
     }
@@ -186,6 +195,9 @@ const child = spawn(launch.command, launch.argv, {
   stdio: ["ignore", "pipe", "pipe"],
 });
 
+child.once("error", (error) => {
+  child.auraStartError = error;
+});
 child.stdout.pipe(stdout);
 child.stderr.pipe(stderr);
 
