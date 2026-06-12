@@ -2,21 +2,20 @@
   {
     "date": "2026-06-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.641.1",
-    "title": "Agent onboarding wizard, mobile public site, and analytics integrity",
-    "intro": "A big day across the public surface: a brand-new glass agent onboarding wizard, a full mobile public landing experience, a multi-repo /os whitepaper, and real Terms/Privacy pages translated into 20 locales. Underneath, the team also unstuck two silent analytics regressions, sped up chat and the 3D profile card, and shipped a feature health status page wired to scheduled probes.",
+    "version": "0.1.0-nightly.642.1",
+    "title": "Agent onboarding wizard, marketing site overhaul, and analytics recovery",
+    "intro": "A big day across the public surface and reliability stack: a new black-glass \"Create your agent\" wizard, a top-to-bottom rebuild of the mobile and marketing experience, a full whitepaper for the core repos, and a series of fixes that restore accurate DAU analytics and resilience for long-running remote agent turns.",
     "entryCount": 6,
     "highlights": [
-      "New black-glass Create-your-agent wizard with 6 stages",
-      "Mobile public landing with Creator hero and full-screen menu",
-      "Public marketing, Terms, and Privacy translated into 20 locales",
-      "Mixpanel token and app_version regression fixed in desktop releases",
-      "Chat transcript no longer re-renders on every keystroke",
-      "Feature health status page with scheduled probes"
+      "New agent onboarding wizard with black-glass modal",
+      "Full marketing site refresh, mobile landing, and 19-locale translations",
+      "Terms, Privacy, and core-repo whitepaper now live",
+      "Mixpanel analytics restored across desktop and web",
+      "Long remote-agent turns no longer trip false timeouts"
     ],
-    "rawCommitCount": 87,
-    "generatedAt": "2026-06-12T01:04:46.315Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.641.1",
+    "rawCommitCount": 88,
+    "generatedAt": "2026-06-12T01:29:09.569Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.642.1",
     "path": "history/2026-06-11.json"
   },
   {
