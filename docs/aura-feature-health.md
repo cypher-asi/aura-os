@@ -153,10 +153,12 @@ local `model-matrix`; those belong to `status:desktop-release`.
 The browser/API and desktop lanes publish to the same `gh-pages` path:
 `observability/status.json`. Each lane first reads the previously published
 snapshot from `gh-pages`, carries forward still-fresh checks from the other
-lane, overlays the checks it just ran, and republishes the merged snapshot. The
-website and desktop route read that published snapshot first, keeping
-`/observability` as one dashboard while preserving the correct execution
-environment for each eval.
+lane, overlays the checks it just ran, and republishes the merged snapshot.
+Desktop release publishing also runs the production browser/API probes into the
+same checks directory before publishing, so release-triggered snapshots contain
+fresh website/API evidence plus desktop-only evidence. The website and desktop
+route read that published snapshot first, keeping `/observability` as one
+dashboard while preserving the correct execution environment for each eval.
 
 The core production commands are:
 

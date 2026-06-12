@@ -112,6 +112,7 @@ async function readChecks(args) {
 
 function checksFromSnapshot(snapshot) {
   if (!Array.isArray(snapshot?.features)) return [];
+  const snapshotGeneratedAt = normalizeSnapshotGeneratedAt(snapshot);
   const checks = [];
   for (const feature of snapshot.features) {
     for (const check of feature?.checks ?? []) {
@@ -124,7 +125,7 @@ function checksFromSnapshot(snapshot) {
         message: check.message ?? "",
         startedAt: check.checkedAt,
         endedAt: check.checkedAt,
-        runGeneratedAt: check.checkedAt,
+        runGeneratedAt: snapshotGeneratedAt ?? check.checkedAt,
         latencyMs: check.latencyMs ?? null,
         environment: snapshot.environment ?? null,
         evidence: check.evidence ?? {},
@@ -132,6 +133,13 @@ function checksFromSnapshot(snapshot) {
     }
   }
   return checks;
+}
+
+function normalizeSnapshotGeneratedAt(snapshot) {
+  if (typeof snapshot?.generatedAt !== "string" || snapshot.generatedAt.length === 0) return null;
+  const date = new Date(snapshot.generatedAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 }
 
 async function writeJson(filePath, payload) {
