@@ -1,42 +1,6 @@
-/* Shared collapsible item-row for the sidekick. Mirrors the row styling
-   the Tasks / Specs `Explorer` rows get from the global overrides in
-   `Sidekick.module.css` (`.sidekickBody [class*="itemContent"]`) so a row
-   rendered here is visually identical to an Explorer row, regardless of
-   which section it lives in.
-
-   The header is the shared zui `Item` button (same primitive Explorer
-   uses); these rules re-declare its compact metrics. The `.row >` scope
-   raises specificity so they always win over zui `Item`'s base `.item`
-   rules regardless of stylesheet import order. */
+/* The header row itself is fully styled by ListItem; this module only
+   keeps the column wrapper used by the header-less embedding mode. */
 .row {
   display: flex;
   flex-direction: column;
-}
-
-.row > .header {
-  gap: 2px;
-  padding: 0 var(--space-3, 12px);
-  margin: 1px var(--space-2, 8px);
-  border-radius: 6px;
-  min-height: 30px;
-  height: 30px;
-  font-size: 12px;
-  /* These rows are always expandable parents; match the Explorer parent
-     label treatment (`--color-text-secondary`). */
-  color: var(--color-text-secondary);
-}
-
-.row > .header:hover {
-  background: var(--color-overlay-subtle);
-  color: var(--color-text-secondary);
-}
-
-/* Label typography matches the Explorer rows. The sidekick already
-   supplies this via `.sidekickBody [class*="label"]`; restated here so a
-   row used outside `.sidekickBody` still reads correctly. */
-.row > .header [class*="label"] {
-  font-size: 12px;
-  font-weight: 300;
-  line-height: 1.25;
-  color: inherit;
 }

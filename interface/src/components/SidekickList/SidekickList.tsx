@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { EmptyState } from "../EmptyState";
+import { ListItem } from "../ListItem";
 import { SidekickCollapsibleRow } from "../SidekickCollapsibleRow";
 import {
   SidekickItemContextMenu,
@@ -17,9 +18,9 @@ import {
 import styles from "./SidekickList.module.css";
 
 /**
- * A single selectable row in a {@link SidekickList}. Built on the zui
- * `Item` primitive (the same one the Plans / Tasks Explorer rows use) so
- * every list reads with identical metrics and hover/selected treatment.
+ * A single selectable row in a {@link SidekickList}. Built on the shared
+ * `ListItem` primitive (the same one the Plans / Tasks / Files trees use)
+ * so every list reads with identical metrics and hover/selected treatment.
  */
 export interface SidekickListRow {
   /** Stable unique id; also used to resolve the right-click context menu. */
@@ -98,7 +99,7 @@ function SidekickListItem({
   selected,
   onSelectRow,
 }: SidekickListItemProps): ReactElement {
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const { onVisibilityChange } = row;
 
   useEffect(() => {
@@ -107,7 +108,7 @@ function SidekickListItem({
       onVisibilityChange(true);
       return;
     }
-    const target = buttonRef.current;
+    const target = wrapRef.current;
     if (!target) return;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -129,38 +130,22 @@ function SidekickListItem({
     onSelectRow?.(row.id);
   }, [row, onSelectRow]);
 
-  const hasDetail = row.detail !== undefined && row.detail !== null;
-
   return (
-    <div
-      className={`${styles.rowWrap}${selected ? ` ${styles.rowWrapSelected}` : ""}`}
-    >
-      <button
-        ref={buttonRef}
+    <div ref={wrapRef}>
+      <ListItem
         id={row.id}
-        type="button"
-        role="treeitem"
-        aria-selected={selected}
-        aria-current={selected ? "page" : undefined}
+        title={row.label}
+        secondary={row.detail}
+        icon={row.icon}
+        leading={row.leadingIndicator}
+        status={row.suffix}
+        trailing={row.trailingAction}
+        selected={selected}
         disabled={row.disabled}
-        className={`${styles.row}${hasDetail ? ` ${styles.rowMultiline}` : ""}`}
-        onClick={handleClick}
+        onSelect={handleClick}
         onMouseEnter={row.onMouseEnter}
         onFocus={row.onFocus}
-      >
-        {row.leadingIndicator && (
-          <span className={styles.leadingIndicator}>{row.leadingIndicator}</span>
-        )}
-        {row.icon && <span className={styles.icon}>{row.icon}</span>}
-        <span className={styles.text}>
-          <span className={styles.label}>{row.label}</span>
-          {hasDetail && <span className={styles.detail}>{row.detail}</span>}
-        </span>
-        {row.suffix && <span className={styles.suffix}>{row.suffix}</span>}
-      </button>
-      {row.trailingAction && (
-        <div className={styles.trailingAction}>{row.trailingAction}</div>
-      )}
+      />
     </div>
   );
 }

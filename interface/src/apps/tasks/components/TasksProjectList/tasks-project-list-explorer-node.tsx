@@ -8,7 +8,7 @@ import {
   isUserFacingAgentInstance,
   resolveStatus,
 } from "../../../../components/ProjectList/project-list-shared";
-import type { ExplorerNodeWithSuffix } from "../../../../lib/zui-compat";
+import type { ListTreeNode } from "../../../../components/ListTree";
 import { agentDisplayName } from "../../../../lib/derive-project-agent-title";
 
 function buildTaskProjectSuffix(
@@ -38,7 +38,7 @@ function buildTaskAgentNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNodeWithSuffix {
+): ListTreeNode {
   const isAutomating =
     data.automatingProjectId === projectId &&
     data.automatingAgentInstanceId === agent.agent_instance_id;
@@ -66,7 +66,7 @@ function buildTaskAgentNode(
         isLocal={isLocal}
       />
     ),
-    suffix: isAutomating ? (
+    status: isAutomating ? (
       <span className={explorerStyles.sessionIndicator}>
         <Loader2
           size={10}
@@ -88,7 +88,7 @@ export function buildTasksExplorerNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNodeWithSuffix {
+): ListTreeNode {
   const projectAgents = data.agentsByProject[project.project_id];
   // Mirror the Projects-app sidebar: hide infrastructure-role rows
   // (`Loop`, `Executor`) so each `run-once` task click does not stack
@@ -114,7 +114,7 @@ export function buildTasksExplorerNode(
     label: project.name,
     icon: <Folder size={16} />,
     expandedIcon: <FolderOpen size={16} />,
-    suffix: buildTaskProjectSuffix(
+    status: buildTaskProjectSuffix(
       project.project_id,
       data.actions.handleAddAgent,
       explorerStyles,

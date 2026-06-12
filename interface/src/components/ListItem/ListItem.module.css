@@ -1,0 +1,225 @@
+/* Canonical row metrics for every aura-os list/tree row. This is the
+   single source of truth that used to be spread across the zui Explorer
+   overrides in Sidekick.module.css, the SidekickList row rules, and the
+   index.css chevron/suffix alignment hacks.
+
+   Layout contract:
+   - 12px inset on both edges: the title's left edge and the chevron
+     column's right edge sit at the same distance from the row edge.
+   - The status slot and the chevron are both fixed 24px centered
+     columns, so a leaf row's status icon lines up with a parent row's
+     chevron across the list. */
+
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  margin: 1px var(--space-2, 8px);
+  padding: 0 var(--space-3, 12px);
+  min-height: 30px;
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--transition-fast, 75ms ease-out),
+    color var(--transition-fast, 75ms ease-out);
+}
+
+.row:hover {
+  background: var(--color-overlay-subtle);
+}
+
+/* Hover (subtle) and selected (medium) stay visually distinct so a
+   hovered row never reads identical to the selected row. */
+.rowSelected,
+.rowSelected:hover {
+  background: var(--color-overlay-medium);
+}
+
+/* Expandable parent rows read muted, like section headers. */
+.rowParent {
+  color: var(--color-text-secondary);
+}
+
+.rowDisabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Rows are managed-focus tree items; the app suppresses rings on them
+   (matches the previous SidekickList / Explorer treatment). */
+.row:focus-visible {
+  outline: none;
+}
+
+/* Two-line rows (title + secondary) grow to fit both lines. */
+.rowMultiline {
+  min-height: 44px;
+  padding-top: var(--space-1, 4px);
+  padding-bottom: var(--space-1, 4px);
+  align-items: flex-start;
+}
+
+.rowMultiline .icon,
+.rowMultiline .leading {
+  margin-top: 1px;
+}
+
+.rowEditing {
+  cursor: text;
+}
+
+.rowEditing:hover {
+  background: transparent;
+}
+
+.leading {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+/* Indicator components (e.g. the chat streaming dot) render null when
+   inactive; collapse the empty wrapper so it adds no gap. */
+.leading:empty {
+  display: none;
+}
+
+.icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secondary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--color-text-muted);
+}
+
+.meta {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.meta:empty {
+  display: none;
+}
+
+.status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+}
+
+.status:empty {
+  display: none;
+}
+
+.copy {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.trailing {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.chevron {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 2px);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast, 75ms ease-out);
+}
+
+.row:hover .chevron,
+.chevron:hover {
+  color: var(--color-text-secondary);
+}
+
+.chevronIcon {
+  transition: transform var(--transition-fast, 75ms ease-out);
+}
+
+.chevronIconExpanded {
+  transform: rotate(90deg);
+}
+
+/* Animated expand/collapse for nested content. */
+.children {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 200ms ease-out;
+}
+
+.childrenCollapsed {
+  grid-template-rows: 0fr;
+}
+
+.childrenInner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 1px 4px;
+  font: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-surface, #1e1e1e);
+  border: 1px solid var(--color-accent, #5e9eff);
+  border-radius: 2px;
+  outline: none;
+  box-sizing: border-box;
+}

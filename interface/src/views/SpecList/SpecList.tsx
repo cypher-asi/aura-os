@@ -12,9 +12,8 @@ import { mergeById, compareSpecs } from "../../utils/collections";
 import { groupSpecsByPlan } from "../../utils/plan-grouping";
 import { usePlanStore } from "../../stores/plan-store";
 import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
-import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../components/EmptyState";
-import type { ExplorerNode } from "@cypher-asi/zui";
+import { ListTree, type ListTreeNode } from "../../components/ListTree";
 import {
   SidekickItemContextMenu,
   useSidekickItemContextMenu,
@@ -134,7 +133,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     [mergedSpecs, plans, planTitle],
   );
 
-  const explorerData: ExplorerNode[] = useMemo(
+  const explorerData: ListTreeNode[] = useMemo(
     () =>
       planGroups.map((group) => ({
         id: `plan:${group.plan_id}`,
@@ -189,16 +188,8 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     [selectedId],
   );
 
-  const handleSelect = (ids: string[]) => {
-    const id = [...ids]
-      .reverse()
-      .find(
-        (candidate) =>
-          candidate.startsWith("summary:") ||
-          candidate.startsWith("plan:") ||
-          specById.has(candidate),
-      );
-    if (!id) return;
+  const handleSelect = (node: ListTreeNode) => {
+    const id = node.id;
     if (id.startsWith("summary:")) {
       const planId = id.slice("summary:".length);
       const group = planGroups.find((g) => g.plan_id === planId);
@@ -304,13 +295,12 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   return (
     <>
       <div onContextMenu={handleContextMenu}>
-        <Explorer
-          data={filteredData}
+        <ListTree
+          nodes={filteredData}
           expandOnSelect
-          enableDragDrop={false}
-          enableMultiSelect={false}
+          indent={0}
           defaultExpandedIds={defaultExpandedIds}
-          defaultSelectedIds={defaultSelectedIds}
+          defaultSelectedId={defaultSelectedIds[0] ?? null}
           onSelect={handleSelect}
           editingNodeId={renamingId}
           onRenameCommit={handleRenameCommit}

@@ -1,10 +1,10 @@
-import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ListTreeNode } from "../ListTree";
 import type { AgentInstance } from "../../shared/types";
 
-export function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
+export function filterTree(nodes: ListTreeNode[], q: string): ListTreeNode[] {
   if (!q) return nodes;
   const lower = q.toLowerCase();
-  return nodes.reduce<ExplorerNode[]>((acc, node) => {
+  return nodes.reduce<ListTreeNode[]>((acc, node) => {
     const labelMatch = node.label.toLowerCase().includes(lower);
     const filteredChildren = node.children ? filterTree(node.children, q) : [];
     if (labelMatch) acc.push(node);

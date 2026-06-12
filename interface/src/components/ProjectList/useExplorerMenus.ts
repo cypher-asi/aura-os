@@ -10,7 +10,7 @@ export function useExplorerMenus(
   actions: Actions,
 ) {
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    const target = (e.target as HTMLElement).closest("button[id]");
+    const target = (e.target as HTMLElement).closest("[data-list-item][id]");
     if (!target) return;
     const nodeId = target.id;
     const proj = projectMap.get(nodeId);
@@ -21,7 +21,7 @@ export function useExplorerMenus(
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== "F2") return;
-    const focused = (e.target as HTMLElement).closest("button[id]");
+    const focused = (e.target as HTMLElement).closest("[data-list-item][id]");
     if (!focused) return;
     const proj = projectMap.get(focused.id);
     if (proj) { e.preventDefault(); actions.setRenameTarget(proj); return; }

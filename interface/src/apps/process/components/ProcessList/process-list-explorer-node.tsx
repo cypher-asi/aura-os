@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import type { ExplorerNode } from "@cypher-asi/zui";
 import { Cpu } from "lucide-react";
 import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
 import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
-import type { ExplorerNodeWithSuffix } from "../../../../lib/zui-compat";
+import type { ListTreeNode } from "../../../../components/ListTree";
 
 interface BuildProcessExplorerDataParams {
   processes: {
@@ -45,12 +44,12 @@ function buildEnabledIndicator(
 function buildProcessNode(
   process: BuildProcessExplorerDataParams["processes"][number],
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNodeWithSuffix {
+): ListTreeNode {
   return {
     id: process.process_id,
     label: process.name,
     icon: <Cpu size={16} />,
-    suffix: buildEnabledIndicator(process.enabled, explorerStyles),
+    status: buildEnabledIndicator(process.enabled, explorerStyles),
     metadata: { type: "process", projectId: process.project_id ?? null },
   };
 }
@@ -58,11 +57,11 @@ function buildProcessNode(
 function buildProjectProcessNode(
   project: BuildProcessExplorerDataParams["projects"][number],
   params: BuildProcessExplorerDataParams,
-): ExplorerNodeWithSuffix {
+): ListTreeNode {
   return {
     id: project.project_id,
     label: project.name,
-    suffix: (
+    status: (
       <span className={params.explorerStyles.projectSuffix}>
         <span
           onClick={(event) => event.stopPropagation()}
@@ -84,7 +83,7 @@ function buildProjectProcessNode(
 
 export function buildProcessExplorerData(
   params: BuildProcessExplorerDataParams,
-): ExplorerNode[] {
+): ListTreeNode[] {
   const projectNodes = params.projects.map((project) =>
     buildProjectProcessNode(project, params),
   );

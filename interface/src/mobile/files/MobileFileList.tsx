@@ -1,4 +1,4 @@
-import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ListTreeNode } from "../../components/ListTree";
 import { api } from "../../api/client";
 import type { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import styles from "../../components/FileExplorer/FileExplorer.module.css";
@@ -18,7 +18,7 @@ function getMobilePreviewLabel(filename: string): string {
 }
 
 interface MobileFileListProps {
-  nodes: ExplorerNode[];
+  nodes: ListTreeNode[];
   features: ReturnType<typeof useAuraCapabilities>["features"];
   isRemote: boolean;
   onFileSelect?: (path: string) => void;

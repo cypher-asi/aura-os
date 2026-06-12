@@ -1,6 +1,5 @@
 import { createElement, useMemo, useRef, useState } from "react";
-import { Explorer } from "@cypher-asi/zui";
-import type { ExplorerNode } from "@cypher-asi/zui";
+import { ListTree, type ListTreeNode } from "../../../components/ListTree";
 import { FolderSection } from "../../../components/FolderSection";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { useMarketplaceFilters } from "../stores";
@@ -19,7 +18,7 @@ export function MarketplaceSidebar() {
   const [expertiseExpanded, setExpertiseExpanded] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const trendingNodes = useMemo<ExplorerNode[]>(
+  const trendingNodes = useMemo<ListTreeNode[]>(
     () =>
       MARKETPLACE_TRENDING_SORTS.map((s) => ({
         id: s.id,
@@ -29,7 +28,7 @@ export function MarketplaceSidebar() {
     [],
   );
 
-  const expertiseNodes = useMemo<ExplorerNode[]>(
+  const expertiseNodes = useMemo<ListTreeNode[]>(
     () =>
       MARKETPLACE_EXPERTISE.map((e) => ({
         id: e.id,
@@ -39,20 +38,15 @@ export function MarketplaceSidebar() {
     [],
   );
 
-  const selectedIds = useMemo(
-    () => (expertiseFilter ? [expertiseFilter] : [sort]),
-    [expertiseFilter, sort],
-  );
+  const selectedId = expertiseFilter ?? sort;
 
-  const handleSelect = (ids: string[]) => {
-    const next = ids[ids.length - 1];
-    if (!next) return;
-    if (TRENDING_SORT_IDS.has(next)) {
-      setSort(next as MarketplaceTrendingSort);
+  const handleSelect = (node: ListTreeNode) => {
+    if (TRENDING_SORT_IDS.has(node.id)) {
+      setSort(node.id as MarketplaceTrendingSort);
       setExpertiseFilter(null);
       return;
     }
-    setExpertiseFilter(next);
+    setExpertiseFilter(node.id);
   };
 
   return (
@@ -63,11 +57,9 @@ export function MarketplaceSidebar() {
           expanded={trendingExpanded}
           onToggle={() => setTrendingExpanded((v) => !v)}
         >
-          <Explorer
-            data={trendingNodes}
-            enableDragDrop={false}
-            enableMultiSelect={false}
-            defaultSelectedIds={selectedIds}
+          <ListTree
+            nodes={trendingNodes}
+            selectedId={selectedId}
             onSelect={handleSelect}
           />
         </FolderSection>
@@ -76,11 +68,9 @@ export function MarketplaceSidebar() {
           expanded={expertiseExpanded}
           onToggle={() => setExpertiseExpanded((v) => !v)}
         >
-          <Explorer
-            data={expertiseNodes}
-            enableDragDrop={false}
-            enableMultiSelect={false}
-            defaultSelectedIds={selectedIds}
+          <ListTree
+            nodes={expertiseNodes}
+            selectedId={selectedId}
             onSelect={handleSelect}
           />
         </FolderSection>

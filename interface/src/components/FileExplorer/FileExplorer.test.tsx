@@ -3,7 +3,6 @@ import { render, screen } from "../../test/render";
 const mockUseFileExplorerState = vi.fn();
 
 vi.mock("@cypher-asi/zui", () => ({
-  Explorer: () => <div data-testid="explorer" />,
   Spinner: () => <div>Loading...</div>,
   PageEmptyState: ({
     title,

@@ -2,8 +2,9 @@ import { useRef, useCallback, useLayoutEffect, useState, useEffect } from "react
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
+import { Button, Text, GroupCollapsible } from "@cypher-asi/zui";
 import { X, ArrowLeft, FileText } from "lucide-react";
+import { ListItem } from "../ListItem";
 import { useParams } from "react-router-dom";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
@@ -138,16 +139,12 @@ function SpecsOverviewPreview({
       >
         <div className={styles.fileOpsList}>
           {specs.map((spec) => (
-              <Item
-                key={spec.spec_id}
-                onClick={() => pushPreview({ kind: "spec", spec })}
-                className={styles.fileOpItem}
-              >
-                <Item.Icon><FileText size={14} /></Item.Icon>
-                <Item.Label>
-                  <span title={spec.title}>{spec.title}</span>
-                </Item.Label>
-              </Item>
+            <ListItem
+              key={spec.spec_id}
+              icon={<FileText size={14} />}
+              title={<span title={spec.title}>{spec.title}</span>}
+              onSelect={() => pushPreview({ kind: "spec", spec })}
+            />
           ))}
         </div>
       </GroupCollapsible>

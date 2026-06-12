@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, type KeyboardEventHandler, type MouseEventHandler } from "react";
-import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ListTreeNode } from "../../../../components/ListTree";
 import { useNavigate } from "react-router-dom";
 import { useProfileStatusStore } from "../../../../stores/profile-status-store";
 import { useProjectListData } from "../../../../components/ProjectList/useProjectListData";
@@ -41,7 +41,7 @@ function useTaskAgentRegistration(
 function useTaskExplorerData(
   data: ReturnType<typeof useProjectListData>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode[] {
+): ListTreeNode[] {
   const statusMap = useProfileStatusStore((s) => s.statuses);
   const machineTypesMap = useProfileStatusStore((s) => s.machineTypes);
 
@@ -62,7 +62,7 @@ function useTaskExplorerData(
   );
 }
 
-function buildDefaultExpandedIds(explorerData: ExplorerNode[]): string[] {
+function buildDefaultExpandedIds(explorerData: ListTreeNode[]): string[] {
   return explorerData
     .filter(
       (node) =>
@@ -118,7 +118,7 @@ function useTaskNavigationHandlers(
 }
 
 function useTaskLeftMenuEntries(
-  explorerData: ExplorerNode[],
+  explorerData: ListTreeNode[],
   expandedIds: string[],
   searchActive: boolean,
   selectedNodeId: string | null,

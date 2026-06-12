@@ -161,13 +161,8 @@
   padding: 4px 0;
 }
 
-.mobileResponsiveControls :global([class*="itemContent"]) {
+.mobileResponsiveControls :global([data-list-item]) {
   min-height: 34px !important;
-  padding-top: 5px !important;
-  padding-bottom: 5px !important;
-}
-
-.mobileResponsiveControls :global([class*="label"]) {
   font-size: 13px;
   line-height: 1.2;
 }

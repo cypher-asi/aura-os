@@ -186,12 +186,11 @@
   flex-direction: column;
 }
 
-.fileOpItem {
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 1.5;
-  height: 26px;
+/* Compact preview rows: tighter than the standard 30px ListItem row,
+   flush with the preview body (no row margin). */
+.fileOpsList [data-list-item] {
   min-height: 26px;
+  margin: 1px 0;
 }
 
 .specOverviewRow {
@@ -227,7 +226,7 @@
   color: var(--color-text-muted) !important;
 }
 
-.fileOpItem:hover {
+.fileOpsList [data-list-item]:hover {
   background: var(--color-overlay-light);
 }
 

@@ -4,12 +4,14 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { useSidekickItemContextMenu } from "./useSidekickItemContextMenu";
 
 function makeEvent(targetId: string, clientX = 10, clientY = 20): ReactMouseEvent {
-  const button = document.createElement("button");
-  button.id = targetId;
-  document.body.appendChild(button);
+  // Mirrors the ListItem row contract the hook resolves against.
+  const row = document.createElement("div");
+  row.id = targetId;
+  row.setAttribute("data-list-item", "");
+  document.body.appendChild(row);
   const preventDefault = vi.fn();
   return {
-    target: button,
+    target: row,
     clientX,
     clientY,
     preventDefault,

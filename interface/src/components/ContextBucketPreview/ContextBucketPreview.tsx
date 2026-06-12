@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from "react";
-import { GroupCollapsible, Item, Text } from "@cypher-asi/zui";
+import { GroupCollapsible, Text } from "@cypher-asi/zui";
+import { ListItem } from "../ListItem";
 import type { ContextBucketId } from "../../stores/sidekick-store";
 import { contextBucketLabel } from "./context-bucket-labels";
 import { useContextBucketContents } from "./use-context-contents";
@@ -119,32 +120,26 @@ export function ContextBucketPreview({
             const key = `${segmentBucketId}:${index}`;
             const expanded = expandedKeys.has(key);
             return (
-              <div key={key} className={styles.segment}>
-                <Item
-                  hasChildren
-                  expanded={expanded}
-                  onClick={() => toggleSegment(key)}
-                  className={styles.segmentHeader}
-                >
-                  <Item.Label>
-                    <span title={segment.label}>
-                      {segment.label || "(unnamed)"}
-                    </span>
-                  </Item.Label>
-                  <Item.Action>
-                    <span className={styles.tokenCount}>
-                      {formatTokens(segment.tokens)}
-                    </span>
-                  </Item.Action>
-                  <Item.Chevron
-                    expanded={expanded}
-                    onToggle={() => toggleSegment(key)}
-                  />
-                </Item>
-                {expanded && (
-                  <pre className={styles.segmentText}>{segment.text}</pre>
-                )}
-              </div>
+              <ListItem
+                key={key}
+                className={styles.segment}
+                title={
+                  <span title={segment.label}>
+                    {segment.label || "(unnamed)"}
+                  </span>
+                }
+                meta={
+                  <span className={styles.tokenCount}>
+                    {formatTokens(segment.tokens)}
+                  </span>
+                }
+                hasChildren
+                expanded={expanded}
+                onExpandedChange={() => toggleSegment(key)}
+                onSelect={() => toggleSegment(key)}
+              >
+                <pre className={styles.segmentText}>{segment.text}</pre>
+              </ListItem>
             );
           })}
         </div>

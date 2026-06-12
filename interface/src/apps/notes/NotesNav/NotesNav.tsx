@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, FileText, FolderClosed } from "lucide-react";
-import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ListTreeNode } from "../../../components/ListTree";
 import {
   buildLeftMenuEntries,
   LeftMenuTree,
@@ -54,7 +54,7 @@ import { seedAuraDocs } from "../seed-aura-docs/run";
  * Draft/Published pill shown as the note's left-nav suffix inside the
  * aura-blog CMS project. Normal notes get no badge.
  */
-function blogStatusSuffix(status: string | null | undefined): ExplorerNode["suffix"] {
+function blogStatusSuffix(status: string | null | undefined): ListTreeNode["status"] {
   const published = status === "published";
   return (
     <span
@@ -67,7 +67,7 @@ function blogStatusSuffix(status: string | null | undefined): ExplorerNode["suff
   );
 }
 
-function hoverPlusSuffix(onClick: () => void, title: string): ExplorerNode["suffix"] {
+function hoverPlusSuffix(onClick: () => void, title: string): ListTreeNode["status"] {
   return (
     <span className={leftMenuStyles.newChatWrap}>
       <ProjectsPlusButton
@@ -96,7 +96,7 @@ function compareByOrderThenLabel(
 }
 
 /**
- * Build the ExplorerNode children for a single folder level. Folders nest
+ * Build the ListTreeNode children for a single folder level. Folders nest
  * via `parentId`; notes are placed under their `folderId` (or the project
  * root when `folderId` is null). `parentId === null` builds the project
  * root level. Live edits surface through `titleOverrides` (keyed by noteId).
@@ -109,7 +109,7 @@ function buildFolderChildren(
   titleOverrides: Record<string, string>,
   onCreateInFolder: (folderId: string) => void,
   isCmsProject: boolean,
-): ExplorerNode[] {
+): ListTreeNode[] {
   const childFolders = folders
     .filter((f) => (f.parentId ?? null) === parentId)
     .map((folder) => {
@@ -129,7 +129,7 @@ function buildFolderChildren(
       label,
       icon: <FolderClosed size={14} aria-hidden="true" />,
       metadata: { variant: "default", type: "folder" },
-      suffix: hoverPlusSuffix(
+      status: hoverPlusSuffix(
         () => onCreateInFolder(folder.id),
         `New note in ${label}`,
       ),
@@ -167,7 +167,7 @@ function buildFolderChildren(
       label,
       icon: <FileText size={14} aria-hidden="true" />,
       metadata: { type: "note" },
-      ...(isCmsProject ? { suffix: blogStatusSuffix(note.status) } : {}),
+      ...(isCmsProject ? { status: blogStatusSuffix(note.status) } : {}),
     }));
 
   return [...childFolders, ...childNotes];
@@ -346,7 +346,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
     [createNote, navigate, onCreateNote],
   );
 
-  const data = useMemo<ExplorerNode[]>(() => {
+  const data = useMemo<ListTreeNode[]>(() => {
     return projects.map((project) => {
       const projectId = project.project_id;
       const isCmsProject =
@@ -369,7 +369,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
         id: projectIdFor(projectId),
         label: project.name,
         children,
-        suffix: hoverPlusSuffix(
+        status: hoverPlusSuffix(
           () => handleCreateNote(projectId, null),
           `New note in ${project.name}`,
         ),

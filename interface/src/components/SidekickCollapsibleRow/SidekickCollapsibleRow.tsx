@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Item } from "@cypher-asi/zui";
+
+import { ListItem } from "../ListItem";
 import styles from "./SidekickCollapsibleRow.module.css";
 
 interface SidekickCollapsibleRowProps {
@@ -18,16 +19,15 @@ interface SidekickCollapsibleRowProps {
    * already label the section themselves.
    */
   showHeader?: boolean;
-  /** Body, rendered only while expanded. */
+  /** Body, collapsed/expanded with the header chevron. */
   children?: ReactNode;
 }
 
 /**
- * Reusable collapsible item-row for the sidekick. Wraps the shared zui
- * `Item` primitive (the same one the Tasks / Specs `Explorer` rows use)
- * and applies the exact compact row styling those sections get, so any
- * sidekick section renders a visually identical header. The body is left
- * to the consumer and only mounted while expanded.
+ * Reusable collapsible item-row for the sidekick. Thin wrapper over the
+ * shared `ListItem` primitive (the same row the Tasks / Specs / Files
+ * trees use), so any sidekick section renders a visually identical
+ * header with the standard animated expand/collapse.
  */
 export function SidekickCollapsibleRow({
   expanded,
@@ -37,21 +37,21 @@ export function SidekickCollapsibleRow({
   showHeader = true,
   children,
 }: SidekickCollapsibleRowProps) {
+  if (!showHeader) {
+    return <div className={styles.row}>{children}</div>;
+  }
+
   return (
-    <div className={styles.row}>
-      {showHeader && (
-        <Item
-          className={styles.header}
-          hasChildren
-          expanded={expanded}
-          onClick={onToggle}
-        >
-          <Item.Label>{label}</Item.Label>
-          {suffix}
-          <Item.Chevron size="sm" expanded={expanded} onToggle={onToggle} />
-        </Item>
-      )}
-      {expanded && children}
-    </div>
+    <ListItem
+      className={styles.row}
+      title={label}
+      status={suffix}
+      hasChildren
+      expanded={expanded}
+      onExpandedChange={onToggle}
+      onSelect={onToggle}
+    >
+      {children}
+    </ListItem>
   );
 }

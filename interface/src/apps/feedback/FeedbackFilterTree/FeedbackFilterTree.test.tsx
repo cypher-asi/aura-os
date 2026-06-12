@@ -1,14 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-interface StubExplorerNode {
-  id: string;
-  label: string;
-}
-interface StubExplorerProps {
-  data: StubExplorerNode[];
-  onSelect: (ids: string[]) => void;
-}
 interface StubFolderSectionProps {
   label: string;
   expanded: boolean;
@@ -16,19 +8,6 @@ interface StubFolderSectionProps {
   children?: React.ReactNode;
 }
 
-vi.mock("@cypher-asi/zui", () => ({
-  Explorer: ({ data, onSelect }: StubExplorerProps) => (
-    <ul data-testid="stub-explorer">
-      {data.map((node) => (
-        <li key={node.id}>
-          <button type="button" onClick={() => onSelect([node.id])}>
-            {node.label}
-          </button>
-        </li>
-      ))}
-    </ul>
-  ),
-}));
 vi.mock("../../../components/FolderSection", () => ({
   FolderSection: ({ label, expanded, onToggle, children }: StubFolderSectionProps) => (
     <section>

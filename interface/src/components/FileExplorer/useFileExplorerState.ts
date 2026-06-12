@@ -1,15 +1,14 @@
 import { useEffect, useState, useMemo, useCallback, useRef, createElement } from "react";
 import { api, type DirEntry } from "../../api/client";
 import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
-import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ListTreeNode } from "../../components/ListTree";
 import { Folder, File, FolderOpen, FolderOutput } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useEventStore } from "../../stores/event-store/index";
 import { EventType } from "../../shared/types/aura-events";
 import styles from "./FileExplorer.module.css";
-import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 
-function toExplorerNodes(entries: DirEntry[]): ExplorerNode[] {
+function toExplorerNodes(entries: DirEntry[]): ListTreeNode[] {
   return entries.map((entry) => ({
     id: entry.path,
     label: entry.name,
@@ -168,7 +167,7 @@ export function useFileExplorerState({
     [rootPath],
   );
 
-  const explorerData: ExplorerNodeWithSuffix[] = useMemo(() => {
+  const explorerData: ListTreeNode[] = useMemo(() => {
     if (!rootPath) return [];
     const rootName = rootPath.split(/[\\/]/).pop() ?? rootPath;
     return [
@@ -177,7 +176,7 @@ export function useFileExplorerState({
         label: rootName,
         icon: createElement(FolderOpen, { size: 14 }),
         children: toExplorerNodes(entries),
-        suffix: showOpenFolder
+        status: showOpenFolder
           ? createElement(
               "button",
               {
@@ -201,7 +200,7 @@ export function useFileExplorerState({
 
   const defaultExpandedIds = useMemo(() => {
     const ids: string[] = ["__files_root__"];
-    const collectFolderIds = (nodes: ExplorerNode[]) => {
+    const collectFolderIds = (nodes: ListTreeNode[]) => {
       for (const node of nodes) {
         if (node.children) {
           ids.push(node.id);
@@ -214,20 +213,16 @@ export function useFileExplorerState({
   }, [explorerData]);
 
   const handleSelect = useCallback(
-    (ids: string[]) => {
+    (node: ListTreeNode) => {
       if (!features.linkedWorkspace && !isRemote) return;
-      const id = ids[0];
-      if (!id || id === "__files_root__") return;
-      const node = findNode(filteredData, id);
-      if (node && !node.children) {
-        if (onFileSelect) {
-          onFileSelect(id);
-        } else {
-          api.openIde(id, rootPath);
-        }
+      if (node.id === "__files_root__" || node.children) return;
+      if (onFileSelect) {
+        onFileSelect(node.id);
+      } else {
+        api.openIde(node.id, rootPath);
       }
     },
-    [features.linkedWorkspace, isRemote, filteredData, onFileSelect, rootPath],
+    [features.linkedWorkspace, isRemote, onFileSelect, rootPath],
   );
 
   return {
@@ -245,13 +240,3 @@ export function useFileExplorerState({
   };
 }
 
-function findNode(nodes: ExplorerNode[], id: string): ExplorerNode | null {
-  for (const node of nodes) {
-    if (node.id === id) return node;
-    if (node.children) {
-      const found = findNode(node.children, id);
-      if (found) return found;
-    }
-  }
-  return null;
-}

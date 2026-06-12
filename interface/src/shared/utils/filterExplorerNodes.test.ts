@@ -1,7 +1,7 @@
 import { filterExplorerNodes } from "./filterExplorerNodes";
-import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ListTreeNode } from "../../components/ListTree";
 
-function node(id: string, label: string, children?: ExplorerNode[]): ExplorerNode {
+function node(id: string, label: string, children?: ListTreeNode[]): ListTreeNode {
   return { id, label, children };
 }
 

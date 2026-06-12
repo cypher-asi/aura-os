@@ -31,11 +31,11 @@ describe("SidekickList", () => {
 
   it("marks the selected row with aria-selected", () => {
     render(<SidekickList sections={sections()} selectedId="row-2" />);
-    expect(screen.getByText("Second").closest("button")).toHaveAttribute(
+    expect(screen.getByText("Second").closest("[data-list-item]")).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByText("First").closest("button")).toHaveAttribute(
+    expect(screen.getByText("First").closest("[data-list-item]")).toHaveAttribute(
       "aria-selected",
       "false",
     );
@@ -62,9 +62,14 @@ describe("SidekickList", () => {
 
   it("collapses a section when its header is toggled", () => {
     render(<SidekickList sections={sections()} />);
-    expect(screen.getByText("First")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Section A"));
-    expect(screen.queryByText("First")).not.toBeInTheDocument();
+    const header = screen
+      .getByText("Section A")
+      .closest("[data-list-item]") as HTMLElement;
+    expect(header).toHaveAttribute("aria-expanded", "true");
+    // Rows stay mounted for the collapse animation; the section reports
+    // its collapsed state through the header's aria-expanded.
+    fireEvent.click(header);
+    expect(header).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByText("Third")).toBeInTheDocument();
   });
 
@@ -95,7 +100,9 @@ describe("SidekickList", () => {
         onMenuAction={onMenuAction}
       />,
     );
-    const row = screen.getByText("First").closest("button") as HTMLButtonElement;
+    const row = screen
+      .getByText("First")
+      .closest("[data-list-item]") as HTMLElement;
     fireEvent.contextMenu(row);
     const deleteItem = screen.getByText("Delete");
     fireEvent.click(deleteItem);

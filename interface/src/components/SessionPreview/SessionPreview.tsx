@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Text, GroupCollapsible, Item } from "@cypher-asi/zui";
+import { Text, GroupCollapsible } from "@cypher-asi/zui";
+import { ListItem } from "../ListItem";
 import { api } from "../../api/client";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
@@ -113,14 +114,12 @@ export function SessionPreview({ session }: { session: Session }) {
             <Text variant="muted" size="sm" className={styles.inlinePadding}>No tasks in this session</Text>
           )}
           {tasks.map((task) => (
-            <Item
+            <ListItem
               key={task.task_id}
-              onClick={() => pushPreview({ kind: "task", task })}
-              className={styles.fileOpItem}
-            >
-              <Item.Icon><TaskStatusIcon status={task.status} /></Item.Icon>
-              <Item.Label>{task.title}</Item.Label>
-            </Item>
+              icon={<TaskStatusIcon status={task.status} />}
+              title={task.title}
+              onSelect={() => pushPreview({ kind: "task", task })}
+            />
           ))}
         </div>
       </GroupCollapsible>

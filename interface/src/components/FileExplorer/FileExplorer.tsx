@@ -1,5 +1,6 @@
-import { Explorer, Spinner, PageEmptyState } from "@cypher-asi/zui";
+import { Spinner, PageEmptyState } from "@cypher-asi/zui";
 import { Folder, FolderOpen } from "lucide-react";
+import { ListTree } from "../ListTree";
 import { useFileExplorerState } from "./useFileExplorerState";
 import { MobileFileList } from "../../mobile/files/MobileFileList";
 import { FileExplorerHeader } from "./FileExplorerHeader";
@@ -83,13 +84,11 @@ export function FileExplorer({
   }
 
   return (
-    <div className={styles.explorerContainer} data-explorer-scope="files">
+    <div className={styles.explorerContainer}>
       {rootPath && <FileExplorerHeader rootPath={rootPath} />}
-      <Explorer
-        data={s.filteredData}
+      <ListTree
+        nodes={s.filteredData}
         expandOnSelect
-        enableDragDrop={false}
-        enableMultiSelect={false}
         defaultExpandedIds={s.defaultExpandedIds}
         onSelect={s.handleSelect}
       />

@@ -1,7 +1,8 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useCallback } from "react";
-import { Explorer, PageEmptyState } from "@cypher-asi/zui";
+import { PageEmptyState } from "@cypher-asi/zui";
 import { FolderGit2 } from "lucide-react";
+import { ListTree } from "../ListTree";
 import { useProjectListData } from "./useProjectListData";
 import { ProjectListModals } from "./ProjectListModals";
 import { ExplorerContextMenu } from "./ExplorerContextMenu";
@@ -43,21 +44,20 @@ export function ProjectList() {
   // `ChatPanel`'s cold-load reveal cycle re-fires (overlay + brief
   // `visibility: hidden` on the message area).
   //
-  // Delegated through the wrapping div because `Explorer` from zui
-  // exposes neither per-row mouse hooks nor a row-level data hook; the
-  // underlying `<button id={agent_instance_id}>` rendered by `Item` is
-  // identifiable by its `id`, which we look up against the same
+  // Delegated through the wrapping div so a single listener covers
+  // every row; each `ListItem` row stamps the node id on its
+  // `[data-list-item]` element, which we look up against the same
   // `agentMeta` map the click handler uses.
   const agentMeta = data.agentMeta;
   const projectMap = data.projectMap;
   const handleExplorerHover = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null;
-    const button = target?.closest?.("button[id]") as HTMLButtonElement | null;
-    if (!button) return;
-    const meta = agentMeta.get(button.id);
+    const row = target?.closest?.("[data-list-item][id]") as HTMLElement | null;
+    if (!row) return;
+    const meta = agentMeta.get(row.id);
     if (!meta) return;
     const { projectId } = meta;
-    const agentInstanceId = button.id;
+    const agentInstanceId = row.id;
     // 1. Warm the no-session destination — covers the first frame of the
     //    project route while the default-session redirect is in flight.
     void useChatHistoryStore.getState().fetchHistory(
@@ -119,13 +119,12 @@ export function ProjectList() {
         onKeyDown={explorer.handleKeyDown}
         onMouseOver={handleExplorerHover}
       >
-        <Explorer
-          data={explorer.filteredExplorerData}
-          enableDragDrop={false}
-          enableMultiSelect={false}
-          defaultExpandedIds={explorer.defaultExpandedIds}
-          defaultSelectedIds={explorer.defaultSelectedIds}
-          onSelect={explorer.handleSelect}
+        <ListTree
+          nodes={explorer.filteredExplorerData}
+          indent={0}
+          expandedIds={explorer.expandedIds}
+          selectedId={explorer.defaultSelectedIds[0] ?? null}
+          onSelect={(node) => explorer.handleSelect([node.id])}
           onExpand={explorer.handleExpand}
         />
       </div>

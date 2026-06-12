@@ -1,5 +1,4 @@
-import type { ExplorerNode } from "@cypher-asi/zui";
-import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
+import type { ListTreeNode } from "../../components/ListTree";
 import type {
   LeftMenuEmptyEntry,
   LeftMenuEntry,
@@ -25,19 +24,19 @@ function buildTestId(prefix: string | undefined, nodeId: string): string | undef
   return prefix ? `${prefix}-${nodeId}` : undefined;
 }
 
-function isEmptyStateNode(node: ExplorerNode): boolean {
+function isEmptyStateNode(node: ListTreeNode): boolean {
   const type = node.metadata?.type;
   // `project-empty` is the original, app-specific sentinel; `empty` is the
   // generic one new apps (e.g. Notes) should use.
   return type === "empty" || type === "project-empty";
 }
 
-function isGroupNode(node: ExplorerNode): boolean {
+function isGroupNode(node: ListTreeNode): boolean {
   return Array.isArray(node.children);
 }
 
 function resolveGroupVariant(
-  node: ExplorerNode,
+  node: ListTreeNode,
 ): "default" | "section" {
   const variant = node.metadata?.variant;
   if (variant === "section" || variant === "default") {
@@ -48,7 +47,7 @@ function resolveGroupVariant(
 }
 
 function buildLeafEntry(
-  node: ExplorerNodeWithSuffix,
+  node: ListTreeNode,
   selectedNodeId: string | null,
   itemTestIdPrefix: string | undefined,
   onItemSelect: (nodeId: string) => void,
@@ -58,7 +57,7 @@ function buildLeafEntry(
     id: node.id,
     label: node.label,
     icon: node.icon,
-    suffix: node.suffix,
+    suffix: node.status,
     disabled: Boolean(node.disabled),
     selected: selectedNodeId === node.id,
     testId: buildTestId(itemTestIdPrefix, node.id),
@@ -67,7 +66,7 @@ function buildLeafEntry(
 }
 
 function buildEmptyEntry(
-  node: ExplorerNode | undefined,
+  node: ListTreeNode | undefined,
   emptyTestIdPrefix: string | undefined,
   fallbackId: string,
 ): LeftMenuEmptyEntry | null {
@@ -81,7 +80,7 @@ function buildEmptyEntry(
 }
 
 function buildGroupEntry(
-  node: ExplorerNodeWithSuffix,
+  node: ListTreeNode,
   options: BuildLeftMenuEntriesOptions,
 ): LeftMenuGroupEntry {
   const emptyNode = node.children?.find(isEmptyStateNode);
@@ -104,7 +103,7 @@ function buildGroupEntry(
     label: node.label,
     icon: node.icon,
     expandedIcon: node.expandedIcon,
-    suffix: node.suffix,
+    suffix: node.status,
     variant: resolveGroupVariant(node),
     expanded: Boolean(options.searchActive) || options.expandedIds.has(node.id),
     selected: options.selectedGroupIds?.has(node.id),
@@ -120,7 +119,7 @@ function buildGroupEntry(
 }
 
 export function buildLeftMenuEntries(
-  nodes: ExplorerNodeWithSuffix[],
+  nodes: ListTreeNode[],
   options: BuildLeftMenuEntriesOptions,
 ): LeftMenuEntry[] {
   return nodes.map((node) =>

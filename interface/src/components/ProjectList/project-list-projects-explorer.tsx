@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ListTreeNode } from "../ListTree";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
 import {
   getMobileProjectDestination,
@@ -46,7 +46,7 @@ function compareUpdatedAtDesc(
   return safeRightTime - safeLeftTime;
 }
 
-function collectExpandableNodeIds(nodes: ExplorerNode[]): string[] {
+function collectExpandableNodeIds(nodes: ListTreeNode[]): string[] {
   const expandedIds: string[] = [];
   for (const node of nodes) {
     if (!node.children || node.children.length === 0) {
@@ -68,7 +68,7 @@ function buildArchivedRootNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode {
+): ListTreeNode {
   // `Executor` rows are deleted (not archived) by the per-run
   // reaper, but a server crash mid-cleanup could leave one with
   // `status: "archived"`. Defensively skip non-user-facing roles
@@ -120,8 +120,8 @@ function useProjectExplorerData(
   machineTypesMap: Record<string, string>,
 ): {
   computedExpandedIds: string[];
-  explorerData: ExplorerNode[];
-  filteredExplorerData: ExplorerNode[];
+  explorerData: ListTreeNode[];
+  filteredExplorerData: ListTreeNode[];
 } {
   const nodeBuildContext = useMemo(
     () => ({

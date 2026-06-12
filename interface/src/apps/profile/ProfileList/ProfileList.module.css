@@ -5,11 +5,11 @@
   overflow-y: auto;
 }
 
-.list [class*="itemContent"] {
+.list [data-list-item] {
   min-height: 28px;
 }
 
-.list button[aria-selected="true"],
-.list button[aria-selected="true"]:hover {
+.list [data-list-item][aria-selected="true"],
+.list [data-list-item][aria-selected="true"]:hover {
   background: var(--color-overlay-subtle) !important;
 }

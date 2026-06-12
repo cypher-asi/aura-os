@@ -21,19 +21,13 @@
   display: none;
 }
 
-/* ZUI's Explorer wraps each row's label in an element whose class starts
-   with "itemContent". Reach in to normalize the hit target height so the
-   feedback filter rows line up with our other sidebar rows. */
-.list [class*="itemContent"] {
+/* Normalize the ListItem hit-target height so the feedback filter rows
+   line up with our other sidebar rows. */
+.list [data-list-item] {
   min-height: var(--control-height-sm, 32px);
-  padding-top: 0;
-  padding-bottom: 0;
 }
 
-/* `!important` here specifically fights ZUI's own higher-specificity
-   selected-row background; without it the selection highlight reverts to
-   the default hover color. */
-.list button[aria-selected="true"],
-.list button[aria-selected="true"]:hover {
+.list [data-list-item][aria-selected="true"],
+.list [data-list-item][aria-selected="true"]:hover {
   background: var(--color-overlay-subtle) !important;
 }

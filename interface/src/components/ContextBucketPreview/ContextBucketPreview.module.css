@@ -40,16 +40,6 @@
   min-width: 0;
 }
 
-.segmentHeader {
-  font-size: 12px;
-}
-
-/* Token count sits left of the trailing chevron; drop the Item.Action
-   negative right margin (meant for an edge-flush action) so it doesn't
-   overlap the chevron, and add a small gap before it. */
-.segmentHeader [class*="action"] {
-  margin-right: var(--space-2, 8px);
-}
 
 .tokenCount {
   color: var(--color-text-muted);

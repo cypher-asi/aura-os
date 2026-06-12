@@ -1,5 +1,6 @@
-import { Text, GroupCollapsible, Item } from "@cypher-asi/zui";
+import { Text, GroupCollapsible } from "@cypher-asi/zui";
 import { FilePlus, FilePen, FileX } from "lucide-react";
+import { ListItem } from "../ListItem";
 import { api } from "../../api/client";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -29,14 +30,16 @@ export function TaskFilesSection({ fileOps }: { fileOps: { op: string; path: str
         {fileOps.map((f) => {
           const fullPath = localWorkspaceRoot ? `${localWorkspaceRoot}/${f.path}` : null;
           return (
-            <Item
+            <ListItem
               key={f.path}
-              onClick={canOpenChangedFiles && fullPath ? () => api.openIde(fullPath) : undefined}
-              className={styles.fileOpItem}
-            >
-              <Item.Icon><FileOpIcon op={f.op} /></Item.Icon>
-              <Item.Label>{f.path}</Item.Label>
-            </Item>
+              icon={<FileOpIcon op={f.op} />}
+              title={f.path}
+              onSelect={
+                canOpenChangedFiles && fullPath
+                  ? () => api.openIde(fullPath)
+                  : undefined
+              }
+            />
           );
         })}
       </div>

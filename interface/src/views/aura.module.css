@@ -110,19 +110,18 @@
   overflow-y: auto;
 }
 
-.feedList button[aria-selected="true"],
-.taskExplorer button[aria-selected="true"] {
+.feedList [data-list-item][aria-selected="true"],
+.taskExplorer [data-list-item][aria-selected="true"],
+.feedList [data-list-item][aria-selected="true"]:hover,
+.taskExplorer [data-list-item][aria-selected="true"]:hover {
   background: var(--color-overlay-subtle);
   color: var(--color-text-primary);
 }
 
-.feedList button[aria-selected="true"]:hover,
-.taskExplorer button[aria-selected="true"]:hover {
-  background: var(--color-overlay-subtle);
-  color: var(--color-text-primary);
-}
-
-.taskExplorer div:has(> div > [aria-level="3"]) {
+/* Indent + guide line for subtask rows (level 3 = task nested under a
+   task under a spec group). Targets the ListItem container whose own
+   row is at level 3, so the guide spans the row and its children. */
+.taskExplorer div:has(> [data-list-item][aria-level="3"]) {
   margin-left: 20px;
   padding-left: 8px;
   border-left: 1px solid var(--color-border);

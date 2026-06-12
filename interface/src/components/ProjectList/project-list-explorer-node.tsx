@@ -1,12 +1,11 @@
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
-import type { ExplorerNode } from "@cypher-asi/zui";
 import { Archive, Folder, FolderOpen, Gauge, Loader2 } from "lucide-react";
 import { Avatar } from "../Avatar";
 import { ProjectsPlusButton } from "../ProjectsPlusButton";
+import type { ListTreeNode } from "../ListTree";
 import type { useProjectListData } from "./useProjectListData";
 import { isUserFacingAgentInstance, resolveStatus } from "./project-list-shared";
 import { isLocalAgent } from "../../shared/lib/agent-runtime-visibility";
-import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 import { agentDisplayName } from "../../lib/derive-project-agent-title";
 
 export type ProjectAgentNode =
@@ -57,7 +56,7 @@ function emptyAgentsNodeId(projectId: string): string {
   return `_empty_${projectId}`;
 }
 
-function buildExecutionNode(projectId: string): ExplorerNode {
+function buildExecutionNode(projectId: string): ListTreeNode {
   return {
     id: executionNodeId(projectId),
     label: "Execution",
@@ -106,7 +105,7 @@ export function buildAgentNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNodeWithSuffix {
+): ListTreeNode {
   const isAutomating =
     context.automatingProjectId === projectId &&
     context.automatingAgentInstanceId === agent.agent_instance_id;
@@ -148,7 +147,7 @@ export function buildAgentNode(
         isLocal={isLocal}
       />
     ),
-    suffix: canArchive || statusIndicator ? (
+    status: canArchive || statusIndicator ? (
       <span className={explorerStyles.agentTrailing}>
         <span className={explorerStyles.agentStatusWrap}>
           {statusIndicator}
@@ -190,7 +189,7 @@ function buildProjectChildren(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode[] {
+): ListTreeNode[] {
   const projectAgents = context.agentsByProject[projectId];
   if (projectAgents === undefined) {
     return [{ id: `_load_${projectId}`, label: "Loading...", disabled: true }];
@@ -222,7 +221,7 @@ function buildProjectChildren(
       !(context.remoteOnly && isLocalAgent(agent)),
   );
 
-  const children: ExplorerNode[] = [
+  const children: ListTreeNode[] = [
     ...mobileChildren,
     ...activeAgents.map((agent) =>
       buildAgentNode(
@@ -257,13 +256,13 @@ export function buildProjectExplorerNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNodeWithSuffix {
+): ListTreeNode {
   return {
     id: project.project_id,
     label: project.name,
     icon: <Folder size={16} />,
     expandedIcon: <FolderOpen size={16} />,
-    suffix: buildProjectSuffix(
+    status: buildProjectSuffix(
       project.project_id,
       context,
       explorerStyles,

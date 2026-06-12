@@ -1,14 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-interface StubExplorerNode {
-  id: string;
-  label: string;
-}
-interface StubExplorerProps {
-  data: StubExplorerNode[];
-  onSelect: (ids: string[]) => void;
-}
 interface StubFolderSectionProps {
   label: string;
   expanded: boolean;
@@ -22,20 +14,6 @@ vi.mock("./MarketplaceSidebar.module.css", () => ({
 
 vi.mock("../../../components/OverlayScrollbar", () => ({
   OverlayScrollbar: () => null,
-}));
-
-vi.mock("@cypher-asi/zui", () => ({
-  Explorer: ({ data, onSelect }: StubExplorerProps) => (
-    <ul data-testid="stub-explorer">
-      {data.map((node) => (
-        <li key={node.id}>
-          <button type="button" onClick={() => onSelect([node.id])}>
-            {node.label}
-          </button>
-        </li>
-      ))}
-    </ul>
-  ),
 }));
 
 vi.mock("../../../components/FolderSection", () => ({
@@ -67,14 +45,14 @@ describe("MarketplaceSidebar", () => {
 
     // "Trending" appears as both a folder label and the default sort option.
     expect(screen.getAllByText("Trending").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByRole("button", { name: "Latest" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Revenue" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reputation" })).toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: "Latest" })).toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: "Revenue" })).toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: "Reputation" })).toBeInTheDocument();
 
     expect(screen.getByText("Expertise")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Coding" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cyber Security" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "UI / UX" })).toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: "Coding" })).toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: "Cyber Security" })).toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: "UI / UX" })).toBeInTheDocument();
   });
 
   it("updates the store's sort and clears expertise filter when a trending option is picked", () => {
@@ -82,7 +60,7 @@ describe("MarketplaceSidebar", () => {
 
     render(<MarketplaceSidebar />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Revenue" }));
+    fireEvent.click(screen.getByRole("treeitem", { name: "Revenue" }));
 
     const state = useMarketplaceStore.getState();
     expect(state.sort).toBe("revenue");
@@ -92,7 +70,7 @@ describe("MarketplaceSidebar", () => {
   it("updates the store's expertise filter when an expertise option is picked", () => {
     render(<MarketplaceSidebar />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Coding" }));
+    fireEvent.click(screen.getByRole("treeitem", { name: "Coding" }));
 
     expect(useMarketplaceStore.getState().expertiseFilter).toBe("coding");
   });

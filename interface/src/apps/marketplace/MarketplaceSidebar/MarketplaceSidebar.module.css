@@ -19,21 +19,12 @@
   display: none;
 }
 
-.list [class*="itemContent"] {
+.list [data-list-item] {
   min-height: 32px;
-  padding-top: 0;
-  padding-bottom: 0;
+  border-radius: 8px;
 }
 
-/* zui's Explorer rows are square (`border-radius: 0`); round the
-   selected + hover states so they read as soft pills. */
-.list [class*="itemContent"]:hover,
-.list button[aria-selected="true"],
-.list button[aria-selected="true"]:hover {
-  border-radius: 8px !important;
-}
-
-.list button[aria-selected="true"],
-.list button[aria-selected="true"]:hover {
+.list [data-list-item][aria-selected="true"],
+.list [data-list-item][aria-selected="true"]:hover {
   background: var(--color-overlay-subtle) !important;
 }

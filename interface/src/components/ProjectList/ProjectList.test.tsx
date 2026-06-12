@@ -5,35 +5,56 @@ import { useEffect } from "react";
 
 let autoSelectDefaultIds = false;
 const mockNavigate = vi.fn();
-let latestDefaultSelectedIds: string[] = [];
-type MockExplorerNode = {
+let latestSelectedId: string | null = null;
+type MockTreeNode = {
   id: string;
   label: string;
-  children?: MockExplorerNode[];
+  children?: MockTreeNode[];
 };
+
+function findMockNode(nodes: MockTreeNode[], id: string): MockTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    const child = node.children ? findMockNode(node.children, id) : null;
+    if (child) return child;
+  }
+  return null;
+}
 
 vi.mock("@cypher-asi/zui", () => ({
   ButtonPlus: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>+</button>
   ),
-  Explorer: ({
-    data,
-    defaultSelectedIds,
+  Menu: () => <div data-testid="menu" />,
+  PageEmptyState: ({ title, description }: { title: string; description: string }) => (
+    <div data-testid="page-empty-state">
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </div>
+  ),
+}));
+
+vi.mock("../ListTree", () => ({
+  ListTree: ({
+    nodes,
+    selectedId,
     onSelect,
   }: {
-    data: MockExplorerNode[];
-    defaultSelectedIds?: Iterable<string>;
-    onSelect?: (ids: Iterable<string>) => void;
+    nodes: MockTreeNode[];
+    selectedId?: string | null;
+    onSelect?: (node: MockTreeNode) => void;
   }) => {
-    latestDefaultSelectedIds = defaultSelectedIds ? Array.from(defaultSelectedIds) : [];
+    latestSelectedId = selectedId ?? null;
     useEffect(() => {
-      if (!autoSelectDefaultIds || !defaultSelectedIds || !onSelect) return;
-      onSelect(defaultSelectedIds);
-    }, [defaultSelectedIds, onSelect]);
+      if (!autoSelectDefaultIds || !selectedId || !onSelect) return;
+      const node =
+        findMockNode(nodes, selectedId) ?? { id: selectedId, label: selectedId };
+      onSelect(node);
+    }, [nodes, selectedId, onSelect]);
 
     return (
       <div data-testid="explorer">
-        {data.map(function renderNode(node) {
+        {nodes.map(function renderNode(node) {
           return (
             <div key={node.id}>
               <span>{node.label}</span>
@@ -44,13 +65,6 @@ vi.mock("@cypher-asi/zui", () => ({
       </div>
     );
   },
-  Menu: () => <div data-testid="menu" />,
-  PageEmptyState: ({ title, description }: { title: string; description: string }) => (
-    <div data-testid="page-empty-state">
-      <h2>{title}</h2>
-      <p>{description}</p>
-    </div>
-  ),
 }));
 
 const mockSidekickState = {
@@ -209,7 +223,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   autoSelectDefaultIds = false;
-  latestDefaultSelectedIds = [];
+  latestSelectedId = null;
   mockChatHandoffState.pendingCreateAgentHandoff = null;
   mockProjectsList.projects = [];
   mockProjectsList.loadingProjects = false;
@@ -368,7 +382,7 @@ describe("ProjectList", () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(latestDefaultSelectedIds).toEqual(["a1"]);
+    expect(latestSelectedId).toBe("a1");
 
     mockChatHandoffState.pendingCreateAgentHandoff = {
       target: "project:p1:a2",
@@ -383,6 +397,6 @@ describe("ProjectList", () => {
       </MemoryRouter>,
     );
 
-    expect(latestDefaultSelectedIds).toEqual(["a1"]);
+    expect(latestSelectedId).toBe("a1");
   });
 });

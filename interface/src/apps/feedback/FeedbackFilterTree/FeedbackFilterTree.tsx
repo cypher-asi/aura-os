@@ -1,6 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { Explorer } from "@cypher-asi/zui";
-import type { ExplorerNode } from "@cypher-asi/zui";
+import { ListTree, type ListTreeNode } from "../../../components/ListTree";
 import { FolderSection } from "../../../components/FolderSection";
 
 export interface FeedbackFilterOption<TId extends string> {
@@ -27,8 +26,8 @@ export interface FeedbackFilterTreeProps<TId extends string> {
 /**
  * Presentational single-select filter list rendered inside a FolderSection.
  *
- * Wraps ZUI's Explorer so the FeedbackList orchestrator doesn't need to map
- * option arrays to ExplorerNodes itself, and so every filter section
+ * Wraps the shared ListTree so the FeedbackList orchestrator doesn't need
+ * to map option arrays to tree nodes itself, and so every filter section
  * (product / sort / category / status) shares the same look and
  * keyboard/selection behavior.
  */
@@ -40,7 +39,7 @@ export function FeedbackFilterTree<TId extends string>({
   selectedId,
   onSelect,
 }: FeedbackFilterTreeProps<TId>) {
-  const data = useMemo<ExplorerNode[]>(
+  const data = useMemo<ListTreeNode[]>(
     () =>
       options.map((option) => ({
         id: option.id,
@@ -49,19 +48,14 @@ export function FeedbackFilterTree<TId extends string>({
       })),
     [options],
   );
-  const selectedIds = useMemo(() => [selectedId], [selectedId]);
 
   return (
     <FolderSection label={label} expanded={expanded} onToggle={onToggle}>
-      <Explorer
-        data={data}
-        enableDragDrop={false}
-        enableMultiSelect={false}
-        defaultSelectedIds={selectedIds}
-        onSelect={(ids) => {
-          const next = ids[ids.length - 1];
-          if (!next) return;
-          const match = options.find((option) => option.id === next);
+      <ListTree
+        nodes={data}
+        selectedId={selectedId}
+        onSelect={(node) => {
+          const match = options.find((option) => option.id === node.id);
           if (match) onSelect(match.id);
         }}
       />

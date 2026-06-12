@@ -13,8 +13,8 @@ import { useDelayedEmpty } from "../../shared/hooks/use-delayed-empty";
 import { titleSortKey } from "../../utils/collections";
 import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import { getTaskDisplayStatus } from "../../shared/utils/task-display-status";
-import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../components/EmptyState";
+import { ListTree, type ListTreeNode } from "../../components/ListTree";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
 import { api } from "../../api/client";
@@ -26,8 +26,6 @@ import {
 } from "../../queries/project-queries";
 import { useTaskListData } from "./useTaskListData";
 import styles from "../aura.module.css";
-import type { ExplorerNode } from "@cypher-asi/zui";
-import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 import {
   SidekickItemContextMenu,
   useSidekickItemContextMenu,
@@ -90,8 +88,8 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
     [tasks, specMap],
   );
 
-  const explorerData: ExplorerNode[] = useMemo(() => {
-    function buildTaskTree(taskList: Task[]): ExplorerNode[] {
+  const explorerData: ListTreeNode[] = useMemo(() => {
+    function buildTaskTree(taskList: Task[]): ListTreeNode[] {
       const childrenByParent = new Map<string, Task[]>();
       const rootTasks: Task[] = [];
 
@@ -105,13 +103,13 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
         }
       }
 
-      function toNode(task: Task): ExplorerNodeWithSuffix {
+      function toNode(task: Task): ListTreeNode {
         const subtasks = childrenByParent.get(task.task_id);
         const displayStatus = getTaskDisplayStatus(task, liveTaskIds, loopActive);
         return {
           id: task.task_id,
           label: task.title,
-          suffix: <TaskRowSuffix taskId={task.task_id} status={displayStatus} />,
+          status: <TaskRowSuffix taskId={task.task_id} status={displayStatus} />,
           metadata: { type: "task" },
           ...(subtasks && subtasks.length > 0
             ? { children: subtasks.map(toNode) }
@@ -122,7 +120,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       return rootTasks.map(toNode);
     }
 
-    const specNodes: ExplorerNode[] = groupedTasks.map(({ spec, tasks: specTasks }) => ({
+    const specNodes: ListTreeNode[] = groupedTasks.map(({ spec, tasks: specTasks }) => ({
       id: spec.spec_id,
       label: spec.title,
       children:
@@ -270,21 +268,18 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   return (
     <>
       <div onContextMenu={handleContextMenu}>
-        <Explorer
-          data={filteredData}
+        <ListTree
+          nodes={filteredData}
           className={styles.taskExplorer}
           expandOnSelect
-          enableDragDrop={false}
-          enableMultiSelect={false}
+          indent={0}
           defaultExpandedIds={defaultExpandedIds}
-          defaultSelectedIds={defaultSelectedIds}
+          defaultSelectedId={defaultSelectedIds[0] ?? null}
           editingNodeId={renamingId}
           onRenameCommit={handleRenameCommit}
           onRenameCancel={handleRenameCancel}
-          onSelect={(ids) => {
-            const id = [...ids].reverse().find((candidate) => taskMap.has(candidate));
-            if (!id) return;
-            const task = taskMap.get(id);
+          onSelect={(node) => {
+            const task = taskMap.get(node.id);
             if (task) viewTask(task);
           }}
         />

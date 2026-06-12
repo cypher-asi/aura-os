@@ -30,7 +30,7 @@ export function useSidekickItemContextMenu<T>(
   const closeMenu = useCallback(() => setMenu(null), []);
 
   const handleContextMenu = useCallback((event: ReactMouseEvent) => {
-    const target = (event.target as HTMLElement).closest("button[id]");
+    const target = (event.target as HTMLElement).closest("[data-list-item][id]");
     if (!target) return;
     const nodeId = target.id;
     const item = resolveRef.current(nodeId);

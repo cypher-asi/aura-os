@@ -11,48 +11,9 @@
   overflow-y: auto;
 }
 
-.explorerWrap [class*="itemContent"] {
-  min-height: 28px;
-  width: auto;
-  margin: 1px var(--space-2);
-  border-radius: 6px;
-}
-
-.explorerWrap [class*="itemContent"]:focus-visible,
-.explorerWrap [class*="item"]:focus-visible {
-  outline: none;
-}
-
-/* Align search icon with topbar title and tree chevrons */
-.explorerWrap [class*="iconWrapper"] {
-  left: var(--space-4, 16px);
-}
-
-/* Align child (session) labels flush with parent (project) labels */
-.explorerWrap [class*="childrenInner"] [class*="itemContent"] {
-  padding-left: 12px !important;
-}
-
-.explorerWrap [class*="itemContent"][aria-expanded] [class*="label"] {
-  color: var(--color-text-secondary);
-}
-
-/* Tighten suffix so the per-project + stays flush right */
-.explorerWrap [class*="suffix"] {
-  padding-right: 0;
-}
-
-/* Hide the icon spacer on parent (project) items */
-.explorerWrap [class*="itemContent"][aria-expanded] [class*="iconSpacer"] {
-  display: none;
-}
-
-/* Child icon slots: zero width so they don't push labels, but still visible */
-.explorerWrap [class*="childrenInner"] [class*="iconSpacer"] {
-  width: 0;
-  min-width: 0;
-  overflow: visible;
-}
+/* Row metrics, hover/selected treatment, parent-label color, and child
+   alignment all come from the shared ListItem component now; this module
+   only keeps the project-specific affordances (hover-revealed actions). */
 
 .projectSuffix {
   display: inline-flex;
@@ -71,8 +32,8 @@
   transition: opacity 0.15s;
 }
 
-.explorerWrap [class*="itemContent"]:hover .newChatWrap,
-.explorerWrap [class*="itemContent"]:focus-within .newChatWrap {
+.explorerWrap [data-list-item]:hover .newChatWrap,
+.explorerWrap [data-list-item]:focus-within .newChatWrap {
   opacity: 1;
 }
 
@@ -135,13 +96,13 @@
   cursor: default;
 }
 
-.explorerWrap [class*="itemContent"]:hover .agentStatusWrap,
-.explorerWrap [class*="itemContent"]:focus-within .agentStatusWrap {
+.explorerWrap [data-list-item]:hover .agentStatusWrap,
+.explorerWrap [data-list-item]:focus-within .agentStatusWrap {
   opacity: 0;
 }
 
-.explorerWrap [class*="itemContent"]:hover .agentActionWrap,
-.explorerWrap [class*="itemContent"]:focus-within .agentActionWrap {
+.explorerWrap [data-list-item]:hover .agentActionWrap,
+.explorerWrap [data-list-item]:focus-within .agentActionWrap {
   opacity: 1;
   pointer-events: auto;
 }

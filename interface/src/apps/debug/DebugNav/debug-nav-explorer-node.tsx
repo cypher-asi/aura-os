@@ -4,7 +4,7 @@ import type {
   DebugRunMetadata,
   DebugRunStatus,
 } from "../../../shared/api/debug";
-import type { ExplorerNodeWithSuffix } from "../../../lib/zui-compat";
+import type { ListTreeNode } from "../../../components/ListTree";
 import styles from "./DebugNav.module.css";
 
 interface Project {
@@ -63,7 +63,7 @@ function runLabel(run: DebugRunMetadata): string {
 function buildRunNode(
   run: DebugRunMetadata,
   projectId: string,
-): ExplorerNodeWithSuffix {
+): ListTreeNode {
   return {
     id: `${projectId}::${run.run_id}`,
     label: runLabel(run),
@@ -75,7 +75,7 @@ function buildRunNode(
         aria-hidden
       />
     ),
-    suffix: buildRunSuffix(run),
+    status: buildRunSuffix(run),
     metadata: { type: "run", runId: run.run_id, projectId },
   };
 }
@@ -83,10 +83,10 @@ function buildRunNode(
 function buildProjectNode(
   project: Project,
   params: BuildDebugExplorerDataParams,
-): ExplorerNodeWithSuffix {
+): ListTreeNode {
   const runs = params.runsByProject[project.project_id] ?? [];
   const loaded = params.loadedProjectIds.has(project.project_id);
-  const children: ExplorerNodeWithSuffix[] = loaded
+  const children: ListTreeNode[] = loaded
     ? runs.length > 0
       ? runs.map((run) => buildRunNode(run, project.project_id))
       : [
@@ -107,7 +107,7 @@ function buildProjectNode(
     id: project.project_id,
     label: project.name || project.project_id,
     icon: <Bug size={14} />,
-    suffix:
+    status:
       loaded && runs.length > 0 ? (
         <span className={styles.navSuffix}>{runs.length}</span>
       ) : null,
@@ -118,7 +118,7 @@ function buildProjectNode(
 
 export function buildDebugExplorerData(
   params: BuildDebugExplorerDataParams,
-): ExplorerNodeWithSuffix[] {
+): ListTreeNode[] {
   return params.projects.map((project) => buildProjectNode(project, params));
 }
 
@@ -139,9 +139,9 @@ export interface RunningRunItem {
  */
 export function buildRunningNowSection(
   runs: readonly RunningRunItem[],
-): ExplorerNodeWithSuffix | null {
+): ListTreeNode | null {
   if (runs.length === 0) return null;
-  const children: ExplorerNodeWithSuffix[] = runs.map(
+  const children: ListTreeNode[] = runs.map(
     ({ projectId, projectName, run }) => ({
       // Prefix the id so it doesn't collide with the same run rendered
       // inside its normal project group (react-keyed entries require
@@ -156,7 +156,7 @@ export function buildRunningNowSection(
           aria-hidden
         />
       ),
-      suffix: buildRunSuffix(run),
+      status: buildRunSuffix(run),
       metadata: { type: "run", runId: run.run_id, projectId },
     }),
   );
