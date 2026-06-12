@@ -43,16 +43,13 @@
   --color-accent: #01f4cb;
   --color-accent-text: #5ef2da;
   --color-surface-hover: rgba(255, 255, 255, 0.06);
-  /* Chat input-bar pill + attach "+" disc chrome. These flip to
-     light-gray under [data-theme='light'] (see index.css), so pin the
-     dark recipe locally — otherwise the embedded real LLM input's pill
-     turns light inside this always-dark mock when the visitor toggles
-     light mode. The bar here uses the chrome `.attachRing` (no
-     attachAccent), so --attach-ring-plate matters. */
+  /* Chat input-bar pill chrome. These flip to light-gray under
+     [data-theme='light'] (see index.css), so pin the dark recipe
+     locally — otherwise the embedded real LLM input's pill turns light
+     inside this always-dark mock when the visitor toggles light mode. */
   --input-pill-fill: linear-gradient(135deg, #1e1e1e, #181818);
   --input-pill-stroke: linear-gradient(135deg, #121212, #565656);
   --input-pill-stroke-focus: linear-gradient(135deg, #1e1e1e, #6a6a6a);
-  --attach-ring-plate: linear-gradient(180deg, #232323, #141414);
   --pill-shadow: #141414;
   /* Status / activity indicators (the "working" badge + dot, avatar
      status dots, the rotating busy ring) all resolve to the cyan-green

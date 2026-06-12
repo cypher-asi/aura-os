@@ -151,15 +151,14 @@
   --taskbar-icon-color: #acacac;
 
   /*
-   * Chat input-bar pill paint + the attach "+" disc plate. Like the pills
-   * above these are fixed-dark by default and flipped to light-gray under
-   * [data-theme='light']; defining them here keeps the consuming modules
-   * (InputBarShell, ChatInputBar) free of inline theme-specific literals.
+   * Chat input-bar pill paint. Like the pills above these are fixed-dark
+   * by default and flipped to light-gray under [data-theme='light'];
+   * defining them here keeps the consuming modules (InputBarShell,
+   * ChatInputBar) free of inline theme-specific literals.
    */
   --input-pill-fill: linear-gradient(135deg, #1e1e1e, #181818);
   --input-pill-stroke: linear-gradient(135deg, #121212, #565656);
   --input-pill-stroke-focus: linear-gradient(135deg, #1e1e1e, #6a6a6a);
-  --attach-ring-plate: linear-gradient(180deg, #232323, #141414);
 
   /*
    * Shared cap for the centered LLM chat column. Every surface that must
@@ -461,11 +460,10 @@ img[data-aura-wordmark] {
   --nav-plate-glyph: #1c1c20;
   --taskbar-icon-color: #5b5b62;
 
-  /* Chat input-bar pill + attach "+" disc plate. */
+  /* Chat input-bar pill. */
   --input-pill-fill: linear-gradient(180deg, #ffffff, #f1f1f4);
   --input-pill-stroke: linear-gradient(180deg, #e2e2e8, #d3d3da);
   --input-pill-stroke-focus: linear-gradient(180deg, #cfcfd6, #bfbfc8);
-  --attach-ring-plate: linear-gradient(180deg, #ffffff, #e9e9ee);
 
   /* Taskbar pill frame ring — soft mid-gray instead of near-black. */
   --taskbar-frame: linear-gradient(135deg, #c2c2cb, #d4d4db);

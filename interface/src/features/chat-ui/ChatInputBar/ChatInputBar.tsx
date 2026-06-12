@@ -261,11 +261,11 @@ export interface ChatInputBarProps {
   onNewChat?: () => void;
   /**
    * Optional decorative node rendered behind the "+" glyph of the
-   * bottom-left attach button, turning the chrome disc into a circular,
-   * inset WebGL well (the `<AuraScreenOrb />` field) with the "+" centered
-   * on top. Opt-in so only the marketing mock LLM input on `/agents`
-   * pays for an animated canvas; every real chat input leaves it unset
-   * and keeps the standard `attachRing` chrome.
+   * bottom-left attach button, turning it into a circular, inset WebGL
+   * well (the `<AuraScreenOrb />` field) with the "+" centered on top.
+   * Opt-in so only the marketing mock LLM input on `/agents` pays for
+   * an animated canvas; every real chat input leaves it unset and keeps
+   * the shell's plain attach button.
    */
   attachAccent?: ReactNode;
 }
@@ -1029,9 +1029,11 @@ export const DesktopChatInputBar = memo(
     const attachButton = (
       <button
         type="button"
-        className={`${inputBarShellStyles.attachButton} ${
-          attachAccent ? styles.attachOrb : styles.attachRing
-        }`}
+        className={
+          attachAccent
+            ? `${inputBarShellStyles.attachButton} ${styles.attachOrb}`
+            : inputBarShellStyles.attachButton
+        }
         onClick={() => fileInputRef.current?.click()}
         disabled={!canAddMore || sendDisabled}
         aria-label="Attach file"
