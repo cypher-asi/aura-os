@@ -97,12 +97,12 @@ the goal is to validate local `aura-network`, `aura-storage`, `orbit`, or local
 database behavior. Remote-agent checks should run through the hybrid or
 production path so local harness execution cannot mask deployed swarm failures.
 
-Default probe runs skip only high-cost optional media checks
-(`video-generation-stream`, `model3d-generation-stream`, and public equivalents
-if added). Run a deeper media sweep with:
+Default probe runs include every implemented check unless `--checks` is used to
+select a smaller set. The production browser/API lane runs media generation
+checks directly, including image, 3D, and video streams:
 
 ```sh
-npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_ACCESS_TOKEN" --include-expensive
+npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_ACCESS_TOKEN"
 ```
 
 For AURA OS public-mode page checks against the frontend dev server:
@@ -133,10 +133,10 @@ unknown state.
 be triggered manually. It runs probes with production secrets, builds the
 snapshot even when probes fail, and uploads the generated JSON/check artifacts.
 This scheduled workflow uses `AURA_STATUS_CHECKS` to restrict itself to checks
-that can be truthfully exercised against deployed website/API surfaces. It does
-not run desktop-loopback checks such as `local-agent-runtime`,
-`workspace-defaults`, `terminal-list`, or the local `model-matrix`; those belong
-to `status:desktop-release`.
+that can be truthfully exercised against deployed website/API surfaces. It runs
+the public media generation checks, but it does not run desktop-loopback checks
+such as `local-agent-runtime`, `workspace-defaults`, `terminal-list`, or the
+local `model-matrix`; those belong to `status:desktop-release`.
 
 The browser/API and desktop lanes publish to the same public path:
 `/observability/status.json`. Each lane first reads the previously published

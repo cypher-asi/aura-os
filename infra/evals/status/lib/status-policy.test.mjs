@@ -211,7 +211,7 @@ test("aggregateFeature reports the active severity reason before missing optiona
     category: "website",
     checks: [
       { id: "public-setup", required: true, staleAfterMinutes: 10 },
-      { id: "public-models-api", required: false, staleAfterMinutes: 10 },
+      { id: "public-blog-api", required: false, staleAfterMinutes: 10 },
     ],
     degradedAfterFailures: 1,
     outageAfterFailures: 2,
@@ -220,9 +220,9 @@ test("aggregateFeature reports the active severity reason before missing optiona
     feature,
     new Map([
       [
-        "public-models-api",
+        "public-blog-api",
         {
-          checkId: "public-models-api",
+          checkId: "public-blog-api",
           status: CHECK_STATUS.FAIL,
           message: "count expected >= 1 but got 0",
           endedAt: GENERATED_AT,

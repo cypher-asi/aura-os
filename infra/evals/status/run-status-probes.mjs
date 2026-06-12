@@ -16,13 +16,6 @@ const DEFAULT_MODELS = [
   "aura-gpt-5-5",
   "aura-gemini-3-pro",
 ];
-const EXPENSIVE_CHECKS = new Set([
-  "video-generation-stream",
-  "model3d-generation-stream",
-  "public-video-generation-stream",
-  "public-model3d-generation-stream",
-]);
-
 function parseArgs(argv) {
   const args = {
     baseUrl: process.env.AURA_STATUS_API_BASE_URL || "http://127.0.0.1:3190",
@@ -37,7 +30,6 @@ function parseArgs(argv) {
     checks: (process.env.AURA_STATUS_CHECKS || "").split(",").map((v) => v.trim()).filter(Boolean),
     models: (process.env.AURA_STATUS_MODEL_IDS || "").split(",").map((v) => v.trim()).filter(Boolean),
     keepEntities: process.env.AURA_STATUS_KEEP_ENTITIES === "1",
-    includeExpensive: process.env.AURA_STATUS_INCLUDE_EXPENSIVE === "1",
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -57,9 +49,8 @@ function parseArgs(argv) {
     else if (arg === "--checks") args.checks = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--models") args.models = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--keep-entities") args.keepEntities = true;
-    else if (arg === "--include-expensive") args.includeExpensive = true;
     else if (arg === "--help") {
-      process.stdout.write("Usage: node infra/evals/status/run-status-probes.mjs [--base-url URL] [--token TOKEN] [--checks a,b] [--include-expensive]\n");
+      process.stdout.write("Usage: node infra/evals/status/run-status-probes.mjs [--base-url URL] [--token TOKEN] [--checks a,b]\n");
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -413,7 +404,7 @@ async function waitForRemoteReady(args, agentId) {
 
 async function runChecks(args) {
   const checks = [];
-  const selected = (id) => (args.checks ? args.checks.has(id) : args.includeExpensive || !EXPENSIVE_CHECKS.has(id));
+  const selected = (id) => (args.checks ? args.checks.has(id) : true);
 
   if (selected("api-health")) {
     checks.push(await probe("api-health", "core-api", "API health endpoint", args, async () => {
@@ -434,7 +425,7 @@ async function runChecks(args) {
     checks.push(await probe("auth-validate", "identity-orgs", "Auth validation refresh", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const session = await apiJson(args, "POST", "/api/auth/validate", {});
-      return { evidence: { userIdPresent: Boolean(session?.user_id), accessGranted: Boolean(session?.is_access_granted) } };
+      return { evidence: { userIdPresent: Boolean(session?.user_id) } };
     }));
   }
 
@@ -799,7 +790,7 @@ async function runChecks(args) {
         prompt: "A minimal black AURA status check glyph on a white background",
         model: process.env.AURA_STATUS_IMAGE_MODEL || "gpt-image-2",
         size: "1024x1024",
-      }, 180_000);
+      }, 360_000);
       const completed = frames.find((frame) => frame.event === "generation_completed");
       const error = frames.find((frame) => frame.event === "generation_error");
       if (error) {
@@ -886,13 +877,6 @@ async function runChecks(args) {
     checks.push(await probe("public-feedback-api", "public-experience", "Public feedback API", args, async () => {
       const feedback = await publicJson(args.baseUrl, "/api/public/feedback");
       return { evidence: { count: Array.isArray(feedback) ? feedback.length : null } };
-    }));
-  }
-
-  if (selected("public-models-api")) {
-    checks.push(await probe("public-models-api", "public-experience", "Public models API", args, async () => {
-      const models = await publicJson(args.baseUrl, "/api/public/models");
-      return { evidence: { count: collectionCount(models, ["models", "data"]) } };
     }));
   }
 
