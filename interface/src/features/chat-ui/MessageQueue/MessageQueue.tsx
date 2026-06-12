@@ -36,13 +36,13 @@ export const MessageQueue = memo(function MessageQueue({
         className={styles.queueHeader}
         onClick={() => setCollapsed((v) => !v)}
       >
+        <span className={styles.queueCount}>
+          {queue.length} Queued
+        </span>
         <ChevronDown
           size={14}
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ""}`}
         />
-        <span className={styles.queueCount}>
-          {queue.length} Queued
-        </span>
       </div>
 
       {!collapsed && (

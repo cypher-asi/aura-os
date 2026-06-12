@@ -309,11 +309,11 @@ export function ProjectNavigationDrawerContent() {
           aria-expanded={!isCollapsed}
           onClick={() => toggleOrg(section.org.org_id)}
         >
+          <span className={styles.mobileDrawerOrgTitle}>{section.org.name}</span>
+          <span className={styles.mobileDrawerOrgCount}>{section.totalProjects}</span>
           <span className={styles.mobileDrawerOrgChevron}>
             {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
           </span>
-          <span className={styles.mobileDrawerOrgTitle}>{section.org.name}</span>
-          <span className={styles.mobileDrawerOrgCount}>{section.totalProjects}</span>
         </button>
 
         {!isCollapsed ? (

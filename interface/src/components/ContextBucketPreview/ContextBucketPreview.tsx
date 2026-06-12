@@ -126,10 +126,6 @@ export function ContextBucketPreview({
                   onClick={() => toggleSegment(key)}
                   className={styles.segmentHeader}
                 >
-                  <Item.Chevron
-                    expanded={expanded}
-                    onToggle={() => toggleSegment(key)}
-                  />
                   <Item.Label>
                     <span title={segment.label}>
                       {segment.label || "(unnamed)"}
@@ -140,6 +136,10 @@ export function ContextBucketPreview({
                       {formatTokens(segment.tokens)}
                     </span>
                   </Item.Action>
+                  <Item.Chevron
+                    expanded={expanded}
+                    onToggle={() => toggleSegment(key)}
+                  />
                 </Item>
                 {expanded && (
                   <pre className={styles.segmentText}>{segment.text}</pre>

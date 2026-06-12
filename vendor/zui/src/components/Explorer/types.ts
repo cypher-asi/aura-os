@@ -63,7 +63,7 @@ export interface ExplorerProps {
   onSearch?: (query: string) => void;
   /** Whether to use compact item height (default: true). When false, items match typical menu item height. */
   compact?: boolean;
-  /** Position of the expand/collapse chevron (default: 'left') */
+  /** Position of the expand/collapse chevron (default: 'right') */
   chevronPosition?: 'left' | 'right';
   /** ID of the node currently in inline-edit (rename) mode. */
   editingNodeId?: string | null;

@@ -46,9 +46,9 @@ export function SidekickCollapsibleRow({
           expanded={expanded}
           onClick={onToggle}
         >
-          <Item.Chevron size="sm" expanded={expanded} onToggle={onToggle} />
           <Item.Label>{label}</Item.Label>
           {suffix}
+          <Item.Chevron size="sm" expanded={expanded} onToggle={onToggle} />
         </Item>
       )}
       {expanded && children}

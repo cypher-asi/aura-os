@@ -591,7 +591,7 @@ export function Explorer({
   searchPlaceholder,
   onSearch,
   compact = true,
-  chevronPosition = 'left',
+  chevronPosition = 'right',
   editingNodeId = null,
   onRenameCommit,
   onRenameCancel,

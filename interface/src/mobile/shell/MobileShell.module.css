@@ -677,7 +677,9 @@
   gap: 8px;
   width: 100%;
   min-height: 44px;
-  padding: 0 10px;
+  /* Left padding matches `.mobileDrawerOrgProjects` so the org title lines
+     up with its child project rows; the chevron is pushed to the far right. */
+  padding: 0 10px 0 18px;
   border: 0;
   border-radius: 12px;
   background: transparent;

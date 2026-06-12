@@ -177,12 +177,12 @@ function DocNav<D extends MarketingDoc>({
               aria-expanded={!isCollapsed}
               onClick={() => toggle(group.key)}
             >
+              <span>{group.label}</span>
               {isCollapsed ? (
                 <ChevronRight size={13} aria-hidden="true" />
               ) : (
                 <ChevronDown size={13} aria-hidden="true" />
               )}
-              <span>{group.label}</span>
             </button>
             {!isCollapsed ? (
               <ul className={styles.navList}>

@@ -130,7 +130,7 @@ export function ExplorerProvider({
   onExpand,
   onDrop,
   compact = true,
-  chevronPosition = 'left',
+  chevronPosition = 'right',
   editingNodeId = null,
   onRenameCommit,
   onRenameCancel,

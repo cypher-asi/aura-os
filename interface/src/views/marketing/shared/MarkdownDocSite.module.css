@@ -86,7 +86,9 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 2px 0;
+  /* Left padding matches `.navList`'s indent so the group label lines up
+     with its child links; the chevron is pushed to the far right. */
+  padding: 2px 0 2px 19px;
   background: none;
   border: none;
   cursor: pointer;
@@ -99,6 +101,7 @@
 .navGroupHeader svg {
   color: var(--doc-fg-faint);
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .navList {

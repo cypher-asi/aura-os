@@ -93,13 +93,13 @@ function FolderSection({
         aria-expanded={expanded}
         onClick={onToggle}
       >
+        <span className="feedbackFolderLabel">{label}</span>
         <span
           className={`feedbackFolderChevron ${expanded ? "feedbackFolderChevronOpen" : ""}`}
           aria-hidden
         >
           <ChevronRight size={12} strokeWidth={2} />
         </span>
-        <span className="feedbackFolderLabel">{label}</span>
       </button>
       {expanded && <div className="feedbackFolderBody">{children}</div>}
     </div>
