@@ -277,7 +277,11 @@ export const MessageBubble = memo(function MessageBubble({
             if (isLargeText(block.text)) {
               return <LargeTextBlock key={index} text={block.text} />;
             }
-            return <span key={index}>{block.text}</span>;
+            return (
+              <span key={index} className={styles.userText}>
+                {block.text}
+              </span>
+            );
           })}
         </div>
       );
@@ -285,7 +289,7 @@ export const MessageBubble = memo(function MessageBubble({
     if (hasContent && isLargeText(message.content)) {
       return <LargeTextBlock text={message.content} />;
     }
-    return message.content;
+    return <span className={styles.userText}>{message.content}</span>;
   };
 
   // Shared chrome for every error variant. Renders as two

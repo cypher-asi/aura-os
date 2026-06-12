@@ -1,22 +1,10 @@
 import { useState, useMemo } from "react";
 import { FileText } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
 import { CopyButton } from "../../../../components/CopyButton";
 import styles from "./LargeTextBlock.module.css";
 
 const CHAR_THRESHOLD = 600;
 const LINE_THRESHOLD = 15;
-
-const MD_REMARK = [remarkGfm];
-const MD_REHYPE = [rehypeHighlight];
-
-function ExternalLink(props: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
-  return <a {...props} target="_blank" rel="noopener noreferrer" />;
-}
-
-const MD_COMPONENTS = { a: ExternalLink };
 
 const HEADING_RE = /^#{1,3}\s+(.+)/m;
 const PREVIEW_CHAR_LIMIT = 900;
@@ -63,17 +51,7 @@ export function LargeTextBlock({ text }: { text: string }) {
       <div
         className={`${styles.contentArea} ${expanded ? styles.expanded : styles.collapsed}`}
       >
-        {expanded ? (
-          <ReactMarkdown
-            remarkPlugins={MD_REMARK}
-            rehypePlugins={MD_REHYPE}
-            components={MD_COMPONENTS}
-          >
-            {text}
-          </ReactMarkdown>
-        ) : (
-          <pre className={styles.previewText}>{preview}</pre>
-        )}
+        <pre className={styles.previewText}>{expanded ? text : preview}</pre>
         {!expanded && <div className={styles.fade} />}
       </div>
 

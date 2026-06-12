@@ -105,8 +105,18 @@
      standard control row without touching the font metrics. */
   min-height: calc(var(--control-height-sm, 32px) * 0.83);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: calc(var(--space-2) * 0.83) var(--space-3);
+}
+
+/* User-authored text preserves the line breaks, blank lines, and
+   indentation the user typed. Without pre-wrap the bubble's default
+   `white-space: normal` collapses every newline / run of spaces into a
+   single space, dropping the message's formatting. */
+.userText {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* Override the app-wide ::selection tint inside the accent-colored user
