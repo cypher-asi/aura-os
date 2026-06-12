@@ -7,9 +7,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 // mocks it for the same reason). Stub it to a lightweight stand-in so
 // these tests stay focused on the mock shell's own behavior.
 vi.mock("../../../features/chat-ui/ChatInputBar", () => ({
-  DesktopChatInputBar: (props: { agentName?: string }) => (
-    <div data-testid="mock-chat-input">{props.agentName}</div>
-  ),
+  DesktopChatInputBar: () => <div data-testid="mock-chat-input" />,
 }));
 
 import { MockAuraDesktop } from "./MockAuraDesktop";

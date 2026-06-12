@@ -27,6 +27,7 @@ import type { GenerationMode } from "../../../constants/models";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
 import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
+import type { LoadOlderPageFetcher } from "../../../hooks/use-load-older-messages";
 import styles from "./ChatPanel.module.css";
 
 type ChatPanelHandoffMode = "create-agent";
@@ -109,8 +110,6 @@ export interface ChatPanelProps {
    * arms the next send to create a fresh session.
    */
   onNewChat?: () => void;
-  /** Forwarded to the input bar as a compact-layout flag. */
-  compact?: boolean;
   sendDisabled?: boolean;
   sendDisabledReason?: string;
   /** Loads the chronologically previous session above the current chat. */
@@ -120,6 +119,8 @@ export interface ChatPanelProps {
   isLoadingPriorSession?: boolean;
   /** Per-session dividers for the prepended prior sessions. */
   sessionBoundaries?: SessionBoundary[];
+  /** Fetches one older history page for this thread (cursor-paginated). */
+  loadOlderPage?: LoadOlderPageFetcher;
 }
 
 /**
@@ -165,13 +166,13 @@ export function ChatPanel({
   contextUsage,
   onFetchContextContents,
   onNewChat,
-  compact = false,
   sendDisabled = false,
   sendDisabledReason,
   onLoadPriorSession,
   hasPriorSession,
   isLoadingPriorSession,
   sessionBoundaries,
+  loadOlderPage,
 }: ChatPanelProps) {
   const subagentPane = useSubAgentPane(parentStreamKey);
   const { closePane } = useSubAgentPaneActions();
@@ -272,13 +273,13 @@ export function ChatPanel({
           contextUsage={contextUsage}
           onFetchContextContents={onFetchContextContents}
           onNewChat={onNewChat}
-          compact={compact}
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}
           onLoadPriorSession={onLoadPriorSession}
           hasPriorSession={hasPriorSession}
           isLoadingPriorSession={isLoadingPriorSession}
           sessionBoundaries={sessionBoundaries}
+          loadOlderPage={loadOlderPage}
         />
         {paneToRender && (
           <SubAgentSurface
@@ -299,7 +300,6 @@ export function ChatPanel({
             workspacePath={workspacePath}
             remoteAgentId={remoteAgentId}
             contextUsage={contextUsage}
-            compact={compact}
             InputBarComponent={InputBarComponent}
           />
         )}

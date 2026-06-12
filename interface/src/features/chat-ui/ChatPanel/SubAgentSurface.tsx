@@ -34,7 +34,6 @@ export interface SubAgentSurfaceProps {
   workspacePath?: string;
   remoteAgentId?: string;
   contextUsage?: ContextUsageEntry;
-  compact?: boolean;
   InputBarComponent?: ForwardRefExoticComponent<
     ChatInputBarProps & RefAttributes<ChatInputBarHandle>
   >;
@@ -63,7 +62,6 @@ export function SubAgentSurface({
   workspacePath,
   remoteAgentId,
   contextUsage,
-  compact,
   InputBarComponent,
 }: SubAgentSurfaceProps) {
   const subagentThread = useSubagentChatStream(
@@ -119,7 +117,6 @@ export function SubAgentSurface({
       workspacePath={workspacePath}
       remoteAgentId={remoteAgentId}
       contextUsage={contextUsage}
-      compact={compact}
       InputBarComponent={InputBarComponent}
     />
   );

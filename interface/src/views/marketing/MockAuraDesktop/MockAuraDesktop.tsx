@@ -423,7 +423,6 @@ function MockChat({
             onStop={noop}
             streamKey={`mock-code-${agent.id}`}
             machineType="local"
-            agentName={agent.name}
             isStatic
             inputReadOnly
           />

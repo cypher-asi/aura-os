@@ -19,7 +19,7 @@ type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 const AgentChatWindowPanel = memo(function AgentChatWindowPanel({ agentId }: { agentId: string }) {
   const chatProps = useStandaloneAgentChat(agentId);
-  return <ChatPanel {...chatProps} compact />;
+  return <ChatPanel {...chatProps} />;
 });
 
 export const AgentWindow = memo(function AgentWindow({ win, isFocused }: AgentWindowProps) {

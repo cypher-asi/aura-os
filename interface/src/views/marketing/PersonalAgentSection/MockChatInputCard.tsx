@@ -180,7 +180,6 @@ export function MockChatInputCard(): ReactNode {
           onStop={() => {}}
           streamKey="marketing-personal-agent"
           machineType="local"
-          agentName="AURA"
           isStatic
           selectedModeOverride={selectedMode}
           onSelectedModeOverrideChange={jumpToMode}

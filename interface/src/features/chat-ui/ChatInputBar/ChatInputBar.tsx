@@ -132,7 +132,6 @@ export interface ChatInputBarProps {
   queuedHint?: string;
   adapterType?: string;
   defaultModel?: string | null;
-  agentName?: string;
   machineType?: "local" | "remote";
   templateAgentId?: string;
   agentId?: string;
@@ -190,14 +189,6 @@ export interface ChatInputBarProps {
   onSelectedModeOverrideChange?: (mode: AgentMode) => void;
   /** Render the prompt as controlled display text while keeping mode clicks live. */
   inputReadOnly?: boolean;
-  /**
-   * Reserved for compact-layout tweaks (e.g. floating desktop agent
-   * windows where the chat surface can be very narrow). Currently a
-   * no-op now that the info-bar slash hint has been removed; kept on
-   * the public props so callers (`ChatPanel`, `AgentWindow`) don't
-   * need to be touched if a future compact affordance is added.
-   */
-  compact?: boolean;
   contextUsage?: ContextUsageEntry;
   /**
    * Lazy fetcher for the Context Composition popover's bucket contents.

@@ -41,6 +41,7 @@ import type { GenerationMode } from "../../../constants/models";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
 import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
+import type { LoadOlderPageFetcher } from "../../../hooks/use-load-older-messages";
 import styles from "./ChatPanel.module.css";
 
 const LOADING_OVERLAY_FADE_MS = 120;
@@ -105,7 +106,6 @@ export interface ChatSurfaceProps {
    * lazily fetch a bucket's contents when a row is clicked. */
   onFetchContextContents?: ContextContentsFetcher;
   onNewChat?: () => void;
-  compact?: boolean;
   sendDisabled?: boolean;
   sendDisabledReason?: string;
   /**
@@ -130,6 +130,8 @@ export interface ChatSurfaceProps {
   isLoadingPriorSession?: boolean;
   /** Per-session dividers for the prepended prior sessions. */
   sessionBoundaries?: SessionBoundary[];
+  /** Fetches one older history page for this thread (cursor-paginated). */
+  loadOlderPage?: LoadOlderPageFetcher;
 }
 
 /**
@@ -174,7 +176,6 @@ export function ChatSurface({
   contextUsage,
   onFetchContextContents,
   onNewChat,
-  compact = false,
   sendDisabled = false,
   sendDisabledReason,
   centerInputWhenEmpty = true,
@@ -184,6 +185,7 @@ export function ChatSurface({
   hasPriorSession,
   isLoadingPriorSession,
   sessionBoundaries,
+  loadOlderPage,
 }: ChatSurfaceProps) {
   const {
     attachments,
@@ -226,6 +228,7 @@ export function ChatSurface({
     llmProjectId,
     agentId,
     sendDisabled,
+    loadOlderPage,
   });
 
   // Agent identity + device context attached to every error rendered in
@@ -486,18 +489,29 @@ export function ChatSurface({
     };
   }, [isMobileLayout, streamKey, messageAreaRef, getUserUnpinnedAt]);
 
+  // Cache-first session switching: when the chat-history store already
+  // holds a (possibly stale) transcript for this thread — LRU hit,
+  // IndexedDB hydrate, or a stale entry pending revalidation — paint it
+  // immediately instead of arming the cold-load overlay. The background
+  // refetch reconciles content in place; the overlay is reserved for
+  // true cold misses where there is nothing to show.
+  const hasPaintableTranscript = renderedMessages.length > 0;
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
   const hasHandledThreadResetRef = useRef(false);
-  const initialColdLoadRef = useRef(!historyResolved && !hasBridgeFrame);
-  const hasInitiallyRevealedRef = useRef(historyResolved || hasBridgeFrame);
+  const initialColdLoadRef = useRef(
+    !historyResolved && !hasBridgeFrame && !hasPaintableTranscript,
+  );
+  const hasInitiallyRevealedRef = useRef(
+    historyResolved || hasBridgeFrame || hasPaintableTranscript,
+  );
   const revealAnimationFrameRef = useRef<number | null>(null);
   const loadingOverlayTimeoutRef = useRef<number | null>(null);
   const [isInitialThreadRevealReady, setIsInitialThreadRevealReady] = useState(
-    () => historyResolved || hasBridgeFrame,
+    () => historyResolved || hasBridgeFrame || hasPaintableTranscript,
   );
   const [isLoadingOverlayVisible, setIsLoadingOverlayVisible] = useState(
-    () => !historyResolved && !hasBridgeFrame,
+    () => !historyResolved && !hasBridgeFrame && !hasPaintableTranscript,
   );
   const [isLoadingOverlayFadingOut, setIsLoadingOverlayFadingOut] = useState(false);
   const [imagePinUntil, setImagePinUntil] = useState<number>(
@@ -505,7 +519,8 @@ export function ChatSurface({
   );
 
   const contentReady = (historyResolved && !isLoading) || hasBridgeFrame;
-  const shouldArmColdLoad = !historyResolved && !hasBridgeFrame;
+  const shouldArmColdLoad =
+    !historyResolved && !hasBridgeFrame && !hasPaintableTranscript;
   const shouldHideThreadForInitialReveal =
     initialColdLoadRef.current &&
     historyResolved &&
@@ -793,7 +808,6 @@ export function ChatSurface({
           externalBusyMessage={externalBusyMessage}
           adapterType={adapterType}
           defaultModel={defaultModel}
-          agentName={agentName}
           machineType={machineType}
           templateAgentId={templateAgentId}
           agentId={agentId}
@@ -811,7 +825,6 @@ export function ChatSurface({
           remoteAgentId={remoteAgentId}
           isVisible
           isCentered={centerInputWhenEmpty && isThreadEmpty}
-          compact={compact}
           contextUsage={contextUsage}
           onFetchContextContents={onFetchContextContents}
           onNewChat={onNewChat ? handleNewChat : undefined}
