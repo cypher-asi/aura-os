@@ -69,7 +69,14 @@ async function walkJsonFiles(dir) {
 async function readChecks(args) {
   if (args.checksFile) {
     const payload = await readJson(args.checksFile);
-    return Array.isArray(payload) ? payload : payload.checks ?? [];
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload.checks)) {
+      return payload.checks.map((check) => ({
+        ...check,
+        runGeneratedAt: payload.generatedAt ?? check.runGeneratedAt,
+      }));
+    }
+    return [];
   }
 
   const files = await walkJsonFiles(args.checksDir);
@@ -78,7 +85,12 @@ async function readChecks(args) {
     try {
       const payload = await readJson(file);
       if (Array.isArray(payload)) checks.push(...payload);
-      else if (Array.isArray(payload.checks)) checks.push(...payload.checks);
+      else if (Array.isArray(payload.checks)) {
+        checks.push(...payload.checks.map((check) => ({
+          ...check,
+          runGeneratedAt: payload.generatedAt ?? check.runGeneratedAt,
+        })));
+      }
       else if (payload.checkId) checks.push(payload);
     } catch {
       // Ignore unrelated JSON artifacts.

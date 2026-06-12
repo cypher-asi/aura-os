@@ -179,6 +179,16 @@ async function publicText(baseUrl, endpoint) {
   return { status: response.status, text };
 }
 
+function collectionCount(payload, keys = []) {
+  if (Array.isArray(payload)) return payload.length;
+  for (const key of keys) {
+    const value = payload?.[key];
+    if (Array.isArray(value)) return value.length;
+    if (Number.isFinite(Number(value))) return Number(value);
+  }
+  return null;
+}
+
 async function apiSse(args, endpoint, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const response = await fetchWithTimeout(
     `${args.baseUrl}${endpoint}`,
@@ -599,7 +609,7 @@ async function runChecks(args) {
     checks.push(await probe("marketplace-agents", "marketplace-bootstrap", "Marketplace agents catalog", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const agents = await apiJson(args, "GET", "/api/marketplace/agents");
-      return { evidence: { count: Array.isArray(agents) ? agents.length : null } };
+      return { evidence: { count: collectionCount(agents, ["total", "agents"]) } };
     }));
   }
 
@@ -615,7 +625,7 @@ async function runChecks(args) {
     checks.push(await probe("active-streams", "streams-debug", "Active stream registry", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const streams = await apiJson(args, "GET", "/api/streams/active");
-      return { evidence: { count: Array.isArray(streams) ? streams.length : null } };
+      return { evidence: { count: collectionCount(streams, ["streams"]) } };
     }));
   }
 
@@ -881,7 +891,7 @@ async function runChecks(args) {
   if (selected("public-models-api")) {
     checks.push(await probe("public-models-api", "public-experience", "Public models API", args, async () => {
       const models = await publicJson(args.baseUrl, "/api/public/models");
-      return { evidence: { count: Array.isArray(models) ? models.length : null } };
+      return { evidence: { count: collectionCount(models, ["models", "data"]) } };
     }));
   }
 
@@ -949,7 +959,10 @@ async function runChecks(args) {
     checks.push(await probe("public-observability-page", "public-website", "Public observability snapshot", args, async () => {
       const base = args.publicBaseUrl || args.baseUrl;
       const payload = await publicJson(base, "/observability/status.json");
-      return { evidence: { overall: payload?.overall, featureCount: payload?.features?.length ?? 0 } };
+      const featureCount = Array.isArray(payload?.features)
+        ? payload.features.length
+        : Object.keys(payload?.features ?? {}).length;
+      return { evidence: { overall: payload?.overall, featureCount } };
     }));
   }
 

@@ -237,3 +237,34 @@ test("aggregateFeature reports the active severity reason before missing optiona
   assert.equal(result.status, FEATURE_STATUS.DEGRADED);
   assert.equal(result.message, "count expected >= 1 but got 0");
 });
+
+test("aggregateFeature uses run completion time for staleness", () => {
+  const feature = {
+    id: "core-api",
+    label: "Core API",
+    category: "platform",
+    checks: [
+      { id: "api-health", required: true, staleAfterMinutes: 5 },
+    ],
+  };
+  const result = aggregateFeature(
+    feature,
+    new Map([
+      [
+        "api-health",
+        {
+          checkId: "api-health",
+          status: CHECK_STATUS.PASS,
+          endedAt: "2026-06-10T11:50:00.000Z",
+          runGeneratedAt: "2026-06-10T11:59:00.000Z",
+          latencyMs: 100,
+          evidence: {},
+        },
+      ],
+    ]),
+    GENERATED_AT,
+  );
+
+  assert.equal(result.status, FEATURE_STATUS.OPERATIONAL);
+  assert.equal(result.message, "All required checks are passing.");
+});
