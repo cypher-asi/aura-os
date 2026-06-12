@@ -8,6 +8,7 @@ import "@xterm/xterm/css/xterm.css";
 import type { TerminalOutputChunk, UseTerminalReturn } from "../../hooks/use-terminal";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { getXtermTheme, type ResolvedTheme } from "./getXtermTheme";
+import { createTerminalLineHistory, type TerminalLineHistory } from "./terminalLineHistory";
 import styles from "./XTerminal.module.css";
 
 function readResolvedTheme(): ResolvedTheme {
@@ -19,6 +20,9 @@ interface XTerminalProps {
   terminal: UseTerminalReturn;
   visible: boolean;
   focused: boolean;
+  /** Stable key (project id, remote agent id, or "local") used to group the
+   *  shared command history that Arrow Up/Down navigates. */
+  historyKey: string;
 }
 
 // Large scrollback so users can page back through long-running output
@@ -36,12 +40,14 @@ const SCROLLBACK_LINES = 100_000;
 // and the buffer is current when the window comes back.
 const MAX_PENDING_WRITE_CHUNKS = 64;
 
-export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) {
+export function XTerminal({ terminal: hook, visible, focused, historyKey }: XTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const hookRef = useRef(hook);
+  const historyKeyRef = useRef(historyKey);
+  const lineHistoryRef = useRef<TerminalLineHistory | null>(null);
   const fitFrameRef = useRef<number | null>(null);
   const pendingFitRef = useRef({ force: false, notifyResize: false });
   // The first fit tells the hook what size to spawn the PTY at.
@@ -56,6 +62,10 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
   useEffect(() => {
     hookRef.current = hook;
   }, [hook]);
+
+  useEffect(() => {
+    historyKeyRef.current = historyKey;
+  }, [historyKey]);
 
   const scheduleFit = useCallback((options: { force?: boolean; notifyResize?: boolean } = {}) => {
     pendingFitRef.current = {
@@ -159,6 +169,11 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
 
     scheduleFit({ force: true, notifyResize: true });
 
+    lineHistoryRef.current = createTerminalLineHistory({
+      getHistoryKey: () => historyKeyRef.current,
+      write: (data) => hookRef.current.write(data),
+    });
+
     // Ctrl+L safety net. We let the keystroke through to the shell so the
     // prompt repaints, but also call `xterm.clear()` directly so the
     // 100k-line scrollback is wiped instantly regardless of what the
@@ -175,11 +190,27 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
         && event.key.toLowerCase() === "l"
       ) {
         xterm.clear();
+        return true;
+      }
+      // Intercept history navigation so it walks the shared per-project
+      // history instead of the per-PTY shell history. Returning false stops
+      // xterm from forwarding the arrow escape sequence to the shell.
+      if (
+        event.type === "keydown"
+        && !event.ctrlKey
+        && !event.shiftKey
+        && !event.altKey
+        && !event.metaKey
+        && (event.key === "ArrowUp" || event.key === "ArrowDown")
+      ) {
+        lineHistoryRef.current?.handleArrow(event.key === "ArrowUp" ? "up" : "down");
+        return false;
       }
       return true;
     });
 
     const dataDisposable = xterm.onData((data) => {
+      lineHistoryRef.current?.onData(data);
       hook.write(data);
     });
 
@@ -231,6 +262,7 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
       viewportRef.current = null;
       xtermRef.current = null;
       fitRef.current = null;
+      lineHistoryRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheduleFit]);

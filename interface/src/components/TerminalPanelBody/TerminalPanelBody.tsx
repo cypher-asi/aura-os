@@ -12,6 +12,7 @@ function TerminalWrapper({
   cwd,
   remoteAgentId,
   projectId,
+  historyKey,
   onHook,
 }: {
   visible: boolean;
@@ -19,6 +20,7 @@ function TerminalWrapper({
   cwd?: string;
   remoteAgentId?: string;
   projectId?: string;
+  historyKey: string;
   onHook: (hook: UseTerminalReturn) => void;
 }) {
   const hook = useTerminal({ cwd, remoteAgentId, projectId });
@@ -28,7 +30,7 @@ function TerminalWrapper({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hook.terminalId]);
 
-  return <XTerminal terminal={hook} visible={visible} focused={focused} />;
+  return <XTerminal terminal={hook} visible={visible} focused={focused} historyKey={historyKey} />;
 }
 
 export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
@@ -60,6 +62,8 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
     })),
   );
 
+  const historyKey = projectId ?? remoteAgentId ?? "local";
+
   if (embedded) {
     return (
       <div className={cn(styles.terminalBodyPanel, styles.terminalBodyPanelContentReady)} style={{ flex: 1, height: "100%" }}>
@@ -74,6 +78,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
                 cwd={cwd}
                 remoteAgentId={remoteAgentId}
                 projectId={projectId}
+                historyKey={historyKey}
                 onHook={(hook) => registerHook(t.id, hook)}
               />
             );
@@ -107,6 +112,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
               cwd={cwd}
               remoteAgentId={remoteAgentId}
               projectId={projectId}
+              historyKey={historyKey}
               onHook={(hook) => registerHook(t.id, hook)}
             />
           );

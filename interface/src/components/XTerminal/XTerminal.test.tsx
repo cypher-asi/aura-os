@@ -177,7 +177,7 @@ describe("XTerminal theme syncing", () => {
 
     const hook = makeHook();
 
-    render(<XTerminal terminal={hook} visible focused />);
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
 
     const term = testState.capturedTerminals.at(-1);
     expect(term).toBeDefined();
@@ -210,7 +210,7 @@ describe("XTerminal link opening", () => {
     // The handler must hand the real URI to window.open directly.
     const { XTerminal } = await import("./XTerminal");
     const hook = makeHook();
-    render(<XTerminal terminal={hook} visible focused />);
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
 
     const handler = testState.capturedLinkHandlers.at(-1);
     expect(handler).toBeTypeOf("function");
@@ -230,7 +230,7 @@ describe("XTerminal Ctrl+L handling", () => {
   it("clears the xterm buffer (and scrollback) when Ctrl+L is pressed", async () => {
     const { XTerminal } = await import("./XTerminal");
     const hook = makeHook();
-    render(<XTerminal terminal={hook} visible focused />);
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
 
     const term = testState.capturedTerminals.at(-1);
     expect(term).toBeDefined();
@@ -248,7 +248,7 @@ describe("XTerminal Ctrl+L handling", () => {
   it("does not clear when Ctrl+L is pressed with another modifier", async () => {
     const { XTerminal } = await import("./XTerminal");
     const hook = makeHook();
-    render(<XTerminal terminal={hook} visible focused />);
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
 
     const term = testState.capturedTerminals.at(-1);
     expect(term).toBeDefined();
@@ -279,7 +279,7 @@ describe("XTerminal deferred spawn", () => {
     const hook = makeHook();
     testState.proposedDimensions = { cols: 132, rows: 43 };
 
-    render(<XTerminal terminal={hook} visible focused />);
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
     await act(async () => {
       await flushAnimationFrames();
     });
@@ -297,7 +297,7 @@ describe("XTerminal resize fitting", () => {
     const { XTerminal } = await import("./XTerminal");
     const hook = makeHook();
 
-    render(<XTerminal terminal={hook} visible focused />);
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
     await act(async () => {
       await flushAnimationFrames();
     });
@@ -325,7 +325,7 @@ describe("XTerminal resize fitting", () => {
     const { XTerminal } = await import("./XTerminal");
     const hook = makeHook();
 
-    render(<XTerminal terminal={hook} visible focused />);
+    render(<XTerminal terminal={hook} visible focused historyKey="test" />);
     await act(async () => {
       await flushAnimationFrames();
     });
