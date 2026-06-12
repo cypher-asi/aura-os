@@ -127,6 +127,31 @@ export function Block({
   headerOnly = false,
 }: BlockProps) {
   const [expanded, setExpanded] = useState(defaultExpanded || forceExpanded);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const revealTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (revealTimeoutRef.current != null) {
+        window.clearTimeout(revealTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // After a user-initiated expand, nudge the scroll container so the
+  // newly revealed body is actually readable instead of opening below
+  // the fold. Deferred past the 160ms grid-rows expand animation so the
+  // measured height is final; `block: "nearest"` scrolls the minimum
+  // distance (no jump when the block is already fully visible).
+  const revealAfterExpand = useCallback(() => {
+    if (revealTimeoutRef.current != null) {
+      window.clearTimeout(revealTimeoutRef.current);
+    }
+    revealTimeoutRef.current = window.setTimeout(() => {
+      revealTimeoutRef.current = null;
+      rootRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }, 190);
+  }, []);
 
   // Auto-collapse on the `forceExpanded` true -> false edge so e.g. a
   // `ThinkingBlock` whose segment just closed snaps back to its default
@@ -151,8 +176,12 @@ export function Block({
 
   const toggle = useCallback(() => {
     if (forceExpanded) return;
-    setExpanded((v) => !v);
-  }, [forceExpanded]);
+    setExpanded((v) => {
+      const next = !v;
+      if (next) revealAfterExpand();
+      return next;
+    });
+  }, [forceExpanded, revealAfterExpand]);
 
   // The header used to be rendered as `<button>`, but renderers like
   // `SpecBlock` thread interactive controls (e.g. a `CopyButton`) through
@@ -165,10 +194,10 @@ export function Block({
       if (forceExpanded) return;
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        setExpanded((v) => !v);
+        toggle();
       }
     },
-    [forceExpanded],
+    [forceExpanded, toggle],
   );
 
   const internalBodyRef = useRef<HTMLDivElement | null>(null);
@@ -201,7 +230,10 @@ export function Block({
       };
 
   return (
-    <div className={`${styles.block} ${statusClass(status)} ${className ?? ""}`}>
+    <div
+      ref={rootRef}
+      className={`${styles.block} ${statusClass(status)} ${className ?? ""}`}
+    >
       <div
         className={`${styles.blockHeader} ${headerOnly ? styles.blockHeaderStatic : ""}`}
         {...headerInteractiveProps}

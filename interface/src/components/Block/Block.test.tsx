@@ -231,6 +231,42 @@ describe("Block primitive", () => {
     expect(screen.getByTestId("copy-button")).toBeInTheDocument();
   });
 
+  // Expanding a collapsed block must bring the revealed body into view —
+  // otherwise a block near the bottom of the viewport opens below the
+  // fold and the user has to scroll manually to read what they just
+  // asked for. Collapsing must NOT scroll.
+  it("scrolls the block into view after a user-initiated expand", () => {
+    vi.useFakeTimers();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      render(
+        <Block title="Read file" copy={{ getText: () => "" }}>
+          body
+        </Block>,
+      );
+      const header = screen
+        .getAllByRole("button")
+        .find((el) => el.hasAttribute("aria-expanded"));
+
+      fireEvent.click(header!);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      // Deferred past the 160ms expand animation.
+      vi.advanceTimersByTime(250);
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        block: "nearest",
+        behavior: "smooth",
+      });
+
+      scrollIntoView.mockClear();
+      fireEvent.click(header!);
+      vi.advanceTimersByTime(250);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // Defense against the previous fix overreaching: a block that was
   // never `forceExpanded` and whose user manually toggled open must not
   // be reset just because `defaultExpanded` later flips (e.g. the
