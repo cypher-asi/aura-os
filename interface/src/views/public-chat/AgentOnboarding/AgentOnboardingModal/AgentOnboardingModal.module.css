@@ -18,14 +18,27 @@
   --glass-modal-glow: rgba(0, 0, 0, 0.55);
 }
 
-.sheet {
-  /* Drawer manages its own height via defaultSize/maxSize; match the desktop
-     neutral near-black glass fill (no blue tint). */
-  background:
-    radial-gradient(120% 90% at 50% -10%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
-    rgba(6, 7, 9, 0.94);
-  backdrop-filter: blur(22px) saturate(1.2);
-  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+/* Mobile: fill the viewport as a full-screen sheet. Doubled class beats zui's
+   `.modal` sizing; safe-area insets keep the sheet clear of the notch / home
+   indicator. zui's overlay still pads 12px around it so it reads as a floating
+   sheet rather than a hard-edged takeover. */
+.modalMobile.modalMobile {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin-top: env(safe-area-inset-top, 0px);
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile surface: same neutral near-black glass as desktop, slightly tighter
+   corner radius so the tall sheet doesn't read as a small floating card. */
+.surfaceMobile {
+  --glass-modal-radius: 18px;
+  --glass-modal-tint: rgba(255, 255, 255, 0.03);
+  --glass-modal-body-top: rgba(14, 15, 18, 0.82);
+  --glass-modal-body-bottom: rgba(0, 0, 0, 0.94);
+  --glass-modal-glow: rgba(0, 0, 0, 0.55);
 }
 
 .container {

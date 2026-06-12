@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Button, Drawer } from "@cypher-asi/zui";
+import { Button } from "@cypher-asi/zui";
 import { GlassModal } from "../../../../components/GlassModal";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useAuth } from "../../../../stores/auth-store";
@@ -203,33 +203,16 @@ export function AgentOnboardingModal(): React.ReactElement | null {
     </div>
   );
 
-  if (isMobileLayout) {
-    return (
-      <Drawer
-        side="bottom"
-        isOpen={isOpen}
-        onClose={close}
-        title={MODAL_TITLE}
-        className={styles.sheet}
-        showMinimizedBar={false}
-        defaultSize={560}
-        maxSize={760}
-      >
-        {inner}
-      </Drawer>
-    );
-  }
-
   return (
     <GlassModal
       isOpen={isOpen}
       onClose={close}
       title={MODAL_TITLE}
-      size="lg"
+      size={isMobileLayout ? "full" : "lg"}
       centerTitle
       titleClassName={styles.modalTitle}
-      modalClassName={styles.modal}
-      className={styles.surface}
+      modalClassName={isMobileLayout ? styles.modalMobile : styles.modal}
+      className={isMobileLayout ? styles.surfaceMobile : styles.surface}
     >
       {inner}
     </GlassModal>
