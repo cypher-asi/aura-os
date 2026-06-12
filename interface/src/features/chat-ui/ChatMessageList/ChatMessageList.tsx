@@ -165,9 +165,9 @@ function ChatMessageListImpl({
   const justFinalizedIdRef = useRef<string | null>(null);
 
   // Detect streaming -> not-streaming transition during render so the
-  // MessageBubble for the just-finalized message mounts with its thinking /
-  // activity rows expanded, matching the live assistant row it replaces. This
-  // has to happen during render (not useEffect) because `initialThinkingExpanded`
+  // MessageBubble for the just-finalized message mounts with its activity
+  // rows expanded, matching the live assistant row it replaces. This has
+  // to happen during render (not useEffect) because `initialActivitiesExpanded`
   // is read once at MessageBubble mount — deferring to useEffect means the
   // bubble mounts collapsed for one frame and then can't be re-expanded.
   // React Compiler's "no refs during render" rule doesn't distinguish this
@@ -344,7 +344,6 @@ function ChatMessageListImpl({
                     <MessageBubble
                       message={msg}
                       isStreaming={isStreaming && msg.id.startsWith("stream-")}
-                      initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
                       initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
                       streamKey={streamKey}
                       agentId={agentId}

@@ -157,7 +157,7 @@ describe("Block primitive", () => {
 
   // Companion to the previous test: when the finalize handoff flips
   // `defaultExpanded` to true at the same moment `forceExpanded` goes
-  // false (the just-finished message gets `initialThinkingExpanded`),
+  // false (the just-finished message gets `initialActivitiesExpanded`),
   // the block should adopt the new default and stay open instead of
   // snapping closed.
   it("snaps to the new defaultExpanded value on the forceExpanded falling edge", () => {
@@ -270,7 +270,7 @@ describe("Block primitive", () => {
   // Defense against the previous fix overreaching: a block that was
   // never `forceExpanded` and whose user manually toggled open must not
   // be reset just because `defaultExpanded` later flips (e.g. the
-  // finalize handoff that flips `defaultThinkingExpanded` to `true` on
+  // finalize handoff that flips `defaultActivitiesExpanded` to `true` on
   // a fully historical bubble that already has user-managed state).
   it("does not clobber user toggle when defaultExpanded changes without forceExpanded", () => {
     function Harness() {

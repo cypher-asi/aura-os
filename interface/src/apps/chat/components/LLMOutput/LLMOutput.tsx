@@ -37,7 +37,6 @@ export interface LLMOutputProps {
   artifactRefs?: ArtifactRef[];
   isStreaming?: boolean;
   className?: string;
-  defaultThinkingExpanded?: boolean;
   defaultActivitiesExpanded?: boolean;
   /**
    * When provided, forwarded to the embedded `ActivityTimeline` so it
@@ -57,7 +56,6 @@ export function LLMOutput({
   artifactRefs,
   isStreaming = false,
   className,
-  defaultThinkingExpanded,
   defaultActivitiesExpanded,
   scrollRef,
 }: LLMOutputProps) {
@@ -114,7 +112,6 @@ export function LLMOutput({
           thinkingDurationMs={thinkingDurationMs}
           toolCalls={toolCallsForRender}
           isStreaming={isStreaming}
-          defaultThinkingExpanded={defaultThinkingExpanded}
           defaultActivitiesExpanded={defaultActivitiesExpanded}
           scrollRef={scrollRef}
         />

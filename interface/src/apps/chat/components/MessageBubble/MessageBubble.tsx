@@ -46,7 +46,6 @@ import {
 interface Props {
   message: DisplaySessionEvent;
   isStreaming?: boolean;
-  initialThinkingExpanded?: boolean;
   initialActivitiesExpanded?: boolean;
   /**
    * Phase 5: stream key the message belongs to. Threaded into the
@@ -135,7 +134,6 @@ function FileAttachmentBlock({ text }: { text: string }) {
 export const MessageBubble = memo(function MessageBubble({
   message,
   isStreaming = false,
-  initialThinkingExpanded,
   initialActivitiesExpanded,
   streamKey,
   agentId,
@@ -430,7 +428,6 @@ export const MessageBubble = memo(function MessageBubble({
               thinkingDurationMs={message.thinkingDurationMs}
               artifactRefs={message.artifactRefs}
               isStreaming={isStreaming}
-              defaultThinkingExpanded={initialThinkingExpanded}
               defaultActivitiesExpanded={initialActivitiesExpanded}
             />
           )}
@@ -459,7 +456,6 @@ export const MessageBubble = memo(function MessageBubble({
             thinkingDurationMs={message.thinkingDurationMs}
             artifactRefs={message.artifactRefs}
             isStreaming={isStreaming}
-            defaultThinkingExpanded={initialThinkingExpanded}
             defaultActivitiesExpanded={initialActivitiesExpanded}
           />
         )}

@@ -74,7 +74,7 @@ describe("ChatMessageList", () => {
     });
   });
 
-  it("renders historical bubbles with default collapse state for thinking/activity", () => {
+  it("renders historical bubbles with default collapse state for activity rows", () => {
     const scrollRef = makeScrollRef();
 
     render(
@@ -92,7 +92,6 @@ describe("ChatMessageList", () => {
       expect.objectContaining({
         message: expect.objectContaining({ id: "message-1" }),
         isStreaming: false,
-        initialThinkingExpanded: false,
         initialActivitiesExpanded: false,
       }),
     );
@@ -324,7 +323,7 @@ describe("ChatMessageList", () => {
     expect(screen.queryByTestId("bubble-stream-assistant")).not.toBeInTheDocument();
   });
 
-  it("expands thinking / activities on the just-finalized message when a stream ends", () => {
+  it("expands activities on the just-finalized message when a stream ends", () => {
     mockStreamEntry.isStreaming = true;
     mockStreamEntry.streamingText = "partial output";
 
@@ -362,7 +361,6 @@ describe("ChatMessageList", () => {
     );
     expect(finalizedCall?.[0]).toEqual(
       expect.objectContaining({
-        initialThinkingExpanded: true,
         initialActivitiesExpanded: true,
       }),
     );
@@ -372,7 +370,6 @@ describe("ChatMessageList", () => {
     );
     expect(historicalCall?.[0]).toEqual(
       expect.objectContaining({
-        initialThinkingExpanded: false,
         initialActivitiesExpanded: false,
       }),
     );

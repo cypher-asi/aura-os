@@ -40,7 +40,9 @@
 .timeline:not(.timelineVirtual) > [data-kind="tool"] + [data-kind="text"],
 .timeline:not(.timelineVirtual) > [data-kind="text"] + [data-kind="tool"],
 .timeline:not(.timelineVirtual) > [data-kind="thinking"] + [data-kind="text"],
-.timeline:not(.timelineVirtual) > [data-kind="text"] + [data-kind="thinking"] {
+.timeline:not(.timelineVirtual) > [data-kind="text"] + [data-kind="thinking"],
+.timeline:not(.timelineVirtual) > [data-kind="thinking"] + [data-kind="tool"],
+.timeline:not(.timelineVirtual) > [data-kind="tool"] + [data-kind="thinking"] {
   margin-top: 12px;
 }
 
@@ -52,10 +54,10 @@
  *
  * `data-block-row="true"` is stamped per-row by `ActivityTimeline.tsx`
  * on any row whose rendered node is a `Block` primitive (today:
- * `kind === "tool"` and `kind === "thinking"`). Text rows render bare
- * markdown with no border so they are deliberately off this attribute
- * and keep their full 12px breathing-room margin against bordered
- * neighbours via the rule above.
+ * `kind === "tool"` only). Thinking rows render as borderless inline
+ * prose and text rows render bare markdown, so both are deliberately
+ * off this attribute and keep their full 12px breathing-room margin
+ * against bordered neighbours via the rule above.
  *
  * The wrapper div that previously enclosed each tool run was removed
  * so every row can live in its own virtualizer slot; this used to be

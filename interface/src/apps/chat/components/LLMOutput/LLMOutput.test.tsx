@@ -19,14 +19,8 @@ describe("LLMOutput", () => {
     expect(screen.getByText(/Thought/)).toBeInTheDocument();
   });
 
-  it("renders thinking content expanded initially when defaultThinkingExpanded is true", () => {
-    render(
-      <LLMOutput
-        content=""
-        thinkingText="Considering options..."
-        defaultThinkingExpanded
-      />,
-    );
+  it("always renders thinking text inline (no expand needed)", () => {
+    render(<LLMOutput content="" thinkingText="Considering options..." />);
     expect(screen.getByText("Considering options...")).toBeInTheDocument();
   });
 

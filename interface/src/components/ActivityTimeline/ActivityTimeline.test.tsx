@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ActivityTimeline } from "./ActivityTimeline";
 import type { TimelineItem, ToolCallEntry } from "../../shared/types/stream";
@@ -28,9 +28,10 @@ vi.mock("../../shared/hooks/use-highlighted-html", () => ({
 describe("ActivityTimeline thinking segments", () => {
   // Regression: when a multi-segment turn renders (thinking -> tool ->
   // thinking), only the trailing live segment should show "Thinking..."
-  // / shimmer / forced-expand. Earlier segments are already closed by
+  // / shimmer. Earlier segments are already closed by
   // `closeCurrentThinkingSegment` (they carry `durationMs`) and must
-  // render as "Thought for X" and start collapsed.
+  // render as "Thought for X". All thinking text is inline prose —
+  // always visible, never behind a collapse affordance.
   it("only the open thinking segment shows 'Thinking...' during a live multi-segment turn", () => {
     const toolCalls: ToolCallEntry[] = [
       {
@@ -75,27 +76,22 @@ describe("ActivityTimeline thinking segments", () => {
     const thinkingLabels = screen.getAllByText("Thinking...");
     expect(thinkingLabels).toHaveLength(1);
 
-    // The closed segment's block must NOT be force-expanded (i.e. it
-    // starts collapsed since `defaultThinkingExpanded` is undefined and
-    // its derived `isStreaming` is false). The open segment's block IS
-    // force-expanded.
+    // Both segments' reasoning text is fully visible inline — closed
+    // segments are no longer collapsed behind a chevron.
+    expect(screen.getByText("first thoughts")).toBeInTheDocument();
+    expect(screen.getByText("second thoughts streaming")).toBeInTheDocument();
+
+    // Thinking rows expose no expand/collapse affordance. The only
+    // expandable header in this timeline belongs to the tool row.
     const expandableHeaders = screen
       .getAllByRole("button")
       .filter((el) => el.hasAttribute("aria-expanded"));
-    const expandedCount = expandableHeaders.filter(
-      (el) => el.getAttribute("aria-expanded") === "true",
-    ).length;
-    // 1 open thinking block (force-expanded) + 0 collapsed thinking block
-    // visible as expanded + tool block collapsed = 1 expanded total.
-    expect(expandedCount).toBe(1);
+    expect(expandableHeaders).toHaveLength(1);
   });
 
-  // While a thinking segment is actively streaming and has received
-  // text, the block auto-opens via `defaultExpanded` but must remain
-  // user-collapsible. Previously `forceExpanded={isStreaming}` locked
-  // the chevron and `aria-disabled`d the header, so the user could not
-  // hide a verbose live thinking trace mid-stream.
-  it("a streaming thinking segment with text is user-collapsible (no aria-disabled lock)", () => {
+  // Thinking is inline prose: a streaming segment's text is visible in
+  // the flow with no collapse affordance and no aria-expanded header.
+  it("a streaming thinking segment renders its full text inline with no collapse affordance", () => {
     const timeline: TimelineItem[] = [
       {
         kind: "thinking",
@@ -107,16 +103,11 @@ describe("ActivityTimeline thinking segments", () => {
 
     render(<ActivityTimeline timeline={timeline} isStreaming />);
 
-    const header = screen
-      .getAllByRole("button")
-      .find((el) => el.hasAttribute("aria-expanded"));
-    expect(header).toBeDefined();
-    // Auto-open while streaming, but no force-lock.
-    expect(header).toHaveAttribute("aria-expanded", "true");
-    expect(header).not.toHaveAttribute("aria-disabled");
-
-    fireEvent.click(header!);
-    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("live thoughts streaming in")).toBeInTheDocument();
+    const expandableHeaders = screen
+      .queryAllByRole("button")
+      .filter((el) => el.hasAttribute("aria-expanded"));
+    expect(expandableHeaders).toHaveLength(0);
   });
 
   // Once the turn finishes, no thinking segment is streaming so neither
@@ -292,15 +283,14 @@ describe("ActivityTimeline tool-position data attributes", () => {
 });
 
 describe("ActivityTimeline block-row data attribute", () => {
-  // Generalized border-collapse marker: any row whose rendered node is a
-  // `Block` primitive (thinking + tool, today; future Block-derived
-  // kinds get it for free) carries `data-block-row="true"` so the
+  // Border-collapse marker: only rows whose rendered node is a `Block`
+  // primitive (tool rows, today) carry `data-block-row="true"` so the
   // adjacent-sibling rule in `ActivityTimeline.module.css` can collapse
-  // every Block-on-Block boundary into a single 1px divider — not only
-  // the tool↔tool pairs that the original `data-tool-position` machinery
-  // covered. Text rows render bare markdown with no border and must
-  // stay off the attribute so they keep their 12px breathing-room gap.
-  it("marks both thinking and tool rows as bordered block rows", () => {
+  // tool-on-tool boundaries into a single 1px divider. Thinking rows
+  // render as borderless inline prose and text rows render bare
+  // markdown, so both must stay off the attribute and keep their
+  // breathing-room gap.
+  it("marks tool rows — but not inline-prose thinking rows — as bordered block rows", () => {
     const toolCalls: ToolCallEntry[] = [
       { id: "tc-1", name: "read_file", input: { path: "a.rs" }, result: "ok", pending: false },
     ];
@@ -315,13 +305,14 @@ describe("ActivityTimeline block-row data attribute", () => {
     );
 
     const blockRows = container.querySelectorAll<HTMLElement>('[data-block-row="true"]');
-    // Two thinking blocks + one tool block.
-    expect(blockRows).toHaveLength(3);
-    expect(Array.from(blockRows).map((r) => r.dataset.kind)).toEqual([
-      "thinking",
-      "tool",
-      "thinking",
-    ]);
+    expect(blockRows).toHaveLength(1);
+    expect(blockRows[0].dataset.kind).toBe("tool");
+
+    const thinkingRows = container.querySelectorAll<HTMLElement>('[data-kind="thinking"]');
+    expect(thinkingRows).toHaveLength(2);
+    for (const row of Array.from(thinkingRows)) {
+      expect(row.dataset.blockRow).toBeUndefined();
+    }
   });
 
   it("does not flag text rows so prose still gets its breathing-room margin", () => {
@@ -398,12 +389,10 @@ describe("ActivityTimeline synthetic thinking placeholder", () => {
   });
 
   // The synthetic placeholder has no thinking text yet, so the
-  // ThinkingBlock must render as `headerOnly`: no chevron, no
-  // body wrap, no expand/collapse affordance. Without this the empty
-  // body painted its own `border-top` and the block shell painted a
-  // bottom `border` with empty padding between them — the "double
-  // line" visible in the streaming chat lane.
-  it("renders the empty-text placeholder as a header-only row (no body wrap, no chevron)", () => {
+  // ThinkingBlock renders only its caption row: the shimmering
+  // "Thinking..." label with no prose body, no copy affordance, and
+  // no interactive header.
+  it("renders the empty-text placeholder as a caption-only row (no body, no toggle)", () => {
     const toolCalls: ToolCallEntry[] = [
       {
         id: "tc-1",
@@ -426,27 +415,17 @@ describe("ActivityTimeline synthetic thinking placeholder", () => {
       />,
     );
 
-    // The placeholder header is present but renders no expand toggle.
+    // The placeholder caption is present but renders no expand toggle.
     expect(screen.getByText("Thinking...")).toBeInTheDocument();
     const expandableHeaders = screen
       .getAllByRole("button")
       .filter((el) => el.hasAttribute("aria-expanded"));
     // Only the tool row's expandable header — the synthetic thinking
-    // header is non-interactive in headerOnly mode.
+    // caption is non-interactive.
     expect(expandableHeaders).toHaveLength(1);
 
-    // No body wrap / chevron is mounted for the placeholder. Two
-    // chevrons would normally render (one per Block); after the fix
-    // only the tool row owns one. We grep by the bordered-body-wrap
-    // class which the headerOnly path skips.
-    const bodyWraps = container.querySelectorAll(".blockBodyWrap");
-    // The tool row may render its body wrap (it's still a regular
-    // Block); the headerOnly thinking placeholder must not. Count
-    // the headerOnly markers instead to assert directly.
-    expect(container.querySelector(".blockHeaderStatic")).not.toBeNull();
-    // The tool row contributes exactly one body wrap; before this fix
-    // the placeholder contributed a second one too.
-    expect(bodyWraps.length).toBeLessThanOrEqual(1);
+    // No prose body is mounted for the empty placeholder.
+    expect(container.querySelector(".thinkingText")).toBeNull();
   });
 
   it("uses the real thinking item once a thinking_delta arrives (no duplicate synthetic)", () => {

@@ -20,7 +20,6 @@ interface ActivityTimelineProps {
   thinkingDurationMs?: number | null;
   toolCalls?: ToolCallEntry[];
   isStreaming: boolean;
-  defaultThinkingExpanded?: boolean;
   defaultActivitiesExpanded?: boolean;
   /**
    * When provided, the timeline windows its rows via `@tanstack/react-virtual`,
@@ -50,7 +49,6 @@ type RenderedItem =
       text: string;
       isStreaming: boolean;
       durationMs: number | null | undefined;
-      defaultExpanded: boolean | undefined;
     }
   | {
       key: string;
@@ -80,8 +78,7 @@ function areRowsEqual(
     return (
       a.text === b.text &&
       a.isStreaming === b.isStreaming &&
-      a.durationMs === b.durationMs &&
-      a.defaultExpanded === b.defaultExpanded
+      a.durationMs === b.durationMs
     );
   }
   if (a.kind === "tool" && b.kind === "tool") {
@@ -114,7 +111,6 @@ const TimelineRow = memo(function TimelineRow({ item }: { item: RenderedItem }) 
         text={item.text}
         isStreaming={item.isStreaming}
         durationMs={item.durationMs}
-        defaultExpanded={item.defaultExpanded}
       />
     );
   }
@@ -140,7 +136,6 @@ export function ActivityTimeline({
   thinkingDurationMs,
   toolCalls,
   isStreaming,
-  defaultThinkingExpanded,
   defaultActivitiesExpanded,
   scrollRef,
 }: ActivityTimelineProps) {
@@ -326,7 +321,6 @@ export function ActivityTimeline({
         // multi-segment turns from rendering the same
         // "Thought for X" label on every block.
         durationMs: item.durationMs ?? thinkingDurationMs,
-        defaultExpanded: defaultThinkingExpanded,
       });
     } else if (item.kind === "tool") {
       const entry = toolCallMap.get(item.toolCallId);
@@ -408,12 +402,7 @@ export function ActivityTimeline({
   return (
     <>
       {shouldSynthesizeThinking && (
-        <ThinkingBlock
-          text=""
-          isStreaming
-          durationMs={undefined}
-          defaultExpanded={defaultThinkingExpanded}
-        />
+        <ThinkingBlock text="" isStreaming durationMs={undefined} />
       )}
       {shouldVirtualize && scrollRef ? (
         <VirtualizedTimeline items={items} scrollRef={scrollRef} />
@@ -428,11 +417,11 @@ function rowDataAttrs(item: RenderedItem): Record<string, string> {
   const attrs: Record<string, string> = { "data-kind": item.kind };
   // Flag rows whose rendered node is a `Block` primitive so the
   // border-collapse rule in `ActivityTimeline.module.css` can fire on
-  // any two adjacent bordered rows (thinking + tool, tool + thinking,
-  // tool + tool, …) instead of only tool-tool runs. Text rows render
-  // bare markdown with no border, so they intentionally stay off this
-  // attribute and keep their full 12px breathing-room margin.
-  if (item.kind === "tool" || item.kind === "thinking") {
+  // adjacent bordered rows (tool-tool runs). Thinking rows render as
+  // inline prose (no Block shell, no border) and text rows render bare
+  // markdown, so both intentionally stay off this attribute and keep
+  // their full breathing-room margin.
+  if (item.kind === "tool") {
     attrs["data-block-row"] = "true";
   }
   if (item.kind === "tool" && item.toolPosition) {

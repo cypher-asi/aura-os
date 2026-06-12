@@ -1,9 +1,64 @@
-.thinkingBlock {
-  opacity: 0.65;
+/*
+ * Inline thinking prose — no collapsible shell. A small caption row
+ * ("Thinking..." / "Thought for Xs") sits above the full reasoning
+ * text, which flows in the timeline like dimmed narration between
+ * tool rows.
+ */
+
+.thinking {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0.7;
 }
 
-.thinkingBlockStreaming {
+.thinkingStreaming {
   opacity: 1;
+}
+
+.thinkingHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  color: var(--color-text-muted);
+}
+
+.thinkingIcon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.thinkingLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.thinkingCopy {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/*
+ * Keep the copy affordance invisible until the row is engaged, same as
+ * the Block header treatment: opacity (not display) so layout never
+ * shifts, focus-within for keyboard users, hover-capable devices only.
+ */
+@media (hover: hover) {
+  .thinkingCopy {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .thinking:hover .thinkingCopy,
+  .thinking:focus-within .thinkingCopy {
+    opacity: 1;
+  }
 }
 
 .thinkingLabelShimmer {

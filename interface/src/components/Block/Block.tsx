@@ -154,11 +154,11 @@ export function Block({
   }, []);
 
   // Auto-collapse on the `forceExpanded` true -> false edge so e.g. a
-  // `ThinkingBlock` whose segment just closed snaps back to its default
+  // pending command block that just resolved snaps back to its default
   // (collapsed) state instead of staying open from the streaming-era
   // forced-expand. The ref-guard means a steady-state change to
   // `defaultExpanded` while `forceExpanded` is already false (e.g. the
-  // finalize-handoff that flips `defaultThinkingExpanded` to `true` on
+  // finalize-handoff that flips `defaultActivitiesExpanded` to `true` on
   // the just-finished message) does NOT clobber a user's manual toggle
   // on blocks that were never force-expanded. While `forceExpanded` is
   // `true` the toggle is suppressed (`aria-disabled` + `toggle`
