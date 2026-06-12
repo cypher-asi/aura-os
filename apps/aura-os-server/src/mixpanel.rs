@@ -115,19 +115,7 @@ impl MixpanelTracker {
         let version = version.or(meta.app_version);
         let platform = platform.or(meta.platform);
 
-        let mut properties = Map::new();
-        if let Some(version) = version {
-            properties.insert("app_version".to_string(), json!(version));
-        }
-        if let Some(platform) = platform {
-            properties.insert("platform".to_string(), json!(platform));
-        }
-        if let Some(ip) = sanitize_client_header(client_ip) {
-            properties.insert("ip".to_string(), json!(ip));
-        }
-        if let Some(os) = os_from_user_agent(user_agent) {
-            properties.insert("$os".to_string(), json!(os));
-        }
+        let properties = build_session_active_properties(version, platform, client_ip, user_agent);
 
         self.enqueue_event("session_active", user_id.to_string(), properties);
     }
@@ -243,6 +231,38 @@ impl MixpanelTracker {
             post_mixpanel_payload(client, payload, event).await;
         });
     }
+}
+
+/// Build the property map for a server-emitted `session_active` event.
+///
+/// `session_active` is only fired from `require_verified_session`, i.e.
+/// after the session has been verified, so the user is authenticated by
+/// construction. We stamp `is_authenticated = true` here — the same
+/// super-property the client SDK registers — so True DAU broken down by
+/// `is_authenticated` does not split server-emitted events into a
+/// misleading `false`/`"(not set)"` bucket. The remaining properties are
+/// attached only when present so we never record a misleading value.
+fn build_session_active_properties(
+    app_version: Option<String>,
+    platform: Option<String>,
+    client_ip: Option<&str>,
+    user_agent: Option<&str>,
+) -> Map<String, Value> {
+    let mut properties = Map::new();
+    properties.insert("is_authenticated".to_string(), json!(true));
+    if let Some(version) = app_version {
+        properties.insert("app_version".to_string(), json!(version));
+    }
+    if let Some(platform) = platform {
+        properties.insert("platform".to_string(), json!(platform));
+    }
+    if let Some(ip) = sanitize_client_header(client_ip) {
+        properties.insert("ip".to_string(), json!(ip));
+    }
+    if let Some(os) = os_from_user_agent(user_agent) {
+        properties.insert("$os".to_string(), json!(os));
+    }
+    properties
 }
 
 /// Normalize a client-supplied header value before it lands in Mixpanel.
@@ -395,6 +415,38 @@ mod tests {
         assert_eq!(payload[0]["properties"]["mp_lib"], "rust-server");
         assert_eq!(payload[0]["properties"]["session_id"], "session-1");
         assert_eq!(payload[0]["properties"]["reused"], true);
+    }
+
+    #[test]
+    fn session_active_properties_mark_authenticated_and_include_meta() {
+        let props = build_session_active_properties(
+            Some("0.1.0-nightly.640.1".to_string()),
+            Some("desktop".to_string()),
+            Some("203.0.113.7"),
+            Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"),
+        );
+
+        // Server-emitted session_active is always from a verified session,
+        // so it must carry is_authenticated=true to match the client SDK.
+        assert_eq!(props.get("is_authenticated"), Some(&json!(true)));
+        assert_eq!(props.get("app_version"), Some(&json!("0.1.0-nightly.640.1")));
+        assert_eq!(props.get("platform"), Some(&json!("desktop")));
+        assert_eq!(props.get("ip"), Some(&json!("203.0.113.7")));
+        assert_eq!(props.get("$os"), Some(&json!("Windows")));
+    }
+
+    #[test]
+    fn session_active_properties_authenticated_even_without_client_meta() {
+        // A header-less request (e.g. native WebSocket / <img> ticket redeem)
+        // still represents an authenticated user — the is_authenticated stamp
+        // must be present even when version / platform / os are unknown.
+        let props = build_session_active_properties(None, None, None, None);
+
+        assert_eq!(props.get("is_authenticated"), Some(&json!(true)));
+        assert!(props.get("app_version").is_none());
+        assert!(props.get("platform").is_none());
+        assert!(props.get("ip").is_none());
+        assert!(props.get("$os").is_none());
     }
 
     #[test]
