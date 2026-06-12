@@ -4,6 +4,11 @@ const mockSendMessage = vi.fn();
 const mockStopStreaming = vi.fn();
 const mockResetEvents = vi.fn();
 const mockGetIsStreaming = vi.fn(() => false);
+const { mockListSessionEventsPaginated } = vi.hoisted(() => ({
+  mockListSessionEventsPaginated: vi.fn(() =>
+    Promise.resolve({ events: [], has_more: false, next_before: null }),
+  ),
+}));
 const storageState = new Map<string, string>();
 
 vi.mock("./stream/store", () => ({
@@ -27,6 +32,7 @@ interface MockUseChatHistorySyncArgs {
 }
 const { mockUseChatHistorySync } = vi.hoisted(() => ({
   mockUseChatHistorySync: vi.fn(() => ({
+    historyMessages: [],
     historyResolved: true,
     isLoading: false,
     historyError: null,
@@ -68,6 +74,7 @@ vi.mock("../api/client", () => ({
     agents: {
       listEvents: mockListEvents,
       listSessionEvents: mockListSessionEvents,
+      listSessionEventsPaginated: mockListSessionEventsPaginated,
       getContextUsage: vi.fn().mockResolvedValue({ context_utilization: 0 }),
       resetSession: vi.fn().mockResolvedValue(undefined),
       cancelTurn: vi.fn().mockResolvedValue(undefined),
@@ -81,6 +88,8 @@ const { mockClearHistory } = vi.hoisted(() => ({
 }));
 vi.mock("../stores/chat-history-store", () => ({
   agentHistoryKey: (id: string) => `agent:${id}`,
+  agentSessionHistoryKey: (id: string, sessionId: string) =>
+    `agent:${id}:session:${sessionId}`,
   projectChatHistoryKey: (projectId: string, instanceId: string) =>
     `project:${projectId}:${instanceId}`,
   useChatHistoryStore: {
@@ -137,6 +146,7 @@ vi.mock("../stores/sessions-list-store", () => {
     replaceSessionId: mockReplaceSessionId,
     bumpVersion: mockBumpVersion,
     addOptimisticSession: mockAddOptimisticSession,
+    loadAgentSessions: vi.fn(() => Promise.resolve()),
   });
   type MockState = ReturnType<typeof buildState>;
   const useSessionsListStore = ((
@@ -159,6 +169,18 @@ vi.mock("../stores/sessions-list-store", () => {
     OPTIMISTIC_SESSION_ID_PREFIX: "optimistic:",
   };
 });
+
+// Prior-session pagination has its own hook (and tests); return an
+// inert surface so this suite stays focused on the chat wiring.
+vi.mock("./use-prior-sessions", () => ({
+  usePriorSessions: vi.fn(() => ({
+    priorEvents: [],
+    loadPriorSession: vi.fn(),
+    hasPriorSession: false,
+    isLoadingPriorSession: false,
+    sessionBoundaries: [],
+  })),
+}));
 
 vi.mock("../stores/context-usage-store", () => ({
   useContextUsage: vi.fn(() => undefined),
@@ -732,15 +754,17 @@ describe("useStandaloneAgentChat", () => {
       // The user-visible bug Phase 4 closes: with a `?session=X`
       // pin, the hook must NOT fall back to `listEvents` (which
       // aggregates across every session of the agent and would drag
-      // X's prior siblings back into the panel after a reset).
+      // X's prior siblings back into the panel after a reset). The
+      // pinned path now loads the trailing window via the paginated
+      // per-session endpoint.
       renderHook(() => useStandaloneAgentChat("agent-1", "session-A"));
 
       const fetchFn = latestFetchFn();
       expect(fetchFn).toBeDefined();
       await fetchFn?.();
 
-      expect(mockListSessionEvents).toHaveBeenCalledTimes(1);
-      expect(mockListSessionEvents).toHaveBeenCalledWith(
+      expect(mockListSessionEventsPaginated).toHaveBeenCalledTimes(1);
+      expect(mockListSessionEventsPaginated).toHaveBeenCalledWith(
         "agent-1",
         "session-A",
         { limit: 50 },
@@ -755,17 +779,17 @@ describe("useStandaloneAgentChat", () => {
       );
 
       await latestFetchFn()?.();
-      expect(mockListSessionEvents).toHaveBeenLastCalledWith(
+      expect(mockListSessionEventsPaginated).toHaveBeenLastCalledWith(
         "agent-1",
         "session-A",
         { limit: 50 },
       );
 
-      mockListSessionEvents.mockClear();
+      mockListSessionEventsPaginated.mockClear();
       rerender({ sid: "session-B" });
 
       await latestFetchFn()?.();
-      expect(mockListSessionEvents).toHaveBeenLastCalledWith(
+      expect(mockListSessionEventsPaginated).toHaveBeenLastCalledWith(
         "agent-1",
         "session-B",
         { limit: 50 },

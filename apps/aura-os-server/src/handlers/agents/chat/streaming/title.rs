@@ -72,22 +72,23 @@ pub(super) fn spawn_session_title_task(
             return;
         }
 
-        let result = crate::handlers::agents::sessions::generate_session_title(
-            &storage,
-            &http,
-            &router_url,
-            &ctx.jwt,
-            &session_id_str,
-            &ctx.project_id,
+        let scope = crate::handlers::agents::session_titles::TitleGenScope {
+            storage: &storage,
+            http: &http,
+            router_url: &router_url,
+            jwt: &ctx.jwt,
+            session_id: &session_id_str,
+            project_id: &ctx.project_id,
             // Mirror `generate_session_summary` / `summarize_session`:
             // attribute the title's tokens to the project-agent
             // binding (`project_agent_id`), which is what the chat
             // path itself stamps. `ctx.agent_id` is `None` for
             // project-scoped chat so it isn't a usable substitute.
-            &ctx.project_agent_id,
-            &user_content,
-        )
-        .await;
+            agent_id: &ctx.project_agent_id,
+        };
+        let result =
+            crate::handlers::agents::session_titles::generate_session_title(&scope, &user_content)
+                .await;
 
         match result {
             Ok(title) if !title.is_empty() => {

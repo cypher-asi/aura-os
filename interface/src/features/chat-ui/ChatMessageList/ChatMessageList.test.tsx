@@ -23,6 +23,39 @@ const mockStreamEntry = {
   progressText: "",
 };
 
+// jsdom reports a 0x0 rect for the scroll container, which makes the
+// real virtualizer window collapse to zero rows. Render every row with
+// a controllable per-row height instead; `mockRowHeight` lets tests
+// simulate measured growth (e.g. the streaming tail gaining tokens)
+// which is what drives the pin-to-bottom effect in production.
+let mockRowHeight = 100;
+
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (opts: {
+    count: number;
+    getItemKey?: (index: number) => string | number;
+  }) => ({
+    getVirtualItems: () =>
+      Array.from({ length: opts.count }, (_, index) => ({
+        index,
+        key: opts.getItemKey ? opts.getItemKey(index) : index,
+        start: index * mockRowHeight,
+        size: mockRowHeight,
+        end: (index + 1) * mockRowHeight,
+        lane: 0,
+      })),
+    getTotalSize: () => opts.count * mockRowHeight,
+    measureElement: () => {},
+  }),
+}));
+
+// jsdom reports 0x0 rects, so the real `useScrollMargin` would compute a
+// bogus margin from `scrollTop` after the pin effect runs and trigger an
+// extra mount-time render. Pin it to 0 for deterministic render counts.
+vi.mock("../../../shared/hooks/use-scroll-margin", () => ({
+  useScrollMargin: () => 0,
+}));
+
 vi.mock("../../../apps/chat/components/MessageBubble", () => ({
   MessageBubble: (props: { message: { id: string } }) => {
     mockMessageBubble(props);
@@ -63,6 +96,7 @@ function makeScrollRef(overrides: { scrollHeight?: number; scrollTop?: number } 
 describe("ChatMessageList", () => {
   beforeEach(() => {
     mockMessageBubble.mockReset();
+    mockRowHeight = 100;
     Object.assign(mockStreamEntry, {
       isStreaming: false,
       streamingText: "",
@@ -233,7 +267,10 @@ describe("ChatMessageList", () => {
     expect(screen.getByRole("button", { name: "Load older messages" })).toBeInTheDocument();
   });
 
-  it("keeps the scroll pinned when streaming text grows while auto-following", () => {
+  it("keeps the scroll pinned when the streaming tail row grows while auto-following", () => {
+    // In production, token ticks re-render only the StreamingTail row;
+    // the pin is driven by the virtualizer re-measuring the tail (total
+    // size grows). Simulate that via `mockRowHeight`.
     mockStreamEntry.isStreaming = true;
     mockStreamEntry.streamingText = "partial output";
     const scrollRef = makeScrollRef({ scrollHeight: 800, scrollTop: 800 });
@@ -249,7 +286,7 @@ describe("ChatMessageList", () => {
       />,
     );
 
-    mockStreamEntry.streamingText = "partial output with many more tokens";
+    mockRowHeight = 160;
     (scrollRef.current as unknown as { scrollHeight: number }).scrollHeight = 1000;
 
     act(() => {

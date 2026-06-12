@@ -1,8 +1,8 @@
 use aura_os_core::parse_dt;
-use aura_os_core::{
-    AgentInstanceId, ChatContentBlock, ChatRole, ProjectId, SessionEvent, SessionEventId,
-};
+use aura_os_core::{AgentInstanceId, ChatContentBlock, ChatRole, ProjectId, SessionEvent};
 use aura_os_storage::StorageSessionEvent;
+
+use super::event_id::stable_event_id;
 
 /// Walk the persisted incremental events for the latest assistant turn that
 /// has been started but not yet terminated by `assistant_message_end`, and
@@ -31,7 +31,7 @@ pub(super) fn reconstruct_in_flight_assistant_turn(
         return None;
     }
 
-    Some(parts.into_session_event(agent_instance_id, project_id, &start_event.created_at))
+    Some(parts.into_session_event(agent_instance_id, project_id, start_event))
 }
 
 fn message_id_of(event: &StorageSessionEvent) -> Option<&str> {
@@ -103,7 +103,7 @@ impl AssistantParts {
         self,
         agent_instance_id: AgentInstanceId,
         project_id: ProjectId,
-        created_at: &Option<String>,
+        start_event: &StorageSessionEvent,
     ) -> SessionEvent {
         let blocks_opt = if self.blocks.is_empty() {
             None
@@ -116,7 +116,9 @@ impl AssistantParts {
             Some(self.thinking_buf)
         };
         SessionEvent {
-            event_id: SessionEventId::new(),
+            // Keyed off the `assistant_message_start` row so the synthetic
+            // in-flight snapshot keeps the same id across mid-turn refetches.
+            event_id: stable_event_id(&start_event.id),
             agent_instance_id,
             project_id,
             role: ChatRole::Assistant,
@@ -124,7 +126,7 @@ impl AssistantParts {
             content_blocks: blocks_opt,
             thinking: thinking_opt,
             thinking_duration_ms: None,
-            created_at: parse_dt(created_at),
+            created_at: parse_dt(&start_event.created_at),
             in_flight: Some(true),
             from_agent_id: None,
         }

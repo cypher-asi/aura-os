@@ -197,6 +197,11 @@ vi.mock("../../../api/client", () => ({
       removeProjectBinding: vi.fn(async () => {}),
     },
     listSessionEvents: vi.fn(async () => []),
+    listSessionEventsPaginated: vi.fn(async () => ({
+      events: [],
+      has_more: false,
+      next_cursor: null,
+    })),
   },
   ApiClientError: class ApiClientError extends Error {
     body = { error: "error" };
@@ -487,9 +492,15 @@ describe("AgentList", () => {
       loadAgentSessions,
     });
 
-    const listSessionEvents = vi.fn(async () => []);
+    const listSessionEventsPaginated = vi.fn(async () => ({
+      events: [],
+      has_more: false,
+      next_cursor: null,
+    }));
     const client = await import("../../../api/client");
-    vi.spyOn(client.api, "listSessionEvents").mockImplementation(listSessionEvents);
+    vi.spyOn(client.api, "listSessionEventsPaginated").mockImplementation(
+      listSessionEventsPaginated as never,
+    );
 
     render(<AgentList />);
     await user.hover(screen.getByRole("button", { name: "Builder Bot" }));
@@ -509,10 +520,11 @@ describe("AgentList", () => {
     )?.[1] as (() => Promise<unknown>) | undefined;
     expect(sessionFetchFn).toBeDefined();
     await sessionFetchFn?.();
-    expect(listSessionEvents).toHaveBeenCalledWith(
+    expect(listSessionEventsPaginated).toHaveBeenCalledWith(
       "proj-1",
       "inst-1",
       "sess-most-recent",
+      { limit: 100 },
     );
   });
 

@@ -294,6 +294,69 @@ describe("chat-history-store", () => {
     });
   });
 
+  describe("prependHistoryEvents", () => {
+    it("prepends older events above the current entry, deduped by id", async () => {
+      await useChatHistoryStore
+        .getState()
+        .fetchHistory("k-prep", makeFetchFn([makeMsg("m3"), makeMsg("m4")]));
+
+      useChatHistoryStore.getState().prependHistoryEvents("k-prep", [
+        { id: "m1" },
+        { id: "m2" },
+        { id: "m3" },
+      ] as never);
+
+      const events = useChatHistoryStore.getState().entries["k-prep"].events;
+      expect(events.map((e) => e.id)).toEqual(["m1", "m2", "m3", "m4"]);
+    });
+
+    it("no-ops when the entry is missing or the page is empty", () => {
+      useChatHistoryStore.getState().prependHistoryEvents("k-missing", [
+        { id: "m1" },
+      ] as never);
+      expect(useChatHistoryStore.getState().entries["k-missing"]).toBeUndefined();
+    });
+  });
+
+  describe("refetch window merging", () => {
+    it("preserves paginated-up older events when a forced refetch returns only the tail window", async () => {
+      await useChatHistoryStore
+        .getState()
+        .fetchHistory("k-merge", makeFetchFn([makeMsg("m5"), makeMsg("m6")]));
+      useChatHistoryStore.getState().prependHistoryEvents("k-merge", [
+        { id: "m3" },
+        { id: "m4" },
+      ] as never);
+
+      // Post-stream refetch returns the tail window only (m5..m7).
+      await useChatHistoryStore
+        .getState()
+        .fetchHistory(
+          "k-merge",
+          makeFetchFn([makeMsg("m5"), makeMsg("m6"), makeMsg("m7")]),
+          { force: true },
+        );
+
+      const events = useChatHistoryStore.getState().entries["k-merge"].events;
+      expect(events.map((e) => e.id)).toEqual(["m3", "m4", "m5", "m6", "m7"]);
+    });
+
+    it("replaces the entry outright when the fetched window does not overlap", async () => {
+      await useChatHistoryStore
+        .getState()
+        .fetchHistory("k-swap", makeFetchFn([makeMsg("a1")]));
+
+      await useChatHistoryStore
+        .getState()
+        .fetchHistory("k-swap", makeFetchFn([makeMsg("b1"), makeMsg("b2")]), {
+          force: true,
+        });
+
+      const events = useChatHistoryStore.getState().entries["k-swap"].events;
+      expect(events.map((e) => e.id)).toEqual(["b1", "b2"]);
+    });
+  });
+
   describe("key helpers", () => {
     it("agentHistoryKey", () => {
       expect(agentHistoryKey("a1")).toBe("agent:a1");

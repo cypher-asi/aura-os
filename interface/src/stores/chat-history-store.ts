@@ -60,6 +60,12 @@ type ChatHistoryState = {
    */
   hydrateFromCache: (key: string) => Promise<void>;
   /**
+   * Prepend an older page of display events (from a paginated
+   * "load older" fetch) above the entry's current events. Dedupes by
+   * event id; no-ops when the entry isn't ready.
+   */
+  prependHistoryEvents: (key: string, olderEvents: DisplaySessionEvent[]) => void;
+  /**
    * Copy a warm `"ready"` entry (events + preview bridge frame) to a
    * second key, marking it fresh so the destination surface resolves
    * `historyResolved === true` on its first render. Used when the same
@@ -78,6 +84,14 @@ const ERROR_TTL_MS = 10_000;
 const MAX_HISTORY_ENTRIES = 8;
 const MAX_HISTORY_PREVIEW_ENTRIES = 100;
 const MAX_HISTORY_EVENTS_PER_ENTRY = 500;
+/**
+ * Upper bound for an entry that has grown beyond the fetch window via
+ * "load older" pagination prepends. Kept separate from
+ * `MAX_HISTORY_EVENTS_PER_ENTRY` (which bounds a single fetched window
+ * and the IndexedDB persistence payload) so paginated-up transcripts
+ * aren't re-trimmed back to the window size on every entry rewrite.
+ */
+const MAX_HISTORY_EVENTS_HARD_CAP = 1500;
 
 /**
  * Shape we round-trip through IndexedDB for a single history key.
@@ -106,10 +120,28 @@ function persistHistoryToCache(
   });
 }
 
-function boundHistoryEvents(events: DisplaySessionEvent[]): DisplaySessionEvent[] {
-  return events.length > MAX_HISTORY_EVENTS_PER_ENTRY
-    ? events.slice(-MAX_HISTORY_EVENTS_PER_ENTRY)
-    : events;
+function boundHistoryEvents(
+  events: DisplaySessionEvent[],
+  cap: number = MAX_HISTORY_EVENTS_PER_ENTRY,
+): DisplaySessionEvent[] {
+  return events.length > cap ? events.slice(-cap) : events;
+}
+
+/**
+ * Preserve older pages the user loaded via pagination when a refetch
+ * replaces the entry with a fresh tail window. The fetched window's
+ * first event id is located in the current entry; everything before it
+ * (previously prepended older pages) is kept as a prefix.
+ */
+function mergeFetchedWindow(
+  current: DisplaySessionEvent[] | undefined,
+  fetched: DisplaySessionEvent[],
+): DisplaySessionEvent[] {
+  if (!current || current.length === 0 || fetched.length === 0) return fetched;
+  const firstFetchedId = fetched[0].id;
+  const splitIndex = current.findIndex((event) => event.id === firstFetchedId);
+  if (splitIndex <= 0) return fetched;
+  return [...current.slice(0, splitIndex), ...fetched];
 }
 
 function withBoundedHistoryEntry(
@@ -118,7 +150,13 @@ function withBoundedHistoryEntry(
   key: string,
   entry: HistoryEntry,
 ): Record<string, HistoryEntry> {
-  const next = { ...entries, [key]: { ...entry, events: boundHistoryEvents(entry.events) } };
+  const next = {
+    ...entries,
+    [key]: {
+      ...entry,
+      events: boundHistoryEvents(entry.events, MAX_HISTORY_EVENTS_HARD_CAP),
+    },
+  };
   if (Object.keys(next).length <= MAX_HISTORY_ENTRIES) return next;
   // First pass: only evict non-pinned, non-active keys. This is the
   // hot path; pinned keys (the currently-displayed chat panel(s))
@@ -261,9 +299,14 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
         staleTime: opts?.force ? 0 : CHAT_HISTORY_STALE_TIME_MS,
       })
       .then((data) => {
-        const events = boundHistoryEvents(data.events);
-        const lastMessage = events.length ? events[events.length - 1] : undefined;
         const current = get().entries[key];
+        // Preserve older pages prepended via pagination across refetches
+        // (post-stream / WS-triggered fetches return only the tail window).
+        const events = mergeFetchedWindow(
+          current?.events,
+          boundHistoryEvents(data.events),
+        );
+        const lastMessage = events.length ? events[events.length - 1] : undefined;
         if (
           current?.status === "ready" &&
           current.error == null &&
@@ -420,6 +463,27 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
       ),
     }));
     useMessageStore.getState().setThread(key, events);
+  },
+
+  prependHistoryEvents: (key, olderEvents): void => {
+    if (olderEvents.length === 0) return;
+    set((s) => {
+      const entry = s.entries[key];
+      if (!entry || entry.status !== "ready") return s;
+      const existingIds = new Set(entry.events.map((event) => event.id));
+      const fresh = olderEvents.filter((event) => !existingIds.has(event.id));
+      if (fresh.length === 0) return s;
+      return {
+        entries: withBoundedHistoryEntry(s.entries, s.pinnedKeys, key, {
+          ...entry,
+          events: [...fresh, ...entry.events],
+        }),
+      };
+    });
+    const updated = get().entries[key];
+    if (updated) {
+      useMessageStore.getState().setThread(key, updated.events);
+    }
   },
 
   aliasHistoryEntry: (fromKey, toKey): void => {

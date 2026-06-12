@@ -40,6 +40,25 @@ export interface PaginatedEventsResponse {
   next_cursor: string | null;
 }
 
+export interface PaginatedSessionEventsRequestOptions extends ApiRequestOptions {
+  /** Page size (server default 100, max 400). */
+  limit?: number;
+  /** `event_id` cursor: return the page of messages immediately before it. */
+  before?: string;
+}
+
+function paginatedEventsQuery(options?: PaginatedSessionEventsRequestOptions): string {
+  const params = new URLSearchParams();
+  if (options?.limit != null) {
+    params.set("limit", String(options.limit));
+  }
+  if (options?.before) {
+    params.set("before", options.before);
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export interface ContextUsageResponse {
   context_utilization: number;
   /** Most recent absolute token count for the session's input context,
@@ -198,6 +217,20 @@ export const agentTemplatesApi = {
       { signal: options?.signal },
     );
   },
+  /**
+   * Cursor-paginated single-session history for a standalone agent.
+   * Without `before`, returns the trailing `limit` messages plus
+   * `has_more` / `next_cursor` for loading older pages.
+   */
+  listSessionEventsPaginated: (
+    agentId: AgentId,
+    sessionId: string,
+    options?: PaginatedSessionEventsRequestOptions,
+  ) =>
+    apiFetch<PaginatedEventsResponse>(
+      `/api/agents/${agentId}/sessions/${sessionId}/events/paginated${paginatedEventsQuery(options)}`,
+      { signal: options?.signal },
+    ),
   listEventsPaginated: (
     agentId: AgentId,
     options?: {
@@ -474,6 +507,21 @@ export const sessionsApi = {
   listSessionEvents: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<SessionEvent[]>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/events`,
+    ),
+  /**
+   * Cursor-paginated session history. Without `before`, returns the
+   * trailing `limit` messages plus `has_more` / `next_cursor` for
+   * loading older pages on upward scroll.
+   */
+  listSessionEventsPaginated: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+    options?: PaginatedSessionEventsRequestOptions,
+  ) =>
+    apiFetch<PaginatedEventsResponse>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/events/paginated${paginatedEventsQuery(options)}`,
+      { signal: options?.signal },
     ),
   summarizeSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<Session>(

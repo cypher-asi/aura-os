@@ -1,4 +1,5 @@
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../../api/client";
+import { buildProjectSessionHistoryFetch } from "../../../hooks/use-load-older-messages";
 import {
   agentHistoryKey,
   sessionHistoryKey,
@@ -57,8 +58,9 @@ export function warmStandaloneAgentSession(agentId: string): void {
       mostRecent._agentInstanceId,
       mostRecent.session_id,
     );
-    void useChatHistoryStore.getState().fetchHistory(key, () =>
-      api.listSessionEvents(
+    void useChatHistoryStore.getState().fetchHistory(
+      key,
+      buildProjectSessionHistoryFetch(
         mostRecent._projectId,
         mostRecent._agentInstanceId,
         mostRecent.session_id,

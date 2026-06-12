@@ -1,0 +1,53 @@
+.loaderRow {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.loaderText {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.loaderButton {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 6px 16px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Spacer that owns the full virtual height of the transcript. Rows are
+   absolutely positioned inside and translated to their measured offsets. */
+.virtualList {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.virtualRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+/* The inter-bubble gap the flex column used to provide via `gap` now
+   lives as per-row padding so `measureElement` includes it in the
+   measured row height. */
+.virtualRowDesktop {
+  padding-bottom: 8px;
+}
+
+.virtualRowMobile {
+  padding-bottom: 6px;
+}
+
+/* Flex container (matching the previous inline wrapper) so bubble
+   margins are contained and counted by the row measurement. */
+.messageRow {
+  display: flex;
+  width: 100%;
+}

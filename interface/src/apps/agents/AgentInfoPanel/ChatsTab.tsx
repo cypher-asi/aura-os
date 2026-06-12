@@ -76,12 +76,11 @@ export function ChatsTab() {
         target._agentInstanceId,
         target.session_id,
       ),
-      () =>
-        api.listSessionEvents(
-          target._projectId,
-          target._agentInstanceId,
-          target.session_id,
-        ),
+      buildProjectSessionHistoryFetch(
+        target._projectId,
+        target._agentInstanceId,
+        target.session_id,
+      ),
     );
   }, []);
 

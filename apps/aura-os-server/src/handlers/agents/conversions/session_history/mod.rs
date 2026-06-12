@@ -1,14 +1,14 @@
 mod blocks;
+mod event_id;
 mod in_flight;
 mod subagent_link;
 
 use aura_os_core::parse_dt;
-use aura_os_core::{
-    AgentInstanceId, ChatContentBlock, ChatRole, ProjectId, SessionEvent, SessionEventId,
-};
+use aura_os_core::{AgentInstanceId, ChatContentBlock, ChatRole, ProjectId, SessionEvent};
 use aura_os_storage::StorageSessionEvent;
 
 use blocks::{deserialize_content_blocks, sanitize_assistant_content_blocks};
+use event_id::stable_event_id;
 use in_flight::reconstruct_in_flight_assistant_turn;
 use subagent_link::fold_subagent_session_links;
 
@@ -18,6 +18,10 @@ use subagent_link::fold_subagent_session_links;
 /// produce `SessionEvent` objects.  Incremental events (`text_delta`, `tool_use_start`,
 /// etc.) are stored for replay but skipped here — the `assistant_message_end`
 /// event contains the full synthesis (text, thinking, content_blocks, usage).
+///
+/// Each reconstructed message's `event_id` is derived deterministically
+/// from the backing storage-event row id (see [`event_id`]), so ids are
+/// stable across requests and usable as pagination cursors.
 pub fn events_to_session_history(
     events: &[StorageSessionEvent],
     project_agent_id: &str,
@@ -130,7 +134,7 @@ fn parse_user_message_event(
         .filter(|s| !s.is_empty())
         .map(str::to_string);
     Some(SessionEvent {
-        event_id: SessionEventId::new(),
+        event_id: stable_event_id(&event.id),
         agent_instance_id,
         project_id,
         role: ChatRole::User,
@@ -178,7 +182,7 @@ fn parse_assistant_message_end_event(
     }
 
     Some(SessionEvent {
-        event_id: SessionEventId::new(),
+        event_id: stable_event_id(&event.id),
         agent_instance_id,
         project_id,
         role: ChatRole::Assistant,
@@ -241,7 +245,7 @@ fn reconstruct_completed_assistant_from_deltas(
     }
 
     Some(SessionEvent {
-        event_id: SessionEventId::new(),
+        event_id: stable_event_id(&terminal_event.id),
         agent_instance_id,
         project_id,
         role: ChatRole::Assistant,
@@ -273,7 +277,7 @@ fn parse_task_output_event(
         return None;
     }
     Some(SessionEvent {
-        event_id: SessionEventId::new(),
+        event_id: stable_event_id(&event.id),
         agent_instance_id,
         project_id,
         role: ChatRole::Assistant,

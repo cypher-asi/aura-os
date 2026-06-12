@@ -253,14 +253,15 @@
   );
 }
 
-/* DIAGNOSTIC: let the browser keep the bottom/anchor stable natively via
-   CSS scroll anchoring. The previous `overflow-anchor: none` rules were
-   a no-op for virtualized items (absolute-positioned items are excluded
-   from anchor candidates anyway) but they blocked anchoring in the
-   non-virtualized diagnostic. Re-enable by omitting the override. */
+/* The transcript is virtualized: rows are absolutely positioned (and
+   therefore never anchor candidates), but the in-flow virtual-list
+   spacer div changes height as estimates are corrected by measurement.
+   Letting the browser anchor on that spacer would fight the JS
+   pin/preserve logic in `use-virtual-chat-list`, so native scroll
+   anchoring is disabled and the hook owns all scroll compensation. */
 .messageAreaFollowing,
 .messageAreaReading {
-  overflow-anchor: auto;
+  overflow-anchor: none;
 }
 
 .messageArea::-webkit-scrollbar {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { SetURLSearchParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
-import { api } from "../../../api/client";
+import { buildProjectSessionHistoryFetch } from "../../../hooks/use-load-older-messages";
 import {
   sessionHistoryKey,
   useChatHistoryStore,
@@ -199,8 +199,9 @@ export function useConversationTarget(input: UseConversationTargetInput): Conver
       warmTarget.agentInstanceId,
       warmTarget.sessionId,
     );
-    void useChatHistoryStore.getState().fetchHistory(key, () =>
-      api.listSessionEvents(
+    void useChatHistoryStore.getState().fetchHistory(
+      key,
+      buildProjectSessionHistoryFetch(
         warmTarget.projectId,
         warmTarget.agentInstanceId,
         warmTarget.sessionId,

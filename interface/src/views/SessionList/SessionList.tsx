@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
+import { buildProjectSessionHistoryFetch } from "../../hooks/use-load-older-messages";
 import {
   type AnnotatedSession,
   formatDeleteSessionError,
@@ -67,12 +68,11 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
         target._agentInstanceId,
         target.session_id,
       ),
-      () =>
-        api.listSessionEvents(
-          target._projectId,
-          target._agentInstanceId,
-          target.session_id,
-        ),
+      buildProjectSessionHistoryFetch(
+        target._projectId,
+        target._agentInstanceId,
+        target.session_id,
+      ),
     );
   }, []);
 

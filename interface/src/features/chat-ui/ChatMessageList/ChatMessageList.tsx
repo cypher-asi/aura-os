@@ -8,7 +8,6 @@ import {
 } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../../../apps/chat/components/MessageBubble";
-import { StreamingBubble } from "../../../apps/chat/components/StreamingBubble";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
 
@@ -17,7 +16,14 @@ import { useImageScrollPin } from "../../../shared/hooks/use-image-scroll-pin";
 import { SessionGalleryContext } from "../../../components/Gallery";
 import { collectSessionImages } from "./collect-session-images";
 import { PriorSessionDivider } from "./PriorSessionDivider";
+import { StreamingTail } from "./StreamingTail";
+import {
+  STREAM_TAIL_ROW_KEY,
+  useVirtualChatList,
+  type ChatRow,
+} from "./use-virtual-chat-list";
 import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
+import styles from "./ChatMessageList.module.css";
 
 interface ChatMessageListProps {
   messages: DisplaySessionEvent[];
@@ -63,27 +69,21 @@ interface ChatMessageListProps {
   imagePinUntil?: number;
 }
 
-const EMPTY_TOOL_CALLS: NonNullable<
-  ReturnType<typeof useStreamStore.getState>["entries"][string]
->["activeToolCalls"] = [];
-const EMPTY_TIMELINE: NonNullable<
-  ReturnType<typeof useStreamStore.getState>["entries"][string]
->["timeline"] = [];
-
 /**
- * Renders the full chat transcript in natural flex flow. Pin-to-bottom and
- * reading-position preservation when content above the viewport changes
- * size are handled by the browser via CSS `overflow-anchor: auto` on the
- * parent scroll container (see `ChatPanel.module.css`). This component only
- * needs to push scrollTop to the fresh bottom when the last item itself
- * grows (streaming tokens, a new message arriving while pinned) — a case
- * the native scroll-anchoring algorithm doesn't cover, since it only
- * compensates for size changes above the anchor.
+ * Renders the chat transcript through a `@tanstack/react-virtual`
+ * window, so only the rows near the viewport are mounted regardless of
+ * transcript length. Scroll behaviors (pin-to-bottom, prepend
+ * preservation, auto-load-older) live in `useVirtualChatList`.
  *
- * Wrapped in `React.memo` (see export below) so draft-input keystrokes in
- * the parent `ChatSurface` don't re-run the whole transcript map; the
- * component still re-renders on its own stream-store subscription during
- * live streaming.
+ * This component subscribes to the stream store through *boolean*
+ * selectors only (streaming on/off, live text present, ...), so
+ * per-token word-reveal ticks re-render just the `StreamingTail` row —
+ * not the historical row map. Tail growth still reaches the pin logic
+ * because `measureElement` re-measures the tail row, which updates the
+ * virtualizer's total size.
+ *
+ * Wrapped in `React.memo` (see export below) so draft-input keystrokes
+ * in the parent `ChatSurface` don't re-run the transcript.
  */
 function ChatMessageListImpl({
   messages,
@@ -111,39 +111,24 @@ function ChatMessageListImpl({
     initialRevealUntil: imagePinUntil,
     getUserUnpinnedAt,
   });
-  const {
-    isStreaming,
-    isWriting,
-    streamingText,
-    thinkingText,
-    thinkingDurationMs,
-    activeToolCalls,
-    timeline,
-    progressText,
-    generationKind,
-    generationPercent,
-  } = useStreamStore(
-    useShallow((state) => ({
-      isStreaming: state.entries[streamKey]?.isStreaming ?? false,
-      isWriting: state.entries[streamKey]?.isWriting ?? false,
-      streamingText: state.entries[streamKey]?.streamingText ?? "",
-      thinkingText: state.entries[streamKey]?.thinkingText ?? "",
-      thinkingDurationMs: state.entries[streamKey]?.thinkingDurationMs ?? null,
-      activeToolCalls: state.entries[streamKey]?.activeToolCalls ?? EMPTY_TOOL_CALLS,
-      timeline: state.entries[streamKey]?.timeline ?? EMPTY_TIMELINE,
-      progressText: state.entries[streamKey]?.progressText ?? "",
-      generationKind: state.entries[streamKey]?.generationKind ?? null,
-      generationPercent: state.entries[streamKey]?.generationPercent ?? null,
-    })),
+  // Boolean-only projection of the live stream so this component
+  // re-renders on streaming *transitions*, not on every token tick.
+  // The full per-token fields are consumed by `StreamingTail`.
+  const { isStreaming, hasLiveText, hasActiveTools, hasTimeline } = useStreamStore(
+    useShallow((state) => {
+      const entry = state.entries[streamKey];
+      return {
+        isStreaming: entry?.isStreaming ?? false,
+        hasLiveText: !!(entry?.streamingText || entry?.thinkingText),
+        hasActiveTools: (entry?.activeToolCalls?.length ?? 0) > 0,
+        hasTimeline: (entry?.timeline?.length ?? 0) > 0,
+      };
+    }),
   );
 
-  const nowStreaming =
-    isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
-  const liveAssistantBubbleHasText = !!streamingText || !!thinkingText;
+  const nowStreaming = isStreaming || hasLiveText || hasActiveTools;
   const visibleMessages =
-    liveAssistantBubbleHasText &&
-    messages.length > 0 &&
-    messages[messages.length - 1].role === "assistant"
+    hasLiveText && messages.length > 0 && messages[messages.length - 1].role === "assistant"
       ? messages.slice(0, -1)
       : messages;
   // Session-wide gallery list. Recomputed only when the visible
@@ -184,13 +169,7 @@ function ChatMessageListImpl({
   }
   /* eslint-enable react-hooks/refs */
 
-  const hasMessages =
-    messages.length > 0 ||
-    isStreaming ||
-    streamingText ||
-    thinkingText ||
-    activeToolCalls.length > 0 ||
-    timeline.length > 0;
+  const hasMessages = messages.length > 0 || nowStreaming || hasTimeline;
 
   const initialLayoutReadyKeyRef = useRef<string | null>(null);
   useLayoutEffect(() => {
@@ -206,87 +185,51 @@ function ChatMessageListImpl({
     onInitialAnchorReady?.();
   }, [hasMessages, onInitialAnchorReady, streamKey]);
 
-  // Scroll-preservation bookkeeping for prepends (see the effect below).
-  const prevScrollMetricsRef = useRef({ scrollHeight: 0, distanceFromBottom: 0 });
-  const prevTopMessageIdRef = useRef<string | undefined>(undefined);
+  const rows = useMemo<ChatRow[]>(() => {
+    const out: ChatRow[] = visibleMessages.map((msg) => ({
+      kind: "message",
+      key: msg.clientId ?? msg.id,
+      msg,
+      boundary: boundaryByEventId.get(msg.id),
+    }));
+    if (nowStreaming) {
+      out.push({ kind: "stream-tail", key: STREAM_TAIL_ROW_KEY });
+    }
+    return out;
+  }, [visibleMessages, boundaryByEventId, nowStreaming]);
 
-  // Pin to bottom when the tail grows. CSS scroll anchoring handles content
-  // growth *above* the in-view anchor; it does not compensate for growth
-  // *at* the anchor itself, so we explicitly push scrollTop to scrollHeight
-  // whenever the streaming bubble gains tokens, a new message arrives, or
-  // a tool-row reveals content — but only while the user is actually pinned.
-  // The `getUserUnpinnedAt` check is defense in depth against same-tick
-  // races where the user's wheel/touch event fires after this layout effect
-  // has already been scheduled but before `isAutoFollowing` re-renders.
-  useLayoutEffect(() => {
-    if (!hasMessages || !isAutoFollowing) return;
-    if (getUserUnpinnedAt && getUserUnpinnedAt() > 0) return;
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [
+  const listRef = useRef<HTMLDivElement>(null);
+  const { virtualizer, virtualItems, totalSize, scrollMargin } = useVirtualChatList({
+    rows,
+    scrollRef,
+    listRef,
+    messages,
     hasMessages,
     isAutoFollowing,
     getUserUnpinnedAt,
-    scrollRef,
-    messages.length,
-    streamingText,
-    thinkingText,
-    activeToolCalls.length,
-    progressText,
-  ]);
-
-  // Keep the viewport stable when older content is prepended (e.g.
-  // "Load prior session"). Prepending above the viewport leaves the
-  // distance from the bottom unchanged, so we hold that distance
-  // constant. Setting `scrollTop` to an absolute computed value (rather
-  // than nudging by a delta) is idempotent: even if the browser's native
-  // scroll anchoring already shifted the position this frame, the final
-  // value lands exactly where the previously-visible messages were, so
-  // nothing jumps. Detected via the top message id changing to an older
-  // message that is still present further down the list.
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const topId = messages[0]?.id;
-    const prevTopId = prevTopMessageIdRef.current;
-    if (
-      prevTopId !== undefined &&
-      topId !== prevTopId &&
-      messages.some((m) => m.id === prevTopId)
-    ) {
-      el.scrollTop = el.scrollHeight - prevScrollMetricsRef.current.distanceFromBottom;
-    }
-    prevScrollMetricsRef.current = {
-      scrollHeight: el.scrollHeight,
-      distanceFromBottom: el.scrollHeight - el.scrollTop,
-    };
-    prevTopMessageIdRef.current = topId;
-  }, [messages, scrollRef]);
+    onLoadOlder,
+    hasOlderMessages,
+    isLoadingOlder,
+  });
 
   if (!hasMessages) {
     return <>{emptyState}</>;
   }
 
+  const rowDensityClass =
+    density === "mobile" ? styles.virtualRowMobile : styles.virtualRowDesktop;
+
   return (
     <>
       {hasPriorSession && (
-        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}>
+        <div className={styles.loaderRow}>
           {isLoadingPriorSession ? (
-            <span style={{ color: "var(--color-text-muted)", fontSize: 13 }}>Loading...</span>
+            <span className={styles.loaderText}>Loading...</span>
           ) : (
             <button
               type="button"
+              className={styles.loaderButton}
               onClick={onLoadPriorSession}
-              style={{
-                background: "none",
-                border: "1px solid var(--color-border)",
-                borderRadius: 6,
-                padding: "6px 16px",
-                color: "var(--color-text-secondary)",
-                fontSize: 13,
-                cursor: "pointer",
-              }}
             >
               Load prior session
             </button>
@@ -294,86 +237,68 @@ function ChatMessageListImpl({
         </div>
       )}
       {hasOlderMessages && (
-        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}>
+        <div className={styles.loaderRow}>
           {isLoadingOlder ? (
-            <span style={{ color: "var(--color-text-muted)", fontSize: 13 }}>Loading...</span>
+            <span className={styles.loaderText}>Loading...</span>
           ) : (
             <button
               type="button"
+              className={styles.loaderButton}
               onClick={onLoadOlder}
-              style={{
-                background: "none",
-                border: "1px solid var(--color-border)",
-                borderRadius: 6,
-                padding: "6px 16px",
-                color: "var(--color-text-secondary)",
-                fontSize: 13,
-                cursor: "pointer",
-              }}
             >
               Load older messages
             </button>
           )}
         </div>
       )}
-      {visibleMessages.length > 0 && (
-        <SessionGalleryContext.Provider value={sessionGalleryImages}>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: density === "mobile" ? 6 : 8,
-              flexShrink: 0,
-            }}
-          >
-            {/* eslint-disable-next-line react-hooks/refs -- reading justFinalizedIdRef.current here is part of the intentional render-phase pattern documented above the transition detection */}
-            {visibleMessages.map((msg) => {
-              const boundary = boundaryByEventId.get(msg.id);
-              return (
-                <div key={msg.clientId ?? msg.id} style={{ display: "contents" }}>
-                  {boundary && (
-                    <PriorSessionDivider
-                      label={boundary.label}
-                      startedAt={boundary.startedAt}
-                    />
-                  )}
-                  <div
-                    data-message-id={msg.id}
-                    style={{ display: "flex", width: "100%" }}
-                  >
-                    <MessageBubble
-                      message={msg}
-                      isStreaming={isStreaming && msg.id.startsWith("stream-")}
-                      initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
-                      streamKey={streamKey}
-                      agentId={agentId}
-                      errorAgentInfo={errorAgentInfo}
-                      onRetry={onRetry}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </SessionGalleryContext.Provider>
-      )}
-      {nowStreaming && (
-        <div>
-          <StreamingBubble
-            isStreaming={isStreaming}
-            text={streamingText}
-            toolCalls={activeToolCalls}
-            thinkingText={thinkingText}
-            thinkingDurationMs={thinkingDurationMs}
-            timeline={timeline}
-            progressText={progressText}
-            isWriting={isWriting}
-            showPhaseIndicator={false}
-            generationKind={generationKind}
-            generationPercent={generationPercent}
-          />
+      <SessionGalleryContext.Provider value={sessionGalleryImages}>
+        <div
+          ref={listRef}
+          className={styles.virtualList}
+          style={{ height: `${totalSize}px` }}
+        >
+          {/* eslint-disable-next-line react-hooks/refs -- reading justFinalizedIdRef.current here is part of the intentional render-phase pattern documented above the transition detection */}
+          {virtualItems.map((vi) => {
+            const row = rows[vi.index];
+            if (!row) return null;
+            return (
+              <div
+                key={vi.key}
+                ref={virtualizer.measureElement}
+                data-index={vi.index}
+                className={`${styles.virtualRow} ${rowDensityClass}`}
+                style={{ transform: `translateY(${vi.start - scrollMargin}px)` }}
+              >
+                {row.kind === "message" ? (
+                  <>
+                    {row.boundary && (
+                      <PriorSessionDivider
+                        label={row.boundary.label}
+                        startedAt={row.boundary.startedAt}
+                      />
+                    )}
+                    <div data-message-id={row.msg.id} className={styles.messageRow}>
+                      <MessageBubble
+                        message={row.msg}
+                        isStreaming={isStreaming && row.msg.id.startsWith("stream-")}
+                        initialActivitiesExpanded={
+                          row.msg.id === justFinalizedIdRef.current
+                        }
+                        streamKey={streamKey}
+                        agentId={agentId}
+                        errorAgentInfo={errorAgentInfo}
+                        onRetry={onRetry}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <StreamingTail streamKey={streamKey} />
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+      </SessionGalleryContext.Provider>
     </>
   );
 }

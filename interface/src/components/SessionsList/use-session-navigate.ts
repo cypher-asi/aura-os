@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { startTransition, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useActiveAppId } from "../../hooks/use-active-app";
 import type { AnnotatedSession } from "./session-row-utils";
@@ -38,13 +38,17 @@ export function useSessionNavigate({ agentId }: UseSessionNavigateOptions) {
 
   return useCallback(
     (session: AnnotatedSession) => {
+      // Mark the route change (and the transcript swap it triggers) as a
+      // transition so the click feedback paints immediately and React can
+      // keep the previous transcript responsive while the new session's
+      // panel state renders.
       if (activeAppId === "agents" && agentId) {
         const params = new URLSearchParams({
           project: session._projectId,
           instance: session._agentInstanceId,
           session: session.session_id,
         });
-        navigate(`/agents/${agentId}?${params.toString()}`);
+        startTransition(() => navigate(`/agents/${agentId}?${params.toString()}`));
         return;
       }
       if (activeAppId === "chat") {
@@ -54,11 +58,13 @@ export function useSessionNavigate({ agentId }: UseSessionNavigateOptions) {
           session: session.session_id,
         });
         if (agentId) params.set("agent", agentId);
-        navigate(`/chat?${params.toString()}`);
+        startTransition(() => navigate(`/chat?${params.toString()}`));
         return;
       }
-      navigate(
-        `/projects/${session._projectId}/agents/${session._agentInstanceId}?session=${session.session_id}`,
+      startTransition(() =>
+        navigate(
+          `/projects/${session._projectId}/agents/${session._agentInstanceId}?session=${session.session_id}`,
+        ),
       );
     },
     [activeAppId, agentId, navigate],

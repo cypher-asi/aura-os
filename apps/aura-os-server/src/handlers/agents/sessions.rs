@@ -1,7 +1,6 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use futures_util::future::join_all;
-use serde_json::json;
 use tracing::{info, warn};
 
 use aura_os_core::{
@@ -15,47 +14,7 @@ use crate::handlers::agents::chat::is_subagent_session_summary;
 use crate::state::{AppState, AuthJwt};
 
 use super::conversions::events_to_session_history;
-
-const HAIKU_MODEL: &str = "claude-haiku-4-5-20251001";
-/// 32 tokens is plenty for a 2-5 word title; the extra slack is room
-/// for Haiku to choose the slightly-longer phrasing when the topic
-/// genuinely needs it (e.g. "Cyberpunk Character Design Iteration").
-const SUMMARY_MAX_TOKENS: u32 = 32;
-const TRANSCRIPT_CHAR_LIMIT: usize = 4000;
-/// Cap how much of the user's first message we send to the title
-/// model. 2k chars covers any reasonable prompt and keeps the request
-/// small; longer prompts get truncated rather than blowing past
-/// router limits.
-const TITLE_INPUT_CHAR_LIMIT: usize = 2000;
-
-/// Title-style system prompt shared by `generate_session_title` (the
-/// new on-send WebSocket-pushed flow) and `generate_session_summary`
-/// (the legacy lazy /summarize endpoint, kept for backfilling sessions
-/// that were created before the on-send path existed).
-///
-/// Calibrated to mimic ChatGPT's recents list — short, scannable,
-/// title-cased noun phrases like "Heartburn During Water Fast" or
-/// "Logo Addition Request". Plain text only because the sidekick row
-/// renders the result as a single-line label and any `#`/`**`/`-`
-/// decoration leaks through as literal characters; the render-time
-/// strip in `interface/src/components/SessionsList/session-row-utils.ts`
-/// is a backstop for older summaries that already carry these
-/// prefixes.
-const TITLE_SYSTEM_PROMPT: &str = "Generate a concise 2-5 word title for this conversation \
-based on the user's message. Use title case (e.g. \"Heartburn During Water Fast\", \
-\"Logo Addition Request\", \"Cyberpunk Character Design\"). Be specific to the topic. \
-No quotes, no trailing punctuation. Output only the title, nothing else.";
-
-/// Strip whitespace, surrounding quotes, and trailing punctuation that
-/// the model occasionally appends despite the prompt asking it not to.
-/// Returns an empty string if nothing meaningful remains.
-fn clean_title(raw: &str) -> String {
-    let trimmed = raw.trim();
-    let stripped = trimmed
-        .trim_start_matches(|c| c == '"' || c == '\'' || c == '`')
-        .trim_end_matches(|c| c == '"' || c == '\'' || c == '`' || c == '.' || c == ':');
-    stripped.trim().to_string()
-}
+use super::session_titles::{generate_session_summary, TitleGenScope};
 
 /// Project-scoped session list.
 ///
@@ -394,215 +353,6 @@ pub(crate) async fn list_session_events(
     Ok(Json(messages))
 }
 
-pub(crate) async fn generate_session_summary(
-    storage: &StorageClient,
-    http: &reqwest::Client,
-    router_url: &str,
-    jwt: &str,
-    session_id: &str,
-    project_id: &str,
-    agent_id: &str,
-) -> Result<String, String> {
-    let events = storage
-        .list_events(session_id, jwt, None, None)
-        .await
-        .map_err(|e| format!("listing events: {e}"))?;
-
-    let mut transcript = String::new();
-    for event in &events {
-        let event_type = event.event_type.as_deref().unwrap_or("");
-        let content = event.content.as_ref();
-        let text = content
-            .and_then(|c| c.get("text"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        if text.is_empty() {
-            continue;
-        }
-        let role = match event_type {
-            "user_message" => "User",
-            "assistant_message_end" | "task_output" => "Assistant",
-            _ => continue,
-        };
-        transcript.push_str(role);
-        transcript.push_str(": ");
-        transcript.push_str(text);
-        transcript.push('\n');
-        if transcript.len() > TRANSCRIPT_CHAR_LIMIT {
-            transcript.truncate(TRANSCRIPT_CHAR_LIMIT);
-            transcript.push_str("\n[truncated]");
-            break;
-        }
-    }
-
-    if transcript.is_empty() {
-        return Ok(String::new());
-    }
-
-    // Lazy /summarize endpoint also produces ChatGPT-style titles now,
-    // so old sessions backfilled by `useSessionSummaries` end up with
-    // the same look as new sessions titled on-send by
-    // `generate_session_title`. The transcript loaded above gives Haiku
-    // a few extra turns of context to title against (vs. titling from
-    // just the first user message), which is useful when the first
-    // message alone is ambiguous like "fix this" or "again".
-    let req_body = json!({
-        "model": HAIKU_MODEL,
-        "max_tokens": SUMMARY_MAX_TOKENS,
-        "system": [
-            {
-                "type": "text",
-                "text": TITLE_SYSTEM_PROMPT,
-                "cache_control": { "type": "ephemeral" }
-            }
-        ],
-        "messages": [{"role": "user", "content": transcript}],
-    });
-
-    // Stamp the aura-* attribution headers so this LLM round-trip's
-    // tokens and cost land on the right session/project. Without these,
-    // aura-router's SessionContext::from_headers returns None and the
-    // resulting token_usage_daily row gets project_id=null — silently
-    // excluded from per-project cost aggregation.
-    let resp = http
-        .post(format!("{router_url}/v1/messages"))
-        .bearer_auth(jwt)
-        .header("anthropic-beta", "prompt-caching-2024-07-31")
-        .header("x-aura-session-id", session_id)
-        .header("x-aura-project-id", project_id)
-        .header("x-aura-agent-id", agent_id)
-        .json(&req_body)
-        .send()
-        .await
-        .map_err(|e| format!("LLM request failed: {e}"))?;
-
-    if !resp.status().is_success() {
-        let status = resp.status().as_u16();
-        let body = resp.text().await.unwrap_or_default();
-        return Err(format!("LLM returned {status}: {body}"));
-    }
-
-    let body: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| format!("parsing LLM response: {e}"))?;
-
-    let summary = clean_title(
-        body.get("content")
-            .and_then(|c| c.as_array())
-            .and_then(|arr| arr.first())
-            .and_then(|block| block.get("text"))
-            .and_then(|t| t.as_str())
-            .unwrap_or(""),
-    );
-
-    if !summary.is_empty() {
-        let update_req = aura_os_storage::UpdateSessionRequest {
-            summary_of_previous_context: Some(summary.clone()),
-            ..Default::default()
-        };
-        storage
-            .update_session(session_id, jwt, &update_req)
-            .await
-            .map_err(|e| format!("updating session summary: {e}"))?;
-    }
-
-    Ok(summary)
-}
-
-/// On-send title generator. Builds a ChatGPT-style 2-5 word noun
-/// phrase from the user's first message in a brand-new session and
-/// persists it as `summary_of_previous_context`. Designed to be
-/// `tokio::spawn`'d from the chat send path so the title lands in the
-/// sidekick before the assistant's turn finishes streaming.
-///
-/// Distinct from `generate_session_summary` (lazy /summarize endpoint)
-/// because we already have the user's message in hand and don't need
-/// to round-trip storage to load the transcript — keeping the
-/// critical-path latency low. The router call shape (Haiku, x-aura-*
-/// attribution headers, /v1/messages) mirrors that function so token
-/// usage lands on the right session and project.
-pub(crate) async fn generate_session_title(
-    storage: &StorageClient,
-    http: &reqwest::Client,
-    router_url: &str,
-    jwt: &str,
-    session_id: &str,
-    project_id: &str,
-    agent_id: &str,
-    first_user_message: &str,
-) -> Result<String, String> {
-    let trimmed = first_user_message.trim();
-    if trimmed.is_empty() {
-        return Ok(String::new());
-    }
-    let prompt_input: &str = if trimmed.len() > TITLE_INPUT_CHAR_LIMIT {
-        &trimmed[..TITLE_INPUT_CHAR_LIMIT]
-    } else {
-        trimmed
-    };
-
-    let req_body = json!({
-        "model": HAIKU_MODEL,
-        "max_tokens": SUMMARY_MAX_TOKENS,
-        "system": [
-            {
-                "type": "text",
-                "text": TITLE_SYSTEM_PROMPT,
-                "cache_control": { "type": "ephemeral" }
-            }
-        ],
-        "messages": [{"role": "user", "content": prompt_input}],
-    });
-
-    let resp = http
-        .post(format!("{router_url}/v1/messages"))
-        .bearer_auth(jwt)
-        .header("anthropic-beta", "prompt-caching-2024-07-31")
-        .header("x-aura-session-id", session_id)
-        .header("x-aura-project-id", project_id)
-        .header("x-aura-agent-id", agent_id)
-        .json(&req_body)
-        .send()
-        .await
-        .map_err(|e| format!("title LLM request failed: {e}"))?;
-
-    if !resp.status().is_success() {
-        let status = resp.status().as_u16();
-        let body = resp.text().await.unwrap_or_default();
-        return Err(format!("title LLM returned {status}: {body}"));
-    }
-
-    let body: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| format!("parsing title LLM response: {e}"))?;
-
-    let title = clean_title(
-        body.get("content")
-            .and_then(|c| c.as_array())
-            .and_then(|arr| arr.first())
-            .and_then(|block| block.get("text"))
-            .and_then(|t| t.as_str())
-            .unwrap_or(""),
-    );
-
-    if title.is_empty() {
-        return Ok(String::new());
-    }
-
-    let update_req = aura_os_storage::UpdateSessionRequest {
-        summary_of_previous_context: Some(title.clone()),
-        ..Default::default()
-    };
-    storage
-        .update_session(session_id, jwt, &update_req)
-        .await
-        .map_err(|e| format!("updating session title: {e}"))?;
-
-    Ok(title)
-}
-
 pub(crate) async fn summarize_session(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -619,17 +369,18 @@ pub(crate) async fn summarize_session(
     let aid = agent_instance_id.to_string();
     info!(%session_id, "Session summary generation requested");
 
-    let summary = generate_session_summary(
+    let scope = TitleGenScope {
         storage,
-        &state.http_client,
-        &state.router_url,
-        &jwt,
-        &sid,
-        &pid,
-        &aid,
-    )
-    .await
-    .map_err(|e| ApiError::internal(format!("summarizing session: {e}")))?;
+        http: &state.http_client,
+        router_url: &state.router_url,
+        jwt: &jwt,
+        session_id: &sid,
+        project_id: &pid,
+        agent_id: &aid,
+    };
+    let summary = generate_session_summary(&scope)
+        .await
+        .map_err(|e| ApiError::internal(format!("summarizing session: {e}")))?;
 
     info!(%session_id, summary_len = summary.len(), "Session summary generated");
 

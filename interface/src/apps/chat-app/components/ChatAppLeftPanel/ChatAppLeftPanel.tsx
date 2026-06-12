@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../../../api/client";
+import { buildAgentSessionHistoryFetch } from "../../../../hooks/use-load-older-messages";
 import {
   type AnnotatedSession,
   formatDeleteSessionError,
@@ -386,10 +387,13 @@ export function ChatAppLeftPanel() {
       setTimeout(() => {
         useChatHistoryStore.getState().unpinKey(key);
       }, 30_000);
-      void store.fetchHistory(key, () =>
-        api.agents.listSessionEvents(agentId, target.session_id, {
-          limit: STANDALONE_AGENT_HISTORY_LIMIT,
-        }),
+      void store.fetchHistory(
+        key,
+        buildAgentSessionHistoryFetch(
+          agentId,
+          target.session_id,
+          STANDALONE_AGENT_HISTORY_LIMIT,
+        ),
       );
     },
     [resolveSessionAgentId],

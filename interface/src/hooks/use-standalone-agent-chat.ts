@@ -11,6 +11,7 @@ import {
   projectChatHistoryKey,
   useChatHistoryStore,
 } from "../stores/chat-history-store";
+import { buildAgentSessionHistoryFetch } from "./use-load-older-messages";
 import {
   agentSessionsSurfaceKey,
   buildOptimisticSession,
@@ -32,6 +33,8 @@ import type { AgentInstance, Project } from "../shared/types";
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 const EMPTY_PROJECTS: Project[] = [];
 const EMPTY_SESSION_EVENTS_FETCH = () => Promise.resolve([]);
+/** Page size for "load older" upward pagination of a pinned session. */
+const OLDER_HISTORY_PAGE_SIZE = 50;
 
 // Markers for the server-side auto-created Home project. Kept in sync
 // with `HOME_PROJECT_NAME` / `AGENT_HOME_PROJECT_MARKER` /
@@ -360,17 +363,31 @@ export function useStandaloneAgentChat(
     // returns only events that belong to the pinned session id, so
     // the reset actually sticks.
     if (pinnedSessionId) {
-      const pinned = pinnedSessionId;
-      return () =>
-        api.agents.listSessionEvents(agentId, pinned, {
-          limit: STANDALONE_AGENT_HISTORY_LIMIT,
-        });
+      // Paginated initial load: fetch only the trailing window of the
+      // pinned session and seed the "load older" pagination state.
+      return buildAgentSessionHistoryFetch(
+        agentId,
+        pinnedSessionId,
+        STANDALONE_AGENT_HISTORY_LIMIT,
+      );
     }
     return () =>
       api.agents.listEvents(agentId, {
         limit: STANDALONE_AGENT_HISTORY_LIMIT,
       });
   }, [agentId, freshCanvasPending, pinnedSessionId]);
+
+  // Fetches one older page above the loaded transcript of the pinned
+  // session (cursor-paginated upward scroll).
+  const loadOlderPage = useMemo(() => {
+    if (!agentId || !pinnedSessionId) return undefined;
+    const pinned = pinnedSessionId;
+    return (cursor: string | null) =>
+      api.agents.listSessionEventsPaginated(agentId, pinned, {
+        limit: OLDER_HISTORY_PAGE_SIZE,
+        before: cursor ?? undefined,
+      });
+  }, [agentId, pinnedSessionId]);
 
   const setSelectedAgent = useAgentStore((s) => s.setSelectedAgent);
   const onSwitch = useCallback(() => {
@@ -594,6 +611,7 @@ export function useStandaloneAgentChat(
     hasPriorSession: prior.hasPriorSession,
     isLoadingPriorSession: prior.isLoadingPriorSession,
     sessionBoundaries: prior.sessionBoundaries,
+    loadOlderPage,
     projects: displayProjects,
     selectedProjectId: effectiveProjectId,
     llmProjectId,

@@ -12,7 +12,7 @@ use crate::capture_auth::{
     demo_agent_events, demo_agent_id, demo_agent_instance_id, demo_project_id,
     is_capture_access_token,
 };
-use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::error::{map_storage_error, ApiResult};
 use crate::state::{AppState, AuthJwt};
 
 use super::super::conversions::events_to_session_history;
@@ -22,6 +22,8 @@ use super::request::{
     apply_cursor_filter, normalize_agent_history_limit, slice_recent_agent_events,
     target_window_size, AgentEventsQuery, PaginatedEventsQuery, PaginatedEventsResponse,
 };
+use super::session_access::resolve_agent_owned_session;
+use super::session_pagination::{cursor_page_available, tail_page};
 
 pub(crate) async fn list_events(
     State(state): State<AppState>,
@@ -79,61 +81,73 @@ pub(crate) async fn list_agent_events_paginated(
     Path(agent_id): Path<AgentId>,
     Query(query): Query<PaginatedEventsQuery>,
 ) -> ApiResult<Json<PaginatedEventsResponse>> {
+    let limit = normalize_agent_history_limit(query.limit).unwrap_or(50);
+
     if is_capture_access_token(&jwt) && agent_id == demo_agent_id() {
         let filtered = apply_cursor_filter(
             demo_agent_events(),
             query.before.as_deref(),
             query.after.as_deref(),
         );
-        let limit = normalize_agent_history_limit(query.limit).unwrap_or(50);
-        let has_more = filtered.len() > limit;
-        let start = filtered.len().saturating_sub(limit);
-        let result = filtered[start..].to_vec();
-        let next_cursor = if has_more {
-            result.first().map(|m| m.event_id.to_string())
-        } else {
-            None
-        };
-        return Ok(Json(PaginatedEventsResponse {
-            events: result,
-            has_more,
-            next_cursor,
-        }));
+        return Ok(Json(tail_page(filtered, limit, false)));
     }
 
     let _ = state.require_storage_client()?;
-    // When either cursor is present we need the full transcript so the
-    // `before`/`after` anchor can be located; otherwise we only need
-    // enough events to fill the requested window.
-    let target_size = if query.before.is_some() || query.after.is_some() {
-        None
-    } else {
-        target_window_size(query.limit, 0)
-    };
-    let messages =
-        load_latest_agent_events_from_storage_result(&state, &agent_id, &jwt, target_size)
-            .await
-            .map_err(map_storage_error)?;
+    let messages = load_window_for_cursor_query(&state, &agent_id, &jwt, &query, limit)
+        .await
+        .map_err(map_storage_error)?;
 
     let filtered = apply_cursor_filter(messages, query.before.as_deref(), query.after.as_deref());
+    Ok(Json(tail_page(filtered, limit, false)))
+}
 
-    let limit = normalize_agent_history_limit(query.limit).unwrap_or(50);
+/// Bounded aggregated-history load for the cursor-paginated endpoint.
+///
+/// Any `before`/`after` cursor used to force `target_size = None`, i.e. a
+/// full walk of every historical session just to locate the anchor.
+/// Instead, walk sessions newest-first with escalating targets and stop
+/// as soon as the loaded suffix provably contains the whole requested
+/// page ([`cursor_page_available`]) or history is exhausted (the loader
+/// returned fewer messages than asked for).
+///
+/// Residual cost: when the cursor sits deep in history, or is
+/// stale/unknown, the final attempt still loads the full transcript —
+/// unavoidable for the aggregated multi-session case, since storage only
+/// offers ascending offset reads and the cursor is an opaque message id
+/// with no session/offset hint. The common case (cursor near the tail,
+/// as produced by chat scrollback) is now bounded.
+async fn load_window_for_cursor_query(
+    state: &AppState,
+    agent_id: &AgentId,
+    jwt: &str,
+    query: &PaginatedEventsQuery,
+    limit: usize,
+) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
+    if query.before.is_none() && query.after.is_none() {
+        let target = target_window_size(query.limit, 0);
+        return load_latest_agent_events_from_storage_result(state, agent_id, jwt, target).await;
+    }
 
-    let has_more = filtered.len() > limit;
-    let start = filtered.len().saturating_sub(limit);
-    let result = filtered[start..].to_vec();
-
-    let next_cursor = if has_more {
-        result.first().map(|m| m.event_id.to_string())
-    } else {
-        None
-    };
-
-    Ok(Json(PaginatedEventsResponse {
-        events: result,
-        has_more,
-        next_cursor,
-    }))
+    // `2 * limit + 1`: room for the page itself, the cursor's own page
+    // above it, and one extra message so `has_more` is provable.
+    let base_target = limit.saturating_mul(2).saturating_add(1);
+    for target in [base_target, base_target.saturating_mul(8)] {
+        let messages =
+            load_latest_agent_events_from_storage_result(state, agent_id, jwt, Some(target))
+                .await?;
+        let exhausted = messages.len() < target;
+        if exhausted
+            || cursor_page_available(
+                &messages,
+                query.before.as_deref(),
+                query.after.as_deref(),
+                limit,
+            )
+        {
+            return Ok(messages);
+        }
+    }
+    load_latest_agent_events_from_storage_result(state, agent_id, jwt, None).await
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -177,52 +191,15 @@ pub(crate) async fn list_agent_session_events(
     Query(query): Query<AgentSessionEventsQuery>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let storage = state.require_storage_client()?;
-    let session_id_str = session_id.to_string();
-    let agent_id_str = agent_id.to_string();
+    let owned = resolve_agent_owned_session(storage, &jwt, &agent_id, &session_id).await?;
 
-    let storage_session =
-        storage
-            .get_session(&session_id_str, &jwt)
-            .await
-            .map_err(|e| match &e {
-                aura_os_storage::StorageError::Server { status: 404, .. } => {
-                    ApiError::not_found("session not found")
-                }
-                _ => map_storage_error(e),
-            })?;
-
-    let project_agent_id = storage_session
-        .project_agent_id
-        .clone()
-        .ok_or_else(|| ApiError::not_found("session not found"))?;
-
-    let project_agent = storage
-        .get_project_agent(&project_agent_id, &jwt)
-        .await
-        .map_err(|e| match &e {
-            aura_os_storage::StorageError::Server { status: 404, .. } => {
-                ApiError::not_found("session not found")
-            }
-            _ => map_storage_error(e),
-        })?;
-
-    let owns_session = project_agent.agent_id.as_deref() == Some(agent_id_str.as_str());
-    if !owns_session {
-        warn!(
-            %agent_id,
-            %session_id,
-            owner_agent_id = ?project_agent.agent_id,
-            "list_agent_session_events: session does not belong to URL agent",
-        );
-        return Err(ApiError::not_found("session not found"));
-    }
-
-    let project_id = storage_session.project_id.clone().unwrap_or_default();
+    let project_id = owned.session.project_id.clone().unwrap_or_default();
     let storage_events = storage
-        .list_events(&session_id_str, &jwt, None, None)
+        .list_events(&session_id.to_string(), &jwt, None, None)
         .await
         .map_err(map_storage_error)?;
-    let mut messages = events_to_session_history(&storage_events, &project_agent_id, &project_id);
+    let mut messages =
+        events_to_session_history(&storage_events, &owned.project_agent_id, &project_id);
 
     if let Some(since) = query.since.as_deref() {
         if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(since) {

@@ -18,6 +18,7 @@ import {
   useSessionsListStore,
 } from "../../../../stores/sessions-list-store";
 import { usePriorSessions } from "../../../../hooks/use-prior-sessions";
+import { buildProjectSessionHistoryFetch } from "../../../../hooks/use-load-older-messages";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { useContextUsage } from "../../../../stores/context-usage-store";
 import { useHydrateContextUtilization } from "../../../../hooks/use-hydrate-context-utilization";
@@ -34,6 +35,8 @@ import { ProjectAgentSwitcher } from "../ProjectAgentSwitcher";
 const EMPTY_PROJECTS: Project[] = [];
 const EMPTY_AGENT_INSTANCES: AgentInstance[] = [];
 const EMPTY_SESSION_EVENTS_FETCH = (): Promise<never[]> => Promise.resolve([]);
+/** Page size for "load older" upward pagination. */
+const OLDER_HISTORY_PAGE_SIZE = 50;
 
 function selectCurrentProject(projectId: string) {
   return (state: { projects: Project[] }): Project[] => {
@@ -193,10 +196,26 @@ export function AgentChatPanel({
   const fetchFn = useMemo(() => {
     if (fresh.freshCanvasPending) return EMPTY_SESSION_EVENTS_FETCH;
     if (sessionId) {
-      return () => api.listSessionEvents(projectId, agentInstanceId, sessionId);
+      // Paginated initial load: fetch only the trailing window instead
+      // of the entire session, and seed the thread's "load older"
+      // pagination state from the response.
+      return buildProjectSessionHistoryFetch(projectId, agentInstanceId, sessionId);
     }
     return () => api.getEvents(projectId, agentInstanceId);
   }, [projectId, agentInstanceId, sessionId, fresh.freshCanvasPending]);
+
+  // Fetches one older page above the currently-loaded transcript.
+  // Only meaningful for pinned sessions (the paginated endpoint is
+  // session-scoped); the no-session lane view keeps its existing
+  // bounded fetch.
+  const loadOlderPage = useMemo(() => {
+    if (!sessionId) return undefined;
+    return (cursor: string | null) =>
+      api.listSessionEventsPaginated(projectId, agentInstanceId, sessionId, {
+        limit: OLDER_HISTORY_PAGE_SIZE,
+        before: cursor ?? undefined,
+      });
+  }, [projectId, agentInstanceId, sessionId]);
 
   const onProjectSwitch = useCallback(() => {
     setLastProject(projectId);
@@ -353,6 +372,7 @@ export function AgentChatPanel({
     hasPriorSession: prior.hasPriorSession,
     isLoadingPriorSession: prior.isLoadingPriorSession,
     sessionBoundaries: prior.sessionBoundaries,
+    loadOlderPage,
     projects: currentProject,
     selectedProjectId: projectId,
     // The projects-app pins the wire `project_id` to the route

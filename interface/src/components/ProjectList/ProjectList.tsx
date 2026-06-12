@@ -8,6 +8,7 @@ import { ProjectListModals } from "./ProjectListModals";
 import { ExplorerContextMenu } from "./ExplorerContextMenu";
 import { useProjectsExplorerModel } from "./project-list-projects-explorer";
 import { api } from "../../api/client";
+import { buildProjectSessionHistoryFetch } from "../../hooks/use-load-older-messages";
 import {
   projectChatHistoryKey,
   sessionHistoryKey,
@@ -85,12 +86,11 @@ export function ProjectList() {
       );
       void useChatHistoryStore.getState().fetchHistory(
         key,
-        () =>
-          api.listSessionEvents(
-            mostRecentForInstance._projectId,
-            mostRecentForInstance._agentInstanceId,
-            mostRecentForInstance.session_id,
-          ),
+        buildProjectSessionHistoryFetch(
+          mostRecentForInstance._projectId,
+          mostRecentForInstance._agentInstanceId,
+          mostRecentForInstance.session_id,
+        ),
       );
     };
     if (sessionsStore.sessionsBySurface[surfaceKey] !== undefined) {

@@ -67,16 +67,16 @@ async fn generate_rollover_summary_for_session(
     // Stringify the typed session id once at this storage boundary;
     // `generate_session_summary` keeps `&str` to match the REST shape.
     let session_id_str = ctx.session_id.to_string();
-    let result = crate::handlers::agents::sessions::generate_session_summary(
-        &ctx.storage,
-        &extras.http_client,
-        &extras.router_url,
-        &ctx.jwt,
-        &session_id_str,
-        &ctx.project_id,
-        &ctx.project_agent_id,
-    )
-    .await;
+    let scope = crate::handlers::agents::session_titles::TitleGenScope {
+        storage: &ctx.storage,
+        http: &extras.http_client,
+        router_url: &extras.router_url,
+        jwt: &ctx.jwt,
+        session_id: &session_id_str,
+        project_id: &ctx.project_id,
+        agent_id: &ctx.project_agent_id,
+    };
+    let result = crate::handlers::agents::session_titles::generate_session_summary(&scope).await;
     match result {
         Ok(summary) if !summary.trim().is_empty() => summary,
         Ok(_) => {

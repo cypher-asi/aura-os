@@ -18,7 +18,10 @@ import { availableModelsForAdapter } from "../../../constants/models";
 import { useDemoRecordStore } from "../../../stores/demo-record-store";
 import { useChatUI, useChatUIStore } from "../../../stores/chat-ui-store";
 import { useConversationSnapshot } from "../../../hooks/use-conversation-snapshot";
-import { useLoadOlderMessages } from "../../../hooks/use-load-older-messages";
+import {
+  useLoadOlderMessages,
+  type LoadOlderPageFetcher,
+} from "../../../hooks/use-load-older-messages";
 import { useChatViewStore, useThreadView } from "../../../stores/chat-view-store";
 import {
   dispatch as dispatchResolvedSend,
@@ -78,6 +81,8 @@ export interface UseChatPanelStateOptions {
   llmProjectId?: string;
   agentId?: string;
   sendDisabled?: boolean;
+  /** Fetches one older history page for this thread (cursor-paginated). */
+  loadOlderPage?: LoadOlderPageFetcher;
 }
 
 export function useChatPanelState({
@@ -94,6 +99,7 @@ export function useChatPanelState({
   llmProjectId,
   agentId,
   sendDisabled = false,
+  loadOlderPage,
 }: UseChatPanelStateOptions) {
   const wireProjectId = llmProjectId ?? selectedProjectId;
   // Imperative draft writes only. The live draft subscription lives in
@@ -171,7 +177,7 @@ export function useChatPanelState({
 
   const { loadOlder, isLoadingOlder, hasOlderMessages } = useLoadOlderMessages({
     threadKey: effectiveTranscriptKey,
-    agentId,
+    fetchPage: loadOlderPage,
   });
 
   const threadView = useThreadView(streamKey);

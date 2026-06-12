@@ -101,6 +101,10 @@ vi.mock("../../../../stores/sessions-list-store", () => ({
 }));
 
 vi.mock("../../../../stores/chat-history-store", () => ({
+  agentSessionHistoryKey: (agentId: string, sessionId: string) =>
+    `agent:${agentId}:session:${sessionId}`,
+  sessionHistoryKey: (projectId: string, instanceId: string, sessionId: string) =>
+    `session:${projectId}:${instanceId}:${sessionId}`,
   useChatHistoryStore: {
     getState: () => ({
       pinKey: mocks.pinKey,
