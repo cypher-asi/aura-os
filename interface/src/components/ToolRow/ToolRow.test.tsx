@@ -271,6 +271,40 @@ describe("ToolCallBlock (Block dispatch)", () => {
       expect(text).toContain("exit 101");
       expect(text).not.toContain("EXIT 101");
     });
+
+    it("drops the $ prompt entirely when no command was recorded", () => {
+      const { container } = render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "run_command",
+            pending: false,
+            started: false,
+            input: {},
+            result: "run_command completed",
+          })}
+        />,
+      );
+      const text = container.textContent ?? "";
+      expect(text).not.toContain("$");
+      expect(text).not.toContain("…");
+      expect(text).toContain("Run command");
+    });
+
+    it("recovers the command from raw_input when input arrived as a plain string", () => {
+      const { container } = render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "run_command",
+            pending: false,
+            started: false,
+            input: { raw_input: "git fetch origin" },
+          })}
+        />,
+      );
+      const text = container.textContent ?? "";
+      expect(text).toContain("git fetch origin");
+      expect(text).toContain("Fetch remote changes");
+    });
   });
 
   describe("task blocks", () => {

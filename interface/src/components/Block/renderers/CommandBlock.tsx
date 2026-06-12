@@ -28,16 +28,41 @@ function buildCopyText(
   exitCode: number | null,
 ): string {
   const lines: string[] = [];
-  lines.push(`$ ${command || ""}`);
+  if (command) lines.push(`$ ${command}`);
   if (stdout) lines.push(stdout);
   if (stderr) lines.push(stderr);
   if (exitCode !== null) lines.push(`# exit ${exitCode}`);
   return lines.join("\n");
 }
 
+/**
+ * Recover the command line from wherever it may live. The canonical key
+ * is `input.command`, but marker-rehydrated history and non-JSON
+ * snapshots can land it under `cmd` / `raw_input`, and some result
+ * envelopes echo it back in `metadata.command`. Returns "" when nothing
+ * is recorded so the header can drop the `$` prompt instead of showing
+ * a meaningless `$ …`.
+ */
+function resolveCommand(
+  input: Record<string, unknown>,
+  metadata: unknown,
+): string {
+  for (const key of ["command", "cmd", "raw_input"]) {
+    const value = input[key];
+    if (typeof value === "string" && value.trim().length > 0) return value.trim();
+  }
+  if (metadata && typeof metadata === "object") {
+    const fromMeta = (metadata as Record<string, unknown>).command;
+    if (typeof fromMeta === "string" && fromMeta.trim().length > 0) {
+      return fromMeta.trim();
+    }
+  }
+  return "";
+}
+
 export function CommandBlock({ entry, defaultExpanded }: CommandBlockProps) {
-  const command = (entry.input.command as string) || "";
-  const { stdout, stderr, exitCode } = decodeCapturedOutput(entry.result);
+  const { stdout, stderr, exitCode, metadata } = decodeCapturedOutput(entry.result);
+  const command = resolveCommand(entry.input, metadata);
   const hasOutput = !!stdout || !!stderr;
 
   const severity = deriveToolSeverity(entry, exitCode);
@@ -69,10 +94,17 @@ export function CommandBlock({ entry, defaultExpanded }: CommandBlockProps) {
       icon={<SquareTerminal size={12} />}
       title={toolLabel}
       summary={
-        <>
-          <span className={styles.cmdPrompt}>$</span>
-          <span className={styles.cmdLine}>{command || "…"}</span>
-        </>
+        // Only render the shell prompt when there is an actual command.
+        // A bare `$ …` on rows whose input was never recorded (e.g.
+        // marker-rehydrated history) reads as a broken card.
+        command ? (
+          <>
+            <span className={styles.cmdPrompt}>$</span>
+            <span className={styles.cmdLine}>{command}</span>
+          </>
+        ) : entry.pending ? (
+          <span className={styles.cmdPending}>starting…</span>
+        ) : undefined
       }
       status={status}
       trailing={trailing}

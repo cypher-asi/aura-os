@@ -121,6 +121,14 @@
    */
 }
 
+/* Placeholder summary while a command row exists but its input hasn't
+   streamed in yet — calmer than a bare `$ …`. */
+.cmdPending {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 11px;
+}
+
 .cmdOutput {
   font-family: var(--font-mono, monospace);
   font-size: 11px;
