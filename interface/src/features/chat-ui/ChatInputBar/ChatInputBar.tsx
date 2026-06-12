@@ -29,18 +29,13 @@ import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
 import type {
   GenerationMode,
-  ImageQuality,
   ModelEffort,
   ModelVendor,
 } from "../../../constants/models";
 import {
-  availableModelsForAdapter,
-  groupChatModelsByVendor,
   IMAGE_QUALITY_OPTIONS,
   modelLabelWithEffort,
-  getModelsForMode,
   modelSupportsQuality,
-  sortModelsForMenu,
 } from "../../../constants/models";
 import { isGenerationCommand } from "../../../constants/commands";
 import {
@@ -64,6 +59,8 @@ import {
 import { SlashCommandMenu } from "./SlashCommandMenu";
 import { FileMentionMenu } from "./FileMentionMenu";
 import { useProjectFiles } from "./useProjectFiles";
+import { useInputTriggers } from "./useInputTriggers";
+import { useModelSelection } from "./useModelSelection";
 import { CommandChips } from "./CommandChips";
 import { DemoRecordSettings } from "./DemoRecordSettings";
 import { useChatUI } from "../../../stores/chat-ui-store";
@@ -79,25 +76,6 @@ import styles from "./ChatInputBar.module.css";
 export interface ChatInputBarHandle {
   focus: () => void;
   isFocused?: () => boolean;
-}
-
-function getTrailingTriggerQuery(
-  value: string,
-  cursor: number,
-  trigger: "/" | "@",
-): { start: number; query: string } | null {
-  let tokenStart = cursor;
-  while (tokenStart > 0) {
-    const code = value.charCodeAt(tokenStart - 1);
-    if (code === 32 || code === 9 || code === 10 || code === 13) break;
-    tokenStart--;
-  }
-
-  if (value.charAt(tokenStart) !== trigger) return null;
-  return {
-    start: tokenStart,
-    query: value.slice(tokenStart + 1, cursor),
-  };
 }
 
 /**
@@ -359,18 +337,6 @@ export const DesktopChatInputBar = memo(
     const setCouncilCount = chatUI.setCouncilCount;
     const setCouncilModel = chatUI.setCouncilModel;
     const setCouncilMechanism = chatUI.setCouncilMechanism;
-    const onModelChange = useCallback(
-      (model: string, effort?: ModelEffort) => {
-        chatUI.setSelectedModel(streamKey, model, adapterType, agentId, effort);
-      },
-      [chatUI.setSelectedModel, streamKey, adapterType, agentId],
-    );
-    const onImageQualityChange = useCallback(
-      (quality: ImageQuality) => {
-        chatUI.setImageQuality(streamKey, quality, agentId);
-      },
-      [chatUI.setImageQuality, streamKey, agentId],
-    );
     const clearGenerationCommands = useCallback(() => {
       if (onCommandsChange && selectedCommands.some((c) => isGenerationCommand(c.id))) {
         onCommandsChange(selectedCommands.filter((c) => !isGenerationCommand(c.id)));
@@ -466,24 +432,12 @@ export const DesktopChatInputBar = memo(
     // the rounded container) so the prompt can use the full width when
     // it grows tall.
     const [isMultiLine, setIsMultiLine] = useState(false);
-    const [slashMenuOpen, setSlashMenuOpen] = useState(false);
-    const [slashQuery, setSlashQuery] = useState("");
     // Fallback store for the demo-record settings when the owner does
     // not lift them (controlled prop wins via `effectiveDemoOptions`).
     const [localDemoOptions, setLocalDemoOptions] = useState<DemoRecordOptions>(
       DEFAULT_DEMO_RECORD_OPTIONS,
     );
-    const slashStartRef = useRef<number | null>(null);
-    const [mentionMenuOpen, setMentionMenuOpen] = useState(false);
-    const [mentionQuery, setMentionQuery] = useState("");
-    const [mentionRefreshNonce, setMentionRefreshNonce] = useState(0);
-    const mentionStartRef = useRef<number | null>(null);
     const canUseMentions = Boolean(workspacePath);
-    const projectFiles = useProjectFiles({
-      workspacePath: canUseMentions ? workspacePath : undefined,
-      remoteAgentId,
-      refreshNonce: mentionRefreshNonce,
-    });
     const projectMenuRef = useRef<HTMLDivElement>(null);
     const shellRef = useRef<InputBarShellHandle>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -508,6 +462,45 @@ export const DesktopChatInputBar = memo(
       textareaRefShim as React.RefObject<HTMLTextAreaElement | null>,
       remoteAgentId,
     );
+
+    // Generation slash commands (`/image` etc.) act as a keyboard path
+    // to the mode selector; the trigger hook hands us the target mode
+    // and we own the store write.
+    const onSelectGenerationMode = useCallback(
+      (mode: AgentMode) => {
+        chatUI.setSelectedMode(streamKey, mode, adapterType, agentId);
+      },
+      [chatUI.setSelectedMode, streamKey, adapterType, agentId],
+    );
+
+    const {
+      slashMenuOpen,
+      slashQuery,
+      mentionMenuOpen,
+      mentionQuery,
+      mentionRefreshNonce,
+      handleInputChange,
+      handleTextareaKeyDown,
+      handleCommandSelect,
+      handleSlashClose,
+      handleMentionSelect,
+      handleMentionClose,
+    } = useInputTriggers({
+      input,
+      onInputChange,
+      shellRef,
+      canUseMentions,
+      selectedCommands,
+      onCommandsChange,
+      onSelectGenerationMode,
+      addFileFromPath,
+    });
+
+    const projectFiles = useProjectFiles({
+      workspacePath: canUseMentions ? workspacePath : undefined,
+      remoteAgentId,
+      refreshNonce: mentionRefreshNonce,
+    });
 
     useEffect(() => {
       if (!projectMenuOpen) return;
@@ -596,26 +589,22 @@ export const DesktopChatInputBar = memo(
       },
       [addFiles, generationMode],
     );
-    // In chat mode, let the (only) `aura_harness` adapter drive the available
-    // model list. In image/3d mode, use the mode-filtered model list (image/3d
-    // generation is provider-agnostic today).
-    const modelsForMode =
-      generationMode === "chat"
-        ? availableModelsForAdapter(adapterType)
-        : getModelsForMode(generationMode);
-    const sortedModelsForMode = useMemo(
-      () => sortModelsForMenu(modelsForMode),
-      [modelsForMode],
-    );
-    const shouldUseCondensedAuraMenu =
-      generationMode === "chat" &&
-      (!adapterType || adapterType === "aura_harness");
-    // Ordered, non-empty vendor sections (Anthropic / OpenAI / Open
-    // Source today) for the collapsible chat picker.
-    const vendorGroups = useMemo(
-      () => groupChatModelsByVendor(modelsForMode),
-      [modelsForMode],
-    );
+    const {
+      modelsForMode,
+      sortedModelsForMode,
+      vendorGroups,
+      shouldUseCondensedAuraMenu,
+      isModelPickerInteractive,
+      onModelChange,
+      onImageQualityChange,
+    } = useModelSelection({
+      streamKey,
+      adapterType,
+      agentId,
+      generationMode,
+      setSelectedModel: chatUI.setSelectedModel,
+      setImageQuality: chatUI.setImageQuality,
+    });
     const toggleVendor = useCallback((vendor: ModelVendor) => {
       setCollapsedVendors((prev) => {
         const next = new Set(prev);
@@ -629,44 +618,6 @@ export const DesktopChatInputBar = memo(
     }, []);
 
     const excludeIds = new Set(selectedCommands.map((c) => c.id));
-
-    const handleCommandSelect = useCallback(
-      (cmd: SlashCommand) => {
-        if (isGenerationCommand(cmd.id)) {
-          // Slash command becomes a fast keyboard path to the mode
-          // selector. The mode itself injects the matching command
-          // id at send time, so we don't add a redundant chip.
-          const targetMode: AgentMode =
-            cmd.id === "generate_image" ? "image" :
-            cmd.id === "generate_video" ? "video" :
-            "3d";
-          chatUI.setSelectedMode(streamKey, targetMode, adapterType, agentId);
-        } else {
-          onCommandsChange?.([...selectedCommands, cmd]);
-        }
-        if (slashStartRef.current !== null) {
-          const before = input.slice(0, slashStartRef.current);
-          const afterSlash = input.slice(slashStartRef.current);
-          const spaceIdx = afterSlash.indexOf(" ");
-          const after = spaceIdx === -1 ? "" : afterSlash.slice(spaceIdx + 1);
-          onInputChange(before + after);
-        }
-        setSlashMenuOpen(false);
-        setSlashQuery("");
-        slashStartRef.current = null;
-        shellRef.current?.focus();
-      },
-      [
-        adapterType,
-        agentId,
-        chatUI.setSelectedMode,
-        input,
-        onCommandsChange,
-        onInputChange,
-        selectedCommands,
-        streamKey,
-      ],
-    );
 
     const handleCommandRemove = useCallback(
       (id: string) => {
@@ -701,89 +652,6 @@ export const DesktopChatInputBar = memo(
         }
       })();
     }, [effectiveDemoOptions, handleDemoOptionsChange]);
-
-    const handleInputChange = useCallback(
-      (value: string) => {
-        onInputChange(value);
-        const el = shellRef.current?.getTextarea();
-        if (!el) return;
-        const cursor = el.selectionStart;
-        const slashMatch = getTrailingTriggerQuery(value, cursor, "/");
-        if (slashMatch) {
-          slashStartRef.current = slashMatch.start;
-          setSlashQuery(slashMatch.query);
-          setSlashMenuOpen(true);
-        } else if (slashMenuOpen) {
-          setSlashMenuOpen(false);
-          setSlashQuery("");
-          slashStartRef.current = null;
-        }
-
-        // @-mention detection mirrors the slash-menu trigger shape but
-        // is only armed when the surrounding chat is project-scoped
-        // (workspacePath is set). The two menus are mutually exclusive
-        // in practice — `@` and `/` are different leading tokens — so
-        // no tie-breaking is needed here.
-        if (canUseMentions) {
-          const mentionMatch = getTrailingTriggerQuery(value, cursor, "@");
-          if (mentionMatch) {
-            const wasClosed = !mentionMenuOpen;
-            mentionStartRef.current = mentionMatch.start;
-            setMentionQuery(mentionMatch.query);
-            setMentionMenuOpen(true);
-            // Refresh the file listing the moment the menu opens so
-            // newly-created files show up without waiting for the
-            // explorer's 3s polling loop.
-            if (wasClosed) setMentionRefreshNonce((n) => n + 1);
-          } else if (mentionMenuOpen) {
-            setMentionMenuOpen(false);
-            setMentionQuery("");
-            mentionStartRef.current = null;
-          }
-        }
-      },
-      [canUseMentions, mentionMenuOpen, onInputChange, slashMenuOpen],
-    );
-
-    const handleTextareaKeyDown = useCallback(
-      (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (
-          (slashMenuOpen || mentionMenuOpen) &&
-          ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)
-        ) {
-          // The slash / mention menu owns these keys while open;
-          // preventDefault tells the shell not to treat Enter as submit.
-          e.preventDefault();
-        }
-      },
-      [slashMenuOpen, mentionMenuOpen],
-    );
-
-    const handleMentionSelect = useCallback(
-      (file: { path: string; name: string }) => {
-        // Strip the `@query` token from the input the same way the
-        // slash menu strips its `/cmd` token, then push the file into
-        // the attachment pipeline (S3 upload starts in the background).
-        if (mentionStartRef.current !== null) {
-          const before = input.slice(0, mentionStartRef.current);
-          const afterAt = input.slice(mentionStartRef.current);
-          const spaceIdx = afterAt.indexOf(" ");
-          const after = spaceIdx === -1 ? "" : afterAt.slice(spaceIdx + 1);
-          onInputChange(before + after);
-        }
-        setMentionMenuOpen(false);
-        setMentionQuery("");
-        mentionStartRef.current = null;
-        void addFileFromPath(file.path);
-      },
-      [input, onInputChange, addFileFromPath],
-    );
-
-    const handleMentionClose = useCallback(() => {
-      setMentionMenuOpen(false);
-      setMentionQuery("");
-      mentionStartRef.current = null;
-    }, []);
 
     // 3D mode is a two-step in-bar pipeline: with no source image
     // pinned, the user types a prompt and the first send runs the
@@ -925,7 +793,6 @@ export const DesktopChatInputBar = memo(
       [renderModelMenuList, selectedModel, selectedEffort, onModelChange],
     );
 
-    const isModelPickerInteractive = modelsForMode.length > 1;
     // Expand every vendor section each time the picker reopens, so a
     // user who collapsed sections last time still sees the full list.
     // `ModelPicker` itself keeps the caret focused in the textarea via
@@ -943,11 +810,7 @@ export const DesktopChatInputBar = memo(
             query={slashQuery}
             excludeIds={excludeIds}
             onSelect={handleCommandSelect}
-            onClose={() => {
-              setSlashMenuOpen(false);
-              setSlashQuery("");
-              slashStartRef.current = null;
-            }}
+            onClose={handleSlashClose}
           />
         )}
         {mentionMenuOpen && canUseMentions && (
