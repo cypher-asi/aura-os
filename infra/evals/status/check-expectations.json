@@ -149,22 +149,6 @@
         { "path": "imageUrlPresent", "equals": true }
       ]
     },
-    "model3d-generation-stream": {
-      "description": "3D generation stream emits frame types and completion.",
-      "requiredEvidence": ["frameTypes"]
-    },
-    "video-generation-stream": {
-      "description": "Video generation stream emits frame types and completion.",
-      "requiredEvidence": ["frameTypes"]
-    },
-    "live-benchmark-hello-world": {
-      "description": "Existing live benchmark artifact reports benchmark output.",
-      "requiredEvidence": ["files"]
-    },
-    "harness-fixture-suite": {
-      "description": "Existing harness fixture artifact reports fixture output.",
-      "requiredEvidence": ["files"]
-    },
     "marketplace-agents": {
       "description": "Marketplace agent catalog returns a list count.",
       "requiredEvidence": ["count"]

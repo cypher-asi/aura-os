@@ -200,7 +200,7 @@ fn trim_local_path(value: Option<&str>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use aura_os_core::OrgId;
+    use aura_os_core::{AgentPermissions, AgentScope, OrgId};
 
     fn create_request(org_id: OrgId) -> CreateAgentRequest {
         CreateAgentRequest {
@@ -261,5 +261,26 @@ mod tests {
         apply_submitted_org_fallback(&mut agent, &prepared);
 
         assert_eq!(agent.org_id, Some(org_id));
+    }
+
+    #[test]
+    fn prepare_create_preserves_scoped_zero_capability_permissions() {
+        let org_id = OrgId::new();
+        let mut request = create_request(org_id);
+        request.permissions = AgentPermissions {
+            scope: AgentScope {
+                orgs: vec![org_id.to_string()],
+                ..AgentScope::default()
+            },
+            capabilities: Vec::new(),
+        };
+
+        let prepared = prepare_create(request).expect("valid create request");
+
+        assert!(prepared.net_req.permissions.capabilities.is_empty());
+        assert_eq!(
+            prepared.net_req.permissions.scope.orgs,
+            vec![org_id.to_string()]
+        );
     }
 }
