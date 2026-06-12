@@ -498,13 +498,37 @@ async function getProjectStats() {
   return { result };
 }
 
-function resolveLoopModel(args) {
-  return optionalTrimmedString(args?.model) ?? optionalTrimmedString(process.env.AURA_MCP_MODEL);
+// Resolve the model the calling agent is running on by reading its
+// project-agent instance (`AURA_MCP_AGENT_INSTANCE_ID`). The dev-loop
+// start otherwise inherits the *loop* instance's model, which is often
+// unset for system-promoted Loop rows — so the harness rejects the run
+// with HTTP 400 "missing model". Best-effort: a lookup failure returns
+// undefined and the caller falls through to the no-model behavior.
+async function resolveCallerAgentModel() {
+  const agentInstanceId = process.env.AURA_MCP_AGENT_INSTANCE_ID?.trim();
+  if (!agentInstanceId) {
+    return undefined;
+  }
+  try {
+    const instance = await api(
+      `/api/projects/${projectId}/agents/${encodeURIComponent(agentInstanceId)}`,
+    );
+    return optionalTrimmedString(instance?.default_model)
+      ?? optionalTrimmedString(instance?.model);
+  } catch {
+    return undefined;
+  }
+}
+
+async function resolveLoopModel(args) {
+  return optionalTrimmedString(args?.model)
+    ?? optionalTrimmedString(process.env.AURA_MCP_MODEL)
+    ?? (await resolveCallerAgentModel());
 }
 
 async function startDevLoop(args) {
   let query = currentAgentLoopQuery();
-  const model = resolveLoopModel(args);
+  const model = await resolveLoopModel(args);
   if (model) {
     query += `&model=${encodeURIComponent(model)}`;
   }
