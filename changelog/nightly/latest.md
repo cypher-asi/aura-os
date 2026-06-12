@@ -1,68 +1,69 @@
-# Agent onboarding wizard, marketing site overhaul, and analytics rescue
+# Agent onboarding wizard, mobile public site, and analytics integrity
 
 - Date: `2026-06-11`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.640.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.640.1
+- Version: `0.1.0-nightly.641.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.641.1
 
-A heavy day across the public surface: a new black-glass "Create your agent" wizard, a full marketing site rebuild in 20 locales with real legal pages and a multi-repo whitepaper, a top-to-bottom mobile public shell, and an analytics fix that restores accurate DAU after weeks of silently-broken desktop telemetry.
+A big day across the public surface: a brand-new glass agent onboarding wizard, a full mobile public landing experience, a multi-repo /os whitepaper, and real Terms/Privacy pages translated into 20 locales. Underneath, the team also unstuck two silent analytics regressions, sped up chat and the 3D profile card, and shipped a feature health status page wired to scheduled probes.
 
 ## 9:18 AM — Theme-aware mode selector capsule
 
-The input bar's mode selector now picks up the active theme accent and ships with calmer selected-state styling.
+The input bar mode selector now picks up the active theme accent and softens its selected-state glow, with eval fixtures stabilized alongside.
 
-- Mode selector capsule and selected-mode label now read from the theme accent, with a softer glow on the active option. (`ec00764`, `4b52616`)
-- Stabilized eval fixtures by seeding the Run sidekick tab and mocking transient remote probes so CI assertions stay deterministic. (`34404cf`)
+- Reworked the mode selector capsule to use the theme accent for the selected label and tone down the selected glow, so the chip blends with custom themes instead of locking to a fixed color. (`ec00764`, `4b52616`)
+- Stabilized project eval fixtures by seeding the Run sidekick tab and mocking transient remote state probes so CI assertions stay deterministic. (`34404cf`)
 
-## 9:54 AM — Remote agent turns survive cold microVM wakes
+## 9:54 AM — Remote agent turns no longer time out mid-work
 
-Long-running remote agent turns no longer surface as spurious stalls or 502s when a hibernated microVM is warming up.
+Long but actively-progressing remote agent turns were tripping the sliding idle and cold-open caps, surfacing as spurious stalls and 502s; the timeouts were raised and made configurable.
 
-- Raised the idle turn timeout from 180s to 600s and the first-event timeout from 180s to 300s, and made the cold-open cap configurable via AURA_COLD_OPEN_TIMEOUT_SECS (default 180s) instead of a hardcoded 60s, so actively-progressing tool/LLM work isn't killed mid-flight. (`f3a817c`)
+- Raised the per-turn idle timeout from 180s to 600s and the first-event timeout from 180s to 300s, and replaced the hardcoded 60s cold-open cap with a configurable AURA_COLD_OPEN_TIMEOUT_SECS (default 180s) so waking a hibernated microVM or running long tool/LLM work no longer surfaces as a fake stall. (`f3a817c`)
 
-## 9:59 AM — Chat typing latency and idle GPU usage fixes
+## 9:59 AM — Chat keystroke latency and idle GPU cost
 
-Two performance regressions in the chat surface and agent profile card are resolved, removing app-wide slowdowns on every keystroke and on integrated GPUs.
+Two targeted performance fixes: the chat transcript no longer re-parses markdown on every keystroke, and the 3D agent profile card stops compositing bloom while idle.
 
-- Eliminated the full-transcript re-render on every chat keystroke by stabilizing the error-agent context hook and memoizing ChatMessageList, so the whole transcript no longer re-parses markdown on each draft character or streaming token. (`ae002b8`)
-- Cut idle GPU cost of the 3D agent profile card by dropping unused antialiasing, halting the render loop under prefers-reduced-motion once transitions settle, and pausing off-screen via IntersectionObserver. (`b562759`)
-- Always-on chat input animations now honor the OS prefers-reduced-motion setting. (`ae002b8`)
+- Stopped the full chat transcript from re-rendering on every draft keystroke and streaming token by memoizing the error-agent context hook and ChatMessageList, restoring memoization through MessageBubble and ending the recent app-wide messaging slowdown. (`ae002b8`)
+- Cut idle GPU cost of the agent profile card by dropping the unused antialias buffer, halting the THREE.js render loop under prefers-reduced-motion once transitions settle, and re-adding an IntersectionObserver pause for off-screen cards. (`b562759`)
 
-## 10:10 AM — Server session_active carries real app_version
+## 10:10 AM — Server session_active keeps a real app_version
 
-The daily session_active event no longer gets stamped with a missing app_version when a header-less request wins the dedupe slot.
+Header-less requests could win the daily session_active dedup slot and land it on Mixpanel's app_version = (not set) slice; the server now remembers the latest known version per user.
 
-- Server now remembers the latest non-empty X-App-Version and X-App-Platform per user and falls back to those when the triggering request omits headers, so the once-daily session_active always carries a real version on Mixpanel. (`3d0bef1`)
-- Capture-mode tokens are now skipped entirely for session_active, removing a fake DAU user with no version. (`3d0bef1`)
+- Server-emitted session_active now falls back to the latest non-empty X-App-Version / X-App-Platform remembered per user when the triggering request omits headers, so the daily True DAU event always carries a real app version instead of '(not set)'. (`3d0bef1`)
+- Skipped session_active entirely for capture-mode tokens so synthetic capture-demo-user traffic stops adding a fake DAU user with no version. (`3d0bef1`)
 
-## 10:22 AM — AURA OS whitepaper and full marketing localization
+## 10:22 AM — Whitepaper, legal pages, and 20-locale marketing translations
 
-The public /os whitepaper grew an Invariants section and detailed diagrams, and the marketing surface was translated into all 19 non-English locales alongside polish to the trust card and login.
+The /os whitepaper got a structural rework with diagrams and code links, real Terms and Privacy pages replaced the placeholders, and the entire public marketing surface was translated into all 19 non-English locales.
 
-- Reworked the /os whitepaper with per-section summaries, Overview/Internals ASCII diagrams, a new Invariants section, sequence diagrams for user flows, and inline code references that link out to the public aura-harness repo. (`e84938a`, `54f3e01`, `7d9aca5`)
-- Generated marketing.json and publicChat.json for all 19 non-English locales (plus expertise detail pages), routed the rotating tagline through i18n, and added reproducible machine-translation and validation scripts so changing site language now actually changes marketing content. (`0d6155a`)
-- Login email field is now a dropdown of remembered accounts (up to 5, most-recent first) with an "Add an account" option and per-entry forget. (`886e305`)
-- Trust card polish: the "Always on." toggle became clickable with a sequenced knob/label animation, the trust display panel is centered against the card edge, marketing page resize flicker was eliminated, and the trust disc, verified cubes, and paint gallery now keep animating under reduced motion. (`47a76da`, `f942415`, `184024e`, `a6a21a5`, `49c23e0`)
+- Restructured the /os whitepaper with two-line section summaries, Overview bullets, ASCII architecture and internals diagrams, an Invariants section, detailed user-flow sequence diagrams, and code-reference tokens that link out to the public cypher-asi/aura-harness repo. (`e84938a`, `54f3e01`, `7d9aca5`, `cfb01e9`)
+- Translated the public marketing and publicChat namespaces into all 19 non-English locales (including expertise detail pages) and routed the rotating tagline through i18n, so changing the site language now actually changes marketing content instead of falling back to English. Added reproducible machine-translation and placeholder-validation scripts. (`0d6155a`)
+- Added a remembered-accounts dropdown to the Sign In email field that persists up to five recent emails with an 'Add an account' option and per-entry forget control. (`886e305`)
+- Polished the Built for Trust card with a clickable, animated 'Always on.' toggle, the trust display panel correctly centered against the device, and the trust disc, verified cubes, and paint gallery animations no longer freezing under prefers-reduced-motion. (`47a76da`, `f942415`, `184024e`, `49c23e0`, `a6a21a5`)
 
-## 11:19 AM — Glass agent onboarding wizard, mobile public shell, and analytics rescue
+## 11:19 AM — Glass agent onboarding wizard, mobile public site, and feature health page
 
-A wide afternoon thread shipped a brand-new public agent-creation wizard, rebuilt the mobile marketing site around a Creator hero, expanded the whitepaper to every core repo, added real legal pages, and rescued desktop analytics.
+The largest thread of the day: a brand-new black-glass Create-your-agent wizard, a desktop-equivalent mobile public landing, multi-repo whitepaper coverage, real Terms/Privacy pages, an Aura feature health status page, and two analytics integrity fixes for desktop and web.
 
-- Shipped a six-step "Create your agent" wizard (Identity, Skills, Integrations, Messaging, Automations, Launch) rendered in a reusable black-glass modal with compact selectable tiles, Lucide icons, a footer Create-account CTA, and signup that applies the onboarding draft to a remote-only CEO agent. (`81ce6f5`, `69a71e7`, `7d5c9d2`, `074dca9`, `e6ffe93`, `641ce07`, `afdb0ab`, `fa244c3`, `7927779`, `87e883e`, `c1c63dc`, `101aece`)
-- Rebuilt the mobile public site around a Creator-pinned landing hero with live persona WebGL plasma, a full-screen hamburger menu sharing nav links with desktop, a framed page shell matching desktop chrome, static WebGL posters where canvases are disabled, and a 4x4 skill keypad — plus dedicated /chat routing off the landing page. (`743979e`, `af596ea`, `0c0fe4e`, `98a9925`, `c1cb5e2`, `d36f573`, `c94afcb`, `8e12874`, `ed3e93a`, `7684bcb`, `4e36250`)
-- Replaced the placeholder /terms and /privacy heroes with full CYPHER, INC. legal documents in 20 locales, gave them the standard hero/CTA/footer stack, and unified all public pages on a black shell with risen-glass panels plus a two-column Resources nav that includes Docs. (`e29e90c`, `7565b5e`, `46c231e`, `70188ec`, `afc12be`)
-- Extended the /os whitepaper to cover aura-os, aura-router, aura-network, aura-storage, and z-billing as their own collapsible nav groups with repo-aware code links, and unified /docs and /os on a shared MarkdownDocSite layout that reads published content from prod in dev. (`6df99cb`, `c045d96`, `41c6000`)
-- Restored desktop analytics: VITE_MIXPANEL_TOKEN is now injected into the build-interface job for nightly and stable releases (with a --require-analytics guardrail that fails the build on missing token or 0.0.0 fallback), the web build derives app_version from git describe instead of 0.0.0, and server-emitted session_active now stamps is_authenticated=true so True DAU breakdowns line up. (`6e669ed`, `7790077`, `262e2cf`)
-- Hardened agent surfaces for web/mobile: local agents are filtered everywhere there is no desktop bridge, stale or deleted last-agent IDs no longer leave the sidekick empty after login, chat history is warmed on click and post-login redirect, and the env popup links the deployed harness commit. (`599102e`, `166913c`, `29fbc11`, `a792833`, `066fdd7`)
-- Disabled Vite 8's AI-agent console forwarding in dev, which had been latching onto a dead websocket and locking the page in an infinite error loop before React mounted. (`b2296e3`)
-- Fixed a Windows/WebView2 dead-zone where the centered public top nav left a stale no-drag region beside the menu, by centering the slot with layout instead of a CSS transform so window dragging is reliable on desktop. (`0845a1c`)
+- Shipped the public Create your agent wizard end-to-end: a six-stage flow (Identity, Skills, Integrations, Automations, Messaging, Launch) built on a new reusable GlassModal with compact selectable tiles, hover/info-dot descriptions, a personality picker, and a footer Create-account CTA that applies the draft to the user's CEO agent after signup. (`81ce6f5`, `69a71e7`, `7d5c9d2`, `074dca9`, `e6ffe93`, `641ce07`, `afdb0ab`, `fa244c3`, `7927779`, `87e883e`, `101aece`)
+- Rebuilt the mobile public landing to mirror the desktop story: a Creator-pinned hero with persona WebGL plasma and character video, a full-screen hamburger menu sharing the desktop nav, framed shell with shell-stroke border, and mobile-only reflows for the agents sections, trust device rail, skill keypad, and privacy cards. (`743979e`, `af596ea`, `0c0fe4e`, `c1cb5e2`, `c94afcb`, `8e12874`, `7684bcb`, `ed3e93a`, `0845a1c`, `278133b`, `d36f573`)
+- Added the Aura feature health status page: a public StatusView, a scheduled GitHub Actions workflow that runs status probes every 30 minutes and publishes a snapshot, desktop-release observability probes wired into the nightly and stable release workflows, and a new observability route on the server. (`5bd0ba0`)
+- Replaced the placeholder /terms and /privacy heroes with full Terms of Service and Privacy Policy documents for CYPHER, INC., rendered via a shared LegalDocument component and machine-translated into all 20 supported locales, with the standard changelog/CTA/footer stack underneath. (`e29e90c`, `7565b5e`, `46c231e`)
+- Extended the /os whitepaper beyond AURA Harness to cover aura-os, aura-router, aura-network, aura-storage, and z-billing as their own collapsible nav groups with per-section diagrams, made code-reference links repo-aware, and unified /os and /docs onto a shared MarkdownDocSite layout that reads published content from prod in dev. (`6df99cb`, `41c6000`, `530311a`, `8c12fa2`, `c045d96`)
+- Restored Mixpanel coverage in desktop builds: the build-interface job now receives VITE_MIXPANEL_TOKEN in both release-nightly and release-stable so the desktop client stops shipping a silently no-op SDK, with a --require-analytics guardrail in desktop-frontend-assets-validate that fails the build if the token or app_version is missing. The web build now derives APP_VERSION from git describe instead of falling back to package.json's '0.0.0', and the server logs loudly when MIXPANEL_TOKEN is unset. (`6e669ed`, `7790077`, `262e2cf`)
+- Hid local agents from every web and mobile surface where there is no desktop bridge — main sidebar, project attach picker, project explorer, agent switcher, mobile roster, and menu cycling — via a centralized runtime-visibility predicate, and added a stale-agent recovery path that bounces dead /agents/<id> deep links to a valid agent on login. (`599102e`, `166913c`, `29fbc11`)
+- Restyled the public marketing surface around a 'risen black glass' system: unified /pricing, /blog, /changelog, /downloads, /feedback, /models, /os, /docs, /terms, and /privacy on a flat #090909 surface inside the diagonal shell frame, with a two-column Resources nav that adds Docs to the menu. (`70188ec`, `afc12be`, `238c8c2`)
+- Unblocked the dev experience by disabling Vite 8's auto-enabled console forwarding, which was latching onto a dead websocket and locking the page in an infinite error loop before React mounted. (`b2296e3`)
+- Fixed a Windows/WebView2 dead zone where the centered public top nav left a stale -webkit-app-region hole beside the menu after a layout swap, by centering the slot with justify-content instead of a CSS transform so the draggable rect matches the visual position. (`0845a1c`)
 
 ## Highlights
 
-- New 6-step glass agent onboarding wizard
-- Public marketing site translated into 19 new locales
-- Whitepaper expanded to cover all core AURA repos
-- Mobile public landing rebuilt around a Creator hero
-- Desktop analytics restored: real app_version and authenticated DAU
-- Long remote-agent turns no longer trip spurious timeouts
+- New black-glass Create-your-agent wizard with 6 stages
+- Mobile public landing with Creator hero and full-screen menu
+- Public marketing, Terms, and Privacy translated into 20 locales
+- Mixpanel token and app_version regression fixed in desktop releases
+- Chat transcript no longer re-renders on every keystroke
+- Feature health status page with scheduled probes
 
