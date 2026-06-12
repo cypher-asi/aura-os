@@ -109,7 +109,9 @@ export function ChatStreamingIndicator({
   return (
     <div className={styles.pinnedStreamingIndicator} aria-live="polite">
       <div className={styles.pinnedStreamingIndicatorInner}>
-        <CookingIndicator label={label} countdown={countdown} />
+        <span className={styles.pinnedIndicatorPill}>
+          <CookingIndicator label={label} countdown={countdown} />
+        </span>
       </div>
     </div>
   );

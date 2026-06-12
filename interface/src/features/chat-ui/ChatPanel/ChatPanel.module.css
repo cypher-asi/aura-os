@@ -427,6 +427,31 @@
   padding: 0;
 }
 
+/*
+ * Shrink-wrapped backdrop behind just the phase label. The strip itself
+ * no longer paints a full-width gradient band, so without this the
+ * shimmer overlapped transcript text scrolled beneath it. The pill is
+ * exactly as wide as the current label ("Thinking…", "Putting it all
+ * together…", …) and the soft box-shadow halo in the background color
+ * fades nearby text out instead of hard-clipping it — everything beyond
+ * the label's width stays fully visible.
+ */
+.pinnedIndicatorPill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  background: var(--color-bg);
+  border-radius: 999px;
+  box-shadow: 0 0 10px 6px var(--color-bg);
+}
+
+/* Doubled class beats the CookingIndicator module's own padding rule
+   (both would otherwise tie at single-class specificity, leaving the
+   winner to CSS injection order). */
+.pinnedIndicatorPill.pinnedIndicatorPill > * {
+  padding: 2px 10px;
+}
+
 .newMessagesPill {
   position: absolute;
   bottom: 108px;
