@@ -2,10 +2,10 @@
  * Behavioural tests for `MobilePublicChatView`.
  *
  * The mobile public surface lands on a Creator-pinned hero
- * (`MobileLandingHero`) with the composer inline, scrolling into the
- * lazily-embedded `/agents` sections; `/chat` is a scrollable
- * transcript + sticky composer. These tests pin that contract and
- * the SSE dispatch wiring.
+ * (`MobileLandingHero`) with a "Create your agent" CTA (no inline
+ * composer), scrolling into the lazily-embedded `/agents` sections;
+ * `/chat` is a scrollable transcript + sticky composer. These tests
+ * pin that contract and the SSE dispatch wiring.
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -82,16 +82,20 @@ afterEach(() => {
 });
 
 describe("MobilePublicChatView", () => {
-  it("renders the Creator landing hero with the inline composer on the landing route", () => {
+  it("renders the Creator landing hero with the CTA (no inline composer) on the landing route", () => {
     renderView("/");
     expect(screen.getByTestId("mobile-public-chat-view")).toBeInTheDocument();
     // Creator-pinned hero (the first / default persona).
     const hero = screen.getByTestId("mobile-landing-hero");
     expect(hero).toHaveAttribute("data-persona-id", "creator");
-    // Composer renders inside the hero viewport, not as a bottom bar.
-    const input = screen.getByRole("textbox", { name: "Message Aura" });
-    expect(input).toHaveAttribute("placeholder", "What do you want to create?");
-    expect(hero.contains(input)).toBe(true);
+    // The composer no longer renders on the landing route — the hero
+    // carries the shared "Create your agent" CTA instead, and the
+    // composer only exists on `/chat`.
+    expect(
+      screen.queryByRole("textbox", { name: "Message Aura" }),
+    ).not.toBeInTheDocument();
+    const cta = screen.getByRole("button", { name: "Create your agent" });
+    expect(hero.contains(cta)).toBe(true);
     // The heavy /agents embed stays unmounted until first interaction
     // or idle — neither has happened yet at first paint.
     expect(
@@ -99,8 +103,8 @@ describe("MobilePublicChatView", () => {
     ).toBeInTheDocument();
   });
 
-  it("submits the composer, navigates to /chat?session=<id>, and renders the streamed reply", async () => {
-    renderView("/");
+  it("submits the composer on /chat, rewrites the URL to /chat?session=<id>, and renders the streamed reply", async () => {
+    renderView("/chat");
 
     const input = screen.getByRole("textbox", { name: "Message Aura" });
     fireEvent.change(input, { target: { value: "build me a chess app" } });

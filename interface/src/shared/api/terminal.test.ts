@@ -42,7 +42,9 @@ describe("spawnTerminal", () => {
   });
 
   it("throws on non-ok response", async () => {
-    globalThis.fetch = mockFetch(500, null);
+    // Terminal endpoints throw structured ApiClientError built from the
+    // server's JSON error body now (message = body.error).
+    globalThis.fetch = mockFetch(500, { error: "Spawn terminal failed", code: "internal", details: null });
     await expect(spawnTerminal({ cols: 80, rows: 24 })).rejects.toThrow("Spawn terminal failed");
   });
 });
@@ -66,7 +68,7 @@ describe("listTerminals", () => {
   });
 
   it("throws on non-ok response", async () => {
-    globalThis.fetch = mockFetch(500, null);
+    globalThis.fetch = mockFetch(500, { error: "List terminals failed", code: "internal", details: null });
     await expect(listTerminals()).rejects.toThrow("List terminals failed");
   });
 });
@@ -93,7 +95,7 @@ describe("killTerminal", () => {
   });
 
   it("throws on non-204 error", async () => {
-    globalThis.fetch = mockFetch(500, null);
+    globalThis.fetch = mockFetch(500, { error: "Kill terminal failed", code: "internal", details: null });
     await expect(killTerminal("term-1")).rejects.toThrow("Kill terminal failed");
   });
 });

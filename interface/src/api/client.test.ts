@@ -156,9 +156,13 @@ describe("api (via apiFetch)", () => {
     globalThis.fetch = fetchMock;
 
     await api.listTasks("proj-123" as string);
+    // Requests also carry X-App-Platform / X-App-Version telemetry
+    // headers now, so only pin the content type.
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/projects/proj-123/tasks",
-      expect.objectContaining({ headers: { "Content-Type": "application/json" } }),
+      expect.objectContaining({
+        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+      }),
     );
   });
 });

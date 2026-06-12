@@ -29,6 +29,53 @@ vi.mock("react-i18next", () => {
   };
 });
 
+// Defense-in-depth against Node's experimental Web Storage global (Node 23+).
+// vitest.config.ts already passes `--no-experimental-webstorage` to the fork
+// workers, but if the pool type or the flag name changes, Node's storage stub
+// (method-less without `--localstorage-file`) would silently shadow jsdom's
+// implementation again. If `localStorage` is missing or broken, install a
+// real in-memory Storage so tests behave the same everywhere.
+class MemoryStorage implements Storage {
+  private store = new Map<string, string>();
+
+  get length(): number {
+    return this.store.size;
+  }
+
+  clear(): void {
+    this.store.clear();
+  }
+
+  getItem(key: string): string | null {
+    return this.store.get(String(key)) ?? null;
+  }
+
+  key(index: number): string | null {
+    return [...this.store.keys()][index] ?? null;
+  }
+
+  removeItem(key: string): void {
+    this.store.delete(String(key));
+  }
+
+  setItem(key: string, value: string): void {
+    this.store.set(String(key), String(value));
+  }
+}
+
+for (const name of ["localStorage", "sessionStorage"] as const) {
+  const existing = (globalThis as Record<string, unknown>)[name] as
+    | Storage
+    | undefined;
+  if (typeof existing?.getItem !== "function") {
+    Object.defineProperty(globalThis, name, {
+      value: new MemoryStorage(),
+      configurable: true,
+      writable: true,
+    });
+  }
+}
+
 // JSDOM lacks ResizeObserver. Several layout-driven components (ModeSelector,
 // DesktopShell, sidekick scrollbar, etc.) rely on it at mount time, so any
 // consumer test that doesn't otherwise mock it would crash on render. Provide

@@ -259,7 +259,7 @@ describe("TerminalSidekickPane", () => {
     const user = userEvent.setup();
     render(<TerminalSidekickPane />);
 
-    await user.click(screen.getByRole("button", { name: "Terminal 1" }));
+    await user.click(screen.getByRole("tab", { name: "Terminal 1" }));
     expect(setActiveId).toHaveBeenCalledWith("term-1");
   });
 });

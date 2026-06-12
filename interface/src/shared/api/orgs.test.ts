@@ -45,7 +45,8 @@ describe("orgsApi", () => {
   it("update sends PUT with name", async () => {
     const fetchMock = mockFetch(200, { id: "o1", name: "Updated" });
     globalThis.fetch = fetchMock;
-    await orgsApi.update("o1", "Updated");
+    // update takes an UpdateOrgPayload object now, not a bare name.
+    await orgsApi.update("o1", { name: "Updated" });
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/orgs/o1",
       expect.objectContaining({ method: "PUT", body: JSON.stringify({ name: "Updated" }) }),

@@ -145,10 +145,10 @@ beforeEach(() => {
   streamEventsState = [];
 });
 
-// Rows are collapsed by default; expand by clicking the header so the
-// body actually renders in the DOM.
+// Rows are collapsed by default; expand by clicking the header (a
+// ListItem `treeitem` row) so the body is visible.
 function expandRow() {
-  const header = screen.getByRole("button", { expanded: false });
+  const header = screen.getByRole("treeitem", { expanded: false });
   fireEvent.click(header);
 }
 

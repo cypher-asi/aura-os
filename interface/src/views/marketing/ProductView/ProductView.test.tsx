@@ -2,6 +2,30 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// `ModelMarquee` (inside `PersonalAgentSection`) imports provider marks
+// from `@lobehub/icons`, whose ESM build does a directory import of
+// `@lobehub/fluent-emoji` that Node's ESM resolver rejects under
+// Vitest. Stub the ten marks the marquee/device textures use; the
+// tests only care about surrounding layout, not the brand SVGs.
+vi.mock("@lobehub/icons", () => {
+  const Icon = ({ size }: { size?: number }) => (
+    <span data-testid="provider-icon-stub" data-size={size} />
+  );
+  return {
+    Anthropic: Icon,
+    ByteDance: Icon,
+    DeepSeek: Icon,
+    Gemini: Icon,
+    Minimax: Icon,
+    Moonshot: Icon,
+    OpenAI: Icon,
+    Qwen: Icon,
+    Tripo: Icon,
+    ZAI: Icon,
+  };
+});
+
 import { ProductView } from "./ProductView";
 
 // `ProductScreenSection` calls `window.matchMedia("(prefers-reduced-motion:
@@ -85,12 +109,12 @@ describe("ProductView", () => {
   });
 
   it("renders the personal-agent section after the agents hero", () => {
-    // The "An agent for work, love, play." section is inserted after
-    // the agents hero/card row, so its headline must precede the
+    // The "Every model. Every mode." section is inserted after the
+    // agents hero/card row, so its headline must precede the
     // agent-chat section's headline in DOM order.
     renderProductView();
     const personalAgent = screen.getByRole("heading", {
-      name: /An agent for work, love, play\./i,
+      name: /Every model\. Every mode\./i,
     });
     const agentChat = screen.getByRole("heading", {
       name: /Chat with your agents/i,

@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { SharedMainPanel } from "./SharedMainPanel";
 import { TerminalPanelBody } from "../TerminalPanelBody";
+import { useConversationSurfaceSync } from "../ConversationSurfaceHost/use-conversation-surface-sync";
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 
 const terminalHookState = vi.hoisted(() => ({
@@ -16,6 +17,17 @@ const useTerminalTargetMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../hooks/use-terminal-target", () => ({
   useTerminalTarget: useTerminalTargetMock,
+}));
+
+const setSelectedAgent = vi.hoisted(() => vi.fn());
+
+vi.mock("../../apps/agents/stores", () => ({
+  useAgentStore: (selector: (state: { setSelectedAgent: typeof setSelectedAgent }) => unknown) =>
+    selector({ setSelectedAgent }),
+}));
+
+vi.mock("../../utils/storage", () => ({
+  setLastStandaloneAgentId: vi.fn(),
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -61,6 +73,35 @@ vi.mock("../../hooks/use-terminal", async () => {
   };
 });
 
+/**
+ * Mimics the shell-level `ConversationSurfaceHost`: it resolves the route to
+ * a conversation target and runs `useConversationSurfaceSync`, which now owns
+ * terminal targeting (formerly attempted inside `SharedMainPanel`).
+ */
+function ConversationRouteSurface() {
+  const { projectId, agentInstanceId } = useParams<{
+    projectId: string;
+    agentInstanceId: string;
+  }>();
+
+  useConversationSurfaceSync({
+    isConversationRoute: true,
+    target:
+      projectId && agentInstanceId
+        ? { kind: "ready", projectId, agentInstanceId, sessionId: null }
+        : { kind: "pending" },
+  });
+
+  return (
+    <>
+      <SharedMainPanel>
+        <div data-testid="project-route-content" />
+      </SharedMainPanel>
+      <TerminalPanelBody embedded />
+    </>
+  );
+}
+
 function ProjectRouteHarness() {
   const navigate = useNavigate();
 
@@ -72,14 +113,7 @@ function ProjectRouteHarness() {
       <Routes>
         <Route
           path="/projects/:projectId/agents/:agentInstanceId"
-          element={(
-            <>
-              <SharedMainPanel>
-                <div data-testid="project-route-content" />
-              </SharedMainPanel>
-              <TerminalPanelBody embedded />
-            </>
-          )}
+          element={<ConversationRouteSurface />}
         />
       </Routes>
     </>
@@ -99,9 +133,12 @@ beforeEach(() => {
     contentReady: false,
     cwd: undefined,
     remoteAgentId: undefined,
+    projectId: undefined,
     modeReady: false,
     targetVersion: 0,
   });
+
+  setSelectedAgent.mockReset();
 
   useTerminalTargetMock.mockReset();
   useTerminalTargetMock.mockImplementation(
@@ -143,6 +180,8 @@ describe("SharedMainPanel", () => {
         <ProjectRouteHarness />
       </MemoryRouter>,
     );
+
+    expect(screen.getByTestId("project-route-content")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(terminalHookState.mounts).toHaveLength(1);

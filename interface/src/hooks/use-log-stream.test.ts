@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { useLogStream, EVENT_LABELS } from "./use-log-stream";
+import { useLogStream } from "./use-log-stream";
 
 type SubscribeCallback = (event: Record<string, unknown>) => void;
 
@@ -57,7 +57,10 @@ describe("useLogStream", () => {
 
     act(() => {
       subscribeMap.get("task_completed")?.forEach((cb) =>
-        cb({ type: "task_completed", task_id: "t-1", task_title: "Test Task" }),
+        cb({
+          type: "task_completed",
+          content: { task_id: "t-1", task_title: "Test Task" },
+        }),
       );
     });
 
@@ -70,7 +73,10 @@ describe("useLogStream", () => {
 
     act(() => {
       subscribeMap.get("task_failed")?.forEach((cb) =>
-        cb({ type: "task_failed", task_id: "t-1", task_title: "Fail Task", reason: "timeout" }),
+        cb({
+          type: "task_failed",
+          content: { task_id: "t-1", task_title: "Fail Task", reason: "timeout" },
+        }),
       );
     });
 
@@ -83,20 +89,34 @@ describe("useLogStream", () => {
 
     act(() => {
       subscribeMap.get("build_verification_passed")?.forEach((cb) =>
-        cb({ type: "build_verification_passed", duration_ms: 1500 }),
+        cb({ type: "build_verification_passed", content: { duration_ms: 1500 } }),
       );
     });
 
     expect(result.current.entries[0].summary).toContain("Build passed");
   });
 
-  it("subscribes to all event types", () => {
+  it("subscribes to the engine event types but not chat noise", () => {
+    // EVENT_LABELS now covers every EventType (it also drives the log
+    // badge categories), while the log stream itself subscribes to the
+    // curated engine set only — chat deltas would flood the log.
     renderHook(() => useLogStream());
 
-    const expectedTypes = Object.keys(EVENT_LABELS);
+    const expectedTypes = [
+      "loop_started",
+      "loop_finished",
+      "task_started",
+      "task_completed",
+      "task_failed",
+      "build_verification_passed",
+      "git_committed",
+      "error",
+    ];
     for (const type of expectedTypes) {
       expect(subscribeMap.has(type)).toBe(true);
     }
+    expect(subscribeMap.has("delta")).toBe(false);
+    expect(subscribeMap.has("thinking_delta")).toBe(false);
   });
 
   it("provides contentRef and handleScroll", () => {

@@ -7,17 +7,26 @@ vi.mock("./LargeTextBlock.module.css", () => ({
 }));
 
 describe("LargeTextBlock", () => {
-  it("defers markdown rendering until expanded", async () => {
+  it("shows a truncated plain-text preview and reveals the full text when expanded", async () => {
     const user = userEvent.setup();
-    const text = `# Deep Report\n\n${"Paragraph line\n".repeat(40)}`;
+    const lines = Array.from({ length: 60 }, (_, i) => `Paragraph line ${i + 1}`).join("\n");
+    const text = `# Deep Report\n\n${lines}`;
 
     const { container } = render(<LargeTextBlock text={text} />);
 
-    expect(screen.getByText("Show more")).toBeInTheDocument();
+    // The markdown heading is lifted into the card header as plain text;
+    // the body is never rendered as markdown.
+    expect(screen.getByText("Deep Report")).toBeInTheDocument();
     expect(container.querySelector("h1")).toBeNull();
+
+    const collapsedContent = container.querySelector("pre");
+    expect(collapsedContent?.textContent).toContain("Paragraph line 1");
+    expect(collapsedContent?.textContent).not.toContain("Paragraph line 60");
+    expect(collapsedContent?.textContent).toContain("...");
 
     await user.click(screen.getByRole("button", { name: "Show more" }));
 
-    expect(screen.getByRole("heading", { name: "Deep Report" })).toBeInTheDocument();
+    expect(container.querySelector("pre")?.textContent).toContain("Paragraph line 60");
+    expect(screen.getByRole("button", { name: "Show less" })).toBeInTheDocument();
   });
 });

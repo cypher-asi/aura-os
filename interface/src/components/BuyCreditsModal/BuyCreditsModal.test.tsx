@@ -54,7 +54,7 @@ beforeEach(() => {
 describe("BuyCreditsModal", () => {
   it("renders the modal with title", () => {
     renderModal();
-    expect(screen.getByText("BUY CREDITS")).toBeInTheDocument();
+    expect(screen.getByText("BUY Z CREDITS")).toBeInTheDocument();
   });
 
   it("shows the current balance", () => {

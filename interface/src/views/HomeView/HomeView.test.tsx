@@ -158,7 +158,9 @@ describe("HomeView", () => {
 
     renderHomeView();
 
-    expect(screen.queryByTestId("page-empty-state")).not.toBeInTheDocument();
+    expect(screen.getByText("Loading projects")).toBeInTheDocument();
+    expect(screen.getByText("Preparing your workspace...")).toBeInTheDocument();
+    expect(screen.queryByText("Welcome to AURA")).not.toBeInTheDocument();
   });
 
   it("retries loading projects when an org is active but no projects are ready yet", () => {

@@ -33,5 +33,13 @@ export default defineConfig({
     globals: true,
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["./src/test/setup.ts"],
+    // Node >= 23 ships an experimental Web Storage global. Without a
+    // `--localstorage-file` it is a method-less stub, and because the
+    // jsdom environment sets `window === globalThis`, it shadows jsdom's
+    // working `localStorage`/`sessionStorage` and every test touching
+    // storage fails with "localStorage.getItem is not a function".
+    // Disable it so jsdom's implementation wins (src/test/setup.ts also
+    // carries an in-memory fallback in case this flag changes again).
+    execArgv: ["--no-experimental-webstorage"],
   },
 });

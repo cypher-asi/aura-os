@@ -180,7 +180,7 @@ describe("SidekickTaskbar", () => {
       .map((button) => button.getAttribute("aria-label") ?? button.getAttribute("title"));
 
     expect(labels).toEqual([
-      "Sessions",
+      "Chats",
       "Terminal",
       "Browser",
       "Plans",
@@ -274,16 +274,20 @@ describe("SidekickContent", () => {
     expect(screen.getByTestId("stats-dashboard")).toBeInTheDocument();
   });
 
-  it("renders run pane for run tab", () => {
+  // The run/terminal panes are lazy-loaded behind Suspense, so resolve
+  // them with findByTestId instead of a synchronous query.
+  it("renders run pane for run tab", async () => {
     mockSidekick.activeTab = "run";
     render(<SidekickContent />);
-    expect(screen.getByTestId("run-sidekick-pane")).toBeInTheDocument();
+    expect(await screen.findByTestId("run-sidekick-pane")).toBeInTheDocument();
   });
 
-  it("renders terminal pane for terminal tab", () => {
+  it("renders terminal pane for terminal tab", async () => {
     mockSidekick.activeTab = "terminal";
     render(<SidekickContent />);
-    expect(screen.getByTestId("terminal-sidekick-pane")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("terminal-sidekick-pane"),
+    ).toBeInTheDocument();
   });
 
   it("renders session list for sessions tab", () => {
@@ -310,10 +314,12 @@ describe("SidekickContent", () => {
     expect(screen.queryByTestId("panel-search")).not.toBeInTheDocument();
   });
 
-  it("hides search on run tab", () => {
+  it("shows search on run tab", () => {
+    // The Run pane filters its task rows by the panel search query, so
+    // run is a searchable tab (only stats / terminal / browser hide it).
     mockSidekick.activeTab = "run";
     render(<SidekickContent />);
-    expect(screen.queryByTestId("panel-search")).not.toBeInTheDocument();
+    expect(screen.getByTestId("panel-search")).toBeInTheDocument();
   });
 
   it("shows info panel when showInfo is true", () => {

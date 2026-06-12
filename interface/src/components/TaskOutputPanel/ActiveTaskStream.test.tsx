@@ -35,14 +35,44 @@ vi.mock("../../hooks/stream/hooks", () => ({
   useStreamEvents: () => [],
 }));
 
-vi.mock("../../stores/event-store/index", () => ({
-  useTaskOutput: () => ({
-    text: "",
-    fileOps: [],
-    buildSteps: [],
-    testSteps: [],
-    gitSteps: [],
-  }),
+// `useTaskOutputView` (pulled in transitively) selects `seedTaskOutput`
+// and `connected` off the event store; `connected: false` keeps every
+// server-rehydration effect short-circuited for these non-terminal rows.
+vi.mock("../../stores/event-store/index", () => {
+  const state = {
+    seedTaskOutput: vi.fn(),
+    connected: false,
+    taskOutputs: {},
+  };
+  return {
+    useTaskOutput: () => ({
+      text: "",
+      fileOps: [],
+      buildSteps: [],
+      testSteps: [],
+      gitSteps: [],
+    }),
+    useEventStore: Object.assign(
+      vi.fn((selector?: (s: typeof state) => unknown) =>
+        selector ? selector(state) : state,
+      ),
+      { getState: () => state },
+    ),
+    getCachedTaskOutputText: () => Promise.resolve(""),
+  };
+});
+
+vi.mock("../../stores/task-output-hydration-cache", () => ({
+  hydrateTaskOutputOnce: vi.fn().mockResolvedValue("empty"),
+}));
+
+vi.mock("../../stores/task-turn-cache", () => ({
+  persistTaskTurns: vi.fn(),
+  readTaskTurns: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("../../hooks/stream/store", () => ({
+  seedStreamEventsFromCache: vi.fn(),
 }));
 
 vi.mock("../../stores/project-action-store", () => ({

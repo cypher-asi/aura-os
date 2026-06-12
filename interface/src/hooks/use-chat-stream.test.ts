@@ -428,6 +428,7 @@ describe("useChatStream", () => {
       "ai-1",
       false,
       null,
+      "tripo-v2",
     );
     const pinned = useChatUIStore
       .getState()
@@ -469,6 +470,7 @@ describe("useChatStream", () => {
       "ai-1",
       false,
       null,
+      "tripo-v2",
     );
     const entry = useStreamStore.getState().entries[result.current.streamKey];
     const userMsg = entry.events.find((evt) => evt.role === "user");
@@ -762,6 +764,7 @@ describe("useChatStream", () => {
       "ai-1",
       true,
       null,
+      "tripo-v2",
     );
   });
 

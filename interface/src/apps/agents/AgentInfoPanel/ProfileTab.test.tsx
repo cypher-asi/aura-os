@@ -20,6 +20,9 @@ vi.mock("../../../api/client", () => ({
     harnessSkills: {
       listAgentSkills: (...args: any[]) => mockListAgentSkills(...args),
     },
+    channels: {
+      listChannels: vi.fn().mockResolvedValue({ channels: [] }),
+    },
   },
 }));
 
@@ -33,6 +36,12 @@ vi.mock("../../../components/Avatar", () => ({
 
 vi.mock("../../../components/FollowEditButton", () => ({
   FollowEditButton: () => <button>Follow</button>,
+}));
+
+// TelegramConnect uses react-query (`useQuery`), which would require a
+// QueryClientProvider; it has its own tests, so stub it out here.
+vi.mock("../components/TelegramConnect", () => ({
+  TelegramConnect: () => null,
 }));
 
 vi.mock("./AgentInfoPanel.module.css", () => ({
@@ -128,7 +137,9 @@ describe("ProfileTab", () => {
 
     expect(screen.getByText("Remote Runtime")).toBeInTheDocument();
     expect(screen.getByText("Remote agent is running")).toBeInTheDocument();
-    expect(screen.getAllByText("deploy")).toHaveLength(2);
+    // The skill renders once, as the tappable row in Installed Skills
+    // (the profile spec card shows only the section count now).
+    expect(screen.getAllByText("deploy")).toHaveLength(1);
     expect(screen.getByRole("button", { name: /deploy/i })).toBeInTheDocument();
   });
 });

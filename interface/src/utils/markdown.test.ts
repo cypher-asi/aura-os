@@ -28,8 +28,10 @@ describe("getStreamSafeContent", () => {
   });
 
   it("trims trailing backticks that look like unclosed inline code", () => {
+    // Trailing whitespace is also stripped by the lone-emphasis-marker
+    // pass; harmless mid-stream since more text follows.
     const input = "some text `";
-    expect(getStreamSafeContent(input, true)).toBe("some text ");
+    expect(getStreamSafeContent(input, true)).toBe("some text");
   });
 
   it("keeps closed inline code", () => {

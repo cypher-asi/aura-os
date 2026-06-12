@@ -46,7 +46,6 @@ describe("useNewProjectDraft", () => {
       JSON.stringify({
         name: "Saved",
         folderPath: "/saved",
-        environment: "local",
       }),
     );
 
@@ -55,7 +54,6 @@ describe("useNewProjectDraft", () => {
     expect(result.current.storedDraft).toEqual({
       name: "Saved",
       folderPath: "/saved",
-      environment: "local",
     });
   });
 
@@ -81,13 +79,13 @@ describe("useNewProjectDraft", () => {
     expect(result.current.storedDraft).toBeNull();
   });
 
-  it("defaults environment to remote for invalid values", () => {
+  it("drops legacy fields (e.g. environment) from stored drafts", () => {
     sessionStorage.setItem(
       "aura:new-project-draft",
       JSON.stringify({ name: "x", folderPath: "", environment: "invalid" }),
     );
 
     const { result } = renderHook(() => useNewProjectDraft(false));
-    expect(result.current.storedDraft!.environment).toBe("remote");
+    expect(result.current.storedDraft).toEqual({ name: "x", folderPath: "" });
   });
 });

@@ -408,6 +408,7 @@ describe("useAgentChatStream", () => {
       undefined,
       false,
       null,
+      "tripo-v2",
     );
     const pinned = useChatUIStore
       .getState()
@@ -460,6 +461,7 @@ describe("useAgentChatStream", () => {
       undefined,
       false,
       null,
+      "tripo-v2",
     );
     const entry = useStreamStore.getState().entries[result.current.streamKey];
     const userMsg = entry.events.find((evt) => evt.role === "user");
@@ -1104,6 +1106,7 @@ describe("useAgentChatStream", () => {
       undefined,
       true,
       null,
+      "tripo-v2",
     );
   });
 

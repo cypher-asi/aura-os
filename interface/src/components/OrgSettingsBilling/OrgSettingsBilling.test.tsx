@@ -26,7 +26,12 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
 
 vi.mock("../../stores/billing-store", () => {
   const state = {
-    subscription: null as { plan: string; is_subscribed: boolean; monthly_credits: number } | null,
+    subscription: null as {
+      plan: string;
+      is_subscribed: boolean;
+      monthly_credits: number;
+      current_period_end?: string;
+    } | null,
     subscriptionLoading: false,
     fetchSubscription: vi.fn().mockResolvedValue(undefined),
   };
@@ -38,11 +43,11 @@ vi.mock("../../stores/billing-store", () => {
 });
 
 import { OrgSettingsBilling } from "./OrgSettingsBilling";
+import { useBillingStore } from "../../stores/billing-store";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 
 const defaultProps = {
   billing: { billing_email: "test@example.com", plan: "free" },
-  billingEmail: "test@example.com",
   isAdminOrOwner: true,
   balance: { balance_cents: 500, plan: "free", balance_formatted: "$5.00" },
   balanceLoading: false,
@@ -59,12 +64,13 @@ function renderBilling(overrides: Partial<typeof defaultProps> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useBillingStore.getState().subscription = null;
 });
 
 describe("OrgSettingsBilling", () => {
   it("renders the current balance formatted", () => {
     renderBilling();
-    expect(screen.getByText("500 credits")).toBeInTheDocument();
+    expect(screen.getByText("500 Z credits")).toBeInTheDocument();
   });
 
   it("renders preset buttons", () => {
@@ -138,22 +144,27 @@ describe("OrgSettingsBilling", () => {
     expect(screen.getByText("free")).toBeInTheDocument();
   });
 
-  it("renders the billing email as read-only text (no input, no save button)", () => {
+  // The billing email row was removed from this panel in the redesign; the
+  // Plan group (current plan + next billing date / free-tier copy) took its
+  // place, so these tests cover that section instead.
+  it("renders the plan section without any billing email editing UI", () => {
     renderBilling();
-    expect(screen.getByText("Billing Email")).toBeInTheDocument();
-    expect(screen.getByText(/Tied to your ZERO account/i)).toBeInTheDocument();
-    expect(screen.getByText("test@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Current Plan")).toBeInTheDocument();
+    expect(screen.getByText("Plan Includes")).toBeInTheDocument();
+    expect(screen.getByText("Free tier benefits")).toBeInTheDocument();
+    expect(screen.queryByText("Billing Email")).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("billing@example.com")).not.toBeInTheDocument();
     expect(screen.queryByText("Save")).not.toBeInTheDocument();
   });
 
-  it("hides the billing email row for non-admin users", () => {
-    renderBilling({ isAdminOrOwner: false });
-    expect(screen.queryByText("Billing Email")).not.toBeInTheDocument();
-  });
-
-  it("shows an em-dash fallback when billing email is missing", () => {
-    renderBilling({ billingEmail: "" });
+  it("shows an em-dash fallback when a paid plan has no period end date", () => {
+    useBillingStore.getState().subscription = {
+      plan: "pro",
+      is_subscribed: true,
+      monthly_credits: 10_000,
+    };
+    renderBilling();
+    expect(screen.getByText("Next Billing Date")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 

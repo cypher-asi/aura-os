@@ -30,13 +30,26 @@ vi.mock("../api/client", () => ({
   },
 }));
 
+const activeOrg = {
+  org_id: "org-1",
+  name: "Test Org",
+  owner_user_id: "user-1",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 describe("useIntegrationsManager", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     mocks.listIntegrations.mockResolvedValue([]);
     mocks.listMembers.mockResolvedValue([]);
-    mocks.list.mockResolvedValue([]);
+    // Setting the auth user triggers the org-store boot subscriber, which
+    // hydrates and then calls `refreshOrgs()`. That refresh replaces
+    // `activeOrg` with whatever `api.orgs.list()` returns, so the list must
+    // contain the test org or `activeOrg` is reset to null before the hook
+    // under test runs (making `connectGoogle` bail out early).
+    mocks.list.mockResolvedValue([activeOrg]);
     mocks.startGoogleOAuth.mockResolvedValue({
       authorization_url: "https://accounts.google.com/o/oauth2/v2/auth",
     });
@@ -61,13 +74,7 @@ describe("useIntegrationsManager", () => {
     });
 
     useOrgStore.setState({
-      activeOrg: {
-        org_id: "org-1",
-        name: "Test Org",
-        owner_user_id: "user-1",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
+      activeOrg,
       members: [],
       integrations: [],
       isLoading: false,

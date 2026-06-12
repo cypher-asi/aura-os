@@ -57,24 +57,42 @@ const projectAgentFixtures = [
 ] as Array<{ agent_instance_id: string; name: string; role?: string }>;
 const openNewProjectModal = vi.fn();
 
-const orgFixtures = [
-  { org_id: "org-1", name: "Alpha Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
-  { org_id: "org-2", name: "Beta Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
-] as const;
-const switchOrg = vi.fn();
-const createOrg = vi.fn(async (name: string) => ({
-  org_id: "org-new",
-  name,
-  owner_user_id: "u1",
-  billing: null,
-  created_at: "2025-01-01T00:00:00Z",
-  updated_at: "2025-01-01T00:00:00Z",
-}));
-const mockOrgErrors = {
-  orgsError: null as string | null,
-  membersError: null as string | null,
-  integrationsError: null as string | null,
-};
+// Hoisted because the org-store mock factory now runs while
+// `agent-store.ts` (deep in the shell's import graph) is being loaded —
+// i.e. before this file's top-level statements — so plain consts would
+// still be in their temporal dead zone when the factory reads them.
+const { orgFixtures, switchOrg, createOrg, mockOrgErrors, getMockOrgState } = vi.hoisted(() => {
+  const orgFixtures = [
+    { org_id: "org-1", name: "Alpha Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
+    { org_id: "org-2", name: "Beta Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
+  ] as const;
+  const switchOrg = vi.fn();
+  const createOrg = vi.fn(async (name: string) => ({
+    org_id: "org-new",
+    name,
+    owner_user_id: "u1",
+    billing: null,
+    created_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-01-01T00:00:00Z",
+  }));
+  const mockOrgErrors = {
+    orgsError: null as string | null,
+    membersError: null as string | null,
+    integrationsError: null as string | null,
+  };
+  const getMockOrgState = () => ({
+    orgs: orgFixtures,
+    activeOrg: orgFixtures[0],
+    orgsError: mockOrgErrors.orgsError,
+    membersError: mockOrgErrors.membersError,
+    integrationsError: mockOrgErrors.integrationsError,
+    switchOrg,
+    createOrg,
+    refreshOrgs: async () => undefined,
+  });
+  return { orgFixtures, switchOrg, createOrg, mockOrgErrors, getMockOrgState };
+});
+type MockOrgState = ReturnType<typeof getMockOrgState>;
 const mockProjectsError = {
   value: null as string | null,
 };
@@ -118,26 +136,18 @@ vi.mock("../../stores/ui-modal-store", () => ({
   },
 }));
 
+// `agent-store.ts` (pulled in through the shell's import graph) reads
+// `useOrgStore.getState()` and calls `useOrgStore.subscribe()` at module
+// load to re-fetch the agent fleet on org changes, so the mock must
+// expose the zustand store API alongside the selector hook.
 vi.mock("../../stores/org-store", () => ({
-  useOrgStore: (selector: (state: {
-    orgs: typeof orgFixtures;
-    activeOrg: typeof orgFixtures[number];
-    orgsError: string | null;
-    membersError: string | null;
-    integrationsError: string | null;
-    switchOrg: typeof switchOrg;
-    createOrg: typeof createOrg;
-    refreshOrgs: () => Promise<void>;
-  }) => unknown) => selector({
-    orgs: orgFixtures,
-    activeOrg: orgFixtures[0],
-    orgsError: mockOrgErrors.orgsError,
-    membersError: mockOrgErrors.membersError,
-    integrationsError: mockOrgErrors.integrationsError,
-    switchOrg,
-    createOrg,
-    refreshOrgs: async () => undefined,
-  }),
+  useOrgStore: Object.assign(
+    (selector: (state: MockOrgState) => unknown) => selector(getMockOrgState()),
+    {
+      getState: getMockOrgState,
+      subscribe: vi.fn(() => vi.fn()),
+    },
+  ),
 }));
 
 vi.mock("../../stores/project-action-store", () => ({
@@ -241,6 +251,13 @@ vi.mock("../../utils/mobileNavigation", () => ({
 
 vi.mock("../../components/ErrorBoundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+// The persistent agent chat host needs a QueryClientProvider (and the
+// whole chat-ui stack) — none of which these shell-chrome tests
+// exercise, so it gets the same stub treatment as the other heavy
+// panels.
+vi.mock("../../components/ConversationSurfaceHost", () => ({
+  ConversationSurfaceHost: () => <div data-testid="conversation-surface-host-stub" />,
 }));
 vi.mock("../../components/ProjectList", () => ({
   ProjectList: () => <div data-testid="project-list" />,

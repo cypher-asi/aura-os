@@ -102,6 +102,7 @@ vi.mock("../../marketing/ProductView/AgentsPageSections", () => {
 
 import { PublicChatView } from "./PublicChatView";
 import { usePublicChatStore } from "../../../stores/public-chat-store";
+import { useAgentOnboardingStore } from "../AgentOnboarding/agent-onboarding-store";
 
 function renderView(initialPath = "/") {
   return render(
@@ -178,6 +179,7 @@ afterEach(() => {
   window.localStorage.clear();
   streamPublicChatMock.mockReset();
   setupPublicSessionMock.mockReset();
+  useAgentOnboardingStore.setState({ isOpen: false, source: null, currentStep: 0 });
   usePublicChatStore.setState({
     sessions: {},
     sessionOrder: [],
@@ -206,22 +208,26 @@ describe("PublicChatView", () => {
     );
   });
 
-  it("navigates to /login?tab=register when the CTA button is clicked", () => {
-    // Mirrors the destination used by the public shell's "Sign Up"
-    // pill, so the AuraShell-mounted LoginOverlay opens with the
-    // Create Account tab pre-selected (via `useLoginForm`'s
-    // `?tab=register` seed effect).
+  it("opens the agent onboarding wizard (no navigation) when the CTA button is clicked", () => {
+    // The CTA no longer deep-links to /login?tab=register. It opens
+    // the multi-step agent onboarding wizard in place (the wizard
+    // itself ends in account creation), recording which surface
+    // launched it for the landing→signup funnel.
     renderViewWithProbe();
     const probe = screen.getByTestId("location-probe");
     expect(probe).toHaveAttribute("data-pathname", "/");
     expect(probe).toHaveAttribute("data-search", "");
+    expect(useAgentOnboardingStore.getState().isOpen).toBe(false);
 
     fireEvent.click(
       screen.getByRole("button", { name: /create your agent/i }),
     );
 
-    expect(probe).toHaveAttribute("data-pathname", "/login");
-    expect(probe).toHaveAttribute("data-search", "?tab=register");
+    // No route change — the wizard mounts as an overlay.
+    expect(probe).toHaveAttribute("data-pathname", "/");
+    expect(probe).toHaveAttribute("data-search", "");
+    expect(useAgentOnboardingStore.getState().isOpen).toBe(true);
+    expect(useAgentOnboardingStore.getState().source).toBe("public_chat");
   });
 
   it("shows the simple chat input on /chat WITHOUT auto-minting a session", async () => {

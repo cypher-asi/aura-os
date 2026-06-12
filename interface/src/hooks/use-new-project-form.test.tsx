@@ -21,6 +21,8 @@ vi.mock("../stores/auth-store", () => ({
 vi.mock("../apps/projects/useProjectsList", () => ({
   useProjectsList: () => ({
     projects: [{ project_id: "existing", org_id: "org-1" }],
+    loadingProjects: false,
+    refreshProjects: vi.fn(() => Promise.resolve()),
   }),
 }));
 
@@ -76,13 +78,13 @@ describe("useNewProjectForm", () => {
     );
 
     expect(result.current.name).toBe("");
-    expect(result.current.folderPath).toBe("");
-    expect(result.current.environment).toBe("remote");
+    expect(result.current.localWorkspacePath).toBe("");
+    expect(result.current.orbitRepoMode).toBe("default");
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBe("");
   });
 
-  it("setName updates the name and auto-derives folderPath", () => {
+  it("setName updates the name and derives the repo slug", () => {
     const { result } = renderHook(() =>
       useNewProjectForm(true, mockOnClose, mockOnCreated),
     );
@@ -92,10 +94,10 @@ describe("useNewProjectForm", () => {
     });
 
     expect(result.current.name).toBe("New Project");
-    expect(result.current.folderPath).toBe("p/new-project");
+    expect(result.current.proposedRepoSlug).toBe("new-project");
   });
 
-  it("auto-derived folderPath stops updating after manual edit", () => {
+  it("a custom repo name overrides the derived display name", () => {
     const { result } = renderHook(() =>
       useNewProjectForm(true, mockOnClose, mockOnCreated),
     );
@@ -103,17 +105,17 @@ describe("useNewProjectForm", () => {
     act(() => {
       result.current.setName("First");
     });
-    expect(result.current.folderPath).toBe("p/first");
+    expect(result.current.displayRepoName).toBe("first");
 
     act(() => {
-      result.current.setFolderPath("/custom/path");
+      result.current.setOrbitRepoName("custom-repo");
     });
-    expect(result.current.folderPath).toBe("/custom/path");
+    expect(result.current.displayRepoName).toBe("custom-repo");
 
     act(() => {
       result.current.setName("Second");
     });
-    expect(result.current.folderPath).toBe("/custom/path");
+    expect(result.current.displayRepoName).toBe("custom-repo");
   });
 
   it("canSubmit is false when name is empty", () => {
@@ -122,7 +124,11 @@ describe("useNewProjectForm", () => {
     );
 
     expect(result.current.canSubmit).toBe(false);
-    expect(result.current.submitBlocker).toContain("Project name is required");
+
+    act(() => {
+      result.current.setName("Named");
+    });
+    expect(result.current.canSubmit).toBe(true);
   });
 
   it("proposedRepoSlug derives from name", () => {
@@ -157,6 +163,7 @@ describe("useNewProjectForm", () => {
 
     act(() => {
       result.current.setName("test");
+      result.current.setLocalWorkspacePath("/custom/path");
     });
 
     act(() => {
@@ -164,38 +171,35 @@ describe("useNewProjectForm", () => {
     });
 
     expect(result.current.name).toBe("");
-    expect(result.current.folderPath).toBe("");
-    expect(result.current.environment).toBe("remote");
+    expect(result.current.localWorkspacePath).toBe("");
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it("setEnvironment updates the environment", () => {
+  it("setLocalWorkspacePath stores the local-only folder override", () => {
     const { result } = renderHook(() =>
       useNewProjectForm(true, mockOnClose, mockOnCreated),
     );
 
-    expect(result.current.environment).toBe("remote");
+    expect(result.current.localWorkspacePath).toBe("");
 
     act(() => {
-      result.current.setEnvironment("local");
+      result.current.setLocalWorkspacePath("/work/here");
     });
 
-    expect(result.current.environment).toBe("local");
+    expect(result.current.localWorkspacePath).toBe("/work/here");
   });
 
-  it("keeps mobile projects remote-only even if local is requested", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
-
+  it("blocks submit until an existing repo is selected in existing mode", () => {
     const { result } = renderHook(() =>
       useNewProjectForm(true, mockOnClose, mockOnCreated),
     );
 
-    expect(result.current.environment).toBe("remote");
-
     act(() => {
-      result.current.setEnvironment("local");
+      result.current.setName("Named");
+      result.current.setOrbitRepoMode("existing");
     });
 
-    expect(result.current.environment).toBe("remote");
+    expect(result.current.submitBlocker).toContain("existing Orbit repo");
+    expect(result.current.canSubmit).toBe(false);
   });
 });
