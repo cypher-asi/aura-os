@@ -152,20 +152,39 @@ async function bridgeLoopToolResult(
   const boundLoopId = loopStore.loopByProject[projectId] ?? null;
   switch (name) {
     case "start_dev_loop": {
-      try {
-        const status = await api.getLoopStatus(projectId);
-        if ((status.active_agent_instances?.length ?? 0) > 0) {
-          if (status.paused) await api.resumeLoop(projectId, boundLoopId ?? undefined);
+      // The harness-side loop is already running by the time this
+      // bridge fires; this call is what wires up the server's event
+      // forwarder. If it silently fails, the loop runs headless: no
+      // task/todo updates ever reach the UI. Retry once (start is
+      // idempotent — the server adopts the existing automaton) and
+      // surface the failure instead of swallowing it.
+      const attempts = 2;
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+          const status = await api.getLoopStatus(projectId);
+          if ((status.active_agent_instances?.length ?? 0) > 0) {
+            if (status.paused) await api.resumeLoop(projectId, boundLoopId ?? undefined);
+            return;
+          }
+          const res = await api.startLoop(projectId, undefined, selectedModel);
+          if (res.agent_instance_id) {
+            useAutomationLoopStore
+              .getState()
+              .setLoopAgent(projectId as ProjectId, res.agent_instance_id);
+          }
           return;
+        } catch (error) {
+          if (attempt === attempts) {
+            console.error(
+              "start_dev_loop bridge failed: dev loop may be running in the harness " +
+                "without an event forwarder (todos will not update). " +
+                "Press Play in the automation bar to re-attach.",
+              { projectId, error },
+            );
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         }
-        const res = await api.startLoop(projectId, undefined, selectedModel);
-        if (res.agent_instance_id) {
-          useAutomationLoopStore
-            .getState()
-            .setLoopAgent(projectId as ProjectId, res.agent_instance_id);
-        }
-      } catch {
-        /* ignore; automation bar / WS will reflect server state */
       }
       break;
     }

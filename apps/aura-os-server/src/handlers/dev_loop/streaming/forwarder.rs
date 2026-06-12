@@ -22,7 +22,7 @@ use std::sync::{
     atomic::{AtomicBool, AtomicI64, Ordering},
     Arc,
 };
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use aura_os_core::{AgentInstanceId, ProjectId, SessionId, SessionStatus, TaskId};
 use aura_os_harness::{collect_automaton_events, RunCompletion, WsReaderHandle};
@@ -343,6 +343,13 @@ fn emit_startup_log_line(
 /// forwarder look stale to `can_reuse_forwarder`, and dispatches
 /// every event through the [`side_effects`] pipeline plus
 /// per-loop-log / live-heuristics / loop-activity bookkeeping.
+///
+/// Token-level `text_delta` events are coalesced (see
+/// [`PendingTextDelta`]) before dispatch so the `/ws/events`
+/// firehose carries one merged frame per ~100 ms per task instead of
+/// one frame per streamed token — the per-token flood was lagging the
+/// desktop's broadcast receiver past the replay ring during dev-loop
+/// runs, forcing `ws_resync_required` round-trips.
 fn spawn_event_worker(inputs: EventWorkerInputs) -> tokio::task::JoinHandle<()> {
     let EventWorkerInputs {
         state,
@@ -354,30 +361,218 @@ fn spawn_event_worker(inputs: EventWorkerInputs) -> tokio::task::JoinHandle<()> 
         fallback_task_id,
         retry_state,
         last_forwarder_event_at,
-        mut event_rx,
+        event_rx,
     } = inputs;
-    tokio::spawn(async move {
-        let mut live_analyzer = LiveAnalyzer::new();
-        while let Some((event, event_type)) = event_rx.recv().await {
-            last_forwarder_event_at.store(current_millis(), Ordering::Relaxed);
-            handle_forwarder_event(
-                EventHandlerInputs {
-                    state: &state,
-                    project_id,
-                    agent_instance_id,
-                    loop_handle: &loop_handle,
-                    jwt: jwt.as_deref().map(|s| s.as_str()),
-                    session_id,
-                    fallback_task_id: fallback_task_id.clone(),
-                    retry_state: &retry_state,
-                },
-                &mut live_analyzer,
-                event,
-                event_type,
-            )
-            .await;
+    let ctx = WorkerCtx {
+        state,
+        project_id,
+        agent_instance_id,
+        loop_handle,
+        jwt,
+        session_id,
+        fallback_task_id,
+        retry_state,
+        last_forwarder_event_at,
+    };
+    tokio::spawn(run_event_worker(ctx, event_rx))
+}
+
+/// Owned context the side-effects worker carries across its whole
+/// lifetime. Mirrors [`EventHandlerInputs`] field-for-field but owns
+/// everything, so [`handler_inputs`](WorkerCtx::handler_inputs) can
+/// mint a fresh borrow bundle for each dispatch (regular events and
+/// coalesced-delta flushes alike).
+struct WorkerCtx {
+    state: AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    loop_handle: Arc<LoopHandle>,
+    jwt: Option<Arc<String>>,
+    session_id: Option<SessionId>,
+    fallback_task_id: Option<String>,
+    retry_state: Arc<LoopRetryState>,
+    last_forwarder_event_at: Arc<AtomicI64>,
+}
+
+impl WorkerCtx {
+    fn handler_inputs(&self) -> EventHandlerInputs<'_> {
+        EventHandlerInputs {
+            state: &self.state,
+            project_id: self.project_id,
+            agent_instance_id: self.agent_instance_id,
+            loop_handle: &self.loop_handle,
+            jwt: self.jwt.as_deref().map(|s| s.as_str()),
+            session_id: self.session_id,
+            fallback_task_id: self.fallback_task_id.clone(),
+            retry_state: &self.retry_state,
         }
-    })
+    }
+}
+
+/// Worker loop body. Drains the event mpsc, buffering consecutive
+/// `text_delta` events into a [`PendingTextDelta`] and flushing the
+/// merged frame whenever (a) a non-delta event arrives (ordering is
+/// preserved: the merged text always dispatches before the event
+/// that interrupted it), (b) the delta belongs to a different task,
+/// (c) the buffer trips its size/age caps, or (d) the stream goes
+/// quiet for [`TEXT_DELTA_FLUSH_INTERVAL`].
+async fn run_event_worker(
+    ctx: WorkerCtx,
+    mut event_rx: mpsc::UnboundedReceiver<(serde_json::Value, String)>,
+) {
+    let mut live_analyzer = LiveAnalyzer::new();
+    let mut pending: Option<PendingTextDelta> = None;
+    loop {
+        let received = if pending.is_some() {
+            match tokio::time::timeout(TEXT_DELTA_FLUSH_INTERVAL, event_rx.recv()).await {
+                Ok(received) => received,
+                Err(_elapsed) => {
+                    flush_pending_text_delta(&ctx, &mut live_analyzer, &mut pending).await;
+                    continue;
+                }
+            }
+        } else {
+            event_rx.recv().await
+        };
+        let Some((event, event_type)) = received else { break };
+        ctx.last_forwarder_event_at
+            .store(current_millis(), Ordering::Relaxed);
+        if event_type == "text_delta" && delta_text(&event).is_some() {
+            absorb_text_delta(&ctx, &mut live_analyzer, &mut pending, event).await;
+            continue;
+        }
+        flush_pending_text_delta(&ctx, &mut live_analyzer, &mut pending).await;
+        handle_forwarder_event(ctx.handler_inputs(), &mut live_analyzer, event, event_type).await;
+    }
+    // Channel closed: dispatch whatever is still buffered so the last
+    // streamed fragment of a run is never silently dropped.
+    flush_pending_text_delta(&ctx, &mut live_analyzer, &mut pending).await;
+}
+
+/// Fold a `text_delta` event into the pending buffer, flushing first
+/// when it belongs to a different task than the buffered run, and
+/// flushing after when the buffer trips its size or age cap.
+async fn absorb_text_delta(
+    ctx: &WorkerCtx,
+    live_analyzer: &mut LiveAnalyzer,
+    pending: &mut Option<PendingTextDelta>,
+    event: serde_json::Value,
+) {
+    match pending.as_mut() {
+        Some(buffered) if buffered.accepts(&event) => buffered.append(&event),
+        _ => {
+            flush_pending_text_delta(ctx, live_analyzer, pending).await;
+            *pending = Some(PendingTextDelta::start(event));
+        }
+    }
+    if pending
+        .as_ref()
+        .is_some_and(PendingTextDelta::should_flush_eagerly)
+    {
+        flush_pending_text_delta(ctx, live_analyzer, pending).await;
+    }
+}
+
+/// Dispatch the merged frame for the buffered delta run (if any)
+/// through the normal per-event pipeline.
+async fn flush_pending_text_delta(
+    ctx: &WorkerCtx,
+    live_analyzer: &mut LiveAnalyzer,
+    pending: &mut Option<PendingTextDelta>,
+) {
+    let Some(buffered) = pending.take() else { return };
+    let (event, event_type) = buffered.into_event();
+    handle_forwarder_event(ctx.handler_inputs(), live_analyzer, event, event_type).await;
+}
+
+/// Quiet-stream flush deadline for a buffered delta run: if no event
+/// arrives for this long, the merged frame dispatches anyway so the
+/// Live Output panel never sits on stale text.
+const TEXT_DELTA_FLUSH_INTERVAL: Duration = Duration::from_millis(100);
+
+/// A steady token stream resets the quiet-stream timeout on every
+/// delta, so cap how long a buffered run may age before it is
+/// force-flushed regardless of arrival cadence.
+const TEXT_DELTA_MAX_BUFFER_AGE: Duration = Duration::from_millis(250);
+
+/// Upper bound on buffered text per merged frame, so a single flush
+/// never produces a pathologically large WS frame.
+const TEXT_DELTA_MAX_BUFFERED_CHARS: usize = 4096;
+
+/// A run of consecutive `text_delta` events for one task, merged into
+/// a single frame before dispatch. The first event of the run is kept
+/// verbatim as the template (routing keys, aliases, ...) and only its
+/// text payload is replaced with the concatenation on flush. Protocol
+/// events are never buffered — only `text_delta` — so task lifecycle
+/// ordering on the firehose is unchanged.
+struct PendingTextDelta {
+    template: serde_json::Value,
+    task_id: Option<String>,
+    text: String,
+    started: Instant,
+}
+
+impl PendingTextDelta {
+    fn start(event: serde_json::Value) -> Self {
+        let task_id = delta_task_id(&event);
+        let text = delta_text(&event).unwrap_or_default().to_string();
+        Self {
+            template: event,
+            task_id,
+            text,
+            started: Instant::now(),
+        }
+    }
+
+    /// A delta joins the buffered run only when it targets the same
+    /// task; otherwise the caller must flush first so per-task output
+    /// buffers never interleave.
+    fn accepts(&self, event: &serde_json::Value) -> bool {
+        delta_task_id(event) == self.task_id
+    }
+
+    fn append(&mut self, event: &serde_json::Value) {
+        if let Some(text) = delta_text(event) {
+            self.text.push_str(text);
+        }
+    }
+
+    fn should_flush_eagerly(&self) -> bool {
+        self.text.len() >= TEXT_DELTA_MAX_BUFFERED_CHARS
+            || self.started.elapsed() >= TEXT_DELTA_MAX_BUFFER_AGE
+    }
+
+    /// Build the merged frame: the template event with its text
+    /// payload replaced by the full concatenation. The `delta` alias
+    /// key is dropped so no downstream reader can pick up the stale
+    /// first-token fragment over the merged `text`.
+    fn into_event(mut self) -> (serde_json::Value, String) {
+        if let Some(object) = self.template.as_object_mut() {
+            object.insert("text".to_string(), self.text.into());
+            object.remove("delta");
+        }
+        (self.template, "text_delta".to_string())
+    }
+}
+
+/// Task routing key of a `text_delta` payload, if present. Deltas
+/// without a task id coalesce with each other but never with deltas
+/// bound to a task.
+fn delta_task_id(event: &serde_json::Value) -> Option<String> {
+    event
+        .get("task_id")
+        .and_then(|value| value.as_str())
+        .map(str::to_string)
+}
+
+/// Streamed text fragment of a `text_delta` payload. Mirrors the key
+/// precedence of `side_effects::common::event_text` (`text`, then the
+/// legacy `delta` alias).
+fn delta_text(event: &serde_json::Value) -> Option<&str> {
+    event
+        .get("text")
+        .or_else(|| event.get("delta"))
+        .and_then(|value| value.as_str())
 }
 
 /// Inputs for [`handle_forwarder_event`]. Bundled so the per-event
@@ -930,6 +1125,60 @@ async fn task_output_snapshot(
         .await
         .get(&(project_id, task_id))
         .map(|entry| entry.live_output.clone())
+}
+
+#[cfg(test)]
+mod pending_text_delta_tests {
+    use super::{PendingTextDelta, TEXT_DELTA_MAX_BUFFERED_CHARS};
+    use serde_json::json;
+
+    #[test]
+    fn merges_consecutive_deltas_for_same_task() {
+        let mut pending = PendingTextDelta::start(json!({
+            "type": "text_delta",
+            "task_id": "abc",
+            "text": "Hello",
+            "project_id": "p1",
+        }));
+        assert!(pending.accepts(&json!({ "task_id": "abc", "text": ", world" })));
+        pending.append(&json!({ "task_id": "abc", "text": ", world" }));
+        let (event, event_type) = pending.into_event();
+        assert_eq!(event_type, "text_delta");
+        assert_eq!(event.get("text").and_then(|v| v.as_str()), Some("Hello, world"));
+        // Template fields (routing keys) survive the merge verbatim.
+        assert_eq!(event.get("project_id").and_then(|v| v.as_str()), Some("p1"));
+    }
+
+    #[test]
+    fn rejects_delta_for_different_task() {
+        let pending = PendingTextDelta::start(json!({ "task_id": "abc", "text": "x" }));
+        assert!(!pending.accepts(&json!({ "task_id": "def", "text": "y" })));
+        // Untasked deltas never join a task-bound run (and vice versa).
+        assert!(!pending.accepts(&json!({ "text": "y" })));
+    }
+
+    #[test]
+    fn merges_legacy_delta_alias_and_drops_it_on_flush() {
+        let mut pending = PendingTextDelta::start(json!({ "task_id": "abc", "delta": "Hel" }));
+        pending.append(&json!({ "task_id": "abc", "delta": "lo" }));
+        let (event, _) = pending.into_event();
+        assert_eq!(event.get("text").and_then(|v| v.as_str()), Some("Hello"));
+        assert!(
+            event.get("delta").is_none(),
+            "stale single-token alias must not survive the merge"
+        );
+    }
+
+    #[test]
+    fn size_cap_triggers_eager_flush() {
+        let mut pending = PendingTextDelta::start(json!({ "task_id": "abc", "text": "" }));
+        assert!(!pending.should_flush_eagerly());
+        pending.append(&json!({
+            "task_id": "abc",
+            "text": "x".repeat(TEXT_DELTA_MAX_BUFFERED_CHARS),
+        }));
+        assert!(pending.should_flush_eagerly());
+    }
 }
 
 #[cfg(test)]

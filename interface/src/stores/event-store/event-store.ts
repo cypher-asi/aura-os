@@ -112,6 +112,15 @@ function sameTaskOutputEntry(a: TaskOutputEntry | undefined, b: TaskOutputEntry)
 interface EventState {
   connected: boolean;
   lastEventAt: number | null;
+  /**
+   * Incremented every time the server tells us our firehose cursor is
+   * unrecoverable (`ws_resync_required`). Consumers that cache state
+   * derived from WS deltas (e.g. the task list) must treat a bump
+   * exactly like a reconnect and refetch their HTTP snapshot, because
+   * an unknown number of events was dropped while the socket stayed
+   * "connected".
+   */
+  resyncNonce: number;
   taskOutputs: Record<string, TaskOutputEntry>;
   /**
    * Keyed by \project_id\. Populated by the \project_push_stuck\ domain
@@ -134,6 +143,7 @@ export function notifyTaskOutputListeners(taskId: string) {
 export const useEventStore = create<EventState>()((set, get) => ({
   connected: false,
   lastEventAt: null,
+  resyncNonce: 0,
   taskOutputs: {},
   pushStuckByProject: {},
 
@@ -378,6 +388,10 @@ async function resyncAfterGap(): Promise<void> {
   // Drop any half-applied frame batch so the fresh snapshot wins.
   cancelQueuedEngineEventFrame();
   queuedEngineEvents.length = 0;
+  // Tell delta-derived caches (task list, etc.) that they missed an
+  // unknown number of events and must refetch — the socket never
+  // closed, so the reconnect-driven refetch path won't fire.
+  useEventStore.setState((s) => ({ resyncNonce: s.resyncNonce + 1 }));
   try {
     await useLoopActivityStore.getState().hydrate();
   } catch (error) {

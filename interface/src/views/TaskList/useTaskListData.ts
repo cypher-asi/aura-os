@@ -73,6 +73,7 @@ export function useTaskListData(): TaskListData {
   const projectId = ctx?.project.project_id;
   const subscribe = useEventStore((s) => s.subscribe);
   const connected = useEventStore((s) => s.connected);
+  const resyncNonce = useEventStore((s) => s.resyncNonce);
   const storeSpecs = useSidekickStore((s) => s.specs);
   const storeTasks = useSidekickStore((s) => s.tasks);
   const deletedSpecIds = useSidekickStore((s) => s.deletedSpecIds);
@@ -145,6 +146,19 @@ export function useTaskListData(): TaskListData {
     }
     prevConnectedRef.current = connected;
   }, [connected, refetchTasks]);
+
+  // The firehose reported a replay gap (`ws_resync_required`): an
+  // unknown number of task lifecycle events was dropped while the
+  // socket stayed connected, so the reconnect refetch above never
+  // fires. Treat each nonce bump as a forced refetch so todo statuses
+  // converge on the server's truth instead of freezing mid-loop.
+  const prevResyncNonceRef = useRef(resyncNonce);
+  useEffect(() => {
+    if (resyncNonce !== prevResyncNonceRef.current) {
+      prevResyncNonceRef.current = resyncNonce;
+      refetchTasks();
+    }
+  }, [resyncNonce, refetchTasks]);
 
   useEffect(() => {
     const unsubs = [
