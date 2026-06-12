@@ -96,7 +96,7 @@ test("aggregateFeature escalates repeated required failures to major outage", ()
 
 test("buildStatusSnapshot picks the latest check result and computes overall severity", () => {
   const registry = {
-    title: "Aura Observability",
+    title: "AURA Observability",
     features: [
       {
         id: "models",

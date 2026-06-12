@@ -315,8 +315,8 @@ async function requireOrgId(args) {
 async function createProject(args, track, orgId) {
   const project = await apiJson(args, "POST", "/api/projects", {
     org_id: orgId,
-    name: `Aura Status Project ${Date.now()}`,
-    description: "Temporary project created by Aura feature health probes.",
+    name: `AURA Status Project ${Date.now()}`,
+    description: "Temporary project created by AURA feature health probes.",
   });
   const projectId = extractId(project, ["project_id", "id"]);
   track("project", projectId, `/api/projects/${projectId}`);
@@ -326,7 +326,7 @@ async function createProject(args, track, orgId) {
 async function createSpec(args, projectId, title = "Status Probe Spec") {
   const spec = await apiJson(args, "POST", `/api/projects/${projectId}/specs`, {
     title,
-    markdown_contents: "## Goal\nVerify Aura status probe persistence.\n\n## Acceptance\nThe check can create and read a spec.\n",
+    markdown_contents: "## Goal\nVerify AURA status probe persistence.\n\n## Acceptance\nThe check can create and read a spec.\n",
     order_index: 0,
   });
   const specId = extractId(spec, ["spec_id", "id"]);
@@ -338,7 +338,7 @@ async function createTask(args, projectId, specId) {
   const task = await apiJson(args, "POST", `/api/projects/${projectId}/tasks`, {
     title: "Status probe task",
     spec_id: specId,
-    description: "Temporary task created by Aura feature health probes.",
+    description: "Temporary task created by AURA feature health probes.",
     status: "backlog",
     order_index: 0,
     skip_auto_decompose: true,
@@ -377,7 +377,7 @@ async function createAgent(args, track, machineType, model = null, orgId = null)
     name: `aura-status-${machineType}-${Date.now()}`,
     role: "status-probe",
     personality: "Small, deterministic health-check agent.",
-    system_prompt: "You are an Aura status probe. Reply exactly as requested.",
+    system_prompt: "You are an AURA status probe. Reply exactly as requested.",
     skills: [],
     icon: null,
     machine_type: machineType,
@@ -594,7 +594,7 @@ async function runChecks(args) {
         const { projectId } = await createProject(args, track, orgId);
         const process = await apiJson(args, "POST", "/api/processes", {
           name: `Status Probe Process ${Date.now()}`,
-          description: "Temporary process created by Aura feature health probes.",
+          description: "Temporary process created by AURA feature health probes.",
           project_id: projectId,
           tags: ["aura-status-probe"],
         });
@@ -818,7 +818,7 @@ async function runChecks(args) {
     checks.push(await probe("model3d-generation-stream", "media-generation", "3D generation stream", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const frames = await apiSse(args, "/api/generate/3d/stream", {
-        prompt: "A simple cube for an Aura status probe",
+        prompt: "A simple cube for an AURA status probe",
         image_data: process.env.AURA_STATUS_3D_SOURCE_IMAGE || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
       }, 240_000);
       const completed = frames.find((frame) => frame.event === "generation_completed" || frame.event === "completed");
@@ -836,7 +836,7 @@ async function runChecks(args) {
     checks.push(await probe("video-generation-stream", "media-generation", "Video generation stream", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const frames = await apiSse(args, "/api/generate/video/stream", {
-        prompt: "A one second Aura status pulse animation",
+        prompt: "A one second AURA status pulse animation",
         model: process.env.AURA_STATUS_VIDEO_MODEL || "veo-3.1-fast",
         durationSeconds: 1,
         aspectRatio: "16:9",
