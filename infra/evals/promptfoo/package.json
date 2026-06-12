@@ -7,6 +7,6 @@
     "eval:ci": "mkdir -p ../reports && promptfoo eval -c promptfooconfig.yaml -o ../reports/promptfoo-results.json"
   },
   "devDependencies": {
-    "promptfoo": "0.121.3"
+    "promptfoo": "0.121.15"
   }
 }

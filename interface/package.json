@@ -82,7 +82,7 @@
     "react-easy-crop": "^5.5.7",
     "react-i18next": "^17.0.8",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.13.1",
+    "react-router-dom": "^7.17.0",
     "rehype-highlight": "^7.0.2",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
@@ -97,6 +97,10 @@
   "overrides": {
     "@types/react": "$@types/react",
     "@types/react-dom": "$@types/react-dom",
+    "i18next-parser": {
+      "esbuild": "^0.25.0"
+    },
+    "js-yaml": "^4.1.1",
     "@xterm/addon-webgl": {
       "@xterm/xterm": "$@xterm/xterm"
     },
