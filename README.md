@@ -94,6 +94,10 @@ Edit `.env` and set:
 | `AURA_INTEGRATIONS_URL` | No | aura-integrations URL for encrypted integrations and Google OAuth. Required for users to connect Google. |
 | `AURA_INTEGRATIONS_INTERNAL_TOKEN` | No | Internal token matching aura-integrations `INTERNAL_SERVICE_TOKEN`; used for service-to-service secret resolution paths. |
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
+| `SWARM_BASE_URL` | No | **aura-swarm gateway** URL for remote agents (confidential SEV-SNP VMs). Agents with `machine_type` other than `local` route their sessions, lifecycle, files, and VM logs through this gateway. Omit for local-only agents. See [docs/aura-swarm.md](./docs/aura-swarm.md). |
+| `LOCAL_HARNESS_URL` | No | Local aura-harness URL for `local` agents (default port `8080`; dev channel `8081`). If nothing is listening there at startup, the server auto-spawns the harness from `AURA_HARNESS_DIR` (or `../aura-harness`). |
+| `AURA_HARNESS_DIR` | No | Path to a sibling `aura-harness` checkout used for harness auto-spawn and desktop packaging. |
+| `AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN` | No | Set `1`/`true` to never auto-spawn the local harness (e.g. remote-only deployments such as Render). |
 | `Z_BILLING_API_KEY` | No | Service API key for z-billing. Required when the public x402 chat endpoint settles actual token usage from z-billing quotes. |
 | `AURA_X402_PAY_TO` | No | Wallet address that receives x402 payments. Required to enable the paid x402 endpoints. |
 | `AURA_X402_CHAT_PRICE` | No | Maximum dollar-denominated x402 authorization for one `POST /api/public/x402/v1/chat/completions` request (default: `$0.02`). With the default `upto` scheme, Aura settles the actual z-billing usage quote up to this ceiling. |
@@ -191,6 +195,26 @@ LOCAL_HARNESS_URL=http://127.0.0.1:3404 cargo run --no-default-features --featur
 With `--external-harness` the desktop binary refuses to start if `LOCAL_HARNESS_URL` is unset or `/health` is unreachable, and will not spawn the bundled local harness sidecar. The runtime config surfaces this as `AURA_DESKTOP_EXTERNAL_HARNESS=1` so the UI can reflect that the harness is externally managed.
 
 The standard external harness runtime selects its command execution policy in code rather than through env-based command switches. Its `/health` response should report `run_command_enabled: true`, `shell_enabled: true`, and a non-empty `binary_allowlist`; if any of those are missing or disabled, restart the harness with the current autonomous-agent runtime policy before starting the dev loop.
+
+### Remote agents via aura-swarm
+
+aura-swarm is the third runtime component of the stack (alongside the aura-os server and the local harness): a gateway + control plane that runs each **remote** agent in its own confidential SEV-SNP VM with sealed (encrypted-at-rest) state, on one of three billed tiers (`small` 4¢/h, `standard` 8¢/h default, `pro` 15¢/h).
+
+Routing is automatic per agent: agents with `machine_type: "local"` use the local harness at `LOCAL_HARNESS_URL`; any other `machine_type` routes through the swarm gateway at `SWARM_BASE_URL`. Both URLs can be set side by side — a typical full setup runs local agents against the auto-spawned sidecar harness and remote agents against a deployed gateway:
+
+```bash
+# .env
+LOCAL_HARNESS_URL=http://localhost:8080      # local agents (auto-spawned if absent)
+SWARM_BASE_URL=https://your-swarm-gateway.example.com   # remote agents
+```
+
+Notes:
+
+- The server forwards the signed-in user's zOS JWT to the gateway on every call — there is no separate swarm credential to configure.
+- If `SWARM_BASE_URL` is unset, remote-agent creation and lifecycle actions fail with `503 remote agent runtime is not configured (SWARM_BASE_URL)`; local agents are unaffected.
+- When sessions route off-box (a `SWARM_BASE_URL` is set, or `LOCAL_HARNESS_URL` is non-loopback), also set `AURA_SERVER_BASE_URL` (or `VITE_API_URL`) so cross-agent tool callbacks can reach back into the server.
+- Desktop builds ship a baked-in default `SWARM_BASE_URL` (see `apps/aura-os-desktop/build.rs`); set the env var to override it.
+- Remote-agent operations (wake/hibernate, tier changes, usage and cost queries, VM logs) are covered in [docs/runbooks/swarm-operations.md](./docs/runbooks/swarm-operations.md), and the architecture split in [docs/aura-swarm.md](./docs/aura-swarm.md).
 
 ### Run mobile web
 

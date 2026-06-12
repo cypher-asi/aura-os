@@ -7,6 +7,7 @@ This folder keeps the documents that are still useful for current architecture, 
 ## Architecture
 
 - [Capabilities and Credentials Architecture](./capabilities-and-credentials-architecture.md) - canonical reference for capability, credential, and runtime boundaries.
+- [aura-swarm Integration](./aura-swarm.md) - local harness vs swarm split, remote-agent proxying, process trigger registration, VM logs.
 - [Feedback System Requirements](./feedback-system-requirements.md) - current product and data requirements for the global Feedback app.
 
 ## Evals
@@ -29,6 +30,7 @@ This folder keeps the documents that are still useful for current architecture, 
 ## Runbooks
 
 - [Remote push recovery](./runbooks/remote-push-recovery.md) - diagnose and unblock a stuck git remote when the autonomous dev-loop is running.
+- [Swarm operations](./runbooks/swarm-operations.md) - wake/hibernate expectations, tier changes, usage/cost queries, and VM log access for remote agents.
 
 ## Dependency Maintenance
 
