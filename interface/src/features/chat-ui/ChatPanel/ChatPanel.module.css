@@ -405,17 +405,11 @@
   justify-content: center;
   padding: var(--space-4) calc(var(--space-3) * 2) 0;
   pointer-events: none;
-  /* Full-width backdrop fade so chat content scrolling above the
-     pinned indicator dissolves into the chat background instead of
-     visibly overlapping the shimmering phase label. Applied to the
-     outer (not the centered max-width inner) so text that sits on
-     either side of the narrow indicator label is also covered. */
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--color-bg) 60%,
-    var(--color-bg) 100%
-  );
+  /* No backdrop: the strip used to paint a full-width bottom fade so
+     scrolling content dissolved behind the phase label, but the wide
+     gradient band read as a stray UI block under the indicator. The
+     input bar's own mask cutoff already hides content near the input;
+     the shimmer label sits directly on the transcript. */
 }
 
 .pinnedStreamingIndicatorInner {
