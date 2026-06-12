@@ -60,8 +60,8 @@
       "description": "Local agent template creation, project binding, and workspace-backed chat readiness.",
       "publicSummary": "Local agents can be created and exercised through the harness.",
       "checks": [
-        { "id": "local-agent-create", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
-        { "id": "local-agent-runtime", "required": true, "staleAfterMinutes": 15, "warningLatencyMs": 15000, "outageLatencyMs": 45000 }
+        { "id": "local-agent-create", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "local-agent-runtime", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 15000, "outageLatencyMs": 45000 }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 2
@@ -119,7 +119,7 @@
       "description": "Curated model matrix smoke tests through Aura's runtime path.",
       "publicSummary": "Supported text models are returning valid assistant responses.",
       "checks": [
-        { "id": "model-matrix", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 25000, "outageLatencyMs": 60000 }
+        { "id": "model-matrix", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 25000, "outageLatencyMs": 60000 }
       ],
       "minPassRate": 0.9,
       "degradedAfterFailures": 1,
@@ -209,8 +209,8 @@
       "description": "Desktop runtime defaults and local terminal API availability.",
       "publicSummary": "Desktop runtime support endpoints are responding.",
       "checks": [
-        { "id": "workspace-defaults", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
-        { "id": "terminal-list", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 3000, "outageLatencyMs": 10000 }
+        { "id": "workspace-defaults", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
+        { "id": "terminal-list", "required": false, "staleAfterMinutes": 1800, "warningLatencyMs": 3000, "outageLatencyMs": 10000 }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 1

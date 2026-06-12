@@ -50,9 +50,16 @@ jobs:
       - name: Build public observability snapshot
         if: always()
         env:
+          AURA_STATUS_PREVIOUS_SNAPSHOT: infra/evals/reports/status/previous/status.json
           AURA_STATUS_ENVIRONMENT: production
           AURA_STATUS_SOURCE: github-actions
-        run: npm run status:snapshot
+        shell: bash
+        run: |
+          mkdir -p infra/evals/reports/status/previous
+          git fetch origin +gh-pages:refs/remotes/origin/gh-pages || true
+          git show origin/gh-pages:observability/status.json \
+            > infra/evals/reports/status/previous/status.json || true
+          npm run status:snapshot
 
       - uses: actions/checkout@v5
         if: always()

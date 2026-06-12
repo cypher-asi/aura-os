@@ -65,10 +65,11 @@ npm run status:desktop-release
 ```
 
 By default this covers the binary-local API, authenticated session, org/profile
-reads, workspace defaults, terminal list, local agent creation, and local agent
-runtime response. Release workflows run this on the macOS arm64 release leg
-when `AURA_STATUS_USER_EMAIL` and `AURA_STATUS_USER_PASSWORD` are configured,
-then upload the generated check JSON and desktop logs as artifacts.
+reads, workspace defaults, terminal list, local agent creation, local agent
+runtime response, and the local model matrix. Release workflows run this on the
+macOS arm64 release leg when `AURA_STATUS_USER_EMAIL` and
+`AURA_STATUS_USER_PASSWORD` are configured, then upload the generated check JSON
+and desktop logs as artifacts.
 
 For end-to-end local verification, use the existing eval local stack in
 `infra/evals/local-stack/`. The observability page is not served from a sibling
@@ -136,6 +137,13 @@ that can be truthfully exercised against deployed website/API surfaces. It does
 not run desktop-loopback checks such as `local-agent-runtime`,
 `workspace-defaults`, `terminal-list`, or the local `model-matrix`; those belong
 to `status:desktop-release`.
+
+The browser/API and desktop lanes publish to the same public path:
+`/observability/status.json`. Each lane first reads the previously published
+snapshot from `gh-pages`, carries forward still-fresh checks from the other
+lane, overlays the checks it just ran, and republishes the merged snapshot. This
+keeps `/observability` as one dashboard while preserving the correct execution
+environment for each eval.
 
 The core production commands are:
 

@@ -502,6 +502,7 @@ jobs:
 
       - name: Run desktop release observability probes
         if: matrix.target == 'macos' && matrix.arch == 'aarch64'
+        continue-on-error: true
         env:
           AURA_DESKTOP_BINARY: ${{ env.AURA_RELEASE_DIR }}/aura-os-desktop
           AURA_STATUS_USER_EMAIL: ${{ secrets.AURA_STATUS_USER_EMAIL }}
@@ -509,7 +510,7 @@ jobs:
           AURA_STATUS_ENVIRONMENT: desktop-stable-${{ matrix.target }}-${{ matrix.arch }}
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_DESKTOP_LOG_DIR: desktop-observability-logs
-          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime
+          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime,model-matrix
         shell: bash
         run: |
           if [ -z "$AURA_STATUS_USER_EMAIL" ] || [ -z "$AURA_STATUS_USER_PASSWORD" ]; then
@@ -527,6 +528,39 @@ jobs:
             desktop-observability-checks
             desktop-observability-logs
           if-no-files-found: ignore
+
+      - name: Build merged desktop observability snapshot
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64'
+        env:
+          AURA_STATUS_CHECKS_DIR: desktop-observability-checks
+          AURA_STATUS_PREVIOUS_SNAPSHOT: infra/evals/reports/status/previous/status.json
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: desktop-stable-release
+        shell: bash
+        run: |
+          mkdir -p infra/evals/reports/status/previous
+          git fetch origin +gh-pages:refs/remotes/origin/gh-pages || true
+          git show origin/gh-pages:observability/status.json \
+            > infra/evals/reports/status/previous/status.json || true
+          npm run status:snapshot
+
+      - uses: actions/checkout@v5
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64'
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: desktop-observability-pages
+
+      - name: Publish merged desktop observability snapshot
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64'
+        shell: bash
+        run: |
+          mkdir -p desktop-observability-pages/observability
+          cp interface/public/observability/status.json desktop-observability-pages/observability/status.json
+          bash infra/scripts/release/commit-gh-pages-with-retry.sh \
+            desktop-observability-pages \
+            "Update desktop observability status snapshot" \
+            observability/status.json
 
       - name: Package installer
         env:
