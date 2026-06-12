@@ -216,11 +216,9 @@
   width: 16px;
   height: 16px;
   min-width: 16px;
+  /* Double the button's 6px gap so the folder sits clearly apart from the label. */
+  margin-right: 6px;
   flex-shrink: 0;
-  color: var(--color-text-secondary);
-}
-
-.projectMainButtonSelected .projectIcon {
   color: var(--color-text-primary);
 }
 
