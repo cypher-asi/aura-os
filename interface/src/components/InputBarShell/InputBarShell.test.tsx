@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { vi } from "vitest";
 
 vi.mock("./InputBarShell.module.css", () => ({
@@ -173,5 +173,87 @@ describe("InputBarShell", () => {
           .scrollHeight;
       }
     }
+  });
+
+  describe("native autosize path (field-sizing: content supported)", () => {
+    let capturedCallback: ResizeObserverCallback | null = null;
+    let observedTargets: Element[] = [];
+
+    beforeEach(() => {
+      capturedCallback = null;
+      observedTargets = [];
+      // The hook samples support once per mount via CSS.supports.
+      vi.stubGlobal("CSS", {
+        supports: (property: string) => property === "field-sizing",
+      });
+      class MockResizeObserver {
+        constructor(cb: ResizeObserverCallback) {
+          capturedCallback = cb;
+        }
+        observe(target: Element) {
+          observedTargets.push(target);
+        }
+        unobserve() {}
+        disconnect() {}
+      }
+      vi.stubGlobal(
+        "ResizeObserver",
+        MockResizeObserver as unknown as typeof ResizeObserver,
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    /** Delivers mirror sizes the way the browser's layout pass would. */
+    function fireMirrorSizes(heights: { content: number; baseline: number }) {
+      const entries = observedTargets.map((target) => ({
+        target,
+        contentRect: {
+          height:
+            target.getAttribute("data-autosize-mirror") === "content"
+              ? heights.content
+              : heights.baseline,
+        },
+      })) as unknown as ResizeObserverEntry[];
+      act(() => {
+        capturedCallback!(entries, {} as ResizeObserver);
+      });
+    }
+
+    it("drives the wrap state from observed mirror sizes without touching the textarea height", () => {
+      const { container } = render(
+        <InputBarShell
+          {...makeProps({
+            value: "a prompt",
+            inputRowStart: <button type="button" aria-label="Attach" />,
+          })}
+        />,
+      );
+
+      // The native path observes exactly the two mirrors (the fallback's
+      // textarea observer is not installed).
+      expect(observedTargets).toHaveLength(2);
+
+      fireMirrorSizes({ content: 20, baseline: 20 });
+      expect(container.querySelector('[data-multiline="true"]')).toBeNull();
+
+      // The content mirror wrapping to a second line flips the layout.
+      fireMirrorSizes({ content: 40, baseline: 20 });
+      expect(
+        container.querySelector('[data-multiline="true"]'),
+      ).not.toBeNull();
+      const bottomRow = container.querySelector(".containerBottomRow");
+      expect(
+        bottomRow!.querySelector('button[aria-label="Send"]'),
+      ).not.toBeNull();
+      // The browser owns the height — the hook must never write one.
+      expect(container.querySelector("textarea")!.style.height).toBe("");
+
+      // Fitting on one line again collapses back to the inline layout.
+      fireMirrorSizes({ content: 20, baseline: 20 });
+      expect(container.querySelector('[data-multiline="true"]')).toBeNull();
+    });
   });
 });

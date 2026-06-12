@@ -289,6 +289,18 @@
   outline: none;
 }
 
+/* Modern engines: let CSS own the auto-grow so typing never runs the
+   JS write→read→write height pass in useInputAutosize — that forced
+   synchronous reflow per keystroke was the dominant source of input
+   latency. The `max-height` cap above still engages the textarea's
+   own scrollbar for long prompts; the hook detects support and skips
+   its fallback measurement entirely. */
+@supports (field-sizing: content) {
+  .textarea {
+    field-sizing: content;
+  }
+}
+
 @media (pointer: coarse), (max-width: 900px) {
   .textarea,
   .sizeMirror {
