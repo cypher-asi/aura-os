@@ -75,6 +75,7 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
   const isSelected = selectedIds.has(node.id);
   const hasChildren = !!node.children;
   const isDisabled = node.disabled || false;
+  const displayIcon = isExpanded && node.expandedIcon ? node.expandedIcon : node.icon;
 
   // Drag and drop setup
   const {
@@ -291,8 +292,8 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
               ? <span className={clsx(styles.chevronButton, styles.leafSpacer)} />
               : <span className={styles.leafSpacer} />
           )}
-          {node.icon ? (
-            <span className={styles.icon}>{node.icon}</span>
+          {displayIcon ? (
+            <span className={styles.icon}>{displayIcon}</span>
           ) : (
             <span className={styles.iconSpacer} />
           )}
@@ -356,8 +357,8 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
       >
         {chevronPosition === 'left' && chevronElement}
 
-        {node.icon ? (
-          <Item.Icon className={styles.icon}>{node.icon}</Item.Icon>
+        {displayIcon ? (
+          <Item.Icon className={styles.icon}>{displayIcon}</Item.Icon>
         ) : (
           <span className={styles.iconSpacer} />
         )}

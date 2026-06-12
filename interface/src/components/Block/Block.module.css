@@ -164,6 +164,18 @@
   min-width: 0;
 }
 
+/*
+ * Fallback flex-grow spacer for rows without a summary. `.blockSummary`
+ * normally owns the `flex: 1` that pushes the trailing/copy/chevron
+ * cluster to the right edge; when a renderer omits its summary (e.g. a
+ * Run command row whose input was never recorded) this keeps the chevron
+ * pinned far-right instead of bunching up after the title.
+ */
+.blockSpacer {
+  flex: 1;
+  min-width: 0;
+}
+
 .blockBadge {
   font-size: 10px;
   text-transform: uppercase;

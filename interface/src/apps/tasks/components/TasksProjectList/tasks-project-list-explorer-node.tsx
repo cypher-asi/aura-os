@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { Folder, FolderOpen, Loader2 } from "lucide-react";
 import { Avatar } from "../../../../components/Avatar";
 import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
 import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
@@ -112,6 +112,8 @@ export function buildTasksExplorerNode(
   return {
     id: project.project_id,
     label: project.name,
+    icon: <Folder size={16} />,
+    expandedIcon: <FolderOpen size={16} />,
     suffix: buildTaskProjectSuffix(
       project.project_id,
       data.actions.handleAddAgent,

@@ -10,6 +10,8 @@ export interface ExplorerNode {
   label: string;
   /** Optional icon to display before the label */
   icon?: ReactNode;
+  /** Optional icon shown instead of `icon` when the node is expanded */
+  expandedIcon?: ReactNode;
   /** Optional content rendered after the label (e.g. status icons) */
   suffix?: ReactNode;
   /** Child nodes */

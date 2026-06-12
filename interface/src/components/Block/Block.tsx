@@ -243,7 +243,11 @@ export function Block({
         <span className={styles.blockTitle}>
           <span className={styles.blockTitleText}>{title}</span>
         </span>
-        {summary ? <span className={styles.blockSummary}>{summary}</span> : null}
+        {summary ? (
+          <span className={styles.blockSummary}>{summary}</span>
+        ) : (
+          <span className={styles.blockSpacer} aria-hidden="true" />
+        )}
         {trailing ? <span className={styles.blockTrailing}>{trailing}</span> : null}
         {badge ? <span className={styles.blockBadge}>{badge}</span> : null}
         <span className={styles.blockCopy}>

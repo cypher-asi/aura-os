@@ -1,6 +1,6 @@
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { Archive, Gauge, Loader2 } from "lucide-react";
+import { Archive, Folder, FolderOpen, Gauge, Loader2 } from "lucide-react";
 import { Avatar } from "../Avatar";
 import { ProjectsPlusButton } from "../ProjectsPlusButton";
 import type { useProjectListData } from "./useProjectListData";
@@ -261,6 +261,8 @@ export function buildProjectExplorerNode(
   return {
     id: project.project_id,
     label: project.name,
+    icon: <Folder size={16} />,
+    expandedIcon: <FolderOpen size={16} />,
     suffix: buildProjectSuffix(
       project.project_id,
       context,
