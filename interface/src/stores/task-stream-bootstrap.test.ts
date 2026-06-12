@@ -69,6 +69,7 @@ import { useTaskOutputPanelStore } from "./task-output-panel-store";
 import { useAutomationLoopStore } from "./automation-loop-store";
 import { useTaskStatusStore } from "./task-status-store";
 import { useContextUsageStore } from "./context-usage-store";
+import { flushPendingTokenBumps } from "./context-usage-throttle";
 
 function resetStreamStore(): void {
   useStreamStore.setState({ entries: {} });
@@ -666,6 +667,9 @@ describe("task-stream-bootstrap: context-usage wiring", () => {
       content: { task_id: "t1", text: "x".repeat(400) },
       project_id: "p1",
     } as unknown as AuraEvent);
+    // Delta bumps are coalesced (see `context-usage-throttle.ts`);
+    // drain them so the assertion sees the bumped value immediately.
+    flushPendingTokenBumps();
 
     const bumped = useContextUsageStore.getState().usageByStreamKey[taskStreamKey("t1")];
     expect(bumped!.estimatedTokens).toBeGreaterThan(baseline!.estimatedTokens!);

@@ -22,6 +22,11 @@ export interface UseTerminalOptions {
   remoteAgentId?: string;
 }
 
+/** PTY output chunk: local terminals deliver raw bytes (binary WS
+ *  frames, handed to xterm.js as `Uint8Array` with zero decode work);
+ *  remote terminals and synthesized error banners deliver strings. */
+export type TerminalOutputChunk = string | Uint8Array;
+
 export interface UseTerminalReturn {
   terminalId: string | null;
   connected: boolean;
@@ -35,7 +40,7 @@ export interface UseTerminalReturn {
   spawn: (cols: number, rows: number) => void;
   write: (data: string) => void;
   resize: (cols: number, rows: number) => void;
-  onOutput: (cb: (data: string) => void) => () => void;
+  onOutput: (cb: (data: TerminalOutputChunk) => void) => () => void;
   kill: () => void;
 }
 
@@ -47,7 +52,7 @@ const REMOTE_TERMINAL_CONNECTION_ERROR =
   "Could not connect to the remote swarm virtual machine terminal.";
 
 function emitError(
-  listeners: Set<(data: string) => void>,
+  listeners: Set<(data: TerminalOutputChunk) => void>,
   message: string,
   title = "Error:",
 ) {
@@ -55,7 +60,7 @@ function emitError(
   listeners.forEach((cb) => cb(text));
 }
 
-function emitRemoteConnectionError(listeners: Set<(data: string) => void>) {
+function emitRemoteConnectionError(listeners: Set<(data: TerminalOutputChunk) => void>) {
   const text = `\r\n${ANSI_RED}${ANSI_BOLD}ERROR:${ANSI_RESET}${ANSI_RED} ${REMOTE_TERMINAL_CONNECTION_ERROR}${ANSI_RESET}\r\n`;
   listeners.forEach((cb) => cb(text));
 }
@@ -64,7 +69,7 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
   const [terminalId, setTerminalId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const outputListeners = useRef<Set<(data: string) => void>>(new Set());
+  const outputListeners = useRef<Set<(data: TerminalOutputChunk) => void>>(new Set());
   const idRef = useRef<string | null>(null);
   const cancelledRef = useRef(false);
   const spawnedRef = useRef(false);
@@ -95,10 +100,25 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
 
   const wireWs = useCallback((socket: WebSocket, isRemote: boolean) => {
     wsRef.current = socket;
+    socket.binaryType = "arraybuffer";
     let receivedData = false;
 
     socket.onmessage = (event) => {
       receivedData = true;
+      // Local PTY output arrives as raw binary frames — forward the
+      // bytes untouched (xterm.js consumes Uint8Array natively). This
+      // keeps the per-chunk main-thread cost near zero; the previous
+      // JSON + base64 envelope cost a JSON.parse + atob per 4 KiB chunk.
+      // (`typeof !== "string"` rather than `instanceof ArrayBuffer` so
+      // cross-realm buffers are handled too; `binaryType` is set to
+      // "arraybuffer" above, so non-string data is always a buffer.)
+      if (typeof event.data !== "string") {
+        const bytes = new Uint8Array(event.data as ArrayBuffer);
+        outputListeners.current.forEach((cb) => cb(bytes));
+        return;
+      }
+      // Text frames: control messages (`exit`) and the remote-terminal
+      // gateway protocol, which still wraps output in JSON + base64.
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "output" && msg.data) {
@@ -219,7 +239,7 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
     }
   }, []);
 
-  const onOutput = useCallback((cb: (data: string) => void) => {
+  const onOutput = useCallback((cb: (data: TerminalOutputChunk) => void) => {
     outputListeners.current.add(cb);
     return () => {
       outputListeners.current.delete(cb);

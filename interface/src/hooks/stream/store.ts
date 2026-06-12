@@ -431,6 +431,19 @@ function resolveKey(r: StreamKeyResolver): string {
 export function createSetters(keyOrResolver: StreamKeyResolver): StreamSetters {
   const getKey = typeof keyOrResolver === "function" ? keyOrResolver : () => keyOrResolver;
   return {
+    applyStreamingPatch(patch) {
+      const key = getKey();
+      touchEntry(key);
+      // One setState for the whole display tick: text + timeline +
+      // isWriting + the lastEventAt/stuckSince bump that
+      // markStreamProgress would otherwise issue as a second setState.
+      // This is the per-frame hot path during token streaming.
+      updateStreamEntry(key, {
+        ...patch,
+        lastEventAt: Date.now(),
+        stuckSince: null,
+      });
+    },
     setStreamingText(v) {
       const key = getKey();
       touchEntry(key);

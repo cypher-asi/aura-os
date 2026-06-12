@@ -12,14 +12,35 @@ export interface PendingToolResolution {
 
 const SPEC_WRITE_TOOL_NAMES = new Set(["create_spec", "update_spec"]);
 
-const WORD_REVEAL_INITIAL_DELAY_MS = 16;
-const WORD_REVEAL_INTERVAL_MS = 42;
-const WORD_REVEAL_MEDIUM_BACKLOG_INTERVAL_MS = 24;
-const WORD_REVEAL_LARGE_BACKLOG_INTERVAL_MS = 12;
-const WORD_REVEAL_MAX_BACKLOG_INTERVAL_MS = 8;
-const WORD_REVEAL_MEDIUM_BACKLOG_WORDS = 6;
-const WORD_REVEAL_LARGE_BACKLOG_WORDS = 12;
-const WORD_REVEAL_MAX_BACKLOG_WORDS = 24;
+/* ------------------------------------------------------------------ */
+/*  Frame-driven reveal pacing.                                        */
+/*                                                                     */
+/*  The reveal runs as a single requestAnimationFrame loop: at most    */
+/*  ONE store update per display frame, no matter how fast tokens      */
+/*  arrive on the wire. Each frame reveals a time-based character      */
+/*  budget (words are never split mid-word) whose rate scales with     */
+/*  the hidden backlog, so the animation stays smooth at a calm pace   */
+/*  when caught up but can never fall behind unboundedly. A backlog    */
+/*  past REVEAL_FULL_FLUSH_CHARS skips the animation entirely — at     */
+/*  that size the user is watching a wall of text anyway and the      */
+/*  per-frame markdown re-render is pure waste.                        */
+/*                                                                     */
+/*  This replaced a setTimeout(8-42ms)-per-word chain that fired up   */
+/*  to ~125 store updates/sec (each one a full React commit + forced   */
+/*  layout), starving everything else on the main thread — most        */
+/*  visibly the xterm.js terminal.                                     */
+/* ------------------------------------------------------------------ */
+
+/** Floor reveal rate (chars/sec) when the backlog is small. */
+const REVEAL_MIN_CPS = 180;
+/** Target wall-clock to drain whatever backlog exists right now. */
+const REVEAL_BACKLOG_DRAIN_MS = 350;
+/** Backlog size beyond which the animation is skipped entirely. */
+const REVEAL_FULL_FLUSH_CHARS = 6000;
+/** Clamp per-frame elapsed time so a long stall (tab hidden, GC
+ *  pause) doesn't dump a huge burst in a single frame. */
+const REVEAL_MAX_FRAME_MS = 64;
+const REVEAL_MIN_FRAME_MS = 8;
 const MARKDOWN_LINE_PREFIX_RE = /^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+\.\s+|>\s+|#{1,6}\s+)/;
 const CODE_FENCE_LINE_RE = /^(?:`{3,}|~{3,})[^\n]*(?:\n|$)/;
 
@@ -103,20 +124,27 @@ function buildDisplayedTimeline(
   return displayedTimeline;
 }
 
-function updateWritingFlag(
-  refs: StreamRefs,
-  setters: StreamSetters,
-): void {
-  const writing =
-    refs.displayedTextLength.current < refs.streamBuffer.current.length;
-  setters.setIsWriting(writing);
-}
-
 export function syncDisplayedTimeline(
   refs: StreamRefs,
   setters: StreamSetters,
 ): void {
-  setters.setTimeline(buildDisplayedTimeline(refs, getDisplayedStreamingText(refs)));
+  setters.applyStreamingPatch({
+    timeline: buildDisplayedTimeline(refs, getDisplayedStreamingText(refs)),
+  });
+}
+
+/**
+ * Thinking-coalescer publish: thinking text + the gated timeline in one
+ * store update. Called from `handleThinkingDelta`'s per-frame rAF.
+ */
+export function applyThinkingDisplayState(
+  refs: StreamRefs,
+  setters: StreamSetters,
+): void {
+  setters.applyStreamingPatch({
+    thinkingText: refs.thinkingBuffer.current,
+    timeline: buildDisplayedTimeline(refs, getDisplayedStreamingText(refs)),
+  });
 }
 
 function applyDisplayedStreamingState(
@@ -128,9 +156,11 @@ function applyDisplayedStreamingState(
   refs.lastTextFlushAt.current = Date.now();
 
   const visibleText = getDisplayedStreamingText(refs);
-  setters.setStreamingText(visibleText);
-  setters.setTimeline(buildDisplayedTimeline(refs, visibleText));
-  updateWritingFlag(refs, setters);
+  setters.applyStreamingPatch({
+    streamingText: visibleText,
+    timeline: buildDisplayedTimeline(refs, visibleText),
+    isWriting: refs.displayedTextLength.current < refs.streamBuffer.current.length,
+  });
 }
 
 function isWhitespace(char: string): boolean {
@@ -173,28 +203,40 @@ function getNextWordRevealIndex(buffer: string, start: number): number {
   return cursor;
 }
 
-function getPendingRevealWordCount(refs: StreamRefs): number {
-  const hiddenText = refs.streamBuffer.current.slice(refs.displayedTextLength.current);
-  const matches = hiddenText.match(/\S+/g);
-  return matches ? matches.length : 0;
-}
-
-function getWordRevealDelayMs(refs: StreamRefs): number {
-  if (refs.displayedTextLength.current === 0) {
-    return WORD_REVEAL_INITIAL_DELAY_MS;
+/**
+ * How far the reveal cursor should advance this frame. The character
+ * budget is `elapsed * rate`, where the rate is the larger of the calm
+ * floor and "whatever drains the current backlog in
+ * REVEAL_BACKLOG_DRAIN_MS". The budget is then extended to the next
+ * word boundary (via `getNextWordRevealIndex`) so words, code-fence
+ * lines, and markdown line prefixes never render half-typed.
+ */
+function getRevealTargetIndex(refs: StreamRefs, now: number): number {
+  const buffer = refs.streamBuffer.current;
+  const displayed = refs.displayedTextLength.current;
+  const pendingChars = buffer.length - displayed;
+  if (pendingChars <= 0 || pendingChars >= REVEAL_FULL_FLUSH_CHARS) {
+    return buffer.length;
   }
 
-  const pendingWords = getPendingRevealWordCount(refs);
-  if (pendingWords >= WORD_REVEAL_MAX_BACKLOG_WORDS) {
-    return WORD_REVEAL_MAX_BACKLOG_INTERVAL_MS;
+  const lastFlushAt = refs.lastTextFlushAt.current;
+  const elapsedMs = lastFlushAt === 0
+    ? REVEAL_MAX_FRAME_MS
+    : Math.min(REVEAL_MAX_FRAME_MS, Math.max(REVEAL_MIN_FRAME_MS, now - lastFlushAt));
+  const cps = Math.max(
+    REVEAL_MIN_CPS,
+    pendingChars * (1000 / REVEAL_BACKLOG_DRAIN_MS),
+  );
+  const budget = Math.max(1, Math.round((cps * elapsedMs) / 1000));
+  const target = Math.min(buffer.length, displayed + budget);
+
+  let cursor = displayed;
+  while (cursor < target) {
+    const next = getNextWordRevealIndex(buffer, cursor);
+    if (next <= cursor) return buffer.length;
+    cursor = next;
   }
-  if (pendingWords >= WORD_REVEAL_LARGE_BACKLOG_WORDS) {
-    return WORD_REVEAL_LARGE_BACKLOG_INTERVAL_MS;
-  }
-  if (pendingWords >= WORD_REVEAL_MEDIUM_BACKLOG_WORDS) {
-    return WORD_REVEAL_MEDIUM_BACKLOG_INTERVAL_MS;
-  }
-  return WORD_REVEAL_INTERVAL_MS;
+  return cursor;
 }
 
 function queueStreamingTextReveal(
@@ -210,11 +252,11 @@ function queueStreamingTextReveal(
     refs.raf.current = null;
     const nextDisplayedLength = mode === "full"
       ? refs.streamBuffer.current.length
-      : getNextWordRevealIndex(refs.streamBuffer.current, refs.displayedTextLength.current);
+      : getRevealTargetIndex(refs, Date.now());
 
     applyDisplayedStreamingState(refs, setters, nextDisplayedLength);
     if (mode === "step" && refs.displayedTextLength.current < refs.streamBuffer.current.length) {
-      scheduleStreamingTextReveal(refs, setters);
+      queueStreamingTextReveal(refs, setters);
     }
   });
   refs.raf.current = ranSynchronously ? null : rafId;
@@ -229,13 +271,8 @@ export function scheduleStreamingTextReveal(
   refs: StreamRefs,
   setters: StreamSetters,
 ): void {
-  if (refs.raf.current !== null || refs.flushTimeout.current !== null) return;
   if (refs.displayedTextLength.current >= refs.streamBuffer.current.length) return;
-
-  refs.flushTimeout.current = setTimeout(() => {
-    refs.flushTimeout.current = null;
-    queueStreamingTextReveal(refs, setters);
-  }, getWordRevealDelayMs(refs));
+  queueStreamingTextReveal(refs, setters);
 }
 
 export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): void {

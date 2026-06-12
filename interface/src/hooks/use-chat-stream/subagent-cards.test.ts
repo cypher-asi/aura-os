@@ -44,6 +44,7 @@ function makeHarness(
   };
   const noop = vi.fn();
   const setters: StreamSetters = {
+    applyStreamingPatch: noop,
     setStreamingText: noop,
     setThinkingText: noop,
     setThinkingDurationMs: noop,

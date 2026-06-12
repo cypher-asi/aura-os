@@ -518,8 +518,9 @@ describe("stream/handlers — lifecycle (error / finalize / boundary / saved)", 
       const abortRef = { current: null as AbortController | null };
 
       handleTextDelta(refs, setters, null, "hello world again");
-      vi.advanceTimersByTime(16);
-      expect(setters.calls.setStreamingText).toEqual(["hello"]);
+      // Stage a mid-reveal state: the buffer holds the full text but
+      // the display cursor has only caught up to "hello".
+      refs.displayedTextLength.current = 5;
 
       finalizeStream(refs, setters, abortRef, false);
 

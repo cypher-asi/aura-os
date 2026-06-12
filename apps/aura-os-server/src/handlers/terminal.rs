@@ -143,6 +143,11 @@ pub(crate) async fn kill_terminal(
     }
 }
 
+/// Upper bound on a single coalesced PTY output frame. Large enough to
+/// swallow a burst of 4 KiB reads in one frame, small enough to keep
+/// the client's per-frame parse/render work bounded.
+const MAX_WS_OUTPUT_BATCH_BYTES: usize = 64 * 1024;
+
 #[derive(Deserialize)]
 struct WsClientMsg {
     #[serde(rename = "type")]
@@ -259,9 +264,22 @@ async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: Terminal
     loop {
         tokio::select! {
             Some(data) = output_rx.recv() => {
-                scan_output_for_urls(&state, project_id.as_ref(), &mut scanner, &data).await;
-                let msg = serde_json::json!({"type": "output", "data": B64.encode(&data)});
-                if socket.send(Message::Text(msg.to_string())).await.is_err() { break; }
+                // Greedily drain whatever the PTY has already produced so a
+                // burst of output (build logs, `ls -R`, …) goes out as one
+                // WS frame instead of one frame per 4 KiB read. Raw bytes
+                // ship as a binary frame — no base64/JSON envelope — so the
+                // client can hand them straight to xterm.js without
+                // `JSON.parse` + `atob` on its main thread. Control
+                // messages (`exit`, client `input`/`resize`) stay JSON text.
+                let mut batch = data;
+                while batch.len() < MAX_WS_OUTPUT_BATCH_BYTES {
+                    match output_rx.try_recv() {
+                        Ok(more) => batch.extend_from_slice(&more),
+                        Err(_) => break,
+                    }
+                }
+                scan_output_for_urls(&state, project_id.as_ref(), &mut scanner, &batch).await;
+                if socket.send(Message::Binary(batch)).await.is_err() { break; }
             }
             Some(code) = exit_rx.recv() => {
                 let _ = socket.send(Message::Text(serde_json::json!({"type": "exit", "code": code}).to_string())).await;

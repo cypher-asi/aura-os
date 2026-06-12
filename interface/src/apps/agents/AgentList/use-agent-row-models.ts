@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { resolveAvatarState } from "../../../hooks/use-avatar-state";
 import {
@@ -58,7 +59,21 @@ export function useAgentRowModels(
   const previewLastMessages = useChatHistoryStore((s) => s.previewLastMessages);
   const pinnedAgentIds = useAgentStore((s) => s.pinnedAgentIds);
   const loops = useLoopActivityStore((s) => s.loops);
-  const streamEntries = useStreamStore((s) => s.entries);
+  // Narrowed subscription: only the per-agent `isStreaming` flags this
+  // list actually consumes. Subscribing to the whole `entries` object
+  // re-ran the row-model build on EVERY streaming tick of every
+  // conversation (once per animation frame during a live turn); with
+  // `useShallow` over the boolean map, the list only re-renders when a
+  // flag actually flips.
+  const standaloneStreamingById = useStreamStore(
+    useShallow((s) => {
+      const flags: Record<string, boolean> = {};
+      for (const agent of agents) {
+        if (s.entries[agent.agent_id]?.isStreaming) flags[agent.agent_id] = true;
+      }
+      return flags;
+    }),
+  );
   const streamingAgentInstanceIds = useSidekickStore((s) => s.streamingAgentInstanceIds);
   const instanceIdsByTemplateId = useProjectsListStore((s) => s.instanceIdsByTemplateId);
 
@@ -88,7 +103,7 @@ export function useAgentRowModels(
       const { status, isLocal } = resolveAvatarState(statuses[id], machineTypes[id]);
       const loopActivity = aggregateRows(loopsByAgentId.get(id) ?? []);
       const hasActiveLoop = !!loopActivity && isLoopActivityActive(loopActivity.status);
-      const standaloneStreaming = streamEntries[id]?.isStreaming ?? false;
+      const standaloneStreaming = standaloneStreamingById[id] ?? false;
       const instanceIds = instanceIdsByTemplateId[id];
       const projectStreaming =
         !!instanceIds && instanceIds.some((instanceId) => streamingInstanceIdSet.has(instanceId));
@@ -110,7 +125,7 @@ export function useAgentRowModels(
     previewLastMessages,
     pinnedAgentIds,
     loopsByAgentId,
-    streamEntries,
+    standaloneStreamingById,
     streamingInstanceIdSet,
     instanceIdsByTemplateId,
     includePreview,

@@ -181,69 +181,124 @@ describe("stream/handlers — thinking and text deltas", () => {
       expect(refs.timeline.current).toHaveLength(1);
     });
 
-    it("reveals one word at a time", () => {
-      const refs = makeRefs();
-      const setters = makeSetters();
+    describe("frame-driven reveal pacing", () => {
+      // The reveal runs as one rAF loop with AT MOST one store update
+      // per frame. These tests replace the synchronous rAF shim with a
+      // manual frame queue so each runFrame() models one display frame.
+      let rafQueue: FrameRequestCallback[] = [];
 
-      handleTextDelta(refs, setters, null, "hello world again");
-      expect(setters.calls.setStreamingText).toBeUndefined();
+      function useManualFrames() {
+        rafQueue = [];
+        globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
+          rafQueue.push(cb);
+          return nextRafId++;
+        };
+      }
 
-      vi.advanceTimersByTime(15);
-      expect(setters.calls.setStreamingText).toBeUndefined();
+      function runFrame() {
+        const queue = rafQueue;
+        rafQueue = [];
+        for (const cb of queue) cb(0);
+      }
 
-      vi.advanceTimersByTime(1);
-      expect(setters.calls.setStreamingText).toEqual(["hello"]);
-      expect(refs.displayedTextLength.current).toBe(5);
-      expect(setters.calls.setTimeline?.[0]).toMatchObject([
-        { kind: "text", content: "hello" },
-      ]);
+      function lastText(setters: ReturnType<typeof makeSetters>): string | undefined {
+        const writes = setters.calls.setStreamingText;
+        return writes ? (writes[writes.length - 1] as string) : undefined;
+      }
 
-      vi.advanceTimersByTime(41);
-      expect(setters.calls.setStreamingText).toEqual(["hello"]);
+      it("publishes nothing until a frame runs, then reveals a word-snapped batch", () => {
+        useManualFrames();
+        const refs = makeRefs();
+        const setters = makeSetters();
 
-      vi.advanceTimersByTime(1);
-      expect(setters.calls.setStreamingText).toEqual(["hello", "hello world"]);
+        handleTextDelta(refs, setters, null, "alpha beta gamma delta epsilon zeta eta theta");
+        expect(setters.calls.setStreamingText).toBeUndefined();
 
-      vi.advanceTimersByTime(42);
-      expect(setters.calls.setStreamingText).toEqual([
-        "hello",
-        "hello world",
-        "hello world again",
-      ]);
-    });
+        runFrame();
+        const revealed = lastText(setters)!;
+        expect(revealed.length).toBeGreaterThan(0);
+        expect(revealed.length).toBeLessThan(refs.streamBuffer.current.length);
+        // Word snapping: the visible slice never ends mid-word.
+        expect(refs.streamBuffer.current[revealed.length] ?? " ").toMatch(/\s/);
+        // Exactly one batched store update per frame.
+        expect(setters.calls.applyStreamingPatch).toHaveLength(1);
+      });
 
-    it("accelerates reveal cadence when the hidden backlog grows", () => {
-      const refs = makeRefs();
-      const setters = makeSetters();
+      it("keeps revealing one batch per frame until the buffer drains", () => {
+        useManualFrames();
+        const refs = makeRefs();
+        const setters = makeSetters();
+        const text =
+          "one two three four five six seven eight nine ten eleven twelve " +
+          "thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty";
 
-      handleTextDelta(
-        refs,
-        setters,
-        null,
-        "one two three four five six seven eight nine ten eleven twelve thirteen",
-      );
+        handleTextDelta(refs, setters, null, text);
 
-      vi.advanceTimersByTime(16);
-      expect(setters.calls.setStreamingText).toEqual(["one"]);
+        let guard = 0;
+        while (refs.displayedTextLength.current < text.length && guard < 100) {
+          runFrame();
+          guard++;
+        }
+        expect(guard).toBeGreaterThan(1);
+        expect(lastText(setters)).toBe(text);
+      });
 
-      vi.advanceTimersByTime(11);
-      expect(setters.calls.setStreamingText).toEqual(["one"]);
+      it("scales the per-frame budget with the hidden backlog", () => {
+        useManualFrames();
+        const smallRefs = makeRefs();
+        const smallSetters = makeSetters();
+        handleTextDelta(smallRefs, smallSetters, null, "tiny backlog of words here");
+        runFrame();
+        const smallRevealed = lastText(smallSetters)!.length;
 
-      vi.advanceTimersByTime(1);
-      expect(setters.calls.setStreamingText).toEqual(["one", "one two"]);
-    });
+        useManualFrames();
+        const bigRefs = makeRefs();
+        const bigSetters = makeSetters();
+        handleTextDelta(bigRefs, bigSetters, null, "word ".repeat(800).trim());
+        runFrame();
+        const bigRevealed = lastText(bigSetters)!.length;
 
-    it("keeps punctuation and markdown prefixes attached to the revealed word", () => {
-      const refs = makeRefs();
-      const setters = makeSetters();
+        expect(bigRevealed).toBeGreaterThan(smallRevealed);
+      });
 
-      handleTextDelta(refs, setters, null, "Hello,\n- bullet item");
+      it("skips the animation entirely for very large backlogs", () => {
+        useManualFrames();
+        const refs = makeRefs();
+        const setters = makeSetters();
+        const text = "x".repeat(7000);
 
-      vi.advanceTimersByTime(16);
-      expect(setters.calls.setStreamingText).toEqual(["Hello,"]);
+        handleTextDelta(refs, setters, null, text);
+        runFrame();
 
-      vi.advanceTimersByTime(42);
-      expect(setters.calls.setStreamingText).toEqual(["Hello,", "Hello,\n- bullet"]);
+        expect(refs.displayedTextLength.current).toBe(text.length);
+        expect(lastText(setters)).toBe(text);
+      });
+
+      it("keeps punctuation and markdown prefixes attached to the revealed word", () => {
+        useManualFrames();
+        const refs = makeRefs();
+        const setters = makeSetters();
+
+        handleTextDelta(refs, setters, null, "Hello,\n- bullet item");
+
+        let guard = 0;
+        while (refs.displayedTextLength.current < refs.streamBuffer.current.length && guard < 100) {
+          runFrame();
+          guard++;
+        }
+
+        // No intermediate publish may end in a bare list marker or a
+        // split word — every slice ends on a word boundary.
+        for (const write of setters.calls.setStreamingText ?? []) {
+          const slice = write as string;
+          expect(slice).not.toMatch(/(^|\n)[-*+]\s*$/);
+          const nextChar = refs.streamBuffer.current[slice.length];
+          if (nextChar !== undefined) {
+            expect(nextChar).toMatch(/\s/);
+          }
+        }
+        expect(lastText(setters)).toBe("Hello,\n- bullet item");
+      });
     });
 
     it("keeps text strictly linear when tool calls interleave with prose", () => {

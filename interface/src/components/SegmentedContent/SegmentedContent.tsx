@@ -1,9 +1,10 @@
-import type { AnchorHTMLAttributes, ImgHTMLAttributes } from "react";
+import { memo, useMemo, type AnchorHTMLAttributes, type ImgHTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { FadeInImage } from "../FadeInImage";
 import { useStreamSafeContent } from "../../hooks/use-stream-safe-content";
+import { splitMarkdownBlocks } from "./split-markdown-blocks";
 
 /**
  * Markdown renderer for a segment of LLM prose.
@@ -31,6 +32,18 @@ function MarkdownImage(props: ImgHTMLAttributes<HTMLImageElement>) {
 
 const MD_COMPONENTS = { a: ExternalLink, img: MarkdownImage };
 
+const MarkdownBlock = memo(function MarkdownBlock({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={MD_PLUGINS_REMARK}
+      rehypePlugins={MD_PLUGINS_REHYPE}
+      components={MD_COMPONENTS}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+});
+
 interface SegmentedContentProps {
   content: string;
   isStreaming?: boolean;
@@ -38,13 +51,14 @@ interface SegmentedContentProps {
 
 export function SegmentedContent({ content, isStreaming = false }: SegmentedContentProps) {
   const safeContent = useStreamSafeContent(content, isStreaming);
+  const blocks = useMemo(() => splitMarkdownBlocks(safeContent), [safeContent]);
   return (
-    <ReactMarkdown
-      remarkPlugins={MD_PLUGINS_REMARK}
-      rehypePlugins={MD_PLUGINS_REHYPE}
-      components={MD_COMPONENTS}
-    >
-      {safeContent}
-    </ReactMarkdown>
+    <>
+      {blocks.map((block, i) => (
+        // Index keys are stable here: blocks only ever change at the
+        // tail while streaming (earlier blocks are frozen text).
+        <MarkdownBlock key={i} content={block} />
+      ))}
+    </>
   );
 }

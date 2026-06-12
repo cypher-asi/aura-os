@@ -37,6 +37,7 @@ import {
   mapWireContextBreakdown,
   type WireContextBreakdown,
 } from "./context-usage-store";
+import { bumpEstimatedTokensThrottled } from "./context-usage-throttle";
 import { createEventSubscriptionGroup } from "./event-subscription-group";
 import type { StreamRefs, StreamSetters } from "../shared/types/stream";
 import type { MutableRefObject } from "react";
@@ -261,7 +262,7 @@ function handleTextDeltaEvent(e: AuraEvent): void {
     isStreamingByTask.set(taskId, true);
   }
   handleTextDelta(refs, setters, getThinkingDurationMs(key), text);
-  useContextUsageStore.getState().bumpEstimatedTokens(key, approxTokensFromText(text));
+  bumpEstimatedTokensThrottled(key, approxTokensFromText(text));
 }
 
 function handleThinkingDeltaEvent(e: AuraEvent): void {
@@ -272,7 +273,7 @@ function handleThinkingDeltaEvent(e: AuraEvent): void {
   if (!thinking) return;
   const { key, refs, setters } = contextForTask(taskId);
   handleThinkingDelta(refs, setters, thinking);
-  useContextUsageStore.getState().bumpEstimatedTokens(key, approxTokensFromText(thinking));
+  bumpEstimatedTokensThrottled(key, approxTokensFromText(thinking));
 }
 
 function toolNameFromContent(c: Record<string, unknown>): string {

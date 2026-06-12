@@ -44,6 +44,7 @@ import {
   mapWireContextBreakdown,
   type WireContextBreakdown,
 } from "../stores/context-usage-store";
+import { bumpEstimatedTokensThrottled } from "../stores/context-usage-throttle";
 import { useSessionsListStore } from "../stores/sessions-list-store";
 import { useMessageQueueStore } from "../stores/message-queue-store";
 import {
@@ -422,18 +423,14 @@ export function useAgentChatStream({
             case EventType.TextDelta: {
               const text = (event.content as { text: string }).text;
               handleTextDelta(refs, partitionSetters, getThinkingDurationMs(getPartitionKey()), text);
-              useContextUsageStore
-                .getState()
-                .bumpEstimatedTokens(getPartitionKey(), approxTokensFromText(text));
+              bumpEstimatedTokensThrottled(getPartitionKey(), approxTokensFromText(text));
               break;
             }
             case EventType.ThinkingDelta: {
               const tc = event.content as { text?: string; thinking?: string };
               const text = tc.text ?? tc.thinking ?? "";
               handleThinkingDelta(refs, partitionSetters, text);
-              useContextUsageStore
-                .getState()
-                .bumpEstimatedTokens(getPartitionKey(), approxTokensFromText(text));
+              bumpEstimatedTokensThrottled(getPartitionKey(), approxTokensFromText(text));
               break;
             }
             case EventType.Progress: {
@@ -993,18 +990,14 @@ export function useAgentChatStream({
           case EventType.TextDelta: {
             const text = (event.content as { text: string }).text;
             handleTextDelta(refs, partitionSetters, getThinkingDurationMs(getPartitionKey()), text);
-            useContextUsageStore
-              .getState()
-              .bumpEstimatedTokens(getPartitionKey(), approxTokensFromText(text));
+            bumpEstimatedTokensThrottled(getPartitionKey(), approxTokensFromText(text));
             break;
           }
           case EventType.ThinkingDelta: {
             const tc = event.content as { text?: string; thinking?: string };
             const text = tc.text ?? tc.thinking ?? "";
             handleThinkingDelta(refs, partitionSetters, text);
-            useContextUsageStore
-              .getState()
-              .bumpEstimatedTokens(getPartitionKey(), approxTokensFromText(text));
+            bumpEstimatedTokensThrottled(getPartitionKey(), approxTokensFromText(text));
             break;
           }
           case EventType.Progress: {

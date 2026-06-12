@@ -45,6 +45,7 @@ import {
   mapWireContextBreakdown,
   type WireContextBreakdown,
 } from "../../stores/context-usage-store";
+import { bumpEstimatedTokensThrottled } from "../../stores/context-usage-throttle";
 import { useSessionsListStore } from "../../stores/sessions-list-store";
 import {
   getStreamEntry,
@@ -218,18 +219,16 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       case EventType.TextDelta: {
         const text = (event.content as { text: string }).text;
         handleTextDelta(refs, setters, getThinkingDurationMs(activeKey), text);
-        useContextUsageStore
-          .getState()
-          .bumpEstimatedTokens(activeKey, approxTokensFromText(text));
+        // Per-token wire events: coalesced so the context ring doesn't
+        // re-render its subscribers on every delta.
+        bumpEstimatedTokensThrottled(activeKey, approxTokensFromText(text));
         break;
       }
       case EventType.ThinkingDelta: {
         const tc = event.content as { text?: string; thinking?: string };
         const text = tc.text ?? tc.thinking ?? "";
         handleThinkingDelta(refs, setters, text);
-        useContextUsageStore
-          .getState()
-          .bumpEstimatedTokens(activeKey, approxTokensFromText(text));
+        bumpEstimatedTokensThrottled(activeKey, approxTokensFromText(text));
         break;
       }
       case EventType.Progress: {

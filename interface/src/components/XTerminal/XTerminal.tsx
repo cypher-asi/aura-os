@@ -5,7 +5,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import "@xterm/xterm/css/xterm.css";
-import type { UseTerminalReturn } from "../../hooks/use-terminal";
+import type { TerminalOutputChunk, UseTerminalReturn } from "../../hooks/use-terminal";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { getXtermTheme, type ResolvedTheme } from "./getXtermTheme";
 import styles from "./XTerminal.module.css";
@@ -26,6 +26,15 @@ interface XTerminalProps {
 // per actually-written cell, so the worst-case memory cost (~100k rows ×
 // ~200 cols) is rarely realized in practice.
 const SCROLLBACK_LINES = 100_000;
+
+// Output chunks are queued and flushed in ONE batch per animation
+// frame instead of calling `xterm.write` per WebSocket frame, so a
+// flood of PTY output costs at most one parse/render pass per display
+// frame and leaves the rest of the frame budget to the chat surface.
+// If the queue piles up past this cap (rAF doesn't fire while the
+// window is backgrounded), flush synchronously so memory stays bounded
+// and the buffer is current when the window comes back.
+const MAX_PENDING_WRITE_CHUNKS = 64;
 
 export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -174,8 +183,29 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
       hook.write(data);
     });
 
+    let writeQueue: TerminalOutputChunk[] = [];
+    let writeFrame: number | null = null;
+    const flushWrites = () => {
+      writeFrame = null;
+      if (writeQueue.length === 0) return;
+      const chunks = writeQueue;
+      writeQueue = [];
+      for (const chunk of chunks) {
+        xterm.write(chunk);
+      }
+    };
     const outputUnsub = hook.onOutput((data) => {
-      xterm.write(data);
+      writeQueue.push(data);
+      if (writeQueue.length >= MAX_PENDING_WRITE_CHUNKS) {
+        if (writeFrame !== null) {
+          cancelAnimationFrame(writeFrame);
+        }
+        flushWrites();
+        return;
+      }
+      if (writeFrame === null) {
+        writeFrame = requestAnimationFrame(flushWrites);
+      }
     });
 
     const resizeObserver = new ResizeObserver(() => {
@@ -186,6 +216,10 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
     return () => {
       dataDisposable.dispose();
       outputUnsub();
+      if (writeFrame !== null) {
+        cancelAnimationFrame(writeFrame);
+        writeFrame = null;
+      }
       resizeObserver.disconnect();
       if (fitFrameRef.current !== null) {
         cancelAnimationFrame(fitFrameRef.current);

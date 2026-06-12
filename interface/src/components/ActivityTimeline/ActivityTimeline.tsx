@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, type ReactNode, type RefObject } from "react";
+import { memo, useMemo, useRef, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TimelineItem, ToolCallEntry } from "../../shared/types/stream";
 import { FILE_OPS } from "../../constants/tools";
@@ -34,25 +34,105 @@ interface ActivityTimelineProps {
 
 type ToolPosition = "first" | "mid" | "last" | "solo" | null;
 
-interface RenderedItem {
-  key: string;
-  kind: "thinking" | "tool" | "text";
-  toolPosition: ToolPosition;
-  node: ReactNode;
+/**
+ * Plain-data row model. Rows carry primitives / stable references
+ * (never pre-built JSX) so the `TimelineRow` memo below can actually
+ * bail on unchanged rows. The previous design memoized on a `node`
+ * ReactNode prop, but the node elements were recreated on every parent
+ * render, so the memo never bailed and every streaming tick re-ran
+ * ReactMarkdown + syntax highlighting for the entire timeline.
+ */
+type RenderedItem =
+  | {
+      key: string;
+      kind: "thinking";
+      toolPosition: ToolPosition;
+      text: string;
+      isStreaming: boolean;
+      durationMs: number | null | undefined;
+      defaultExpanded: boolean | undefined;
+    }
+  | {
+      key: string;
+      kind: "tool";
+      toolPosition: ToolPosition;
+      entry: ToolCallEntry;
+      defaultExpanded: boolean;
+      displayPath: string | undefined;
+      groupCount: number | undefined;
+    }
+  | {
+      key: string;
+      kind: "text";
+      toolPosition: ToolPosition;
+      content: string;
+      isStreaming: boolean;
+    };
+
+function areRowsEqual(
+  prev: { item: RenderedItem },
+  next: { item: RenderedItem },
+): boolean {
+  const a = prev.item;
+  const b = next.item;
+  if (a.kind !== b.kind || a.key !== b.key) return false;
+  if (a.kind === "thinking" && b.kind === "thinking") {
+    return (
+      a.text === b.text &&
+      a.isStreaming === b.isStreaming &&
+      a.durationMs === b.durationMs &&
+      a.defaultExpanded === b.defaultExpanded
+    );
+  }
+  if (a.kind === "tool" && b.kind === "tool") {
+    // Tool entries are replaced immutably by the stream handlers, so
+    // reference equality is a correct change signal.
+    return (
+      a.entry === b.entry &&
+      a.defaultExpanded === b.defaultExpanded &&
+      a.displayPath === b.displayPath &&
+      a.groupCount === b.groupCount
+    );
+  }
+  if (a.kind === "text" && b.kind === "text") {
+    return a.content === b.content && a.isStreaming === b.isStreaming;
+  }
+  return false;
 }
 
 /**
- * Per-row node wrapper. Wrapped in `React.memo` so streaming deltas that
- * mutate only the trailing item (new tokens on the last text/thinking
- * segment, a tool call flipping from pending to done) don't force every
- * previously-rendered row to re-execute its ReactMarkdown / syntax
- * highlight / Block render path. The keyed `node` ReactElement
- * identity is stable across renders when the underlying item has not
- * changed, so referential equality on `node` is a safe memo trigger.
+ * Per-row renderer. During a live stream only the trailing row's data
+ * changes frame-to-frame, so every settled row bails here and skips
+ * its ThinkingBlock / tool Block / markdown render entirely. The text
+ * normalization pipeline also lives inside the memo boundary so frozen
+ * rows don't re-run it either.
  */
-const TimelineRow = memo(function TimelineRow({ node }: { node: ReactNode }) {
-  return <>{node}</>;
-});
+const TimelineRow = memo(function TimelineRow({ item }: { item: RenderedItem }) {
+  if (item.kind === "thinking") {
+    return (
+      <ThinkingBlock
+        text={item.text}
+        isStreaming={item.isStreaming}
+        durationMs={item.durationMs}
+        defaultExpanded={item.defaultExpanded}
+      />
+    );
+  }
+  if (item.kind === "tool") {
+    return (
+      <>
+        {renderToolBlock(item.entry, item.defaultExpanded, {
+          displayPath: item.displayPath,
+          groupCount: item.groupCount,
+        })}
+      </>
+    );
+  }
+  const normalized = normalizeLooseStrongEmphasis(
+    flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(item.content))),
+  );
+  return <SegmentedContent content={normalized} isStreaming={item.isStreaming} />;
+}, areRowsEqual);
 
 export function ActivityTimeline({
   timeline,
@@ -237,20 +317,16 @@ export function ActivityTimeline({
         key: item.id,
         kind: "thinking",
         toolPosition: null,
-        node: (
-          <ThinkingBlock
-            text={segmentText ?? ""}
-            isStreaming={segmentIsStreaming}
-            // Prefer the per-segment `durationMs` stamped by
-            // `closeCurrentThinkingSegment`; fall back to the
-            // turn-level total for hydrated history rows that
-            // predate per-segment tracking. This is what stops
-            // multi-segment turns from rendering the same
-            // "Thought for X" label on every block.
-            durationMs={item.durationMs ?? thinkingDurationMs}
-            defaultExpanded={defaultThinkingExpanded}
-          />
-        ),
+        text: segmentText ?? "",
+        isStreaming: segmentIsStreaming,
+        // Prefer the per-segment `durationMs` stamped by
+        // `closeCurrentThinkingSegment`; fall back to the
+        // turn-level total for hydrated history rows that
+        // predate per-segment tracking. This is what stops
+        // multi-segment turns from rendering the same
+        // "Thought for X" label on every block.
+        durationMs: item.durationMs ?? thinkingDurationMs,
+        defaultExpanded: defaultThinkingExpanded,
       });
     } else if (item.kind === "tool") {
       const entry = toolCallMap.get(item.toolCallId);
@@ -281,20 +357,18 @@ export function ActivityTimeline({
         // Position is filled in by a second pass below once we know each
         // tool row's neighbours.
         toolPosition: "solo",
-        node: renderToolBlock(entry, defaultToolExpanded, {
-          displayPath,
-          groupCount,
-        }),
+        entry,
+        defaultExpanded: defaultToolExpanded,
+        displayPath,
+        groupCount,
       });
     } else {
-      const normalized = normalizeLooseStrongEmphasis(
-        flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(item.content))),
-      );
       items.push({
         key: item.id,
         kind: "text",
         toolPosition: null,
-        node: <SegmentedContent content={normalized} isStreaming={isStreaming} />,
+        content: item.content,
+        isStreaming,
       });
     }
   }
@@ -372,7 +446,7 @@ function PlainTimeline({ items }: { items: RenderedItem[] }) {
     <div className={styles.timeline}>
       {items.map((item) => (
         <div key={item.key} {...rowDataAttrs(item)}>
-          <TimelineRow node={item.node} />
+          <TimelineRow item={item} />
         </div>
       ))}
     </div>
@@ -424,7 +498,7 @@ function VirtualizedTimeline({
               transform: `translateY(${vi.start - scrollMargin}px)`,
             }}
           >
-            <TimelineRow node={item.node} />
+            <TimelineRow item={item} />
           </div>
         );
       })}

@@ -172,7 +172,7 @@ describe("useTerminal", () => {
     });
     await vi.waitFor(() => expect(result.current.connected).toBe(true));
 
-    const received: string[] = [];
+    const received: (string | Uint8Array)[] = [];
     act(() => {
       result.current.onOutput((data) => received.push(data));
     });
@@ -186,6 +186,30 @@ describe("useTerminal", () => {
     );
 
     expect(received).toEqual(["hello world"]);
+  });
+
+  it("forwards binary frames as raw bytes without JSON/base64 decoding", async () => {
+    const { result } = renderHook(() => useTerminal());
+
+    act(() => {
+      result.current.spawn(80, 24);
+    });
+    await vi.waitFor(() => expect(result.current.connected).toBe(true));
+
+    const received: (string | Uint8Array)[] = [];
+    act(() => {
+      result.current.onOutput((data) => received.push(data));
+    });
+
+    const bytes = new TextEncoder().encode("raw pty output");
+    lastWS!.onmessage?.call(
+      lastWS as unknown as WebSocket,
+      new MessageEvent("message", { data: bytes.buffer }),
+    );
+
+    expect(received).toHaveLength(1);
+    expect(received[0]).toBeInstanceOf(Uint8Array);
+    expect(new TextDecoder().decode(received[0] as Uint8Array)).toBe("raw pty output");
   });
 
   it("kill closes WS and kills terminal", async () => {
@@ -213,7 +237,7 @@ describe("useTerminal", () => {
     });
     await vi.waitFor(() => expect(result.current.connected).toBe(true));
 
-    const received: string[] = [];
+    const received: (string | Uint8Array)[] = [];
     act(() => {
       result.current.onOutput((data) => received.push(data));
     });

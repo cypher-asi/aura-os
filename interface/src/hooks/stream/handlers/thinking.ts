@@ -1,5 +1,5 @@
 import type { StreamRefs, StreamSetters } from "../../../shared/types/stream";
-import { nextTimelineId, syncDisplayedTimeline } from "./shared";
+import { applyThinkingDisplayState, nextTimelineId } from "./shared";
 
 export function handleThinkingDelta(
   refs: StreamRefs,
@@ -32,8 +32,8 @@ export function handleThinkingDelta(
     const rafId = requestAnimationFrame(() => {
       ranSynchronously = true;
       refs.thinkingRaf.current = null;
-      setters.setThinkingText(refs.thinkingBuffer.current);
-      syncDisplayedTimeline(refs, setters);
+      // Single batched store update (thinkingText + timeline) per frame.
+      applyThinkingDisplayState(refs, setters);
     });
     refs.thinkingRaf.current = ranSynchronously ? null : rafId;
   }

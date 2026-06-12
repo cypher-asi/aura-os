@@ -302,7 +302,28 @@ export interface StreamRefs {
  */
 export type GenerationKind = "image" | "video" | "3d";
 
+/**
+ * Fields a single streaming display tick may publish together. Applied
+ * through {@link StreamSetters.applyStreamingPatch} as ONE store update
+ * so a reveal frame costs one subscriber notification instead of the
+ * 3-5 separate `setState` calls the individual setters would incur.
+ */
+export interface StreamingDisplayPatch {
+  streamingText?: string;
+  thinkingText?: string;
+  timeline?: TimelineItem[];
+  isWriting?: boolean;
+}
+
 export interface StreamSetters {
+  /**
+   * Batched display-tick setter: applies every field of the patch (plus
+   * the wire-progress bookkeeping that `markStreamProgress` would do) in
+   * a single store update. The per-frame reveal loop and the thinking
+   * coalescer go through this; the individual setters below remain for
+   * low-frequency lifecycle paths.
+   */
+  applyStreamingPatch: Dispatch<StreamingDisplayPatch>;
   setStreamingText: Dispatch<SetStateAction<string>>;
   setThinkingText: Dispatch<SetStateAction<string>>;
   setThinkingDurationMs: Dispatch<SetStateAction<number | null>>;

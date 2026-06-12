@@ -5,6 +5,10 @@ import { useStreamStore, streamMetaMap } from "./stream/store";
 import { useChatUIStore } from "../stores/chat-ui-store";
 import { useMessageQueueStore } from "../stores/message-queue-store";
 import { useContextUsageStore } from "../stores/context-usage-store";
+import {
+  clearPendingTokenBumps,
+  flushPendingTokenBumps,
+} from "../stores/context-usage-throttle";
 import { STUCK_THRESHOLD_MS } from "./stream/use-stream-health";
 import { STYLE_LOCK_SUFFIX } from "../constants/generation";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
@@ -919,8 +923,15 @@ describe("useAgentChatStream", () => {
       useAgentChatStream({ agentId: "agent-1" }),
     );
 
+    // Earlier tests in this file stream deltas they never flush; drop
+    // those so only this turn's bumps are counted.
+    clearPendingTokenBumps();
     await act(async () => {
       await result.current.sendMessage("inspect");
+      // Text/thinking delta bumps are coalesced (see
+      // `context-usage-throttle.ts`); drain them so the assertion sees
+      // the final value without waiting out the flush window.
+      flushPendingTokenBumps();
     });
 
     const entry =
