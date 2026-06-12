@@ -102,6 +102,7 @@ fn hydrate_local_state(
 ) -> ApiResult<Agent> {
     let mut agent = agent_from_network(net_agent);
     apply_submitted_org_fallback(&mut agent, prepared);
+    apply_submitted_permissions_fallback(&mut agent, prepared);
     state
         .agent_service
         .save_agent_runtime_config(&agent.agent_id, &prepared.runtime_config)
@@ -124,6 +125,19 @@ fn apply_submitted_org_fallback(agent: &mut Agent, prepared: &PreparedCreate) {
         .org_id
         .as_deref()
         .and_then(|org_id| org_id.parse().ok());
+}
+
+fn apply_submitted_permissions_fallback(agent: &mut Agent, prepared: &PreparedCreate) {
+    if agent.permissions == prepared.net_req.permissions {
+        return;
+    }
+    tracing::warn!(
+        agent_id = %agent.agent_id,
+        submitted_capabilities = prepared.net_req.permissions.capabilities.len(),
+        response_capabilities = agent.permissions.capabilities.len(),
+        "aura-network create response did not echo submitted permissions; using request-side value"
+    );
+    agent.permissions = prepared.net_req.permissions.clone();
 }
 
 pub(crate) fn prepare_create(body: CreateAgentRequest) -> ApiResult<PreparedCreate> {
@@ -226,11 +240,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn submitted_org_fallback_preserves_local_agent_identity() {
-        let org_id = OrgId::new();
-        let prepared = prepare_create(create_request(org_id)).expect("valid create request");
-        let net_agent = aura_os_network::NetworkAgent {
+    fn network_agent_with_permissions(
+        permissions: AgentPermissions,
+    ) -> aura_os_network::NetworkAgent {
+        aura_os_network::NetworkAgent {
             id: aura_os_core::AgentId::new().to_string(),
             name: "Status Probe".to_string(),
             role: Some("status-probe".to_string()),
@@ -251,11 +264,18 @@ mod tests {
             jobs: None,
             revenue_usd: None,
             reputation: None,
-            permissions: aura_os_core::AgentPermissions::default(),
+            permissions,
             intent_classifier: None,
             created_at: None,
             updated_at: None,
-        };
+        }
+    }
+
+    #[test]
+    fn submitted_org_fallback_preserves_local_agent_identity() {
+        let org_id = OrgId::new();
+        let prepared = prepare_create(create_request(org_id)).expect("valid create request");
+        let net_agent = network_agent_with_permissions(AgentPermissions::default());
         let mut agent = agent_from_network(&net_agent);
 
         apply_submitted_org_fallback(&mut agent, &prepared);
@@ -282,5 +302,27 @@ mod tests {
             prepared.net_req.permissions.scope.orgs,
             vec![org_id.to_string()]
         );
+    }
+
+    #[test]
+    fn submitted_permissions_fallback_preserves_scoped_zero_capability_permissions() {
+        let org_id = OrgId::new();
+        let mut request = create_request(org_id);
+        request.permissions = AgentPermissions {
+            scope: AgentScope {
+                orgs: vec![org_id.to_string()],
+                ..AgentScope::default()
+            },
+            capabilities: Vec::new(),
+        };
+        let prepared = prepare_create(request).expect("valid create request");
+        let net_agent = network_agent_with_permissions(AgentPermissions::default());
+        let mut agent = agent_from_network(&net_agent);
+
+        apply_submitted_permissions_fallback(&mut agent, &prepared);
+
+        assert_eq!(agent.permissions, prepared.net_req.permissions);
+        assert!(agent.permissions.capabilities.is_empty());
+        assert_eq!(agent.permissions.scope.orgs, vec![org_id.to_string()]);
     }
 }
