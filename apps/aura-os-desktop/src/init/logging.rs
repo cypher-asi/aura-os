@@ -39,8 +39,15 @@ fn default_filter() -> EnvFilter {
         // and tool lifecycle without setting RUST_LOG; bumping it to
         // `debug` enables the per-harness-event firehose without
         // turning on debug logging for the rest of the server.
+        // `chromiumoxide::handler=error` suppresses the high-volume
+        // "CDP message failed to deserialize" warnings emitted while
+        // browsing (the vendored fork already dedupes + truncates them);
+        // genuine WS connection errors are logged at `error` and still
+        // surface. Opt back in with `RUST_LOG=chromiumoxide::handler=warn`
+        // (concise, one line per diverged method) or `=trace` (full
+        // payloads).
         EnvFilter::new(
-            "aura::automation=info,aura_os_desktop=info,aura_os_server=info,aura_engine=info,tower_http=warn,info",
+            "aura::automation=info,aura_os_desktop=info,aura_os_server=info,aura_engine=info,tower_http=warn,chromiumoxide::handler=error,info",
         )
     })
 }

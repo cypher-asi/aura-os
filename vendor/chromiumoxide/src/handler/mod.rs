@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use fnv::FnvHashMap;
@@ -47,6 +48,43 @@ mod session;
 pub mod target;
 pub mod target_message_future;
 pub mod viewport;
+
+/// Max number of characters of a failed CDP payload to surface in the concise
+/// `WS Invalid message` diagnostic. The full payload is still available at
+/// `trace` level for deep debugging.
+const INVALID_MESSAGE_PREVIEW_LEN: usize = 200;
+
+/// Cheaply extract the CDP `method` from a raw JSON payload without parsing the
+/// whole (potentially multi-KB) blob. Returns the value of the first
+/// `"method":"..."` token, if present.
+fn extract_cdp_method(payload: &str) -> Option<&str> {
+    let start = payload.find("\"method\":\"")? + "\"method\":\"".len();
+    let rest = &payload[start..];
+    let end = rest.find('"')?;
+    Some(&rest[..end])
+}
+
+/// Truncate a payload to a short, single-line preview suitable for a log field.
+fn invalid_message_preview(payload: &str) -> String {
+    if payload.len() > INVALID_MESSAGE_PREVIEW_LEN {
+        let mut end = INVALID_MESSAGE_PREVIEW_LEN;
+        while !payload.is_char_boundary(end) {
+            end -= 1;
+        }
+        format!("{}…", &payload[..end])
+    } else {
+        payload.to_string()
+    }
+}
+
+/// Process-wide set of CDP methods already reported as failing to deserialize.
+/// Used to log each diverged method once at `warn` and demote repeats to
+/// `debug`, so a noisy event (e.g. `Network.requestWillBeSentExtraInfo`) does
+/// not flood the logs.
+fn seen_invalid_methods() -> &'static Mutex<HashSet<String>> {
+    static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    SEEN.get_or_init(|| Mutex::new(HashSet::new()))
+}
 
 /// The handler that monitors the state of the chromium browser and drives all
 /// the requests and events.
@@ -626,14 +664,43 @@ impl Stream for Handler {
                     }
                     Err(CdpError::InvalidMessage(payload, serde_err)) => {
                         if pin.config.ignore_invalid_messages {
-                            // aura-os patch: include the raw JSON payload so
-                            // operators can identify which CDP event/response
-                            // failed to deserialize against the generated
-                            // schemas and file targeted serde-rename fixes.
-                            tracing::warn!(
+                            // aura-os patch: many current-Chrome CDP events
+                            // (e.g. `Network.requestWillBeSentExtraInfo`) carry
+                            // multi-KB cookie/header blobs and fail to
+                            // deserialize against the generated schemas. Dumping
+                            // the full payload on every occurrence drowns the
+                            // dev-loop logs, so we surface a concise, deduped
+                            // diagnostic instead: each diverged `method` is
+                            // reported once at `warn` (with a truncated preview
+                            // so operators can file a targeted serde-rename
+                            // fix), repeats drop to `debug`, and the full raw
+                            // payload stays available at `trace`.
+                            let method = extract_cdp_method(&payload).unwrap_or("<unknown>");
+                            let first_seen = seen_invalid_methods()
+                                .lock()
+                                .map(|mut seen| seen.insert(method.to_string()))
+                                .unwrap_or(true);
+                            if first_seen {
+                                tracing::warn!(
+                                    target: "chromiumoxide::handler",
+                                    method,
+                                    error = %serde_err,
+                                    preview = %invalid_message_preview(&payload),
+                                    "CDP message failed to deserialize (further occurrences for this method are logged at debug)",
+                                );
+                            } else {
+                                tracing::debug!(
+                                    target: "chromiumoxide::handler",
+                                    method,
+                                    error = %serde_err,
+                                    "CDP message failed to deserialize",
+                                );
+                            }
+                            tracing::trace!(
+                                target: "chromiumoxide::handler",
+                                method,
                                 payload = %payload,
-                                "WS Invalid message: {}",
-                                serde_err,
+                                "CDP invalid message raw payload",
                             );
                         } else {
                             return Poll::Ready(Some(Err(CdpError::InvalidMessage(

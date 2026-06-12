@@ -64,7 +64,12 @@ async fn main() {
             // lifecycle; `RUST_LOG=aura::automation=debug` enables
             // the per-harness-event firehose without flipping the
             // rest of the server into debug.
-            EnvFilter::new("aura::automation=info,aura_os_server=info,tower_http=warn,info")
+            // `chromiumoxide::handler=error` suppresses the high-volume
+            // CDP "message failed to deserialize" warnings emitted while
+            // browsing; genuine WS connection errors still surface at
+            // `error`. Override with `RUST_LOG=chromiumoxide::handler=warn`
+            // (concise) or `=trace` (full payloads).
+            EnvFilter::new("aura::automation=info,aura_os_server=info,tower_http=warn,chromiumoxide::handler=error,info")
         }))
         .init();
 

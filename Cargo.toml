@@ -97,9 +97,12 @@ debug = 0
 # Pin `chromiumoxide` and its subcrates to our local fork under
 # `vendor/chromiumoxide`. The fork starts from the upstream v0.9.1 tag and
 # adds:
-# - a diagnostic patch that includes the raw JSON payload in the
-#   `WS Invalid message` log line, so we can identify which CDP event or
-#   response is failing to deserialize against the generated schemas.
+# - a diagnostic patch for CDP messages that fail to deserialize: each
+#   diverged `method` is logged once at `warn` with a truncated payload
+#   preview (repeats drop to `debug`, full payload at `trace`), on the
+#   `chromiumoxide::handler` target, so we can identify which CDP event or
+#   response needs a fix without flooding the dev-loop logs. The target is
+#   filtered to `error` by default in the desktop/server logging configs.
 # - (planned) targeted `#[serde(rename = "...")]` additions for specific
 #   CDP structs whose field names have diverged from what current Chrome
 #   sends on the wire.
