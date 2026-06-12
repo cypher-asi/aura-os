@@ -2,6 +2,10 @@ import { Wrench } from "lucide-react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
 import { TOOL_LABELS } from "../../../constants/tools";
 import { formatResult, summarizeInput, summarizeError } from "../../../shared/utils/format";
+import {
+  blockStatusForSeverity,
+  deriveToolSeverity,
+} from "../../../utils/tool-severity";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";
 
@@ -36,7 +40,8 @@ interface GenericToolBlockProps {
 export function GenericToolBlock({ entry, defaultExpanded }: GenericToolBlockProps) {
   const label = TOOL_LABELS[entry.name] || entry.name;
   const summary = summarizeInput(entry.name, entry.input);
-  const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
+  const severity = deriveToolSeverity(entry);
+  const status = blockStatusForSeverity(severity);
 
   const headerSummary =
     entry.isError && entry.result
@@ -79,7 +84,13 @@ export function GenericToolBlock({ entry, defaultExpanded }: GenericToolBlockPro
         <div className={styles.genericSection}>
           <div className={styles.genericLabel}>{entry.isError ? "Error" : "Result"}</div>
           <div
-            className={`${styles.genericJson} ${entry.isError ? styles.genericError : ""}`}
+            className={`${styles.genericJson} ${
+              severity === "error"
+                ? styles.genericError
+                : entry.isError
+                  ? styles.genericNote
+                  : ""
+            }`}
           >
             {formatResult(entry.result)}
           </div>

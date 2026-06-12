@@ -5,6 +5,10 @@ import { langFromPath } from "../../../ide/lang";
 import { useHighlightedHtml } from "../../../shared/hooks/use-highlighted-html";
 import { TOOL_LABELS, TOOL_PHASE_LABELS } from "../../../constants/tools";
 import { decodeCapturedOutput } from "../../../shared/utils/format";
+import {
+  blockStatusForSeverity,
+  deriveToolSeverity,
+} from "../../../utils/tool-severity";
 import { Block } from "../Block";
 import blockStyles from "../Block.module.css";
 import styles from "./renderers.module.css";
@@ -183,14 +187,20 @@ export function FileBlock({
       return base;
     }
     if (entry.isError) {
-      if (retryExhausted && retryAttempt != null) {
-        const max = retryMax ?? "?";
-        return `${toolLabel} failed - retried ${retryAttempt}/${max}`;
+      // Only a hard failure (retry budget exhausted) gets the alarming
+      // "failed" decoration. A soft tool error the agent absorbed keeps
+      // the plain label — the attention status dot and the inline note
+      // in the body carry the detail without shouting.
+      if (retryExhausted) {
+        if (retryAttempt != null) {
+          const max = retryMax ?? "?";
+          return `${toolLabel} failed - retried ${retryAttempt}/${max}`;
+        }
+        return `${toolLabel} failed`;
       }
       if (hasTransientUpstreamHint) {
-        return `${toolLabel} failed - transient upstream 5xx`;
+        return `${toolLabel} - transient upstream 5xx`;
       }
-      return `${toolLabel} failed`;
     }
     return toolLabel;
   })();
@@ -207,6 +217,9 @@ export function FileBlock({
   const hasEditContent = oldText.length > 0 || newText.length > 0;
   const hasWriteContent = writeContent.length > 0;
   const hasReadContent = !!entry.result;
+
+  const severity = deriveToolSeverity(entry);
+  const status = blockStatusForSeverity(severity);
 
   let body: ReactNode = null;
   let copyPayload = "";
@@ -233,7 +246,7 @@ export function FileBlock({
     const decoded = decodeCapturedOutput(entry.result as string);
     if (decoded.ok === false) {
       body = (
-        <div className={styles.inlineError}>
+        <div className={severity === "error" ? styles.inlineError : styles.inlineNote}>
           {decoded.stderr || decoded.stdout || "Read failed."}
         </div>
       );
@@ -243,7 +256,6 @@ export function FileBlock({
     }
   }
 
-  const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
   const forcePreview =
     entry.pending && ((isWrite && hasWriteContent) || (isEdit && hasEditContent));
 
@@ -270,7 +282,9 @@ export function FileBlock({
     >
       {body}
       {entry.isError && entry.result ? (
-        <div className={styles.inlineError}>{String(entry.result).slice(0, 240)}</div>
+        <div className={severity === "error" ? styles.inlineError : styles.inlineNote}>
+          {String(entry.result).slice(0, 240)}
+        </div>
       ) : null}
     </Block>
   );

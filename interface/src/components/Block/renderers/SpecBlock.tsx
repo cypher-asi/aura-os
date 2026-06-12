@@ -5,6 +5,10 @@ import { useHighlightedHtml } from "../../../shared/hooks/use-highlighted-html";
 import { useMarkdownCopy } from "../../../shared/hooks/use-markdown-copy";
 import { specFilename } from "../../../shared/utils/format";
 import { TOOL_LABELS } from "../../../constants/tools";
+import {
+  blockStatusForSeverity,
+  deriveToolSeverity,
+} from "../../../utils/tool-severity";
 import { Block } from "../Block";
 import blockStyles from "../Block.module.css";
 import styles from "./renderers.module.css";
@@ -22,7 +26,8 @@ export function SpecBlock({ entry, defaultExpanded }: SpecBlockProps) {
   const content = toolContent || draftPreview;
   const highlightedHtml = useHighlightedHtml(content, "markdown");
 
-  const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
+  const severity = deriveToolSeverity(entry);
+  const status = blockStatusForSeverity(severity);
   const toolLabel = TOOL_LABELS[entry.name] ?? "Spec";
 
   // Select+copy of the whole spec body should yield the *original*
@@ -62,7 +67,9 @@ export function SpecBlock({ entry, defaultExpanded }: SpecBlockProps) {
         </pre>
       </div>
       {entry.isError && entry.result ? (
-        <div className={styles.inlineError}>{String(entry.result).slice(0, 240)}</div>
+        <div className={severity === "error" ? styles.inlineError : styles.inlineNote}>
+          {String(entry.result).slice(0, 240)}
+        </div>
       ) : null}
     </Block>
   );

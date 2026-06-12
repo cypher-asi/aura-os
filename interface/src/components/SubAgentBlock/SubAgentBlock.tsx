@@ -35,6 +35,36 @@ function firstLine(text: string, max = 96): string {
   return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }
 
+const OUTCOME_KEYS = ["summary", "response", "result", "output", "text", "message"];
+
+/**
+ * Best-effort one-line "what the subagent accomplished" extracted from
+ * the `task` tool result. The harness may return plain text or a JSON
+ * envelope; for JSON we look for a recognizable prose field and ignore
+ * pure lifecycle payloads like `{"exit":"completed"}` so callers can
+ * fall back to the prompt.
+ */
+function outcomeLine(result: unknown): string | null {
+  if (typeof result !== "string" || result.trim().length === 0) return null;
+  let text = result;
+  try {
+    const parsed: unknown = JSON.parse(result);
+    if (parsed && typeof parsed === "object") {
+      const record = parsed as Record<string, unknown>;
+      const candidate = OUTCOME_KEYS.map((key) => record[key]).find(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      );
+      if (!candidate) return null;
+      text = candidate;
+    }
+  } catch {
+    // Not JSON — treat the raw result as prose.
+  }
+  const line = firstLine(text);
+  return line.length > 0 ? line : null;
+}
+
 function blockStatusFor(state: ReturnType<typeof resolveSubagentState>): BlockStatus {
   if (state === "running") return "pending";
   if (state === "failed" || state === "timeout" || state === "rejected") {
@@ -68,7 +98,13 @@ export function SubAgentBlock({ entry, defaultExpanded }: SubAgentBlockProps) {
   const childRunId = entry.subagentRunId;
   const canOpen = !!childRunId && !!parentStreamKey;
 
-  const summary = firstLine(prompt);
+  // While running, narrate what the subagent is doing (the prompt). Once
+  // it completes, lead with what it accomplished — the first meaningful
+  // line of its result — so a finished turn reads as outcomes, not a
+  // list of stale instructions. Failure states keep the prompt so the
+  // status pill's "Failed" has its subject next to it.
+  const outcome = state === "completed" ? outcomeLine(entry.result) : null;
+  const summary = outcome ?? firstLine(prompt);
 
   const openModal = (event: MouseEvent<HTMLButtonElement>): void => {
     // Stop the click from also toggling the Block's expand/collapse.
@@ -138,6 +174,7 @@ export function SubAgentBlock({ entry, defaultExpanded }: SubAgentBlockProps) {
         ) : (
           <p className={styles.muted}>No prompt was recorded for this subagent.</p>
         )}
+        {outcome && <p className={styles.prompt}>{outcome}</p>}
         {reason && <p className={styles.reason}>{reason}</p>}
       </div>
     </Block>

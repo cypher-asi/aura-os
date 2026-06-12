@@ -130,12 +130,25 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * stderr is frequently informational (git progress, npm warnings), so it
+ * renders muted by default. Only a hard failure (retries exhausted)
+ * escalates to the red variant below.
+ */
 .cmdStderr {
+  color: var(--color-text-muted);
+}
+
+.cmdStderrError {
   color: var(--color-error-fg);
 }
 
-.exitOk {
-  color: var(--color-success);
+/*
+ * Quiet exit-code note for a non-zero exit the agent handled. Lowercase,
+ * muted — present for anyone who looks, invisible to anyone scanning.
+ */
+.exitSoft {
+  color: var(--color-text-muted);
   font-family: var(--font-mono, monospace);
   font-size: 11px;
 }
@@ -448,8 +461,20 @@
   color: var(--color-error-fg);
 }
 
+/* Muted counterpart of .genericError for soft (attention-level) failures. */
+.genericNote {
+  color: var(--color-text-muted);
+}
+
 .inlineError {
   color: var(--color-error-fg);
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+/* Muted counterpart of .inlineError for soft (attention-level) failures. */
+.inlineNote {
+  color: var(--color-text-muted);
   font-size: 11px;
   padding: 4px 10px;
 }

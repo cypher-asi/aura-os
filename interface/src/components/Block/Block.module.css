@@ -48,6 +48,15 @@
   background: var(--color-success);
 }
 
+/*
+ * Soft failure the agent recovered from: amber dot only. The title keeps
+ * its default color on purpose — a non-zero exit the agent handled is
+ * routine work, not something the row should shout about.
+ */
+.statusAttention .statusDot {
+  background: var(--color-warning-fg);
+}
+
 .statusError .statusDot {
   background: var(--color-error-fg);
 }

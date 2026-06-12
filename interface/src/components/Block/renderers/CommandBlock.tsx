@@ -2,6 +2,11 @@ import { SquareTerminal } from "lucide-react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
 import { decodeCapturedOutput } from "../../../shared/utils/format";
 import { TOOL_LABELS } from "../../../constants/tools";
+import { describeCommand } from "../../../utils/derive-activity";
+import {
+  blockStatusForSeverity,
+  deriveToolSeverity,
+} from "../../../utils/tool-severity";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";
 
@@ -35,20 +40,28 @@ export function CommandBlock({ entry, defaultExpanded }: CommandBlockProps) {
   const { stdout, stderr, exitCode } = decodeCapturedOutput(entry.result);
   const hasOutput = !!stdout || !!stderr;
 
-  const isError = entry.isError || (exitCode !== null && exitCode !== 0);
-  const status = entry.pending ? "pending" : isError ? "error" : "done";
-  const toolLabel = TOOL_LABELS[entry.name] ?? "Run command";
+  const severity = deriveToolSeverity(entry, exitCode);
+  const status = blockStatusForSeverity(severity);
+  // Lead with what the step is doing in plain language ("Check git
+  // remotes"); the raw `$ command` stays visible in the summary slot.
+  const toolLabel =
+    describeCommand(command) ?? TOOL_LABELS[entry.name] ?? "Run command";
 
-  const trailing = exitCode !== null ? (
-    <span className={isError ? styles.exitError : styles.exitOk}>
-      EXIT {exitCode}
-    </span>
-  ) : null;
+  // Exit-code badge: silent on success, quiet muted text for a non-zero
+  // exit the agent handled, red only when the harness actually gave up.
+  const trailing =
+    exitCode !== null && (exitCode !== 0 || severity === "error") ? (
+      <span className={severity === "error" ? styles.exitError : styles.exitSoft}>
+        exit {exitCode}
+      </span>
+    ) : null;
 
   const emptyBodyLabel = entry.pending
     ? "Running…"
     : exitCode !== null
-      ? `Exited ${exitCode}${isError ? "" : " — no output"}`
+      ? severity === "attention"
+        ? `Exited ${exitCode} — the agent handled it and continued`
+        : `Exited ${exitCode}${exitCode === 0 ? " — no output" : ""}`
       : "No output captured.";
 
   return (
@@ -76,11 +89,19 @@ export function CommandBlock({ entry, defaultExpanded }: CommandBlockProps) {
         <div style={{ padding: "6px 10px" }}>
           {stdout ? <div className={styles.cmdOutput}>{stdout}</div> : null}
           {stderr ? (
-            <div className={`${styles.cmdOutput} ${styles.cmdStderr}`}>{stderr}</div>
+            <div
+              className={`${styles.cmdOutput} ${
+                severity === "error" ? styles.cmdStderrError : styles.cmdStderr
+              }`}
+            >
+              {stderr}
+            </div>
           ) : null}
         </div>
       ) : entry.isError && entry.result ? (
-        <div className={styles.inlineError}>{String(entry.result).slice(0, 240)}</div>
+        <div className={severity === "error" ? styles.inlineError : styles.inlineNote}>
+          {String(entry.result).slice(0, 240)}
+        </div>
       ) : (
         // Never render a bare "No output." — that read as a broken card
         // even when the command was still running or had simply finished

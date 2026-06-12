@@ -60,7 +60,9 @@ const AUTO_EXPAND_TOOLS = new Set([
   "update_spec",
   "write_file",
   "edit_file",
-  "run_command",
+  // `run_command` is intentionally absent: a finished command collapses
+  // to its one-line outcome (pending commands still force-open with live
+  // output via `forceExpanded` in CommandBlock). Detail is one click away.
 ]);
 
 export function isAutoExpandedTool(name: string): boolean {

@@ -12,7 +12,13 @@ import { ChevronRight } from "lucide-react";
 import { CopyButton } from "../CopyButton";
 import styles from "./Block.module.css";
 
-export type BlockStatus = "pending" | "done" | "error";
+/**
+ * `attention` marks a soft failure the agent absorbed and continued past
+ * (e.g. a probing command that exited non-zero). It renders calm — amber
+ * dot, default title color — while `error` (red) is reserved for hard,
+ * terminal failures such as retry exhaustion.
+ */
+export type BlockStatus = "pending" | "done" | "attention" | "error";
 
 /**
  * Lazily-evaluated payload for the always-on copy icon every Block
@@ -76,6 +82,7 @@ export interface BlockProps {
 function statusClass(status: BlockStatus): string {
   switch (status) {
     case "pending": return styles.statusPending;
+    case "attention": return styles.statusAttention;
     case "error": return styles.statusError;
     case "done":
     default: return styles.statusDone;

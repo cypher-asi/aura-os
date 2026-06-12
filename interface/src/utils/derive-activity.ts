@@ -82,8 +82,119 @@ function findLastToolMarkerEnd(buffer: string): number {
   return lastEnd;
 }
 
+/**
+ * Best-effort plain-language description of a shell command, so a chat
+ * row can read "Check git remotes" instead of leading with the raw
+ * `$ git remote -v`. Only the first command of a `&&` / `;` / `|` chain
+ * is classified. Returns `null` when no confident description exists so
+ * callers can fall back to a generic label — a wrong guess is worse
+ * than no guess.
+ *
+ * A server-provided description (if the harness ever sends one with
+ * `run_command`) should take precedence over this heuristic.
+ */
+export function describeCommand(command: string): string | null {
+  const first = command.split(/&&|;|\|/, 1)[0]?.trim() ?? "";
+  if (!first) return null;
+
+  // Drop leading env assignments (`FOO=bar cmd`) and `sudo`.
+  const tokens = first.split(/\s+/).filter((t) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(t));
+  if (tokens[0] === "sudo") tokens.shift();
+  const [bin, sub] = tokens;
+  if (!bin) return null;
+
+  switch (bin) {
+    case "git":
+      switch (sub) {
+        case "status": return "Check git status";
+        case "remote": return "Check git remotes";
+        case "init": return "Initialize git repository";
+        case "clone": return "Clone repository";
+        case "pull": return "Pull latest changes";
+        case "push": return "Push changes";
+        case "fetch": return "Fetch remote changes";
+        case "add": return "Stage changes";
+        case "commit": return "Commit changes";
+        case "checkout":
+        case "switch": return "Switch branch";
+        case "branch": return "Manage branches";
+        case "merge": return "Merge branches";
+        case "rebase": return "Rebase branch";
+        case "stash": return "Stash changes";
+        case "log": return "Inspect git history";
+        case "diff": return "Review changes";
+        default: return sub ? `Run git ${sub}` : "Run git";
+      }
+    case "npm":
+    case "pnpm":
+    case "yarn":
+    case "bun":
+      if (sub === "install" || sub === "i" || sub === "add" || sub === undefined) {
+        return "Install dependencies";
+      }
+      if (sub === "test" || sub === "t") return "Run tests";
+      if (sub === "run") {
+        const script = tokens[2];
+        if (script === "build") return "Build project";
+        if (script === "dev" || script === "start") return "Start dev server";
+        if (script === "test") return "Run tests";
+        if (script === "lint") return "Lint code";
+        return script ? `Run ${script} script` : null;
+      }
+      if (sub === "build") return "Build project";
+      if (sub === "start" || sub === "dev") return "Start dev server";
+      return null;
+    case "cargo":
+      switch (sub) {
+        case "build": return "Build project";
+        case "test": return "Run tests";
+        case "check": return "Check project compiles";
+        case "run": return "Run project";
+        case "fmt": return "Format code";
+        case "clippy": return "Lint code";
+        case "add": return "Add dependency";
+        default: return sub ? `Run cargo ${sub}` : null;
+      }
+    case "pytest":
+    case "jest":
+    case "vitest":
+      return "Run tests";
+    case "pip":
+    case "pip3":
+    case "uv":
+      if (sub === "install" || sub === "add" || sub === "sync") {
+        return "Install dependencies";
+      }
+      return null;
+    case "mkdir": return "Create directory";
+    case "rm":
+    case "del": return "Remove files";
+    case "cp":
+    case "copy": return "Copy files";
+    case "mv":
+    case "move": return "Move files";
+    case "ls":
+    case "dir": return "List directory";
+    case "cat":
+    case "type": return "Show file contents";
+    case "curl":
+    case "wget": return "Fetch URL";
+    case "docker":
+      if (sub === "build") return "Build container image";
+      if (sub === "compose" || sub === "up") return "Start containers";
+      if (sub === "ps") return "List containers";
+      return null;
+    default:
+      return null;
+  }
+}
+
 export function agenticToolLabel(toolName: string, arg?: string): string {
   const shortArg = arg ? shortenArg(arg, 60) : "";
+  if (toolName === "run_command" && arg) {
+    const described = describeCommand(arg);
+    if (described) return described;
+  }
   switch (toolName) {
     case "read_file": return shortArg ? `Read \`${shortArg}\`` : "Read file";
     case "write_file": return shortArg ? `Write \`${shortArg}\`` : "Write file";

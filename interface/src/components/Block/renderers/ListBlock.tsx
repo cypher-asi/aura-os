@@ -3,6 +3,10 @@ import type { ReactNode } from "react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
 import { TOOL_LABELS } from "../../../constants/tools";
 import { decodeCapturedOutput, summarizeInput } from "../../../shared/utils/format";
+import {
+  blockStatusForSeverity,
+  deriveToolSeverity,
+} from "../../../utils/tool-severity";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";
 
@@ -129,7 +133,8 @@ export function ListBlock({ entry, defaultExpanded }: ListBlockProps) {
 
   const rows = resolveRows(entry.result);
 
-  const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
+  const severity = deriveToolSeverity(entry);
+  const status = blockStatusForSeverity(severity);
   // Serialize rows back to plaintext so pasting outside the chat gives
   // a clean "primary[: secondary]" line per item -- matches what the
   // body visually shows (icon column is purely decorative).
@@ -161,7 +166,9 @@ export function ListBlock({ entry, defaultExpanded }: ListBlockProps) {
       {entry.pending && !entry.result ? (
         <div className={styles.listEmpty}>Searching…</div>
       ) : entry.isError && entry.result ? (
-        <div className={styles.inlineError}>{String(entry.result).slice(0, 240)}</div>
+        <div className={severity === "error" ? styles.inlineError : styles.inlineNote}>
+          {String(entry.result).slice(0, 240)}
+        </div>
       ) : rows.length === 0 ? (
         <div className={styles.listEmpty}>No results.</div>
       ) : (

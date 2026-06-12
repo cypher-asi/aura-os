@@ -2,6 +2,7 @@ import {
   deriveActivity,
   agenticToolLabel,
   computeIterationStats,
+  describeCommand,
 } from "./derive-activity";
 import type { IterationStats } from "./derive-activity";
 
@@ -200,8 +201,14 @@ describe("agenticToolLabel", () => {
     expect(agenticToolLabel("search_code", "TODO")).toBe("Search: TODO");
   });
 
-  it("labels run_command", () => {
-    expect(agenticToolLabel("run_command", "npm test")).toBe("Run: `npm test`");
+  it("labels run_command with a plain-language description when recognized", () => {
+    expect(agenticToolLabel("run_command", "npm test")).toBe("Run tests");
+  });
+
+  it("falls back to the raw command label for unrecognized commands", () => {
+    expect(agenticToolLabel("run_command", "frobnicate --all")).toBe(
+      "Run: `frobnicate --all`",
+    );
   });
 
   it("labels task_done", () => {
@@ -209,7 +216,7 @@ describe("agenticToolLabel", () => {
   });
 
   it("labels get_task_context", () => {
-    expect(agenticToolLabel("get_task_context")).toBe("Load task context");
+    expect(agenticToolLabel("get_task_context")).toBe("Load context");
   });
 
   it("labels unknown tool with arg", () => {
@@ -225,6 +232,46 @@ describe("agenticToolLabel", () => {
     const result = agenticToolLabel("read_file", longArg);
     expect(result.length).toBeLessThan(100);
     expect(result).toContain("\u2026");
+  });
+});
+
+describe("describeCommand", () => {
+  it("describes common git subcommands", () => {
+    expect(describeCommand("git status")).toBe("Check git status");
+    expect(describeCommand("git remote -v")).toBe("Check git remotes");
+    expect(describeCommand("git pull origin master")).toBe("Pull latest changes");
+    expect(describeCommand("git init")).toBe("Initialize git repository");
+    expect(describeCommand("git commit -m 'msg'")).toBe("Commit changes");
+  });
+
+  it("falls back to a generic git label for unmapped subcommands", () => {
+    expect(describeCommand("git bisect start")).toBe("Run git bisect");
+  });
+
+  it("describes package-manager and build commands", () => {
+    expect(describeCommand("npm install")).toBe("Install dependencies");
+    expect(describeCommand("pnpm i")).toBe("Install dependencies");
+    expect(describeCommand("npm run build")).toBe("Build project");
+    expect(describeCommand("npm run dev")).toBe("Start dev server");
+    expect(describeCommand("cargo test --workspace")).toBe("Run tests");
+    expect(describeCommand("cargo check")).toBe("Check project compiles");
+    expect(describeCommand("pytest -x")).toBe("Run tests");
+  });
+
+  it("classifies only the first command of a chain", () => {
+    expect(describeCommand("git add . && git commit -m x && git push")).toBe(
+      "Stage changes",
+    );
+  });
+
+  it("skips env assignments and sudo", () => {
+    expect(describeCommand("CI=1 npm test")).toBe("Run tests");
+    expect(describeCommand("sudo npm install")).toBe("Install dependencies");
+  });
+
+  it("returns null when there is no confident description", () => {
+    expect(describeCommand("")).toBeNull();
+    expect(describeCommand("frobnicate --all")).toBeNull();
   });
 });
 

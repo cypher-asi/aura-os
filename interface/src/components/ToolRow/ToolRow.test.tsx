@@ -235,7 +235,8 @@ describe("ToolCallBlock (Block dispatch)", () => {
         />,
       );
       expect(container.textContent ?? "").toContain("Hello, World!");
-      expect(container.textContent ?? "").toContain("EXIT 0");
+      // Clean exits stay quiet: no exit-code badge on success.
+      expect(container.textContent ?? "").not.toMatch(/exit 0/i);
       expect(container.textContent ?? "").not.toContain(btoa("Hello, World!\n"));
     });
 
@@ -265,7 +266,10 @@ describe("ToolCallBlock (Block dispatch)", () => {
       expect(text).toContain("error[E0433]: cannot find crate `foo`");
       // eslint-disable-next-line no-control-regex
       expect(text).not.toMatch(/\x1B\[/);
-      expect(text).toContain("EXIT 101");
+      // Non-zero exit the agent handled: quiet lowercase note, not a
+      // shouting red "EXIT 101" badge.
+      expect(text).toContain("exit 101");
+      expect(text).not.toContain("EXIT 101");
     });
   });
 
