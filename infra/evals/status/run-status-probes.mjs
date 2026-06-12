@@ -762,17 +762,27 @@ async function runChecks(args) {
       const results = [];
       const { orgId } = await requireOrgId(args);
       for (const model of args.models) {
-        const result = await withCleanup(args, async (track) => {
-          const agent = await createAgent(args, track, "local", model, orgId);
-          const runtime = await runRuntimeTest(args, agent.agent_id, 60_000);
-          return {
+        try {
+          const result = await withCleanup(args, async (track) => {
+            const agent = await createAgent(args, track, "local", model, orgId);
+            const runtime = await runRuntimeTest(args, agent.agent_id, 60_000);
+            return {
+              model,
+              ok: String(runtime?.message ?? "").toLowerCase().includes("hello from aura"),
+              provider: runtime?.provider ?? null,
+              resolvedModel: runtime?.model ?? null,
+            };
+          });
+          results.push(result);
+        } catch (error) {
+          results.push({
             model,
-            ok: String(runtime?.message ?? "").toLowerCase().includes("hello from aura"),
-            provider: runtime?.provider ?? null,
-            resolvedModel: runtime?.model ?? null,
-          };
-        });
-        results.push(result);
+            ok: false,
+            provider: null,
+            resolvedModel: null,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
       const passed = results.filter((result) => result.ok).length;
       return {
