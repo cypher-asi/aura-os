@@ -51,6 +51,8 @@ pub(crate) async fn call_tool(
         crate::handlers::generation::generate_image_tool(&state, &jwt, &args).await?
     } else if tool_name == "generate_3d_model" {
         crate::handlers::generation::generate_3d_tool(&state, &jwt, &args).await?
+    } else if tool_name == "generate_video" {
+        crate::handlers::generation::generate_video_tool(&state, &jwt, &args).await?
     } else {
         let contract = app_provider_contract_by_tool(&tool_name)
             .ok_or_else(|| ApiError::not_found(format!("unknown org tool `{tool_name}`")))?;

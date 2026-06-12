@@ -8,6 +8,7 @@ pub(super) fn tool_hints_from_commands(commands: Option<&[String]>) -> Option<Ve
         let hint = match command.as_str() {
             "generate_image" => "generate_image",
             "generate_3d" | "generate_3d_model" => "generate_3d_model",
+            "generate_video" => "generate_video",
             _ => continue,
         };
         if !hints.iter().any(|existing| existing == hint) {

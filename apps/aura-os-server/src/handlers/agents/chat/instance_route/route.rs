@@ -9,7 +9,7 @@ use tracing::info;
 use crate::dto::SendChatRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::billing::require_credits_for_auth_source;
-use crate::handlers::plan_mode::{is_plan_mode_action, plan_mode_tool_permissions};
+use crate::handlers::plan_mode::{is_plan_mode_action, session_tool_permissions};
 use crate::handlers::projects_helpers::{
     is_project_tool_action, project_tool_max_turns, resolve_agent_instance_workspace_path,
 };
@@ -256,7 +256,8 @@ pub(crate) async fn send_event_stream(
     // `open_harness_chat_stream`. See `crate::handlers::plan_mode`
     // for the full contract.
     let is_plan_mode = is_plan_mode_action(body.action.as_deref());
-    let tool_permissions = is_plan_mode.then(plan_mode_tool_permissions);
+    let tool_permissions =
+        session_tool_permissions(&normalized_instance_perms.tool_permissions, is_plan_mode);
 
     // Chat-WS migration: forward typed identity / skills /
     // operator-prompt / project_info on the wire and let the harness

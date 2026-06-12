@@ -19,6 +19,23 @@ use crate::trusted_methods::{
     trusted_integration_method_by_tool, TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY,
 };
 
+/// Media-generation tool calls regularly run for minutes (video renders,
+/// `gpt-image-2` high-quality tiers), so they get a much larger HTTP
+/// timeout than ordinary org tools. The harness aborts the callback at
+/// this deadline; the server side keeps draining the router SSE
+/// regardless, so a generous ceiling here only bounds true hangs.
+const GENERATION_TOOL_TIMEOUT_MS: u64 = 600_000;
+
+/// Default timeout for ordinary (non-generation) org tool callbacks.
+const DEFAULT_TOOL_TIMEOUT_MS: u64 = 30_000;
+
+fn tool_timeout_ms(tool_name: &str) -> u64 {
+    match tool_name {
+        "generate_image" | "generate_video" | "generate_3d_model" => GENERATION_TOOL_TIMEOUT_MS,
+        _ => DEFAULT_TOOL_TIMEOUT_MS,
+    }
+}
+
 fn available_workspace_integration_providers(integrations: &[OrgIntegration]) -> HashSet<&str> {
     integrations
         .iter()
@@ -55,7 +72,7 @@ pub fn installed_workspace_app_tools(
             auth: ToolAuth::Bearer {
                 token: bearer_token.to_string(),
             },
-            timeout_ms: Some(30_000),
+            timeout_ms: Some(tool_timeout_ms(&tool.name)),
             namespace: Some("aura_org_tools".to_string()),
             required_integration: Some(InstalledToolIntegrationRequirement {
                 integration_id: None,
@@ -309,6 +326,76 @@ mod tests {
             .expect("brave tool");
         assert!(brave.endpoint.ends_with("/tool-actions/brave_search_web"));
         assert!(matches!(brave.auth, ToolAuth::Bearer { .. }));
+    }
+
+    #[test]
+    fn generation_tools_are_provider_less_and_always_installed() {
+        // Empty integrations on purpose: the media-generation tools have
+        // no provider gate, so every chat / dev-loop agent must see all
+        // three regardless of which workspace integrations the org has
+        // enabled.
+        let org_id = OrgId::new();
+        let integrations: Vec<OrgIntegration> = Vec::new();
+
+        let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-media");
+        for name in ["generate_image", "generate_video", "generate_3d_model"] {
+            let tool = tools
+                .iter()
+                .find(|tool| tool.name == name)
+                .unwrap_or_else(|| panic!("{name} should ship for every org"));
+            assert!(tool.endpoint.ends_with(&format!("/tool-actions/{name}")));
+            assert_eq!(
+                tool.timeout_ms,
+                Some(GENERATION_TOOL_TIMEOUT_MS),
+                "{name} must carry the long generation timeout",
+            );
+        }
+
+        // Non-generation tools keep the ordinary timeout.
+        let list = tools
+            .iter()
+            .find(|tool| tool.name == "list_org_integrations")
+            .expect("list_org_integrations tool");
+        assert_eq!(list.timeout_ms, Some(DEFAULT_TOOL_TIMEOUT_MS));
+    }
+
+    #[test]
+    fn generate_video_schema_exposes_full_parameter_set() {
+        let entry = org_integration_tool_manifest_entries()
+            .iter()
+            .find(|entry| entry.name == "generate_video")
+            .expect("generate_video manifest entry");
+        let properties = entry.input_schema["properties"]
+            .as_object()
+            .expect("inputSchema.properties");
+        for param in [
+            "prompt",
+            "model",
+            "aspect_ratio",
+            "duration_seconds",
+            "resolution",
+            "generate_audio",
+            "images",
+            "project_id",
+        ] {
+            assert!(
+                properties.contains_key(param),
+                "generate_video schema missing `{param}`",
+            );
+        }
+    }
+
+    #[test]
+    fn generate_image_schema_exposes_quality() {
+        let entry = org_integration_tool_manifest_entries()
+            .iter()
+            .find(|entry| entry.name == "generate_image")
+            .expect("generate_image manifest entry");
+        let quality = &entry.input_schema["properties"]["quality"];
+        assert_eq!(
+            quality["enum"],
+            serde_json::json!(["auto", "low", "medium", "high"]),
+        );
     }
 
     #[test]

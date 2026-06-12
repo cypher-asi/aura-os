@@ -251,7 +251,93 @@ describe("PermissionsTab", () => {
     expect(
       screen.getByRole("switch", { name: /Read agents/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/get_agent_state/i)).toBeInTheDocument();
+    // Matches both the capability description and the tool-permissions
+    // row for the same tool, so assert on "at least one".
+    expect(screen.getAllByText(/get_agent_state/i).length).toBeGreaterThan(0);
+  });
+
+  it("renders default-on tri-state controls for the tool catalog", () => {
+    const agent = makeAgent();
+    render(<PermissionsTab agent={agent} isOwnAgent />);
+
+    const group = screen.getByRole("radiogroup", {
+      name: /Generate video permission/i,
+    });
+    const on = group.querySelector('[role="radio"][aria-checked="true"]');
+    expect(on).not.toBeNull();
+    expect(on?.textContent).toBe("On");
+  });
+
+  it("persists a tool tri-state override through the autosave PUT", async () => {
+    const agent = makeAgent();
+    const updatedAgent = makeAgent({
+      permissions: {
+        scope: { orgs: [], projects: [], agent_ids: [] },
+        capabilities: [],
+        tool_permissions: { per_tool: { generate_video: "ask" } },
+      },
+    });
+    mockUpdate.mockResolvedValue(updatedAgent);
+
+    render(<PermissionsTab agent={agent} isOwnAgent />);
+
+    const group = screen.getByRole("radiogroup", {
+      name: /Generate video permission/i,
+    });
+    const askButton = Array.from(
+      group.querySelectorAll('[role="radio"]'),
+    ).find((el) => el.textContent === "Ask");
+    expect(askButton).toBeDefined();
+    fireEvent.click(askButton as Element);
+
+    await waitFor(
+      () => {
+        expect(mockUpdate).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 2000 },
+    );
+    expect(mockUpdate).toHaveBeenCalledWith("agent-1", {
+      permissions: {
+        scope: { orgs: [], projects: [], agent_ids: [] },
+        capabilities: [],
+        tool_permissions: { per_tool: { generate_video: "ask" } },
+      },
+    });
+  });
+
+  it("setting a tool back to On removes the stored override", async () => {
+    const agent = makeAgent({
+      permissions: {
+        scope: { orgs: [], projects: [], agent_ids: [] },
+        capabilities: [],
+        tool_permissions: { per_tool: { generate_video: "off" } },
+      },
+    });
+    mockUpdate.mockResolvedValue(makeAgent());
+
+    render(<PermissionsTab agent={agent} isOwnAgent />);
+
+    const group = screen.getByRole("radiogroup", {
+      name: /Generate video permission/i,
+    });
+    const offRadio = group.querySelector('[role="radio"][aria-checked="true"]');
+    expect(offRadio?.textContent).toBe("Off");
+
+    const onButton = Array.from(
+      group.querySelectorAll('[role="radio"]'),
+    ).find((el) => el.textContent === "On");
+    fireEvent.click(onButton as Element);
+
+    await waitFor(
+      () => {
+        expect(mockUpdate).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 2000 },
+    );
+    const sent = mockUpdate.mock.calls[0][1] as {
+      permissions: AgentPermissions;
+    };
+    expect(sent.permissions.tool_permissions).toBeUndefined();
   });
 
   it("coalesces rapid toggles back to the saved state without firing a PUT", async () => {

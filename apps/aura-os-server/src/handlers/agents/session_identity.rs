@@ -343,6 +343,7 @@ mod tests {
             installed_tools: None,
             installed_integrations: None,
             agent_permissions: AgentPermissionsWire::default(),
+            tool_permissions: None,
             prior_failure: None,
             work_log: Vec::new(),
             aura_org_id: Some("org-1".to_string()),

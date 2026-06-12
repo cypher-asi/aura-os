@@ -6,8 +6,31 @@ import type { IntentClassifierSpec as IntentClassifierSpecWire } from "./generat
 
 export type AgentScope = AgentScopeWire;
 export type Capability = Exclude<CapabilityWire, { type: "unknown" }>;
+
+/**
+ * Tri-state per-tool permission value. Mirrors the Rust
+ * `ToolStateWire` ("on" / "off" / "ask") used by both the persisted
+ * agent record and the harness session wire.
+ */
+export type ToolPermissionState = "on" | "off" | "ask";
+
+/**
+ * Per-tool overrides persisted on `agent.permissions`. A tool with no
+ * entry defaults to "on", so an empty map means every default tool is
+ * enabled — the starting state for all agents.
+ */
+export interface AgentToolPermissions {
+  per_tool: Record<string, ToolPermissionState>;
+}
+
 export type AgentPermissions = Omit<AgentPermissionsWire, "capabilities"> & {
   capabilities: Capability[];
+  /**
+   * Per-tool tri-state overrides. Absent / empty means "everything
+   * on". Serialized by the server only when at least one override is
+   * stored (`skip_serializing_if` on the Rust side).
+   */
+  tool_permissions?: AgentToolPermissions;
 };
 export type IntentClassifierRule = IntentClassifierRuleWire;
 export type IntentClassifierSpec = Omit<

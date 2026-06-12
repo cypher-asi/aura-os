@@ -17,7 +17,7 @@
   {
     "name": "generate_image",
     "description": "Generate an image from a text prompt using the configured image model. Returns the hosted image URL and artifact metadata. Use this whenever the user asks to create, draw, render, or generate an image.",
-    "promptSignature": "generate_image(prompt, model?, size?)",
+    "promptSignature": "generate_image(prompt, model?, size?, quality?)",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -40,6 +40,11 @@
         "size": {
           "type": "string",
           "description": "Optional WxH size hint (e.g. 1024x1024, 1792x1024)."
+        },
+        "quality": {
+          "type": "string",
+          "description": "Optional quality tier for GPT Image models. Lower tiers render faster; `auto` lets the provider choose. Ignored by models without quality support.",
+          "enum": ["auto", "low", "medium", "high"]
         }
       },
       "required": ["prompt"]
@@ -48,7 +53,7 @@
   {
     "name": "generate_3d_model",
     "description": "Generate a 3D model from an image URL or image data URI using the configured 3D generation pipeline. Returns the hosted GLB URL and artifact metadata. Use this whenever the user asks to create, render, or generate a 3D model.",
-    "promptSignature": "generate_3d_model(image_url, prompt?, project_id?, parent_id?)",
+    "promptSignature": "generate_3d_model(image_url, prompt?, model?, project_id?, parent_id?)",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -61,6 +66,11 @@
           "type": "string",
           "description": "Optional text prompt or guidance for the 3D model."
         },
+        "model": {
+          "type": "string",
+          "description": "3D provider model id. Defaults to tripo-v2.",
+          "enum": ["tripo-v2"]
+        },
         "project_id": {
           "type": "string",
           "description": "Optional project id for artifact storage."
@@ -71,6 +81,59 @@
         }
       },
       "required": ["image_url"]
+    }
+  },
+  {
+    "name": "generate_video",
+    "description": "Generate a video from a text prompt (optionally seeded with source images for image-to-video) using the configured video model. Returns the hosted video URL and artifact metadata. Use this whenever the user asks to create, render, or generate a video.",
+    "promptSignature": "generate_video(prompt, model?, aspect_ratio?, duration_seconds?, resolution?, generate_audio?, images?, project_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Text description of the video to generate."
+        },
+        "model": {
+          "type": "string",
+          "description": "Video model id. Defaults to veo-3.1-fast-generate-preview.",
+          "enum": [
+            "veo-3.1-fast-generate-preview",
+            "veo-3.1-generate-preview",
+            "veo-3.1-lite-generate-preview",
+            "dreamina-seedance-2-0-260128",
+            "dreamina-seedance-2-0-fast-260128"
+          ]
+        },
+        "aspect_ratio": {
+          "type": "string",
+          "description": "Optional aspect ratio (e.g. 16:9, 9:16)."
+        },
+        "duration_seconds": {
+          "type": "integer",
+          "description": "Optional clip duration in seconds (typically 4, 6, or 8).",
+          "enum": [4, 6, 8]
+        },
+        "resolution": {
+          "type": "string",
+          "description": "Optional output resolution (e.g. 720p, 1080p, 4k)."
+        },
+        "generate_audio": {
+          "type": "boolean",
+          "description": "Whether to generate audio alongside the video."
+        },
+        "images": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional source image URLs or data URIs for image-to-video."
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Optional project id for artifact storage."
+        }
+      },
+      "required": ["prompt"]
     }
   },
   {

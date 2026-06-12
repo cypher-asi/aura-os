@@ -3,6 +3,7 @@ import {
   emptyAgentPermissions,
   type AgentPermissions,
   type Capability,
+  type ToolPermissionState,
 } from "../../../../shared/types/permissions-wire";
 import {
   hasAllCoreCapabilities,
@@ -29,6 +30,14 @@ export interface PermissionsFormHandle {
     projectId: string,
     mode: "read" | "write" | "both",
   ) => void;
+  /** Resolved tri-state for a tool: stored entry or the "on" default. */
+  toolStateFor: (name: string) => ToolPermissionState;
+  /**
+   * Set a tool's tri-state. "on" removes the stored entry (the
+   * default-on semantics keep the persisted map minimal); "off" /
+   * "ask" store an explicit override.
+   */
+  setToolState: (name: string, state: ToolPermissionState) => void;
 }
 
 /**
@@ -188,6 +197,27 @@ export function usePermissionsForm(
     });
   };
 
+  const toolStateFor = (name: string): ToolPermissionState =>
+    draft.tool_permissions?.per_tool[name] ?? "on";
+
+  const setToolState = (name: string, state: ToolPermissionState) => {
+    setDraft((prev) => {
+      const perTool = { ...(prev.tool_permissions?.per_tool ?? {}) };
+      if (state === "on") {
+        delete perTool[name];
+      } else {
+        perTool[name] = state;
+      }
+      const next = { ...prev };
+      if (Object.keys(perTool).length === 0) {
+        delete next.tool_permissions;
+      } else {
+        next.tool_permissions = { per_tool: perTool };
+      }
+      return next;
+    });
+  };
+
   return {
     draft,
     lastSavedRef,
@@ -202,5 +232,7 @@ export function usePermissionsForm(
     toggleGlobalCapability,
     removeProjectAccess,
     addProjectAccess,
+    toolStateFor,
+    setToolState,
   };
 }

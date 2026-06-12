@@ -143,6 +143,27 @@ pub(crate) fn plan_mode_tool_permissions() -> AgentToolPermissionsWire {
     AgentToolPermissionsWire { per_tool }
 }
 
+/// Resolve the per-session tool override map for a chat session: the
+/// agent's **persisted** per-tool tri-state (edited in the Permissions
+/// tab; empty = every tool `on`) with the plan-mode hard-disables
+/// layered on top when this is a plan-mode session. Plan-mode `off`
+/// entries win over any persisted state so a `generate_specs` turn can
+/// never write code, regardless of how permissive the agent record is.
+///
+/// Returns `None` when there is nothing to override (no persisted
+/// entries and not plan mode) so the wire request keeps the historical
+/// "field absent" shape.
+pub(crate) fn session_tool_permissions(
+    persisted: &aura_os_core::AgentToolPermissions,
+    is_plan_mode: bool,
+) -> Option<AgentToolPermissionsWire> {
+    let mut wire: AgentToolPermissionsWire = persisted.into();
+    if is_plan_mode {
+        wire.per_tool.extend(plan_mode_tool_permissions().per_tool);
+    }
+    (!wire.per_tool.is_empty()).then_some(wire)
+}
+
 /// Per-turn `tool_hints` payload. Cloned each call because the harness
 /// API takes ownership.
 pub(crate) fn plan_mode_tool_hints() -> Vec<String> {
@@ -221,6 +242,51 @@ mod tests {
                 "{name} must be hard-disabled in plan mode",
             );
         }
+    }
+
+    #[test]
+    fn session_tool_permissions_returns_none_when_nothing_to_override() {
+        let persisted = aura_os_core::AgentToolPermissions::default();
+        assert!(session_tool_permissions(&persisted, false).is_none());
+    }
+
+    #[test]
+    fn session_tool_permissions_forwards_persisted_overrides() {
+        let mut persisted = aura_os_core::AgentToolPermissions::default();
+        persisted
+            .per_tool
+            .insert("generate_video".into(), aura_os_core::ToolState::Ask);
+        persisted
+            .per_tool
+            .insert("run_command".into(), aura_os_core::ToolState::Off);
+
+        let wire = session_tool_permissions(&persisted, false).expect("overrides forwarded");
+        assert_eq!(
+            wire.per_tool.get("generate_video"),
+            Some(&ToolStateWire::Ask)
+        );
+        assert_eq!(wire.per_tool.get("run_command"), Some(&ToolStateWire::Off));
+    }
+
+    #[test]
+    fn session_tool_permissions_plan_mode_off_wins_over_persisted_on() {
+        // The operator can pin `write_file` to `on`, but a plan-mode
+        // session must still hard-disable it.
+        let mut persisted = aura_os_core::AgentToolPermissions::default();
+        persisted
+            .per_tool
+            .insert("write_file".into(), aura_os_core::ToolState::On);
+        persisted
+            .per_tool
+            .insert("generate_image".into(), aura_os_core::ToolState::Ask);
+
+        let wire = session_tool_permissions(&persisted, true).expect("plan-mode overrides");
+        assert_eq!(wire.per_tool.get("write_file"), Some(&ToolStateWire::Off));
+        // Non-conflicting persisted entries survive the merge.
+        assert_eq!(
+            wire.per_tool.get("generate_image"),
+            Some(&ToolStateWire::Ask)
+        );
     }
 
     #[test]

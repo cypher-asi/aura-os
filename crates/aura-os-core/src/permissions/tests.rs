@@ -52,6 +52,7 @@ fn normalized_for_identity_leaves_non_ceo_untouched() {
     let perms = AgentPermissions {
         scope: AgentScope::default(),
         capabilities: vec![Capability::ReadAgent],
+        ..Default::default()
     };
     let same = perms
         .clone()
@@ -64,6 +65,7 @@ fn normalized_for_identity_requires_both_name_and_role_to_match() {
     let restricted = AgentPermissions {
         scope: AgentScope::default(),
         capabilities: vec![Capability::ReadAgent],
+        ..Default::default()
     };
     // name matches but role doesn't - must not promote a deliberately
     // restricted bundle.
@@ -100,6 +102,7 @@ fn normalized_for_identity_preserves_customized_ceo_bundle() {
     let customized = AgentPermissions {
         scope: AgentScope::default(),
         capabilities: vec![Capability::ReadAgent, Capability::ListAgents],
+        ..Default::default()
     };
     let same = customized
         .clone()
@@ -141,6 +144,7 @@ fn with_subagent_caps_preserves_existing_caps() {
         capabilities: vec![Capability::ReadProject {
             id: "proj-7".into(),
         }],
+        ..Default::default()
     };
     let after = before.with_subagent_caps();
     assert!(after.capabilities.contains(&Capability::ReadProject {
@@ -181,6 +185,7 @@ fn with_project_self_caps_is_noop_for_matching_grant() {
                 id: "proj-42".into(),
             },
         ],
+        ..Default::default()
     };
     let after = existing.clone().with_project_self_caps("proj-42");
     assert_eq!(after, existing);
@@ -207,6 +212,7 @@ fn with_project_self_caps_adds_write_when_only_read_present() {
         capabilities: vec![Capability::ReadProject {
             id: "proj-42".into(),
         }],
+        ..Default::default()
     };
     let after = before.with_project_self_caps("proj-42");
     assert_eq!(
@@ -231,6 +237,7 @@ fn with_project_self_caps_does_not_satisfy_other_projects() {
         capabilities: vec![Capability::WriteProject {
             id: "proj-a".into(),
         }],
+        ..Default::default()
     };
     let after = before.with_project_self_caps("proj-b");
     assert!(after.capabilities.contains(&Capability::ReadProject {
@@ -281,6 +288,7 @@ fn with_dev_loop_execution_caps_preserves_other_capabilities() {
                 id: "proj-42".into(),
             },
         ],
+        ..Default::default()
     };
     let after = before.clone().with_dev_loop_execution_caps();
     for cap in &before.capabilities {
@@ -302,6 +310,7 @@ fn with_dev_loop_execution_caps_preserves_scope() {
     let before = AgentPermissions {
         scope: scope.clone(),
         capabilities: vec![Capability::ReadAgent],
+        ..Default::default()
     };
     let after = before.with_dev_loop_execution_caps();
     assert_eq!(after.scope, scope, "splice must not widen agent scope");

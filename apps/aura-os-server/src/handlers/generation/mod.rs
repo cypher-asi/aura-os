@@ -8,7 +8,7 @@ mod video;
 
 pub(crate) use image::{generate_image_stream, generate_image_tool};
 pub(crate) use model3d::{generate_3d_stream, generate_3d_tool};
-pub(crate) use video::generate_video_stream;
+pub(crate) use video::{generate_video_stream, generate_video_tool};
 
 /// Shared with `crate::handlers::public::generation_common` so the
 /// public-mode proxy uses the same heartbeat shape + cadence as the

@@ -159,6 +159,7 @@ fn reconcile_prefers_shadow_when_network_response_drops_permissions() {
         AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::SpawnAgent, Capability::ReadAgent],
+            ..Default::default()
         },
     );
     service
@@ -192,6 +193,7 @@ fn reconcile_is_noop_when_network_response_has_permissions() {
         AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::SpawnAgent],
+            ..Default::default()
         },
     );
     service.save_agent_shadow(&seeded).unwrap();
@@ -201,6 +203,7 @@ fn reconcile_is_noop_when_network_response_has_permissions() {
     seeded.permissions = AgentPermissions {
         scope: AgentScope::default(),
         capabilities: vec![Capability::PostToFeed],
+        ..Default::default()
     };
     service.reconcile_permissions_with_shadow(&mut seeded);
 
@@ -247,6 +250,7 @@ fn save_agent_shadow_preserves_non_empty_permissions_when_input_is_empty() {
         AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::SpawnAgent, Capability::ReadAgent],
+            ..Default::default()
         },
     );
     service.save_agent_shadow(&seeded).unwrap();
@@ -282,6 +286,7 @@ fn save_agent_shadows_if_changed_preserves_non_empty_permissions_on_empty_input(
         AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::SpawnAgent],
+            ..Default::default()
         },
     );
     service.save_agent_shadow(&seeded).unwrap();
@@ -480,6 +485,7 @@ fn reconcile_repeated_calls_still_adopt_shadow() {
         AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::SpawnAgent],
+            ..Default::default()
         },
     );
     service.save_agent_shadow(&seeded).unwrap();
@@ -539,6 +545,7 @@ fn reconcile_with_sentinel_set_still_adopts_shadow() {
         AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::SpawnAgent, Capability::ReadAgent],
+            ..Default::default()
         },
     );
     service.save_agent_shadow(&seeded).unwrap();
@@ -592,6 +599,7 @@ fn reconcile_clears_sentinel_when_upstream_returns_non_empty() {
         AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::PostToFeed],
+            ..Default::default()
         },
     );
     service.reconcile_permissions_with_shadow(&mut fetched);

@@ -808,6 +808,7 @@ export function useAgentChatStream({
             undefined,
             shouldStartNewSession,
             shouldStartNewSession ? null : sessionIdRef.current,
+            selectedModel,
           );
           return;
         }

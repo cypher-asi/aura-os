@@ -89,8 +89,9 @@ pub(crate) async fn generate_3d_stream(
         aura_protocol::GenerationRequest {
             mode: "3d".to_string(),
             prompt: body.prompt,
-            model: None,
+            model: body.model,
             size: None,
+            quality: None,
             image_url: Some(image_url),
             images: None,
             project_id: body.project_id,
@@ -126,6 +127,11 @@ pub(crate) async fn generate_3d_tool(
         .and_then(|v| v.as_str())
         .map(str::trim)
         .filter(|s| !s.is_empty());
+    let model = args
+        .get("model")
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
     let project_id = args
         .get("project_id")
         .or_else(|| args.get("projectId"))
@@ -142,6 +148,9 @@ pub(crate) async fn generate_3d_tool(
     });
     if let Some(prompt) = prompt {
         payload["prompt"] = serde_json::json!(prompt);
+    }
+    if let Some(model) = model {
+        payload["model"] = serde_json::json!(model);
     }
     if let Some(project_id) = project_id {
         payload["projectId"] = serde_json::json!(project_id);

@@ -462,6 +462,11 @@ export function generate3dStream(
   newSession?: boolean,
   /** See {@link generateImageStream} — same semantics. */
   sessionId?: string | null,
+  /**
+   * 3D provider model id (e.g. `tripo-v2`). Forwarded as `model`; the
+   * server/router fall back to the default provider when omitted.
+   */
+  model?: string | null,
 ) {
   // Keep the legacy positional `string` shape working for existing
   // callers (the AURA 3D app passes an image URL directly).
@@ -472,6 +477,7 @@ export function generate3dStream(
       ? { image_url: normalized.imageUrl }
       : { image_data: normalized.imageData };
   if (prompt) body.prompt = prompt;
+  if (model) body.model = model;
   if (projectId) body.projectId = projectId;
   if (parentId) body.parentId = parentId;
   if (agentId) body.agentId = agentId;

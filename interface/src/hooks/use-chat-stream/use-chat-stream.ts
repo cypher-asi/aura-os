@@ -594,6 +594,7 @@ export function useChatStream({
             capturedInstanceId,
             shouldStartNewSession,
             shouldStartNewSession ? null : sessionIdRef.current,
+            selectedModel,
           );
           return;
         }

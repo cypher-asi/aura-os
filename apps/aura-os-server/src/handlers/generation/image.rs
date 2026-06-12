@@ -1,13 +1,10 @@
 use axum::extract::State;
-use axum::response::sse::{Event, KeepAlive, Sse};
+use axum::response::sse::Event;
 use axum::Json;
 use futures_util::StreamExt;
 use reqwest::StatusCode as ReqwestStatus;
-use serde_json::{json, Value};
-use std::convert::Infallible;
+use serde_json::json;
 use std::time::Duration;
-use tokio::sync::{broadcast, mpsc};
-use tokio_stream::wrappers::ReceiverStream;
 use tracing::{error, info};
 
 use crate::dto::GenerateImageRequest;
@@ -16,21 +13,13 @@ use crate::handlers::billing;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 use super::harness_stream::{
-    normalize_generation_completed_payload, resolve_generation_identity, GenerationIdentity,
-    GenerationPersistArgs,
+    open_generation_stream, resolve_generation_identity, GenerationPersistArgs,
 };
 use super::persist::{
     persist_user_prompt, resolve_persist_ctx, GenerationPersistMeta, GenerationPersistTargets,
 };
 use super::router_proxy::router_url;
-use super::sse::{SseResponse, SseStream, SSE_NO_BUFFERING_HEADERS};
-use crate::handlers::agents::chat::ChatPersistCtx;
-
-/// Capacity of the per-stream channel feeding the SSE response. Sized
-/// generously so the upstream-drain task never blocks on a slow client
-/// drain — partial-image frames from `gpt-image-2` can land in tight
-/// bursts.
-const IMAGE_STREAM_CHANNEL_CAPACITY: usize = 64;
+use super::sse::SseResponse;
 
 /// Interval between synthetic `generation_progress` heartbeat frames
 /// emitted while the upstream router is silent. Sized comfortably
@@ -63,7 +52,7 @@ pub(crate) async fn generate_image_stream(
     // Image-mode generation lives outside the regular chat stream, so
     // we resolve the chat-session persistence context separately and
     // (best-effort) write a `user_message` row up front. The companion
-    // assistant turn is persisted when the router stream emits its
+    // assistant turn is persisted when the harness stream emits its
     // terminal completion event. If no chat scope was threaded through
     // (legacy clients, AURA 3D app), `persist` stays `None` and
     // generation streams without durable history.
@@ -92,285 +81,34 @@ pub(crate) async fn generate_image_stream(
         },
     });
 
-    let router_payload = router_image_payload(&body);
-    open_router_image_stream(state, jwt, identity, router_payload, persist_args).await
-}
-
-fn router_image_payload(body: &GenerateImageRequest) -> serde_json::Value {
-    let mut payload = json!({
-        "prompt": body.prompt,
-    });
-    if let Some(model) = body.model.as_deref() {
-        payload["model"] = json!(model);
-    }
-    if let Some(size) = body.size.as_deref() {
-        payload["size"] = json!(size);
-    }
-    if let Some(quality) = body.quality.as_deref() {
-        payload["quality"] = json!(quality);
-    }
-    if let Some(project_id) = body.project_id.as_deref() {
-        payload["projectId"] = json!(project_id);
-    }
-    if let Some(images) = body.images.as_deref() {
-        if !images.is_empty() {
-            payload["images"] = json!(images);
-        }
-    }
-    if let Some(is_iteration) = body.is_iteration {
-        payload["isIteration"] = json!(is_iteration);
-    }
-    payload
-}
-
-/// Build the SSE response for an image-generation request.
-///
-/// Returns immediately with the SSE headers + a `ReceiverStream` fed
-/// by a background task. The task's very first action is to emit a
-/// synthetic `generation_start` event so the client sees a wire event
-/// within milliseconds of the connection opening — before the
-/// upstream router has even been contacted.
-///
-/// This is the fix for the "Agent paused for 7s — last activity was
-/// 37s ago" stuck-stream pill: the frontend watchdog
-/// (`STUCK_THRESHOLD_MS = 30s` in
-/// `interface/src/hooks/stream/use-stream-health.ts`) bumps
-/// `lastEventAt` on every SSE-driven setter. Long-rendering image
-/// models like `gpt-image-2` previously left the SSE wire silent for
-/// the entire upstream blocking POST (the handler awaited
-/// `client.post(...).send().await` BEFORE constructing the SSE
-/// response), so the watchdog fired even though the request was
-/// healthy in flight. Now the watchdog clock resets the moment the
-/// SSE EventSource opens, and subsequent
-/// `generation_progress` / `generation_partial_image` frames from
-/// the upstream keep it reset.
-///
-/// Upstream failures (transport errors, non-2xx status) are
-/// translated to in-band `generation_error` SSE frames since the
-/// HTTP 200 has already been committed to the wire by the time they
-/// are observed.
-async fn open_router_image_stream(
-    state: AppState,
-    jwt: String,
-    identity: GenerationIdentity,
-    body: serde_json::Value,
-    persist: Option<GenerationPersistArgs>,
-) -> ApiResult<SseResponse> {
-    let generation_id = uuid::Uuid::new_v4().to_string();
-    let agent_id = format!("generation-{}", uuid::Uuid::new_v4().as_simple());
-    let url = format!("{}/v1/generate-image/stream", router_url(&state));
-    info!(
-        generation_id = %generation_id,
-        "image generation stream opening router request"
-    );
-
-    let persist = persist.map(|persist| (persist.ctx, state.event_broadcast.clone(), persist.meta));
-
-    let (tx, rx) = mpsc::channel::<Result<Event, Infallible>>(IMAGE_STREAM_CHANNEL_CAPACITY);
-    tokio::spawn(run_image_upstream_task(
-        tx,
-        url,
+    // Image mode rides the same harness generation session as video /
+    // 3D (`open_generation_stream`): the harness proxies the router SSE
+    // through its Declared-Exception generation pipe, so every chat
+    // mode shares one code path and one set of identity headers
+    // instead of image mode talking to aura-router directly.
+    open_generation_stream(
+        state,
         jwt,
-        agent_id,
+        aura_protocol::GenerationRequest {
+            mode: "image".to_string(),
+            prompt: Some(body.prompt),
+            model: body.model,
+            size: body.size,
+            quality: body.quality,
+            image_url: None,
+            images: body.images.filter(|images| !images.is_empty()),
+            project_id: body.project_id,
+            parent_id: None,
+            is_iteration: body.is_iteration,
+            aspect_ratio: None,
+            duration_seconds: None,
+            resolution: None,
+            generate_audio: None,
+        },
         identity,
-        body,
-        generation_id,
-        persist,
-    ));
-
-    let stream: SseStream = Box::pin(ReceiverStream::new(rx));
-    Ok((
-        SSE_NO_BUFFERING_HEADERS,
-        Sse::new(stream).keep_alive(KeepAlive::default()),
-    ))
-}
-
-type RouterPersist = (
-    ChatPersistCtx,
-    broadcast::Sender<Value>,
-    GenerationPersistMeta,
-);
-
-/// Background task that drives one image-generation SSE response:
-/// emits the synthetic `generation_start`, opens the upstream
-/// router request, and drains the upstream byte stream through the
-/// shared frame translator into the response channel.
-///
-/// Every send is best-effort: if the client disconnects mid-stream
-/// the receiver is dropped and the task exits cleanly.
-#[allow(clippy::too_many_arguments)]
-async fn run_image_upstream_task(
-    tx: mpsc::Sender<Result<Event, Infallible>>,
-    url: String,
-    jwt: String,
-    agent_id: String,
-    identity: GenerationIdentity,
-    body: serde_json::Value,
-    generation_id: String,
-    mut persist: Option<RouterPersist>,
-) {
-    if tx
-        .send(Ok(build_generation_start_event("image")))
-        .await
-        .is_err()
-    {
-        return;
-    }
-
-    let client = reqwest::Client::new();
-    let resp = match client
-        .post(&url)
-        .bearer_auth(&jwt)
-        .header("X-Aura-Agent-Id", &agent_id)
-        .header("X-Aura-Org-Id", &identity.aura_org_id)
-        .header("X-Aura-Session-Id", &identity.aura_session_id)
-        .header("X-Aura-User-Id", &identity.user_id)
-        .json(&body)
-        .send()
-        .await
-    {
-        Ok(resp) => resp,
-        Err(e) => {
-            error!(
-                generation_id = %generation_id,
-                error = %e,
-                "image generation router request failed"
-            );
-            let _ = tx
-                .send(Ok(generation_error_event(
-                    "UPSTREAM_REQUEST_FAILED",
-                    format!("Image generation upstream request failed: {e}"),
-                )))
-                .await;
-            return;
-        }
-    };
-
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let text = resp.text().await.unwrap_or_default();
-        error!(
-            generation_id = %generation_id,
-            %status,
-            body = %text,
-            "image generation router returned error"
-        );
-        let (code, message) = upstream_status_to_error_payload(status, &text);
-        let _ = tx.send(Ok(generation_error_event(code, message))).await;
-        return;
-    }
-
-    let mut byte_stream = resp.bytes_stream();
-    let mut buffer = String::new();
-    loop {
-        while let Some(sep_pos) = buffer.find("\n\n") {
-            let frame = buffer[..sep_pos].to_string();
-            buffer = buffer[sep_pos + 2..].to_string();
-            if frame.trim().is_empty() {
-                continue;
-            }
-            if let Some((event, terminal, completed_payload)) =
-                router_frame_to_generation_event(&frame)
-            {
-                // Deliver the SSE frame to the client BEFORE awaiting
-                // persistence. `persist_completion` does an HTTP POST
-                // to storage via `persist_event`; a slow / unreachable
-                // storage backend was holding this loop open
-                // indefinitely, blocking both the terminal
-                // `generation_completed` frame and the outer
-                // heartbeat tick. The user-visible symptom was
-                // "cooking forever, image never appears" in image
-                // mode against a healthy router but unhealthy storage.
-                // Persistence stays best-effort (the existing
-                // `warn!`-and-swallow contract in `persist.rs`) and is
-                // awaited AFTER the send so a late client disconnect
-                // still gets the assistant-history row written.
-                let send_result = tx.send(Ok(event)).await;
-                if let Some(payload) = completed_payload.as_ref() {
-                    if let Some((ctx, event_bus, meta)) = persist.take() {
-                        super::persist::persist_completion(&ctx, &event_bus, &meta, payload).await;
-                    }
-                }
-                if send_result.is_err() {
-                    return;
-                }
-                if terminal {
-                    return;
-                }
-            }
-        }
-
-        // Wait for the next chunk or the heartbeat tick — whichever
-        // arrives first. Without the heartbeat, models like
-        // `gpt-image-2` that emit nothing between the upstream
-        // `generation_start` and the final `completed` frame leave
-        // the SSE wire silent for the full render (>30s on cold
-        // tenants), tripping the frontend's stuck-stream watchdog
-        // even though the request is healthy.
-        match tokio::time::timeout(GENERATION_HEARTBEAT_INTERVAL, byte_stream.next()).await {
-            Err(_) => {
-                if tx
-                    .send(Ok(build_generation_progress_heartbeat_event("image")))
-                    .await
-                    .is_err()
-                {
-                    return;
-                }
-            }
-            Ok(Some(Ok(chunk))) => {
-                buffer.push_str(&String::from_utf8_lossy(&chunk));
-            }
-            Ok(Some(Err(e))) => {
-                error!(
-                    generation_id = %generation_id,
-                    error = %e,
-                    "image generation router stream failed"
-                );
-                let _ = tx
-                    .send(Ok(generation_error_event(
-                        "UPSTREAM_STREAM_ERROR",
-                        format!("Image generation stream failed: {e}"),
-                    )))
-                    .await;
-                return;
-            }
-            Ok(None) => {
-                if !buffer.trim().is_empty() {
-                    let frame = std::mem::take(&mut buffer);
-                    if let Some((event, _terminal, completed_payload)) =
-                        router_frame_to_generation_event(&frame)
-                    {
-                        // Same ordering rule as the inner loop above:
-                        // deliver the SSE frame BEFORE awaiting
-                        // persistence so a slow storage backend
-                        // cannot delay (or eternally swallow) the
-                        // final `generation_completed` event.
-                        let _ = tx.send(Ok(event)).await;
-                        if let Some(payload) = completed_payload.as_ref() {
-                            if let Some((ctx, event_bus, meta)) = persist.take() {
-                                super::persist::persist_completion(
-                                    &ctx, &event_bus, &meta, payload,
-                                )
-                                .await;
-                            }
-                        }
-                        return;
-                    }
-                }
-                error!(
-                    generation_id = %generation_id,
-                    "image generation router stream closed before a terminal event"
-                );
-                let _ = tx
-                    .send(Ok(generation_error_event(
-                        "UPSTREAM_STREAM_CLOSED",
-                        "Image generation stream closed before completing.",
-                    )))
-                    .await;
-                return;
-            }
-        }
-    }
+        persist_args,
+    )
+    .await
 }
 
 /// Build the synthetic `generation_start` SSE event emitted as the
@@ -402,141 +140,6 @@ pub(crate) fn build_generation_progress_heartbeat_event(mode: &str) -> Event {
     Event::default()
         .event("generation_progress")
         .json_data(json!({ "message": message }))
-        .unwrap_or_else(|_| Event::default().data("{}"))
-}
-
-/// Map a non-2xx upstream status into the `(code, message)` pair
-/// surfaced as an in-band `generation_error` SSE event. The
-/// frontend's `handleStreamError` already understands the
-/// "PAYMENT_REQUIRED" / "RATE_LIMITED" / "UNAUTHORIZED" prefixes
-/// the auth'd path used to surface via HTTP status codes.
-fn upstream_status_to_error_payload(status: ReqwestStatus, body: &str) -> (&'static str, String) {
-    match status {
-        ReqwestStatus::UNAUTHORIZED => (
-            "UNAUTHORIZED",
-            "Image generation rejected by router (unauthorized).".to_string(),
-        ),
-        ReqwestStatus::PAYMENT_REQUIRED => (
-            "PAYMENT_REQUIRED",
-            "Insufficient credits for image generation.".to_string(),
-        ),
-        ReqwestStatus::TOO_MANY_REQUESTS => (
-            "RATE_LIMITED",
-            "Image generation rate limited; try again in a moment.".to_string(),
-        ),
-        _ => (
-            "UPSTREAM_ERROR",
-            format!("Image generation upstream returned {status}: {body}"),
-        ),
-    }
-}
-
-fn router_frame_to_generation_event(frame: &str) -> Option<(Event, bool, Option<Value>)> {
-    let (event_type, data) = parse_sse_frame(frame);
-    if data.trim() == "[DONE]" {
-        return Some((Event::default().event("done").data("{}"), true, None));
-    }
-
-    let parsed = if data.trim().is_empty() {
-        Value::Object(Default::default())
-    } else {
-        serde_json::from_str::<Value>(&data).unwrap_or(Value::Null)
-    };
-    let tagged_type = parsed
-        .get("type")
-        .and_then(|value| value.as_str())
-        .unwrap_or_default();
-    let event_type = if event_type.is_empty() {
-        tagged_type
-    } else {
-        event_type.as_str()
-    };
-
-    match event_type {
-        "generation_start" | "start" | "started" => Some((
-            Event::default()
-                .event("generation_start")
-                .json_data(json!({ "mode": "image" }))
-                .unwrap_or_else(|_| Event::default().data("{}")),
-            false,
-            None,
-        )),
-        "generation_progress" | "progress" => Some((
-            Event::default()
-                .event("generation_progress")
-                .json_data(&parsed)
-                .unwrap_or_else(|_| Event::default().data("{}")),
-            false,
-            None,
-        )),
-        "generation_partial_image" | "partial_image" | "partial" => Some((
-            Event::default()
-                .event("generation_partial_image")
-                .json_data(&parsed)
-                .unwrap_or_else(|_| Event::default().data("{}")),
-            false,
-            None,
-        )),
-        "generation_completed" | "completed" | "complete" => {
-            let payload = normalize_generation_completed_payload("image".to_string(), parsed);
-            Some((
-                Event::default()
-                    .event("generation_completed")
-                    .json_data(&payload)
-                    .unwrap_or_else(|_| Event::default().data("{}")),
-                true,
-                Some(payload),
-            ))
-        }
-        "generation_error" | "error" => Some((
-            Event::default()
-                .event("generation_error")
-                .json_data(normalize_router_error_payload(parsed))
-                .unwrap_or_else(|_| Event::default().data("{}")),
-            true,
-            None,
-        )),
-        "done" => Some((Event::default().event("done").data("{}"), true, None)),
-        _ => None,
-    }
-}
-
-fn parse_sse_frame(frame: &str) -> (String, String) {
-    let mut event_type = String::new();
-    let mut data_lines = Vec::new();
-    for line in frame.lines() {
-        if let Some(rest) = line.strip_prefix("event:") {
-            event_type = rest.trim().to_string();
-        } else if let Some(rest) = line.strip_prefix("data:") {
-            data_lines.push(rest.trim_start().to_string());
-        }
-    }
-    (event_type, data_lines.join("\n"))
-}
-
-fn normalize_router_error_payload(payload: Value) -> Value {
-    let message = payload
-        .get("message")
-        .and_then(|value| value.as_str())
-        .or_else(|| payload.get("error").and_then(|value| value.as_str()))
-        .unwrap_or("Image generation failed upstream.");
-    let code = payload
-        .get("code")
-        .and_then(|value| value.as_str())
-        .unwrap_or("GENERATION_FAILED");
-    json!({
-        "code": code,
-        "message": message,
-    })
-}
-
-fn generation_error_event(code: &'static str, message: impl Into<String>) -> Event {
-    Event::default()
-        .event("generation_error")
-        .json_data(json!({
-            "code": code,
-            "message": message.into(),
-        }))
         .unwrap_or_else(|_| Event::default().data("{}"))
 }
 
@@ -573,6 +176,11 @@ pub(crate) async fn generate_image_tool(
         .filter(|s| !s.is_empty())
         .unwrap_or(DEFAULT_GENERATE_IMAGE_TOOL_MODEL);
     let size = args.get("size").and_then(|v| v.as_str());
+    let quality = args
+        .get("quality")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty());
     let project_id = args
         .get("project_id")
         .or_else(|| args.get("projectId"))
@@ -581,6 +189,7 @@ pub(crate) async fn generate_image_tool(
     info!(
         model = %model,
         size = ?size,
+        quality = ?quality,
         "generate_image tool invocation"
     );
 
@@ -590,6 +199,9 @@ pub(crate) async fn generate_image_tool(
     });
     if let Some(size) = size {
         payload["size"] = json!(size);
+    }
+    if let Some(quality) = quality {
+        payload["quality"] = json!(quality);
     }
     if let Some(project_id) = project_id {
         payload["projectId"] = json!(project_id);
@@ -728,372 +340,4 @@ pub(super) async fn run_generate_image_to_completion(
     }
 
     Ok(completed)
-}
-
-#[cfg(test)]
-mod streaming_tests {
-    //! Tests for the deferred-upstream-open behaviour of
-    //! [`run_image_upstream_task`]. The fix ensures the synthetic
-    //! `generation_start` frame is emitted BEFORE the upstream POST
-    //! resolves so the frontend's 30s stuck-stream watchdog clock
-    //! resets the moment the SSE EventSource opens. These tests
-    //! exercise that contract by driving the task directly against a
-    //! controllable mock router.
-    use super::*;
-    use std::time::Duration;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::TcpListener;
-
-    fn mk_identity() -> GenerationIdentity {
-        GenerationIdentity {
-            aura_org_id: "org-test".to_string(),
-            aura_session_id: "session-test".to_string(),
-            user_id: "user-test".to_string(),
-        }
-    }
-
-    /// Extract the SSE event name from an [`Event`] by parsing its
-    /// Debug representation. axum's `Event` Debug impl emits
-    /// `Event { buffer: b"event: <name>\ndata: ...", ... }`, so we
-    /// pull the event name out of the buffer field. Brittle if axum
-    /// changes the Debug layout, but stable as of axum 0.8.
-    fn event_kind(event: &Event) -> String {
-        let dbg = format!("{event:?}");
-        // Look for the pattern `event: ` inside the buffer literal —
-        // the `\n` separator after the name terminates it on the wire.
-        let marker = "event: ";
-        let mut search = dbg.as_str();
-        while let Some(idx) = search.find(marker) {
-            search = &search[idx + marker.len()..];
-            // Skip Debug-struct field hits ("event: <Some(...)>" or
-            // "event: None") — those don't start with an alpha char
-            // matching an SSE event name, but the buffer-literal hit
-            // does. Buffer-literal hits run until the literal `\n`
-            // escape, encoded as `\\n` in the debug string.
-            if let Some(end) = search.find("\\n") {
-                let candidate = &search[..end];
-                if !candidate.is_empty()
-                    && candidate
-                        .chars()
-                        .all(|c| c.is_ascii_alphanumeric() || c == '_')
-                {
-                    return candidate.to_string();
-                }
-            }
-        }
-        dbg
-    }
-
-    /// Spin up a TCP listener that:
-    /// 1. Optionally delays before sending any HTTP response (simulates
-    ///    a slow upstream router that hasn't begun streaming yet).
-    /// 2. Then responds with the given HTTP status + body.
-    async fn start_mock_upstream(
-        body: String,
-        status: u16,
-        pre_response_delay_ms: u64,
-    ) -> (String, tokio::task::JoinHandle<()>) {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let url = format!("http://{addr}");
-        let handle = tokio::spawn(async move {
-            let (mut socket, _) = match listener.accept().await {
-                Ok(pair) => pair,
-                Err(_) => return,
-            };
-            let mut req_buf = vec![0u8; 4096];
-            let _ = socket.read(&mut req_buf).await;
-            if pre_response_delay_ms > 0 {
-                tokio::time::sleep(Duration::from_millis(pre_response_delay_ms)).await;
-            }
-            let response = format!(
-                "HTTP/1.1 {status} OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{body}"
-            );
-            let _ = socket.write_all(response.as_bytes()).await;
-            let _ = socket.shutdown().await;
-        });
-        (url, handle)
-    }
-
-    /// The synthetic `generation_start` event lands on the response
-    /// channel BEFORE the upstream router has emitted anything. This
-    /// is the core fix: a slow upstream open can no longer leave the
-    /// SSE wire silent for >30s and trip the stuck-stream watchdog.
-    #[tokio::test]
-    async fn first_emitted_frame_is_generation_start_before_upstream_responds() {
-        let (base_url, handle) = start_mock_upstream(String::new(), 200, 5_000).await;
-        let url = format!("{base_url}/v1/generate-image/stream");
-
-        let (tx, mut rx) = mpsc::channel::<Result<Event, Infallible>>(8);
-        tokio::spawn(run_image_upstream_task(
-            tx,
-            url,
-            "jwt".to_string(),
-            "agent-test".to_string(),
-            mk_identity(),
-            json!({ "prompt": "a cat" }),
-            "gen-test".to_string(),
-            None,
-        ));
-
-        // The first frame must arrive promptly — well before the
-        // 5s upstream delay. We give a generous 500ms ceiling so
-        // CI noise doesn't false-positive.
-        let first = tokio::time::timeout(Duration::from_millis(500), rx.recv())
-            .await
-            .expect("first frame should land before upstream responds")
-            .expect("channel should not be closed");
-        let event = first.expect("infallible result");
-        assert_eq!(event_kind(&event), "generation_start");
-
-        handle.abort();
-    }
-
-    /// Upstream 402 (`PAYMENT_REQUIRED`) is now surfaced as an
-    /// in-band `generation_error` frame instead of a synchronous
-    /// 4xx HTTP response, because the SSE 200 has already been
-    /// committed by the time the upstream status is observed.
-    #[tokio::test]
-    async fn upstream_4xx_becomes_in_band_generation_error_after_generation_start() {
-        let (base_url, handle) =
-            start_mock_upstream("insufficient credits".to_string(), 402, 0).await;
-        let url = format!("{base_url}/v1/generate-image/stream");
-
-        let (tx, mut rx) = mpsc::channel::<Result<Event, Infallible>>(8);
-        tokio::spawn(run_image_upstream_task(
-            tx,
-            url,
-            "jwt".to_string(),
-            "agent-test".to_string(),
-            mk_identity(),
-            json!({ "prompt": "a cat" }),
-            "gen-test".to_string(),
-            None,
-        ));
-
-        let first = rx.recv().await.expect("first frame").expect("infallible");
-        assert_eq!(event_kind(&first), "generation_start");
-
-        let second = tokio::time::timeout(Duration::from_secs(2), rx.recv())
-            .await
-            .expect("second frame should land")
-            .expect("channel should not be closed");
-        let second = second.expect("infallible");
-        assert_eq!(event_kind(&second), "generation_error");
-
-        handle.abort();
-    }
-
-    /// The synthetic `generation_progress` heartbeat fires while
-    /// the upstream router is silent. Without it the wire stays
-    /// quiet for the full upstream render and the frontend's
-    /// `STUCK_THRESHOLD_MS = 30s` watchdog still trips even though
-    /// the synthetic `generation_start` correctly resets it at
-    /// t=0. We use `tokio::time::pause` so we can advance virtual
-    /// time past the 15s heartbeat interval without sleeping in
-    /// the test.
-    #[tokio::test(start_paused = true)]
-    async fn heartbeat_fires_when_upstream_stays_silent() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let url = format!("http://{addr}/v1/generate-image/stream");
-
-        // Mock server that accepts the connection, sends the SSE
-        // response headers so reqwest's `send().await` resolves, and
-        // then holds the body open forever — exactly the
-        // `gpt-image-2`-style upstream that triggered the original
-        // "Agent paused" pill.
-        let mock_handle = tokio::spawn(async move {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let mut buf = vec![0u8; 4096];
-            let _ = socket.read(&mut buf).await;
-            let response = "HTTP/1.1 200 OK\r\n\
-                            Content-Type: text/event-stream\r\n\
-                            Transfer-Encoding: chunked\r\n\
-                            \r\n";
-            let _ = socket.write_all(response.as_bytes()).await;
-            let _ = socket.flush().await;
-            std::future::pending::<()>().await;
-        });
-
-        let (tx, mut rx) = mpsc::channel::<Result<Event, Infallible>>(8);
-        tokio::spawn(run_image_upstream_task(
-            tx,
-            url,
-            "jwt".to_string(),
-            "agent-test".to_string(),
-            mk_identity(),
-            json!({ "prompt": "a cat" }),
-            "gen-test".to_string(),
-            None,
-        ));
-
-        // Receive the initial generation_start frame. This happens
-        // before any time-based await so it lands without needing a
-        // virtual-time advance.
-        let first = rx.recv().await.expect("first").expect("infallible");
-        assert_eq!(event_kind(&first), "generation_start");
-
-        // Drain any progress frames that land before the task is
-        // sitting on its `timeout(...)` for the first byte chunk.
-        // In practice on Tokio's single-threaded paused runtime
-        // there are none, but yielding to the scheduler is enough
-        // to let the task reach the `timeout` await before we
-        // advance virtual time.
-        tokio::task::yield_now().await;
-
-        // Advance past the heartbeat interval. The drain loop's
-        // `timeout(GENERATION_HEARTBEAT_INTERVAL, byte_stream.next())`
-        // expires and the task emits a heartbeat. We push slightly
-        // over the interval so a single advance reliably crosses
-        // the deadline.
-        tokio::time::advance(GENERATION_HEARTBEAT_INTERVAL + Duration::from_secs(1)).await;
-
-        let heartbeat = rx.recv().await.expect("heartbeat").expect("infallible");
-        assert_eq!(event_kind(&heartbeat), "generation_progress");
-
-        mock_handle.abort();
-    }
-
-    /// Regression gate for the image-mode "cooking forever, image
-    /// never appears" hang: a slow / unreachable storage backend
-    /// (the user-reproducible local-dev failure) must not delay the
-    /// terminal `generation_completed` SSE frame. The pre-fix loop
-    /// awaited `persist_completion` BEFORE `tx.send(event)`, so a
-    /// wedged storage HTTP call held the SSE wire silent forever
-    /// — heartbeats stopped too because we were stuck inside the
-    /// inner `while` loop rather than the outer `timeout(...)`.
-    #[tokio::test]
-    async fn generation_completed_arrives_even_when_storage_hangs() {
-        use crate::handlers::agents::chat::ChatPersistCtx;
-        use aura_os_core::SessionId;
-        use aura_os_storage::StorageClient;
-        use std::sync::Arc;
-
-        // Router fires the `completed` frame immediately.
-        let body = format!(
-            "event: completed\ndata: {}\n\n",
-            json!({
-                "imageUrl": "https://cdn.example.com/cat.png",
-                "originalUrl": "https://cdn.example.com/cat-orig.png",
-                "artifactId": "art-cat",
-            }),
-        );
-        let (router_base_url, router_handle) = start_mock_upstream(body, 200, 0).await;
-        let router_url = format!("{router_base_url}/v1/generate-image/stream");
-
-        // Slow storage: accept the persist POST and never reply. We
-        // intentionally do NOT bound this with a timeout — the test's
-        // own `tokio::time::timeout` on `rx.recv()` is the guard.
-        let storage_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let storage_addr = storage_listener.local_addr().unwrap();
-        let storage_url = format!("http://{storage_addr}");
-        let storage_handle = tokio::spawn(async move {
-            loop {
-                let Ok((mut socket, _)) = storage_listener.accept().await else {
-                    return;
-                };
-                tokio::spawn(async move {
-                    let mut buf = vec![0u8; 4096];
-                    let _ = socket.read(&mut buf).await;
-                    std::future::pending::<()>().await;
-                });
-            }
-        });
-
-        let storage = Arc::new(StorageClient::with_base_url(&storage_url));
-        let session_id: SessionId = "11111111-2222-3333-4444-555555555555"
-            .parse()
-            .expect("valid UUID");
-        let ctx = ChatPersistCtx {
-            storage,
-            jwt: "jwt".to_string(),
-            session_id,
-            project_agent_id: "pa-test".to_string(),
-            project_id: "p-test".to_string(),
-            agent_id: Some("agent-test".to_string()),
-            originating_agent_id: None,
-            cross_agent_depth: 0,
-            from_agent_id: None,
-        };
-        let (event_bus, _rx_bus) = broadcast::channel::<Value>(8);
-        let meta = GenerationPersistMeta {
-            prompt: "a cat".to_string(),
-            model: Some("gpt-image-2".to_string()),
-            size: None,
-            tool_name: "generate_image",
-        };
-
-        let (tx, mut rx) = mpsc::channel::<Result<Event, Infallible>>(8);
-        tokio::spawn(run_image_upstream_task(
-            tx,
-            router_url,
-            "jwt".to_string(),
-            "agent-test".to_string(),
-            mk_identity(),
-            json!({ "prompt": "a cat" }),
-            "gen-test".to_string(),
-            Some((ctx, event_bus, meta)),
-        ));
-
-        // `generation_start` is the synthetic first frame; no awaits
-        // gate it.
-        let first = rx.recv().await.expect("first frame").expect("infallible");
-        assert_eq!(event_kind(&first), "generation_start");
-
-        // The `generation_completed` frame MUST land within a tight
-        // deadline even though `persist_completion`'s storage POST
-        // will never return. 2s comfortably covers the local TCP
-        // roundtrip while staying well below any realistic storage
-        // wait time. Pre-fix this assertion times out.
-        let second = tokio::time::timeout(Duration::from_secs(2), rx.recv())
-            .await
-            .expect("generation_completed must land even when storage hangs")
-            .expect("channel open")
-            .expect("infallible");
-        assert_eq!(event_kind(&second), "generation_completed");
-
-        router_handle.abort();
-        storage_handle.abort();
-    }
-
-    /// Happy path: upstream emits a `completed` frame; the response
-    /// channel sees `generation_start` then `generation_completed`.
-    #[tokio::test]
-    async fn happy_path_emits_generation_start_then_completed() {
-        let body = format!(
-            "event: completed\ndata: {}\n\n",
-            json!({
-                "imageUrl": "https://cdn.example.com/cat.png",
-                "originalUrl": "https://cdn.example.com/cat-orig.png",
-                "artifactId": "art-cat",
-            }),
-        );
-        let (base_url, handle) = start_mock_upstream(body, 200, 0).await;
-        let url = format!("{base_url}/v1/generate-image/stream");
-
-        let (tx, mut rx) = mpsc::channel::<Result<Event, Infallible>>(8);
-        tokio::spawn(run_image_upstream_task(
-            tx,
-            url,
-            "jwt".to_string(),
-            "agent-test".to_string(),
-            mk_identity(),
-            json!({ "prompt": "a cat" }),
-            "gen-test".to_string(),
-            None,
-        ));
-
-        let first = rx.recv().await.expect("first frame").expect("infallible");
-        assert_eq!(event_kind(&first), "generation_start");
-
-        let second = tokio::time::timeout(Duration::from_secs(2), rx.recv())
-            .await
-            .expect("completed frame should land")
-            .expect("channel open")
-            .expect("infallible");
-        assert_eq!(event_kind(&second), "generation_completed");
-
-        handle.abort();
-    }
 }

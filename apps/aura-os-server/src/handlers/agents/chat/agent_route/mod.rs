@@ -9,7 +9,7 @@ use tracing::info;
 use crate::dto::SendChatRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::billing::require_credits_for_auth_source;
-use crate::handlers::plan_mode::{is_plan_mode_action, plan_mode_tool_permissions};
+use crate::handlers::plan_mode::{is_plan_mode_action, session_tool_permissions};
 use crate::handlers::projects_helpers::{is_project_tool_action, project_tool_max_turns};
 use crate::state::{AppState, AuthJwt};
 
@@ -254,7 +254,8 @@ pub(crate) async fn send_agent_event_stream(
     // but still see the per-turn preamble + tool_hints applied inside
     // `open_harness_chat_stream`. See `crate::handlers::plan_mode`.
     let is_plan_mode = is_plan_mode_action(body.action.as_deref());
-    let tool_permissions = is_plan_mode.then(plan_mode_tool_permissions);
+    let tool_permissions =
+        session_tool_permissions(&normalized_perms.tool_permissions, is_plan_mode);
 
     // Project-bound bare-agent chats need the same `<project_context>`
     // block + workspace path as the instance route so workspace tools

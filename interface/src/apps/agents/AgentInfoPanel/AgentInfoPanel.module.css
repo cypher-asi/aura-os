@@ -1260,6 +1260,51 @@
   flex-shrink: 0;
 }
 
+/* ── Tri-state tool permission control (On / Ask / Off) ── */
+
+.permsToolTriState {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.permsToolTriStateOption {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.permsToolTriStateOption:not(:last-child) {
+  border-right: 1px solid var(--color-border);
+}
+
+.permsToolTriStateOption:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.permsToolTriStateOptionActive {
+  background: var(--color-overlay-subtle);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.permsToolTriStateOptionActiveOff {
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  color: var(--color-danger);
+}
+
+.permsToolTriStateOptionActiveAsk {
+  background: color-mix(in srgb, var(--color-warning, #d97706) 14%, transparent);
+  color: var(--color-warning, #d97706);
+}
+
 /* ── Empty state for placeholder tabs ── */
 
 .tabEmptyState {

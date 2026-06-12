@@ -24,8 +24,11 @@
 //! once agent records no longer persist `AgentPermissions` directly.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
-use aura_protocol::{AgentPermissionsWire, AgentScopeWire, CapabilityWire};
+use aura_protocol::{
+    AgentPermissionsWire, AgentScopeWire, AgentToolPermissionsWire, CapabilityWire, ToolStateWire,
+};
 
 /// Distinctive opening line of the bootstrap CEO system prompt.
 ///
@@ -93,6 +96,43 @@ impl AgentScope {
     }
 }
 
+/// Tri-state per-tool permission value. Native mirror of
+/// [`aura_protocol::ToolStateWire`] (byte-identical serde: `"on"` /
+/// `"off"` / `"ask"`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ToolState {
+    #[serde(rename = "on")]
+    On,
+    #[serde(rename = "off")]
+    Off,
+    #[serde(rename = "ask")]
+    Ask,
+}
+
+/// Per-tool tri-state overrides persisted on the agent record. Native
+/// mirror of [`aura_protocol::AgentToolPermissionsWire`].
+///
+/// A tool with **no entry** in `per_tool` defaults to **on** (subject
+/// to the capability gate), so a fresh agent ships with every default
+/// tool enabled. Entries are only stored when the operator flips a
+/// tool to `off` / `ask` (or explicitly pins `on`), which keeps old
+/// persisted records — which predate this field — semantically
+/// identical to "everything on".
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentToolPermissions {
+    #[serde(default)]
+    pub per_tool: BTreeMap<String, ToolState>,
+}
+
+impl AgentToolPermissions {
+    /// True when no per-tool override is stored (the default
+    /// "everything on" state).
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.per_tool.is_empty()
+    }
+}
+
 /// Scope + capabilities bundle attached to an agent record.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AgentPermissions {
@@ -100,6 +140,13 @@ pub struct AgentPermissions {
     pub scope: AgentScope,
     #[serde(default)]
     pub capabilities: Vec<Capability>,
+    /// Per-tool tri-state overrides layered on top of `capabilities`.
+    /// Empty (the serde default) means every tool the capability
+    /// bundle exposes is `on`. Skipped during serialization when empty
+    /// so legacy consumers and pre-existing JSON comparisons see the
+    /// historical two-field shape.
+    #[serde(default, skip_serializing_if = "AgentToolPermissions::is_empty")]
+    pub tool_permissions: AgentToolPermissions,
 }
 
 impl AgentPermissions {
@@ -109,6 +156,7 @@ impl AgentPermissions {
     pub fn full_access() -> Self {
         Self {
             scope: AgentScope::default(),
+            tool_permissions: AgentToolPermissions::default(),
             capabilities: vec![
                 Capability::SpawnAgent,
                 Capability::ControlAgent,
@@ -474,6 +522,63 @@ impl From<AgentPermissionsWire> for AgentPermissions {
                 .capabilities
                 .into_iter()
                 .filter_map(|c| Capability::try_from(c).ok())
+                .collect(),
+            tool_permissions: AgentToolPermissions::default(),
+        }
+    }
+}
+
+impl From<ToolState> for ToolStateWire {
+    fn from(s: ToolState) -> Self {
+        match s {
+            ToolState::On => ToolStateWire::On,
+            ToolState::Off => ToolStateWire::Off,
+            ToolState::Ask => ToolStateWire::Ask,
+        }
+    }
+}
+
+impl From<ToolStateWire> for ToolState {
+    fn from(s: ToolStateWire) -> Self {
+        match s {
+            ToolStateWire::On => ToolState::On,
+            ToolStateWire::Off => ToolState::Off,
+            ToolStateWire::Ask => ToolState::Ask,
+        }
+    }
+}
+
+impl From<AgentToolPermissions> for AgentToolPermissionsWire {
+    fn from(p: AgentToolPermissions) -> Self {
+        AgentToolPermissionsWire {
+            per_tool: p
+                .per_tool
+                .into_iter()
+                .map(|(name, state)| (name, state.into()))
+                .collect(),
+        }
+    }
+}
+
+impl From<&AgentToolPermissions> for AgentToolPermissionsWire {
+    fn from(p: &AgentToolPermissions) -> Self {
+        AgentToolPermissionsWire {
+            per_tool: p
+                .per_tool
+                .iter()
+                .map(|(name, state)| (name.clone(), (*state).into()))
+                .collect(),
+        }
+    }
+}
+
+impl From<AgentToolPermissionsWire> for AgentToolPermissions {
+    fn from(p: AgentToolPermissionsWire) -> Self {
+        AgentToolPermissions {
+            per_tool: p
+                .per_tool
+                .into_iter()
+                .map(|(name, state)| (name, state.into()))
                 .collect(),
         }
     }

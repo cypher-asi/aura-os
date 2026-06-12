@@ -6,12 +6,17 @@ import type {
   AgentInstalledToolsDiagnostic,
   InstalledToolDiagnosticRow,
 } from "../../../../shared/api/agents";
+import type { ToolPermissionState } from "../../../../shared/types/permissions-wire";
 import { getApiErrorMessage } from "../../../../shared/utils/api-errors";
 import { useAgentStore } from "../../stores";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { useOrgStore } from "../../../../stores/org-store";
 import styles from "../AgentInfoPanel.module.css";
 import { shortenId, type SaveStatus, type ScopeAxis } from "./permissions-utils";
+import {
+  TOOL_PERMISSION_GROUPS,
+  toolPermissionLabel,
+} from "./tool-permission-catalog";
 
 /**
  * Subtle inline indicator that echoes the autosave lifecycle: spinner
@@ -105,6 +110,121 @@ function groupDiagnosticRows(
     entry.rows.push(row);
   }
   return Array.from(groups.values());
+}
+
+const TOOL_TRI_STATE_OPTIONS: { state: ToolPermissionState; label: string }[] =
+  [
+    { state: "on", label: "On" },
+    { state: "ask", label: "Ask" },
+    { state: "off", label: "Off" },
+  ];
+
+function triStateOptionClass(
+  state: ToolPermissionState,
+  active: boolean,
+): string {
+  if (!active) return styles.permsToolTriStateOption;
+  const activeClass =
+    state === "off"
+      ? styles.permsToolTriStateOptionActiveOff
+      : state === "ask"
+        ? styles.permsToolTriStateOptionActiveAsk
+        : "";
+  return `${styles.permsToolTriStateOption} ${styles.permsToolTriStateOptionActive} ${activeClass}`;
+}
+
+/** Segmented On / Ask / Off control for one tool row. */
+function ToolTriStateControl({
+  name,
+  state,
+  canEdit,
+  onChange,
+}: {
+  name: string;
+  state: ToolPermissionState;
+  canEdit: boolean;
+  onChange: (state: ToolPermissionState) => void;
+}) {
+  return (
+    <span
+      className={styles.permsToolTriState}
+      role="radiogroup"
+      aria-label={`${toolPermissionLabel(name)} permission`}
+    >
+      {TOOL_TRI_STATE_OPTIONS.map((option) => (
+        <button
+          key={option.state}
+          type="button"
+          role="radio"
+          aria-checked={state === option.state}
+          className={triStateOptionClass(option.state, state === option.state)}
+          disabled={!canEdit}
+          onClick={() => {
+            if (state !== option.state) onChange(option.state);
+          }}
+        >
+          {option.label}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+interface ToolPermissionsSectionProps {
+  canEdit: boolean;
+  toolStateFor: (name: string) => ToolPermissionState;
+  setToolState: (name: string, state: ToolPermissionState) => void;
+}
+
+/**
+ * Editable per-tool tri-state permissions over the default tool
+ * catalog. Every tool defaults to "on" for every agent; flipping a
+ * row to "ask" requires a live approval each call, and "off" hides
+ * the tool from the harness session entirely. Changes ride the same
+ * `agent.permissions` autosave as the capability toggles.
+ */
+export function ToolPermissionsSection({
+  canEdit,
+  toolStateFor,
+  setToolState,
+}: ToolPermissionsSectionProps) {
+  return (
+    <div className={styles.section}>
+      <div className={styles.permsSectionHeader}>
+        <span className={styles.permsSectionTitle}>Tool permissions</span>
+      </div>
+      <Text size="xs" variant="muted">
+        Default tools are on for every agent. Set a tool to Ask to
+        require live approval, or Off to remove it from sessions and
+        automation runs.
+      </Text>
+      {TOOL_PERMISSION_GROUPS.map((group) => (
+        <div key={group.id} className={styles.permsToolsGroup}>
+          <div className={styles.permsToolsGroupHeader}>{group.label}</div>
+          {group.tools.map((name) => (
+            <div key={name} className={styles.permsToolsRow}>
+              <span
+                className={`${styles.permsToolsStatusDot} ${
+                  toolStateFor(name) === "off"
+                    ? styles.permsToolsStatusDotMissing
+                    : styles.permsToolsStatusDotOk
+                }`}
+              />
+              <span className={styles.permsToolsName} title={name}>
+                {toolPermissionLabel(name)}
+              </span>
+              <ToolTriStateControl
+                name={name}
+                state={toolStateFor(name)}
+                canEdit={canEdit}
+                onChange={(state) => setToolState(name, state)}
+              />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 interface ActiveHarnessToolsSectionProps {

@@ -121,6 +121,11 @@ fn assemble_automaton_start_params(inputs: AssembleInputs<'_>) -> AutomatonStart
         installed_tools,
         installed_integrations,
         agent_permissions: (&ctx.permissions).into(),
+        // Per-tool tri-state overrides persisted on the agent record.
+        // Forwarded so dev-loop / single-task automation runs respect
+        // the same Permissions-tab tool toggles as chat sessions.
+        tool_permissions: (!ctx.permissions.tool_permissions.is_empty())
+            .then(|| (&ctx.permissions.tool_permissions).into()),
         aura_org_id,
         aura_session_id,
         // PR C: forward the typed identity bundle resolved by

@@ -3,7 +3,13 @@
 /**
  * Payload for `generation_request`.
  */
-export type GenerationRequest = { mode: string, prompt: string | null, model: string | null, size: string | null, image_url: string | null, images: Array<string> | null, project_id: string | null, parent_id: string | null, is_iteration: boolean | null, 
+export type GenerationRequest = { mode: string, prompt: string | null, model: string | null, size: string | null, 
+/**
+ * Image generation: quality tier (`auto` / `low` / `medium` / `high`
+ * for GPT Image models). The router validates per model and ignores
+ * unsupported values.
+ */
+quality: string | null, image_url: string | null, images: Array<string> | null, project_id: string | null, parent_id: string | null, is_iteration: boolean | null, 
 /**
  * Video generation: aspect ratio (e.g. "16:9", "9:16").
  */

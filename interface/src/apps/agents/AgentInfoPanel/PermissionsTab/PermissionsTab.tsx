@@ -20,6 +20,7 @@ import {
   ProjectAccessModePicker,
   ProjectAccessPicker,
   ScopeRow,
+  ToolPermissionsSection,
 } from "./permissions-rows";
 import { usePermissionsForm } from "./usePermissionsForm";
 import { usePermissionsAutosave } from "./usePermissionsAutosave";
@@ -44,6 +45,8 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
     toggleGlobalCapability,
     removeProjectAccess,
     addProjectAccess,
+    toolStateFor,
+    setToolState,
   } = form;
   const { status, toolsRefreshKey, retry } = usePermissionsAutosave({
     agentId: agent.agent_id,
@@ -187,6 +190,12 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
           ]}
         />
       </div>
+
+      <ToolPermissionsSection
+        canEdit={canEdit}
+        toolStateFor={toolStateFor}
+        setToolState={setToolState}
+      />
 
       <ActiveHarnessToolsSection
         agentId={agent.agent_id}

@@ -1,9 +1,9 @@
 use serde::Serialize;
 
 use aura_protocol::{
-    AgentCapabilities, AgentIdentity, AgentPermissionsWire, AgentPersona, ChatProjectInfoWire,
-    InstalledIntegration, InstalledTool, IntentClassifierSpec, ModelSelection, ProjectContext,
-    RuntimeRequest, RuntimeRequestType, SessionModelOverrides, WorkspaceLocation,
+    AgentCapabilities, AgentIdentity, AgentPermissionsWire, AgentPersona, AgentToolPermissionsWire,
+    ChatProjectInfoWire, InstalledIntegration, InstalledTool, IntentClassifierSpec, ModelSelection,
+    ProjectContext, RuntimeRequest, RuntimeRequestType, SessionModelOverrides, WorkspaceLocation,
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -82,6 +82,14 @@ pub struct AutomatonStartParams {
     /// chat sessions, so dev-loop runs inherit the agent's real tool
     /// capabilities instead of falling back to an empty bundle.
     pub agent_permissions: AgentPermissionsWire,
+    /// Per-tool tri-state overrides persisted on the agent record
+    /// (Permissions tab). Layered on top of `agent_permissions` by the
+    /// harness exactly like chat sessions, so an operator who turned a
+    /// tool `off` for an agent sees that respected in dev-loop /
+    /// single-task automation runs too. Skipped on the wire when
+    /// `None` so older harnesses keep accepting the payload.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_permissions: Option<AgentToolPermissionsWire>,
     /// Retry-warm-up: the reason text persisted on the previous
     /// attempt's `task_failed` record. Forwarded verbatim to the
     /// harness as `prior_failure`; the `task-run` automaton folds it
@@ -221,7 +229,7 @@ pub fn automaton_start_params_to_runtime_request(params: &AutomatonStartParams) 
             aura_agent_id: params.aura_agent_id.clone(),
         }),
         agent_permissions: params.agent_permissions.clone(),
-        tool_permissions: None,
+        tool_permissions: params.tool_permissions.clone(),
         agent_capabilities: AgentCapabilities {
             installed_tools: params.installed_tools.clone().unwrap_or_default(),
             installed_integrations: params.installed_integrations.clone().unwrap_or_default(),

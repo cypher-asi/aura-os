@@ -75,5 +75,14 @@ export function permissionsEqual(
   const cb = sortedCapabilities(bb.capabilities).map(capabilityKey);
   if (ca.length !== cb.length) return false;
   for (let i = 0; i < ca.length; i++) if (ca[i] !== cb[i]) return false;
+  const ta = aa.tool_permissions?.per_tool ?? {};
+  const tb = bb.tool_permissions?.per_tool ?? {};
+  const taKeys = Object.keys(ta).sort();
+  const tbKeys = Object.keys(tb).sort();
+  if (taKeys.length !== tbKeys.length) return false;
+  for (let i = 0; i < taKeys.length; i++) {
+    if (taKeys[i] !== tbKeys[i]) return false;
+    if (ta[taKeys[i]] !== tb[tbKeys[i]]) return false;
+  }
   return true;
 }

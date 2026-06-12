@@ -435,6 +435,10 @@ pub(crate) struct Generate3dRequest {
     #[serde(default, alias = "imageData")]
     pub image_data: Option<String>,
     pub prompt: Option<String>,
+    /// 3D provider model id (e.g. `tripo-v2`). Forwarded to the router,
+    /// which falls back to its default provider when omitted.
+    #[serde(default)]
+    pub model: Option<String>,
     #[serde(rename = "projectId")]
     pub project_id: Option<String>,
     #[serde(rename = "parentId")]
