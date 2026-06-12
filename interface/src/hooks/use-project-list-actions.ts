@@ -9,6 +9,7 @@ import { getApiErrorDetails, getApiErrorMessage } from "../shared/utils/api-erro
 import { projectAgentHandoffTarget } from "../utils/chat-handoff";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import { useAttachCreatedAgent } from "./use-attach-created-agent";
+import type { ProjectSettingsTab } from "../components/ProjectSettingsModal/ProjectSettingsModal";
 import type { Project, AgentInstance } from "../shared/types";
 
 interface ContextMenuState {
@@ -35,6 +36,11 @@ export function useProjectListActions() {
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
   const [renameAgentTarget, setRenameAgentTarget] = useState<AgentInstance | null>(null);
   const [settingsTarget, setSettingsTarget] = useState<Project | null>(null);
+  // Which tab the settings modal should open with. Reset to "general"
+  // implicitly each time a fresh target is set via the explicit
+  // setSettingsTargetWithTab helper below.
+  const [settingsInitialTab, setSettingsInitialTab] =
+    useState<ProjectSettingsTab>("general");
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -131,6 +137,12 @@ export function useProjectListActions() {
     } else if (actionId === "rename" && target) {
       setRenameTarget(target);
     } else if (actionId === "settings" && target) {
+      setSettingsInitialTab("general");
+      setSettingsTarget(target);
+    } else if (actionId === "appearance" && target) {
+      // Deep-link into the Appearance tab so the user lands
+      // directly on the controls invoked from the right-click menu.
+      setSettingsInitialTab("appearance");
       setSettingsTarget(target);
     } else if (actionId === "delete" && target) {
       setDeleteTarget(target);
@@ -292,7 +304,7 @@ export function useProjectListActions() {
     ctxMenu, setCtxMenu, ctxMenuRef,
     renameTarget, setRenameTarget,
     renameAgentTarget, setRenameAgentTarget,
-    settingsTarget, setSettingsTarget,
+    settingsTarget, setSettingsTarget, settingsInitialTab,
     deleteTarget, setDeleteTarget, deleteLoading, deleteError, setDeleteError,
     deleteAgentTarget, setDeleteAgentTarget, deleteAgentLoading, deleteAgentError, setDeleteAgentError,
     agentSelectorProjectId, setAgentSelectorProjectId, pendingCreatedAgent,

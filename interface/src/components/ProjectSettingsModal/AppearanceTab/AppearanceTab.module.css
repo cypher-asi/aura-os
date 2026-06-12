@@ -1,0 +1,316 @@
+.tabBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tabHint {
+  margin-bottom: calc(var(--space-2) * -1);
+}
+
+/* Live preview chip: shows the icon (in the accent color when set)
+   next to the project name. Mirrors the sidebar row treatment —
+   rounded chip with a straight 4px accent stripe on the left edge
+   rendered via a ::before pseudo-element (so the radius doesn't
+   curve the stripe). Color piped in via `--accent-stripe-color`
+   set inline when an accent is configured. */
+.preview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.preview::before {
+  content: "";
+  position: absolute;
+  left: var(--accent-stripe-left, 0);
+  right: var(--accent-stripe-right, auto);
+  top: var(--accent-stripe-top, 6px);
+  bottom: var(--accent-stripe-bottom, 6px);
+  width: var(--accent-stripe-width, 4px);
+  height: var(--accent-stripe-height, auto);
+  background: var(--accent-stripe-color, transparent);
+  pointer-events: none;
+}
+
+.previewIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-text-secondary);
+}
+
+.previewName {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sectionLabel {
+  margin: 0;
+}
+
+/* Accent swatch row */
+.swatchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s ease;
+}
+
+.swatch:hover {
+  transform: scale(1.1);
+}
+
+.swatchActive {
+  border-color: var(--color-text-primary);
+}
+
+.swatchClear {
+  background: transparent !important;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.hexRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nativeColorInput {
+  width: 36px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Background controls */
+.bgRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.bgRowLabel {
+  width: 64px;
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.miniButton {
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.miniButton:hover {
+  background: var(--color-overlay-light);
+  color: var(--color-text-primary);
+}
+
+/* Pressed-state for toggle minibuttons (e.g. background Invert).
+   Uses the surface fill instead of overlay-light so the active
+   state reads as held-down rather than hovered. */
+.miniButtonActive {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border-color: var(--project-accent, var(--color-accent));
+}
+
+/* Segmented toggle row (e.g. accent-stripe position Left/Bottom).
+   Sits flush under the accent color picker; uses the same
+   miniButton chrome so the two states read consistently with
+   other toggles in this tab. */
+.segmentedRow {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.opacitySlider {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  background: var(--color-border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.opacitySlider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--project-accent, var(--color-accent));
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.opacitySlider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--project-accent, var(--color-accent));
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+.opacityValue {
+  width: 40px;
+  text-align: right;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Inline label for the frost checkbox so the box and its text read
+   as one clickable target — matches typical settings-row patterns
+   elsewhere in the app. */
+.frostCheckLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* Icon picker */
+.iconHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: var(--space-1);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+
+.iconButton:hover {
+  background: var(--color-overlay-light);
+  color: var(--color-text-primary);
+}
+
+.iconButtonActive {
+  background: var(--color-surface);
+  border-color: var(--project-accent, var(--color-accent));
+  color: var(--color-text-primary);
+}
+
+/* Banner preview */
+.bannerPreview {
+  width: 100%;
+  aspect-ratio: 16 / 5;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bannerPreviewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bannerEmpty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.bannerActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Background-image upload block: stacks preview + actions, shown
+   only when the user picks `Image` from the Style dropdown. Wider
+   aspect than the banner preview (closer to a project workspace
+   shape) so the user has a reasonable sense of how the image will
+   tile/cover behind their content. */
+.bgImageBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: 72px;
+}
+
+.bgImagePreview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bgImagePreviewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

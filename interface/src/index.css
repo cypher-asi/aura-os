@@ -88,6 +88,42 @@
 :root {
   color-scheme: light dark;
   --font-sans: 'Inter Variable', sans-serif;
+}
+
+/* Pin `color-scheme` to the app's current theme so OS-native form
+   widgets (`<select>` dropdown popups, scrollbars, date pickers)
+   render in the matching light/dark variant instead of falling back
+   to the OS preference. Without this the closed `<select>` reads
+   correctly (themed via CSS) but the open dropdown shows the OS's
+   light/dark default. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* Belt-and-suspenders: also set `color-scheme` directly on native
+   form elements. Chromium on Windows (and WebView2 in particular)
+   doesn't always propagate the root-level `color-scheme` into the
+   native `<select>` popup widget — setting it on the elements
+   themselves is the reliable path. Covers select, input, textarea
+   so date pickers / number spinners / autocomplete dropdowns all
+   follow the theme too. */
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] textarea {
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] select,
+:root[data-theme='light'] input,
+:root[data-theme='light'] textarea {
+  color-scheme: light;
+}
+
+:root {
 
   /*
    * Shell chrome tokens shared by every surface that participates in the

@@ -1,6 +1,7 @@
 import { Button, Text } from "@cypher-asi/zui";
 import { Bot, CheckSquare, BarChart3, MessageSquare } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
+import { ProjectBanner } from "../../components/ProjectBanner";
 import { useNavigate } from "react-router-dom";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectActions } from "../../stores/project-action-store";
@@ -26,6 +27,7 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
     return (
       <>
         <div className={styles.mobileLayout}>
+          <ProjectBanner projectId={project.project_id} />
           <div className={styles.headerSection}>
             <Text size="xs" variant="muted" className={styles.uppercaseLabel}>
               Project
@@ -83,11 +85,20 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
     );
   }
 
+  const project = ctx?.project;
   return (
-    <EmptyState icon={<Bot size={32} />}>
-      {mode === "agent"
-        ? "No agent yet. Add one from project navigation, or continue in Tasks."
-        : "No agent yet. Add an agent to get started."}
-    </EmptyState>
+    <div className={styles.desktopLayout}>
+      {project && (
+        <ProjectBanner
+          projectId={project.project_id}
+          projectName={project.name}
+        />
+      )}
+      <EmptyState icon={<Bot size={32} />}>
+        {mode === "agent"
+          ? "No agent yet. Add one from project navigation, or continue in Tasks."
+          : "No agent yet. Add an agent to get started."}
+      </EmptyState>
+    </div>
   );
 }

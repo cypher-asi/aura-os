@@ -1,0 +1,22 @@
+/* Banner strip at the top of the project layout. Aspect ratio
+   matches the crop dialog's 16:5 output so the strip shows the
+   user's full cropped image without further clipping — WYSIWYG.
+   Max-height caps how tall the banner gets on wide screens so it
+   doesn't dominate the page; under that cap the strip scales
+   responsively with viewport width. `flex-shrink: 0` keeps the
+   strip from being squeezed when content below grows. */
+.strip {
+  flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 16 / 5;
+  max-height: 80px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

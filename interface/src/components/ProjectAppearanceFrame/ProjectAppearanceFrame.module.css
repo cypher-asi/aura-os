@@ -1,0 +1,228 @@
+/* The frame is a passive layout host: it fills its parent and emits
+   CSS custom properties (via inline style) plus a `data-bg-pattern`
+   attribute (via React). The background tint and pattern overlay are
+   composited here so descendant content (main panel, etc.) sits on
+   top of the painted backdrop without needing per-page styling. */
+.frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+}
+
+/* Frosted-glass overlay. Sits between the ::before/::after
+   background layers (negative z-index) and the `.content` wrapper
+   (positive z-index) so the blur softens the color + pattern/image
+   composite without affecting the actual page content. The tint is
+   intentionally minimal — the `backdrop-filter` blur is the main
+   effect; the rgba is just enough to make the layer visible on
+   browsers that haven't repainted blur yet. */
+.frost {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Children wrapper. `position: relative` + `z-index: 1` guarantees
+   page content paints above both the frost overlay and the
+   background pseudo-elements regardless of normal-flow vs
+   positioned painting rules. Flex passthrough so existing layouts
+   that expected the frame to be the flex parent keep working. */
+.content {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+/* The background color layer. Only paints when style is `solid` (or
+   the legacy `none`) — once the user picks a pattern or image, the
+   chosen color drives the pattern itself via `::after`, NOT a fill
+   underneath. This keeps the user's mental model simple: "pick a
+   pattern, the color you set IS the pattern color". Opacity scales
+   the whole composite via `--project-bg-opacity`. */
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: transparent;
+  opacity: var(--project-bg-opacity, 1);
+  pointer-events: none;
+}
+
+.frame[data-bg-pattern="solid"]::before,
+.frame[data-bg-pattern="none"]::before {
+  background: var(--project-bg-color, transparent);
+}
+
+/* The pattern / image overlay layer. Owns the visible rendering for
+   every non-solid style. Patterns read their color from
+   `--project-bg-color` (the same color the user set in the Color
+   picker), falling back to a translucent mid-gray that reads on both
+   light and dark themes when no color is set. */
+.frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: var(--project-bg-opacity, 1);
+  pointer-events: none;
+  background-image: none;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Each scalable pattern multiplies its natural tile / spacing by
+   `--project-bg-pattern-scale` (unitless, default `1`). The variable
+   is set inline by `ProjectAppearanceFrame` only when the user has
+   moved the Size slider, so the default-1.0 case never emits the
+   property and the calc() falls back to the natural defaults. */
+.frame[data-bg-pattern="dots"]::after {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--project-bg-color, rgba(127, 127, 127, 0.9)) 1px,
+    transparent 0
+  );
+  background-size:
+    calc(16px * var(--project-bg-pattern-scale, 1))
+    calc(16px * var(--project-bg-pattern-scale, 1));
+}
+
+.frame[data-bg-pattern="grid"]::after {
+  background-image:
+    linear-gradient(
+      to right,
+      var(--project-bg-color, rgba(127, 127, 127, 0.7)) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      var(--project-bg-color, rgba(127, 127, 127, 0.7)) 1px,
+      transparent 1px
+    );
+  background-size:
+    calc(32px * var(--project-bg-pattern-scale, 1))
+    calc(32px * var(--project-bg-pattern-scale, 1));
+}
+
+.frame[data-bg-pattern="diagonal"]::after {
+  /* Line stays 1px; only the spacing between lines scales so a
+     "size" change reads as repeat density rather than thickness. */
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--project-bg-color, rgba(127, 127, 127, 0.8)),
+    var(--project-bg-color, rgba(127, 127, 127, 0.8)) 1px,
+    transparent 1px,
+    transparent calc(12px * var(--project-bg-pattern-scale, 1))
+  );
+}
+
+.frame[data-bg-pattern="radial"]::after {
+  /* Scale changes how far the colored glow reaches before fading
+     to transparent. `min/max` clamp keeps the value in the legal
+     0-100% range even at extreme scales. */
+  background-image: radial-gradient(
+    ellipse at top,
+    var(--project-bg-color, rgba(127, 127, 127, 0.55)),
+    transparent
+      max(10%, min(100%, calc(70% * var(--project-bg-pattern-scale, 1))))
+  );
+}
+
+/* SVG noise — small inline filter so we don't need an asset file.
+   The noise texture is intrinsically multi-colored grain; we don't
+   re-tint it from `--project-bg-color` since the chosen color is
+   what the OTHER patterns express, and noise reads better as
+   neutral grain. Users who want colored noise can layer the noise
+   pattern with a colored frame underneath in a future iteration. */
+.frame[data-bg-pattern="noise"]::after {
+  background-image: url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22120%22%20height%3D%22120%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%222%22%20stitchTiles%3D%22stitch%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url(%23n)%22%20opacity%3D%220.6%22%2F%3E%3C%2Fsvg%3E");
+  background-size:
+    calc(120px * var(--project-bg-pattern-scale, 1))
+    calc(120px * var(--project-bg-pattern-scale, 1));
+}
+
+/* `none` and `solid` are color-fill-only; ::after stays empty.
+   `none` is preserved for v1 saves that haven't been re-saved yet. */
+.frame[data-bg-pattern="none"]::after,
+.frame[data-bg-pattern="solid"]::after {
+  background-image: none;
+}
+
+/* Image pattern: paints the user's uploaded image (served from
+   `/appearance/background-image`). The URL is piped in via
+   `--project-bg-image` from the frame component; an unset variable
+   collapses the rule to no paint, so picking `image` before uploading
+   yields nothing (no broken-image icon, no stretched fallback). */
+.frame[data-bg-pattern="image"]::after {
+  background-image: var(--project-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* ─── Inverted variants ──────────────────────────────────────────
+   `data-bg-invert="true"` flips figure/ground for the geometric
+   patterns: the color paints the surrounding area, the pattern
+   shape becomes transparent cut-out. For image and noise (which
+   have intrinsic textures rather than a figure/ground), inverting
+   applies `filter: invert(1)` to flip the rendered colors. */
+.frame[data-bg-pattern="dots"][data-bg-invert="true"]::after {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    transparent 1px,
+    var(--project-bg-color, rgba(127, 127, 127, 0.9)) 0
+  );
+}
+
+.frame[data-bg-pattern="grid"][data-bg-invert="true"]::after {
+  /* Grid lines (transparent) on a colored field: stops swap so the
+     lines are the cut-out and everything else fills. */
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 1px,
+      var(--project-bg-color, rgba(127, 127, 127, 0.7)) 1px
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 1px,
+      var(--project-bg-color, rgba(127, 127, 127, 0.7)) 1px
+    );
+}
+
+.frame[data-bg-pattern="diagonal"][data-bg-invert="true"]::after {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 1px,
+    var(--project-bg-color, rgba(127, 127, 127, 0.8)) 1px,
+    var(--project-bg-color, rgba(127, 127, 127, 0.8)) 12px
+  );
+}
+
+.frame[data-bg-pattern="radial"][data-bg-invert="true"]::after {
+  /* The original is a soft glow at top fading to transparent;
+     inverted is a soft hole at top fading from solid color. */
+  background-image: radial-gradient(
+    ellipse at top,
+    transparent,
+    var(--project-bg-color, rgba(127, 127, 127, 0.55)) 70%
+  );
+}
+
+.frame[data-bg-pattern="image"][data-bg-invert="true"]::after,
+.frame[data-bg-pattern="noise"][data-bg-invert="true"]::after {
+  filter: invert(1);
+}

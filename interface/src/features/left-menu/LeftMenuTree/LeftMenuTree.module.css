@@ -118,6 +118,7 @@
 }
 
 .projectHeader {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -126,6 +127,29 @@
   padding: 0 16px;
   border-radius: 6px;
   transition: background-color 0.15s ease;
+}
+
+/* Accent stripe for projects with `appearance.accent` set. Rendered
+   as a ::before pseudo-element rather than via `inset box-shadow`
+   so the line stays straight regardless of the row's 6px border
+   radius — the perpendicular axis is inset by the radius amount so
+   the stripe doesn't poke past the curve. Color and geometry are
+   piped in via CSS custom properties set inline by
+   `buildAccentStripeStyle`; defaults paint a 4px-wide stripe on the
+   left edge, and "bottom" callers override to a 4px-tall stripe
+   along the bottom edge. When `--accent-stripe-color` is unset, the
+   rule paints nothing. */
+.projectHeader::before {
+  content: "";
+  position: absolute;
+  left: var(--accent-stripe-left, 0);
+  right: var(--accent-stripe-right, auto);
+  top: var(--accent-stripe-top, 6px);
+  bottom: var(--accent-stripe-bottom, 6px);
+  width: var(--accent-stripe-width, 4px);
+  height: var(--accent-stripe-height, auto);
+  background: var(--accent-stripe-color, transparent);
+  pointer-events: none;
 }
 
 .sectionHeader {
@@ -400,6 +424,20 @@
   min-width: 18px;
   color: inherit;
   flex-shrink: 0;
+}
+
+/* Slot for the project-row glyph emitted by `<ProjectRowIcon>` — sits
+   before the label inside the project button, picks up the same
+   flex layout as the chevron wrapper next to it. */
+.projectIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  flex-shrink: 0;
+  color: inherit;
 }
 
 .agentLabel {

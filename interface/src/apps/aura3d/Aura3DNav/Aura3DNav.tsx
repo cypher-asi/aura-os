@@ -7,6 +7,10 @@ import {
   useProjectsListStore,
 } from "../../../stores/projects-list-store";
 import { LeftMenuTree, buildLeftMenuEntries } from "../../../features/left-menu";
+import {
+  buildProjectRowAppearance,
+  useProjectAppearancesByProject,
+} from "../../../features/project-row-appearance";
 import { getLastProject } from "../../../utils/storage";
 import styles from "./Aura3DNav.module.css";
 
@@ -50,6 +54,8 @@ export function Aura3DNav() {
       ? `model:${selectedModelId}`
       : null;
 
+  const appearanceByProject = useProjectAppearancesByProject();
+
   const explorerData = useMemo(() => {
     return projects.map((project) => {
       const isActive = selectedProjectId === project.project_id;
@@ -58,6 +64,12 @@ export function Aura3DNav() {
       return {
         id: project.project_id,
         label: project.name,
+        // Shared project-row styling so the AURA 3D app's project list
+        // matches the projects sidebar one-to-one.
+        ...buildProjectRowAppearance(
+          project.project_id,
+          appearanceByProject.get(project.project_id),
+        ),
         children: [
           ...projectImages.map((img) => ({
             id: `img:${img.id}`,
@@ -78,7 +90,7 @@ export function Aura3DNav() {
         ],
       };
     });
-  }, [projects, images, models, selectedProjectId]);
+  }, [projects, images, models, selectedProjectId, appearanceByProject]);
 
   const entries = useMemo(
     () =>

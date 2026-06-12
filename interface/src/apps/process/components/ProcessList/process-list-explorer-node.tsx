@@ -4,6 +4,8 @@ import { Cpu } from "lucide-react";
 import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
 import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
 import type { ExplorerNodeWithSuffix } from "../../../../lib/zui-compat";
+import { buildProjectRowAppearance } from "../../../../features/project-row-appearance";
+import type { ProjectAppearance } from "../../../../shared/api/appearance";
 
 interface BuildProcessExplorerDataParams {
   processes: {
@@ -19,6 +21,10 @@ interface BuildProcessExplorerDataParams {
   processesByProject: Record<string, BuildProcessExplorerDataParams["processes"]>;
   explorerStyles: ProjectExplorerNodeStyles;
   onAddProcess: (projectId: string | null) => void;
+  /** Per-project appearance, keyed by `project_id`. Read from the
+   *  shared appearance store so this app's project rows pick up the
+   *  same accent / icon / chip styling as the projects sidebar. */
+  appearanceByProject: Map<string, ProjectAppearance>;
 }
 
 function buildEnabledIndicator(
@@ -62,6 +68,12 @@ function buildProjectProcessNode(
   return {
     id: project.project_id,
     label: project.name,
+    // Shared appearance fields so process-app rows match the
+    // projects sidebar one-to-one.
+    ...buildProjectRowAppearance(
+      project.project_id,
+      params.appearanceByProject.get(project.project_id),
+    ),
     suffix: (
       <span className={params.explorerStyles.projectSuffix}>
         <span

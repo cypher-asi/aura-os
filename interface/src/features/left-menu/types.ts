@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
 export interface LeftMenuItemEntry {
   kind: "item";
@@ -41,6 +41,15 @@ export interface LeftMenuGroupEntry {
   kind: "group";
   id: string;
   label: string;
+  icon?: ReactNode;
+  /** Inline style applied to the rendered label text. Used by the
+   *  project rows to tint the name via appearance.nameColor without
+   *  coupling LeftMenu to per-project state. */
+  labelStyle?: CSSProperties;
+  /** Inline style applied to the rendered row container. Used by
+   *  the project rows for background fill / outline driven by
+   *  appearance.headerBackground / appearance.headerOutline. */
+  headerStyle?: CSSProperties;
   suffix?: ReactNode;
   variant?: "default" | "section";
   expanded: boolean;

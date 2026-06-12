@@ -8,6 +8,20 @@
   width: 100%;
 }
 
+/* Desktop wrapper for the empty state so the optional banner has a
+   constrained max-width and sits above the EmptyState. The
+   `EmptyState` is naturally centered; this column lets us stack the
+   banner on top without breaking that. */
+.desktopLayout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 .headerSection {
   display: flex;
   flex-direction: column;

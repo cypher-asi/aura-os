@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ExplorerNode } from "@cypher-asi/zui";
+import { useProjectAppearancesByProject } from "../../features/project-row-appearance";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
 import {
   getMobileProjectDestination,
@@ -138,6 +139,12 @@ function useProjectExplorerData(
     [data],
   );
 
+  // Project appearance lookup keyed by project id. Shared with every
+  // app that builds a project-list tree (tasks, process, …) so the
+  // sidebar's accent / icon / chip styling stays in lockstep across
+  // all surfaces.
+  const appearanceByProject = useProjectAppearancesByProject();
+
   const explorerData = useMemo(
     () => {
       const projectNodes = data.projects
@@ -149,6 +156,7 @@ function useProjectExplorerData(
             statusMap,
             machineTypesMap,
             explorerStyles,
+            appearanceByProject.get(project.project_id),
           ),
         );
       return [
@@ -161,7 +169,14 @@ function useProjectExplorerData(
         ),
       ];
     },
-    [data.projects, explorerStyles, machineTypesMap, nodeBuildContext, statusMap],
+    [
+      data.projects,
+      explorerStyles,
+      machineTypesMap,
+      nodeBuildContext,
+      statusMap,
+      appearanceByProject,
+    ],
   );
 
   const filteredExplorerData = useMemo(

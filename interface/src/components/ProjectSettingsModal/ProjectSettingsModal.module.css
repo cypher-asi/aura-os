@@ -26,3 +26,9 @@
 .dangerText {
   color: var(--color-danger);
 }
+
+/* Sits above the tab body so tab navigation feels separate from the
+   scrollable form fields. */
+.tabsHeader {
+  margin-bottom: var(--space-3);
+}

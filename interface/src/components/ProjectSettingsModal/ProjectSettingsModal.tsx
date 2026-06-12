@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Modal, Button, Input, Spinner, Text } from "@cypher-asi/zui";
+import { Modal, Button, Input, Spinner, Tabs, Text } from "@cypher-asi/zui";
 import { api, type OrbitCollaborator, type OrbitRepo } from "../../api/client";
 import type { Project } from "../../shared/types";
 import {
@@ -8,6 +8,7 @@ import {
 } from "../../hooks/use-workspace-defaults";
 import { FolderPickerField } from "../FolderPickerField";
 import { OrbitRepoSection } from "../OrbitRepoSection";
+import { AppearanceTab } from "./AppearanceTab";
 import { useOrbitRepos } from "../../hooks/use-orbit-repos";
 import type { OrbitRepoMode } from "../../hooks/use-new-project-form";
 import { useOrgStore } from "../../stores/org-store";
@@ -15,11 +16,25 @@ import { useAuth } from "../../stores/auth-store";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import styles from "./ProjectSettingsModal.module.css";
 
+export type ProjectSettingsTab = "general" | "appearance" | "integrations";
+
 interface ProjectSettingsModalProps {
   target: Project | null;
   onClose: () => void;
   onSaved: (project: Project) => void;
+  /**
+   * Tab to focus when the modal opens. Defaults to `"general"`. Used
+   * by the right-click "Change icon…" / "Change color…" context-menu
+   * shortcuts to deep-link straight into the Appearance tab.
+   */
+  initialTab?: ProjectSettingsTab;
 }
+
+const SETTINGS_TABS: { id: ProjectSettingsTab; label: string }[] = [
+  { id: "general", label: "General" },
+  { id: "appearance", label: "Appearance" },
+  { id: "integrations", label: "Integrations" },
+];
 
 function resolveOrbitUrl(project: Project): string {
   const owner = project.orbit_owner?.trim();
@@ -37,8 +52,20 @@ function slugFromName(name: string): string {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettingsModalProps) {
+export function ProjectSettingsModal({
+  target,
+  onClose,
+  onSaved,
+  initialTab = "general",
+}: ProjectSettingsModalProps) {
   const [project, setProject] = useState<Project | null>(null);
+  const [activeTab, setActiveTab] = useState<ProjectSettingsTab>(initialTab);
+  // Reset to the requested tab every time the modal opens with a new
+  // target so the deep-link entry from the right-click menu always
+  // lands the user on the expected tab.
+  useEffect(() => {
+    if (target) setActiveTab(initialTab);
+  }, [target, initialTab]);
   const [gitRepoUrl, setGitRepoUrl] = useState("");
   const [gitBranch, setGitBranch] = useState("main");
   const [localWorkspacePath, setLocalWorkspacePath] = useState("");
@@ -234,70 +261,92 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
         </div>
       ) : (
         <div className={styles.formColumn}>
-          <Text variant="muted" size="sm" className={styles.sectionLabel}>
-            Github
-          </Text>
-          <Input
-            value={gitRepoUrl}
-            onChange={(e) => setGitRepoUrl(e.target.value)}
-            placeholder="Git remote URL"
+          <Tabs
+            tabs={SETTINGS_TABS}
+            value={activeTab}
+            onChange={(id) => setActiveTab(id as ProjectSettingsTab)}
+            className={styles.tabsHeader}
           />
-          <Input
-            value={gitBranch}
-            onChange={(e) => setGitBranch(e.target.value)}
-            placeholder="Branch (e.g. main)"
-          />
-          <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
-            Orbit
-          </Text>
-          {hasLinkedOrbit ? (
-            <Input value={orbitUrl} readOnly disabled />
-          ) : (
-            <OrbitRepoSection
-              isAuthenticated={isAuthenticated}
-              orbitOwner={orbitOwner}
-              orbitRepoMode={orbitRepoMode}
-              setOrbitRepoMode={setOrbitRepoMode}
-              orbitRepoName={orbitRepoName}
-              setOrbitRepoName={setOrbitRepoName}
-              proposedRepoSlug={proposedRepoSlug}
-              displayRepoName={displayRepoName}
-              orbitRepos={orbitRepos}
-              orbitReposLoading={orbitReposLoading}
-              selectedOrbitRepo={selectedOrbitRepo}
-              setSelectedOrbitRepo={setSelectedOrbitRepo}
+          {activeTab === "general" && (
+            <>
+              <Text variant="muted" size="sm" className={styles.sectionLabel}>
+                Local workspace
+              </Text>
+              <FolderPickerField
+                label=""
+                value={localWorkspacePath}
+                onChange={setLocalWorkspacePath}
+                disabled={saving}
+                defaultPath={defaultWorkspacePath}
+              />
+            </>
+          )}
+          {activeTab === "appearance" && project && (
+            <AppearanceTab
+              projectId={project.project_id}
+              projectName={project.name}
             />
           )}
-          <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
-            Local workspace
-          </Text>
-          <FolderPickerField
-            label=""
-            value={localWorkspacePath}
-            onChange={setLocalWorkspacePath}
-            disabled={saving}
-            defaultPath={defaultWorkspacePath}
-          />
-          {project?.orbit_owner && project?.orbit_repo && (
+          {activeTab === "integrations" && (
             <>
-              <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
-                Repo collaborators
+              <Text variant="muted" size="sm" className={styles.sectionLabel}>
+                Github
               </Text>
-              {collaboratorsLoading ? (
-                <Spinner size="sm" />
-              ) : collaborators && collaborators.length > 0 ? (
-                <ul className={styles.collaboratorList}>
-                  {collaborators.map((c, i) => (
-                    <li key={c.user_id ?? c.username ?? i}>
-                      {c.display_name ?? c.username ?? c.user_id ?? "—"} ({c.role})
-                      {c.role === "owner" ? " — can add people" : ""}
-                    </li>
-                  ))}
-                </ul>
-              ) : collaborators?.length === 0 ? (
-                <Text variant="muted" size="sm">No collaborators returned.</Text>
-              ) : null}
-              <Text variant="muted" size="xs">Repo owner and users with owner role can add people.</Text>
+              <Input
+                value={gitRepoUrl}
+                onChange={(e) => setGitRepoUrl(e.target.value)}
+                placeholder="Git remote URL"
+              />
+              <Input
+                value={gitBranch}
+                onChange={(e) => setGitBranch(e.target.value)}
+                placeholder="Branch (e.g. main)"
+              />
+              <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
+                Orbit
+              </Text>
+              {hasLinkedOrbit ? (
+                <Input value={orbitUrl} readOnly disabled />
+              ) : (
+                <OrbitRepoSection
+                  isAuthenticated={isAuthenticated}
+                  orbitOwner={orbitOwner}
+                  orbitRepoMode={orbitRepoMode}
+                  setOrbitRepoMode={setOrbitRepoMode}
+                  orbitRepoName={orbitRepoName}
+                  setOrbitRepoName={setOrbitRepoName}
+                  proposedRepoSlug={proposedRepoSlug}
+                  displayRepoName={displayRepoName}
+                  orbitRepos={orbitRepos}
+                  orbitReposLoading={orbitReposLoading}
+                  selectedOrbitRepo={selectedOrbitRepo}
+                  setSelectedOrbitRepo={setSelectedOrbitRepo}
+                />
+              )}
+              {project?.orbit_owner && project?.orbit_repo && (
+                <>
+                  <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
+                    Repo collaborators
+                  </Text>
+                  {collaboratorsLoading ? (
+                    <Spinner size="sm" />
+                  ) : collaborators && collaborators.length > 0 ? (
+                    <ul className={styles.collaboratorList}>
+                      {collaborators.map((c, i) => (
+                        <li key={c.user_id ?? c.username ?? i}>
+                          {c.display_name ?? c.username ?? c.user_id ?? "—"} ({c.role})
+                          {c.role === "owner" ? " — can add people" : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : collaborators?.length === 0 ? (
+                    <Text variant="muted" size="sm">No collaborators returned.</Text>
+                  ) : null}
+                  <Text variant="muted" size="xs">
+                    Repo owner and users with owner role can add people.
+                  </Text>
+                </>
+              )}
             </>
           )}
           {error && (

@@ -9,6 +9,8 @@ import {
   resolveStatus,
 } from "../../../../components/ProjectList/project-list-shared";
 import type { ExplorerNodeWithSuffix } from "../../../../lib/zui-compat";
+import { buildProjectRowAppearance } from "../../../../features/project-row-appearance";
+import type { ProjectAppearance } from "../../../../shared/api/appearance";
 import { agentDisplayName } from "../../../../lib/derive-project-agent-title";
 
 function buildTaskProjectSuffix(
@@ -88,6 +90,7 @@ export function buildTasksExplorerNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
+  appearance?: ProjectAppearance,
 ): ExplorerNodeWithSuffix {
   const projectAgents = data.agentsByProject[project.project_id];
   // Mirror the Projects-app sidebar: hide infrastructure-role rows
@@ -112,6 +115,9 @@ export function buildTasksExplorerNode(
   return {
     id: project.project_id,
     label: project.name,
+    // Appearance-derived fields shared with every project-list
+    // surface so the styling stays consistent across apps.
+    ...buildProjectRowAppearance(project.project_id, appearance),
     suffix: buildTaskProjectSuffix(
       project.project_id,
       data.actions.handleAddAgent,

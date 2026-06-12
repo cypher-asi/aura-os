@@ -1,6 +1,7 @@
 pub(crate) mod admin;
 pub(crate) mod agent_bootstrap;
 pub(crate) mod agents;
+pub(crate) mod appearance;
 pub(crate) mod auth;
 pub(crate) mod billing;
 pub(crate) mod browser;

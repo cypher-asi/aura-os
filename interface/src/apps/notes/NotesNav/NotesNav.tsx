@@ -8,6 +8,10 @@ import {
   useLeftMenuExpandedGroups,
   useLeftMenuProjectReorder,
 } from "../../../features/left-menu";
+import {
+  buildProjectRowAppearance,
+  useProjectAppearancesByProject,
+} from "../../../features/project-row-appearance";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useIsSysAdmin } from "../../../stores/auth-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
@@ -346,6 +350,8 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
     [createNote, navigate, onCreateNote],
   );
 
+  const appearanceByProject = useProjectAppearancesByProject();
+
   const data = useMemo<ExplorerNode[]>(() => {
     return projects.map((project) => {
       const projectId = project.project_id;
@@ -368,6 +374,13 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
       return {
         id: projectIdFor(projectId),
         label: project.name,
+        // Shared project-row styling so the notes app's project list
+        // matches the projects sidebar one-to-one (accent stripe,
+        // icon, name color, chip fill / outline).
+        ...buildProjectRowAppearance(
+          projectId,
+          appearanceByProject.get(projectId),
+        ),
         children,
         suffix: hoverPlusSuffix(
           () => handleCreateNote(projectId, null),
@@ -379,7 +392,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
         },
       };
     });
-  }, [projects, trees, handleCreateNote]);
+  }, [projects, trees, handleCreateNote, appearanceByProject]);
 
   useEffect(() => {
     setAction(

@@ -12,6 +12,7 @@ import { useSidebarSearch } from "../../../../hooks/use-sidebar-search";
 import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
 import { filterTree } from "../../../../components/ProjectList/project-list-shared";
 import { buildLeftMenuEntries, useLeftMenuExpandedGroups } from "../../../../features/left-menu";
+import { useProjectAppearancesByProject } from "../../../../features/project-row-appearance";
 import { buildProcessExplorerData } from "./process-list-explorer-node";
 import {
   useDeleteProjectHandler,
@@ -103,6 +104,7 @@ function useProcessExplorerData(
   isEmptyState: boolean;
 } {
   const data = useProcessStoreData();
+  const appearanceByProject = useProjectAppearancesByProject();
   const explorerData = useMemo(
     () =>
       buildProcessExplorerData({
@@ -111,6 +113,7 @@ function useProcessExplorerData(
         processesByProject: data.processesByProject,
         explorerStyles,
         onAddProcess,
+        appearanceByProject,
       }),
     [
       data.processes,
@@ -118,6 +121,7 @@ function useProcessExplorerData(
       data.projects,
       explorerStyles,
       onAddProcess,
+      appearanceByProject,
     ],
   );
   const filteredExplorerData = useMemo(

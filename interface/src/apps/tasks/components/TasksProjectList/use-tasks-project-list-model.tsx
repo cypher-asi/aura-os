@@ -5,6 +5,7 @@ import { useProfileStatusStore } from "../../../../stores/profile-status-store";
 import { useProjectListData } from "../../../../components/ProjectList/useProjectListData";
 import { useExplorerMenus } from "../../../../components/ProjectList/useExplorerMenus";
 import { buildLeftMenuEntries, useLeftMenuExpandedGroups } from "../../../../features/left-menu";
+import { useProjectAppearancesByProject } from "../../../../features/project-row-appearance";
 import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
 import { buildTasksExplorerNode } from "./tasks-project-list-explorer-node";
 import { useTasksProjectListEffects } from "./use-tasks-project-list-effects";
@@ -44,6 +45,11 @@ function useTaskExplorerData(
 ): ExplorerNode[] {
   const statusMap = useProfileStatusStore((s) => s.statuses);
   const machineTypesMap = useProfileStatusStore((s) => s.machineTypes);
+  // Shared appearance subscription so this app's project rows pick
+  // up the same accent / icon / chip styling as the projects
+  // sidebar. Re-runs the memo whenever any project's appearance
+  // changes.
+  const appearanceByProject = useProjectAppearancesByProject();
 
   return useMemo(
     () =>
@@ -56,9 +62,10 @@ function useTaskExplorerData(
             statusMap,
             machineTypesMap,
             explorerStyles,
+            appearanceByProject.get(project.project_id),
           ),
         ),
-    [data, explorerStyles, machineTypesMap, statusMap],
+    [data, explorerStyles, machineTypesMap, statusMap, appearanceByProject],
   );
 }
 

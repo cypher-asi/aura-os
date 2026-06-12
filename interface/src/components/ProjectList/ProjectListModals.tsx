@@ -33,6 +33,7 @@ export function ProjectListModals({ actions }: Props) {
 
       <ProjectSettingsModal
         target={actions.settingsTarget}
+        initialTab={actions.settingsInitialTab}
         onClose={() => actions.setSettingsTarget(null)}
         onSaved={actions.handleProjectSaved}
       />

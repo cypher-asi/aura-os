@@ -1,0 +1,117 @@
+/* Themed select trigger + menu. Replaces a native `<select>` so the
+   dropdown popup follows the app's theme tokens instead of the OS's
+   native widget (which Chromium doesn't reliably theme via
+   `color-scheme` inside WebView2). Tracks zui Select / Input's
+   visual language so it slots into the appearance tab without
+   feeling foreign. */
+.root {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
+  color: var(--color-text-primary);
+  min-height: var(--control-height-md);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  text-align: left;
+}
+
+.trigger:hover {
+  border-color: var(--color-input-border-hover);
+}
+
+.trigger:focus,
+.trigger:focus-visible {
+  border-color: var(--color-input-border-focus);
+  outline: none;
+}
+
+.triggerLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerChevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+/* Menu floats above the trigger row. `z-index: 10` keeps it above
+   adjacent rows in the same control group; modal stacking is owned
+   by the Modal wrapper higher up. */
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 16px var(--color-backdrop-light);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  gap: var(--space-2);
+}
+
+.option:hover {
+  background: var(--color-overlay-light);
+}
+
+.option:focus,
+.option:focus-visible {
+  background: var(--color-overlay-light);
+  outline: none;
+}
+
+.optionActive {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.optionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionCheck {
+  flex-shrink: 0;
+  color: var(--project-accent, var(--color-accent));
+}

@@ -7,6 +7,10 @@ import {
   useProjectsListStore,
 } from "../../../stores/projects-list-store";
 import { LeftMenuTree, buildLeftMenuEntries } from "../../../features/left-menu";
+import {
+  buildProjectRowAppearance,
+  useProjectAppearancesByProject,
+} from "../../../features/project-row-appearance";
 import { getLastProject } from "../../../utils/storage";
 import styles from "./AuraVideoNav.module.css";
 
@@ -41,6 +45,8 @@ export function AuraVideoNav() {
 
   const selectedNodeId = currentVideo ? `video:${currentVideo.id}` : null;
 
+  const appearanceByProject = useProjectAppearancesByProject();
+
   const explorerData = useMemo(() => {
     return projects.map((project) => {
       const isActive = selectedProjectId === project.project_id;
@@ -48,6 +54,12 @@ export function AuraVideoNav() {
       return {
         id: project.project_id,
         label: project.name,
+        // Mirror the other left-panel apps: accent stripe, custom icon,
+        // and name color from the project's appearance.json.
+        ...buildProjectRowAppearance(
+          project.project_id,
+          appearanceByProject.get(project.project_id),
+        ),
         children: projectVideos.map((video) => ({
           id: `video:${video.id}`,
           label:
@@ -58,7 +70,7 @@ export function AuraVideoNav() {
         })),
       };
     });
-  }, [projects, videos, selectedProjectId]);
+  }, [projects, videos, selectedProjectId, appearanceByProject]);
 
   const entries = useMemo(
     () =>

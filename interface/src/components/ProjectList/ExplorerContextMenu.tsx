@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
-import { Bot, Pencil, Settings, Trash2 } from "lucide-react";
+import { Bot, Palette, Pencil, Settings, Trash2 } from "lucide-react";
 import type { useProjectListActions } from "../../hooks/use-project-list-actions";
 import styles from "./ProjectList.module.css";
 
@@ -9,6 +9,8 @@ const projectMenuItems: MenuItem[] = [
   { id: "add-agent", label: "Add Agent", icon: <Bot size={14} /> },
   { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
   { id: "settings", label: "Settings", icon: <Settings size={14} /> },
+  { type: "separator" },
+  { id: "appearance", label: "Appearance", icon: <Palette size={14} /> },
   { type: "separator" },
   { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
 ];

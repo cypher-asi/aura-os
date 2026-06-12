@@ -7,6 +7,8 @@ import type { useProjectListData } from "./useProjectListData";
 import { isUserFacingAgentInstance, resolveStatus } from "./project-list-shared";
 import { isLocalAgent } from "../../shared/lib/agent-runtime-visibility";
 import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
+import type { ProjectAppearance } from "../../shared/api/appearance";
+import { buildProjectRowAppearance } from "../../features/project-row-appearance";
 import { agentDisplayName } from "../../lib/derive-project-agent-title";
 
 export type ProjectAgentNode =
@@ -257,10 +259,16 @@ export function buildProjectExplorerNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
+  appearance?: ProjectAppearance,
 ): ExplorerNodeWithSuffix {
   return {
     id: project.project_id,
     label: project.name,
+    // Appearance-derived fields (icon, label tint, chip styling) live
+    // in the shared `features/project-row-appearance/` module so every
+    // project-list surface (projects / tasks / process) reads the
+    // same logic instead of duplicating the priority rules.
+    ...buildProjectRowAppearance(project.project_id, appearance),
     suffix: buildProjectSuffix(
       project.project_id,
       context,

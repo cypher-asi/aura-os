@@ -129,7 +129,10 @@ function LeftMenuGroup({
     <section className={isSection ? styles.sectionGroup : styles.projectGroup}>
       <div
         className={headerClassName}
-        style={{ paddingLeft: 16 + depth * 16 }}
+        // Padding stays per-depth indentation; entry.headerStyle is
+        // merged after so a project that sets `background` / `border`
+        // can override but cannot clobber the indent.
+        style={{ paddingLeft: 16 + depth * 16, ...entry.headerStyle }}
       >
         <button
           id={entry.id}
@@ -143,9 +146,13 @@ function LeftMenuGroup({
           onKeyDown={handleProjectKeyDown}
           onPointerDown={handlePointerDown}
         >
+          {entry.icon ? (
+            <span className={styles.projectIcon}>{entry.icon}</span>
+          ) : null}
           <span
             className={isSection ? styles.sectionLabel : styles.projectLabel}
             data-inline-rename-label
+            style={entry.labelStyle}
           >
             {entry.label}
           </span>
