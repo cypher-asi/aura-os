@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { track } from "../../../lib/analytics";
 import { useLanguageStore } from "../../../stores/language-store";
@@ -72,7 +72,7 @@ function MenuGroup({
         onClick={() => onToggle(id)}
       >
         {label}
-        <ChevronDown
+        <ChevronRight
           size={20}
           strokeWidth={2}
           aria-hidden="true"

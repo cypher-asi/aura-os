@@ -14,6 +14,9 @@ function scrollMarketingColumnToTop(): void {
     "[data-marketing-scroll-column]",
   );
   column?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  // In mobile document-scroll mode the column isn't the scroller, so also
+  // scroll the window (a no-op on desktop where the column scrolls).
+  window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
 }
 
 type InternalLink = {

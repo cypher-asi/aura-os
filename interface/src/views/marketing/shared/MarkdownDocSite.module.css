@@ -27,6 +27,12 @@
   max-width: 1240px;
 }
 
+/* Mobile nav toggle — hidden on desktop (the sidebar is always shown in
+   the grid there); revealed at <=760px to open/close the collapsed nav. */
+.navToggle {
+  display: none;
+}
+
 /* ---- Left nav ------------------------------------------------------- */
 
 /* The nav lists every section across all repos, so it can exceed the
@@ -390,15 +396,64 @@
 @media (max-width: 760px) {
   .layout {
     grid-template-columns: 1fr;
-    gap: 24px;
-    padding: 40px 20px 80px;
+    gap: 16px;
+    /* Clear the 56px floating mobile topbar (+ breathing room) so the
+       sidebar title / toggle don't sit jammed under the AURA logo. */
+    padding: 88px 20px 80px;
   }
 
-  /* Single-column on mobile: drop the sticky pin so the nav flows above
-     the content instead of overlapping it. */
+  /* The nav is collapsed behind the toggle on phones: hidden by default,
+     dropped into flow above the content only when opened. */
   .sidebar {
     position: static;
     max-height: none;
     overflow-y: visible;
+    display: none;
+  }
+
+  .sidebarOpen {
+    display: block;
+  }
+
+  /* Toggle row: a bordered control that names the doc site and flips a
+     chevron open/closed. */
+  .navToggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--doc-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--doc-fg);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .navToggleLabel {
+    flex: 1;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--doc-fg-muted);
+  }
+
+  .navToggleChevron {
+    flex-shrink: 0;
+    color: var(--doc-fg-muted);
+    transition: transform 160ms ease;
+  }
+
+  .navToggleChevronOpen {
+    transform: rotate(180deg);
+  }
+
+  /* When the nav is open the in-sidebar title link is redundant with the
+     toggle label, so hide it to avoid a doubled heading. */
+  .sidebarOpen .sidebarTitle {
+    display: none;
   }
 }

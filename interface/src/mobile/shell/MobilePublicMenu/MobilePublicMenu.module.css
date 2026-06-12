@@ -140,8 +140,10 @@
   color: var(--color-text-muted, #9aa0a6);
 }
 
+/* Collapsed the chevron points right (>); rotate it a quarter-turn to
+   point down when the group is open. */
 .chevronOpen {
-  transform: rotate(180deg);
+  transform: rotate(90deg);
 }
 
 @media (prefers-reduced-motion: reduce) {

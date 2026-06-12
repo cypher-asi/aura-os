@@ -175,19 +175,23 @@
    on .builtForTrustStage (TrustDeviceStage.css). The rail also flips from a
    vertical column to a horizontal bar that sits below the computer visual. */
 @media (max-width: 768px) {
+  /* Two rows of four: an explicit 4-column grid wraps the eight keys onto
+     two rows so each key can be larger (see --trust-rail-key bump in
+     TrustDeviceStage.css) instead of one cramped row of eight. */
   .serviceButtonRailWell {
-    flex-direction: row;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, var(--trust-rail-key, 48px));
     justify-content: center;
   }
 
   .serviceButtonSocket {
-    border-radius: 11px;
+    width: var(--trust-rail-key, 48px);
+    border-radius: 13px;
   }
 
   .serviceButtonKey svg {
-    width: 15px;
-    height: 15px;
+    width: 22px;
+    height: 22px;
   }
 
   /* Nozzles fed the connection mesh on the device's left; that mesh is

@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 describe("ProductView", () => {
-  it("streams the 'Delegate everything.' hero headline via the typewriter", () => {
+  it("streams the 'Work while you sleep.' hero headline via the typewriter", () => {
     // The hero headline renders through `<TypewriterText />`, which
     // reveals characters on a 45ms interval. The full literal string
     // only appears in the DOM after the interval has run for every
@@ -66,7 +66,7 @@ describe("ProductView", () => {
     act(() => {
       vi.advanceTimersByTime(2000);
     });
-    expect(screen.getByText("Delegate everything.")).toBeInTheDocument();
+    expect(screen.getByText("Work while you sleep.")).toBeInTheDocument();
   });
 
   it("keeps the AgentChatSection and moves the product-screen rows to the Code page", () => {

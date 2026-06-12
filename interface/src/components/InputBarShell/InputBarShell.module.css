@@ -366,6 +366,17 @@
     padding-right: 50px;
   }
 
+  /* Phones: drop the attach "+" disc from the marketing mock and reclaim
+     its left inset so the wrapped prompt uses the full width up to the
+     send disc. */
+  :global(.personalAgentChatMock) .inputContainerPill .attachButton {
+    display: none;
+  }
+
+  :global(.personalAgentChatMock) .inputContainerPill .textarea {
+    padding-left: 16px;
+  }
+
   :global(.personalAgentChatMock) .inputContainerPill .inputRowEnd {
     top: auto;
     bottom: 8px;
@@ -373,6 +384,35 @@
     transform: none;
     max-width: calc(100% - 24px);
     justify-content: flex-end;
+  }
+
+  /* Multi-line (growing) state on the marketing mock: match the clean
+     desktop multi-line layout. The model picker drops into the bottom
+     row (moved there by ChatInputBar) and the send disc re-anchors to
+     the container bottom so it's BOTTOM-ALIGNED with that picker, while
+     the prompt grows above. `position: static` on the input row drops it
+     as the buttons' positioning context so they fall back to the
+     relative `.inputContainer` (its bottom edge) like desktop. */
+  :global(.personalAgentChatMock)
+    .inputContainerPill[data-multiline="true"]
+    .inputRow {
+    position: static;
+  }
+
+  :global(.personalAgentChatMock)
+    .inputContainerPill[data-multiline="true"]
+    .sendButton {
+    top: auto;
+    bottom: 6px;
+    transform: none;
+  }
+
+  /* Left-align the dropped model picker with the prompt text (16px, the
+     textarea's left padding) instead of the 50px disc-clearance inset, so
+     it reads as bottom-left aligned under the text. The right inset stays
+     wide to clear the bottom-anchored send disc. */
+  :global(.personalAgentChatMock) .inputContainerPill .containerBottomRow {
+    padding-left: 16px;
   }
 }
 

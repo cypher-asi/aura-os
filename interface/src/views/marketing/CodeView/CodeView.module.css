@@ -53,6 +53,13 @@
   :global(.metalCard).mockDesktopCard {
     min-height: 420px;
   }
+
+  /* Phones: shrink the hero description so "Code while you sleep."'s
+     supporting line settles onto two lines instead of three. Scoped to
+     `/code` so the shared centered PageHero on other routes is untouched. */
+  .codeView :global(.pageHeroDescriptionInline) {
+    font-size: 13px;
+  }
 }
 
 /*

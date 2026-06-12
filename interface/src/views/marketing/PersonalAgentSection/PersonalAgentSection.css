@@ -15,6 +15,20 @@
   padding-bottom: clamp(8px, 1.5vh, 20px);
 }
 
+/* Phones: tighten the intro subhead column so the supporting line lands
+   on three balanced rows instead of stretching toward the 640px cap. */
+@media (max-width: 768px) {
+  .section.personalAgentIntro .textCardSubhead {
+    max-width: 34ch;
+  }
+
+  /* "Connected to everything." card copy: shrink slightly so the long
+     description settles onto ~3 lines rather than four on a phone. */
+  .paCardServices .metalCardDesc {
+    font-size: 13px;
+  }
+}
+
 /*
  * The bento grid + cells now render via the shared `<CardSection />` /
  * `<MetalCard />` (see CardSection.css). Only the personal-agent content
@@ -208,6 +222,33 @@
   .personalAgentChatMock [data-sliding-pills-item] {
     width: auto;
     flex: 0 0 auto;
+  }
+
+  /* Phones: let the example prompt wrap to multiple lines (instead of the
+     desktop single-line clip) and shrink it so it doesn't run under the
+     send disc. The attach "+" disc is hidden below (InputBarShell mobile
+     block), so the wrapped prompt gets the reclaimed left room.
+
+     `transition: height` animates the box growing/shrinking as the
+     typewriter adds or clears lines (the textarea's inline height is set
+     from its scrollHeight), so the mock expands smoothly instead of
+     jumping a whole row at once. */
+  .personalAgentChatMock textarea {
+    white-space: normal;
+    font-size: 13px;
+    transition: height 220ms ease;
+  }
+
+  /* Soften the pill→rounded-rect corner change in step with the height
+     growth so the whole capsule animates together. */
+  .personalAgentChatMock [data-input-pill] {
+    transition: border-radius 220ms ease;
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .personalAgentChatMock textarea {
+    transition: none;
   }
 }
 

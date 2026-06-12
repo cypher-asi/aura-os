@@ -92,11 +92,18 @@
     flex-direction: column;
     justify-content: center;
     gap: 16px;
-    /* Sized so all eight keys fit one clean horizontal row inside the
-       ~302px stage (8 x 30 + 7 x 5 + padding + plate rim). */
-    --trust-rail-key: 30px;
-    --trust-rail-gap: 5px;
-    --trust-rail-pad: 6px;
+    /* Sized for two rows of four BIGGER keys (4 x 48 + 3 x 8 + padding +
+       plate rim) so the icons read clearly on a phone instead of one
+       cramped row of eight tiny keys. */
+    --trust-rail-key: 48px;
+    --trust-rail-gap: 8px;
+    --trust-rail-pad: 8px;
+  }
+
+  /* The converging gold port on the computer's left edge has no rail to
+     connect to on phones (the mesh + rail moved below), so drop it. */
+  .builtForTrustStage .trustDevicePort {
+    display: none;
   }
 
   /* Rail drops out of its absolute far-left pin into normal flow, below the

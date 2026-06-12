@@ -175,8 +175,16 @@
     display: flex;
     grid-template-columns: none;
     gap: 10px;
-    margin-right: -24px;
-    padding: 0 24px 4px 0;
+    /* Full-bleed the scroll row past BOTH section gutters and pad it back
+       in symmetrically. Previously only the right side bled (`margin-right`
+       + no left padding), which left the first card's left border flush
+       against the scrollport's content edge where it was clipped / hidden.
+       Mirroring the bleed on the left gives that border clearance so it
+       renders, and `scroll-padding-left` keeps the first card snapped to
+       the 24px gutter. */
+    margin-inline: -24px;
+    padding: 0 24px 4px 24px;
+    scroll-padding-left: 24px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;

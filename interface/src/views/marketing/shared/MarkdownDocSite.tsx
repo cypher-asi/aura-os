@@ -24,7 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Menu } from "lucide-react";
 
 import styles from "./MarkdownDocSite.module.css";
 import { extractText, slugify } from "./markdown";
@@ -334,6 +334,11 @@ export function MarkdownDocSite<D extends MarketingDoc>({
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
 
+  // Mobile-only: the left nav collapses behind a toggle so the reading
+  // column isn't buried under the full page tree. Closed by default on a
+  // phone; the toggle is hidden entirely on desktop (CSS).
+  const [navOpen, setNavOpen] = useState(false);
+
   const { data: docs, isFetched: docsFetched } = useQuery({
     queryKey: [`${queryKeyPrefix}`],
     queryFn: fetchList,
@@ -347,6 +352,12 @@ export function MarkdownDocSite<D extends MarketingDoc>({
 
   // Resolve the active page: the slug param, else the first page.
   const activeSlug = slug ?? allDocs[0]?.slug ?? null;
+
+  // Close the mobile nav whenever the active page changes (i.e. the
+  // visitor tapped a nav link) so the reading column comes into view.
+  useEffect(() => {
+    setNavOpen(false);
+  }, [activeSlug]);
 
   const { data: doc, error: docError } = useQuery({
     queryKey: [`${queryKeyPrefix}-doc`, activeSlug],
@@ -411,7 +422,28 @@ export function MarkdownDocSite<D extends MarketingDoc>({
       <div
         className={`${styles.layout} ${showToc ? styles.layoutWithToc : ""}`}
       >
-        <aside className={styles.sidebar}>
+        <button
+          type="button"
+          className={styles.navToggle}
+          aria-expanded={navOpen}
+          aria-controls="doc-mobile-nav"
+          onClick={() => setNavOpen((open) => !open)}
+        >
+          <Menu size={16} strokeWidth={2} aria-hidden="true" />
+          <span className={styles.navToggleLabel}>{text.sidebarTitle}</span>
+          <ChevronDown
+            size={16}
+            strokeWidth={2}
+            aria-hidden="true"
+            className={`${styles.navToggleChevron} ${
+              navOpen ? styles.navToggleChevronOpen : ""
+            }`}
+          />
+        </button>
+        <aside
+          id="doc-mobile-nav"
+          className={`${styles.sidebar} ${navOpen ? styles.sidebarOpen : ""}`}
+        >
           <Link to={basePath} className={styles.sidebarTitle}>
             {text.sidebarTitle}
           </Link>

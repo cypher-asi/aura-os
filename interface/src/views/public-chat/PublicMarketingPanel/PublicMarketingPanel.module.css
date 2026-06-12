@@ -49,3 +49,51 @@
 .scrollColumn::-webkit-scrollbar {
   display: none;
 }
+
+/*
+ * Mobile document-scroll mode: the panel flows in normal document order so
+ * the ROOT document is the scroller (see `aura-public-doc-scroll` in
+ * index.css), letting iOS Safari minimize its address bar on scroll-down.
+ * The absolute inset + inner overflow are dropped so no inner scroll
+ * container is created.
+ */
+.rootFlow {
+  position: static;
+  inset: auto;
+}
+
+.scrollColumnFlow {
+  position: static;
+  inset: auto;
+  overflow: visible;
+  /* Fill at least the viewport so the per-route background covers short
+     pages instead of leaving the shell backdrop showing below. */
+  min-height: 100dvh;
+  /* Don't let the browser anchor scroll to shifting content while a route's
+     lazy chunk and images load in — that anchoring is what reads as the
+     content "janking around" mid-transition. */
+  overflow-anchor: none;
+}
+
+/* Mobile route content eases in on navigation (keyed remount) so pages
+   load smoothly instead of snapping into place. */
+.routeContentMobile {
+  animation: marketingRouteIn 200ms ease both;
+}
+
+@keyframes marketingRouteIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .routeContentMobile {
+    animation: none;
+  }
+}

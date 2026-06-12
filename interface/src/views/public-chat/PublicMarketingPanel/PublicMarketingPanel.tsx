@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { usePublicPageViewed } from "../use-public-shell-analytics";
 import styles from "./PublicMarketingPanel.module.css";
 
@@ -105,6 +106,11 @@ export function PublicMarketingPanel(): React.ReactElement {
   usePublicPageViewed();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
+  // On mobile the public shell scrolls as one document (so iOS Safari can
+  // collapse its address bar), so this panel flows instead of owning an
+  // inner scroll column. On desktop it keeps the absolute scroll column +
+  // overlay scrollbar.
+  const { isMobileLayout } = useAuraCapabilities();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -139,7 +145,12 @@ export function PublicMarketingPanel(): React.ReactElement {
   // autoplay observers would evaluate against the stale position.
   useLayoutEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, [pathname]);
+    // In document-scroll mode the inner column isn't the scroller, so also
+    // reset the window or the next page would open scrolled down.
+    if (isMobileLayout) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [pathname, isMobileLayout]);
 
   // Exact-match the per-route background, then fall back to a prefix
   // match so nested routes (e.g. `/blog/:slug`) inherit their section's
@@ -160,10 +171,12 @@ export function PublicMarketingPanel(): React.ReactElement {
     pathname === "/os" || pathname.startsWith("/os/") ? "os" : pathname;
 
   return (
-    <div className={styles.root}>
+    <div className={`${styles.root} ${isMobileLayout ? styles.rootFlow : ""}`}>
       <div
         ref={scrollRef}
-        className={styles.scrollColumn}
+        className={`${styles.scrollColumn} ${
+          isMobileLayout ? styles.scrollColumnFlow : ""
+        }`}
         style={{ background: columnBackground }}
         // Stable hook so the header nav (see `PublicTopNav`) can reset
         // this column to the top when the visitor clicks the link for
@@ -171,9 +184,20 @@ export function PublicMarketingPanel(): React.ReactElement {
         // for React Router, so it never resets on its own.
         data-marketing-scroll-column=""
       >
-        <Outlet key={outletKey} />
+        {/* Keyed wrapper so each route's content remounts and eases in on
+            mobile (where the document scrolls and pages swap in place),
+            smoothing the transition instead of the content popping. */}
+        <div
+          key={outletKey}
+          className={isMobileLayout ? styles.routeContentMobile : undefined}
+        >
+          <Outlet />
+        </div>
       </div>
-      <OverlayScrollbar scrollRef={scrollRef} />
+      {/* The overlay scrollbar is a mouse-hover affordance tied to the
+          inner scroll column; on mobile the document scrolls instead, so
+          it's neither needed nor anchorable. */}
+      {isMobileLayout ? null : <OverlayScrollbar scrollRef={scrollRef} />}
     </div>
   );
 }

@@ -34,6 +34,35 @@
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/*
+ * Document-scroll mode (marketing content routes): the shell grows with
+ * its content and the ROOT document scrolls (see the `aura-public-doc-scroll`
+ * override in index.css), which lets iOS Safari minimize its bottom address
+ * bar on scroll-down. The topbar sticks to the viewport top, and the framed
+ * body grows to wrap the full page height instead of clipping it.
+ */
+.shell[data-scroll-mode="document"] {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+/* Fixed overlay (not in-flow) so the framed page still renders flush
+   beneath the transparent topbar — preserving the marketing pages' top
+   paddings that already clear it — while the document scrolls behind it
+   and the bar stays pinned to the viewport top. */
+.shell[data-scroll-mode="document"] .topbar {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+}
+
+.shell[data-scroll-mode="document"] .body {
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -49,6 +78,36 @@
   background: transparent;
   z-index: 10;
   flex-shrink: 0;
+  overflow: hidden;
+  /* Smoothly collapse + fade up when scrolling down, re-expand on scroll
+     up. Collapsing the height (not just translating) reclaims the flex
+     slot so the framed page slides up to meet the shell top instead of
+     leaving an empty band. */
+  transition:
+    height 240ms ease,
+    min-height 240ms ease,
+    opacity 200ms ease,
+    transform 240ms ease;
+}
+
+.topbar[data-hidden="true"] {
+  height: 0;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+}
+
+/* On route change the bar is snapped back to visible without animating so
+   it doesn't visibly "unfold" on every navigation. */
+.topbar[data-instant="true"] {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar {
+    transition: none;
+  }
 }
 
 .logoLink {

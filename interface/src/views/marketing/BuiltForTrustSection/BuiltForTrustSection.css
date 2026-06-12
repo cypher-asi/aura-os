@@ -50,4 +50,16 @@
   .builtForTrustCopy.metalCard {
     min-height: 312px;
   }
+
+  /* "Built for trust." intro subhead: narrow the column so it lands on
+     three balanced lines on a phone. */
+  .builtForTrustIntro .textCardSubhead {
+    max-width: 26ch;
+  }
+
+  /* "Isolated by default." + "Trusted and verifiable." card copy: shrink
+     so each description settles onto two lines on a phone. */
+  .builtForTrustCopy .metalCardDesc {
+    font-size: 12px;
+  }
 }

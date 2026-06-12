@@ -47,8 +47,10 @@
   "agents": {
     "buildDeviceAriaLabel": "Build your agent",
     "documentTitle": "AURA - Agents",
-    "heroDescription": "AURA agents are experts in every field that work while you sleep.",
-    "heroHeadline": "Delegate everything."
+    "heroDescription": "AURA agents are experts in every field that work around the clock for you.",
+    "heroDescriptionLine1": "AURA agents are experts in every field",
+    "heroDescriptionLine2": "that work around the clock for you.",
+    "heroHeadline": "Work while you sleep."
   },
   "alwaysOn": {
     "ariaLabel": "Always on"

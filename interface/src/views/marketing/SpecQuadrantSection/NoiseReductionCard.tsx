@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { Plate } from "../../../components/Plate";
 import { SlidingPills, type SlidingPillItem } from "../../../components/SlidingPills";
 import { NoiseReductionBrain } from "../NoiseReductionBrain";
@@ -175,6 +176,10 @@ export function NoiseReductionCard(): ReactNode {
   // a typewriter capability list (left) + an example mockup (right) around the
   // same centered brain (see `expertiseContent.tsx`).
   const { t } = useTranslation("marketing");
+  // On phones/tablets the WebGL brain is removed: it's the heaviest visual
+  // in the card and reads as clutter at that size, so we skip mounting it
+  // entirely (no canvas, no render loop) rather than just hiding it.
+  const { isMobileLayout } = useAuraCapabilities();
   const [expertise, setExpertise] = useState<Expertise>("General");
   const showGeneralFlanks = expertise === "General";
   // Narrow away `General` so the per-discipline content maps stay strongly
@@ -441,7 +446,9 @@ export function NoiseReductionCard(): ReactNode {
                 <ExampleMockup />
               </div>
             ) : null}
-            <NoiseReductionBrain className="nrScreenBrain" />
+            {isMobileLayout ? null : (
+              <NoiseReductionBrain className="nrScreenBrain" />
+            )}
             <div className="nrScreenGloss" />
           </div>
 

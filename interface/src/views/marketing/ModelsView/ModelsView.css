@@ -433,8 +433,19 @@
     align-items: stretch;
   }
 
+  /* Phones: the search box stretched full-width with sharp corners, a
+     tiny 32px height and 13px text read as a big plain rectangle. Give it
+     a rounded, comfortably-tall field with 16px text (which also stops
+     iOS zoom-on-focus) so it reads as a real search input. */
   .modelsSearch {
     max-width: none;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 12px;
+  }
+
+  .modelsSearchInput {
+    font-size: 16px;
   }
 
   .modelsGrid {

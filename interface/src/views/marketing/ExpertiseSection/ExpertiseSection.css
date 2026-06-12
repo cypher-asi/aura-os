@@ -23,3 +23,11 @@
   padding-top: 0;
   padding-bottom: clamp(8px, 1.5vh, 20px);
 }
+
+/* Phones: narrow the subhead column so the two sentences (joined by a
+   <br/>) settle onto three lines instead of two long ones. */
+@media (max-width: 768px) {
+  .section.expertiseSection .textCardSubhead {
+    max-width: 38ch;
+  }
+}

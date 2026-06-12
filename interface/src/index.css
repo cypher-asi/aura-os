@@ -279,6 +279,30 @@ body:has([role="dialog"][aria-modal="true"]) {
   }
 }
 
+/*
+ * Document-level scrolling for the mobile public marketing surface.
+ *
+ * The app normally pins `html/body/#root` to `overflow: hidden` and
+ * scrolls inner containers, but iOS Safari only minimizes its bottom
+ * address bar when the ROOT document scrolls. `MobilePublicShell`
+ * toggles this class on the marketing content routes (not the app-like
+ * landing `/` or `/chat`) so the page scrolls as one document there and
+ * the browser chrome collapses on scroll-down. Desktop never mounts that
+ * shell, so this is mobile-only.
+ */
+html.aura-public-doc-scroll {
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+html.aura-public-doc-scroll body,
+html.aura-public-doc-scroll #root {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
 html[data-mobile-client="true"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
 html[data-mobile-client="true"] textarea,
 html[data-mobile-client="true"] select {

@@ -223,9 +223,28 @@ export function ScreenOrbBackground(): React.ReactElement | null {
       raf = 0;
     };
 
-    const onVisibility = (): void => {
-      if (document.hidden) stop();
-      else start();
+    // The orb is pinned behind the scroll column, so it stays technically
+    // "in view" (a plain IntersectionObserver would never fire) even after
+    // the hero scrolls past and the opaque agents sections cover it. Drive
+    // the loop off the scroll position instead: pause once the visitor has
+    // scrolled beyond the first viewport (orb no longer on screen) and
+    // whenever the tab is hidden, so the shader stops burning GPU offscreen
+    // and the black page background shows through underneath.
+    const scrollRoot = document.querySelector<HTMLElement>(
+      "[data-public-home-scroll]",
+    );
+
+    const isOrbOnScreen = (): boolean => {
+      if (document.hidden) return false;
+      if (!scrollRoot) return true;
+      // A small margin keeps the loop alive just past the fold so it's
+      // already running again the moment the hero scrolls back into view.
+      return scrollRoot.scrollTop < scrollRoot.clientHeight + 160;
+    };
+
+    const syncActivity = (): void => {
+      if (isOrbOnScreen()) start();
+      else stop();
     };
 
     const resizeObserver = new ResizeObserver(() => {
@@ -237,13 +256,15 @@ export function ScreenOrbBackground(): React.ReactElement | null {
       renderFrame();
     });
     resizeObserver.observe(parent);
-    document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("visibilitychange", syncActivity);
+    scrollRoot?.addEventListener("scroll", syncActivity, { passive: true });
 
-    start();
+    syncActivity();
 
     return () => {
       stop();
-      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("visibilitychange", syncActivity);
+      scrollRoot?.removeEventListener("scroll", syncActivity);
       resizeObserver.disconnect();
       geometry.dispose();
       material.dispose();

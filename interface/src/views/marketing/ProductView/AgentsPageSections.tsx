@@ -37,7 +37,7 @@ import styles from "./ProductView.module.css";
  * Pulling the literal into a constant means a future copy change
  * cannot drift the ghost and the streamed text out of sync.
  */
-const HERO_HEADLINE = "Delegate everything.";
+const HERO_HEADLINE = "Work while you sleep.";
 
 /**
  * The full `/agents` marketing section stack — hero + `AgentConsole`
@@ -78,10 +78,17 @@ export function AgentsPageSections(): ReactNode {
                 />
               </span>
             }
-            description={t("agents.heroDescription", {
-              defaultValue:
-                "AURA agents are experts in every field that work while you sleep.",
-            })}
+            description={
+              <>
+                {t("agents.heroDescriptionLine1", {
+                  defaultValue: "AURA agents are experts in every field",
+                })}
+                <br />
+                {t("agents.heroDescriptionLine2", {
+                  defaultValue: "that work around the clock for you.",
+                })}
+              </>
+            }
             preview={null}
             centered
             headlineCta={<CreateAgentButton source="product_hero" />}

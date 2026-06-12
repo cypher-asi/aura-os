@@ -184,6 +184,11 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    /* When the pills are wider than the row, plain `center` clips the
+       leading segments and they can't be scrolled into view. `safe center`
+       falls back to start alignment on overflow so no pill is cut off at
+       the left/right edges. */
+    justify-content: safe center;
   }
 
   .root::-webkit-scrollbar {

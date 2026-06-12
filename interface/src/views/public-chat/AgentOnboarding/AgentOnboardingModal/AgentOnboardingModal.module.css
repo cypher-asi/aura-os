@@ -24,7 +24,16 @@
    sheet rather than a hard-edged takeover. */
 .modalMobile.modalMobile {
   width: 100%;
-  height: 100%;
+  /* Subtract the safe-area insets from the height (not just add them as
+     margins) so the sheet + its margins fit the overlay exactly. With a
+     bare `height: 100%` plus top/bottom margins the sheet was taller than
+     the viewport on notched devices, so the whole sheet — including the
+     pinned header, stepper, and footer — overflowed and scrolled within
+     the overlay. Keeping it bounded means only `.content` scrolls and the
+     "Create your agent" title, step row, and Back/Next stay put. */
+  height: calc(
+    100% - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+  );
   max-width: none;
   max-height: none;
   margin-top: env(safe-area-inset-top, 0px);
