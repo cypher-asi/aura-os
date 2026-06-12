@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useRef,
@@ -31,7 +32,7 @@ interface AgentEnvironmentProps {
   workspacePath?: string | null
 }
 
-export function AgentEnvironment({ machineType, agentId, workspacePath }: AgentEnvironmentProps) {
+export const AgentEnvironment = memo(function AgentEnvironment({ machineType, agentId, workspacePath }: AgentEnvironmentProps) {
   const [open, setOpen] = useState(false)
   const [pinned, setPinned] = useState(false)
   const [statusCardStyle, setStatusCardStyle] = useState<CSSProperties | null>(null)
@@ -202,4 +203,4 @@ export function AgentEnvironment({ machineType, agentId, workspacePath }: AgentE
       {statusCard}
     </>
   )
-}
+})

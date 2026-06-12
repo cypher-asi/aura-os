@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useRef,
   useState,
@@ -31,7 +32,7 @@ export interface ModelMenuScrollProps
  * outer element and reads the scroller's parent for hover). The native
  * scrollbar is hidden via `.modelMenuScroll` so only the overlay shows.
  */
-export function ModelMenuScroll({
+export const ModelMenuScroll = memo(function ModelMenuScroll({
   children,
   lockWidth = false,
   className,
@@ -70,4 +71,4 @@ export function ModelMenuScroll({
       <OverlayScrollbar scrollRef={scrollRef} />
     </div>
   );
-}
+});

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { CookingIndicator } from "../../../components/CookingIndicator";
 import { StuckStreamPill } from "../../../components/StuckStreamPill";
@@ -51,7 +52,7 @@ interface ChatStreamingIndicatorProps {
  * so the user has an escape hatch instead of staring at a stale
  * "Cooking..." for minutes.
  */
-export function ChatStreamingIndicator({
+export const ChatStreamingIndicator = memo(function ChatStreamingIndicator({
   streamKey,
   onStop,
   onRetry,
@@ -115,4 +116,4 @@ export function ChatStreamingIndicator({
       </div>
     </div>
   );
-}
+});

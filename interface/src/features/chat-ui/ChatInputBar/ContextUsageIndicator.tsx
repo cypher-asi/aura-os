@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ChevronRight, X } from "lucide-react";
 import type { ContextBreakdown } from "../../../stores/context-usage-store";
 import { computeSessionCost } from "../../../constants/model-pricing";
@@ -170,7 +170,7 @@ function buildSessionCostView(
  *    Total" card so older harness builds and the pre-first-turn state
  *    still communicate something useful.
  */
-export function ContextUsageIndicator({
+export const ContextUsageIndicator = memo(function ContextUsageIndicator({
   utilization,
   estimatedTokens,
   breakdown,
@@ -508,4 +508,4 @@ export function ContextUsageIndicator({
       )}
     </span>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react"
+import { memo, useState, useRef, useEffect, useCallback } from "react"
 import { FolderGit2 } from "lucide-react"
 import type { Project } from "../../shared/types"
 import { usePushStuck } from "../../stores/event-store/event-store"
@@ -26,7 +26,7 @@ function formatCooldown(secs: number): string {
   return `${Math.floor(secs / 60)}m`
 }
 
-export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
+export const OrbitStatusIndicator = memo(function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const isConnected = !!(project?.orbit_owner?.trim() && project?.orbit_repo?.trim())
@@ -115,4 +115,4 @@ export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
       )}
     </div>
   )
-}
+})

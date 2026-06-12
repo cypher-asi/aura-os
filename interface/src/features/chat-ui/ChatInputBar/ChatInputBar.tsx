@@ -286,6 +286,7 @@ export const DesktopChatInputBar = memo(
     const setCouncilCount = chatUI.setCouncilCount;
     const setCouncilModel = chatUI.setCouncilModel;
     const setCouncilMechanism = chatUI.setCouncilMechanism;
+    const setSelectedMode = chatUI.setSelectedMode;
     const clearGenerationCommands = useCallback(() => {
       if (onCommandsChange && selectedCommands.some((c) => isGenerationCommand(c.id))) {
         onCommandsChange(selectedCommands.filter((c) => !isGenerationCommand(c.id)));
@@ -295,7 +296,7 @@ export const DesktopChatInputBar = memo(
     const onModeChange = useCallback(
       (mode: AgentMode) => {
         if (selectedModeOverride != null) return;
-        chatUI.setSelectedMode(streamKey, mode, adapterType, agentId);
+        setSelectedMode(streamKey, mode, adapterType, agentId);
         // Drop any conflicting generation chips so the chip row and
         // the mode selector never show contradicting intent.
         clearGenerationCommands();
@@ -311,7 +312,7 @@ export const DesktopChatInputBar = memo(
       [
         adapterType,
         agentId,
-        chatUI.setSelectedMode,
+        setSelectedMode,
         clearGenerationCommands,
         selectedModeOverride,
         streamKey,
@@ -396,9 +397,9 @@ export const DesktopChatInputBar = memo(
     // and we own the store write.
     const onSelectGenerationMode = useCallback(
       (mode: AgentMode) => {
-        chatUI.setSelectedMode(streamKey, mode, adapterType, agentId);
+        setSelectedMode(streamKey, mode, adapterType, agentId);
       },
-      [chatUI.setSelectedMode, streamKey, adapterType, agentId],
+      [setSelectedMode, streamKey, adapterType, agentId],
     );
 
     const {
@@ -518,7 +519,13 @@ export const DesktopChatInputBar = memo(
       setSelectedModel: chatUI.setSelectedModel,
       setImageQuality: chatUI.setImageQuality,
     });
-    const excludeIds = new Set(selectedCommands.map((c) => c.id));
+    // Stable Set identity so `SlashCommandMenu`'s memo can bail out
+    // between keystrokes while the menu is open (a fresh Set per render
+    // used to defeat it on every character).
+    const excludeIds = useMemo(
+      () => new Set(selectedCommands.map((c) => c.id)),
+      [selectedCommands],
+    );
 
     const handleCommandRemove = useCallback(
       (id: string) => {

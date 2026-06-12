@@ -1,4 +1,9 @@
-import { forwardRef, type ForwardRefExoticComponent, type RefAttributes } from "react";
+import {
+  forwardRef,
+  memo,
+  type ForwardRefExoticComponent,
+  type RefAttributes,
+} from "react";
 import type { ChatInputBarHandle, ChatInputBarProps } from "../ChatInputBar";
 import { useChatDraft } from "../../../stores/chat-ui-store";
 
@@ -21,18 +26,22 @@ export type DraftedInputBarProps = Omit<
  * and the input bar, while `ChatSurface` (transcript, queue, scrollbar)
  * stays untouched. `useChatPanelState` writes the draft imperatively
  * (clear-on-send, queue edit) through the store.
+ *
+ * Memoized so `ChatSurface`'s own re-renders (every streamed token)
+ * skip this subtree entirely when the forwarded props are stable.
  */
-export const DraftedInputBar = forwardRef<
-  ChatInputBarHandle,
-  DraftedInputBarProps
->(function DraftedInputBar({ InputBarComponent, ...props }, ref) {
-  const [input, setInput] = useChatDraft(props.streamKey);
-  return (
-    <InputBarComponent
-      ref={ref}
-      {...props}
-      input={input}
-      onInputChange={setInput}
-    />
-  );
-});
+export const DraftedInputBar = memo(
+  forwardRef<ChatInputBarHandle, DraftedInputBarProps>(
+    function DraftedInputBar({ InputBarComponent, ...props }, ref) {
+      const [input, setInput] = useChatDraft(props.streamKey);
+      return (
+        <InputBarComponent
+          ref={ref}
+          {...props}
+          input={input}
+          onInputChange={setInput}
+        />
+      );
+    },
+  ),
+);

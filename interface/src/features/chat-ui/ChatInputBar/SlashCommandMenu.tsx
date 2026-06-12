@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState, memo } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState, memo } from "react";
 import { filterCommands, type SlashCommand } from "../../../constants/commands";
 import styles from "./ChatInputBar.module.css";
 
@@ -17,11 +17,18 @@ export const SlashCommandMenu = memo(function SlashCommandMenu({
 }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
-  const filtered = filterCommands(query, excludeIds);
+  const filtered = useMemo(
+    () => filterCommands(query, excludeIds),
+    [query, excludeIds],
+  );
 
-  useEffect(() => {
+  // Reset the highlight whenever the query changes, using the
+  // adjust-state-during-render pattern (no effect, no extra commit).
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (prevQuery !== query) {
+    setPrevQuery(query);
     setActiveIndex(0);
-  }, [query]);
+  }
 
   useEffect(() => {
     const active = listRef.current?.querySelector(
@@ -67,13 +74,11 @@ export const SlashCommandMenu = memo(function SlashCommandMenu({
 
   if (filtered.length === 0) return null;
 
-  let lastCategory = "";
-
   return (
     <div className={styles.slashMenu} ref={listRef}>
       {filtered.map((cmd, i) => {
-        const showCategory = cmd.category !== lastCategory;
-        lastCategory = cmd.category;
+        const showCategory =
+          i === 0 || cmd.category !== filtered[i - 1].category;
         return (
           <div key={cmd.id}>
             {showCategory && (

@@ -1,6 +1,7 @@
 import {
   forwardRef,
   memo,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -239,14 +240,17 @@ function InputBarShellInner(
   const sendEnabled = isSendEnabled ?? value.trim().length > 0;
   const canSubmit = sendEnabled && !disabled;
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    onTextareaKeyDown?.(e);
-    if (e.defaultPrevented) return;
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (canSubmit) onSubmit();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      onTextareaKeyDown?.(e);
+      if (e.defaultPrevented) return;
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (canSubmit) onSubmit();
+      }
+    },
+    [onTextareaKeyDown, canSubmit, onSubmit],
+  );
 
   const wrapperClassName = [
     styles.inputWrapper,
