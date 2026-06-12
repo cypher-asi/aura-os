@@ -16,6 +16,7 @@ import type { MenuActionKey } from "./menu-config";
 
 const AURA_WEBSITE = "https://aura.ai";
 const AURA_DOWNLOADS = "https://aura.ai/download";
+const AURA_OBSERVABILITY = "https://aura.ai/observability";
 
 function nextIndex(currentIndex: number, length: number, direction: 1 | -1): number {
   if (length === 0) return -1;
@@ -205,6 +206,15 @@ export function useMenuActions(): {
     useUIModalStore.getState().openChangelog();
   }, []);
 
+  const handleStatus = useCallback(() => {
+    if (isAuthenticated) {
+      navigate("/observability");
+      return;
+    }
+    if (typeof window === "undefined") return;
+    window.open(AURA_OBSERVABILITY, "_blank", "noopener,noreferrer");
+  }, [isAuthenticated, navigate]);
+
   const handleGettingStarted = useCallback(() => {
     const store = useOnboardingStore.getState();
     if (store.checklistDismissed) {
@@ -245,6 +255,7 @@ export function useMenuActions(): {
       "view.toggleFullscreen": handleToggleFullscreen,
       "help.visitWebsite": handleVisitWebsite,
       "help.downloads": handleDownloads,
+      "help.status": handleStatus,
       "help.changelog": handleChangelog,
       "help.gettingStarted": handleGettingStarted,
     }),
@@ -260,6 +271,7 @@ export function useMenuActions(): {
       handleNextAgent,
       handlePreviousAgent,
       handleSettings,
+      handleStatus,
       handleToggleFullscreen,
       handleToggleSidekick,
       handleVisitWebsite,

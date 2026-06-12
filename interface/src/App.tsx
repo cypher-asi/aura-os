@@ -56,6 +56,9 @@ const PricingView = lazy(() =>
 const ModelsView = lazy(() =>
   import("./views/marketing/ModelsView").then((m) => ({ default: m.ModelsView })),
 );
+const StatusView = lazy(() =>
+  import("./views/marketing/StatusView").then((m) => ({ default: m.StatusView })),
+);
 const BlogView = lazy(() =>
   import("./views/marketing/BlogView").then((m) => ({ default: m.BlogView })),
 );
@@ -312,6 +315,14 @@ function AppRoutes(): React.ReactElement {
               <Route index element={<LastAppRedirect />} />
               {renderRoutes(shellAppRoutes)}
               <Route path="chat" element={<ChatRouteSwitch />} />
+              <Route
+                path="observability"
+                element={
+                  <Suspense fallback={null}>
+                    <StatusView />
+                  </Suspense>
+                }
+              />
             </Route>
             <Route
               path="invite/:token"
@@ -469,6 +480,14 @@ function AppRoutes(): React.ReactElement {
                 }
               />
               <Route
+                path="observability"
+                element={
+                  <Suspense fallback={null}>
+                    <StatusView />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="blog"
                 element={
                   <Suspense fallback={null}>
@@ -583,6 +602,14 @@ function AppRoutes(): React.ReactElement {
                 </Suspense>
               }
             />
+            <Route
+              path="observability"
+              element={
+                <Suspense fallback={null}>
+                  <StatusView />
+                </Suspense>
+              }
+            />
             {/*
               Parallel authenticated share route. Reuses the SAME
               `SharedSessionView` but renders inside the normal authed
@@ -608,4 +635,3 @@ function AppRoutes(): React.ReactElement {
     </>
   );
 }
-

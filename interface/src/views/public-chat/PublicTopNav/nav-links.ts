@@ -48,6 +48,7 @@ export const RESOURCE_LINKS_PRIMARY: ReadonlyArray<TopNavLink> = [
 export const RESOURCE_LINKS_SECONDARY: ReadonlyArray<TopNavLink> = [
   { tKey: "blog", label: "Blog", to: "/blog" },
   { tKey: "models", label: "Models", to: "/models" },
+  { tKey: "observability", label: "Observability", to: "/observability" },
   { tKey: "os", label: "OS", to: "/os" },
 ];
 

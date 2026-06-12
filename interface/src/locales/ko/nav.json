@@ -1,16 +1,17 @@
 {
-  "agents": "에이전트",
-  "blog": "블로그",
-  "capabilities": "기능",
-  "changelog": "변경 내역",
   "chat": "채팅",
+  "agents": "에이전트",
   "code": "코드",
-  "downloads": "다운로드",
-  "expertise": "전문적 지식",
-  "feedback": "피드백",
-  "industries": "산업",
-  "models": "모델",
   "os": "OS",
   "pricing": "요금",
-  "resources": "리소스"
+  "blog": "블로그",
+  "changelog": "변경 내역",
+  "downloads": "다운로드",
+  "feedback": "피드백",
+  "models": "모델",
+  "observability": "Observability",
+  "resources": "리소스",
+  "expertise": "전문적 지식",
+  "capabilities": "기능",
+  "industries": "산업"
 }

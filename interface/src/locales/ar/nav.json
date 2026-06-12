@@ -1,16 +1,17 @@
 {
-  "agents": "الوكلاء",
-  "blog": "المدونة",
-  "capabilities": "القدرات",
-  "changelog": "سجل التغييرات",
   "chat": "الدردشة",
+  "agents": "الوكلاء",
   "code": "الكود",
-  "downloads": "التنزيلات",
-  "expertise": "خبرة",
-  "feedback": "الملاحظات",
-  "industries": "الصناعات",
-  "models": "النماذج",
   "os": "OS",
   "pricing": "الأسعار",
-  "resources": "الموارد"
+  "blog": "المدونة",
+  "changelog": "سجل التغييرات",
+  "downloads": "التنزيلات",
+  "feedback": "الملاحظات",
+  "models": "النماذج",
+  "observability": "Observability",
+  "resources": "الموارد",
+  "expertise": "خبرة",
+  "capabilities": "القدرات",
+  "industries": "الصناعات"
 }

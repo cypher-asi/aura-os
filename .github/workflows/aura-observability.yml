@@ -1,0 +1,90 @@
+name: AURA Observability
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  observability:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 25.9.0
+
+      - name: Run feature health probes
+        id: probes
+        continue-on-error: true
+        env:
+          AURA_STATUS_API_BASE_URL: ${{ secrets.AURA_STATUS_API_BASE_URL || vars.AURA_STATUS_API_BASE_URL || 'https://api.aura.ai' }}
+          AURA_STATUS_PUBLIC_BASE_URL: ${{ secrets.AURA_STATUS_PUBLIC_BASE_URL || vars.AURA_STATUS_PUBLIC_BASE_URL || 'https://aura.ai' }}
+          AURA_STATUS_ACCESS_TOKEN: ${{ secrets.AURA_STATUS_ACCESS_TOKEN }}
+          AURA_STATUS_USER_EMAIL: ${{ secrets.AURA_STATUS_USER_EMAIL }}
+          AURA_STATUS_USER_PASSWORD: ${{ secrets.AURA_STATUS_USER_PASSWORD }}
+          AURA_STATUS_MODEL_IDS: ${{ secrets.AURA_STATUS_MODEL_IDS || vars.AURA_STATUS_MODEL_IDS }}
+          AURA_STATUS_IMAGE_MODEL: ${{ secrets.AURA_STATUS_IMAGE_MODEL || vars.AURA_STATUS_IMAGE_MODEL }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_CHECKS: >-
+            api-health,auth-session,auth-validate,system-info,
+            orgs-list,user-profile,org-integrations-list,org-tool-actions-list,
+            billing-status,credits-balance,project-crud,spec-task-crud,
+            project-stats,loop-status,process-list,process-crud,
+            marketplace-agents,harness-health,active-streams,debug-projects,
+            feedback-list,bug-reports-mine,feed-list,leaderboard,platform-stats,
+            remote-agent-create,remote-agent-state,remote-agent-runtime,
+            image-generation-stream,live-benchmark-hello-world,eval-summary-artifacts,
+            public-setup,public-chat-stream,public-feedback-api,public-models-api,
+            public-blog-api,public-x402-models,public-x402-payment-challenge,
+            public-observability-page,public-models-page,public-marketing-pages
+        run: npm run status:probes
+
+      - name: Build public observability snapshot
+        if: always()
+        env:
+          AURA_STATUS_PREVIOUS_SNAPSHOT: infra/evals/reports/status/previous/status.json
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: github-actions
+        shell: bash
+        run: |
+          mkdir -p infra/evals/reports/status/previous
+          git fetch origin +gh-pages:refs/remotes/origin/gh-pages || true
+          git show origin/gh-pages:observability/status.json \
+            > infra/evals/reports/status/previous/status.json || true
+          npm run status:snapshot
+
+      - uses: actions/checkout@v5
+        if: always()
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Publish public observability snapshot
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p pages/observability
+          cp interface/public/observability/status.json pages/observability/status.json
+          bash infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "Update observability status snapshot" \
+            observability/status.json
+
+      - name: Upload observability snapshot
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: aura-observability
+          path: |
+            interface/public/observability/status.json
+            infra/evals/reports/status/status.json
+            infra/evals/reports/status/checks

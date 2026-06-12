@@ -1,0 +1,383 @@
+.statusPage {
+  min-height: calc(100vh - var(--marketing-main-bottom-space, 0px));
+  min-height: calc(100dvh - var(--marketing-main-bottom-space, 0px));
+  box-sizing: border-box;
+  padding: 112px 32px 72px;
+  overflow-y: auto;
+  background:
+    radial-gradient(
+      90% 58% at 50% -12%,
+      rgba(50, 174, 130, 0.22) 0%,
+      rgba(50, 174, 130, 0) 58%
+    ),
+    linear-gradient(180deg, #101316 0%, #0b0d10 54%, #111418 100%);
+  color: #eef2f4;
+}
+
+:where([data-ui-mode='public']) .statusPage {
+  padding-inline-start: calc(32px + var(--aura-sidebar-width, 0px));
+}
+
+.statusHero,
+.statusSummary,
+.statusGroups,
+.statusNotice {
+  width: min(100%, 1040px);
+  margin-inline: auto;
+}
+
+.statusHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
+  gap: 32px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.statusHeroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  min-width: 0;
+}
+
+.statusEyebrow {
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #66d0a5;
+}
+
+.statusHero h1 {
+  margin: 0;
+  font-size: clamp(38px, 5vw, 58px);
+  line-height: 1;
+  font-weight: 520;
+  letter-spacing: 0;
+  color: #fff;
+}
+
+.statusHero p {
+  margin: 0;
+  max-width: 650px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: rgba(238, 242, 244, 0.72);
+}
+
+.statusOverallPanel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-content: end;
+  min-height: 112px;
+  padding: 20px;
+  border: 1px solid rgba(238, 242, 244, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.statusOverallText {
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 560;
+  color: #fff;
+}
+
+.statusUpdated {
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(238, 242, 244, 0.58);
+}
+
+.statusSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(238, 242, 244, 0.09);
+  background: rgba(238, 242, 244, 0.09);
+}
+
+.statusMetric {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  min-width: 0;
+  padding: 18px;
+  background: rgba(15, 18, 21, 0.86);
+}
+
+.statusMetricIcon {
+  display: inline-flex;
+  color: #9ac7ff;
+}
+
+.statusMetricValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 600;
+  color: #fff;
+}
+
+.statusMetricLabel {
+  grid-column: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(238, 242, 244, 0.6);
+}
+
+.statusNotice,
+.statusEmpty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 190, 80, 0.28);
+  background: rgba(120, 82, 18, 0.2);
+  color: #ffdba0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.statusNotice {
+  margin-bottom: 22px;
+}
+
+.statusGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+}
+
+.statusGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statusGroup h2 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 720;
+  letter-spacing: 0;
+  color: rgba(238, 242, 244, 0.62);
+}
+
+.statusFeatureList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.statusFeature {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 18px;
+  border: 1px solid rgba(238, 242, 244, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.statusFeatureTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 0;
+}
+
+.statusFeatureTitle {
+  min-width: 0;
+}
+
+.statusFeatureTitle h3 {
+  margin: 0 0 5px;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 620;
+  letter-spacing: 0;
+  color: #fff;
+}
+
+.statusFeatureTitle p,
+.statusFeatureMessage {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(238, 242, 244, 0.64);
+}
+
+.statusFeatureMessage {
+  color: rgba(238, 242, 244, 0.78);
+}
+
+.statusFeatureMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.statusFeatureMeta span,
+.statusOptional {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid rgba(238, 242, 244, 0.08);
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(238, 242, 244, 0.62);
+  background: rgba(15, 18, 21, 0.52);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid currentColor;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.statusBadge-operational {
+  color: #60d39b;
+  background: rgba(47, 177, 120, 0.12);
+}
+
+.statusBadge-degraded,
+.statusBadge-maintenance {
+  color: #f5c66a;
+  background: rgba(245, 198, 106, 0.12);
+}
+
+.statusBadge-partial_outage,
+.statusBadge-major_outage {
+  color: #ff7c7c;
+  background: rgba(255, 124, 124, 0.12);
+}
+
+.statusBadge-unknown {
+  color: #aeb7c2;
+  background: rgba(174, 183, 194, 0.12);
+}
+
+.statusChecks {
+  display: grid;
+  gap: 1px;
+  overflow-x: auto;
+  border: 1px solid rgba(238, 242, 244, 0.08);
+  background: rgba(238, 242, 244, 0.08);
+}
+
+.statusCheckHeader,
+.statusCheckRow {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.45fr) minmax(92px, 0.6fr) minmax(82px, 0.5fr) minmax(96px, 0.65fr);
+  min-width: 580px;
+}
+
+.statusCheckHeader span,
+.statusCheckRow span {
+  min-width: 0;
+  padding: 10px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(10, 12, 15, 0.72);
+  font-size: 12px;
+  line-height: 1.25;
+  color: rgba(238, 242, 244, 0.68);
+}
+
+.statusCheckHeader span {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(238, 242, 244, 0.48);
+}
+
+.statusCheckName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusOptional {
+  min-height: 18px;
+  padding-inline: 6px;
+  font-size: 10px;
+}
+
+.statusCheckState {
+  text-transform: uppercase;
+  font-weight: 720;
+}
+
+.statusCheckPass {
+  color: #60d39b !important;
+}
+
+.statusCheckWarn,
+.statusCheckSkip {
+  color: #f5c66a !important;
+}
+
+.statusCheckFail {
+  color: #ff7c7c !important;
+}
+
+.statusCheckUnknown {
+  color: #aeb7c2 !important;
+}
+
+@media (max-width: 860px) {
+  .statusPage {
+    padding: 88px 18px 56px;
+  }
+
+  :where([data-ui-mode='public']) .statusPage {
+    padding-inline-start: 18px;
+  }
+
+  .statusHero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .statusSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statusFeatureTop {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .statusHero h1 {
+    font-size: 36px;
+  }
+
+  .statusSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .statusFeature {
+    padding: 14px;
+  }
+}

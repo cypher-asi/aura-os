@@ -64,6 +64,7 @@ const MARKETING_PATH_BG: Readonly<Record<string, string>> = {
   "/pricing": "#090909",
   "/models": "#090909",
   "/download": "#090909",
+  "/observability": "#090909",
 };
 
 const DEFAULT_MARKETING_BG = "#000";

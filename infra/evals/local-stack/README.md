@@ -254,7 +254,7 @@ can pass the isolated stack while failing aura-router proxy auth.
 
 At that point the typical local URLs are:
 
-- Aura frontend: `http://127.0.0.1:4317`
+- Aura frontend: `http://127.0.0.1:4173`
 - Aura server: `http://127.0.0.1:3190`
 - aura-network: `http://127.0.0.1:3401`
 - aura-storage: `http://127.0.0.1:3402`

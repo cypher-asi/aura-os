@@ -1,16 +1,17 @@
 {
-  "agents": "Tác nhân",
-  "blog": "Blog",
-  "capabilities": "Khả năng",
-  "changelog": "Nhật ký thay đổi",
   "chat": "Trò chuyện",
+  "agents": "Tác nhân",
   "code": "Mã",
-  "downloads": "Tải xuống",
-  "expertise": "chuyên môn",
-  "feedback": "Phản hồi",
-  "industries": "ngành công nghiệp",
-  "models": "Mô hình",
   "os": "OS",
   "pricing": "Giá",
-  "resources": "Tài nguyên"
+  "blog": "Blog",
+  "changelog": "Nhật ký thay đổi",
+  "downloads": "Tải xuống",
+  "feedback": "Phản hồi",
+  "models": "Mô hình",
+  "observability": "Observability",
+  "resources": "Tài nguyên",
+  "expertise": "chuyên môn",
+  "capabilities": "Khả năng",
+  "industries": "ngành công nghiệp"
 }

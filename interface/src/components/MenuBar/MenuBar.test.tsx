@@ -214,6 +214,18 @@ describe("MenuBar", () => {
     expect(openChangelog).toHaveBeenCalledTimes(1);
   });
 
+  it("Help > Observability navigates in-app when logged in", async () => {
+    isAuthenticatedMock = true;
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const user = userEvent.setup();
+    renderMenuBar();
+    await user.click(screen.getByRole("menuitem", { name: "Help" }));
+    await user.click(screen.getByRole("menuitem", { name: /^Observability$/ }));
+    expect(mockNavigate).toHaveBeenCalledWith("/observability");
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
   it("Help > Downloads opens aura.ai/download in a new tab when logged out", async () => {
     isAuthenticatedMock = false;
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
@@ -223,6 +235,22 @@ describe("MenuBar", () => {
     await user.click(screen.getByRole("menuitem", { name: /Downloads/ }));
     expect(openSpy).toHaveBeenCalledWith(
       "https://aura.ai/download",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
+  it("Help > Observability opens aura.ai/observability in a new tab when logged out", async () => {
+    isAuthenticatedMock = false;
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const user = userEvent.setup();
+    renderMenuBar();
+    await user.click(screen.getByRole("menuitem", { name: "Help" }));
+    await user.click(screen.getByRole("menuitem", { name: /^Observability$/ }));
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://aura.ai/observability",
       "_blank",
       "noopener,noreferrer",
     );

@@ -1,16 +1,17 @@
 {
-  "agents": "Aracılar",
-  "blog": "Blog",
-  "capabilities": "Yetenekler",
-  "changelog": "Değişiklikler",
   "chat": "Sohbet",
+  "agents": "Aracılar",
   "code": "Kod",
-  "downloads": "İndirilenler",
-  "expertise": "Uzmanlık",
-  "feedback": "Geri bildirim",
-  "industries": "Endüstriler",
-  "models": "Modeller",
   "os": "OS",
   "pricing": "Fiyatlandırma",
-  "resources": "Kaynaklar"
+  "blog": "Blog",
+  "changelog": "Değişiklikler",
+  "downloads": "İndirilenler",
+  "feedback": "Geri bildirim",
+  "models": "Modeller",
+  "observability": "Observability",
+  "resources": "Kaynaklar",
+  "expertise": "Uzmanlık",
+  "capabilities": "Yetenekler",
+  "industries": "Endüstriler"
 }

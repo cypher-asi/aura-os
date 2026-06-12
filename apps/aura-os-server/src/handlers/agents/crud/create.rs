@@ -101,6 +101,7 @@ fn hydrate_local_state(
     prepared: &PreparedCreate,
 ) -> ApiResult<Agent> {
     let mut agent = agent_from_network(net_agent);
+    apply_submitted_org_fallback(&mut agent, prepared);
     state
         .agent_service
         .save_agent_runtime_config(&agent.agent_id, &prepared.runtime_config)
@@ -112,6 +113,17 @@ fn hydrate_local_state(
     agent.local_workspace_path = prepared.submitted_local_path.clone();
     let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(agent)
+}
+
+fn apply_submitted_org_fallback(agent: &mut Agent, prepared: &PreparedCreate) {
+    if agent.org_id.is_some() {
+        return;
+    }
+    agent.org_id = prepared
+        .net_req
+        .org_id
+        .as_deref()
+        .and_then(|org_id| org_id.parse().ok());
 }
 
 pub(crate) fn prepare_create(body: CreateAgentRequest) -> ApiResult<PreparedCreate> {
@@ -183,4 +195,71 @@ fn trim_local_path(value: Option<&str>) -> Option<String> {
             Some(trimmed.to_string())
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aura_os_core::OrgId;
+
+    fn create_request(org_id: OrgId) -> CreateAgentRequest {
+        CreateAgentRequest {
+            org_id: Some(org_id),
+            name: "Status Probe".to_string(),
+            role: "status-probe".to_string(),
+            personality: "Deterministic".to_string(),
+            system_prompt: "Reply exactly as requested.".to_string(),
+            skills: vec![],
+            icon: None,
+            machine_type: Some("local".to_string()),
+            adapter_type: Some("aura_harness".to_string()),
+            environment: Some("local_host".to_string()),
+            auth_source: Some("aura_managed".to_string()),
+            integration_id: None,
+            default_model: None,
+            tags: None,
+            listing_status: None,
+            expertise: None,
+            local_workspace_path: None,
+            permissions: aura_os_core::AgentPermissions::default(),
+            intent_classifier: None,
+        }
+    }
+
+    #[test]
+    fn submitted_org_fallback_preserves_local_agent_identity() {
+        let org_id = OrgId::new();
+        let prepared = prepare_create(create_request(org_id)).expect("valid create request");
+        let net_agent = aura_os_network::NetworkAgent {
+            id: aura_os_core::AgentId::new().to_string(),
+            name: "Status Probe".to_string(),
+            role: Some("status-probe".to_string()),
+            personality: Some("Deterministic".to_string()),
+            system_prompt: Some("Reply exactly as requested.".to_string()),
+            skills: Some(vec![]),
+            icon: None,
+            harness: None,
+            machine_type: Some("local".to_string()),
+            vm_id: None,
+            wallet_address: None,
+            user_id: "user-1".to_string(),
+            org_id: None,
+            profile_id: None,
+            tags: None,
+            listing_status: None,
+            expertise: None,
+            jobs: None,
+            revenue_usd: None,
+            reputation: None,
+            permissions: aura_os_core::AgentPermissions::default(),
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        };
+        let mut agent = agent_from_network(&net_agent);
+
+        apply_submitted_org_fallback(&mut agent, &prepared);
+
+        assert_eq!(agent.org_id, Some(org_id));
+    }
 }
