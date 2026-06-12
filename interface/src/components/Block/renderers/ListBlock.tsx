@@ -145,9 +145,9 @@ export function ListBlock({ entry, defaultExpanded }: ListBlockProps) {
       .join("\n");
   };
 
-  const countLabel = !entry.pending
-    ? `${rows.length} ${rows.length === 1 ? "item" : "items"}`
-    : undefined;
+  // Bare count, and only when there is something to count — "0 ITEMS"
+  // on every empty listing was noise.
+  const countLabel = !entry.pending && rows.length > 0 ? String(rows.length) : undefined;
 
   return (
     <Block

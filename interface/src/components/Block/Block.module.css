@@ -133,15 +133,13 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-  flex: 1;
   /*
-   * Reserve breathing room between the ellipsized title and whatever
-   * trailing labels (EXIT N, summaries, badges) render on the right.
-   * Without this, a long command title truncates right up against the
-   * red EXIT badge and reads as visual overlap even though the 8px
-   * flex gap is technically present.
+   * Shrink-to-fit: the title takes only the width it needs so the
+   * summary reads immediately after it ("Read file  page.tsx") instead
+   * of being pushed to the middle of the row. The summary's flex: 1
+   * absorbs the remaining space, keeping trailing labels right-aligned.
    */
-  padding-right: 8px;
+  flex: 0 1 auto;
 }
 
 .blockTitleText {

@@ -401,7 +401,7 @@ describe("ToolCallBlock (Block dispatch)", () => {
       expect(screen.getByText("src/main.rs")).toBeInTheDocument();
       expect(screen.getByText("src/lib.rs")).toBeInTheDocument();
       expect(screen.getByText("Cargo.toml")).toBeInTheDocument();
-      expect(screen.getByText("3 items")).toBeInTheDocument();
+      expect(screen.getByText("3")).toBeInTheDocument();
     });
 
     it("renders list rows from a base64 stdout envelope for list_files", () => {
@@ -426,7 +426,7 @@ describe("ToolCallBlock (Block dispatch)", () => {
       );
       expect(screen.getByText("README.md")).toBeInTheDocument();
       expect(screen.getByText("package.json")).toBeInTheDocument();
-      expect(screen.getByText("2 items")).toBeInTheDocument();
+      expect(screen.getByText("2")).toBeInTheDocument();
     });
 
     it("splits search_code stdout into file:line + match columns", () => {
