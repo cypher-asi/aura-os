@@ -122,9 +122,9 @@
       "status": "unknown",
       "lastCheckedAt": null,
       "checksPassed": 0,
-      "checksTotal": 7,
+      "checksTotal": 6,
       "checksFailed": 0,
-      "checksUnknown": 7,
+      "checksUnknown": 6,
       "latencyP95Ms": null,
       "message": "No recent result",
       "checks": [
@@ -150,16 +150,6 @@
         },
         {
           "id": "public-feedback-api",
-          "required": false,
-          "status": "unknown",
-          "featureStatus": "unknown",
-          "message": "No recent result",
-          "checkedAt": null,
-          "latencyMs": null,
-          "evidence": {}
-        },
-        {
-          "id": "public-models-api",
           "required": false,
           "status": "unknown",
           "featureStatus": "unknown",

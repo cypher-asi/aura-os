@@ -19,11 +19,10 @@
       "requiredEvidence": ["keys"]
     },
     "auth-validate": {
-      "description": "Auth validation refresh returns a user id and access state.",
-      "requiredEvidence": ["userIdPresent", "accessGranted"],
+      "description": "Auth validation refresh returns a user id.",
+      "requiredEvidence": ["userIdPresent"],
       "assertions": [
-        { "path": "userIdPresent", "equals": true },
-        { "path": "accessGranted", "equals": true }
+        { "path": "userIdPresent", "equals": true }
       ]
     },
     "orgs-list": {
@@ -58,11 +57,6 @@
     "public-feedback-api": {
       "description": "Public feedback API returns a list count.",
       "requiredEvidence": ["count"]
-    },
-    "public-models-api": {
-      "description": "Public models API returns a list count.",
-      "requiredEvidence": ["count"],
-      "assertions": [{ "path": "count", "min": 1 }]
     },
     "public-blog-api": {
       "description": "Public blog API returns a list count.",

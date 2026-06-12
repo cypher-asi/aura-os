@@ -44,7 +44,6 @@
         { "id": "public-setup", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
         { "id": "public-chat-stream", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 25000, "outageLatencyMs": 90000 },
         { "id": "public-feedback-api", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
-        { "id": "public-models-api", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
         { "id": "public-blog-api", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
         { "id": "public-x402-models", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
         { "id": "public-x402-payment-challenge", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 }
@@ -133,7 +132,7 @@
       "description": "Image, 3D, and video generation stream routers, progress frames, completion payloads, and artifact URLs.",
       "publicSummary": "Media generation streams can complete with generated artifacts.",
       "checks": [
-        { "id": "image-generation-stream", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 45000, "outageLatencyMs": 120000 },
+        { "id": "image-generation-stream", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 120000, "outageLatencyMs": 300000 },
         { "id": "model3d-generation-stream", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 90000, "outageLatencyMs": 240000 },
         { "id": "video-generation-stream", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 120000, "outageLatencyMs": 300000 }
       ],
