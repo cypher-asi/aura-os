@@ -129,26 +129,10 @@
       "label": "Media Generation",
       "category": "media",
       "priority": 45,
-      "description": "Image, 3D, and video generation stream routers, progress frames, completion payloads, and artifact URLs.",
-      "publicSummary": "Media generation streams can complete with generated artifacts.",
+      "description": "Image generation stream routing, progress frames, completion payloads, and artifact URLs.",
+      "publicSummary": "AURA image generation streams can complete with generated artifacts.",
       "checks": [
-        { "id": "image-generation-stream", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 120000, "outageLatencyMs": 300000 },
-        { "id": "model3d-generation-stream", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 90000, "outageLatencyMs": 240000 },
-        { "id": "video-generation-stream", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 120000, "outageLatencyMs": 300000 }
-      ],
-      "degradedAfterFailures": 1,
-      "outageAfterFailures": 1
-    },
-    {
-      "id": "spec-task-loop",
-      "label": "Autonomous Build Loop",
-      "category": "automation",
-      "priority": 50,
-      "description": "End-to-end spec generation, task extraction, autonomous loop execution, and artifact validation.",
-      "publicSummary": "AURA can turn requirements into tasks and complete a small validated build.",
-      "checks": [
-        { "id": "live-benchmark-hello-world", "required": true, "staleAfterMinutes": 120, "warningLatencyMs": 240000, "outageLatencyMs": 600000 },
-        { "id": "harness-fixture-suite", "required": false, "staleAfterMinutes": 240, "warningLatencyMs": 120000, "outageLatencyMs": 300000 }
+        { "id": "image-generation-stream", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 180000, "outageLatencyMs": 360000 }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 1

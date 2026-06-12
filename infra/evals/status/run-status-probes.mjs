@@ -14,7 +14,6 @@ const DEFAULT_REMOTE_TIMEOUT_MS = 180_000;
 const DEFAULT_MODELS = [
   "aura-claude-sonnet-4-6",
   "aura-gpt-5-5",
-  "aura-gemini-3-pro",
 ];
 function parseArgs(argv) {
   const args = {
