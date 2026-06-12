@@ -434,7 +434,9 @@ async fn run_event_worker(
         } else {
             event_rx.recv().await
         };
-        let Some((event, event_type)) = received else { break };
+        let Some((event, event_type)) = received else {
+            break;
+        };
         ctx.last_forwarder_event_at
             .store(current_millis(), Ordering::Relaxed);
         if event_type == "text_delta" && delta_text(&event).is_some() {
@@ -480,7 +482,9 @@ async fn flush_pending_text_delta(
     live_analyzer: &mut LiveAnalyzer,
     pending: &mut Option<PendingTextDelta>,
 ) {
-    let Some(buffered) = pending.take() else { return };
+    let Some(buffered) = pending.take() else {
+        return;
+    };
     let (event, event_type) = buffered.into_event();
     handle_forwarder_event(ctx.handler_inputs(), live_analyzer, event, event_type).await;
 }
@@ -1153,7 +1157,10 @@ mod pending_text_delta_tests {
         pending.append(&json!({ "task_id": "abc", "text": ", world" }));
         let (event, event_type) = pending.into_event();
         assert_eq!(event_type, "text_delta");
-        assert_eq!(event.get("text").and_then(|v| v.as_str()), Some("Hello, world"));
+        assert_eq!(
+            event.get("text").and_then(|v| v.as_str()),
+            Some("Hello, world")
+        );
         // Template fields (routing keys) survive the merge verbatim.
         assert_eq!(event.get("project_id").and_then(|v| v.as_str()), Some("p1"));
     }

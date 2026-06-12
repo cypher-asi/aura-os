@@ -138,7 +138,7 @@ mod tests {
         // Dropping the session dropped the sole `commands_tx`, so the
         // receiver now observes a closed channel — the signal that the
         // ws-bridge writer ends and the slot is released.
-        assert!(matches!(commands_rx.recv().await, None));
+        assert!(commands_rx.recv().await.is_none());
     }
 
     #[tokio::test]

@@ -127,6 +127,10 @@ fn run_cargo_check_json(workspace_path: &str) -> Option<(String, bool)> {
 }
 
 #[cfg(test)]
+// The std `ENV_GUARD` is deliberately held across awaits: it
+// serializes whole env-mutating test bodies (process-global state), so
+// an async-aware mutex would add ceremony without changing behavior.
+#[allow(clippy::await_holding_lock)]
 mod tests {
     use super::*;
     use std::sync::Mutex;

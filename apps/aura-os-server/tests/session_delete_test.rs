@@ -69,8 +69,14 @@ async fn delete_session_removes_session_from_storage() {
         .expect("create session");
 
     assert!(!session.id.is_empty());
+    // `include_empty`: the freshly created session has no events yet,
+    // and the plain list (migration 0014 parity) filters event-less rows.
     assert_eq!(
-        storage.list_sessions(&pa.id, TEST_JWT).await.unwrap().len(),
+        storage
+            .list_sessions_including_empty(&pa.id, TEST_JWT)
+            .await
+            .unwrap()
+            .len(),
         1,
     );
 
@@ -84,8 +90,12 @@ async fn delete_session_removes_session_from_storage() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
-    // Assert: session is gone from storage.
-    let sessions = storage.list_sessions(&pa.id, TEST_JWT).await.unwrap();
+    // Assert: session is gone from storage. `include_empty` so the
+    // check proves real deletion rather than empty-row filtering.
+    let sessions = storage
+        .list_sessions_including_empty(&pa.id, TEST_JWT)
+        .await
+        .unwrap();
     assert!(sessions.is_empty(), "session should be removed");
 
     // A follow-up GET should now 404 at the proxy.

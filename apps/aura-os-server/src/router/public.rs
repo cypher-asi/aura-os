@@ -70,7 +70,10 @@ pub(super) fn public_routes() -> Router<AppState> {
         // returned, in authored (`sortOrder`) order, resolved with the
         // server's `X-Internal-Token` (no caller JWT).
         .route("/api/public/os", get(public::list_published_os))
-        .route("/api/public/os/:slug", get(public::get_published_os_by_slug))
+        .route(
+            "/api/public/os/:slug",
+            get(public::get_published_os_by_slug),
+        )
         // Anonymous documentation reads. Doc pages are notes under the
         // reserved `AURA_DOCS_PROJECT_ID`; only published rows are returned,
         // in authored (`sortOrder`) order, resolved with the server's

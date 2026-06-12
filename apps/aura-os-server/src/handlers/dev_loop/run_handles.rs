@@ -82,11 +82,7 @@ pub(super) fn save(state: &AppState, handle: &RunHandle) {
 /// Delete the handle for `(project_id, agent_instance_id)`
 /// unconditionally. Used by explicit stop / displacement paths where
 /// the caller owns the slot.
-pub(super) fn remove(
-    state: &AppState,
-    project_id: ProjectId,
-    agent_instance_id: AgentInstanceId,
-) {
+pub(super) fn remove(state: &AppState, project_id: ProjectId, agent_instance_id: AgentInstanceId) {
     let path = handle_path(state, project_id, agent_instance_id);
     match std::fs::remove_file(&path) {
         Ok(()) => {}

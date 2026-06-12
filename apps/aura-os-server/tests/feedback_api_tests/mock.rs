@@ -491,7 +491,7 @@ pub(crate) async fn build_test_app_with_feedback_network(
     let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
-    let (app, _state) = build_test_app_from_store(
+    let (app, state) = build_test_app_from_store(
         store,
         store_dir.path().to_path_buf(),
         Some(Arc::new(NetworkClient::with_base_url(&format!(
@@ -501,6 +501,14 @@ pub(crate) async fn build_test_app_with_feedback_network(
         None,
         None,
     );
+    // Align the cached test session's profile with the profile the mock
+    // network attributes every request to (`viewer_profile_id`), the
+    // same way real aura-network resolves the profile from the JWT.
+    // Without this, author-gated routes (feedback status PATCH) see
+    // `profile_id: None` and 403 the post's own creator.
+    if let Some(mut cached) = state.validation_cache.get_mut(TEST_JWT) {
+        cached.session.profile_id = "00000000-0000-0000-0000-000000000001".parse().ok();
+    }
     (app, store_dir)
 }
 

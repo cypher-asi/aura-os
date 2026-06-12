@@ -178,8 +178,7 @@ pub(super) async fn list_published_notes(
         .notes
         .iter()
         .filter(|n| {
-            n.project_id.as_deref() == Some(&project_id)
-                && n.status.as_deref() == Some("published")
+            n.project_id.as_deref() == Some(&project_id) && n.status.as_deref() == Some("published")
         })
         .cloned()
         .collect();

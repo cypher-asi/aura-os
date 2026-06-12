@@ -133,7 +133,10 @@ impl MixpanelTracker {
         {
             self.last_client_meta.clear();
         }
-        let mut entry = self.last_client_meta.entry(user_id.to_string()).or_default();
+        let mut entry = self
+            .last_client_meta
+            .entry(user_id.to_string())
+            .or_default();
         if let Some(version) = version {
             entry.app_version = Some(version.to_string());
         }
@@ -429,7 +432,10 @@ mod tests {
         // Server-emitted session_active is always from a verified session,
         // so it must carry is_authenticated=true to match the client SDK.
         assert_eq!(props.get("is_authenticated"), Some(&json!(true)));
-        assert_eq!(props.get("app_version"), Some(&json!("0.1.0-nightly.640.1")));
+        assert_eq!(
+            props.get("app_version"),
+            Some(&json!("0.1.0-nightly.640.1"))
+        );
         assert_eq!(props.get("platform"), Some(&json!("desktop")));
         assert_eq!(props.get("ip"), Some(&json!("203.0.113.7")));
         assert_eq!(props.get("$os"), Some(&json!("Windows")));

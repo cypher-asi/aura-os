@@ -234,7 +234,7 @@ pub(crate) async fn extract_tasks(
     session
         .commands_tx
         .try_send(HarnessInbound::UserMessage(UserMessage {
-            content: task_extraction_prompt(&project_id),
+            content: task_extraction_prompt(project_id),
             tool_hints: Some(task_extraction_tool_hints()),
             attachments: None,
         }))

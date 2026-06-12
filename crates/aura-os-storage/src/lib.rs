@@ -10,6 +10,9 @@ pub use client::StorageClient;
 pub use error::StorageError;
 pub use types::{
     CreateLogEntryRequest,
+    CreateNoteCommentRequest,
+    CreateNoteFolderRequest,
+    CreateNoteRequest,
     // Process types
     CreateProcessArtifactRequest,
     CreateProcessConnectionRequest,
@@ -21,9 +24,6 @@ pub use types::{
     CreateProjectAgentRequest,
     // Project artifact types
     CreateProjectArtifactRequest,
-    CreateNoteCommentRequest,
-    CreateNoteFolderRequest,
-    CreateNoteRequest,
     CreateSessionEventRequest,
     CreateSessionRequest,
     CreateSpecRequest,

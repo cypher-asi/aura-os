@@ -32,8 +32,5 @@ pub trait ChatConnector: Send + Sync {
     /// [`InboundHandler::on_message`]. Takes `Arc<Self>` so the loop can hand
     /// owned clones to spawned tasks. Implementations should be resilient to
     /// transient transport errors and keep polling rather than returning.
-    async fn run(
-        self: Arc<Self>,
-        handler: Arc<dyn InboundHandler>,
-    ) -> Result<(), ChannelError>;
+    async fn run(self: Arc<Self>, handler: Arc<dyn InboundHandler>) -> Result<(), ChannelError>;
 }

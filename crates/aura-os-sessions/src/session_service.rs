@@ -445,7 +445,12 @@ impl SessionService {
         let mut closed = Vec::new();
         let now = Utc::now();
         for aid in &agent_ids {
-            let sessions = storage.list_sessions(aid, &jwt).await?;
+            // `include_empty`: the plain list filters event-less rows
+            // (migration 0014), but a stale *empty* active session is
+            // exactly the kind of row this sweep must retire — without
+            // this, a session created by a reset and never written to
+            // stays "active" forever.
+            let sessions = storage.list_sessions_including_empty(aid, &jwt).await?;
             for ss in sessions {
                 if ss.status.as_deref() == Some("active") {
                     let req = aura_os_storage::UpdateSessionRequest {

@@ -48,7 +48,7 @@ pub(crate) async fn delegate_agent_task(
 ) -> ApiResult<Json<DelegateAgentTaskResponse>> {
     let storage = state.require_storage_client()?;
     let agent_id_str = agent_id.to_string();
-    let bindings = find_matching_project_agents(&state, &storage, &jwt, &agent_id_str).await;
+    let bindings = find_matching_project_agents(&state, storage, &jwt, &agent_id_str).await;
     let preferred_project_id = req
         .context
         .as_ref()

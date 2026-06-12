@@ -77,7 +77,12 @@ async fn reset_session_retires_prior_active_sessions() {
         .expect("create s2");
 
     // Sanity: both are stored as active before we reset.
-    let before = storage.list_sessions(&pa.id, TEST_JWT).await.unwrap();
+    // `include_empty`: these sessions carry no events, and the plain
+    // list (migration 0014 parity) filters event-less rows.
+    let before = storage
+        .list_sessions_including_empty(&pa.id, TEST_JWT)
+        .await
+        .unwrap();
     assert_eq!(before.len(), 2);
     for s in &before {
         assert_eq!(s.status.as_deref(), Some("active"));
@@ -94,7 +99,10 @@ async fn reset_session_retires_prior_active_sessions() {
         .unwrap();
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
-    let after = storage.list_sessions(&pa.id, TEST_JWT).await.unwrap();
+    let after = storage
+        .list_sessions_including_empty(&pa.id, TEST_JWT)
+        .await
+        .unwrap();
 
     // One brand-new active session from the reset, plus the two prior
     // sessions now flipped to completed.

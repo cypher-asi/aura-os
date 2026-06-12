@@ -111,7 +111,10 @@ pub(crate) async fn require_verified_session(
                 .headers()
                 .get("x-app-platform")
                 .and_then(|v| v.to_str().ok());
-            let user_agent = req.headers().get("user-agent").and_then(|v| v.to_str().ok());
+            let user_agent = req
+                .headers()
+                .get("user-agent")
+                .and_then(|v| v.to_str().ok());
             let client_ip = client_ip_from_headers(req.headers());
             mp.track_session_active(
                 &session.user_id,

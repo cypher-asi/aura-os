@@ -87,10 +87,7 @@ pub(crate) fn strip_frontmatter(markdown: &str) -> (String, String) {
     }
 
     let frontmatter = fm_lines.join("\n");
-    let body = body_lines
-        .join("\n")
-        .trim_start_matches('\n')
-        .to_string();
+    let body = body_lines.join("\n").trim_start_matches('\n').to_string();
     (frontmatter, body)
 }
 
@@ -433,14 +430,14 @@ pub(crate) async fn import_project_notes(
         };
 
         let slug = slugify(&note.title);
-        let (body_url, body_s3_key) =
-            match upload_note_body(&state, &jwt, &slug, &note.body).await {
-                Ok(pair) => pair,
-                Err(e) => {
-                    summary.errors.push(format!("{}: {e}", note.rel_path));
-                    continue;
-                }
-            };
+        let (body_url, body_s3_key) = match upload_note_body(&state, &jwt, &slug, &note.body).await
+        {
+            Ok(pair) => pair,
+            Err(e) => {
+                summary.errors.push(format!("{}: {e}", note.rel_path));
+                continue;
+            }
+        };
 
         let req = CreateNoteRequest {
             title: note.title.clone(),
@@ -563,8 +560,9 @@ mod tests {
 
     #[test]
     fn parse_frontmatter_reads_known_keys() {
-        let (fm, _) =
-            strip_frontmatter("---\ncreated_at: \"2026-04-17\"\ncreated_by: u1\nother: x\n---\n\nB");
+        let (fm, _) = strip_frontmatter(
+            "---\ncreated_at: \"2026-04-17\"\ncreated_by: u1\nother: x\n---\n\nB",
+        );
         let parsed = parse_frontmatter(&fm);
         assert_eq!(parsed.created_at.as_deref(), Some("2026-04-17"));
         assert_eq!(parsed.created_by.as_deref(), Some("u1"));
@@ -642,7 +640,10 @@ mod tests {
         assert_eq!(top.created_at.as_deref(), Some("2026-01-01"));
         assert_eq!(top.created_by.as_deref(), Some("alice"));
 
-        let leaf = notes.iter().find(|n| n.rel_path == "sub/deep/leaf.md").unwrap();
+        let leaf = notes
+            .iter()
+            .find(|n| n.rel_path == "sub/deep/leaf.md")
+            .unwrap();
         assert_eq!(leaf.title, "plain leaf line");
     }
 

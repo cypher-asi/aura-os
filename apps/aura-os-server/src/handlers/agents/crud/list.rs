@@ -213,12 +213,7 @@ fn heal_missing_remote_org(net_agents: &mut [NetworkAgent], org_id: &str) -> Vec
     let mut healed = Vec::new();
     for na in net_agents.iter_mut() {
         let is_remote = na.machine_type.as_deref() == Some("remote");
-        let missing_org = na
-            .org_id
-            .as_deref()
-            .map(str::trim)
-            .unwrap_or("")
-            .is_empty();
+        let missing_org = na.org_id.as_deref().map(str::trim).unwrap_or("").is_empty();
         if is_remote && missing_org {
             na.org_id = Some(org_id.to_string());
             healed.push(na.id.clone());
@@ -492,7 +487,10 @@ mod tests {
         assert_eq!(normalized_org_id(None), None);
         assert_eq!(normalized_org_id(Some("")), None);
         assert_eq!(normalized_org_id(Some("   ")), None);
-        assert_eq!(normalized_org_id(Some("  org-1 ")).as_deref(), Some("org-1"));
+        assert_eq!(
+            normalized_org_id(Some("  org-1 ")).as_deref(),
+            Some("org-1")
+        );
     }
 
     #[test]

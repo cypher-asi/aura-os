@@ -55,7 +55,8 @@ impl ChannelService {
     pub fn create_pending(&self, pending: &PendingLink) -> Result<(), ChannelError> {
         let key = Self::pending_key(&pending.code);
         let value = serde_json::to_vec(pending)?;
-        self.store.put_cf_bytes(CHANNELS_CF, key.as_bytes(), &value)?;
+        self.store
+            .put_cf_bytes(CHANNELS_CF, key.as_bytes(), &value)?;
         Ok(())
     }
 
@@ -83,7 +84,8 @@ impl ChannelService {
     pub fn put_link(&self, link: &ChannelLink) -> Result<(), ChannelError> {
         let key = Self::link_key(link.kind, &link.chat_id);
         let value = serde_json::to_vec(link)?;
-        self.store.put_cf_bytes(CHANNELS_CF, key.as_bytes(), &value)?;
+        self.store
+            .put_cf_bytes(CHANNELS_CF, key.as_bytes(), &value)?;
         self.add_to_index(&link.agent_id, link.kind, &link.chat_id)?;
         Ok(())
     }
@@ -141,7 +143,8 @@ impl ChannelService {
         link.needs_relink = needs;
         let key = Self::link_key(kind, chat_id);
         let value = serde_json::to_vec(&link)?;
-        self.store.put_cf_bytes(CHANNELS_CF, key.as_bytes(), &value)?;
+        self.store
+            .put_cf_bytes(CHANNELS_CF, key.as_bytes(), &value)?;
         Ok(())
     }
 
@@ -156,7 +159,8 @@ impl ChannelService {
     fn write_index(&self, agent_id: &str, refs: &[ChannelLinkRef]) -> Result<(), ChannelError> {
         let key = Self::index_key(agent_id);
         let value = serde_json::to_vec(refs)?;
-        self.store.put_cf_bytes(CHANNELS_CF, key.as_bytes(), &value)?;
+        self.store
+            .put_cf_bytes(CHANNELS_CF, key.as_bytes(), &value)?;
         Ok(())
     }
 

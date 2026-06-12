@@ -499,8 +499,9 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         public_rate_limiter: crate::handlers::public::RateLimiter::new(),
         public_demo_agent_id: Arc::new(OnceCell::new()),
         mixpanel: {
-            let tracker =
-                crate::mixpanel::MixpanelTracker::new(&env_opt("MIXPANEL_TOKEN").unwrap_or_default());
+            let tracker = crate::mixpanel::MixpanelTracker::new(
+                &env_opt("MIXPANEL_TOKEN").unwrap_or_default(),
+            );
             if tracker.is_some() {
                 info!("server-side Mixpanel analytics enabled");
             } else {

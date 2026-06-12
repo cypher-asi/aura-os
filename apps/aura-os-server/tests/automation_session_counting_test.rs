@@ -60,8 +60,11 @@ async fn automation_run_creates_updates_and_ends_storage_session() {
 
     // Sanity: the row landed in mock storage and carries the routing
     // keys subscribers (and `total_sessions` aggregations) need.
+    // `include_empty` because a freshly created automation session has
+    // no `session_events` rows yet, and the plain list (migration 0014
+    // parity) filters `event_count == 0` sessions out.
     let stored = storage
-        .list_sessions(&agent_instance_id.to_string(), TEST_JWT)
+        .list_sessions_including_empty(&agent_instance_id.to_string(), TEST_JWT)
         .await
         .expect("list_sessions should succeed against mock storage");
     assert_eq!(
@@ -215,12 +218,14 @@ async fn parallel_automation_runs_do_not_share_sessions() {
         "concurrent runs must mint distinct session ids"
     );
 
+    // `include_empty`: see the sibling test — fresh automation
+    // sessions carry no events, and the plain list filters them.
     let listed_a = storage
-        .list_sessions(&aiid_a.to_string(), TEST_JWT)
+        .list_sessions_including_empty(&aiid_a.to_string(), TEST_JWT)
         .await
         .expect("list_sessions a");
     let listed_b = storage
-        .list_sessions(&aiid_b.to_string(), TEST_JWT)
+        .list_sessions_including_empty(&aiid_b.to_string(), TEST_JWT)
         .await
         .expect("list_sessions b");
     assert_eq!(listed_a.len(), 1);

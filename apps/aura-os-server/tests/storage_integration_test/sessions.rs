@@ -29,7 +29,12 @@ async fn session_create_list_get_update() {
     assert!(!session.id.is_empty());
     assert_eq!(session.status.as_deref(), Some("active"));
 
-    let sessions = sc.list_sessions(&pai, JWT).await.expect("list sessions");
+    // `include_empty`: the freshly created session has no events yet,
+    // and the plain list (migration 0014 parity) filters event-less rows.
+    let sessions = sc
+        .list_sessions_including_empty(&pai, JWT)
+        .await
+        .expect("list sessions");
     assert_eq!(sessions.len(), 1);
     assert_eq!(sessions[0].id, session.id);
 

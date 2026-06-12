@@ -20,8 +20,12 @@ use crate::error::{StoreError, StoreResult};
 /// family here would require a data migration (existing on-disk
 /// JSON files are keyed by this CF name), so the legacy name is
 /// retained intentionally. Comments only — storage key is stable.
-pub(crate) const CF_NAMES: &[&str] =
-    &["settings", "super_agent_orchestrations", "bug_reports", "channels"];
+pub(crate) const CF_NAMES: &[&str] = &[
+    "settings",
+    "super_agent_orchestrations",
+    "bug_reports",
+    "channels",
+];
 pub(crate) const ZERO_AUTH_SESSION_KEY: &str = "zero_auth_session";
 
 type CfMap = BTreeMap<String, Vec<u8>>;

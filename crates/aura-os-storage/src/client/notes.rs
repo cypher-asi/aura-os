@@ -125,11 +125,7 @@ impl StorageClient {
         .await
     }
 
-    pub async fn delete_note_folder(
-        &self,
-        folder_id: &str,
-        jwt: &str,
-    ) -> Result<(), StorageError> {
+    pub async fn delete_note_folder(&self, folder_id: &str, jwt: &str) -> Result<(), StorageError> {
         validate_url_id(folder_id, "folder_id")?;
         self.delete_authed(
             &format!("{}/api/note-folders/{}", self.base_url, folder_id),

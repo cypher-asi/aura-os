@@ -240,7 +240,7 @@ pub(crate) async fn create_bug_report(
     // a feedback-network failure must never lose the private report or block
     // the user, so we warn and fall back to no linked post. An explicit
     // `feedbackPostId` from the client (rare) wins over creating a new one.
-    let profile_id_str = session.profile_id.clone().map(|id| id.to_string());
+    let profile_id_str = session.profile_id.map(|id| id.to_string());
     let feedback_post_id = match req.feedback_post_id.clone() {
         Some(existing) if !existing.trim().is_empty() => Some(existing),
         _ => match create_feedback_bug_post(

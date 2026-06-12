@@ -1168,6 +1168,11 @@ fn first_non_empty<'a>(a: &'a str, b: &'a str) -> Option<&'a str> {
 }
 
 #[cfg(test)]
+// The std `ENV_LOCK` guard is deliberately held across awaits: it
+// serializes whole env-mutating test bodies (process-global state), so
+// an async-aware mutex would add ceremony without changing behavior —
+// the runtime is single-threaded (`current_thread`) per test.
+#[allow(clippy::await_holding_lock)]
 mod tests {
     use super::*;
     use aura_os_harness::test_support::FakeHarness;

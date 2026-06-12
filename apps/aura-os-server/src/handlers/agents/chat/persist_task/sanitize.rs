@@ -77,9 +77,7 @@ fn match_xml_tool_tag(rest: &str) -> Option<usize> {
 /// marker has neither `name="` nor a `>` before its `]`, so it returns
 /// `None`.
 fn match_hybrid_tool_use(rest: &str) -> Option<usize> {
-    let bound = rest
-        .find(|c: char| c == ']' || c == '\n' || c == '\r')
-        .unwrap_or(rest.len());
+    let bound = rest.find([']', '\n', '\r']).unwrap_or(rest.len());
     let window = &rest[..bound];
     if !window.contains("name=\"") {
         return None;

@@ -138,7 +138,6 @@ async fn concurrent_agents_stress_32_partitions() {
     let parallel_started_at = Instant::now();
     let opens = (0..PARTITION_COUNT).map(|i| {
         let fake = fake.clone();
-        let template = template;
         let instance = instance_ids[i];
         async move {
             let cfg = SessionConfig {
@@ -183,7 +182,7 @@ async fn concurrent_agents_stress_32_partitions() {
 
     let observed_agent_ids = fake.observed_agent_ids().await;
     assert!(
-        observed_agent_ids.len() >= PARTITION_COUNT + 1,
+        observed_agent_ids.len() > PARTITION_COUNT,
         "fake harness must have seen at least {} SessionInits (1 baseline + {} parallel), got {}",
         PARTITION_COUNT + 1,
         PARTITION_COUNT,

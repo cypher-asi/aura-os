@@ -339,17 +339,17 @@ async fn run_harness_generation_task(
 
     let session_id = session.session_id.clone();
     let heartbeat_mode = mode.clone();
-    let inner = harness_generation_to_sse(
+    let inner = harness_generation_to_sse(HarnessSseParams {
         state,
         harness_mode,
         session_id,
         generation_id,
         mode,
-        generation_event_idle_timeout(),
-        generation_max_runtime(),
-        rx_harness,
-        session.commands_tx.clone(),
-    );
+        event_idle_timeout: generation_event_idle_timeout(),
+        max_runtime: generation_max_runtime(),
+        rx: rx_harness,
+        commands_tx: session.commands_tx.clone(),
+    });
     let mut inner = std::pin::pin!(inner);
     loop {
         // Drain the harness-backed stream, but interleave a
@@ -396,7 +396,9 @@ fn generation_error_event_with_code(code: &'static str, message: String) -> Even
         .unwrap_or_else(|_| Event::default().data("{}"))
 }
 
-fn harness_generation_to_sse(
+/// Inputs for [`harness_generation_to_sse`], grouped so the adapter
+/// takes one coherent bundle instead of a long positional list.
+struct HarnessSseParams {
     state: AppState,
     harness_mode: HarnessMode,
     session_id: String,
@@ -406,7 +408,22 @@ fn harness_generation_to_sse(
     max_runtime: Duration,
     rx: broadcast::Receiver<HarnessOutbound>,
     commands_tx: HarnessCommandSender,
+}
+
+fn harness_generation_to_sse(
+    params: HarnessSseParams,
 ) -> impl futures_core::Stream<Item = Result<Event, Infallible>> + Send {
+    let HarnessSseParams {
+        state,
+        harness_mode,
+        session_id,
+        generation_id,
+        mode,
+        event_idle_timeout,
+        max_runtime,
+        rx,
+        commands_tx,
+    } = params;
     let now = Instant::now();
     stream::unfold(
         GenerationStreamState {

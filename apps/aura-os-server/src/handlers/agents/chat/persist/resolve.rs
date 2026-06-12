@@ -182,7 +182,14 @@ async fn close_active_sessions_for_agent(
     jwt: &str,
     project_agent_id: &str,
 ) {
-    let sessions = match storage.list_sessions(project_agent_id, jwt).await {
+    // `include_empty`: the plain list filters event-less rows
+    // (migration 0014), but a stale *empty* active session — e.g. one
+    // minted by a prior reset and never written to — is exactly what
+    // this sweep must retire, or it stays "active" forever.
+    let sessions = match storage
+        .list_sessions_including_empty(project_agent_id, jwt)
+        .await
+    {
         Ok(list) => list,
         Err(e) => {
             warn!(

@@ -28,7 +28,7 @@ use crate::{HarnessInbound, HarnessOutbound};
 
 /// Default broadcast capacity for a [`FakeHarness`] session. Sized
 /// generously so a 32-partition stress test can buffer 5 text chunks
-/// + an `AssistantMessageEnd` per session without lagging the
+/// plus an `AssistantMessageEnd` per session without lagging the
 /// receiver.
 const DEFAULT_EVENT_CHANNEL_CAPACITY: usize = 256;
 

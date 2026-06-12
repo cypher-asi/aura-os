@@ -155,108 +155,6 @@ pub(super) async fn abort_and_remove(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    //! Unit tests for the adopt-shortcut freshness gate. The wedge
-    //! the user reported (AutomationBar ring spinning forever after
-    //! rapid Stop+Start cycles, no task progress, needs harness + app
-    //! restart) was caused by [`can_reuse_forwarder`] returning
-    //! `true` whenever `alive == true` regardless of whether the
-    //! forwarder had received any actual harness traffic. These
-    //! tests pin the new gating behaviour (extracted into
-    //! [`evaluate_forwarder_reuse`] so it can be exercised without
-    //! standing up a full [`AppState`]) so a future refactor cannot
-    //! quietly regress back to the alive-only check.
-
-    use super::{
-        evaluate_forwarder_reuse, ForwarderHealthSnapshot, ReuseDecision,
-        FORWARDER_FRESHNESS_THRESHOLD,
-    };
-
-    fn snapshot(
-        alive: bool,
-        paused: bool,
-        automaton_id_matches: bool,
-        last_event_at_ms: i64,
-    ) -> ForwarderHealthSnapshot {
-        ForwarderHealthSnapshot {
-            automaton_id_matches,
-            alive,
-            paused,
-            last_event_at_ms,
-        }
-    }
-
-    const NOW_MS: i64 = 10_000_000;
-
-    #[test]
-    fn fresh_active_forwarder_can_be_reused() {
-        let snap = snapshot(true, false, true, NOW_MS);
-        assert_eq!(
-            evaluate_forwarder_reuse(&snap, NOW_MS),
-            ReuseDecision::Reuse
-        );
-    }
-
-    #[test]
-    fn stale_active_forwarder_is_refused_as_wedged() {
-        // One ms past the threshold: must trip the wedge gate, NOT
-        // be allowed through. This is the regression the user hit —
-        // a registry entry still flagged `alive` but whose ws-reader
-        // had died, so no harness events were arriving.
-        let gap = FORWARDER_FRESHNESS_THRESHOLD.as_millis() as i64 + 1;
-        let snap = snapshot(true, false, true, NOW_MS - gap);
-        assert_eq!(
-            evaluate_forwarder_reuse(&snap, NOW_MS),
-            ReuseDecision::Wedged { gap_ms: gap }
-        );
-    }
-
-    #[test]
-    fn freshness_window_is_inclusive_at_the_edge() {
-        // One ms inside the threshold: still allowed. The gate uses
-        // strict less-than, so the boundary belongs to the
-        // "still fresh" half.
-        let gap = FORWARDER_FRESHNESS_THRESHOLD.as_millis() as i64 - 1;
-        let snap = snapshot(true, false, true, NOW_MS - gap);
-        assert_eq!(
-            evaluate_forwarder_reuse(&snap, NOW_MS),
-            ReuseDecision::Reuse
-        );
-    }
-
-    #[test]
-    fn paused_forwarder_skips_freshness_gate() {
-        // Paused loops legitimately have no harness traffic; gating
-        // on freshness for them would force a forwarder rebuild on
-        // every Resume click and regress the pause/resume happy path.
-        let stale = NOW_MS - (FORWARDER_FRESHNESS_THRESHOLD.as_millis() as i64) - 1_000;
-        let snap = snapshot(true, true, true, stale);
-        assert_eq!(
-            evaluate_forwarder_reuse(&snap, NOW_MS),
-            ReuseDecision::Reuse
-        );
-    }
-
-    #[test]
-    fn dead_forwarder_is_refused_even_when_fresh() {
-        let snap = snapshot(false, false, true, NOW_MS);
-        assert_eq!(
-            evaluate_forwarder_reuse(&snap, NOW_MS),
-            ReuseDecision::Refuse
-        );
-    }
-
-    #[test]
-    fn mismatched_automaton_id_is_refused() {
-        let snap = snapshot(true, false, false, NOW_MS);
-        assert_eq!(
-            evaluate_forwarder_reuse(&snap, NOW_MS),
-            ReuseDecision::Refuse
-        );
-    }
-}
-
 pub(super) async fn status_response(
     state: &AppState,
     project_id: ProjectId,
@@ -356,5 +254,107 @@ fn status_loop_state(running: bool, paused: bool) -> &'static str {
         "running"
     } else {
         "finished"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Unit tests for the adopt-shortcut freshness gate. The wedge
+    //! the user reported (AutomationBar ring spinning forever after
+    //! rapid Stop+Start cycles, no task progress, needs harness + app
+    //! restart) was caused by [`can_reuse_forwarder`] returning
+    //! `true` whenever `alive == true` regardless of whether the
+    //! forwarder had received any actual harness traffic. These
+    //! tests pin the new gating behaviour (extracted into
+    //! [`evaluate_forwarder_reuse`] so it can be exercised without
+    //! standing up a full [`AppState`]) so a future refactor cannot
+    //! quietly regress back to the alive-only check.
+
+    use super::{
+        evaluate_forwarder_reuse, ForwarderHealthSnapshot, ReuseDecision,
+        FORWARDER_FRESHNESS_THRESHOLD,
+    };
+
+    fn snapshot(
+        alive: bool,
+        paused: bool,
+        automaton_id_matches: bool,
+        last_event_at_ms: i64,
+    ) -> ForwarderHealthSnapshot {
+        ForwarderHealthSnapshot {
+            automaton_id_matches,
+            alive,
+            paused,
+            last_event_at_ms,
+        }
+    }
+
+    const NOW_MS: i64 = 10_000_000;
+
+    #[test]
+    fn fresh_active_forwarder_can_be_reused() {
+        let snap = snapshot(true, false, true, NOW_MS);
+        assert_eq!(
+            evaluate_forwarder_reuse(&snap, NOW_MS),
+            ReuseDecision::Reuse
+        );
+    }
+
+    #[test]
+    fn stale_active_forwarder_is_refused_as_wedged() {
+        // One ms past the threshold: must trip the wedge gate, NOT
+        // be allowed through. This is the regression the user hit —
+        // a registry entry still flagged `alive` but whose ws-reader
+        // had died, so no harness events were arriving.
+        let gap = FORWARDER_FRESHNESS_THRESHOLD.as_millis() as i64 + 1;
+        let snap = snapshot(true, false, true, NOW_MS - gap);
+        assert_eq!(
+            evaluate_forwarder_reuse(&snap, NOW_MS),
+            ReuseDecision::Wedged { gap_ms: gap }
+        );
+    }
+
+    #[test]
+    fn freshness_window_is_inclusive_at_the_edge() {
+        // One ms inside the threshold: still allowed. The gate uses
+        // strict less-than, so the boundary belongs to the
+        // "still fresh" half.
+        let gap = FORWARDER_FRESHNESS_THRESHOLD.as_millis() as i64 - 1;
+        let snap = snapshot(true, false, true, NOW_MS - gap);
+        assert_eq!(
+            evaluate_forwarder_reuse(&snap, NOW_MS),
+            ReuseDecision::Reuse
+        );
+    }
+
+    #[test]
+    fn paused_forwarder_skips_freshness_gate() {
+        // Paused loops legitimately have no harness traffic; gating
+        // on freshness for them would force a forwarder rebuild on
+        // every Resume click and regress the pause/resume happy path.
+        let stale = NOW_MS - (FORWARDER_FRESHNESS_THRESHOLD.as_millis() as i64) - 1_000;
+        let snap = snapshot(true, true, true, stale);
+        assert_eq!(
+            evaluate_forwarder_reuse(&snap, NOW_MS),
+            ReuseDecision::Reuse
+        );
+    }
+
+    #[test]
+    fn dead_forwarder_is_refused_even_when_fresh() {
+        let snap = snapshot(false, false, true, NOW_MS);
+        assert_eq!(
+            evaluate_forwarder_reuse(&snap, NOW_MS),
+            ReuseDecision::Refuse
+        );
+    }
+
+    #[test]
+    fn mismatched_automaton_id_is_refused() {
+        let snap = snapshot(true, false, false, NOW_MS);
+        assert_eq!(
+            evaluate_forwarder_reuse(&snap, NOW_MS),
+            ReuseDecision::Refuse
+        );
     }
 }

@@ -686,10 +686,7 @@ impl ChatConnector for TelegramConnector {
         Ok(())
     }
 
-    async fn run(
-        self: Arc<Self>,
-        handler: Arc<dyn InboundHandler>,
-    ) -> Result<(), ChannelError> {
+    async fn run(self: Arc<Self>, handler: Arc<dyn InboundHandler>) -> Result<(), ChannelError> {
         let url = self.method_url("getUpdates");
         loop {
             let offset = self.offset.load(Ordering::SeqCst);
@@ -887,7 +884,10 @@ mod tests {
 
     #[test]
     fn v2_italic_becomes_underscore() {
-        assert_eq!(to_markdown_v2("you *create* meaning"), "you _create_ meaning");
+        assert_eq!(
+            to_markdown_v2("you *create* meaning"),
+            "you _create_ meaning"
+        );
     }
 
     #[test]

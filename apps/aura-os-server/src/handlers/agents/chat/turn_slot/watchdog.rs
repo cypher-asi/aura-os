@@ -325,20 +325,17 @@ mod tests {
         // watchdog yet — if the sliding clock was broken, a
         // `turn_timeout` Error would already be sitting in the
         // broadcast.
-        loop {
-            match tokio::time::timeout(Duration::from_millis(10), observed.recv()).await {
-                Ok(Ok(event)) => {
-                    assert!(
-                        !matches!(
-                            event,
-                            HarnessOutbound::Error(ErrorMsg { ref code, .. })
-                                if code == "turn_timeout"
-                        ),
-                        "sliding watchdog must not emit turn_timeout while periodic events arrive"
-                    );
-                }
-                Ok(Err(_)) | Err(_) => break,
-            }
+        while let Ok(Ok(event)) =
+            tokio::time::timeout(Duration::from_millis(10), observed.recv()).await
+        {
+            assert!(
+                !matches!(
+                    event,
+                    HarnessOutbound::Error(ErrorMsg { ref code, .. })
+                        if code == "turn_timeout"
+                ),
+                "sliding watchdog must not emit turn_timeout while periodic events arrive"
+            );
         }
     }
 
