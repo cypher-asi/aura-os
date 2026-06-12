@@ -533,20 +533,14 @@ jobs:
             desktop-observability-logs
           if-no-files-found: ignore
 
-      - name: Build merged desktop observability snapshot
+      - name: Build desktop observability snapshot
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         env:
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
-          AURA_STATUS_PREVIOUS_SNAPSHOT: infra/evals/reports/status/previous/status.json
           AURA_STATUS_ENVIRONMENT: production
           AURA_STATUS_SOURCE: desktop-stable-release
         shell: bash
-        run: |
-          mkdir -p infra/evals/reports/status/previous
-          git fetch origin +gh-pages:refs/remotes/origin/gh-pages || true
-          git show origin/gh-pages:observability/status.json \
-            > infra/evals/reports/status/previous/status.json || true
-          npm run status:snapshot
+        run: npm run status:snapshot
 
       - uses: actions/checkout@v5
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
@@ -555,7 +549,7 @@ jobs:
           fetch-depth: 0
           path: desktop-observability-pages
 
-      - name: Publish merged desktop observability snapshot
+      - name: Publish desktop observability snapshot
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         shell: bash
         run: |
