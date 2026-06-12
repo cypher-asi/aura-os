@@ -1,0 +1,1060 @@
+{
+  "schemaVersion": 1,
+  "title": "Aura Observability",
+  "description": "Feature health backed by Aura-owned live eval probes.",
+  "generatedAt": "2026-06-12T01:21:35.826Z",
+  "environment": "production",
+  "source": "github-actions",
+  "overall": "degraded",
+  "totals": {
+    "features": 17,
+    "operational": 2,
+    "degraded": 3,
+    "partialOutage": 0,
+    "majorOutage": 0,
+    "unknown": 12,
+    "maintenance": 0
+  },
+  "features": [
+    {
+      "id": "core-api",
+      "label": "Core API",
+      "category": "platform",
+      "priority": 10,
+      "description": "Aura OS API reachability, authenticated session reads, and runtime environment metadata.",
+      "publicSummary": "Core API routes and environment metadata are responding.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.082Z",
+      "checksPassed": 1,
+      "checksTotal": 3,
+      "checksFailed": 0,
+      "checksUnknown": 1,
+      "latencyP95Ms": 186,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "api-health",
+          "required": true,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:33.082Z",
+          "latencyMs": 186,
+          "evidence": {
+            "status": "ok",
+            "timestamp": "2026-06-12T01:21:33.052498428+00:00"
+          }
+        },
+        {
+          "id": "auth-session",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.082Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "system-info",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.082Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "identity-orgs",
+      "label": "Identity and Organizations",
+      "category": "platform",
+      "priority": 15,
+      "description": "Session validation, current user profile sync, and organization membership lookup.",
+      "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.083Z",
+      "checksPassed": 0,
+      "checksTotal": 3,
+      "checksFailed": 0,
+      "checksUnknown": 2,
+      "latencyP95Ms": 1,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "auth-validate",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.082Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "orgs-list",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 1,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "user-profile",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "public-experience",
+      "label": "Public Chat and APIs",
+      "category": "website",
+      "priority": 18,
+      "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
+      "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
+      "status": "degraded",
+      "lastCheckedAt": "2026-06-12T01:21:34.396Z",
+      "checksPassed": 6,
+      "checksTotal": 7,
+      "checksFailed": 1,
+      "checksUnknown": 0,
+      "latencyP95Ms": 829,
+      "message": "Expected evidence assertion failed: count expected >= 1 but got 0",
+      "checks": [
+        {
+          "id": "public-setup",
+          "required": true,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:33.130Z",
+          "latencyMs": 45,
+          "evidence": {
+            "tokenPresent": true,
+            "turnCount": 0,
+            "limit": 3
+          }
+        },
+        {
+          "id": "public-chat-stream",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:33.959Z",
+          "latencyMs": 829,
+          "evidence": {
+            "frameTypes": [
+              "text_delta",
+              "text_delta",
+              "limit",
+              "message"
+            ],
+            "textSample": "aura public ok"
+          }
+        },
+        {
+          "id": "public-feedback-api",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:34.119Z",
+          "latencyMs": 160,
+          "evidence": {
+            "count": 100
+          }
+        },
+        {
+          "id": "public-models-api",
+          "required": false,
+          "status": "fail",
+          "featureStatus": "degraded",
+          "message": "Expected evidence assertion failed: count expected >= 1 but got 0",
+          "checkedAt": "2026-06-12T01:21:34.198Z",
+          "latencyMs": 79,
+          "evidence": {
+            "count": 0
+          }
+        },
+        {
+          "id": "public-blog-api",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:34.311Z",
+          "latencyMs": 113,
+          "evidence": {
+            "count": 7
+          }
+        },
+        {
+          "id": "public-x402-models",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:34.353Z",
+          "latencyMs": 42,
+          "evidence": {
+            "object": "list",
+            "modelCount": 1
+          }
+        },
+        {
+          "id": "public-x402-payment-challenge",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:34.396Z",
+          "latencyMs": 43,
+          "evidence": {
+            "status": 402,
+            "payToPresent": true,
+            "network": "eip155:8453",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "amount": "20000",
+            "acceptsCount": 1,
+            "paymentRequiredHeaderPresent": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "local-agents",
+      "label": "Local Agents",
+      "category": "agents",
+      "priority": 20,
+      "description": "Local agent template creation, project binding, and workspace-backed chat readiness.",
+      "publicSummary": "Local agents can be created and exercised through the harness.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.084Z",
+      "checksPassed": 0,
+      "checksTotal": 2,
+      "checksFailed": 0,
+      "checksUnknown": 2,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "local-agent-create",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "local-agent-runtime",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "remote-agents",
+      "label": "Remote Agents",
+      "category": "agents",
+      "priority": 30,
+      "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
+      "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.084Z",
+      "checksPassed": 0,
+      "checksTotal": 3,
+      "checksFailed": 0,
+      "checksUnknown": 2,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "remote-agent-create",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "remote-agent-state",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "remote-agent-runtime",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "projects-specs-tasks",
+      "label": "Projects, Specs, and Tasks",
+      "category": "automation",
+      "priority": 35,
+      "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
+      "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.083Z",
+      "checksPassed": 0,
+      "checksTotal": 4,
+      "checksFailed": 0,
+      "checksUnknown": 2,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "project-crud",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "spec-task-crud",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "project-stats",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "loop-status",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "process-workflows",
+      "label": "Processes",
+      "category": "automation",
+      "priority": 38,
+      "description": "Process workflow lists, process creation, default ignition node creation, and cleanup.",
+      "publicSummary": "Process workflows can be listed and created.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.083Z",
+      "checksPassed": 0,
+      "checksTotal": 2,
+      "checksFailed": 0,
+      "checksUnknown": 1,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "process-list",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "process-crud",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "model-responses",
+      "label": "Model Responses",
+      "category": "models",
+      "priority": 40,
+      "description": "Curated model matrix smoke tests through Aura's runtime path.",
+      "publicSummary": "Supported text models are returning valid assistant responses.",
+      "status": "degraded",
+      "lastCheckedAt": "2026-06-12T01:21:33.085Z",
+      "checksPassed": 0,
+      "checksTotal": 1,
+      "checksFailed": 0,
+      "checksUnknown": 1,
+      "latencyP95Ms": 1,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "model-matrix",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.085Z",
+          "latencyMs": 1,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "media-generation",
+      "label": "Media Generation",
+      "category": "media",
+      "priority": 45,
+      "description": "Image, 3D, and video generation stream routers, progress frames, completion payloads, and artifact URLs.",
+      "publicSummary": "Media generation streams can complete with generated artifacts.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.085Z",
+      "checksPassed": 0,
+      "checksTotal": 3,
+      "checksFailed": 0,
+      "checksUnknown": 3,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "image-generation-stream",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.085Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "model3d-generation-stream",
+          "required": false,
+          "status": "unknown",
+          "featureStatus": "unknown",
+          "message": "No recent result",
+          "checkedAt": null,
+          "latencyMs": null,
+          "evidence": {}
+        },
+        {
+          "id": "video-generation-stream",
+          "required": false,
+          "status": "unknown",
+          "featureStatus": "unknown",
+          "message": "No recent result",
+          "checkedAt": null,
+          "latencyMs": null,
+          "evidence": {}
+        }
+      ]
+    },
+    {
+      "id": "spec-task-loop",
+      "label": "Autonomous Build Loop",
+      "category": "automation",
+      "priority": 50,
+      "description": "End-to-end spec generation, task extraction, autonomous loop execution, and artifact validation.",
+      "publicSummary": "Aura can turn requirements into tasks and complete a small validated build.",
+      "status": "degraded",
+      "lastCheckedAt": "2026-06-12T01:21:35.679Z",
+      "checksPassed": 1,
+      "checksTotal": 2,
+      "checksFailed": 0,
+      "checksUnknown": 0,
+      "latencyP95Ms": 1,
+      "message": "0/3 live benchmark artifacts found",
+      "checks": [
+        {
+          "id": "live-benchmark-hello-world",
+          "required": true,
+          "status": "warn",
+          "featureStatus": "degraded",
+          "message": "0/3 live benchmark artifacts found",
+          "checkedAt": "2026-06-12T01:21:35.678Z",
+          "latencyMs": 1,
+          "evidence": {
+            "files": [
+              {
+                "file": "interface/test-results/aura-evals-summary.json",
+                "exists": false
+              },
+              {
+                "file": "interface/test-results/live-benchmark-summary.json",
+                "exists": false
+              },
+              {
+                "file": "infra/evals/reports/baselines/live-benchmark-summary.json",
+                "exists": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "harness-fixture-suite",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "3/4 harness fixture artifacts found",
+          "checkedAt": "2026-06-12T01:21:35.679Z",
+          "latencyMs": 1,
+          "evidence": {
+            "files": [
+              {
+                "file": "interface/test-results/aura-evals-summary.json",
+                "exists": false
+              },
+              {
+                "file": "infra/evals/reports/baselines/smoke-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T01:21:27.492Z",
+                "size": 2796
+              },
+              {
+                "file": "infra/evals/reports/baselines/chat-core-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T01:21:27.492Z",
+                "size": 11513
+              },
+              {
+                "file": "infra/evals/reports/baselines/workflow-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T01:21:27.492Z",
+                "size": 2219
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "marketplace-bootstrap",
+      "label": "Marketplace and Bootstrap",
+      "category": "agents",
+      "priority": 55,
+      "description": "Marketplace agent catalog and harness bootstrap health.",
+      "publicSummary": "Marketplace and bootstrap services are reachable.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.084Z",
+      "checksPassed": 0,
+      "checksTotal": 2,
+      "checksFailed": 0,
+      "checksUnknown": 1,
+      "latencyP95Ms": 1,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "marketplace-agents",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "harness-health",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 1,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "integrations-billing",
+      "label": "Integrations and Billing",
+      "category": "platform",
+      "priority": 60,
+      "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
+      "publicSummary": "Integrations and billing surfaces are responding.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.083Z",
+      "checksPassed": 0,
+      "checksTotal": 4,
+      "checksFailed": 0,
+      "checksUnknown": 1,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "org-integrations-list",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "org-tool-actions-list",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "billing-status",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "credits-balance",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.083Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "community-feedback",
+      "label": "Community and Feedback",
+      "category": "website",
+      "priority": 65,
+      "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
+      "publicSummary": "Community and feedback data surfaces are responding.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.084Z",
+      "checksPassed": 0,
+      "checksTotal": 5,
+      "checksFailed": 0,
+      "checksUnknown": 1,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "feedback-list",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "bug-reports-mine",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "feed-list",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "leaderboard",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "platform-stats",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "desktop-runtime",
+      "label": "Desktop Runtime",
+      "category": "platform",
+      "priority": 68,
+      "description": "Desktop runtime defaults and local terminal API availability.",
+      "publicSummary": "Desktop runtime support endpoints are responding.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.084Z",
+      "checksPassed": 0,
+      "checksTotal": 2,
+      "checksFailed": 0,
+      "checksUnknown": 1,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "workspace-defaults",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.082Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "terminal-list",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "streams-debug",
+      "label": "Streams and Debug",
+      "category": "platform",
+      "priority": 70,
+      "description": "Stream reattachment registry and debug run index.",
+      "publicSummary": "Stream and debug inspection endpoints are reachable.",
+      "status": "unknown",
+      "lastCheckedAt": "2026-06-12T01:21:33.084Z",
+      "checksPassed": 0,
+      "checksTotal": 2,
+      "checksFailed": 0,
+      "checksUnknown": 1,
+      "latencyP95Ms": 0,
+      "message": "No access token configured",
+      "checks": [
+        {
+          "id": "active-streams",
+          "required": true,
+          "status": "skip",
+          "featureStatus": "unknown",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        },
+        {
+          "id": "debug-projects",
+          "required": false,
+          "status": "skip",
+          "featureStatus": "operational",
+          "message": "No access token configured",
+          "checkedAt": "2026-06-12T01:21:33.084Z",
+          "latencyMs": 0,
+          "evidence": {
+            "status": "skip",
+            "message": "No access token configured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "eval-artifacts",
+      "label": "Eval Artifacts",
+      "category": "automation",
+      "priority": 75,
+      "description": "Existing Playwright and benchmark eval summaries produced by Aura's eval lanes.",
+      "publicSummary": "Aura eval artifacts are being produced and retained.",
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T01:21:35.679Z",
+      "checksPassed": 1,
+      "checksTotal": 1,
+      "checksFailed": 0,
+      "checksUnknown": 0,
+      "latencyP95Ms": 0,
+      "message": "All required checks are passing.",
+      "checks": [
+        {
+          "id": "eval-summary-artifacts",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "3/4 eval summary artifacts found",
+          "checkedAt": "2026-06-12T01:21:35.679Z",
+          "latencyMs": 0,
+          "evidence": {
+            "files": [
+              {
+                "file": "interface/test-results/aura-evals-summary.json",
+                "exists": false
+              },
+              {
+                "file": "infra/evals/reports/baselines/smoke-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T01:21:27.492Z",
+                "size": 2796
+              },
+              {
+                "file": "infra/evals/reports/baselines/chat-core-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T01:21:27.492Z",
+                "size": 11513
+              },
+              {
+                "file": "infra/evals/reports/baselines/workflow-summary.json",
+                "exists": true,
+                "mtime": "2026-06-12T01:21:27.492Z",
+                "size": 2219
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "public-website",
+      "label": "Public Website",
+      "category": "website",
+      "priority": 80,
+      "description": "Public Aura pages, observability snapshot JSON, and marketing routes.",
+      "publicSummary": "Aura's public web surfaces are reachable.",
+      "status": "operational",
+      "lastCheckedAt": "2026-06-12T01:21:35.677Z",
+      "checksPassed": 3,
+      "checksTotal": 3,
+      "checksFailed": 0,
+      "checksUnknown": 0,
+      "latencyP95Ms": 947,
+      "message": "All required checks are passing.",
+      "checks": [
+        {
+          "id": "public-observability-page",
+          "required": true,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:34.588Z",
+          "latencyMs": 192,
+          "evidence": {
+            "overall": "unknown",
+            "featureCount": 17
+          }
+        },
+        {
+          "id": "public-models-page",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:34.730Z",
+          "latencyMs": 142,
+          "evidence": {
+            "status": 200
+          }
+        },
+        {
+          "id": "public-marketing-pages",
+          "required": false,
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-12T01:21:35.677Z",
+          "latencyMs": 947,
+          "evidence": {
+            "results": [
+              {
+                "route": "/agents",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/code",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/pricing",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/models",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/feedback",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/blog",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/download",
+                "status": 200,
+                "hasRoot": true
+              },
+              {
+                "route": "/observability",
+                "status": 200,
+                "hasRoot": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
