@@ -42,8 +42,11 @@ test("every registered status check has a runner branch", async () => {
   const registry = await readJson("infra/evals/status/features.json");
   const runner = await readFile(path.join(repoRoot, "infra/evals/status/run-status-probes.mjs"), "utf8");
   const checkIds = registry.features.flatMap((feature) => feature.checks.map((check) => check.id));
+  const runnerIds = Array.from(runner.matchAll(/selected\("([^"]+)"\)/g), (match) => match[1]);
+  const unknown = runnerIds.filter((id) => !checkIds.includes(id));
   const missing = checkIds.filter((id) => !runner.includes(`selected("${id}")`));
 
+  assert.deepEqual(unknown, [], "runner must not expose unregistered checks");
   assert.deepEqual(missing, [], "every registered check must be selectable in the runner");
 });
 

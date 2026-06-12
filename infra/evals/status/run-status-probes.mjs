@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { CHECK_STATUS } from "./lib/status-policy.mjs";
 import { validateCheckEvidence } from "./lib/check-expectations.mjs";
+import { statusProbeAgentPermissions } from "./lib/status-probe-permissions.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
@@ -60,13 +61,6 @@ function parseArgs(argv) {
   if (args.models.length === 0) args.models = DEFAULT_MODELS;
   args.checks = args.checks.length > 0 ? new Set(args.checks) : null;
   return args;
-}
-
-function statusProbeAgentPermissions() {
-  return {
-    scope: { orgs: [], projects: [], agent_ids: [] },
-    capabilities: [],
-  };
 }
 
 function sseFramesFromText(text) {
@@ -366,7 +360,7 @@ async function createAgent(args, track, machineType, model = null, orgId = null)
     environment,
     auth_source: "aura_managed",
     default_model: model,
-    permissions: statusProbeAgentPermissions(),
+    permissions: statusProbeAgentPermissions(orgId),
     tags: ["aura-status-probe"],
   }, { timeoutMs: machineType === "remote" ? DEFAULT_REMOTE_TIMEOUT_MS : DEFAULT_TIMEOUT_MS });
   track("agent", agent.agent_id, `/api/agents/${agent.agent_id}`);
@@ -805,44 +799,6 @@ async function runChecks(args) {
     }));
   }
 
-  if (selected("model3d-generation-stream")) {
-    checks.push(await probe("model3d-generation-stream", "media-generation", "3D generation stream", args, async () => {
-      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
-      const frames = await apiSse(args, "/api/generate/3d/stream", {
-        prompt: "A simple cube for an AURA status probe",
-        image_data: process.env.AURA_STATUS_3D_SOURCE_IMAGE || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
-      }, 240_000);
-      const completed = frames.find((frame) => frame.event === "generation_completed" || frame.event === "completed");
-      const error = frames.find((frame) => frame.event === "generation_error" || frame.event === "error");
-      if (error) return { status: CHECK_STATUS.FAIL, message: error.data?.message ?? "3D generation error", evidence: { frames } };
-      return {
-        status: completed ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
-        message: completed ? "" : "3D generation stream did not emit completion",
-        evidence: { frameTypes: frames.map((frame) => frame.event) },
-      };
-    }));
-  }
-
-  if (selected("video-generation-stream")) {
-    checks.push(await probe("video-generation-stream", "media-generation", "Video generation stream", args, async () => {
-      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
-      const frames = await apiSse(args, "/api/generate/video/stream", {
-        prompt: "A one second AURA status pulse animation",
-        model: process.env.AURA_STATUS_VIDEO_MODEL || "veo-3.1-fast",
-        durationSeconds: 1,
-        aspectRatio: "16:9",
-      }, 300_000);
-      const completed = frames.find((frame) => frame.event === "generation_completed" || frame.event === "completed");
-      const error = frames.find((frame) => frame.event === "generation_error" || frame.event === "error");
-      if (error) return { status: CHECK_STATUS.FAIL, message: error.data?.message ?? "Video generation error", evidence: { frames } };
-      return {
-        status: completed ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
-        message: completed ? "" : "Video generation stream did not emit completion",
-        evidence: { frameTypes: frames.map((frame) => frame.event) },
-      };
-    }));
-  }
-
   if (selected("public-setup")) {
     checks.push(await probe("public-setup", "public-experience", "Public guest session setup", args, async () => {
       const setup = await apiJson(args, "POST", "/api/public/setup", {});
@@ -974,39 +930,6 @@ async function runChecks(args) {
       }
       const ok = results.every((result) => result.status >= 200 && result.status < 400);
       return { status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL, evidence: { results } };
-    }));
-  }
-
-  if (selected("live-benchmark-hello-world")) {
-    checks.push(await probe("live-benchmark-hello-world", "spec-task-loop", "Live benchmark hello world artifact", args, async () => {
-      const files = await artifactScan([
-        "interface/test-results/aura-evals-summary.json",
-        "interface/test-results/live-benchmark-summary.json",
-        "infra/evals/reports/baselines/live-benchmark-summary.json",
-      ]);
-      const existing = files.filter((file) => file.exists).length;
-      return {
-        status: existing > 0 ? CHECK_STATUS.PASS : CHECK_STATUS.WARN,
-        message: `${existing}/${files.length} live benchmark artifacts found`,
-        evidence: { files },
-      };
-    }));
-  }
-
-  if (selected("harness-fixture-suite")) {
-    checks.push(await probe("harness-fixture-suite", "spec-task-loop", "Harness fixture eval artifacts", args, async () => {
-      const files = await artifactScan([
-        "interface/test-results/aura-evals-summary.json",
-        "infra/evals/reports/baselines/smoke-summary.json",
-        "infra/evals/reports/baselines/chat-core-summary.json",
-        "infra/evals/reports/baselines/workflow-summary.json",
-      ]);
-      const existing = files.filter((file) => file.exists).length;
-      return {
-        status: existing > 0 ? CHECK_STATUS.PASS : CHECK_STATUS.WARN,
-        message: `${existing}/${files.length} harness fixture artifacts found`,
-        evidence: { files },
-      };
     }));
   }
 
