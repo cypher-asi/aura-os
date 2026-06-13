@@ -1,71 +1,71 @@
-# Smoother chat streaming, leaner input bar, and a rebuilt observability pipeline
+# Smoother streaming chat, virtualized transcripts, and a rebuilt input bar
 
 - Date: `2026-06-12`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.659.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.659.1
+- Version: `0.1.0-nightly.660.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.660.1
 
-A heavy nightly across the board: the chat surface gets virtualization, paginated history, and a frame-batched streaming pipeline that stops chat and the terminal from starving each other. The 1,500-line ChatInputBar is broken apart, typing lag is eliminated, and dev loops gain reattach-after-restart resilience. On the platform side, per-tool permissions become first-class, swarm VM logs surface in agent details, and the observability/status pipeline is rebuilt around a single snapshot source.
+A heavy day for chat performance and polish: the input bar was rebuilt from the ground up to kill typing lag, transcripts now virtualize and paginate, streaming reveals stay in order, and tool markup that used to leak into prose is finally rendered as proper blocks. Behind the scenes, dev-loop runs survive server restarts, swarm VMs expose live logs, and the observability pipeline was reworked to publish a single, trustworthy status snapshot.
 
-## 11:13 PM — Streaming pipeline rewrite and chat transcript polish
+## 11:13 PM — Chat streaming, terminal links, and project chrome polish
 
-A late-night sweep tightened the chat transcript's visual details and rebuilt the streaming hot path so chat and terminal stop fighting for the main thread.
+A long late-night pass tightened the chat transcript, fixed terminal link handling on Desktop, and brought streaming and terminal I/O onto a shared frame budget.
 
-- Rebuilt chat and terminal streaming around a single rAF loop: chat reveals coalesce into one store update per frame with markdown rendered as memoized per-paragraph blocks, while PTY output now ships as coalesced binary WebSocket frames and flushes to xterm once per frame — ending the per-token setState storm that was starving the terminal. (`449a6ad`)
-- Fixed several streaming-order and formatting bugs in the transcript: the timeline now reveals strictly in order behind a still-typing paragraph, block collapse animates symmetrically with expand, expanding a block scrolls its body into view, and user messages preserve newlines and runs of spaces instead of collapsing them. (`314d95e`, `ffb6201`, `62300dc`, `234717a`)
-- Cleaned up command and list rendering: command rows recover their input from alternate keys instead of showing a bare "$ ...", list summaries follow titles directly, block copy buttons only appear on hover/focus, and the gradient band behind the streaming indicator was replaced with a shrink-wrapped pill. (`94d469c`, `80ca317`, `03686c5`, `f9f6cfd`, `44404f9`)
-- Sidebar projects gained live open/closed folder icons in both the zui Explorer and the desktop LeftMenuTree, with collapsibles flipped to left-aligned labels and far-right chevrons across sidekick, explorer, message queue, and marketing surfaces. (`f925d5a`, `1b62a3e`, `058af79`, `1d980da`, `8288e7b`, `39201e8`)
-- Terminal links now open in the OS default browser instead of triggering Windows' "about:blank" app picker, with the Rust new-window handlers restricted to http/https/mailto. (`3b22dea`)
-- Observability and dev-loop plumbing: status health checks were made complete, the CI artifact poller now retries fetch failures, and the start_dev_loop MCP tool threads the calling agent's model so harness loops stop hitting "missing model" 400s. (`71be72f`, `5f1e3a7`, `7c4f02f`)
+- Frame-batched the chat reveal loop and terminal PTY writes so token streaming and xterm output stop starving each other on the renderer thread, with memoized per-paragraph markdown, coalesced context-ring updates, and binary WS frames replacing JSON+base64 for terminal output. (`449a6ad`)
+- Fixed a Desktop regression where clicking a terminal link opened an "about:blank" picker on Windows; URIs are now passed directly to window.open and the wry shell only forwards http/https/mailto through the OS browser. (`3b22dea`)
+- Streaming timelines now reveal strictly in order — tool blocks, thinking cards, and later paragraphs hold back until the prose above finishes its typewriter, with matching collapse/expand animation and a scroll-into-view when users expand a block. (`314d95e`, `62300dc`, `ffb6201`)
+- Sidebar projects gained open/closed folder icons across both the zui Explorer and the desktop LeftMenuTree, with color and spacing tuned to match labels, and rename rows now underline in edit mode. (`f925d5a`, `1b62a3e`, `058af79`, `8288e7b`)
+- Cleaned up several chat-surface rough edges: long project names ellipsize in the input chip, command rows no longer render a bare "$ ..." placeholder, user messages preserve their line breaks and spacing, copy buttons reveal only on hover, and the streaming indicator drops its gradient band for a tighter pill. (`39201e8`, `94d469c`, `234717a`, `03686c5`, `f9f6cfd`, `44404f9`, `80ca317`, `1d980da`)
+- Dev-loop MCP start_dev_loop now accepts a model argument and threads it through to /loop/start, unblocking agent-driven loop starts that previously hit the harness "missing model" 400. (`7c4f02f`)
+- Hardened the observability and CI pipeline by running complete health checks across releases and retrying transient artifact-polling fetch failures. (`71be72f`, `5f1e3a7`)
 
-## 12:58 AM — Dev-loop model resolution from the calling agent
+## 12:58 AM — Dev-loop picks up the calling agent's model automatically
 
-A follow-up closed the remaining gap where agent-driven loop starts still hit the harness without a model.
+A follow-up so the agent-driven dev-loop path always has a model to send to the harness.
 
-- When start_dev_loop is invoked without an explicit model arg or AURA_MCP_MODEL, the MCP tool now looks up the calling project-agent instance and uses its default_model, so live agent-driven loops no longer fail the harness "missing model" check. (`5d12a6c`)
+- When start_dev_loop is invoked without an explicit model or AURA_MCP_MODEL, the MCP tool now looks up the calling agent instance and forwards its default model to /loop/start, eliminating the remaining "missing model" 400s on live agent-driven runs. (`5d12a6c`)
 
-## 1:16 AM — Default desktop service URLs in CI workflows
+## 1:16 AM — Default desktop service URLs in release workflows
 
-Release Infrastructure: aligned desktop service URL defaults across performance, validate, and release workflows.
+A small but meaningful release-config cleanup.
 
-- Standardized default desktop service URLs across the performance-benchmark, desktop-validate, and nightly/stable release workflows so CI jobs no longer disagree on which environment they target. (`f82c98f`)
+- Release Infrastructure: nightly, stable, performance-benchmark, and desktop-validate workflows now default the desktop service URLs consistently, removing duplicated per-workflow configuration. (`f82c98f`)
 
-## 1:20 AM — Inline thinking prose, swarm VM logs, and resilient dev-loop tasks
+## 1:20 AM — Inline thinking, swarm VM logs, and resilient dev-loop streaming
 
-Three substantial features landed back-to-back: reasoning becomes fully readable, swarm VMs expose their logs in the UI, and dev-loop runs keep the task UI live through event-stream resyncs.
+Three substantive product changes landed together: reasoning is now visible inline, swarm agents expose their VM logs, and dev-loop runs keep the task UI updating under load.
 
-- Thinking segments now render as full dimmed inline prose in the activity timeline instead of hiding behind a collapsed "Thought for Xs" chevron, flowing chronologically between tool rows across live streams, finalized turns, and history. (`9d4c5fe`)
-- Agent details gained a VM Logs tab that proxies live tail and termination snapshots from the swarm gateway, exposing per-VM log streams directly in the UI via a new RemoteLogsPanel. (`a4d4200`)
-- Dev-loop runs no longer freeze task statuses when the firehose forces a resync: the forwarder coalesces text_delta events (~100ms / 4KB / 250ms-age caps), the client refetches tasks on a bumped resyncNonce, and the post-start_dev_loop startLoop bridge now retries instead of silently leaving the loop forwarderless. (`341bdff`)
+- Thinking segments now render as full inline prose under a small caption row in the activity timeline instead of hiding behind a "Thought for Xs" chevron, flowing chronologically between tool rows on live, just-finalized, and historical turns. (`9d4c5fe`)
+- Added a VM Logs tab to agent details that proxies the swarm gateway's per-VM live tail and termination snapshots through the server. (`a4d4200`)
+- Fixed task UI freezes during dev-loop runs: the server now coalesces consecutive text_delta events per task before broadcasting, the client refetches tasks on ws_resync_required, and the post-start_dev_loop bridge retries once instead of silently leaving a loop without a forwarder. (`341bdff`)
 
-## 3:14 AM — Swarm integration guide, env reference, and ops runbook
+## 3:14 AM — aura-swarm integration guide and operations runbook
 
-Docs: a full aura-swarm onboarding and operations bundle landed.
+Documentation catches up to the swarm surface area.
 
-- Added an aura-swarm integration guide, environment-variable reference in .env.example, and a swarm-operations runbook covering day-to-day operations, surfaced from the docs README. (`71ae735`)
+- Published an aura-swarm integration guide, environment-variable reference, and an operations runbook, plus updated README and .env.example entries. (`71ae735`)
 
-## 5:56 AM — Virtualized transcript, decomposed input bar, and platform-wide upgrades
+## 5:56 AM — Rebuilt input bar, virtualized transcripts, and trustworthy observability
 
-The day's biggest batch reshapes the chat surface end-to-end, persists per-tool permissions, hardens dev loops against server restarts, and consolidates the observability pipeline.
+The day's biggest push: zero-reflow typing, paginated session history, leaked tool markup rendered as blocks, dev-loop reattachment across restarts, per-tool permissions, and a consolidated observability pipeline.
 
-- Chat history is now cursor-paginated end to end: new server routes serve windowed events with stable reconstructed ids, ChatMessageList is virtualized via @tanstack/react-virtual with pin-to-bottom and prepend preservation, and per-token re-renders are isolated to a dedicated StreamingTail row so huge sessions no longer download or render in full. (`d43cfb4`, `aff73e2`)
-- Typing in the main LLM input is no longer laggy: drafts are localized to a leaf DraftedInputBar, the autosize machinery was rewritten around mirror-element measurement, and on Chromium/Electron CSS `field-sizing: content` owns the auto-grow so keystrokes cost zero synchronous layout reads. (`adf4d1f`, `f88a075`, `8e95031`)
-- The 1,510-line ChatInputBar was decomposed into memoized slot components (ModelControls, ChatModeBar, ProjectPicker, AgentInfoBar, AttachControl, InputStatusHints, AttachmentPreviews) with /-slash and @-mention machinery and per-mode model selection lifted into dedicated hooks; a regression test now guards that a draft change re-renders none of the chrome slots. (`b6183e2`, `c6b4a08`, `f6b8795`, `bdd7cbd`, `17b9cf9`)
-- Per-tool tri-state permissions (on/ask/off) are now persisted on AgentPermissions and editable in the Permissions tab, forwarded to chat sessions and dev-loop/single-task automation runs; image chat mode rides the same harness generation session as video/3D, and the default org tool catalog gains generate_video plus quality/model knobs for image and 3D. (`f1afd33`)
-- Dev loops now survive aura-os-server restarts: a per-run handle file is persisted so a restarted server can probe the harness sidecar, report `loop_state="detached"`, and have the AutomationBar re-adopt the run via the existing start/conflict path — rebuilding the forwarder and re-emitting loop_opened instead of leaving tasks advancing headless. (`9b916d7`)
-- Chat now copes with messy tool transcripts: leaked Anthropic <invoke>/<function_calls> XML is hoisted into tool cards (with a server-side scrubber stripping markup from persisted text), the compaction `[tool_use ...]` dialect renders as proper Blocks, and unterminated [tool_result ...] markers are hoisted instead of leaking as a wall of N|-numbered lines. (`0fa0ab4`, `9c4faf9`, `042d15e`)
-- Other chat quality fixes: the just-sent bubble no longer jumps on send (persisted-id ↔ clientId aliasing plus smarter input-bar measurement), and the terminal now remembers per-project command history across sessions and tabs via Arrow Up/Down over a localStorage-backed store. (`2025928`, `23221c7`)
-- All Explorer/Item call sites (Tasks, Plans, Files, ProjectList, Feed, Profile, Marketplace, Feedback, sidekick previews) were migrated onto app-owned ListItem and ListTree components with fixed slot order and symmetric insets, deleting the hashed-class CSS overrides that papered over zui row metrics. (`7ef7956`)
-- The observability/status pipeline was rebuilt around a single generated snapshot at `infra/evals/reports/status/status.json`: probes got truthful, minimally-scoped permissions, regression-focused evals were added, a real history persistence step landed, and the bundled `interface/public/observability/status.json` second copy was retired so nightly/stable releases preserve a full snapshot from one source. (`45c287f`, `1d96402`, `573e753`, `086a496`, `115a761`, `240d4b2`, `1bb31b2`, `7719167`, `56be76b`)
-- Server logs are quieter and more useful: chromiumoxide's invalid-CDP-message firehose is now logged once-with-preview instead of dumping multi-KB JSON at WARN on every Network event, and stale empty sessions are correctly retired against the unfiltered session list after migration 0014. (`d9dfdb3`, `2ecee30`)
-- Interface test suites were unblocked on Node 25 by disabling the experimental Web Storage global and adding a jsdom Storage fallback, while ~20 suites were updated to track ListItem, paginated history, 3D model args, and redesigned billing/profile panels. (`58e3328`)
+- Rebuilt the chat input bar end to end: a new auto-resize using field-sizing and mirror-based wrap detection eliminates per-keystroke forced reflow, draft updates are localized to a leaf DraftedInputBar, and the 1500-line component was decomposed into memoized slot components (ModelControls, ChatModeBar, ProjectPicker, AgentInfoBar, AttachControl, InputStatusHints, AttachmentPreviews) plus extracted useInputTriggers and useModelSelection hooks — a draft-only change now re-renders nothing but the textarea path. (`adf4d1f`, `f88a075`, `c6b4a08`, `b6183e2`, `8e95031`, `f6b8795`, `bdd7cbd`)
+- Virtualized the chat transcript with @tanstack/react-virtual and added cursor-paginated session-history endpoints, so huge sessions load only a trailing window, older pages prepend on demand, session switches paint from cache, and per-token renders are isolated to a StreamingTail row. (`d43cfb4`)
+- Tool markup that leaked into text — Anthropic <invoke> XML, hybrid [tool_use ...] openers, compaction-dialect markers, and unterminated [tool_result ...] dumps — now hoists into proper tool cards, with a server-side scrubber stripping residue before persistence so cold-start history rebuilds stay clean. (`9c4faf9`, `0fa0ab4`, `042d15e`)
+- Dev-loop runs now survive aura-os-server restarts: a per-run handle file lets the AutomationBar detect a detached harness loop and re-adopt it via the existing /loop/start conflict path, rebuilding the event forwarder and re-emitting loop_opened so tasks keep advancing in the UI. (`9b916d7`)
+- Generation modes consolidated onto the harness session — image mode joins video and 3D, with quality threaded end to end — and agents gained tri-state per-tool permissions (on/ask/off) editable from the Permissions tab and respected by chat, dev-loop, and single-task automaton runs. (`f1afd33`)
+- Replaced zui Explorer/Item across Tasks, Plans, Files, ProjectList, Feed, Profile, Marketplace, Feedback, and the sidekick surfaces with shared ListItem/ListTree components, removing hashed-class CSS overrides that papered over zui row metrics. (`7ef7956`)
+- Terminals now remember a per-project command history across sessions and tabs, with Arrow Up/Down navigating the shared store instead of the per-PTY shell history. (`23221c7`)
+- Stopped the just-sent chat bubble from jumping after send by aliasing the optimistic temp row's identity to its persisted id, skipping ResizeObserver measurements during the centered empty-thread state, and re-pinning the transcript when input clearance changes mid-frame. (`2025928`)
+- Quieted a chromiumoxide WARN firehose that was dumping multi-KB CDP payloads on every diverged event, drowning dev-loop logs; divergent methods now log once with a truncated preview and the full payload moves to trace. (`d9dfdb3`)
+- Reworked the observability pipeline so a single generated status.json drives the public /observability page, with scoped probe permissions, regression-focused evals, persisted status history, and tightened eval cadence — replacing the previously duplicated bundled snapshot. (`45c287f`, `1d96402`, `573e753`, `086a496`, `115a761`, `240d4b2`, `1bb31b2`, `7719167`, `56be76b`, `26fcc3a`)
+- Fixed server-side fallout uncovered by the pagination work: stale empty sessions now retire correctly after the migration-0014 filter, and Vitest suites were stabilized against Node 25's experimental Web Storage stub. (`2ecee30`, `58e3328`)
 
 ## Highlights
 
-- Frame-batched chat + terminal streaming
-- Virtualized transcript with cursor-paginated history
-- ChatInputBar decomposed into memoized slots
-- Dev loops survive server restarts
-- Per-tool tri-state permissions across chat and automation
-- Unified observability snapshot pipeline
+- Frame-batched streaming and a rebuilt input bar eliminate typing and reveal lag
+- Chat transcripts now virtualize and cursor-paginate session history
+- Tool markup leaks render as proper blocks instead of garbled text
+- Dev loops reattach across server restarts and keep the task UI live
+- Per-tool permissions and a fuller generation catalog ship end to end
 

@@ -2,21 +2,20 @@
   {
     "date": "2026-06-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.659.1",
-    "title": "Smoother chat streaming, leaner input bar, and a rebuilt observability pipeline",
-    "intro": "A heavy nightly across the board: the chat surface gets virtualization, paginated history, and a frame-batched streaming pipeline that stops chat and the terminal from starving each other. The 1,500-line ChatInputBar is broken apart, typing lag is eliminated, and dev loops gain reattach-after-restart resilience. On the platform side, per-tool permissions become first-class, swarm VM logs surface in agent details, and the observability/status pipeline is rebuilt around a single snapshot source.",
+    "version": "0.1.0-nightly.660.1",
+    "title": "Smoother streaming chat, virtualized transcripts, and a rebuilt input bar",
+    "intro": "A heavy day for chat performance and polish: the input bar was rebuilt from the ground up to kill typing lag, transcripts now virtualize and paginate, streaming reveals stay in order, and tool markup that used to leak into prose is finally rendered as proper blocks. Behind the scenes, dev-loop runs survive server restarts, swarm VMs expose live logs, and the observability pipeline was reworked to publish a single, trustworthy status snapshot.",
     "entryCount": 6,
     "highlights": [
-      "Frame-batched chat + terminal streaming",
-      "Virtualized transcript with cursor-paginated history",
-      "ChatInputBar decomposed into memoized slots",
-      "Dev loops survive server restarts",
-      "Per-tool tri-state permissions across chat and automation",
-      "Unified observability snapshot pipeline"
+      "Frame-batched streaming and a rebuilt input bar eliminate typing and reveal lag",
+      "Chat transcripts now virtualize and cursor-paginate session history",
+      "Tool markup leaks render as proper blocks instead of garbled text",
+      "Dev loops reattach across server restarts and keep the task UI live",
+      "Per-tool permissions and a fuller generation catalog ship end to end"
     ],
-    "rawCommitCount": 58,
-    "generatedAt": "2026-06-13T03:58:11.955Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.659.1",
+    "rawCommitCount": 59,
+    "generatedAt": "2026-06-13T04:39:18.486Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.660.1",
     "path": "history/2026-06-12.json"
   },
   {
