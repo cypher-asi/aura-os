@@ -1,53 +1,58 @@
-# Observability probes get truthful, scoped, and release-aware
+# Observability gets honest, scoped, and historical
 
 - Date: `2026-06-12`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.655.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.655.1
+- Version: `0.1.0-nightly.656.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.656.1
 
-Today was a deep iteration day on Aura's status and observability pipeline. The team tightened which checks actually run, made probe agents enforce least-privilege permissions end to end, and rewired desktop releases so they publish a complete, merged status snapshot that the public observability dashboard reads first. CI also got more resilient defaults so jobs no longer break when service URL variables are unset.
+Today's nightly is almost entirely an observability and release-infrastructure day. The status pipeline was overhauled to run a complete suite after every desktop release, drop probes that weren't actually exercising production paths, scope probe agents to least-privilege permissions, and finally persist a queryable history of runs to internal storage.
 
-## 12:10 AM — Complete health suite and resilient artifact polling
+## 12:10 AM — Complete health-check suite and resilient artifact polling
 
-Status probes were broadened to cover the full feature set, and CI artifact polling no longer fails the run on transient fetch errors.
+Early-morning fixes broadened the observability suite back to a full run and made cross-job artifact polling tolerant of transient GitHub fetch errors.
 
-- Expanded the observability workflow to run the complete check list, including 3D and video generation streams, and gated desktop release probes behind a `ran` output so dependent publish steps only fire when probes actually executed. (`71be72f`)
-- Hardened `wait-gh-artifacts` so transient GitHub API fetch failures during artifact polling are retried instead of aborting the release job. (`5f1e3a7`)
+- Restored the full set of public and generation-stream checks (including model3d-generation-stream and video-generation-stream) in the observability workflow and across nightly/stable release pipelines, so health snapshots reflect the real surface area again. (`71be72f`)
+- Added retry-with-backoff to the GitHub artifact polling script so transient fetch failures during release waits no longer abort CI jobs. (`5f1e3a7`)
 
-## 1:16 AM — Default service URLs for desktop and release workflows
+## 1:16 AM — Default service URLs for desktop CI lanes
 
-CI workflows now fall back to known production service URLs when repository variables are unset, eliminating a class of empty-env failures.
+Desktop validation, benchmark, and release workflows now fall back to known-good production service URLs when repository variables are unset, eliminating a class of empty-env CI failures.
 
-- Performance benchmark, desktop validate, and nightly/stable release workflows now default `AURA_NETWORK_URL`, `AURA_STORAGE_URL`, `AURA_INTEGRATIONS_URL`, `AURA_ROUTER_URL`, `Z_BILLING_URL`, `ORBIT_BASE_URL`, and `SWARM_BASE_URL` to their production endpoints when the corresponding `vars.*` are missing. (`f82c98f`)
+- AURA_NETWORK_URL, AURA_STORAGE_URL, AURA_INTEGRATIONS_URL, AURA_ROUTER_URL, Z_BILLING_URL, ORBIT_BASE_URL, and SWARM_BASE_URL now default to their hosted endpoints across desktop-validate, ci-performance-benchmark, release-nightly, and release-stable when the workflow variable is missing. (`f82c98f`)
 
-## 5:56 AM — Post-release status refresh and model-matrix fault tolerance
+## 5:56 AM — Auto-refresh observability after every desktop release
 
-Observability now auto-refreshes after each desktop release, and per-model runtime checks no longer fail the entire status run on a single bad model.
+The observability workflow now triggers automatically on completion of Desktop Nightly and Desktop Stable releases, and desktop snapshot building no longer depends on a fragile gh-pages merge step.
 
-- Added a `workflow_run` trigger so the observability workflow runs the full suite automatically after Desktop Nightly and Stable releases complete successfully. (`45c287f`)
-- Simplified the desktop release publish path to a single `status:snapshot` step and made the model-matrix probe catch per-model errors so one failing model is reported as `ok: false` instead of aborting the run. (`45c287f`)
+- Added a workflow_run trigger so observability re-runs the full probe suite immediately after a successful Desktop Nightly or Desktop Stable release. (`45c287f`)
+- Simplified release-side snapshot building by dropping the previous-snapshot fetch-and-merge dance, and made the local model runtime check record per-model failures instead of aborting the whole batch. (`45c287f`)
 
-## 10:28 AM — Probe agents pinned to org-scoped, zero-capability permissions
+## 10:28 AM — Truthful probes with least-privilege probe agents
 
-Status probes were made honest about what they exercise: the agent runtime now forwards real agent permissions, and probe agents are created with a strict org-scoped, capability-free bundle that is preserved end to end.
+A multi-step thread made status probes actually exercise the runtime they claim to test and locked probe-created agents down to org-scoped, zero-capability permissions without breaking real agent creation.
 
-- Runtime sessions now forward each agent's permissions into `SessionConfig` via a new `runtime_session_config` helper, so model-matrix and runtime probes reflect actual agent capabilities instead of an empty default. (`1d96402`)
-- Introduced a shared `statusProbeAgentPermissions` helper plus a `local-agent-permissions` check, and trimmed the probe runner so probe agents are always created with `{ orgs: [orgId], capabilities: [] }` and verified against that contract. (`086a496`, `573e753`)
-- Server-side agent creation now falls back to the submitted permissions when aura-network's create response fails to echo them, logging a warning instead of silently dropping the caller's scoped, zero-capability bundle. (`115a761`)
-- Retired stale stream and harness expectations (`model3d-generation-stream`, `video-generation-stream`, `live-benchmark-hello-world`, `harness-fixture-suite`) and added a registry test that rejects runner checks not present in the registry. (`086a496`, `1d96402`)
+- Runtime sessions now forward agent permissions end-to-end, and unreliable model3d/video/live-benchmark/harness-fixture checks were removed from the suite so the dashboard reflects what is genuinely exercised. (`1d96402`)
+- Extracted a shared statusProbeAgentPermissions helper that scopes probe agents to a single org with no capabilities, and added a registry test ensuring the runner can't expose unregistered checks. (`573e753`, `086a496`)
+- Fixed a regression in the agent create handler so scoped, zero-capability permission bundles round-trip correctly, with a new test covering the org-scoped no-capability case. (`115a761`, `086a496`)
 
-## 2:43 PM — Release-driven web probes and merged snapshot for /observability
+## 2:43 PM — Regression-focused evals and merged release snapshots
 
-Desktop releases now also run the full production web probe suite and publish a merged status snapshot that the public `/observability` page reads as the source of truth.
+Status evals gained a published-snapshot regression check and a new local-agent-permissions check, and desktop release jobs now run the production web probes too and merge them with the prior gh-pages snapshot before publishing.
 
-- Added a `published-observability-snapshot` regression check and updated the React `/observability` route to fetch the workflow-published snapshot first, falling back to the bundled build-time JSON only if the published one is unreachable. (`240d4b2`)
-- Extended desktop release expectations with a new `local-agent-permissions` check and tightened the x402 payment-challenge probe to require the `paymentRequiredHeaderPresent` evidence field. (`240d4b2`)
-- Nightly and stable release jobs now run the full production web probe set (api-health, auth, billing, marketplace, x402, marketing pages, and more) alongside the desktop probes, and rebuild the snapshot by merging the previous `gh-pages` status with the freshly captured checks before publishing. (`1bb31b2`, `240d4b2`)
+- Added a published-observability-snapshot check that validates the workflow-published JSON the React /observability page prefers, plus a local-agent-permissions check asserting org-scoped, zero-capability bundles. The x402 payment-challenge check now also requires the 402 response header. (`240d4b2`)
+- Desktop nightly and stable release jobs now run the full production web/API probe suite into the same checks directory before snapshot build, and reintroduce the previous-snapshot merge so release-triggered snapshots carry forward fresh website, API, and desktop-only evidence in one publish. (`240d4b2`, `1bb31b2`)
+
+## 5:21 PM — Persisted observability history to aura-storage
+
+A new internal pipeline posts each observability run to aura-storage so the team finally has a queryable history of features, checks, latency, and failure evidence beyond the latest snapshot.
+
+- Introduced status:persist with a new status-persistence library and persist-status-history script that build an ingest payload from the snapshot and POST it to aura-storage's /internal/observability/runs endpoint, gated on AURA_STORAGE_URL and an internal token. (`7719167`)
+- Wired the persist step into the scheduled observability workflow and into desktop nightly/stable release jobs as a best-effort, continue-on-error stage tagged with environment, source, and release channel, so persistence failures never block the public status page. (`7719167`)
 
 ## Highlights
 
-- Status probes now run the full health suite and survive transient artifact fetch failures
-- Desktop releases auto-trigger an observability refresh and publish a merged snapshot
-- Probe agents are pinned to org-scoped, zero-capability permissions across server and client
-- Production web probes now run alongside desktop release probes for a unified snapshot
+- Status probes now run a full, truthful suite after each desktop release
+- Probe-created agents are scoped to org-only, zero-capability permissions
+- Observability runs are now persisted to aura-storage for historical querying
+- CI workflows fall back to sane default service URLs when vars are unset
 

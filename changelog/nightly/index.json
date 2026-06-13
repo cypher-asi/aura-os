@@ -2,19 +2,19 @@
   {
     "date": "2026-06-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.655.1",
-    "title": "Observability probes get truthful, scoped, and release-aware",
-    "intro": "Today was a deep iteration day on Aura's status and observability pipeline. The team tightened which checks actually run, made probe agents enforce least-privilege permissions end to end, and rewired desktop releases so they publish a complete, merged status snapshot that the public observability dashboard reads first. CI also got more resilient defaults so jobs no longer break when service URL variables are unset.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.656.1",
+    "title": "Observability gets honest, scoped, and historical",
+    "intro": "Today's nightly is almost entirely an observability and release-infrastructure day. The status pipeline was overhauled to run a complete suite after every desktop release, drop probes that weren't actually exercising production paths, scope probe agents to least-privilege permissions, and finally persist a queryable history of runs to internal storage.",
+    "entryCount": 6,
     "highlights": [
-      "Status probes now run the full health suite and survive transient artifact fetch failures",
-      "Desktop releases auto-trigger an observability refresh and publish a merged snapshot",
-      "Probe agents are pinned to org-scoped, zero-capability permissions across server and client",
-      "Production web probes now run alongside desktop release probes for a unified snapshot"
+      "Status probes now run a full, truthful suite after each desktop release",
+      "Probe-created agents are scoped to org-only, zero-capability permissions",
+      "Observability runs are now persisted to aura-storage for historical querying",
+      "CI workflows fall back to sane default service URLs when vars are unset"
     ],
-    "rawCommitCount": 10,
-    "generatedAt": "2026-06-12T22:32:29.436Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.655.1",
+    "rawCommitCount": 11,
+    "generatedAt": "2026-06-13T00:39:13.658Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.656.1",
     "path": "history/2026-06-12.json"
   },
   {
