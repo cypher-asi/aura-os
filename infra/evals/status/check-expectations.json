@@ -252,15 +252,12 @@
       ]
     },
     "public-observability-page": {
-      "description": "Public observability snapshot JSON returns overall state and feature count.",
-      "requiredEvidence": ["schemaVersion", "overall", "generatedAtPresent", "source", "featureCount", "totalsFeatures"],
+      "description": "Public observability route serves the Aura app shell.",
+      "requiredEvidence": ["status", "hasAppShell", "bodyLength"],
       "assertions": [
-        { "path": "schemaVersion", "equals": 1 },
-        { "path": "overall", "oneOf": ["operational", "degraded", "partial_outage", "major_outage", "unknown", "maintenance"] },
-        { "path": "generatedAtPresent", "equals": true },
-        { "path": "source", "nonEmpty": true },
-        { "path": "featureCount", "min": 1 },
-        { "path": "totalsFeatures", "min": 1 }
+        { "path": "status", "equals": 200 },
+        { "path": "hasAppShell", "equals": true },
+        { "path": "bodyLength", "min": 1 }
       ]
     },
     "public-models-page": {

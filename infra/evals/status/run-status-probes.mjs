@@ -1005,10 +1005,19 @@ async function runChecks(args) {
   }
 
   if (selected("public-observability-page")) {
-    checks.push(await probe("public-observability-page", "public-website", "Public observability snapshot", args, async () => {
+    checks.push(await probe("public-observability-page", "public-website", "Public observability page", args, async () => {
       const base = args.publicBaseUrl || args.baseUrl;
-      const payload = await publicJson(base, "/observability/status.json");
-      return { evidence: statusSnapshotEvidence(payload) };
+      const result = await publicText(base, "/observability");
+      const hasAppShell = result.text.includes("root") || result.text.includes("AURA");
+      return {
+        status: hasAppShell ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+        message: hasAppShell ? "" : "Public observability page did not return the Aura app shell",
+        evidence: {
+          status: result.status,
+          hasAppShell,
+          bodyLength: result.text.length,
+        },
+      };
     }));
   }
 

@@ -71,10 +71,11 @@ jobs:
 
       - name: Persist observability history
         if: always()
-        continue-on-error: true
         env:
           AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL || 'https://aura-storage.onrender.com' }}
           AURA_STORAGE_INTERNAL_TOKEN: ${{ secrets.AURA_STORAGE_INTERNAL_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
+          AURA_STATUS_SNAPSHOT_FILE: infra/evals/reports/status/status.json
+          AURA_STATUS_PERSIST_REQUIRED: "1"
           AURA_STATUS_ENVIRONMENT: production
           AURA_STATUS_SOURCE: github-actions
         run: npm run status:persist
@@ -87,11 +88,10 @@ jobs:
           path: pages
 
       - name: Publish public observability snapshot
-        if: always()
         shell: bash
         run: |
           mkdir -p pages/observability
-          cp interface/public/observability/status.json pages/observability/status.json
+          cp infra/evals/reports/status/status.json pages/observability/status.json
           bash infra/scripts/release/commit-gh-pages-with-retry.sh \
             pages \
             "Update observability status snapshot" \
@@ -103,6 +103,5 @@ jobs:
         with:
           name: aura-observability
           path: |
-            interface/public/observability/status.json
             infra/evals/reports/status/status.json
             infra/evals/reports/status/checks
