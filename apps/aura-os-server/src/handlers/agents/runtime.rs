@@ -204,19 +204,7 @@ async fn run_harness_test(
     user_id: &str,
     model: Option<String>,
 ) -> ApiResult<RuntimeOutcome> {
-    let config = SessionConfig {
-        agent_system_prompt: Some(agent.system_prompt.clone()),
-        agent_id: Some(aura_os_core::harness_agent_id(&agent.agent_id, None, None)),
-        template_agent_id: Some(agent.agent_id.to_string()),
-        agent_name: Some(agent.name.clone()),
-        model: model.clone(),
-        token: Some(jwt.to_string()),
-        aura_org_id: agent.org_id.as_ref().map(ToString::to_string),
-        aura_session_id: Some(uuid::Uuid::new_v4().to_string()),
-        user_id: Some(user_id.to_string()),
-        provider_overrides: session_model_overrides(model.as_deref()),
-        ..Default::default()
-    };
+    let config = runtime_session_config(agent, jwt, user_id, model);
     validate_session_identity(
         &config,
         SessionIdentityRequirements::CHAT,
@@ -279,9 +267,36 @@ async fn run_harness_test(
     Ok(turn)
 }
 
+fn runtime_session_config(
+    agent: &Agent,
+    jwt: &str,
+    user_id: &str,
+    model: Option<String>,
+) -> SessionConfig {
+    SessionConfig {
+        agent_system_prompt: Some(agent.system_prompt.clone()),
+        agent_id: Some(aura_os_core::harness_agent_id(&agent.agent_id, None, None)),
+        template_agent_id: Some(agent.agent_id.to_string()),
+        agent_name: Some(agent.name.clone()),
+        model: model.clone(),
+        token: Some(jwt.to_string()),
+        aura_org_id: agent.org_id.as_ref().map(ToString::to_string),
+        aura_session_id: Some(uuid::Uuid::new_v4().to_string()),
+        user_id: Some(user_id.to_string()),
+        provider_overrides: session_model_overrides(model.as_deref()),
+        agent_permissions: (&agent.permissions).into(),
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aura_os_core::{
+        listing_status::AgentListingStatus, AgentPermissions, AgentScope, Capability, OrgId,
+    };
+    use aura_protocol::CapabilityWire;
+    use chrono::Utc;
 
     #[test]
     fn session_model_overrides_populates_default_model() {
@@ -318,6 +333,27 @@ mod tests {
         assert!(
             session_model_overrides_with_cache(Some(""), Some("  ".into()), Some("")).is_none()
         );
+    }
+
+    #[test]
+    fn runtime_session_config_forwards_agent_permissions() {
+        let agent = test_agent_with_permissions(AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::InvokeProcess],
+        });
+
+        let config = runtime_session_config(&agent, "jwt", "user-1", Some("aura-gpt-5-5".into()));
+
+        assert_eq!(config.agent_permissions.capabilities.len(), 1);
+        assert!(matches!(
+            config.agent_permissions.capabilities[0],
+            CapabilityWire::InvokeProcess
+        ));
+        assert!(!config
+            .agent_permissions
+            .capabilities
+            .iter()
+            .any(|capability| matches!(capability, CapabilityWire::Unknown)));
     }
 
     fn council_body(mechanism: Option<&str>) -> CouncilRequestBody {
@@ -383,5 +419,42 @@ mod tests {
         )
         .expect("model + key should produce overrides");
         assert_eq!(overrides.prompt_cache_key.as_deref(), Some(long.as_str()));
+    }
+
+    fn test_agent_with_permissions(permissions: AgentPermissions) -> Agent {
+        let now = Utc::now();
+        Agent {
+            agent_id: AgentId::new(),
+            user_id: "user-1".into(),
+            org_id: Some(OrgId::new()),
+            name: "Status Probe".into(),
+            role: "status-probe".into(),
+            personality: "Deterministic".into(),
+            system_prompt: "Reply exactly as requested.".into(),
+            skills: vec![],
+            icon: None,
+            machine_type: "local".into(),
+            adapter_type: "aura_harness".into(),
+            environment: "local_host".into(),
+            auth_source: "aura_managed".into(),
+            integration_id: None,
+            default_model: None,
+            vm_id: None,
+            wallet_address: None,
+            network_agent_id: None,
+            profile_id: None,
+            tags: vec![],
+            is_pinned: false,
+            listing_status: AgentListingStatus::Closed,
+            expertise: vec![],
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
+            local_workspace_path: None,
+            permissions,
+            intent_classifier: None,
+            created_at: now,
+            updated_at: now,
+        }
     }
 }

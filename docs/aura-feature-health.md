@@ -34,7 +34,7 @@ Current feature groups:
 - Desktop Runtime: workspace defaults and terminal session API.
 - Streams and Debug: active stream registry and debug project index.
 - Eval Artifacts: existing Playwright/benchmark eval summary artifacts.
-- Public Website: observability snapshot JSON plus public marketing routes.
+- Public Website: the observability page, the published snapshot, and public marketing routes.
 
 ## Running Probes
 
@@ -48,7 +48,8 @@ npm run status:snapshot
 `AURA_STATUS_API_BASE_URL` selects the AURA API/control-plane host for cloud
 probes. Point it at `https://api.aura.ai` when the goal is to measure the
 deployed AURA API. It does not prove that the packaged desktop binary, embedded
-server, local harness, or local-agent runtime are healthy.
+server, local harness, local-agent runtime, or desktop-local model matrix are
+healthy.
 
 Desktop release observability is a separate lane. This is the only path that
 proves the packaged local harness path, because the harness is bundled with the
@@ -70,6 +71,11 @@ runtime response, and the local model matrix. Release workflows run this on the
 macOS arm64 release leg when `AURA_STATUS_USER_EMAIL` and
 `AURA_STATUS_USER_PASSWORD` are configured, then upload the generated check JSON
 and desktop logs as artifacts.
+
+The scheduled public observability workflow intentionally excludes
+desktop-loopback checks and generation modes that require a bundled harness
+runtime. It preserves fresh desktop-release check results from the previous
+published snapshot, then layers deployed API and public website probes on top.
 
 For end-to-end local verification, use the existing eval local stack in
 `infra/evals/local-stack/`. The observability page is not served from a sibling
@@ -97,12 +103,12 @@ the goal is to validate local `aura-network`, `aura-storage`, `orbit`, or local
 database behavior. Remote-agent checks should run through the hybrid or
 production path so local harness execution cannot mask deployed swarm failures.
 
-Default probe runs skip only high-cost optional media checks
-(`video-generation-stream`, `model3d-generation-stream`, and public equivalents
-if added). Run a deeper media sweep with:
+Default probe runs include every implemented check unless `--checks` is used to
+select a smaller set. The production browser/API lane runs media generation
+checks directly, including image, 3D, and video streams:
 
 ```sh
-npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_ACCESS_TOKEN" --include-expensive
+npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_ACCESS_TOKEN"
 ```
 
 For AURA OS public-mode page checks against the frontend dev server:
@@ -115,17 +121,26 @@ node infra/evals/status/run-status-probes.mjs \
   --environment local-dev
 ```
 
+The `published-observability-snapshot` check validates the workflow-published
+snapshot that the React page prefers by default. Override that URL with
+`AURA_STATUS_PUBLISHED_SNAPSHOT_URL` or `--published-snapshot-url` when testing
+a fork or preview branch.
+
 `status:probes` writes check runs under
 `infra/evals/reports/status/checks/`. `status:snapshot` reads those runs,
-applies `infra/evals/status/lib/status-policy.mjs`, and writes:
-
-- `interface/public/observability/status.json`
-- `infra/evals/reports/status/status.json`
+applies `infra/evals/status/lib/status-policy.mjs`, and writes one generated
+snapshot: `infra/evals/reports/status/status.json`.
 
 The AURA OS React route at `/observability`
-(`interface/src/views/marketing/StatusView`) fetches `/observability/status.json` and
-renders the snapshot. If the JSON is missing, the page falls back to an explicit
-unknown state.
+(`interface/src/views/marketing/StatusView`) fetches the workflow-published
+snapshot URL. If that JSON request fails, the page falls back to an explicit
+unknown state instead of reading a bundled second copy.
+
+`status:persist` is the private history path. It reads the generated snapshot
+and posts it to Aura storage at `/internal/observability/runs` when
+`AURA_STORAGE_URL` and `AURA_STORAGE_INTERNAL_TOKEN` are configured. This does
+not change the public status page; it only gives internal tooling a queryable
+history of runs, features, checks, latency, and failure evidence.
 
 ## Publishing
 
@@ -133,17 +148,25 @@ unknown state.
 be triggered manually. It runs probes with production secrets, builds the
 snapshot even when probes fail, and uploads the generated JSON/check artifacts.
 This scheduled workflow uses `AURA_STATUS_CHECKS` to restrict itself to checks
-that can be truthfully exercised against deployed website/API surfaces. It does
-not run desktop-loopback checks such as `local-agent-runtime`,
-`workspace-defaults`, `terminal-list`, or the local `model-matrix`; those belong
-to `status:desktop-release`.
+that can be truthfully exercised against deployed website/API surfaces. It runs
+the public media generation checks, but it does not run desktop-loopback checks
+such as `local-agent-runtime`, `workspace-defaults`, `terminal-list`, or the
+local `model-matrix`; those belong to `status:desktop-release`.
 
-The browser/API and desktop lanes publish to the same public path:
-`/observability/status.json`. Each lane first reads the previously published
+The browser/API and desktop lanes publish to the same `gh-pages` path:
+`observability/status.json`. Each lane first reads the previously published
 snapshot from `gh-pages`, carries forward still-fresh checks from the other
-lane, overlays the checks it just ran, and republishes the merged snapshot. This
-keeps `/observability` as one dashboard while preserving the correct execution
-environment for each eval.
+lane, overlays the checks it just ran, persists that same generated snapshot to
+Aura storage, and then publishes it to `gh-pages`. The public JSON and private
+history are updated from the same file; if required persistence is not
+configured or fails in CI, the workflow fails before publishing a new public
+snapshot.
+
+Desktop release publishing also runs the production browser/API probes into the
+same checks directory before publishing, so release-triggered snapshots contain
+fresh website/API evidence plus desktop-only evidence. The website and desktop
+route read the published snapshot, keeping `/observability` as one dashboard
+while preserving the correct execution environment for each eval.
 
 The core production commands are:
 
@@ -158,9 +181,7 @@ case the probe runner logs into `AURA_STATUS_API_BASE_URL` with
 `POST /api/auth/login` and uses the returned `access_token` in-memory for the
 run.
 
-The generated `interface/public/observability/status.json` ships with the AURA OS
-interface build, and the `/observability` route reads it directly. No
-external status-page service is required for the first version because the
+No external status-page service is required for the first version because the
 valuable part is the AURA-specific probe catalog and status policy. An external
 service only adds value if we later need subscriber notifications, incident
 timelines, or multi-region uptime checks independent of AURA's deploy pipeline.

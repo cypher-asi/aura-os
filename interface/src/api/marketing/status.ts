@@ -57,7 +57,6 @@ export interface StatusSnapshot {
   readonly features: readonly StatusFeature[];
 }
 
-const LOCAL_STATUS_JSON_URL = "/observability/status.json";
 const PUBLISHED_STATUS_JSON_URL =
   import.meta.env.VITE_AURA_STATUS_SNAPSHOT_URL ||
   "https://cypher-asi.github.io/aura-os/observability/status.json";
@@ -74,16 +73,5 @@ async function fetchStatusSnapshot(url: string): Promise<StatusSnapshot> {
 }
 
 export async function getStatusSnapshot(): Promise<StatusSnapshot> {
-  try {
-    return await fetchStatusSnapshot(PUBLISHED_STATUS_JSON_URL);
-  } catch (publishedError) {
-    try {
-      return await fetchStatusSnapshot(LOCAL_STATUS_JSON_URL);
-    } catch (localError) {
-      const message =
-        publishedError instanceof Error ? publishedError.message : String(publishedError);
-      const localMessage = localError instanceof Error ? localError.message : String(localError);
-      throw new Error(`${message}; local fallback failed: ${localMessage}`);
-    }
-  }
+  return fetchStatusSnapshot(PUBLISHED_STATUS_JSON_URL);
 }

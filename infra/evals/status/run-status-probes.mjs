@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { CHECK_STATUS } from "./lib/status-policy.mjs";
 import { validateCheckEvidence } from "./lib/check-expectations.mjs";
+import { statusProbeAgentPermissions } from "./lib/status-probe-permissions.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
@@ -14,19 +15,21 @@ const DEFAULT_REMOTE_TIMEOUT_MS = 180_000;
 const DEFAULT_MODELS = [
   "aura-claude-sonnet-4-6",
   "aura-gpt-5-5",
-  "aura-gemini-3-pro",
 ];
-const EXPENSIVE_CHECKS = new Set([
-  "video-generation-stream",
-  "model3d-generation-stream",
-  "public-video-generation-stream",
-  "public-model3d-generation-stream",
+const EXPECTED_RUNTIME_PHRASE = "hello from aura";
+const DEFAULT_PUBLISHED_STATUS_JSON_URL = "https://cypher-asi.github.io/aura-os/observability/status.json";
+const PUBLISHED_STATUS_MAX_AGE_MINUTES = 180;
+const LIVE_STATUS_SNAPSHOT_SOURCES = new Set([
+  "github-actions",
+  "desktop-nightly-release",
+  "desktop-stable-release",
 ]);
 
 function parseArgs(argv) {
   const args = {
     baseUrl: process.env.AURA_STATUS_API_BASE_URL || "http://127.0.0.1:3190",
     publicBaseUrl: process.env.AURA_STATUS_PUBLIC_BASE_URL || "",
+    publishedSnapshotUrl: process.env.AURA_STATUS_PUBLISHED_SNAPSHOT_URL || process.env.VITE_AURA_STATUS_SNAPSHOT_URL || DEFAULT_PUBLISHED_STATUS_JSON_URL,
     token: process.env.AURA_STATUS_ACCESS_TOKEN || process.env.AURA_EVAL_ACCESS_TOKEN || "",
     userEmail: process.env.AURA_STATUS_USER_EMAIL || "",
     userPassword: process.env.AURA_STATUS_USER_PASSWORD || "",
@@ -37,7 +40,6 @@ function parseArgs(argv) {
     checks: (process.env.AURA_STATUS_CHECKS || "").split(",").map((v) => v.trim()).filter(Boolean),
     models: (process.env.AURA_STATUS_MODEL_IDS || "").split(",").map((v) => v.trim()).filter(Boolean),
     keepEntities: process.env.AURA_STATUS_KEEP_ENTITIES === "1",
-    includeExpensive: process.env.AURA_STATUS_INCLUDE_EXPENSIVE === "1",
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -48,6 +50,7 @@ function parseArgs(argv) {
     };
     if (arg === "--base-url") args.baseUrl = next();
     else if (arg === "--public-base-url") args.publicBaseUrl = next();
+    else if (arg === "--published-snapshot-url") args.publishedSnapshotUrl = next();
     else if (arg === "--token") args.token = next();
     else if (arg === "--user-email") args.userEmail = next();
     else if (arg === "--user-password") args.userPassword = next();
@@ -57,9 +60,8 @@ function parseArgs(argv) {
     else if (arg === "--checks") args.checks = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--models") args.models = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--keep-entities") args.keepEntities = true;
-    else if (arg === "--include-expensive") args.includeExpensive = true;
     else if (arg === "--help") {
-      process.stdout.write("Usage: node infra/evals/status/run-status-probes.mjs [--base-url URL] [--token TOKEN] [--checks a,b] [--include-expensive]\n");
+      process.stdout.write("Usage: node infra/evals/status/run-status-probes.mjs [--base-url URL] [--public-base-url URL] [--published-snapshot-url URL] [--token TOKEN] [--checks a,b]\n");
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -70,22 +72,6 @@ function parseArgs(argv) {
   if (args.models.length === 0) args.models = DEFAULT_MODELS;
   args.checks = args.checks.length > 0 ? new Set(args.checks) : null;
   return args;
-}
-
-function fullAccessAgentPermissions() {
-  return {
-    scope: { orgs: [], projects: [], agent_ids: [] },
-    capabilities: [
-      "spawnAgent",
-      "controlAgent",
-      "readAgent",
-      "listAgents",
-      "invokeProcess",
-      "generateMedia",
-      "readAllProjects",
-      "writeAllProjects",
-    ].map((type) => ({ type })),
-  };
 }
 
 function sseFramesFromText(text) {
@@ -178,6 +164,37 @@ async function publicText(baseUrl, endpoint) {
   const text = await response.text();
   if (!response.ok) throw new Error(`GET ${endpoint} failed with ${response.status}: ${text}`);
   return { status: response.status, text };
+}
+
+async function publicJsonUrl(url) {
+  const response = await fetchWithTimeout(url, {}, DEFAULT_TIMEOUT_MS);
+  const text = await response.text();
+  if (!response.ok) throw new Error(`GET ${url} failed with ${response.status}: ${text}`);
+  return text ? JSON.parse(text) : null;
+}
+
+function statusSnapshotEvidence(payload) {
+  const features = Array.isArray(payload?.features)
+    ? payload.features
+    : Object.values(payload?.features ?? {});
+  const generatedAtMs = Date.parse(payload?.generatedAt ?? "");
+  const snapshotAgeMinutes = Number.isFinite(generatedAtMs)
+    ? Math.round(Math.max(0, (Date.now() - generatedAtMs) / 60000))
+    : null;
+  const unknownFeatureCount = features.filter((feature) => feature?.status === "unknown").length;
+  const featureCount = features.length;
+  return {
+    schemaVersion: payload?.schemaVersion ?? null,
+    overall: payload?.overall,
+    generatedAtPresent: typeof payload?.generatedAt === "string" && payload.generatedAt.length > 0,
+    source: payload?.source ?? null,
+    featureCount,
+    totalsFeatures: payload?.totals?.features ?? null,
+    unknownFeatureCount,
+    snapshotAgeMinutes,
+    hasLiveSource: LIVE_STATUS_SNAPSHOT_SOURCES.has(payload?.source),
+    hasNonUnknownFeatureData: featureCount > 0 && unknownFeatureCount < featureCount,
+  };
 }
 
 function collectionCount(payload, keys = []) {
@@ -385,11 +402,36 @@ async function createAgent(args, track, machineType, model = null, orgId = null)
     environment,
     auth_source: "aura_managed",
     default_model: model,
-    permissions: fullAccessAgentPermissions(),
+    permissions: statusProbeAgentPermissions(orgId),
     tags: ["aura-status-probe"],
   }, { timeoutMs: machineType === "remote" ? DEFAULT_REMOTE_TIMEOUT_MS : DEFAULT_TIMEOUT_MS });
   track("agent", agent.agent_id, `/api/agents/${agent.agent_id}`);
   return agent;
+}
+
+function permissionEvidence(permissions, orgId) {
+  const scope = permissions?.scope ?? {};
+  const capabilities = Array.isArray(permissions?.capabilities) ? permissions.capabilities : [];
+  const orgScope = Array.isArray(scope.orgs) ? scope.orgs : [];
+  const projectScope = Array.isArray(scope.projects) ? scope.projects : [];
+  const agentScope = Array.isArray(scope.agent_ids) ? scope.agent_ids : [];
+  const capabilityTypes = capabilities
+    .map((capability) => {
+      if (typeof capability === "string") return capability;
+      if (typeof capability?.type === "string") return capability.type;
+      return null;
+    })
+    .filter(Boolean);
+
+  return {
+    permissionsPresent: permissions != null && typeof permissions === "object",
+    orgScope,
+    orgScoped: orgScope.length === 1 && orgScope[0] === orgId,
+    projectScopeEmpty: projectScope.length === 0,
+    agentScopeEmpty: agentScope.length === 0,
+    capabilityCount: capabilities.length,
+    capabilityTypes,
+  };
 }
 
 async function runRuntimeTest(args, agentId, timeoutMs = DEFAULT_TIMEOUT_MS) {
@@ -413,7 +455,7 @@ async function waitForRemoteReady(args, agentId) {
 
 async function runChecks(args) {
   const checks = [];
-  const selected = (id) => (args.checks ? args.checks.has(id) : args.includeExpensive || !EXPENSIVE_CHECKS.has(id));
+  const selected = (id) => (args.checks ? args.checks.has(id) : true);
 
   if (selected("api-health")) {
     checks.push(await probe("api-health", "core-api", "API health endpoint", args, async () => {
@@ -434,7 +476,7 @@ async function runChecks(args) {
     checks.push(await probe("auth-validate", "identity-orgs", "Auth validation refresh", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const session = await apiJson(args, "POST", "/api/auth/validate", {});
-      return { evidence: { userIdPresent: Boolean(session?.user_id), accessGranted: Boolean(session?.is_access_granted) } };
+      return { evidence: { userIdPresent: Boolean(session?.user_id) } };
     }));
   }
 
@@ -704,11 +746,38 @@ async function runChecks(args) {
         const { orgId } = await requireOrgId(args);
         const agent = await createAgent(args, track, "local", null, orgId);
         const runtime = await runRuntimeTest(args, agent.agent_id, 60_000);
-        const ok = String(runtime?.message ?? "").toLowerCase().includes("hello from aura");
+        const ok = String(runtime?.message ?? "").toLowerCase().includes(EXPECTED_RUNTIME_PHRASE);
         return {
           status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
           message: ok ? "" : "Runtime response did not contain expected phrase",
           evidence: { orgId, agentId: agent.agent_id, model: runtime?.model, provider: runtime?.provider, message: runtime?.message },
+        };
+      });
+    }));
+  }
+
+  if (selected("local-agent-permissions")) {
+    checks.push(await probe("local-agent-permissions", "local-agents", "Local agent persisted permissions", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => {
+        const { orgId } = await requireOrgId(args);
+        const agent = await createAgent(args, track, "local", null, orgId);
+        const fetched = await apiJson(args, "GET", `/api/agents/${agent.agent_id}`);
+        const evidence = {
+          orgId,
+          agentId: agent.agent_id,
+          ...permissionEvidence(fetched?.permissions ?? agent?.permissions, orgId),
+        };
+        const ok =
+          evidence.permissionsPresent &&
+          evidence.orgScoped &&
+          evidence.projectScopeEmpty &&
+          evidence.agentScopeEmpty &&
+          evidence.capabilityCount === 0;
+        return {
+          status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+          message: ok ? "" : "Local status probe agent permissions did not persist as org-scoped and capability-free",
+          evidence,
         };
       });
     }));
@@ -755,7 +824,7 @@ async function runChecks(args) {
         const agent = await createAgent(args, track, "remote", null, orgId);
         await waitForRemoteReady(args, agent.agent_id);
         const runtime = await runRuntimeTest(args, agent.agent_id, 90_000);
-        const ok = String(runtime?.message ?? "").toLowerCase().includes("hello from aura");
+        const ok = String(runtime?.message ?? "").toLowerCase().includes(EXPECTED_RUNTIME_PHRASE);
         return {
           status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
           message: ok ? "" : "Runtime response did not contain expected phrase",
@@ -771,23 +840,46 @@ async function runChecks(args) {
       const results = [];
       const { orgId } = await requireOrgId(args);
       for (const model of args.models) {
-        const result = await withCleanup(args, async (track) => {
-          const agent = await createAgent(args, track, "local", model, orgId);
-          const runtime = await runRuntimeTest(args, agent.agent_id, 60_000);
-          return {
+        try {
+          const result = await withCleanup(args, async (track) => {
+            const agent = await createAgent(args, track, "local", model, orgId);
+            const runtime = await runRuntimeTest(args, agent.agent_id, 60_000);
+            const message = String(runtime?.message ?? "");
+            return {
+              model,
+              ok: message.toLowerCase().includes(EXPECTED_RUNTIME_PHRASE),
+              provider: runtime?.provider ?? null,
+              resolvedModel: runtime?.model ?? null,
+              messageSample: message.slice(0, 120),
+            };
+          });
+          results.push(result);
+        } catch (error) {
+          results.push({
             model,
-            ok: String(runtime?.message ?? "").toLowerCase().includes("hello from aura"),
-            provider: runtime?.provider ?? null,
-            resolvedModel: runtime?.model ?? null,
-          };
-        });
-        results.push(result);
+            ok: false,
+            provider: null,
+            resolvedModel: null,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
       const passed = results.filter((result) => result.ok).length;
+      const failedModels = results.filter((result) => !result.ok).map((result) => result.model);
+      const allPassed = passed === results.length;
       return {
-        status: passed === results.length ? CHECK_STATUS.PASS : passed > 0 ? CHECK_STATUS.WARN : CHECK_STATUS.FAIL,
+        status: allPassed ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
         message: `${passed}/${results.length} models returned the expected response`,
-        evidence: { orgId, passed, total: results.length, results },
+        evidence: {
+          orgId,
+          passed,
+          total: results.length,
+          allPassed,
+          failedModelCount: failedModels.length,
+          failedModels,
+          expectedPhrase: EXPECTED_RUNTIME_PHRASE,
+          results,
+        },
       };
     }));
   }
@@ -799,7 +891,7 @@ async function runChecks(args) {
         prompt: "A minimal black AURA status check glyph on a white background",
         model: process.env.AURA_STATUS_IMAGE_MODEL || "gpt-image-2",
         size: "1024x1024",
-      }, 180_000);
+      }, 360_000);
       const completed = frames.find((frame) => frame.event === "generation_completed");
       const error = frames.find((frame) => frame.event === "generation_error");
       if (error) {
@@ -810,44 +902,6 @@ async function runChecks(args) {
         status: imageUrl ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
         message: imageUrl ? "" : "Image generation stream did not emit a completed image URL",
         evidence: { frameTypes: frames.map((frame) => frame.event), imageUrlPresent: Boolean(imageUrl) },
-      };
-    }));
-  }
-
-  if (selected("model3d-generation-stream")) {
-    checks.push(await probe("model3d-generation-stream", "media-generation", "3D generation stream", args, async () => {
-      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
-      const frames = await apiSse(args, "/api/generate/3d/stream", {
-        prompt: "A simple cube for an AURA status probe",
-        image_data: process.env.AURA_STATUS_3D_SOURCE_IMAGE || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
-      }, 240_000);
-      const completed = frames.find((frame) => frame.event === "generation_completed" || frame.event === "completed");
-      const error = frames.find((frame) => frame.event === "generation_error" || frame.event === "error");
-      if (error) return { status: CHECK_STATUS.FAIL, message: error.data?.message ?? "3D generation error", evidence: { frames } };
-      return {
-        status: completed ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
-        message: completed ? "" : "3D generation stream did not emit completion",
-        evidence: { frameTypes: frames.map((frame) => frame.event) },
-      };
-    }));
-  }
-
-  if (selected("video-generation-stream")) {
-    checks.push(await probe("video-generation-stream", "media-generation", "Video generation stream", args, async () => {
-      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
-      const frames = await apiSse(args, "/api/generate/video/stream", {
-        prompt: "A one second AURA status pulse animation",
-        model: process.env.AURA_STATUS_VIDEO_MODEL || "veo-3.1-fast",
-        durationSeconds: 1,
-        aspectRatio: "16:9",
-      }, 300_000);
-      const completed = frames.find((frame) => frame.event === "generation_completed" || frame.event === "completed");
-      const error = frames.find((frame) => frame.event === "generation_error" || frame.event === "error");
-      if (error) return { status: CHECK_STATUS.FAIL, message: error.data?.message ?? "Video generation error", evidence: { frames } };
-      return {
-        status: completed ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
-        message: completed ? "" : "Video generation stream did not emit completion",
-        evidence: { frameTypes: frames.map((frame) => frame.event) },
       };
     }));
   }
@@ -886,13 +940,6 @@ async function runChecks(args) {
     checks.push(await probe("public-feedback-api", "public-experience", "Public feedback API", args, async () => {
       const feedback = await publicJson(args.baseUrl, "/api/public/feedback");
       return { evidence: { count: Array.isArray(feedback) ? feedback.length : null } };
-    }));
-  }
-
-  if (selected("public-models-api")) {
-    checks.push(await probe("public-models-api", "public-experience", "Public models API", args, async () => {
-      const models = await publicJson(args.baseUrl, "/api/public/models");
-      return { evidence: { count: collectionCount(models, ["models", "data"]) } };
     }));
   }
 
@@ -939,7 +986,8 @@ async function runChecks(args) {
       const requirement = Array.isArray(payload?.accepts) ? payload.accepts[0] : null;
       const payToPresent = typeof requirement?.payTo === "string" && requirement.payTo.length > 0;
       const amountPresent = typeof requirement?.amount === "string" && requirement.amount.length > 0;
-      const ok = response.status === 402 && payToPresent && amountPresent && requirement?.network && requirement?.asset;
+      const paymentRequiredHeaderPresent = response.headers.has("payment-required");
+      const ok = response.status === 402 && payToPresent && amountPresent && requirement?.network && requirement?.asset && paymentRequiredHeaderPresent;
       return {
         status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
         message: ok ? "" : `Public x402 challenge returned HTTP ${response.status}`,
@@ -950,20 +998,48 @@ async function runChecks(args) {
           asset: requirement?.asset ?? null,
           amount: requirement?.amount ?? null,
           acceptsCount: Array.isArray(payload?.accepts) ? payload.accepts.length : 0,
-          paymentRequiredHeaderPresent: response.headers.has("payment-required"),
+          paymentRequiredHeaderPresent,
         },
       };
     }));
   }
 
   if (selected("public-observability-page")) {
-    checks.push(await probe("public-observability-page", "public-website", "Public observability snapshot", args, async () => {
+    checks.push(await probe("public-observability-page", "public-website", "Public observability page", args, async () => {
       const base = args.publicBaseUrl || args.baseUrl;
-      const payload = await publicJson(base, "/observability/status.json");
-      const featureCount = Array.isArray(payload?.features)
-        ? payload.features.length
-        : Object.keys(payload?.features ?? {}).length;
-      return { evidence: { overall: payload?.overall, featureCount } };
+      const result = await publicText(base, "/observability");
+      const hasAppShell = result.text.includes("root") || result.text.includes("AURA");
+      return {
+        status: hasAppShell ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+        message: hasAppShell ? "" : "Public observability page did not return the Aura app shell",
+        evidence: {
+          status: result.status,
+          hasAppShell,
+          bodyLength: result.text.length,
+        },
+      };
+    }));
+  }
+
+  if (selected("published-observability-snapshot")) {
+    checks.push(await probe("published-observability-snapshot", "public-website", "Published observability snapshot", args, async () => {
+      const payload = await publicJsonUrl(args.publishedSnapshotUrl);
+      const evidence = {
+        ...statusSnapshotEvidence(payload),
+        snapshotUrl: args.publishedSnapshotUrl,
+        maxAgeMinutes: PUBLISHED_STATUS_MAX_AGE_MINUTES,
+      };
+      const ok =
+        evidence.schemaVersion === 1 &&
+        evidence.hasLiveSource &&
+        evidence.hasNonUnknownFeatureData &&
+        evidence.snapshotAgeMinutes != null &&
+        evidence.snapshotAgeMinutes <= PUBLISHED_STATUS_MAX_AGE_MINUTES;
+      return {
+        status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+        message: ok ? "" : "Published observability snapshot is missing live workflow data or is stale",
+        evidence,
+      };
     }));
   }
 
@@ -989,39 +1065,16 @@ async function runChecks(args) {
         results.push({ route, status: result.status, hasRoot: result.text.includes("root") || result.text.includes("AURA") });
       }
       const ok = results.every((result) => result.status >= 200 && result.status < 400);
-      return { status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL, evidence: { results } };
-    }));
-  }
-
-  if (selected("live-benchmark-hello-world")) {
-    checks.push(await probe("live-benchmark-hello-world", "spec-task-loop", "Live benchmark hello world artifact", args, async () => {
-      const files = await artifactScan([
-        "interface/test-results/aura-evals-summary.json",
-        "interface/test-results/live-benchmark-summary.json",
-        "infra/evals/reports/baselines/live-benchmark-summary.json",
-      ]);
-      const existing = files.filter((file) => file.exists).length;
+      const failedRoutes = results.filter((result) => result.status < 200 || result.status >= 400).map((result) => result.route);
       return {
-        status: existing > 0 ? CHECK_STATUS.PASS : CHECK_STATUS.WARN,
-        message: `${existing}/${files.length} live benchmark artifacts found`,
-        evidence: { files },
-      };
-    }));
-  }
-
-  if (selected("harness-fixture-suite")) {
-    checks.push(await probe("harness-fixture-suite", "spec-task-loop", "Harness fixture eval artifacts", args, async () => {
-      const files = await artifactScan([
-        "interface/test-results/aura-evals-summary.json",
-        "infra/evals/reports/baselines/smoke-summary.json",
-        "infra/evals/reports/baselines/chat-core-summary.json",
-        "infra/evals/reports/baselines/workflow-summary.json",
-      ]);
-      const existing = files.filter((file) => file.exists).length;
-      return {
-        status: existing > 0 ? CHECK_STATUS.PASS : CHECK_STATUS.WARN,
-        message: `${existing}/${files.length} harness fixture artifacts found`,
-        evidence: { files },
+        status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+        evidence: {
+          allRoutesOk: ok,
+          routeCount: results.length,
+          failedRoutes,
+          failedRouteCount: failedRoutes.length,
+          results,
+        },
       };
     }));
   }

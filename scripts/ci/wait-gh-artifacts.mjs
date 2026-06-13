@@ -42,22 +42,37 @@ if (!repository || !runId || !token) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+class RetryableGitHubApiError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RetryableGitHubApiError";
+  }
+}
+
 async function githubApi(pathname, query = {}) {
   const url = new URL(`${apiBase}${pathname}`);
   for (const [key, value] of Object.entries(query)) {
     url.searchParams.set(key, String(value));
   }
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      Accept: "application/vnd.github+json",
-    },
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        Accept: "application/vnd.github+json",
+      },
+    });
+  } catch (error) {
+    throw new RetryableGitHubApiError(`GitHub API request failed for ${url}: ${error.message}`);
+  }
 
   if (!response.ok) {
     const body = await response.text();
+    if (response.status === 429 || response.status >= 500) {
+      throw new RetryableGitHubApiError(`GitHub API ${response.status} for ${url}: ${body}`);
+    }
     throw new Error(`GitHub API ${response.status} for ${url}: ${body}`);
   }
 
@@ -92,9 +107,27 @@ async function snapshot() {
 
 const deadline = Date.now() + timeoutMs;
 let lastStatus = "";
+let lastSnapshotError = "";
 
 while (Date.now() < deadline) {
-  const { artifactNames, jobsByName } = await snapshot();
+  let artifactNames;
+  let jobsByName;
+  try {
+    ({ artifactNames, jobsByName } = await snapshot());
+  } catch (error) {
+    if (!(error instanceof RetryableGitHubApiError)) {
+      throw error;
+    }
+    const status = `Waiting for GitHub API: ${error.message}`;
+    if (status !== lastSnapshotError) {
+      console.log(status);
+      lastSnapshotError = status;
+    }
+    await sleep(intervalMs);
+    continue;
+  }
+  lastSnapshotError = "";
+
   const missingArtifacts = artifacts.filter((name) => !artifactNames.has(name));
   const failedJobs = failJobs
     .map((name) => jobsByName.get(name))

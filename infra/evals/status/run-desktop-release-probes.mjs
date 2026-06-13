@@ -17,6 +17,7 @@ const DEFAULT_CHECKS = [
   "terminal-list",
   "local-agent-create",
   "local-agent-runtime",
+  "local-agent-permissions",
   "model-matrix",
 ];
 

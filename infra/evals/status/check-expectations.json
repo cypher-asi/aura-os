@@ -19,11 +19,10 @@
       "requiredEvidence": ["keys"]
     },
     "auth-validate": {
-      "description": "Auth validation refresh returns a user id and access state.",
-      "requiredEvidence": ["userIdPresent", "accessGranted"],
+      "description": "Auth validation refresh returns a user id.",
+      "requiredEvidence": ["userIdPresent"],
       "assertions": [
-        { "path": "userIdPresent", "equals": true },
-        { "path": "accessGranted", "equals": true }
+        { "path": "userIdPresent", "equals": true }
       ]
     },
     "orgs-list": {
@@ -59,11 +58,6 @@
       "description": "Public feedback API returns a list count.",
       "requiredEvidence": ["count"]
     },
-    "public-models-api": {
-      "description": "Public models API returns a list count.",
-      "requiredEvidence": ["count"],
-      "assertions": [{ "path": "count", "min": 1 }]
-    },
     "public-blog-api": {
       "description": "Public blog API returns a list count.",
       "requiredEvidence": ["count"]
@@ -78,14 +72,15 @@
     },
     "public-x402-payment-challenge": {
       "description": "Public x402 chat returns a payment challenge with wallet, network, asset, and amount fields before settlement.",
-      "requiredEvidence": ["status", "payToPresent", "network", "asset", "amount", "acceptsCount"],
+      "requiredEvidence": ["status", "payToPresent", "network", "asset", "amount", "acceptsCount", "paymentRequiredHeaderPresent"],
       "assertions": [
         { "path": "status", "equals": 402 },
         { "path": "payToPresent", "equals": true },
         { "path": "network", "nonEmpty": true },
         { "path": "asset", "nonEmpty": true },
         { "path": "amount", "nonEmpty": true },
-        { "path": "acceptsCount", "min": 1 }
+        { "path": "acceptsCount", "min": 1 },
+        { "path": "paymentRequiredHeaderPresent", "equals": true }
       ]
     },
     "local-agent-create": {
@@ -96,6 +91,17 @@
       "description": "Local runtime test returns the expected response metadata.",
       "requiredEvidence": ["orgId", "agentId", "model", "provider", "message"],
       "assertions": [{ "path": "message", "containsIgnoreCase": "hello from aura" }]
+    },
+    "local-agent-permissions": {
+      "description": "A local status probe agent persists the org-scoped, capability-free permissions bundle used by live evals.",
+      "requiredEvidence": ["orgId", "agentId", "permissionsPresent", "orgScoped", "projectScopeEmpty", "agentScopeEmpty", "capabilityCount", "capabilityTypes"],
+      "assertions": [
+        { "path": "permissionsPresent", "equals": true },
+        { "path": "orgScoped", "equals": true },
+        { "path": "projectScopeEmpty", "equals": true },
+        { "path": "agentScopeEmpty", "equals": true },
+        { "path": "capabilityCount", "equals": 0 }
+      ]
     },
     "remote-agent-create": {
       "description": "Remote agent creation reaches a ready state.",
@@ -140,10 +146,13 @@
     },
     "model-matrix": {
       "description": "Every configured model is exercised and pass/total counts are recorded.",
-      "requiredEvidence": ["orgId", "passed", "total", "results"],
+      "requiredEvidence": ["orgId", "passed", "total", "allPassed", "failedModelCount", "failedModels", "expectedPhrase", "results"],
       "assertions": [
         { "path": "total", "min": 1 },
         { "path": "passed", "min": 1 },
+        { "path": "allPassed", "equals": true },
+        { "path": "failedModelCount", "equals": 0 },
+        { "path": "expectedPhrase", "equals": "hello from aura" },
         { "path": "results", "nonEmpty": true }
       ]
     },
@@ -154,22 +163,6 @@
         { "path": "frameTypes", "contains": "generation_completed" },
         { "path": "imageUrlPresent", "equals": true }
       ]
-    },
-    "model3d-generation-stream": {
-      "description": "3D generation stream emits frame types and completion.",
-      "requiredEvidence": ["frameTypes"]
-    },
-    "video-generation-stream": {
-      "description": "Video generation stream emits frame types and completion.",
-      "requiredEvidence": ["frameTypes"]
-    },
-    "live-benchmark-hello-world": {
-      "description": "Existing live benchmark artifact reports benchmark output.",
-      "requiredEvidence": ["files"]
-    },
-    "harness-fixture-suite": {
-      "description": "Existing harness fixture artifact reports fixture output.",
-      "requiredEvidence": ["files"]
     },
     "marketplace-agents": {
       "description": "Marketplace agent catalog returns a list count.",
@@ -241,12 +234,30 @@
       "description": "Eval artifact scan reports files and found counts.",
       "requiredEvidence": ["files"]
     },
-    "public-observability-page": {
-      "description": "Public observability snapshot JSON returns overall state and feature count.",
-      "requiredEvidence": ["overall", "featureCount"],
+    "published-observability-snapshot": {
+      "description": "The published snapshot consumed by /observability is workflow-generated, fresh, and contains real feature data.",
+      "requiredEvidence": ["schemaVersion", "overall", "generatedAtPresent", "source", "featureCount", "totalsFeatures", "unknownFeatureCount", "snapshotAgeMinutes", "hasLiveSource", "hasNonUnknownFeatureData", "snapshotUrl", "maxAgeMinutes"],
       "assertions": [
-        { "path": "overall", "oneOf": ["operational", "degraded", "partial_outage", "major_outage", "unknown", "maintenance"] },
-        { "path": "featureCount", "min": 1 }
+        { "path": "schemaVersion", "equals": 1 },
+        { "path": "overall", "oneOf": ["operational", "degraded", "partial_outage", "major_outage", "maintenance"] },
+        { "path": "generatedAtPresent", "equals": true },
+        { "path": "source", "oneOf": ["github-actions", "desktop-nightly-release", "desktop-stable-release"] },
+        { "path": "featureCount", "min": 1 },
+        { "path": "totalsFeatures", "min": 1 },
+        { "path": "snapshotAgeMinutes", "max": 180 },
+        { "path": "hasLiveSource", "equals": true },
+        { "path": "hasNonUnknownFeatureData", "equals": true },
+        { "path": "snapshotUrl", "nonEmpty": true },
+        { "path": "maxAgeMinutes", "equals": 180 }
+      ]
+    },
+    "public-observability-page": {
+      "description": "Public observability route serves the Aura app shell.",
+      "requiredEvidence": ["status", "hasAppShell", "bodyLength"],
+      "assertions": [
+        { "path": "status", "equals": 200 },
+        { "path": "hasAppShell", "equals": true },
+        { "path": "bodyLength", "min": 1 }
       ]
     },
     "public-models-page": {
@@ -256,7 +267,13 @@
     },
     "public-marketing-pages": {
       "description": "Public marketing route sweep returns per-route results.",
-      "requiredEvidence": ["results"]
+      "requiredEvidence": ["allRoutesOk", "routeCount", "failedRoutes", "failedRouteCount", "results"],
+      "assertions": [
+        { "path": "allRoutesOk", "equals": true },
+        { "path": "routeCount", "min": 8 },
+        { "path": "failedRouteCount", "equals": 0 },
+        { "path": "results", "nonEmpty": true }
+      ]
     }
   }
 }

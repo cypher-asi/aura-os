@@ -150,39 +150,6 @@ describe("StatusView", () => {
     expect(within(table).getByText("2/3")).toBeInTheDocument();
   });
 
-  it("falls back to the bundled snapshot when the published JSON is unavailable", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 404,
-          json: async () => ({}),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => FIXTURE_SNAPSHOT,
-        }),
-    );
-
-    render(<StatusView />);
-
-    await waitFor(() => {
-      expect(screen.getByText("github-actions")).toBeInTheDocument();
-    });
-    expect(fetch).toHaveBeenNthCalledWith(
-      1,
-      PUBLISHED_STATUS_URL,
-      expect.objectContaining({ cache: "no-store" }),
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      2,
-      "/observability/status.json",
-      expect.objectContaining({ cache: "no-store" }),
-    );
-  });
-
   it("falls back to an unknown snapshot when the published JSON is unavailable", async () => {
     vi.stubGlobal(
       "fetch",
@@ -198,7 +165,11 @@ describe("StatusView", () => {
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("HTTP 404");
     });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith(
+      PUBLISHED_STATUS_URL,
+      expect.objectContaining({ cache: "no-store" }),
+    );
     expect(screen.getByText("No status snapshot has been published.")).toBeInTheDocument();
   });
 });

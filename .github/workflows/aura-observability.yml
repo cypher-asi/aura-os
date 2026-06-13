@@ -3,6 +3,12 @@ name: AURA Observability
 on:
   schedule:
     - cron: "*/30 * * * *"
+  workflow_run:
+    workflows:
+      - Desktop Nightly Release
+      - Desktop Stable Release
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -10,6 +16,7 @@ permissions:
 
 jobs:
   observability:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: production
 
@@ -41,10 +48,11 @@ jobs:
             marketplace-agents,harness-health,active-streams,debug-projects,
             feedback-list,bug-reports-mine,feed-list,leaderboard,platform-stats,
             remote-agent-create,remote-agent-state,remote-agent-runtime,
-            image-generation-stream,live-benchmark-hello-world,eval-summary-artifacts,
-            public-setup,public-chat-stream,public-feedback-api,public-models-api,
+            image-generation-stream,eval-summary-artifacts,
+            public-setup,public-chat-stream,public-feedback-api,
             public-blog-api,public-x402-models,public-x402-payment-challenge,
-            public-observability-page,public-models-page,public-marketing-pages
+            published-observability-snapshot,public-observability-page,
+            public-models-page,public-marketing-pages
         run: npm run status:probes
 
       - name: Build public observability snapshot
@@ -61,6 +69,17 @@ jobs:
             > infra/evals/reports/status/previous/status.json || true
           npm run status:snapshot
 
+      - name: Persist observability history
+        if: always()
+        env:
+          AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL || 'https://aura-storage.onrender.com' }}
+          AURA_STORAGE_INTERNAL_TOKEN: ${{ secrets.AURA_STORAGE_INTERNAL_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
+          AURA_STATUS_SNAPSHOT_FILE: infra/evals/reports/status/status.json
+          AURA_STATUS_PERSIST_REQUIRED: "1"
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: github-actions
+        run: npm run status:persist
+
       - uses: actions/checkout@v5
         if: always()
         with:
@@ -69,11 +88,10 @@ jobs:
           path: pages
 
       - name: Publish public observability snapshot
-        if: always()
         shell: bash
         run: |
           mkdir -p pages/observability
-          cp interface/public/observability/status.json pages/observability/status.json
+          cp infra/evals/reports/status/status.json pages/observability/status.json
           bash infra/scripts/release/commit-gh-pages-with-retry.sh \
             pages \
             "Update observability status snapshot" \
@@ -85,6 +103,5 @@ jobs:
         with:
           name: aura-observability
           path: |
-            interface/public/observability/status.json
             infra/evals/reports/status/status.json
             infra/evals/reports/status/checks

@@ -212,6 +212,7 @@ jobs:
 
   package:
     needs: release-preflight
+    environment: production
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
@@ -221,13 +222,13 @@ jobs:
       IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
       IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
       IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
-      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
-      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
-      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
-      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
-      Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
-      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
-      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
+      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL || 'https://aura-network.onrender.com' }}
+      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL || 'https://aura-storage.onrender.com' }}
+      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL || 'https://aura-integrations.onrender.com' }}
+      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL || 'https://aura-router.onrender.com' }}
+      Z_BILLING_URL: ${{ vars.Z_BILLING_URL || 'https://z-billing.onrender.com' }}
+      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL || 'https://orbit-sfvu.onrender.com' }}
+      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL || 'http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com' }}
       REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
       # NOTE: This job no longer builds the frontend (it consumes the
@@ -501,6 +502,7 @@ jobs:
             --expected-channel Stable
 
       - name: Run desktop release observability probes
+        id: desktop_observability
         if: matrix.target == 'macos' && matrix.arch == 'aarch64'
         continue-on-error: true
         env:
@@ -510,17 +512,48 @@ jobs:
           AURA_STATUS_ENVIRONMENT: desktop-stable-${{ matrix.target }}-${{ matrix.arch }}
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_DESKTOP_LOG_DIR: desktop-observability-logs
-          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime,model-matrix
+          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime,local-agent-permissions,model-matrix
         shell: bash
         run: |
           if [ -z "$AURA_STATUS_USER_EMAIL" ] || [ -z "$AURA_STATUS_USER_PASSWORD" ]; then
             echo "Skipping desktop observability probes because AURA_STATUS_USER_EMAIL/AURA_STATUS_USER_PASSWORD are not configured."
+            echo "ran=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "ran=true" >> "$GITHUB_OUTPUT"
           npm run status:desktop-release
 
+      - name: Run production web observability probes
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
+        continue-on-error: true
+        env:
+          AURA_STATUS_API_BASE_URL: ${{ secrets.AURA_STATUS_API_BASE_URL || vars.AURA_STATUS_API_BASE_URL || 'https://api.aura.ai' }}
+          AURA_STATUS_PUBLIC_BASE_URL: ${{ secrets.AURA_STATUS_PUBLIC_BASE_URL || vars.AURA_STATUS_PUBLIC_BASE_URL || 'https://aura.ai' }}
+          AURA_STATUS_ACCESS_TOKEN: ${{ secrets.AURA_STATUS_ACCESS_TOKEN }}
+          AURA_STATUS_USER_EMAIL: ${{ secrets.AURA_STATUS_USER_EMAIL }}
+          AURA_STATUS_USER_PASSWORD: ${{ secrets.AURA_STATUS_USER_PASSWORD }}
+          AURA_STATUS_MODEL_IDS: ${{ secrets.AURA_STATUS_MODEL_IDS || vars.AURA_STATUS_MODEL_IDS }}
+          AURA_STATUS_IMAGE_MODEL: ${{ secrets.AURA_STATUS_IMAGE_MODEL || vars.AURA_STATUS_IMAGE_MODEL }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_CHECKS_DIR: desktop-observability-checks
+          AURA_STATUS_CHECKS: >-
+            api-health,auth-session,auth-validate,system-info,
+            orgs-list,user-profile,org-integrations-list,org-tool-actions-list,
+            billing-status,credits-balance,project-crud,spec-task-crud,
+            project-stats,loop-status,process-list,process-crud,
+            marketplace-agents,harness-health,active-streams,debug-projects,
+            feedback-list,bug-reports-mine,feed-list,leaderboard,platform-stats,
+            remote-agent-create,remote-agent-state,remote-agent-runtime,
+            image-generation-stream,eval-summary-artifacts,
+            public-setup,public-chat-stream,public-feedback-api,
+            public-blog-api,public-x402-models,public-x402-payment-challenge,
+            published-observability-snapshot,public-observability-page,
+            public-models-page,public-marketing-pages
+        shell: bash
+        run: npm run status:probes
+
       - name: Upload desktop observability artifacts
-        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64'
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: desktop-observability-stable-${{ matrix.target }}-${{ matrix.arch }}
@@ -529,8 +562,8 @@ jobs:
             desktop-observability-logs
           if-no-files-found: ignore
 
-      - name: Build merged desktop observability snapshot
-        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64'
+      - name: Build desktop observability snapshot
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         env:
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_PREVIOUS_SNAPSHOT: infra/evals/reports/status/previous/status.json
@@ -544,19 +577,31 @@ jobs:
             > infra/evals/reports/status/previous/status.json || true
           npm run status:snapshot
 
+      - name: Persist desktop observability history
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
+        env:
+          AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL || 'https://aura-storage.onrender.com' }}
+          AURA_STORAGE_INTERNAL_TOKEN: ${{ secrets.AURA_STORAGE_INTERNAL_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
+          AURA_STATUS_SNAPSHOT_FILE: infra/evals/reports/status/status.json
+          AURA_STATUS_PERSIST_REQUIRED: "1"
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: desktop-stable-release
+          AURA_STATUS_RELEASE_CHANNEL: stable
+        run: npm run status:persist
+
       - uses: actions/checkout@v5
-        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64'
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         with:
           ref: gh-pages
           fetch-depth: 0
           path: desktop-observability-pages
 
-      - name: Publish merged desktop observability snapshot
-        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64'
+      - name: Publish desktop observability snapshot
+        if: matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         shell: bash
         run: |
           mkdir -p desktop-observability-pages/observability
-          cp interface/public/observability/status.json desktop-observability-pages/observability/status.json
+          cp infra/evals/reports/status/status.json desktop-observability-pages/observability/status.json
           bash infra/scripts/release/commit-gh-pages-with-retry.sh \
             desktop-observability-pages \
             "Update desktop observability status snapshot" \
