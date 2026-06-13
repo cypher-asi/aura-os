@@ -577,6 +577,17 @@ jobs:
             > infra/evals/reports/status/previous/status.json || true
           npm run status:snapshot
 
+      - name: Persist desktop observability history
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
+        continue-on-error: true
+        env:
+          AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL || 'https://aura-storage.onrender.com' }}
+          AURA_STORAGE_INTERNAL_TOKEN: ${{ secrets.AURA_STORAGE_INTERNAL_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: desktop-stable-release
+          AURA_STATUS_RELEASE_CHANNEL: stable
+        run: npm run status:persist
+
       - uses: actions/checkout@v5
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         with:
