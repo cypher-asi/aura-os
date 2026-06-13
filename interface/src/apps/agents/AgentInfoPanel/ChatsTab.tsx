@@ -18,6 +18,7 @@ import {
   sessionHistoryKey,
   useChatHistoryStore,
 } from "../../../stores/chat-history-store";
+import { buildProjectSessionHistoryFetch } from "../../../hooks/use-load-older-messages";
 import { useSelectedAgent } from "../stores";
 import { EmptyState } from "../../../components/EmptyState";
 
