@@ -9,13 +9,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 
 function parseArgs(argv) {
+  const output = resolveSnapshotOutput();
   const args = {
     checksDir: process.env.AURA_STATUS_CHECKS_DIR || path.join(repoRoot, "infra/evals/reports/status/checks"),
     checksFile: process.env.AURA_STATUS_CHECKS_FILE || "",
     previousSnapshot: process.env.AURA_STATUS_PREVIOUS_SNAPSHOT || "",
     registry: process.env.AURA_STATUS_FEATURES_FILE || path.join(__dirname, "features.json"),
-    out: process.env.AURA_STATUS_OUTPUT || path.join(repoRoot, "interface/public/observability/status.json"),
-    reportOut: process.env.AURA_STATUS_REPORT_OUTPUT || path.join(repoRoot, "infra/evals/reports/status/status.json"),
+    out: output,
     environment: process.env.AURA_STATUS_ENVIRONMENT || "unknown",
     source: process.env.AURA_STATUS_SOURCE || "aura-status",
   };
@@ -32,7 +32,7 @@ function parseArgs(argv) {
     else if (arg === "--previous-snapshot") args.previousSnapshot = path.resolve(next());
     else if (arg === "--registry") args.registry = path.resolve(next());
     else if (arg === "--out") args.out = path.resolve(next());
-    else if (arg === "--report-out") args.reportOut = path.resolve(next());
+    else if (arg === "--report-out") args.out = path.resolve(next());
     else if (arg === "--environment") args.environment = next();
     else if (arg === "--source") args.source = next();
     else if (arg === "--help") {
@@ -44,6 +44,16 @@ function parseArgs(argv) {
   }
   if (args.previousSnapshot) args.previousSnapshot = path.resolve(args.previousSnapshot);
   return args;
+}
+
+function resolveSnapshotOutput() {
+  const canonicalOutput = path.join(repoRoot, "infra/evals/reports/status/status.json");
+  const output = process.env.AURA_STATUS_OUTPUT || "";
+  const reportOutput = process.env.AURA_STATUS_REPORT_OUTPUT || "";
+  if (output && reportOutput && path.resolve(output) !== path.resolve(reportOutput)) {
+    throw new Error("AURA_STATUS_OUTPUT and AURA_STATUS_REPORT_OUTPUT must point to the same snapshot file.");
+  }
+  return output || reportOutput || canonicalOutput;
 }
 
 async function readJson(filePath) {
@@ -158,9 +168,5 @@ const snapshot = buildStatusSnapshot({
 });
 
 await writeJson(args.out, snapshot);
-if (args.reportOut && path.resolve(args.reportOut) !== path.resolve(args.out)) {
-  await writeJson(args.reportOut, snapshot);
-}
 
 process.stdout.write(`${path.relative(repoRoot, args.out)}\n`);
-if (args.reportOut) process.stdout.write(`${path.relative(repoRoot, args.reportOut)}\n`);

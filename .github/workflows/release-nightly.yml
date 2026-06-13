@@ -690,10 +690,11 @@ jobs:
 
       - name: Persist desktop observability history
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
-        continue-on-error: true
         env:
           AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL || 'https://aura-storage.onrender.com' }}
           AURA_STORAGE_INTERNAL_TOKEN: ${{ secrets.AURA_STORAGE_INTERNAL_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
+          AURA_STATUS_SNAPSHOT_FILE: infra/evals/reports/status/status.json
+          AURA_STATUS_PERSIST_REQUIRED: "1"
           AURA_STATUS_ENVIRONMENT: production
           AURA_STATUS_SOURCE: desktop-nightly-release
           AURA_STATUS_RELEASE_CHANNEL: nightly
@@ -707,11 +708,11 @@ jobs:
           path: desktop-observability-pages
 
       - name: Publish desktop observability snapshot
-        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
+        if: matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         shell: bash
         run: |
           mkdir -p desktop-observability-pages/observability
-          cp interface/public/observability/status.json desktop-observability-pages/observability/status.json
+          cp infra/evals/reports/status/status.json desktop-observability-pages/observability/status.json
           bash infra/scripts/release/commit-gh-pages-with-retry.sh \
             desktop-observability-pages \
             "Update desktop observability status snapshot" \

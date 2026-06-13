@@ -15,13 +15,15 @@ function parseArgs(argv) {
   const args = {
     snapshot: process.env.AURA_STATUS_SNAPSHOT_FILE
       || process.env.AURA_STATUS_OUTPUT
-      || path.join(repoRoot, "interface/public/observability/status.json"),
+      || process.env.AURA_STATUS_REPORT_OUTPUT
+      || path.join(repoRoot, "infra/evals/reports/status/status.json"),
     storageUrl: process.env.AURA_STATUS_STORAGE_URL || process.env.AURA_STORAGE_URL || "",
     token: process.env.AURA_STATUS_STORAGE_INTERNAL_TOKEN
       || process.env.AURA_STORAGE_INTERNAL_TOKEN
       || process.env.INTERNAL_SERVICE_TOKEN
       || "",
     enabled: !["0", "false", "no"].includes(String(process.env.AURA_STATUS_PERSIST_HISTORY || "1").toLowerCase()),
+    required: ["1", "true", "yes"].includes(String(process.env.AURA_STATUS_PERSIST_REQUIRED || "0").toLowerCase()),
     timeoutMs: Number(process.env.AURA_STATUS_STORAGE_TIMEOUT_MS || "30000"),
     releaseChannel: process.env.AURA_STATUS_RELEASE_CHANNEL || process.env.AURA_RELEASE_CHANNEL || "",
   };
@@ -39,8 +41,9 @@ function parseArgs(argv) {
     else if (arg === "--release-channel") args.releaseChannel = next();
     else if (arg === "--timeout-ms") args.timeoutMs = Number(next());
     else if (arg === "--disabled") args.enabled = false;
+    else if (arg === "--required") args.required = true;
     else if (arg === "--help") {
-      process.stdout.write("Usage: node infra/evals/status/persist-status-history.mjs [--snapshot FILE] [--storage-url URL] [--token TOKEN]\n");
+      process.stdout.write("Usage: node infra/evals/status/persist-status-history.mjs [--snapshot FILE] [--storage-url URL] [--token TOKEN] [--required]\n");
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -60,6 +63,9 @@ if (!args.enabled) {
 }
 
 if (!args.storageUrl || !args.token) {
+  if (args.required) {
+    throw new Error("Aura storage URL and internal token are required before publishing observability status.");
+  }
   process.stdout.write("Skipping observability history persistence because storage URL or internal token is not configured.\n");
   process.exit(0);
 }

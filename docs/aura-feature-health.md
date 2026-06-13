@@ -34,7 +34,7 @@ Current feature groups:
 - Desktop Runtime: workspace defaults and terminal session API.
 - Streams and Debug: active stream registry and debug project index.
 - Eval Artifacts: existing Playwright/benchmark eval summary artifacts.
-- Public Website: observability snapshot JSON plus public marketing routes.
+- Public Website: the observability page, the published snapshot, and public marketing routes.
 
 ## Running Probes
 
@@ -128,19 +128,16 @@ a fork or preview branch.
 
 `status:probes` writes check runs under
 `infra/evals/reports/status/checks/`. `status:snapshot` reads those runs,
-applies `infra/evals/status/lib/status-policy.mjs`, and writes:
-
-- `interface/public/observability/status.json`
-- `infra/evals/reports/status/status.json`
+applies `infra/evals/status/lib/status-policy.mjs`, and writes one generated
+snapshot: `infra/evals/reports/status/status.json`.
 
 The AURA OS React route at `/observability`
 (`interface/src/views/marketing/StatusView`) fetches the workflow-published
-snapshot URL first, then falls back to `/observability/status.json` from the
-current frontend build. If both JSON requests fail, the page falls back to an
-explicit unknown state.
+snapshot URL. If that JSON request fails, the page falls back to an explicit
+unknown state instead of reading a bundled second copy.
 
 `status:persist` is the private history path. It reads the generated snapshot
-and posts it to aura-storage at `/internal/observability/runs` when
+and posts it to Aura storage at `/internal/observability/runs` when
 `AURA_STORAGE_URL` and `AURA_STORAGE_INTERNAL_TOKEN` are configured. This does
 not change the public status page; it only gives internal tooling a queryable
 history of runs, features, checks, latency, and failure evidence.
@@ -159,12 +156,17 @@ local `model-matrix`; those belong to `status:desktop-release`.
 The browser/API and desktop lanes publish to the same `gh-pages` path:
 `observability/status.json`. Each lane first reads the previously published
 snapshot from `gh-pages`, carries forward still-fresh checks from the other
-lane, overlays the checks it just ran, and republishes the merged snapshot.
+lane, overlays the checks it just ran, persists that same generated snapshot to
+Aura storage, and then publishes it to `gh-pages`. The public JSON and private
+history are updated from the same file; if required persistence is not
+configured or fails in CI, the workflow fails before publishing a new public
+snapshot.
+
 Desktop release publishing also runs the production browser/API probes into the
 same checks directory before publishing, so release-triggered snapshots contain
 fresh website/API evidence plus desktop-only evidence. The website and desktop
-route read that published snapshot first, keeping `/observability` as one
-dashboard while preserving the correct execution environment for each eval.
+route read the published snapshot, keeping `/observability` as one dashboard
+while preserving the correct execution environment for each eval.
 
 The core production commands are:
 
@@ -179,12 +181,7 @@ case the probe runner logs into `AURA_STATUS_API_BASE_URL` with
 `POST /api/auth/login` and uses the returned `access_token` in-memory for the
 run.
 
-The generated `interface/public/observability/status.json` ships with the AURA OS
-interface build as a local fallback. No external status-page service is required
-for the first version because the valuable part is the AURA-specific probe
-catalog and status policy. An external service only adds value if we later need
-subscriber notifications, incident timelines, or multi-region uptime checks
-independent of AURA's deploy pipeline.
-
-Private history persistence is best-effort in CI/release workflows. If
-aura-storage is unavailable, the latest public snapshot should still publish.
+No external status-page service is required for the first version because the
+valuable part is the AURA-specific probe catalog and status policy. An external
+service only adds value if we later need subscriber notifications, incident
+timelines, or multi-region uptime checks independent of AURA's deploy pipeline.
