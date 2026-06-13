@@ -372,18 +372,24 @@ export async function installChatCoreMockApp(
     if (pathname === "/api/harness/skills") return json(route, []);
     if (pathname === "/api/streams/active") return json(route, []);
 
+    const projectAgentEventsPath =
+      `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/events`;
+    const projectSessionEventsPath =
+      `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions/${chatSession.session_id}/events`;
     if (
-      pathname === `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions/${chatSession.session_id}/events/paginated`
+      pathname === projectAgentEventsPath ||
+      pathname === `${projectAgentEventsPath}/paginated` ||
+      pathname === projectSessionEventsPath ||
+      pathname === `${projectSessionEventsPath}/paginated`
     ) {
       historyRequests.push(`${method} ${pathname}`);
-      return json(route, { events: history, has_more: false, next_cursor: null });
-    }
-
-    if (
-      pathname === `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/events` ||
-      pathname === `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions/${chatSession.session_id}/events`
-    ) {
-      historyRequests.push(`${method} ${pathname}`);
+      if (pathname.endsWith("/paginated")) {
+        return json(route, {
+          events: history,
+          has_more: false,
+          next_cursor: null,
+        });
+      }
       return json(route, history);
     }
 
