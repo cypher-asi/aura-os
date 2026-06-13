@@ -94,12 +94,14 @@ export function LLMOutput({
       baseTimeline = synthetic;
     }
 
-    const expanded = expandToolMarkersInTimeline(baseTimeline, baseToolCalls);
+    const expanded = expandToolMarkersInTimeline(baseTimeline, baseToolCalls, {
+      isStreaming,
+    });
     return {
       timelineForRender: expanded.timeline,
       toolCallsForRender: expanded.toolCalls.length > 0 ? expanded.toolCalls : undefined,
     };
-  }, [hasTimeline, timeline, hasThinking, hasToolCalls, toolCalls, hasContent, content]);
+  }, [hasTimeline, timeline, hasThinking, hasToolCalls, toolCalls, hasContent, content, isStreaming]);
 
   if (!hasContent && !hasToolCalls && !hasThinking && !hasTimeline) return null;
 

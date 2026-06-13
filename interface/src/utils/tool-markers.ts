@@ -118,7 +118,7 @@ const XML_PARAM_RE =
 // closing `>` but no `]` — i.e. one that is *not* a valid compaction
 // marker (those carry `input={...}` and a `]`, never a `>` before it).
 const TOOL_MARKUP_RESIDUE_RE =
-  /<\/?(?:function_calls|invoke|parameter)\b[^>]*?\/?>/gi;
+  /<\/?(?:function_calls|invoke|parameter|target)\b[^>]*?\/?>/gi;
 const HYBRID_TOOL_USE_RESIDUE_RE =
   /\[tool_use\s+[A-Za-z0-9_.:-]+[^\]\r\n]*?name="[^"]*"[^\]\r\n>]*>/gi;
 
@@ -251,6 +251,45 @@ function findCompactClose(
   return fallback >= contentStart ? fallback : -1;
 }
 
+// Matches a captured-file line prefixed with its source line number
+// (`150|.megaInner {`), the shape `read_file` emits. Used to bound an
+// unterminated `[tool_result ...]` marker so the dump is hoisted into a
+// tool card while the model's prose that follows it stays a text segment.
+const NUMBERED_LINE_RE = /^\s*\d+\|/;
+
+// Pick the exclusive end of an unterminated compaction marker body (no
+// closing `]`). When the body begins as `N|`-line-numbered file content we
+// consume the contiguous run of numbered (and interleaved blank) lines and
+// stop at the first line that resumes prose — so a malformed
+// `[tool_result <file dump>` renders as a collapsible card without
+// swallowing the assistant text after it. With no numbered content we
+// surrender the whole region rather than leak the raw marker.
+function implicitCompactClose(
+  text: string,
+  contentStart: number,
+  regionEnd: number,
+): number {
+  const region = text.slice(contentStart, regionEnd);
+  const lines = region.split("\n");
+  let sawNumbered = false;
+  let consumed = 0;
+  for (const line of lines) {
+    if (NUMBERED_LINE_RE.test(line)) {
+      sawNumbered = true;
+      consumed += line.length + 1;
+      continue;
+    }
+    if (sawNumbered && line.trim().length === 0) {
+      consumed += line.length + 1;
+      continue;
+    }
+    if (sawNumbered) break;
+    consumed += line.length + 1;
+  }
+  if (!sawNumbered) return regionEnd;
+  return Math.min(contentStart + consumed, regionEnd);
+}
+
 function parseXmlAttributes(s: string): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   const re = /([A-Za-z0-9_.:-]+)="([^"]*)"/g;
@@ -337,7 +376,7 @@ export function scrubToolMarkup(text: string): string {
     .replace(/\n{3,}/g, "\n\n");
 }
 
-function collectCompactionMatches(text: string): RawMatch[] {
+function collectCompactionMatches(text: string, allowUnclosed: boolean): RawMatch[] {
   const matches: RawMatch[] = [];
   for (const prefix of COMPACT_PREFIXES) {
     let from = 0;
@@ -347,13 +386,30 @@ function collectCompactionMatches(text: string): RawMatch[] {
       const nextOpener = nextMarkerOpener(text, contentStart);
       const regionEnd = nextOpener === -1 ? text.length : nextOpener;
       const close = findCompactClose(text, contentStart, regionEnd);
-      if (close === -1) {
-        // No closing bracket yet (still streaming) — leave as text.
+
+      // `contentEnd` is the exclusive end of the inner body; `rawEnd` is the
+      // exclusive end of the whole marker (one past the `]` when closed).
+      let contentEnd: number;
+      let rawEnd: number;
+      if (close !== -1) {
+        contentEnd = close;
+        rawEnd = close + 1;
+      } else if (allowUnclosed) {
+        // Finalized text with an unterminated marker — the model emitted
+        // tool-result-like prose without a closing `]`. Hoist it into a tool
+        // card so it renders as collapsible content instead of leaking the
+        // raw dump as mashed markdown prose.
+        contentEnd = implicitCompactClose(text, contentStart, regionEnd);
+        rawEnd = contentEnd;
+      } else {
+        // Still streaming — leave the incomplete marker as text; the
+        // stream-safe tail trimmer hides it until it closes.
         from = contentStart;
         continue;
       }
-      const raw = text.slice(start, close + 1);
-      const inner = text.slice(contentStart, close);
+
+      const raw = text.slice(start, rawEnd);
+      const inner = text.slice(contentStart, contentEnd);
       if (prefix === COMPACT_USE_PREFIX) {
         const parsed = parseCompactUseInner(inner);
         if (parsed) {
@@ -380,13 +436,13 @@ function collectCompactionMatches(text: string): RawMatch[] {
           },
         });
       }
-      from = close + 1;
+      from = rawEnd;
     }
   }
   return matches;
 }
 
-function collectMatches(text: string): RawMatch[] {
+function collectMatches(text: string, allowUnclosed: boolean): RawMatch[] {
   const matches: RawMatch[] = [];
 
   TOOL_MARKER_RE.lastIndex = 0;
@@ -419,7 +475,7 @@ function collectMatches(text: string): RawMatch[] {
     });
   }
 
-  for (const match of collectCompactionMatches(text)) {
+  for (const match of collectCompactionMatches(text, allowUnclosed)) {
     matches.push(match);
   }
 
@@ -443,8 +499,11 @@ function collectMatches(text: string): RawMatch[] {
   return filtered;
 }
 
-export function splitTextByToolMarkers(text: string): ToolMarkerSegment[] | null {
-  const matches = collectMatches(text);
+export function splitTextByToolMarkers(
+  text: string,
+  allowUnclosed = true,
+): ToolMarkerSegment[] | null {
+  const matches = collectMatches(text, allowUnclosed);
   if (matches.length === 0) return null;
 
   const segments: ToolMarkerSegment[] = [];
@@ -538,7 +597,14 @@ function gateSlug(gate: PseudoGateLabel): string {
 export function expandToolMarkersInTimeline(
   timeline: TimelineItem[],
   toolCalls: ToolCallEntry[] = [],
+  options: { isStreaming?: boolean } = {},
 ): { timeline: TimelineItem[]; toolCalls: ToolCallEntry[] } {
+  // While a turn is still streaming, an unterminated marker is just a
+  // not-yet-closed token: leave it as text (the stream-safe tail trimmer
+  // hides it) so we don't flash a half-typed card. Once finalized, hoist
+  // unterminated markers so a malformed tool dump renders as a collapsible
+  // card instead of leaking as raw prose.
+  const allowUnclosed = options.isStreaming !== true;
   const usedIds = new Set(toolCalls.map((tc) => tc.id));
   const expandedTimeline: TimelineItem[] = [];
   const expandedToolCalls = [...toolCalls];
@@ -551,7 +617,7 @@ export function expandToolMarkersInTimeline(
       continue;
     }
 
-    const segments = splitTextByToolMarkers(item.content);
+    const segments = splitTextByToolMarkers(item.content, allowUnclosed);
     if (!segments) {
       // No recognized markers, but the text may still carry leftover
       // tool markup (an orphan `</invoke>`, a `<function_calls>` wrapper,

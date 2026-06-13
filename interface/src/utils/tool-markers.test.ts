@@ -446,6 +446,62 @@ describe("compaction-dialect tool markers", () => {
       trimIncompleteToolMarkerTail("[tool_use list_tasks input={}]"),
     ).toBe("[tool_use list_tasks input={}]");
   });
+
+  // Regression: a `read_file` dump emitted as an unterminated
+  // `[tool_result ...]` marker (multi-line `N|` content, no closing `]`)
+  // used to leak verbatim into markdown prose and render as an unreadable
+  // mashed wall of text. Once finalized it must hoist into a tool card and
+  // leave the model's trailing prose intact.
+  const UNCLOSED_DUMP = [
+    "[tool_result 150|.megaInner {",
+    "151|  max-width: 1180px;",
+    "152|  margin: 0 auto;",
+    "153|}",
+    "154|",
+    "209|  transition: background 160ms ease;",
+    "210|  </target> </target>",
+  ].join("\n") + "\nLet me make it a two-column layout now.";
+
+  it("hoists an unterminated multi-line tool_result into a card once finalized", () => {
+    const timeline: TimelineItem[] = [
+      { kind: "text", id: "t1", content: UNCLOSED_DUMP },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline);
+
+    const textItems = result.timeline.filter((item) => item.kind === "text");
+    // The raw marker / file dump must not survive as renderable prose.
+    expect(textItems.some((item) => item.content.includes("tool_result"))).toBe(false);
+    expect(textItems.some((item) => item.content.includes("150|.megaInner"))).toBe(false);
+    expect(textItems.some((item) => item.content.includes("</target>"))).toBe(false);
+
+    // A real tool entry carries the dump instead.
+    const resultEntry = result.toolCalls.find((tc) => tc.name === "tool_result");
+    expect(resultEntry).toBeDefined();
+    expect(resultEntry?.result).toContain(".megaInner");
+
+    // The model's prose after the dump is preserved as its own segment.
+    expect(
+      textItems.some((item) => item.content.includes("two-column layout now.")),
+    ).toBe(true);
+  });
+
+  it("leaves an unterminated tool_result as text while streaming", () => {
+    const timeline: TimelineItem[] = [
+      { kind: "text", id: "t1", content: UNCLOSED_DUMP },
+    ];
+
+    const result = expandToolMarkersInTimeline(timeline, [], { isStreaming: true });
+
+    // Mid-stream the not-yet-closed marker stays put (the stream-safe tail
+    // trimmer hides it); we must not flash a half-typed card.
+    expect(result.toolCalls.find((tc) => tc.name === "tool_result")).toBeUndefined();
+    expect(
+      result.timeline.some(
+        (item) => item.kind === "text" && item.content.includes("[tool_result"),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("leaked XML / hybrid tool-call markup", () => {
