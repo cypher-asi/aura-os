@@ -69,6 +69,16 @@ jobs:
             > infra/evals/reports/status/previous/status.json || true
           npm run status:snapshot
 
+      - name: Persist observability history
+        if: always()
+        continue-on-error: true
+        env:
+          AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL || 'https://aura-storage.onrender.com' }}
+          AURA_STORAGE_INTERNAL_TOKEN: ${{ secrets.AURA_STORAGE_INTERNAL_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: github-actions
+        run: npm run status:persist
+
       - uses: actions/checkout@v5
         if: always()
         with:

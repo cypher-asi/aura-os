@@ -139,6 +139,12 @@ snapshot URL first, then falls back to `/observability/status.json` from the
 current frontend build. If both JSON requests fail, the page falls back to an
 explicit unknown state.
 
+`status:persist` is the private history path. It reads the generated snapshot
+and posts it to aura-storage at `/internal/observability/runs` when
+`AURA_STORAGE_URL` and `AURA_STORAGE_INTERNAL_TOKEN` are configured. This does
+not change the public status page; it only gives internal tooling a queryable
+history of runs, features, checks, latency, and failure evidence.
+
 ## Publishing
 
 `.github/workflows/aura-observability.yml` runs every 30 minutes and can also
@@ -179,3 +185,6 @@ for the first version because the valuable part is the AURA-specific probe
 catalog and status policy. An external service only adds value if we later need
 subscriber notifications, incident timelines, or multi-region uptime checks
 independent of AURA's deploy pipeline.
+
+Private history persistence is best-effort in CI/release workflows. If
+aura-storage is unavailable, the latest public snapshot should still publish.

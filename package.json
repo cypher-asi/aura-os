@@ -8,6 +8,7 @@
     "status:probes": "node infra/evals/status/run-status-probes.mjs",
     "status:desktop-release": "node infra/evals/status/run-desktop-release-probes.mjs",
     "status:snapshot": "node infra/evals/status/build-status-snapshot.mjs",
+    "status:persist": "node infra/evals/status/persist-status-history.mjs",
     "status:all": "npm run status:probes && npm run status:snapshot"
   }
 }
