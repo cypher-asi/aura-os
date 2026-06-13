@@ -170,7 +170,12 @@
     },
     "harness-health": {
       "description": "Harness bootstrap health returns a JSON health payload.",
-      "requiredEvidence": []
+      "requiredEvidence": ["reachable", "status", "url"],
+      "assertions": [
+        { "path": "reachable", "equals": true },
+        { "path": "status", "equals": 200 },
+        { "path": "url", "nonEmpty": true }
+      ]
     },
     "org-integrations-list": {
       "description": "Org integrations endpoint returns a list count for the current org.",
@@ -232,7 +237,12 @@
     },
     "eval-summary-artifacts": {
       "description": "Eval artifact scan reports files and found counts.",
-      "requiredEvidence": ["files"]
+      "requiredEvidence": ["files", "existingCount", "expectedCount"],
+      "assertions": [
+        { "path": "existingCount", "min": 1 },
+        { "path": "expectedCount", "min": 1 },
+        { "path": "files", "nonEmpty": true }
+      ]
     },
     "published-observability-snapshot": {
       "description": "The published snapshot consumed by /observability is workflow-generated, fresh, and contains real feature data.",
@@ -261,9 +271,13 @@
       ]
     },
     "public-models-page": {
-      "description": "Public models page returns an HTTP status.",
-      "requiredEvidence": ["status"],
-      "assertions": [{ "path": "status", "min": 200, "max": 399 }]
+      "description": "Public models route serves the Aura app shell.",
+      "requiredEvidence": ["status", "hasAppShell", "bodyLength"],
+      "assertions": [
+        { "path": "status", "equals": 200 },
+        { "path": "hasAppShell", "equals": true },
+        { "path": "bodyLength", "min": 1 }
+      ]
     },
     "public-marketing-pages": {
       "description": "Public marketing route sweep returns per-route results.",

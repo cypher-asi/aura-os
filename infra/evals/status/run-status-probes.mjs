@@ -1046,11 +1046,16 @@ async function runChecks(args) {
   if (selected("public-models-page")) {
     checks.push(await probe("public-models-page", "public-website", "Public models page", args, async () => {
       const base = args.publicBaseUrl || args.baseUrl;
-      const response = await fetchWithTimeout(`${base}/models`, {}, DEFAULT_TIMEOUT_MS);
+      const result = await publicText(base, "/models");
+      const hasAppShell = result.text.includes("root") || result.text.includes("AURA");
       return {
-        status: response.ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
-        message: response.ok ? "" : `HTTP ${response.status}`,
-        evidence: { status: response.status },
+        status: hasAppShell ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+        message: hasAppShell ? "" : "Public models page did not return the Aura app shell",
+        evidence: {
+          status: result.status,
+          hasAppShell,
+          bodyLength: result.text.length,
+        },
       };
     }));
   }
@@ -1091,7 +1096,7 @@ async function runChecks(args) {
       return {
         status: existing > 0 ? CHECK_STATUS.PASS : CHECK_STATUS.WARN,
         message: `${existing}/${files.length} eval summary artifacts found`,
-        evidence: { files },
+        evidence: { files, existingCount: existing, expectedCount: files.length },
       };
     }));
   }
