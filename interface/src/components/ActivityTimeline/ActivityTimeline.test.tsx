@@ -30,8 +30,9 @@ describe("ActivityTimeline thinking segments", () => {
   // thinking), only the trailing live segment should show "Thinking..."
   // / shimmer. Earlier segments are already closed by
   // `closeCurrentThinkingSegment` (they carry `durationMs`) and must
-  // render as "Thought for X". All thinking text is inline prose —
-  // always visible, never behind a collapse affordance.
+  // render as "Thought for X". Thinking renders through the collapsible
+  // `Block` shell: the live segment is force-expanded, closed segments
+  // collapse to a clickable "Thought for X" summary.
   it("only the open thinking segment shows 'Thinking...' during a live multi-segment turn", () => {
     const toolCalls: ToolCallEntry[] = [
       {
@@ -76,22 +77,24 @@ describe("ActivityTimeline thinking segments", () => {
     const thinkingLabels = screen.getAllByText("Thinking...");
     expect(thinkingLabels).toHaveLength(1);
 
-    // Both segments' reasoning text is fully visible inline — closed
-    // segments are no longer collapsed behind a chevron.
+    // Both segments' reasoning text stays mounted in the DOM (collapse is
+    // CSS-only via the grid-rows trick, so the closed segment's body is
+    // present even when visually collapsed).
     expect(screen.getByText("first thoughts")).toBeInTheDocument();
     expect(screen.getByText("second thoughts streaming")).toBeInTheDocument();
 
-    // Thinking rows expose no expand/collapse affordance. The only
-    // expandable header in this timeline belongs to the tool row.
+    // Each thinking segment now renders a collapsible `Block` header, plus
+    // the tool row: two thinking headers + one tool = three expandable
+    // headers.
     const expandableHeaders = screen
       .getAllByRole("button")
       .filter((el) => el.hasAttribute("aria-expanded"));
-    expect(expandableHeaders).toHaveLength(1);
+    expect(expandableHeaders).toHaveLength(3);
   });
 
-  // Thinking is inline prose: a streaming segment's text is visible in
-  // the flow with no collapse affordance and no aria-expanded header.
-  it("a streaming thinking segment renders its full text inline with no collapse affordance", () => {
+  // A streaming thinking segment with text is force-expanded so the
+  // reasoning reveals live, and exposes a (locked-open) collapsible header.
+  it("a streaming thinking segment is force-expanded with its text visible", () => {
     const timeline: TimelineItem[] = [
       {
         kind: "thinking",
@@ -107,7 +110,8 @@ describe("ActivityTimeline thinking segments", () => {
     const expandableHeaders = screen
       .queryAllByRole("button")
       .filter((el) => el.hasAttribute("aria-expanded"));
-    expect(expandableHeaders).toHaveLength(0);
+    expect(expandableHeaders).toHaveLength(1);
+    expect(expandableHeaders[0]).toHaveAttribute("aria-expanded", "true");
   });
 
   // Once the turn finishes, no thinking segment is streaming so neither
@@ -283,14 +287,13 @@ describe("ActivityTimeline tool-position data attributes", () => {
 });
 
 describe("ActivityTimeline block-row data attribute", () => {
-  // Border-collapse marker: only rows whose rendered node is a `Block`
-  // primitive (tool rows, today) carry `data-block-row="true"` so the
-  // adjacent-sibling rule in `ActivityTimeline.module.css` can collapse
-  // tool-on-tool boundaries into a single 1px divider. Thinking rows
-  // render as borderless inline prose and text rows render bare
-  // markdown, so both must stay off the attribute and keep their
-  // breathing-room gap.
-  it("marks tool rows — but not inline-prose thinking rows — as bordered block rows", () => {
+  // Border-collapse marker: only tool rows carry `data-block-row="true"`
+  // so the adjacent-sibling rule in `ActivityTimeline.module.css` can
+  // collapse tool-on-tool boundaries into a single 1px divider. Thinking
+  // rows (even though they now render a `Block`) and text rows stay off
+  // the attribute so they keep their breathing-room gap and never collapse
+  // borders with an adjacent tool.
+  it("marks tool rows — but not thinking rows — as bordered block rows", () => {
     const toolCalls: ToolCallEntry[] = [
       { id: "tc-1", name: "read_file", input: { path: "a.rs" }, result: "ok", pending: false },
     ];

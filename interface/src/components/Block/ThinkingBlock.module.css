@@ -1,67 +1,23 @@
 /*
- * Inline thinking prose — no collapsible shell. A small caption row
- * ("Thinking..." / "Thought for Xs") sits above the full reasoning
- * text, which flows in the timeline like dimmed narration between
- * tool rows.
+ * Thinking renders through the shared `Block` shell (collapsible header +
+ * scrolling body). These rules only style the reasoning prose inside the
+ * body and the shimmering "Thinking..." caption while a segment streams.
  */
 
-.thinking {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  opacity: 0.7;
-}
-
-.thinkingStreaming {
-  opacity: 1;
-}
-
-.thinkingHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 20px;
-  color: var(--color-text-muted);
-}
-
-.thinkingIcon {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.thinkingLabel {
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.thinkingCopy {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+.thinkingText {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /*
- * Keep the copy affordance invisible until the row is engaged, same as
- * the Block header treatment: opacity (not display) so layout never
- * shifts, focus-within for keyboard users, hover-capable devices only.
+ * Shimmer the caption while the segment is live so the header reads as
+ * active work. Applied to a span nested inside the Block title so the
+ * background-clip text trick wins over the title's solid color.
  */
-@media (hover: hover) {
-  .thinkingCopy {
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-
-  .thinking:hover .thinkingCopy,
-  .thinking:focus-within .thinkingCopy {
-    opacity: 1;
-  }
-}
-
-.thinkingLabelShimmer {
+.labelShimmer {
   background: linear-gradient(
     90deg,
     var(--color-text-muted) 0%,
@@ -72,18 +28,10 @@
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 2s ease-in-out infinite;
+  animation: thinkingShimmer 2s ease-in-out infinite;
 }
 
-@keyframes shimmer {
+@keyframes thinkingShimmer {
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }
-}
-
-.thinkingText {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--color-text-secondary);
-  white-space: pre-wrap;
-  word-break: break-word;
 }
