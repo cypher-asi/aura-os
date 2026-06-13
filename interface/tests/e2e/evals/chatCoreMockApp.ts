@@ -373,6 +373,13 @@ export async function installChatCoreMockApp(
     if (pathname === "/api/streams/active") return json(route, []);
 
     if (
+      pathname === `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions/${chatSession.session_id}/events/paginated`
+    ) {
+      historyRequests.push(`${method} ${pathname}`);
+      return json(route, { events: history, has_more: false, next_cursor: null });
+    }
+
+    if (
       pathname === `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/events` ||
       pathname === `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions/${chatSession.session_id}/events`
     ) {
