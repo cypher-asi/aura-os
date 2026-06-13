@@ -2,19 +2,21 @@
   {
     "date": "2026-06-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.657.1",
-    "title": "Observability pipeline gets a truthful, persistent status story",
-    "intro": "Today was a deep, end-to-end pass on Aura's status and observability stack. The team tightened what probes actually run after a release, locked down the permissions probe agents use, added a persistent run history backed by Aura storage, and collapsed the published status snapshot down to a single source of truth. Release workflows on macOS, Linux, and Windows also got safer defaults for service URLs and more resilient artifact polling.",
+    "version": "0.1.0-nightly.659.1",
+    "title": "Smoother chat streaming, leaner input bar, and a rebuilt observability pipeline",
+    "intro": "A heavy nightly across the board: the chat surface gets virtualization, paginated history, and a frame-batched streaming pipeline that stops chat and the terminal from starving each other. The 1,500-line ChatInputBar is broken apart, typing lag is eliminated, and dev loops gain reattach-after-restart resilience. On the platform side, per-tool permissions become first-class, swarm VM logs surface in agent details, and the observability/status pipeline is rebuilt around a single snapshot source.",
     "entryCount": 6,
     "highlights": [
-      "Status probes now run the full suite after every desktop release",
-      "Probe agents are scoped to org with zero capabilities by default",
-      "Persistent observability history wired into Aura storage",
-      "Single published snapshot drives the /observability page"
+      "Frame-batched chat + terminal streaming",
+      "Virtualized transcript with cursor-paginated history",
+      "ChatInputBar decomposed into memoized slots",
+      "Dev loops survive server restarts",
+      "Per-tool tri-state permissions across chat and automation",
+      "Unified observability snapshot pipeline"
     ],
-    "rawCommitCount": 12,
-    "generatedAt": "2026-06-13T03:01:33.334Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.657.1",
+    "rawCommitCount": 58,
+    "generatedAt": "2026-06-13T03:58:11.955Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.659.1",
     "path": "history/2026-06-12.json"
   },
   {
