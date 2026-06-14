@@ -3,28 +3,16 @@ import { createHash } from "node:crypto";
 import { buildInvestigationEvidencePacket } from "./status-investigation-packets.mjs";
 import { INVESTIGATION_STATUS, normalizeInvestigation } from "./status-investigations.mjs";
 import { redactSensitive as redactSensitiveValue } from "./status-redaction.mjs";
+import { sourceNeedlesForCheck } from "./status-source-discovery.mjs";
 
 export { redactSensitiveValue as redactSensitive };
-
-const COMMON_SOURCE_NEEDLES = new Set([
-  "allPassed",
-  "count",
-  "error",
-  "failed",
-  "message",
-  "model",
-  "passed",
-  "provider",
-  "results",
-  "status",
-  "total",
-]);
+export { sourceNeedlesForCheck };
 
 export const INVESTIGATOR_SYSTEM_PROMPT = [
   "You are AURA's observability investigator.",
-  "You receive a structured investigation packet with failing eval evidence, expected-output contracts, sibling check context, source-search hints, and reproduction hints.",
+  "You receive a structured investigation packet with failing eval evidence, expected-output contracts, sibling check context, source discovery artifacts, and reproduction hints.",
   "Produce JSON only. Do not include markdown.",
-  "Use only the supplied evidence and source hints. If the root cause is uncertain, say so and explain what evidence would prove or disprove it.",
+  "Use only the supplied evidence and source discovery artifacts. If the root cause is uncertain, say so and explain what evidence would prove or disprove it.",
   "Do not invent file paths, commands, endpoints, or line numbers.",
   "Proof points should cite investigationPacket.evidenceItems ids when possible.",
   "Distinguish an eval failure from a user-facing product outage. Do not claim production users or real traffic are impacted unless the supplied evidence includes user-traffic or incident signals.",
@@ -47,6 +35,7 @@ export function buildInvestigationInput({
   siblingChecks = [],
   sourceHints = [],
   sourceContext = [],
+  sourceDiscovery = null,
   verifierContext = null,
 }) {
   const investigationPacket = buildInvestigationEvidencePacket({
@@ -57,6 +46,7 @@ export function buildInvestigationInput({
     siblingChecks,
     sourceHints,
     sourceContext,
+    sourceDiscovery,
     verifierContext,
   });
   return redactSensitiveValue({
@@ -96,13 +86,14 @@ export function buildInvestigationInput({
     })),
     sourceHints,
     sourceContext,
+    sourceDiscovery,
     verifierContext,
     responseSchema: {
       title: "Short investigator report title.",
       confidence: "low | medium | high",
       summary: "One or two sentences proving the visible failure.",
       rootCause: "Best evidence-backed root cause, or explicit uncertainty. Keep impact scoped to the eval evidence.",
-      proof: ["Evidence points from the eval result or source hints."],
+      proof: ["Evidence points from the eval result or source discovery artifacts."],
       possibleCauses: ["Plausible causes ranked by evidence strength."],
       reproductionSteps: [
         {
@@ -113,7 +104,7 @@ export function buildInvestigationInput({
       affectedAreas: [
         {
           label: "Area, product surface, runtime component, or code path",
-          path: "Optional exact path from source hints",
+          path: "Optional exact path from source discovery artifacts",
           reason: "Why this area is implicated",
         },
       ],
@@ -146,6 +137,7 @@ export async function investigateCheck({
   siblingChecks = [],
   sourceHints = [],
   sourceContext = [],
+  sourceDiscovery = null,
   verifierContext = null,
   generatedAt = new Date().toISOString(),
   environment = "unknown",
@@ -162,6 +154,7 @@ export async function investigateCheck({
     siblingChecks,
     sourceHints,
     sourceContext,
+    sourceDiscovery,
     verifierContext,
   });
   const messages = buildInvestigationMessages(input);
@@ -183,7 +176,7 @@ export async function investigateCheck({
           ...messages,
           {
             role: "user",
-            content: `The previous report was missing required non-empty fields: ${missing.join(", ")}. Return the same structured report again, but fill every missing field using only the supplied evidence and source hints.`,
+            content: `The previous report was missing required non-empty fields: ${missing.join(", ")}. Return the same structured report again, but fill every missing field using only the supplied evidence and source discovery artifacts.`,
           },
         ],
         input,
@@ -283,16 +276,6 @@ export function normalizeInvestigationResponse(content, {
   }, generatedAt);
 }
 
-export function sourceNeedlesForCheck(check, expectation) {
-  const needles = new Set();
-  addNeedle(needles, check?.checkId);
-  addNeedle(needles, check?.featureId);
-  for (const value of stringsFromValue(check?.message)) addNeedle(needles, value);
-  for (const value of stringsFromValue(check?.evidence)) addNeedle(needles, value);
-  for (const value of expectation?.requiredEvidence ?? []) addNeedle(needles, value);
-  return [...needles].slice(0, 16);
-}
-
 function parseJsonObject(content) {
   if (content && typeof content === "object" && !Array.isArray(content)) return content;
   if (typeof content !== "string") throw new Error("Investigator response was not a string or JSON object");
@@ -324,34 +307,4 @@ function evidenceDigest(check) {
     latencyMs: check?.latencyMs ?? null,
     evidence: check?.evidence ?? {},
   });
-}
-
-function addNeedle(needles, value) {
-  if (typeof value !== "string") return;
-  const trimmed = value.trim();
-  if (trimmed.length < 3 || trimmed.length > 120) return;
-  if (/^\d+$/.test(trimmed)) return;
-  if (COMMON_SOURCE_NEEDLES.has(trimmed)) return;
-  needles.add(trimmed);
-}
-
-function stringsFromValue(value, strings = []) {
-  if (value == null) return strings;
-  if (typeof value === "string") {
-    const endpointMatches = value.match(/\/(?:api|v\d+)[a-z0-9/_:.-]*/gi) ?? [];
-    for (const endpoint of endpointMatches) strings.push(endpoint);
-    const codeMatches = value.match(/[a-z][a-z0-9_:-]{5,}/gi) ?? [];
-    for (const code of codeMatches) strings.push(code);
-    return strings;
-  }
-  if (typeof value !== "object") return strings;
-  if (Array.isArray(value)) {
-    for (const entry of value.slice(0, 20)) stringsFromValue(entry, strings);
-    return strings;
-  }
-  for (const [key, entry] of Object.entries(value).slice(0, 50)) {
-    strings.push(key);
-    stringsFromValue(entry, strings);
-  }
-  return strings;
 }

@@ -8,6 +8,7 @@ export function buildInvestigationVerifierContext({
   previousChecks = [],
   sourceHints = [],
   sourceContext = [],
+  sourceDiscovery = null,
 }) {
   const requiredEvidence = Array.isArray(expectation?.requiredEvidence) ? expectation.requiredEvidence : [];
   const evidence = check?.evidence && typeof check.evidence === "object" ? check.evidence : {};
@@ -54,6 +55,9 @@ export function buildInvestigationVerifierContext({
       sourceHintCount: sourceHints.length,
       sourcePaths,
       excerpts: sourceContext.slice(0, 8),
+      rankedPaths: sourceDiscovery?.rankedPaths ?? [],
+      candidateCodePaths: sourceDiscovery?.candidateCodePaths ?? [],
+      recentChanges: sourceDiscovery?.recentChanges ?? [],
     },
     recommendedVerifierProbes: recommendedVerifierProbes({
       check,
@@ -62,6 +66,7 @@ export function buildInvestigationVerifierContext({
       failedSiblingIds,
       sameMessageSiblingIds,
       sourcePaths,
+      sourceDiscovery,
       previousChecks,
     }),
   });
@@ -97,6 +102,7 @@ function recommendedVerifierProbes({
   failedSiblingIds,
   sameMessageSiblingIds,
   sourcePaths,
+  sourceDiscovery,
   previousChecks,
 }) {
   const probes = [];
@@ -117,6 +123,15 @@ function recommendedVerifierProbes({
     probes.push({
       label: "Inspect implicated source paths",
       reason: sourcePaths.join(", "),
+    });
+  }
+  if (sourceDiscovery?.recentChanges?.length > 0) {
+    probes.push({
+      label: "Review recent commits for implicated source paths",
+      reason: sourceDiscovery.recentChanges
+        .slice(0, 3)
+        .map((change) => `${change.path}: ${change.commits?.[0] ?? "recent commit"}`)
+        .join("; "),
     });
   }
   if (previousChecks.some((entry) => entry.status === "pass")) {

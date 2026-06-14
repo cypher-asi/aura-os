@@ -9,6 +9,7 @@ export function buildInvestigationEvidencePacket({
   siblingChecks = [],
   sourceHints = [],
   sourceContext = [],
+  sourceDiscovery = null,
   verifierContext = null,
 }) {
   const requiredEvidence = Array.isArray(expectation?.requiredEvidence) ? expectation.requiredEvidence : [];
@@ -67,6 +68,7 @@ export function buildInvestigationEvidencePacket({
     siblingPattern: siblingSummaries.pattern,
     siblingChecks: siblingSummaries.checks,
     verifierContext,
+    sourceDiscovery,
     evidenceItems: buildEvidenceItems({
       check,
       expectation,
@@ -74,6 +76,7 @@ export function buildInvestigationEvidencePacket({
       siblingChecks: siblingSummaries.checks,
       sourceHints,
       sourceContext,
+      sourceDiscovery,
     }),
     reproductionHint: {
       label: `Run only ${check?.checkId ?? "this check"}`,
@@ -82,6 +85,7 @@ export function buildInvestigationEvidencePacket({
     },
     sourceHints,
     sourceContext,
+    sourceDiscovery,
   });
 }
 
@@ -121,6 +125,7 @@ function buildEvidenceItems({
   siblingChecks,
   sourceHints,
   sourceContext,
+  sourceDiscovery,
 }) {
   const items = [];
   addEvidenceItem(items, {
@@ -165,7 +170,7 @@ function buildEvidenceItems({
   }
   for (const hint of sourceHints.slice(0, 12)) {
     addEvidenceItem(items, {
-      id: `source.${hint.path}:${hint.line}`,
+      id: hint.path && hint.line ? `source.${hint.path}:${hint.line}` : `source.${hint.id ?? hint.kind ?? "hint"}`,
       kind: "source-hint",
       summary: hint,
     });
@@ -175,6 +180,24 @@ function buildEvidenceItems({
       id: `source-context.${context.path}:${context.startLine}-${context.endLine}`,
       kind: "source-context",
       summary: context,
+    });
+  }
+  for (const change of sourceDiscovery?.recentChanges?.slice(0, 8) ?? []) {
+    addEvidenceItem(items, {
+      id: `recent-change.${change.path}`,
+      kind: "recent-change",
+      summary: change,
+    });
+  }
+  if (sourceDiscovery?.rankedPaths?.length > 0) {
+    addEvidenceItem(items, {
+      id: "source-discovery.ranked-paths",
+      kind: "source-discovery-summary",
+      summary: {
+        byKind: sourceDiscovery.byKind ?? {},
+        rankedPaths: sourceDiscovery.rankedPaths,
+        candidateCodePaths: sourceDiscovery.candidateCodePaths ?? [],
+      },
     });
   }
   return items;

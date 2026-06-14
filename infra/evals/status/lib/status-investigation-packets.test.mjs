@@ -63,6 +63,16 @@ test("buildInvestigationEvidencePacket captures contracts, sibling patterns, and
         excerpt: "900: image-generation-stream",
       },
     ],
+    sourceDiscovery: {
+      rankedPaths: [{ path: "infra/evals/status/run-status-probes.mjs", score: 120 }],
+      candidateCodePaths: [{ path: "apps/aura-os-server/src/handlers/agents/chat.rs", score: 90 }],
+      recentChanges: [
+        {
+          path: "infra/evals/status/run-status-probes.mjs",
+          commits: ["abc1234 fix status probe routing"],
+        },
+      ],
+    },
   });
 
   assert.equal(packet.packetKind, "aura-observability-investigation-packet");
@@ -75,4 +85,6 @@ test("buildInvestigationEvidencePacket captures contracts, sibling patterns, and
   assert.ok(packet.evidenceItems.some((item) => item.id === "expected-output.missing-required-evidence"));
   assert.ok(packet.evidenceItems.some((item) => item.id === "source.infra/evals/status/run-status-probes.mjs:900"));
   assert.ok(packet.evidenceItems.some((item) => item.id === "source-context.infra/evals/status/run-status-probes.mjs:897-903"));
+  assert.ok(packet.evidenceItems.some((item) => item.id === "recent-change.infra/evals/status/run-status-probes.mjs"));
+  assert.ok(packet.evidenceItems.some((item) => item.id === "source-discovery.ranked-paths"));
 });

@@ -44,6 +44,16 @@ test("buildInvestigationVerifierContext summarizes contract gaps, sibling failur
     ],
     sourceHints: [{ path: "server/routes/agents.ts", line: 14, preview: "POST /api/agents" }],
     sourceContext: [{ path: "server/routes/agents.ts", startLine: 10, endLine: 18, excerpt: "14: POST /api/agents" }],
+    sourceDiscovery: {
+      rankedPaths: [{ path: "server/routes/agents.ts", score: 80 }],
+      candidateCodePaths: [{ path: "server/routes/agents.ts", score: 80 }],
+      recentChanges: [
+        {
+          path: "server/routes/agents.ts",
+          commits: ["abc1234 change remote agent route"],
+        },
+      ],
+    },
   });
 
   assert.equal(verifierContext.verifierKind, "aura-observability-investigation-verifier-context");
@@ -54,5 +64,9 @@ test("buildInvestigationVerifierContext summarizes contract gaps, sibling failur
   assert.deepEqual(verifierContext.siblingCorrelation.sameMessageSiblingIds, ["remote-agent-state"]);
   assert.equal(verifierContext.history.currentlyRegressedFromPass, true);
   assert.equal(verifierContext.sourceContext.sourcePaths[0], "server/routes/agents.ts");
+  assert.equal(verifierContext.sourceContext.rankedPaths[0].path, "server/routes/agents.ts");
+  assert.equal(verifierContext.sourceContext.candidateCodePaths[0].path, "server/routes/agents.ts");
+  assert.equal(verifierContext.sourceContext.recentChanges[0].path, "server/routes/agents.ts");
   assert.ok(verifierContext.recommendedVerifierProbes.some((probe) => probe.command === "AURA_STATUS_CHECKS=remote-agent-create npm run status:probes"));
+  assert.ok(verifierContext.recommendedVerifierProbes.some((probe) => probe.label === "Review recent commits for implicated source paths"));
 });

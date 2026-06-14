@@ -1,19 +1,16 @@
 #!/usr/bin/env node
-import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import { normalizeCheckResult } from "./lib/status-policy.mjs";
 import {
   investigateCheck,
   needsInvestigation,
-  sourceNeedlesForCheck,
 } from "./lib/status-investigator.mjs";
 import { buildInvestigationVerifierContext } from "./lib/status-investigation-verifiers.mjs";
+import { discoverInvestigationSources } from "./lib/status-source-discovery.mjs";
 
-const execFileAsync = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const ANTHROPIC_INVESTIGATION_TOOL = Object.freeze({
@@ -225,82 +222,6 @@ function findCheckConfig(feature, checkId) {
   return (feature?.checks ?? []).find((config) => config.id === checkId) ?? null;
 }
 
-async function collectSourceHints(check, expectation, enabled) {
-  if (!enabled) return [];
-  const needles = sourceNeedlesForCheck(check, expectation).slice(0, 8);
-  const hints = [];
-  for (const needle of needles) {
-    try {
-      const { stdout } = await execFileAsync(
-        "rg",
-        [
-          "-n",
-          "--fixed-strings",
-          "--max-count",
-          "6",
-          "--glob",
-          "!node_modules",
-          "--glob",
-          "!target",
-          "--glob",
-          "!interface/node_modules",
-          needle,
-          repoRoot,
-        ],
-        { timeout: 5_000, maxBuffer: 256_000 },
-      );
-      for (const line of stdout.split("\n").filter(Boolean).slice(0, 6)) {
-        const match = line.match(/^(.*?):(\d+):(.*)$/);
-        if (!match) continue;
-        hints.push({
-          needle,
-          path: path.relative(repoRoot, match[1]),
-          line: Number(match[2]),
-          preview: match[3].trim().slice(0, 500),
-        });
-      }
-    } catch {
-      // Source hints are helpful but never required for the investigator.
-    }
-    if (hints.length >= 24) break;
-  }
-  return hints.slice(0, 24);
-}
-
-async function collectSourceContext(sourceHints, enabled) {
-  if (!enabled || sourceHints.length === 0) return [];
-  const contexts = [];
-  const seen = new Set();
-  for (const hint of sourceHints) {
-    if (!hint.path || !Number.isFinite(Number(hint.line))) continue;
-    const key = `${hint.path}:${hint.line}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const filePath = path.join(repoRoot, hint.path);
-    if (!filePath.startsWith(repoRoot)) continue;
-    try {
-      const lines = (await fs.readFile(filePath, "utf8")).split("\n");
-      const line = Math.max(1, Number(hint.line));
-      const startLine = Math.max(1, line - 3);
-      const endLine = Math.min(lines.length, line + 3);
-      const excerpt = lines
-        .slice(startLine - 1, endLine)
-        .map((text, index) => `${startLine + index}: ${text}`)
-        .join("\n");
-      contexts.push({
-        path: hint.path,
-        startLine,
-        endLine,
-        excerpt: excerpt.slice(0, 2_000),
-      });
-    } catch {
-      // Source context is supplementary and should never block investigation.
-    }
-    if (contexts.length >= 8) break;
-  }
-  return contexts;
-}
-
 async function callOpenAiCompatible(args, { messages }) {
   if (!args.baseUrl || !args.apiKey || !args.model) {
     throw new Error("AURA_STATUS_INVESTIGATOR_BASE_URL, AURA_STATUS_INVESTIGATOR_API_KEY, and AURA_STATUS_INVESTIGATOR_MODEL are required.");
@@ -450,8 +371,18 @@ async function main() {
           && check.endedAt
           && new Date(candidate.endedAt).getTime() < new Date(check.endedAt).getTime(),
       );
-    const sourceHints = await collectSourceHints(check, expectation, args.sourceHints);
-    const sourceContext = await collectSourceContext(sourceHints, args.sourceHints && args.sourceContext);
+    const { sourceHints, sourceContext, sourceDiscovery } = await discoverInvestigationSources({
+      check,
+      feature,
+      checkConfig,
+      expectation,
+      registryPath: args.registry,
+      expectationsPath: args.expectationsFile,
+      runnerPath: path.join(__dirname, "run-status-probes.mjs"),
+      repoRoot,
+      enabled: args.sourceHints,
+      includeContext: args.sourceHints && args.sourceContext,
+    });
     const verifierContext = buildInvestigationVerifierContext({
       check,
       expectation,
@@ -459,6 +390,7 @@ async function main() {
       previousChecks,
       sourceHints,
       sourceContext,
+      sourceDiscovery,
     });
     payload.investigations.push(await investigateCheck({
       check,
@@ -468,6 +400,7 @@ async function main() {
       siblingChecks,
       sourceHints,
       sourceContext,
+      sourceDiscovery,
       verifierContext,
       generatedAt,
       environment: args.environment,
