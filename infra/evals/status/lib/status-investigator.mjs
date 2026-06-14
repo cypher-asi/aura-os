@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 
+import { buildInvestigationEvidencePacket } from "./status-investigation-packets.mjs";
 import { INVESTIGATION_STATUS, normalizeInvestigation } from "./status-investigations.mjs";
+import { redactSensitive as redactSensitiveValue } from "./status-redaction.mjs";
 
-const SENSITIVE_KEY = /authorization|cookie|password|secret|token|api[_-]?key|access[_-]?token|refresh[_-]?token/i;
-const LONG_SECRET = /(bearer\s+)?[a-z0-9_-]{32,}/gi;
+export { redactSensitiveValue as redactSensitive };
+
 const COMMON_SOURCE_NEEDLES = new Set([
   "allPassed",
   "count",
@@ -20,10 +22,11 @@ const COMMON_SOURCE_NEEDLES = new Set([
 
 export const INVESTIGATOR_SYSTEM_PROMPT = [
   "You are AURA's observability investigator.",
-  "You receive failing eval evidence, expected-output contracts, sibling check context, and source-search hints.",
+  "You receive a structured investigation packet with failing eval evidence, expected-output contracts, sibling check context, source-search hints, and reproduction hints.",
   "Produce JSON only. Do not include markdown.",
   "Use only the supplied evidence and source hints. If the root cause is uncertain, say so and explain what evidence would prove or disprove it.",
   "Do not invent file paths, commands, endpoints, or line numbers.",
+  "Proof points should cite investigationPacket.evidenceItems ids when possible.",
   "Distinguish an eval failure from a user-facing product outage. Do not claim production users or real traffic are impacted unless the supplied evidence includes user-traffic or incident signals.",
   "If a broad health check passed but a specific endpoint or route failed, localize the diagnosis to that endpoint, route, version, or configuration instead of declaring the whole service down.",
   "Every report must include at least one proof point, possible cause, reproduction step, affected area, and recommended next action.",
@@ -43,9 +46,18 @@ export function buildInvestigationInput({
   siblingChecks = [],
   sourceHints = [],
 }) {
-  return redactSensitive({
+  const investigationPacket = buildInvestigationEvidencePacket({
+    check,
+    feature,
+    checkConfig,
+    expectation,
+    siblingChecks,
+    sourceHints,
+  });
+  return redactSensitiveValue({
     schemaVersion: 1,
     investigationGoal: "Explain this AURA observability eval failure with evidence-backed diagnosis and reproduction steps.",
+    investigationPacket,
     feature: {
       id: feature?.id ?? check?.featureId ?? null,
       label: feature?.label ?? null,
@@ -249,25 +261,6 @@ export function sourceNeedlesForCheck(check, expectation) {
   return [...needles].slice(0, 16);
 }
 
-export function redactSensitive(value, depth = 0) {
-  if (depth > 8) return "[Max depth reached]";
-  if (value == null) return value;
-  if (typeof value === "string") {
-    return truncate(value.replace(LONG_SECRET, (match) => {
-      if (match.length < 32 || match.includes("/")) return match;
-      return "[REDACTED]";
-    }));
-  }
-  if (typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.slice(0, 40).map((entry) => redactSensitive(entry, depth + 1));
-
-  const output = {};
-  for (const [key, entry] of Object.entries(value).slice(0, 80)) {
-    output[key] = SENSITIVE_KEY.test(key) ? "[REDACTED]" : redactSensitive(entry, depth + 1);
-  }
-  return output;
-}
-
 function parseJsonObject(content) {
   if (content && typeof content === "object" && !Array.isArray(content)) return content;
   if (typeof content !== "string") throw new Error("Investigator response was not a string or JSON object");
@@ -294,7 +287,7 @@ function investigationId(featureId, checkId, generatedAt) {
 }
 
 function evidenceDigest(check) {
-  return redactSensitive({
+  return redactSensitiveValue({
     message: check?.message ?? "",
     latencyMs: check?.latencyMs ?? null,
     evidence: check?.evidence ?? {},
@@ -329,9 +322,4 @@ function stringsFromValue(value, strings = []) {
     stringsFromValue(entry, strings);
   }
   return strings;
-}
-
-function truncate(value) {
-  if (value.length <= 5_000) return value;
-  return `${value.slice(0, 5_000)}...[truncated ${value.length - 5_000} chars]`;
 }

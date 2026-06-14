@@ -57,12 +57,16 @@ test("buildInvestigationInput includes factual contracts and redacts secrets", (
   assert.equal(input.feature.id, "media-generation");
   assert.equal(input.failedCheck.checkId, "image-generation-stream");
   assert.equal(input.expectedOutputContract.requiredEvidence[0], "frameTypes");
+  assert.equal(input.investigationPacket.packetKind, "aura-observability-investigation-packet");
+  assert.deepEqual(input.investigationPacket.checkContract.missingRequiredEvidence, ["frameTypes", "imageUrlPresent"]);
   assert.equal(input.failedCheck.evidence.authorization, "[REDACTED]");
   assert.equal(input.sourceHints[0].path, "infra/evals/status/run-status-probes.mjs");
 });
 
 test("investigator prompt keeps impact scoped to supplied eval evidence", () => {
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /Distinguish an eval failure from a user-facing product outage/);
+  assert.match(INVESTIGATOR_SYSTEM_PROMPT, /structured investigation packet/);
+  assert.match(INVESTIGATOR_SYSTEM_PROMPT, /evidenceItems ids/);
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /Do not claim production users or real traffic are impacted/);
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /If a broad health check passed but a specific endpoint or route failed/);
 });
