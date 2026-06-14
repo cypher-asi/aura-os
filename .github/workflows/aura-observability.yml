@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   observability:
@@ -94,6 +95,35 @@ jobs:
           AURA_STATUS_SOURCE: github-actions
         run: npm run status:persist
 
+      - name: Plan automatic repair dispatch
+        id: repair-plan
+        if: always()
+        env:
+          AURA_STATUS_CHECKS_DIR: infra/evals/reports/status/checks
+          AURA_STATUS_INVESTIGATIONS_DIR: infra/evals/reports/status/investigations
+          AURA_STATUS_REPAIR_MIN_INVESTIGATION_CONFIDENCE: ${{ vars.AURA_STATUS_REPAIR_MIN_INVESTIGATION_CONFIDENCE || 'medium' }}
+          AURA_STATUS_REPAIR_DISPATCH_MAX_CHECKS: ${{ vars.AURA_STATUS_REPAIR_DISPATCH_MAX_CHECKS || '3' }}
+          AURA_STATUS_REPAIR_DISPATCH_PLAN_FILE: infra/evals/reports/status/repair-dispatch-plan.json
+        run: node infra/evals/status/plan-status-repair-dispatch.mjs
+
+      - name: Dispatch automatic repair workflow
+        if: ${{ always() && steps.repair-plan.outputs.should_dispatch == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPAIR_CHECKS: ${{ steps.repair-plan.outputs.checks }}
+          REPAIR_MAX: ${{ steps.repair-plan.outputs.count }}
+          REPAIR_MIN_CONFIDENCE: ${{ vars.AURA_STATUS_REPAIR_MIN_CONFIDENCE || 'medium' }}
+        run: |
+          gh workflow run aura-observability-repair.yml \
+            --ref "${GITHUB_REF_NAME}" \
+            -f checks="$REPAIR_CHECKS" \
+            -f max_repairs="$REPAIR_MAX" \
+            -f apply_patch=true \
+            -f create_pr=true \
+            -f run_verification=true \
+            -f min_confidence="$REPAIR_MIN_CONFIDENCE" \
+            -f allowed_path_prefixes=""
+
       - uses: actions/checkout@v5
         if: always()
         with:
@@ -120,3 +150,4 @@ jobs:
             infra/evals/reports/status/status.json
             infra/evals/reports/status/checks
             infra/evals/reports/status/investigations
+            infra/evals/reports/status/repair-dispatch-plan.json

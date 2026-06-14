@@ -81,6 +81,61 @@ test("run-status-repairs can apply a validated repair patch without committing",
   }
 });
 
+test("run-status-repairs skips patch application below the repair confidence gate", async () => {
+  const fixture = await createFixtureRepo();
+  const requests = [];
+  const server = await createMockRepairServer(requests, { confidence: "low" });
+  try {
+    const outFile = path.join(fixture.tempDir, "repairs.json");
+    const result = await runNode([
+      ...repairArgs(fixture, server, outFile),
+      "--apply",
+      "--no-commit",
+      "--min-confidence",
+      "medium",
+    ], process.env);
+
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /applied 0/);
+    const source = await readFile(path.join(fixture.tempDir, "server/routes/agents.ts"), "utf8");
+    assert.match(source, /timeoutMs: 1000/);
+    const payload = JSON.parse(await readFile(outFile, "utf8"));
+    assert.equal(payload.repairs[0].status, "skipped");
+    assert.match(payload.repairs[0].error, /below required medium/);
+  } finally {
+    await server.close();
+    await rm(fixture.tempDir, { recursive: true, force: true });
+  }
+});
+
+test("run-status-repairs rejects apply when verification omits the failing check probe", async () => {
+  const fixture = await createFixtureRepo();
+  const requests = [];
+  const server = await createMockRepairServer(requests, {
+    verificationCommands: ["node --test infra/evals/status/lib/status-repairer.test.mjs"],
+  });
+  try {
+    const outFile = path.join(fixture.tempDir, "repairs.json");
+    const result = await runNode([
+      ...repairArgs(fixture, server, outFile),
+      "--apply",
+      "--no-commit",
+      "--run-verification",
+    ], process.env);
+
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /applied 0/);
+    const source = await readFile(path.join(fixture.tempDir, "server/routes/agents.ts"), "utf8");
+    assert.match(source, /timeoutMs: 1000/);
+    const payload = JSON.parse(await readFile(outFile, "utf8"));
+    assert.equal(payload.repairs[0].status, "failed");
+    assert.match(payload.repairs[0].error, /must include AURA_STATUS_CHECKS=remote-agent-create/);
+  } finally {
+    await server.close();
+    await rm(fixture.tempDir, { recursive: true, force: true });
+  }
+});
+
 async function createFixtureRepo() {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "aura-status-repairs-"));
   await mkdir(path.join(tempDir, "infra/evals/status"), { recursive: true });
@@ -176,7 +231,13 @@ async function createFixtureRepo() {
   return { tempDir, ...files };
 }
 
-async function createMockRepairServer(requests) {
+async function createMockRepairServer(requests, {
+  confidence = "medium",
+  verificationCommands = [
+    "AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
+    "node --test infra/evals/status/lib/status-repairer.test.mjs",
+  ],
+} = {}) {
   const server = createServer((request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -198,17 +259,14 @@ async function createMockRepairServer(requests) {
               content: JSON.stringify({
                 repairable: true,
                 title: "Increase remote agent create timeout",
-                confidence: "medium",
+                confidence,
                 summary: "Increase the remote agent route timeout so the create check can observe agent evidence.",
                 rootCause: "The route returns before agent provisioning reaches a state with agentId.",
                 proof: ["sourceDiscovery.candidateCodePaths includes server/routes/agents.ts."],
                 changePlan: ["Increase timeout in the agent creation route."],
                 targetFiles: ["server/routes/agents.ts"],
                 unifiedDiff: repairDiff,
-                verificationCommands: [
-                  "AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-                  "node --test infra/evals/status/lib/status-repairer.test.mjs",
-                ],
+                verificationCommands,
                 risks: ["The upstream provisioning service can still fail."],
                 requiresHumanReview: true,
                 followUpEvals: ["remote-agent-create-timeout"],

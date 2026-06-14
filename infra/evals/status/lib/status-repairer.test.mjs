@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildRepairInput,
   missingRequiredRepairFields,
+  meetsRepairConfidence,
   normalizeRepairResponse,
   pathsFromUnifiedDiff,
   REPAIR_SYSTEM_PROMPT,
@@ -89,6 +90,8 @@ test("normalizeRepairResponse requires real patch fields only for repairable pro
   assert.equal(repair.repairable, true);
   assert.equal(repair.status, "ready");
   assert.deepEqual(missingRequiredRepairFields(repair), []);
+  assert.equal(meetsRepairConfidence(repair, "medium"), true);
+  assert.equal(meetsRepairConfidence(repair, "high"), false);
   assert.equal(repair.targetFiles[0], "server/routes/agents.ts");
 
   const notRepairable = normalizeRepairResponse({

@@ -26,6 +26,10 @@ on:
         required: false
         type: boolean
         default: false
+      min_confidence:
+        description: "Minimum repair proposal confidence required before applying or creating a PR."
+        required: false
+        default: "medium"
       allowed_path_prefixes:
         description: "Optional comma-separated path prefixes the repair patch may edit."
         required: false
@@ -99,6 +103,7 @@ jobs:
           AURA_STATUS_ENVIRONMENT: production
           AURA_STATUS_SOURCE: github-actions-repair
           AURA_STATUS_REPAIR_BRANCH: codex/aura-observability-repair-${{ github.run_id }}
+          AURA_STATUS_REPAIR_MIN_CONFIDENCE: ${{ inputs.min_confidence }}
           AURA_STATUS_REPAIR_ALLOWED_PATH_PREFIXES: ${{ inputs.allowed_path_prefixes }}
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -112,6 +117,9 @@ jobs:
           fi
           if [[ "${{ inputs.run_verification }}" == "true" ]]; then
             args+=(--run-verification)
+          fi
+          if [[ -n "${{ inputs.min_confidence }}" ]]; then
+            args+=(--min-confidence "${{ inputs.min_confidence }}")
           fi
           if [[ -n "${{ inputs.allowed_path_prefixes }}" ]]; then
             args+=(--allowed-path-prefixes "${{ inputs.allowed_path_prefixes }}")

@@ -18,6 +18,11 @@ export const REPAIR_CONFIDENCE = Object.freeze({
 
 const VALID_REPAIR_CONFIDENCE = new Set(Object.values(REPAIR_CONFIDENCE));
 const VALID_REPAIR_STATUS = new Set(Object.values(REPAIR_STATUS));
+const REPAIR_CONFIDENCE_SCORE = Object.freeze({
+  [REPAIR_CONFIDENCE.LOW]: 1,
+  [REPAIR_CONFIDENCE.MEDIUM]: 2,
+  [REPAIR_CONFIDENCE.HIGH]: 3,
+});
 
 export const REPAIR_SYSTEM_PROMPT = [
   "You are AURA's gated observability repair planner.",
@@ -306,6 +311,12 @@ export function missingRequiredRepairFields(repair) {
     }
   }
   return missing;
+}
+
+export function meetsRepairConfidence(repair, minConfidence = REPAIR_CONFIDENCE.MEDIUM) {
+  const required = REPAIR_CONFIDENCE_SCORE[minConfidence] ?? REPAIR_CONFIDENCE_SCORE[REPAIR_CONFIDENCE.MEDIUM];
+  const actual = REPAIR_CONFIDENCE_SCORE[repair?.confidence] ?? 0;
+  return actual >= required;
 }
 
 export function validateUnifiedDiff(unifiedDiff, { repoRoot = "", allowedPathPrefixes = [] } = {}) {

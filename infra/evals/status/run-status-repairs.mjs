@@ -21,6 +21,7 @@ import {
   pathsFromUnifiedDiff,
   proposeRepair,
   REPAIR_STATUS,
+  meetsRepairConfidence,
   validateUnifiedDiff,
 } from "./lib/status-repairer.mjs";
 
@@ -91,11 +92,14 @@ function parseArgs(argv) {
     timeoutMs: Number(process.env.AURA_STATUS_REPAIR_TIMEOUT_MS || 120_000),
     maxTokens: Number(process.env.AURA_STATUS_REPAIR_MAX_TOKENS || 8_000),
     maxRepairs: Number(process.env.AURA_STATUS_REPAIR_MAX_CHECKS || 1),
+    maxPatchFiles: Number(process.env.AURA_STATUS_REPAIR_MAX_PATCH_FILES || 6),
+    maxPatchLines: Number(process.env.AURA_STATUS_REPAIR_MAX_PATCH_LINES || 600),
     apply: process.env.AURA_STATUS_REPAIR_APPLY === "1",
     commit: process.env.AURA_STATUS_REPAIR_COMMIT !== "0",
     createPr: process.env.AURA_STATUS_REPAIR_CREATE_PR === "1",
     runVerification: process.env.AURA_STATUS_REPAIR_RUN_VERIFICATION === "1",
     allowDirty: process.env.AURA_STATUS_REPAIR_ALLOW_DIRTY === "1",
+    minConfidence: process.env.AURA_STATUS_REPAIR_MIN_CONFIDENCE || "medium",
     branch: process.env.AURA_STATUS_REPAIR_BRANCH || "",
     prBase: process.env.AURA_STATUS_REPAIR_PR_BASE || "main",
     prTitle: process.env.AURA_STATUS_REPAIR_PR_TITLE || "",
@@ -127,6 +131,8 @@ function parseArgs(argv) {
     else if (arg === "--model") args.model = next();
     else if (arg === "--timeout-ms") args.timeoutMs = Number(next());
     else if (arg === "--max-repairs") args.maxRepairs = Number(next());
+    else if (arg === "--max-patch-files") args.maxPatchFiles = Number(next());
+    else if (arg === "--max-patch-lines") args.maxPatchLines = Number(next());
     else if (arg === "--apply") args.apply = true;
     else if (arg === "--dry-run") args.apply = false;
     else if (arg === "--commit") args.commit = true;
@@ -134,6 +140,7 @@ function parseArgs(argv) {
     else if (arg === "--create-pr") args.createPr = true;
     else if (arg === "--run-verification") args.runVerification = true;
     else if (arg === "--allow-dirty") args.allowDirty = true;
+    else if (arg === "--min-confidence") args.minConfidence = next();
     else if (arg === "--branch") args.branch = next();
     else if (arg === "--pr-base") args.prBase = next();
     else if (arg === "--pr-title") args.prTitle = next();
@@ -149,6 +156,8 @@ function parseArgs(argv) {
   if (!Number.isFinite(args.timeoutMs) || args.timeoutMs <= 0) args.timeoutMs = 120_000;
   if (!Number.isFinite(args.maxTokens) || args.maxTokens <= 0) args.maxTokens = 8_000;
   if (!Number.isFinite(args.maxRepairs) || args.maxRepairs <= 0) args.maxRepairs = 1;
+  if (!Number.isFinite(args.maxPatchFiles) || args.maxPatchFiles <= 0) args.maxPatchFiles = 6;
+  if (!Number.isFinite(args.maxPatchLines) || args.maxPatchLines <= 0) args.maxPatchLines = 600;
   if (args.provider === "anthropic") {
     args.baseUrl = args.baseUrl || "https://api.anthropic.com/v1";
     args.apiKey = args.apiKey || process.env.ANTHROPIC_API_KEY || "";
@@ -283,6 +292,24 @@ function callRepairModel(args, request) {
 
 async function applyRepair(args, repair) {
   if (!repair.repairable) return repair;
+  if (!meetsRepairConfidence(repair, args.minConfidence)) {
+    return {
+      ...repair,
+      status: REPAIR_STATUS.SKIPPED,
+      error: `Repair confidence ${repair.confidence} is below required ${args.minConfidence}.`,
+    };
+  }
+  if (args.createPr) {
+    const existingPrUrl = await findExistingRepairPullRequest(args, repair);
+    if (existingPrUrl) {
+      return {
+        ...repair,
+        status: REPAIR_STATUS.SKIPPED,
+        error: `Open repair PR already exists for ${repair.checkId}: ${existingPrUrl}`,
+        apply: { prUrl: existingPrUrl },
+      };
+    }
+  }
   const patchIssues = validateUnifiedDiff(repair.unifiedDiff, {
     repoRoot: args.repoRoot,
     allowedPathPrefixes: args.allowedPathPrefixes,
@@ -299,12 +326,34 @@ async function applyRepair(args, repair) {
   if (args.branch) await execGit(args.repoRoot, ["checkout", "-B", args.branch]);
 
   const patchPaths = pathsFromUnifiedDiff(repair.unifiedDiff);
+  if (patchPaths.length > args.maxPatchFiles) {
+    return {
+      ...repair,
+      status: REPAIR_STATUS.FAILED,
+      error: `Patch edits ${patchPaths.length} files, above limit ${args.maxPatchFiles}.`,
+    };
+  }
+  const patchLineCount = repair.unifiedDiff.split("\n").length;
+  if (patchLineCount > args.maxPatchLines) {
+    return {
+      ...repair,
+      status: REPAIR_STATUS.FAILED,
+      error: `Patch has ${patchLineCount} lines, above limit ${args.maxPatchLines}.`,
+    };
+  }
   const undeclaredPaths = patchPaths.filter((filePath) => !repair.targetFiles.includes(filePath));
   if (undeclaredPaths.length > 0) {
     return {
       ...repair,
       status: REPAIR_STATUS.FAILED,
       error: `Patch edits undeclared target file(s): ${undeclaredPaths.join(", ")}`,
+    };
+  }
+  if (args.runVerification && !hasRequiredFailingCheckVerifier(repair)) {
+    return {
+      ...repair,
+      status: REPAIR_STATUS.FAILED,
+      error: `Verification commands must include AURA_STATUS_CHECKS=${repair.checkId} npm run status:probes.`,
     };
   }
 
@@ -378,6 +427,11 @@ function isAllowedVerificationCommand(command) {
     || /^npm run test -- [A-Za-z0-9_./:-]+$/.test(command);
 }
 
+function hasRequiredFailingCheckVerifier(repair) {
+  const expected = repair?.checkId ? `AURA_STATUS_CHECKS=${repair.checkId} npm run status:probes` : "npm run status:probes";
+  return repair?.verificationCommands?.includes(expected);
+}
+
 function runShell(command, cwd, timeoutMs) {
   return new Promise((resolve) => {
     const child = spawn("/bin/sh", ["-lc", command], {
@@ -431,7 +485,7 @@ async function execGit(cwd, args, input = "") {
 }
 
 async function createPullRequest(args, repair, branch) {
-  const title = args.prTitle || repair.title || `Repair ${repair.checkId} observability failure`;
+  const title = repairPrTitle(args, repair);
   const body = [
     "## Observability Repair",
     "",
@@ -459,6 +513,31 @@ async function createPullRequest(args, repair, branch) {
     branch,
   ], { cwd: args.repoRoot, timeout: 30_000, maxBuffer: 64_000 });
   return stdout.trim().split("\n").at(-1) ?? "";
+}
+
+async function findExistingRepairPullRequest(args, repair) {
+  const title = repairPrTitle(args, repair);
+  try {
+    const { stdout } = await execFileAsync("gh", [
+      "pr",
+      "list",
+      "--state",
+      "open",
+      "--search",
+      `"${title}" in:title`,
+      "--json",
+      "url,title",
+      "--jq",
+      ".[0].url // \"\"",
+    ], { cwd: args.repoRoot, timeout: 30_000, maxBuffer: 64_000 });
+    return stdout.trim();
+  } catch {
+    return "";
+  }
+}
+
+function repairPrTitle(args, repair) {
+  return args.prTitle || `Repair ${repair.checkId} observability failure`;
 }
 
 function commitMessage(repair) {
