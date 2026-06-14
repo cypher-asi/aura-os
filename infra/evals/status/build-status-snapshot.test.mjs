@@ -128,6 +128,8 @@ test("build-status-snapshot attaches investigation artifacts", async () => {
           summary: "A model failed.",
           rootCause: "The model-authored report points to aura-small.",
           proof: ["failedModels includes aura-small"],
+          whatWouldDisproveThis: ["The same model returns the expected phrase on rerun."],
+          recommendedVerifierProbes: [{ label: "Rerun model matrix" }],
         },
       ],
     }));

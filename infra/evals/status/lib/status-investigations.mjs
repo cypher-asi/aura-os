@@ -50,6 +50,8 @@ export function normalizeInvestigation(raw, generatedAt) {
     reproductionSteps: normalizeStructuredList(raw.reproductionSteps),
     affectedAreas: normalizeStructuredList(raw.affectedAreas),
     recommendedNextActions: normalizeStringArray(raw.recommendedNextActions),
+    recommendedVerifierProbes: normalizeStructuredList(raw.recommendedVerifierProbes),
+    whatWouldDisproveThis: normalizeStringArray(raw.whatWouldDisproveThis),
     followUpEvals: normalizeStringArray(raw.followUpEvals),
     evidenceDigest: raw.evidenceDigest && typeof raw.evidenceDigest === "object" ? raw.evidenceDigest : undefined,
     error: typeof raw.error === "string" ? raw.error : undefined,

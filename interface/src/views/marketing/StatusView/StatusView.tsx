@@ -251,6 +251,8 @@ function InvestigationReportView({
   readonly group: InvestigationReportGroup;
 }): ReactNode {
   const { investigation, checkIds } = group;
+  const whatWouldDisproveThis = investigation.whatWouldDisproveThis ?? [];
+  const recommendedVerifierProbes = investigation.recommendedVerifierProbes ?? [];
   return (
     <section className="statusInvestigationItem" aria-label={`Investigation for ${investigation.checkId}`}>
       <div className="statusInvestigationItemTop">
@@ -311,6 +313,16 @@ function InvestigationReportView({
           <InvestigationList items={investigation.possibleCauses} />
         </div>
 
+        {whatWouldDisproveThis.length > 0 && (
+          <div className="statusInvestigationBlock statusInvestigationBlockWide">
+            <h5>
+              <Search size={14} strokeWidth={1.9} aria-hidden />
+              What would disprove this
+            </h5>
+            <InvestigationList items={whatWouldDisproveThis} />
+          </div>
+        )}
+
         <div className="statusInvestigationBlock statusInvestigationBlockWide">
           <h5>
             <Terminal size={14} strokeWidth={1.9} aria-hidden />
@@ -318,6 +330,16 @@ function InvestigationReportView({
           </h5>
           <InvestigationItemList items={investigation.reproductionSteps} />
         </div>
+
+        {recommendedVerifierProbes.length > 0 && (
+          <div className="statusInvestigationBlock statusInvestigationBlockWide">
+            <h5>
+              <Activity size={14} strokeWidth={1.9} aria-hidden />
+              Verifier probes
+            </h5>
+            <InvestigationItemList items={recommendedVerifierProbes} />
+          </div>
+        )}
 
         <div className="statusInvestigationBlock statusInvestigationBlockWide">
           <h5>

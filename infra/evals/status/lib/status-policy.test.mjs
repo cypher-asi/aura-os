@@ -215,6 +215,13 @@ test("buildStatusSnapshot attaches LLM-generated investigations to failed checks
             reason: "The check captured the failing SSE frame.",
           },
         ],
+        whatWouldDisproveThis: ["The same check emits generation_completed and imageUrlPresent."],
+        recommendedVerifierProbes: [
+          {
+            label: "Run harness-health",
+            command: "AURA_STATUS_CHECKS=harness-health npm run status:probes",
+          },
+        ],
         recommendedNextActions: ["Run harness-health before debugging image generation."],
         followUpEvals: ["harness-health"],
       },
@@ -230,6 +237,8 @@ test("buildStatusSnapshot attaches LLM-generated investigations to failed checks
   assert.equal(investigation.source, "github-actions");
   assert.equal(investigation.featureStatus, FEATURE_STATUS.PARTIAL_OUTAGE);
   assert.deepEqual(investigation.proof, ["generation_error has code session_open_failed and status 404"]);
+  assert.equal(investigation.whatWouldDisproveThis[0], "The same check emits generation_completed and imageUrlPresent.");
+  assert.equal(investigation.recommendedVerifierProbes[0].label, "Run harness-health");
   assert.equal(snapshot.features[0].checks[0].investigation.id, investigation.id);
 });
 

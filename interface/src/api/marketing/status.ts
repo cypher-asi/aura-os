@@ -40,6 +40,8 @@ export interface StatusInvestigation {
   readonly possibleCauses: readonly string[];
   readonly reproductionSteps: readonly StatusInvestigationItem[];
   readonly affectedAreas: readonly StatusInvestigationItem[];
+  readonly whatWouldDisproveThis?: readonly string[];
+  readonly recommendedVerifierProbes?: readonly StatusInvestigationItem[];
   readonly recommendedNextActions: readonly string[];
   readonly followUpEvals: readonly string[];
   readonly evidenceDigest?: Record<string, unknown>;

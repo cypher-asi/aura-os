@@ -46,6 +46,16 @@ const MODEL_INVESTIGATION: StatusInvestigation = {
       command: "AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes",
     },
   ],
+  whatWouldDisproveThis: [
+    "A rerun with aura-small returns the expected phrase with the same test account.",
+  ],
+  recommendedVerifierProbes: [
+    {
+      label: "Rerun model matrix for aura-small",
+      command: "AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes",
+      reason: "This confirms whether the model alias is still failing.",
+    },
+  ],
   recommendedNextActions: [
     "Inspect failedModels and per-model errors in evidence.results.",
     "Compare configured model ids with the public model catalog and router aliases.",
@@ -290,7 +300,11 @@ describe("StatusView", () => {
     expect(screen.getByText("Investigations")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("medium confidence")).toBeInTheDocument();
-    expect(screen.getByText("AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes")).toBeInTheDocument();
+    expect(screen.getAllByText("AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes").length).toBeGreaterThan(0);
+    expect(screen.getByText("What would disprove this")).toBeInTheDocument();
+    expect(screen.getByText("A rerun with aura-small returns the expected phrase with the same test account.")).toBeInTheDocument();
+    expect(screen.getByText("Verifier probes")).toBeInTheDocument();
+    expect(screen.getByText("Rerun model matrix for aura-small")).toBeInTheDocument();
     expect(screen.getByText("model-catalog-contract")).toBeInTheDocument();
   });
 

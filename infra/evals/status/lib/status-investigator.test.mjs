@@ -67,6 +67,7 @@ test("investigator prompt keeps impact scoped to supplied eval evidence", () => 
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /Distinguish an eval failure from a user-facing product outage/);
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /structured investigation packet/);
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /evidenceItems ids/);
+  assert.match(INVESTIGATOR_SYSTEM_PROMPT, /what evidence would disprove/);
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /Do not claim production users or real traffic are impacted/);
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /If a broad health check passed but a specific endpoint or route failed/);
 });
@@ -102,6 +103,14 @@ test("investigateCheck normalizes model-authored JSON without a deterministic di
           reason: "The probe captured the 404.",
         },
       ],
+      whatWouldDisproveThis: ["A rerun emits generation_completed with imageUrlPresent using the same harness URL."],
+      recommendedVerifierProbes: [
+        {
+          label: "Run harness health first",
+          command: "AURA_STATUS_CHECKS=harness-health npm run status:probes",
+          reason: "This rules out the shared runtime harness before media code changes.",
+        },
+      ],
       recommendedNextActions: ["Check the packaged harness route table."],
       followUpEvals: ["harness-health"],
     }),
@@ -112,6 +121,8 @@ test("investigateCheck normalizes model-authored JSON without a deterministic di
   assert.equal(investigation.rootCause, "The evidence shows POST /v1/run returned 404 before image generation could complete.");
   assert.equal(investigation.provider, "mock");
   assert.equal(investigation.model, "mock-investigator");
+  assert.equal(investigation.whatWouldDisproveThis[0], "A rerun emits generation_completed with imageUrlPresent using the same harness URL.");
+  assert.equal(investigation.recommendedVerifierProbes[0].label, "Run harness health first");
   assert.equal(investigation.evidenceDigest.evidence.authorization, "[REDACTED]");
 });
 
@@ -138,6 +149,8 @@ test("investigateCheck retries incomplete model reports instead of filling field
         possibleCauses: ["The local harness route is unavailable"],
         reproductionSteps: [{ label: "Run image generation stream" }],
         affectedAreas: calls === 1 ? [] : [{ label: "Image stream probe", path: "infra/evals/status/run-status-probes.mjs" }],
+        whatWouldDisproveThis: calls === 1 ? [] : ["A rerun against the same route completes."],
+        recommendedVerifierProbes: calls === 1 ? [] : [{ label: "Run harness health", command: "AURA_STATUS_CHECKS=harness-health npm run status:probes" }],
         recommendedNextActions: calls === 1 ? [] : ["Check the runtime route before changing media generation."],
         followUpEvals: [],
       });
@@ -147,5 +160,7 @@ test("investigateCheck retries incomplete model reports instead of filling field
   assert.equal(calls, 2);
   assert.deepEqual(missingRequiredInvestigationFields(investigation), []);
   assert.equal(investigation.affectedAreas[0].label, "Image stream probe");
+  assert.equal(investigation.whatWouldDisproveThis[0], "A rerun against the same route completes.");
+  assert.equal(investigation.recommendedVerifierProbes[0].label, "Run harness health");
   assert.equal(investigation.recommendedNextActions[0], "Check the runtime route before changing media generation.");
 });

@@ -30,6 +30,7 @@ export const INVESTIGATOR_SYSTEM_PROMPT = [
   "Distinguish an eval failure from a user-facing product outage. Do not claim production users or real traffic are impacted unless the supplied evidence includes user-traffic or incident signals.",
   "If a broad health check passed but a specific endpoint or route failed, localize the diagnosis to that endpoint, route, version, or configuration instead of declaring the whole service down.",
   "Every report must include at least one proof point, possible cause, reproduction step, affected area, and recommended next action.",
+  "Every report must also name what evidence would disprove the diagnosis and which verifier probes should run next.",
   "If no exact file path is proven, affectedAreas must name the implicated product or runtime area without a path.",
   "Do not propose a code diff. Focus on proving the problem exists, localizing where it appears to exist, possible causes, reproduction steps, and follow-up evals.",
 ].join(" ");
@@ -114,6 +115,14 @@ export function buildInvestigationInput({
           label: "Area, product surface, runtime component, or code path",
           path: "Optional exact path from source hints",
           reason: "Why this area is implicated",
+        },
+      ],
+      whatWouldDisproveThis: ["Evidence that would weaken or falsify the proposed root cause."],
+      recommendedVerifierProbes: [
+        {
+          label: "Safe verifier probe to run next",
+          command: "Optional command if directly supported by supplied evidence",
+          reason: "Why this probe would confirm or rule out the diagnosis",
         },
       ],
       recommendedNextActions: ["Concrete next actions for an engineer."],
@@ -233,6 +242,12 @@ export function missingRequiredInvestigationFields(investigation) {
   if (!Array.isArray(investigation?.possibleCauses) || investigation.possibleCauses.length === 0) missing.push("possibleCauses");
   if (!Array.isArray(investigation?.reproductionSteps) || investigation.reproductionSteps.length === 0) missing.push("reproductionSteps");
   if (!Array.isArray(investigation?.affectedAreas) || investigation.affectedAreas.length === 0) missing.push("affectedAreas");
+  if (!Array.isArray(investigation?.whatWouldDisproveThis) || investigation.whatWouldDisproveThis.length === 0) {
+    missing.push("whatWouldDisproveThis");
+  }
+  if (!Array.isArray(investigation?.recommendedVerifierProbes) || investigation.recommendedVerifierProbes.length === 0) {
+    missing.push("recommendedVerifierProbes");
+  }
   if (!Array.isArray(investigation?.recommendedNextActions) || investigation.recommendedNextActions.length === 0) {
     missing.push("recommendedNextActions");
   }

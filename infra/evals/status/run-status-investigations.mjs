@@ -31,6 +31,8 @@ const ANTHROPIC_INVESTIGATION_TOOL = Object.freeze({
       "possibleCauses",
       "reproductionSteps",
       "affectedAreas",
+      "whatWouldDisproveThis",
+      "recommendedVerifierProbes",
       "recommendedNextActions",
       "followUpEvals",
     ],
@@ -65,6 +67,22 @@ const ANTHROPIC_INVESTIGATION_TOOL = Object.freeze({
           properties: {
             label: { type: "string" },
             path: { type: "string" },
+            reason: { type: "string" },
+            details: { type: "string" },
+          },
+        },
+      },
+      whatWouldDisproveThis: { type: "array", minItems: 1, items: { type: "string" } },
+      recommendedVerifierProbes: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["label"],
+          properties: {
+            label: { type: "string" },
+            command: { type: "string" },
             reason: { type: "string" },
             details: { type: "string" },
           },
