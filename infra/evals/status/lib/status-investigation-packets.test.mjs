@@ -55,6 +55,14 @@ test("buildInvestigationEvidencePacket captures contracts, sibling patterns, and
         preview: "image-generation-stream",
       },
     ],
+    sourceContext: [
+      {
+        path: "infra/evals/status/run-status-probes.mjs",
+        startLine: 897,
+        endLine: 903,
+        excerpt: "900: image-generation-stream",
+      },
+    ],
   });
 
   assert.equal(packet.packetKind, "aura-observability-investigation-packet");
@@ -66,4 +74,5 @@ test("buildInvestigationEvidencePacket captures contracts, sibling patterns, and
   assert.equal(packet.reproductionHint.command, "AURA_STATUS_CHECKS=image-generation-stream npm run status:probes");
   assert.ok(packet.evidenceItems.some((item) => item.id === "expected-output.missing-required-evidence"));
   assert.ok(packet.evidenceItems.some((item) => item.id === "source.infra/evals/status/run-status-probes.mjs:900"));
+  assert.ok(packet.evidenceItems.some((item) => item.id === "source-context.infra/evals/status/run-status-probes.mjs:897-903"));
 });

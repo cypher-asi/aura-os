@@ -11,6 +11,7 @@ import {
   needsInvestigation,
   sourceNeedlesForCheck,
 } from "./lib/status-investigator.mjs";
+import { buildInvestigationVerifierContext } from "./lib/status-investigation-verifiers.mjs";
 
 const execFileAsync = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -96,6 +97,7 @@ function parseArgs(argv) {
     maxTokens: Number(process.env.AURA_STATUS_INVESTIGATOR_MAX_TOKENS || 4_000),
     maxChecks: Number(process.env.AURA_STATUS_INVESTIGATOR_MAX_CHECKS || 8),
     sourceHints: process.env.AURA_STATUS_INVESTIGATOR_SOURCE_HINTS !== "0",
+    sourceContext: process.env.AURA_STATUS_INVESTIGATOR_SOURCE_CONTEXT !== "0",
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -159,7 +161,7 @@ async function walkJsonFiles(dir) {
   return files;
 }
 
-async function readChecks(args, generatedAt) {
+async function readCheckRecords(args, generatedAt) {
   const checks = [];
   if (args.checksFile) {
     const payload = await readJson(args.checksFile);
@@ -172,7 +174,7 @@ async function readChecks(args, generatedAt) {
       // Ignore unrelated JSON artifacts.
     }
   }
-  return latestByCheckId(checks, generatedAt);
+  return checks;
 }
 
 function checksFromPayload(payload, generatedAt) {
@@ -245,6 +247,40 @@ async function collectSourceHints(check, expectation, enabled) {
     if (hints.length >= 24) break;
   }
   return hints.slice(0, 24);
+}
+
+async function collectSourceContext(sourceHints, enabled) {
+  if (!enabled || sourceHints.length === 0) return [];
+  const contexts = [];
+  const seen = new Set();
+  for (const hint of sourceHints) {
+    if (!hint.path || !Number.isFinite(Number(hint.line))) continue;
+    const key = `${hint.path}:${hint.line}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const filePath = path.join(repoRoot, hint.path);
+    if (!filePath.startsWith(repoRoot)) continue;
+    try {
+      const lines = (await fs.readFile(filePath, "utf8")).split("\n");
+      const line = Math.max(1, Number(hint.line));
+      const startLine = Math.max(1, line - 3);
+      const endLine = Math.min(lines.length, line + 3);
+      const excerpt = lines
+        .slice(startLine - 1, endLine)
+        .map((text, index) => `${startLine + index}: ${text}`)
+        .join("\n");
+      contexts.push({
+        path: hint.path,
+        startLine,
+        endLine,
+        excerpt: excerpt.slice(0, 2_000),
+      });
+    } catch {
+      // Source context is supplementary and should never block investigation.
+    }
+    if (contexts.length >= 8) break;
+  }
+  return contexts;
 }
 
 async function callOpenAiCompatible(args, { messages }) {
@@ -358,7 +394,8 @@ async function main() {
   const generatedAt = new Date().toISOString();
   const registry = await readJson(args.registry);
   const expectations = await readJson(args.expectationsFile);
-  const checks = await readChecks(args, generatedAt);
+  const checkRecords = await readCheckRecords(args, generatedAt);
+  const checks = latestByCheckId(checkRecords, generatedAt);
   const failingChecks = checks.filter(needsInvestigation).slice(0, args.maxChecks);
 
   const payload = {
@@ -388,7 +425,23 @@ async function main() {
     const checkConfig = findCheckConfig(feature, check.checkId);
     const expectation = expectations.checks?.[check.checkId] ?? null;
     const siblingChecks = checks.filter((candidate) => candidate.featureId === check.featureId && candidate.checkId !== check.checkId);
+    const previousChecks = checkRecords
+      .filter((candidate) =>
+        candidate.checkId === check.checkId
+          && candidate.endedAt
+          && check.endedAt
+          && new Date(candidate.endedAt).getTime() < new Date(check.endedAt).getTime(),
+      );
     const sourceHints = await collectSourceHints(check, expectation, args.sourceHints);
+    const sourceContext = await collectSourceContext(sourceHints, args.sourceHints && args.sourceContext);
+    const verifierContext = buildInvestigationVerifierContext({
+      check,
+      expectation,
+      siblingChecks,
+      previousChecks,
+      sourceHints,
+      sourceContext,
+    });
     payload.investigations.push(await investigateCheck({
       check,
       feature,
@@ -396,6 +449,8 @@ async function main() {
       expectation,
       siblingChecks,
       sourceHints,
+      sourceContext,
+      verifierContext,
       generatedAt,
       environment: args.environment,
       source: args.source,

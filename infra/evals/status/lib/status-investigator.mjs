@@ -45,6 +45,8 @@ export function buildInvestigationInput({
   expectation,
   siblingChecks = [],
   sourceHints = [],
+  sourceContext = [],
+  verifierContext = null,
 }) {
   const investigationPacket = buildInvestigationEvidencePacket({
     check,
@@ -53,6 +55,8 @@ export function buildInvestigationInput({
     expectation,
     siblingChecks,
     sourceHints,
+    sourceContext,
+    verifierContext,
   });
   return redactSensitiveValue({
     schemaVersion: 1,
@@ -90,6 +94,8 @@ export function buildInvestigationInput({
       evidence: sibling.evidence ?? {},
     })),
     sourceHints,
+    sourceContext,
+    verifierContext,
     responseSchema: {
       title: "Short investigator report title.",
       confidence: "low | medium | high",
@@ -130,6 +136,8 @@ export async function investigateCheck({
   expectation,
   siblingChecks = [],
   sourceHints = [],
+  sourceContext = [],
+  verifierContext = null,
   generatedAt = new Date().toISOString(),
   environment = "unknown",
   source = "aura-status",
@@ -137,7 +145,16 @@ export async function investigateCheck({
   model,
   callModel,
 }) {
-  const input = buildInvestigationInput({ check, feature, checkConfig, expectation, siblingChecks, sourceHints });
+  const input = buildInvestigationInput({
+    check,
+    feature,
+    checkConfig,
+    expectation,
+    siblingChecks,
+    sourceHints,
+    sourceContext,
+    verifierContext,
+  });
   const messages = buildInvestigationMessages(input);
   try {
     let content = await callModel({ messages, input });

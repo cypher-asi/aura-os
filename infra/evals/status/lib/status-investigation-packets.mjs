@@ -8,6 +8,8 @@ export function buildInvestigationEvidencePacket({
   expectation,
   siblingChecks = [],
   sourceHints = [],
+  sourceContext = [],
+  verifierContext = null,
 }) {
   const requiredEvidence = Array.isArray(expectation?.requiredEvidence) ? expectation.requiredEvidence : [];
   const failedEvidence = check?.evidence && typeof check.evidence === "object" ? check.evidence : {};
@@ -64,12 +66,14 @@ export function buildInvestigationEvidencePacket({
     },
     siblingPattern: siblingSummaries.pattern,
     siblingChecks: siblingSummaries.checks,
+    verifierContext,
     evidenceItems: buildEvidenceItems({
       check,
       expectation,
       missingRequiredEvidence,
       siblingChecks: siblingSummaries.checks,
       sourceHints,
+      sourceContext,
     }),
     reproductionHint: {
       label: `Run only ${check?.checkId ?? "this check"}`,
@@ -77,6 +81,7 @@ export function buildInvestigationEvidencePacket({
       details: "Use the same environment variables as the scheduled observability workflow.",
     },
     sourceHints,
+    sourceContext,
   });
 }
 
@@ -115,6 +120,7 @@ function buildEvidenceItems({
   missingRequiredEvidence,
   siblingChecks,
   sourceHints,
+  sourceContext,
 }) {
   const items = [];
   addEvidenceItem(items, {
@@ -162,6 +168,13 @@ function buildEvidenceItems({
       id: `source.${hint.path}:${hint.line}`,
       kind: "source-hint",
       summary: hint,
+    });
+  }
+  for (const context of sourceContext.slice(0, 8)) {
+    addEvidenceItem(items, {
+      id: `source-context.${context.path}:${context.startLine}-${context.endLine}`,
+      kind: "source-context",
+      summary: context,
     });
   }
   return items;
