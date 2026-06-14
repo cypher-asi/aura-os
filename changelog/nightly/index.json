@@ -2,18 +2,18 @@
   {
     "date": "2026-06-13",
     "channel": "nightly",
-    "version": "0.1.0-nightly.661.1",
-    "title": "LLM-powered status investigations land in observability",
-    "intro": "Today's nightly is a focused observability upgrade: when status probes detect a problem, an LLM-backed investigator now produces structured incident reports that flow through the public status page and into every release pipeline.",
+    "version": "0.1.0-nightly.662.1",
+    "title": "LLM-powered status investigations land on the public status page",
+    "intro": "Today's nightly brings a new observability layer to Aura: when status probes fail, an LLM investigator now drafts scoped, evidence-backed diagnoses that are uploaded as release artifacts and rendered directly on the marketing status page. A follow-up fix tightens the prompt against overstated impact and groups repeated troubleshooting cards so the page stays readable when many checks share one root cause.",
     "entryCount": 1,
     "highlights": [
-      "Automated LLM investigation reports for failing status checks",
-      "Investigations wired into nightly and stable desktop release pipelines",
-      "Public Status view redesigned to surface investigation findings"
+      "LLM investigation reports for failing status checks",
+      "Status page renders investigations with grouped troubleshooting cards",
+      "Nightly and stable desktop releases now upload investigation artifacts"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-06-14T03:48:49.730Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.661.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-06-14T05:29:37.957Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.662.1",
     "path": "history/2026-06-13.json"
   },
   {
