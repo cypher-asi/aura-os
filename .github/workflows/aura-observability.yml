@@ -55,6 +55,20 @@ jobs:
             public-models-page,public-marketing-pages
         run: npm run status:probes
 
+      - name: Run observability investigations
+        if: always()
+        env:
+          AURA_STATUS_CHECKS_DIR: infra/evals/reports/status/checks
+          AURA_STATUS_INVESTIGATIONS_DIR: infra/evals/reports/status/investigations
+          AURA_STATUS_INVESTIGATOR_PROVIDER: ${{ secrets.AURA_STATUS_INVESTIGATOR_PROVIDER || vars.AURA_STATUS_INVESTIGATOR_PROVIDER || 'anthropic' }}
+          AURA_STATUS_INVESTIGATOR_BASE_URL: ${{ secrets.AURA_STATUS_INVESTIGATOR_BASE_URL || vars.AURA_STATUS_INVESTIGATOR_BASE_URL }}
+          AURA_STATUS_INVESTIGATOR_API_KEY: ${{ secrets.AURA_STATUS_INVESTIGATOR_API_KEY }}
+          AURA_STATUS_INVESTIGATOR_MODEL: ${{ secrets.AURA_STATUS_INVESTIGATOR_MODEL || vars.AURA_STATUS_INVESTIGATOR_MODEL || vars.CHANGELOG_ANTHROPIC_MODEL || vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: github-actions
+        run: npm run status:investigate
+
       - name: Build public observability snapshot
         if: always()
         env:
@@ -105,3 +119,4 @@ jobs:
           path: |
             infra/evals/reports/status/status.json
             infra/evals/reports/status/checks
+            infra/evals/reports/status/investigations

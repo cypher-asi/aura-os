@@ -13,6 +13,8 @@ function parseArgs(argv) {
   const args = {
     checksDir: process.env.AURA_STATUS_CHECKS_DIR || path.join(repoRoot, "infra/evals/reports/status/checks"),
     checksFile: process.env.AURA_STATUS_CHECKS_FILE || "",
+    investigationsDir: process.env.AURA_STATUS_INVESTIGATIONS_DIR || path.join(repoRoot, "infra/evals/reports/status/investigations"),
+    investigationsFile: process.env.AURA_STATUS_INVESTIGATIONS_FILE || "",
     previousSnapshot: process.env.AURA_STATUS_PREVIOUS_SNAPSHOT || "",
     registry: process.env.AURA_STATUS_FEATURES_FILE || path.join(__dirname, "features.json"),
     out: output,
@@ -29,6 +31,8 @@ function parseArgs(argv) {
     };
     if (arg === "--checks-dir") args.checksDir = path.resolve(next());
     else if (arg === "--checks-file") args.checksFile = path.resolve(next());
+    else if (arg === "--investigations-dir") args.investigationsDir = path.resolve(next());
+    else if (arg === "--investigations-file") args.investigationsFile = path.resolve(next());
     else if (arg === "--previous-snapshot") args.previousSnapshot = path.resolve(next());
     else if (arg === "--registry") args.registry = path.resolve(next());
     else if (arg === "--out") args.out = path.resolve(next());
@@ -36,7 +40,7 @@ function parseArgs(argv) {
     else if (arg === "--environment") args.environment = next();
     else if (arg === "--source") args.source = next();
     else if (arg === "--help") {
-      process.stdout.write("Usage: node infra/evals/status/build-status-snapshot.mjs [--checks-dir DIR] [--checks-file FILE] [--previous-snapshot FILE] [--out FILE]\n");
+      process.stdout.write("Usage: node infra/evals/status/build-status-snapshot.mjs [--checks-dir DIR] [--checks-file FILE] [--investigations-dir DIR] [--previous-snapshot FILE] [--out FILE]\n");
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -120,6 +124,31 @@ async function readChecks(args) {
   return checks;
 }
 
+async function readInvestigations(args) {
+  if (args.investigationsFile) {
+    try {
+      const payload = await readJson(args.investigationsFile);
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload.investigations)) return payload.investigations;
+    } catch {
+      return [];
+    }
+  }
+
+  const investigations = [];
+  for (const file of await walkJsonFiles(args.investigationsDir)) {
+    try {
+      const payload = await readJson(file);
+      if (Array.isArray(payload)) investigations.push(...payload);
+      else if (Array.isArray(payload.investigations)) investigations.push(...payload.investigations);
+      else if (payload.checkId) investigations.push(payload);
+    } catch {
+      // Ignore unrelated JSON artifacts.
+    }
+  }
+  return investigations;
+}
+
 function checksFromSnapshot(snapshot) {
   if (!Array.isArray(snapshot?.features)) return [];
   const snapshotGeneratedAt = normalizeSnapshotGeneratedAt(snapshot);
@@ -160,9 +189,11 @@ async function writeJson(filePath, payload) {
 const args = parseArgs(process.argv.slice(2));
 const registry = await readJson(args.registry);
 const checks = await readChecks(args);
+const investigations = await readInvestigations(args);
 const snapshot = buildStatusSnapshot({
   registry,
   checks,
+  investigations,
   environment: args.environment,
   source: args.source,
 });

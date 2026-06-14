@@ -64,7 +64,7 @@ if (!args.enabled) {
 
 if (!args.storageUrl || !args.token) {
   if (args.required) {
-    throw new Error("Aura storage URL and internal token are required before publishing observability status.");
+    throw new Error("AURA storage URL and internal token are required before publishing observability status.");
   }
   process.stdout.write("Skipping observability history persistence because storage URL or internal token is not configured.\n");
   process.exit(0);
@@ -90,4 +90,4 @@ const run = await persistObservabilityRun({
   timeoutMs: args.timeoutMs,
 });
 
-process.stdout.write(`Persisted observability run ${run?.id ?? "(unknown id)"} to Aura storage.\n`);
+process.stdout.write(`Persisted observability run ${run?.id ?? "(unknown id)"} to AURA storage.\n`);

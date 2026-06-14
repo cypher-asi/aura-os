@@ -262,7 +262,7 @@
       ]
     },
     "public-observability-page": {
-      "description": "Public observability route serves the Aura app shell.",
+      "description": "Public observability route serves the AURA app shell.",
       "requiredEvidence": ["status", "hasAppShell", "bodyLength"],
       "assertions": [
         { "path": "status", "equals": 200 },
@@ -271,7 +271,7 @@
       ]
     },
     "public-models-page": {
-      "description": "Public models route serves the Aura app shell.",
+      "description": "Public models route serves the AURA app shell.",
       "requiredEvidence": ["status", "hasAppShell", "bodyLength"],
       "assertions": [
         { "path": "status", "equals": 200 },

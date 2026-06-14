@@ -36,12 +36,45 @@ Current feature groups:
 - Eval Artifacts: existing Playwright/benchmark eval summary artifacts.
 - Public Website: the observability page, the published snapshot, and public marketing routes.
 
+## Investigator Loop
+
+The probe runner is deliberately factual. It records what failed, latency,
+evidence, and the expected-output contract. It does not write root-cause
+diagnoses.
+
+`status:investigate` is the optional LLM investigator lane. It reads failed or
+warning check JSON, the feature registry, expected-output contracts, sibling
+check context, and source-search hints. When
+`AURA_STATUS_INVESTIGATOR_MODEL` and model credentials are configured, it asks
+the investigator model to produce structured JSON. The default provider is
+OpenAI-compatible `/chat/completions`, configured with
+`AURA_STATUS_INVESTIGATOR_BASE_URL` and
+`AURA_STATUS_INVESTIGATOR_API_KEY`. Set
+`AURA_STATUS_INVESTIGATOR_PROVIDER=anthropic` to use Anthropic Messages with
+`AURA_STATUS_INVESTIGATOR_API_KEY` or the repo-standard `ANTHROPIC_API_KEY`.
+GitHub Actions defaults the investigator lane to Anthropic with
+`claude-sonnet-4-6` when no investigator-specific model override is set.
+
+- proof that the problem exists;
+- an evidence-backed root-cause hypothesis or explicit uncertainty;
+- possible causes ranked by the supplied evidence;
+- reproduction steps;
+- affected areas and exact source hints when available;
+- recommended next actions and follow-up evals.
+
+If no investigator model is configured, the lane writes an empty investigation
+set. It never falls back to canned diagnosis text.
+
+This lane is additive: it does not choose which evals run, change existing
+pass/fail rules, or alter latency and outage thresholds.
+
 ## Running Probes
 
 From the repo root:
 
 ```sh
 npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_ACCESS_TOKEN"
+npm run status:investigate
 npm run status:snapshot
 ```
 
@@ -127,9 +160,11 @@ snapshot that the React page prefers by default. Override that URL with
 a fork or preview branch.
 
 `status:probes` writes check runs under
-`infra/evals/reports/status/checks/`. `status:snapshot` reads those runs,
-applies `infra/evals/status/lib/status-policy.mjs`, and writes one generated
-snapshot: `infra/evals/reports/status/status.json`.
+`infra/evals/reports/status/checks/`. `status:investigate` writes generated
+investigator reports under `infra/evals/reports/status/investigations/`.
+`status:snapshot` reads those runs and investigations, applies
+`infra/evals/status/lib/status-policy.mjs`, and writes one generated snapshot:
+`infra/evals/reports/status/status.json`.
 
 The AURA OS React route at `/observability`
 (`interface/src/views/marketing/StatusView`) fetches the workflow-published
@@ -137,14 +172,14 @@ snapshot URL. If that JSON request fails, the page falls back to an explicit
 unknown state instead of reading a bundled second copy.
 
 `status:persist` is the private history path. It reads the generated snapshot
-and posts it to Aura storage at `/internal/observability/runs` when
+and posts it to AURA storage at `/internal/observability/runs` when
 `AURA_STORAGE_URL` and `AURA_STORAGE_INTERNAL_TOKEN` are configured. This does
 not change the public status page; it only gives internal tooling a queryable
 history of runs, features, checks, latency, and failure evidence.
 
 ## Publishing
 
-`.github/workflows/aura-observability.yml` runs every 30 minutes and can also
+`.github/workflows/aura-observability.yml` runs every 2 hours and can also
 be triggered manually. It runs probes with production secrets, builds the
 snapshot even when probes fail, and uploads the generated JSON/check artifacts.
 This scheduled workflow uses `AURA_STATUS_CHECKS` to restrict itself to checks
@@ -156,9 +191,10 @@ local `model-matrix`; those belong to `status:desktop-release`.
 The browser/API and desktop lanes publish to the same `gh-pages` path:
 `observability/status.json`. Each lane first reads the previously published
 snapshot from `gh-pages`, carries forward still-fresh checks from the other
-lane, overlays the checks it just ran, persists that same generated snapshot to
-Aura storage, and then publishes it to `gh-pages`. The public JSON and private
-history are updated from the same file; if required persistence is not
+lane, overlays the checks it just ran, runs the investigator against current
+failed or warning checks when model credentials are configured, persists that
+same generated snapshot to AURA storage, and then publishes it to `gh-pages`.
+The public JSON and private history are updated from the same file; if required persistence is not
 configured or fails in CI, the workflow fails before publishing a new public
 snapshot.
 
@@ -172,6 +208,7 @@ The core production commands are:
 
 ```sh
 npm run status:probes -- --base-url "$AURA_STATUS_API_BASE_URL" --token "$AURA_STATUS_ACCESS_TOKEN" --environment production
+npm run status:investigate -- --environment production --source github-actions
 npm run status:snapshot -- --environment production --source github-actions
 ```
 

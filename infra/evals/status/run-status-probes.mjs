@@ -1011,7 +1011,7 @@ async function runChecks(args) {
       const hasAppShell = result.text.includes("root") || result.text.includes("AURA");
       return {
         status: hasAppShell ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
-        message: hasAppShell ? "" : "Public observability page did not return the Aura app shell",
+        message: hasAppShell ? "" : "Public observability page did not return the AURA app shell",
         evidence: {
           status: result.status,
           hasAppShell,
@@ -1050,7 +1050,7 @@ async function runChecks(args) {
       const hasAppShell = result.text.includes("root") || result.text.includes("AURA");
       return {
         status: hasAppShell ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
-        message: hasAppShell ? "" : "Public models page did not return the Aura app shell",
+        message: hasAppShell ? "" : "Public models page did not return the AURA app shell",
         evidence: {
           status: result.status,
           hasAppShell,

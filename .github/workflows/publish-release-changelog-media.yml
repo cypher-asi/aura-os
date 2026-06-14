@@ -29,7 +29,7 @@ on:
         default: "3"
         type: string
       base_url:
-        description: "Optional Aura web app URL. Defaults to repository variable/secret."
+        description: "Optional AURA web app URL. Defaults to repository variable/secret."
         required: false
         default: ""
         type: string

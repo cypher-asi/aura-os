@@ -148,6 +148,136 @@ test("buildStatusSnapshot picks the latest check result and computes overall sev
   assert.equal(snapshot.totals.degraded, 1);
 });
 
+test("buildStatusSnapshot attaches LLM-generated investigations to failed checks", () => {
+  const registry = {
+    title: "AURA Observability",
+    features: [
+      {
+        id: "media-generation",
+        label: "Image Generation",
+        category: "media",
+        priority: 20,
+        checks: [{ id: "image-generation-stream", required: true, staleAfterMinutes: 10 }],
+      },
+    ],
+  };
+
+  const snapshot = buildStatusSnapshot({
+    registry,
+    generatedAt: GENERATED_AT,
+    environment: "production",
+    source: "github-actions",
+    checks: [
+      {
+        checkId: "image-generation-stream",
+        featureId: "media-generation",
+        status: CHECK_STATUS.FAIL,
+        message: "session_open_failed: POST /v1/run returned 404 from configured local harness URL",
+        endedAt: GENERATED_AT,
+        latencyMs: 1800,
+        evidence: {
+          frames: [
+            {
+              event: "generation_error",
+              data: { code: "session_open_failed", status: 404 },
+            },
+          ],
+        },
+      },
+    ],
+    investigations: [
+      {
+        schemaVersion: 1,
+        kind: "llm-investigation",
+        id: "media-generation:image-generation-stream:investigator",
+        featureId: "media-generation",
+        featureLabel: "Media Generation",
+        checkId: "image-generation-stream",
+        title: "Image stream failure depends on harness runtime",
+        status: "ready",
+        checkStatus: "fail",
+        generatedAt: GENERATED_AT,
+        confidence: "medium",
+        summary: "The image stream produced a session_open_failed event before completion.",
+        rootCause: "The supplied evidence points at the harness runtime open path returning 404 before image generation can finish.",
+        proof: ["generation_error has code session_open_failed and status 404"],
+        possibleCauses: ["The harness runtime URL or /v1/run route is unavailable"],
+        reproductionSteps: [
+          {
+            label: "Run image Evolve",
+            command: "AURA_STATUS_CHECKS=image-generation-stream npm run status:probes",
+          },
+        ],
+        affectedAreas: [
+          {
+            label: "Image stream probe",
+            path: "infra/evals/status/run-status-probes.mjs",
+            reason: "The check captured the failing SSE frame.",
+          },
+        ],
+        recommendedNextActions: ["Run harness-health before debugging image generation."],
+        followUpEvals: ["harness-health"],
+      },
+    ],
+  });
+
+  assert.equal(snapshot.totals.investigations, 1);
+  assert.equal(snapshot.investigations.length, 1);
+  const investigation = snapshot.investigations[0];
+  assert.equal(investigation.id, "media-generation:image-generation-stream:investigator");
+  assert.equal(investigation.title, "Image stream failure depends on harness runtime");
+  assert.equal(investigation.environment, "production");
+  assert.equal(investigation.source, "github-actions");
+  assert.equal(investigation.featureStatus, FEATURE_STATUS.PARTIAL_OUTAGE);
+  assert.deepEqual(investigation.proof, ["generation_error has code session_open_failed and status 404"]);
+  assert.equal(snapshot.features[0].checks[0].investigation.id, investigation.id);
+});
+
+test("buildStatusSnapshot reports a failed check without inventing a diagnosis", () => {
+  const registry = {
+    title: "AURA Observability",
+    features: [
+      {
+        id: "model-responses",
+        label: "Model Responses",
+        category: "models",
+        priority: 19,
+        checks: [{ id: "model-matrix", required: true, staleAfterMinutes: 10 }],
+        outageAfterFailures: 1,
+      },
+    ],
+  };
+
+  const snapshot = buildStatusSnapshot({
+    registry,
+    generatedAt: GENERATED_AT,
+    environment: "production",
+    source: "github-actions",
+    checks: [
+      {
+        checkId: "model-matrix",
+        featureId: "model-responses",
+        status: CHECK_STATUS.FAIL,
+        message: "1/2 models returned the expected response",
+        endedAt: GENERATED_AT,
+        latencyMs: 900,
+        evidence: {
+          expectedPhrase: "hello from aura",
+          passed: 1,
+          total: 2,
+          failedModels: ["aura-small"],
+        },
+      },
+    ],
+  });
+
+  assert.equal(snapshot.overall, FEATURE_STATUS.MAJOR_OUTAGE);
+  assert.equal(snapshot.features[0].label, "Model Responses");
+  assert.equal(snapshot.totals.investigations, 0);
+  assert.deepEqual(snapshot.investigations, []);
+  assert.equal(snapshot.features[0].checks[0].investigation, undefined);
+});
+
 test("aggregateFeature degrades and outages on slow passing checks", () => {
   const feature = {
     id: "core-api",

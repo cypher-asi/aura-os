@@ -20,6 +20,7 @@
 
 .statusHero,
 .statusSummary,
+.statusSnapshotMeta,
 .statusGroups,
 .statusNotice {
   width: min(100%, 1040px);
@@ -95,7 +96,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
   border: 1px solid rgba(238, 242, 244, 0.09);
   background: rgba(238, 242, 244, 0.09);
 }
@@ -146,6 +147,28 @@
   color: #ffdba0;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.statusSnapshotMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(238, 242, 244, 0.56);
+}
+
+.statusSnapshotMeta span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.statusSnapshotMeta span + span::before {
+  content: "/";
+  margin-right: 8px;
+  color: rgba(238, 242, 244, 0.28);
 }
 
 .statusNotice {
@@ -344,6 +367,200 @@
   color: #aeb7c2 !important;
 }
 
+.statusInvestigation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.statusInvestigationHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.statusInvestigationIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(154, 199, 255, 0.24);
+  color: #9ac7ff;
+  background: rgba(52, 112, 191, 0.14);
+}
+
+.statusInvestigationHeader h3,
+.statusInvestigationItem h4,
+.statusInvestigationBlock h5 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.statusInvestigationHeader h3 {
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 720;
+  color: #fff;
+}
+
+.statusInvestigationHeader p,
+.statusInvestigationItemTop p,
+.statusInvestigationBlock p,
+.statusInvestigationFollowUp {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(238, 242, 244, 0.64);
+}
+
+.statusInvestigationReports {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.statusInvestigationItem {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid rgba(154, 199, 255, 0.14);
+  background: rgba(8, 11, 15, 0.46);
+}
+
+.statusInvestigationItemTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+
+.statusInvestigationItemTop h4 {
+  margin-bottom: 4px;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 720;
+  color: #fff;
+}
+
+.statusInvestigationState {
+  align-self: flex-start;
+  min-height: 24px;
+  padding: 6px 8px;
+  border: 1px solid rgba(154, 199, 255, 0.2);
+  background: rgba(52, 112, 191, 0.14);
+  color: #9ac7ff;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.statusInvestigationMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.statusInvestigationMeta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 21px;
+  padding: 0 7px;
+  border: 1px solid rgba(238, 242, 244, 0.08);
+  background: rgba(15, 18, 21, 0.58);
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(238, 242, 244, 0.62);
+}
+
+.statusInvestigationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.statusInvestigationBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(238, 242, 244, 0.08);
+  background: rgba(10, 12, 15, 0.54);
+}
+
+.statusInvestigationBlockWide {
+  grid-column: 1 / -1;
+}
+
+.statusInvestigationBlock h5 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 760;
+  color: rgba(238, 242, 244, 0.8);
+}
+
+.statusInvestigationList {
+  margin: 0;
+  padding-left: 18px;
+  color: rgba(238, 242, 244, 0.68);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.statusInvestigationItems {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+}
+
+.statusInvestigationEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.statusInvestigationEntry span {
+  font-size: 11px;
+  line-height: 1.3;
+  color: rgba(238, 242, 244, 0.52);
+}
+
+.statusInvestigationEntry ol {
+  margin: 0;
+  padding-left: 18px;
+  color: rgba(238, 242, 244, 0.68);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.statusInvestigationEntry code {
+  display: block;
+  min-width: 0;
+  padding: 8px;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(238, 242, 244, 0.08);
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(238, 242, 244, 0.84);
+  font-family: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.statusInvestigationFollowUp strong {
+  color: rgba(238, 242, 244, 0.9);
+  font-weight: 700;
+}
+
 @media (max-width: 860px) {
   .statusPage {
     padding: 88px 18px 56px;
@@ -365,6 +582,10 @@
   .statusFeatureTop {
     flex-direction: column;
     gap: 12px;
+  }
+
+  .statusInvestigationGrid {
+    grid-template-columns: 1fr;
   }
 }
 

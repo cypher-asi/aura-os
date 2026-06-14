@@ -24,6 +24,6 @@ test("persist-status-history fails closed when production persistence is require
   assert.notEqual(result.status, 0);
   assert.match(
     `${result.stdout}\n${result.stderr}`,
-    /Aura storage URL and internal token are required before publishing observability status/,
+    /AURA storage URL and internal token are required before publishing observability status/,
   );
 });

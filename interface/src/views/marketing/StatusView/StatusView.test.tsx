@@ -2,9 +2,62 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StatusView } from "./StatusView";
-import type { StatusSnapshot } from "../../../api/marketing/status";
+import type { StatusInvestigation, StatusSnapshot } from "../../../api/marketing/status";
 
 const PUBLISHED_STATUS_URL = "https://cypher-asi.github.io/aura-os/observability/status.json";
+
+const MODEL_INVESTIGATION: StatusInvestigation = {
+  schemaVersion: 1,
+  kind: "llm-investigation",
+  id: "model-responses:model-matrix:abc123",
+  featureId: "model-responses",
+  featureLabel: "Model Responses",
+  checkId: "model-matrix",
+  title: "Model matrix response degradation",
+  status: "ready",
+  checkStatus: "warn",
+  featureStatus: "degraded",
+  generatedAt: "2026-06-10T12:00:00.000Z",
+  environment: "production",
+  source: "github-actions",
+  provider: "openai-compatible",
+  model: "aura-investigator",
+  confidence: "medium",
+  summary: "The model matrix returned only 2 of 3 expected responses, and the failing model was aura-small.",
+  rootCause: "The evidence points to one model alias failing the expected runtime phrase while the surrounding model path still returned successful responses.",
+  proof: [
+    "failedModels contains aura-small.",
+    "passed is 2 while total is 3.",
+  ],
+  possibleCauses: [
+    "The aura-small router alias may point at a provider deployment that changed behavior.",
+    "The test account may not have access to that model tier.",
+  ],
+  affectedAreas: [
+    {
+      label: "Model matrix probe",
+      path: "infra/evals/status/run-status-probes.mjs",
+      reason: "This probe records per-model runtime results and named aura-small as the failing model.",
+    },
+  ],
+  reproductionSteps: [
+    {
+      label: "Run failed model set",
+      command: "AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes",
+    },
+  ],
+  recommendedNextActions: [
+    "Inspect failedModels and per-model errors in evidence.results.",
+    "Compare configured model ids with the public model catalog and router aliases.",
+  ],
+  followUpEvals: [
+    "model-catalog-contract",
+  ],
+  evidenceDigest: {
+    failedModels: ["aura-small"],
+    counts: { passed: 2, total: 3 },
+  },
+};
 
 const FIXTURE_SNAPSHOT: StatusSnapshot = {
   schemaVersion: 1,
@@ -22,6 +75,7 @@ const FIXTURE_SNAPSHOT: StatusSnapshot = {
     majorOutage: 0,
     unknown: 0,
     maintenance: 0,
+    investigations: 1,
   },
   features: [
     {
@@ -87,10 +141,12 @@ const FIXTURE_SNAPSHOT: StatusSnapshot = {
           checkedAt: "2026-06-10T11:58:00.000Z",
           latencyMs: 42000,
           evidence: { passed: 2, total: 3 },
+          investigation: MODEL_INVESTIGATION,
         },
       ],
     },
   ],
+  investigations: [MODEL_INVESTIGATION],
 };
 
 describe("StatusView", () => {
@@ -136,7 +192,7 @@ describe("StatusView", () => {
     render(<StatusView />);
 
     await waitFor(() => {
-      expect(screen.getByText("model-matrix")).toBeInTheDocument();
+      expect(screen.getAllByText("model-matrix").length).toBeGreaterThan(0);
     });
 
     const table = screen
@@ -148,6 +204,20 @@ describe("StatusView", () => {
     expect(within(table).getByText("warn")).toBeInTheDocument();
     expect(within(table).getByText("42 s")).toBeInTheDocument();
     expect(within(table).getByText("2/3")).toBeInTheDocument();
+  });
+
+  it("renders investigator reports beside degraded checks", async () => {
+    render(<StatusView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Model matrix response degradation")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Investigations")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("medium confidence")).toBeInTheDocument();
+    expect(screen.getByText("AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes")).toBeInTheDocument();
+    expect(screen.getByText("model-catalog-contract")).toBeInTheDocument();
   });
 
   it("falls back to an unknown snapshot when the published JSON is unavailable", async () => {

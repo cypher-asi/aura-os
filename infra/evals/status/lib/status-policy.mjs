@@ -1,3 +1,9 @@
+import {
+  annotateInvestigation,
+  investigationKey,
+  latestInvestigationsByCheck,
+} from "./status-investigations.mjs";
+
 export const FEATURE_STATUS = Object.freeze({
   OPERATIONAL: "operational",
   DEGRADED: "degraded",
@@ -155,7 +161,7 @@ function statusMax(left, right) {
   return FEATURE_SEVERITY[left] >= FEATURE_SEVERITY[right] ? left : right;
 }
 
-export function aggregateFeature(feature, checkMap, generatedAt) {
+export function aggregateFeature(feature, checkMap, generatedAt, context = {}) {
   const checkConfigs = Array.isArray(feature.checks) ? feature.checks : [];
   const verdicts = checkConfigs.map((config) =>
     checkVerdict(checkMap.get(config.id), config, generatedAt),
@@ -221,16 +227,31 @@ export function aggregateFeature(feature, checkMap, generatedAt) {
     checksUnknown: verdicts.filter((verdict) => verdict.status === FEATURE_STATUS.UNKNOWN).length,
     latencyP95Ms: p95Index >= 0 ? latencies[p95Index] : null,
     message: featureMessage(status, verdicts),
-    checks: verdicts.map((verdict, index) => ({
-      id: checkConfigs[index].id,
-      required: checkConfigs[index].required !== false,
-      status: verdict.check?.status ?? "unknown",
-      featureStatus: verdict.status,
-      message: verdict.reason,
-      checkedAt: verdict.check?.endedAt ?? null,
-      latencyMs: verdict.check?.latencyMs ?? null,
-      evidence: verdict.check?.evidence ?? {},
-    })),
+    checks: verdicts.map((verdict, index) => {
+      const checkConfig = checkConfigs[index];
+      const investigation = annotateInvestigation(
+        context.investigationMap?.get(investigationKey(feature.id, checkConfig.id))
+          ?? context.investigationMap?.get(investigationKey(null, checkConfig.id)),
+        {
+          feature,
+          checkConfig,
+          verdict,
+          environment: context.environment,
+          source: context.source,
+        },
+      );
+      return {
+        id: checkConfig.id,
+        required: checkConfig.required !== false,
+        status: verdict.check?.status ?? "unknown",
+        featureStatus: verdict.status,
+        message: verdict.reason,
+        checkedAt: verdict.check?.endedAt ?? null,
+        latencyMs: verdict.check?.latencyMs ?? null,
+        evidence: verdict.check?.evidence ?? {},
+        ...(investigation ? { investigation } : {}),
+      };
+    }),
   };
 }
 
@@ -241,12 +262,29 @@ function featureMessage(status, verdicts) {
   return blocking?.reason ?? "Feature health needs attention.";
 }
 
-export function buildStatusSnapshot({ registry, checks = [], generatedAt = new Date().toISOString(), environment = "unknown", source = "aura-status" }) {
+export function buildStatusSnapshot({
+  registry,
+  checks = [],
+  investigations = [],
+  generatedAt = new Date().toISOString(),
+  environment = "unknown",
+  source = "aura-status",
+}) {
   const normalizedGeneratedAt = normalizeIsoDate(generatedAt, new Date().toISOString());
   const checkMap = latestByCheckId(checks, normalizedGeneratedAt);
+  const investigationMap = latestInvestigationsByCheck(investigations, normalizedGeneratedAt);
   const features = [...(registry.features ?? [])]
-    .map((feature) => aggregateFeature(feature, checkMap, normalizedGeneratedAt))
+    .map((feature) =>
+      aggregateFeature(feature, checkMap, normalizedGeneratedAt, { environment, source, investigationMap }),
+    )
     .sort((left, right) => left.priority - right.priority || left.label.localeCompare(right.label));
+  const attachedInvestigations = features
+    .flatMap((feature) => feature.checks.map((check) => check.investigation).filter(Boolean))
+    .sort((left, right) =>
+      severityRank(right.featureStatus) - severityRank(left.featureStatus)
+        || left.featureLabel.localeCompare(right.featureLabel)
+        || left.checkId.localeCompare(right.checkId),
+    );
 
   const overall = features.reduce(
     (current, feature) => statusMax(current, feature.status),
@@ -269,7 +307,13 @@ export function buildStatusSnapshot({ registry, checks = [], generatedAt = new D
       majorOutage: features.filter((feature) => feature.status === FEATURE_STATUS.MAJOR_OUTAGE).length,
       unknown: features.filter((feature) => feature.status === FEATURE_STATUS.UNKNOWN).length,
       maintenance: features.filter((feature) => feature.status === FEATURE_STATUS.MAINTENANCE).length,
+      investigations: attachedInvestigations.length,
     },
     features,
+    investigations: attachedInvestigations,
   };
+}
+
+function severityRank(status) {
+  return FEATURE_SEVERITY[status] ?? FEATURE_SEVERITY[FEATURE_STATUS.UNKNOWN];
 }

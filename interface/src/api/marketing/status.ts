@@ -8,6 +8,44 @@ export type FeatureHealthStatus =
 
 export type StatusCheckState = "pass" | "warn" | "fail" | "skip" | "unknown";
 
+export interface StatusInvestigationItem {
+  readonly label: string;
+  readonly command?: string;
+  readonly path?: string;
+  readonly reason?: string;
+  readonly details?: string;
+  readonly steps?: readonly string[];
+}
+
+export interface StatusInvestigation {
+  readonly schemaVersion: 1;
+  readonly kind: "llm-investigation";
+  readonly id: string;
+  readonly featureId: string | null;
+  readonly featureLabel: string;
+  readonly checkId: string;
+  readonly title: string;
+  readonly status: "ready" | "failed" | "skipped";
+  readonly checkStatus: StatusCheckState | null;
+  readonly featureStatus: FeatureHealthStatus | null;
+  readonly generatedAt: string;
+  readonly environment?: string;
+  readonly source?: string;
+  readonly provider?: string;
+  readonly model?: string;
+  readonly confidence: "low" | "medium" | "high";
+  readonly summary: string;
+  readonly rootCause: string;
+  readonly proof: readonly string[];
+  readonly possibleCauses: readonly string[];
+  readonly reproductionSteps: readonly StatusInvestigationItem[];
+  readonly affectedAreas: readonly StatusInvestigationItem[];
+  readonly recommendedNextActions: readonly string[];
+  readonly followUpEvals: readonly string[];
+  readonly evidenceDigest?: Record<string, unknown>;
+  readonly error?: string;
+}
+
 export interface StatusCheck {
   readonly id: string;
   readonly required: boolean;
@@ -17,6 +55,7 @@ export interface StatusCheck {
   readonly checkedAt: string | null;
   readonly latencyMs: number | null;
   readonly evidence: Record<string, unknown>;
+  readonly investigation?: StatusInvestigation;
 }
 
 export interface StatusFeature {
@@ -53,8 +92,10 @@ export interface StatusSnapshot {
     readonly majorOutage: number;
     readonly unknown: number;
     readonly maintenance: number;
+    readonly investigations?: number;
   };
   readonly features: readonly StatusFeature[];
+  readonly investigations?: readonly StatusInvestigation[];
 }
 
 const PUBLISHED_STATUS_JSON_URL =

@@ -7,6 +7,8 @@ import {
   Gauge,
   RefreshCw,
   Server,
+  Search,
+  Terminal,
   XCircle,
 } from "lucide-react";
 
@@ -15,6 +17,8 @@ import {
   type FeatureHealthStatus,
   type StatusCheck,
   type StatusFeature,
+  type StatusInvestigation,
+  type StatusInvestigationItem,
   type StatusSnapshot,
 } from "../../../api/marketing/status";
 
@@ -124,6 +128,12 @@ function extractEvidence(check: StatusCheck): string {
   return Object.keys(evidence).length > 0 ? "Captured" : "-";
 }
 
+function investigationsFor(feature: StatusFeature): StatusInvestigation[] {
+  return feature.checks
+    .map((check) => check.investigation)
+    .filter((investigation): investigation is StatusInvestigation => investigation != null);
+}
+
 function StatusBadge({ status }: { readonly status: FeatureHealthStatus }): ReactNode {
   return (
     <span className={`statusBadge statusBadge-${status}`}>
@@ -149,6 +159,158 @@ function SummaryMetric({
       </span>
       <span className="statusMetricValue">{value}</span>
       <span className="statusMetricLabel">{label}</span>
+    </div>
+  );
+}
+
+function optionalText(value: string | undefined): string {
+  return value && value.trim() ? value : "-";
+}
+
+function InvestigationList({
+  items,
+  ordered = false,
+}: {
+  readonly items: readonly string[];
+  readonly ordered?: boolean;
+}): ReactNode {
+  if (items.length === 0) return <p>No model-generated details returned.</p>;
+  const List = ordered ? "ol" : "ul";
+  return (
+    <List className="statusInvestigationList">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </List>
+  );
+}
+
+function InvestigationItemList({
+  items,
+}: {
+  readonly items: readonly StatusInvestigationItem[];
+}): ReactNode {
+  if (items.length === 0) return <p>No model-generated entries returned.</p>;
+  return (
+    <div className="statusInvestigationItems">
+      {items.map((entry) => (
+        <div className="statusInvestigationEntry" key={`${entry.label}:${entry.command ?? entry.path ?? entry.reason ?? ""}`}>
+          <span>{entry.label}</span>
+          {entry.path && <code>{entry.path}</code>}
+          {entry.command && <code>{entry.command}</code>}
+          {entry.reason && <p>{entry.reason}</p>}
+          {entry.details && <p>{entry.details}</p>}
+          {entry.steps && entry.steps.length > 0 && (
+            <ol>
+              {entry.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InvestigationReportView({ investigation }: { readonly investigation: StatusInvestigation }): ReactNode {
+  return (
+    <section className="statusInvestigationItem" aria-label={`Investigation for ${investigation.checkId}`}>
+      <div className="statusInvestigationItemTop">
+        <div>
+          <h4>{investigation.title}</h4>
+          <p>{investigation.summary}</p>
+        </div>
+        <span className="statusInvestigationState">
+          {investigation.status}
+        </span>
+      </div>
+
+      <div className="statusInvestigationMeta">
+        <span>{investigation.confidence} confidence</span>
+        <span>{investigation.checkId}</span>
+        {investigation.featureStatus && <span>{STATUS_LABELS[investigation.featureStatus]}</span>}
+        {(investigation.provider || investigation.model) && (
+          <span>{[investigation.provider, investigation.model].filter(Boolean).join(" / ")}</span>
+        )}
+      </div>
+
+      <div className="statusInvestigationGrid">
+        <div className="statusInvestigationBlock">
+          <h5>
+            <AlertTriangle size={14} strokeWidth={1.9} aria-hidden />
+            Root cause
+          </h5>
+          <p>{optionalText(investigation.rootCause)}</p>
+        </div>
+
+        <div className="statusInvestigationBlock">
+          <h5>
+            <Server size={14} strokeWidth={1.9} aria-hidden />
+            Affected areas
+          </h5>
+          <InvestigationItemList items={investigation.affectedAreas} />
+        </div>
+
+        <div className="statusInvestigationBlock statusInvestigationBlockWide">
+          <h5>
+            <CheckCircle2 size={14} strokeWidth={1.9} aria-hidden />
+            Proof
+          </h5>
+          <InvestigationList items={investigation.proof} />
+        </div>
+
+        <div className="statusInvestigationBlock statusInvestigationBlockWide">
+          <h5>
+            <AlertTriangle size={14} strokeWidth={1.9} aria-hidden />
+            Possible causes
+          </h5>
+          <InvestigationList items={investigation.possibleCauses} />
+        </div>
+
+        <div className="statusInvestigationBlock statusInvestigationBlockWide">
+          <h5>
+            <Terminal size={14} strokeWidth={1.9} aria-hidden />
+            Repro
+          </h5>
+          <InvestigationItemList items={investigation.reproductionSteps} />
+        </div>
+
+        <div className="statusInvestigationBlock statusInvestigationBlockWide">
+          <h5>
+            <CheckCircle2 size={14} strokeWidth={1.9} aria-hidden />
+            Next actions
+          </h5>
+          <InvestigationList items={investigation.recommendedNextActions} ordered />
+          {investigation.followUpEvals.length > 0 && (
+            <p className="statusInvestigationFollowUp">
+              Follow-up evals: <strong>{investigation.followUpEvals.join(", ")}</strong>
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function InvestigationReports({ investigations }: { readonly investigations: readonly StatusInvestigation[] }): ReactNode {
+  if (investigations.length === 0) return null;
+  return (
+    <div className="statusInvestigation">
+      <div className="statusInvestigationHeader">
+        <span className="statusInvestigationIcon" aria-hidden>
+          <Search size={15} strokeWidth={1.9} />
+        </span>
+        <div>
+          <h3>Investigator</h3>
+          <p>{investigations.length} report{investigations.length === 1 ? "" : "s"} generated</p>
+        </div>
+      </div>
+      <div className="statusInvestigationReports">
+        {investigations.map((investigation) => (
+          <InvestigationReportView key={investigation.id} investigation={investigation} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -180,6 +342,7 @@ function CheckRows({ checks }: { readonly checks: readonly StatusCheck[] }): Rea
 }
 
 function FeatureRow({ feature }: { readonly feature: StatusFeature }): ReactNode {
+  const investigations = investigationsFor(feature);
   return (
     <article className="statusFeature">
       <div className="statusFeatureTop">
@@ -196,6 +359,7 @@ function FeatureRow({ feature }: { readonly feature: StatusFeature }): ReactNode
       </div>
       <p className="statusFeatureMessage">{feature.message}</p>
       <CheckRows checks={feature.checks} />
+      <InvestigationReports investigations={investigations} />
     </article>
   );
 }
@@ -215,7 +379,6 @@ export function StatusView(): ReactNode {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     getStatusSnapshot()
       .then((payload) => {
         if (!active) return;
@@ -255,6 +418,9 @@ export function StatusView(): ReactNode {
     if (latencies.length === 0) return null;
     return latencies.reduce((sum, value) => sum + value, 0) / latencies.length;
   }, [activeSnapshot.features]);
+  const investigationCount = activeSnapshot.investigations?.length
+    ?? activeSnapshot.totals.investigations
+    ?? activeSnapshot.features.reduce((sum, feature) => sum + investigationsFor(feature).length, 0);
 
   return (
     <main className="statusPage">
@@ -293,11 +459,17 @@ export function StatusView(): ReactNode {
           icon={<Gauge size={18} strokeWidth={1.8} />}
         />
         <SummaryMetric
-          label={activeSnapshot.environment}
-          value={loading ? "Loading" : activeSnapshot.source}
-          icon={<Activity size={18} strokeWidth={1.8} />}
+          label="Investigations"
+          value={loading ? "Loading" : investigationCount}
+          icon={<Search size={18} strokeWidth={1.8} />}
         />
       </section>
+
+      <div className="statusSnapshotMeta" aria-label="Snapshot source">
+        <Activity size={14} strokeWidth={1.8} aria-hidden />
+        <span>{activeSnapshot.environment}</span>
+        <span>{activeSnapshot.source}</span>
+      </div>
 
       {error && (
         <div className="statusNotice" role="status">

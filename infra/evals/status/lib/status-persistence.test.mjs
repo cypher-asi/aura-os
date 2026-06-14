@@ -71,7 +71,7 @@ test("buildObservabilityIngestPayload rejects snapshots without feature data", (
   );
 });
 
-test("persistObservabilityRun posts to Aura storage internal endpoint", async () => {
+test("persistObservabilityRun posts to AURA storage internal endpoint", async () => {
   let observed = null;
   const server = http.createServer(async (request, response) => {
     const chunks = [];
