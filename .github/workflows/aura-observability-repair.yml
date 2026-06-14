@@ -1,0 +1,129 @@
+name: AURA Observability Repair
+
+on:
+  workflow_dispatch:
+    inputs:
+      checks:
+        description: "Optional comma-separated status checks to probe before repair."
+        required: false
+        default: ""
+      max_repairs:
+        description: "Maximum investigated failures to repair."
+        required: false
+        default: "1"
+      apply_patch:
+        description: "Apply and commit the generated repair patch in the workflow branch."
+        required: false
+        type: boolean
+        default: false
+      create_pr:
+        description: "Push the repair branch and open a pull request. Requires apply_patch."
+        required: false
+        type: boolean
+        default: false
+      run_verification:
+        description: "Run model-proposed allowlisted verification commands after applying the patch."
+        required: false
+        type: boolean
+        default: false
+      allowed_path_prefixes:
+        description: "Optional comma-separated path prefixes the repair patch may edit."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 25.9.0
+
+      - name: Run feature health probes
+        id: probes
+        continue-on-error: true
+        env:
+          AURA_STATUS_API_BASE_URL: ${{ secrets.AURA_STATUS_API_BASE_URL || vars.AURA_STATUS_API_BASE_URL || 'https://api.aura.ai' }}
+          AURA_STATUS_PUBLIC_BASE_URL: ${{ secrets.AURA_STATUS_PUBLIC_BASE_URL || vars.AURA_STATUS_PUBLIC_BASE_URL || 'https://aura.ai' }}
+          AURA_STATUS_ACCESS_TOKEN: ${{ secrets.AURA_STATUS_ACCESS_TOKEN }}
+          AURA_STATUS_USER_EMAIL: ${{ secrets.AURA_STATUS_USER_EMAIL }}
+          AURA_STATUS_USER_PASSWORD: ${{ secrets.AURA_STATUS_USER_PASSWORD }}
+          AURA_STATUS_MODEL_IDS: ${{ secrets.AURA_STATUS_MODEL_IDS || vars.AURA_STATUS_MODEL_IDS }}
+          AURA_STATUS_IMAGE_MODEL: ${{ secrets.AURA_STATUS_IMAGE_MODEL || vars.AURA_STATUS_IMAGE_MODEL }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_CHECKS: ${{ inputs.checks }}
+        run: npm run status:probes
+
+      - name: Run observability investigations
+        if: always()
+        env:
+          AURA_STATUS_CHECKS_DIR: infra/evals/reports/status/checks
+          AURA_STATUS_INVESTIGATIONS_DIR: infra/evals/reports/status/investigations
+          AURA_STATUS_INVESTIGATOR_PROVIDER: ${{ secrets.AURA_STATUS_INVESTIGATOR_PROVIDER || vars.AURA_STATUS_INVESTIGATOR_PROVIDER || 'anthropic' }}
+          AURA_STATUS_INVESTIGATOR_BASE_URL: ${{ secrets.AURA_STATUS_INVESTIGATOR_BASE_URL || vars.AURA_STATUS_INVESTIGATOR_BASE_URL }}
+          AURA_STATUS_INVESTIGATOR_API_KEY: ${{ secrets.AURA_STATUS_INVESTIGATOR_API_KEY }}
+          AURA_STATUS_INVESTIGATOR_MODEL: ${{ secrets.AURA_STATUS_INVESTIGATOR_MODEL || vars.AURA_STATUS_INVESTIGATOR_MODEL || vars.CHANGELOG_ANTHROPIC_MODEL || vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: github-actions-repair
+        run: npm run status:investigate
+
+      - name: Configure repair git identity
+        if: ${{ inputs.apply_patch }}
+        run: |
+          git config user.name "aura-observability-repair"
+          git config user.email "aura-observability-repair@users.noreply.github.com"
+
+      - name: Run gated repair loop
+        if: always()
+        env:
+          AURA_STATUS_CHECKS_DIR: infra/evals/reports/status/checks
+          AURA_STATUS_INVESTIGATIONS_DIR: infra/evals/reports/status/investigations
+          AURA_STATUS_REPAIRS_DIR: infra/evals/reports/status/repairs
+          AURA_STATUS_REPAIR_PROVIDER: ${{ secrets.AURA_STATUS_REPAIR_PROVIDER || vars.AURA_STATUS_REPAIR_PROVIDER || secrets.AURA_STATUS_INVESTIGATOR_PROVIDER || vars.AURA_STATUS_INVESTIGATOR_PROVIDER || 'anthropic' }}
+          AURA_STATUS_REPAIR_BASE_URL: ${{ secrets.AURA_STATUS_REPAIR_BASE_URL || vars.AURA_STATUS_REPAIR_BASE_URL || secrets.AURA_STATUS_INVESTIGATOR_BASE_URL || vars.AURA_STATUS_INVESTIGATOR_BASE_URL }}
+          AURA_STATUS_REPAIR_API_KEY: ${{ secrets.AURA_STATUS_REPAIR_API_KEY || secrets.AURA_STATUS_INVESTIGATOR_API_KEY || secrets.ANTHROPIC_API_KEY }}
+          AURA_STATUS_REPAIR_MODEL: ${{ secrets.AURA_STATUS_REPAIR_MODEL || vars.AURA_STATUS_REPAIR_MODEL || secrets.AURA_STATUS_INVESTIGATOR_MODEL || vars.AURA_STATUS_INVESTIGATOR_MODEL || vars.CHANGELOG_ANTHROPIC_MODEL || vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: github-actions-repair
+          AURA_STATUS_REPAIR_BRANCH: codex/aura-observability-repair-${{ github.run_id }}
+          AURA_STATUS_REPAIR_ALLOWED_PATH_PREFIXES: ${{ inputs.allowed_path_prefixes }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          args=(--max-repairs "${{ inputs.max_repairs }}")
+          if [[ "${{ inputs.apply_patch }}" == "true" ]]; then
+            args+=(--apply --branch "$AURA_STATUS_REPAIR_BRANCH")
+          fi
+          if [[ "${{ inputs.create_pr }}" == "true" ]]; then
+            args+=(--create-pr)
+          fi
+          if [[ "${{ inputs.run_verification }}" == "true" ]]; then
+            args+=(--run-verification)
+          fi
+          if [[ -n "${{ inputs.allowed_path_prefixes }}" ]]; then
+            args+=(--allowed-path-prefixes "${{ inputs.allowed_path_prefixes }}")
+          fi
+          npm run status:repair -- "${args[@]}"
+
+      - name: Upload repair artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: aura-observability-repair
+          path: |
+            infra/evals/reports/status/checks
+            infra/evals/reports/status/investigations
+            infra/evals/reports/status/repairs

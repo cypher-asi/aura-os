@@ -9,6 +9,10 @@ import {
   needsInvestigation,
 } from "./lib/status-investigator.mjs";
 import { buildInvestigationVerifierContext } from "./lib/status-investigation-verifiers.mjs";
+import {
+  callAnthropicTool,
+  callOpenAiCompatibleJson,
+} from "./lib/status-llm-client.mjs";
 import { discoverInvestigationSources } from "./lib/status-source-discovery.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -222,105 +226,32 @@ function findCheckConfig(feature, checkId) {
   return (feature?.checks ?? []).find((config) => config.id === checkId) ?? null;
 }
 
-async function callOpenAiCompatible(args, { messages }) {
-  if (!args.baseUrl || !args.apiKey || !args.model) {
-    throw new Error("AURA_STATUS_INVESTIGATOR_BASE_URL, AURA_STATUS_INVESTIGATOR_API_KEY, and AURA_STATUS_INVESTIGATOR_MODEL are required.");
-  }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(new Error(`investigator timed out after ${args.timeoutMs}ms`)), args.timeoutMs);
-  try {
-    const response = await fetch(`${args.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${args.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: args.model,
-        messages,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      }),
-      signal: controller.signal,
-    });
-    const text = await response.text();
-    if (!response.ok) throw new Error(`Investigator request failed with ${response.status}: ${text}`);
-    const payload = text ? JSON.parse(text) : null;
-    const content = payload?.choices?.[0]?.message?.content;
-    if (typeof content !== "string" || !content.trim()) {
-      throw new Error("Investigator response did not include message content");
-    }
-    return content;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function callAnthropic(args, { messages }) {
-  if (!args.apiKey || !args.model) {
-    throw new Error("AURA_STATUS_INVESTIGATOR_API_KEY or ANTHROPIC_API_KEY, and AURA_STATUS_INVESTIGATOR_MODEL are required.");
-  }
-  const system = messages
-    .filter((message) => message.role === "system")
-    .map((message) => message.content)
-    .join("\n\n");
-  const anthropicMessages = messages
-    .filter((message) => message.role !== "system")
-    .map((message) => ({
-      role: message.role === "assistant" ? "assistant" : "user",
-      content: message.content,
-    }));
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(new Error(`investigator timed out after ${args.timeoutMs}ms`)), args.timeoutMs);
-  try {
-    const response = await fetch(`${args.baseUrl.replace(/\/+$/, "")}/messages`, {
-      method: "POST",
-      headers: {
-        "x-api-key": args.apiKey,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: args.model,
-        max_tokens: args.maxTokens,
-        temperature: 0.1,
-        ...(system ? { system } : {}),
-        messages: anthropicMessages,
-        tools: [ANTHROPIC_INVESTIGATION_TOOL],
-        tool_choice: { type: "tool", name: ANTHROPIC_INVESTIGATION_TOOL.name },
-      }),
-      signal: controller.signal,
-    });
-    const text = await response.text();
-    if (!response.ok) throw new Error(`Anthropic investigator request failed with ${response.status}: ${text}`);
-    const payload = text ? JSON.parse(text) : null;
-    const toolUse = (payload?.content ?? []).find((block) =>
-      block?.type === "tool_use"
-        && block.name === ANTHROPIC_INVESTIGATION_TOOL.name
-        && block.input
-        && typeof block.input === "object",
-    );
-    if (toolUse) return toolUse.input;
-    const content = (payload?.content ?? [])
-      .filter((block) => block?.type === "text" && typeof block.text === "string")
-      .map((block) => block.text)
-      .join("\n")
-      .trim();
-    if (!content) throw new Error("Anthropic investigator response did not include text content");
-    return content;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 function hasConfiguredModel(args) {
   if (args.provider === "anthropic") return Boolean(args.apiKey && args.model);
   return Boolean(args.baseUrl && args.apiKey && args.model);
 }
 
 function callInvestigatorModel(args, request) {
-  if (args.provider === "anthropic") return callAnthropic(args, request);
-  return callOpenAiCompatible(args, request);
+  if (args.provider === "anthropic") {
+    return callAnthropicTool({
+      baseUrl: args.baseUrl,
+      apiKey: args.apiKey,
+      model: args.model,
+      messages: request.messages,
+      timeoutMs: args.timeoutMs,
+      maxTokens: args.maxTokens,
+      tool: ANTHROPIC_INVESTIGATION_TOOL,
+      requestLabel: "Anthropic investigator",
+    });
+  }
+  return callOpenAiCompatibleJson({
+    baseUrl: args.baseUrl,
+    apiKey: args.apiKey,
+    model: args.model,
+    messages: request.messages,
+    timeoutMs: args.timeoutMs,
+    requestLabel: "Investigator",
+  });
 }
 
 async function writeJson(filePath, payload) {

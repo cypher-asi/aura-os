@@ -7,6 +7,7 @@
     "evals:validate": "node scripts/ci/validate-evals-registry.mjs",
     "status:probes": "node infra/evals/status/run-status-probes.mjs",
     "status:investigate": "node infra/evals/status/run-status-investigations.mjs",
+    "status:repair": "node infra/evals/status/run-status-repairs.mjs",
     "status:desktop-release": "node infra/evals/status/run-desktop-release-probes.mjs",
     "status:snapshot": "node infra/evals/status/build-status-snapshot.mjs",
     "status:persist": "node infra/evals/status/persist-status-history.mjs",
