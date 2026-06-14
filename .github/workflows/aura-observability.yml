@@ -106,6 +106,22 @@ jobs:
           AURA_STATUS_REPAIR_DISPATCH_PLAN_FILE: infra/evals/reports/status/repair-dispatch-plan.json
         run: node infra/evals/status/plan-status-repair-dispatch.mjs
 
+      - name: Run observability learning
+        if: always()
+        env:
+          AURA_STATUS_CHECKS_DIR: infra/evals/reports/status/checks
+          AURA_STATUS_INVESTIGATIONS_DIR: infra/evals/reports/status/investigations
+          AURA_STATUS_REPAIR_DISPATCH_PLAN_FILE: infra/evals/reports/status/repair-dispatch-plan.json
+          AURA_STATUS_LESSONS_DIR: infra/evals/reports/status/lessons
+          AURA_STATUS_LEARNING_PROVIDER: ${{ secrets.AURA_STATUS_LEARNING_PROVIDER || vars.AURA_STATUS_LEARNING_PROVIDER || secrets.AURA_STATUS_INVESTIGATOR_PROVIDER || vars.AURA_STATUS_INVESTIGATOR_PROVIDER || 'anthropic' }}
+          AURA_STATUS_LEARNING_BASE_URL: ${{ secrets.AURA_STATUS_LEARNING_BASE_URL || vars.AURA_STATUS_LEARNING_BASE_URL || secrets.AURA_STATUS_INVESTIGATOR_BASE_URL || vars.AURA_STATUS_INVESTIGATOR_BASE_URL }}
+          AURA_STATUS_LEARNING_API_KEY: ${{ secrets.AURA_STATUS_LEARNING_API_KEY || secrets.AURA_STATUS_INVESTIGATOR_API_KEY || secrets.ANTHROPIC_API_KEY }}
+          AURA_STATUS_LEARNING_MODEL: ${{ secrets.AURA_STATUS_LEARNING_MODEL || vars.AURA_STATUS_LEARNING_MODEL || secrets.AURA_STATUS_INVESTIGATOR_MODEL || vars.AURA_STATUS_INVESTIGATOR_MODEL || vars.CHANGELOG_ANTHROPIC_MODEL || vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: github-actions-learning
+        run: npm run status:learn
+
       - name: Dispatch automatic repair workflow
         if: ${{ always() && steps.repair-plan.outputs.should_dispatch == 'true' }}
         env:
@@ -150,4 +166,5 @@ jobs:
             infra/evals/reports/status/status.json
             infra/evals/reports/status/checks
             infra/evals/reports/status/investigations
+            infra/evals/reports/status/lessons
             infra/evals/reports/status/repair-dispatch-plan.json

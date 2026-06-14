@@ -677,6 +677,21 @@ jobs:
           AURA_STATUS_SOURCE: desktop-nightly-release
         run: npm run status:investigate
 
+      - name: Run desktop observability learning
+        if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
+        env:
+          AURA_STATUS_CHECKS_DIR: desktop-observability-checks
+          AURA_STATUS_INVESTIGATIONS_DIR: desktop-observability-investigations
+          AURA_STATUS_LESSONS_DIR: desktop-observability-lessons
+          AURA_STATUS_LEARNING_PROVIDER: ${{ secrets.AURA_STATUS_LEARNING_PROVIDER || vars.AURA_STATUS_LEARNING_PROVIDER || secrets.AURA_STATUS_INVESTIGATOR_PROVIDER || vars.AURA_STATUS_INVESTIGATOR_PROVIDER || 'anthropic' }}
+          AURA_STATUS_LEARNING_BASE_URL: ${{ secrets.AURA_STATUS_LEARNING_BASE_URL || vars.AURA_STATUS_LEARNING_BASE_URL || secrets.AURA_STATUS_INVESTIGATOR_BASE_URL || vars.AURA_STATUS_INVESTIGATOR_BASE_URL }}
+          AURA_STATUS_LEARNING_API_KEY: ${{ secrets.AURA_STATUS_LEARNING_API_KEY || secrets.AURA_STATUS_INVESTIGATOR_API_KEY || secrets.ANTHROPIC_API_KEY }}
+          AURA_STATUS_LEARNING_MODEL: ${{ secrets.AURA_STATUS_LEARNING_MODEL || vars.AURA_STATUS_LEARNING_MODEL || secrets.AURA_STATUS_INVESTIGATOR_MODEL || vars.AURA_STATUS_INVESTIGATOR_MODEL || vars.CHANGELOG_ANTHROPIC_MODEL || vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_SOURCE: desktop-nightly-release-learning
+        run: npm run status:learn
+
       - name: Upload desktop observability artifacts
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         uses: actions/upload-artifact@v5
@@ -685,6 +700,7 @@ jobs:
           path: |
             desktop-observability-checks
             desktop-observability-investigations
+            desktop-observability-lessons
             desktop-observability-logs
           if-no-files-found: ignore
 
