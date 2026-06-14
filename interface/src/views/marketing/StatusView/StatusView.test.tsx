@@ -149,6 +149,80 @@ const FIXTURE_SNAPSHOT: StatusSnapshot = {
   investigations: [MODEL_INVESTIGATION],
 };
 
+const REMOTE_QUOTA_MESSAGE = "POST /api/agents failed with 409: agent quota exceeded: limit is 100";
+
+function remoteQuotaInvestigation(checkId: string): StatusInvestigation {
+  return {
+    ...MODEL_INVESTIGATION,
+    id: `remote-agents:${checkId}:quota`,
+    featureId: "remote-agents",
+    featureLabel: "Remote Agents",
+    checkId,
+    title: "Remote agent creation blocked by quota exhaustion",
+    checkStatus: "fail",
+    featureStatus: "major_outage",
+    confidence: "high",
+    summary: "Remote agent checks fail at the shared creation step because the swarm quota is exhausted.",
+    rootCause: "POST /api/agents returns 409 with agent quota exceeded before any remote agent can be created.",
+    proof: [REMOTE_QUOTA_MESSAGE],
+    possibleCauses: ["The eval org has no remaining agent quota."],
+    affectedAreas: [{ label: "Remote agent creation", reason: "All checks depend on POST /api/agents." }],
+    reproductionSteps: [{ label: "Run remote agent checks", command: "AURA_STATUS_CHECKS=remote-agent-create npm run status:probes" }],
+    recommendedNextActions: ["Clean up stale agents or raise the quota."],
+    followUpEvals: ["remote-agent-quota-headroom"],
+    evidenceDigest: { message: REMOTE_QUOTA_MESSAGE },
+  };
+}
+
+const REMOTE_QUOTA_INVESTIGATIONS = [
+  remoteQuotaInvestigation("remote-agent-create"),
+  remoteQuotaInvestigation("remote-agent-state"),
+  remoteQuotaInvestigation("remote-agent-runtime"),
+] as const;
+
+const DUPLICATE_ROOT_CAUSE_SNAPSHOT: StatusSnapshot = {
+  ...FIXTURE_SNAPSHOT,
+  overall: "major_outage",
+  totals: {
+    ...FIXTURE_SNAPSHOT.totals,
+    features: 1,
+    operational: 0,
+    degraded: 0,
+    majorOutage: 1,
+    investigations: REMOTE_QUOTA_INVESTIGATIONS.length,
+  },
+  features: [
+    {
+      id: "remote-agents",
+      label: "Remote Agents",
+      category: "agents",
+      priority: 20,
+      description: "Remote agent provisioning.",
+      publicSummary: "Remote hosted agents can be created and can respond.",
+      status: "major_outage",
+      lastCheckedAt: "2026-06-10T12:00:00.000Z",
+      checksPassed: 0,
+      checksTotal: 3,
+      checksFailed: 3,
+      checksUnknown: 0,
+      latencyP95Ms: 1600,
+      message: REMOTE_QUOTA_MESSAGE,
+      checks: REMOTE_QUOTA_INVESTIGATIONS.map((investigation) => ({
+        id: investigation.checkId,
+        required: investigation.checkId !== "remote-agent-runtime",
+        status: "fail",
+        featureStatus: "major_outage",
+        message: REMOTE_QUOTA_MESSAGE,
+        checkedAt: "2026-06-10T12:00:00.000Z",
+        latencyMs: 1600,
+        evidence: {},
+        investigation,
+      })),
+    },
+  ],
+  investigations: REMOTE_QUOTA_INVESTIGATIONS,
+};
+
 describe("StatusView", () => {
   beforeEach(() => {
     vi.stubGlobal(
@@ -218,6 +292,27 @@ describe("StatusView", () => {
     expect(screen.getByText("medium confidence")).toBeInTheDocument();
     expect(screen.getByText("AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes")).toBeInTheDocument();
     expect(screen.getByText("model-catalog-contract")).toBeInTheDocument();
+  });
+
+  it("groups repeated investigations that share the same feature evidence", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => DUPLICATE_ROOT_CAUSE_SNAPSHOT,
+      }),
+    );
+
+    render(<StatusView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Remote agent creation blocked by quota exhaustion")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("1 root-cause card across 3 checks")).toBeInTheDocument();
+    expect(screen.getByText("3 checks")).toBeInTheDocument();
+    expect(screen.getByText("remote-agent-create, remote-agent-state, remote-agent-runtime")).toBeInTheDocument();
+    expect(screen.getAllByText("Remote agent creation blocked by quota exhaustion")).toHaveLength(1);
   });
 
   it("falls back to an unknown snapshot when the published JSON is unavailable", async () => {

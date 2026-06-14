@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildInvestigationInput,
+  INVESTIGATOR_SYSTEM_PROMPT,
   investigateCheck,
   missingRequiredInvestigationFields,
   needsInvestigation,
@@ -58,6 +59,12 @@ test("buildInvestigationInput includes factual contracts and redacts secrets", (
   assert.equal(input.expectedOutputContract.requiredEvidence[0], "frameTypes");
   assert.equal(input.failedCheck.evidence.authorization, "[REDACTED]");
   assert.equal(input.sourceHints[0].path, "infra/evals/status/run-status-probes.mjs");
+});
+
+test("investigator prompt keeps impact scoped to supplied eval evidence", () => {
+  assert.match(INVESTIGATOR_SYSTEM_PROMPT, /Distinguish an eval failure from a user-facing product outage/);
+  assert.match(INVESTIGATOR_SYSTEM_PROMPT, /Do not claim production users or real traffic are impacted/);
+  assert.match(INVESTIGATOR_SYSTEM_PROMPT, /If a broad health check passed but a specific endpoint or route failed/);
 });
 
 test("investigateCheck normalizes model-authored JSON without a deterministic diagnosis", async () => {

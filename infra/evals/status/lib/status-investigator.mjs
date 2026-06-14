@@ -24,6 +24,8 @@ export const INVESTIGATOR_SYSTEM_PROMPT = [
   "Produce JSON only. Do not include markdown.",
   "Use only the supplied evidence and source hints. If the root cause is uncertain, say so and explain what evidence would prove or disprove it.",
   "Do not invent file paths, commands, endpoints, or line numbers.",
+  "Distinguish an eval failure from a user-facing product outage. Do not claim production users or real traffic are impacted unless the supplied evidence includes user-traffic or incident signals.",
+  "If a broad health check passed but a specific endpoint or route failed, localize the diagnosis to that endpoint, route, version, or configuration instead of declaring the whole service down.",
   "Every report must include at least one proof point, possible cause, reproduction step, affected area, and recommended next action.",
   "If no exact file path is proven, affectedAreas must name the implicated product or runtime area without a path.",
   "Do not propose a code diff. Focus on proving the problem exists, localizing where it appears to exist, possible causes, reproduction steps, and follow-up evals.",
@@ -80,7 +82,7 @@ export function buildInvestigationInput({
       title: "Short investigator report title.",
       confidence: "low | medium | high",
       summary: "One or two sentences proving the visible failure.",
-      rootCause: "Best evidence-backed root cause, or explicit uncertainty.",
+      rootCause: "Best evidence-backed root cause, or explicit uncertainty. Keep impact scoped to the eval evidence.",
       proof: ["Evidence points from the eval result or source hints."],
       possibleCauses: ["Plausible causes ranked by evidence strength."],
       reproductionSteps: [

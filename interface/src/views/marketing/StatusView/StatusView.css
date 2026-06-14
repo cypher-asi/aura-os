@@ -478,6 +478,19 @@
   color: rgba(238, 242, 244, 0.62);
 }
 
+.statusInvestigationCoveredChecks {
+  margin: -2px 0 0;
+  color: rgba(238, 242, 244, 0.62);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.statusInvestigationCoveredChecks strong {
+  color: rgba(238, 242, 244, 0.86);
+  font-weight: 680;
+}
+
 .statusInvestigationGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

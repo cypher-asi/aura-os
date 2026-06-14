@@ -134,6 +134,38 @@ function investigationsFor(feature: StatusFeature): StatusInvestigation[] {
     .filter((investigation): investigation is StatusInvestigation => investigation != null);
 }
 
+interface InvestigationReportGroup {
+  readonly investigation: StatusInvestigation;
+  readonly checkIds: readonly string[];
+}
+
+function investigationGroupKey(investigation: StatusInvestigation): string {
+  const evidenceMessage = investigation.evidenceDigest?.message;
+  if (typeof evidenceMessage === "string" && evidenceMessage.trim()) {
+    return `${investigation.featureId ?? ""}:${evidenceMessage.trim()}`;
+  }
+  return `${investigation.featureId ?? ""}:${investigation.checkId}:${investigation.rootCause}`;
+}
+
+function groupInvestigations(investigations: readonly StatusInvestigation[]): InvestigationReportGroup[] {
+  const groups = new Map<string, InvestigationReportGroup>();
+  for (const investigation of investigations) {
+    const key = investigationGroupKey(investigation);
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, { investigation, checkIds: [investigation.checkId] });
+      continue;
+    }
+    if (!existing.checkIds.includes(investigation.checkId)) {
+      groups.set(key, {
+        investigation: existing.investigation,
+        checkIds: [...existing.checkIds, investigation.checkId],
+      });
+    }
+  }
+  return [...groups.values()];
+}
+
 function StatusBadge({ status }: { readonly status: FeatureHealthStatus }): ReactNode {
   return (
     <span className={`statusBadge statusBadge-${status}`}>
@@ -213,7 +245,12 @@ function InvestigationItemList({
   );
 }
 
-function InvestigationReportView({ investigation }: { readonly investigation: StatusInvestigation }): ReactNode {
+function InvestigationReportView({
+  group,
+}: {
+  readonly group: InvestigationReportGroup;
+}): ReactNode {
+  const { investigation, checkIds } = group;
   return (
     <section className="statusInvestigationItem" aria-label={`Investigation for ${investigation.checkId}`}>
       <div className="statusInvestigationItemTop">
@@ -228,12 +265,18 @@ function InvestigationReportView({ investigation }: { readonly investigation: St
 
       <div className="statusInvestigationMeta">
         <span>{investigation.confidence} confidence</span>
-        <span>{investigation.checkId}</span>
+        <span>{checkIds.length === 1 ? investigation.checkId : `${checkIds.length} checks`}</span>
         {investigation.featureStatus && <span>{STATUS_LABELS[investigation.featureStatus]}</span>}
         {(investigation.provider || investigation.model) && (
           <span>{[investigation.provider, investigation.model].filter(Boolean).join(" / ")}</span>
         )}
       </div>
+
+      {checkIds.length > 1 && (
+        <p className="statusInvestigationCoveredChecks">
+          Covers checks: <strong>{checkIds.join(", ")}</strong>
+        </p>
+      )}
 
       <div className="statusInvestigationGrid">
         <div className="statusInvestigationBlock">
@@ -295,6 +338,7 @@ function InvestigationReportView({ investigation }: { readonly investigation: St
 
 function InvestigationReports({ investigations }: { readonly investigations: readonly StatusInvestigation[] }): ReactNode {
   if (investigations.length === 0) return null;
+  const groups = groupInvestigations(investigations);
   return (
     <div className="statusInvestigation">
       <div className="statusInvestigationHeader">
@@ -303,12 +347,15 @@ function InvestigationReports({ investigations }: { readonly investigations: rea
         </span>
         <div>
           <h3>Investigator</h3>
-          <p>{investigations.length} report{investigations.length === 1 ? "" : "s"} generated</p>
+          <p>
+            {groups.length} root-cause card{groups.length === 1 ? "" : "s"}
+            {groups.length !== investigations.length ? ` across ${investigations.length} checks` : ""}
+          </p>
         </div>
       </div>
       <div className="statusInvestigationReports">
-        {investigations.map((investigation) => (
-          <InvestigationReportView key={investigation.id} investigation={investigation} />
+        {groups.map((group) => (
+          <InvestigationReportView key={group.investigation.id} group={group} />
         ))}
       </div>
     </div>
