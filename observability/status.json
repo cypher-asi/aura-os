@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-06-14T03:44:23.728Z",
+  "generatedAt": "2026-06-14T03:45:16.010Z",
   "environment": "production",
-  "source": "desktop-nightly-release",
+  "source": "github-actions",
   "overall": "major_outage",
   "totals": {
     "features": 16,
@@ -25,12 +25,12 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:17.216Z",
+      "lastCheckedAt": "2026-06-14T03:42:11.543Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 110,
+      "latencyP95Ms": 104,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -39,11 +39,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:16.528Z",
+          "checkedAt": "2026-06-14T03:42:10.838Z",
           "latencyMs": 88,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-06-14T03:41:16.497527472+00:00"
+            "timestamp": "2026-06-14T03:42:10.798075293+00:00"
           }
         },
         {
@@ -52,8 +52,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:16.635Z",
-          "latencyMs": 107,
+          "checkedAt": "2026-06-14T03:42:10.942Z",
+          "latencyMs": 104,
           "evidence": {
             "userPresent": true,
             "keys": [
@@ -80,8 +80,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:17.216Z",
-          "latencyMs": 110,
+          "checkedAt": "2026-06-14T03:42:11.543Z",
+          "latencyMs": 104,
           "evidence": {
             "keys": [
               "os",
@@ -102,12 +102,12 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:17.493Z",
+      "lastCheckedAt": "2026-06-14T03:42:11.825Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 471,
+      "latencyP95Ms": 497,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -116,8 +116,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:17.106Z",
-          "latencyMs": 471,
+          "checkedAt": "2026-06-14T03:42:11.439Z",
+          "latencyMs": 497,
           "evidence": {
             "userIdPresent": true
           }
@@ -128,8 +128,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:17.354Z",
-          "latencyMs": 138,
+          "checkedAt": "2026-06-14T03:42:11.675Z",
+          "latencyMs": 132,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "orgCount": 1
@@ -141,8 +141,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:17.493Z",
-          "latencyMs": 138,
+          "checkedAt": "2026-06-14T03:42:11.825Z",
+          "latencyMs": 150,
           "evidence": {
             "userIdPresent": true,
             "keys": [
@@ -169,12 +169,12 @@
       "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
       "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:34.267Z",
+      "lastCheckedAt": "2026-06-14T03:42:27.758Z",
       "checksPassed": 6,
       "checksTotal": 6,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 727,
+      "latencyP95Ms": 733,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -183,8 +183,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:33.022Z",
-          "latencyMs": 273,
+          "checkedAt": "2026-06-14T03:42:26.585Z",
+          "latencyMs": 157,
           "evidence": {
             "tokenPresent": true,
             "turnCount": 0,
@@ -197,8 +197,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:33.749Z",
-          "latencyMs": 727,
+          "checkedAt": "2026-06-14T03:42:27.318Z",
+          "latencyMs": 733,
           "evidence": {
             "frameTypes": [
               "text_delta",
@@ -215,8 +215,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:33.966Z",
-          "latencyMs": 217,
+          "checkedAt": "2026-06-14T03:42:27.483Z",
+          "latencyMs": 165,
           "evidence": {
             "count": 100
           }
@@ -227,8 +227,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:34.082Z",
-          "latencyMs": 116,
+          "checkedAt": "2026-06-14T03:42:27.595Z",
+          "latencyMs": 112,
           "evidence": {
             "count": 7
           }
@@ -239,8 +239,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:34.174Z",
-          "latencyMs": 92,
+          "checkedAt": "2026-06-14T03:42:27.676Z",
+          "latencyMs": 81,
           "evidence": {
             "object": "list",
             "modelCount": 1
@@ -252,8 +252,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:34.267Z",
-          "latencyMs": 94,
+          "checkedAt": "2026-06-14T03:42:27.758Z",
+          "latencyMs": 82,
           "evidence": {
             "status": 402,
             "payToPresent": true,
@@ -345,12 +345,12 @@
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-06-14T03:41:30.721Z",
+      "lastCheckedAt": "2026-06-14T03:42:24.394Z",
       "checksPassed": 0,
       "checksTotal": 3,
       "checksFailed": 3,
       "checksUnknown": 0,
-      "latencyP95Ms": 1347,
+      "latencyP95Ms": 1426,
       "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
       "checks": [
         {
@@ -359,13 +359,13 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-          "checkedAt": "2026-06-14T03:41:28.334Z",
-          "latencyMs": 1347,
+          "checkedAt": "2026-06-14T03:42:22.004Z",
+          "latencyMs": 1426,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:remote-agent-create:ad9cccb7457e",
+            "id": "remote-agents:remote-agent-create:e83365bd42ca",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-create",
@@ -373,92 +373,92 @@
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-06-14T03:41:36.267Z",
+            "generatedAt": "2026-06-14T03:42:28.902Z",
             "environment": "production",
-            "source": "desktop-nightly-release",
+            "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) are failing in production with identical HTTP 409 conflict errors indicating the swarm agent quota of 100 has been reached. The AURA observability eval cannot provision a new agent to validate VM readiness or runtime state because the upstream swarm layer is rejecting all creation requests.",
-            "rootCause": "The production swarm backend has reached its hard agent quota limit of 100. Every POST /api/agents request is rejected with a 409 conflict response containing the message \"agent quota exceeded: limit is 100\". Because the eval check depends on successfully creating a new agent to assert vmIdPresent and remoteState, the entire remote-agents feature check tree fails before any evidence can be collected. The quota exhaustion is the singular upstream blocker for all three sibling checks.",
+            "summary": "All three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) are failing in production with identical HTTP 409 conflict errors indicating the swarm agent quota of 100 has been reached. The AURA observability eval cannot provision a new agent to validate VM readiness or runtime state because the upstream swarm layer is rejecting all new agent creation requests.",
+            "rootCause": "The production swarm backend has hit its hard agent quota limit of 100. Every POST /api/agents request is rejected with a 409 conflict response containing the message \"agent quota exceeded: limit is 100\". Because the AURA eval check depends on successfully creating a new agent to assert vmIdPresent and remoteState, the entire remote-agents feature check tree is blocked at the creation step. No evidence points to a transient network or auth issue; the error is deterministic and quota-specific.",
             "proof": [
-              "HTTP 409 response body on POST /api/agents: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-              "All three sibling checks (remote-agent-create, remote-agent-state, remote-agent-runtime) carry the identical 409 error message, confirming the failure is not isolated to one check path but is systemic at the swarm creation layer.",
-              "evidence:{} on all three checks confirms zero evidence was collected — no agentId, no vmIdPresent, no remoteState — because execution never progressed past the creation step.",
-              "Latency for all three failing checks is low (1148–1347 ms), consistent with an immediate rejection at the API gateway or swarm controller rather than a timeout or downstream VM failure.",
-              "The expected output contract requires vmIdPresent=true and remoteState in [running, idle, ready], neither of which can be asserted when agent creation is blocked at the quota boundary.",
-              "The check staleAfterMinutes is 20 and the run was at 2026-06-14T03:41:36Z, meaning this is a fresh failure, not a stale result — the quota was already exhausted at the time of the eval run."
+              "POST /api/agents returned HTTP 409 with body: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+              "All three sibling checks (remote-agent-create, remote-agent-state, remote-agent-runtime) carry the identical 409 error message, confirming the failure is not isolated to one check path but is systemic across the entire remote-agents feature.",
+              "The inner swarm error code is 'conflict' with message 'conflict: agent quota exceeded: limit is 100', indicating a hard quota ceiling enforced by the swarm layer, not a transient error.",
+              "Eval evidence object is empty ({}) for all three checks, confirming no agent was created and no downstream assertions (vmIdPresent, remoteState) could be evaluated.",
+              "Latency for all three failing calls is low (1426 ms, 1261 ms, 1129 ms), consistent with an immediate quota-rejection response rather than a timeout or infrastructure hang.",
+              "The check ran at 2026-06-14T03:42:20Z in the production environment, ruling out a staging/dev misconfiguration."
             ],
             "possibleCauses": [
-              "[Highest confidence] Swarm agent quota (hard limit: 100) is fully consumed in the production environment by existing live agents, leaving no capacity for new agent provisioning. This is directly stated in the error payload.",
-              "[Medium confidence] AURA eval agents created by previous check runs were not cleaned up after each run, causing quota slots to accumulate over time until the limit was reached.",
-              "[Medium confidence] A separate workload or tenant in the same swarm namespace consumed quota slots independently of the AURA eval runner, exhausting capacity without the eval system's awareness.",
-              "[Lower confidence] The quota limit of 100 is misconfigured or too low for the current production scale, and legitimate user-created agents alone are sufficient to exhaust it under normal load.",
-              "[Lower confidence] A swarm controller bug is failing to release quota slots when agents are deleted or terminated, causing phantom quota consumption that does not reflect actual running agents."
+              "[MOST LIKELY] The production swarm environment has accumulated 100 live agents and the quota ceiling has been reached. This could be caused by AURA eval agents from previous runs not being cleaned up (leaked agents), leaving no room for new provisioning.",
+              "[LIKELY] The AURA eval check does not perform teardown of the agent it creates after each run, causing agents to accumulate over time until the quota is exhausted.",
+              "[POSSIBLE] A separate workload or tenant in the same swarm namespace/org is consuming agent slots, leaving none available for the observability eval account.",
+              "[POSSIBLE] The quota limit of 100 is a per-org or per-environment ceiling that has not been raised to accommodate growth in agent usage, and legitimate production agents have filled the quota.",
+              "[LESS LIKELY] A swarm-side bug is incorrectly counting active agents or failing to release slots for terminated agents, causing phantom quota consumption."
             ],
             "reproductionSteps": [
               {
-                "label": "Attempt to create a new remote agent via the agents API and observe the 409 response",
-                "command": "curl -X POST /api/agents -H 'Content-Type: application/json' -d '{...agent payload...}'"
+                "label": "Confirm current agent count against quota",
+                "command": "GET /api/agents?limit=100 (or equivalent list endpoint) and count total active agents in the production org to verify the 100-agent ceiling is reached.",
+                "details": "If the response returns 100 agents or the API returns a count equal to the quota, the quota exhaustion is confirmed."
               },
               {
-                "label": "Query the current agent count in the production swarm namespace to confirm quota saturation",
-                "details": "Use the swarm management API or admin console to list all active agents and compare the count against the reported limit of 100."
+                "label": "Check for leaked AURA eval agents",
+                "details": "Filter the agent list for agents created by the AURA observability eval identity (e.g., by name prefix, label, or creator ID). Determine if prior eval runs left agents running without cleanup."
               },
               {
-                "label": "Check for AURA eval-created agents that were not cleaned up from prior runs",
-                "details": "Filter the agent list for agents created by the AURA observability runner identity (e.g., by label, tag, or creator metadata) and count how many are still alive."
+                "label": "Attempt a manual POST /api/agents in production",
+                "command": "POST /api/agents with a minimal valid payload using the same credentials as the AURA eval runner",
+                "details": "Expect a 409 conflict response with 'agent quota exceeded: limit is 100' to reproduce the failure deterministically."
               },
               {
-                "label": "Attempt to delete one or more existing agents and then retry POST /api/agents to confirm quota is the sole blocker",
-                "details": "If a retry succeeds after freeing a slot, quota exhaustion is confirmed as the root cause with no secondary blockers."
+                "label": "Inspect swarm quota configuration",
+                "details": "Check the swarm backend configuration or admin panel for the per-org agent quota setting to confirm the limit is 100 and whether it is adjustable."
               },
               {
-                "label": "Re-run the AURA remote-agent-create eval after quota is freed to verify all three sibling checks recover",
-                "details": "Confirm that evidence fields (agentId, vmIdPresent, remoteState) are populated and assertions pass once creation succeeds."
+                "label": "Review agent lifecycle and teardown logic in the eval check",
+                "details": "Inspect the remote-agent-create check implementation to determine whether it deletes or terminates the agent it creates after each eval run completes."
               }
             ],
             "affectedAreas": [
               {
-                "label": "POST /api/agents — Remote Agent Creation Endpoint",
-                "reason": "This is the direct point of failure. All three eval checks call this endpoint and receive a 409 quota-exceeded rejection, preventing any downstream evidence collection."
+                "label": "Remote Agents – POST /api/agents creation endpoint",
+                "reason": "This is the direct point of failure; all three checks fail at the agent creation POST before any downstream state can be evaluated."
               },
               {
-                "label": "Swarm Agent Controller — Quota Enforcement Layer",
-                "reason": "The inner error payload originates from the swarm layer: 'conflict: agent quota exceeded: limit is 100'. The quota gate is enforced here before any VM provisioning occurs."
+                "label": "Swarm backend – agent quota enforcement layer",
+                "reason": "The inner error originates from the swarm layer enforcing a hard limit of 100 agents. The quota gate is blocking all new agent provisioning."
               },
               {
-                "label": "AURA Eval Runner — Remote Agents Feature Check Tree",
-                "reason": "All three checks in the remote-agents feature (remote-agent-create, remote-agent-state, remote-agent-runtime) are blocked. The entire feature is dark with zero evidence collected, meaning the eval runner has no visibility into remote agent health."
+                "label": "AURA eval check – remote-agent-create teardown/cleanup logic",
+                "reason": "If the eval check does not delete agents it creates, it is the likely source of quota leakage over repeated runs."
               },
               {
-                "label": "AURA Eval Agent Lifecycle / Cleanup Logic",
-                "reason": "If eval-created agents are not being deleted after each check run, they may be accumulating and consuming quota slots, implicating the teardown path of the eval runner."
+                "label": "Remote Agents feature – remote-agent-state and remote-agent-runtime sibling checks",
+                "reason": "Both sibling checks are co-failing with the identical error, meaning the entire remote-agents observability surface is dark and no VM readiness or runtime state can be asserted."
               },
               {
-                "label": "Production Swarm Namespace — Agent Inventory",
-                "reason": "The quota is enforced at the namespace or environment level. The production swarm namespace is the resource boundary that is saturated."
+                "label": "Expected output contract – vmIdPresent and remoteState assertions",
+                "reason": "Because agent creation fails, the required evidence fields (orgId, agentId, vmIdPresent, remoteState) are never populated, making all contract assertions unevaluable."
               }
             ],
             "recommendedNextActions": [
-              "Immediately audit the production swarm namespace to list all 100 (or more) agents currently consuming quota slots — identify which are stale, orphaned, or owned by the AURA eval runner.",
-              "Delete or terminate any orphaned or AURA-eval-owned agents that were not cleaned up from prior runs to free quota capacity and restore agent creation ability.",
-              "Verify the AURA eval runner has a guaranteed teardown/cleanup step that deletes eval-created agents after each check run completes, regardless of check success or failure.",
-              "Investigate whether the swarm quota release mechanism correctly frees slots upon agent deletion — if phantom quota consumption is occurring, escalate to the swarm platform team.",
-              "Consider raising the swarm agent quota limit in production if 100 is insufficient for the current legitimate workload, coordinating with the swarm platform team.",
-              "Add a pre-flight check to the AURA eval runner that verifies available quota headroom before attempting agent creation, and surface a distinct 'quota exhausted' status rather than a generic fail.",
-              "Alert on swarm agent quota utilization (e.g., page at 80% consumption) so engineers can intervene before the limit is fully reached and evals begin failing."
+              "Immediately audit the production org's active agent list to identify and terminate any leaked or stale agents created by AURA eval runs, freeing quota slots.",
+              "Verify and enforce that the remote-agent-create eval check performs agent teardown (DELETE /api/agents/{agentId}) in a finally/cleanup block after each run, regardless of success or failure.",
+              "If legitimate production agents are consuming the quota, request a quota increase from the swarm platform team or isolate the AURA eval runner into a dedicated org/namespace with its own quota.",
+              "Add a pre-flight check to the eval runner that asserts available agent quota (quota_used < quota_limit) before attempting agent creation, and surface a distinct 'quota exhausted' warning status rather than a generic fail.",
+              "Investigate whether the swarm backend correctly releases quota slots when agents are terminated or expire, to rule out phantom quota consumption from a swarm-side accounting bug.",
+              "Set up a quota utilization alert (e.g., warn at 80% of limit, critical at 95%) so engineers are notified before the ceiling is reached and evals begin failing."
             ],
             "followUpEvals": [
-              "Add a dedicated eval check that monitors current swarm agent count vs. quota limit and warns at a configurable threshold (e.g., 80%) before exhaustion causes creation failures.",
-              "Add an eval that verifies AURA-eval-owned agents are cleaned up within a defined TTL after each check run, catching teardown regressions before they accumulate into quota exhaustion.",
-              "Add a quota headroom pre-flight eval that runs before remote-agent-create and emits a distinct 'quota-insufficient' status, separating quota failures from other creation failures.",
-              "Add an eval that periodically lists all agents in the production swarm namespace and flags any agents older than a defined age threshold (e.g., 30 minutes) that match the eval runner's ownership label.",
-              "Add a post-creation cleanup verification eval that confirms an agent created by the eval runner is successfully deleted after the check run, asserting the teardown path is exercised end-to-end."
+              "Add an eval check 'remote-agent-quota-headroom' that calls the agent list/quota API and asserts that used slots are below a safe threshold (e.g., < 90 of 100), running on a frequent schedule to catch quota exhaustion before it blocks creation checks.",
+              "Add an eval check 'remote-agent-cleanup-verification' that verifies agents created by prior eval runs are no longer present after a defined TTL, catching teardown regressions.",
+              "Add a post-run teardown assertion to remote-agent-create that confirms the agent created during the eval was successfully deleted, failing the check if cleanup did not occur.",
+              "Add a 'remote-agent-quota-recovery' eval that, after a quota-exhaustion event is detected, attempts to list and delete stale eval agents and then retries creation, to distinguish a recoverable leak from a hard quota ceiling breach."
             ],
             "evidenceDigest": {
               "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-              "latencyMs": 1347,
+              "latencyMs": 1426,
               "evidence": {}
             }
           }
@@ -469,13 +469,13 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-          "checkedAt": "2026-06-14T03:41:29.482Z",
-          "latencyMs": 1148,
+          "checkedAt": "2026-06-14T03:42:23.265Z",
+          "latencyMs": 1261,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:remote-agent-state:69335158fe7e",
+            "id": "remote-agents:remote-agent-state:562d6e5bc46d",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-state",
@@ -483,92 +483,92 @@
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-06-14T03:41:36.267Z",
+            "generatedAt": "2026-06-14T03:42:28.902Z",
             "environment": "production",
-            "source": "desktop-nightly-release",
+            "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed simultaneously in production at 2026-06-14T03:41Z with identical HTTP 409 conflict errors indicating the swarm agent quota of 100 has been reached. Because agent creation is a prerequisite for state polling and runtime readiness, no check in the remote-agents feature could produce the required evidence (orgId, agentId, readyState, state).",
-            "rootCause": "The swarm backend rejected POST /api/agents with a 409 conflict error whose inner message explicitly states \"agent quota exceeded: limit is 100\". The observability eval environment shares (or is subject to) the same per-org or global swarm agent quota as production workloads. The quota is exhausted, so no new agent can be provisioned, causing every downstream check that depends on a freshly created agent to fail with no evidence collected.",
+            "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed simultaneously in production at 2026-06-14T03:42Z with identical HTTP 409 conflict errors. The swarm backend rejected every POST /api/agents request with \"agent quota exceeded: limit is 100\", meaning the observability eval could not provision a test agent and therefore produced no evidence payload at all.",
+            "rootCause": "The swarm backend has reached its hard agent quota limit of 100 for the target organization or environment. Every attempt to create a new agent via POST /api/agents returns HTTP 409 with the nested error \"conflict: agent quota exceeded: limit is 100\". Because the AURA eval check depends on successfully creating a fresh agent before it can poll state or verify runtime readiness, the quota exhaustion causes a total cascade failure across all three sibling checks. No evidence fields (orgId, agentId, readyState, state) were populated, confirming the failure occurred at agent creation before any lifecycle state could be observed.",
             "proof": [
-              "POST /api/agents returned HTTP 409 on all three checks: remote-agent-create (latency 1347ms, endedAt 03:41:28.334Z), remote-agent-state (latency 1148ms, endedAt 03:41:29.482Z), and remote-agent-runtime (latency 1239ms, endedAt 03:41:30.721Z).",
-              "Inner swarm error message is unambiguous: 'conflict: agent quota exceeded: limit is 100', confirming the quota ceiling has been reached.",
-              "All three checks carry identical error payloads ({\"error\":\"swarm agent already exists\", \"code\":\"conflict\", \"details\":null}), ruling out a transient or isolated failure and pointing to a shared quota constraint.",
-              "evidence:{} on every check confirms zero required contract fields (orgId, agentId, readyState, state) were collected, consistent with creation failing before any state could be observed.",
-              "Failure window spans at least 2.387 seconds (03:41:28.334Z – 03:41:30.721Z) across sequential checks, indicating the quota was already exhausted at the start of the eval run, not hit mid-run."
+              "All three checks (remote-agent-create, remote-agent-state, remote-agent-runtime) returned HTTP 409 with identical error body: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+              "The nested swarm error explicitly states 'agent quota exceeded: limit is 100', indicating the swarm layer enforces a hard cap of 100 agents.",
+              "All three checks have empty evidence objects ({}) — none of the required contract fields (orgId, agentId, readyState, state) were populated, confirming failure at the creation step before any state polling could occur.",
+              "Failure timestamps are tightly clustered (03:42:22Z–03:42:24Z) with low latencies (1129–1426 ms), consistent with fast rejection at the quota-enforcement layer rather than a timeout or network issue.",
+              "The outer error message 'swarm agent already exists' alongside 'quota exceeded' suggests the swarm may also be tracking a leaked or un-cleaned agent from a prior eval run that was never deleted, compounding the quota pressure."
             ],
             "possibleCauses": [
-              "[Most likely] The swarm agent quota (limit=100) is exhausted in the target org or environment because previously provisioned eval agents were not cleaned up after prior runs, accumulating until the ceiling was hit.",
-              "[Likely] A prior eval run or automated process created agents but crashed or was interrupted before executing teardown/delete logic, leaving orphaned agents that count against the quota.",
-              "[Possible] The observability eval uses the same org/quota namespace as production or staging workloads, and organic user growth in agent count has consumed the remaining quota headroom.",
-              "[Less likely] The quota limit of 100 is a hard system-wide ceiling that has not been raised to accommodate the current scale of production usage plus eval overhead.",
-              "[Less likely] A duplicate-creation guard in the swarm backend is misidentifying the eval agent as an already-existing agent ('swarm agent already exists') due to a naming/ID collision, triggering the quota error as a secondary effect."
+              "[MOST LIKELY] The swarm environment used by AURA evals has accumulated 100 live agents and hit the hard quota cap — likely due to prior eval runs that created agents but did not successfully delete them (leaked agents), exhausting the available slots.",
+              "[LIKELY] The AURA eval teardown/cleanup step for POST /api/agents is failing silently or not being reached on error paths, causing each failed or partial eval run to leave a residual agent behind, gradually consuming quota.",
+              "[POSSIBLE] The quota limit of 100 is shared between AURA observability eval agents and real user-provisioned agents in the same environment/org, and organic user growth has consumed the remaining capacity.",
+              "[POSSIBLE] A recent deployment or configuration change lowered the quota ceiling or changed the org/environment scoping of the quota, causing previously-sufficient headroom to disappear.",
+              "[LESS LIKELY] The swarm backend is misreporting quota exhaustion due to a counter bug (e.g., agents that were deleted are not being decremented from the quota counter)."
             ],
             "reproductionSteps": [
               {
-                "label": "Query current swarm agent count for the affected org",
-                "command": "GET /api/agents?limit=100 (inspect total count in response against quota limit of 100)",
-                "details": "Confirm whether the org is at or near the 100-agent ceiling."
+                "label": "Attempt to create a new remote agent via the agents API and observe the 409 response",
+                "command": "curl -X POST /api/agents -H 'Content-Type: application/json' -d '{...agent payload...}'",
+                "details": "Expect HTTP 409 with body containing 'agent quota exceeded: limit is 100' if quota is still exhausted."
               },
               {
-                "label": "Attempt to create a new agent directly and observe the 409",
-                "command": "POST /api/agents {\"name\": \"aura-eval-probe\"}",
-                "details": "Reproduce the exact 409 conflict response seen in the eval: {\"error\":\"swarm agent already exists\",\"code\":\"conflict\"}"
+                "label": "Query the current agent count for the affected org/environment against the swarm backend",
+                "details": "Retrieve the list of all active agents to confirm the count is at or near 100 and identify any agents that appear to be stale or orphaned eval artifacts."
               },
               {
-                "label": "List all agents and identify orphaned eval agents",
-                "details": "Filter the agent list for agents created by the AURA observability eval (e.g., by name prefix or tag) that were not deleted after previous runs."
+                "label": "Check for orphaned AURA eval agents by filtering agent list for agents created by the observability eval service",
+                "details": "Look for agents with names, tags, or metadata matching the AURA eval identity that were never deleted — these are likely leaked from prior eval runs."
               },
               {
-                "label": "Attempt to delete one orphaned eval agent and retry creation",
-                "details": "Verify that freeing one quota slot allows POST /api/agents to succeed with HTTP 201, confirming quota exhaustion as the root cause."
+                "label": "Attempt to delete one or more stale/orphaned agents and then retry POST /api/agents",
+                "details": "If the retry succeeds after freeing a slot, this confirms quota exhaustion as the root cause rather than a swarm counter bug."
               },
               {
-                "label": "Check eval teardown logic for agent deletion",
-                "details": "Review the eval runner's cleanup phase to confirm whether DELETE /api/agents/{agentId} is called after each run and whether it is resilient to prior failures."
+                "label": "Review eval run history around 2026-06-14T03:42Z for prior runs that may have created agents without completing teardown",
+                "details": "Correlate eval run IDs with agent creation events in the swarm audit log to identify which runs did not clean up."
               }
             ],
             "affectedAreas": [
               {
-                "label": "Remote Agents – Agent Creation API (POST /api/agents)",
-                "reason": "The creation endpoint is the direct source of the 409 response; all downstream checks depend on it succeeding."
+                "label": "POST /api/agents — Remote Agent Creation Endpoint",
+                "reason": "This is the direct point of failure; all three checks call this endpoint and receive HTTP 409 quota rejection."
               },
               {
-                "label": "Swarm Backend – Agent Quota Enforcement",
-                "reason": "The inner error originates from the swarm layer enforcing a hard limit of 100 agents, which is now exhausted."
+                "label": "Swarm Agent Quota Enforcement Layer",
+                "reason": "The swarm backend enforces a hard limit of 100 agents and is returning the quota-exceeded conflict error, blocking all new agent provisioning."
               },
               {
-                "label": "AURA Eval Runner – Remote Agent Lifecycle (Create/Teardown)",
-                "reason": "The eval runner is responsible for provisioning and cleaning up probe agents; failure to delete agents after runs leads to quota accumulation."
+                "label": "AURA Eval Agent Lifecycle / Teardown Logic",
+                "reason": "If eval-created agents are not being deleted after each run, the teardown path is implicated as the source of quota leakage over time."
               },
               {
-                "label": "Remote Agents Feature – All Checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
-                "reason": "All three required checks share the same creation dependency and are simultaneously failing, meaning the entire remote-agents feature is dark in observability."
+                "label": "Remote Agents Feature — All Checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+                "reason": "All three sibling checks share the same creation dependency and failed with identical errors, meaning the entire Remote Agents feature surface is dark in observability."
               },
               {
-                "label": "Expected Output Contract – Remote Agent State Polling",
-                "reason": "No required evidence fields (orgId, agentId, readyState, state) can be populated while agent creation is blocked, so the contract is fully unmet."
+                "label": "Expected Output Contract — Evidence Collection",
+                "reason": "No required evidence fields (orgId, agentId, readyState, state) were populated; the contract is entirely unmet, meaning AURA has zero visibility into remote agent health."
               }
             ],
             "recommendedNextActions": [
-              "Immediately audit the current agent list for the affected org/environment and identify orphaned eval-created agents; delete them to restore quota headroom and unblock the eval.",
-              "Verify and harden the eval runner's teardown phase to ensure DELETE /api/agents/{agentId} is always called after each run, including on failure or timeout paths (e.g., use a finally/defer block).",
-              "Introduce a dedicated, quota-isolated org or namespace for AURA observability eval agents so they cannot be starved by or interfere with production agent quotas.",
-              "Add a pre-flight check to the eval runner that asserts available quota (current count < limit) before attempting agent creation, and emit a distinct 'quota_exhausted' failure status rather than surfacing a raw 409.",
-              "Work with the swarm platform team to determine whether the quota limit of 100 should be raised for the production environment, or whether a separate eval-tier quota can be allocated.",
-              "Instrument the swarm backend to emit a metric or alert when agent count crosses a high-watermark threshold (e.g., 80%) so quota exhaustion is detected proactively before it causes eval or user-facing failures."
+              "Immediately audit the swarm agent list for the affected org/environment to identify and delete stale or orphaned agents created by AURA eval runs — this is the fastest path to restoring eval functionality.",
+              "Inspect the AURA eval teardown/cleanup code path for POST /api/agents to confirm that agent deletion is always executed, including on error and timeout paths (e.g., ensure cleanup runs in a finally block or equivalent).",
+              "Add an agent deletion step as a guaranteed post-condition in the remote-agent eval harness so that every eval run cleans up after itself regardless of success or failure.",
+              "Determine whether the quota is org-scoped or environment-scoped and whether AURA eval agents share quota with production user agents — if so, consider provisioning a dedicated eval org or environment with its own quota.",
+              "Investigate whether the swarm quota counter correctly decrements on agent deletion; if deleted agents are not being counted down, file a bug against the swarm quota accounting subsystem.",
+              "Set up a proactive quota utilization alert (e.g., warn at 80 agents, critical at 95) so engineers are notified before the limit is hit and evals begin failing.",
+              "Consider implementing a pre-check in the eval harness that verifies available quota headroom before attempting agent creation, and surfaces a clearer AURA status (e.g., 'quota-exhausted') rather than a generic fail."
             ],
             "followUpEvals": [
-              "Add a pre-run eval check that calls GET /api/agents, counts active agents, and fails with status 'quota_warning' if count >= 90 (90% of limit), giving early signal before exhaustion.",
-              "Add a post-run eval check that confirms the probe agent was successfully deleted (DELETE /api/agents/{agentId} returns 200/204), catching teardown failures before they accumulate.",
-              "Add a dedicated 'agent quota headroom' eval that asserts (quota_limit - current_agent_count) >= N (e.g., N=5) as a standalone required check for the remote-agents feature.",
-              "Add a sibling check that validates the inner swarm error code separately from the HTTP status, so 'quota_exceeded' vs. 'name_collision' conflicts can be distinguished in future failures.",
-              "Add a time-series eval that tracks agent count over successive runs to detect monotonic growth (a leading indicator of missing teardown logic)."
+              "Add an eval that explicitly checks current swarm agent count against the quota limit and warns when utilization exceeds a configurable threshold (e.g., 80%).",
+              "Add a post-run cleanup verification eval that confirms the agent created during a check was successfully deleted, catching teardown failures before they accumulate.",
+              "Add an eval that lists all agents attributed to the AURA eval identity and alerts if any are older than 2x the staleAfterMinutes window (20 min), indicating a leaked agent.",
+              "Add a quota headroom pre-flight check as a separate named check (e.g., remote-agent-quota-headroom) that runs before remote-agent-create so quota exhaustion is surfaced as its own distinct failure mode rather than masking as a creation failure.",
+              "Add an eval that verifies the swarm quota counter is consistent with the actual agent count by comparing the reported limit-remaining value against a direct list count."
             ],
             "evidenceDigest": {
               "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-              "latencyMs": 1148,
+              "latencyMs": 1261,
               "evidence": {}
             }
           }
@@ -579,103 +579,104 @@
           "status": "fail",
           "featureStatus": "degraded",
           "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-          "checkedAt": "2026-06-14T03:41:30.721Z",
-          "latencyMs": 1239,
+          "checkedAt": "2026-06-14T03:42:24.394Z",
+          "latencyMs": 1129,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:remote-agent-runtime:b1e248fb94e0",
+            "id": "remote-agents:remote-agent-runtime:930badb59f6d",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-runtime",
-            "title": "Remote Agent Creation Blocked by Swarm Agent Quota Exhaustion (HTTP 409)",
+            "title": "Remote Agent Creation Blocked by Swarm Agent Quota Exhaustion (409 Conflict)",
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "degraded",
-            "generatedAt": "2026-06-14T03:41:36.267Z",
+            "generatedAt": "2026-06-14T03:42:28.902Z",
             "environment": "production",
-            "source": "desktop-nightly-release",
+            "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed simultaneously at 2026-06-14T03:41Z with identical HTTP 409 responses indicating the swarm agent quota of 100 has been reached. Because agent creation is a prerequisite for every downstream check, no check in the remote-agents feature could progress past the POST /api/agents call.",
-            "rootCause": "The production swarm has reached its hard agent quota limit of 100. Every attempt to POST /api/agents returns a 409 conflict with the message \"agent quota exceeded: limit is 100\", preventing the AURA observability eval from provisioning a test agent. This is most likely caused by leaked or un-reaped eval agents from prior runs accumulating against the quota, or by legitimate production agents consuming the full allocation, leaving no headroom for ephemeral eval agents.",
+            "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed simultaneously at 2026-06-14T03:42Z with identical 409 Conflict responses indicating the swarm agent quota of 100 has been reached. Because agent creation is a prerequisite for all downstream checks, no check in the remote-agents feature could progress past the POST /api/agents call.",
+            "rootCause": "The production swarm has hit its hard agent quota limit of 100. Every attempt to POST /api/agents returns HTTP 409 with the nested error \"conflict: agent quota exceeded: limit is 100\", preventing the AURA observability eval from provisioning a new test agent. This blocks all dependent lifecycle and runtime checks from executing, causing a full feature-level failure cascade.",
             "proof": [
-              "remote-agent-runtime check: POST /api/agents → HTTP 409, error: \"swarm agent already exists: conflict: agent quota exceeded: limit is 100\"",
-              "remote-agent-create check (sibling): identical 409 body, endedAt 2026-06-14T03:41:28.334Z, latencyMs 1347",
-              "remote-agent-state check (sibling): identical 409 body, endedAt 2026-06-14T03:41:29.482Z, latencyMs 1148",
-              "All three checks carry empty evidence objects {}, confirming no agent was ever successfully created — failure is at the very first API call",
-              "Latency for all three checks (1239 ms, 1347 ms, 1148 ms) is well under the warningLatencyMs threshold of 20000 ms, ruling out a timeout or network issue — the server responded immediately with a quota rejection",
-              "The nested error payload contains both an outer AURA-layer message and an inner swarm-layer structured error {code: conflict, message: conflict: agent quota exceeded: limit is 100}, confirming the quota enforcement originates in the swarm backend, not the AURA API layer"
+              "remote-agent-runtime check failed: POST /api/agents → HTTP 409, error: 'swarm agent already exists', inner code: 'conflict', inner message: 'conflict: agent quota exceeded: limit is 100'",
+              "remote-agent-create sibling check failed with identical 409 body at 2026-06-14T03:42:22.004Z (latency 1426 ms)",
+              "remote-agent-state sibling check failed with identical 409 body at 2026-06-14T03:42:23.265Z (latency 1261 ms)",
+              "remote-agent-runtime check failed at 2026-06-14T03:42:24.394Z (latency 1129 ms) — all three checks share the same error, confirming the failure is at the creation layer, not in state or runtime logic",
+              "All evidence fields are empty ({}) across all three checks, confirming no agent was ever successfully provisioned and no downstream evidence could be collected",
+              "The expected output contract requires orgId, agentId, model, provider, and message (containing 'hello from aura') — none of these could be satisfied because agent creation never succeeded"
             ],
             "possibleCauses": [
-              "[Highest confidence] Eval agents from previous AURA observability runs were not deleted after check completion, causing them to accumulate against the 100-agent quota over time until the limit was exhausted.",
-              "[High confidence] A prior eval run crashed or was interrupted before its cleanup/teardown phase, leaving one or more orphaned agents registered in the swarm.",
-              "[Medium confidence] Legitimate production remote agents have grown to consume the full quota of 100, leaving zero capacity for ephemeral eval agents — the eval has no reserved quota slot.",
-              "[Low confidence] A race condition between concurrent eval runs caused multiple agents to be created simultaneously, each believing quota was available, collectively exhausting the limit.",
-              "[Low confidence] The swarm quota limit itself (100) was recently lowered by a configuration change, retroactively putting the current agent count over the new limit."
+              "[Most likely] The production swarm's agent quota (hard limit: 100) is fully consumed by live or leaked agents that were never cleaned up — including potentially stale AURA eval agents from prior runs that were not deleted after check completion.",
+              "[Likely] The AURA eval harness does not perform agent teardown (DELETE) after each check run, causing eval-created agents to accumulate against the quota over time.",
+              "[Possible] A separate workload or automated process provisioned a large number of agents in production around or before 2026-06-14T03:42Z, exhausting the remaining quota headroom.",
+              "[Less likely] The quota limit of 100 is misconfigured or too low for the current production workload, and the limit itself needs to be raised via swarm configuration.",
+              "[Unlikely] A swarm-side bug is incorrectly counting active agents and reporting quota exceeded even when actual live agent count is below 100."
             ],
             "reproductionSteps": [
               {
-                "label": "Query current swarm agent count to confirm quota saturation",
-                "command": "GET /api/agents?limit=100 (inspect total count in response against quota of 100)",
-                "details": "If the returned count equals or exceeds 100, quota exhaustion is confirmed."
+                "label": "Confirm current agent count against quota by listing all agents in the production swarm",
+                "command": "GET /api/agents?limit=100 (or equivalent swarm list endpoint) and count total active agents"
               },
               {
-                "label": "Identify eval/test agents that should have been cleaned up",
-                "details": "Filter the agent list for agents whose names or metadata match the AURA eval naming convention (e.g., created by the observability check runner). Check their createdAt timestamps against past eval run windows."
+                "label": "Attempt to create a new agent in production and observe the 409 response",
+                "command": "POST /api/agents with a valid agent creation payload in the production environment"
               },
               {
-                "label": "Attempt to manually reproduce the 409 by posting a new agent",
-                "command": "POST /api/agents with a minimal valid payload",
-                "details": "If the response is HTTP 409 with 'agent quota exceeded', the quota is still exhausted and cleanup has not occurred."
+                "label": "Check for stale or leaked AURA eval agents by filtering the agent list for agents created by the observability eval service account or with an AURA eval naming convention"
               },
               {
-                "label": "Inspect eval runner teardown logic for agent deletion",
-                "details": "Review the remote-agent check implementation to confirm whether a DELETE /api/agents/{agentId} or equivalent cleanup call is issued after each eval run, including in error and timeout paths."
+                "label": "Inspect agent creation timestamps to determine whether quota was exhausted gradually (leak) or suddenly (burst provisioning)",
+                "details": "Sort agent list by createdAt ascending and look for clustering of creation times near the failure window"
               },
               {
-                "label": "Re-run the failing eval after manually deleting orphaned eval agents",
-                "details": "After freeing quota slots, trigger the remote-agent-runtime check again to confirm it passes end-to-end and produces the expected 'hello from aura' message."
+                "label": "Attempt to delete one or more agents and then retry POST /api/agents to confirm quota enforcement is the sole blocker",
+                "command": "DELETE /api/agents/{agentId}, then POST /api/agents"
               }
             ],
             "affectedAreas": [
               {
-                "label": "POST /api/agents — Remote Agent Creation Endpoint",
-                "reason": "This is the exact endpoint returning HTTP 409 for all three checks. It is the single point of failure blocking all downstream remote-agent eval steps."
+                "label": "POST /api/agents — Agent Creation Endpoint",
+                "reason": "All three checks fail at this single endpoint with 409; it is the entry point for the entire remote-agent provisioning flow and the direct source of the quota conflict error."
               },
               {
-                "label": "Swarm Backend — Agent Quota Enforcement",
-                "reason": "The inner error payload originates from the swarm layer (nested error object with code: conflict), indicating the quota is enforced at the swarm backend, not the AURA API gateway."
+                "label": "Swarm Agent Quota Enforcement Layer",
+                "reason": "The inner error 'conflict: agent quota exceeded: limit is 100' originates from the swarm backend quota guard, which is rejecting all new agent creation requests."
               },
               {
-                "label": "AURA Observability Eval Runner — Remote Agents Feature Checks",
-                "reason": "All three checks in the remote-agents feature (remote-agent-create, remote-agent-state, remote-agent-runtime) are blocked. The eval runner's agent lifecycle management (create → use → delete) is implicated if cleanup is not reliably executing."
+                "label": "AURA Eval Harness — Remote Agents Check Lifecycle",
+                "reason": "The eval harness provisions agents to run checks but may not be cleaning them up (DELETE) after each run, making it a likely contributor to quota exhaustion over repeated eval cycles."
               },
               {
-                "label": "Remote Agents Feature — Full Observability Coverage",
-                "reason": "Because agent creation fails, no evidence is collected for orgId, agentId, model, provider, or message. The expectedOutputContract assertion on message containing 'hello from aura' cannot be evaluated at all, meaning the feature has zero observability signal."
+                "label": "Remote Agents Feature — All Checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+                "reason": "All three checks share a hard dependency on successful agent creation; quota exhaustion causes a total feature-level failure cascade with no partial signal."
+              },
+              {
+                "label": "Production Swarm Agent Pool",
+                "reason": "The production swarm is the environment where the quota is enforced; the limit of 100 is either exhausted or misconfigured relative to actual workload needs."
               }
             ],
             "recommendedNextActions": [
-              "Immediately audit the current swarm agent roster via GET /api/agents and identify any agents created by the AURA eval runner that were not cleaned up; delete them to restore quota headroom.",
-              "Review the remote-agent eval check implementation to ensure agent deletion (teardown) is called unconditionally — including in catch/finally blocks — so orphaned agents cannot accumulate across runs.",
-              "Introduce a dedicated, reserved quota allocation or a separate isolated swarm namespace for AURA observability eval agents so they cannot be crowded out by production agents and vice versa.",
-              "Add a pre-flight quota check step to the remote-agent eval: before attempting POST /api/agents, query the current agent count and emit a warning-level signal if remaining capacity is below a safe threshold (e.g., fewer than 5 slots free).",
-              "Investigate whether the staleAfterMinutes: 20 window combined with the eval runner's retry behavior could cause multiple in-flight agent creation attempts to stack up, and add idempotency handling (e.g., check for an existing eval agent before creating a new one).",
-              "If production agents are legitimately consuming the full quota, work with the swarm team to raise the quota limit or establish a quota tier for observability workloads."
+              "Immediately audit the production swarm agent list to identify and delete stale, leaked, or AURA-eval-owned agents that are consuming quota without serving live traffic.",
+              "Add an explicit agent teardown step (DELETE /api/agents/{agentId}) to the AURA eval harness so that every provisioned test agent is cleaned up after each check run, regardless of check outcome.",
+              "Implement a named or tagged convention for AURA eval agents (e.g., a label or name prefix) so they can be identified and bulk-deleted independently of production agents.",
+              "Evaluate whether the swarm quota limit of 100 is appropriate for the current production workload; if legitimate agent usage is approaching this ceiling, coordinate with the swarm platform team to raise the limit.",
+              "Add a pre-flight check to the eval harness that queries current agent count before attempting creation, and surfaces a distinct 'quota near limit' warning when count exceeds a configurable threshold (e.g., 90%).",
+              "Investigate whether any automated process or deployment event provisioned a large number of agents near 2026-06-14T03:42Z by reviewing swarm audit logs for that time window."
             ],
             "followUpEvals": [
-              "Eval: swarm-agent-quota-headroom — Before each remote-agent check cycle, assert that current agent count is less than (quota limit - N) where N is a configurable safety buffer; fail with a warning before quota is fully exhausted.",
-              "Eval: remote-agent-cleanup-verification — After each remote-agent eval run (pass or fail), assert that the agent created during the run no longer appears in GET /api/agents, confirming teardown succeeded.",
-              "Eval: remote-agent-orphan-detection — Periodically scan all agents for any whose metadata matches the eval runner's naming convention and whose age exceeds 2× the staleAfterMinutes window (40 min); alert if any are found.",
-              "Eval: remote-agent-create-idempotency — Attempt to create an agent with the same identifier twice in sequence and assert the second call either returns the existing agent or a clear conflict that the runner handles gracefully without leaking the first agent.",
-              "Eval: swarm-quota-trend — Track agent count over time and alert if the count has grown monotonically across 3 or more consecutive eval windows, indicating a slow leak before full exhaustion occurs."
+              "Eval: Assert that the production swarm active agent count is below a warning threshold (e.g., 80% of quota) before each remote-agent check run, and emit a distinct 'quota pressure' status rather than failing silently with a 409.",
+              "Eval: After each remote-agent check run, verify that the test agent was successfully deleted (DELETE returns 200/204) to confirm teardown hygiene.",
+              "Eval: Periodically enumerate all agents tagged or named as AURA eval agents and assert that none are older than the staleAfterMinutes window (20 minutes), catching leaked eval agents before they accumulate.",
+              "Eval: Introduce a quota headroom check as a standalone sibling check (e.g., remote-agent-quota-headroom) that runs before create/state/runtime checks and gates them, making quota exhaustion a first-class observable signal.",
+              "Eval: Simulate quota exhaustion in a staging environment by filling the agent pool to the limit and assert that the eval harness surfaces a clear, actionable error distinct from other 409 conflict scenarios."
             ],
             "evidenceDigest": {
               "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-              "latencyMs": 1239,
+              "latencyMs": 1129,
               "evidence": {}
             }
           }
@@ -690,12 +691,12 @@
       "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
       "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:22.256Z",
+      "lastCheckedAt": "2026-06-14T03:42:16.171Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1570,
+      "latencyP95Ms": 1460,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -704,13 +705,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:19.454Z",
-          "latencyMs": 761,
+          "checkedAt": "2026-06-14T03:42:13.581Z",
+          "latencyMs": 748,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "cbdf4ebe-6a50-445a-a44f-42bd28ece7ab",
+            "projectId": "fc961349-088e-4ba2-a81e-0514da462061",
             "listed": true,
-            "projectName": "AURA Status Project 1781408478827"
+            "projectName": "AURA Status Project 1781408532973"
           }
         },
         {
@@ -719,13 +720,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:21.025Z",
-          "latencyMs": 1570,
+          "checkedAt": "2026-06-14T03:42:15.041Z",
+          "latencyMs": 1460,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "edd20271-0d9f-437a-85b9-693f8f445051",
-            "specId": "bb684b15-b4a3-4318-95c4-6b317848e31c",
-            "taskId": "5fc57fda-d33b-4ad1-aa3b-50290c265667",
+            "projectId": "01fe8fe0-81bf-4261-adaa-1df0d4f61338",
+            "specId": "1b67b1d2-09d8-417d-910a-deac2caf5130",
+            "taskId": "050d3108-c977-4b8f-b101-d5bcff0b2a8b",
             "specHashPresent": true,
             "taskCount": 1
           }
@@ -736,10 +737,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:21.702Z",
-          "latencyMs": 677,
+          "checkedAt": "2026-06-14T03:42:15.629Z",
+          "latencyMs": 588,
           "evidence": {
-            "projectId": "f60ddb25-b263-406a-99dd-c28412b8b62a",
+            "projectId": "0ab5aa1c-f661-4666-86e5-616b7e639312",
             "keys": [
               "total_tasks",
               "pending_tasks",
@@ -767,10 +768,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:22.256Z",
-          "latencyMs": 554,
+          "checkedAt": "2026-06-14T03:42:16.171Z",
+          "latencyMs": 542,
           "evidence": {
-            "projectId": "c4f8813d-77b2-457c-99f1-e06fb41f04cb",
+            "projectId": "ac9d365b-92ec-43fa-801a-61098371bd20",
             "status": null,
             "keys": [
               "running",
@@ -792,12 +793,12 @@
       "description": "Process workflow lists, process creation, default ignition node creation, and cleanup.",
       "publicSummary": "Process workflows can be listed and created.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:23.750Z",
+      "lastCheckedAt": "2026-06-14T03:42:17.679Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1112,
+      "latencyP95Ms": 1140,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -806,8 +807,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:22.638Z",
-          "latencyMs": 382,
+          "checkedAt": "2026-06-14T03:42:16.539Z",
+          "latencyMs": 368,
           "evidence": {
             "processes": 0,
             "folders": 0
@@ -819,11 +820,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:23.750Z",
-          "latencyMs": 1112,
+          "checkedAt": "2026-06-14T03:42:17.679Z",
+          "latencyMs": 1140,
           "evidence": {
-            "projectId": "088100db-872a-4abb-ba24-922e3c3a00b0",
-            "processId": "3552977b-36d6-43ac-b2d4-e9e1fee6316a",
+            "projectId": "8d401b9c-f3d0-48d9-ae0e-728781b56528",
+            "processId": "55282998-d5ce-4a07-9ff7-f09e4a3a8c2f",
             "nodeCount": 1
           }
         }
@@ -889,12 +890,12 @@
       "description": "Image generation stream routing, progress frames, completion payloads, and artifact URLs.",
       "publicSummary": "AURA image generation streams can complete with generated artifacts.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-06-14T03:41:32.749Z",
+      "lastCheckedAt": "2026-06-14T03:42:26.428Z",
       "checksPassed": 0,
       "checksTotal": 1,
       "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 2028,
+      "latencyP95Ms": 2034,
       "message": "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.; Missing expected evidence: frameTypes, imageUrlPresent",
       "checks": [
         {
@@ -903,8 +904,8 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.; Missing expected evidence: frameTypes, imageUrlPresent",
-          "checkedAt": "2026-06-14T03:41:32.749Z",
-          "latencyMs": 2028,
+          "checkedAt": "2026-06-14T03:42:26.428Z",
+          "latencyMs": 2034,
           "evidence": {
             "frames": [
               {
@@ -932,7 +933,7 @@
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "media-generation:image-generation-stream:28592e10a156",
+            "id": "media-generation:image-generation-stream:3218a267a5f7",
             "featureId": "media-generation",
             "featureLabel": "Media Generation",
             "checkId": "image-generation-stream",
@@ -940,88 +941,88 @@
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-06-14T03:41:36.267Z",
+            "generatedAt": "2026-06-14T03:42:28.902Z",
             "environment": "production",
-            "source": "desktop-nightly-release",
+            "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "The image generation stream check failed immediately after `generation_start` because the agent runtime returned a 404, emitting a `SESSION_OPEN_FAILED` error frame before any progress or completion frames could be produced. Both required evidence fields (`frameTypes` and `imageUrlPresent`) are absent, confirming the stream never advanced past session initialization.",
-            "rootCause": "The agent runtime harness is unreachable at the configured endpoint (LOCAL_HARNESS_URL / SWARM_BASE_URL). The HTTP 404 response during session open indicates either the harness process is not running, the deployment is missing or misconfigured, or the harness version deployed does not expose the expected session endpoint path — preventing any image generation work from starting.",
+            "summary": "The image generation stream eval failed immediately after `generation_start` because the agent runtime returned a 404, emitting a `SESSION_OPEN_FAILED` error frame before any progress or completion frames could be produced. Both required evidence fields (`frameTypes` and `imageUrlPresent`) are absent, confirming the stream never advanced past session initialization.",
+            "rootCause": "The agent runtime harness is unreachable at the configured endpoint (LOCAL_HARNESS_URL / SWARM_BASE_URL). The 404 response during session open indicates either the harness process is not running, the endpoint path has changed due to a version mismatch between the eval harness and the deployed runtime, or the environment configuration points to a stale or incorrect URL. The stream terminates in under 2.1 seconds (latencyMs: 2034) with no image frames, which is consistent with an immediate connection-level rejection rather than a processing failure.",
             "proof": [
-              "Frame 2 (generation_error) carries code SESSION_OPEN_FAILED with message: 'agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version.'",
-              "The stream contains only 3 frames: generation_start, generation_error, and an empty message frame — no progress frames, no generation_completed frame, and no artifact URL were ever emitted.",
-              "Required evidence fields 'frameTypes' and 'imageUrlPresent' are both missing from the eval evidence object, confirming zero successful stream output.",
-              "Check latency was 2028 ms (well under the 180 000 ms warning threshold), consistent with an immediate connection failure rather than a timeout or slow generation.",
-              "The check ran in the 'production' environment at 2026-06-14T03:41:30Z and is marked required with a 30-minute staleness window, meaning this failure directly blocks the feature's production health signal."
+              "Frame 1 (generation_start) confirms the stream was initiated with mode=image, meaning the eval harness itself started correctly.",
+              "Frame 2 (generation_error) carries code=SESSION_OPEN_FAILED and an explicit 404 message: 'agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version.'",
+              "Frame 3 is a bare message event with null data and empty raw payload, indicating the stream was closed without any content after the error.",
+              "latencyMs of 2034ms is far below the warningLatencyMs threshold of 180000ms, confirming the failure is an immediate rejection, not a timeout.",
+              "Required evidence fields frameTypes and imageUrlPresent are both missing from the collected evidence, meaning no generation_completed frame and no artifact URL were ever emitted.",
+              "The expectedOutputContract assertion frameTypes contains generation_completed was never satisfied, and imageUrlPresent equals true was never satisfied."
             ],
             "possibleCauses": [
-              "[Most likely] The agent runtime harness process is not running or was never deployed to the target host, causing every request to the session-open endpoint to return 404.",
-              "[Likely] LOCAL_HARNESS_URL or SWARM_BASE_URL is misconfigured (wrong host, port, or base path), pointing the eval harness at a server that does not host the agent runtime.",
-              "[Likely] A recent harness deployment changed the session endpoint path or API version, making the previously valid URL return 404 (version incompatibility as stated in the error message).",
-              "[Possible] A network or infrastructure change (DNS update, load-balancer rule, ingress reconfiguration) broke routing to the harness endpoint after the last successful check.",
-              "[Less likely] The harness is running but behind an auth layer or firewall that returns 404 instead of 401/403 for unauthenticated requests from the eval runner."
+              "[Most likely] The agent runtime harness process is not running or has crashed in the production environment, causing all session-open requests to return 404.",
+              "[Likely] The LOCAL_HARNESS_URL or SWARM_BASE_URL environment variable is misconfigured — pointing to a wrong host, port, or path — so the 404 is returned by a reverse proxy or load balancer that has no matching route.",
+              "[Likely] A recent deployment changed the harness API route structure (version mismatch), making the previously valid session-open endpoint path return 404 on the new version.",
+              "[Possible] A network policy, firewall rule, or service mesh configuration change in the production environment is blocking or misrouting traffic to the harness endpoint, resulting in a 404 from an intermediary.",
+              "[Less likely] The harness container or pod was evicted or scaled to zero in production and has not been rescheduled, making the endpoint transiently unavailable."
             ],
             "reproductionSteps": [
               {
-                "label": "Confirm the harness endpoint URL in use",
-                "details": "Inspect the eval runner's environment for LOCAL_HARNESS_URL and SWARM_BASE_URL to determine the exact URL being called during session open."
+                "label": "Confirm the harness endpoint is reachable by issuing a direct HTTP probe to the configured LOCAL_HARNESS_URL or SWARM_BASE_URL",
+                "command": "curl -v $LOCAL_HARNESS_URL",
+                "details": "A 404 response here confirms the harness is up but the route is wrong; a connection refused or timeout confirms the process is down."
               },
               {
-                "label": "Issue a direct HTTP probe to the session-open endpoint",
-                "command": "curl -v \"${LOCAL_HARNESS_URL:-$SWARM_BASE_URL}/\" 2>&1 | head -40",
-                "details": "Replace the path with the actual session-open path used by the eval harness. A 404 response here confirms the endpoint is absent or misrouted."
+                "label": "Check the harness process or container status in the production environment",
+                "details": "Inspect the running processes, pods, or containers hosting the agent runtime harness to verify it is alive and healthy."
               },
               {
-                "label": "Check whether the harness process is running on the target host",
-                "command": "ps aux | grep -i harness",
-                "details": "If no harness process is found, the service is down. If found, compare the listening port against the configured URL."
+                "label": "Replay the failing eval in production to confirm the error is deterministic",
+                "details": "Re-run the image-generation-stream check and observe whether SESSION_OPEN_FAILED recurs consistently, ruling out a transient blip."
               },
               {
-                "label": "Inspect harness deployment logs for startup errors or version mismatches",
-                "details": "Review the harness service logs (container logs, systemd journal, or equivalent) around 2026-06-14T03:41:30Z for crash, failed bind, or missing route registration messages."
+                "label": "Compare the session-open endpoint path expected by the eval harness against the routes registered by the currently deployed agent runtime version",
+                "details": "A mismatch here would confirm a version skew root cause."
               },
               {
-                "label": "Re-run the image-generation-stream eval check after confirming harness reachability",
-                "details": "Once the harness is confirmed reachable, trigger the check again and verify that frameTypes includes 'generation_completed' and imageUrlPresent equals true."
+                "label": "Inspect environment variable values for LOCAL_HARNESS_URL and SWARM_BASE_URL in the production deployment configuration",
+                "details": "Verify the values match the actual host, port, and path of the running harness."
               }
             ],
             "affectedAreas": [
               {
                 "label": "Agent Runtime Harness — Session Open Endpoint",
-                "reason": "The 404 is returned at session open time, implicating the harness's session initialization route as either absent, misrouted, or not deployed."
-              },
-              {
-                "label": "Eval Runner Harness URL Configuration (LOCAL_HARNESS_URL / SWARM_BASE_URL)",
-                "reason": "The error message explicitly names these two environment variables as the configuration surface to verify; a wrong value here would cause every eval targeting the harness to fail with 404."
+                "reason": "The 404 is returned at session open time, implicating the harness endpoint responsible for initializing image generation sessions."
               },
               {
                 "label": "Image Generation Stream Router",
-                "reason": "The stream never advances past generation_start, meaning the entire image generation pipeline — progress frames, completion payload, and artifact URL emission — is blocked by the upstream harness failure."
+                "reason": "The stream routing layer emits generation_start but immediately receives SESSION_OPEN_FAILED, meaning no downstream generation pipeline (progress frames, completion, artifact URL) is ever reached."
               },
               {
-                "label": "Production Media Generation Feature Health Signal",
-                "reason": "This check is marked required with a 30-minute staleness window in production; its failure means the media-generation feature has no valid health signal and may be incorrectly reported as degraded or unknown."
+                "label": "Environment Configuration — LOCAL_HARNESS_URL / SWARM_BASE_URL",
+                "reason": "The error message explicitly names these variables as the configuration surface to verify; a misconfigured value would directly cause the 404."
+              },
+              {
+                "label": "Media Generation Feature (image-generation-stream check)",
+                "reason": "This is the required check for the media-generation feature and is currently in a fail state in production, meaning the entire image generation capability is reported as broken."
               }
             ],
             "recommendedNextActions": [
-              "Verify that the agent runtime harness is deployed and running in the production environment; check container/process status and recent deployment history around the check's failure time (2026-06-14T03:41:30Z).",
-              "Confirm LOCAL_HARNESS_URL and SWARM_BASE_URL are set correctly in the eval runner's production configuration and that the URL resolves to the live harness host and correct port.",
-              "If a harness version was recently updated, compare the session-open endpoint path in the new version against the path the eval runner is calling; update the URL or harness version to restore compatibility.",
-              "Check network routing, DNS, and ingress/load-balancer rules between the eval runner and the harness host for any changes made near the failure timestamp.",
-              "After restoring harness reachability, re-run the image-generation-stream check and confirm both 'frameTypes' (containing 'generation_completed') and 'imageUrlPresent: true' appear in the evidence before closing the incident.",
-              "Add an explicit harness liveness/readiness probe as a prerequisite check so that a 404 at session open is surfaced as a harness-down alert rather than silently failing the image generation eval."
+              "Immediately verify the agent runtime harness is running in production and that its session-open endpoint responds to HTTP requests — this is the fastest way to confirm or rule out a process-down scenario.",
+              "Audit the LOCAL_HARNESS_URL and SWARM_BASE_URL values in the production deployment against the actual harness host/port/path to catch any misconfiguration introduced by a recent deploy.",
+              "Check deployment history for the agent runtime harness around 2026-06-14T03:42Z to identify any version change, rollout, or restart that could have caused a route change or process restart.",
+              "If a version mismatch is suspected, align the eval harness client and the agent runtime server to the same API contract version and redeploy.",
+              "Add a dedicated liveness/readiness probe or synthetic health-check eval that hits the harness session-open endpoint directly, so harness unavailability is caught before it surfaces as a stream eval failure.",
+              "Review whether the production environment has any recent network policy or ingress rule changes that could cause 404s from an intermediary rather than the harness itself."
             ],
             "followUpEvals": [
-              "harness-liveness-probe: A dedicated eval that performs a lightweight HTTP GET to the harness health or ping endpoint and asserts a 200 response, running on the same staleness cadence (30 min) as the image generation check.",
-              "session-open-latency: An eval that measures time-to-first-frame after session open and alerts if no frame is received within a configurable threshold, catching slow or partially broken harness deployments before they produce full 404s.",
-              "harness-version-compatibility: An eval that queries the harness version endpoint and asserts the reported version falls within the range supported by the current eval runner, catching incompatible deployments before stream checks run.",
-              "image-generation-progress-frames: An eval that asserts at least one intermediate progress frame (e.g., generation_progress or equivalent) is present between generation_start and generation_completed, catching cases where the stream starts but stalls mid-generation.",
-              "artifact-url-reachability: An eval that, upon receiving imageUrlPresent=true, performs a HEAD request against the artifact URL and asserts a 200 response, confirming the generated image is actually accessible."
+              "Harness liveness eval: a lightweight check that probes LOCAL_HARNESS_URL / SWARM_BASE_URL directly and asserts a non-404 HTTP response, running on a shorter staleAfterMinutes interval than the stream check.",
+              "Session-open isolation eval: an eval that attempts only the session-open step (without full image generation) and asserts a successful session ID is returned, to catch harness routing failures before the full stream eval runs.",
+              "Environment config validation eval: an eval that asserts LOCAL_HARNESS_URL and SWARM_BASE_URL are set, non-empty, and resolve to a reachable host at deploy time.",
+              "Version compatibility eval: an eval that compares the API version advertised by the running harness against the version expected by the eval client, flagging mismatches before stream evals are attempted.",
+              "Regression eval for generation_completed frame presence: once the harness is restored, add an explicit assertion that the frameTypes array contains generation_completed within the warningLatencyMs window."
             ],
             "evidenceDigest": {
               "message": "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.; Missing expected evidence: frameTypes, imageUrlPresent",
-              "latencyMs": 2028,
+              "latencyMs": 2034,
               "evidence": {
                 "frames": [
                   {
@@ -1059,12 +1060,12 @@
       "description": "Marketplace agent catalog and harness bootstrap health.",
       "publicSummary": "Marketplace and bootstrap services are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:25.742Z",
+      "lastCheckedAt": "2026-06-14T03:42:19.395Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1744,
+      "latencyP95Ms": 1506,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1073,8 +1074,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:25.494Z",
-          "latencyMs": 1744,
+          "checkedAt": "2026-06-14T03:42:19.185Z",
+          "latencyMs": 1506,
           "evidence": {
             "count": 13
           }
@@ -1085,12 +1086,12 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:25.742Z",
-          "latencyMs": 248,
+          "checkedAt": "2026-06-14T03:42:19.395Z",
+          "latencyMs": 210,
           "evidence": {
             "reachable": true,
             "url": "https://aura-harness-latest.onrender.com",
-            "latencyMs": 91,
+            "latencyMs": 41,
             "status": 200
           }
         }
@@ -1104,12 +1105,12 @@
       "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
       "publicSummary": "Integrations and billing surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:18.694Z",
+      "lastCheckedAt": "2026-06-14T03:42:12.833Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 455,
+      "latencyP95Ms": 299,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1118,8 +1119,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:17.948Z",
-          "latencyMs": 455,
+          "checkedAt": "2026-06-14T03:42:12.124Z",
+          "latencyMs": 299,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 0
@@ -1131,8 +1132,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:18.262Z",
-          "latencyMs": 314,
+          "checkedAt": "2026-06-14T03:42:12.416Z",
+          "latencyMs": 292,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 4
@@ -1144,8 +1145,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:18.407Z",
-          "latencyMs": 145,
+          "checkedAt": "2026-06-14T03:42:12.559Z",
+          "latencyMs": 143,
           "evidence": {
             "keys": [
               "is_subscribed",
@@ -1162,8 +1163,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:18.694Z",
-          "latencyMs": 286,
+          "checkedAt": "2026-06-14T03:42:12.833Z",
+          "latencyMs": 274,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "keys": [
@@ -1183,12 +1184,12 @@
       "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
       "publicSummary": "Community and feedback data surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:26.987Z",
+      "lastCheckedAt": "2026-06-14T03:42:20.578Z",
       "checksPassed": 5,
       "checksTotal": 5,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 327,
+      "latencyP95Ms": 252,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1197,8 +1198,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:26.287Z",
-          "latencyMs": 327,
+          "checkedAt": "2026-06-14T03:42:19.849Z",
+          "latencyMs": 252,
           "evidence": {
             "count": 50
           }
@@ -1209,8 +1210,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:26.389Z",
-          "latencyMs": 102,
+          "checkedAt": "2026-06-14T03:42:19.950Z",
+          "latencyMs": 101,
           "evidence": {
             "count": 0
           }
@@ -1221,8 +1222,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:26.598Z",
-          "latencyMs": 209,
+          "checkedAt": "2026-06-14T03:42:20.201Z",
+          "latencyMs": 251,
           "evidence": {
             "count": 50
           }
@@ -1233,8 +1234,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:26.860Z",
-          "latencyMs": 262,
+          "checkedAt": "2026-06-14T03:42:20.446Z",
+          "latencyMs": 245,
           "evidence": {
             "count": 49
           }
@@ -1245,8 +1246,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:26.987Z",
-          "latencyMs": 127,
+          "checkedAt": "2026-06-14T03:42:20.578Z",
+          "latencyMs": 132,
           "evidence": {
             "present": true,
             "keys": [
@@ -1312,12 +1313,12 @@
       "description": "Stream reattachment registry and debug run index.",
       "publicSummary": "Stream and debug inspection endpoints are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:25.960Z",
+      "lastCheckedAt": "2026-06-14T03:42:19.597Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 111,
+      "latencyP95Ms": 102,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1326,8 +1327,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:25.854Z",
-          "latencyMs": 111,
+          "checkedAt": "2026-06-14T03:42:19.494Z",
+          "latencyMs": 99,
           "evidence": {
             "count": 0
           }
@@ -1338,8 +1339,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:25.960Z",
-          "latencyMs": 106,
+          "checkedAt": "2026-06-14T03:42:19.597Z",
+          "latencyMs": 102,
           "evidence": {
             "keys": [
               "projects"
@@ -1356,12 +1357,12 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:36.091Z",
+      "lastCheckedAt": "2026-06-14T03:42:28.775Z",
       "checksPassed": 1,
       "checksTotal": 1,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 2,
+      "latencyP95Ms": 1,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1370,8 +1371,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "3/4 eval summary artifacts found",
-          "checkedAt": "2026-06-14T03:41:36.091Z",
-          "latencyMs": 2,
+          "checkedAt": "2026-06-14T03:42:28.775Z",
+          "latencyMs": 1,
           "evidence": {
             "files": [
               {
@@ -1381,19 +1382,19 @@
               {
                 "file": "infra/evals/reports/baselines/smoke-summary.json",
                 "exists": true,
-                "mtime": "2026-06-14T03:39:56.271Z",
+                "mtime": "2026-06-14T03:42:03.698Z",
                 "size": 2796
               },
               {
                 "file": "infra/evals/reports/baselines/chat-core-summary.json",
                 "exists": true,
-                "mtime": "2026-06-14T03:39:56.270Z",
+                "mtime": "2026-06-14T03:42:03.698Z",
                 "size": 11513
               },
               {
                 "file": "infra/evals/reports/baselines/workflow-summary.json",
                 "exists": true,
-                "mtime": "2026-06-14T03:39:56.271Z",
+                "mtime": "2026-06-14T03:42:03.698Z",
                 "size": 2219
               }
             ],
@@ -1411,12 +1412,12 @@
       "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "AURA's public web surfaces are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-14T03:41:36.089Z",
+      "lastCheckedAt": "2026-06-14T03:42:28.774Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1121,
+      "latencyP95Ms": 571,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1425,8 +1426,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:34.770Z",
-          "latencyMs": 44,
+          "checkedAt": "2026-06-14T03:42:28.113Z",
+          "latencyMs": 146,
           "evidence": {
             "schemaVersion": 1,
             "overall": "major_outage",
@@ -1435,7 +1436,7 @@
             "featureCount": 16,
             "totalsFeatures": 16,
             "unknownFeatureCount": 0,
-            "snapshotAgeMinutes": 44,
+            "snapshotAgeMinutes": 45,
             "hasLiveSource": true,
             "hasNonUnknownFeatureData": true,
             "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
@@ -1448,8 +1449,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:34.726Z",
-          "latencyMs": 458,
+          "checkedAt": "2026-06-14T03:42:27.967Z",
+          "latencyMs": 209,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -1462,8 +1463,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:34.968Z",
-          "latencyMs": 197,
+          "checkedAt": "2026-06-14T03:42:28.203Z",
+          "latencyMs": 90,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -1476,8 +1477,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-14T03:41:36.089Z",
-          "latencyMs": 1121,
+          "checkedAt": "2026-06-14T03:42:28.774Z",
+          "latencyMs": 571,
           "evidence": {
             "allRoutesOk": true,
             "routeCount": 8,
@@ -1534,7 +1535,7 @@
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "media-generation:image-generation-stream:28592e10a156",
+      "id": "media-generation:image-generation-stream:3218a267a5f7",
       "featureId": "media-generation",
       "featureLabel": "Media Generation",
       "checkId": "image-generation-stream",
@@ -1542,88 +1543,88 @@
       "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-06-14T03:41:36.267Z",
+      "generatedAt": "2026-06-14T03:42:28.902Z",
       "environment": "production",
-      "source": "desktop-nightly-release",
+      "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "high",
-      "summary": "The image generation stream check failed immediately after `generation_start` because the agent runtime returned a 404, emitting a `SESSION_OPEN_FAILED` error frame before any progress or completion frames could be produced. Both required evidence fields (`frameTypes` and `imageUrlPresent`) are absent, confirming the stream never advanced past session initialization.",
-      "rootCause": "The agent runtime harness is unreachable at the configured endpoint (LOCAL_HARNESS_URL / SWARM_BASE_URL). The HTTP 404 response during session open indicates either the harness process is not running, the deployment is missing or misconfigured, or the harness version deployed does not expose the expected session endpoint path — preventing any image generation work from starting.",
+      "summary": "The image generation stream eval failed immediately after `generation_start` because the agent runtime returned a 404, emitting a `SESSION_OPEN_FAILED` error frame before any progress or completion frames could be produced. Both required evidence fields (`frameTypes` and `imageUrlPresent`) are absent, confirming the stream never advanced past session initialization.",
+      "rootCause": "The agent runtime harness is unreachable at the configured endpoint (LOCAL_HARNESS_URL / SWARM_BASE_URL). The 404 response during session open indicates either the harness process is not running, the endpoint path has changed due to a version mismatch between the eval harness and the deployed runtime, or the environment configuration points to a stale or incorrect URL. The stream terminates in under 2.1 seconds (latencyMs: 2034) with no image frames, which is consistent with an immediate connection-level rejection rather than a processing failure.",
       "proof": [
-        "Frame 2 (generation_error) carries code SESSION_OPEN_FAILED with message: 'agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version.'",
-        "The stream contains only 3 frames: generation_start, generation_error, and an empty message frame — no progress frames, no generation_completed frame, and no artifact URL were ever emitted.",
-        "Required evidence fields 'frameTypes' and 'imageUrlPresent' are both missing from the eval evidence object, confirming zero successful stream output.",
-        "Check latency was 2028 ms (well under the 180 000 ms warning threshold), consistent with an immediate connection failure rather than a timeout or slow generation.",
-        "The check ran in the 'production' environment at 2026-06-14T03:41:30Z and is marked required with a 30-minute staleness window, meaning this failure directly blocks the feature's production health signal."
+        "Frame 1 (generation_start) confirms the stream was initiated with mode=image, meaning the eval harness itself started correctly.",
+        "Frame 2 (generation_error) carries code=SESSION_OPEN_FAILED and an explicit 404 message: 'agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version.'",
+        "Frame 3 is a bare message event with null data and empty raw payload, indicating the stream was closed without any content after the error.",
+        "latencyMs of 2034ms is far below the warningLatencyMs threshold of 180000ms, confirming the failure is an immediate rejection, not a timeout.",
+        "Required evidence fields frameTypes and imageUrlPresent are both missing from the collected evidence, meaning no generation_completed frame and no artifact URL were ever emitted.",
+        "The expectedOutputContract assertion frameTypes contains generation_completed was never satisfied, and imageUrlPresent equals true was never satisfied."
       ],
       "possibleCauses": [
-        "[Most likely] The agent runtime harness process is not running or was never deployed to the target host, causing every request to the session-open endpoint to return 404.",
-        "[Likely] LOCAL_HARNESS_URL or SWARM_BASE_URL is misconfigured (wrong host, port, or base path), pointing the eval harness at a server that does not host the agent runtime.",
-        "[Likely] A recent harness deployment changed the session endpoint path or API version, making the previously valid URL return 404 (version incompatibility as stated in the error message).",
-        "[Possible] A network or infrastructure change (DNS update, load-balancer rule, ingress reconfiguration) broke routing to the harness endpoint after the last successful check.",
-        "[Less likely] The harness is running but behind an auth layer or firewall that returns 404 instead of 401/403 for unauthenticated requests from the eval runner."
+        "[Most likely] The agent runtime harness process is not running or has crashed in the production environment, causing all session-open requests to return 404.",
+        "[Likely] The LOCAL_HARNESS_URL or SWARM_BASE_URL environment variable is misconfigured — pointing to a wrong host, port, or path — so the 404 is returned by a reverse proxy or load balancer that has no matching route.",
+        "[Likely] A recent deployment changed the harness API route structure (version mismatch), making the previously valid session-open endpoint path return 404 on the new version.",
+        "[Possible] A network policy, firewall rule, or service mesh configuration change in the production environment is blocking or misrouting traffic to the harness endpoint, resulting in a 404 from an intermediary.",
+        "[Less likely] The harness container or pod was evicted or scaled to zero in production and has not been rescheduled, making the endpoint transiently unavailable."
       ],
       "reproductionSteps": [
         {
-          "label": "Confirm the harness endpoint URL in use",
-          "details": "Inspect the eval runner's environment for LOCAL_HARNESS_URL and SWARM_BASE_URL to determine the exact URL being called during session open."
+          "label": "Confirm the harness endpoint is reachable by issuing a direct HTTP probe to the configured LOCAL_HARNESS_URL or SWARM_BASE_URL",
+          "command": "curl -v $LOCAL_HARNESS_URL",
+          "details": "A 404 response here confirms the harness is up but the route is wrong; a connection refused or timeout confirms the process is down."
         },
         {
-          "label": "Issue a direct HTTP probe to the session-open endpoint",
-          "command": "curl -v \"${LOCAL_HARNESS_URL:-$SWARM_BASE_URL}/\" 2>&1 | head -40",
-          "details": "Replace the path with the actual session-open path used by the eval harness. A 404 response here confirms the endpoint is absent or misrouted."
+          "label": "Check the harness process or container status in the production environment",
+          "details": "Inspect the running processes, pods, or containers hosting the agent runtime harness to verify it is alive and healthy."
         },
         {
-          "label": "Check whether the harness process is running on the target host",
-          "command": "ps aux | grep -i harness",
-          "details": "If no harness process is found, the service is down. If found, compare the listening port against the configured URL."
+          "label": "Replay the failing eval in production to confirm the error is deterministic",
+          "details": "Re-run the image-generation-stream check and observe whether SESSION_OPEN_FAILED recurs consistently, ruling out a transient blip."
         },
         {
-          "label": "Inspect harness deployment logs for startup errors or version mismatches",
-          "details": "Review the harness service logs (container logs, systemd journal, or equivalent) around 2026-06-14T03:41:30Z for crash, failed bind, or missing route registration messages."
+          "label": "Compare the session-open endpoint path expected by the eval harness against the routes registered by the currently deployed agent runtime version",
+          "details": "A mismatch here would confirm a version skew root cause."
         },
         {
-          "label": "Re-run the image-generation-stream eval check after confirming harness reachability",
-          "details": "Once the harness is confirmed reachable, trigger the check again and verify that frameTypes includes 'generation_completed' and imageUrlPresent equals true."
+          "label": "Inspect environment variable values for LOCAL_HARNESS_URL and SWARM_BASE_URL in the production deployment configuration",
+          "details": "Verify the values match the actual host, port, and path of the running harness."
         }
       ],
       "affectedAreas": [
         {
           "label": "Agent Runtime Harness — Session Open Endpoint",
-          "reason": "The 404 is returned at session open time, implicating the harness's session initialization route as either absent, misrouted, or not deployed."
-        },
-        {
-          "label": "Eval Runner Harness URL Configuration (LOCAL_HARNESS_URL / SWARM_BASE_URL)",
-          "reason": "The error message explicitly names these two environment variables as the configuration surface to verify; a wrong value here would cause every eval targeting the harness to fail with 404."
+          "reason": "The 404 is returned at session open time, implicating the harness endpoint responsible for initializing image generation sessions."
         },
         {
           "label": "Image Generation Stream Router",
-          "reason": "The stream never advances past generation_start, meaning the entire image generation pipeline — progress frames, completion payload, and artifact URL emission — is blocked by the upstream harness failure."
+          "reason": "The stream routing layer emits generation_start but immediately receives SESSION_OPEN_FAILED, meaning no downstream generation pipeline (progress frames, completion, artifact URL) is ever reached."
         },
         {
-          "label": "Production Media Generation Feature Health Signal",
-          "reason": "This check is marked required with a 30-minute staleness window in production; its failure means the media-generation feature has no valid health signal and may be incorrectly reported as degraded or unknown."
+          "label": "Environment Configuration — LOCAL_HARNESS_URL / SWARM_BASE_URL",
+          "reason": "The error message explicitly names these variables as the configuration surface to verify; a misconfigured value would directly cause the 404."
+        },
+        {
+          "label": "Media Generation Feature (image-generation-stream check)",
+          "reason": "This is the required check for the media-generation feature and is currently in a fail state in production, meaning the entire image generation capability is reported as broken."
         }
       ],
       "recommendedNextActions": [
-        "Verify that the agent runtime harness is deployed and running in the production environment; check container/process status and recent deployment history around the check's failure time (2026-06-14T03:41:30Z).",
-        "Confirm LOCAL_HARNESS_URL and SWARM_BASE_URL are set correctly in the eval runner's production configuration and that the URL resolves to the live harness host and correct port.",
-        "If a harness version was recently updated, compare the session-open endpoint path in the new version against the path the eval runner is calling; update the URL or harness version to restore compatibility.",
-        "Check network routing, DNS, and ingress/load-balancer rules between the eval runner and the harness host for any changes made near the failure timestamp.",
-        "After restoring harness reachability, re-run the image-generation-stream check and confirm both 'frameTypes' (containing 'generation_completed') and 'imageUrlPresent: true' appear in the evidence before closing the incident.",
-        "Add an explicit harness liveness/readiness probe as a prerequisite check so that a 404 at session open is surfaced as a harness-down alert rather than silently failing the image generation eval."
+        "Immediately verify the agent runtime harness is running in production and that its session-open endpoint responds to HTTP requests — this is the fastest way to confirm or rule out a process-down scenario.",
+        "Audit the LOCAL_HARNESS_URL and SWARM_BASE_URL values in the production deployment against the actual harness host/port/path to catch any misconfiguration introduced by a recent deploy.",
+        "Check deployment history for the agent runtime harness around 2026-06-14T03:42Z to identify any version change, rollout, or restart that could have caused a route change or process restart.",
+        "If a version mismatch is suspected, align the eval harness client and the agent runtime server to the same API contract version and redeploy.",
+        "Add a dedicated liveness/readiness probe or synthetic health-check eval that hits the harness session-open endpoint directly, so harness unavailability is caught before it surfaces as a stream eval failure.",
+        "Review whether the production environment has any recent network policy or ingress rule changes that could cause 404s from an intermediary rather than the harness itself."
       ],
       "followUpEvals": [
-        "harness-liveness-probe: A dedicated eval that performs a lightweight HTTP GET to the harness health or ping endpoint and asserts a 200 response, running on the same staleness cadence (30 min) as the image generation check.",
-        "session-open-latency: An eval that measures time-to-first-frame after session open and alerts if no frame is received within a configurable threshold, catching slow or partially broken harness deployments before they produce full 404s.",
-        "harness-version-compatibility: An eval that queries the harness version endpoint and asserts the reported version falls within the range supported by the current eval runner, catching incompatible deployments before stream checks run.",
-        "image-generation-progress-frames: An eval that asserts at least one intermediate progress frame (e.g., generation_progress or equivalent) is present between generation_start and generation_completed, catching cases where the stream starts but stalls mid-generation.",
-        "artifact-url-reachability: An eval that, upon receiving imageUrlPresent=true, performs a HEAD request against the artifact URL and asserts a 200 response, confirming the generated image is actually accessible."
+        "Harness liveness eval: a lightweight check that probes LOCAL_HARNESS_URL / SWARM_BASE_URL directly and asserts a non-404 HTTP response, running on a shorter staleAfterMinutes interval than the stream check.",
+        "Session-open isolation eval: an eval that attempts only the session-open step (without full image generation) and asserts a successful session ID is returned, to catch harness routing failures before the full stream eval runs.",
+        "Environment config validation eval: an eval that asserts LOCAL_HARNESS_URL and SWARM_BASE_URL are set, non-empty, and resolve to a reachable host at deploy time.",
+        "Version compatibility eval: an eval that compares the API version advertised by the running harness against the version expected by the eval client, flagging mismatches before stream evals are attempted.",
+        "Regression eval for generation_completed frame presence: once the harness is restored, add an explicit assertion that the frameTypes array contains generation_completed within the warningLatencyMs window."
       ],
       "evidenceDigest": {
         "message": "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the harness deployment and the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.; Missing expected evidence: frameTypes, imageUrlPresent",
-        "latencyMs": 2028,
+        "latencyMs": 2034,
         "evidence": {
           "frames": [
             {
@@ -1653,7 +1654,7 @@
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:remote-agent-create:ad9cccb7457e",
+      "id": "remote-agents:remote-agent-create:e83365bd42ca",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-create",
@@ -1661,99 +1662,99 @@
       "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-06-14T03:41:36.267Z",
+      "generatedAt": "2026-06-14T03:42:28.902Z",
       "environment": "production",
-      "source": "desktop-nightly-release",
+      "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "high",
-      "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) are failing in production with identical HTTP 409 conflict errors indicating the swarm agent quota of 100 has been reached. The AURA observability eval cannot provision a new agent to validate VM readiness or runtime state because the upstream swarm layer is rejecting all creation requests.",
-      "rootCause": "The production swarm backend has reached its hard agent quota limit of 100. Every POST /api/agents request is rejected with a 409 conflict response containing the message \"agent quota exceeded: limit is 100\". Because the eval check depends on successfully creating a new agent to assert vmIdPresent and remoteState, the entire remote-agents feature check tree fails before any evidence can be collected. The quota exhaustion is the singular upstream blocker for all three sibling checks.",
+      "summary": "All three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) are failing in production with identical HTTP 409 conflict errors indicating the swarm agent quota of 100 has been reached. The AURA observability eval cannot provision a new agent to validate VM readiness or runtime state because the upstream swarm layer is rejecting all new agent creation requests.",
+      "rootCause": "The production swarm backend has hit its hard agent quota limit of 100. Every POST /api/agents request is rejected with a 409 conflict response containing the message \"agent quota exceeded: limit is 100\". Because the AURA eval check depends on successfully creating a new agent to assert vmIdPresent and remoteState, the entire remote-agents feature check tree is blocked at the creation step. No evidence points to a transient network or auth issue; the error is deterministic and quota-specific.",
       "proof": [
-        "HTTP 409 response body on POST /api/agents: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-        "All three sibling checks (remote-agent-create, remote-agent-state, remote-agent-runtime) carry the identical 409 error message, confirming the failure is not isolated to one check path but is systemic at the swarm creation layer.",
-        "evidence:{} on all three checks confirms zero evidence was collected — no agentId, no vmIdPresent, no remoteState — because execution never progressed past the creation step.",
-        "Latency for all three failing checks is low (1148–1347 ms), consistent with an immediate rejection at the API gateway or swarm controller rather than a timeout or downstream VM failure.",
-        "The expected output contract requires vmIdPresent=true and remoteState in [running, idle, ready], neither of which can be asserted when agent creation is blocked at the quota boundary.",
-        "The check staleAfterMinutes is 20 and the run was at 2026-06-14T03:41:36Z, meaning this is a fresh failure, not a stale result — the quota was already exhausted at the time of the eval run."
+        "POST /api/agents returned HTTP 409 with body: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+        "All three sibling checks (remote-agent-create, remote-agent-state, remote-agent-runtime) carry the identical 409 error message, confirming the failure is not isolated to one check path but is systemic across the entire remote-agents feature.",
+        "The inner swarm error code is 'conflict' with message 'conflict: agent quota exceeded: limit is 100', indicating a hard quota ceiling enforced by the swarm layer, not a transient error.",
+        "Eval evidence object is empty ({}) for all three checks, confirming no agent was created and no downstream assertions (vmIdPresent, remoteState) could be evaluated.",
+        "Latency for all three failing calls is low (1426 ms, 1261 ms, 1129 ms), consistent with an immediate quota-rejection response rather than a timeout or infrastructure hang.",
+        "The check ran at 2026-06-14T03:42:20Z in the production environment, ruling out a staging/dev misconfiguration."
       ],
       "possibleCauses": [
-        "[Highest confidence] Swarm agent quota (hard limit: 100) is fully consumed in the production environment by existing live agents, leaving no capacity for new agent provisioning. This is directly stated in the error payload.",
-        "[Medium confidence] AURA eval agents created by previous check runs were not cleaned up after each run, causing quota slots to accumulate over time until the limit was reached.",
-        "[Medium confidence] A separate workload or tenant in the same swarm namespace consumed quota slots independently of the AURA eval runner, exhausting capacity without the eval system's awareness.",
-        "[Lower confidence] The quota limit of 100 is misconfigured or too low for the current production scale, and legitimate user-created agents alone are sufficient to exhaust it under normal load.",
-        "[Lower confidence] A swarm controller bug is failing to release quota slots when agents are deleted or terminated, causing phantom quota consumption that does not reflect actual running agents."
+        "[MOST LIKELY] The production swarm environment has accumulated 100 live agents and the quota ceiling has been reached. This could be caused by AURA eval agents from previous runs not being cleaned up (leaked agents), leaving no room for new provisioning.",
+        "[LIKELY] The AURA eval check does not perform teardown of the agent it creates after each run, causing agents to accumulate over time until the quota is exhausted.",
+        "[POSSIBLE] A separate workload or tenant in the same swarm namespace/org is consuming agent slots, leaving none available for the observability eval account.",
+        "[POSSIBLE] The quota limit of 100 is a per-org or per-environment ceiling that has not been raised to accommodate growth in agent usage, and legitimate production agents have filled the quota.",
+        "[LESS LIKELY] A swarm-side bug is incorrectly counting active agents or failing to release slots for terminated agents, causing phantom quota consumption."
       ],
       "reproductionSteps": [
         {
-          "label": "Attempt to create a new remote agent via the agents API and observe the 409 response",
-          "command": "curl -X POST /api/agents -H 'Content-Type: application/json' -d '{...agent payload...}'"
+          "label": "Confirm current agent count against quota",
+          "command": "GET /api/agents?limit=100 (or equivalent list endpoint) and count total active agents in the production org to verify the 100-agent ceiling is reached.",
+          "details": "If the response returns 100 agents or the API returns a count equal to the quota, the quota exhaustion is confirmed."
         },
         {
-          "label": "Query the current agent count in the production swarm namespace to confirm quota saturation",
-          "details": "Use the swarm management API or admin console to list all active agents and compare the count against the reported limit of 100."
+          "label": "Check for leaked AURA eval agents",
+          "details": "Filter the agent list for agents created by the AURA observability eval identity (e.g., by name prefix, label, or creator ID). Determine if prior eval runs left agents running without cleanup."
         },
         {
-          "label": "Check for AURA eval-created agents that were not cleaned up from prior runs",
-          "details": "Filter the agent list for agents created by the AURA observability runner identity (e.g., by label, tag, or creator metadata) and count how many are still alive."
+          "label": "Attempt a manual POST /api/agents in production",
+          "command": "POST /api/agents with a minimal valid payload using the same credentials as the AURA eval runner",
+          "details": "Expect a 409 conflict response with 'agent quota exceeded: limit is 100' to reproduce the failure deterministically."
         },
         {
-          "label": "Attempt to delete one or more existing agents and then retry POST /api/agents to confirm quota is the sole blocker",
-          "details": "If a retry succeeds after freeing a slot, quota exhaustion is confirmed as the root cause with no secondary blockers."
+          "label": "Inspect swarm quota configuration",
+          "details": "Check the swarm backend configuration or admin panel for the per-org agent quota setting to confirm the limit is 100 and whether it is adjustable."
         },
         {
-          "label": "Re-run the AURA remote-agent-create eval after quota is freed to verify all three sibling checks recover",
-          "details": "Confirm that evidence fields (agentId, vmIdPresent, remoteState) are populated and assertions pass once creation succeeds."
+          "label": "Review agent lifecycle and teardown logic in the eval check",
+          "details": "Inspect the remote-agent-create check implementation to determine whether it deletes or terminates the agent it creates after each eval run completes."
         }
       ],
       "affectedAreas": [
         {
-          "label": "POST /api/agents — Remote Agent Creation Endpoint",
-          "reason": "This is the direct point of failure. All three eval checks call this endpoint and receive a 409 quota-exceeded rejection, preventing any downstream evidence collection."
+          "label": "Remote Agents – POST /api/agents creation endpoint",
+          "reason": "This is the direct point of failure; all three checks fail at the agent creation POST before any downstream state can be evaluated."
         },
         {
-          "label": "Swarm Agent Controller — Quota Enforcement Layer",
-          "reason": "The inner error payload originates from the swarm layer: 'conflict: agent quota exceeded: limit is 100'. The quota gate is enforced here before any VM provisioning occurs."
+          "label": "Swarm backend – agent quota enforcement layer",
+          "reason": "The inner error originates from the swarm layer enforcing a hard limit of 100 agents. The quota gate is blocking all new agent provisioning."
         },
         {
-          "label": "AURA Eval Runner — Remote Agents Feature Check Tree",
-          "reason": "All three checks in the remote-agents feature (remote-agent-create, remote-agent-state, remote-agent-runtime) are blocked. The entire feature is dark with zero evidence collected, meaning the eval runner has no visibility into remote agent health."
+          "label": "AURA eval check – remote-agent-create teardown/cleanup logic",
+          "reason": "If the eval check does not delete agents it creates, it is the likely source of quota leakage over repeated runs."
         },
         {
-          "label": "AURA Eval Agent Lifecycle / Cleanup Logic",
-          "reason": "If eval-created agents are not being deleted after each check run, they may be accumulating and consuming quota slots, implicating the teardown path of the eval runner."
+          "label": "Remote Agents feature – remote-agent-state and remote-agent-runtime sibling checks",
+          "reason": "Both sibling checks are co-failing with the identical error, meaning the entire remote-agents observability surface is dark and no VM readiness or runtime state can be asserted."
         },
         {
-          "label": "Production Swarm Namespace — Agent Inventory",
-          "reason": "The quota is enforced at the namespace or environment level. The production swarm namespace is the resource boundary that is saturated."
+          "label": "Expected output contract – vmIdPresent and remoteState assertions",
+          "reason": "Because agent creation fails, the required evidence fields (orgId, agentId, vmIdPresent, remoteState) are never populated, making all contract assertions unevaluable."
         }
       ],
       "recommendedNextActions": [
-        "Immediately audit the production swarm namespace to list all 100 (or more) agents currently consuming quota slots — identify which are stale, orphaned, or owned by the AURA eval runner.",
-        "Delete or terminate any orphaned or AURA-eval-owned agents that were not cleaned up from prior runs to free quota capacity and restore agent creation ability.",
-        "Verify the AURA eval runner has a guaranteed teardown/cleanup step that deletes eval-created agents after each check run completes, regardless of check success or failure.",
-        "Investigate whether the swarm quota release mechanism correctly frees slots upon agent deletion — if phantom quota consumption is occurring, escalate to the swarm platform team.",
-        "Consider raising the swarm agent quota limit in production if 100 is insufficient for the current legitimate workload, coordinating with the swarm platform team.",
-        "Add a pre-flight check to the AURA eval runner that verifies available quota headroom before attempting agent creation, and surface a distinct 'quota exhausted' status rather than a generic fail.",
-        "Alert on swarm agent quota utilization (e.g., page at 80% consumption) so engineers can intervene before the limit is fully reached and evals begin failing."
+        "Immediately audit the production org's active agent list to identify and terminate any leaked or stale agents created by AURA eval runs, freeing quota slots.",
+        "Verify and enforce that the remote-agent-create eval check performs agent teardown (DELETE /api/agents/{agentId}) in a finally/cleanup block after each run, regardless of success or failure.",
+        "If legitimate production agents are consuming the quota, request a quota increase from the swarm platform team or isolate the AURA eval runner into a dedicated org/namespace with its own quota.",
+        "Add a pre-flight check to the eval runner that asserts available agent quota (quota_used < quota_limit) before attempting agent creation, and surface a distinct 'quota exhausted' warning status rather than a generic fail.",
+        "Investigate whether the swarm backend correctly releases quota slots when agents are terminated or expire, to rule out phantom quota consumption from a swarm-side accounting bug.",
+        "Set up a quota utilization alert (e.g., warn at 80% of limit, critical at 95%) so engineers are notified before the ceiling is reached and evals begin failing."
       ],
       "followUpEvals": [
-        "Add a dedicated eval check that monitors current swarm agent count vs. quota limit and warns at a configurable threshold (e.g., 80%) before exhaustion causes creation failures.",
-        "Add an eval that verifies AURA-eval-owned agents are cleaned up within a defined TTL after each check run, catching teardown regressions before they accumulate into quota exhaustion.",
-        "Add a quota headroom pre-flight eval that runs before remote-agent-create and emits a distinct 'quota-insufficient' status, separating quota failures from other creation failures.",
-        "Add an eval that periodically lists all agents in the production swarm namespace and flags any agents older than a defined age threshold (e.g., 30 minutes) that match the eval runner's ownership label.",
-        "Add a post-creation cleanup verification eval that confirms an agent created by the eval runner is successfully deleted after the check run, asserting the teardown path is exercised end-to-end."
+        "Add an eval check 'remote-agent-quota-headroom' that calls the agent list/quota API and asserts that used slots are below a safe threshold (e.g., < 90 of 100), running on a frequent schedule to catch quota exhaustion before it blocks creation checks.",
+        "Add an eval check 'remote-agent-cleanup-verification' that verifies agents created by prior eval runs are no longer present after a defined TTL, catching teardown regressions.",
+        "Add a post-run teardown assertion to remote-agent-create that confirms the agent created during the eval was successfully deleted, failing the check if cleanup did not occur.",
+        "Add a 'remote-agent-quota-recovery' eval that, after a quota-exhaustion event is detected, attempts to list and delete stale eval agents and then retries creation, to distinguish a recoverable leak from a hard quota ceiling breach."
       ],
       "evidenceDigest": {
         "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-        "latencyMs": 1347,
+        "latencyMs": 1426,
         "evidence": {}
       }
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:remote-agent-state:69335158fe7e",
+      "id": "remote-agents:remote-agent-state:562d6e5bc46d",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-state",
@@ -1761,189 +1762,190 @@
       "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-06-14T03:41:36.267Z",
+      "generatedAt": "2026-06-14T03:42:28.902Z",
       "environment": "production",
-      "source": "desktop-nightly-release",
+      "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "high",
-      "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed simultaneously in production at 2026-06-14T03:41Z with identical HTTP 409 conflict errors indicating the swarm agent quota of 100 has been reached. Because agent creation is a prerequisite for state polling and runtime readiness, no check in the remote-agents feature could produce the required evidence (orgId, agentId, readyState, state).",
-      "rootCause": "The swarm backend rejected POST /api/agents with a 409 conflict error whose inner message explicitly states \"agent quota exceeded: limit is 100\". The observability eval environment shares (or is subject to) the same per-org or global swarm agent quota as production workloads. The quota is exhausted, so no new agent can be provisioned, causing every downstream check that depends on a freshly created agent to fail with no evidence collected.",
+      "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed simultaneously in production at 2026-06-14T03:42Z with identical HTTP 409 conflict errors. The swarm backend rejected every POST /api/agents request with \"agent quota exceeded: limit is 100\", meaning the observability eval could not provision a test agent and therefore produced no evidence payload at all.",
+      "rootCause": "The swarm backend has reached its hard agent quota limit of 100 for the target organization or environment. Every attempt to create a new agent via POST /api/agents returns HTTP 409 with the nested error \"conflict: agent quota exceeded: limit is 100\". Because the AURA eval check depends on successfully creating a fresh agent before it can poll state or verify runtime readiness, the quota exhaustion causes a total cascade failure across all three sibling checks. No evidence fields (orgId, agentId, readyState, state) were populated, confirming the failure occurred at agent creation before any lifecycle state could be observed.",
       "proof": [
-        "POST /api/agents returned HTTP 409 on all three checks: remote-agent-create (latency 1347ms, endedAt 03:41:28.334Z), remote-agent-state (latency 1148ms, endedAt 03:41:29.482Z), and remote-agent-runtime (latency 1239ms, endedAt 03:41:30.721Z).",
-        "Inner swarm error message is unambiguous: 'conflict: agent quota exceeded: limit is 100', confirming the quota ceiling has been reached.",
-        "All three checks carry identical error payloads ({\"error\":\"swarm agent already exists\", \"code\":\"conflict\", \"details\":null}), ruling out a transient or isolated failure and pointing to a shared quota constraint.",
-        "evidence:{} on every check confirms zero required contract fields (orgId, agentId, readyState, state) were collected, consistent with creation failing before any state could be observed.",
-        "Failure window spans at least 2.387 seconds (03:41:28.334Z – 03:41:30.721Z) across sequential checks, indicating the quota was already exhausted at the start of the eval run, not hit mid-run."
+        "All three checks (remote-agent-create, remote-agent-state, remote-agent-runtime) returned HTTP 409 with identical error body: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+        "The nested swarm error explicitly states 'agent quota exceeded: limit is 100', indicating the swarm layer enforces a hard cap of 100 agents.",
+        "All three checks have empty evidence objects ({}) — none of the required contract fields (orgId, agentId, readyState, state) were populated, confirming failure at the creation step before any state polling could occur.",
+        "Failure timestamps are tightly clustered (03:42:22Z–03:42:24Z) with low latencies (1129–1426 ms), consistent with fast rejection at the quota-enforcement layer rather than a timeout or network issue.",
+        "The outer error message 'swarm agent already exists' alongside 'quota exceeded' suggests the swarm may also be tracking a leaked or un-cleaned agent from a prior eval run that was never deleted, compounding the quota pressure."
       ],
       "possibleCauses": [
-        "[Most likely] The swarm agent quota (limit=100) is exhausted in the target org or environment because previously provisioned eval agents were not cleaned up after prior runs, accumulating until the ceiling was hit.",
-        "[Likely] A prior eval run or automated process created agents but crashed or was interrupted before executing teardown/delete logic, leaving orphaned agents that count against the quota.",
-        "[Possible] The observability eval uses the same org/quota namespace as production or staging workloads, and organic user growth in agent count has consumed the remaining quota headroom.",
-        "[Less likely] The quota limit of 100 is a hard system-wide ceiling that has not been raised to accommodate the current scale of production usage plus eval overhead.",
-        "[Less likely] A duplicate-creation guard in the swarm backend is misidentifying the eval agent as an already-existing agent ('swarm agent already exists') due to a naming/ID collision, triggering the quota error as a secondary effect."
+        "[MOST LIKELY] The swarm environment used by AURA evals has accumulated 100 live agents and hit the hard quota cap — likely due to prior eval runs that created agents but did not successfully delete them (leaked agents), exhausting the available slots.",
+        "[LIKELY] The AURA eval teardown/cleanup step for POST /api/agents is failing silently or not being reached on error paths, causing each failed or partial eval run to leave a residual agent behind, gradually consuming quota.",
+        "[POSSIBLE] The quota limit of 100 is shared between AURA observability eval agents and real user-provisioned agents in the same environment/org, and organic user growth has consumed the remaining capacity.",
+        "[POSSIBLE] A recent deployment or configuration change lowered the quota ceiling or changed the org/environment scoping of the quota, causing previously-sufficient headroom to disappear.",
+        "[LESS LIKELY] The swarm backend is misreporting quota exhaustion due to a counter bug (e.g., agents that were deleted are not being decremented from the quota counter)."
       ],
       "reproductionSteps": [
         {
-          "label": "Query current swarm agent count for the affected org",
-          "command": "GET /api/agents?limit=100 (inspect total count in response against quota limit of 100)",
-          "details": "Confirm whether the org is at or near the 100-agent ceiling."
+          "label": "Attempt to create a new remote agent via the agents API and observe the 409 response",
+          "command": "curl -X POST /api/agents -H 'Content-Type: application/json' -d '{...agent payload...}'",
+          "details": "Expect HTTP 409 with body containing 'agent quota exceeded: limit is 100' if quota is still exhausted."
         },
         {
-          "label": "Attempt to create a new agent directly and observe the 409",
-          "command": "POST /api/agents {\"name\": \"aura-eval-probe\"}",
-          "details": "Reproduce the exact 409 conflict response seen in the eval: {\"error\":\"swarm agent already exists\",\"code\":\"conflict\"}"
+          "label": "Query the current agent count for the affected org/environment against the swarm backend",
+          "details": "Retrieve the list of all active agents to confirm the count is at or near 100 and identify any agents that appear to be stale or orphaned eval artifacts."
         },
         {
-          "label": "List all agents and identify orphaned eval agents",
-          "details": "Filter the agent list for agents created by the AURA observability eval (e.g., by name prefix or tag) that were not deleted after previous runs."
+          "label": "Check for orphaned AURA eval agents by filtering agent list for agents created by the observability eval service",
+          "details": "Look for agents with names, tags, or metadata matching the AURA eval identity that were never deleted — these are likely leaked from prior eval runs."
         },
         {
-          "label": "Attempt to delete one orphaned eval agent and retry creation",
-          "details": "Verify that freeing one quota slot allows POST /api/agents to succeed with HTTP 201, confirming quota exhaustion as the root cause."
+          "label": "Attempt to delete one or more stale/orphaned agents and then retry POST /api/agents",
+          "details": "If the retry succeeds after freeing a slot, this confirms quota exhaustion as the root cause rather than a swarm counter bug."
         },
         {
-          "label": "Check eval teardown logic for agent deletion",
-          "details": "Review the eval runner's cleanup phase to confirm whether DELETE /api/agents/{agentId} is called after each run and whether it is resilient to prior failures."
+          "label": "Review eval run history around 2026-06-14T03:42Z for prior runs that may have created agents without completing teardown",
+          "details": "Correlate eval run IDs with agent creation events in the swarm audit log to identify which runs did not clean up."
         }
       ],
       "affectedAreas": [
         {
-          "label": "Remote Agents – Agent Creation API (POST /api/agents)",
-          "reason": "The creation endpoint is the direct source of the 409 response; all downstream checks depend on it succeeding."
+          "label": "POST /api/agents — Remote Agent Creation Endpoint",
+          "reason": "This is the direct point of failure; all three checks call this endpoint and receive HTTP 409 quota rejection."
         },
         {
-          "label": "Swarm Backend – Agent Quota Enforcement",
-          "reason": "The inner error originates from the swarm layer enforcing a hard limit of 100 agents, which is now exhausted."
+          "label": "Swarm Agent Quota Enforcement Layer",
+          "reason": "The swarm backend enforces a hard limit of 100 agents and is returning the quota-exceeded conflict error, blocking all new agent provisioning."
         },
         {
-          "label": "AURA Eval Runner – Remote Agent Lifecycle (Create/Teardown)",
-          "reason": "The eval runner is responsible for provisioning and cleaning up probe agents; failure to delete agents after runs leads to quota accumulation."
+          "label": "AURA Eval Agent Lifecycle / Teardown Logic",
+          "reason": "If eval-created agents are not being deleted after each run, the teardown path is implicated as the source of quota leakage over time."
         },
         {
-          "label": "Remote Agents Feature – All Checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
-          "reason": "All three required checks share the same creation dependency and are simultaneously failing, meaning the entire remote-agents feature is dark in observability."
+          "label": "Remote Agents Feature — All Checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+          "reason": "All three sibling checks share the same creation dependency and failed with identical errors, meaning the entire Remote Agents feature surface is dark in observability."
         },
         {
-          "label": "Expected Output Contract – Remote Agent State Polling",
-          "reason": "No required evidence fields (orgId, agentId, readyState, state) can be populated while agent creation is blocked, so the contract is fully unmet."
+          "label": "Expected Output Contract — Evidence Collection",
+          "reason": "No required evidence fields (orgId, agentId, readyState, state) were populated; the contract is entirely unmet, meaning AURA has zero visibility into remote agent health."
         }
       ],
       "recommendedNextActions": [
-        "Immediately audit the current agent list for the affected org/environment and identify orphaned eval-created agents; delete them to restore quota headroom and unblock the eval.",
-        "Verify and harden the eval runner's teardown phase to ensure DELETE /api/agents/{agentId} is always called after each run, including on failure or timeout paths (e.g., use a finally/defer block).",
-        "Introduce a dedicated, quota-isolated org or namespace for AURA observability eval agents so they cannot be starved by or interfere with production agent quotas.",
-        "Add a pre-flight check to the eval runner that asserts available quota (current count < limit) before attempting agent creation, and emit a distinct 'quota_exhausted' failure status rather than surfacing a raw 409.",
-        "Work with the swarm platform team to determine whether the quota limit of 100 should be raised for the production environment, or whether a separate eval-tier quota can be allocated.",
-        "Instrument the swarm backend to emit a metric or alert when agent count crosses a high-watermark threshold (e.g., 80%) so quota exhaustion is detected proactively before it causes eval or user-facing failures."
+        "Immediately audit the swarm agent list for the affected org/environment to identify and delete stale or orphaned agents created by AURA eval runs — this is the fastest path to restoring eval functionality.",
+        "Inspect the AURA eval teardown/cleanup code path for POST /api/agents to confirm that agent deletion is always executed, including on error and timeout paths (e.g., ensure cleanup runs in a finally block or equivalent).",
+        "Add an agent deletion step as a guaranteed post-condition in the remote-agent eval harness so that every eval run cleans up after itself regardless of success or failure.",
+        "Determine whether the quota is org-scoped or environment-scoped and whether AURA eval agents share quota with production user agents — if so, consider provisioning a dedicated eval org or environment with its own quota.",
+        "Investigate whether the swarm quota counter correctly decrements on agent deletion; if deleted agents are not being counted down, file a bug against the swarm quota accounting subsystem.",
+        "Set up a proactive quota utilization alert (e.g., warn at 80 agents, critical at 95) so engineers are notified before the limit is hit and evals begin failing.",
+        "Consider implementing a pre-check in the eval harness that verifies available quota headroom before attempting agent creation, and surfaces a clearer AURA status (e.g., 'quota-exhausted') rather than a generic fail."
       ],
       "followUpEvals": [
-        "Add a pre-run eval check that calls GET /api/agents, counts active agents, and fails with status 'quota_warning' if count >= 90 (90% of limit), giving early signal before exhaustion.",
-        "Add a post-run eval check that confirms the probe agent was successfully deleted (DELETE /api/agents/{agentId} returns 200/204), catching teardown failures before they accumulate.",
-        "Add a dedicated 'agent quota headroom' eval that asserts (quota_limit - current_agent_count) >= N (e.g., N=5) as a standalone required check for the remote-agents feature.",
-        "Add a sibling check that validates the inner swarm error code separately from the HTTP status, so 'quota_exceeded' vs. 'name_collision' conflicts can be distinguished in future failures.",
-        "Add a time-series eval that tracks agent count over successive runs to detect monotonic growth (a leading indicator of missing teardown logic)."
+        "Add an eval that explicitly checks current swarm agent count against the quota limit and warns when utilization exceeds a configurable threshold (e.g., 80%).",
+        "Add a post-run cleanup verification eval that confirms the agent created during a check was successfully deleted, catching teardown failures before they accumulate.",
+        "Add an eval that lists all agents attributed to the AURA eval identity and alerts if any are older than 2x the staleAfterMinutes window (20 min), indicating a leaked agent.",
+        "Add a quota headroom pre-flight check as a separate named check (e.g., remote-agent-quota-headroom) that runs before remote-agent-create so quota exhaustion is surfaced as its own distinct failure mode rather than masking as a creation failure.",
+        "Add an eval that verifies the swarm quota counter is consistent with the actual agent count by comparing the reported limit-remaining value against a direct list count."
       ],
       "evidenceDigest": {
         "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-        "latencyMs": 1148,
+        "latencyMs": 1261,
         "evidence": {}
       }
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:remote-agent-runtime:b1e248fb94e0",
+      "id": "remote-agents:remote-agent-runtime:930badb59f6d",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-runtime",
-      "title": "Remote Agent Creation Blocked by Swarm Agent Quota Exhaustion (HTTP 409)",
+      "title": "Remote Agent Creation Blocked by Swarm Agent Quota Exhaustion (409 Conflict)",
       "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "degraded",
-      "generatedAt": "2026-06-14T03:41:36.267Z",
+      "generatedAt": "2026-06-14T03:42:28.902Z",
       "environment": "production",
-      "source": "desktop-nightly-release",
+      "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "high",
-      "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed simultaneously at 2026-06-14T03:41Z with identical HTTP 409 responses indicating the swarm agent quota of 100 has been reached. Because agent creation is a prerequisite for every downstream check, no check in the remote-agents feature could progress past the POST /api/agents call.",
-      "rootCause": "The production swarm has reached its hard agent quota limit of 100. Every attempt to POST /api/agents returns a 409 conflict with the message \"agent quota exceeded: limit is 100\", preventing the AURA observability eval from provisioning a test agent. This is most likely caused by leaked or un-reaped eval agents from prior runs accumulating against the quota, or by legitimate production agents consuming the full allocation, leaving no headroom for ephemeral eval agents.",
+      "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed simultaneously at 2026-06-14T03:42Z with identical 409 Conflict responses indicating the swarm agent quota of 100 has been reached. Because agent creation is a prerequisite for all downstream checks, no check in the remote-agents feature could progress past the POST /api/agents call.",
+      "rootCause": "The production swarm has hit its hard agent quota limit of 100. Every attempt to POST /api/agents returns HTTP 409 with the nested error \"conflict: agent quota exceeded: limit is 100\", preventing the AURA observability eval from provisioning a new test agent. This blocks all dependent lifecycle and runtime checks from executing, causing a full feature-level failure cascade.",
       "proof": [
-        "remote-agent-runtime check: POST /api/agents → HTTP 409, error: \"swarm agent already exists: conflict: agent quota exceeded: limit is 100\"",
-        "remote-agent-create check (sibling): identical 409 body, endedAt 2026-06-14T03:41:28.334Z, latencyMs 1347",
-        "remote-agent-state check (sibling): identical 409 body, endedAt 2026-06-14T03:41:29.482Z, latencyMs 1148",
-        "All three checks carry empty evidence objects {}, confirming no agent was ever successfully created — failure is at the very first API call",
-        "Latency for all three checks (1239 ms, 1347 ms, 1148 ms) is well under the warningLatencyMs threshold of 20000 ms, ruling out a timeout or network issue — the server responded immediately with a quota rejection",
-        "The nested error payload contains both an outer AURA-layer message and an inner swarm-layer structured error {code: conflict, message: conflict: agent quota exceeded: limit is 100}, confirming the quota enforcement originates in the swarm backend, not the AURA API layer"
+        "remote-agent-runtime check failed: POST /api/agents → HTTP 409, error: 'swarm agent already exists', inner code: 'conflict', inner message: 'conflict: agent quota exceeded: limit is 100'",
+        "remote-agent-create sibling check failed with identical 409 body at 2026-06-14T03:42:22.004Z (latency 1426 ms)",
+        "remote-agent-state sibling check failed with identical 409 body at 2026-06-14T03:42:23.265Z (latency 1261 ms)",
+        "remote-agent-runtime check failed at 2026-06-14T03:42:24.394Z (latency 1129 ms) — all three checks share the same error, confirming the failure is at the creation layer, not in state or runtime logic",
+        "All evidence fields are empty ({}) across all three checks, confirming no agent was ever successfully provisioned and no downstream evidence could be collected",
+        "The expected output contract requires orgId, agentId, model, provider, and message (containing 'hello from aura') — none of these could be satisfied because agent creation never succeeded"
       ],
       "possibleCauses": [
-        "[Highest confidence] Eval agents from previous AURA observability runs were not deleted after check completion, causing them to accumulate against the 100-agent quota over time until the limit was exhausted.",
-        "[High confidence] A prior eval run crashed or was interrupted before its cleanup/teardown phase, leaving one or more orphaned agents registered in the swarm.",
-        "[Medium confidence] Legitimate production remote agents have grown to consume the full quota of 100, leaving zero capacity for ephemeral eval agents — the eval has no reserved quota slot.",
-        "[Low confidence] A race condition between concurrent eval runs caused multiple agents to be created simultaneously, each believing quota was available, collectively exhausting the limit.",
-        "[Low confidence] The swarm quota limit itself (100) was recently lowered by a configuration change, retroactively putting the current agent count over the new limit."
+        "[Most likely] The production swarm's agent quota (hard limit: 100) is fully consumed by live or leaked agents that were never cleaned up — including potentially stale AURA eval agents from prior runs that were not deleted after check completion.",
+        "[Likely] The AURA eval harness does not perform agent teardown (DELETE) after each check run, causing eval-created agents to accumulate against the quota over time.",
+        "[Possible] A separate workload or automated process provisioned a large number of agents in production around or before 2026-06-14T03:42Z, exhausting the remaining quota headroom.",
+        "[Less likely] The quota limit of 100 is misconfigured or too low for the current production workload, and the limit itself needs to be raised via swarm configuration.",
+        "[Unlikely] A swarm-side bug is incorrectly counting active agents and reporting quota exceeded even when actual live agent count is below 100."
       ],
       "reproductionSteps": [
         {
-          "label": "Query current swarm agent count to confirm quota saturation",
-          "command": "GET /api/agents?limit=100 (inspect total count in response against quota of 100)",
-          "details": "If the returned count equals or exceeds 100, quota exhaustion is confirmed."
+          "label": "Confirm current agent count against quota by listing all agents in the production swarm",
+          "command": "GET /api/agents?limit=100 (or equivalent swarm list endpoint) and count total active agents"
         },
         {
-          "label": "Identify eval/test agents that should have been cleaned up",
-          "details": "Filter the agent list for agents whose names or metadata match the AURA eval naming convention (e.g., created by the observability check runner). Check their createdAt timestamps against past eval run windows."
+          "label": "Attempt to create a new agent in production and observe the 409 response",
+          "command": "POST /api/agents with a valid agent creation payload in the production environment"
         },
         {
-          "label": "Attempt to manually reproduce the 409 by posting a new agent",
-          "command": "POST /api/agents with a minimal valid payload",
-          "details": "If the response is HTTP 409 with 'agent quota exceeded', the quota is still exhausted and cleanup has not occurred."
+          "label": "Check for stale or leaked AURA eval agents by filtering the agent list for agents created by the observability eval service account or with an AURA eval naming convention"
         },
         {
-          "label": "Inspect eval runner teardown logic for agent deletion",
-          "details": "Review the remote-agent check implementation to confirm whether a DELETE /api/agents/{agentId} or equivalent cleanup call is issued after each eval run, including in error and timeout paths."
+          "label": "Inspect agent creation timestamps to determine whether quota was exhausted gradually (leak) or suddenly (burst provisioning)",
+          "details": "Sort agent list by createdAt ascending and look for clustering of creation times near the failure window"
         },
         {
-          "label": "Re-run the failing eval after manually deleting orphaned eval agents",
-          "details": "After freeing quota slots, trigger the remote-agent-runtime check again to confirm it passes end-to-end and produces the expected 'hello from aura' message."
+          "label": "Attempt to delete one or more agents and then retry POST /api/agents to confirm quota enforcement is the sole blocker",
+          "command": "DELETE /api/agents/{agentId}, then POST /api/agents"
         }
       ],
       "affectedAreas": [
         {
-          "label": "POST /api/agents — Remote Agent Creation Endpoint",
-          "reason": "This is the exact endpoint returning HTTP 409 for all three checks. It is the single point of failure blocking all downstream remote-agent eval steps."
+          "label": "POST /api/agents — Agent Creation Endpoint",
+          "reason": "All three checks fail at this single endpoint with 409; it is the entry point for the entire remote-agent provisioning flow and the direct source of the quota conflict error."
         },
         {
-          "label": "Swarm Backend — Agent Quota Enforcement",
-          "reason": "The inner error payload originates from the swarm layer (nested error object with code: conflict), indicating the quota is enforced at the swarm backend, not the AURA API gateway."
+          "label": "Swarm Agent Quota Enforcement Layer",
+          "reason": "The inner error 'conflict: agent quota exceeded: limit is 100' originates from the swarm backend quota guard, which is rejecting all new agent creation requests."
         },
         {
-          "label": "AURA Observability Eval Runner — Remote Agents Feature Checks",
-          "reason": "All three checks in the remote-agents feature (remote-agent-create, remote-agent-state, remote-agent-runtime) are blocked. The eval runner's agent lifecycle management (create → use → delete) is implicated if cleanup is not reliably executing."
+          "label": "AURA Eval Harness — Remote Agents Check Lifecycle",
+          "reason": "The eval harness provisions agents to run checks but may not be cleaning them up (DELETE) after each run, making it a likely contributor to quota exhaustion over repeated eval cycles."
         },
         {
-          "label": "Remote Agents Feature — Full Observability Coverage",
-          "reason": "Because agent creation fails, no evidence is collected for orgId, agentId, model, provider, or message. The expectedOutputContract assertion on message containing 'hello from aura' cannot be evaluated at all, meaning the feature has zero observability signal."
+          "label": "Remote Agents Feature — All Checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+          "reason": "All three checks share a hard dependency on successful agent creation; quota exhaustion causes a total feature-level failure cascade with no partial signal."
+        },
+        {
+          "label": "Production Swarm Agent Pool",
+          "reason": "The production swarm is the environment where the quota is enforced; the limit of 100 is either exhausted or misconfigured relative to actual workload needs."
         }
       ],
       "recommendedNextActions": [
-        "Immediately audit the current swarm agent roster via GET /api/agents and identify any agents created by the AURA eval runner that were not cleaned up; delete them to restore quota headroom.",
-        "Review the remote-agent eval check implementation to ensure agent deletion (teardown) is called unconditionally — including in catch/finally blocks — so orphaned agents cannot accumulate across runs.",
-        "Introduce a dedicated, reserved quota allocation or a separate isolated swarm namespace for AURA observability eval agents so they cannot be crowded out by production agents and vice versa.",
-        "Add a pre-flight quota check step to the remote-agent eval: before attempting POST /api/agents, query the current agent count and emit a warning-level signal if remaining capacity is below a safe threshold (e.g., fewer than 5 slots free).",
-        "Investigate whether the staleAfterMinutes: 20 window combined with the eval runner's retry behavior could cause multiple in-flight agent creation attempts to stack up, and add idempotency handling (e.g., check for an existing eval agent before creating a new one).",
-        "If production agents are legitimately consuming the full quota, work with the swarm team to raise the quota limit or establish a quota tier for observability workloads."
+        "Immediately audit the production swarm agent list to identify and delete stale, leaked, or AURA-eval-owned agents that are consuming quota without serving live traffic.",
+        "Add an explicit agent teardown step (DELETE /api/agents/{agentId}) to the AURA eval harness so that every provisioned test agent is cleaned up after each check run, regardless of check outcome.",
+        "Implement a named or tagged convention for AURA eval agents (e.g., a label or name prefix) so they can be identified and bulk-deleted independently of production agents.",
+        "Evaluate whether the swarm quota limit of 100 is appropriate for the current production workload; if legitimate agent usage is approaching this ceiling, coordinate with the swarm platform team to raise the limit.",
+        "Add a pre-flight check to the eval harness that queries current agent count before attempting creation, and surfaces a distinct 'quota near limit' warning when count exceeds a configurable threshold (e.g., 90%).",
+        "Investigate whether any automated process or deployment event provisioned a large number of agents near 2026-06-14T03:42Z by reviewing swarm audit logs for that time window."
       ],
       "followUpEvals": [
-        "Eval: swarm-agent-quota-headroom — Before each remote-agent check cycle, assert that current agent count is less than (quota limit - N) where N is a configurable safety buffer; fail with a warning before quota is fully exhausted.",
-        "Eval: remote-agent-cleanup-verification — After each remote-agent eval run (pass or fail), assert that the agent created during the run no longer appears in GET /api/agents, confirming teardown succeeded.",
-        "Eval: remote-agent-orphan-detection — Periodically scan all agents for any whose metadata matches the eval runner's naming convention and whose age exceeds 2× the staleAfterMinutes window (40 min); alert if any are found.",
-        "Eval: remote-agent-create-idempotency — Attempt to create an agent with the same identifier twice in sequence and assert the second call either returns the existing agent or a clear conflict that the runner handles gracefully without leaking the first agent.",
-        "Eval: swarm-quota-trend — Track agent count over time and alert if the count has grown monotonically across 3 or more consecutive eval windows, indicating a slow leak before full exhaustion occurs."
+        "Eval: Assert that the production swarm active agent count is below a warning threshold (e.g., 80% of quota) before each remote-agent check run, and emit a distinct 'quota pressure' status rather than failing silently with a 409.",
+        "Eval: After each remote-agent check run, verify that the test agent was successfully deleted (DELETE returns 200/204) to confirm teardown hygiene.",
+        "Eval: Periodically enumerate all agents tagged or named as AURA eval agents and assert that none are older than the staleAfterMinutes window (20 minutes), catching leaked eval agents before they accumulate.",
+        "Eval: Introduce a quota headroom check as a standalone sibling check (e.g., remote-agent-quota-headroom) that runs before create/state/runtime checks and gates them, making quota exhaustion a first-class observable signal.",
+        "Eval: Simulate quota exhaustion in a staging environment by filling the agent pool to the limit and assert that the eval harness surfaces a clear, actionable error distinct from other 409 conflict scenarios."
       ],
       "evidenceDigest": {
         "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-        "latencyMs": 1239,
+        "latencyMs": 1129,
         "evidence": {}
       }
     }
