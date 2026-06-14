@@ -29,6 +29,7 @@ export function buildInvestigationEvidencePacket({
       "Cite evidence item ids when writing proof.",
       "Distinguish eval infrastructure failures from user-facing incidents unless traffic or incident evidence is present.",
       "Prefer the earliest violated contract, endpoint, runtime, or config boundary over the most visible downstream symptom.",
+      "Treat sourceDiscovery.suspectChanges as regression hypotheses, not proof of causality without supporting eval and source evidence.",
     ],
     feature: {
       id: feature?.id ?? check?.featureId ?? null,
@@ -189,6 +190,13 @@ function buildEvidenceItems({
       summary: change,
     });
   }
+  for (const change of sourceDiscovery?.suspectChanges?.slice(0, 8) ?? []) {
+    addEvidenceItem(items, {
+      id: `suspect-change.${change.shortCommit ?? change.commit}`,
+      kind: "suspect-change",
+      summary: change,
+    });
+  }
   if (sourceDiscovery?.rankedPaths?.length > 0) {
     addEvidenceItem(items, {
       id: "source-discovery.ranked-paths",
@@ -197,6 +205,7 @@ function buildEvidenceItems({
         byKind: sourceDiscovery.byKind ?? {},
         rankedPaths: sourceDiscovery.rankedPaths,
         candidateCodePaths: sourceDiscovery.candidateCodePaths ?? [],
+        suspectChanges: sourceDiscovery.suspectChanges ?? [],
       },
     });
   }

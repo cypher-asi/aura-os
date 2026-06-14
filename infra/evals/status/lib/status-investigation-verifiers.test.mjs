@@ -53,6 +53,15 @@ test("buildInvestigationVerifierContext summarizes contract gaps, sibling failur
           commits: ["abc1234 change remote agent route"],
         },
       ],
+      suspectChanges: [
+        {
+          commit: "abc1234deadbeef",
+          shortCommit: "abc1234",
+          subject: "change remote-agent-create route",
+          score: 91,
+          reasons: ["Changed after the last passing run and before this failing run."],
+        },
+      ],
     },
   });
 
@@ -67,6 +76,8 @@ test("buildInvestigationVerifierContext summarizes contract gaps, sibling failur
   assert.equal(verifierContext.sourceContext.rankedPaths[0].path, "server/routes/agents.ts");
   assert.equal(verifierContext.sourceContext.candidateCodePaths[0].path, "server/routes/agents.ts");
   assert.equal(verifierContext.sourceContext.recentChanges[0].path, "server/routes/agents.ts");
+  assert.equal(verifierContext.sourceContext.suspectChanges[0].shortCommit, "abc1234");
   assert.ok(verifierContext.recommendedVerifierProbes.some((probe) => probe.command === "AURA_STATUS_CHECKS=remote-agent-create npm run status:probes"));
   assert.ok(verifierContext.recommendedVerifierProbes.some((probe) => probe.label === "Review recent commits for implicated source paths"));
+  assert.ok(verifierContext.recommendedVerifierProbes.some((probe) => probe.label === "Check suspect changes against eval proof"));
 });

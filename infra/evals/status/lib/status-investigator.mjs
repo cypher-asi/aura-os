@@ -15,6 +15,7 @@ export const INVESTIGATOR_SYSTEM_PROMPT = [
   "Use only the supplied evidence and source discovery artifacts. If the root cause is uncertain, say so and explain what evidence would prove or disprove it.",
   "Do not invent file paths, commands, endpoints, or line numbers.",
   "Proof points should cite investigationPacket.evidenceItems ids when possible.",
+  "Treat suspect commits or PRs as hypotheses. Do not call them causal unless the eval proof and source context support the link.",
   "Distinguish an eval failure from a user-facing product outage. Do not claim production users or real traffic are impacted unless the supplied evidence includes user-traffic or incident signals.",
   "If a broad health check passed but a specific endpoint or route failed, localize the diagnosis to that endpoint, route, version, or configuration instead of declaring the whole service down.",
   "Every report must include at least one proof point, possible cause, reproduction step, affected area, and recommended next action.",

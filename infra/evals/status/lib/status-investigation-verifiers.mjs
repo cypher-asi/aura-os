@@ -58,6 +58,7 @@ export function buildInvestigationVerifierContext({
       rankedPaths: sourceDiscovery?.rankedPaths ?? [],
       candidateCodePaths: sourceDiscovery?.candidateCodePaths ?? [],
       recentChanges: sourceDiscovery?.recentChanges ?? [],
+      suspectChanges: sourceDiscovery?.suspectChanges ?? [],
     },
     recommendedVerifierProbes: recommendedVerifierProbes({
       check,
@@ -131,6 +132,15 @@ function recommendedVerifierProbes({
       reason: sourceDiscovery.recentChanges
         .slice(0, 3)
         .map((change) => `${change.path}: ${change.commits?.[0] ?? "recent commit"}`)
+        .join("; "),
+    });
+  }
+  if (sourceDiscovery?.suspectChanges?.length > 0) {
+    probes.push({
+      label: "Check suspect changes against eval proof",
+      reason: sourceDiscovery.suspectChanges
+        .slice(0, 3)
+        .map((change) => `${change.shortCommit ?? change.commit}: ${change.reasons?.[0] ?? change.subject ?? "suspect change"}`)
         .join("; "),
     });
   }

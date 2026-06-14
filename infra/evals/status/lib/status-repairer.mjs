@@ -29,6 +29,7 @@ export const REPAIR_SYSTEM_PROMPT = [
   "You receive a structured repair packet with a failing eval, the LLM investigation, expected-output contracts, source-discovery artifacts, verifier context, and reproduction commands.",
   "Produce JSON only. Do not include markdown.",
   "Use only supplied evidence and source-discovery artifacts. If the fix is uncertain or unsafe, set repairable=false and explain the missing evidence.",
+  "Treat suspect commits or PRs as localization hints only. Do not repair or revert a change unless the investigation and source context prove why it is relevant.",
   "Do not invent files, commands, endpoints, or line numbers.",
   "Prefer the smallest production or eval-harness patch that addresses the earliest proven boundary failure.",
   "Do not mask a real product failure by weakening expected-output contracts unless the investigation proves the eval contract is wrong.",
@@ -57,6 +58,7 @@ export function buildRepairInput({
     repairRules: [
       "Confirm the failing eval and expected-output contract before proposing a patch.",
       "Use sourceDiscovery.candidateCodePaths first when choosing target files.",
+      "Use sourceDiscovery.suspectChanges to understand likely regression windows, but cite concrete eval/source proof before proposing a diff.",
       "Cite supplied proof, investigation details, source-discovery artifacts, or verifier context.",
       "Preserve or strengthen eval coverage; do not hide failures by weakening checks.",
       "Return a unified diff only when the fix is sufficiently supported by the supplied evidence.",

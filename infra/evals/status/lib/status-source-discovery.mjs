@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { collectSuspectChanges } from "./status-change-suspects.mjs";
 import { redactSensitive } from "./status-redaction.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -43,6 +44,7 @@ export async function discoverInvestigationSources({
   feature = null,
   checkConfig = null,
   expectation = null,
+  previousChecks = [],
   registryPath,
   expectationsPath,
   runnerPath,
@@ -76,8 +78,26 @@ export async function discoverInvestigationSources({
     }),
   ], 32);
   const sourceContext = includeContext ? await collectSourceContext(sourceHints, repoRoot) : [];
+  const pathSummary = buildSourcePathSummary(sourceHints);
   const recentChanges = includeRecentChanges ? await collectRecentChanges(sourceHints, repoRoot) : [];
-  const sourceDiscovery = buildSourceDiscoverySummary({ sourceHints, sourceContext, recentChanges });
+  const suspectChanges = includeRecentChanges
+    ? await collectSuspectChanges({
+      check,
+      feature,
+      previousChecks,
+      candidatePaths: suspectCandidatePaths(sourceHints, pathSummary),
+      rankedPaths: pathSummary.rankedPaths,
+      sourceNeedles: sourceNeedlesForCheck(check, expectation),
+      repoRoot,
+    })
+    : [];
+  const sourceDiscovery = buildSourceDiscoverySummary({
+    sourceHints,
+    sourceContext,
+    recentChanges,
+    suspectChanges,
+    pathSummary,
+  });
 
   return redactSensitive({
     sourceHints,
@@ -312,7 +332,7 @@ async function collectRecentChanges(sourceHints, repoRoot) {
   return recentChanges;
 }
 
-function buildSourceDiscoverySummary({ sourceHints, sourceContext, recentChanges }) {
+function buildSourcePathSummary(sourceHints) {
   const byKind = {};
   for (const hint of sourceHints) {
     const kind = hint.kind ?? "source-match";
@@ -332,6 +352,26 @@ function buildSourceDiscoverySummary({ sourceHints, sourceContext, recentChanges
     .filter((entry) => isCandidateCodePath(entry.path))
     .slice(0, 8);
 
+  return { byKind, rankedPaths, candidateCodePaths };
+}
+
+function suspectCandidatePaths(sourceHints, pathSummary) {
+  return [...new Set([
+    ...pathSummary.candidateCodePaths.map((entry) => entry.path),
+    ...pathSummary.rankedPaths.filter((entry) => isCandidateCodePath(entry.path)).map((entry) => entry.path),
+    ...sourceHints.map((hint) => hint.path).filter((hintPath) => hintPath && isCandidateCodePath(hintPath)),
+  ])].slice(0, 10);
+}
+
+function buildSourceDiscoverySummary({
+  sourceHints,
+  sourceContext,
+  recentChanges,
+  suspectChanges,
+  pathSummary,
+}) {
+  const { byKind, rankedPaths, candidateCodePaths } = pathSummary ?? buildSourcePathSummary(sourceHints);
+
   return {
     schemaVersion: 1,
     discoveryKind: "aura-observability-source-discovery",
@@ -339,15 +379,18 @@ function buildSourceDiscoverySummary({ sourceHints, sourceContext, recentChanges
       "Anchor the failing eval to its registry entry, expected-output contract, and runner branch.",
       "Search repository code for failed messages, endpoints, evidence keys, and expected assertions.",
       "Attach bounded source excerpts and recent commits for implicated files.",
+      "Rank recent commits and PRs as suspect hypotheses only; require eval and source proof before calling any change causal.",
       "Rank evidence so the investigator receives focused context instead of a broad code dump.",
     ],
     hintCount: sourceHints.length,
     contextCount: sourceContext.length,
     recentChangeCount: recentChanges.length,
+    suspectChangeCount: suspectChanges.length,
     byKind,
     rankedPaths: rankedPaths.slice(0, 12),
     candidateCodePaths,
     recentChanges,
+    suspectChanges,
   };
 }
 
@@ -359,10 +402,12 @@ function emptySourceDiscovery() {
     hintCount: 0,
     contextCount: 0,
     recentChangeCount: 0,
+    suspectChangeCount: 0,
     byKind: {},
     rankedPaths: [],
     candidateCodePaths: [],
     recentChanges: [],
+    suspectChanges: [],
   };
 }
 

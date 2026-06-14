@@ -72,6 +72,17 @@ test("buildInvestigationEvidencePacket captures contracts, sibling patterns, and
           commits: ["abc1234 fix status probe routing"],
         },
       ],
+      suspectChanges: [
+        {
+          commit: "abc1234deadbeef",
+          shortCommit: "abc1234",
+          subject: "fix image-generation-stream routing",
+          score: 92,
+          confidence: "high",
+          reasons: ["Changed after the last passing run and before this failing run."],
+          candidateTouchedPaths: ["apps/aura-os-server/src/handlers/agents/chat.rs"],
+        },
+      ],
     },
   });
 
@@ -86,5 +97,6 @@ test("buildInvestigationEvidencePacket captures contracts, sibling patterns, and
   assert.ok(packet.evidenceItems.some((item) => item.id === "source.infra/evals/status/run-status-probes.mjs:900"));
   assert.ok(packet.evidenceItems.some((item) => item.id === "source-context.infra/evals/status/run-status-probes.mjs:897-903"));
   assert.ok(packet.evidenceItems.some((item) => item.id === "recent-change.infra/evals/status/run-status-probes.mjs"));
+  assert.ok(packet.evidenceItems.some((item) => item.id === "suspect-change.abc1234"));
   assert.ok(packet.evidenceItems.some((item) => item.id === "source-discovery.ranked-paths"));
 });

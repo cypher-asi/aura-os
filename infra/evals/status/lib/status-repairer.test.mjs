@@ -50,14 +50,25 @@ test("buildRepairInput preserves investigation proof and source-discovery candid
     sourceDiscovery: {
       candidateCodePaths: [{ path: "server/routes/agents.ts", score: 120 }],
       recentChanges: [{ path: "server/routes/agents.ts", commits: ["abc123 change route"] }],
+      suspectChanges: [
+        {
+          commit: "abc123def456",
+          shortCommit: "abc123",
+          subject: "change remote-agent-create route timeout",
+          score: 90,
+          reasons: ["Changed after the last passing run and before this failing run."],
+        },
+      ],
     },
   });
 
   assert.match(REPAIR_SYSTEM_PROMPT, /gated observability repair planner/);
+  assert.match(REPAIR_SYSTEM_PROMPT, /suspect commits or PRs as localization hints/);
   assert.equal(input.repairGoal, "Propose the smallest gated code repair for this AURA observability eval failure.");
   assert.equal(input.failedCheck.evidence.authorization, "[REDACTED]");
   assert.equal(input.investigation.proof[0], "expected-output.missing-required-evidence lists agentId.");
   assert.equal(input.sourceDiscovery.candidateCodePaths[0].path, "server/routes/agents.ts");
+  assert.equal(input.sourceDiscovery.suspectChanges[0].shortCommit, "abc123");
   assert.ok(input.defaultVerificationCommands.includes("AURA_STATUS_CHECKS=remote-agent-create npm run status:probes"));
 });
 

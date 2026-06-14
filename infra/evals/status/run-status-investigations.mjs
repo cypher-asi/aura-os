@@ -307,6 +307,7 @@ async function main() {
       feature,
       checkConfig,
       expectation,
+      previousChecks,
       registryPath: args.registry,
       expectationsPath: args.expectationsFile,
       runnerPath: path.join(__dirname, "run-status-probes.mjs"),

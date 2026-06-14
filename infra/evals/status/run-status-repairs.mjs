@@ -615,6 +615,7 @@ async function main() {
       feature,
       checkConfig,
       expectation,
+      previousChecks,
       registryPath: args.registry,
       expectationsPath: args.expectationsFile,
       runnerPath: args.runner,
