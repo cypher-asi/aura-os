@@ -621,9 +621,10 @@ jobs:
           AURA_STATUS_USER_EMAIL: ${{ secrets.AURA_STATUS_USER_EMAIL }}
           AURA_STATUS_USER_PASSWORD: ${{ secrets.AURA_STATUS_USER_PASSWORD }}
           AURA_STATUS_ENVIRONMENT: desktop-nightly-${{ matrix.target }}-${{ matrix.arch }}
+          AURA_STATUS_RUNTIME_ENVIRONMENT: desktop-release
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_DESKTOP_LOG_DIR: desktop-observability-logs
-          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime,local-agent-permissions,model-matrix
+          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime,local-agent-permissions,model-matrix,image-generation-stream
         shell: bash
         run: |
           if [ -z "$AURA_STATUS_USER_EMAIL" ] || [ -z "$AURA_STATUS_USER_PASSWORD" ]; then
@@ -646,6 +647,7 @@ jobs:
           AURA_STATUS_MODEL_IDS: ${{ secrets.AURA_STATUS_MODEL_IDS || vars.AURA_STATUS_MODEL_IDS }}
           AURA_STATUS_IMAGE_MODEL: ${{ secrets.AURA_STATUS_IMAGE_MODEL || vars.AURA_STATUS_IMAGE_MODEL }}
           AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_RUNTIME_ENVIRONMENT: production-api
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_CHECKS: >-
             api-health,auth-session,auth-validate,system-info,

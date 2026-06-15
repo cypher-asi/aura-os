@@ -37,6 +37,7 @@ function parseArgs(argv) {
     expectationsFile: process.env.AURA_STATUS_EXPECTATIONS_FILE || path.join(__dirname, "check-expectations.json"),
     expectations: null,
     environment: process.env.AURA_STATUS_ENVIRONMENT || "local",
+    runtimeEnvironment: process.env.AURA_STATUS_RUNTIME_ENVIRONMENT || "",
     checks: (process.env.AURA_STATUS_CHECKS || "").split(",").map((v) => v.trim()).filter(Boolean),
     models: (process.env.AURA_STATUS_MODEL_IDS || "").split(",").map((v) => v.trim()).filter(Boolean),
     keepEntities: process.env.AURA_STATUS_KEEP_ENTITIES === "1",
@@ -57,6 +58,7 @@ function parseArgs(argv) {
     else if (arg === "--out-dir") args.outDir = path.resolve(next());
     else if (arg === "--expectations") args.expectationsFile = path.resolve(next());
     else if (arg === "--environment") args.environment = next();
+    else if (arg === "--runtime-environment") args.runtimeEnvironment = next();
     else if (arg === "--checks") args.checks = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--models") args.models = next().split(",").map((v) => v.trim()).filter(Boolean);
     else if (arg === "--keep-entities") args.keepEntities = true;
@@ -68,10 +70,23 @@ function parseArgs(argv) {
     }
   }
   args.baseUrl = args.baseUrl.replace(/\/+$/, "");
+  args.runtimeEnvironment = normalizeRuntimeEnvironment(args.runtimeEnvironment || inferRuntimeEnvironment(args.environment));
   args.publicBaseUrl = args.publicBaseUrl.replace(/\/+$/, "");
   if (args.models.length === 0) args.models = DEFAULT_MODELS;
   args.checks = args.checks.length > 0 ? new Set(args.checks) : null;
   return args;
+}
+
+function normalizeRuntimeEnvironment(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function inferRuntimeEnvironment(environment) {
+  const normalized = typeof environment === "string" ? environment.trim().toLowerCase() : "";
+  if (normalized.startsWith("desktop-")) return "desktop-release";
+  if (normalized === "production") return "production-api";
+  if (normalized === "local") return "local-dev";
+  return normalized || "";
 }
 
 function sseFramesFromText(text) {
@@ -259,6 +274,7 @@ async function probe(checkId, featureId, label, args, fn) {
       endedAt: new Date().toISOString(),
       latencyMs: Date.now() - started,
       environment: args.environment,
+      runtimeEnvironment: args.runtimeEnvironment,
       evidence: evidence?.evidence ?? evidence ?? {},
     };
     const expectationError = validateCheckEvidence(checkId, result, args.expectations);
@@ -281,6 +297,7 @@ async function probe(checkId, featureId, label, args, fn) {
       endedAt: new Date().toISOString(),
       latencyMs: Date.now() - started,
       environment: args.environment,
+      runtimeEnvironment: args.runtimeEnvironment,
       evidence: {},
     };
   }
@@ -1112,6 +1129,7 @@ async function writeRun(args, checks) {
     runId,
     generatedAt: new Date().toISOString(),
     environment: args.environment,
+    runtimeEnvironment: args.runtimeEnvironment,
     baseUrl: args.baseUrl,
     checks,
   };

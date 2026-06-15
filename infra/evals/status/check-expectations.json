@@ -157,7 +157,7 @@
       ]
     },
     "image-generation-stream": {
-      "description": "Image generation stream emits frame types and a completion artifact signal.",
+      "description": "Image generation stream emits frame types and a completion artifact signal in the runtime environment under test.",
       "requiredEvidence": ["frameTypes", "imageUrlPresent"],
       "assertions": [
         { "path": "frameTypes", "contains": "generation_completed" },

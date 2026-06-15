@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 
+import { recordRuntimeEnvironment } from "./status-investigations.mjs";
 import { redactSensitive } from "./status-redaction.mjs";
 
 export const REPAIR_STATUS = Object.freeze({
@@ -83,6 +84,8 @@ export function buildRepairInput({
       startedAt: check?.startedAt ?? null,
       endedAt: check?.endedAt ?? null,
       latencyMs: check?.latencyMs ?? null,
+      environment: check?.environment ?? null,
+      runtimeEnvironment: check?.runtimeEnvironment ?? null,
       evidence: check?.evidence ?? {},
     },
     expectedOutputContract: expectation ?? null,
@@ -105,9 +108,9 @@ export function buildRepairInput({
     sourceHints,
     sourceContext,
     verifierContext,
-    defaultReproductionCommand: check?.checkId ? `AURA_STATUS_CHECKS=${check.checkId} npm run status:probes` : "npm run status:probes",
+    defaultReproductionCommand: reproductionCommand(check),
     defaultVerificationCommands: [
-      check?.checkId ? `AURA_STATUS_CHECKS=${check.checkId} npm run status:probes` : "npm run status:probes",
+      reproductionCommand(check),
       "node --test $(rg --files infra/evals/status | rg 'test\\.mjs$')",
     ],
     responseSchema: {
@@ -247,10 +250,11 @@ export function normalizeRepairResponse(content, metadata) {
     ...parsed,
     schemaVersion: 1,
     kind: "llm-repair",
-    id: repairId(metadata.feature?.id ?? metadata.check?.featureId, metadata.check?.checkId, metadata.generatedAt),
+    id: repairId(metadata.feature?.id ?? metadata.check?.featureId, metadata.check?.checkId, metadata.generatedAt, metadata.check?.runtimeEnvironment),
     featureId: metadata.feature?.id ?? metadata.check?.featureId ?? null,
     featureLabel: metadata.feature?.label ?? metadata.feature?.id ?? "Unknown feature",
     checkId: metadata.check?.checkId,
+    runtimeEnvironment: metadata.check?.runtimeEnvironment ?? null,
     investigationId: metadata.investigation?.id ?? null,
     status: REPAIR_STATUS.READY,
     generatedAt: metadata.generatedAt,
@@ -265,14 +269,16 @@ export function normalizeRepair(raw, generatedAt = new Date().toISOString()) {
   const checkId = typeof raw?.checkId === "string" ? raw.checkId.trim() : "";
   if (!checkId) return null;
   const featureId = typeof raw.featureId === "string" && raw.featureId.trim() ? raw.featureId.trim() : null;
+  const runtimeEnvironment = recordRuntimeEnvironment(raw);
   const repairable = raw.repairable === true;
   return {
     schemaVersion: 1,
     kind: "llm-repair",
-    id: stringOrDefault(raw.id, repairId(featureId, checkId, generatedAt)),
+    id: stringOrDefault(raw.id, repairId(featureId, checkId, generatedAt, runtimeEnvironment)),
     featureId,
     featureLabel: stringOrDefault(raw.featureLabel, featureId ?? "Unknown feature"),
     checkId,
+    runtimeEnvironment,
     investigationId: typeof raw.investigationId === "string" ? raw.investigationId : null,
     status: VALID_REPAIR_STATUS.has(raw.status) ? raw.status : REPAIR_STATUS.READY,
     generatedAt: normalizeIsoDate(raw.generatedAt, generatedAt),
@@ -368,12 +374,22 @@ function parseJsonObject(content) {
   throw new Error("Repair response did not contain a JSON object");
 }
 
-function repairId(featureId, checkId, generatedAt) {
+function reproductionCommand(check) {
+  if (!check?.checkId) return "npm run status:probes";
+  const runtimePrefix = check.runtimeEnvironment
+    ? `AURA_STATUS_RUNTIME_ENVIRONMENT=${check.runtimeEnvironment} `
+    : "";
+  return `${runtimePrefix}AURA_STATUS_CHECKS=${check.checkId} npm run status:probes`;
+}
+
+function repairId(featureId, checkId, generatedAt, runtimeEnvironment = null) {
   const digest = createHash("sha256")
-    .update(`${featureId ?? "unknown"}:${checkId ?? "unknown"}:${generatedAt}`)
+    .update(`${featureId ?? "unknown"}:${runtimeEnvironment ?? ""}:${checkId ?? "unknown"}:${generatedAt}`)
     .digest("hex")
     .slice(0, 12);
-  return `${featureId ?? "unknown"}:${checkId ?? "unknown"}:${digest}`;
+  return runtimeEnvironment
+    ? `${featureId ?? "unknown"}:${runtimeEnvironment}:${checkId ?? "unknown"}:${digest}`
+    : `${featureId ?? "unknown"}:${checkId ?? "unknown"}:${digest}`;
 }
 
 function normalizeIsoDate(value, fallback) {

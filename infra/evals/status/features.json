@@ -2,6 +2,23 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
+  "runtimeEnvironments": [
+    {
+      "id": "production-api",
+      "label": "Production API",
+      "description": "Hosted AURA API and its configured upstream services."
+    },
+    {
+      "id": "desktop-release",
+      "label": "Desktop Release",
+      "description": "Packaged desktop binary with the bundled local harness runtime."
+    },
+    {
+      "id": "local-dev",
+      "label": "Local Dev",
+      "description": "Developer-run local API and harness stack."
+    }
+  ],
   "features": [
     {
       "id": "core-api",
@@ -133,7 +150,25 @@
       "description": "Image generation stream routing, progress frames, completion payloads, and artifact URLs.",
       "publicSummary": "AURA image generation streams can complete with generated artifacts.",
       "checks": [
-        { "id": "image-generation-stream", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 180000, "outageLatencyMs": 360000 }
+        {
+          "id": "image-generation-stream",
+          "label": "Image generation stream",
+          "runtimeEnvironment": "desktop-release",
+          "required": true,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 180000,
+          "outageLatencyMs": 360000
+        },
+        {
+          "id": "image-generation-stream",
+          "label": "Image generation stream",
+          "runtimeEnvironment": "production-api",
+          "required": false,
+          "statusImpact": "informational",
+          "staleAfterMinutes": 30,
+          "warningLatencyMs": 180000,
+          "outageLatencyMs": 360000
+        }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 1

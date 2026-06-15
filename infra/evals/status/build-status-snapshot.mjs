@@ -167,6 +167,7 @@ function checksFromSnapshot(snapshot) {
         runGeneratedAt: snapshotGeneratedAt ?? check.checkedAt,
         latencyMs: check.latencyMs ?? null,
         environment: snapshot.environment ?? null,
+        runtimeEnvironment: check.runtimeEnvironment ?? check.runtime ?? null,
         evidence: check.evidence ?? {},
       });
     }

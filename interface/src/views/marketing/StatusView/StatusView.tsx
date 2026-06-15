@@ -58,7 +58,9 @@ const FALLBACK_SNAPSHOT: StatusSnapshot = {
     majorOutage: 0,
     unknown: 0,
     maintenance: 0,
+    runtimeEnvironments: 0,
   },
+  runtimeEnvironments: [],
   features: [],
 };
 
@@ -128,6 +130,10 @@ function extractEvidence(check: StatusCheck): string {
   return Object.keys(evidence).length > 0 ? "Captured" : "-";
 }
 
+function runtimeDisplay(check: StatusCheck): string {
+  return check.runtimeLabel || check.runtimeEnvironment || "-";
+}
+
 function investigationsFor(feature: StatusFeature): StatusInvestigation[] {
   return feature.checks
     .map((check) => check.investigation)
@@ -136,30 +142,38 @@ function investigationsFor(feature: StatusFeature): StatusInvestigation[] {
 
 interface InvestigationReportGroup {
   readonly investigation: StatusInvestigation;
-  readonly checkIds: readonly string[];
+  readonly checkRefs: readonly string[];
 }
 
 function investigationGroupKey(investigation: StatusInvestigation): string {
+  const runtime = investigation.runtimeEnvironment || "";
   const evidenceMessage = investigation.evidenceDigest?.message;
   if (typeof evidenceMessage === "string" && evidenceMessage.trim()) {
-    return `${investigation.featureId ?? ""}:${evidenceMessage.trim()}`;
+    return `${investigation.featureId ?? ""}:${runtime}:${evidenceMessage.trim()}`;
   }
-  return `${investigation.featureId ?? ""}:${investigation.checkId}:${investigation.rootCause}`;
+  return `${investigation.featureId ?? ""}:${runtime}:${investigation.checkId}:${investigation.rootCause}`;
+}
+
+function investigationCheckRef(investigation: StatusInvestigation): string {
+  return investigation.runtimeEnvironment
+    ? `${investigation.runtimeEnvironment}/${investigation.checkId}`
+    : investigation.checkId;
 }
 
 function groupInvestigations(investigations: readonly StatusInvestigation[]): InvestigationReportGroup[] {
   const groups = new Map<string, InvestigationReportGroup>();
   for (const investigation of investigations) {
     const key = investigationGroupKey(investigation);
+    const checkRef = investigationCheckRef(investigation);
     const existing = groups.get(key);
     if (!existing) {
-      groups.set(key, { investigation, checkIds: [investigation.checkId] });
+      groups.set(key, { investigation, checkRefs: [checkRef] });
       continue;
     }
-    if (!existing.checkIds.includes(investigation.checkId)) {
+    if (!existing.checkRefs.includes(checkRef)) {
       groups.set(key, {
         investigation: existing.investigation,
-        checkIds: [...existing.checkIds, investigation.checkId],
+        checkRefs: [...existing.checkRefs, checkRef],
       });
     }
   }
@@ -250,7 +264,7 @@ function InvestigationReportView({
 }: {
   readonly group: InvestigationReportGroup;
 }): ReactNode {
-  const { investigation, checkIds } = group;
+  const { investigation, checkRefs } = group;
   const whatWouldDisproveThis = investigation.whatWouldDisproveThis ?? [];
   const recommendedVerifierProbes = investigation.recommendedVerifierProbes ?? [];
   return (
@@ -267,16 +281,16 @@ function InvestigationReportView({
 
       <div className="statusInvestigationMeta">
         <span>{investigation.confidence} confidence</span>
-        <span>{checkIds.length === 1 ? investigation.checkId : `${checkIds.length} checks`}</span>
+        <span>{checkRefs.length === 1 ? checkRefs[0] : `${checkRefs.length} checks`}</span>
         {investigation.featureStatus && <span>{STATUS_LABELS[investigation.featureStatus]}</span>}
         {(investigation.provider || investigation.model) && (
           <span>{[investigation.provider, investigation.model].filter(Boolean).join(" / ")}</span>
         )}
       </div>
 
-      {checkIds.length > 1 && (
+      {checkRefs.length > 1 && (
         <p className="statusInvestigationCoveredChecks">
-          Covers checks: <strong>{checkIds.join(", ")}</strong>
+          Covers checks: <strong>{checkRefs.join(", ")}</strong>
         </p>
       )}
 
@@ -389,15 +403,21 @@ function CheckRows({ checks }: { readonly checks: readonly StatusCheck[] }): Rea
     <div className="statusChecks" role="table" aria-label="Feature checks">
       <div className="statusCheckHeader" role="row">
         <span role="columnheader">Check</span>
+        <span role="columnheader">Runtime</span>
         <span role="columnheader">State</span>
         <span role="columnheader">Latency</span>
         <span role="columnheader">Evidence</span>
       </div>
       {checks.map((check) => (
-        <div className="statusCheckRow" role="row" key={check.id}>
+        <div className="statusCheckRow" role="row" key={`${check.runtimeEnvironment || "default"}:${check.id}`}>
           <span className="statusCheckName" role="cell">
-            {check.id}
+            <span>{check.label || check.id}</span>
+            {check.label && check.label !== check.id && <code>{check.id}</code>}
             {!check.required && <span className="statusOptional">Optional</span>}
+            {check.statusImpact === "informational" && <span className="statusOptional">Info</span>}
+          </span>
+          <span role="cell">
+            <span className="statusRuntimeTag">{runtimeDisplay(check)}</span>
           </span>
           <span className={`statusCheckState ${checkStatusClass(check.status)}`} role="cell">
             {check.status}
@@ -490,6 +510,11 @@ export function StatusView(): ReactNode {
   const investigationCount = activeSnapshot.investigations?.length
     ?? activeSnapshot.totals.investigations
     ?? activeSnapshot.features.reduce((sum, feature) => sum + investigationsFor(feature).length, 0);
+  const runtimeCount = activeSnapshot.totals.runtimeEnvironments
+    ?? activeSnapshot.runtimeEnvironments?.length
+    ?? new Set(activeSnapshot.features.flatMap((feature) =>
+      feature.checks.map((check) => check.runtimeEnvironment).filter(Boolean),
+    )).size;
 
   return (
     <main className="statusPage">
@@ -526,6 +551,11 @@ export function StatusView(): ReactNode {
           label="Average p95"
           value={formatLatency(avgLatency)}
           icon={<Gauge size={18} strokeWidth={1.8} />}
+        />
+        <SummaryMetric
+          label="Runtimes"
+          value={runtimeCount}
+          icon={<Terminal size={18} strokeWidth={1.8} />}
         />
         <SummaryMetric
           label="Investigations"

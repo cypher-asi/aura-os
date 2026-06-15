@@ -41,6 +41,7 @@ export function buildInvestigationEvidencePacket({
     checkContract: {
       id: checkConfig?.id ?? check?.checkId ?? null,
       label: check?.label ?? checkConfig?.label ?? check?.checkId ?? null,
+      runtimeEnvironment: checkConfig?.runtimeEnvironment ?? check?.runtimeEnvironment ?? null,
       required: checkConfig?.required !== false,
       warningLatencyMs: checkConfig?.warningLatencyMs ?? null,
       outageLatencyMs: checkConfig?.outageLatencyMs ?? null,
@@ -64,6 +65,7 @@ export function buildInvestigationEvidencePacket({
       runGeneratedAt: check?.runGeneratedAt ?? null,
       latencyMs: check?.latencyMs ?? null,
       environment: check?.environment ?? null,
+      runtimeEnvironment: check?.runtimeEnvironment ?? null,
       evidence: failedEvidence,
     },
     siblingPattern: siblingSummaries.pattern,
@@ -81,7 +83,7 @@ export function buildInvestigationEvidencePacket({
     }),
     reproductionHint: {
       label: `Run only ${check?.checkId ?? "this check"}`,
-      command: check?.checkId ? `AURA_STATUS_CHECKS=${check.checkId} npm run status:probes` : "npm run status:probes",
+      command: reproductionCommand(check),
       details: "Use the same environment variables as the scheduled observability workflow.",
     },
     sourceHints,
@@ -90,11 +92,20 @@ export function buildInvestigationEvidencePacket({
   });
 }
 
+function reproductionCommand(check) {
+  if (!check?.checkId) return "npm run status:probes";
+  const runtimePrefix = check.runtimeEnvironment
+    ? `AURA_STATUS_RUNTIME_ENVIRONMENT=${check.runtimeEnvironment} `
+    : "";
+  return `${runtimePrefix}AURA_STATUS_CHECKS=${check.checkId} npm run status:probes`;
+}
+
 function summarizeSiblings(check, siblingChecks) {
   const normalizedMessage = normalizeMessage(check?.message);
   const checks = siblingChecks.map((sibling) => ({
     checkId: sibling.checkId,
     featureId: sibling.featureId,
+    runtimeEnvironment: sibling.runtimeEnvironment ?? null,
     status: sibling.status,
     message: sibling.message,
     endedAt: sibling.endedAt,

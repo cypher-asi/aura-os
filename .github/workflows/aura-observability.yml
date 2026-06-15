@@ -41,6 +41,7 @@ jobs:
           AURA_STATUS_MODEL_IDS: ${{ secrets.AURA_STATUS_MODEL_IDS || vars.AURA_STATUS_MODEL_IDS }}
           AURA_STATUS_IMAGE_MODEL: ${{ secrets.AURA_STATUS_IMAGE_MODEL || vars.AURA_STATUS_IMAGE_MODEL }}
           AURA_STATUS_ENVIRONMENT: production
+          AURA_STATUS_RUNTIME_ENVIRONMENT: production-api
           AURA_STATUS_CHECKS: >-
             api-health,auth-session,auth-validate,system-info,
             orgs-list,user-profile,org-integrations-list,org-tool-actions-list,

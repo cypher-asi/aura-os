@@ -65,8 +65,8 @@ export function buildLearningInput({
     source,
     runSummary: {
       checkCount: checks.length,
-      failingCheckIds: checks.filter((check) => check.status === "fail").map((check) => check.checkId),
-      warningCheckIds: checks.filter((check) => check.status === "warn").map((check) => check.checkId),
+      failingCheckIds: checks.filter((check) => check.status === "fail").map(checkRef),
+      warningCheckIds: checks.filter((check) => check.status === "warn").map(checkRef),
       investigationCount: investigations.length,
       repairCount: repairs.length,
       repairDispatchPlan,
@@ -211,7 +211,7 @@ function buildLearningCase(entry) {
     return value === undefined || value === null;
   });
   return {
-    id: `${check.featureId ?? "unknown"}:${check.checkId ?? "unknown"}`,
+    id: `${check.featureId ?? "unknown"}:${check.runtimeEnvironment ?? ""}:${check.checkId ?? "unknown"}`,
     feature: entry.feature ?? null,
     checkConfig: entry.checkConfig ?? null,
     check: {
@@ -221,6 +221,8 @@ function buildLearningCase(entry) {
       message: check.message ?? "",
       endedAt: check.endedAt ?? null,
       latencyMs: check.latencyMs ?? null,
+      environment: check.environment ?? null,
+      runtimeEnvironment: check.runtimeEnvironment ?? null,
       evidence,
     },
     expectedOutputContract: expectation ? {
@@ -234,6 +236,10 @@ function buildLearningCase(entry) {
     verifierContext: entry.verifierContext ?? null,
     sourceDiscovery: entry.sourceDiscovery ?? null,
   };
+}
+
+function checkRef(check) {
+  return check?.runtimeEnvironment ? `${check.runtimeEnvironment}/${check.checkId}` : check?.checkId;
 }
 
 function summarizeInvestigation(investigation) {

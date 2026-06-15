@@ -27,6 +27,7 @@ function parseArgs(argv) {
     port: process.env.AURA_STATUS_DESKTOP_PORT || process.env.AURA_SERVER_PORT || "19847",
     baseUrl: process.env.AURA_STATUS_DESKTOP_BASE_URL || "",
     checks: process.env.AURA_STATUS_DESKTOP_CHECKS || DEFAULT_CHECKS.join(","),
+    runtimeEnvironment: process.env.AURA_STATUS_RUNTIME_ENVIRONMENT || "desktop-release",
     outDir:
       process.env.AURA_STATUS_CHECKS_DIR ||
       path.join(repoRoot, "infra/evals/reports/status/checks"),
@@ -46,6 +47,7 @@ function parseArgs(argv) {
     else if (arg === "--port") args.port = next();
     else if (arg === "--base-url") args.baseUrl = next();
     else if (arg === "--checks") args.checks = next();
+    else if (arg === "--runtime-environment") args.runtimeEnvironment = next();
     else if (arg === "--out-dir") args.outDir = path.resolve(next());
     else if (arg === "--environment") args.environment = next();
     else if (arg === "--timeout-ms") args.timeoutMs = Number(next());
@@ -127,6 +129,8 @@ function runProbes(args) {
         args.outDir,
         "--environment",
         args.environment,
+        "--runtime-environment",
+        args.runtimeEnvironment,
       ],
       {
         cwd: repoRoot,
@@ -134,6 +138,7 @@ function runProbes(args) {
           ...process.env,
           AURA_STATUS_API_BASE_URL: args.baseUrl,
           AURA_STATUS_ENVIRONMENT: args.environment,
+          AURA_STATUS_RUNTIME_ENVIRONMENT: args.runtimeEnvironment,
           AURA_STATUS_CHECKS_DIR: args.outDir,
         },
         stdio: ["ignore", "pipe", "pipe"],
