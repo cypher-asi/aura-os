@@ -2,19 +2,19 @@
   {
     "date": "2026-06-15",
     "channel": "nightly",
-    "version": "0.1.0-nightly.668.1",
-    "title": "Analytics integrity and feature-health observability harden the release pipeline",
-    "intro": "Today's nightly is a deep investment in trustworthy telemetry and release-time signal. The team split feature health from runtime evidence in the status dashboard, rebuilt the analytics stack so True DAU and retention can actually be trusted, and tightened the build guards that keep no-op or dirty analytics bundles from ever shipping.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.669.1",
+    "title": "Analytics integrity and feature-health observability take shape",
+    "intro": "Today's nightly is heavy on reliability plumbing: the team rebuilt analytics into a contract-enforced pipeline across web, desktop, and mobile, and reshaped feature-health probes so each check declares which runtime it actually exercised. Two follow-up fixes tightened release guards against dirty builds and aligned live probe fixtures with the new expectations.",
+    "entryCount": 4,
     "highlights": [
-      "Feature health and runtime environment are now separate axes in the status dashboard",
-      "Analytics rebuilt around a typed event registry with a CI contract gate",
-      "Release builds now refuse to ship dirty or token-less analytics bundles",
-      "Desktop and public observability probes expanded to cover notes, billing, and content detail endpoints"
+      "Analytics contract enforced across web, desktop, iOS, and Android builds",
+      "Feature health now separated from runtime evidence in observability",
+      "Dirty/0.0.0 frontend builds now fail loudly at release time",
+      "Expanded desktop and production probes cover notes, processes, and public content"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-06-15T20:28:07.243Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.668.1",
+    "rawCommitCount": 5,
+    "generatedAt": "2026-06-15T23:15:16.169Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.669.1",
     "path": "history/2026-06-15.json"
   },
   {
