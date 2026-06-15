@@ -30,6 +30,7 @@ function parseArgs(argv) {
   const args = {
     baseUrl: process.env.AURA_STATUS_API_BASE_URL || "http://127.0.0.1:3190",
     publicBaseUrl: process.env.AURA_STATUS_PUBLIC_BASE_URL || "",
+    publicApiBaseUrl: process.env.AURA_STATUS_PUBLIC_API_BASE_URL || "",
     publishedSnapshotUrl: process.env.AURA_STATUS_PUBLISHED_SNAPSHOT_URL || process.env.VITE_AURA_STATUS_SNAPSHOT_URL || DEFAULT_PUBLISHED_STATUS_JSON_URL,
     token: process.env.AURA_STATUS_ACCESS_TOKEN || process.env.AURA_EVAL_ACCESS_TOKEN || "",
     userEmail: process.env.AURA_STATUS_USER_EMAIL || "",
@@ -52,6 +53,7 @@ function parseArgs(argv) {
     };
     if (arg === "--base-url") args.baseUrl = next();
     else if (arg === "--public-base-url") args.publicBaseUrl = next();
+    else if (arg === "--public-api-base-url") args.publicApiBaseUrl = next();
     else if (arg === "--published-snapshot-url") args.publishedSnapshotUrl = next();
     else if (arg === "--token") args.token = next();
     else if (arg === "--user-email") args.userEmail = next();
@@ -73,6 +75,7 @@ function parseArgs(argv) {
   args.baseUrl = args.baseUrl.replace(/\/+$/, "");
   args.runtimeEnvironment = normalizeRuntimeEnvironment(args.runtimeEnvironment || inferRuntimeEnvironment(args.environment));
   args.publicBaseUrl = args.publicBaseUrl.replace(/\/+$/, "");
+  args.publicApiBaseUrl = args.publicApiBaseUrl.replace(/\/+$/, "");
   if (args.models.length === 0) args.models = DEFAULT_MODELS;
   args.checks = args.checks.length > 0 ? new Set(args.checks) : null;
   return args;
@@ -1280,7 +1283,7 @@ async function runChecks(args) {
         const share = await apiJson(args, "POST", `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/share`, null);
         const shareId = firstTruthyString(share, ["shareId", "share_id"]);
         if (!shareId) throw new Error("Session share response did not include shareId");
-        const shareReadBaseUrl = args.publicBaseUrl || args.baseUrl;
+        const shareReadBaseUrl = args.publicApiBaseUrl || args.publicBaseUrl || args.baseUrl;
         const publicMessages = await waitForValue(async () => {
           try {
             const payload = await publicJson(shareReadBaseUrl, `/api/public/share/${encodeURIComponent(shareId)}`);
