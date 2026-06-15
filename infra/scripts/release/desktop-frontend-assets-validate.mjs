@@ -115,11 +115,11 @@ export function validateAnalyticsBakedIn(distDir, env = process.env) {
   }
 
   const appVersion = (env.APP_VERSION ?? "").trim();
-  if (!appVersion || appVersion === "0.0.0") {
+  if (!appVersion || appVersion === "0.0.0" || appVersion.endsWith("-dirty")) {
     throw new Error(
-      `APP_VERSION must be a real release version, got "${appVersion || "(empty)"}". ` +
-        'A "0.0.0" / empty version means the build did not receive APP_VERSION and ' +
-        "analytics events would report the package.json fallback.",
+      `APP_VERSION must be a real clean release version, got "${appVersion || "(empty)"}". ` +
+        'A "0.0.0", empty, or *-dirty version means the build did not receive clean ' +
+        "CI/CD release metadata.",
     );
   }
 

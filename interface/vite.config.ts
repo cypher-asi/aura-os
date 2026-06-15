@@ -5,6 +5,33 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 
+function envFlagEnabled(value: string | undefined): boolean {
+  return value === "1" || value === "true" || value === "TRUE" || value === "yes" || value === "YES";
+}
+
+function assertAnalyticsBuildMeta(isDev: boolean, version: string) {
+  const token = process.env.VITE_MIXPANEL_TOKEN?.trim() ?? "";
+  const requireAnalytics = envFlagEnabled(process.env.REQUIRE_ANALYTICS);
+
+  if (isDev && !requireAnalytics) return;
+  if (!requireAnalytics && !token) return;
+
+  if (!token) {
+    throw new Error(
+      "REQUIRE_ANALYTICS=1 was set, but VITE_MIXPANEL_TOKEN is empty. " +
+        "Refusing to build a release frontend whose analytics SDK would no-op.",
+    );
+  }
+
+  const explicitVersion = process.env.APP_VERSION?.trim() ?? "";
+  if (!explicitVersion || version === "0.0.0" || version.endsWith("-dirty")) {
+    throw new Error(
+      `APP_VERSION must be set to a clean release version for analytics-enabled builds, got "${version || "(empty)"}". ` +
+        "Set APP_VERSION from CI/CD before running npm run build.",
+    );
+  }
+}
+
 function resolveBuildMeta(isDev: boolean) {
   const pkgPath = path.resolve(__dirname, "package.json");
   let pkgVersion = "0.0.0";
@@ -54,6 +81,7 @@ function resolveBuildMeta(isDev: boolean) {
   if (!version) {
     version = !isDev && shortCommit !== "local" ? `0.0.0+${shortCommit}` : pkgVersion;
   }
+  assertAnalyticsBuildMeta(isDev, version);
 
   const channel = process.env.APP_CHANNEL || (isDev ? "dev" : "stable");
   const buildTime = isDev ? "dev" : new Date().toISOString();

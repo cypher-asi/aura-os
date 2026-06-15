@@ -68,7 +68,20 @@ test("validateAnalyticsBakedIn throws when version is the 0.0.0 fallback", () =>
   const dist = makeDist(`var t="${token}";`);
   assert.throws(
     () => validateAnalyticsBakedIn(dist, { VITE_MIXPANEL_TOKEN: token, APP_VERSION: "0.0.0" }),
-    /APP_VERSION must be a real release version/,
+    /APP_VERSION must be a real clean release version/,
+  );
+});
+
+test("validateAnalyticsBakedIn throws when version is dirty", () => {
+  const token = "mp_token_1234567890";
+  const dist = makeDist(`var t="${token}";var v="abc123-dirty";`);
+  assert.throws(
+    () =>
+      validateAnalyticsBakedIn(dist, {
+        VITE_MIXPANEL_TOKEN: token,
+        APP_VERSION: "abc123-dirty",
+      }),
+    /APP_VERSION must be a real clean release version/,
   );
 });
 
