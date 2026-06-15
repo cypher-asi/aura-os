@@ -104,6 +104,10 @@ jobs:
       MATCH_PASSWORD: ${{ secrets.IOS_MATCH_PASSWORD }}
       VITE_IOS_DEFAULT_HOST: ${{ vars.VITE_IOS_DEFAULT_HOST }}
       VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
+      # Baked into the web bundle by the Vite build that fastlane runs, so the
+      # TestFlight/App Store client SDK actually reports analytics (without it
+      # the browser SDK no-ops). The release lane fails the build if missing.
+      VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
 
     steps:
       - uses: actions/checkout@v5
