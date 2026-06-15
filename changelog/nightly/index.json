@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-06-15",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.665.1",
+    "title": "Feature health and runtime evidence become separate signals",
+    "intro": "Today's nightly reworks how Aura's status system reasons about feature health. Checks now declare which runtime they actually exercised — production API, desktop release, or local dev — so the public status dashboard can tell deployment evidence apart from end-to-end product proof.",
+    "entryCount": 1,
+    "highlights": [
+      "Status checks now distinguish feature health from the runtime that produced the evidence",
+      "Media Generation proof is anchored to the desktop-release lane, with production-auth checks demoted to informational",
+      "Desktop release workflows on macOS, Windows, and Linux now exercise image-generation-stream end-to-end"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-06-15T08:59:42.569Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.665.1",
+    "path": "history/2026-06-15.json"
+  },
+  {
     "date": "2026-06-14",
     "channel": "nightly",
     "version": "0.1.0-nightly.664.1",
