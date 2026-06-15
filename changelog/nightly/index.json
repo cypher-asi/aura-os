@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-06-14",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.664.1",
+    "title": "A self-healing observability pipeline for Aura",
+    "intro": "Today's nightly is almost entirely an observability platform push: Aura's status checks gained richer evidence packets, automated source discovery, gated AI-driven repair workflows, and a learning loop that captures lessons across every release. CI guardrails for release history publishing rounded out the day.",
+    "entryCount": 4,
+    "highlights": [
+      "Investigations now ship structured evidence packets with verifier guidance",
+      "Gated AI repair loop can auto-dispatch and open PRs for failing checks",
+      "Suspect-change detection plus a learning loop across nightly and stable releases",
+      "Release history publishing in CI is now guarded against bad runs"
+    ],
+    "rawCommitCount": 10,
+    "generatedAt": "2026-06-15T03:38:23.608Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.664.1",
+    "path": "history/2026-06-14.json"
+  },
+  {
     "date": "2026-06-13",
     "channel": "nightly",
     "version": "0.1.0-nightly.662.1",
