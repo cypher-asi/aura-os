@@ -15,6 +15,10 @@ const DEFAULT_SWARM_BASE_URL: &str =
     "http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com";
 const DEFAULT_REQUIRE_ZERO_PRO: &str = "false";
 const DEFAULT_Z_BILLING_API_KEY: &str = "";
+// Mixpanel project token for the bundled local server's session_active emit.
+// Same public, client-side ingest token already shipped in the frontend bundle
+// (VITE_MIXPANEL_TOKEN) — not a secret. Empty in dev builds (analytics off).
+const DEFAULT_MIXPANEL_TOKEN: &str = "";
 const DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN: &str = "true";
 const DEFAULT_SYS_ADMIN_EMAILS: &str = "";
 
@@ -316,6 +320,11 @@ fn main() {
         "Z_BILLING_API_KEY",
         "AURA_DESKTOP_DEFAULT_Z_BILLING_API_KEY",
         DEFAULT_Z_BILLING_API_KEY,
+    );
+    emit_runtime_default(
+        "MIXPANEL_TOKEN",
+        "AURA_DESKTOP_DEFAULT_MIXPANEL_TOKEN",
+        DEFAULT_MIXPANEL_TOKEN,
     );
     emit_runtime_default(
         "AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN",
