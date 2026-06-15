@@ -110,6 +110,9 @@ jobs:
       # store-shipped client SDK actually reports analytics (without it the
       # browser SDK no-ops). The release lane fails the build if it is missing.
       VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+      # Make analytics a hard requirement for store builds: the fastlane
+      # web-asset sync runs the --require-analytics validator when this is set.
+      REQUIRE_ANALYTICS: "1"
 
     steps:
       - uses: actions/checkout@v5

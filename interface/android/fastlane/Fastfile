@@ -128,6 +128,13 @@ private_lane :sync_android_web_assets do
   # before Gradle packages the native shell.
   root = interface_root.shellescape
   sh("cd #{root} && npm run build")
+  # On release/store builds (CI sets REQUIRE_ANALYTICS=1) fail loudly if the
+  # Mixpanel token / app version did not reach the bundle, so a config
+  # regression can't silently ship a store app whose analytics SDK no-ops.
+  # Local builds leave REQUIRE_ANALYTICS unset and skip this.
+  if ENV["REQUIRE_ANALYTICS"] == "1"
+    sh("cd #{root} && node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist --require-analytics")
+  end
   sh("cd #{root} && npx cap sync android")
 end
 
