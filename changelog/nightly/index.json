@@ -2,18 +2,18 @@
   {
     "date": "2026-06-15",
     "channel": "nightly",
-    "version": "0.1.0-nightly.666.1",
-    "title": "Trustworthy signals: feature health and analytics get rebuilt",
-    "intro": "Today's nightly focuses on the signals Aura relies on to know whether the product is actually working. The status dashboard learns to tell feature health apart from the runtime it was observed in, and the analytics pipeline gets a contract-tested rebuild so True DAU, retention, and reliability numbers can be trusted across web, desktop, and mobile.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.667.1",
+    "title": "Trustworthy analytics and feature-health signals",
+    "intro": "Today's nightly focuses on making Aura's telemetry and health dashboards honest. The status system now separates what a feature does from where it was exercised, analytics tracking is enforced end-to-end across web, desktop, and mobile builds, and dirty release builds can no longer slip through the deploy gate.",
+    "entryCount": 3,
     "highlights": [
-      "Status dashboard separates feature health from runtime evidence",
-      "Analytics rebuilt with a typed registry and CI contract gate",
-      "Mobile store builds now hard-fail without a Mixpanel token"
+      "Feature health and runtime environment split into separate axes on the status dashboard",
+      "Hard CI gate for analytics contracts across web, desktop, iOS, and Android",
+      "Dirty or unversioned frontend builds now fail the Render deploy"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-06-15T17:11:02.735Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.666.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-06-15T19:57:19.040Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.667.1",
     "path": "history/2026-06-15.json"
   },
   {

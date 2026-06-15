@@ -3,20 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-15T17:11:02.735Z",
+  "generatedAt": "2026-06-15T19:57:19.040Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.666.1",
+  "version": "0.1.0-nightly.667.1",
   "date": "2026-06-15",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.666.1",
-  "lastIncludedSha": "57b077e8e3596117c08ce0ae032de9bd8e60386c",
-  "previousProcessedSha": "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.667.1",
+  "lastIncludedSha": "5d7fff8c58ed75b527e47b87750c36fcfe3fd391",
+  "previousProcessedSha": "57b077e8e3596117c08ce0ae032de9bd8e60386c",
   "commitShas": [
     "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
-    "57b077e8e3596117c08ce0ae032de9bd8e60386c"
+    "57b077e8e3596117c08ce0ae032de9bd8e60386c",
+    "5d7fff8c58ed75b527e47b87750c36fcfe3fd391"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
@@ -175,36 +176,80 @@
         "Android",
         "iOS"
       ]
+    },
+    {
+      "sha": "5d7fff8c58ed75b527e47b87750c36fcfe3fd391",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-15T15:40:29-04:00",
+      "subject": "fix(analytics): fail dirty versioned frontend builds",
+      "body": "",
+      "parents": [
+        "57b077e8e3596117c08ce0ae032de9bd8e60386c"
+      ],
+      "files": [
+        "docs/render-deployment.md",
+        "infra/scripts/release/desktop-frontend-assets-validate.mjs",
+        "infra/scripts/release/desktop-frontend-assets-validate.test.mjs",
+        "interface/vite.config.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 48,
+        "deletions": 7
+      },
+      "committedAtMs": 1781552429000,
+      "cleanSubject": "fail dirty versioned frontend builds",
+      "keywords": [
+        "fail",
+        "dirty",
+        "versioned",
+        "frontend",
+        "builds"
+      ],
+      "fileGroups": [
+        "docs/render-deployment.md",
+        "infra/scripts/release",
+        "interface/vite.config.ts"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Docs",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.666.1",
+      "version": "0.1.0-nightly.667.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64817870
+          "sizeBytes": 64822990
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 131496440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -214,29 +259,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.666.1",
+      "version": "0.1.0-nightly.667.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.666.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.667.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60732031
+          "sizeBytes": 60735163
         },
         {
-          "name": "AURA_0.1.0-nightly.666.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.667.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59739860
+          "sizeBytes": 59740182
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -246,29 +291,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.666.1",
+      "version": "0.1.0-nightly.667.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.666.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.667.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62875776
+          "sizeBytes": 62876307
         },
         {
-          "name": "AURA_0.1.0-nightly.666.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.667.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61906511
+          "sizeBytes": 61910891
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -278,17 +323,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.666.1",
+      "version": "0.1.0-nightly.667.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47992873
+          "sizeBytes": 47994762
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.666.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.667.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -297,33 +342,33 @@
     }
   ],
   "rendered": {
-    "title": "Trustworthy signals: feature health and analytics get rebuilt",
-    "intro": "Today's nightly focuses on the signals Aura relies on to know whether the product is actually working. The status dashboard learns to tell feature health apart from the runtime it was observed in, and the analytics pipeline gets a contract-tested rebuild so True DAU, retention, and reliability numbers can be trusted across web, desktop, and mobile.",
+    "title": "Trustworthy analytics and feature-health signals",
+    "intro": "Today's nightly focuses on making Aura's telemetry and health dashboards honest. The status system now separates what a feature does from where it was exercised, analytics tracking is enforced end-to-end across web, desktop, and mobile builds, and dirty release builds can no longer slip through the deploy gate.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "1:40 AM",
         "started_at": "2026-06-15T08:40:31.000Z",
         "ended_at": "2026-06-15T08:40:31.000Z",
-        "title": "Status dashboard splits feature health from runtime evidence",
-        "summary": "The observability stack now treats the user-facing feature and the runtime that exercised it as separate axes, so a desktop-only proof no longer gets confused with a production-API probe.",
+        "title": "Feature health decoupled from runtime evidence",
+        "summary": "The observability stack now distinguishes user-facing capabilities from the runtime that produced each check, giving the status dashboard a more honest read on what's actually proven green.",
         "items": [
           {
-            "text": "Each status check now declares its runtime environment (production-api, desktop-release, local-dev) alongside its feature, and the marketing StatusView groups checks by feature while labeling the runtime per row.",
+            "text": "Status checks now declare a runtime environment (production-api, desktop-release, local-dev) alongside the feature they cover, so the dashboard groups by feature and labels the runtime per row instead of conflating the two.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Media Generation is now anchored to the desktop-release lane where the bundled harness actually runs, while the scheduled public workflow can still surface informational production-auth stream health without falsely proving or disproving the feature.",
+            "text": "Media Generation health now treats the desktop-release lane as the required proof and the production-auth stream as informational, reflecting that the bundled harness only exists on desktop.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Nightly and stable release workflows pick up an added image-generation-stream desktop check and a new AURA_STATUS_RUNTIME_ENVIRONMENT tag, giving release probes clearer provenance in the published snapshot.",
+            "text": "Desktop release probes on nightly and stable workflows added an image-generation-stream check and now stamp AURA_STATUS_RUNTIME_ENVIRONMENT so artifacts carry runtime provenance.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
@@ -336,34 +381,58 @@
         "time_label": "9:52 AM",
         "started_at": "2026-06-15T16:52:53.000Z",
         "ended_at": "2026-06-15T16:52:53.000Z",
-        "title": "Analytics rebuilt around a typed registry and contract CI gate",
-        "summary": "Aura's metrics pipeline was reworked end to end so True DAU, retention, and reliability numbers stop silently drifting when code changes.",
+        "title": "Analytics contract enforced across web, desktop, and mobile",
+        "summary": "A ground-up rebuild of the analytics pipeline closes the gaps that were producing inaccurate DAU and retention, backed by a new CI contract that fails loudly the moment tracking would silently break.",
         "items": [
           {
-            "text": "Client analytics now flow through a typed event registry with AST and pipeline tests that fail the build if an event is renamed, dropped, or passed as a non-literal, and if the client ever stops forwarding events to the Mixpanel SDK.",
+            "text": "Server is now the single emitter for session_active, with a typed event registry and AST/pipeline/server contract tests guarding against renamed, dropped, or non-literal event names.",
             "commit_shas": [
               "57b077e8e3596117c08ce0ae032de9bd8e60386c"
             ],
             "confidence": "high"
           },
           {
-            "text": "session_active is now emitted server-side from a single emitter, with Rust tests enforcing the event-name and manifest invariants so True DAU can't be double-counted or quietly lost.",
+            "text": "New Analytics Contract workflow runs on every push to main and on PRs touching interface or server analytics code, gating both client registry tests and server Mixpanel tests.",
             "commit_shas": [
               "57b077e8e3596117c08ce0ae032de9bd8e60386c"
             ],
             "confidence": "high"
           },
           {
-            "text": "A new Analytics Contract workflow runs the client and server analytics tests on every PR and direct push to main, gating merges the moment tracking would break.",
+            "text": "iOS and Android release lanes now bake VITE_MIXPANEL_TOKEN into the store bundle and require analytics validation, so TestFlight and Play Store builds can no longer ship a no-op browser SDK.",
             "commit_shas": [
               "57b077e8e3596117c08ce0ae032de9bd8e60386c"
             ],
             "confidence": "high"
           },
           {
-            "text": "iOS, Android, and desktop release lanes now bake VITE_MIXPANEL_TOKEN into the shipped bundle and hard-fail the build under REQUIRE_ANALYTICS, fixing the case where store-shipped clients silently no-op'd analytics; mobile chat input also picks up missing tracking.",
+            "text": "Mobile chat input now emits tracking events and the desktop local-server token path was corrected, closing two known reporting holes.",
             "commit_shas": [
               "57b077e8e3596117c08ce0ae032de9bd8e60386c"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "12:40 PM",
+        "started_at": "2026-06-15T19:40:29.000Z",
+        "ended_at": "2026-06-15T19:40:29.000Z",
+        "title": "Dirty frontend builds now fail the deploy",
+        "summary": "The Render and desktop release guards tightened the APP_VERSION check so analytics-enabled builds cannot ship under a git-fallback or unclean version string.",
+        "items": [
+          {
+            "text": "Vite now asserts a clean APP_VERSION and a present VITE_MIXPANEL_TOKEN at build time when REQUIRE_ANALYTICS is set, refusing release builds whose SDK would no-op.",
+            "commit_shas": [
+              "5d7fff8c58ed75b527e47b87750c36fcfe3fd391"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The desktop-frontend-assets validator and Render deploy now reject any APP_VERSION that is empty, 0.0.0, or ends in -dirty, with a regression test covering the dirty-version case.",
+            "commit_shas": [
+              "5d7fff8c58ed75b527e47b87750c36fcfe3fd391"
             ],
             "confidence": "high"
           }
@@ -371,10 +440,10 @@
       }
     ],
     "highlights": [
-      "Status dashboard separates feature health from runtime evidence",
-      "Analytics rebuilt with a typed registry and CI contract gate",
-      "Mobile store builds now hard-fail without a Mixpanel token"
+      "Feature health and runtime environment split into separate axes on the status dashboard",
+      "Hard CI gate for analytics contracts across web, desktop, iOS, and Android",
+      "Dirty or unversioned frontend builds now fail the Render deploy"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 3
   }
 }
