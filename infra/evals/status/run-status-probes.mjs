@@ -570,6 +570,47 @@ async function runProjectChatTurn(args, track) {
   };
 }
 
+async function createRunnableProcessGraph(args, track, projectId, orgId) {
+  const agent = await createAgent(args, track, "local", DEFAULT_MODELS[0], orgId);
+  const process = await apiJson(args, "POST", "/api/processes", {
+    name: `Status Probe Run ${Date.now()}`,
+    description: "Temporary process run created by AURA feature health probes.",
+    project_id: projectId,
+    tags: ["aura-status-probe"],
+  });
+  const processId = idFrom(process, ["id", "process_id"]);
+  track("process", processId, `/api/processes/${processId}`);
+
+  const nodes = await apiJson(args, "GET", `/api/processes/${processId}/nodes`);
+  const ignitionNode = collectionItems(nodes)
+    .find((node) => String(node?.node_type ?? node?.nodeType ?? "").toLowerCase() === "ignition");
+  const ignitionNodeId = firstTruthyString(ignitionNode, ["node_id", "nodeId", "id"]);
+  if (!ignitionNodeId) throw new Error("Process create did not return an ignition node");
+
+  const actionNode = await apiJson(args, "POST", `/api/processes/${processId}/nodes`, {
+    node_type: "action",
+    label: "Status probe action",
+    agent_id: agent.agent_id,
+    prompt: "Reply exactly: process probe ok",
+    config: {},
+    position_x: 520,
+    position_y: 50,
+  });
+  const actionNodeId = idFrom(actionNode, ["node_id", "nodeId", "id"]);
+  const connection = await apiJson(args, "POST", `/api/processes/${processId}/connections`, {
+    source_node_id: ignitionNodeId,
+    target_node_id: actionNodeId,
+  });
+
+  return {
+    agent,
+    processId,
+    ignitionNodeId,
+    actionNodeId,
+    connectionId: firstTruthyString(connection, ["connection_id", "connectionId", "id"]),
+  };
+}
+
 async function waitForRemoteReady(args, agentId) {
   const deadline = Date.now() + DEFAULT_REMOTE_TIMEOUT_MS;
   let latest = null;
@@ -892,14 +933,13 @@ async function runChecks(args) {
       return withCleanup(args, async (track) => {
         const { orgId } = await requireOrgId(args);
         const { projectId } = await createProject(args, track, orgId);
-        const process = await apiJson(args, "POST", "/api/processes", {
-          name: `Status Probe Run ${Date.now()}`,
-          description: "Temporary process run created by AURA feature health probes.",
-          project_id: projectId,
-          tags: ["aura-status-probe"],
-        });
-        const processId = idFrom(process, ["id", "process_id"]);
-        track("process", processId, `/api/processes/${processId}`);
+        const {
+          agent,
+          processId,
+          ignitionNodeId,
+          actionNodeId,
+          connectionId,
+        } = await createRunnableProcessGraph(args, track, projectId, orgId);
         const run = await apiJson(args, "POST", `/api/processes/${processId}/trigger`, null, { timeoutMs: 60_000 });
         const runId = idFrom(run, ["id", "run_id", "process_run_id"]);
         const fetchedRun = await apiJson(args, "GET", `/api/processes/${processId}/runs/${runId}`);
@@ -918,7 +958,11 @@ async function runChecks(args) {
           evidence: {
             orgId,
             projectId,
+            agentId: agent.agent_id,
             processId,
+            ignitionNodeId,
+            actionNodeId,
+            connectionId,
             runId,
             runStatus: fetchedRun?.status ?? run?.status ?? null,
             runCount: Array.isArray(runs) ? runs.length : null,
@@ -962,8 +1006,10 @@ async function runChecks(args) {
         const factId = idFrom(fact, ["id", "fact_id"]);
         const fetchedFact = await apiJson(args, "GET", `/api/harness/agents/${agent.agent_id}/memory/facts/by-key/${encodeURIComponent(key)}`);
         const updatedFact = await apiJson(args, "PUT", `/api/harness/agents/${agent.agent_id}/memory/facts/${factId}`, {
+          key,
           value: { status: "updated" },
           confidence: 0.95,
+          importance: 0.2,
         });
         const event = await apiJson(args, "POST", `/api/harness/agents/${agent.agent_id}/memory/events`, {
           event_type: "status_probe",
@@ -1234,7 +1280,15 @@ async function runChecks(args) {
         const share = await apiJson(args, "POST", `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/share`, null);
         const shareId = firstTruthyString(share, ["shareId", "share_id"]);
         if (!shareId) throw new Error("Session share response did not include shareId");
-        const publicMessages = await publicJson(args.baseUrl, `/api/public/share/${encodeURIComponent(shareId)}`);
+        const publicMessages = await waitForValue(async () => {
+          try {
+            const payload = await publicJson(args.baseUrl, `/api/public/share/${encodeURIComponent(shareId)}`);
+            return collectionItems(payload, ["messages", "events"]).length > 0 ? payload : null;
+          } catch (error) {
+            if (error instanceof Error && error.message.includes("failed with 404")) return null;
+            throw error;
+          }
+        }, 30_000, 1500);
         return {
           evidence: {
             projectId,
@@ -1242,7 +1296,7 @@ async function runChecks(args) {
             sessionId,
             shareIdPresent: Boolean(shareId),
             shareUrlPresent: Boolean(share?.url),
-            publicMessageCount: Array.isArray(publicMessages) ? publicMessages.length : null,
+            publicMessageCount: collectionCount(publicMessages, ["messages", "events"]),
             textSample: chat.evidence.textSample,
           },
         };

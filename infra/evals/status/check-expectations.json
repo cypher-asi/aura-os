@@ -238,11 +238,15 @@
     },
     "process-run-lifecycle": {
       "description": "A desktop release can trigger a process run through the bundled harness automaton path and read the run, events, and artifact lists.",
-      "requiredEvidence": ["orgId", "projectId", "processId", "runId", "runStatus", "runCount", "eventCount", "artifactCount"],
+      "requiredEvidence": ["orgId", "projectId", "agentId", "processId", "ignitionNodeId", "actionNodeId", "connectionId", "runId", "runStatus", "runCount", "eventCount", "artifactCount"],
       "assertions": [
         { "path": "orgId", "nonEmpty": true },
         { "path": "projectId", "nonEmpty": true },
+        { "path": "agentId", "nonEmpty": true },
         { "path": "processId", "nonEmpty": true },
+        { "path": "ignitionNodeId", "nonEmpty": true },
+        { "path": "actionNodeId", "nonEmpty": true },
+        { "path": "connectionId", "nonEmpty": true },
         { "path": "runId", "nonEmpty": true },
         { "path": "runStatus", "nonEmpty": true },
         { "path": "runCount", "min": 1 }
