@@ -62,12 +62,17 @@ export const ANALYTICS_EVENTS = {
 
 export type AnalyticsEventName = keyof typeof ANALYTICS_EVENTS;
 
+// Canonical "engaged" set: a user performed a meaningful PRODUCT action
+// (created/ran work, generated content, hired an agent). This must stay in
+// sync with the Mixpanel "Engaged DAU" chart (Uniques of these events).
+// Deliberately excludes support/meta actions like feedback_created.
 export const ENGAGED_BUNDLE = [
   "chat_message_sent",
   "task_created",
   "task_run_started",
   "project_created",
   "agent_created",
+  "process_created",
   "process_triggered",
   "note_created",
   "aura3d_image_generated",
