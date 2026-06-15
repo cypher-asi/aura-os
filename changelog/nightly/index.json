@@ -2,18 +2,18 @@
   {
     "date": "2026-06-15",
     "channel": "nightly",
-    "version": "0.1.0-nightly.665.1",
-    "title": "Feature health and runtime evidence become separate signals",
-    "intro": "Today's nightly reworks how Aura's status system reasons about feature health. Checks now declare which runtime they actually exercised — production API, desktop release, or local dev — so the public status dashboard can tell deployment evidence apart from end-to-end product proof.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.666.1",
+    "title": "Trustworthy signals: feature health and analytics get rebuilt",
+    "intro": "Today's nightly focuses on the signals Aura relies on to know whether the product is actually working. The status dashboard learns to tell feature health apart from the runtime it was observed in, and the analytics pipeline gets a contract-tested rebuild so True DAU, retention, and reliability numbers can be trusted across web, desktop, and mobile.",
+    "entryCount": 2,
     "highlights": [
-      "Status checks now distinguish feature health from the runtime that produced the evidence",
-      "Media Generation proof is anchored to the desktop-release lane, with production-auth checks demoted to informational",
-      "Desktop release workflows on macOS, Windows, and Linux now exercise image-generation-stream end-to-end"
+      "Status dashboard separates feature health from runtime evidence",
+      "Analytics rebuilt with a typed registry and CI contract gate",
+      "Mobile store builds now hard-fail without a Mixpanel token"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-06-15T08:59:42.569Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.665.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-06-15T17:11:02.735Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.666.1",
     "path": "history/2026-06-15.json"
   },
   {

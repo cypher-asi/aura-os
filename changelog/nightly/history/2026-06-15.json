@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-15T08:59:42.569Z",
+  "generatedAt": "2026-06-15T17:11:02.735Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.665.1",
+  "version": "0.1.0-nightly.666.1",
   "date": "2026-06-15",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.665.1",
-  "lastIncludedSha": "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
-  "previousProcessedSha": "aee54ab0f3a15850d95d0e3a8d7e37b40e2b65bc",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.666.1",
+  "lastIncludedSha": "57b077e8e3596117c08ce0ae032de9bd8e60386c",
+  "previousProcessedSha": "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
   "commitShas": [
-    "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
+    "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
+    "57b077e8e3596117c08ce0ae032de9bd8e60386c"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
@@ -90,36 +91,120 @@
         "Release Infrastructure",
         "Docs"
       ]
+    },
+    {
+      "sha": "57b077e8e3596117c08ce0ae032de9bd8e60386c",
+      "author": {
+        "name": "DomW",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-15T17:52:53+01:00",
+      "subject": "feat(analytics): rebuild metrics for accurate True DAU, retention, and reliability (#64)",
+      "body": "Server-only session_active (single emitter), typed event registry + AST/pipeline/server contract tests, build-time token+version guards across web/desktop/mobile, mobile chat tracking + desktop local-server token fixes, and a CI gate. See PR #64 for full detail.",
+      "parents": [
+        "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
+      ],
+      "files": [
+        ".github/workflows/analytics-contract.yml",
+        ".github/workflows/android-mobile.yml",
+        ".github/workflows/ios-mobile.yml",
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "apps/aura-os-desktop/build.rs",
+        "apps/aura-os-desktop/src/init/env.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/create.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/shares/mod.rs",
+        "apps/aura-os-server/src/mixpanel.rs",
+        "docs/analytics.md",
+        "docs/render-deployment.md",
+        "infra/scripts/release/desktop-frontend-assets-validate.mjs",
+        "infra/scripts/release/desktop-frontend-assets-validate.test.mjs",
+        "interface/android/fastlane/Fastfile",
+        "interface/ios/fastlane/Fastfile",
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/lib/analytics-contract.test.ts",
+        "interface/src/lib/analytics-events.json",
+        "interface/src/lib/analytics-registry.ts",
+        "interface/src/lib/analytics.test.ts",
+        "interface/src/lib/analytics.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 25,
+        "insertions": 749,
+        "deletions": 63
+      },
+      "committedAtMs": 1781542373000,
+      "cleanSubject": "rebuild metrics for accurate True DAU, retention, and reliability (#64)",
+      "keywords": [
+        "rebuild",
+        "metrics",
+        "accurate",
+        "true",
+        "retention",
+        "reliability"
+      ],
+      "fileGroups": [
+        ".github/workflows/analytics-contract.yml",
+        ".github/workflows/android-mobile.yml",
+        ".github/workflows/ios-mobile.yml",
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "apps/aura-os-desktop/build.rs",
+        "apps/aura-os-desktop/src",
+        "apps/aura-os-server/src",
+        "docs/analytics.md",
+        "docs/render-deployment.md",
+        "infra/scripts/release",
+        "interface/android/fastlane",
+        "interface/ios/fastlane",
+        "interface/src/components",
+        "interface/src/lib",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Interface",
+        "Other",
+        "Desktop",
+        "Docs",
+        "Android",
+        "iOS"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.665.1",
+      "version": "0.1.0-nightly.666.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64819284
+          "sizeBytes": 64817870
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131508728
+          "sizeBytes": 131496440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -129,29 +214,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.665.1",
+      "version": "0.1.0-nightly.666.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.665.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.666.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60735960
+          "sizeBytes": 60732031
         },
         {
-          "name": "AURA_0.1.0-nightly.665.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.666.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59737792
+          "sizeBytes": 59739860
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -161,29 +246,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.665.1",
+      "version": "0.1.0-nightly.666.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.665.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.666.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62904813
+          "sizeBytes": 62875776
         },
         {
-          "name": "AURA_0.1.0-nightly.665.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.666.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61907234
+          "sizeBytes": 61906511
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -193,17 +278,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.665.1",
+      "version": "0.1.0-nightly.666.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47995904
+          "sizeBytes": 47992873
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.665.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.666.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -212,53 +297,84 @@
     }
   ],
   "rendered": {
-    "title": "Feature health and runtime evidence become separate signals",
-    "intro": "Today's nightly reworks how Aura's status system reasons about feature health. Checks now declare which runtime they actually exercised — production API, desktop release, or local dev — so the public status dashboard can tell deployment evidence apart from end-to-end product proof.",
+    "title": "Trustworthy signals: feature health and analytics get rebuilt",
+    "intro": "Today's nightly focuses on the signals Aura relies on to know whether the product is actually working. The status dashboard learns to tell feature health apart from the runtime it was observed in, and the analytics pipeline gets a contract-tested rebuild so True DAU, retention, and reliability numbers can be trusted across web, desktop, and mobile.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "1:40 AM",
         "started_at": "2026-06-15T08:40:31.000Z",
         "ended_at": "2026-06-15T08:40:31.000Z",
-        "title": "Status dashboard separates feature health from runtime evidence",
-        "summary": "The observability stack and marketing Status view were reworked so each check declares the runtime it ran against, letting the dashboard show product health and deployment health as distinct signals.",
+        "title": "Status dashboard splits feature health from runtime evidence",
+        "summary": "The observability stack now treats the user-facing feature and the runtime that exercised it as separate axes, so a desktop-only proof no longer gets confused with a production-API probe.",
         "items": [
           {
-            "text": "Status checks now carry an explicit runtime axis (production-api, desktop-release, local-dev) alongside the feature they cover, and the Status view groups checks by feature while labeling the runtime on each row so deployed-API noise no longer masks real product regressions.",
+            "text": "Each status check now declares its runtime environment (production-api, desktop-release, local-dev) alongside its feature, and the marketing StatusView groups checks by feature while labeling the runtime per row.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Media Generation health is now sourced from the desktop-release lane where the bundled harness actually exists; the public observability workflow keeps its production-auth media probe but treats it as informational rather than a pass/fail product proof.",
+            "text": "Media Generation is now anchored to the desktop-release lane where the bundled harness actually runs, while the scheduled public workflow can still surface informational production-auth stream health without falsely proving or disproving the feature.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Nightly and stable desktop release workflows on macOS, Windows, and Linux now run an image-generation-stream check as part of the desktop observability suite, and tag their runs with AURA_STATUS_RUNTIME_ENVIRONMENT=desktop-release so artifacts are attributed to the right lane.",
+            "text": "Nightly and stable release workflows pick up an added image-generation-stream desktop check and a new AURA_STATUS_RUNTIME_ENVIRONMENT tag, giving release probes clearer provenance in the published snapshot.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "9:52 AM",
+        "started_at": "2026-06-15T16:52:53.000Z",
+        "ended_at": "2026-06-15T16:52:53.000Z",
+        "title": "Analytics rebuilt around a typed registry and contract CI gate",
+        "summary": "Aura's metrics pipeline was reworked end to end so True DAU, retention, and reliability numbers stop silently drifting when code changes.",
+        "items": [
+          {
+            "text": "Client analytics now flow through a typed event registry with AST and pipeline tests that fail the build if an event is renamed, dropped, or passed as a non-literal, and if the client ever stops forwarding events to the Mixpanel SDK.",
+            "commit_shas": [
+              "57b077e8e3596117c08ce0ae032de9bd8e60386c"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "The feature-health policy gained dedicated tests and updated investigator, repairer, and learning runners so informational runtime evidence is preserved through repair dispatch without falsely flipping a feature green or red.",
+            "text": "session_active is now emitted server-side from a single emitter, with Rust tests enforcing the event-name and manifest invariants so True DAU can't be double-counted or quietly lost.",
             "commit_shas": [
-              "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
+              "57b077e8e3596117c08ce0ae032de9bd8e60386c"
             ],
-            "confidence": "medium"
+            "confidence": "high"
+          },
+          {
+            "text": "A new Analytics Contract workflow runs the client and server analytics tests on every PR and direct push to main, gating merges the moment tracking would break.",
+            "commit_shas": [
+              "57b077e8e3596117c08ce0ae032de9bd8e60386c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "iOS, Android, and desktop release lanes now bake VITE_MIXPANEL_TOKEN into the shipped bundle and hard-fail the build under REQUIRE_ANALYTICS, fixing the case where store-shipped clients silently no-op'd analytics; mobile chat input also picks up missing tracking.",
+            "commit_shas": [
+              "57b077e8e3596117c08ce0ae032de9bd8e60386c"
+            ],
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Status checks now distinguish feature health from the runtime that produced the evidence",
-      "Media Generation proof is anchored to the desktop-release lane, with production-auth checks demoted to informational",
-      "Desktop release workflows on macOS, Windows, and Linux now exercise image-generation-stream end-to-end"
+      "Status dashboard separates feature health from runtime evidence",
+      "Analytics rebuilt with a typed registry and CI contract gate",
+      "Mobile store builds now hard-fail without a Mixpanel token"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
