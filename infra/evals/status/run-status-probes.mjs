@@ -19,6 +19,7 @@ const DEFAULT_MODELS = [
 const EXPECTED_RUNTIME_PHRASE = "hello from aura";
 const DEFAULT_PUBLISHED_STATUS_JSON_URL = "https://cypher-asi.github.io/aura-os/observability/status.json";
 const PUBLISHED_STATUS_MAX_AGE_MINUTES = 180;
+const PROJECT_CHAT_EXPECTED_PHRASE = "hello from aura";
 const LIVE_STATUS_SNAPSHOT_SOURCES = new Set([
   "github-actions",
   "desktop-nightly-release",
@@ -222,6 +223,54 @@ function collectionCount(payload, keys = []) {
   return null;
 }
 
+function collectionItems(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  for (const key of keys) {
+    const value = payload?.[key];
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+}
+
+function idFrom(value, candidates = ["id"]) {
+  const id = extractId(value, candidates);
+  if (!id) throw new Error(`Response did not include any id field: ${candidates.join(", ")}`);
+  return id;
+}
+
+function firstTruthyString(value, candidates = []) {
+  for (const key of candidates) {
+    const item = value?.[key];
+    if (typeof item === "string" && item.length > 0) return item;
+  }
+  return null;
+}
+
+function sseTextSample(frames) {
+  return frames
+    .filter((frame) => frame.event === "text_delta")
+    .map((frame) => {
+      if (typeof frame.data === "string") return frame.data;
+      return frame.data?.text ?? frame.data?.delta?.text ?? "";
+    })
+    .join("");
+}
+
+async function waitForValue(fn, timeoutMs = DEFAULT_TIMEOUT_MS, intervalMs = 1000) {
+  const deadline = Date.now() + timeoutMs;
+  let latestError = "";
+  while (Date.now() < deadline) {
+    try {
+      const value = await fn();
+      if (value) return value;
+    } catch (error) {
+      latestError = error instanceof Error ? error.message : String(error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(latestError || `Timed out after ${timeoutMs}ms waiting for expected value`);
+}
+
 async function apiSse(args, endpoint, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const response = await fetchWithTimeout(
     `${args.baseUrl}${endpoint}`,
@@ -357,6 +406,15 @@ async function createProject(args, track, orgId) {
   return { project, projectId };
 }
 
+async function createProjectAgentInstance(args, projectId, agentId) {
+  const instance = await apiJson(args, "POST", `/api/projects/${projectId}/agents`, {
+    agent_id: agentId,
+    source: "status_probe",
+  });
+  const agentInstanceId = idFrom(instance, ["agent_instance_id", "project_agent_id", "id"]);
+  return { instance, agentInstanceId };
+}
+
 async function createSpec(args, projectId, title = "Status Probe Spec") {
   const spec = await apiJson(args, "POST", `/api/projects/${projectId}/specs`, {
     title,
@@ -455,6 +513,63 @@ async function runRuntimeTest(args, agentId, timeoutMs = DEFAULT_TIMEOUT_MS) {
   return apiJson(args, "POST", `/api/agents/${agentId}/runtime/test`, null, { timeoutMs });
 }
 
+async function runProjectChatTurn(args, track) {
+  const { orgId } = await requireOrgId(args);
+  const { projectId } = await createProject(args, track, orgId);
+  const agent = await createAgent(args, track, "local", null, orgId);
+  const { agentInstanceId } = await createProjectAgentInstance(args, projectId, agent.agent_id);
+  track("agent-instance", agentInstanceId, `/api/projects/${projectId}/agents/${agentInstanceId}`);
+
+  const frames = await apiSse(args, `/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`, {
+    content: `Reply with exactly: ${PROJECT_CHAT_EXPECTED_PHRASE}`,
+    action: "chat",
+    project_id: projectId,
+    new_session: true,
+  }, 120_000);
+  const text = sseTextSample(frames);
+  const error = frames.find((frame) => frame.event === "error");
+  if (error) {
+    return {
+      status: CHECK_STATUS.FAIL,
+      message: error.data?.message ?? "Project agent chat stream emitted an error",
+      evidence: {
+        orgId,
+        projectId,
+        agentId: agent.agent_id,
+        agentInstanceId,
+        frameTypes: frames.map((frame) => frame.event),
+        textSample: text.slice(0, 120),
+      },
+    };
+  }
+
+  const sessions = await waitForValue(async () => {
+    const payload = await apiJson(args, "GET", `/api/projects/${projectId}/agents/${agentInstanceId}/sessions`);
+    const items = collectionItems(payload, ["sessions"]);
+    return items.length > 0 ? items : null;
+  }, 30_000, 1500);
+  const latestSession = sessions[0];
+  const sessionId = firstTruthyString(latestSession, ["session_id", "id"]);
+  if (!sessionId) throw new Error("Project agent chat created no storage session id");
+
+  const textMatches = text.toLowerCase().includes(PROJECT_CHAT_EXPECTED_PHRASE);
+  return {
+    status: textMatches ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+    message: textMatches ? "" : "Project agent chat stream did not contain the expected phrase",
+    evidence: {
+      orgId,
+      projectId,
+      agentId: agent.agent_id,
+      agentInstanceId,
+      sessionId,
+      frameTypes: frames.map((frame) => frame.event),
+      textSample: text.slice(0, 120),
+      sessionCount: sessions.length,
+      expectedPhrase: PROJECT_CHAT_EXPECTED_PHRASE,
+    },
+  };
+}
+
 async function waitForRemoteReady(args, agentId) {
   const deadline = Date.now() + DEFAULT_REMOTE_TIMEOUT_MS;
   let latest = null;
@@ -548,6 +663,28 @@ async function runChecks(args) {
     }));
   }
 
+  if (selected("org-tool-actions-contract")) {
+    checks.push(await probe("org-tool-actions-contract", "integrations-billing", "Org tool action contract shape", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      const { orgId } = await requireOrgId(args);
+      const catalog = await apiJson(args, "GET", `/api/orgs/${orgId}/tool-actions`);
+      const tools = collectionItems(catalog, ["tools"]);
+      const warnings = collectionItems(catalog, ["warnings"]);
+      const malformedTools = tools.filter((tool) => !tool?.name || !tool?.inputSchema);
+      return {
+        status: malformedTools.length === 0 ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+        message: malformedTools.length === 0 ? "" : "Tool catalog returned entries without name/inputSchema",
+        evidence: {
+          orgId,
+          toolCount: tools.length,
+          warningCount: warnings.length,
+          malformedToolCount: malformedTools.length,
+          sampleToolNames: tools.slice(0, 5).map((tool) => tool?.name).filter(Boolean),
+        },
+      };
+    }));
+  }
+
   if (selected("billing-status")) {
     checks.push(await probe("billing-status", "integrations-billing", "Subscription status", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
@@ -568,6 +705,27 @@ async function runChecks(args) {
       const { orgId } = await requireOrgId(args);
       const balance = await apiJson(args, "GET", `/api/orgs/${orgId}/credits/balance`);
       return { evidence: { orgId, keys: Object.keys(balance ?? {}) } };
+    }));
+  }
+
+  if (selected("billing-account-transactions")) {
+    checks.push(await probe("billing-account-transactions", "integrations-billing", "Billing account and transaction reads", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      const { orgId } = await requireOrgId(args);
+      const [account, transactions] = await Promise.all([
+        apiJson(args, "GET", `/api/orgs/${orgId}/account`),
+        apiJson(args, "GET", `/api/orgs/${orgId}/credits/transactions`),
+      ]);
+      const transactionItems = collectionItems(transactions, ["transactions"]);
+      return {
+        evidence: {
+          orgId,
+          accountKeys: Object.keys(account ?? {}),
+          accountIdPresent: Boolean(account?.id ?? account?.account_id ?? account?.user_id),
+          transactionsKnown: Array.isArray(transactions?.transactions),
+          transactionCount: transactionItems.length,
+        },
+      };
     }));
   }
 
@@ -634,6 +792,69 @@ async function runChecks(args) {
     }));
   }
 
+  if (selected("notes-crud")) {
+    checks.push(await probe("notes-crud", "notes-knowledge", "Notes folder/note/comment CRUD", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => {
+        const { orgId } = await requireOrgId(args);
+        const { projectId } = await createProject(args, track, orgId);
+        const folder = await apiJson(args, "POST", `/api/notes/projects/${projectId}/folders`, {
+          name: `Status Probe Folder ${Date.now()}`,
+          parentId: null,
+          sortOrder: 0,
+        });
+        const folderId = idFrom(folder, ["id", "folder_id"]);
+        const note = await apiJson(args, "POST", `/api/notes/projects/${projectId}/notes`, {
+          title: "Status Probe Note",
+          slug: `status-probe-${Date.now()}`,
+          folderId,
+        });
+        const noteId = idFrom(note, ["id", "note_id"]);
+        const fetched = await apiJson(args, "GET", `/api/notes/projects/${projectId}/notes/${noteId}`);
+        const updated = await apiJson(args, "PUT", `/api/notes/projects/${projectId}/notes/${noteId}`, {
+          title: "Status Probe Note Updated",
+          folderId,
+          wordCount: 7,
+        });
+        const transitioned = await apiJson(args, "POST", `/api/notes/projects/${projectId}/notes/${noteId}/transition`, {
+          status: "draft",
+        });
+        const comment = await apiJson(args, "POST", `/api/notes/projects/${projectId}/notes/${noteId}/comments`, {
+          body: "Status probe comment",
+          authorName: "AURA Status",
+        });
+        const commentId = idFrom(comment, ["id", "comment_id"]);
+        const comments = await apiJson(args, "GET", `/api/notes/projects/${projectId}/notes/${noteId}/comments`);
+        const tree = await apiJson(args, "GET", `/api/notes/projects/${projectId}/tree`);
+
+        await apiJson(args, "DELETE", `/api/notes/projects/${projectId}/notes/${noteId}/comments/${commentId}`);
+        await apiJson(args, "DELETE", `/api/notes/projects/${projectId}/notes/${noteId}`);
+        await apiJson(args, "DELETE", `/api/notes/projects/${projectId}/folders/${folderId}`);
+
+        const linkedFolderId = fetched?.folderId ?? fetched?.folder_id ?? note?.folderId ?? note?.folder_id ?? null;
+        const folderLinked = linkedFolderId === folderId;
+        const titleUpdated = (updated?.title ?? "") === "Status Probe Note Updated";
+        return {
+          status: folderLinked && titleUpdated ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+          message: folderLinked && titleUpdated ? "" : "Notes CRUD did not preserve folder linkage or note update fields",
+          evidence: {
+            orgId,
+            projectId,
+            folderId,
+            noteId,
+            commentId,
+            folderLinked,
+            titleUpdated,
+            transitionStatus: transitioned?.status ?? null,
+            commentCount: Array.isArray(comments) ? comments.length : null,
+            treeFolderCount: Array.isArray(tree?.folders) ? tree.folders.length : null,
+            treeNoteCount: Array.isArray(tree?.notes) ? tree.notes.length : null,
+          },
+        };
+      });
+    }));
+  }
+
   if (selected("process-list")) {
     checks.push(await probe("process-list", "process-workflows", "Process and folder lists", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
@@ -665,6 +886,50 @@ async function runChecks(args) {
     }));
   }
 
+  if (selected("process-run-lifecycle")) {
+    checks.push(await probe("process-run-lifecycle", "process-workflows", "Process trigger/run lifecycle", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => {
+        const { orgId } = await requireOrgId(args);
+        const { projectId } = await createProject(args, track, orgId);
+        const process = await apiJson(args, "POST", "/api/processes", {
+          name: `Status Probe Run ${Date.now()}`,
+          description: "Temporary process run created by AURA feature health probes.",
+          project_id: projectId,
+          tags: ["aura-status-probe"],
+        });
+        const processId = idFrom(process, ["id", "process_id"]);
+        track("process", processId, `/api/processes/${processId}`);
+        const run = await apiJson(args, "POST", `/api/processes/${processId}/trigger`, null, { timeoutMs: 60_000 });
+        const runId = idFrom(run, ["id", "run_id", "process_run_id"]);
+        const fetchedRun = await apiJson(args, "GET", `/api/processes/${processId}/runs/${runId}`);
+        const runs = await apiJson(args, "GET", `/api/processes/${processId}/runs`);
+        const events = await apiJson(args, "GET", `/api/processes/${processId}/runs/${runId}/events`);
+        const artifacts = await apiJson(args, "GET", `/api/processes/${processId}/runs/${runId}/artifacts`);
+        const runStatus = String(fetchedRun?.status ?? run?.status ?? "").toLowerCase();
+        if (["pending", "queued", "running", "active", "in_progress"].includes(runStatus)) {
+          try {
+            await apiJson(args, "POST", `/api/processes/${processId}/runs/${runId}/cancel`, null);
+          } catch {
+            // A fast process can finish between fetch and cancel; the observed run already proves trigger wiring.
+          }
+        }
+        return {
+          evidence: {
+            orgId,
+            projectId,
+            processId,
+            runId,
+            runStatus: fetchedRun?.status ?? run?.status ?? null,
+            runCount: Array.isArray(runs) ? runs.length : null,
+            eventCount: Array.isArray(events) ? events.length : null,
+            artifactCount: Array.isArray(artifacts) ? artifacts.length : null,
+          },
+        };
+      });
+    }));
+  }
+
   if (selected("marketplace-agents")) {
     checks.push(await probe("marketplace-agents", "marketplace-bootstrap", "Marketplace agents catalog", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
@@ -678,6 +943,135 @@ async function runChecks(args) {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const health = await apiJson(args, "GET", "/api/agents/harness/health");
       return { evidence: health };
+    }));
+  }
+
+  if (selected("harness-memory-roundtrip")) {
+    checks.push(await probe("harness-memory-roundtrip", "harness-memory-skills", "Harness memory roundtrip", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => {
+        const { orgId } = await requireOrgId(args);
+        const agent = await createAgent(args, track, "local", null, orgId);
+        const key = `status_probe_${Date.now()}`;
+        const fact = await apiJson(args, "POST", `/api/harness/agents/${agent.agent_id}/memory/facts`, {
+          key,
+          value: { status: "ok" },
+          confidence: 0.99,
+          importance: 0.2,
+        });
+        const factId = idFrom(fact, ["id", "fact_id"]);
+        const fetchedFact = await apiJson(args, "GET", `/api/harness/agents/${agent.agent_id}/memory/facts/by-key/${encodeURIComponent(key)}`);
+        const updatedFact = await apiJson(args, "PUT", `/api/harness/agents/${agent.agent_id}/memory/facts/${factId}`, {
+          value: { status: "updated" },
+          confidence: 0.95,
+        });
+        const event = await apiJson(args, "POST", `/api/harness/agents/${agent.agent_id}/memory/events`, {
+          event_type: "status_probe",
+          summary: "AURA status memory event",
+          metadata: { key },
+          importance: 0.2,
+        });
+        const eventId = idFrom(event, ["id", "event_id"]);
+        const procedure = await apiJson(args, "POST", `/api/harness/agents/${agent.agent_id}/memory/procedures`, {
+          name: "status_probe_procedure",
+          trigger: "status probe",
+          steps: ["write fact", "read fact"],
+          skill_name: "status-probe",
+          skill_relevance: 0.4,
+        });
+        const procedureId = idFrom(procedure, ["id", "procedure_id", "proc_id"]);
+        const [facts, events, procedures, bySkill, snapshot, stats] = await Promise.all([
+          apiJson(args, "GET", `/api/harness/agents/${agent.agent_id}/memory/facts`),
+          apiJson(args, "GET", `/api/harness/agents/${agent.agent_id}/memory/events?limit=10&event_type=status_probe`),
+          apiJson(args, "GET", `/api/harness/agents/${agent.agent_id}/memory/procedures`),
+          apiJson(args, "GET", `/api/harness/agents/${agent.agent_id}/memory/procedures/by-skill/status-probe`),
+          apiJson(args, "GET", `/api/harness/agents/${agent.agent_id}/memory`),
+          apiJson(args, "GET", `/api/harness/agents/${agent.agent_id}/memory/stats`),
+        ]);
+        await apiJson(args, "DELETE", `/api/harness/agents/${agent.agent_id}/memory/procedures/${procedureId}`);
+        await apiJson(args, "DELETE", `/api/harness/agents/${agent.agent_id}/memory/events/${eventId}`);
+        await apiJson(args, "DELETE", `/api/harness/agents/${agent.agent_id}/memory/facts/${factId}`);
+        return {
+          evidence: {
+            orgId,
+            agentId: agent.agent_id,
+            factId,
+            eventId,
+            procedureId,
+            factKey: key,
+            factByKeyMatches: firstTruthyString(fetchedFact, ["key"]) === key,
+            updatedFactPresent: updatedFact != null,
+            factCount: collectionCount(facts, ["facts"]),
+            eventCount: collectionCount(events, ["events"]),
+            procedureCount: collectionCount(procedures, ["procedures"]),
+            bySkillCount: collectionCount(bySkill, ["procedures"]),
+            snapshotKeys: Object.keys(snapshot ?? {}),
+            statsKeys: Object.keys(stats ?? {}),
+          },
+        };
+      });
+    }));
+  }
+
+  if (selected("harness-skills-roundtrip")) {
+    checks.push(await probe("harness-skills-roundtrip", "harness-memory-skills", "Harness skill create/install/list/delete", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      const skillName = `aura-status-${Date.now()}`;
+      let agentId = null;
+      try {
+        return await withCleanup(args, async (track) => {
+          const { orgId } = await requireOrgId(args);
+          const agent = await createAgent(args, track, "local", null, orgId);
+          agentId = agent.agent_id;
+          const created = await apiJson(args, "POST", "/api/harness/skills", {
+            name: skillName,
+            description: "Temporary skill created by AURA feature health probes.",
+            body: "Use this only to prove skill create/list/install/delete wiring.",
+            user_invocable: true,
+            model_invocable: false,
+            agent_id: agentId,
+          });
+          const [catalog, mine, agentSkills] = await Promise.all([
+            apiJson(args, "GET", "/api/harness/skills"),
+            apiJson(args, "GET", "/api/harness/skills/mine"),
+            apiJson(args, "GET", `/api/harness/agents/${agentId}/skills`),
+          ]);
+          const catalogItems = collectionItems(catalog, ["skills"]);
+          const mySkillItems = collectionItems(mine, ["skills"]);
+          const agentSkillItems = collectionItems(agentSkills, ["skills", "installations"]);
+          const mineContainsSkill = mySkillItems.some((skill) => skill?.name === skillName);
+          const agentContainsSkill = agentSkillItems.some((skill) => skill?.skill_name === skillName || skill?.name === skillName);
+          await apiJson(args, "DELETE", `/api/harness/agents/${agentId}/skills/${encodeURIComponent(skillName)}`);
+          const deleted = await apiJson(args, "DELETE", `/api/harness/skills/mine/${encodeURIComponent(skillName)}`);
+          return {
+            status: mineContainsSkill && agentContainsSkill ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+            message: mineContainsSkill && agentContainsSkill ? "" : "Created skill was not visible in my skills and agent installations",
+            evidence: {
+              orgId,
+              agentId,
+              skillName,
+              created: Boolean(created?.created ?? created?.ok ?? true),
+              registered: Boolean(created?.registered ?? true),
+              installedOnAgent: Boolean(created?.installed_on_agent ?? created?.installedOnAgent ?? agentContainsSkill),
+              catalogCount: catalogItems.length,
+              mySkillsCount: mySkillItems.length,
+              agentSkillsCount: agentSkillItems.length,
+              mineContainsSkill,
+              agentContainsSkill,
+              deleted: Boolean(deleted?.deleted ?? true),
+            },
+          };
+        });
+      } finally {
+        if (agentId) {
+          try {
+            await apiJson(args, "DELETE", `/api/harness/agents/${agentId}/skills/${encodeURIComponent(skillName)}`);
+          } catch {}
+        }
+        try {
+          await apiJson(args, "DELETE", `/api/harness/skills/mine/${encodeURIComponent(skillName)}`);
+        } catch {}
+      }
     }));
   }
 
@@ -702,6 +1096,29 @@ async function runChecks(args) {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       const terminals = await apiJson(args, "GET", "/api/terminal");
       return { evidence: { count: Array.isArray(terminals) ? terminals.length : null } };
+    }));
+  }
+
+  if (selected("desktop-update-runtime")) {
+    checks.push(await probe("desktop-update-runtime", "desktop-runtime", "Desktop updater/runtime config", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      const [updateStatus, runtimeConfig, bundleInfo] = await Promise.all([
+        apiJson(args, "GET", "/api/update-status"),
+        apiJson(args, "GET", "/api/runtime-config"),
+        apiJson(args, "GET", "/api/update-bundle-info"),
+      ]);
+      return {
+        evidence: {
+          currentVersionPresent: Boolean(updateStatus?.current_version),
+          channel: updateStatus?.channel ?? null,
+          updaterSupportedKnown: typeof updateStatus?.supported === "boolean",
+          localHarnessUrlPresent: Boolean(runtimeConfig?.local_harness_url),
+          harnessBinaryPresent: Boolean(runtimeConfig?.harness_binary),
+          routerUrlPresent: Boolean(runtimeConfig?.aura_router_url),
+          bundleOk: Boolean(bundleInfo?.ok),
+          bundleSupportedKnown: typeof bundleInfo?.supported === "boolean",
+        },
+      };
     }));
   }
 
@@ -795,6 +1212,39 @@ async function runChecks(args) {
           status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
           message: ok ? "" : "Local status probe agent permissions did not persist as org-scoped and capability-free",
           evidence,
+        };
+      });
+    }));
+  }
+
+  if (selected("project-agent-chat-stream")) {
+    checks.push(await probe("project-agent-chat-stream", "project-agent-workflows", "Project agent chat stream", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => runProjectChatTurn(args, track));
+    }));
+  }
+
+  if (selected("session-share-public-read")) {
+    checks.push(await probe("session-share-public-read", "project-agent-workflows", "Session share public read", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => {
+        const chat = await runProjectChatTurn(args, track);
+        if (chat.status === CHECK_STATUS.FAIL) return chat;
+        const { projectId, agentInstanceId, sessionId } = chat.evidence;
+        const share = await apiJson(args, "POST", `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/share`, null);
+        const shareId = firstTruthyString(share, ["shareId", "share_id"]);
+        if (!shareId) throw new Error("Session share response did not include shareId");
+        const publicMessages = await publicJson(args.baseUrl, `/api/public/share/${encodeURIComponent(shareId)}`);
+        return {
+          evidence: {
+            projectId,
+            agentInstanceId,
+            sessionId,
+            shareIdPresent: Boolean(shareId),
+            shareUrlPresent: Boolean(share?.url),
+            publicMessageCount: Array.isArray(publicMessages) ? publicMessages.length : null,
+            textSample: chat.evidence.textSample,
+          },
         };
       });
     }));
@@ -967,6 +1417,47 @@ async function runChecks(args) {
     }));
   }
 
+  if (selected("public-content-details")) {
+    checks.push(await probe("public-content-details", "public-experience", "Public content detail APIs", args, async () => {
+      const [blog, os, docs, models] = await Promise.all([
+        publicJson(args.baseUrl, "/api/public/blog"),
+        publicJson(args.baseUrl, "/api/public/os"),
+        publicJson(args.baseUrl, "/api/public/docs"),
+        publicJson(args.baseUrl, "/api/public/models"),
+      ]);
+      async function detailEvidence(kind, list) {
+        const items = Array.isArray(list) ? list : [];
+        const slug = items.find((item) => typeof item?.slug === "string" && item.slug.length > 0)?.slug ?? null;
+        if (!slug) return { [`${kind}Count`]: items.length, [`${kind}DetailChecked`]: false, [`${kind}SlugPresent`]: false };
+        const detail = await publicJson(args.baseUrl, `/api/public/${kind}/${encodeURIComponent(slug)}`);
+        return {
+          [`${kind}Count`]: items.length,
+          [`${kind}DetailChecked`]: true,
+          [`${kind}SlugPresent`]: true,
+          [`${kind}DetailIdPresent`]: Boolean(detail?.id),
+        };
+      }
+      const evidence = {
+        ...(await detailEvidence("blog", blog)),
+        ...(await detailEvidence("os", os)),
+        ...(await detailEvidence("docs", docs)),
+        publicModelCount: collectionCount(models, ["models", "data"]) ?? 0,
+      };
+      const ok =
+        evidence.blogDetailChecked &&
+        evidence.osDetailChecked &&
+        evidence.docsDetailChecked &&
+        evidence.blogDetailIdPresent &&
+        evidence.osDetailIdPresent &&
+        evidence.docsDetailIdPresent;
+      return {
+        status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+        message: ok ? "" : "One or more public content lists did not provide a readable detail slug",
+        evidence,
+      };
+    }));
+  }
+
   if (selected("public-x402-models")) {
     checks.push(await probe("public-x402-models", "public-experience", "Public x402 model discovery", args, async () => {
       const payload = await publicJson(args.baseUrl, "/api/public/x402/v1/models");
@@ -1114,6 +1605,67 @@ async function runChecks(args) {
         status: existing > 0 ? CHECK_STATUS.PASS : CHECK_STATUS.WARN,
         message: `${existing}/${files.length} eval summary artifacts found`,
         evidence: { files, existingCount: existing, expectedCount: files.length },
+      };
+    }));
+  }
+
+  if (selected("analytics-contract-artifacts")) {
+    checks.push(await probe("analytics-contract-artifacts", "eval-artifacts", "Analytics contract artifacts", args, async () => {
+      const registryPath = path.join(repoRoot, "interface/src/lib/analytics-registry.ts");
+      const workflowPath = path.join(repoRoot, ".github/workflows/analytics-contract.yml");
+      const releaseValidatorPath = path.join(repoRoot, "infra/scripts/release/desktop-frontend-assets-validate.mjs");
+      const [registryText, workflowText, releaseValidatorText] = await Promise.all([
+        fs.readFile(registryPath, "utf8"),
+        fs.readFile(workflowPath, "utf8"),
+        fs.readFile(releaseValidatorPath, "utf8"),
+      ]);
+      const eventNames = Array.from(
+        registryText.matchAll(/^\s{2}([a-zA-Z0-9_]+):\s*\{/gm),
+        (match) => match[1],
+      );
+      const engagedBundleMatch = registryText.match(/export const ENGAGED_BUNDLE = \[([\s\S]*?)\] as const/);
+      const serverEventsMatch = registryText.match(/export const SERVER_EVENTS = \[([\s\S]*?)\] as const/);
+      const quotedItems = (text) => Array.from((text ?? "").matchAll(/"([^"]+)"/g), (match) => match[1]);
+      const engagedEvents = quotedItems(engagedBundleMatch?.[1]);
+      const serverEvents = quotedItems(serverEventsMatch?.[1]);
+      const requiredClientEvents = [
+        "chat_message_sent",
+        "project_created",
+        "agent_created",
+        "process_triggered",
+        "note_created",
+        "aura3d_image_generated",
+      ];
+      const missingClientEvents = requiredClientEvents.filter((event) => !eventNames.includes(event));
+      const missingServerEvents = ["session_active", "share_link_generated", "share_link_opened"]
+        .filter((event) => !serverEvents.includes(event));
+      const releaseRequiresAnalytics = releaseValidatorText.includes("validateAnalyticsBakedIn")
+        && releaseValidatorText.includes("VITE_MIXPANEL_TOKEN is empty");
+      const workflowRunsContracts = workflowText.includes("analytics-contract.test.ts")
+        && workflowText.includes("analytics.test.ts")
+        && workflowText.includes("cargo test -p aura-os-server mixpanel");
+      const ok =
+        eventNames.length >= 40 &&
+        engagedEvents.length >= 8 &&
+        missingClientEvents.length === 0 &&
+        missingServerEvents.length === 0 &&
+        releaseRequiresAnalytics &&
+        workflowRunsContracts;
+      return {
+        status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+        message: ok ? "" : "Analytics registry/workflow/release validation artifacts are incomplete",
+        evidence: {
+          registryPresent: registryText.length > 0,
+          eventCount: eventNames.length,
+          engagedEventCount: engagedEvents.length,
+          serverEventCount: serverEvents.length,
+          missingClientEvents,
+          missingClientEventCount: missingClientEvents.length,
+          missingServerEvents,
+          missingServerEventCount: missingServerEvents.length,
+          releaseRequiresAnalytics,
+          workflowRunsContracts,
+        },
       };
     }));
   }

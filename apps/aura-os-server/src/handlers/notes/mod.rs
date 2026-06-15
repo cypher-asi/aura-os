@@ -127,6 +127,25 @@ fn slugify(title: &str) -> String {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::CreateNoteBody;
+
+    #[test]
+    fn create_note_body_accepts_frontend_camel_case_folder_id() {
+        let body: CreateNoteBody = serde_json::from_value(serde_json::json!({
+            "title": "Observability note",
+            "slug": "observability-note",
+            "folderId": "folder-123"
+        }))
+        .expect("create note body should accept frontend camelCase fields");
+
+        assert_eq!(body.title, "Observability note");
+        assert_eq!(body.slug.as_deref(), Some("observability-note"));
+        assert_eq!(body.folder_id.as_deref(), Some("folder-123"));
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tree
 // ---------------------------------------------------------------------------
