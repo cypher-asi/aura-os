@@ -11,6 +11,15 @@ use std::sync::Arc;
 use tracing::warn;
 use uuid::Uuid;
 
+/// Canonical server-emitted analytics event names. These are the only
+/// three events the server fires. They mirror the `server_events` list in
+/// the shared analytics manifest (`interface/src/lib/analytics-events.json`)
+/// and the TS registry's `SERVER_EVENTS`; the tests below verify they stay
+/// in sync and that `session_active` is emitted from exactly one site.
+pub(crate) const EVENT_SESSION_ACTIVE: &str = "session_active";
+pub(crate) const EVENT_SHARE_LINK_GENERATED: &str = "share_link_generated";
+pub(crate) const EVENT_SHARE_LINK_OPENED: &str = "share_link_opened";
+
 /// Tracks which users have already fired `session_active` today.
 /// Key: `"user_id:YYYY-MM-DD"`, Value: `()`.
 #[derive(Clone)]
@@ -117,7 +126,7 @@ impl MixpanelTracker {
 
         let properties = build_session_active_properties(version, platform, client_ip, user_agent);
 
-        self.enqueue_event("session_active", user_id.to_string(), properties);
+        self.enqueue_event(EVENT_SESSION_ACTIVE, user_id.to_string(), properties);
     }
 
     /// Record the latest non-empty client metadata for a user. Empty
@@ -198,7 +207,7 @@ impl MixpanelTracker {
         }
 
         self.enqueue_event(
-            "share_link_opened",
+            EVENT_SHARE_LINK_OPENED,
             format!("share:{fingerprint}"),
             properties,
         );
@@ -589,5 +598,100 @@ mod tests {
         let empty = tracker.client_meta("user-2");
         assert!(empty.app_version.is_none());
         assert!(empty.platform.is_none());
+    }
+
+    /// The three server event-name constants must exactly match the
+    /// `server_events` list in the shared cross-language manifest
+    /// (`interface/src/lib/analytics-events.json`). The TS contract test
+    /// checks that same manifest against the TS registry, so this is the
+    /// TS<->Rust agreement guard: rename a server event on either side
+    /// without updating the manifest and one of the two tests fails.
+    #[test]
+    fn server_event_constants_match_shared_manifest() {
+        let manifest_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../interface/src/lib/analytics-events.json"
+        );
+        let raw = std::fs::read_to_string(manifest_path).expect(
+            "shared analytics manifest must exist at interface/src/lib/analytics-events.json",
+        );
+        let manifest: Value = serde_json::from_str(&raw).expect("manifest must be valid JSON");
+
+        let mut manifest_events: Vec<String> = manifest["server_events"]
+            .as_array()
+            .expect("manifest.server_events must be an array")
+            .iter()
+            .map(|v| {
+                v.as_str()
+                    .expect("server event names must be strings")
+                    .to_string()
+            })
+            .collect();
+        manifest_events.sort();
+
+        let mut constants = vec![
+            EVENT_SESSION_ACTIVE.to_string(),
+            EVENT_SHARE_LINK_GENERATED.to_string(),
+            EVENT_SHARE_LINK_OPENED.to_string(),
+        ];
+        constants.sort();
+
+        assert_eq!(
+            constants, manifest_events,
+            "Rust server event constants must exactly match manifest.server_events"
+        );
+    }
+
+    /// `session_active` must be enqueued from exactly one call site. The
+    /// server is the sole `session_active` emitter; that only holds if a
+    /// second server emit can't silently creep in. `enqueue_event` is
+    /// private to this module, so the only emit paths are `enqueue_event(...)`
+    /// here and `track_event(...)` callers crate-wide — we scan source for
+    /// both. Patterns are assembled at runtime so they don't self-match
+    /// this test file.
+    #[test]
+    fn session_active_emitted_from_exactly_one_site() {
+        let src_root = concat!(env!("CARGO_MANIFEST_DIR"), "/src");
+        let mut files = Vec::new();
+        collect_rs_files(std::path::Path::new(src_root), &mut files);
+        assert!(!files.is_empty(), "expected .rs files under src/");
+
+        let enqueue = ".enqueue_event(";
+        let track = ".track_event(";
+        let const_arg = "EVENT_SESSION_ACTIVE";
+        let lit_arg = "\"session_active\"";
+        let patterns = [
+            format!("{enqueue}{const_arg}"),
+            format!("{enqueue}{lit_arg}"),
+            format!("{track}{const_arg}"),
+            format!("{track}{lit_arg}"),
+        ];
+
+        let mut sites = 0usize;
+        for file in &files {
+            let content = std::fs::read_to_string(file).expect("readable source file");
+            for pat in &patterns {
+                sites += content.matches(pat.as_str()).count();
+            }
+        }
+
+        assert_eq!(
+            sites, 1,
+            "session_active must be emitted from exactly one call site (found {sites})"
+        );
+    }
+
+    fn collect_rs_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                collect_rs_files(&path, out);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+                out.push(path);
+            }
+        }
     }
 }

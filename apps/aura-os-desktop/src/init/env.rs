@@ -67,6 +67,13 @@ pub(crate) fn apply_desktop_runtime_defaults() {
         "Z_BILLING_API_KEY",
         env!("AURA_DESKTOP_DEFAULT_Z_BILLING_API_KEY"),
     );
+    // Server-side Mixpanel token for the bundled local aura-os-server, which is
+    // the sole emitter of session_active (True DAU) on desktop. Without it the
+    // local server's MixpanelTracker is None and desktop True DAU is dropped.
+    set_env_default(
+        "MIXPANEL_TOKEN",
+        env!("AURA_DESKTOP_DEFAULT_MIXPANEL_TOKEN"),
+    );
     set_env_default(
         "AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN",
         env!("AURA_DESKTOP_DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN"),

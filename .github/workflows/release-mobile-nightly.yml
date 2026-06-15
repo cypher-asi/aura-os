@@ -40,6 +40,8 @@ jobs:
       VITE_ANDROID_DEFAULT_HOST: ${{ vars.VITE_ANDROID_DEFAULT_HOST }}
       VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
       VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+      # Fail the nightly build if analytics didn't make it into the bundle.
+      REQUIRE_ANALYTICS: "1"
 
     steps:
       - uses: actions/checkout@v5
@@ -162,6 +164,8 @@ jobs:
       VITE_IOS_DEFAULT_HOST: ${{ vars.VITE_IOS_DEFAULT_HOST }}
       VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
       VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+      # Fail the nightly build if analytics didn't make it into the bundle.
+      REQUIRE_ANALYTICS: "1"
 
     steps:
       - uses: actions/checkout@v5

@@ -136,7 +136,18 @@ export function validateAnalyticsBakedIn(distDir, env = process.env) {
     );
   }
 
-  return { appVersion, tokenBaked: true };
+  const versionBaked = files.some(
+    (file) => file.endsWith(".js") && fs.readFileSync(file, "utf8").includes(appVersion),
+  );
+  if (!versionBaked) {
+    throw new Error(
+      `APP_VERSION ("${appVersion}") was set in the environment but was not inlined ` +
+        "into the built frontend, so analytics events would report the package.json " +
+        '"0.0.0" fallback instead. Ensure APP_VERSION is exported before the build.',
+    );
+  }
+
+  return { appVersion, tokenBaked: true, versionBaked: true };
 }
 
 function validateDistAssets(distDir, options = {}) {

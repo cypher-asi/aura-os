@@ -340,6 +340,7 @@ mod tests {
         let agent = test_agent_with_permissions(AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::InvokeProcess],
+            ..Default::default()
         });
 
         let config = runtime_session_config(&agent, "jwt", "user-1", Some("aura-gpt-5-5".into()));

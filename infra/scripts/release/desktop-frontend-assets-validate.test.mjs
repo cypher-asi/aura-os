@@ -44,14 +44,15 @@ test("findBrokenCssModuleExports detects rolldown CSS export stubs", () => {
   assert.deepEqual(findBrokenCssModuleExports(js), ["github_dark_min_exports"]);
 });
 
-test("validateAnalyticsBakedIn passes when token is inlined and version is real", () => {
+test("validateAnalyticsBakedIn passes when token and version are both inlined", () => {
   const token = "mp_token_1234567890";
-  const dist = makeDist(`var t="${token}";console.log(t);`);
+  const appVersion = "0.1.0-nightly.640.1";
+  const dist = makeDist(`var t="${token}";var v="${appVersion}";console.log(t,v);`);
   const result = validateAnalyticsBakedIn(dist, {
     VITE_MIXPANEL_TOKEN: token,
-    APP_VERSION: "0.1.0-nightly.640.1",
+    APP_VERSION: appVersion,
   });
-  assert.deepEqual(result, { appVersion: "0.1.0-nightly.640.1", tokenBaked: true });
+  assert.deepEqual(result, { appVersion, tokenBaked: true, versionBaked: true });
 });
 
 test("validateAnalyticsBakedIn throws when token env is empty", () => {
@@ -80,5 +81,18 @@ test("validateAnalyticsBakedIn throws when token did not reach the bundle", () =
         APP_VERSION: "0.1.0",
       }),
     /was not inlined into the built frontend/,
+  );
+});
+
+test("validateAnalyticsBakedIn throws when version is set but not inlined", () => {
+  const token = "mp_token_1234567890";
+  const dist = makeDist(`var t="${token}";`);
+  assert.throws(
+    () =>
+      validateAnalyticsBakedIn(dist, {
+        VITE_MIXPANEL_TOKEN: token,
+        APP_VERSION: "9.9.9-not-in-bundle",
+      }),
+    /APP_VERSION.*was not inlined/s,
   );
 });

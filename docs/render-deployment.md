@@ -9,7 +9,7 @@ Single Web Service that builds both frontend and backend. The backend serves the
 | **Type** | Web Service |
 | **Repository** | `cypher-asi/aura-os` |
 | **Branch** | `main` |
-| **Build Command** | `cd interface && npm ci && APP_VERSION="$RENDER_GIT_COMMIT" APP_CHANNEL=web npm run build && cd .. && cargo build --release -p aura-os-server` |
+| **Build Command** | `cd interface && npm ci && export APP_VERSION="$RENDER_GIT_COMMIT" APP_CHANNEL=web && npm run build && node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist --require-analytics && cd .. && cargo build --release -p aura-os-server` |
 | **Start Command** | `./target/release/aura-os-server` |
 | **Plan** | Starter ($7/mo) or higher |
 
@@ -44,7 +44,11 @@ Single Web Service that builds both frontend and backend. The backend serves the
 | `MIXPANEL_TOKEN` | Mixpanel project token. Enables **server-side** analytics (`session_active` True DAU backstop + share events). The server logs a loud warning at startup if unset. |
 | `VITE_MIXPANEL_TOKEN` | Same Mixpanel token, consumed by the Vite build so the **web client** SDK sends engagement events. Without it the browser SDK silently no-ops. |
 
-`APP_VERSION` in the build command stamps a real version into the bundle so analytics events are not bucketed under `app_version = "0.0.0"`. `RENDER_GIT_COMMIT` is provided automatically by Render; if omitted, the build falls back to `git describe` and then to a commit-stamped version.
+`APP_VERSION` in the build command stamps a real version into the bundle so analytics events are not bucketed under `app_version = "0.0.0"`. `RENDER_GIT_COMMIT` is provided automatically by Render; if omitted, the build falls back to `git describe` and then to a commit-stamped version. It is `export`ed (not set inline on `npm run build` only) so the analytics validator below sees it too.
+
+The `desktop-frontend-assets-validate.mjs --require-analytics` step **fails the build** if `VITE_MIXPANEL_TOKEN` is missing/empty or was not actually inlined into the bundle, or if `APP_VERSION` is empty/`0.0.0`. This is the web equivalent of the desktop release guard — a config regression that would silently ship a no-op web analytics SDK now breaks the deploy loudly instead of going unnoticed. `VITE_MIXPANEL_TOKEN` must be present in the Render service env (above) for it to pass.
+
+> **Apply on the Render dashboard:** this build command lives in the `aura-app` Render service settings — update it there to match the command above; this doc is the record, not the source of truth Render reads.
 
 ### Optional
 

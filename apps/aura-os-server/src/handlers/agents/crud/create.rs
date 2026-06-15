@@ -293,6 +293,7 @@ mod tests {
                 ..AgentScope::default()
             },
             capabilities: Vec::new(),
+            ..Default::default()
         };
 
         let prepared = prepare_create(request).expect("valid create request");
@@ -314,6 +315,7 @@ mod tests {
                 ..AgentScope::default()
             },
             capabilities: Vec::new(),
+            ..Default::default()
         };
         let prepared = prepare_create(request).expect("valid create request");
         let net_agent = network_agent_with_permissions(AgentPermissions::default());

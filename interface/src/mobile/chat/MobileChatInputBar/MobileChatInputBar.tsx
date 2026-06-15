@@ -40,6 +40,7 @@ import {
 import { ModeSelector, ModelMenuGroup } from "../../../components/InputBarShell";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useChatUI } from "../../../stores/chat-ui-store";
+import { track } from "../../../lib/analytics";
 import styles from "./MobileChatInputBar.module.css";
 
 function AttachmentPreviews({
@@ -362,10 +363,14 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
 
     const submitMessage = useCallback(() => {
       if (!canSend) return;
+      // Mirror ChatInputBar.handleSubmit: emit before onSend so the engaged
+      // signal fires regardless of any downstream send/runtime failure.
+      // Mobile previously omitted this, so mobile chat sends were untracked.
+      track("chat_message_sent", { model: selectedModel, mode: selectedMode });
       // Mode lives in the per-stream store; the panel state reads it
       // when constructing the resolved send.
       onSend(input, undefined, undefined);
-    }, [canSend, input, onSend]);
+    }, [canSend, input, onSend, selectedModel, selectedMode]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (slashMenuOpen && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
