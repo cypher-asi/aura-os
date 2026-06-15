@@ -62,6 +62,18 @@
       "description": "Public blog API returns a list count.",
       "requiredEvidence": ["count"]
     },
+    "public-content-details": {
+      "description": "Public blog, OS, and docs list endpoints each expose a slug that resolves through the matching detail endpoint.",
+      "requiredEvidence": ["blogCount", "blogDetailChecked", "blogDetailIdPresent", "osCount", "osDetailChecked", "osDetailIdPresent", "docsCount", "docsDetailChecked", "docsDetailIdPresent", "publicModelCount"],
+      "assertions": [
+        { "path": "blogDetailChecked", "equals": true },
+        { "path": "blogDetailIdPresent", "equals": true },
+        { "path": "osDetailChecked", "equals": true },
+        { "path": "osDetailIdPresent", "equals": true },
+        { "path": "docsDetailChecked", "equals": true },
+        { "path": "docsDetailIdPresent", "equals": true }
+      ]
+    },
     "public-x402-models": {
       "description": "Public x402 model discovery returns an OpenAI-shaped model list.",
       "requiredEvidence": ["modelCount", "object"],
@@ -103,6 +115,70 @@
         { "path": "capabilityCount", "equals": 0 }
       ]
     },
+    "project-agent-chat-stream": {
+      "description": "A desktop release project-bound local agent instance streams a chat response, persists a session, and returns the expected phrase through the real project/session path.",
+      "requiredEvidence": ["orgId", "projectId", "agentId", "agentInstanceId", "sessionId", "frameTypes", "textSample", "sessionCount", "expectedPhrase"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "projectId", "nonEmpty": true },
+        { "path": "agentId", "nonEmpty": true },
+        { "path": "agentInstanceId", "nonEmpty": true },
+        { "path": "sessionId", "nonEmpty": true },
+        { "path": "frameTypes", "contains": "text_delta" },
+        { "path": "textSample", "containsIgnoreCase": "hello from aura" },
+        { "path": "sessionCount", "min": 1 },
+        { "path": "expectedPhrase", "equals": "hello from aura" }
+      ]
+    },
+    "session-share-public-read": {
+      "description": "A desktop release project chat session can be shared and read through the anonymous public share endpoint.",
+      "requiredEvidence": ["projectId", "agentInstanceId", "sessionId", "shareIdPresent", "shareUrlPresent", "publicMessageCount", "textSample"],
+      "assertions": [
+        { "path": "projectId", "nonEmpty": true },
+        { "path": "agentInstanceId", "nonEmpty": true },
+        { "path": "sessionId", "nonEmpty": true },
+        { "path": "shareIdPresent", "equals": true },
+        { "path": "shareUrlPresent", "equals": true },
+        { "path": "publicMessageCount", "min": 1 }
+      ]
+    },
+    "harness-memory-roundtrip": {
+      "description": "The bundled desktop harness can create, read by key, update, list, and delete fact/event/procedure memory for a local agent.",
+      "requiredEvidence": ["orgId", "agentId", "factId", "eventId", "procedureId", "factKey", "factByKeyMatches", "updatedFactPresent", "factCount", "eventCount", "procedureCount", "bySkillCount", "snapshotKeys", "statsKeys"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "agentId", "nonEmpty": true },
+        { "path": "factId", "nonEmpty": true },
+        { "path": "eventId", "nonEmpty": true },
+        { "path": "procedureId", "nonEmpty": true },
+        { "path": "factKey", "nonEmpty": true },
+        { "path": "factByKeyMatches", "equals": true },
+        { "path": "updatedFactPresent", "equals": true },
+        { "path": "factCount", "min": 1 },
+        { "path": "eventCount", "min": 1 },
+        { "path": "procedureCount", "min": 1 },
+        { "path": "bySkillCount", "min": 1 },
+        { "path": "snapshotKeys", "nonEmpty": true },
+        { "path": "statsKeys", "nonEmpty": true }
+      ]
+    },
+    "harness-skills-roundtrip": {
+      "description": "The bundled desktop harness can create a user-authored skill, list it under My Skills, attach it to a local agent, then uninstall and delete it.",
+      "requiredEvidence": ["orgId", "agentId", "skillName", "created", "registered", "installedOnAgent", "catalogCount", "mySkillsCount", "agentSkillsCount", "mineContainsSkill", "agentContainsSkill", "deleted"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "agentId", "nonEmpty": true },
+        { "path": "skillName", "nonEmpty": true },
+        { "path": "created", "equals": true },
+        { "path": "registered", "equals": true },
+        { "path": "installedOnAgent", "equals": true },
+        { "path": "mySkillsCount", "min": 1 },
+        { "path": "agentSkillsCount", "min": 1 },
+        { "path": "mineContainsSkill", "equals": true },
+        { "path": "agentContainsSkill", "equals": true },
+        { "path": "deleted", "equals": true }
+      ]
+    },
     "remote-agent-create": {
       "description": "Remote agent creation reaches a ready state.",
       "requiredEvidence": ["orgId", "agentId", "vmIdPresent", "remoteState"],
@@ -136,6 +212,22 @@
       "description": "Loop status endpoint returns a JSON object for a project.",
       "requiredEvidence": ["projectId", "keys"]
     },
+    "notes-crud": {
+      "description": "Project notes can create folders, create/update/transition notes, create/list/delete comments, and return the project note tree with preserved folder linkage.",
+      "requiredEvidence": ["orgId", "projectId", "folderId", "noteId", "commentId", "folderLinked", "titleUpdated", "transitionStatus", "commentCount", "treeFolderCount", "treeNoteCount"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "projectId", "nonEmpty": true },
+        { "path": "folderId", "nonEmpty": true },
+        { "path": "noteId", "nonEmpty": true },
+        { "path": "commentId", "nonEmpty": true },
+        { "path": "folderLinked", "equals": true },
+        { "path": "titleUpdated", "equals": true },
+        { "path": "commentCount", "min": 1 },
+        { "path": "treeFolderCount", "min": 1 },
+        { "path": "treeNoteCount", "min": 1 }
+      ]
+    },
     "process-list": {
       "description": "Process and folder list endpoints return list counts.",
       "requiredEvidence": ["processes", "folders"]
@@ -143,6 +235,18 @@
     "process-crud": {
       "description": "Process create/list-nodes/delete roundtrip returns process identity and node count.",
       "requiredEvidence": ["projectId", "processId", "nodeCount"]
+    },
+    "process-run-lifecycle": {
+      "description": "A desktop release can trigger a process run through the bundled harness automaton path and read the run, events, and artifact lists.",
+      "requiredEvidence": ["orgId", "projectId", "processId", "runId", "runStatus", "runCount", "eventCount", "artifactCount"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "projectId", "nonEmpty": true },
+        { "path": "processId", "nonEmpty": true },
+        { "path": "runId", "nonEmpty": true },
+        { "path": "runStatus", "nonEmpty": true },
+        { "path": "runCount", "min": 1 }
+      ]
     },
     "model-matrix": {
       "description": "Every configured model is exercised and pass/total counts are recorded.",
@@ -185,6 +289,14 @@
       "description": "Org tool actions endpoint returns a list count for the current org.",
       "requiredEvidence": ["orgId", "count"]
     },
+    "org-tool-actions-contract": {
+      "description": "Org tool action catalog returns well-formed tool entries or warnings without malformed tool definitions.",
+      "requiredEvidence": ["orgId", "toolCount", "warningCount", "malformedToolCount", "sampleToolNames"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "malformedToolCount", "equals": 0 }
+      ]
+    },
     "billing-status": {
       "description": "Subscription endpoint returns plan/subscription state or response keys.",
       "requiredEvidence": ["keys", "subscriptionKnown"],
@@ -196,6 +308,16 @@
     "credits-balance": {
       "description": "Credits balance endpoint returns a JSON object for the current org.",
       "requiredEvidence": ["orgId", "keys"]
+    },
+    "billing-account-transactions": {
+      "description": "Billing account and credit transaction read endpoints return account identity and a transaction envelope for the current org.",
+      "requiredEvidence": ["orgId", "accountKeys", "accountIdPresent", "transactionsKnown", "transactionCount"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "accountKeys", "nonEmpty": true },
+        { "path": "accountIdPresent", "equals": true },
+        { "path": "transactionsKnown", "equals": true }
+      ]
     },
     "feedback-list": {
       "description": "Authenticated feedback endpoint returns a list count.",
@@ -227,6 +349,19 @@
       "description": "Terminal list endpoint returns a list count.",
       "requiredEvidence": ["count"]
     },
+    "desktop-update-runtime": {
+      "description": "Desktop updater status, runtime config, and bundle diagnostics expose the release version and local harness wiring.",
+      "requiredEvidence": ["currentVersionPresent", "channel", "updaterSupportedKnown", "localHarnessUrlPresent", "harnessBinaryPresent", "routerUrlPresent", "bundleOk", "bundleSupportedKnown"],
+      "assertions": [
+        { "path": "currentVersionPresent", "equals": true },
+        { "path": "updaterSupportedKnown", "equals": true },
+        { "path": "localHarnessUrlPresent", "equals": true },
+        { "path": "harnessBinaryPresent", "equals": true },
+        { "path": "routerUrlPresent", "equals": true },
+        { "path": "bundleOk", "equals": true },
+        { "path": "bundleSupportedKnown", "equals": true }
+      ]
+    },
     "active-streams": {
       "description": "Active stream registry returns a list count.",
       "requiredEvidence": ["count"]
@@ -242,6 +377,20 @@
         { "path": "existingCount", "min": 1 },
         { "path": "expectedCount", "min": 1 },
         { "path": "files", "nonEmpty": true }
+      ]
+    },
+    "analytics-contract-artifacts": {
+      "description": "Analytics registry, CI contract workflow, and desktop release analytics validation are present and include the core client/server event families.",
+      "requiredEvidence": ["registryPresent", "eventCount", "engagedEventCount", "serverEventCount", "missingClientEvents", "missingClientEventCount", "missingServerEvents", "missingServerEventCount", "releaseRequiresAnalytics", "workflowRunsContracts"],
+      "assertions": [
+        { "path": "registryPresent", "equals": true },
+        { "path": "eventCount", "min": 40 },
+        { "path": "engagedEventCount", "min": 8 },
+        { "path": "serverEventCount", "min": 3 },
+        { "path": "missingClientEventCount", "equals": 0 },
+        { "path": "missingServerEventCount", "equals": 0 },
+        { "path": "releaseRequiresAnalytics", "equals": true },
+        { "path": "workflowRunsContracts", "equals": true }
       ]
     },
     "published-observability-snapshot": {

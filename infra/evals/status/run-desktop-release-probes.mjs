@@ -15,10 +15,18 @@ const DEFAULT_CHECKS = [
   "user-profile",
   "workspace-defaults",
   "terminal-list",
+  "desktop-update-runtime",
   "local-agent-create",
   "local-agent-runtime",
   "local-agent-permissions",
+  "project-agent-chat-stream",
+  "session-share-public-read",
+  "harness-memory-roundtrip",
+  "harness-skills-roundtrip",
+  "notes-crud",
+  "process-run-lifecycle",
   "model-matrix",
+  "analytics-contract-artifacts",
 ];
 
 function parseArgs(argv) {

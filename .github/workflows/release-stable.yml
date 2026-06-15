@@ -517,7 +517,7 @@ jobs:
           AURA_STATUS_RUNTIME_ENVIRONMENT: desktop-release
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_DESKTOP_LOG_DIR: desktop-observability-logs
-          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,local-agent-create,local-agent-runtime,local-agent-permissions,model-matrix,image-generation-stream
+          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,desktop-update-runtime,local-agent-create,local-agent-runtime,local-agent-permissions,project-agent-chat-stream,session-share-public-read,harness-memory-roundtrip,harness-skills-roundtrip,notes-crud,process-run-lifecycle,model-matrix,image-generation-stream,analytics-contract-artifacts
         shell: bash
         run: |
           if [ -z "$AURA_STATUS_USER_EMAIL" ] || [ -z "$AURA_STATUS_USER_PASSWORD" ]; then
@@ -545,14 +545,15 @@ jobs:
           AURA_STATUS_CHECKS: >-
             api-health,auth-session,auth-validate,system-info,
             orgs-list,user-profile,org-integrations-list,org-tool-actions-list,
-            billing-status,credits-balance,project-crud,spec-task-crud,
-            project-stats,loop-status,process-list,process-crud,
+            org-tool-actions-contract,billing-status,credits-balance,
+            billing-account-transactions,project-crud,spec-task-crud,
+            project-stats,loop-status,notes-crud,process-list,process-crud,
             marketplace-agents,harness-health,active-streams,debug-projects,
             feedback-list,bug-reports-mine,feed-list,leaderboard,platform-stats,
             remote-agent-create,remote-agent-state,remote-agent-runtime,
-            image-generation-stream,eval-summary-artifacts,
+            image-generation-stream,eval-summary-artifacts,analytics-contract-artifacts,
             public-setup,public-chat-stream,public-feedback-api,
-            public-blog-api,public-x402-models,public-x402-payment-challenge,
+            public-blog-api,public-content-details,public-x402-models,public-x402-payment-challenge,
             published-observability-snapshot,public-observability-page,
             public-models-page,public-marketing-pages
         shell: bash

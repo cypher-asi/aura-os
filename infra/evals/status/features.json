@@ -62,6 +62,7 @@
         { "id": "public-chat-stream", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 25000, "outageLatencyMs": 90000 },
         { "id": "public-feedback-api", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
         { "id": "public-blog-api", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
+        { "id": "public-content-details", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 7000, "outageLatencyMs": 20000 },
         { "id": "public-x402-models", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 },
         { "id": "public-x402-payment-challenge", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 4000, "outageLatencyMs": 12000 }
       ],
@@ -82,6 +83,62 @@
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 2
+    },
+    {
+      "id": "project-agent-workflows",
+      "label": "Project Agent Workflows",
+      "category": "agents",
+      "priority": 22,
+      "description": "Desktop release project-bound agent instance chat streams, persisted sessions, and public session share reads.",
+      "publicSummary": "Project agents can stream chat through the real project/session path.",
+      "checks": [
+        {
+          "id": "project-agent-chat-stream",
+          "runtimeEnvironment": "desktop-release",
+          "required": true,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 30000,
+          "outageLatencyMs": 90000
+        },
+        {
+          "id": "session-share-public-read",
+          "runtimeEnvironment": "desktop-release",
+          "required": false,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 45000,
+          "outageLatencyMs": 120000
+        }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
+      "id": "harness-memory-skills",
+      "label": "Harness Memory and Skills",
+      "category": "agents",
+      "priority": 24,
+      "description": "Desktop release local harness memory persistence and user-authored skill create/install/delete workflows.",
+      "publicSummary": "The bundled harness can persist agent memory and manage local skills.",
+      "checks": [
+        {
+          "id": "harness-memory-roundtrip",
+          "runtimeEnvironment": "desktop-release",
+          "required": true,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 10000,
+          "outageLatencyMs": 30000
+        },
+        {
+          "id": "harness-skills-roundtrip",
+          "runtimeEnvironment": "desktop-release",
+          "required": false,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 10000,
+          "outageLatencyMs": 30000
+        }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
     },
     {
       "id": "remote-agents",
@@ -115,15 +172,36 @@
       "outageAfterFailures": 2
     },
     {
+      "id": "notes-knowledge",
+      "label": "Notes and Knowledge",
+      "category": "automation",
+      "priority": 36,
+      "description": "Storage-backed note folder, note, transition, comment, and project tree roundtrips.",
+      "publicSummary": "Project notes can be created, updated, commented on, and listed.",
+      "checks": [
+        { "id": "notes-crud", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 10000, "outageLatencyMs": 30000 }
+      ],
+      "degradedAfterFailures": 1,
+      "outageAfterFailures": 1
+    },
+    {
       "id": "process-workflows",
       "label": "Processes",
       "category": "automation",
       "priority": 38,
-      "description": "Process workflow lists, process creation, default ignition node creation, and cleanup.",
-      "publicSummary": "Process workflows can be listed and created.",
+      "description": "Process workflow lists, process creation, default ignition node creation, desktop release trigger/run lifecycle, and cleanup.",
+      "publicSummary": "Process workflows can be listed, created, and triggered in the desktop release.",
       "checks": [
         { "id": "process-list", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
-        { "id": "process-crud", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 9000, "outageLatencyMs": 25000 }
+        { "id": "process-crud", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 9000, "outageLatencyMs": 25000 },
+        {
+          "id": "process-run-lifecycle",
+          "runtimeEnvironment": "desktop-release",
+          "required": false,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 30000,
+          "outageLatencyMs": 90000
+        }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 1
@@ -197,8 +275,10 @@
       "checks": [
         { "id": "org-integrations-list", "required": true, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
         { "id": "org-tool-actions-list", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "org-tool-actions-contract", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 6000, "outageLatencyMs": 18000 },
         { "id": "billing-status", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
-        { "id": "credits-balance", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 }
+        { "id": "credits-balance", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 5000, "outageLatencyMs": 15000 },
+        { "id": "billing-account-transactions", "required": false, "staleAfterMinutes": 30, "warningLatencyMs": 7000, "outageLatencyMs": 20000 }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 1
@@ -225,11 +305,19 @@
       "label": "Desktop Runtime",
       "category": "platform",
       "priority": 68,
-      "description": "Desktop runtime defaults and local terminal API availability.",
-      "publicSummary": "Desktop runtime support endpoints are responding.",
+      "description": "Desktop workspace defaults, updater status, bundled harness wiring, and local terminal API availability.",
+      "publicSummary": "Desktop runtime support endpoints and bundled harness wiring are responding.",
       "checks": [
         { "id": "workspace-defaults", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
-        { "id": "terminal-list", "required": false, "staleAfterMinutes": 1800, "warningLatencyMs": 3000, "outageLatencyMs": 10000 }
+        { "id": "terminal-list", "required": false, "staleAfterMinutes": 1800, "warningLatencyMs": 3000, "outageLatencyMs": 10000 },
+        {
+          "id": "desktop-update-runtime",
+          "runtimeEnvironment": "desktop-release",
+          "required": true,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 5000,
+          "outageLatencyMs": 15000
+        }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 1
@@ -256,7 +344,8 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "checks": [
-        { "id": "eval-summary-artifacts", "required": false, "staleAfterMinutes": 1440, "warningLatencyMs": 1000, "outageLatencyMs": 3000 }
+        { "id": "eval-summary-artifacts", "required": false, "staleAfterMinutes": 1440, "warningLatencyMs": 1000, "outageLatencyMs": 3000 },
+        { "id": "analytics-contract-artifacts", "required": false, "staleAfterMinutes": 1440, "warningLatencyMs": 1000, "outageLatencyMs": 3000 }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 1
