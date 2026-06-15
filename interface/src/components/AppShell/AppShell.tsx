@@ -409,39 +409,11 @@ function useOnboardingHydration() {
     hydrateForUser(user.user_id);
     if (trackedUserIdRef.current !== user.user_id) {
       trackedUserIdRef.current = user.user_id;
-      import("../../lib/analytics").then(({ track, identifyUser }) => {
+      import("../../lib/analytics").then(({ identifyUser }) => {
         identifyUser(user.user_id);
-        track("session_active");
       });
     }
   }, [user?.user_id, hydrateForUser]);
-
-  // Re-fire session_active so True DAU counts users who leave the
-  // app open across days. Three triggers:
-  //   1. visibilitychange — web tab switched back
-  //   2. window focus — desktop app restored
-  //   3. hourly interval — covers apps that stay focused overnight
-  // Mixpanel deduplicates uniques per day so repeated fires on the
-  // same day don't inflate the count.
-  useEffect(() => {
-    if (!user?.user_id) return;
-    const fireSessionActive = () => {
-      import("../../lib/analytics").then(({ track }) => {
-        track("session_active");
-      });
-    };
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") fireSessionActive();
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", fireSessionActive);
-    const interval = setInterval(fireSessionActive, 60 * 60 * 1000);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", fireSessionActive);
-      clearInterval(interval);
-    };
-  }, [user?.user_id]);
 }
 
 function AppContent() {

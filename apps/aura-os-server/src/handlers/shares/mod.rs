@@ -147,7 +147,11 @@ fn track_share_link_generated(
                 map.insert("$os".to_string(), json!(os));
             }
         }
-        mixpanel.track_event("share_link_generated", owner_user_id, properties);
+        mixpanel.track_event(
+            crate::mixpanel::EVENT_SHARE_LINK_GENERATED,
+            owner_user_id,
+            properties,
+        );
     }
 }
 

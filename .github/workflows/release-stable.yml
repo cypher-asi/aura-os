@@ -231,9 +231,13 @@ jobs:
       SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL || 'http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com' }}
       REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
-      # NOTE: This job no longer builds the frontend (it consumes the
-      # prebuilt dist from `build-interface`), so VITE_MIXPANEL_TOKEN is not
-      # needed here. The token is baked in the `build-interface` job instead.
+      # NOTE: This job no longer builds the frontend (it consumes the prebuilt
+      # dist from `build-interface`), so the *client* token VITE_MIXPANEL_TOKEN
+      # is baked in `build-interface`, not here. MIXPANEL_TOKEN below is the
+      # *server-side* token for the bundled local aura-os-server, the sole
+      # emitter of session_active (True DAU) on desktop. Same public
+      # project-token value; without it desktop True DAU is silently dropped.
+      MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
       Z_BILLING_API_KEY: ${{ secrets.Z_BILLING_API_KEY }}
     strategy:
       fail-fast: false
