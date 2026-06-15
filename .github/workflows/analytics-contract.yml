@@ -1,0 +1,68 @@
+name: Analytics Contract
+
+# Fails loudly the moment analytics tracking would silently break:
+#  - an event is renamed/dropped/added without updating the registry,
+#  - a non-literal event name is passed to track(),
+#  - the client stops forwarding events to the Mixpanel SDK,
+#  - the server session_active single-emitter / event-name / manifest
+#    invariants are violated.
+#
+# Runs on push to main (the primary workflow here) AND on pull requests, so
+# direct-to-main pushes are covered too — not just PRs. On a direct push it
+# runs right after the push and fails the commit if tracking broke.
+on:
+  push:
+    branches: [main]
+    paths:
+      - interface/src/**
+      - interface/package.json
+      - interface/package-lock.json
+      - apps/aura-os-server/src/**
+      - .github/workflows/analytics-contract.yml
+  pull_request:
+    paths:
+      - interface/src/**
+      - interface/package.json
+      - interface/package-lock.json
+      - apps/aura-os-server/src/**
+      - .github/workflows/analytics-contract.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: analytics-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  client-analytics:
+    name: Client analytics (registry + contract + pipeline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+      - name: Install interface dependencies
+        working-directory: interface
+        run: npm ci
+      - name: Run analytics contract + pipeline tests
+        working-directory: interface
+        run: npx vitest run src/lib/analytics-contract.test.ts src/lib/analytics.test.ts
+
+  server-analytics:
+    name: Server analytics (event constants + manifest + single emitter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust toolchain
+        uses: ./.github/actions/setup-rust-toolchain
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: analytics-contract
+      - name: Run server analytics tests
+        run: cargo test -p aura-os-server mixpanel
