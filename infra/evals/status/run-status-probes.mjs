@@ -1280,9 +1280,10 @@ async function runChecks(args) {
         const share = await apiJson(args, "POST", `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/share`, null);
         const shareId = firstTruthyString(share, ["shareId", "share_id"]);
         if (!shareId) throw new Error("Session share response did not include shareId");
+        const shareReadBaseUrl = args.publicBaseUrl || args.baseUrl;
         const publicMessages = await waitForValue(async () => {
           try {
-            const payload = await publicJson(args.baseUrl, `/api/public/share/${encodeURIComponent(shareId)}`);
+            const payload = await publicJson(shareReadBaseUrl, `/api/public/share/${encodeURIComponent(shareId)}`);
             return collectionItems(payload, ["messages", "events"]).length > 0 ? payload : null;
           } catch (error) {
             if (error instanceof Error && error.message.includes("failed with 404")) return null;
@@ -1296,6 +1297,7 @@ async function runChecks(args) {
             sessionId,
             shareIdPresent: Boolean(shareId),
             shareUrlPresent: Boolean(share?.url),
+            shareReadBaseUrl,
             publicMessageCount: collectionCount(publicMessages, ["messages", "events"]),
             textSample: chat.evidence.textSample,
           },

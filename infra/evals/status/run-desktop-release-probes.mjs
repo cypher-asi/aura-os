@@ -34,6 +34,7 @@ function parseArgs(argv) {
     binary: process.env.AURA_DESKTOP_BINARY || "",
     port: process.env.AURA_STATUS_DESKTOP_PORT || process.env.AURA_SERVER_PORT || "19847",
     baseUrl: process.env.AURA_STATUS_DESKTOP_BASE_URL || "",
+    publicBaseUrl: process.env.AURA_STATUS_PUBLIC_BASE_URL || "",
     checks: process.env.AURA_STATUS_DESKTOP_CHECKS || DEFAULT_CHECKS.join(","),
     runtimeEnvironment: process.env.AURA_STATUS_RUNTIME_ENVIRONMENT || "desktop-release",
     outDir:
@@ -54,6 +55,7 @@ function parseArgs(argv) {
     if (arg === "--binary") args.binary = next();
     else if (arg === "--port") args.port = next();
     else if (arg === "--base-url") args.baseUrl = next();
+    else if (arg === "--public-base-url") args.publicBaseUrl = next();
     else if (arg === "--checks") args.checks = next();
     else if (arg === "--runtime-environment") args.runtimeEnvironment = next();
     else if (arg === "--out-dir") args.outDir = path.resolve(next());
@@ -62,7 +64,7 @@ function parseArgs(argv) {
     else if (arg === "--log-dir") args.logDir = path.resolve(next());
     else if (arg === "--help") {
       process.stdout.write(
-        "Usage: node infra/evals/status/run-desktop-release-probes.mjs --binary PATH [--checks a,b] [--out-dir DIR]\n",
+        "Usage: node infra/evals/status/run-desktop-release-probes.mjs --binary PATH [--public-base-url URL] [--checks a,b] [--out-dir DIR]\n",
       );
       process.exit(0);
     } else {
@@ -76,6 +78,7 @@ function parseArgs(argv) {
   }
   args.binary = path.resolve(args.binary);
   args.baseUrl = (args.baseUrl || `http://127.0.0.1:${args.port}`).replace(/\/+$/, "");
+  args.publicBaseUrl = args.publicBaseUrl.replace(/\/+$/, "");
   return args;
 }
 
@@ -124,22 +127,26 @@ async function waitForDesktopReady(args, child) {
 }
 
 function runProbes(args) {
+  const probeArgs = [
+    path.join(__dirname, "run-status-probes.mjs"),
+    "--base-url",
+    args.baseUrl,
+    "--checks",
+    args.checks,
+    "--out-dir",
+    args.outDir,
+    "--environment",
+    args.environment,
+    "--runtime-environment",
+    args.runtimeEnvironment,
+  ];
+  if (args.publicBaseUrl) {
+    probeArgs.push("--public-base-url", args.publicBaseUrl);
+  }
   return new Promise((resolve, reject) => {
     const probe = spawn(
       process.execPath,
-      [
-        path.join(__dirname, "run-status-probes.mjs"),
-        "--base-url",
-        args.baseUrl,
-        "--checks",
-        args.checks,
-        "--out-dir",
-        args.outDir,
-        "--environment",
-        args.environment,
-        "--runtime-environment",
-        args.runtimeEnvironment,
-      ],
+      probeArgs,
       {
         cwd: repoRoot,
         env: {
@@ -148,6 +155,7 @@ function runProbes(args) {
           AURA_STATUS_ENVIRONMENT: args.environment,
           AURA_STATUS_RUNTIME_ENVIRONMENT: args.runtimeEnvironment,
           AURA_STATUS_CHECKS_DIR: args.outDir,
+          AURA_STATUS_PUBLIC_BASE_URL: args.publicBaseUrl,
         },
         stdio: ["ignore", "pipe", "pipe"],
       },

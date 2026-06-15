@@ -625,6 +625,7 @@ jobs:
           AURA_DESKTOP_BINARY: ${{ env.AURA_RELEASE_DIR }}/aura-os-desktop
           AURA_STATUS_USER_EMAIL: ${{ secrets.AURA_STATUS_USER_EMAIL }}
           AURA_STATUS_USER_PASSWORD: ${{ secrets.AURA_STATUS_USER_PASSWORD }}
+          AURA_STATUS_PUBLIC_BASE_URL: ${{ secrets.AURA_STATUS_PUBLIC_BASE_URL || vars.AURA_STATUS_PUBLIC_BASE_URL || 'https://aura.ai' }}
           AURA_STATUS_ENVIRONMENT: desktop-nightly-${{ matrix.target }}-${{ matrix.arch }}
           AURA_STATUS_RUNTIME_ENVIRONMENT: desktop-release
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks

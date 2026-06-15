@@ -21,6 +21,7 @@ use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite;
 
+use aura_os_harness::HarnessAutomatonStartParams;
 use aura_os_server::{HarnessClient, HarnessTxKind};
 
 /// Observations collected by the mock server for post-hoc assertions.
@@ -297,6 +298,46 @@ async fn subscribe_stream_receives_text_frame_and_forwards_jwt() {
         .find_map(|a| a.clone())
         .expect("authorization header present on ws upgrade");
     assert_eq!(auth, "Bearer jwt-ws");
+}
+
+#[tokio::test]
+async fn start_automaton_forwards_model_selection() {
+    let (url, rec, _h) = start_mock_harness().await;
+    let client = HarnessClient::new(url);
+
+    let response = client
+        .start_automaton(
+            &HarnessAutomatonStartParams {
+                kind: "scheduled_process".to_string(),
+                project_id: "project-123".to_string(),
+                auth_token: Some("body-jwt".to_string()),
+                process_id: Some("process-123".to_string()),
+                model: Some("aura-claude-sonnet-4-6".to_string()),
+                input: None,
+                aura_org_id: Some("org-123".to_string()),
+                aura_session_id: Some("session-123".to_string()),
+            },
+            Some("header-jwt"),
+        )
+        .await
+        .expect("start_automaton succeeded");
+
+    assert_eq!(response.run_id, "fixed-run-id");
+
+    let r = rec.lock().await;
+    let auth = r
+        .seen_authorizations
+        .iter()
+        .find_map(|value| value.clone())
+        .expect("authorization header present");
+    assert_eq!(auth, "Bearer header-jwt");
+
+    let body = r.last_run_body.as_ref().expect("run body recorded");
+    assert_eq!(body["model"]["id"], "aura-claude-sonnet-4-6");
+    assert_eq!(body["project"]["project_id"], "project-123");
+    assert_eq!(body["project"]["aura_org_id"], "org-123");
+    assert_eq!(body["project"]["aura_session_id"], "session-123");
+    assert_eq!(body["auth_jwt"], "body-jwt");
 }
 
 #[tokio::test]

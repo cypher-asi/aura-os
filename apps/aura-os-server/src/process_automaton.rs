@@ -1,7 +1,7 @@
-use aura_os_core::{ProcessRunId, ProcessRunTrigger};
+use aura_os_core::{Agent, AgentId, ProcessRunId, ProcessRunTrigger, LATEST_FRONTIER_MODEL};
 use aura_os_harness::{HarnessAutomatonStartParams, HarnessClient, HarnessClientError};
 use aura_os_storage::{
-    CreateProcessRunRequest, StorageClient, StorageProcess, StorageProcessRun,
+    CreateProcessRunRequest, StorageClient, StorageProcess, StorageProcessNode, StorageProcessRun,
     UpdateProcessRunRequest,
 };
 use chrono::Utc;
@@ -46,7 +46,7 @@ pub(crate) async fn trigger_process_run(
         .map_err(map_storage_error)?;
 
     if let Err(error) =
-        start_scheduled_process_automaton(state, &process, &run_id, trigger_wire, jwt).await
+        start_scheduled_process_automaton(state, client, &process, &run_id, trigger_wire, jwt).await
     {
         mark_run_failed(client, process_id, &run_id, jwt, &error).await;
         return Err(error);
@@ -104,6 +104,7 @@ async fn reject_active_run(client: &StorageClient, process_id: &str, jwt: &str) 
 
 async fn start_scheduled_process_automaton(
     state: &AppState,
+    storage: &StorageClient,
     process: &StorageProcess,
     run_id: &str,
     trigger: &str,
@@ -128,6 +129,7 @@ async fn start_scheduled_process_automaton(
         .or_else(|| resolve_project_org_id(state, project_id));
     let aura_session_id = Some(stable_process_run_session_id(&process.id, run_id));
     let auth_token = Some(jwt.to_string());
+    let model = resolve_process_model(state, storage, &process.id, jwt).await?;
     let client = HarnessClient::new(aura_os_harness::local_harness_base_url());
 
     client
@@ -137,6 +139,7 @@ async fn start_scheduled_process_automaton(
                 project_id: project_id.to_string(),
                 auth_token,
                 process_id: Some(process.id.clone()),
+                model: Some(model),
                 input: Some(serde_json::json!({
                     "process_id": process.id,
                     "run_id": run_id,
@@ -150,6 +153,61 @@ async fn start_scheduled_process_automaton(
         .await
         .map(|_| ())
         .map_err(|err| map_automaton_start_error(state.harness_ws_slots, err))
+}
+
+async fn resolve_process_model(
+    state: &AppState,
+    storage: &StorageClient,
+    process_id: &str,
+    jwt: &str,
+) -> ApiResult<String> {
+    let nodes = storage
+        .list_process_nodes(process_id, jwt)
+        .await
+        .map_err(map_storage_error)?;
+
+    let agent_id = first_process_agent_id(&nodes).ok_or_else(|| {
+        ApiError::bad_request(
+            "process must include at least one action node with an agent before it can run",
+        )
+    })?;
+
+    let agent = state
+        .agent_service
+        .get_agent_with_jwt(jwt, &agent_id)
+        .await
+        .or_else(|_| state.agent_service.get_agent_local(&agent_id))
+        .map_err(|_| ApiError::bad_request("process action node agent could not be resolved"))?;
+
+    Ok(effective_process_model(&agent))
+}
+
+fn effective_process_model(agent: &Agent) -> String {
+    agent
+        .default_model
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| LATEST_FRONTIER_MODEL.to_string())
+}
+
+fn first_process_agent_id(nodes: &[StorageProcessNode]) -> Option<AgentId> {
+    nodes
+        .iter()
+        .filter(|node| {
+            node.node_type
+                .as_deref()
+                .map(str::trim)
+                .map(str::to_ascii_lowercase)
+                .as_deref()
+                .unwrap_or("action")
+                == "action"
+        })
+        .filter_map(|node| node.agent_id.as_deref())
+        .map(str::trim)
+        .find(|agent_id| !agent_id.is_empty())
+        .and_then(|agent_id| agent_id.parse().ok())
 }
 
 /// Best-effort lookup of the project's owning org id from the local
@@ -273,4 +331,51 @@ fn process_trigger_wire(trigger: ProcessRunTrigger) -> &'static str {
 
 fn is_active_run(status: Option<&str>) -> bool {
     matches!(status, Some("pending" | "running" | "Pending" | "Running"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn node(node_type: Option<&str>, agent_id: Option<&str>) -> StorageProcessNode {
+        StorageProcessNode {
+            id: uuid::Uuid::new_v4().to_string(),
+            process_id: Some(uuid::Uuid::new_v4().to_string()),
+            node_type: node_type.map(str::to_string),
+            label: None,
+            agent_id: agent_id.map(str::to_string),
+            prompt: None,
+            config: None,
+            position_x: None,
+            position_y: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn first_process_agent_id_uses_first_action_agent() {
+        let trigger_agent = AgentId::new().to_string();
+        let action_agent = AgentId::new().to_string();
+        let nodes = vec![
+            node(Some("ignition"), Some(&trigger_agent)),
+            node(Some("action"), Some(&action_agent)),
+        ];
+
+        assert_eq!(
+            first_process_agent_id(&nodes).map(|id| id.to_string()),
+            Some(action_agent)
+        );
+    }
+
+    #[test]
+    fn first_process_agent_id_treats_missing_type_as_action() {
+        let action_agent = AgentId::new().to_string();
+        let nodes = vec![node(None, Some(&action_agent))];
+
+        assert_eq!(
+            first_process_agent_id(&nodes).map(|id| id.to_string()),
+            Some(action_agent)
+        );
+    }
 }

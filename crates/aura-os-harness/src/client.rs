@@ -72,6 +72,8 @@ pub struct HarnessAutomatonStartParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub process_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub input: Option<serde_json::Value>,
     /// Org UUID forwarded to the harness so the outbound proxy
     /// request carries `X-Aura-Org-Id`. Mirrors the same field on
@@ -207,7 +209,15 @@ impl HarnessClient {
         let body = RuntimeRequest {
             r#type: RuntimeRequestType::DevLoop {},
             agent_identity: AgentIdentity::default(),
-            model: ModelSelection::default(),
+            model: ModelSelection {
+                id: params
+                    .model
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string),
+                ..Default::default()
+            },
             workspace: WorkspaceLocation::default(),
             project: Some(ProjectContext {
                 project_id: params.project_id.clone(),
