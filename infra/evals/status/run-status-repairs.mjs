@@ -10,6 +10,7 @@ import {
   latestInvestigationsByCheck,
   investigationKey,
   INVESTIGATION_STATUS,
+  recordRuntimeEnvironment,
 } from "./lib/status-investigations.mjs";
 import { buildInvestigationVerifierContext } from "./lib/status-investigation-verifiers.mjs";
 import {
@@ -220,12 +221,22 @@ function latestByCheckId(checks, generatedAt) {
   const map = new Map();
   for (const check of checks) {
     if (!check.checkId) continue;
-    const existing = map.get(check.checkId);
+    const key = checkRuntimeKey(check);
+    const existing = map.get(key);
     const endedAt = new Date(check.endedAt ?? generatedAt).getTime();
     const existingEndedAt = new Date(existing?.endedAt ?? 0).getTime();
-    if (!existing || endedAt > existingEndedAt) map.set(check.checkId, check);
+    if (!existing || endedAt > existingEndedAt) map.set(key, check);
   }
   return [...map.values()];
+}
+
+function checkRuntimeKey(check) {
+  const runtimeEnvironment = recordRuntimeEnvironment(check);
+  return runtimeEnvironment ? `${runtimeEnvironment}::${check.checkId}` : check.checkId;
+}
+
+function sameCheckRuntime(left, right) {
+  return left?.checkId === right?.checkId && recordRuntimeEnvironment(left) === recordRuntimeEnvironment(right);
 }
 
 async function readInvestigations(args, generatedAt) {
@@ -250,12 +261,19 @@ function investigationsFromPayload(payload) {
 
 function findFeature(registry, check) {
   return (registry.features ?? []).find((feature) => feature.id === check.featureId)
-    ?? (registry.features ?? []).find((feature) => (feature.checks ?? []).some((config) => config.id === check.checkId))
+    ?? (registry.features ?? []).find((feature) => (feature.checks ?? []).some((config) => checkConfigMatches(config, check)))
     ?? null;
 }
 
-function findCheckConfig(feature, checkId) {
-  return (feature?.checks ?? []).find((config) => config.id === checkId) ?? null;
+function findCheckConfig(feature, check) {
+  return (feature?.checks ?? []).find((config) => checkConfigMatches(config, check))
+    ?? (feature?.checks ?? []).find((config) => config.id === check?.checkId)
+    ?? null;
+}
+
+function checkConfigMatches(config, check) {
+  if (!config || config.id !== check?.checkId) return false;
+  return !config.runtimeEnvironment || config.runtimeEnvironment === recordRuntimeEnvironment(check);
 }
 
 function needsRepair(check) {
@@ -568,8 +586,11 @@ async function main() {
   const investigations = await readInvestigations(args, generatedAt);
   const investigationMap = latestInvestigationsByCheck(investigations, generatedAt);
   const failingChecks = checks.filter(needsRepair).filter((check) => {
-    const key = investigationKey(check.featureId, check.checkId);
-    const investigation = investigationMap.get(key) ?? investigationMap.get(investigationKey(null, check.checkId));
+    const runtimeEnvironment = recordRuntimeEnvironment(check);
+    const investigation = investigationMap.get(investigationKey(check.featureId, check.checkId, runtimeEnvironment))
+      ?? investigationMap.get(investigationKey(null, check.checkId, runtimeEnvironment))
+      ?? investigationMap.get(investigationKey(check.featureId, check.checkId))
+      ?? investigationMap.get(investigationKey(null, check.checkId));
     return investigation?.status === INVESTIGATION_STATUS.READY;
   }).slice(0, args.maxRepairs);
 
@@ -598,14 +619,17 @@ async function main() {
 
   for (const check of failingChecks) {
     const feature = findFeature(registry, check);
-    const checkConfig = findCheckConfig(feature, check.checkId);
+    const checkConfig = findCheckConfig(feature, check);
     const expectation = expectations.checks?.[check.checkId] ?? null;
-    const investigation = investigationMap.get(investigationKey(check.featureId, check.checkId))
+    const runtimeEnvironment = recordRuntimeEnvironment(check);
+    const investigation = investigationMap.get(investigationKey(check.featureId, check.checkId, runtimeEnvironment))
+      ?? investigationMap.get(investigationKey(null, check.checkId, runtimeEnvironment))
+      ?? investigationMap.get(investigationKey(check.featureId, check.checkId))
       ?? investigationMap.get(investigationKey(null, check.checkId));
-    const siblingChecks = checks.filter((candidate) => candidate.featureId === check.featureId && candidate.checkId !== check.checkId);
+    const siblingChecks = checks.filter((candidate) => candidate.featureId === check.featureId && checkRuntimeKey(candidate) !== checkRuntimeKey(check));
     const previousChecks = checkRecords
       .filter((candidate) =>
-        candidate.checkId === check.checkId
+        sameCheckRuntime(candidate, check)
           && candidate.endedAt
           && check.endedAt
           && new Date(candidate.endedAt).getTime() < new Date(check.endedAt).getTime(),

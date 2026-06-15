@@ -23,13 +23,13 @@ export function buildInvestigationVerifierContext({
 
   const sameMessageSiblingIds = siblingChecks
     .filter((sibling) => normalizeMessage(sibling.message) === normalizeMessage(check?.message))
-    .map((sibling) => sibling.checkId);
+    .map(checkRef);
   const failedSiblingIds = siblingChecks
     .filter((sibling) => sibling.status === "fail")
-    .map((sibling) => sibling.checkId);
+    .map(checkRef);
   const passingSiblingIds = siblingChecks
     .filter((sibling) => sibling.status === "pass")
-    .map((sibling) => sibling.checkId);
+    .map(checkRef);
   const sourcePaths = [...new Set([
     ...sourceHints.map((hint) => hint.path).filter(Boolean),
     ...sourceContext.map((context) => context.path).filter(Boolean),
@@ -110,7 +110,7 @@ function recommendedVerifierProbes({
   if (missingRequiredEvidence.length > 0 || contractValidationError) {
     probes.push({
       label: "Re-run the failed expected-output contract",
-      command: check?.checkId ? `AURA_STATUS_CHECKS=${check.checkId} npm run status:probes` : "npm run status:probes",
+      command: reproductionCommand(check),
       reason: contractValidationError ?? `Missing required evidence: ${missingRequiredEvidence.join(", ")}`,
     });
   }
@@ -151,6 +151,18 @@ function recommendedVerifierProbes({
     });
   }
   return probes;
+}
+
+function reproductionCommand(check) {
+  if (!check?.checkId) return "npm run status:probes";
+  const runtimePrefix = check.runtimeEnvironment
+    ? `AURA_STATUS_RUNTIME_ENVIRONMENT=${check.runtimeEnvironment} `
+    : "";
+  return `${runtimePrefix}AURA_STATUS_CHECKS=${check.checkId} npm run status:probes`;
+}
+
+function checkRef(check) {
+  return check?.runtimeEnvironment ? `${check.runtimeEnvironment}/${check.checkId}` : check?.checkId;
 }
 
 function normalizeMessage(value) {

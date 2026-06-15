@@ -8,6 +8,7 @@ import {
   INVESTIGATION_STATUS,
   investigationKey,
   latestInvestigationsByCheck,
+  recordRuntimeEnvironment,
 } from "./lib/status-investigations.mjs";
 import { normalizeCheckResult } from "./lib/status-policy.mjs";
 
@@ -104,12 +105,18 @@ function latestByCheckId(checks, generatedAt) {
   const map = new Map();
   for (const check of checks) {
     if (!check.checkId) continue;
-    const existing = map.get(check.checkId);
+    const key = checkRuntimeKey(check);
+    const existing = map.get(key);
     const endedAt = new Date(check.endedAt ?? generatedAt).getTime();
     const existingEndedAt = new Date(existing?.endedAt ?? 0).getTime();
-    if (!existing || endedAt > existingEndedAt) map.set(check.checkId, check);
+    if (!existing || endedAt > existingEndedAt) map.set(key, check);
   }
   return [...map.values()];
+}
+
+function checkRuntimeKey(check) {
+  const runtimeEnvironment = recordRuntimeEnvironment(check);
+  return runtimeEnvironment ? `${runtimeEnvironment}::${check.checkId}` : check.checkId;
 }
 
 async function readInvestigations(args, generatedAt) {
@@ -138,12 +145,16 @@ function shouldRepairCheck(check, investigation, minConfidence) {
 function buildPlan({ checks, investigationMap, minConfidence, maxChecks, generatedAt }) {
   const eligible = [];
   for (const check of checks) {
-    const investigation = investigationMap.get(investigationKey(check.featureId, check.checkId))
+    const runtimeEnvironment = recordRuntimeEnvironment(check);
+    const investigation = investigationMap.get(investigationKey(check.featureId, check.checkId, runtimeEnvironment))
+      ?? investigationMap.get(investigationKey(null, check.checkId, runtimeEnvironment))
+      ?? investigationMap.get(investigationKey(check.featureId, check.checkId))
       ?? investigationMap.get(investigationKey(null, check.checkId));
     if (!shouldRepairCheck(check, investigation, minConfidence)) continue;
     eligible.push({
       checkId: check.checkId,
       featureId: check.featureId,
+      runtimeEnvironment,
       status: check.status,
       investigationId: investigation.id,
       investigationConfidence: investigation.confidence,

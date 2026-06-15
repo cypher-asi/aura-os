@@ -24,6 +24,7 @@ export interface StatusInvestigation {
   readonly featureId: string | null;
   readonly featureLabel: string;
   readonly checkId: string;
+  readonly runtimeEnvironment?: string | null;
   readonly title: string;
   readonly status: "ready" | "failed" | "skipped";
   readonly checkStatus: StatusCheckState | null;
@@ -50,6 +51,10 @@ export interface StatusInvestigation {
 
 export interface StatusCheck {
   readonly id: string;
+  readonly label?: string;
+  readonly runtimeEnvironment?: string | null;
+  readonly runtimeLabel?: string | null;
+  readonly statusImpact?: "feature" | "informational" | string;
   readonly required: boolean;
   readonly status: StatusCheckState;
   readonly featureStatus: FeatureHealthStatus;
@@ -94,8 +99,14 @@ export interface StatusSnapshot {
     readonly majorOutage: number;
     readonly unknown: number;
     readonly maintenance: number;
+    readonly runtimeEnvironments?: number;
     readonly investigations?: number;
   };
+  readonly runtimeEnvironments?: readonly {
+    readonly id: string;
+    readonly label: string;
+    readonly description?: string;
+  }[];
   readonly features: readonly StatusFeature[];
   readonly investigations?: readonly StatusInvestigation[];
 }

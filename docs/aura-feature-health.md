@@ -16,6 +16,13 @@ contract before allowing a check to pass, and
 `infra/evals/status/lib/status-registry.test.mjs` fails locally if a check is
 registered without both an expected-output contract and a runner branch.
 
+Feature health and runtime environment are separate axes. A feature represents
+the user-facing capability, while each check declares the runtime it actually
+exercised, such as `production-api`, `desktop-release`, or `local-dev`. The
+dashboard groups checks by feature, labels the runtime for each row, and lets a
+runtime-specific check be informational when it exposes useful deployment
+evidence without proving or disproving the whole feature.
+
 Current feature groups:
 
 - Core API: `/health`, authenticated session reads, and system metadata.
@@ -26,7 +33,8 @@ Current feature groups:
 - Projects, Specs, and Tasks: project CRUD, spec CRUD, task CRUD, project stats, and loop status.
 - Processes: workflow lists, process creation, default node creation, and cleanup.
 - Model Responses: curated model matrix through the AURA runtime path.
-- Media Generation: image generation by default, with optional 3D and video stream probes.
+- Media Generation: desktop-backed image generation, plus informational
+  production-auth stream health.
 - Autonomous Build Loop: benchmark and harness fixture outputs.
 - Marketplace and Bootstrap: marketplace catalog and harness bootstrap health.
 - Integrations and Billing: integrations, tool actions, subscription status, and credits.
@@ -100,15 +108,19 @@ npm run status:desktop-release
 
 By default this covers the binary-local API, authenticated session, org/profile
 reads, workspace defaults, terminal list, local agent creation, local agent
-runtime response, and the local model matrix. Release workflows run this on the
-macOS arm64 release leg when `AURA_STATUS_USER_EMAIL` and
+runtime response, the local model matrix, and desktop-backed image generation.
+Release workflows run this on the macOS arm64 release leg when
+`AURA_STATUS_USER_EMAIL` and
 `AURA_STATUS_USER_PASSWORD` are configured, then upload the generated check JSON
 and desktop logs as artifacts.
 
 The scheduled public observability workflow intentionally excludes
-desktop-loopback checks and generation modes that require a bundled harness
-runtime. It preserves fresh desktop-release check results from the previous
-published snapshot, then layers deployed API and public website probes on top.
+desktop-loopback checks. It can still run informational deployed API checks for
+the production-auth media endpoint, but the required product proof for Media
+Generation comes from the desktop-release lane because that is where the
+bundled harness actually exists. The workflow preserves fresh desktop-release
+check results from the previous published snapshot, then layers deployed API
+and public website probes on top.
 
 For end-to-end local verification, use the existing eval local stack in
 `infra/evals/local-stack/`. The observability page is not served from a sibling
@@ -136,9 +148,12 @@ the goal is to validate local `aura-network`, `aura-storage`, `orbit`, or local
 database behavior. Remote-agent checks should run through the hybrid or
 production path so local harness execution cannot mask deployed swarm failures.
 
-Default probe runs include every implemented check unless `--checks` is used to
-select a smaller set. The production browser/API lane runs media generation
-checks directly, including image, 3D, and video streams:
+Each probe lane should run only checks it can truthfully exercise. Production
+browser/API runs should use production-runtime checks, and desktop-release runs
+should use desktop-runtime checks. For example,
+`image-generation-stream` is the same feature eval in both lanes; the
+`runtimeEnvironment` field tells the dashboard whether that result came from
+the deployed authenticated API path or the packaged desktop harness path:
 
 ```sh
 npm run status:probes -- --base-url http://127.0.0.1:3190 --token "$AURA_STATUS_ACCESS_TOKEN"
@@ -184,9 +199,12 @@ be triggered manually. It runs probes with production secrets, builds the
 snapshot even when probes fail, and uploads the generated JSON/check artifacts.
 This scheduled workflow uses `AURA_STATUS_CHECKS` to restrict itself to checks
 that can be truthfully exercised against deployed website/API surfaces. It runs
-the public media generation checks, but it does not run desktop-loopback checks
-such as `local-agent-runtime`, `workspace-defaults`, `terminal-list`, or the
-local `model-matrix`; those belong to `status:desktop-release`.
+the informational production-auth media generation check, but it does not run
+desktop-loopback checks such as `local-agent-runtime`, `workspace-defaults`,
+`terminal-list`, or the local `model-matrix`; those belong to
+`status:desktop-release`. The shared `image-generation-stream` eval can run in
+both lanes because its runtime environment distinguishes production-auth API
+evidence from desktop-harness evidence.
 
 The browser/API and desktop lanes publish to the same `gh-pages` path:
 `observability/status.json`. Each lane first reads the previously published
@@ -207,7 +225,7 @@ while preserving the correct execution environment for each eval.
 The core production commands are:
 
 ```sh
-npm run status:probes -- --base-url "$AURA_STATUS_API_BASE_URL" --token "$AURA_STATUS_ACCESS_TOKEN" --environment production
+npm run status:probes -- --base-url "$AURA_STATUS_API_BASE_URL" --token "$AURA_STATUS_ACCESS_TOKEN" --environment production --runtime-environment production-api
 npm run status:investigate -- --environment production --source github-actions
 npm run status:snapshot -- --environment production --source github-actions
 ```

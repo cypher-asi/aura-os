@@ -15,10 +15,12 @@ async function readJson(relativePath) {
 test("every registered status check has an expected-output contract", async () => {
   const registry = await readJson("infra/evals/status/features.json");
   const expectations = await readJson("infra/evals/status/check-expectations.json");
-  const checkIds = registry.features.flatMap((feature) => feature.checks.map((check) => check.id));
+  const checks = registry.features.flatMap((feature) => feature.checks);
+  const checkKeys = checks.map(checkRegistryKey);
+  const checkIds = [...new Set(checks.map((check) => check.id))];
   const expectationIds = Object.keys(expectations.checks);
 
-  assert.equal(new Set(checkIds).size, checkIds.length, "registry check ids must be unique");
+  assert.equal(new Set(checkKeys).size, checkKeys.length, "registry check id/runtime pairs must be unique");
   assert.deepEqual(
     expectationIds.filter((id) => !checkIds.includes(id)),
     [],
@@ -41,7 +43,7 @@ test("every registered status check has an expected-output contract", async () =
 test("every registered status check has a runner branch", async () => {
   const registry = await readJson("infra/evals/status/features.json");
   const runner = await readFile(path.join(repoRoot, "infra/evals/status/run-status-probes.mjs"), "utf8");
-  const checkIds = registry.features.flatMap((feature) => feature.checks.map((check) => check.id));
+  const checkIds = [...new Set(registry.features.flatMap((feature) => feature.checks.map((check) => check.id)))];
   const runnerIds = Array.from(runner.matchAll(/selected\("([^"]+)"\)/g), (match) => match[1]);
   const unknown = runnerIds.filter((id) => !checkIds.includes(id));
   const missing = checkIds.filter((id) => !runner.includes(`selected("${id}")`));
@@ -58,11 +60,11 @@ test("every registered status check has response-time thresholds", async () => {
   for (const feature of registry.features) {
     for (const check of feature.checks) {
       if (!Object.hasOwn(check, "warningLatencyMs") || !Object.hasOwn(check, "outageLatencyMs")) {
-        missing.push(check.id);
+        missing.push(checkRegistryKey(check));
         continue;
       }
       if (!(check.warningLatencyMs > 0) || !(check.outageLatencyMs > check.warningLatencyMs)) {
-        invalid.push(check.id);
+        invalid.push(checkRegistryKey(check));
       }
     }
   }
@@ -70,3 +72,7 @@ test("every registered status check has response-time thresholds", async () => {
   assert.deepEqual(missing, [], "every check must define warningLatencyMs and outageLatencyMs");
   assert.deepEqual(invalid, [], "every check must define positive thresholds with outage > warning");
 });
+
+function checkRegistryKey(check) {
+  return check.runtimeEnvironment ? `${check.runtimeEnvironment}::${check.id}` : check.id;
+}

@@ -14,6 +14,7 @@ import {
   callOpenAiCompatibleJson,
 } from "./lib/status-llm-client.mjs";
 import { discoverInvestigationSources } from "./lib/status-source-discovery.mjs";
+import { recordRuntimeEnvironment } from "./lib/status-investigations.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
@@ -208,22 +209,39 @@ function latestByCheckId(checks, generatedAt) {
   const map = new Map();
   for (const check of checks) {
     if (!check.checkId) continue;
-    const existing = map.get(check.checkId);
+    const key = checkRuntimeKey(check);
+    const existing = map.get(key);
     const endedAt = new Date(check.endedAt ?? generatedAt).getTime();
     const existingEndedAt = new Date(existing?.endedAt ?? 0).getTime();
-    if (!existing || endedAt > existingEndedAt) map.set(check.checkId, check);
+    if (!existing || endedAt > existingEndedAt) map.set(key, check);
   }
   return [...map.values()];
 }
 
+function checkRuntimeKey(check) {
+  const runtimeEnvironment = recordRuntimeEnvironment(check);
+  return runtimeEnvironment ? `${runtimeEnvironment}::${check.checkId}` : check.checkId;
+}
+
+function sameCheckRuntime(left, right) {
+  return left?.checkId === right?.checkId && recordRuntimeEnvironment(left) === recordRuntimeEnvironment(right);
+}
+
 function findFeature(registry, check) {
   return (registry.features ?? []).find((feature) => feature.id === check.featureId)
-    ?? (registry.features ?? []).find((feature) => (feature.checks ?? []).some((config) => config.id === check.checkId))
+    ?? (registry.features ?? []).find((feature) => (feature.checks ?? []).some((config) => checkConfigMatches(config, check)))
     ?? null;
 }
 
-function findCheckConfig(feature, checkId) {
-  return (feature?.checks ?? []).find((config) => config.id === checkId) ?? null;
+function findCheckConfig(feature, check) {
+  return (feature?.checks ?? []).find((config) => checkConfigMatches(config, check))
+    ?? (feature?.checks ?? []).find((config) => config.id === check?.checkId)
+    ?? null;
+}
+
+function checkConfigMatches(config, check) {
+  if (!config || config.id !== check?.checkId) return false;
+  return !config.runtimeEnvironment || config.runtimeEnvironment === recordRuntimeEnvironment(check);
 }
 
 function hasConfiguredModel(args) {
@@ -292,12 +310,12 @@ async function main() {
 
   for (const check of failingChecks) {
     const feature = findFeature(registry, check);
-    const checkConfig = findCheckConfig(feature, check.checkId);
+    const checkConfig = findCheckConfig(feature, check);
     const expectation = expectations.checks?.[check.checkId] ?? null;
-    const siblingChecks = checks.filter((candidate) => candidate.featureId === check.featureId && candidate.checkId !== check.checkId);
+    const siblingChecks = checks.filter((candidate) => candidate.featureId === check.featureId && checkRuntimeKey(candidate) !== checkRuntimeKey(check));
     const previousChecks = checkRecords
       .filter((candidate) =>
-        candidate.checkId === check.checkId
+        sameCheckRuntime(candidate, check)
           && candidate.endedAt
           && check.endedAt
           && new Date(candidate.endedAt).getTime() < new Date(check.endedAt).getTime(),

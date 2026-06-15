@@ -1,7 +1,9 @@
 import {
   annotateInvestigation,
+  inferRuntimeEnvironment,
   investigationKey,
   latestInvestigationsByCheck,
+  normalizeRuntimeEnvironment,
 } from "./status-investigations.mjs";
 
 export const FEATURE_STATUS = Object.freeze({
@@ -50,6 +52,9 @@ export function normalizeCheckResult(raw, generatedAt) {
   const startedAt = normalizeIsoDate(raw?.startedAt, endedAt);
   const runGeneratedAt = normalizeIsoDate(raw?.runGeneratedAt, null);
   const latencyMs = Number.isFinite(Number(raw?.latencyMs)) ? Math.max(0, Number(raw.latencyMs)) : null;
+  const runtimeEnvironment = normalizeRuntimeEnvironment(
+    raw?.runtimeEnvironment ?? raw?.runtime ?? inferRuntimeEnvironment(raw?.environment),
+  );
 
   return {
     checkId,
@@ -62,8 +67,21 @@ export function normalizeCheckResult(raw, generatedAt) {
     runGeneratedAt,
     latencyMs,
     environment: typeof raw?.environment === "string" ? raw.environment : null,
+    runtimeEnvironment,
     evidence: raw?.evidence && typeof raw.evidence === "object" ? raw.evidence : {},
   };
+}
+
+function checkMapKey(checkId, runtimeEnvironment = null) {
+  return runtimeEnvironment ? `${runtimeEnvironment}::${checkId}` : checkId;
+}
+
+function upsertLatest(map, key, check) {
+  if (!key) return;
+  const existing = map.get(key);
+  if (!existing || new Date(check.endedAt).getTime() > new Date(existing.endedAt).getTime()) {
+    map.set(key, check);
+  }
 }
 
 function latestByCheckId(checks, generatedAt) {
@@ -71,12 +89,35 @@ function latestByCheckId(checks, generatedAt) {
   for (const raw of checks) {
     const check = normalizeCheckResult(raw, generatedAt);
     if (!check.checkId) continue;
-    const existing = map.get(check.checkId);
-    if (!existing || new Date(check.endedAt).getTime() > new Date(existing.endedAt).getTime()) {
-      map.set(check.checkId, check);
-    }
+    upsertLatest(map, checkMapKey(check.checkId, check.runtimeEnvironment), check);
+    upsertLatest(map, check.checkId, check);
   }
   return map;
+}
+
+function checkConfigRuntimeEnvironment(config) {
+  return normalizeRuntimeEnvironment(config?.runtimeEnvironment ?? config?.runtime);
+}
+
+function checkConfigStatusImpact(config) {
+  return typeof config?.statusImpact === "string" ? config.statusImpact : "feature";
+}
+
+function lookupCheck(checkMap, config) {
+  const runtimeEnvironment = checkConfigRuntimeEnvironment(config);
+  if (!runtimeEnvironment) return checkMap.get(config.id);
+  const exact = checkMap.get(checkMapKey(config.id, runtimeEnvironment));
+  if (exact) return exact;
+  const legacy = checkMap.get(config.id);
+  return legacy?.runtimeEnvironment ? null : legacy;
+}
+
+function runtimeDefinitionMap(registry) {
+  return new Map((registry.runtimeEnvironments ?? []).map((runtime) => [runtime.id, runtime]));
+}
+
+function runtimeLabel(runtimeEnvironment, runtimeMap) {
+  return runtimeMap.get(runtimeEnvironment)?.label ?? runtimeEnvironment;
 }
 
 function checkVerdict(check, config, generatedAt) {
@@ -103,6 +144,16 @@ function checkVerdict(check, config, generatedAt) {
 
   const warningLatencyMs = Number(config.warningLatencyMs ?? Infinity);
   const outageLatencyMs = Number(config.outageLatencyMs ?? Infinity);
+  const informational = checkConfigStatusImpact(config) === "informational";
+
+  if (informational) {
+    return {
+      status: FEATURE_STATUS.OPERATIONAL,
+      reason: check.message || "Informational runtime check",
+      stale: false,
+      check,
+    };
+  }
 
   if (check.status === CHECK_STATUS.FAIL) {
     return {
@@ -164,7 +215,7 @@ function statusMax(left, right) {
 export function aggregateFeature(feature, checkMap, generatedAt, context = {}) {
   const checkConfigs = Array.isArray(feature.checks) ? feature.checks : [];
   const verdicts = checkConfigs.map((config) =>
-    checkVerdict(checkMap.get(config.id), config, generatedAt),
+    checkVerdict(lookupCheck(checkMap, config), config, generatedAt),
   );
   const requiredVerdicts = verdicts.filter((verdict, index) => checkConfigs[index]?.required !== false);
   const presentRequired = requiredVerdicts.filter((verdict) => verdict.check != null);
@@ -229,8 +280,11 @@ export function aggregateFeature(feature, checkMap, generatedAt, context = {}) {
     message: featureMessage(status, verdicts),
     checks: verdicts.map((verdict, index) => {
       const checkConfig = checkConfigs[index];
+      const runtimeEnvironment = checkConfigRuntimeEnvironment(checkConfig) ?? verdict.check?.runtimeEnvironment ?? null;
       const investigation = annotateInvestigation(
-        context.investigationMap?.get(investigationKey(feature.id, checkConfig.id))
+        context.investigationMap?.get(investigationKey(feature.id, checkConfig.id, runtimeEnvironment))
+          ?? context.investigationMap?.get(investigationKey(null, checkConfig.id, runtimeEnvironment))
+          ?? context.investigationMap?.get(investigationKey(feature.id, checkConfig.id))
           ?? context.investigationMap?.get(investigationKey(null, checkConfig.id)),
         {
           feature,
@@ -242,6 +296,10 @@ export function aggregateFeature(feature, checkMap, generatedAt, context = {}) {
       );
       return {
         id: checkConfig.id,
+        label: checkConfig.label ?? checkConfig.id,
+        runtimeEnvironment,
+        runtimeLabel: runtimeLabel(runtimeEnvironment, context.runtimeMap ?? new Map()),
+        statusImpact: checkConfigStatusImpact(checkConfig),
         required: checkConfig.required !== false,
         status: verdict.check?.status ?? "unknown",
         featureStatus: verdict.status,
@@ -273,9 +331,10 @@ export function buildStatusSnapshot({
   const normalizedGeneratedAt = normalizeIsoDate(generatedAt, new Date().toISOString());
   const checkMap = latestByCheckId(checks, normalizedGeneratedAt);
   const investigationMap = latestInvestigationsByCheck(investigations, normalizedGeneratedAt);
+  const runtimeMap = runtimeDefinitionMap(registry);
   const features = [...(registry.features ?? [])]
     .map((feature) =>
-      aggregateFeature(feature, checkMap, normalizedGeneratedAt, { environment, source, investigationMap }),
+      aggregateFeature(feature, checkMap, normalizedGeneratedAt, { environment, source, investigationMap, runtimeMap }),
     )
     .sort((left, right) => left.priority - right.priority || left.label.localeCompare(right.label));
   const attachedInvestigations = features
@@ -290,6 +349,9 @@ export function buildStatusSnapshot({
     (current, feature) => statusMax(current, feature.status),
     FEATURE_STATUS.OPERATIONAL,
   );
+  const runtimeIds = [...new Set(features.flatMap((feature) =>
+    feature.checks.map((check) => check.runtimeEnvironment).filter(Boolean),
+  ))].sort();
 
   return {
     schemaVersion: 1,
@@ -307,8 +369,17 @@ export function buildStatusSnapshot({
       majorOutage: features.filter((feature) => feature.status === FEATURE_STATUS.MAJOR_OUTAGE).length,
       unknown: features.filter((feature) => feature.status === FEATURE_STATUS.UNKNOWN).length,
       maintenance: features.filter((feature) => feature.status === FEATURE_STATUS.MAINTENANCE).length,
+      runtimeEnvironments: runtimeIds.length,
       investigations: attachedInvestigations.length,
     },
+    runtimeEnvironments: runtimeIds.map((id) => {
+      const definition = runtimeMap.get(id) ?? {};
+      return {
+        id,
+        label: definition.label ?? id,
+        description: definition.description ?? "",
+      };
+    }),
     features,
     investigations: attachedInvestigations,
   };

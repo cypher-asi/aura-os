@@ -13,8 +13,27 @@ export const INVESTIGATION_CONFIDENCE = Object.freeze({
 const VALID_INVESTIGATION_STATUSES = new Set(Object.values(INVESTIGATION_STATUS));
 const VALID_CONFIDENCE = new Set(Object.values(INVESTIGATION_CONFIDENCE));
 
-export function investigationKey(featureId, checkId) {
-  return `${featureId ?? ""}:${checkId ?? ""}`;
+export function normalizeRuntimeEnvironment(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+export function inferRuntimeEnvironment(environment) {
+  const normalized = typeof environment === "string" ? environment.trim().toLowerCase() : "";
+  if (normalized.startsWith("desktop-")) return "desktop-release";
+  if (normalized === "production") return "production-api";
+  if (normalized === "local") return "local-dev";
+  return null;
+}
+
+export function recordRuntimeEnvironment(record) {
+  return normalizeRuntimeEnvironment(
+    record?.runtimeEnvironment ?? record?.runtime ?? inferRuntimeEnvironment(record?.environment),
+  );
+}
+
+export function investigationKey(featureId, checkId, runtimeEnvironment = null) {
+  const runtime = normalizeRuntimeEnvironment(runtimeEnvironment);
+  return runtime ? `${featureId ?? ""}:${runtime}:${checkId ?? ""}` : `${featureId ?? ""}:${checkId ?? ""}`;
 }
 
 export function normalizeInvestigation(raw, generatedAt) {
@@ -24,15 +43,17 @@ export function normalizeInvestigation(raw, generatedAt) {
   const featureId = typeof raw.featureId === "string" && raw.featureId.trim()
     ? raw.featureId.trim()
     : null;
+  const runtimeEnvironment = recordRuntimeEnvironment(raw);
   const normalizedGeneratedAt = normalizeIsoDate(raw.generatedAt, generatedAt);
 
   return {
     schemaVersion: 1,
     kind: "llm-investigation",
-    id: stringOrDefault(raw.id, investigationKey(featureId, checkId)),
+    id: stringOrDefault(raw.id, investigationKey(featureId, checkId, runtimeEnvironment)),
     featureId,
     featureLabel: stringOrDefault(raw.featureLabel, featureId ?? "Unknown feature"),
     checkId,
+    runtimeEnvironment,
     title: stringOrDefault(raw.title, "Investigator report"),
     status: VALID_INVESTIGATION_STATUSES.has(raw.status) ? raw.status : INVESTIGATION_STATUS.READY,
     checkStatus: typeof raw.checkStatus === "string" ? raw.checkStatus : null,
@@ -63,9 +84,16 @@ export function latestInvestigationsByCheck(investigations, generatedAt) {
   for (const raw of investigations ?? []) {
     const investigation = normalizeInvestigation(raw, generatedAt);
     if (!investigation) continue;
-    const keys = investigation.featureId
-      ? [investigationKey(investigation.featureId, investigation.checkId)]
-      : [investigationKey(null, investigation.checkId)];
+    const keys = investigation.runtimeEnvironment
+      ? investigation.featureId
+        ? [
+          investigationKey(investigation.featureId, investigation.checkId, investigation.runtimeEnvironment),
+          investigationKey(null, investigation.checkId, investigation.runtimeEnvironment),
+        ]
+        : [investigationKey(null, investigation.checkId, investigation.runtimeEnvironment)]
+      : investigation.featureId
+        ? [investigationKey(investigation.featureId, investigation.checkId)]
+        : [investigationKey(null, investigation.checkId)];
     for (const key of keys) {
       const existing = map.get(key);
       if (!existing || new Date(investigation.generatedAt).getTime() > new Date(existing.generatedAt).getTime()) {
@@ -83,6 +111,7 @@ export function annotateInvestigation(investigation, { feature, checkConfig, ver
     featureId: feature?.id ?? investigation.featureId,
     featureLabel: feature?.label ?? investigation.featureLabel,
     checkId: checkConfig?.id ?? investigation.checkId,
+    runtimeEnvironment: verdict?.check?.runtimeEnvironment ?? investigation.runtimeEnvironment,
     checkStatus: verdict?.check?.status ?? investigation.checkStatus ?? "unknown",
     featureStatus: verdict?.status ?? investigation.featureStatus ?? "unknown",
     environment: environment ?? investigation.environment,

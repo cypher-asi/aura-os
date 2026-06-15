@@ -73,12 +73,14 @@ export function buildInvestigationInput({
       runGeneratedAt: check?.runGeneratedAt ?? null,
       latencyMs: check?.latencyMs ?? null,
       environment: check?.environment ?? null,
+      runtimeEnvironment: check?.runtimeEnvironment ?? null,
       evidence: check?.evidence ?? {},
     },
     expectedOutputContract: expectation ?? null,
     siblingChecks: siblingChecks.map((sibling) => ({
       checkId: sibling.checkId,
       featureId: sibling.featureId,
+      runtimeEnvironment: sibling.runtimeEnvironment ?? null,
       status: sibling.status,
       message: sibling.message,
       endedAt: sibling.endedAt,
@@ -201,10 +203,11 @@ export async function investigateCheck({
     return normalizeInvestigation({
       schemaVersion: 1,
       kind: "llm-investigation",
-      id: investigationId(feature?.id ?? check?.featureId, check?.checkId, generatedAt),
+      id: investigationId(feature?.id ?? check?.featureId, check?.checkId, generatedAt, check?.runtimeEnvironment),
       featureId: feature?.id ?? check?.featureId ?? null,
       featureLabel: feature?.label ?? feature?.id ?? "Unknown feature",
       checkId: check?.checkId,
+      runtimeEnvironment: check?.runtimeEnvironment ?? null,
       title: "Investigator failed",
       status: INVESTIGATION_STATUS.FAILED,
       checkStatus: check?.status ?? null,
@@ -262,10 +265,11 @@ export function normalizeInvestigationResponse(content, {
     ...parsed,
     schemaVersion: 1,
     kind: "llm-investigation",
-    id: investigationId(feature?.id ?? check?.featureId, check?.checkId, generatedAt),
+    id: investigationId(feature?.id ?? check?.featureId, check?.checkId, generatedAt, check?.runtimeEnvironment),
     featureId: feature?.id ?? check?.featureId ?? null,
     featureLabel: feature?.label ?? feature?.id ?? "Unknown feature",
     checkId: check?.checkId,
+    runtimeEnvironment: check?.runtimeEnvironment ?? null,
     status: INVESTIGATION_STATUS.READY,
     checkStatus: check?.status ?? null,
     generatedAt,
@@ -294,12 +298,14 @@ function parseJsonObject(content) {
   throw new Error("Investigator response did not contain a JSON object");
 }
 
-function investigationId(featureId, checkId, generatedAt) {
+function investigationId(featureId, checkId, generatedAt, runtimeEnvironment = null) {
   const digest = createHash("sha256")
-    .update(`${featureId ?? "unknown"}:${checkId ?? "unknown"}:${generatedAt}`)
+    .update(`${featureId ?? "unknown"}:${runtimeEnvironment ?? ""}:${checkId ?? "unknown"}:${generatedAt}`)
     .digest("hex")
     .slice(0, 12);
-  return `${featureId ?? "unknown"}:${checkId ?? "unknown"}:${digest}`;
+  return runtimeEnvironment
+    ? `${featureId ?? "unknown"}:${runtimeEnvironment}:${checkId ?? "unknown"}:${digest}`
+    : `${featureId ?? "unknown"}:${checkId ?? "unknown"}:${digest}`;
 }
 
 function evidenceDigest(check) {

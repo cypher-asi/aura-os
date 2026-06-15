@@ -94,7 +94,7 @@
 
 .statusSummary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1px;
   margin-bottom: 10px;
   border: 1px solid rgba(238, 242, 244, 0.09);
@@ -310,12 +310,12 @@
 .statusCheckHeader,
 .statusCheckRow {
   display: grid;
-  grid-template-columns: minmax(190px, 1.45fr) minmax(92px, 0.6fr) minmax(82px, 0.5fr) minmax(96px, 0.65fr);
-  min-width: 580px;
+  grid-template-columns: minmax(210px, 1.45fr) minmax(116px, 0.75fr) minmax(92px, 0.6fr) minmax(82px, 0.5fr) minmax(96px, 0.65fr);
+  min-width: 720px;
 }
 
-.statusCheckHeader span,
-.statusCheckRow span {
+.statusCheckHeader > span,
+.statusCheckRow > span {
   min-width: 0;
   padding: 10px 12px;
   overflow: hidden;
@@ -327,7 +327,7 @@
   color: rgba(238, 242, 244, 0.68);
 }
 
-.statusCheckHeader span {
+.statusCheckHeader > span {
   font-size: 11px;
   font-weight: 700;
   color: rgba(238, 242, 244, 0.48);
@@ -337,6 +337,31 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.statusCheckName code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 0;
+  color: rgba(238, 242, 244, 0.42);
+  font-family: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+}
+
+.statusRuntimeTag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 20px;
+  padding: 0 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid rgba(154, 199, 255, 0.16);
+  background: rgba(52, 112, 191, 0.12);
+  color: rgba(205, 226, 255, 0.82);
+  font-size: 11px;
+  line-height: 1;
 }
 
 .statusOptional {

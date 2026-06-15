@@ -86,7 +86,12 @@ const FIXTURE_SNAPSHOT: StatusSnapshot = {
     unknown: 0,
     maintenance: 0,
     investigations: 1,
+    runtimeEnvironments: 2,
   },
+  runtimeEnvironments: [
+    { id: "production-api", label: "Production API" },
+    { id: "desktop-release", label: "Desktop Release" },
+  ],
   features: [
     {
       id: "core-api",
@@ -106,6 +111,9 @@ const FIXTURE_SNAPSHOT: StatusSnapshot = {
       checks: [
         {
           id: "api-health",
+          label: "API health endpoint",
+          runtimeEnvironment: "production-api",
+          runtimeLabel: "Production API",
           required: true,
           status: "pass",
           featureStatus: "operational",
@@ -116,6 +124,8 @@ const FIXTURE_SNAPSHOT: StatusSnapshot = {
         },
         {
           id: "auth-session",
+          runtimeEnvironment: "production-api",
+          runtimeLabel: "Production API",
           required: true,
           status: "pass",
           featureStatus: "operational",
@@ -144,6 +154,9 @@ const FIXTURE_SNAPSHOT: StatusSnapshot = {
       checks: [
         {
           id: "model-matrix",
+          runtimeEnvironment: "desktop-release",
+          runtimeLabel: "Desktop Release",
+          statusImpact: "informational",
           required: true,
           status: "warn",
           featureStatus: "degraded",
@@ -267,6 +280,7 @@ describe("StatusView", () => {
       }),
     );
     expect(screen.getAllByText("Degraded").length).toBeGreaterThan(0);
+    expect(screen.getByText("Runtimes")).toBeInTheDocument();
     expect(screen.getByText("2/3 models returned the expected response")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Platform" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Models" })).toBeInTheDocument();
@@ -285,6 +299,8 @@ describe("StatusView", () => {
     expect(table).toBeDefined();
     if (!table) return;
     expect(within(table).getByText("model-matrix")).toBeInTheDocument();
+    expect(within(table).getByText("Desktop Release")).toBeInTheDocument();
+    expect(within(table).getByText("Info")).toBeInTheDocument();
     expect(within(table).getByText("warn")).toBeInTheDocument();
     expect(within(table).getByText("42 s")).toBeInTheDocument();
     expect(within(table).getByText("2/3")).toBeInTheDocument();

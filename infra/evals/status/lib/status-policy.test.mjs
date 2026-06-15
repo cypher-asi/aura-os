@@ -148,6 +148,96 @@ test("buildStatusSnapshot picks the latest check result and computes overall sev
   assert.equal(snapshot.totals.degraded, 1);
 });
 
+test("buildStatusSnapshot separates feature health from runtime-specific media checks", () => {
+  const registry = {
+    title: "AURA Observability",
+    runtimeEnvironments: [
+      { id: "desktop-release", label: "Desktop Release" },
+      { id: "production-api", label: "Production API" },
+    ],
+    features: [
+      {
+        id: "media-generation",
+        label: "Media Generation",
+        category: "media",
+        priority: 10,
+        checks: [
+          {
+            id: "image-generation-stream",
+            label: "Image generation stream",
+            runtimeEnvironment: "desktop-release",
+            required: true,
+            staleAfterMinutes: 10,
+          },
+          {
+            id: "image-generation-stream",
+            label: "Image generation stream",
+            runtimeEnvironment: "production-api",
+            required: false,
+            statusImpact: "informational",
+            staleAfterMinutes: 10,
+          },
+        ],
+        outageAfterFailures: 1,
+      },
+    ],
+  };
+
+  const waitingForDesktop = buildStatusSnapshot({
+    registry,
+    generatedAt: GENERATED_AT,
+    environment: "production",
+    checks: [
+      {
+        checkId: "image-generation-stream",
+        featureId: "media-generation",
+        status: CHECK_STATUS.FAIL,
+        message: "production API has no harness route",
+        endedAt: GENERATED_AT,
+        runtimeEnvironment: "production-api",
+      },
+    ],
+  });
+
+  assert.equal(waitingForDesktop.features[0].status, FEATURE_STATUS.UNKNOWN);
+  assert.equal(waitingForDesktop.features[0].message, "No recent result");
+  assert.equal(waitingForDesktop.features[0].checks[1].statusImpact, "informational");
+  assert.equal(waitingForDesktop.features[0].checks[1].runtimeLabel, "Production API");
+
+  const desktopPassing = buildStatusSnapshot({
+    registry,
+    generatedAt: GENERATED_AT,
+    environment: "desktop-nightly-macos-aarch64",
+    checks: [
+      {
+        checkId: "image-generation-stream",
+        featureId: "media-generation",
+        status: CHECK_STATUS.PASS,
+        endedAt: GENERATED_AT,
+        runtimeEnvironment: "desktop-release",
+        evidence: { frameTypes: ["generation_start", "generation_completed"], imageUrlPresent: true },
+      },
+      {
+        checkId: "image-generation-stream",
+        featureId: "media-generation",
+        status: CHECK_STATUS.FAIL,
+        message: "production API has no harness route",
+        endedAt: GENERATED_AT,
+        runtimeEnvironment: "production-api",
+      },
+    ],
+  });
+
+  assert.equal(desktopPassing.features[0].status, FEATURE_STATUS.OPERATIONAL);
+  assert.equal(desktopPassing.features[0].checksPassed, 1);
+  assert.equal(desktopPassing.features[0].checksFailed, 1);
+  assert.equal(desktopPassing.totals.runtimeEnvironments, 2);
+  assert.deepEqual(
+    desktopPassing.runtimeEnvironments.map((runtime) => runtime.label),
+    ["Desktop Release", "Production API"],
+  );
+});
+
 test("buildStatusSnapshot attaches LLM-generated investigations to failed checks", () => {
   const registry = {
     title: "AURA Observability",
