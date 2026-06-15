@@ -2,18 +2,19 @@
   {
     "date": "2026-06-15",
     "channel": "nightly",
-    "version": "0.1.0-nightly.667.1",
-    "title": "Trustworthy analytics and feature-health signals",
-    "intro": "Today's nightly focuses on making Aura's telemetry and health dashboards honest. The status system now separates what a feature does from where it was exercised, analytics tracking is enforced end-to-end across web, desktop, and mobile builds, and dirty release builds can no longer slip through the deploy gate.",
+    "version": "0.1.0-nightly.668.1",
+    "title": "Analytics integrity and feature-health observability harden the release pipeline",
+    "intro": "Today's nightly is a deep investment in trustworthy telemetry and release-time signal. The team split feature health from runtime evidence in the status dashboard, rebuilt the analytics stack so True DAU and retention can actually be trusted, and tightened the build guards that keep no-op or dirty analytics bundles from ever shipping.",
     "entryCount": 3,
     "highlights": [
-      "Feature health and runtime environment split into separate axes on the status dashboard",
-      "Hard CI gate for analytics contracts across web, desktop, iOS, and Android",
-      "Dirty or unversioned frontend builds now fail the Render deploy"
+      "Feature health and runtime environment are now separate axes in the status dashboard",
+      "Analytics rebuilt around a typed event registry with a CI contract gate",
+      "Release builds now refuse to ship dirty or token-less analytics bundles",
+      "Desktop and public observability probes expanded to cover notes, billing, and content detail endpoints"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-06-15T19:57:19.040Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.667.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-06-15T20:28:07.243Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.668.1",
     "path": "history/2026-06-15.json"
   },
   {

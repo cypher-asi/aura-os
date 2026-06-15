@@ -1,39 +1,42 @@
-# Trustworthy analytics and feature-health signals
+# Analytics integrity and feature-health observability harden the release pipeline
 
 - Date: `2026-06-15`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.667.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.667.1
+- Version: `0.1.0-nightly.668.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.668.1
 
-Today's nightly focuses on making Aura's telemetry and health dashboards honest. The status system now separates what a feature does from where it was exercised, analytics tracking is enforced end-to-end across web, desktop, and mobile builds, and dirty release builds can no longer slip through the deploy gate.
+Today's nightly is a deep investment in trustworthy telemetry and release-time signal. The team split feature health from runtime evidence in the status dashboard, rebuilt the analytics stack so True DAU and retention can actually be trusted, and tightened the build guards that keep no-op or dirty analytics bundles from ever shipping.
 
-## 1:40 AM — Feature health decoupled from runtime evidence
+## 1:40 AM — Feature health split from runtime evidence in status dashboard
 
-The observability stack now distinguishes user-facing capabilities from the runtime that produced each check, giving the status dashboard a more honest read on what's actually proven green.
+The observability stack now distinguishes user-facing feature health from the specific runtime that produced each check, so the marketing status view can tell deployment-specific signals apart from product proof.
 
-- Status checks now declare a runtime environment (production-api, desktop-release, local-dev) alongside the feature they cover, so the dashboard groups by feature and labels the runtime per row instead of conflating the two. (`6b9c8b0`)
-- Media Generation health now treats the desktop-release lane as the required proof and the production-auth stream as informational, reflecting that the bundled harness only exists on desktop. (`6b9c8b0`)
-- Desktop release probes on nightly and stable workflows added an image-generation-stream check and now stamp AURA_STATUS_RUNTIME_ENVIRONMENT so artifacts carry runtime provenance. (`6b9c8b0`)
+- Introduced an AURA_STATUS_RUNTIME_ENVIRONMENT axis (production-api, desktop-release, local-dev) across the observability, repair, nightly, and stable workflows, letting each check declare the runtime it actually exercised instead of conflating it with the feature. (`6b9c8b0`)
+- Reworked status policy, investigator, and StatusView to group checks by feature, label per-row runtimes, and allow runtime-specific checks to act as informational evidence — for example Media Generation is now proven by the desktop-release lane while production-auth stream health stays informational. (`6b9c8b0`)
+- Added image-generation-stream to desktop release probes and refreshed the feature-health docs to explain the new feature-vs-runtime model. (`6b9c8b0`)
 
-## 9:52 AM — Analytics contract enforced across web, desktop, and mobile
+## 9:52 AM — Analytics rebuilt for trustworthy True DAU and retention
 
-A ground-up rebuild of the analytics pipeline closes the gaps that were producing inaccurate DAU and retention, backed by a new CI contract that fails loudly the moment tracking would silently break.
+A ground-up overhaul of the analytics pipeline replaces ad-hoc tracking with a typed registry, a single server-side session emitter, and build- and CI-time guards that fail loudly before mis-instrumented clients reach users.
 
-- Server is now the single emitter for session_active, with a typed event registry and AST/pipeline/server contract tests guarding against renamed, dropped, or non-literal event names. (`57b077e`)
-- New Analytics Contract workflow runs on every push to main and on PRs touching interface or server analytics code, gating both client registry tests and server Mixpanel tests. (`57b077e`)
-- iOS and Android release lanes now bake VITE_MIXPANEL_TOKEN into the store bundle and require analytics validation, so TestFlight and Play Store builds can no longer ship a no-op browser SDK. (`57b077e`)
-- Mobile chat input now emits tracking events and the desktop local-server token path was corrected, closing two known reporting holes. (`57b077e`)
+- Consolidated session_active into a single server-side emitter and introduced a typed analytics event registry, with AST, pipeline, and server contract tests that fail if events are renamed, dropped, or tracked via non-literal names. (`57b077e`)
+- Added an Analytics Contract GitHub workflow that runs on every push to main and every PR touching interface or server code, gating merges on the client registry, pipeline, and server Mixpanel invariants. (`57b077e`)
+- Made analytics a hard requirement for store builds: Android and iOS fastlane runs now bake VITE_MIXPANEL_TOKEN into the web bundle and set REQUIRE_ANALYTICS=1 so the release lane fails if the SDK would no-op. (`57b077e`)
+- Fixed mobile chat input tracking and desktop local-server token handling so engagement events from MobileChatInputBar and the desktop shell are actually attributed. (`57b077e`)
 
-## 12:40 PM — Dirty frontend builds now fail the deploy
+## 12:40 PM — Dirty-build guard and expanded health probes for notes, billing, and content
 
-The Render and desktop release guards tightened the APP_VERSION check so analytics-enabled builds cannot ship under a git-fallback or unclean version string.
+Afternoon work hardened the analytics build guard against dirty version stamps and broadened the feature-health probe matrix to cover several previously unmonitored product surfaces.
 
-- Vite now asserts a clean APP_VERSION and a present VITE_MIXPANEL_TOKEN at build time when REQUIRE_ANALYTICS is set, refusing release builds whose SDK would no-op. (`5d7fff8`)
-- The desktop-frontend-assets validator and Render deploy now reject any APP_VERSION that is empty, 0.0.0, or ends in -dirty, with a regression test covering the dirty-version case. (`5d7fff8`)
+- Vite builds and the desktop-frontend-assets-validate --require-analytics check now reject APP_VERSION values that are empty, 0.0.0, or end in -dirty, so a config regression that would ship a mis-versioned or no-op analytics SDK fails the deploy loudly instead of going unnoticed. (`5d7fff8`)
+- Expanded the public observability and release-stable/nightly check matrices with new probes for notes-crud, billing-account-transactions, org-tool-actions-contract, public-content-details, and analytics-contract-artifacts, closing visibility gaps in billing, content, and analytics surfaces. (`d58f85f`)
+- Extended the desktop release probe set with desktop-update-runtime, project-agent-chat-stream, session-share-public-read, harness memory/skills roundtrips, notes-crud, and process-run-lifecycle, plus a new run-status-probes.mjs to drive the broader coverage. (`d58f85f`)
+- Server notes endpoint now formally accepts the frontend's camelCase folderId payload, with a regression test pinning the contract. (`d58f85f`)
 
 ## Highlights
 
-- Feature health and runtime environment split into separate axes on the status dashboard
-- Hard CI gate for analytics contracts across web, desktop, iOS, and Android
-- Dirty or unversioned frontend builds now fail the Render deploy
+- Feature health and runtime environment are now separate axes in the status dashboard
+- Analytics rebuilt around a typed event registry with a CI contract gate
+- Release builds now refuse to ship dirty or token-less analytics bundles
+- Desktop and public observability probes expanded to cover notes, billing, and content detail endpoints
 
