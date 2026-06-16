@@ -229,13 +229,14 @@ impl OrgService {
         secret_update: IntegrationSecretUpdate,
     ) -> Result<(), OrgError> {
         match secret_update {
-            IntegrationSecretUpdate::Set(_) => match self
-                .store
-                .delete_setting(&org_integration_secret_key(&integration.integration_id))
-            {
-                Ok(()) | Err(aura_os_store::StoreError::NotFound(_)) => {}
-                Err(e) => return Err(OrgError::Store(e)),
-            },
+            IntegrationSecretUpdate::Set(secret_value) => {
+                self.store
+                    .put_setting(
+                        &org_integration_secret_key(&integration.integration_id),
+                        secret_value.as_bytes(),
+                    )
+                    .map_err(OrgError::Store)?;
+            }
             IntegrationSecretUpdate::Clear => match self
                 .store
                 .delete_setting(&org_integration_secret_key(&integration.integration_id))
@@ -329,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn sync_integration_shadow_preserves_canonical_metadata_without_secret() {
+    fn sync_integration_shadow_stores_canonical_secret() {
         let store_dir = tempfile::tempdir().unwrap();
         let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
         let service = OrgService::new(store);
@@ -349,12 +350,12 @@ mod tests {
         );
         assert_eq!(
             service.get_integration_secret("integration-1").unwrap(),
-            None
+            Some("secret-value".to_string())
         );
     }
 
     #[test]
-    fn sync_integrations_shadow_prunes_local_secrets_for_canonical_entries() {
+    fn sync_integrations_shadow_clears_only_canonical_entry_secrets() {
         let store_dir = tempfile::tempdir().unwrap();
         let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
         let service = OrgService::new(store);
@@ -362,26 +363,55 @@ mod tests {
 
         let stale = sample_integration(org_id, "stale", true);
         service
-            .sync_integration_shadow(
-                &stale,
+            .upsert_integration(
+                &org_id,
+                Some("stale"),
+                stale.name.clone(),
+                stale.provider.clone(),
+                stale.kind.clone(),
+                stale.default_model.clone(),
+                stale.provider_config.clone(),
+                Some(stale.enabled),
                 IntegrationSecretUpdate::Set("stale-secret".to_string()),
             )
             .unwrap();
 
-        let retained = sample_integration(org_id, "retained", false);
+        let canonical_before_sync = sample_integration(org_id, "canonical", true);
         service
-            .sync_integrations_shadow(&org_id, std::slice::from_ref(&retained))
+            .upsert_integration(
+                &org_id,
+                Some("canonical"),
+                canonical_before_sync.name.clone(),
+                canonical_before_sync.provider.clone(),
+                canonical_before_sync.kind.clone(),
+                canonical_before_sync.default_model.clone(),
+                canonical_before_sync.provider_config.clone(),
+                Some(canonical_before_sync.enabled),
+                IntegrationSecretUpdate::Set("old-canonical-secret".to_string()),
+            )
+            .unwrap();
+
+        let canonical = sample_integration(org_id, "canonical", true);
+        service
+            .sync_integrations_shadow(&org_id, std::slice::from_ref(&canonical))
             .unwrap();
 
         assert_eq!(
-            service.get_integration(&org_id, "stale").unwrap(),
-            Some(stale)
+            service
+                .get_integration(&org_id, "stale")
+                .unwrap()
+                .unwrap()
+                .name,
+            stale.name
         );
-        assert_eq!(service.get_integration_secret("stale").unwrap(), None);
         assert_eq!(
-            service.get_integration(&org_id, "retained").unwrap(),
-            Some(retained)
+            service.get_integration_secret("stale").unwrap(),
+            Some("stale-secret".to_string())
         );
-        assert_eq!(service.get_integration_secret("retained").unwrap(), None);
+        assert_eq!(
+            service.get_integration(&org_id, "canonical").unwrap(),
+            Some(canonical)
+        );
+        assert_eq!(service.get_integration_secret("canonical").unwrap(), None);
     }
 }
