@@ -22,6 +22,11 @@ vi.mock("./useReleasesBehind", async () => {
   };
 });
 
+const anyStreamingMock = vi.fn();
+vi.mock("../../hooks/stream/hooks", () => ({
+  useIsAnyStreaming: () => anyStreamingMock(),
+}));
+
 import { ForcedUpgradeOverlay } from "./ForcedUpgradeOverlay";
 
 const installUpdate = vi.fn(() => Promise.resolve());
@@ -62,6 +67,7 @@ function setStatus(overrides: StatusOverrides = {}) {
 beforeEach(() => {
   useAuraCapabilitiesMock.mockReturnValue({ features: { nativeUpdater: true } });
   releasesBehindMock.mockReturnValue(3);
+  anyStreamingMock.mockReturnValue(false);
   setStatus();
 });
 
@@ -133,5 +139,31 @@ describe("ForcedUpgradeOverlay", () => {
     expect(screen.getByTestId("forced-upgrade-action").textContent).toContain(
       "Try again",
     );
+  });
+
+  it("defers (renders nothing) while an operation is streaming, even at the threshold", () => {
+    anyStreamingMock.mockReturnValue(true);
+    const { container } = render(<ForcedUpgradeOverlay />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows the gate once the streaming operation finishes", () => {
+    anyStreamingMock.mockReturnValue(true);
+    const { container, rerender } = render(<ForcedUpgradeOverlay />);
+    expect(container).toBeEmptyDOMElement();
+
+    anyStreamingMock.mockReturnValue(false);
+    rerender(<ForcedUpgradeOverlay />);
+    expect(screen.getByTestId("forced-upgrade-overlay")).toBeInTheDocument();
+  });
+
+  it("stays latched if a stream starts after the gate is already shown", () => {
+    const { rerender } = render(<ForcedUpgradeOverlay />);
+    expect(screen.getByTestId("forced-upgrade-overlay")).toBeInTheDocument();
+
+    // A new operation starting must not dismiss an already-shown gate.
+    anyStreamingMock.mockReturnValue(true);
+    rerender(<ForcedUpgradeOverlay />);
+    expect(screen.getByTestId("forced-upgrade-overlay")).toBeInTheDocument();
   });
 });

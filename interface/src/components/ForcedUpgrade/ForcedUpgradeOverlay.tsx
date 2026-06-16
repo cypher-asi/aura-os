@@ -3,6 +3,7 @@ import { Button, Spinner, Text } from "@cypher-asi/zui";
 import { AlertTriangle, Download } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useUpdateStatus } from "../UpdateControl/useUpdateStatus";
+import { useIsAnyStreaming } from "../../hooks/stream/hooks";
 import { FORCED_UPGRADE_THRESHOLD, useReleasesBehind } from "./useReleasesBehind";
 import styles from "./ForcedUpgradeOverlay.module.css";
 
@@ -20,6 +21,11 @@ interface GateSnapshot {
  * overlay stays up through the install lifecycle (status flips away from
  * `available` while downloading/installing) and only disappears when the
  * upgraded app relaunches.
+ *
+ * Latching is deferred while any stream is active so the gate never interrupts
+ * an in-progress turn/extraction — it appears once the user is idle. This only
+ * gates the initial latch; a stream starting after the gate is shown does not
+ * dismiss it.
  */
 export function ForcedUpgradeOverlay(): React.ReactElement | null {
   const { features } = useAuraCapabilities();
@@ -46,6 +52,11 @@ export function ForcedUpgradeOverlay(): React.ReactElement | null {
     updateBaseUrl,
   });
 
+  // Don't latch (show) the gate while an operation is streaming, so a forced
+  // upgrade never interrupts an in-progress turn/extraction. Once the user is
+  // idle the gate latches and shows — a defer, not a cancel.
+  const anyStreaming = useIsAnyStreaming();
+
   const forcedNow =
     updateAvailable &&
     releasesBehind !== null &&
@@ -60,6 +71,7 @@ export function ForcedUpgradeOverlay(): React.ReactElement | null {
   const [gate, setGate] = useState<GateSnapshot | null>(null);
   if (
     forcedNow &&
+    !anyStreaming &&
     releasesBehind !== null &&
     (gate === null ||
       gate.behind !== releasesBehind ||
