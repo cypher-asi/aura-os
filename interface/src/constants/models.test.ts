@@ -189,9 +189,11 @@ describe("model persistence", () => {
     });
 
     it("image picks write to the image namespace and update the global key", () => {
-      persistModel("dall-e-3", "default", "agent-A");
-      expect(store["aura-selected-model:image:agent:agent-A"]).toBe("dall-e-3");
-      expect(store["aura-selected-model:image:default"]).toBe("dall-e-3");
+      persistModel("gpt-image-1", "default", "agent-A");
+      expect(store["aura-selected-model:image:agent:agent-A"]).toBe(
+        "gpt-image-1",
+      );
+      expect(store["aura-selected-model:image:default"]).toBe("gpt-image-1");
       // Chat keys must remain untouched.
       expect(store["aura-selected-model:agent:agent-A"]).toBeUndefined();
       expect(store["aura-selected-model:default"]).toBeUndefined();
@@ -229,19 +231,28 @@ describe("model persistence", () => {
       // The new global write inside `persistModel` lets a brand-new
       // agent pick up the user's last image-mode choice instead of
       // always reverting to the IMAGE_MODELS[0] default.
-      persistModel("dall-e-3", "default", "agent-A");
-      expect(loadPersistedImageModel("agent-B")).toBe("dall-e-3");
+      persistModel("gemini-nano-banana", "default", "agent-A");
+      expect(loadPersistedImageModel("agent-B")).toBe("gemini-nano-banana");
+    });
+
+    it("loadPersistedImageModel ignores stale DALL-E selections while unavailable", () => {
+      store["aura-selected-model:image:agent:agent-A"] = "dall-e-3";
+      store["aura-selected-model:image:default"] = "dall-e-2";
+
+      expect(loadPersistedImageModel("agent-A")).toBe("gpt-image-2");
     });
 
     it("loadPersistedModelForMode dispatches to the right loader", () => {
       persistModel("aura-gpt-5-5", "default", "agent-A");
-      persistModel("dall-e-3", "default", "agent-A");
+      persistModel("gemini-nano-banana", "default", "agent-A");
       persistModel("dreamina-seedance-2-0-260128", "default", "agent-A");
 
       expect(loadPersistedModelForMode("chat", "agent-A", "default")).toBe(
         "aura-gpt-5-5",
       );
-      expect(loadPersistedModelForMode("image", "agent-A")).toBe("dall-e-3");
+      expect(loadPersistedModelForMode("image", "agent-A")).toBe(
+        "gemini-nano-banana",
+      );
       expect(loadPersistedModelForMode("video", "agent-A")).toBe(
         "dreamina-seedance-2-0-260128",
       );

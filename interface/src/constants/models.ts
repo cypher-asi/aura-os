@@ -601,22 +601,6 @@ export const IMAGE_MODELS: ModelOption[] = [
     description: "Previous-generation GPT image model for fast, detailed generations.",
   },
   {
-    id: "dall-e-3",
-    label: "DALL-E 3",
-    tier: "image",
-    mode: "image",
-    provider: "OpenAI",
-    description: "Creative image generation with strong natural-language prompt understanding.",
-  },
-  {
-    id: "dall-e-2",
-    label: "DALL-E 2",
-    tier: "image",
-    mode: "image",
-    provider: "OpenAI",
-    description: "Earlier DALL-E model for quick, low-cost image generation.",
-  },
-  {
     id: "gemini-nano-banana",
     label: "Gemini Flash Image",
     tier: "image",
@@ -658,7 +642,8 @@ export const DEFAULT_IMAGE_QUALITY: ImageQuality = "medium";
 /**
  * Models that accept a `quality` parameter we expose in the UI. Only the
  * GPT Image family is wired up today (router validates `low`/`medium`/
- * `high`/`auto` for these); DALL-E/Gemini hide the control.
+ * `high`/`auto` for these); Gemini and legacy non-GPT image ids hide the
+ * control.
  */
 export function modelSupportsQuality(modelId?: string | null): boolean {
   if (!modelId) return false;
@@ -689,8 +674,6 @@ export const IMAGE_MODEL_ESTIMATE_MS: Record<string, number> = {
   // router reports faster progress.
   "gpt-image-2": 120_000,
   "gpt-image-1": 30_000,
-  "dall-e-3": 20_000,
-  "dall-e-2": 12_000,
   "gemini-nano-banana": 25_000,
 };
 

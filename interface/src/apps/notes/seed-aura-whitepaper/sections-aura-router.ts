@@ -252,7 +252,7 @@ Synchronous and SSE image generation across OpenAI and Gemini, with automatic wa
 ## Overview
 
 - \`POST /v1/generate-image\` (sync, one response) and \`POST /v1/generate-image/stream\` (SSE progress + partial previews).
-- Models: \`gpt-image-1\`, \`dall-e-3\`, \`dall-e-2\`, \`gemini-nano-banana\`; \`promptMode\` (new / remix / edit) can override model selection.
+- Models: \`gpt-image-2\`, \`gpt-image-1\`, \`gemini-nano-banana\`; \`promptMode\` (new / remix / edit) can override model selection.
 - A style-lock prompt is appended for consistent product renders unless \`isIteration\` is true; reference images are supported.
 - Returns watermarked + original S3 URLs; auto-stores the artifact in \`aura-storage\` when \`projectId\` is given.
 - Flat billing per model; \`GET /v1/generate-image/config\` lists models and ETAs.
@@ -264,7 +264,7 @@ ${F}text
    |  resolve model (promptMode override)
    |  append style-lock prompt (unless isIteration)
    v
- provider (OpenAI gpt-image-1 / dall-e-*, Google gemini)
+ provider (OpenAI gpt-image-*, Google gemini)
    |  watermark + upload to S3
    v
  { imageUrl (watermarked), originalUrl, meta }

@@ -55,24 +55,24 @@ describe("useGenerationEta", () => {
     act(() => {
       setters.setGenerationState({
         startedAt: Date.now(),
-        model: "dall-e-3",
+        model: "gemini-nano-banana",
         kind: "image",
       });
     });
 
     const { result } = renderHook(() => useGenerationEta("k1"));
-    // dall-e-3 baseline: 20_000ms.
-    expect(result.current?.remainingMs).toBe(20_000);
+    // gemini-nano-banana baseline: 25_000ms.
+    expect(result.current?.remainingMs).toBe(25_000);
 
     act(() => {
       vi.advanceTimersByTime(5_000);
     });
-    expect(result.current?.remainingMs).toBe(15_000);
+    expect(result.current?.remainingMs).toBe(20_000);
 
     act(() => {
       vi.advanceTimersByTime(10_000);
     });
-    expect(result.current?.remainingMs).toBe(5_000);
+    expect(result.current?.remainingMs).toBe(10_000);
   });
 
   it("falls back to the default estimate when the model id is unknown", () => {
@@ -146,7 +146,7 @@ describe("useGenerationEta", () => {
     act(() => {
       setters.setGenerationState({
         startedAt: Date.now(),
-        model: "dall-e-3",
+        model: "gemini-nano-banana",
         kind: "image",
       });
     });
@@ -163,12 +163,12 @@ describe("useGenerationEta", () => {
     act(() => {
       setters.setGenerationState({
         startedAt: Date.now(),
-        model: "dall-e-3",
+        model: "gemini-nano-banana",
         kind: "image",
       });
     });
     expect(result.current?.overrun).toBe(false);
-    expect(result.current?.remainingMs).toBe(20_000);
+    expect(result.current?.remainingMs).toBe(25_000);
   });
 
   it("flags overrun once the estimate has elapsed but generation has not cleared", () => {
@@ -180,15 +180,15 @@ describe("useGenerationEta", () => {
     act(() => {
       setters.setGenerationState({
         startedAt: Date.now(),
-        model: "dall-e-2",
+        model: "gpt-image-1",
         kind: "image",
       });
     });
 
     const { result } = renderHook(() => useGenerationEta("k1"));
-    // dall-e-2 baseline: 12_000ms.
+    // gpt-image-1 baseline: 30_000ms.
     act(() => {
-      vi.advanceTimersByTime(15_000);
+      vi.advanceTimersByTime(35_000);
     });
     expect(result.current?.overrun).toBe(true);
     expect(result.current?.remainingMs).toBe(0);

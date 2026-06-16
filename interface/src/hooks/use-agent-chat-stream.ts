@@ -715,7 +715,7 @@ export function useAgentChatStream({
           // store using the same partition key the store is written
           // under (mirrors the `pinnedSourceImage` reads in this hook).
           // Only forward it for models that expose a quality knob so
-          // DALL-E / Gemini sends stay on their provider defaults.
+          // Gemini and legacy non-GPT image sends stay on their provider defaults.
           const imageQuality = modelSupportsQuality(selectedModel)
             ? useChatUIStore.getState().getImageQuality(getPartitionKey())
             : null;

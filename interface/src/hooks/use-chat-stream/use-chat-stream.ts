@@ -495,7 +495,7 @@ export function useChatStream({
           // Mirror the standalone-agent hook: pull the persisted
           // Image-mode quality from the chat-ui store under this
           // partition's key, forwarding it only for models that expose
-          // a quality knob (DALL-E / Gemini keep provider defaults).
+          // a quality knob (Gemini and legacy non-GPT image ids keep provider defaults).
           const imageQuality = modelSupportsQuality(selectedModel)
             ? useChatUIStore.getState().getImageQuality(getPartitionKey())
             : null;
