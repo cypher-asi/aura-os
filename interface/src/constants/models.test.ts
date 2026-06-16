@@ -115,23 +115,27 @@ describe("model persistence", () => {
     expect(loadPersistedModel("default", "gpt-5.5")).toBe("aura-gpt-5-5");
   });
 
-  it("normalizes raw Claude Fable 5 to the Aura-managed chat model", () => {
+  it("ignores raw Claude Fable 5 while it is unavailable", () => {
     expect(loadPersistedModel("default", "claude-fable-5")).toBe(
-      "aura-claude-fable-5",
+      "aura-claude-sonnet-4-6",
     );
   });
 
-  it("includes Claude Fable 5 in the Anthropic chat model list", () => {
+  it("excludes Claude Fable 5 from the selectable chat model list while unavailable", () => {
     const fable = availableModelsForAdapter("default").find(
       (model) => model.id === "aura-claude-fable-5",
     );
 
-    expect(fable).toMatchObject({
-      label: "Fable 5",
-      vendor: "anthropic",
-      creditMultiplier: 10,
-      contextWindow: 1_000_000,
-    });
+    expect(fable).toBeUndefined();
+  });
+
+  it("ignores a persisted Claude Fable 5 selection while it is unavailable", () => {
+    store["aura-selected-model:agent:agent-fable"] = "aura-claude-fable-5";
+    store["aura-selected-model:default"] = "aura-claude-fable-5";
+
+    expect(loadPersistedModel("default", null, "agent-fable")).toBe(
+      "aura-claude-sonnet-4-6",
+    );
   });
 
   it("keeps image models out of the chat adapter model list", () => {

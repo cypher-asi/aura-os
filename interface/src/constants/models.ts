@@ -171,21 +171,6 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
 export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   // ── Anthropic ───────────────────────────────────────────────
   {
-    id: "aura-claude-fable-5",
-    label: "Fable 5",
-    tier: "opus",
-    mode: "chat",
-    vendor: "anthropic",
-    creditMultiplier: 10,
-    contextWindow: 1_000_000,
-    efforts: ANTHROPIC_EFFORTS,
-    defaultEffort: "medium",
-    provider: "Anthropic",
-    description:
-      "Anthropic's Mythos-class model for demanding reasoning and long-horizon agentic work.",
-    featured: true,
-  },
-  {
     id: "aura-claude-opus-4-8",
     label: "Opus 4.8",
     tier: "opus",
