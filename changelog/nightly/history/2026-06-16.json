@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-16T18:24:17.318Z",
+  "generatedAt": "2026-06-16T21:06:19.699Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.680.1",
+  "version": "0.1.0-nightly.681.1",
   "date": "2026-06-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.680.1",
-  "lastIncludedSha": "65d4bede047c6dd234d12736dde9515f5d5dede2",
-  "previousProcessedSha": "04c81439f3bc03beeddb426490521079d80efe56",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.681.1",
+  "lastIncludedSha": "d44c39d97f710d17e094f3c793ea6bca937e5af2",
+  "previousProcessedSha": "65d4bede047c6dd234d12736dde9515f5d5dede2",
   "commitShas": [
     "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
     "7c8e0405beda70cdad1e6f405f3c9c168cde63db",
@@ -20,10 +20,11 @@
     "45b40a1b6ea09eca5f19adf4f3e9f0cded83de65",
     "fa001c127b0ec77c956560a3cfeed2b7cbbcb723",
     "0017da2fa7e298c15eaddc462106a0ac5aed6ab9",
-    "65d4bede047c6dd234d12736dde9515f5d5dede2"
+    "65d4bede047c6dd234d12736dde9515f5d5dede2",
+    "d44c39d97f710d17e094f3c793ea6bca937e5af2"
   ],
-  "rawCommitCount": 9,
-  "filteredCommitCount": 9,
+  "rawCommitCount": 10,
+  "filteredCommitCount": 10,
   "rawCommits": [
     {
       "sha": "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
@@ -392,36 +393,73 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "d44c39d97f710d17e094f3c793ea6bca937e5af2",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-16T16:48:48-04:00",
+      "subject": "fix(desktop): replace stale managed harness sidecars",
+      "body": "",
+      "parents": [
+        "65d4bede047c6dd234d12736dde9515f5d5dede2"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/harness/sidecar.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 204,
+        "deletions": 1
+      },
+      "committedAtMs": 1781642928000,
+      "cleanSubject": "replace stale managed harness sidecars",
+      "keywords": [
+        "replace",
+        "stale",
+        "managed",
+        "harness",
+        "sidecars"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
     }
   ],
-  "batchCount": 3,
+  "batchCount": 4,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.680.1",
+      "version": "0.1.0-nightly.681.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64825966
+          "sizeBytes": 64832122
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 131504632
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -431,29 +469,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.680.1",
+      "version": "0.1.0-nightly.681.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.680.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.681.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60718061
+          "sizeBytes": 60719114
         },
         {
-          "name": "AURA_0.1.0-nightly.680.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.681.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59761748
+          "sizeBytes": 59758044
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -463,29 +501,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.680.1",
+      "version": "0.1.0-nightly.681.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.680.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.681.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62904168
+          "sizeBytes": 62894759
         },
         {
-          "name": "AURA_0.1.0-nightly.680.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.681.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61933532
+          "sizeBytes": 61926457
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -495,17 +533,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.680.1",
+      "version": "0.1.0-nightly.681.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47983915
+          "sizeBytes": 47977885
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.680.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.681.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -514,34 +552,33 @@
     }
   ],
   "rendered": {
-    "title": "Smarter status investigations, gentler upgrade gating, and a model lineup cleanup",
-    "intro": "Today's nightly tightens up how Aura observes itself, keeps the forced-upgrade overlay from cutting off mid-stream work, and prunes chat and image models that were no longer available. Projects also gained proper persistence for build and test commands.",
+    "title": "Smarter status investigations, calmer upgrade gate, and a self-healing desktop harness",
+    "intro": "Today's nightly tightens how Aura's status system reasons about outages, stops the forced-upgrade overlay from interrupting active chats, prunes unavailable image and chat models, and teaches the desktop harness to clear out stale sidecars before launch.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:26 AM",
         "started_at": "2026-06-16T14:26:04.000Z",
         "ended_at": "2026-06-16T15:29:16.000Z",
-        "title": "Status page stops crying wolf on slow model and snapshot signals",
-        "summary": "Observability evals were retuned so realistic latencies and snapshot ages no longer flip the public status page, and the investigator only cites evidence it actually has.",
+        "title": "Status probe tuning and grounded investigations",
+        "summary": "The observability pipeline got more tolerant freshness windows and a stricter, evidence-only investigator so root-cause writeups stop drifting into speculation.",
         "items": [
           {
-            "text": "Relaxed freshness and latency thresholds across status checks — API health and auth-session staleness moved to 30 minutes, the model matrix now tolerates up to 180s warning / 360s outage latency, and the published observability snapshot is treated as informational with a 6-hour staleness budget so a late snapshot no longer takes the public website check down.",
+            "text": "Relaxed staleness and latency thresholds for API health, snapshot freshness, and the public website snapshot check, and shifted the scheduled observability cron off the hour to avoid runner contention — fewer false 'stale' or latency warnings on the public status surface.",
             "commit_shas": [
-              "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
+              "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Raised the model-matrix runtime eval timeout from 45s to 120s (with matching warning/outage budgets up to 180s/360s) so cold model responses no longer trip the status check.",
+            "commit_shas": [
               "2049590dd90f5d4c09d19b3cd141daa6d0a52c24"
             ],
             "confidence": "high"
           },
           {
-            "text": "Raised the agent runtime test-turn timeout from 45s to 120s so cold model responses don't get falsely flagged as runtime failures.",
-            "commit_shas": [
-              "2049590dd90f5d4c09d19b3cd141daa6d0a52c24"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Tightened the status investigator so it can no longer mention commits, PRs, or file paths that aren't in the supplied evidence, and weak suspect changes are suppressed instead of being surfaced as causes.",
+            "text": "The status investigator is now constrained to cite only commits and paths that appear in the supplied evidence, with a sanitization pass that strips unsupported references from proof, causes, affected areas, and follow-up probes.",
             "commit_shas": [
               "2049590dd90f5d4c09d19b3cd141daa6d0a52c24",
               "7560151f6d3be0c6939c7f288a51398f71186182"
@@ -549,7 +586,7 @@
             "confidence": "high"
           },
           {
-            "text": "Refocused source discovery to prefer product code over the observability framework itself and to score phrase-, endpoint-, and error-code-shaped needles higher, producing more relevant suspect paths.",
+            "text": "Source discovery now scores and prioritizes search needles (endpoints, error codes, multi-word phrases) and prefers product code paths over observability framework files, producing more focused suspect-change lists.",
             "commit_shas": [
               "7c8e0405beda70cdad1e6f405f3c9c168cde63db"
             ],
@@ -562,11 +599,11 @@
         "time_label": "8:52 AM",
         "started_at": "2026-06-16T15:52:02.000Z",
         "ended_at": "2026-06-16T15:52:02.000Z",
-        "title": "Forced-upgrade overlay waits for your in-flight turn",
-        "summary": "The forced-upgrade gate no longer slams shut over an active stream — it defers until the current operation finishes.",
+        "title": "Forced-upgrade overlay waits for the user to be idle",
+        "summary": "The upgrade gate no longer interrupts an in-progress turn or extraction; it defers until the active stream finishes.",
         "items": [
           {
-            "text": "Added a global useIsAnyStreaming() selector and used it to defer the initial latch of the forced-upgrade overlay while any chat turn or extraction is streaming; once the user is idle the gate appears as before. A stream starting after the gate is already shown still can't dismiss it.",
+            "text": "Added a global useIsAnyStreaming() selector and used it to defer the ForcedUpgradeOverlay latch while any stream is active. Once the user is idle the gate appears, and a stream starting after the gate is shown will not dismiss it — defer, not cancel.",
             "commit_shas": [
               "04c81439f3bc03beeddb426490521079d80efe56"
             ],
@@ -579,11 +616,11 @@
         "time_label": "10:56 AM",
         "started_at": "2026-06-16T17:56:04.000Z",
         "ended_at": "2026-06-16T18:08:13.000Z",
-        "title": "Fable and DALL-E pulled from pickers, retries honor the live model",
-        "summary": "Aura's model lineup was trimmed to only what's actually serving, retries now use the currently selected chat model, and projects keep their build and test commands.",
+        "title": "Model catalog cleanup and retry-with-current-model",
+        "summary": "Unavailable Fable and DALL-E entries were removed from the model picker, retries now use the model you have selected today, and project APIs preserve build/test commands across updates.",
         "items": [
           {
-            "text": "Removed Claude Fable 5 from the Anthropic chat lineup and DALL-E 2 / DALL-E 3 from the image lineup; persisted selections pointing at any of these now fall back to available models (Sonnet 4.6 for chat, gpt-image-2 for images) instead of trying to use something that isn't there.",
+            "text": "Dropped the unavailable Fable chat model and the DALL-E 2 / DALL-E 3 image models from the picker, defaults, ETA tables, and the whitepaper seed; stale persisted DALL-E selections now fall back to gpt-image-2 instead of staying stuck on a missing model.",
             "commit_shas": [
               "45b40a1b6ea09eca5f19adf4f3e9f0cded83de65",
               "0017da2fa7e298c15eaddc462106a0ac5aed6ab9"
@@ -591,16 +628,33 @@
             "confidence": "high"
           },
           {
-            "text": "Retrying a failed chat turn now sends with the model you currently have selected rather than the cached model from the failed attempt, so swapping off an unavailable model and hitting Retry actually works.",
+            "text": "Retrying a failed chat turn now uses the currently selected model rather than the cached model that originally failed, so swapping away from a broken model and hitting Retry actually re-runs against the new one.",
             "commit_shas": [
               "fa001c127b0ec77c956560a3cfeed2b7cbbcb723"
             ],
             "confidence": "high"
           },
           {
-            "text": "Project create and update APIs now accept and round-trip build_command and test_command, so per-project tooling metadata is preserved on PUT and returned on GET.",
+            "text": "Project create and update requests now carry build_command and test_command, and the server preserves them across PUT/GET round-trips so tooling metadata no longer gets dropped on edit.",
             "commit_shas": [
               "65d4bede047c6dd234d12736dde9515f5d5dede2"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "1:48 PM",
+        "started_at": "2026-06-16T20:48:48.000Z",
+        "ended_at": "2026-06-16T20:48:48.000Z",
+        "title": "Desktop harness reclaims its port from stale sidecars",
+        "summary": "On Unix, the desktop app now detects and terminates orphaned managed harness sidecars holding the local port before spawning a fresh one.",
+        "items": [
+          {
+            "text": "Before launching the local harness, the desktop sidecar manager uses lsof to find processes listening on the harness port, classifies them as the current expected binary or a stale managed sidecar under runtime/sidecar, and terminates stale ones so the new harness can bind cleanly instead of failing health probes.",
+            "commit_shas": [
+              "d44c39d97f710d17e094f3c793ea6bca937e5af2"
             ],
             "confidence": "high"
           }
@@ -608,11 +662,11 @@
       }
     ],
     "highlights": [
-      "Forced-upgrade overlay now defers until your turn finishes",
-      "Removed unavailable Fable chat and DALL-E image models",
-      "Status probes tuned to reduce false alerts",
-      "Project build and test commands now persist via the API"
+      "Status investigator now stays grounded in real evidence",
+      "Forced-upgrade overlay defers during active streams",
+      "Failed chat turns retry with the model you actually have selected",
+      "Desktop reclaims its port from stale managed sidecars"
     ],
-    "raw_commit_count": 9
+    "raw_commit_count": 10
   }
 }
