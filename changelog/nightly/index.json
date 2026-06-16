@@ -2,19 +2,19 @@
   {
     "date": "2026-06-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.683.1",
-    "title": "Sturdier chat turns, calmer upgrade gate, and steadier status signals",
-    "intro": "Today's nightly focuses on resilience across the stack: chat persistence survives WAF blocks and bloated payloads, the forced-upgrade overlay stops interrupting active turns, the desktop harness sidecar no longer gets stuck on stale processes, and the public status page rides through transient freshness blips without flipping red. Unavailable image and chat models were also pruned so the model picker reflects what actually works.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.684.1",
+    "title": "Steadier chat turns, sturdier desktop sidecar, and cleaner status signals",
+    "intro": "Today's nightly is a reliability-heavy pass: chat turns recover more gracefully when models or storage misbehave, the desktop harness sidecar stops tripping over its own stale state, and the public status page calms down false-alarm freshness signals. A handful of integration and project fixes round out the day.",
+    "entryCount": 6,
     "highlights": [
-      "Forced-upgrade overlay now waits for active turns",
-      "Chat persistence retries with a compacted payload after WAF or 413 rejections",
-      "Desktop sidecar reliably replaces stale managed harness processes",
-      "Status page tolerates transient snapshot freshness gaps"
+      "Forced-upgrade overlay no longer interrupts an active turn",
+      "Chat retries with the model you actually have selected",
+      "Desktop sidecar replaces stale managed processes instead of fighting them",
+      "Compact retry path keeps chat events persisting through WAF blocks"
     ],
-    "rawCommitCount": 13,
-    "generatedAt": "2026-06-16T22:45:25.382Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.683.1",
+    "rawCommitCount": 16,
+    "generatedAt": "2026-06-16T23:07:50.570Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.684.1",
     "path": "history/2026-06-16.json"
   },
   {
