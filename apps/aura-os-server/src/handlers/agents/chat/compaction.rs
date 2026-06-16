@@ -11,7 +11,10 @@ use tracing::warn;
 
 use crate::state::AppState;
 
-use super::constants::{HISTORY_RECENT_TURNS, TOOL_BLOB_MAX_BYTES, TOOL_BLOB_OLD_MAX_BYTES};
+use super::constants::{
+    CONVERSATION_HISTORY_MAX_BYTES, HISTORY_RECENT_TURNS, TOOL_BLOB_MAX_BYTES,
+    TOOL_BLOB_OLD_MAX_BYTES,
+};
 
 /// Truncate a string to at most `max_bytes` bytes on a UTF-8 char
 /// boundary and append a marker noting the original length. A no-op
@@ -37,13 +40,70 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
     let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
     let recent_start = recent_window_start(events);
 
-    events
+    let messages: Vec<ConversationMessage> = events
         .iter()
         .enumerate()
         .filter_map(|(i, m)| {
             build_conversation_message(i, m, recent_start, &referenced_tool_use_ids)
         })
-        .collect()
+        .collect();
+
+    bound_conversation_history(messages)
+}
+
+fn conversation_history_bytes(messages: &[ConversationMessage]) -> usize {
+    messages.iter().map(|m| m.content.len()).sum()
+}
+
+fn bound_conversation_history(messages: Vec<ConversationMessage>) -> Vec<ConversationMessage> {
+    let original_bytes = conversation_history_bytes(&messages);
+    if original_bytes <= CONVERSATION_HISTORY_MAX_BYTES {
+        return messages;
+    }
+
+    let original_count = messages.len();
+    let mut kept_rev: Vec<ConversationMessage> = Vec::new();
+    let mut kept_bytes = 0usize;
+    for mut message in messages.into_iter().rev() {
+        let message_bytes = message.content.len();
+        if kept_bytes + message_bytes <= CONVERSATION_HISTORY_MAX_BYTES {
+            kept_bytes += message_bytes;
+            kept_rev.push(message);
+            continue;
+        }
+
+        if kept_rev.is_empty() {
+            message.content =
+                truncate_to_total_bytes(&message.content, CONVERSATION_HISTORY_MAX_BYTES);
+            kept_bytes = message.content.len();
+            kept_rev.push(message);
+        }
+    }
+    kept_rev.reverse();
+    warn!(
+        original_messages = original_count,
+        kept_messages = kept_rev.len(),
+        original_bytes,
+        kept_bytes,
+        max_bytes = CONVERSATION_HISTORY_MAX_BYTES,
+        "conversation history trimmed for harness cold-open"
+    );
+    kept_rev
+}
+
+fn truncate_to_total_bytes(value: &str, max_bytes: usize) -> String {
+    if value.len() <= max_bytes {
+        return value.to_string();
+    }
+    let marker = format!("... [truncated {} bytes]", value.len());
+    if marker.len() >= max_bytes {
+        return marker.chars().take(max_bytes).collect();
+    }
+    let mut end = max_bytes - marker.len();
+    while end > 0 && !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}{}", &value[..end], marker)
 }
 
 fn build_conversation_message(

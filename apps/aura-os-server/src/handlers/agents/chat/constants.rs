@@ -29,11 +29,17 @@ pub(super) const TOOL_BLOB_OLD_MAX_BYTES: usize = 256;
 /// this fall back to `TOOL_BLOB_OLD_MAX_BYTES`.
 pub(super) const HISTORY_RECENT_TURNS: usize = 2;
 
-/// Log-level threshold on the total size of the flat-text
-/// `conversation_messages` array shipped to the harness in
-/// `SessionConfig`. Anything above this triggers a `warn!` so future
-/// context bloat regressions surface without needing user bug reports.
-pub(super) const CONVERSATION_HISTORY_WARN_BYTES: usize = 64 * 1024;
+/// Hard cap on the flat-text `conversation_messages` array shipped to
+/// the harness during cold-open. Real desktop runs hit provider-proxy
+/// WAF blocks at ~64 KiB of message text before the harness could
+/// answer; keep the reconstructed suffix well below that and rely on
+/// the newest turns plus project-state snapshot for continuity.
+pub(super) const CONVERSATION_HISTORY_MAX_BYTES: usize = 32 * 1024;
+
+/// Log-level threshold below [`CONVERSATION_HISTORY_MAX_BYTES`] so
+/// future context-bloat regressions are visible before they start
+/// trimming useful history.
+pub(super) const CONVERSATION_HISTORY_WARN_BYTES: usize = 24 * 1024;
 
 /// Minimum time between consecutive `assistant_turn_progress`
 /// publishes for a single turn. Tuned to balance UI responsiveness
