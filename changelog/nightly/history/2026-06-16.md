@@ -1,45 +1,46 @@
-# Smarter status investigations, calmer upgrade gate, and a self-healing desktop harness
+# Sharper status signals, smarter chat retries, and a calmer desktop sidecar
 
 - Date: `2026-06-16`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.681.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.681.1
+- Version: `0.1.0-nightly.682.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.682.1
 
-Today's nightly tightens how Aura's status system reasons about outages, stops the forced-upgrade overlay from interrupting active chats, prunes unavailable image and chat models, and teaches the desktop harness to clear out stale sidecars before launch.
+Today's nightly tightens up how Aura watches itself and how it recovers from rough edges. The observability stack got noticeably less noisy and better focused, the chat surface stops asking users to live with a stale model selection, and the desktop harness learned how to clean up after itself across upgrades.
 
-## 7:26 AM — Status probe tuning and grounded investigations
+## 7:26 AM — Observability evals stop flagging false outages
 
-The observability pipeline got more tolerant freshness windows and a stricter, evidence-only investigator so root-cause writeups stop drifting into speculation.
+A focused pass on the status pipeline raises the bar for what counts as an incident and what counts as a credible suspect change.
 
-- Relaxed staleness and latency thresholds for API health, snapshot freshness, and the public website snapshot check, and shifted the scheduled observability cron off the hour to avoid runner contention — fewer false 'stale' or latency warnings on the public status surface. (`5a0475f`)
-- Raised the model-matrix runtime eval timeout from 45s to 120s (with matching warning/outage budgets up to 180s/360s) so cold model responses no longer trip the status check. (`2049590`)
-- The status investigator is now constrained to cite only commits and paths that appear in the supplied evidence, with a sanitization pass that strips unsupported references from proof, causes, affected areas, and follow-up probes. (`2049590`, `7560151`)
-- Source discovery now scores and prioritizes search needles (endpoints, error codes, multi-word phrases) and prefers product code paths over observability framework files, producing more focused suspect-change lists. (`7c8e040`)
+- Loosened snapshot freshness thresholds and downgraded the published observability snapshot to informational, so a late publish no longer flips the public website feature into a degraded state. (`5a0475f`)
+- Extended the model runtime eval turn timeout from 45s to 120s (with matching warning/outage latency windows up to 180s/360s) so cold-start model responses no longer trip the model matrix check. (`2049590`)
+- Refined investigation source discovery to prefer product code over the observability framework itself, score phrase- and endpoint-like needles higher, and cap matches per needle for tighter, more relevant suspect lists. (`7c8e040`, `7560151`)
+- Hardened the investigator so it can only cite commits and paths that actually appear in the evidence packet, preventing hallucinated causes in generated status writeups. (`2049590`)
 
-## 8:52 AM — Forced-upgrade overlay waits for the user to be idle
+## 8:52 AM — Forced-upgrade overlay defers instead of interrupting
 
-The upgrade gate no longer interrupts an in-progress turn or extraction; it defers until the active stream finishes.
+The upgrade gate now respects work in flight, waiting for the current turn or extraction to finish before it latches.
 
-- Added a global useIsAnyStreaming() selector and used it to defer the ForcedUpgradeOverlay latch while any stream is active. Once the user is idle the gate appears, and a stream starting after the gate is shown will not dismiss it — defer, not cancel. (`04c8143`)
+- A new global useIsAnyStreaming() selector lets the ForcedUpgradeOverlay skip its initial latch while any stream is active; once the app is idle the gate appears, and a stream starting afterward will no longer dismiss it. (`04c8143`)
 
-## 10:56 AM — Model catalog cleanup and retry-with-current-model
+## 10:56 AM — Chat model lineup cleanup and smarter retry
 
-Unavailable Fable and DALL-E entries were removed from the model picker, retries now use the model you have selected today, and project APIs preserve build/test commands across updates.
+The model picker drops options that were no longer actually available, and a failed turn now retries against whatever model the user has selected right now.
 
-- Dropped the unavailable Fable chat model and the DALL-E 2 / DALL-E 3 image models from the picker, defaults, ETA tables, and the whitepaper seed; stale persisted DALL-E selections now fall back to gpt-image-2 instead of staying stuck on a missing model. (`45b40a1`, `0017da2`)
-- Retrying a failed chat turn now uses the currently selected model rather than the cached model that originally failed, so swapping away from a broken model and hitting Retry actually re-runs against the new one. (`fa001c1`)
-- Project create and update requests now carry build_command and test_command, and the server preserves them across PUT/GET round-trips so tooling metadata no longer gets dropped on edit. (`65d4bed`)
+- Retrying a dropped or errored chat turn now uses the currently selected model rather than replaying the cached model from the failed send, so switching away from a broken model actually unblocks the conversation. (`fa001c1`)
+- Removed the unavailable Fable chat model and the DALL-E 2/3 image models from the picker, and made loadPersistedImageModel fall back to gpt-image-2 when a stale DALL-E selection is loaded from storage. (`45b40a1`, `0017da2`)
+- Projects API now round-trips build and test command metadata, so configured commands survive edits instead of being silently dropped. (`65d4bed`)
 
-## 1:48 PM — Desktop harness reclaims its port from stale sidecars
+## 1:48 PM — Desktop harness sidecar lifecycle across upgrades
 
-On Unix, the desktop app now detects and terminates orphaned managed harness sidecars holding the local port before spawning a fresh one.
+The managed local harness on Desktop now detects and evicts leftover sidecars from prior versions instead of silently colliding with them.
 
-- Before launching the local harness, the desktop sidecar manager uses lsof to find processes listening on the harness port, classifies them as the current expected binary or a stale managed sidecar under runtime/sidecar, and terminates stale ones so the new harness can bind cleanly instead of failing health probes. (`d44c39d`)
+- Before spawning the local harness, Aura now scans for managed sidecars listening on the target port (via lsof on Unix), classifies them as current or stale by comparing against the expected binary path, and terminates stale processes so the bundled sidecar can take over cleanly. (`d44c39d`)
+- An inherited AURA_HARNESS_BIN pointing into the managed runtime/sidecar staging directory is now ignored, letting Desktop restage the freshly bundled harness binary after an upgrade instead of reusing the previous version's path. (`7dcb1d5`)
 
 ## Highlights
 
-- Status investigator now stays grounded in real evidence
-- Forced-upgrade overlay defers during active streams
-- Failed chat turns retry with the model you actually have selected
-- Desktop reclaims its port from stale managed sidecars
+- Status page no longer cries wolf on transient freshness blips
+- Forced-upgrade overlay waits politely instead of cutting off a streaming turn
+- Chat retries now use the model you actually have selected
+- Desktop harness evicts stale sidecars instead of fighting them for the port
 
