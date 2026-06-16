@@ -259,6 +259,28 @@ function sseTextSample(frames) {
     .join("");
 }
 
+function summarizeSseFrames(frames) {
+  return frames.map((frame) => summarizeSseFrame(frame));
+}
+
+function summarizeSseFrame(frame) {
+  const summary = { event: frame.event };
+  if (frame.data && typeof frame.data === "object" && !Array.isArray(frame.data)) {
+    const data = {};
+    for (const key of ["code", "message", "mode", "percent", "imageUrl", "image_url"]) {
+      if (frame.data[key] !== undefined) data[key] = frame.data[key];
+    }
+    if (typeof frame.data.data === "string") data.dataBytes = Buffer.byteLength(frame.data.data);
+    if (Object.keys(data).length > 0) summary.data = data;
+  } else if (typeof frame.data === "string" && frame.data.length > 0) {
+    summary.data = frame.data.slice(0, 256);
+  }
+  if (typeof frame.raw === "string" && frame.raw.length > 0) {
+    summary.rawBytes = Buffer.byteLength(frame.raw);
+  }
+  return summary;
+}
+
 async function waitForValue(fn, timeoutMs = DEFAULT_TIMEOUT_MS, intervalMs = 1000) {
   const deadline = Date.now() + timeoutMs;
   let latestError = "";
@@ -1420,14 +1442,23 @@ async function runChecks(args) {
       }, 360_000);
       const completed = frames.find((frame) => frame.event === "generation_completed");
       const error = frames.find((frame) => frame.event === "generation_error");
-      if (error) {
-        return { status: CHECK_STATUS.FAIL, message: error.data?.message ?? "Image generation error", evidence: { frames } };
-      }
       const imageUrl = completed?.data?.imageUrl ?? completed?.data?.image_url;
+      const frameTypes = frames.map((frame) => frame.event);
+      if (error) {
+        return {
+          status: CHECK_STATUS.FAIL,
+          message: error.data?.message ?? "Image generation error",
+          evidence: {
+            frameTypes,
+            imageUrlPresent: Boolean(imageUrl),
+            frames: summarizeSseFrames(frames),
+          },
+        };
+      }
       return {
         status: imageUrl ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
         message: imageUrl ? "" : "Image generation stream did not emit a completed image URL",
-        evidence: { frameTypes: frames.map((frame) => frame.event), imageUrlPresent: Boolean(imageUrl) },
+        evidence: { frameTypes, imageUrlPresent: Boolean(imageUrl) },
       };
     }));
   }

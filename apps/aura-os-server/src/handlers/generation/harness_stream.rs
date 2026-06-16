@@ -37,7 +37,11 @@ use super::sse::{SseResponse, SseStream, SSE_NO_BUFFERING_HEADERS};
 /// drain.
 const GENERATION_STREAM_CHANNEL_CAPACITY: usize = 64;
 
-const DEFAULT_GENERATION_EVENT_IDLE_TIMEOUT_SECS: u64 = 120;
+// GPT Image streams can emit only a handful of real progress events
+// over a 2-3 minute render. The SSE heartbeat below keeps the UI alive
+// between those events, so this watchdog should catch genuinely dead
+// harness sessions without racing sparse-but-healthy router streams.
+const DEFAULT_GENERATION_EVENT_IDLE_TIMEOUT_SECS: u64 = 300;
 const DEFAULT_GENERATION_MAX_RUNTIME_SECS: u64 = 600;
 
 /// Identity context callers must resolve before opening a

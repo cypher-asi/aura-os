@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
   AlertTriangle,
+  ChevronDown,
   CheckCircle2,
   Clock3,
   Gauge,
@@ -140,6 +141,12 @@ function investigationsFor(feature: StatusFeature): StatusInvestigation[] {
     .filter((investigation): investigation is StatusInvestigation => investigation != null);
 }
 
+function checksAwaitingDiagnosis(feature: StatusFeature): StatusCheck[] {
+  return feature.checks.filter((check) =>
+    (check.status === "fail" || check.status === "warn") && !check.investigation,
+  );
+}
+
 interface InvestigationReportGroup {
   readonly investigation: StatusInvestigation;
   readonly checkRefs: readonly string[];
@@ -158,6 +165,13 @@ function investigationCheckRef(investigation: StatusInvestigation): string {
   return investigation.runtimeEnvironment
     ? `${investigation.runtimeEnvironment}/${investigation.checkId}`
     : investigation.checkId;
+}
+
+function runtimeLabel(value: string | null | undefined): string {
+  if (!value) return "Runtime unknown";
+  if (value === "desktop-release") return "Desktop Release";
+  if (value === "production-api") return "Production API";
+  return value;
 }
 
 function groupInvestigations(investigations: readonly StatusInvestigation[]): InvestigationReportGroup[] {
@@ -264,25 +278,38 @@ function InvestigationReportView({
 }: {
   readonly group: InvestigationReportGroup;
 }): ReactNode {
+  const [expanded, setExpanded] = useState(false);
+  const detailsId = useId();
   const { investigation, checkRefs } = group;
   const whatWouldDisproveThis = investigation.whatWouldDisproveThis ?? [];
   const recommendedVerifierProbes = investigation.recommendedVerifierProbes ?? [];
   return (
     <section className="statusInvestigationItem" aria-label={`Investigation for ${investigation.checkId}`}>
-      <div className="statusInvestigationItemTop">
-        <div>
-          <h4>{investigation.title}</h4>
-          <p>{investigation.summary}</p>
+      <button
+        type="button"
+        className="statusInvestigationToggle"
+        aria-expanded={expanded}
+        aria-controls={detailsId}
+        onClick={() => setExpanded((current) => !current)}
+      >
+        <div className="statusInvestigationItemTop">
+          <div>
+            <h4>{investigation.title}</h4>
+            <p>{investigation.summary}</p>
+          </div>
+          <span className="statusInvestigationToggleIcon" aria-hidden>
+            <ChevronDown size={16} strokeWidth={1.9} />
+          </span>
         </div>
-        <span className="statusInvestigationState">
-          {investigation.status}
-        </span>
-      </div>
+      </button>
 
       <div className="statusInvestigationMeta">
+        <span>Runtime: {runtimeLabel(investigation.runtimeEnvironment)}</span>
+        <span>Check: {investigation.checkStatus ?? "unknown"}</span>
         <span>{investigation.confidence} confidence</span>
         <span>{checkRefs.length === 1 ? checkRefs[0] : `${checkRefs.length} checks`}</span>
-        {investigation.featureStatus && <span>{STATUS_LABELS[investigation.featureStatus]}</span>}
+        {investigation.featureStatus && <span>Feature: {STATUS_LABELS[investigation.featureStatus]}</span>}
+        <span>{investigation.status}</span>
         {(investigation.provider || investigation.model) && (
           <span>{[investigation.provider, investigation.model].filter(Boolean).join(" / ")}</span>
         )}
@@ -294,86 +321,94 @@ function InvestigationReportView({
         </p>
       )}
 
-      <div className="statusInvestigationGrid">
-        <div className="statusInvestigationBlock">
-          <h5>
-            <AlertTriangle size={14} strokeWidth={1.9} aria-hidden />
-            Root cause
-          </h5>
-          <p>{optionalText(investigation.rootCause)}</p>
-        </div>
+      {expanded && (
+        <div className="statusInvestigationGrid" id={detailsId}>
+          <div className="statusInvestigationBlock">
+            <h5>
+              <AlertTriangle size={14} strokeWidth={1.9} aria-hidden />
+              Root cause
+            </h5>
+            <p>{optionalText(investigation.rootCause)}</p>
+          </div>
 
-        <div className="statusInvestigationBlock">
-          <h5>
-            <Server size={14} strokeWidth={1.9} aria-hidden />
-            Affected areas
-          </h5>
-          <InvestigationItemList items={investigation.affectedAreas} />
-        </div>
+          <div className="statusInvestigationBlock">
+            <h5>
+              <Server size={14} strokeWidth={1.9} aria-hidden />
+              Affected areas
+            </h5>
+            <InvestigationItemList items={investigation.affectedAreas} />
+          </div>
 
-        <div className="statusInvestigationBlock statusInvestigationBlockWide">
-          <h5>
-            <CheckCircle2 size={14} strokeWidth={1.9} aria-hidden />
-            Proof
-          </h5>
-          <InvestigationList items={investigation.proof} />
-        </div>
-
-        <div className="statusInvestigationBlock statusInvestigationBlockWide">
-          <h5>
-            <AlertTriangle size={14} strokeWidth={1.9} aria-hidden />
-            Possible causes
-          </h5>
-          <InvestigationList items={investigation.possibleCauses} />
-        </div>
-
-        {whatWouldDisproveThis.length > 0 && (
           <div className="statusInvestigationBlock statusInvestigationBlockWide">
             <h5>
-              <Search size={14} strokeWidth={1.9} aria-hidden />
-              What would disprove this
+              <CheckCircle2 size={14} strokeWidth={1.9} aria-hidden />
+              Proof
             </h5>
-            <InvestigationList items={whatWouldDisproveThis} />
+            <InvestigationList items={investigation.proof} />
           </div>
-        )}
 
-        <div className="statusInvestigationBlock statusInvestigationBlockWide">
-          <h5>
-            <Terminal size={14} strokeWidth={1.9} aria-hidden />
-            Repro
-          </h5>
-          <InvestigationItemList items={investigation.reproductionSteps} />
-        </div>
-
-        {recommendedVerifierProbes.length > 0 && (
           <div className="statusInvestigationBlock statusInvestigationBlockWide">
             <h5>
-              <Activity size={14} strokeWidth={1.9} aria-hidden />
-              Verifier probes
+              <AlertTriangle size={14} strokeWidth={1.9} aria-hidden />
+              Possible causes
             </h5>
-            <InvestigationItemList items={recommendedVerifierProbes} />
+            <InvestigationList items={investigation.possibleCauses} />
           </div>
-        )}
 
-        <div className="statusInvestigationBlock statusInvestigationBlockWide">
-          <h5>
-            <CheckCircle2 size={14} strokeWidth={1.9} aria-hidden />
-            Next actions
-          </h5>
-          <InvestigationList items={investigation.recommendedNextActions} ordered />
-          {investigation.followUpEvals.length > 0 && (
-            <p className="statusInvestigationFollowUp">
-              Follow-up evals: <strong>{investigation.followUpEvals.join(", ")}</strong>
-            </p>
+          {whatWouldDisproveThis.length > 0 && (
+            <div className="statusInvestigationBlock statusInvestigationBlockWide">
+              <h5>
+                <Search size={14} strokeWidth={1.9} aria-hidden />
+                What would disprove this
+              </h5>
+              <InvestigationList items={whatWouldDisproveThis} />
+            </div>
           )}
+
+          <div className="statusInvestigationBlock statusInvestigationBlockWide">
+            <h5>
+              <Terminal size={14} strokeWidth={1.9} aria-hidden />
+              Repro
+            </h5>
+            <InvestigationItemList items={investigation.reproductionSteps} />
+          </div>
+
+          {recommendedVerifierProbes.length > 0 && (
+            <div className="statusInvestigationBlock statusInvestigationBlockWide">
+              <h5>
+                <Activity size={14} strokeWidth={1.9} aria-hidden />
+                Verifier probes
+              </h5>
+              <InvestigationItemList items={recommendedVerifierProbes} />
+            </div>
+          )}
+
+          <div className="statusInvestigationBlock statusInvestigationBlockWide">
+            <h5>
+              <CheckCircle2 size={14} strokeWidth={1.9} aria-hidden />
+              Next actions
+            </h5>
+            <InvestigationList items={investigation.recommendedNextActions} ordered />
+            {investigation.followUpEvals.length > 0 && (
+              <p className="statusInvestigationFollowUp">
+                Follow-up evals: <strong>{investigation.followUpEvals.join(", ")}</strong>
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
 
-function InvestigationReports({ investigations }: { readonly investigations: readonly StatusInvestigation[] }): ReactNode {
-  if (investigations.length === 0) return null;
+function InvestigationReports({
+  investigations,
+  pendingChecks,
+}: {
+  readonly investigations: readonly StatusInvestigation[];
+  readonly pendingChecks: readonly StatusCheck[];
+}): ReactNode {
+  if (investigations.length === 0 && pendingChecks.length === 0) return null;
   const groups = groupInvestigations(investigations);
   return (
     <div className="statusInvestigation">
@@ -386,9 +421,23 @@ function InvestigationReports({ investigations }: { readonly investigations: rea
           <p>
             {groups.length} root-cause card{groups.length === 1 ? "" : "s"}
             {groups.length !== investigations.length ? ` across ${investigations.length} checks` : ""}
+            {pendingChecks.length > 0
+              ? `; ${pendingChecks.length} diagnosis pending`
+              : ""}
           </p>
         </div>
       </div>
+      {pendingChecks.length > 0 && (
+        <div className="statusInvestigationPending" role="status">
+          <AlertTriangle size={14} strokeWidth={1.9} aria-hidden />
+          <span>
+            Diagnosis pending for{" "}
+            <strong>
+              {pendingChecks.map((check) => `${runtimeDisplay(check)} / ${check.id}`).join(", ")}
+            </strong>
+          </span>
+        </div>
+      )}
       <div className="statusInvestigationReports">
         {groups.map((group) => (
           <InvestigationReportView key={group.investigation.id} group={group} />
@@ -432,6 +481,7 @@ function CheckRows({ checks }: { readonly checks: readonly StatusCheck[] }): Rea
 
 function FeatureRow({ feature }: { readonly feature: StatusFeature }): ReactNode {
   const investigations = investigationsFor(feature);
+  const pendingChecks = checksAwaitingDiagnosis(feature);
   return (
     <article className="statusFeature">
       <div className="statusFeatureTop">
@@ -448,7 +498,7 @@ function FeatureRow({ feature }: { readonly feature: StatusFeature }): ReactNode
       </div>
       <p className="statusFeatureMessage">{feature.message}</p>
       <CheckRows checks={feature.checks} />
-      <InvestigationReports investigations={investigations} />
+      <InvestigationReports investigations={investigations} pendingChecks={pendingChecks} />
     </article>
   );
 }

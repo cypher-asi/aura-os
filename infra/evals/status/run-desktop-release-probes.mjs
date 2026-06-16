@@ -203,6 +203,13 @@ async function terminate(child) {
   });
 }
 
+function copyOptionalLog(sourcePath, destPath) {
+  if (!fs.existsSync(sourcePath)) return null;
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  fs.copyFileSync(sourcePath, destPath);
+  return destPath;
+}
+
 const args = parseArgs(process.argv.slice(2));
 if (!fs.existsSync(args.binary)) throw new Error(`desktop binary does not exist: ${args.binary}`);
 fs.mkdirSync(args.logDir, { recursive: true });
@@ -211,6 +218,8 @@ fs.mkdirSync(args.outDir, { recursive: true });
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-desktop-status-"));
 const stdoutPath = path.join(args.logDir, "desktop.stdout.log");
 const stderrPath = path.join(args.logDir, "desktop.stderr.log");
+const sidecarSourceLogPath = path.join(dataDir, "harness", "sidecar.log");
+const sidecarCopiedLogPath = path.join(args.logDir, "sidecar.log");
 const stdout = fs.createWriteStream(stdoutPath, { flags: "w" });
 const stderr = fs.createWriteStream(stderrPath, { flags: "w" });
 const launch = launchCommand(args);
@@ -237,9 +246,12 @@ try {
     `desktop ready at ${args.baseUrl} version=${ready.update.current_version} channel=${ready.update.channel ?? "unknown"}\n`,
   );
   await runProbes(args);
-  process.stdout.write(`desktop logs: ${stdoutPath}, ${stderrPath}\n`);
 } finally {
   await terminate(child);
+  const sidecarLogPath = copyOptionalLog(sidecarSourceLogPath, sidecarCopiedLogPath);
+  process.stdout.write(
+    `desktop logs: ${stdoutPath}, ${stderrPath}${sidecarLogPath ? `, ${sidecarLogPath}` : ""}\n`,
+  );
   stdout.end();
   stderr.end();
 }

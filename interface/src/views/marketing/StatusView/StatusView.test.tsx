@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StatusView } from "./StatusView";
@@ -13,6 +14,7 @@ const MODEL_INVESTIGATION: StatusInvestigation = {
   featureId: "model-responses",
   featureLabel: "Model Responses",
   checkId: "model-matrix",
+  runtimeEnvironment: "desktop-release",
   title: "Model matrix response degradation",
   status: "ready",
   checkStatus: "warn",
@@ -181,6 +183,7 @@ function remoteQuotaInvestigation(checkId: string): StatusInvestigation {
     featureId: "remote-agents",
     featureLabel: "Remote Agents",
     checkId,
+    runtimeEnvironment: "production-api",
     title: "Remote agent creation blocked by quota exhaustion",
     checkStatus: "fail",
     featureStatus: "major_outage",
@@ -246,6 +249,52 @@ const DUPLICATE_ROOT_CAUSE_SNAPSHOT: StatusSnapshot = {
   investigations: REMOTE_QUOTA_INVESTIGATIONS,
 };
 
+const PENDING_DIAGNOSIS_SNAPSHOT: StatusSnapshot = {
+  ...FIXTURE_SNAPSHOT,
+  overall: "major_outage",
+  totals: {
+    ...FIXTURE_SNAPSHOT.totals,
+    features: 1,
+    operational: 0,
+    degraded: 0,
+    majorOutage: 1,
+    investigations: 0,
+  },
+  features: [
+    {
+      id: "media-generation",
+      label: "Media Generation",
+      category: "media",
+      priority: 45,
+      description: "Image generation.",
+      publicSummary: "Image generation streams can complete with artifacts.",
+      status: "major_outage",
+      lastCheckedAt: "2026-06-10T12:00:00.000Z",
+      checksPassed: 0,
+      checksTotal: 1,
+      checksFailed: 1,
+      checksUnknown: 0,
+      latencyP95Ms: 120000,
+      message: "Image generation stopped sending progress before completing.",
+      checks: [
+        {
+          id: "image-generation-stream",
+          runtimeEnvironment: "desktop-release",
+          runtimeLabel: "Desktop Release",
+          required: true,
+          status: "fail",
+          featureStatus: "major_outage",
+          message: "Image generation stopped sending progress before completing.",
+          checkedAt: "2026-06-10T12:00:00.000Z",
+          latencyMs: 120000,
+          evidence: {},
+        },
+      ],
+    },
+  ],
+  investigations: [],
+};
+
 describe("StatusView", () => {
   beforeEach(() => {
     vi.stubGlobal(
@@ -306,7 +355,8 @@ describe("StatusView", () => {
     expect(within(table).getByText("2/3")).toBeInTheDocument();
   });
 
-  it("renders investigator reports beside degraded checks", async () => {
+  it("renders investigator reports as expandable diagnosis rows", async () => {
+    const user = userEvent.setup();
     render(<StatusView />);
 
     await waitFor(() => {
@@ -315,7 +365,14 @@ describe("StatusView", () => {
 
     expect(screen.getByText("Investigations")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText(/Runtime:\s*Desktop Release/)).toBeInTheDocument();
+    expect(screen.getByText(/Check:\s*warn/)).toBeInTheDocument();
     expect(screen.getByText("medium confidence")).toBeInTheDocument();
+    expect(screen.queryByText("AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes")).not.toBeInTheDocument();
+    expect(screen.queryByText("What would disprove this")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Model matrix response degradation/ }));
+
     expect(screen.getAllByText("AURA_STATUS_CHECKS=model-matrix AURA_STATUS_MODEL_IDS=aura-small npm run status:probes").length).toBeGreaterThan(0);
     expect(screen.getByText("What would disprove this")).toBeInTheDocument();
     expect(screen.getByText("A rerun with aura-small returns the expected phrase with the same test account.")).toBeInTheDocument();
@@ -341,8 +398,27 @@ describe("StatusView", () => {
 
     expect(screen.getByText("1 root-cause card across 3 checks")).toBeInTheDocument();
     expect(screen.getByText("3 checks")).toBeInTheDocument();
-    expect(screen.getByText("remote-agent-create, remote-agent-state, remote-agent-runtime")).toBeInTheDocument();
+    expect(screen.getByText("production-api/remote-agent-create, production-api/remote-agent-state, production-api/remote-agent-runtime")).toBeInTheDocument();
     expect(screen.getAllByText("Remote agent creation blocked by quota exhaustion")).toHaveLength(1);
+  });
+
+  it("marks failed checks without an attached investigation as diagnosis pending", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => PENDING_DIAGNOSIS_SNAPSHOT,
+      }),
+    );
+
+    render(<StatusView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("0 root-cause cards; 1 diagnosis pending")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Diagnosis pending for/)).toBeInTheDocument();
+    expect(screen.getByText("Desktop Release / image-generation-stream")).toBeInTheDocument();
   });
 
   it("falls back to an unknown snapshot when the published JSON is unavailable", async () => {

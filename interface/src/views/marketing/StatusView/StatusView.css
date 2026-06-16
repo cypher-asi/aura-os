@@ -448,6 +448,34 @@
   gap: 8px;
 }
 
+.statusInvestigationPending {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(245, 198, 106, 0.2);
+  background: rgba(126, 88, 18, 0.16);
+  color: rgba(255, 219, 160, 0.86);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.statusInvestigationPending svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.statusInvestigationPending span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.statusInvestigationPending strong {
+  color: #ffdba0;
+  font-weight: 700;
+}
+
 .statusInvestigationItem {
   display: flex;
   flex-direction: column;
@@ -457,9 +485,45 @@
   background: rgba(8, 11, 15, 0.46);
 }
 
+.statusInvestigationToggle {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.statusInvestigationToggle:focus-visible {
+  outline: 1px solid rgba(154, 199, 255, 0.7);
+  outline-offset: 4px;
+}
+
+.statusInvestigationToggleIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(154, 199, 255, 0.18);
+  background: rgba(52, 112, 191, 0.12);
+  color: #9ac7ff;
+  transition: transform 150ms ease-out;
+}
+
+.statusInvestigationToggle[aria-expanded='true'] .statusInvestigationToggleIcon {
+  transform: rotate(180deg);
+}
+
 .statusInvestigationItemTop {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 14px;
   min-width: 0;
 }
@@ -470,19 +534,6 @@
   line-height: 1.25;
   font-weight: 720;
   color: #fff;
-}
-
-.statusInvestigationState {
-  align-self: flex-start;
-  min-height: 24px;
-  padding: 6px 8px;
-  border: 1px solid rgba(154, 199, 255, 0.2);
-  background: rgba(52, 112, 191, 0.14);
-  color: #9ac7ff;
-  font-size: 11px;
-  line-height: 1;
-  font-weight: 760;
-  text-transform: uppercase;
 }
 
 .statusInvestigationMeta {
