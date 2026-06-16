@@ -3,23 +3,25 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-15T23:15:16.169Z",
+  "generatedAt": "2026-06-16T00:10:16.788Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.669.1",
+  "version": "0.1.0-nightly.671.1",
   "date": "2026-06-15",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.669.1",
-  "lastIncludedSha": "dfbc1b6490975c9479ebae055ebff01c71accd57",
-  "previousProcessedSha": "d58f85fb70f60c2b71dc12cf9427d8adba4efb51",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.671.1",
+  "lastIncludedSha": "e7b1227ecfaee63c611fb8d56d36312a89357164",
+  "previousProcessedSha": "dfbc1b6490975c9479ebae055ebff01c71accd57",
   "commitShas": [
     "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
     "57b077e8e3596117c08ce0ae032de9bd8e60386c",
     "5d7fff8c58ed75b527e47b87750c36fcfe3fd391",
     "d58f85fb70f60c2b71dc12cf9427d8adba4efb51",
-    "dfbc1b6490975c9479ebae055ebff01c71accd57"
+    "dfbc1b6490975c9479ebae055ebff01c71accd57",
+    "23a750609ede7b7094abd12dc0239eebf1ba4476",
+    "e7b1227ecfaee63c611fb8d56d36312a89357164"
   ],
-  "rawCommitCount": 5,
-  "filteredCommitCount": 5,
+  "rawCommitCount": 7,
+  "filteredCommitCount": 7,
   "rawCommits": [
     {
       "sha": "6b9c8b0786777e2fbb7442179a1f5253a441fbd9",
@@ -308,6 +310,94 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "23a750609ede7b7094abd12dc0239eebf1ba4476",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-15T19:33:22-04:00",
+      "subject": "fix(observability): propagate scheduled process model",
+      "body": "",
+      "parents": [
+        "dfbc1b6490975c9479ebae055ebff01c71accd57"
+      ],
+      "files": [
+        ".github/workflows/release-nightly.yml",
+        "apps/aura-os-server/src/process_automaton.rs",
+        "apps/aura-os-server/tests/harness_client_test.rs",
+        "crates/aura-os-harness/src/client.rs",
+        "infra/evals/status/run-desktop-release-probes.mjs",
+        "infra/evals/status/run-status-probes.mjs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 186,
+        "deletions": 19
+      },
+      "committedAtMs": 1781566402000,
+      "cleanSubject": "propagate scheduled process model",
+      "keywords": [
+        "propagate",
+        "scheduled",
+        "process",
+        "model"
+      ],
+      "fileGroups": [
+        ".github/workflows/release-nightly.yml",
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/src",
+        "infra/evals/status"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "e7b1227ecfaee63c611fb8d56d36312a89357164",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-15T19:49:04-04:00",
+      "subject": "fix(observability): read desktop shares from api origin",
+      "body": "",
+      "parents": [
+        "23a750609ede7b7094abd12dc0239eebf1ba4476"
+      ],
+      "files": [
+        ".github/workflows/release-nightly.yml",
+        "infra/evals/status/run-desktop-release-probes.mjs",
+        "infra/evals/status/run-status-probes.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 13,
+        "deletions": 2
+      },
+      "committedAtMs": 1781567344000,
+      "cleanSubject": "read desktop shares from api origin",
+      "keywords": [
+        "read",
+        "desktop",
+        "shares",
+        "from",
+        "origin"
+      ],
+      "fileGroups": [
+        ".github/workflows/release-nightly.yml",
+        "infra/evals/status"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure"
+      ]
     }
   ],
   "batchCount": 4,
@@ -315,29 +405,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.669.1",
+      "version": "0.1.0-nightly.671.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64817862
+          "sizeBytes": 64842654
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131504632
+          "sizeBytes": 131537400
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -347,29 +437,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.669.1",
+      "version": "0.1.0-nightly.671.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.669.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.671.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60731368
+          "sizeBytes": 60711718
         },
         {
-          "name": "AURA_0.1.0-nightly.669.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.671.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59738785
+          "sizeBytes": 59753542
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -379,29 +469,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.669.1",
+      "version": "0.1.0-nightly.671.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.669.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.671.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62899839
+          "sizeBytes": 62897052
         },
         {
-          "name": "AURA_0.1.0-nightly.669.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.671.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61910329
+          "sizeBytes": 61926295
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -411,17 +501,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.669.1",
+      "version": "0.1.0-nightly.671.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47984166
+          "sizeBytes": 47999541
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.669.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.671.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -430,37 +520,37 @@
     }
   ],
   "rendered": {
-    "title": "Analytics integrity and feature-health observability take shape",
-    "intro": "Today's nightly is heavy on reliability plumbing: the team rebuilt analytics into a contract-enforced pipeline across web, desktop, and mobile, and reshaped feature-health probes so each check declares which runtime it actually exercised. Two follow-up fixes tightened release guards against dirty builds and aligned live probe fixtures with the new expectations.",
+    "title": "Analytics integrity and feature-health observability come into focus",
+    "intro": "Today's nightly is mostly an under-the-hood investment in trustworthy metrics and sharper release observability. A rebuilt analytics pipeline now enforces a typed event contract from client to server, dirty or token-less builds fail loudly, and the desktop release probe suite grew significantly — including a proper process-run lifecycle check that exercises the bundled harness end to end.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "1:40 AM",
         "started_at": "2026-06-15T08:40:31.000Z",
         "ended_at": "2026-06-15T08:40:31.000Z",
-        "title": "Feature health split from runtime evidence in status probes",
-        "summary": "Observability now distinguishes user-facing feature health from the specific runtime (production-api, desktop-release, local-dev) that produced each piece of evidence.",
+        "title": "Feature health separated from runtime environment in status probes",
+        "summary": "The observability stack now distinguishes what a check exercised (production-api, desktop-release, local-dev) from the user-facing feature it represents, so dashboards stop conflating the two.",
         "items": [
           {
-            "text": "Status checks now declare a runtime environment alongside the feature they prove, so the dashboard can label rows by runtime and treat production-auth media probes as informational while desktop-release remains the source of truth for Media Generation.",
+            "text": "Status checks now carry a separate runtime-environment axis, letting the dashboard label each row by the runtime it actually exercised while still grouping by feature.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reworked status policy, investigator, repairer, and StatusView to group checks by feature and reflect the new feature/runtime split, with refreshed docs in aura-feature-health.md and added policy tests.",
+            "text": "Media Generation health is now anchored to desktop-release probes (which have the bundled harness) with deployed-API checks demoted to informational, fixing a long-standing source of false signal in the public status view.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Release-nightly and release-stable desktop legs now also probe image-generation-stream, extending the desktop-release coverage beyond auth, orgs, and local agents.",
+            "text": "Image-generation stream coverage was added to the desktop nightly and stable probe matrices, and the StatusView UI was updated to surface the new runtime labels.",
             "commit_shas": [
               "6b9c8b0786777e2fbb7442179a1f5253a441fbd9"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -469,36 +559,36 @@
         "time_label": "9:52 AM",
         "started_at": "2026-06-15T16:52:53.000Z",
         "ended_at": "2026-06-15T16:52:53.000Z",
-        "title": "Analytics rebuilt for accurate True DAU with a CI contract gate",
-        "summary": "A new typed event registry, server-only session_active emitter, and build-time guards make analytics a hard release requirement across web, desktop, iOS, and Android.",
+        "title": "Rebuilt analytics pipeline with a typed event contract and CI gate",
+        "summary": "Aura's analytics were overhauled end-to-end so True DAU, retention, and reliability metrics actually mean what they claim — backed by a typed registry, contract tests, and build-time guards across web, desktop, and mobile.",
         "items": [
           {
-            "text": "Introduced a typed analytics registry plus AST/pipeline/server contract tests so renaming, dropping, or non-literal track() calls fail loudly instead of silently breaking metrics.",
+            "text": "Session activity is now emitted from a single server-side source, with a typed event registry and AST/pipeline/server contract tests that catch renamed, dropped, or non-literal track() calls before they ship.",
             "commit_shas": [
               "57b077e8e3596117c08ce0ae032de9bd8e60386c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Moved session_active to a single server-side emitter and updated the Mixpanel server module to enforce the single-emitter and manifest invariants via cargo tests.",
+            "text": "A new Analytics Contract GitHub workflow runs on every push to main and on PRs, blocking changes that would silently break client tracking or violate the server single-emitter invariant.",
             "commit_shas": [
               "57b077e8e3596117c08ce0ae032de9bd8e60386c"
             ],
             "confidence": "high"
           },
           {
-            "text": "iOS and Android fastlane release lanes now require VITE_MIXPANEL_TOKEN and run --require-analytics validation, so TestFlight and Play Store builds can no longer ship with a no-op browser SDK.",
+            "text": "iOS and Android release lanes now require VITE_MIXPANEL_TOKEN and run the --require-analytics validator, so a store build whose web bundle would no-op on analytics fails the lane instead of shipping.",
             "commit_shas": [
               "57b077e8e3596117c08ce0ae032de9bd8e60386c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a dedicated Analytics Contract GitHub workflow that runs on every push to main and PR touching the interface or server, gating regressions on both client and server analytics.",
+            "text": "Mobile chat input now reports engagement events and the desktop local-server token plumbing was corrected so authenticated sessions actually get tracked.",
             "commit_shas": [
               "57b077e8e3596117c08ce0ae032de9bd8e60386c"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -507,36 +597,36 @@
         "time_label": "12:40 PM",
         "started_at": "2026-06-15T19:40:29.000Z",
         "ended_at": "2026-06-15T20:04:18.000Z",
-        "title": "Dirty frontend builds blocked and probe coverage broadens to notes and public content",
-        "summary": "Vite now refuses to produce analytics-enabled bundles with empty, 0.0.0, or -dirty versions, while feature-health probes pick up notes, processes, billing transactions, and public content details.",
+        "title": "Dirty frontend builds fail the release, and probe coverage expands",
+        "summary": "The web release guard was tightened to reject mis-versioned bundles, and the feature-health probe set grew to include notes, billing transactions, and public content detail endpoints.",
         "items": [
           {
-            "text": "Vite analytics-enabled builds and the desktop-frontend-assets validator now reject APP_VERSION values that are empty, 0.0.0, or end in -dirty, closing the gap where a mis-versioned web bundle could ship past the previous release guard.",
+            "text": "Vite and the desktop-frontend assets validator now refuse to produce an analytics-enabled build when APP_VERSION is empty, 0.0.0, or ends in -dirty — catching config regressions that would have bucketed events under a fake version.",
             "commit_shas": [
               "5d7fff8c58ed75b527e47b87750c36fcfe3fd391"
             ],
             "confidence": "high"
           },
           {
-            "text": "Greatly expanded feature-health probe coverage with a 552-line addition to run-status-probes.mjs and new expectations for org-tool-actions-contract, billing-account-transactions, notes-crud, public-content-details, and analytics-contract-artifacts.",
+            "text": "Production and release probe matrices added notes-crud, billing-account-transactions, org-tool-actions-contract, public-content-details, and analytics-contract-artifacts checks for broader feature-health coverage.",
             "commit_shas": [
               "d58f85fb70f60c2b71dc12cf9427d8adba4efb51"
             ],
             "confidence": "high"
           },
           {
-            "text": "Desktop release probes now exercise desktop-update-runtime, project-agent-chat-stream, session-share public reads, harness memory/skills roundtrips, notes CRUD, and a full process-run lifecycle, materially deepening what each desktop release leg verifies.",
+            "text": "Desktop release probes picked up project-agent-chat-stream, session-share-public-read, harness memory and skills roundtrips, process-run-lifecycle, and desktop-update-runtime — exercising more of the bundled harness on every nightly.",
             "commit_shas": [
               "d58f85fb70f60c2b71dc12cf9427d8adba4efb51"
             ],
             "confidence": "high"
           },
           {
-            "text": "Notes API now accepts the frontend's camelCase folderId, backed by a serde test, fixing a quiet contract mismatch the new notes-crud probe would otherwise surface.",
+            "text": "The notes create endpoint now formally accepts camelCase folderId from the frontend, with a regression test pinning the contract.",
             "commit_shas": [
               "d58f85fb70f60c2b71dc12cf9427d8adba4efb51"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -544,20 +634,29 @@
         "batch_id": "entry-4",
         "time_label": "3:46 PM",
         "started_at": "2026-06-15T22:46:56.000Z",
-        "ended_at": "2026-06-15T22:46:56.000Z",
-        "title": "Live probe fixtures aligned with new process-run and share expectations",
-        "summary": "A follow-up tightens the process-run lifecycle probe to construct a real runnable graph and waits for share messages to materialize before asserting.",
+        "ended_at": "2026-06-15T23:49:04.000Z",
+        "title": "Scheduled process runs resolve a real model, and share probes use the API origin",
+        "summary": "A short follow-up thread hardened the new process-run-lifecycle probe: scheduled runs now propagate the right model from their action node's agent, and public share reads point at the API origin instead of the marketing host.",
         "items": [
           {
-            "text": "The process-run-lifecycle probe now builds a proper agent + ignition + action + connection graph and reports agentId, ignitionNodeId, actionNodeId, and connectionId as required evidence, matching the new check expectations.",
+            "text": "Scheduled process runs now resolve the executing model from the first action node's agent (falling back to the latest frontier model) so harness automaton runs no longer launch without a model.",
             "commit_shas": [
-              "dfbc1b6490975c9479ebae055ebff01c71accd57"
+              "23a750609ede7b7094abd12dc0239eebf1ba4476"
             ],
             "confidence": "high"
           },
           {
-            "text": "Session-share public reads now poll with a 30s budget instead of asserting immediately, eliminating a race where the public endpoint returned 404 or empty messages before propagation.",
+            "text": "The process-run-lifecycle probe was upgraded to build a real ignition→action graph with an agent and connection, and its expected evidence now asserts each of those IDs is present.",
             "commit_shas": [
+              "dfbc1b6490975c9479ebae055ebff01c71accd57",
+              "23a750609ede7b7094abd12dc0239eebf1ba4476"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Session-share public read probes now resolve via a dedicated AURA_STATUS_PUBLIC_API_BASE_URL (defaulting to api.aura.ai) and wait for messages to materialize, eliminating flakes when the marketing host doesn't proxy the share API.",
+            "commit_shas": [
+              "e7b1227ecfaee63c611fb8d56d36312a89357164",
               "dfbc1b6490975c9479ebae055ebff01c71accd57"
             ],
             "confidence": "high"
@@ -566,11 +665,11 @@
       }
     ],
     "highlights": [
-      "Analytics contract enforced across web, desktop, iOS, and Android builds",
-      "Feature health now separated from runtime evidence in observability",
-      "Dirty/0.0.0 frontend builds now fail loudly at release time",
-      "Expanded desktop and production probes cover notes, processes, and public content"
+      "Analytics rebuilt around a typed event contract with CI gating",
+      "Dirty or unversioned frontend builds now fail the release",
+      "Feature-health probes split from runtime environment for clearer signals",
+      "Desktop release probes now cover process runs, notes, and shares end to end"
     ],
-    "raw_commit_count": 5
+    "raw_commit_count": 7
   }
 }
