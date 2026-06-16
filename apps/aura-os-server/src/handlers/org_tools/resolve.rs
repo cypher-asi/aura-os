@@ -371,23 +371,37 @@ async fn load_mcp_integration_secret(
 ) -> ApiResult<String> {
     let resolved = if let Some(client) = &state.integrations_client {
         match client.get_integration_secret(org_id, integration_id).await {
-            Ok(secret) => secret.filter(|value| !value.trim().is_empty()),
+            Ok(secret) => {
+                let secret = secret.filter(|value| !value.trim().is_empty());
+                if secret.is_none() {
+                    warn!(
+                        %org_id,
+                        integration_id,
+                        "canonical aura-integrations MCP secret missing or empty; falling back to compatibility-only local shadow"
+                    );
+                }
+                secret
+            }
             Err(error) => {
                 warn!(
                     %org_id,
                     integration_id,
                     error = %error,
-                    "failed to load canonical aura-integrations MCP secret"
+                    "failed to load canonical aura-integrations MCP secret; falling back to compatibility-only local shadow"
                 );
                 None
             }
         }
     } else {
-        state
+        None
+    };
+    let resolved = match resolved {
+        Some(secret) => Some(secret),
+        None => state
             .org_service
             .get_integration_secret(integration_id)
             .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?
-            .filter(|value| !value.trim().is_empty())
+            .filter(|value| !value.trim().is_empty()),
     };
     Ok(resolved.unwrap_or_default())
 }

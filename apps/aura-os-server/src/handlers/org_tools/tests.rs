@@ -548,3 +548,52 @@ async fn resolve_mcp_server_integration_accepts_enabled_mcp_server() {
     assert_eq!(resolved.metadata, integration);
     assert_eq!(resolved.secret, "");
 }
+
+#[tokio::test]
+async fn resolve_mcp_server_integration_uses_shadow_secret_when_canonical_secret_is_missing() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let mut state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some("mcp-1"),
+            "Local Docs MCP".to_string(),
+            "mcp_server".to_string(),
+            OrgIntegrationKind::McpServer,
+            None,
+            Some(serde_json::json!({"transport":"stdio","command":"local-demo"})),
+            Some(true),
+            IntegrationSecretUpdate::Set("local-mcp-secret".to_string()),
+        )
+        .expect("save local mcp shadow");
+
+    let mut canonical = sample_integration(
+        org_id,
+        "mcp-1",
+        "Canonical Docs MCP",
+        "mcp_server",
+        true,
+        true,
+    );
+    canonical.kind = OrgIntegrationKind::McpServer;
+    canonical.provider_config = Some(serde_json::json!({
+        "transport": "stdio",
+        "command": "canonical-demo"
+    }));
+    let base_url = start_mock_integrations_server(canonical.clone(), None).await;
+    state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+        &base_url,
+        "internal-token",
+    )));
+
+    let resolved = resolve_mcp_server_integration(&state, &org_id, "mcp-1")
+        .await
+        .expect("resolve canonical mcp integration with shadow secret");
+
+    assert_eq!(resolved.metadata, canonical);
+    assert_eq!(resolved.secret, "local-mcp-secret");
+}
