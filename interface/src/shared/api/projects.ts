@@ -6,6 +6,8 @@ export interface CreateProjectRequest {
   org_id: string;
   name: string;
   description: string;
+  build_command?: string;
+  test_command?: string;
   git_repo_url?: string;
   git_branch?: string;
   orbit_base_url?: string;
@@ -18,6 +20,8 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   name?: string;
   description?: string;
+  build_command?: string;
+  test_command?: string;
   git_repo_url?: string;
   git_branch?: string;
   orbit_base_url?: string;
