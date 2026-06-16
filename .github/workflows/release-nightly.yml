@@ -631,6 +631,8 @@ jobs:
           AURA_STATUS_RUNTIME_ENVIRONMENT: desktop-release
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_DESKTOP_LOG_DIR: desktop-observability-logs
+          AURA_GENERATION_EVENT_IDLE_TIMEOUT_SECS: "300"
+          AURA_GENERATION_STREAM_IDLE_TIMEOUT_SECS: "300"
           AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,desktop-update-runtime,local-agent-create,local-agent-runtime,local-agent-permissions,project-agent-chat-stream,session-share-public-read,harness-memory-roundtrip,harness-skills-roundtrip,notes-crud,process-run-lifecycle,model-matrix,image-generation-stream,analytics-contract-artifacts
         shell: bash
         run: |
