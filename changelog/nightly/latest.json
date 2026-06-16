@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-16T14:48:51.582Z",
+  "generatedAt": "2026-06-16T15:13:48.714Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.674.1",
+  "version": "0.1.0-nightly.675.1",
   "date": "2026-06-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.674.1",
-  "lastIncludedSha": "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
-  "previousProcessedSha": "dd42aa370bb4841048e2e0b4ea4d80c0ff21b311",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.675.1",
+  "lastIncludedSha": "7c8e0405beda70cdad1e6f405f3c9c168cde63db",
+  "previousProcessedSha": "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
   "commitShas": [
-    "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
+    "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
+    "7c8e0405beda70cdad1e6f405f3c9c168cde63db"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
@@ -63,6 +64,43 @@
         "Interface",
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "7c8e0405beda70cdad1e6f405f3c9c168cde63db",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-16T10:54:10-04:00",
+      "subject": "fix(observability): focus investigation source discovery",
+      "body": "",
+      "parents": [
+        "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
+      ],
+      "files": [
+        "infra/evals/status/lib/status-source-discovery.mjs",
+        "infra/evals/status/lib/status-source-discovery.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 126,
+        "deletions": 12
+      },
+      "committedAtMs": 1781621650000,
+      "cleanSubject": "focus investigation source discovery",
+      "keywords": [
+        "focus",
+        "investigation",
+        "source",
+        "discovery"
+      ],
+      "fileGroups": [
+        "infra/evals/status"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 1,
@@ -70,29 +108,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.674.1",
+      "version": "0.1.0-nightly.675.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64838438
+          "sizeBytes": 64834268
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 131525112
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -102,29 +140,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.674.1",
+      "version": "0.1.0-nightly.675.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.674.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.675.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60720263
+          "sizeBytes": 60722054
         },
         {
-          "name": "AURA_0.1.0-nightly.674.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.675.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59763007
+          "sizeBytes": 59758271
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -134,29 +172,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.674.1",
+      "version": "0.1.0-nightly.675.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.674.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.675.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62908124
+          "sizeBytes": 62903416
         },
         {
-          "name": "AURA_0.1.0-nightly.674.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.675.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61935967
+          "sizeBytes": 61932826
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -166,17 +204,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.674.1",
+      "version": "0.1.0-nightly.675.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47996244
+          "sizeBytes": 47993914
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.674.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.675.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -185,53 +223,53 @@
     }
   ],
   "rendered": {
-    "title": "Steadier status page freshness signals",
-    "intro": "A focused tune-up to Aura's public status page and its observability probes, raising the noise floor on freshness checks so transient snapshot lag no longer trips false alarms.",
+    "title": "Calmer status signals and sharper outage investigations",
+    "intro": "A focused observability day for Aura: the public status surface stops flapping on slow snapshot refreshes, and the tooling that finds the offending code during an incident now ranks product code ahead of the framework itself.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:26 AM",
         "started_at": "2026-06-16T14:26:04.000Z",
-        "ended_at": "2026-06-16T14:26:04.000Z",
-        "title": "Status page freshness thresholds relaxed to cut false alarms",
-        "summary": "Tuned the public status page and its evaluation probes so brief snapshot staleness no longer flips features into a degraded state.",
+        "ended_at": "2026-06-16T14:54:10.000Z",
+        "title": "Public status freshness thresholds relaxed and investigation routing improved",
+        "summary": "Status freshness windows were widened so brief snapshot lag no longer trips a degraded state, and outage investigations now surface product code paths ahead of the status framework's own files.",
         "items": [
           {
-            "text": "Raised snapshot freshness tolerances on the public status checks, lifting the max snapshot age from 180 to 300 minutes and standardizing per-check stale windows at 30 minutes so short publishing delays no longer mark core API, auth, and system-info as stale.",
+            "text": "Public Website status stays operational when the published observability snapshot ages out: the snapshot check is now informational with a 360-minute staleness window, and freshness budgets for api-health, auth-session, and system-info were unified at 30 minutes so transient lag in the snapshot pipeline no longer flips the public StatusView into a degraded state.",
             "commit_shas": [
               "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reclassified the published-observability-snapshot check as informational with a 360-minute stale window, and added policy test coverage confirming features stay operational when only that snapshot's freshness metadata fails.",
+            "text": "Snapshot age tolerance on the marketing StatusView was raised from 180 to 300 minutes and the observability workflow cron was nudged from the top of the hour to :17, reducing collisions with other scheduled jobs and false freshness alerts.",
             "commit_shas": [
               "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
             ],
             "confidence": "high"
           },
           {
-            "text": "Updated the marketing StatusView with new styling and rendering for the informational-impact state so users see a clearer, non-alarming indicator when a check is advisory rather than outage-worthy.",
+            "text": "Investigation source discovery now ranks needles by signal quality (API paths, error codes, multi-word phrases, kebab/camel identifiers) and deprioritizes matches inside infra/evals/status itself, so suspected code paths point at the product surface that actually failed rather than the status framework scaffolding.",
             "commit_shas": [
-              "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
+              "7c8e0405beda70cdad1e6f405f3c9c168cde63db"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Repo search during investigations is more thorough and bounded: needle variants now include extracted phrases and stricter word-boundary code/error tokens, with per-needle match caps replacing the old global cutoff to give every needle a fair shot at producing hints.",
+            "commit_shas": [
+              "7c8e0405beda70cdad1e6f405f3c9c168cde63db"
             ],
             "confidence": "medium"
-          },
-          {
-            "text": "Shifted the AURA Observability workflow cron from the top of every other hour to :17 past, reducing contention with other scheduled jobs that kick off on the hour.",
-            "commit_shas": [
-              "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
-            ],
-            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Status page tolerates short snapshot lag without flapping",
-      "Published snapshot freshness demoted to informational",
-      "Observability probe cadence offset to avoid collisions"
+      "Public status page no longer degrades on stale snapshot metadata",
+      "Investigation source discovery prioritizes product code over status framework internals",
+      "Observability probe schedule shifted off the top of the hour"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
