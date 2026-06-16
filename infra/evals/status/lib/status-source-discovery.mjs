@@ -73,7 +73,7 @@ export async function discoverInvestigationSources({
       repoRoot,
     }),
     ...await searchRepoForNeedles({
-      needles: sourceNeedlesForCheck(check, expectation).slice(0, 10),
+      needles: repoSearchNeedlesForCheck(check, expectation),
       repoRoot,
     }),
   ], 32);
@@ -120,6 +120,18 @@ export function sourceNeedlesForCheck(check, expectation) {
     addNeedleWithVariants(needles, assertion?.containsIgnoreCase);
   }
   return [...needles].slice(0, 32);
+}
+
+export function repoSearchNeedlesForCheck(check, expectation) {
+  return sourceNeedlesForCheck(check, expectation)
+    .map((needle, index) => ({
+      needle,
+      index,
+      score: sourceNeedleSearchScore(needle, index),
+    }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((entry) => entry.needle)
+    .slice(0, 18);
 }
 
 async function findKnownSourceAnchors({
@@ -222,7 +234,9 @@ async function searchRepoForNeedles({ needles, repoRoot }) {
         ],
         { timeout: 7_500, maxBuffer: 768_000 },
       );
+      let matchesForNeedle = 0;
       for (const line of stdout.split("\n").filter(Boolean)) {
+        if (matchesForNeedle >= 24) break;
         const event = safeJsonParse(line);
         if (event?.type !== "match") continue;
         const filePath = event.data?.path?.text;
@@ -238,11 +252,11 @@ async function searchRepoForNeedles({ needles, repoRoot }) {
           reason: `Repository match for ${needle}.`,
           priority: priorityForMatch({ needle, filePath, repoRoot, text }),
         });
+        matchesForNeedle += 1;
       }
     } catch {
       // Source discovery is supplemental. Missing rg matches should not block investigation.
     }
-    if (hints.length >= 80) break;
   }
   return hints;
 }
@@ -348,19 +362,24 @@ function buildSourcePathSummary(sourceHints) {
     rankedPaths.push({ path: hintPath, score });
   }
   rankedPaths.sort((left, right) => right.score - left.score || left.path.localeCompare(right.path));
-  const candidateCodePaths = rankedPaths
-    .filter((entry) => isCandidateCodePath(entry.path))
-    .slice(0, 8);
+  const rawCandidateCodePaths = rankedPaths.filter((entry) => isCandidateCodePath(entry.path));
+  const productCandidateCodePaths = rawCandidateCodePaths.filter((entry) => !isObservabilityFrameworkPath(entry.path));
+  const candidateCodePaths = [
+    ...(productCandidateCodePaths.length > 0 ? productCandidateCodePaths : rawCandidateCodePaths),
+    ...(productCandidateCodePaths.length > 0 ? rawCandidateCodePaths.filter((entry) => isObservabilityFrameworkPath(entry.path)) : []),
+  ].slice(0, 8);
 
   return { byKind, rankedPaths, candidateCodePaths };
 }
 
 function suspectCandidatePaths(sourceHints, pathSummary) {
-  return [...new Set([
+  const paths = [...new Set([
     ...pathSummary.candidateCodePaths.map((entry) => entry.path),
     ...pathSummary.rankedPaths.filter((entry) => isCandidateCodePath(entry.path)).map((entry) => entry.path),
     ...sourceHints.map((hint) => hint.path).filter((hintPath) => hintPath && isCandidateCodePath(hintPath)),
-  ])].slice(0, 10);
+  ])];
+  const productPaths = paths.filter((hintPath) => !isObservabilityFrameworkPath(hintPath));
+  return (productPaths.length > 0 ? productPaths : paths).slice(0, 10);
 }
 
 function buildSourceDiscoverySummary({
@@ -442,6 +461,7 @@ function priorityForMatch({ needle, filePath, repoRoot, text }) {
   let priority = 40;
   if (relativePath.includes("infra/evals/status")) priority += 18;
   if (relativePath.includes("/api/") || relativePath.includes("/routes/") || relativePath.includes("/server/")) priority += 12;
+  if (needle.includes(" ")) priority += 22;
   if (isTestPath(relativePath)) priority -= 35;
   if (relativePath.includes("node_modules") || relativePath.includes("dist/")) priority -= 50;
   if (String(text ?? "").includes(needle)) priority += 4;
@@ -463,6 +483,10 @@ function isCandidateCodePath(hintPath) {
     && !hintPath.endsWith("features.json")
     && !hintPath.endsWith("check-expectations.json")
     && !hintPath.includes("infra/evals/reports/");
+}
+
+function isObservabilityFrameworkPath(hintPath) {
+  return hintPath.startsWith("infra/evals/status/");
 }
 
 function isTestPath(hintPath) {
@@ -501,6 +525,7 @@ function addNeedle(needles, value) {
 
 function variantsForNeedle(value) {
   const variants = new Set([value]);
+  for (const phrase of phraseNeedlesFromText(value)) variants.add(phrase);
   if (value.includes("-")) {
     variants.add(value.replace(/-/g, "_"));
     variants.add(toCamelCase(value));
@@ -511,11 +536,43 @@ function variantsForNeedle(value) {
   }
   const endpointMatches = value.match(/\/(?:api|v\d+)[a-z0-9/_:.-]*/gi) ?? [];
   for (const endpoint of endpointMatches) variants.add(endpoint);
-  const codeMatches = value.match(/[a-z][a-z0-9_:-]{5,}/g) ?? [];
+  const codeMatches = value.match(/\b[a-z][a-z0-9_:-]{5,}\b/g) ?? [];
   for (const code of codeMatches) variants.add(code);
-  const errorCodeMatches = value.match(/[A-Z][A-Z0-9_]{5,}/g) ?? [];
+  const errorCodeMatches = value.match(/\b[A-Z][A-Z0-9_]{5,}\b/g) ?? [];
   for (const code of errorCodeMatches) variants.add(code);
   return [...variants];
+}
+
+function sourceNeedleSearchScore(needle, index) {
+  let score = 100 - index / 100;
+  if (/\/(?:api|v\d+)[a-z0-9/_:.-]*/i.test(needle)) score += 90;
+  if (/^[A-Z][A-Z0-9_:-]{5,}$/.test(needle)) score += 80;
+  if (/^[A-Z0-9_]+_URL$/.test(needle)) score += 75;
+  if (needle.includes(" ")) score += 65;
+  if (/\b(?:not found|failed|unreachable|error|404|timeout)\b/i.test(needle)) score += 35;
+  if (/^verify\b/i.test(needle)) score -= 25;
+  if (/^[a-z][a-z0-9]*(?:[A-Z][a-z0-9]*)+$/.test(needle)) score += 45;
+  if (/^[a-z0-9]+(?:[-_][a-z0-9]+)+$/.test(needle)) score += 35;
+  if (needle.includes("_") || needle.includes("-")) score += 10;
+  if (/^[a-z]+$/.test(needle)) score -= 35;
+  if (needle.length < 6) score -= 20;
+  return score;
+}
+
+function phraseNeedlesFromText(value) {
+  if (typeof value !== "string") return [];
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized.includes(" ")) return [];
+  return normalized
+    .split(/(?:[.;]\s+|;\s*|:\s*)/g)
+    .map((phrase) => phrase.replace(/^["'`]+|["'`]+$/g, "").trim())
+    .filter((phrase) =>
+      phrase.length >= 12
+      && phrase.length <= 140
+      && phrase.includes(" ")
+      && !/^expected evidence assertion failed/i.test(phrase),
+    )
+    .slice(0, 6);
 }
 
 function toCamelCase(value) {
@@ -528,9 +585,9 @@ function stringsFromValue(value, strings = []) {
     strings.push(value);
     const endpointMatches = value.match(/\/(?:api|v\d+)[a-z0-9/_:.-]*/gi) ?? [];
     for (const endpoint of endpointMatches) strings.push(endpoint);
-    const codeMatches = value.match(/[a-z][a-z0-9_:-]{5,}/g) ?? [];
+    const codeMatches = value.match(/\b[a-z][a-z0-9_:-]{5,}\b/g) ?? [];
     for (const code of codeMatches) strings.push(code);
-    const errorCodeMatches = value.match(/[A-Z][A-Z0-9_]{5,}/g) ?? [];
+    const errorCodeMatches = value.match(/\b[A-Z][A-Z0-9_]{5,}\b/g) ?? [];
     for (const code of errorCodeMatches) strings.push(code);
     return strings;
   }

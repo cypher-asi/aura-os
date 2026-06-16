@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 
 import {
   discoverInvestigationSources,
+  repoSearchNeedlesForCheck,
   sourceNeedlesForCheck,
 } from "./status-source-discovery.mjs";
 
@@ -35,14 +36,46 @@ test("sourceNeedlesForCheck extracts endpoint, evidence, and naming variants", (
   assert.ok(needles.includes("SESSION_OPEN_FAILED"));
 });
 
+test("repoSearchNeedlesForCheck prioritizes exact runtime evidence over prose terms", () => {
+  const needles = repoSearchNeedlesForCheck({
+    checkId: "image-generation-stream",
+    featureId: "media-generation",
+    message: "agent runtime endpoint not found (404): the harness is unreachable or running an incompatible version. Verify the LOCAL_HARNESS_URL / SWARM_BASE_URL configuration.",
+    evidence: {
+      frameTypes: ["generation_start", "generation_error"],
+      frames: [
+        {
+          event: "generation_error",
+          data: {
+            code: "SESSION_OPEN_FAILED",
+            message: "agent runtime endpoint not found (404)",
+          },
+        },
+      ],
+    },
+  }, {
+    requiredEvidence: ["frameTypes", "imageUrlPresent"],
+    assertions: [{ path: "frameTypes", contains: "generation_completed" }],
+  });
+
+  assert.ok(needles.indexOf("SESSION_OPEN_FAILED") < 10);
+  assert.ok(needles.indexOf("agent runtime endpoint not found (404)") < 10);
+  assert.ok(needles.indexOf("LOCAL_HARNESS_URL") < 10);
+  assert.ok(needles.indexOf("SWARM_BASE_URL") < 10);
+  assert.ok(needles.indexOf("generation_completed") < 18);
+  assert.equal(needles.includes("xpected"), false);
+});
+
 test("discoverInvestigationSources anchors checks, source matches, excerpts, and recent commits", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "aura-source-discovery-"));
   try {
     await mkdir(path.join(tempDir, "infra/evals/status"), { recursive: true });
+    await mkdir(path.join(tempDir, "apps/aura-os-server/src/handlers/agents/chat"), { recursive: true });
     await mkdir(path.join(tempDir, "server/routes"), { recursive: true });
     const registryPath = path.join(tempDir, "infra/evals/status/features.json");
     const expectationsPath = path.join(tempDir, "infra/evals/status/check-expectations.json");
     const runnerPath = path.join(tempDir, "infra/evals/status/run-status-probes.mjs");
+    const runtimeErrorPath = path.join(tempDir, "apps/aura-os-server/src/handlers/agents/chat/errors.rs");
     const routePath = path.join(tempDir, "server/routes/agents.ts");
 
     await writeFile(registryPath, JSON.stringify({
@@ -67,6 +100,12 @@ test("discoverInvestigationSources anchors checks, source matches, excerpts, and
       "    return { orgId, agentId, remoteState };",
       "  },",
       "};",
+      "",
+    ].join("\n"));
+    await writeFile(runtimeErrorPath, [
+      "pub fn map_harness_session_startup_error() -> &'static str {",
+      "  \"SESSION_OPEN_FAILED: agent runtime endpoint not found (404): verify LOCAL_HARNESS_URL / SWARM_BASE_URL\"",
+      "}",
       "",
     ].join("\n"));
     await writeFile(routePath, [
@@ -104,7 +143,14 @@ test("discoverInvestigationSources anchors checks, source matches, excerpts, and
       "}",
       "",
     ].join("\n"));
+    await writeFile(runtimeErrorPath, [
+      "pub fn map_harness_session_startup_error() -> &'static str {",
+      "  \"SESSION_OPEN_FAILED: agent runtime endpoint not found (404): the harness is unreachable; verify LOCAL_HARNESS_URL / SWARM_BASE_URL\"",
+      "}",
+      "",
+    ].join("\n"));
     await execFileAsync("git", ["add", routePath], { cwd: tempDir });
+    await execFileAsync("git", ["add", runtimeErrorPath], { cwd: tempDir });
     await execFileAsync("git", [
       "-c",
       "user.name=AURA Test",
@@ -151,16 +197,27 @@ test("discoverInvestigationSources anchors checks, source matches, excerpts, and
     assert.ok(discovery.sourceHints.some((hint) => hint.kind === "expected-output-contract"));
     assert.ok(discovery.sourceHints.some((hint) => hint.kind === "eval-runner-branch"));
     assert.ok(discovery.sourceHints.some((hint) => hint.kind === "endpoint-match" && hint.path === "server/routes/agents.ts"));
+    assert.ok(discovery.sourceHints.some((hint) => hint.path === "apps/aura-os-server/src/handlers/agents/chat/errors.rs"));
     assert.ok(discovery.sourceContext.some((context) => context.path === "server/routes/agents.ts" && context.excerpt.includes("/api/agents")));
     assert.equal(discovery.sourceDiscovery.discoveryKind, "aura-observability-source-discovery");
     assert.ok(discovery.sourceDiscovery.rankedPaths.some((entry) => entry.path === "infra/evals/status/run-status-probes.mjs"));
+    assert.equal(discovery.sourceDiscovery.candidateCodePaths[0].path.startsWith("infra/evals/status/"), false);
     assert.ok(discovery.sourceDiscovery.candidateCodePaths.some((entry) => entry.path === "server/routes/agents.ts"));
     assert.ok(discovery.sourceDiscovery.recentChanges.some((change) => change.path === "server/routes/agents.ts"));
     assert.ok(discovery.sourceDiscovery.suspectChanges.some((change) => change.subject === "change remote-agent-create route timeout"));
     const suspectChange = discovery.sourceDiscovery.suspectChanges.find((change) => change.subject === "change remote-agent-create route timeout");
     assert.ok(suspectChange.score >= 85);
     assert.ok(suspectChange.reasons.some((reason) => reason.includes("last passing run")));
-    assert.deepEqual(suspectChange.candidateTouchedPaths, ["server/routes/agents.ts"]);
+    assert.deepEqual(suspectChange.candidateTouchedPaths, [
+      "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+      "server/routes/agents.ts",
+    ]);
+    assert.equal(
+      discovery.sourceDiscovery.suspectChanges.some((change) =>
+        change.candidateTouchedPaths?.some((candidatePath) => candidatePath.startsWith("infra/evals/status/")),
+      ),
+      false,
+    );
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
