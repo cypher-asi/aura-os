@@ -3,23 +3,27 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-16T16:07:48.352Z",
+  "generatedAt": "2026-06-16T18:24:17.318Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.678.1",
+  "version": "0.1.0-nightly.680.1",
   "date": "2026-06-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.678.1",
-  "lastIncludedSha": "04c81439f3bc03beeddb426490521079d80efe56",
-  "previousProcessedSha": "7560151f6d3be0c6939c7f288a51398f71186182",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.680.1",
+  "lastIncludedSha": "65d4bede047c6dd234d12736dde9515f5d5dede2",
+  "previousProcessedSha": "04c81439f3bc03beeddb426490521079d80efe56",
   "commitShas": [
     "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
     "7c8e0405beda70cdad1e6f405f3c9c168cde63db",
     "2049590dd90f5d4c09d19b3cd141daa6d0a52c24",
     "7560151f6d3be0c6939c7f288a51398f71186182",
-    "04c81439f3bc03beeddb426490521079d80efe56"
+    "04c81439f3bc03beeddb426490521079d80efe56",
+    "45b40a1b6ea09eca5f19adf4f3e9f0cded83de65",
+    "fa001c127b0ec77c956560a3cfeed2b7cbbcb723",
+    "0017da2fa7e298c15eaddc462106a0ac5aed6ab9",
+    "65d4bede047c6dd234d12736dde9515f5d5dede2"
   ],
-  "rawCommitCount": 5,
-  "filteredCommitCount": 5,
+  "rawCommitCount": 9,
+  "filteredCommitCount": 9,
   "rawCommits": [
     {
       "sha": "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
@@ -226,36 +230,198 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "45b40a1b6ea09eca5f19adf4f3e9f0cded83de65",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-16T13:56:04-04:00",
+      "subject": "fix(models): remove unavailable Fable chat model",
+      "body": "",
+      "parents": [
+        "04c81439f3bc03beeddb426490521079d80efe56"
+      ],
+      "files": [
+        "interface/src/constants/models.test.ts",
+        "interface/src/constants/models.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 13,
+        "deletions": 24
+      },
+      "committedAtMs": 1781632564000,
+      "cleanSubject": "remove unavailable Fable chat model",
+      "keywords": [
+        "remove",
+        "unavailable",
+        "fable",
+        "chat",
+        "model"
+      ],
+      "fileGroups": [
+        "interface/src/constants"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fa001c127b0ec77c956560a3cfeed2b7cbbcb723",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-16T13:56:04-04:00",
+      "subject": "fix(chat): retry failed turns with current chat model",
+      "body": "",
+      "parents": [
+        "45b40a1b6ea09eca5f19adf4f3e9f0cded83de65"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatSurface.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 164,
+        "deletions": 6
+      },
+      "committedAtMs": 1781632564000,
+      "cleanSubject": "retry failed turns with current chat model",
+      "keywords": [
+        "retry",
+        "failed",
+        "turns",
+        "with",
+        "current",
+        "chat",
+        "model"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0017da2fa7e298c15eaddc462106a0ac5aed6ab9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-16T13:56:04-04:00",
+      "subject": "fix(models): remove unavailable DALL-E image models",
+      "body": "",
+      "parents": [
+        "fa001c127b0ec77c956560a3cfeed2b7cbbcb723"
+      ],
+      "files": [
+        "interface/src/apps/notes/seed-aura-whitepaper/sections-aura-router.ts",
+        "interface/src/constants/models.test.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/hooks/stream/use-generation-eta.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 35,
+        "deletions": 41
+      },
+      "committedAtMs": 1781632564000,
+      "cleanSubject": "remove unavailable DALL-E image models",
+      "keywords": [
+        "remove",
+        "unavailable",
+        "dall",
+        "image",
+        "models"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/constants",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "65d4bede047c6dd234d12736dde9515f5d5dede2",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-16T14:08:13-04:00",
+      "subject": "fix(projects): preserve build and test command metadata",
+      "body": "",
+      "parents": [
+        "0017da2fa7e298c15eaddc462106a0ac5aed6ab9"
+      ],
+      "files": [
+        "apps/aura-os-server/tests/api_tests/projects.rs",
+        "interface/src/shared/api/projects.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 45,
+        "deletions": 0
+      },
+      "committedAtMs": 1781633293000,
+      "cleanSubject": "preserve build and test command metadata",
+      "keywords": [
+        "preserve",
+        "build",
+        "test",
+        "command",
+        "metadata"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/tests",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.678.1",
+      "version": "0.1.0-nightly.680.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64825190
+          "sizeBytes": 64825966
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131500536
+          "sizeBytes": 131504632
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -265,29 +431,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.678.1",
+      "version": "0.1.0-nightly.680.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.678.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.680.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60717802
+          "sizeBytes": 60718061
         },
         {
-          "name": "AURA_0.1.0-nightly.678.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.680.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59770098
+          "sizeBytes": 59761748
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -297,29 +463,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.678.1",
+      "version": "0.1.0-nightly.680.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.678.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.680.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62906443
+          "sizeBytes": 62904168
         },
         {
-          "name": "AURA_0.1.0-nightly.678.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.680.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61936621
+          "sizeBytes": 61933532
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -329,17 +495,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.678.1",
+      "version": "0.1.0-nightly.680.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48002618
+          "sizeBytes": 47983915
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.678.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.680.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -348,33 +514,34 @@
     }
   ],
   "rendered": {
-    "title": "Calmer status signals and a forced-upgrade gate that waits its turn",
-    "intro": "Today's nightly tightens how Aura's observability stack reasons about outages — fewer false freshness alarms, more focused root-cause investigations — and fixes a sharp edge in the desktop app where a forced-upgrade prompt could cut off an in-progress turn.",
+    "title": "Smarter status investigations, gentler upgrade gating, and a model lineup cleanup",
+    "intro": "Today's nightly tightens up how Aura observes itself, keeps the forced-upgrade overlay from cutting off mid-stream work, and prunes chat and image models that were no longer available. Projects also gained proper persistence for build and test commands.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:26 AM",
         "started_at": "2026-06-16T14:26:04.000Z",
         "ended_at": "2026-06-16T15:29:16.000Z",
-        "title": "Status investigator stops crying wolf",
-        "summary": "A morning of observability work loosened overly tight freshness thresholds, gave cold model evals more breathing room, and stopped the auto-investigator from inventing commits or noisy suspects.",
+        "title": "Status page stops crying wolf on slow model and snapshot signals",
+        "summary": "Observability evals were retuned so realistic latencies and snapshot ages no longer flip the public status page, and the investigator only cites evidence it actually has.",
         "items": [
           {
-            "text": "Relaxed freshness and latency thresholds across the status probes: api-health, auth-session, and system-info now tolerate up to 30 minutes of staleness, the published observability snapshot is treated as informational with a 6-hour window, and the public-website aggregator stays operational when only that snapshot lags. The scheduled observability workflow was also shifted off the top of the hour to dodge cron contention.",
+            "text": "Relaxed freshness and latency thresholds across status checks — API health and auth-session staleness moved to 30 minutes, the model matrix now tolerates up to 180s warning / 360s outage latency, and the published observability snapshot is treated as informational with a 6-hour staleness budget so a late snapshot no longer takes the public website check down.",
             "commit_shas": [
-              "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
+              "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
+              "2049590dd90f5d4c09d19b3cd141daa6d0a52c24"
             ],
             "confidence": "high"
           },
           {
-            "text": "Gave the model-matrix eval realistic budgets for cold starts — the server-side runtime test timeout moved from 45s to 120s, and the matching status check now warns at 180s and only flags an outage at 360s — so a slow first token no longer registers as a model outage.",
+            "text": "Raised the agent runtime test-turn timeout from 45s to 120s so cold model responses don't get falsely flagged as runtime failures.",
             "commit_shas": [
               "2049590dd90f5d4c09d19b3cd141daa6d0a52c24"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened the auto-investigator so it can only cite commits, PRs, and file paths that actually appear in the supplied evidence packet; unsupported references in proof, possible causes, reproduction steps, and follow-up probes are now stripped before the report is returned.",
+            "text": "Tightened the status investigator so it can no longer mention commits, PRs, or file paths that aren't in the supplied evidence, and weak suspect changes are suppressed instead of being surfaced as causes.",
             "commit_shas": [
               "2049590dd90f5d4c09d19b3cd141daa6d0a52c24",
               "7560151f6d3be0c6939c7f288a51398f71186182"
@@ -382,10 +549,9 @@
             "confidence": "high"
           },
           {
-            "text": "Source discovery for investigations now prioritizes product code over the observability framework itself, scores needles by specificity (endpoints, error codes, phrases), and drops low-confidence suspect commits — cutting noise in the ranked suspects and candidate paths surfaced to investigators.",
+            "text": "Refocused source discovery to prefer product code over the observability framework itself and to score phrase-, endpoint-, and error-code-shaped needles higher, producing more relevant suspect paths.",
             "commit_shas": [
-              "7c8e0405beda70cdad1e6f405f3c9c168cde63db",
-              "7560151f6d3be0c6939c7f288a51398f71186182"
+              "7c8e0405beda70cdad1e6f405f3c9c168cde63db"
             ],
             "confidence": "high"
           }
@@ -396,13 +562,45 @@
         "time_label": "8:52 AM",
         "started_at": "2026-06-16T15:52:02.000Z",
         "ended_at": "2026-06-16T15:52:02.000Z",
-        "title": "Forced-upgrade overlay defers to an active stream",
-        "summary": "The desktop forced-upgrade gate no longer slams down in the middle of a running turn or extraction; it waits for the app to go idle before latching.",
+        "title": "Forced-upgrade overlay waits for your in-flight turn",
+        "summary": "The forced-upgrade gate no longer slams shut over an active stream — it defers until the current operation finishes.",
         "items": [
           {
-            "text": "Introduced a global useIsAnyStreaming() selector and wired it into ForcedUpgradeOverlay so the gate is suppressed while any stream is active and only latches once the user is idle — a defer, not a cancel. If a new stream begins after the gate is already shown, it correctly stays up.",
+            "text": "Added a global useIsAnyStreaming() selector and used it to defer the initial latch of the forced-upgrade overlay while any chat turn or extraction is streaming; once the user is idle the gate appears as before. A stream starting after the gate is already shown still can't dismiss it.",
             "commit_shas": [
               "04c81439f3bc03beeddb426490521079d80efe56"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "10:56 AM",
+        "started_at": "2026-06-16T17:56:04.000Z",
+        "ended_at": "2026-06-16T18:08:13.000Z",
+        "title": "Fable and DALL-E pulled from pickers, retries honor the live model",
+        "summary": "Aura's model lineup was trimmed to only what's actually serving, retries now use the currently selected chat model, and projects keep their build and test commands.",
+        "items": [
+          {
+            "text": "Removed Claude Fable 5 from the Anthropic chat lineup and DALL-E 2 / DALL-E 3 from the image lineup; persisted selections pointing at any of these now fall back to available models (Sonnet 4.6 for chat, gpt-image-2 for images) instead of trying to use something that isn't there.",
+            "commit_shas": [
+              "45b40a1b6ea09eca5f19adf4f3e9f0cded83de65",
+              "0017da2fa7e298c15eaddc462106a0ac5aed6ab9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Retrying a failed chat turn now sends with the model you currently have selected rather than the cached model from the failed attempt, so swapping off an unavailable model and hitting Retry actually works.",
+            "commit_shas": [
+              "fa001c127b0ec77c956560a3cfeed2b7cbbcb723"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Project create and update APIs now accept and round-trip build_command and test_command, so per-project tooling metadata is preserved on PUT and returned on GET.",
+            "commit_shas": [
+              "65d4bede047c6dd234d12736dde9515f5d5dede2"
             ],
             "confidence": "high"
           }
@@ -410,10 +608,11 @@
       }
     ],
     "highlights": [
-      "Forced-upgrade overlay no longer interrupts an active stream",
-      "Status checks tolerate slower model runs and snapshot lag",
-      "Investigator only cites commits and files it actually has evidence for"
+      "Forced-upgrade overlay now defers until your turn finishes",
+      "Removed unavailable Fable chat and DALL-E image models",
+      "Status probes tuned to reduce false alerts",
+      "Project build and test commands now persist via the API"
     ],
-    "raw_commit_count": 5
+    "raw_commit_count": 9
   }
 }

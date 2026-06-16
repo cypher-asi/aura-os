@@ -2,18 +2,19 @@
   {
     "date": "2026-06-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.678.1",
-    "title": "Calmer status signals and a forced-upgrade gate that waits its turn",
-    "intro": "Today's nightly tightens how Aura's observability stack reasons about outages — fewer false freshness alarms, more focused root-cause investigations — and fixes a sharp edge in the desktop app where a forced-upgrade prompt could cut off an in-progress turn.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.680.1",
+    "title": "Smarter status investigations, gentler upgrade gating, and a model lineup cleanup",
+    "intro": "Today's nightly tightens up how Aura observes itself, keeps the forced-upgrade overlay from cutting off mid-stream work, and prunes chat and image models that were no longer available. Projects also gained proper persistence for build and test commands.",
+    "entryCount": 3,
     "highlights": [
-      "Forced-upgrade overlay no longer interrupts an active stream",
-      "Status checks tolerate slower model runs and snapshot lag",
-      "Investigator only cites commits and files it actually has evidence for"
+      "Forced-upgrade overlay now defers until your turn finishes",
+      "Removed unavailable Fable chat and DALL-E image models",
+      "Status probes tuned to reduce false alerts",
+      "Project build and test commands now persist via the API"
     ],
-    "rawCommitCount": 5,
-    "generatedAt": "2026-06-16T16:07:48.352Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.678.1",
+    "rawCommitCount": 9,
+    "generatedAt": "2026-06-16T18:24:17.318Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.680.1",
     "path": "history/2026-06-16.json"
   },
   {
