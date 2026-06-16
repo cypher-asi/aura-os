@@ -13,6 +13,18 @@ export function useIsStreaming(key: string): boolean {
   return useStreamStore((s) => s.entries[key]?.isStreaming ?? false);
 }
 
+/**
+ * True when ANY stream is actively streaming — a global "an operation is in
+ * progress" signal for app-level UI (e.g. deferring a blocking overlay until
+ * the user's current turn/extraction finishes). Returns a primitive bool so
+ * subscribers only re-render when the aggregate flips.
+ */
+export function useIsAnyStreaming(): boolean {
+  return useStreamStore((s) =>
+    Object.values(s.entries).some((e) => e.isStreaming),
+  );
+}
+
 export function useIsWriting(key: string): boolean {
   return useStreamStore((s) => s.entries[key]?.isWriting ?? false);
 }
