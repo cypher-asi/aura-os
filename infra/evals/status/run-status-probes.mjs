@@ -1391,7 +1391,7 @@ async function runChecks(args) {
         try {
           const result = await withCleanup(args, async (track) => {
             const agent = await createAgent(args, track, "local", model, orgId);
-            const runtime = await runRuntimeTest(args, agent.agent_id, 60_000);
+            const runtime = await runRuntimeTest(args, agent.agent_id, 150_000);
             const message = String(runtime?.message ?? "");
             return {
               model,

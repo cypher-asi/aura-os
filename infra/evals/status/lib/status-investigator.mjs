@@ -14,6 +14,8 @@ export const INVESTIGATOR_SYSTEM_PROMPT = [
   "Produce JSON only. Do not include markdown.",
   "Use only the supplied evidence and source discovery artifacts. If the root cause is uncertain, say so and explain what evidence would prove or disprove it.",
   "Do not invent file paths, commands, endpoints, or line numbers.",
+  "Do not mention a commit, PR, or touched file unless it appears verbatim in sourceDiscovery.suspectChanges, sourceDiscovery.recentChanges, sourceHints, sourceContext, or evidenceItems.",
+  "If sourceDiscovery.suspectChanges is empty or does not include a commit, do not introduce that commit as a cause, possible cause, affected area, reproduction step, or verifier probe.",
   "Proof points should cite investigationPacket.evidenceItems ids when possible.",
   "Treat suspect commits or PRs as hypotheses. Do not call them causal unless the eval proof and source context support the link.",
   "Distinguish an eval failure from a user-facing product outage. Do not claim production users or real traffic are impacted unless the supplied evidence includes user-traffic or incident signals.",
@@ -171,6 +173,7 @@ export async function investigateCheck({
       source,
       provider,
       model,
+      investigationPacket: input.investigationPacket,
     });
     const missing = missingRequiredInvestigationFields(investigation);
     if (missing.length > 0) {
@@ -192,6 +195,7 @@ export async function investigateCheck({
         source,
         provider,
         model,
+        investigationPacket: input.investigationPacket,
       });
     }
     const retryMissing = missingRequiredInvestigationFields(investigation);
@@ -259,9 +263,10 @@ export function normalizeInvestigationResponse(content, {
   source,
   provider,
   model,
+  investigationPacket = null,
 }) {
   const parsed = parseJsonObject(content);
-  return normalizeInvestigation({
+  return sanitizeInvestigationReferences(normalizeInvestigation({
     ...parsed,
     schemaVersion: 1,
     kind: "llm-investigation",
@@ -278,7 +283,7 @@ export function normalizeInvestigationResponse(content, {
     provider,
     model,
     evidenceDigest: evidenceDigest(check),
-  }, generatedAt);
+  }, generatedAt), investigationPacket);
 }
 
 function parseJsonObject(content) {
@@ -296,6 +301,102 @@ function parseJsonObject(content) {
     }
   }
   throw new Error("Investigator response did not contain a JSON object");
+}
+
+function sanitizeInvestigationReferences(investigation, investigationPacket) {
+  if (!investigationPacket) return investigation;
+  const allowedPaths = allowedEvidencePaths(investigationPacket);
+  const allowedCommits = allowedEvidenceCommits(investigationPacket);
+  const sanitized = { ...investigation };
+
+  for (const field of [
+    "proof",
+    "possibleCauses",
+    "whatWouldDisproveThis",
+    "recommendedNextActions",
+    "followUpEvals",
+  ]) {
+    sanitized[field] = filterUnsupportedReferenceItems(sanitized[field], allowedCommits);
+  }
+
+  for (const field of ["reproductionSteps", "affectedAreas", "recommendedVerifierProbes"]) {
+    sanitized[field] = filterUnsupportedReferenceItems(sanitized[field], allowedCommits)
+      .map((item) => sanitizePathField(item, allowedPaths));
+  }
+
+  return sanitized;
+}
+
+function filterUnsupportedReferenceItems(items, allowedCommits) {
+  if (!Array.isArray(items)) return [];
+  return items.filter((item) => !hasUnsupportedCommitReference(JSON.stringify(item), allowedCommits));
+}
+
+function sanitizePathField(item, allowedPaths) {
+  if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+  if (!item.path || allowedPaths.has(item.path)) return item;
+  const { path: _unsupportedPath, ...rest } = item;
+  return rest;
+}
+
+function allowedEvidencePaths(packet) {
+  const paths = new Set();
+  for (const hint of packet.sourceHints ?? []) addPath(paths, hint.path);
+  for (const context of packet.sourceContext ?? []) addPath(paths, context.path);
+  for (const item of packet.evidenceItems ?? []) {
+    addPath(paths, item.summary?.path);
+    for (const pathValue of item.summary?.candidateTouchedPaths ?? []) addPath(paths, pathValue);
+    for (const pathValue of item.summary?.touchedPaths ?? []) addPath(paths, pathValue);
+  }
+  const discovery = packet.sourceDiscovery ?? {};
+  for (const entry of discovery.rankedPaths ?? []) addPath(paths, entry.path);
+  for (const entry of discovery.candidateCodePaths ?? []) addPath(paths, entry.path);
+  for (const change of discovery.recentChanges ?? []) addPath(paths, change.path);
+  for (const change of discovery.suspectChanges ?? []) {
+    for (const pathValue of change.candidateTouchedPaths ?? []) addPath(paths, pathValue);
+    for (const pathValue of change.touchedPaths ?? []) addPath(paths, pathValue);
+  }
+  return paths;
+}
+
+function allowedEvidenceCommits(packet) {
+  const commits = new Set();
+  const discovery = packet.sourceDiscovery ?? {};
+  for (const change of discovery.suspectChanges ?? []) {
+    addCommit(commits, change.shortCommit);
+    addCommit(commits, change.commit);
+  }
+  for (const change of discovery.recentChanges ?? []) {
+    for (const entry of change.commits ?? []) addCommit(commits, String(entry).split(/\s+/)[0]);
+  }
+  for (const item of packet.evidenceItems ?? []) {
+    addCommit(commits, item.summary?.shortCommit);
+    addCommit(commits, item.summary?.commit);
+    for (const entry of item.summary?.commits ?? []) addCommit(commits, String(entry).split(/\s+/)[0]);
+  }
+  return commits;
+}
+
+function addPath(paths, value) {
+  if (typeof value === "string" && value.trim()) paths.add(value.trim());
+}
+
+function addCommit(commits, value) {
+  if (typeof value !== "string") return;
+  const trimmed = value.trim();
+  if (/^[a-f0-9]{7,40}$/i.test(trimmed)) commits.add(trimmed.toLowerCase());
+}
+
+function hasUnsupportedCommitReference(value, allowedCommits) {
+  if (typeof value !== "string" || !value) return false;
+  const matches = [
+    ...value.matchAll(/\bsuspect-change\.([a-f0-9]{7,40})\b/gi),
+    ...value.matchAll(/\bcommit\s+([a-f0-9]{7,40})\b/gi),
+  ];
+  return matches.some((match) => {
+    const normalized = match[1].toLowerCase();
+    return ![...allowedCommits].some((allowed) => allowed.startsWith(normalized) || normalized.startsWith(allowed));
+  });
 }
 
 function investigationId(featureId, checkId, generatedAt, runtimeEnvironment = null) {

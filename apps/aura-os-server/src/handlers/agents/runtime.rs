@@ -23,6 +23,8 @@ struct RuntimeOutcome {
     usage: SessionUsage,
 }
 
+const RUNTIME_TEST_TURN_TIMEOUT: Duration = Duration::from_secs(120);
+
 pub(crate) async fn test_agent_runtime(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -234,7 +236,7 @@ async fn run_harness_test(
         }))
         .map_err(|e| ApiError::bad_gateway(format!("sending harness message failed: {e}")))?;
 
-    let turn = timeout(Duration::from_secs(45), async {
+    let turn = timeout(RUNTIME_TEST_TURN_TIMEOUT, async {
         let mut text = String::new();
         loop {
             match rx.recv().await {
@@ -355,6 +357,11 @@ mod tests {
             .capabilities
             .iter()
             .any(|capability| matches!(capability, CapabilityWire::Unknown)));
+    }
+
+    #[test]
+    fn runtime_test_turn_timeout_allows_cold_model_responses() {
+        assert_eq!(RUNTIME_TEST_TURN_TIMEOUT.as_secs(), 120);
     }
 
     fn council_body(mechanism: Option<&str>) -> CouncilRequestBody {

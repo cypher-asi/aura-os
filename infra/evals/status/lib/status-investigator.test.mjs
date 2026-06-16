@@ -70,6 +70,7 @@ test("investigator prompt keeps impact scoped to supplied eval evidence", () => 
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /what evidence would disprove/);
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /Do not claim production users or real traffic are impacted/);
   assert.match(INVESTIGATOR_SYSTEM_PROMPT, /If a broad health check passed but a specific endpoint or route failed/);
+  assert.match(INVESTIGATOR_SYSTEM_PROMPT, /Do not mention a commit, PR, or touched file unless it appears verbatim/);
 });
 
 test("investigateCheck normalizes model-authored JSON without a deterministic diagnosis", async () => {
@@ -124,6 +125,71 @@ test("investigateCheck normalizes model-authored JSON without a deterministic di
   assert.equal(investigation.whatWouldDisproveThis[0], "A rerun emits generation_completed with imageUrlPresent using the same harness URL.");
   assert.equal(investigation.recommendedVerifierProbes[0].label, "Run harness health first");
   assert.equal(investigation.evidenceDigest.evidence.authorization, "[REDACTED]");
+});
+
+test("investigateCheck removes unsupported model-invented commit and path references", async () => {
+  const investigation = await investigateCheck({
+    check: CHECK,
+    feature: FEATURE,
+    checkConfig: { id: "image-generation-stream", required: true },
+    expectation: null,
+    sourceDiscovery: {
+      candidateCodePaths: [{ path: "apps/aura-os-server/src/handlers/agents/chat/errors.rs" }],
+      suspectChanges: [
+        {
+          shortCommit: "abc1234",
+          commit: "abc1234deadbeef",
+          candidateTouchedPaths: ["apps/aura-os-server/src/handlers/agents/chat/errors.rs"],
+        },
+      ],
+    },
+    generatedAt: "2026-06-10T12:00:00.000Z",
+    environment: "production",
+    source: "unit-test",
+    provider: "mock",
+    model: "mock-investigator",
+    callModel: async () => JSON.stringify({
+      title: "Image generation stream cannot open a runtime session",
+      confidence: "high",
+      summary: "The image stream failed before producing a completion artifact.",
+      rootCause: "The evidence shows POST /v1/run returned 404 before image generation could complete.",
+      proof: ["httpStatus is 404"],
+      possibleCauses: [
+        "Commit deadbee changed workflow setup.",
+        "The supplied harness error path maps the 404.",
+      ],
+      reproductionSteps: [{ label: "Run image generation stream" }],
+      affectedAreas: [
+        {
+          label: "Invented workflow path",
+          path: ".github/actions/setup-harness-sibling/action.yml",
+          reason: "Commit deadbee touched this path.",
+        },
+        {
+          label: "Harness error mapping",
+          path: "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+          reason: "This path was supplied in source discovery.",
+        },
+      ],
+      whatWouldDisproveThis: ["A rerun emits generation_completed with imageUrlPresent using the same harness URL."],
+      recommendedVerifierProbes: [
+        {
+          label: "Run harness health first",
+          command: "AURA_STATUS_CHECKS=harness-health npm run status:probes",
+          reason: "This rules out the shared runtime harness before media code changes.",
+        },
+      ],
+      recommendedNextActions: ["Check the packaged harness route table."],
+      followUpEvals: ["harness-health"],
+    }),
+  });
+
+  assert.deepEqual(investigation.possibleCauses, ["The supplied harness error path maps the 404."]);
+  assert.equal(investigation.affectedAreas.length, 1);
+  assert.equal(
+    investigation.affectedAreas[0].path,
+    "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+  );
 });
 
 test("investigateCheck retries incomplete model reports instead of filling fields locally", async () => {

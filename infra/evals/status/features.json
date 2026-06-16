@@ -214,7 +214,7 @@
       "description": "Curated model matrix smoke tests through AURA's runtime path.",
       "publicSummary": "Supported text models are returning valid assistant responses.",
       "checks": [
-        { "id": "model-matrix", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 25000, "outageLatencyMs": 60000 }
+        { "id": "model-matrix", "required": true, "staleAfterMinutes": 1800, "warningLatencyMs": 180000, "outageLatencyMs": 360000 }
       ],
       "minPassRate": 0.9,
       "degradedAfterFailures": 1,
