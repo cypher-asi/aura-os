@@ -6,7 +6,9 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 use tracing::{info, warn};
 
-use crate::harness::binary::resolve_managed_harness_binary;
+use crate::harness::binary::{
+    inherited_managed_harness_binary_env, resolve_managed_harness_binary,
+};
 use crate::init::env::env_string;
 use crate::net::probe::{is_local_bind_host, parse_host_port, probe_http_ok};
 
@@ -17,12 +19,20 @@ pub(crate) fn preferred_local_harness_port() -> u16 {
 pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
     let explicit_harness_url =
         env_string("LOCAL_HARNESS_URL").map(|value| value.trim_end_matches('/').to_string());
+    let inherited_managed_harness_env = inherited_managed_harness_binary_env(data_dir);
+    let has_external_harness_url = external_harness_url_configured(
+        explicit_harness_url.as_deref(),
+        inherited_managed_harness_env,
+    );
     let harness_binary = resolve_managed_harness_binary(data_dir);
     let harness_url = explicit_harness_url
         .clone()
         .unwrap_or_else(|| format!("http://127.0.0.1:{}", preferred_local_harness_port()));
 
-    if let Some(ref configured_url) = explicit_harness_url {
+    if has_external_harness_url {
+        let configured_url = explicit_harness_url
+            .as_ref()
+            .expect("external harness URL requires a configured URL");
         if probe_http_ok(configured_url, "/health") {
             info!(url = %configured_url, "local harness already reachable");
             return None;
@@ -30,7 +40,7 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
     }
 
     let Some(harness_binary) = harness_binary else {
-        if explicit_harness_url.is_some() {
+        if has_external_harness_url {
             info!(url = %harness_url, "no managed local harness sidecar found; relying on configured external harness");
         } else {
             info!("no bundled local harness sidecar found; local harness support stays disabled");
@@ -76,11 +86,18 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
     let child = spawn_and_wait_for_health(command, &harness_url, &harness_binary);
     if child.is_none() {
         std::env::remove_var("AURA_HARNESS_BIN");
-        if explicit_harness_url.is_none() {
+        if !has_external_harness_url {
             std::env::remove_var("LOCAL_HARNESS_URL");
         }
     }
     child
+}
+
+fn external_harness_url_configured(
+    configured_url: Option<&str>,
+    inherited_managed_harness_env: bool,
+) -> bool {
+    configured_url.is_some() && !inherited_managed_harness_env
 }
 
 fn spawn_and_wait_for_health(
@@ -358,7 +375,10 @@ pub(crate) fn stop_managed_local_harness(managed_local_harness: &mut Option<Chil
 
 #[cfg(test)]
 mod tests {
-    use super::{classify_managed_sidecar_command, parse_pid_lines, wait_for_harness_health};
+    use super::{
+        classify_managed_sidecar_command, external_harness_url_configured, parse_pid_lines,
+        wait_for_harness_health,
+    };
     use std::path::Path;
     use std::time::Duration;
 
@@ -421,5 +441,20 @@ mod tests {
     #[test]
     fn parse_pid_lines_ignores_non_pid_lines() {
         assert_eq!(parse_pid_lines("123\nnot-a-pid\n456\n"), vec![123, 456]);
+    }
+
+    #[test]
+    fn inherited_managed_env_does_not_make_local_harness_url_external() {
+        let configured_url = Some("http://127.0.0.1:19080".to_string());
+
+        assert!(external_harness_url_configured(
+            configured_url.as_deref(),
+            false
+        ));
+        assert!(!external_harness_url_configured(
+            configured_url.as_deref(),
+            true
+        ));
+        assert!(!external_harness_url_configured(None, false));
     }
 }

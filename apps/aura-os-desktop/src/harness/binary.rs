@@ -48,9 +48,30 @@ fn harness_resource_candidates() -> Vec<PathBuf> {
     candidates
 }
 
-fn configured_harness_binary() -> Option<PathBuf> {
+fn managed_staging_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join("runtime/sidecar")
+}
+
+fn is_managed_staged_harness_binary(path: &Path, data_dir: &Path) -> bool {
+    path.starts_with(managed_staging_dir(data_dir))
+}
+
+pub(crate) fn inherited_managed_harness_binary_env(data_dir: &Path) -> bool {
+    env_string("AURA_HARNESS_BIN")
+        .map(PathBuf::from)
+        .is_some_and(|path| is_managed_staged_harness_binary(&path, data_dir))
+}
+
+fn configured_harness_binary(data_dir: &Path) -> Option<PathBuf> {
     if let Some(explicit) = env_string("AURA_HARNESS_BIN") {
         let path = PathBuf::from(explicit);
+        if is_managed_staged_harness_binary(&path, data_dir) {
+            info!(
+                path = %path.display(),
+                "ignoring inherited managed AURA_HARNESS_BIN so bundled sidecar can be restaged"
+            );
+            return None;
+        }
         if path.exists() {
             return Some(path);
         }
@@ -91,7 +112,7 @@ pub(crate) fn stage_bundled_harness_binary(
     source: &Path,
     data_dir: &Path,
 ) -> Result<PathBuf, String> {
-    let staged_dir = data_dir.join("runtime/sidecar");
+    let staged_dir = managed_staging_dir(data_dir);
     std::fs::create_dir_all(&staged_dir).map_err(|error| {
         format!(
             "failed to create staged harness directory {}: {error}",
@@ -161,7 +182,7 @@ pub(crate) fn stage_bundled_harness_binary(
 }
 
 pub(crate) fn resolve_managed_harness_binary(data_dir: &Path) -> Option<PathBuf> {
-    if let Some(explicit) = configured_harness_binary() {
+    if let Some(explicit) = configured_harness_binary(data_dir) {
         return Some(explicit);
     }
 
@@ -188,8 +209,14 @@ pub(crate) fn resolve_managed_harness_binary(data_dir: &Path) -> Option<PathBuf>
 
 #[cfg(test)]
 mod tests {
-    use super::{harness_binary_name, stage_bundled_harness_binary};
+    use super::{
+        configured_harness_binary, harness_binary_name, is_managed_staged_harness_binary,
+        stage_bundled_harness_binary,
+    };
     use std::path::PathBuf;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     fn unique_test_dir(label: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
@@ -238,5 +265,35 @@ mod tests {
         assert_eq!(staged_again, staged);
 
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn managed_staged_harness_binary_detects_runtime_sidecar_path() {
+        let data_dir = PathBuf::from("/tmp/aura-data");
+        let managed = data_dir
+            .join("runtime/sidecar")
+            .join("aura-node-0.1.0-nightly.680.1");
+        let external = PathBuf::from("/opt/aura-harness/aura-node");
+
+        assert!(is_managed_staged_harness_binary(&managed, &data_dir));
+        assert!(!is_managed_staged_harness_binary(&external, &data_dir));
+    }
+
+    #[test]
+    fn configured_harness_binary_ignores_inherited_managed_path() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let previous = std::env::var("AURA_HARNESS_BIN").ok();
+        let data_dir = unique_test_dir("managed-env");
+        let inherited = data_dir
+            .join("runtime/sidecar")
+            .join("aura-node-0.1.0-nightly.680.1");
+
+        std::env::set_var("AURA_HARNESS_BIN", &inherited);
+        assert_eq!(configured_harness_binary(&data_dir), None);
+
+        match previous {
+            Some(value) => std::env::set_var("AURA_HARNESS_BIN", value),
+            None => std::env::remove_var("AURA_HARNESS_BIN"),
+        }
     }
 }
