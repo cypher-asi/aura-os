@@ -2,20 +2,19 @@
   {
     "date": "2026-06-15",
     "channel": "nightly",
-    "version": "0.1.0-nightly.672.1",
-    "title": "Sharper feature health signals and a hardened analytics pipeline",
-    "intro": "Today's nightly is dominated by observability and analytics groundwork: Aura's feature-health system learned to tell user-facing capabilities apart from the runtimes that prove them, the analytics pipeline got a contract-tested rebuild with build-time guards across web, desktop, and mobile, and a string of late-day fixes tightened how release probes exercise scheduled processes, public shares, and image generation streams.",
+    "version": "0.1.0-nightly.673.1",
+    "title": "Analytics rebuild and a sharper feature-health signal",
+    "intro": "Today's nightly is dominated by two long threads: a ground-up rebuild of Aura's product analytics so True DAU, retention, and reliability numbers are trustworthy across web, desktop, and mobile; and a deep rework of the feature-health system so the status dashboard distinguishes user-facing capabilities from the runtime that actually exercised them. Several follow-up fixes hardened scheduled process runs, image-generation streams, and the desktop release probes that gate every nightly build.",
     "entryCount": 5,
     "highlights": [
-      "Feature health now separates capability from runtime evidence",
-      "Analytics rebuilt with a CI contract gate across web, desktop, iOS, and Android",
-      "Dirty or unversioned frontend builds now fail loudly",
-      "Image generation probes tolerate sparse SSE streams",
-      "Scheduled process runs propagate the agent's model end-to-end"
+      "Analytics rebuilt with a CI contract gate across web, Desktop, iOS, and Android",
+      "Feature health split from runtime evidence on the public status page",
+      "Scheduled process runs now resolve and propagate the correct model",
+      "Image generation streams tolerate sparse progress without false failures"
     ],
-    "rawCommitCount": 8,
-    "generatedAt": "2026-06-16T04:11:29.298Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.672.1",
+    "rawCommitCount": 9,
+    "generatedAt": "2026-06-16T04:33:31.279Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.673.1",
     "path": "history/2026-06-15.json"
   },
   {

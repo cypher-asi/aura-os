@@ -1,57 +1,57 @@
-# Sharper feature health signals and a hardened analytics pipeline
+# Analytics rebuild and a sharper feature-health signal
 
 - Date: `2026-06-15`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.672.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.672.1
+- Version: `0.1.0-nightly.673.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.673.1
 
-Today's nightly is dominated by observability and analytics groundwork: Aura's feature-health system learned to tell user-facing capabilities apart from the runtimes that prove them, the analytics pipeline got a contract-tested rebuild with build-time guards across web, desktop, and mobile, and a string of late-day fixes tightened how release probes exercise scheduled processes, public shares, and image generation streams.
+Today's nightly is dominated by two long threads: a ground-up rebuild of Aura's product analytics so True DAU, retention, and reliability numbers are trustworthy across web, desktop, and mobile; and a deep rework of the feature-health system so the status dashboard distinguishes user-facing capabilities from the runtime that actually exercised them. Several follow-up fixes hardened scheduled process runs, image-generation streams, and the desktop release probes that gate every nightly build.
 
-## 1:40 AM — Feature health split from runtime evidence
+## 1:40 AM — Feature health split from runtime evidence on the status page
 
-Aura's status system now models feature capability and runtime environment as separate axes, so a check can be informational for one runtime while still proving the feature elsewhere.
+The observability stack now treats the user-facing capability and the runtime that exercised it as separate axes, so the status dashboard can show a feature as healthy on desktop while flagging the same path as merely informational in production.
 
-- Introduced a runtime-environment axis (production-api, desktop-release, local-dev) alongside feature health, with the status dashboard grouping checks by feature and labeling each row with the runtime it actually exercised. (`6b9c8b0`)
-- Reworked Media Generation so desktop-release is the required product proof (with image-generation-stream added to the desktop check matrix) while the production-auth stream remains informational, and updated the feature-health docs to match. (`6b9c8b0`)
-- Tightened the status policy library with new investigation packets, verifiers, and policy tests so checks can't be registered without both an expected-output contract and a runner branch. (`6b9c8b0`)
+- Introduced an explicit AURA_STATUS_RUNTIME_ENVIRONMENT axis (production-api, desktop-release, local-dev) wired through the nightly, stable, and observability workflows, and reflected it in the StatusView UI and feature-health docs so each row labels the runtime it actually proved. (`6b9c8b0`)
+- Reworked the status policy, investigator, and repairer libraries to reason about feature vs. runtime separately, with new policy tests and registry coverage so a runtime-specific probe can be informational without dragging a whole feature red. (`6b9c8b0`)
+- Added image-generation-stream to the desktop release probe set so Media Generation health is proven against the bundled harness instead of the deployed API. (`6b9c8b0`)
 
-## 9:52 AM — Analytics pipeline rebuilt with a CI contract gate
+## 9:52 AM — Analytics rebuilt for trustworthy DAU, retention, and reliability
 
-A ground-up analytics rework gives Aura accurate True DAU, retention, and reliability signals, backed by a typed event registry, server-side single-emitter invariants, and build-time guards on every shipping client.
+A large analytics overhaul replaces ad-hoc tracking with a single server-side session emitter, a typed event registry, and a CI contract that fails the moment tracking would silently break — across web, Desktop, iOS, and Android release lanes.
 
-- Moved session_active to a single server-side emitter and added a typed event registry with AST, pipeline, and server contract tests so a renamed, dropped, or non-literal tracked event now fails CI instead of silently breaking metrics. (`57b077e`)
-- Added a dedicated Analytics Contract workflow that runs on pushes and PRs touching the interface or server, plus build-time VITE_MIXPANEL_TOKEN and APP_VERSION guards wired into Android, iOS, desktop, and nightly/stable release lanes. (`57b077e`)
-- Fixed the desktop local-server token plumbing and added mobile chat input tracking so store-shipped iOS and Android builds actually report engagement instead of no-opping. (`57b077e`)
+- Consolidated session_active to a single server-side emitter and introduced a typed analytics registry with AST, pipeline, and server contract tests, so renamed or dropped events and non-literal track() calls now fail loudly instead of poisoning DAU and retention. (`57b077e`)
+- Added a dedicated Analytics Contract GitHub workflow that runs on every push to main and on pull requests, gating both client (registry + pipeline) and server (event constants + single-emitter) invariants before merge. (`57b077e`)
+- Made analytics a hard requirement for store and desktop release builds: Android and iOS Fastlane lanes now bake VITE_MIXPANEL_TOKEN into the web bundle and run the --require-analytics validator, and desktop local-server token handling was fixed so the shipped SDK no longer silently no-ops. (`57b077e`)
+- Wired mobile chat input tracking through the new registry so the chat composer reports engagement events on iOS and Android via the same contract as web and Desktop. (`57b077e`)
 
-## 12:40 PM — Dirty frontend builds blocked and feature health coverage widened
+## 12:40 PM — Dirty frontend builds blocked and feature-health probes broadened
 
-A midday pair of changes hardened release validation against mis-versioned web bundles and expanded the set of features the observability suite verifies end-to-end.
+Two follow-ups tightened release confidence: Vite and the desktop asset validator now refuse to ship analytics-enabled builds with a *-dirty or 0.0.0 version, and the feature-health probe matrix grew substantially across desktop and production lanes.
 
-- The Vite build and desktop-frontend-assets validator now refuse to ship analytics-enabled bundles when APP_VERSION is empty, 0.0.0, or a *-dirty git fallback, closing a gap where Render deploys could quietly ship mis-versioned analytics. (`5d7fff8`)
-- Expanded feature-health coverage with new checks for notes CRUD, billing account transactions, org tool action contracts, public content detail resolution, analytics contract artifacts, desktop update runtime, project agent chat streams, session share public reads, harness memory and skills roundtrips, and process run lifecycles across nightly and stable release workflows. (`d58f85f`)
-- Taught the notes API to accept camelCase folderId payloads from the frontend, unblocking the new notes-crud probe. (`d58f85f`)
+- Analytics-enabled Vite builds and the desktop-frontend-assets validator now fail when APP_VERSION is empty, 0.0.0, or ends in -dirty, preventing Render and store deploys from shipping mis-versioned analytics that would corrupt release-over-release metrics. (`5d7fff8`)
+- Expanded the observability check matrix with notes-crud, process-run-lifecycle, harness memory/skills roundtrips, project agent chat stream, session share public read, desktop-update-runtime, org-tool-actions-contract, billing account transactions, public content details, and analytics-contract artifacts — both on the desktop release lane and the public observability sweep. (`d58f85f`)
+- Added a 552-line run-status-probes module and a notes handler test confirming the create-note API accepts the frontend's camelCase folderId, closing a long-standing gap between client and server contract. (`d58f85f`)
 
-## 3:46 PM — Scheduled process runs and session shares fixed in release probes
+## 3:46 PM — Scheduled process runs now carry the right model end-to-end
 
-A late-afternoon sweep aligned the new desktop-release probes with how scheduled processes and public shares actually behave, surfacing real bugs in the harness path along the way.
+A trio of observability fixes made the process-run-lifecycle probe meaningful: scheduled runs resolve the action node's agent model, desktop share probes hit the API origin, and live probe fixtures match what the server actually returns.
 
-- Scheduled process runs now resolve the action node's agent and propagate its model (falling back to the latest frontier model) to the harness automaton, so triggered runs no longer launch without a model selection. (`23a7506`)
-- The process-run-lifecycle probe now builds a runnable graph with an agent, ignition node, action node, and connection before triggering, and its assertions require all of those IDs as evidence. (`dfbc1b6`)
-- Public session-share reads now poll until messages appear and route through a dedicated public API origin (AURA_STATUS_PUBLIC_API_BASE_URL), fixing flakey 404s and origin mismatches on the desktop-release lane. (`dfbc1b6`, `e7b1227`)
+- Scheduled process automaton starts now resolve the first action node's agent, derive its effective model (falling back to LATEST_FRONTIER_MODEL), and propagate it through the harness client so triggered runs no longer execute with a missing or stale model. (`23a7506`)
+- Rebuilt the process-run-lifecycle probe to construct a runnable graph — agent, ignition node, action node, and connection — and assert all of those IDs as evidence, so the desktop release lane actually proves the end-to-end trigger path instead of just creating an empty process. (`dfbc1b6`, `23a7506`)
+- Pointed desktop share probes at the public API origin via AURA_STATUS_PUBLIC_BASE_URL and made the session-share public read wait for messages to land, eliminating a flaky 404 race against the share publication pipeline. (`e7b1227`, `dfbc1b6`)
 
-## 8:38 PM — Sparse image generation streams no longer trip the watchdog
+## 8:38 PM — Sparse image-generation streams no longer trip the watchdog
 
-Late-night fixes made the image generation pipeline and its status surface resilient to long, sparse SSE streams from GPT Image renders.
+Late-night fixes raised the image-generation idle timeout to match real GPT Image render cadence and gave the status UI a clearer pending state, so a slow but healthy render is no longer reported as a failure.
 
-- Raised the generation event idle timeout from 120s to 300s so GPT Image renders that emit only a handful of progress events over 2-3 minutes are no longer killed mid-render, while the SSE heartbeat keeps the UI alive between events. (`25f77c7`)
-- Status probes now summarize SSE frame types and byte sizes and capture the desktop harness sidecar log as an artifact, making failed image-generation checks far easier to diagnose. (`25f77c7`)
-- Reworked the marketing StatusView with a pending-investigation treatment and refreshed styles so users see clearer state when a feature health check is still being investigated. (`25f77c7`)
+- Raised the harness generation event idle timeout from 120s to 300s and aligned the nightly release probe environment (AURA_GENERATION_EVENT_IDLE_TIMEOUT_SECS / STREAM_IDLE_TIMEOUT_SECS = 300) so 2–3 minute GPT Image renders that emit only a handful of progress events are no longer killed mid-stream. (`25f77c7`, `dd42aa3`)
+- Image-generation probe evidence now summarizes SSE frame types and byte counts instead of dumping raw frames, and the desktop probe runner copies the harness sidecar log into the artifact bundle for post-mortem debugging. (`25f77c7`)
+- StatusView gained a dedicated investigation-pending treatment with refreshed styling and tests, so users see an explicit in-progress state rather than a misleading red when a check is still being diagnosed. (`25f77c7`)
 
 ## Highlights
 
-- Feature health now separates capability from runtime evidence
-- Analytics rebuilt with a CI contract gate across web, desktop, iOS, and Android
-- Dirty or unversioned frontend builds now fail loudly
-- Image generation probes tolerate sparse SSE streams
-- Scheduled process runs propagate the agent's model end-to-end
+- Analytics rebuilt with a CI contract gate across web, Desktop, iOS, and Android
+- Feature health split from runtime evidence on the public status page
+- Scheduled process runs now resolve and propagate the correct model
+- Image generation streams tolerate sparse progress without false failures
 
