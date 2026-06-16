@@ -65,6 +65,8 @@ const FALLBACK_SNAPSHOT: StatusSnapshot = {
   features: [],
 };
 
+const SNAPSHOT_STALE_AFTER_MINUTES = 300;
+
 function statusIcon(status: FeatureHealthStatus, size = 16): ReactNode {
   switch (status) {
     case "operational":
@@ -99,6 +101,20 @@ function formatTimestamp(value: string | null): string {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+function snapshotAgeMinutes(value: string | null): number | null {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return null;
+  return Math.floor(Math.max(0, Date.now() - timestamp) / 60000);
+}
+
+function formatAge(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
 }
 
 function formatLatency(value: number | null): string {
@@ -565,6 +581,12 @@ export function StatusView(): ReactNode {
     ?? new Set(activeSnapshot.features.flatMap((feature) =>
       feature.checks.map((check) => check.runtimeEnvironment).filter(Boolean),
     )).size;
+  const snapshotAge = useMemo(
+    () => snapshotAgeMinutes(activeSnapshot.generatedAt),
+    [activeSnapshot.generatedAt],
+  );
+  const snapshotIsStale =
+    snapshotAge != null && snapshotAge > SNAPSHOT_STALE_AFTER_MINUTES;
 
   return (
     <main className="statusPage">
@@ -624,6 +646,13 @@ export function StatusView(): ReactNode {
         <div className="statusNotice" role="status">
           <AlertTriangle size={16} strokeWidth={1.9} aria-hidden />
           Snapshot not published yet: {error}
+        </div>
+      )}
+
+      {snapshotIsStale && !error && (
+        <div className="statusNotice statusNoticeStale">
+          <Clock3 size={16} strokeWidth={1.9} aria-hidden />
+          Status data is {formatAge(snapshotAge)} old; latest scheduled eval has not published yet.
         </div>
       )}
 

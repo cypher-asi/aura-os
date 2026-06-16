@@ -307,6 +307,7 @@ describe("StatusView", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -333,6 +334,25 @@ describe("StatusView", () => {
     expect(screen.getByText("2/3 models returned the expected response")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Platform" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Models" })).toBeInTheDocument();
+  });
+
+  it("surfaces stale status data as freshness metadata", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-06-10T18:01:00.000Z"));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ...FIXTURE_SNAPSHOT,
+          generatedAt: "2026-06-10T12:00:00.000Z",
+        }),
+      }),
+    );
+
+    render(<StatusView />);
+
+    expect(await screen.findByText(/Status data is 6h 1m old/)).toBeInTheDocument();
+    expect(screen.getByText("Core API")).toBeInTheDocument();
   });
 
   it("renders check evidence and latency rows", async () => {

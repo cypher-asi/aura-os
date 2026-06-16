@@ -18,7 +18,7 @@ const DEFAULT_MODELS = [
 ];
 const EXPECTED_RUNTIME_PHRASE = "hello from aura";
 const DEFAULT_PUBLISHED_STATUS_JSON_URL = "https://cypher-asi.github.io/aura-os/observability/status.json";
-const PUBLISHED_STATUS_MAX_AGE_MINUTES = 180;
+const PUBLISHED_STATUS_MAX_AGE_MINUTES = 300;
 const PROJECT_CHAT_EXPECTED_PHRASE = "hello from aura";
 const LIVE_STATUS_SNAPSHOT_SOURCES = new Set([
   "github-actions",

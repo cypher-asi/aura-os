@@ -2,7 +2,7 @@ name: AURA Observability
 
 on:
   schedule:
-    - cron: "0 */2 * * *"
+    - cron: "17 */2 * * *"
   workflow_run:
     workflows:
       - Desktop Nightly Release

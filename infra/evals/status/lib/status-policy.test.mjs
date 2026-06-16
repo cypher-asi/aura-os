@@ -467,6 +467,69 @@ test("aggregateFeature reports the active severity reason before missing optiona
   assert.equal(result.message, "count expected >= 1 but got 0");
 });
 
+test("aggregateFeature keeps public routes operational when snapshot freshness metadata fails", () => {
+  const feature = {
+    id: "public-website",
+    label: "Public Website",
+    category: "website",
+    checks: [
+      {
+        id: "published-observability-snapshot",
+        required: false,
+        statusImpact: "informational",
+        staleAfterMinutes: 360,
+      },
+      { id: "public-observability-page", required: true, staleAfterMinutes: 15 },
+      { id: "public-marketing-pages", required: false, staleAfterMinutes: 30 },
+    ],
+    degradedAfterFailures: 1,
+  };
+
+  const result = aggregateFeature(
+    feature,
+    new Map([
+      [
+        "published-observability-snapshot",
+        {
+          checkId: "published-observability-snapshot",
+          status: CHECK_STATUS.FAIL,
+          message: "snapshotAgeMinutes expected <= 300 but got 360",
+          endedAt: GENERATED_AT,
+          latencyMs: 100,
+          evidence: { snapshotAgeMinutes: 360 },
+        },
+      ],
+      [
+        "public-observability-page",
+        {
+          checkId: "public-observability-page",
+          status: CHECK_STATUS.PASS,
+          endedAt: GENERATED_AT,
+          latencyMs: 200,
+          evidence: { status: 200 },
+        },
+      ],
+      [
+        "public-marketing-pages",
+        {
+          checkId: "public-marketing-pages",
+          status: CHECK_STATUS.PASS,
+          endedAt: GENERATED_AT,
+          latencyMs: 300,
+          evidence: { allRoutesOk: true },
+        },
+      ],
+    ]),
+    GENERATED_AT,
+  );
+
+  assert.equal(result.status, FEATURE_STATUS.OPERATIONAL);
+  assert.equal(result.checksFailed, 1);
+  assert.equal(result.message, "All required checks are passing.");
+  assert.equal(result.checks[0].statusImpact, "informational");
+  assert.equal(result.checks[0].featureStatus, FEATURE_STATUS.OPERATIONAL);
+});
+
 test("aggregateFeature uses run completion time for staleness", () => {
   const feature = {
     id: "core-api",

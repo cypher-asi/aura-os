@@ -175,6 +175,12 @@
   margin-bottom: 22px;
 }
 
+.statusNoticeStale {
+  border-color: rgba(154, 199, 255, 0.24);
+  background: rgba(32, 82, 128, 0.18);
+  color: #c9ddff;
+}
+
 .statusGroups {
   display: flex;
   flex-direction: column;

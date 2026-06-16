@@ -407,11 +407,11 @@
         { "path": "source", "oneOf": ["github-actions", "desktop-nightly-release", "desktop-stable-release"] },
         { "path": "featureCount", "min": 1 },
         { "path": "totalsFeatures", "min": 1 },
-        { "path": "snapshotAgeMinutes", "max": 180 },
+        { "path": "snapshotAgeMinutes", "max": 300 },
         { "path": "hasLiveSource", "equals": true },
         { "path": "hasNonUnknownFeatureData", "equals": true },
         { "path": "snapshotUrl", "nonEmpty": true },
-        { "path": "maxAgeMinutes", "equals": 180 }
+        { "path": "maxAgeMinutes", "equals": 300 }
       ]
     },
     "public-observability-page": {
