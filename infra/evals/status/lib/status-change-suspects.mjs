@@ -80,7 +80,7 @@ export async function collectSuspectChanges({
       || new Date(right.committedAt ?? 0).getTime() - new Date(left.committedAt ?? 0).getTime()
       || left.shortCommit.localeCompare(right.shortCommit),
   );
-  const topChanges = scored.slice(0, 8);
+  const topChanges = scored.filter((change) => change.confidence !== "low").slice(0, 8);
   await attachPullRequestMetadata(topChanges, repoRoot);
   return topChanges;
 }

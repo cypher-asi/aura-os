@@ -366,13 +366,9 @@ function allowedEvidenceCommits(packet) {
     addCommit(commits, change.shortCommit);
     addCommit(commits, change.commit);
   }
-  for (const change of discovery.recentChanges ?? []) {
-    for (const entry of change.commits ?? []) addCommit(commits, String(entry).split(/\s+/)[0]);
-  }
   for (const item of packet.evidenceItems ?? []) {
     addCommit(commits, item.summary?.shortCommit);
     addCommit(commits, item.summary?.commit);
-    for (const entry of item.summary?.commits ?? []) addCommit(commits, String(entry).split(/\s+/)[0]);
   }
   return commits;
 }
