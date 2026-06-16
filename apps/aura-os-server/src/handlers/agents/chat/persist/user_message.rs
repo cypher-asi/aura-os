@@ -99,14 +99,19 @@ fn build_user_message_payload(
 }
 
 fn log_user_message_persist_failure(ctx: &ChatPersistCtx, err: &aura_os_storage::StorageError) {
-    let (upstream_status, body_preview) = match err {
+    let (error, upstream_status, body_preview) = match err {
         aura_os_storage::StorageError::Server { status, body } => {
-            (Some(*status), body.chars().take(400).collect::<String>())
+            let preview = body.chars().take(400).collect::<String>();
+            (
+                format!("aura-storage returned {status}"),
+                Some(*status),
+                preview,
+            )
         }
-        _ => (None, String::new()),
+        _ => (err.to_string(), None, String::new()),
     };
     error!(
-        error = %err,
+        error = %error,
         upstream_status = ?upstream_status,
         body_preview = %body_preview,
         session_id = %ctx.session_id,
