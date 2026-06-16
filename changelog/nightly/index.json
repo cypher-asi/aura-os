@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-06-16",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.674.1",
+    "title": "Steadier status page freshness signals",
+    "intro": "A focused tune-up to Aura's public status page and its observability probes, raising the noise floor on freshness checks so transient snapshot lag no longer trips false alarms.",
+    "entryCount": 1,
+    "highlights": [
+      "Status page tolerates short snapshot lag without flapping",
+      "Published snapshot freshness demoted to informational",
+      "Observability probe cadence offset to avoid collisions"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-06-16T14:48:51.582Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.674.1",
+    "path": "history/2026-06-16.json"
+  },
+  {
     "date": "2026-06-15",
     "channel": "nightly",
     "version": "0.1.0-nightly.673.1",
