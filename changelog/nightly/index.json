@@ -2,18 +2,18 @@
   {
     "date": "2026-06-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.677.1",
-    "title": "Sharper status investigations and calmer freshness alerts",
-    "intro": "Today's nightly is focused on the observability stack behind Aura's status page: quieter false alarms on freshness, more trustworthy automated investigations, and a runtime probe that no longer trips on cold model starts.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.678.1",
+    "title": "Calmer status signals and a forced-upgrade gate that waits its turn",
+    "intro": "Today's nightly tightens how Aura's observability stack reasons about outages — fewer false freshness alarms, more focused root-cause investigations — and fixes a sharp edge in the desktop app where a forced-upgrade prompt could cut off an in-progress turn.",
+    "entryCount": 2,
     "highlights": [
-      "Status freshness thresholds tuned to stop spurious alerts",
-      "Investigation reports can no longer cite commits or files outside the evidence",
-      "Model runtime probe now tolerates cold-start latency up to 120s"
+      "Forced-upgrade overlay no longer interrupts an active stream",
+      "Status checks tolerate slower model runs and snapshot lag",
+      "Investigator only cites commits and files it actually has evidence for"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-06-16T15:45:31.243Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.677.1",
+    "rawCommitCount": 5,
+    "generatedAt": "2026-06-16T16:07:48.352Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.678.1",
     "path": "history/2026-06-16.json"
   },
   {
