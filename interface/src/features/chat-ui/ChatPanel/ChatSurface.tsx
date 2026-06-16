@@ -58,6 +58,19 @@ const IMAGE_PIN_AFTER_REVEAL_MS = 800;
 // the user happened to nudge auto-follow off mid-generation.
 const IMAGE_PIN_AFTER_STREAM_MS = 6000;
 
+function modelForRetry(
+  streamKey: string,
+  cachedModel: string | null | undefined,
+  generationMode?: GenerationMode,
+): string | null {
+  if (generationMode) return cachedModel ?? null;
+  return (
+    useChatUIStore.getState().getSelectedModel(streamKey) ??
+    cachedModel ??
+    null
+  );
+}
+
 export interface ChatSurfaceProps {
   streamKey: string;
   transcriptKey?: string;
@@ -259,7 +272,11 @@ export function ChatSurface({
       onSend(
         agentArgs.content,
         agentArgs.action ?? null,
-        agentArgs.selectedModel ?? null,
+        modelForRetry(
+          streamKey,
+          agentArgs.selectedModel,
+          agentArgs.generationMode,
+        ),
         agentArgs.attachments,
         agentArgs.commands,
         agentArgs.projectId,
@@ -272,7 +289,11 @@ export function ChatSurface({
       onSend(
         partitionArgs.content,
         partitionArgs.action ?? null,
-        partitionArgs.selectedModel ?? null,
+        modelForRetry(
+          streamKey,
+          partitionArgs.selectedModel,
+          partitionArgs.generationMode,
+        ),
         partitionArgs.attachments,
         partitionArgs.commands,
         partitionArgs.projectIdOverride,

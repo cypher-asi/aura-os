@@ -4,12 +4,31 @@ import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import { useMessageStore } from "../../../stores/message-store";
+import { useChatUIStore } from "../../../stores/chat-ui-store";
 import { useChatViewStore } from "../../../stores/chat-view-store";
 import { useSubAgentPaneStore } from "../../../stores/subagent-pane-store";
 import type { SubAgentPaneDescriptor } from "../../../stores/subagent-pane-store";
+import {
+  _resetAllPartitionSendControl,
+  getPartitionSendControl,
+} from "../../../hooks/use-chat-stream/partition-send-control";
 
 const mockSubagentOnSend = vi.hoisted(() => vi.fn());
 const mockSubagentOnStop = vi.hoisted(() => vi.fn());
+const mockModelPersistence = vi.hoisted(() => {
+  let selectedModel = "gpt-5.4";
+  const persistModel = vi.fn((model: string) => {
+    selectedModel = model;
+  });
+  return {
+    getSelectedModel: () => selectedModel,
+    persistModel,
+    reset: () => {
+      selectedModel = "gpt-5.4";
+      persistModel.mockClear();
+    },
+  };
+});
 
 const mockUseAuraCapabilities = vi.fn();
 const mockClearQueue = vi.hoisted(() => vi.fn());
@@ -52,10 +71,17 @@ vi.mock("../ChatMessageList", () => ({
     messages,
     emptyState,
     onInitialAnchorReady,
+    onRetry,
   }: {
-    messages?: Array<{ id: string; content: string }>;
+    messages?: Array<{
+      id: string;
+      content: string;
+      displayVariant?: string;
+      errorMessage?: string;
+    }>;
     emptyState?: React.ReactNode;
     onInitialAnchorReady?: () => void;
+    onRetry?: () => void;
   }) => {
     useLayoutEffect(() => {
       if (autoSignalInitialAnchorReady && messages?.length) {
@@ -65,6 +91,13 @@ vi.mock("../ChatMessageList", () => ({
 
     return (
       <div data-testid="chat-message-list">
+        {messages?.some(
+          (message) => message.displayVariant || message.errorMessage,
+        ) && onRetry ? (
+          <button type="button" onClick={onRetry}>
+            Retry
+          </button>
+        ) : null}
         {messages?.length
           ? messages.map((message) => <div key={message.id}>{message.content}</div>)
           : emptyState}
@@ -159,7 +192,7 @@ vi.mock("../../../stores/message-queue-store", () => ({
 }));
 
 vi.mock("../../../constants/models", () => ({
-  loadPersistedModel: () => "gpt-5.4",
+  loadPersistedModel: () => mockModelPersistence.getSelectedModel(),
   loadPersistedImageModel: () => "gpt-image-2",
   loadPersistedVideoModel: () => "veo-3.1-fast-generate-preview",
   loadPersistedThreeDModel: () => "tripo-v2",
@@ -168,10 +201,18 @@ vi.mock("../../../constants/models", () => ({
   DEFAULT_IMAGE_QUALITY: "medium",
   loadPersistedImageQuality: () => "medium",
   persistImageQuality: vi.fn(),
-  availableModelsForAdapter: () => [],
+  availableModelsForAdapter: () => [
+    { id: "gpt-5.4", label: "GPT-5.4", tier: "gpt", mode: "chat" },
+    {
+      id: "aura-claude-opus-4-8",
+      label: "Opus 4.8",
+      tier: "opus",
+      mode: "chat",
+    },
+  ],
   defaultModelForAdapter: () => "gpt-5.4",
   hasAgentScopedModel: () => false,
-  persistModel: vi.fn(),
+  persistModel: mockModelPersistence.persistModel,
 }));
 
 vi.mock("./ChatPanel.module.css", () => ({
@@ -187,7 +228,10 @@ describe("ChatPanel", () => {
     mockClearQueue.mockReset();
     mockSubagentOnSend.mockReset();
     mockSubagentOnStop.mockReset();
+    mockModelPersistence.reset();
+    _resetAllPartitionSendControl();
     useMessageStore.setState({ messages: {}, orderedIds: {} });
+    useChatUIStore.setState({ streams: {}, drafts: {} });
     useChatViewStore.setState({ threads: {} });
     useSubAgentPaneStore.setState({ panes: {} });
     requestAnimationFrameSpy = vi
@@ -752,6 +796,99 @@ describe("ChatPanel", () => {
     });
 
     expect(getInputBar()).toHaveAttribute("data-centered", "false");
+  });
+
+  it("retries a failed chat turn with the currently selected model, not the cached failed model", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+    getPartitionSendControl("stream-1").lastSendArgs = {
+      content: "Build Launch Brief",
+      action: null,
+      selectedModel: "aura-claude-fable-5",
+    };
+
+    renderPanel({
+      onSend,
+      onStop,
+      historyResolved: true,
+      historyMessages: [
+        {
+          id: "assistant-error-1",
+          role: "assistant",
+          content: "",
+          displayVariant: "streamDropped",
+          errorMessage: "Claude Fable 5 is not available.",
+        } as DisplaySessionEvent,
+      ],
+    });
+
+    act(() => {
+      useChatUIStore.getState().setSelectedModel(
+        "stream-1",
+        "aura-claude-opus-4-8",
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onSend).toHaveBeenCalledWith(
+      "Build Launch Brief",
+      null,
+      "aura-claude-opus-4-8",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it("keeps a cached generation model when retrying a failed generation turn", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+    getPartitionSendControl("stream-1").lastSendArgs = {
+      content: "Draw a launch dashboard",
+      action: null,
+      selectedModel: "gpt-image-2",
+      generationMode: "image",
+    };
+
+    renderPanel({
+      onSend,
+      onStop,
+      historyResolved: true,
+      historyMessages: [
+        {
+          id: "assistant-error-2",
+          role: "assistant",
+          content: "",
+          displayVariant: "streamDropped",
+          errorMessage: "Image generation interrupted.",
+        } as DisplaySessionEvent,
+      ],
+    });
+
+    act(() => {
+      useChatUIStore.getState().setSelectedModel(
+        "stream-1",
+        "aura-claude-opus-4-8",
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onSend).toHaveBeenCalledWith(
+      "Draw a launch dashboard",
+      null,
+      "gpt-image-2",
+      undefined,
+      undefined,
+      undefined,
+      "image",
+      undefined,
+    );
   });
 
   it("does not re-render the input bar when only scrollResetKey changes (same-agent session switch)", () => {
