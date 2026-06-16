@@ -128,6 +128,12 @@ impl LoopState {
         }
     }
 
+    fn handle_reopen(&mut self, has_visible_windows: bool) {
+        if !has_visible_windows {
+            self.handle_show_window(self.ctx.main_window_id);
+        }
+    }
+
     fn handle_window_command(
         &mut self,
         window_id: WindowId,
@@ -257,12 +263,16 @@ impl LoopState {
         }
         if window_id == self.ctx.main_window_id {
             self.main_window.set_visible(true);
+            self.main_window.set_focus();
         } else if let Some((ide_win, _)) = self.ide_windows.get(&window_id) {
             ide_win.set_visible(true);
+            ide_win.set_focus();
         } else if let Some((win, _)) = self.secondary_main_windows.get(&window_id) {
             win.set_visible(true);
+            win.set_focus();
         } else if let Some(session) = self.demo_windows.get(&window_id) {
             session.window.set_visible(true);
+            session.window.set_focus();
         }
     }
 
@@ -377,6 +387,10 @@ pub(crate) fn run_event_loop(event_loop: EventLoop<UserEvent>, mut state: LoopSt
                 window_id,
                 ..
             } => state.handle_close_requested(window_id, control_flow),
+            Event::Reopen {
+                has_visible_windows,
+                ..
+            } => state.handle_reopen(has_visible_windows),
             Event::UserEvent(user_event) => state.handle_user_event(user_event, elwt, control_flow),
             _ => {}
         }

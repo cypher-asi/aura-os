@@ -31,6 +31,7 @@ import { installNativeTitlebarDrag } from "./lib/native-titlebar-drag";
 import { installNativeTitlebarResize } from "./lib/native-titlebar-resize";
 import { syncQueryHostOriginToStorage } from "./shared/lib/host-config";
 import { signalDesktopReady, signalDesktopSplashReady } from "./lib/desktop-ready";
+import { scheduleDesktopReveal } from "./lib/desktop-reveal";
 import { awaitInitialShellAppReady } from "./lib/boot-shell";
 import {
   clearBootStatus,
@@ -189,11 +190,13 @@ scheduleIdle(() => {
 
 schedulePostFirstPaint(() => {
   markBootPhase("first paint committed");
+});
 
-  // Reveal the native window only after the initial route module is ready, so
-  // the window appears showing real content instead of an intermediate
-  // loading frame. The native 15s fallback reveal still covers catastrophic
-  // bundle failures (and surfaces the boot-error fallback) if this never runs.
+scheduleDesktopReveal(() => {
+  // Reveal the native window only after the initial route module is ready.
+  // The scheduler still prefers the post-paint requestAnimationFrame path, but
+  // it has a timer fallback because hidden WKWebView instances can pause rAF
+  // before the desktop has received the IPC that makes the window visible.
   void (async () => {
     try {
       markBootPhase("waiting for initial shell app");
