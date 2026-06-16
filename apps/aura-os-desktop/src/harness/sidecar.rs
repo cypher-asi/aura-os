@@ -41,6 +41,7 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
     std::env::set_var("LOCAL_HARNESS_URL", &harness_url);
     std::env::set_var("AURA_HARNESS_BIN", &harness_binary);
 
+    stop_stale_managed_sidecar_if_needed(&harness_url, data_dir, &harness_binary);
     if probe_http_ok(&harness_url, "/health") {
         info!(url = %harness_url, binary = %harness_binary.display(), "local harness already reachable");
         return None;
@@ -140,6 +141,164 @@ fn stop_unhealthy_local_harness(mut child: Child) {
     }
 }
 
+fn stop_stale_managed_sidecar_if_needed(
+    harness_url: &str,
+    data_dir: &Path,
+    expected_binary: &Path,
+) {
+    let Some((host, port)) = parse_host_port(harness_url) else {
+        return;
+    };
+    if !is_local_bind_host(&host) {
+        return;
+    }
+
+    let managed_dir = data_dir.join("runtime/sidecar");
+    for process in managed_sidecars_listening_on_port(port, &managed_dir, expected_binary) {
+        match process.kind {
+            ManagedSidecarKind::Current => {
+                info!(
+                    pid = process.pid,
+                    binary = %expected_binary.display(),
+                    "current managed local harness sidecar already owns the port"
+                );
+                return;
+            }
+            ManagedSidecarKind::Stale => {
+                warn!(
+                    pid = process.pid,
+                    binary = %process.command_line,
+                    expected = %expected_binary.display(),
+                    "stopping stale managed local harness sidecar before launch"
+                );
+                terminate_stale_managed_sidecar(process.pid, harness_url);
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum ManagedSidecarKind {
+    Current,
+    Stale,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ManagedSidecarProcess {
+    pid: u32,
+    command_line: String,
+    kind: ManagedSidecarKind,
+}
+
+fn classify_managed_sidecar_command(
+    command_line: &str,
+    managed_dir: &Path,
+    expected_binary: &Path,
+) -> Option<ManagedSidecarKind> {
+    let command_line = command_line
+        .trim()
+        .trim_start_matches('"')
+        .trim_start_matches('\'');
+    let managed_prefix = managed_dir.to_string_lossy();
+    let expected_prefix = expected_binary.to_string_lossy();
+
+    if command_line.starts_with(expected_prefix.as_ref()) {
+        return Some(ManagedSidecarKind::Current);
+    }
+    if command_line.starts_with(managed_prefix.as_ref()) {
+        return Some(ManagedSidecarKind::Stale);
+    }
+    None
+}
+
+#[cfg(unix)]
+fn managed_sidecars_listening_on_port(
+    port: u16,
+    managed_dir: &Path,
+    expected_binary: &Path,
+) -> Vec<ManagedSidecarProcess> {
+    pids_listening_on_tcp_port(port)
+        .into_iter()
+        .filter_map(|pid| {
+            let command_line = command_line_for_pid(pid)?;
+            let kind =
+                classify_managed_sidecar_command(&command_line, managed_dir, expected_binary)?;
+            Some(ManagedSidecarProcess {
+                pid,
+                command_line,
+                kind,
+            })
+        })
+        .collect()
+}
+
+#[cfg(not(unix))]
+fn managed_sidecars_listening_on_port(
+    _port: u16,
+    _managed_dir: &Path,
+    _expected_binary: &Path,
+) -> Vec<ManagedSidecarProcess> {
+    Vec::new()
+}
+
+#[cfg(unix)]
+fn pids_listening_on_tcp_port(port: u16) -> Vec<u32> {
+    let Ok(output) = Command::new("lsof")
+        .args(["-nP", &format!("-iTCP:{port}"), "-sTCP:LISTEN", "-t"])
+        .output()
+    else {
+        return Vec::new();
+    };
+    if !output.status.success() {
+        return Vec::new();
+    }
+    parse_pid_lines(&String::from_utf8_lossy(&output.stdout))
+}
+
+fn parse_pid_lines(output: &str) -> Vec<u32> {
+    output
+        .lines()
+        .filter_map(|line| line.trim().parse::<u32>().ok())
+        .collect()
+}
+
+#[cfg(unix)]
+fn command_line_for_pid(pid: u32) -> Option<String> {
+    let output = Command::new("ps")
+        .args(["-p", &pid.to_string(), "-o", "command="])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let command_line = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    (!command_line.is_empty()).then_some(command_line)
+}
+
+#[cfg(unix)]
+fn terminate_stale_managed_sidecar(pid: u32, harness_url: &str) {
+    let _ = Command::new("kill").arg(pid.to_string()).status();
+    if wait_for_harness_health(Duration::from_secs(2), Duration::from_millis(100), || {
+        !probe_http_ok(harness_url, "/health")
+    }) {
+        return;
+    }
+
+    warn!(
+        pid,
+        "stale managed local harness sidecar ignored TERM; forcing shutdown"
+    );
+    let _ = Command::new("kill")
+        .args(["-KILL", &pid.to_string()])
+        .status();
+    let _ = wait_for_harness_health(Duration::from_secs(2), Duration::from_millis(100), || {
+        !probe_http_ok(harness_url, "/health")
+    });
+}
+
+#[cfg(not(unix))]
+fn terminate_stale_managed_sidecar(_pid: u32, _harness_url: &str) {}
+
 /// Configure a `Command` so it runs fully in the background: no console
 /// window on Windows (the desktop app is a GUI-subsystem process and would
 /// otherwise get a fresh console allocated for the console-subsystem child,
@@ -199,7 +358,8 @@ pub(crate) fn stop_managed_local_harness(managed_local_harness: &mut Option<Chil
 
 #[cfg(test)]
 mod tests {
-    use super::wait_for_harness_health;
+    use super::{classify_managed_sidecar_command, parse_pid_lines, wait_for_harness_health};
+    use std::path::Path;
     use std::time::Duration;
 
     #[test]
@@ -218,5 +378,48 @@ mod tests {
             Duration::ZERO,
             || true,
         ));
+    }
+
+    #[test]
+    fn classify_managed_sidecar_command_detects_current_binary() {
+        let managed_dir = Path::new("managed sidecar dir");
+        let expected = managed_dir.join("aura-node-0.1.0-nightly.680.1-30458032-1781634098");
+        let command_line = expected.to_string_lossy().to_string();
+
+        assert_eq!(
+            classify_managed_sidecar_command(&command_line, managed_dir, &expected),
+            Some(super::ManagedSidecarKind::Current)
+        );
+    }
+
+    #[test]
+    fn classify_managed_sidecar_command_detects_stale_managed_binary() {
+        let managed_dir = Path::new("managed sidecar dir");
+        let expected = managed_dir.join("aura-node-0.1.0-nightly.680.1-30458032-1781634098");
+        let stale = managed_dir
+            .join("aura-node-0.1.0-nightly.632.1-30000000-1780000000")
+            .to_string_lossy()
+            .to_string();
+
+        assert_eq!(
+            classify_managed_sidecar_command(&stale, managed_dir, &expected),
+            Some(super::ManagedSidecarKind::Stale)
+        );
+    }
+
+    #[test]
+    fn classify_managed_sidecar_command_ignores_external_harnesses() {
+        let managed_dir = Path::new("managed sidecar dir");
+        let expected = managed_dir.join("aura-node-0.1.0-nightly.680.1-30458032-1781634098");
+
+        assert_eq!(
+            classify_managed_sidecar_command("/opt/aura-harness/aura-node", managed_dir, &expected),
+            None
+        );
+    }
+
+    #[test]
+    fn parse_pid_lines_ignores_non_pid_lines() {
+        assert_eq!(parse_pid_lines("123\nnot-a-pid\n456\n"), vec![123, 456]);
     }
 }
