@@ -2,6 +2,7 @@ use axum::http::StatusCode;
 use tower::ServiceExt;
 
 use aura_os_core::*;
+use aura_os_projects::CreateProjectInput;
 
 use crate::common::*;
 
@@ -94,6 +95,39 @@ async fn project_update_preserves_local_build_and_test_commands() {
     let body = response_json(resp).await;
     assert_eq!(body["build_command"], "npm run build");
     assert_eq!(body["test_command"], "npm test");
+}
+
+#[tokio::test]
+async fn project_list_excludes_stale_local_shadows_when_network_is_available() {
+    let (app, state, _db) = build_test_app_with_mocks().await;
+
+    let stale = state
+        .project_service
+        .create_project(CreateProjectInput {
+            org_id: OrgId::new(),
+            name: "Stale Local Project".to_string(),
+            description: "belongs to an org outside current membership".to_string(),
+            build_command: None,
+            test_command: None,
+            local_workspace_path: None,
+        })
+        .expect("seed stale local project shadow");
+    let stale_project_id = stale.project_id.to_string();
+
+    let req = json_request("GET", "/api/projects", None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    let projects = body.as_array().expect("projects array");
+
+    assert!(
+        projects.iter().all(|project| {
+            project.get("project_id").and_then(|id| id.as_str()) != Some(stale_project_id.as_str())
+        }),
+        "unscoped project list must not expose stale local shadows"
+    );
+    assert_eq!(projects.len(), 1);
+    assert_eq!(projects[0]["name"], "Test Project");
 }
 
 #[tokio::test]

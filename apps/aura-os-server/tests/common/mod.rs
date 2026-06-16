@@ -97,6 +97,7 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
     let now_post = now.clone();
     let now_put_get = now_put.clone();
     let now_put_put = now_put.clone();
+    let list_org_id_for_orgs = OrgId::new().to_string();
     let created_ids: Arc<StdMutex<HashMap<String, String>>> =
         Arc::new(StdMutex::new(HashMap::new()));
     let created_ids_post = created_ids.clone();
@@ -104,6 +105,19 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
     let created_ids_put = created_ids.clone();
     let created_ids_del = created_ids.clone();
     let network_app = Router::new()
+        .route(
+            "/api/orgs",
+            get(move || {
+                let org_id = list_org_id_for_orgs.clone();
+                async move {
+                    Json(vec![serde_json::json!({
+                        "id": org_id,
+                        "name": "Mock Org",
+                        "ownerUserId": "u1",
+                    })])
+                }
+            }),
+        )
         .route(
             "/api/projects",
             get(

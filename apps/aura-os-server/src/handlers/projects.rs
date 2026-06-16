@@ -300,6 +300,10 @@ pub(crate) async fn list_projects(
         return Ok(Json(projects));
     }
 
+    if state.network_client.is_some() {
+        return Ok(Json(list_all_projects_from_network(&state, &jwt).await?));
+    }
+
     let projects = state
         .project_service
         .list_projects()
