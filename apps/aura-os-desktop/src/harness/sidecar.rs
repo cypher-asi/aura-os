@@ -195,6 +195,9 @@ fn stop_stale_managed_sidecar_if_needed(
 }
 
 #[derive(Debug, PartialEq, Eq)]
+// Variants are matched on every platform but only constructed by the
+// Unix-only port-detection path (and the cross-platform tests).
+#[cfg_attr(not(any(unix, test)), allow(dead_code))]
 enum ManagedSidecarKind {
     Current,
     Stale,
@@ -207,6 +210,7 @@ struct ManagedSidecarProcess {
     kind: ManagedSidecarKind,
 }
 
+#[cfg(any(unix, test))]
 fn classify_managed_sidecar_command(
     command_line: &str,
     managed_dir: &Path,
@@ -272,6 +276,7 @@ fn pids_listening_on_tcp_port(port: u16) -> Vec<u32> {
     parse_pid_lines(&String::from_utf8_lossy(&output.stdout))
 }
 
+#[cfg(any(unix, test))]
 fn parse_pid_lines(output: &str) -> Vec<u32> {
     output
         .lines()
