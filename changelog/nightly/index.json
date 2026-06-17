@@ -2,19 +2,19 @@
   {
     "date": "2026-06-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.685.1",
-    "title": "Steadier chat turns, calmer status signals, and a smoother desktop launch",
-    "intro": "Today's nightly is a deep reliability pass: chat sessions recover more gracefully from storage and model failures, the status page stops flapping on benign freshness lag, the desktop harness no longer trips over leftover sidecar processes, and a long-standing hidden-window reveal deadlock on desktop is finally unblocked.",
+    "version": "0.1.0-nightly.686.1",
+    "title": "Resilient chat retries, sharper thinking UI, and harder-edged desktop harness",
+    "intro": "A reliability-heavy nightly: chat turns and storage writes recover more gracefully from upstream failures, the desktop harness sidecar stops fighting stale processes and inherited env, and the assistant's reasoning surface gets a proper collapsible \"Thought for Xs\" treatment.",
     "entryCount": 6,
     "highlights": [
-      "Chat retries failed turns with your current model",
-      "WAF-blocked chat events now persist via compacted retry",
-      "Desktop launch reclaims stale sidecars and unblocks hidden webviews",
-      "Status page tolerates snapshot lag without false outages"
+      "Failed chat turns now retry on the currently selected model",
+      "Compact-retry path rescues chat events blocked by WAF or oversized payloads",
+      "Desktop reclaims stale sidecar ports and ignores inherited harness env",
+      "Reasoning streams live then collapses to a clickable \"Thought for Xs\""
     ],
-    "rawCommitCount": 17,
-    "generatedAt": "2026-06-17T00:15:35.881Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.685.1",
+    "rawCommitCount": 19,
+    "generatedAt": "2026-06-17T04:02:31.051Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.686.1",
     "path": "history/2026-06-16.json"
   },
   {

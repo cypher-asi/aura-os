@@ -1,61 +1,62 @@
-# Steadier chat turns, calmer status signals, and a smoother desktop launch
+# Resilient chat retries, sharper thinking UI, and harder-edged desktop harness
 
 - Date: `2026-06-16`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.685.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.685.1
+- Version: `0.1.0-nightly.686.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.686.1
 
-Today's nightly is a deep reliability pass: chat sessions recover more gracefully from storage and model failures, the status page stops flapping on benign freshness lag, the desktop harness no longer trips over leftover sidecar processes, and a long-standing hidden-window reveal deadlock on desktop is finally unblocked.
+A reliability-heavy nightly: chat turns and storage writes recover more gracefully from upstream failures, the desktop harness sidecar stops fighting stale processes and inherited env, and the assistant's reasoning surface gets a proper collapsible "Thought for Xs" treatment.
 
-## 7:26 AM — Status page stops flagging false outages from snapshot lag
+## 7:26 AM — Status investigator stops chasing weak suspects
 
-The observability pipeline gets steadier thresholds, smarter investigation prompts, and a longer runtime eval timeout so transient lag stops paging the status page red.
+The observability status probes were tuned to reduce noisy investigations and align model evals with real cold-start latency.
 
-- Relaxed freshness windows and downgraded the published snapshot check to informational so brief publishing delays no longer mark public surfaces as failing. (`5a0475f`)
-- Raised the model-matrix eval timeout to 120s and aligned status latency budgets so cold model responses don't spuriously trip outage thresholds. (`2049590`)
-- Tightened the status investigator to only cite commits and paths that actually appear in evidence, and suppressed weak suspect changes to cut noise in incident hypotheses. (`7c8e040`, `7560151`)
+- Stabilized the marketing StatusView freshness signals and tightened the underlying status policy and probe expectations. (`5a0475f`)
+- Raised the model-matrix eval timeout to 120s (with warning/outage latency budgets bumped to 180s/360s) so cold model responses no longer trip false outages. (`2049590`)
+- Constrained the status investigator to evidence-backed commits and paths and dropped weak suspect changes, so RCAs stop citing files and commits that aren't in the evidence packet. (`7c8e040`, `7560151`, `2049590`)
 
-## 8:52 AM — Chat retries failed turns with your currently selected model
+## 8:52 AM — Chat retries on your current model and stops offering dead ones
 
-A cluster of chat and model fixes makes failed turns recoverable, prunes models that aren't actually available, and stops upgrade prompts from interrupting an active stream.
+Chat surfaces now retry failed turns against the model you have selected today, and unavailable model entries were pruned from the picker.
 
-- Retrying a failed chat turn now uses the model you've currently selected instead of replaying the one that just failed, so swapping from an unavailable model to a working one actually takes effect. (`fa001c1`)
-- Removed the unavailable Fable chat model and the deprecated DALL-E 2 and DALL-E 3 image models from selection, with persistence falling back to a supported image model when a stale DALL-E choice is loaded. (`45b40a1`, `0017da2`)
-- The forced-upgrade overlay now waits for an in-flight stream to finish before taking over the UI, so a long extraction or chat turn can't be interrupted mid-response. (`04c8143`)
-- Project build and test command metadata is preserved through the projects API, fixing cases where saved commands were silently dropped. (`65d4bed`)
+- Retrying a dropped turn now uses the currently selected chat model instead of replaying the cached model from the failed attempt, so switching models after an error actually takes effect. (`fa001c1`)
+- Removed the unavailable Fable chat model and the retired DALL·E 2/3 image models from the picker, with stale persisted DALL·E selections silently falling back to gpt-image-2. (`45b40a1`, `0017da2`)
+- The forced-upgrade overlay now defers (rather than cancels) while a stream is active, so an in-progress turn or extraction can finish before the upgrade gate appears. (`04c8143`)
+- Project build and test command metadata is now preserved end-to-end through the projects API. (`65d4bed`)
 
-## 1:48 PM — Desktop harness reclaims stale sidecars on launch
+## 1:48 PM — Desktop harness reclaims its port and ignores stale env
 
-Desktop startup gets two fixes that prevent the local harness from getting stuck behind a leftover process or an inherited environment variable.
+The managed local harness sidecar on desktop now detects and replaces stale processes and refuses to trust an inherited managed binary path from a previous install.
 
-- On launch, Desktop now detects and terminates stale managed harness sidecars that are still holding the local port, so a previous crashed run can no longer block the new bundled sidecar from starting. (`d44c39d`)
-- An inherited AURA_HARNESS_BIN pointing at a previous build's staged sidecar is now ignored, letting the current bundled harness restage cleanly instead of running an outdated binary. (`7dcb1d5`)
+- Before spawning, the desktop now scans for managed sidecars listening on the harness port and terminates stale ones whose binary no longer matches the bundled path, while leaving the current process untouched. (`d44c39d`)
+- An inherited AURA_HARNESS_BIN pointing into the managed staging dir is now ignored so the freshly bundled sidecar can be restaged instead of silently reusing an old binary across upgrades. (`7dcb1d5`)
 
-## 3:28 PM — Chat persistence survives WAF blocks and cold-start history blowup
+## 3:28 PM — Chat persistence survives WAF blocks and oversized payloads
 
-Server-side chat persistence becomes resilient to oversized payloads and runaway cold-start histories.
+Server-side chat persistence and integration secret handling were hardened against upstream rejections and missing data.
 
-- When the storage backend rejects a chat event with a 413 or a WAF block, the server now retries with a compacted version of tool snapshots, tool results, and assistant message ends instead of dropping the event entirely. (`cb2ad28`)
-- Cold-start conversation history is now capped during compaction, preventing very long sessions from ballooning the initial context window on resume. (`6ce6353`)
+- When aura-storage rejects an event with 413 or a WAF block (403 with firewall/blocked markers), the server now retries with a compacted payload for tool snapshots, tool results, and assistant message ends instead of dropping the event. (`cb2ad28`)
+- Cold-start conversation history is now capped during compaction so reopening long sessions doesn't blow past safe context limits. (`6ce6353`)
+- Org-tool resolution persists hydrated canonical secrets and falls back to shadow MCP secrets when the canonical copy is missing, keeping integrations connected through partial data states. (`95ef7ff`, `46884ff`)
+- Projects API now hides stale local shadows once the network is available, so users see authoritative data instead of an outdated cached copy. (`dd3285a`)
 
-## 3:44 PM — Integration secrets and project shadows behave more predictably
+## 4:59 PM — Hidden webview no longer deadlocks the desktop reveal
 
-Org integrations and project listings handle secret hydration and offline shadows more reliably.
+The desktop app's first-paint reveal handshake is now resilient to paused requestAnimationFrame in hidden webviews.
 
-- Hydrated canonical integration secrets are now persisted instead of recomputed each time, and resolution falls back to shadow MCP secrets when the canonical entry is missing. (`95ef7ff`, `46884ff`)
-- Stale project shadows are hidden from the projects API when the network is available, so users see live project state instead of cached placeholders once they're back online. (`dd3285a`)
+- Introduced scheduleDesktopReveal with a 750ms timer fallback so WKWebView pausing rAF while hidden can no longer block the reveal IPC, and the native runtime now focuses the window on show and handles macOS reopen events. (`b85829b`)
 
-## 4:59 PM — Desktop no longer hangs revealing a hidden webview
+## 8:47 PM — Thinking block streams live, then collapses to "Thought for Xs"
 
-A long-standing desktop reveal deadlock is fixed by giving the hidden webview a timer fallback and properly handling reopen events.
+The assistant's reasoning surface was rebuilt on the shared collapsible Block shell with a live-reveal then auto-collapse behavior.
 
-- The desktop window now reveals reliably even when WKWebView pauses requestAnimationFrame while hidden, thanks to a 750ms timer fallback alongside the post-paint reveal path. (`b85829b`)
-- Reopen events (e.g. clicking the dock icon with no visible windows) now re-show and focus the main window instead of leaving the app appearing unresponsive. (`b85829b`)
+- ThinkingBlock now force-expands with a shimmering "Thinking..." caption while a reasoning segment streams, then collapses to a clickable "Thought for Xs" summary the moment the segment closes. (`2d709c3`)
+- The chat-core e2e eval harness now mocks paginated session history, unblocking reliable evaluation of long-session UI behavior. (`b950683`)
 
 ## Highlights
 
-- Chat retries failed turns with your current model
-- WAF-blocked chat events now persist via compacted retry
-- Desktop launch reclaims stale sidecars and unblocks hidden webviews
-- Status page tolerates snapshot lag without false outages
+- Failed chat turns now retry on the currently selected model
+- Compact-retry path rescues chat events blocked by WAF or oversized payloads
+- Desktop reclaims stale sidecar ports and ignores inherited harness env
+- Reasoning streams live then collapses to a clickable "Thought for Xs"
 

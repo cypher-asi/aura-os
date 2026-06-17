@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-17T00:15:35.881Z",
+  "generatedAt": "2026-06-17T04:02:31.051Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.685.1",
+  "version": "0.1.0-nightly.686.1",
   "date": "2026-06-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.685.1",
-  "lastIncludedSha": "b85829b0730d15102d2570e9647d0a75721e1c54",
-  "previousProcessedSha": "dd3285a400149e7824fcb5c694adad9a81e0f363",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.686.1",
+  "lastIncludedSha": "2d709c35e217328f1c9f2497ebb2b42e736b185d",
+  "previousProcessedSha": "b85829b0730d15102d2570e9647d0a75721e1c54",
   "commitShas": [
     "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
     "7c8e0405beda70cdad1e6f405f3c9c168cde63db",
@@ -28,10 +28,12 @@
     "95ef7ff3fc626b626f5976597b8d44c53c670927",
     "46884ffd95ad29441ebaf5c46d4a9b43b15d541a",
     "dd3285a400149e7824fcb5c694adad9a81e0f363",
-    "b85829b0730d15102d2570e9647d0a75721e1c54"
+    "b85829b0730d15102d2570e9647d0a75721e1c54",
+    "b9506837154401c0275f1d0c5b37cb208082fb46",
+    "2d709c35e217328f1c9f2497ebb2b42e736b185d"
   ],
-  "rawCommitCount": 17,
-  "filteredCommitCount": 17,
+  "rawCommitCount": 19,
+  "filteredCommitCount": 19,
   "rawCommits": [
     {
       "sha": "5a0475f59638f66a335b31a10ea9c92a6e06ee49",
@@ -708,6 +710,89 @@
         "Interface",
         "Desktop"
       ]
+    },
+    {
+      "sha": "b9506837154401c0275f1d0c5b37cb208082fb46",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-16T20:47:25-07:00",
+      "subject": "fix(evals): mock paginated session history in chat-core harness",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b85829b0730d15102d2570e9647d0a75721e1c54"
+      ],
+      "files": [
+        "interface/tests/e2e/evals/chatCoreMockApp.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 15,
+        "deletions": 9
+      },
+      "committedAtMs": 1781668045000,
+      "cleanSubject": "mock paginated session history in chat-core harness",
+      "keywords": [
+        "mock",
+        "paginated",
+        "session",
+        "history",
+        "chat",
+        "core",
+        "harness"
+      ],
+      "fileGroups": [
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2d709c35e217328f1c9f2497ebb2b42e736b185d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-16T20:47:25-07:00",
+      "subject": "feat(thinking): collapsible thinking block that streams live then collapses to \"Thought for xx\"",
+      "body": "Rebuild ThinkingBlock on the shared collapsible Block shell so reasoning\nreveals live (force-expanded, shimmering \"Thinking...\") while the segment\nstreams, then auto-collapses to a clickable \"Thought for Xs\" summary the\ninstant the segment closes. Empty open segments render header-only.",
+      "parents": [
+        "b9506837154401c0275f1d0c5b37cb208082fb46"
+      ],
+      "files": [
+        "interface/src/components/ActivityTimeline/ActivityTimeline.test.tsx",
+        "interface/src/components/Block/ThinkingBlock.module.css",
+        "interface/src/components/Block/ThinkingBlock.test.tsx",
+        "interface/src/components/Block/ThinkingBlock.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 136,
+        "deletions": 118
+      },
+      "committedAtMs": 1781668045000,
+      "cleanSubject": "collapsible thinking block that streams live then collapses to \"Thought for xx\"",
+      "keywords": [
+        "collapsible",
+        "thinking",
+        "block",
+        "that",
+        "streams",
+        "live",
+        "then",
+        "collapses",
+        "thought"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -715,29 +800,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.685.1",
+      "version": "0.1.0-nightly.686.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64802340
+          "sizeBytes": 64809942
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131463672
+          "sizeBytes": 131459576
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -747,29 +832,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.685.1",
+      "version": "0.1.0-nightly.686.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.685.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.686.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60741792
+          "sizeBytes": 60738103
         },
         {
-          "name": "AURA_0.1.0-nightly.685.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.686.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59791375
+          "sizeBytes": 59788730
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -779,29 +864,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.685.1",
+      "version": "0.1.0-nightly.686.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.685.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.686.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62868883
+          "sizeBytes": 62865708
         },
         {
-          "name": "AURA_0.1.0-nightly.685.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.686.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61890837
+          "sizeBytes": 61892365
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -811,17 +896,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.685.1",
+      "version": "0.1.0-nightly.686.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47996693
+          "sizeBytes": 47990541
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.685.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.686.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -830,36 +915,37 @@
     }
   ],
   "rendered": {
-    "title": "Steadier chat turns, calmer status signals, and a smoother desktop launch",
-    "intro": "Today's nightly is a deep reliability pass: chat sessions recover more gracefully from storage and model failures, the status page stops flapping on benign freshness lag, the desktop harness no longer trips over leftover sidecar processes, and a long-standing hidden-window reveal deadlock on desktop is finally unblocked.",
+    "title": "Resilient chat retries, sharper thinking UI, and harder-edged desktop harness",
+    "intro": "A reliability-heavy nightly: chat turns and storage writes recover more gracefully from upstream failures, the desktop harness sidecar stops fighting stale processes and inherited env, and the assistant's reasoning surface gets a proper collapsible \"Thought for Xs\" treatment.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:26 AM",
         "started_at": "2026-06-16T14:26:04.000Z",
         "ended_at": "2026-06-16T15:29:16.000Z",
-        "title": "Status page stops flagging false outages from snapshot lag",
-        "summary": "The observability pipeline gets steadier thresholds, smarter investigation prompts, and a longer runtime eval timeout so transient lag stops paging the status page red.",
+        "title": "Status investigator stops chasing weak suspects",
+        "summary": "The observability status probes were tuned to reduce noisy investigations and align model evals with real cold-start latency.",
         "items": [
           {
-            "text": "Relaxed freshness windows and downgraded the published snapshot check to informational so brief publishing delays no longer mark public surfaces as failing.",
+            "text": "Stabilized the marketing StatusView freshness signals and tightened the underlying status policy and probe expectations.",
             "commit_shas": [
               "5a0475f59638f66a335b31a10ea9c92a6e06ee49"
             ],
             "confidence": "high"
           },
           {
-            "text": "Raised the model-matrix eval timeout to 120s and aligned status latency budgets so cold model responses don't spuriously trip outage thresholds.",
+            "text": "Raised the model-matrix eval timeout to 120s (with warning/outage latency budgets bumped to 180s/360s) so cold model responses no longer trip false outages.",
             "commit_shas": [
               "2049590dd90f5d4c09d19b3cd141daa6d0a52c24"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tightened the status investigator to only cite commits and paths that actually appear in evidence, and suppressed weak suspect changes to cut noise in incident hypotheses.",
+            "text": "Constrained the status investigator to evidence-backed commits and paths and dropped weak suspect changes, so RCAs stop citing files and commits that aren't in the evidence packet.",
             "commit_shas": [
               "7c8e0405beda70cdad1e6f405f3c9c168cde63db",
-              "7560151f6d3be0c6939c7f288a51398f71186182"
+              "7560151f6d3be0c6939c7f288a51398f71186182",
+              "2049590dd90f5d4c09d19b3cd141daa6d0a52c24"
             ],
             "confidence": "high"
           }
@@ -870,18 +956,18 @@
         "time_label": "8:52 AM",
         "started_at": "2026-06-16T15:52:02.000Z",
         "ended_at": "2026-06-16T18:08:13.000Z",
-        "title": "Chat retries failed turns with your currently selected model",
-        "summary": "A cluster of chat and model fixes makes failed turns recoverable, prunes models that aren't actually available, and stops upgrade prompts from interrupting an active stream.",
+        "title": "Chat retries on your current model and stops offering dead ones",
+        "summary": "Chat surfaces now retry failed turns against the model you have selected today, and unavailable model entries were pruned from the picker.",
         "items": [
           {
-            "text": "Retrying a failed chat turn now uses the model you've currently selected instead of replaying the one that just failed, so swapping from an unavailable model to a working one actually takes effect.",
+            "text": "Retrying a dropped turn now uses the currently selected chat model instead of replaying the cached model from the failed attempt, so switching models after an error actually takes effect.",
             "commit_shas": [
               "fa001c127b0ec77c956560a3cfeed2b7cbbcb723"
             ],
             "confidence": "high"
           },
           {
-            "text": "Removed the unavailable Fable chat model and the deprecated DALL-E 2 and DALL-E 3 image models from selection, with persistence falling back to a supported image model when a stale DALL-E choice is loaded.",
+            "text": "Removed the unavailable Fable chat model and the retired DALL·E 2/3 image models from the picker, with stale persisted DALL·E selections silently falling back to gpt-image-2.",
             "commit_shas": [
               "45b40a1b6ea09eca5f19adf4f3e9f0cded83de65",
               "0017da2fa7e298c15eaddc462106a0ac5aed6ab9"
@@ -889,18 +975,18 @@
             "confidence": "high"
           },
           {
-            "text": "The forced-upgrade overlay now waits for an in-flight stream to finish before taking over the UI, so a long extraction or chat turn can't be interrupted mid-response.",
+            "text": "The forced-upgrade overlay now defers (rather than cancels) while a stream is active, so an in-progress turn or extraction can finish before the upgrade gate appears.",
             "commit_shas": [
               "04c81439f3bc03beeddb426490521079d80efe56"
             ],
             "confidence": "high"
           },
           {
-            "text": "Project build and test command metadata is preserved through the projects API, fixing cases where saved commands were silently dropped.",
+            "text": "Project build and test command metadata is now preserved end-to-end through the projects API.",
             "commit_shas": [
               "65d4bede047c6dd234d12736dde9515f5d5dede2"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -909,18 +995,18 @@
         "time_label": "1:48 PM",
         "started_at": "2026-06-16T20:48:48.000Z",
         "ended_at": "2026-06-16T21:43:05.000Z",
-        "title": "Desktop harness reclaims stale sidecars on launch",
-        "summary": "Desktop startup gets two fixes that prevent the local harness from getting stuck behind a leftover process or an inherited environment variable.",
+        "title": "Desktop harness reclaims its port and ignores stale env",
+        "summary": "The managed local harness sidecar on desktop now detects and replaces stale processes and refuses to trust an inherited managed binary path from a previous install.",
         "items": [
           {
-            "text": "On launch, Desktop now detects and terminates stale managed harness sidecars that are still holding the local port, so a previous crashed run can no longer block the new bundled sidecar from starting.",
+            "text": "Before spawning, the desktop now scans for managed sidecars listening on the harness port and terminates stale ones whose binary no longer matches the bundled path, while leaving the current process untouched.",
             "commit_shas": [
               "d44c39d97f710d17e094f3c793ea6bca937e5af2"
             ],
             "confidence": "high"
           },
           {
-            "text": "An inherited AURA_HARNESS_BIN pointing at a previous build's staged sidecar is now ignored, letting the current bundled harness restage cleanly instead of running an outdated binary.",
+            "text": "An inherited AURA_HARNESS_BIN pointing into the managed staging dir is now ignored so the freshly bundled sidecar can be restaged instead of silently reusing an old binary across upgrades.",
             "commit_shas": [
               "7dcb1d58734d26c478b92169a5b866fab3907361"
             ],
@@ -932,36 +1018,26 @@
         "batch_id": "entry-4",
         "time_label": "3:28 PM",
         "started_at": "2026-06-16T22:28:42.000Z",
-        "ended_at": "2026-06-16T22:28:56.000Z",
-        "title": "Chat persistence survives WAF blocks and cold-start history blowup",
-        "summary": "Server-side chat persistence becomes resilient to oversized payloads and runaway cold-start histories.",
+        "ended_at": "2026-06-16T22:51:23.000Z",
+        "title": "Chat persistence survives WAF blocks and oversized payloads",
+        "summary": "Server-side chat persistence and integration secret handling were hardened against upstream rejections and missing data.",
         "items": [
           {
-            "text": "When the storage backend rejects a chat event with a 413 or a WAF block, the server now retries with a compacted version of tool snapshots, tool results, and assistant message ends instead of dropping the event entirely.",
+            "text": "When aura-storage rejects an event with 413 or a WAF block (403 with firewall/blocked markers), the server now retries with a compacted payload for tool snapshots, tool results, and assistant message ends instead of dropping the event.",
             "commit_shas": [
               "cb2ad285153928a6bfab6d99691fbceac6327847"
             ],
             "confidence": "high"
           },
           {
-            "text": "Cold-start conversation history is now capped during compaction, preventing very long sessions from ballooning the initial context window on resume.",
+            "text": "Cold-start conversation history is now capped during compaction so reopening long sessions doesn't blow past safe context limits.",
             "commit_shas": [
               "6ce6353b706a74ea2729b08f452cd0cc1865bbc7"
             ],
             "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-5",
-        "time_label": "3:44 PM",
-        "started_at": "2026-06-16T22:44:19.000Z",
-        "ended_at": "2026-06-16T22:51:23.000Z",
-        "title": "Integration secrets and project shadows behave more predictably",
-        "summary": "Org integrations and project listings handle secret hydration and offline shadows more reliably.",
-        "items": [
+          },
           {
-            "text": "Hydrated canonical integration secrets are now persisted instead of recomputed each time, and resolution falls back to shadow MCP secrets when the canonical entry is missing.",
+            "text": "Org-tool resolution persists hydrated canonical secrets and falls back to shadow MCP secrets when the canonical copy is missing, keeping integrations connected through partial data states.",
             "commit_shas": [
               "95ef7ff3fc626b626f5976597b8d44c53c670927",
               "46884ffd95ad29441ebaf5c46d4a9b43b15d541a"
@@ -969,7 +1045,7 @@
             "confidence": "high"
           },
           {
-            "text": "Stale project shadows are hidden from the projects API when the network is available, so users see live project state instead of cached placeholders once they're back online.",
+            "text": "Projects API now hides stale local shadows once the network is available, so users see authoritative data instead of an outdated cached copy.",
             "commit_shas": [
               "dd3285a400149e7824fcb5c694adad9a81e0f363"
             ],
@@ -978,36 +1054,53 @@
         ]
       },
       {
-        "batch_id": "entry-6",
+        "batch_id": "entry-5",
         "time_label": "4:59 PM",
         "started_at": "2026-06-16T23:59:06.000Z",
         "ended_at": "2026-06-16T23:59:06.000Z",
-        "title": "Desktop no longer hangs revealing a hidden webview",
-        "summary": "A long-standing desktop reveal deadlock is fixed by giving the hidden webview a timer fallback and properly handling reopen events.",
+        "title": "Hidden webview no longer deadlocks the desktop reveal",
+        "summary": "The desktop app's first-paint reveal handshake is now resilient to paused requestAnimationFrame in hidden webviews.",
         "items": [
           {
-            "text": "The desktop window now reveals reliably even when WKWebView pauses requestAnimationFrame while hidden, thanks to a 750ms timer fallback alongside the post-paint reveal path.",
-            "commit_shas": [
-              "b85829b0730d15102d2570e9647d0a75721e1c54"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Reopen events (e.g. clicking the dock icon with no visible windows) now re-show and focus the main window instead of leaving the app appearing unresponsive.",
+            "text": "Introduced scheduleDesktopReveal with a 750ms timer fallback so WKWebView pausing rAF while hidden can no longer block the reveal IPC, and the native runtime now focuses the window on show and handles macOS reopen events.",
             "commit_shas": [
               "b85829b0730d15102d2570e9647d0a75721e1c54"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "8:47 PM",
+        "started_at": "2026-06-17T03:47:25.000Z",
+        "ended_at": "2026-06-17T03:47:25.000Z",
+        "title": "Thinking block streams live, then collapses to \"Thought for Xs\"",
+        "summary": "The assistant's reasoning surface was rebuilt on the shared collapsible Block shell with a live-reveal then auto-collapse behavior.",
+        "items": [
+          {
+            "text": "ThinkingBlock now force-expands with a shimmering \"Thinking...\" caption while a reasoning segment streams, then collapses to a clickable \"Thought for Xs\" summary the moment the segment closes.",
+            "commit_shas": [
+              "2d709c35e217328f1c9f2497ebb2b42e736b185d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The chat-core e2e eval harness now mocks paginated session history, unblocking reliable evaluation of long-session UI behavior.",
+            "commit_shas": [
+              "b9506837154401c0275f1d0c5b37cb208082fb46"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Chat retries failed turns with your current model",
-      "WAF-blocked chat events now persist via compacted retry",
-      "Desktop launch reclaims stale sidecars and unblocks hidden webviews",
-      "Status page tolerates snapshot lag without false outages"
+      "Failed chat turns now retry on the currently selected model",
+      "Compact-retry path rescues chat events blocked by WAF or oversized payloads",
+      "Desktop reclaims stale sidecar ports and ignores inherited harness env",
+      "Reasoning streams live then collapses to a clickable \"Thought for Xs\""
     ],
-    "raw_commit_count": 17
+    "raw_commit_count": 19
   }
 }
