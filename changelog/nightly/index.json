@@ -2,19 +2,19 @@
   {
     "date": "2026-06-17",
     "channel": "nightly",
-    "version": "0.1.0-nightly.687.1",
-    "title": "Live provisioning visibility for remote agents",
-    "intro": "Today's nightly sharpens the Agent Environment view so cold starts feel transparent instead of opaque: confidential VMs now report their real isolation and instance size, logs stream as the machine boots, and a coarse boot phase replaces the static spinner. A small Desktop build-hygiene fix also clears warnings on non-Unix targets.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.688.1",
+    "title": "Live remote agent provisioning feedback and accurate VM reporting",
+    "intro": "Today's nightly is centered on making remote agent cold starts feel transparent: the AgentEnvironment now streams real boot progress, accurately labels confidential VMs, and reports true VM sizing. A Windows desktop build warning was also silenced, and status probes were recalibrated to stop crying wolf on slow remote checks.",
+    "entryCount": 3,
     "highlights": [
-      "Confidential VMs labeled correctly with real vCPU/GiB and instance type",
-      "Live VM log streaming auto-opens during provisioning",
-      "Adaptive 2.5s polling surfaces boot phase under the Provisioning badge",
-      "Desktop build cleaned up on Windows/non-Unix targets"
+      "Live VM logs and boot phases during remote agent provisioning",
+      "Confidential SEV-SNP VMs now labeled correctly with real vCPU/GiB",
+      "Status probe thresholds recalibrated for realistic remote latencies",
+      "Clean cross-platform desktop builds on non-Unix targets"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-06-17T07:38:43.419Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.687.1",
+    "rawCommitCount": 5,
+    "generatedAt": "2026-06-17T15:19:59.129Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.688.1",
     "path": "history/2026-06-17.json"
   },
   {

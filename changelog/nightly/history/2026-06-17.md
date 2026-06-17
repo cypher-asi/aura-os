@@ -1,30 +1,37 @@
-# Live provisioning visibility for remote agents
+# Live remote agent provisioning feedback and accurate VM reporting
 
 - Date: `2026-06-17`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.687.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.687.1
+- Version: `0.1.0-nightly.688.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.688.1
 
-Today's nightly sharpens the Agent Environment view so cold starts feel transparent instead of opaque: confidential VMs now report their real isolation and instance size, logs stream as the machine boots, and a coarse boot phase replaces the static spinner. A small Desktop build-hygiene fix also clears warnings on non-Unix targets.
+Today's nightly is centered on making remote agent cold starts feel transparent: the AgentEnvironment now streams real boot progress, accurately labels confidential VMs, and reports true VM sizing. A Windows desktop build warning was also silenced, and status probes were recalibrated to stop crying wolf on slow remote checks.
 
-## 10:41 PM — Sidecar port detection no longer warns on Windows builds
+## 10:41 PM — Clean Windows desktop builds for the sidecar harness
 
-Desktop builds on non-Unix targets stop tripping dead-code warnings from the Unix-only managed sidecar path.
+Silenced spurious dead-code warnings on non-Unix targets so the desktop harness builds cleanly across platforms.
 
-- Gated the managed sidecar port-detection helpers and ManagedSidecarKind variants behind cfg(any(unix, test)) so Windows and other non-Unix Desktop builds compile cleanly without dead-code noise. (`0d90288`)
+- Gated the managed sidecar port-detection helpers and ManagedSidecarKind variants behind cfg(any(unix, test)) so Windows builds of aura-os-desktop no longer surface dead-code warnings for Unix-only paths. (`0d90288`)
 
-## 11:50 PM — Agent Environment shows real confidential VM specs and live boot progress
+## 11:50 PM — Transparent cold starts for remote agents
 
-The remote agent status card now reports accurate isolation and resources, streams VM logs during provisioning, and surfaces a coarse boot phase with adaptive polling.
+AgentEnvironment now shows what a provisioning VM is actually doing — accurate isolation and resources, a live boot phase, and streaming logs — instead of an opaque spinner.
 
-- Confidential SEV-SNP agents are now labeled 'Confidential VM' instead of being misreported as 'Container', and the Resources line shows real vCPU/GiB plus the backing AWS instance type (e.g. m6a.xlarge) forwarded from the gateway, rather than the stripped tier spec. (`220e459`)
-- The Remote Logs panel auto-opens while an agent is provisioning and silently refreshes its tail every 3s, so boot and attestation output streams live instead of showing 'No platform logs yet' on a cold start. (`41f9698`)
-- VM state polling now runs at ~2.5s while provisioning (backing off to 15s once settled) and renders a coarse phase under the Provisioning badge — 'Scheduling machine…' before a pod IP is assigned, then 'Booting & attesting…' — replacing the static 'Starting up…' spinner. (`46dcfda`)
+- Confidential SEV-SNP VMs are now labeled "Confidential VM" instead of being misreported as "Container", and the Resources line shows real vCPU/GiB plus the backing AWS instance type (e.g. m6a.xlarge) forwarded from the gateway, rather than the stripped tier spec. (`220e459`)
+- The VM logs panel auto-opens while an agent is provisioning and silently re-polls the tail every 3 seconds, so boot and attestation output streams in live instead of showing "No platform logs yet" after a single fetch. (`41f9698`)
+- Added an adaptive ~2.5s state poll during provisioning (relaxing to 15s once settled) and a coarse phase label under the Provisioning badge that progresses from "Scheduling machine…" to "Booting & attesting…" as the VM gets an endpoint. (`46dcfda`)
+
+## 7:53 AM — Recalibrated remote agent status probes
+
+Tuned the observability probes so remote-agent checks reflect realistic cold-start latencies and dropped a noisy informational probe from the rotation.
+
+- Raised warning/outage latency thresholds for the remote-agent-create, remote-agent-state, and remote-agent-runtime probes (now in the 4–7 minute range) and bumped the default remote probe timeout to 5 minutes via a new AURA_STATUS_REMOTE_TIMEOUT_MS override, so legitimate slow boots stop firing as outages. (`70f1985`)
+- Dropped the image-generation-stream probe from the observability, nightly, and stable release workflows and from features.json to stop tracking it as a status signal. (`70f1985`)
 
 ## Highlights
 
-- Confidential VMs labeled correctly with real vCPU/GiB and instance type
-- Live VM log streaming auto-opens during provisioning
-- Adaptive 2.5s polling surfaces boot phase under the Provisioning badge
-- Desktop build cleaned up on Windows/non-Unix targets
+- Live VM logs and boot phases during remote agent provisioning
+- Confidential SEV-SNP VMs now labeled correctly with real vCPU/GiB
+- Status probe thresholds recalibrated for realistic remote latencies
+- Clean cross-platform desktop builds on non-Unix targets
 

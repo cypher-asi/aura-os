@@ -3,22 +3,23 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-17T07:38:43.419Z",
+  "generatedAt": "2026-06-17T15:19:59.129Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.687.1",
+  "version": "0.1.0-nightly.688.1",
   "date": "2026-06-17",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.687.1",
-  "lastIncludedSha": "46dcfdaaa96439ae7f85f5292bf50de4db9651cd",
-  "previousProcessedSha": "2d709c35e217328f1c9f2497ebb2b42e736b185d",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.688.1",
+  "lastIncludedSha": "70f19851bfff83d05dbce2d1bdc9f4e349bb52de",
+  "previousProcessedSha": "46dcfdaaa96439ae7f85f5292bf50de4db9651cd",
   "commitShas": [
     "0d902888fdb27e5eb9a967d4bf3d99bd705886ce",
     "220e459d571ec3df0f920e775ebdd85edab3bd3c",
     "41f9698d5827d1ba69a686833a87dfefd4f4c4d0",
-    "46dcfdaaa96439ae7f85f5292bf50de4db9651cd"
+    "46dcfdaaa96439ae7f85f5292bf50de4db9651cd",
+    "70f19851bfff83d05dbce2d1bdc9f4e349bb52de"
   ],
-  "rawCommitCount": 4,
-  "filteredCommitCount": 4,
+  "rawCommitCount": 5,
+  "filteredCommitCount": 5,
   "rawCommits": [
     {
       "sha": "0d902888fdb27e5eb9a967d4bf3d99bd705886ce",
@@ -185,36 +186,79 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "70f19851bfff83d05dbce2d1bdc9f4e349bb52de",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-17T10:53:53-04:00",
+      "subject": "fix(observability): calibrate remote probes",
+      "body": "",
+      "parents": [
+        "46dcfdaaa96439ae7f85f5292bf50de4db9651cd"
+      ],
+      "files": [
+        ".github/workflows/aura-observability.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/evals/status/features.json",
+        "infra/evals/status/run-status-probes.mjs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 12,
+        "deletions": 17
+      },
+      "committedAtMs": 1781708033000,
+      "cleanSubject": "calibrate remote probes",
+      "keywords": [
+        "calibrate",
+        "remote",
+        "probes"
+      ],
+      "fileGroups": [
+        ".github/workflows/aura-observability.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/evals/status"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.687.1",
+      "version": "0.1.0-nightly.688.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64806526
+          "sizeBytes": 64810628
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131463672
+          "sizeBytes": 131467768
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -224,29 +268,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.687.1",
+      "version": "0.1.0-nightly.688.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.687.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.688.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60765602
+          "sizeBytes": 60767112
         },
         {
-          "name": "AURA_0.1.0-nightly.687.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.688.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59807025
+          "sizeBytes": 59809167
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -256,29 +300,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.687.1",
+      "version": "0.1.0-nightly.688.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.687.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.688.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62869096
+          "sizeBytes": 62875666
         },
         {
-          "name": "AURA_0.1.0-nightly.687.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.688.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61892017
+          "sizeBytes": 61894071
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -288,17 +332,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.687.1",
+      "version": "0.1.0-nightly.688.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48000797
+          "sizeBytes": 47987324
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.687.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.688.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -307,19 +351,19 @@
     }
   ],
   "rendered": {
-    "title": "Live provisioning visibility for remote agents",
-    "intro": "Today's nightly sharpens the Agent Environment view so cold starts feel transparent instead of opaque: confidential VMs now report their real isolation and instance size, logs stream as the machine boots, and a coarse boot phase replaces the static spinner. A small Desktop build-hygiene fix also clears warnings on non-Unix targets.",
+    "title": "Live remote agent provisioning feedback and accurate VM reporting",
+    "intro": "Today's nightly is centered on making remote agent cold starts feel transparent: the AgentEnvironment now streams real boot progress, accurately labels confidential VMs, and reports true VM sizing. A Windows desktop build warning was also silenced, and status probes were recalibrated to stop crying wolf on slow remote checks.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "10:41 PM",
         "started_at": "2026-06-17T05:41:03.000Z",
         "ended_at": "2026-06-17T05:41:03.000Z",
-        "title": "Sidecar port detection no longer warns on Windows builds",
-        "summary": "Desktop builds on non-Unix targets stop tripping dead-code warnings from the Unix-only managed sidecar path.",
+        "title": "Clean Windows desktop builds for the sidecar harness",
+        "summary": "Silenced spurious dead-code warnings on non-Unix targets so the desktop harness builds cleanly across platforms.",
         "items": [
           {
-            "text": "Gated the managed sidecar port-detection helpers and ManagedSidecarKind variants behind cfg(any(unix, test)) so Windows and other non-Unix Desktop builds compile cleanly without dead-code noise.",
+            "text": "Gated the managed sidecar port-detection helpers and ManagedSidecarKind variants behind cfg(any(unix, test)) so Windows builds of aura-os-desktop no longer surface dead-code warnings for Unix-only paths.",
             "commit_shas": [
               "0d902888fdb27e5eb9a967d4bf3d99bd705886ce"
             ],
@@ -332,27 +376,51 @@
         "time_label": "11:50 PM",
         "started_at": "2026-06-17T06:50:52.000Z",
         "ended_at": "2026-06-17T06:54:28.000Z",
-        "title": "Agent Environment shows real confidential VM specs and live boot progress",
-        "summary": "The remote agent status card now reports accurate isolation and resources, streams VM logs during provisioning, and surfaces a coarse boot phase with adaptive polling.",
+        "title": "Transparent cold starts for remote agents",
+        "summary": "AgentEnvironment now shows what a provisioning VM is actually doing — accurate isolation and resources, a live boot phase, and streaming logs — instead of an opaque spinner.",
         "items": [
           {
-            "text": "Confidential SEV-SNP agents are now labeled 'Confidential VM' instead of being misreported as 'Container', and the Resources line shows real vCPU/GiB plus the backing AWS instance type (e.g. m6a.xlarge) forwarded from the gateway, rather than the stripped tier spec.",
+            "text": "Confidential SEV-SNP VMs are now labeled \"Confidential VM\" instead of being misreported as \"Container\", and the Resources line shows real vCPU/GiB plus the backing AWS instance type (e.g. m6a.xlarge) forwarded from the gateway, rather than the stripped tier spec.",
             "commit_shas": [
               "220e459d571ec3df0f920e775ebdd85edab3bd3c"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Remote Logs panel auto-opens while an agent is provisioning and silently refreshes its tail every 3s, so boot and attestation output streams live instead of showing 'No platform logs yet' on a cold start.",
+            "text": "The VM logs panel auto-opens while an agent is provisioning and silently re-polls the tail every 3 seconds, so boot and attestation output streams in live instead of showing \"No platform logs yet\" after a single fetch.",
             "commit_shas": [
               "41f9698d5827d1ba69a686833a87dfefd4f4c4d0"
             ],
             "confidence": "high"
           },
           {
-            "text": "VM state polling now runs at ~2.5s while provisioning (backing off to 15s once settled) and renders a coarse phase under the Provisioning badge — 'Scheduling machine…' before a pod IP is assigned, then 'Booting & attesting…' — replacing the static 'Starting up…' spinner.",
+            "text": "Added an adaptive ~2.5s state poll during provisioning (relaxing to 15s once settled) and a coarse phase label under the Provisioning badge that progresses from \"Scheduling machine…\" to \"Booting & attesting…\" as the VM gets an endpoint.",
             "commit_shas": [
               "46dcfdaaa96439ae7f85f5292bf50de4db9651cd"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "7:53 AM",
+        "started_at": "2026-06-17T14:53:53.000Z",
+        "ended_at": "2026-06-17T14:53:53.000Z",
+        "title": "Recalibrated remote agent status probes",
+        "summary": "Tuned the observability probes so remote-agent checks reflect realistic cold-start latencies and dropped a noisy informational probe from the rotation.",
+        "items": [
+          {
+            "text": "Raised warning/outage latency thresholds for the remote-agent-create, remote-agent-state, and remote-agent-runtime probes (now in the 4–7 minute range) and bumped the default remote probe timeout to 5 minutes via a new AURA_STATUS_REMOTE_TIMEOUT_MS override, so legitimate slow boots stop firing as outages.",
+            "commit_shas": [
+              "70f19851bfff83d05dbce2d1bdc9f4e349bb52de"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Dropped the image-generation-stream probe from the observability, nightly, and stable release workflows and from features.json to stop tracking it as a status signal.",
+            "commit_shas": [
+              "70f19851bfff83d05dbce2d1bdc9f4e349bb52de"
             ],
             "confidence": "high"
           }
@@ -360,11 +428,11 @@
       }
     ],
     "highlights": [
-      "Confidential VMs labeled correctly with real vCPU/GiB and instance type",
-      "Live VM log streaming auto-opens during provisioning",
-      "Adaptive 2.5s polling surfaces boot phase under the Provisioning badge",
-      "Desktop build cleaned up on Windows/non-Unix targets"
+      "Live VM logs and boot phases during remote agent provisioning",
+      "Confidential SEV-SNP VMs now labeled correctly with real vCPU/GiB",
+      "Status probe thresholds recalibrated for realistic remote latencies",
+      "Clean cross-platform desktop builds on non-Unix targets"
     ],
-    "raw_commit_count": 4
+    "raw_commit_count": 5
   }
 }
