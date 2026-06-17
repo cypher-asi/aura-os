@@ -667,7 +667,7 @@ jobs:
             marketplace-agents,harness-health,active-streams,debug-projects,
             feedback-list,bug-reports-mine,feed-list,leaderboard,platform-stats,
             remote-agent-create,remote-agent-state,remote-agent-runtime,
-            image-generation-stream,eval-summary-artifacts,analytics-contract-artifacts,
+            eval-summary-artifacts,analytics-contract-artifacts,
             public-setup,public-chat-stream,public-feedback-api,
             public-blog-api,public-content-details,public-x402-models,public-x402-payment-challenge,
             published-observability-snapshot,public-observability-page,

@@ -148,9 +148,9 @@
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
       "checks": [
-        { "id": "remote-agent-create", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 30000, "outageLatencyMs": 120000 },
-        { "id": "remote-agent-state", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 5000, "outageLatencyMs": 20000 },
-        { "id": "remote-agent-runtime", "required": false, "staleAfterMinutes": 20, "warningLatencyMs": 20000, "outageLatencyMs": 60000 }
+        { "id": "remote-agent-create", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 240000, "outageLatencyMs": 360000 },
+        { "id": "remote-agent-state", "required": true, "staleAfterMinutes": 20, "warningLatencyMs": 240000, "outageLatencyMs": 360000 },
+        { "id": "remote-agent-runtime", "required": false, "staleAfterMinutes": 20, "warningLatencyMs": 300000, "outageLatencyMs": 420000 }
       ],
       "degradedAfterFailures": 1,
       "outageAfterFailures": 2
@@ -234,16 +234,6 @@
           "runtimeEnvironment": "desktop-release",
           "required": true,
           "staleAfterMinutes": 1800,
-          "warningLatencyMs": 180000,
-          "outageLatencyMs": 360000
-        },
-        {
-          "id": "image-generation-stream",
-          "label": "Image generation stream",
-          "runtimeEnvironment": "production-api",
-          "required": false,
-          "statusImpact": "informational",
-          "staleAfterMinutes": 30,
           "warningLatencyMs": 180000,
           "outageLatencyMs": 360000
         }

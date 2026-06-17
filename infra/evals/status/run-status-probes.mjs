@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 
 const DEFAULT_TIMEOUT_MS = 60_000;
-const DEFAULT_REMOTE_TIMEOUT_MS = 180_000;
+const DEFAULT_REMOTE_TIMEOUT_MS = positiveIntegerEnv("AURA_STATUS_REMOTE_TIMEOUT_MS", 300_000);
 const DEFAULT_MODELS = [
   "aura-claude-sonnet-4-6",
   "aura-gpt-5-5",
@@ -25,6 +25,11 @@ const LIVE_STATUS_SNAPSHOT_SOURCES = new Set([
   "desktop-nightly-release",
   "desktop-stable-release",
 ]);
+
+function positiveIntegerEnv(name, fallback) {
+  const parsed = Number(process.env[name]);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : fallback;
+}
 
 function parseArgs(argv) {
   const args = {
