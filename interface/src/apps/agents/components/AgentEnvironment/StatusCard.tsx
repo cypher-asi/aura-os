@@ -13,6 +13,8 @@ import { ReportBugButton } from "../../../../components/ReportBugButton"
 import { RemoteLogsPanel } from "../../../../components/RemoteLogsPanel"
 import styles from "./AgentEnvironment.module.css"
 import {
+  formatIsolation,
+  formatResources,
   formatUptime,
   getActionsForState,
   type RecoveryNotice,
@@ -212,9 +214,7 @@ function RemoteStatusContent({
         <div className={styles.statusRow}>
           <span className={styles.statusLabel}>Resources</span>
           <span className={styles.statusValue}>
-            {vmState.cpu_millicores ? `${vmState.cpu_millicores}m CPU` : ""}
-            {vmState.cpu_millicores && vmState.memory_mb ? " · " : ""}
-            {vmState.memory_mb ? `${vmState.memory_mb}MB RAM` : ""}
+            {formatResources(vmState)}
           </span>
         </div>
       )}
@@ -222,7 +222,7 @@ function RemoteStatusContent({
         <div className={styles.statusRow}>
           <span className={styles.statusLabel}>Isolation</span>
           <span className={styles.statusValue}>
-            {vmState.isolation === "micro_vm" ? "MicroVM" : "Container"}
+            {formatIsolation(vmState.isolation)}
           </span>
         </div>
       )}

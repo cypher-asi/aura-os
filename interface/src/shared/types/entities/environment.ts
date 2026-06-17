@@ -31,6 +31,8 @@ export interface RemoteVmState {
   name?: string
   cpu_millicores?: number
   memory_mb?: number
+  /** AWS instance type backing a confidential pod VM (e.g. "m6a.xlarge"). */
+  vm_instance_type?: string
   runtime_version?: string
   /** Git commit of the deployed harness build, reported by the swarm gateway. */
   harness_git_sha?: string

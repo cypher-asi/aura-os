@@ -1,5 +1,6 @@
 import { ApiClientError } from "../../../../shared/api/core"
 import type { LifecycleAction } from "../../../../shared/api/swarm"
+import type { RemoteVmState } from "../../../../shared/types"
 import { getApiErrorMessage } from "../../../../shared/utils/api-errors"
 
 export const POLL_INTERVAL = 15_000
@@ -37,6 +38,47 @@ export function formatUptime(seconds: number): string {
   const h = Math.floor(seconds / 3600)
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`
+}
+
+/**
+ * Human-readable isolation label. The gateway sends the Debug-lowercased
+ * isolation level ("confidentialvm" / "container"); older code only knew
+ * "micro_vm", so a confidential SEV-SNP VM was mislabeled as "Container".
+ */
+export function formatIsolation(isolation: string): string {
+  switch (isolation) {
+    case "confidentialvm":
+    case "confidential_vm":
+      return "Confidential VM"
+    case "micro_vm":
+      return "MicroVM"
+    case "container":
+      return "Container"
+    default:
+      return isolation
+  }
+}
+
+/**
+ * Format the VM resource line. When the gateway reports a real pod-VM
+ * instance type (confidential agents, whose tier cpu/memory is stripped by
+ * the peer-pods webhook), show the actual size as vCPU/GiB plus the instance
+ * type. Otherwise fall back to the raw millicore/MB spec.
+ */
+export function formatResources(vm: RemoteVmState): string {
+  const cpu = vm.cpu_millicores
+  const mem = vm.memory_mb
+  if (vm.vm_instance_type) {
+    const parts: string[] = []
+    if (cpu) parts.push(`${cpu / 1000} vCPU`)
+    if (mem) parts.push(`${Math.round((mem / 1024) * 10) / 10} GiB`)
+    const size = parts.join(" · ")
+    return size ? `${size} (${vm.vm_instance_type})` : vm.vm_instance_type
+  }
+  const parts: string[] = []
+  if (cpu) parts.push(`${cpu}m CPU`)
+  if (mem) parts.push(`${mem}MB RAM`)
+  return parts.join(" · ")
 }
 
 export function getRemoteStateErrorMessage(error: unknown): string {

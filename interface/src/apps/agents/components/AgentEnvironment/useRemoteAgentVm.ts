@@ -117,6 +117,7 @@ export function useRemoteAgentVm({
         isolation: prev?.isolation,
         cpu_millicores: prev?.cpu_millicores,
         memory_mb: prev?.memory_mb,
+        vm_instance_type: prev?.vm_instance_type,
         agent_id: prev?.agent_id ?? agentId,
       }))
     })
@@ -144,6 +145,7 @@ export function useRemoteAgentVm({
             isolation: current?.isolation,
             cpu_millicores: current?.cpu_millicores,
             memory_mb: current?.memory_mb,
+            vm_instance_type: current?.vm_instance_type,
             agent_id: current?.agent_id ?? agentId,
             error_message: undefined,
           }))

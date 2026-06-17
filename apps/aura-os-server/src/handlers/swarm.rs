@@ -43,6 +43,11 @@ pub(crate) struct RemoteAgentStateResponse {
     pub cpu_millicores: Option<u32>,
     #[serde(default)]
     pub memory_mb: Option<u32>,
+    /// AWS instance type backing a confidential pod VM (e.g. `m6a.xlarge`),
+    /// when the gateway knows it. Used to report real resources instead of
+    /// the stripped tier spec.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vm_instance_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runtime_version: Option<String>,
     /// Git commit of the harness build running in the pod, reported by the
