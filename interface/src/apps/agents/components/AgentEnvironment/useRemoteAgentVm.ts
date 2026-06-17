@@ -7,6 +7,7 @@ import type { LifecycleAction } from "../../../../shared/api/swarm"
 import {
   PHASE_NOTICES,
   POLL_INTERVAL,
+  PROVISIONING_POLL_INTERVAL,
   getRemoteStateErrorMessage,
   isRecoverableRemoteStateError,
   type RecoveryNotice,
@@ -70,9 +71,28 @@ export function useRemoteAgentVm({
 
   useEffect(() => {
     if (!isRemote) return
-    refreshState()
-    const interval = setInterval(refreshState, POLL_INTERVAL)
-    return () => clearInterval(interval)
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    // Adaptive cadence: poll quickly while the VM is provisioning so boot
+    // progress feels live, then back off to the steady interval once it
+    // settles. A recursive timeout (vs setInterval) lets each tick choose the
+    // next delay from the freshly-observed state.
+    const tick = async () => {
+      const state = await refreshState()
+      if (cancelled) return
+      const next =
+        state?.state === "provisioning"
+          ? PROVISIONING_POLL_INTERVAL
+          : POLL_INTERVAL
+      timer = setTimeout(tick, next)
+    }
+    tick()
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
   }, [isRemote, agentId, refreshState])
 
   useEffect(() => {

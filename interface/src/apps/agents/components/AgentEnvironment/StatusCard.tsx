@@ -18,6 +18,7 @@ import {
   formatResources,
   formatUptime,
   getActionsForState,
+  provisioningPhaseLabel,
   type RecoveryNotice,
 } from "./helpers"
 
@@ -73,7 +74,7 @@ function RemoteActions({
         <div className={styles.actionsRow}>
           <span className={styles.actionsWait}>
             {vmState.state === "provisioning"
-              ? (pendingRecovery ? "Recovery requested. Starting up..." : "Starting up…")
+              ? (pendingRecovery ? "Recovery requested. Starting up..." : provisioningPhaseLabel(vmState))
               : "Shutting down…"}
           </span>
         </div>

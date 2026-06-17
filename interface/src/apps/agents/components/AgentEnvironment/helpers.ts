@@ -4,6 +4,8 @@ import type { RemoteVmState } from "../../../../shared/types"
 import { getApiErrorMessage } from "../../../../shared/utils/api-errors"
 
 export const POLL_INTERVAL = 15_000
+/** Faster poll cadence while the VM is provisioning, for live boot feedback. */
+export const PROVISIONING_POLL_INTERVAL = 2_500
 export const STATUS_CARD_GAP = 6
 export const STATUS_CARD_MIN_WIDTH = 220
 export const STATUS_CARD_VIEWPORT_MARGIN = 8
@@ -30,6 +32,16 @@ export const PHASE_NOTICES: Record<string, RecoveryNotice> = {
     tone: "error",
     message: "Machine failed to start. Click Recovery to try again.",
   },
+}
+
+/**
+ * Coarse, at-a-glance boot phase shown under the Provisioning badge. The
+ * detailed play-by-play comes from the live VM logs; this is derived from
+ * signals already in the state poll: an endpoint (pod IP) means the VM has
+ * been scheduled and is booting/attesting, otherwise it is still being placed.
+ */
+export function provisioningPhaseLabel(vm: RemoteVmState): string {
+  return vm.endpoint ? "Booting & attesting…" : "Scheduling machine…"
 }
 
 export function formatUptime(seconds: number): string {

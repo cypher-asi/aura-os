@@ -6,6 +6,7 @@ import { AgentEnvironment } from "./AgentEnvironment"
 
 const swarmApiMocks = vi.hoisted(() => ({
   getRemoteAgentState: vi.fn(),
+  getRemoteAgentLogs: vi.fn(),
   remoteAgentAction: vi.fn(),
   recoverRemoteAgent: vi.fn(),
 }))
@@ -14,6 +15,7 @@ vi.mock("../../../../api/client", () => ({
   api: {
     swarm: {
       getRemoteAgentState: swarmApiMocks.getRemoteAgentState,
+      getRemoteAgentLogs: swarmApiMocks.getRemoteAgentLogs,
       remoteAgentAction: swarmApiMocks.remoteAgentAction,
       recoverRemoteAgent: swarmApiMocks.recoverRemoteAgent,
     },
@@ -57,6 +59,7 @@ describe("AgentEnvironment", () => {
       error_message: "Machine failed",
       agent_id: "a1",
     })
+    swarmApiMocks.getRemoteAgentLogs.mockResolvedValue({ logs: [] })
     swarmApiMocks.remoteAgentAction.mockResolvedValue({ agent_id: "a1", status: "stopped" })
     swarmApiMocks.recoverRemoteAgent.mockResolvedValue({
       agent_id: "a1",
