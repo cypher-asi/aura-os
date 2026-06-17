@@ -2,20 +2,20 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-06-17T15:14:51.638Z",
+  "generatedAt": "2026-06-17T15:29:21.589Z",
   "environment": "production",
-  "source": "desktop-nightly-release",
-  "overall": "degraded",
+  "source": "github-actions",
+  "overall": "operational",
   "totals": {
     "features": 19,
-    "operational": 18,
-    "degraded": 1,
+    "operational": 19,
+    "degraded": 0,
     "partialOutage": 0,
     "majorOutage": 0,
     "unknown": 0,
     "maintenance": 0,
     "runtimeEnvironments": 2,
-    "investigations": 1
+    "investigations": 0
   },
   "runtimeEnvironments": [
     {
@@ -38,12 +38,12 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:44.686Z",
+      "lastCheckedAt": "2026-06-17T15:19:33.366Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 136,
+      "latencyP95Ms": 66,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -56,11 +56,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:44.049Z",
-          "latencyMs": 112,
+          "checkedAt": "2026-06-17T15:19:32.948Z",
+          "latencyMs": 46,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-06-17T15:00:44.669138455+00:00"
+            "timestamp": "2026-06-17T15:19:32.932072935+00:00"
           }
         },
         {
@@ -73,8 +73,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:44.146Z",
-          "latencyMs": 97,
+          "checkedAt": "2026-06-17T15:19:32.987Z",
+          "latencyMs": 39,
           "evidence": {
             "userPresent": true,
             "keys": [
@@ -105,8 +105,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:44.686Z",
-          "latencyMs": 136,
+          "checkedAt": "2026-06-17T15:19:33.366Z",
+          "latencyMs": 66,
           "evidence": {
             "keys": [
               "os",
@@ -127,12 +127,12 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:44.988Z",
+      "lastCheckedAt": "2026-06-17T15:19:33.512Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 404,
+      "latencyP95Ms": 313,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -145,8 +145,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:44.550Z",
-          "latencyMs": 404,
+          "checkedAt": "2026-06-17T15:19:33.300Z",
+          "latencyMs": 313,
           "evidence": {
             "userIdPresent": true
           }
@@ -161,8 +161,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:44.817Z",
-          "latencyMs": 131,
+          "checkedAt": "2026-06-17T15:19:33.440Z",
+          "latencyMs": 75,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "orgCount": 1
@@ -178,8 +178,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:44.988Z",
-          "latencyMs": 171,
+          "checkedAt": "2026-06-17T15:19:33.512Z",
+          "latencyMs": 71,
           "evidence": {
             "userIdPresent": true,
             "keys": [
@@ -206,12 +206,12 @@
       "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
       "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:12:14.848Z",
+      "lastCheckedAt": "2026-06-17T15:29:16.581Z",
       "checksPassed": 7,
       "checksTotal": 7,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1167,
+      "latencyP95Ms": 876,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -224,8 +224,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:12.358Z",
-          "latencyMs": 97,
+          "checkedAt": "2026-06-17T15:29:14.974Z",
+          "latencyMs": 38,
           "evidence": {
             "tokenPresent": true,
             "turnCount": 0,
@@ -242,8 +242,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:13.525Z",
-          "latencyMs": 1167,
+          "checkedAt": "2026-06-17T15:29:15.850Z",
+          "latencyMs": 876,
           "evidence": {
             "frameTypes": [
               "text_delta",
@@ -264,8 +264,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:13.905Z",
-          "latencyMs": 380,
+          "checkedAt": "2026-06-17T15:29:16.009Z",
+          "latencyMs": 159,
           "evidence": {
             "count": 100
           }
@@ -280,8 +280,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:14.031Z",
-          "latencyMs": 126,
+          "checkedAt": "2026-06-17T15:29:16.085Z",
+          "latencyMs": 76,
           "evidence": {
             "count": 7
           }
@@ -296,8 +296,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:14.652Z",
-          "latencyMs": 621,
+          "checkedAt": "2026-06-17T15:29:16.388Z",
+          "latencyMs": 303,
           "evidence": {
             "blogCount": 7,
             "blogDetailChecked": true,
@@ -324,8 +324,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:14.749Z",
-          "latencyMs": 97,
+          "checkedAt": "2026-06-17T15:29:16.428Z",
+          "latencyMs": 40,
           "evidence": {
             "object": "list",
             "modelCount": 1
@@ -341,8 +341,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:14.848Z",
-          "latencyMs": 99,
+          "checkedAt": "2026-06-17T15:29:16.581Z",
+          "latencyMs": 153,
           "evidence": {
             "status": 402,
             "payToPresent": true,
@@ -598,14 +598,14 @@
       "priority": 30,
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
-      "status": "degraded",
-      "lastCheckedAt": "2026-06-17T15:12:12.261Z",
-      "checksPassed": 2,
+      "status": "operational",
+      "lastCheckedAt": "2026-06-17T15:29:14.936Z",
+      "checksPassed": 3,
       "checksTotal": 3,
-      "checksFailed": 1,
+      "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 304785,
-      "message": "remote agent did not become ready; last state=provisioning",
+      "latencyP95Ms": 194240,
+      "message": "All required checks are passing.",
       "checks": [
         {
           "id": "remote-agent-create",
@@ -617,11 +617,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:03:54.000Z",
-          "latencyMs": 176609,
+          "checkedAt": "2026-06-17T15:22:53.427Z",
+          "latencyMs": 193431,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "agentId": "30253430-cdea-4d47-a634-7e9cb989a0ac",
+            "agentId": "90a89f70-6d3f-4d58-bd2d-53609b28dbea",
             "vmIdPresent": true,
             "remoteState": "running",
             "runtimeVersion": "latest"
@@ -637,40 +637,40 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:07:07.476Z",
-          "latencyMs": 193476,
+          "checkedAt": "2026-06-17T15:26:07.667Z",
+          "latencyMs": 194240,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "agentId": "d18b82cd-be86-4b2b-8eea-addbd0f340ba",
+            "agentId": "5d5ce3b7-6c63-4669-ac7e-92d15369db86",
             "readyState": {
               "state": "running",
-              "uptime_seconds": 191,
+              "uptime_seconds": 192,
               "active_sessions": 0,
-              "agent_id": "d18b82cd-be86-4b2b-8eea-addbd0f340ba",
-              "name": "aura-status-remote-1781708634120",
+              "agent_id": "5d5ce3b7-6c63-4669-ac7e-92d15369db86",
+              "name": "aura-status-remote-1781709773517",
               "cpu_millicores": 4000,
               "memory_mb": 16384,
               "vm_instance_type": "m6a.xlarge",
               "runtime_version": "latest",
               "harness_git_sha": "5ac2aa3e5d4cdc475d19d32b1b9c57a74946c97b",
               "isolation": "confidentialvm",
-              "endpoint": "10.0.3.90:8080",
-              "created_at": "2026-06-17T15:03:55.971068533Z"
+              "endpoint": "10.0.3.96:8080",
+              "created_at": "2026-06-17T15:22:55.012084920Z"
             },
             "state": {
               "state": "running",
-              "uptime_seconds": 191,
+              "uptime_seconds": 192,
               "active_sessions": 0,
-              "agent_id": "d18b82cd-be86-4b2b-8eea-addbd0f340ba",
-              "name": "aura-status-remote-1781708634120",
+              "agent_id": "5d5ce3b7-6c63-4669-ac7e-92d15369db86",
+              "name": "aura-status-remote-1781709773517",
               "cpu_millicores": 4000,
               "memory_mb": 16384,
               "vm_instance_type": "m6a.xlarge",
               "runtime_version": "latest",
               "harness_git_sha": "5ac2aa3e5d4cdc475d19d32b1b9c57a74946c97b",
               "isolation": "confidentialvm",
-              "endpoint": "10.0.3.90:8080",
-              "created_at": "2026-06-17T15:03:55.971068533Z"
+              "endpoint": "10.0.3.96:8080",
+              "created_at": "2026-06-17T15:22:55.012084920Z"
             }
           }
         },
@@ -681,133 +681,17 @@
           "runtimeLabel": "Production API",
           "statusImpact": "feature",
           "required": false,
-          "status": "fail",
-          "featureStatus": "degraded",
-          "message": "remote agent did not become ready; last state=provisioning",
-          "checkedAt": "2026-06-17T15:12:12.261Z",
-          "latencyMs": 304785,
-          "evidence": {},
-          "investigation": {
-            "schemaVersion": 1,
-            "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-runtime:3f14e5583682",
-            "featureId": "remote-agents",
-            "featureLabel": "Remote Agents",
-            "checkId": "remote-agent-runtime",
-            "runtimeEnvironment": "production-api",
-            "title": "remote-agent-runtime eval failure: agent stuck in provisioning state, runtime chat never reached",
-            "status": "ready",
-            "checkStatus": "fail",
-            "featureStatus": "degraded",
-            "generatedAt": "2026-06-17T15:12:16.615Z",
-            "environment": "production",
-            "source": "desktop-nightly-release",
+          "status": "pass",
+          "featureStatus": "operational",
+          "message": "Check passed",
+          "checkedAt": "2026-06-17T15:29:14.936Z",
+          "latencyMs": 187269,
+          "evidence": {
+            "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
+            "agentId": "dd6f453b-e692-4356-8c1a-35d49cbd3ce7",
+            "model": "aura-claude-opus-4-8",
             "provider": "anthropic",
-            "model": "claude-sonnet-4-6",
-            "confidence": "medium",
-            "summary": "The remote-agent-runtime eval failed because the provisioned remote agent never advanced beyond the provisioning state within the allowed window, so the runner could not reach the agent runtime to collect the required response evidence. This is an eval-layer failure localized to the remote agent VM readiness-to-runtime transition; no user-traffic or incident signals are present in the packet.",
-            "rootCause": "The remote agent VM was created and its swarm state was confirmed as running by the preceding sibling checks (remote-agent-create and remote-agent-state both passed), but the remote-agent-runtime probe timed out waiting for the agent to become ready for runtime interaction. The check message \"remote agent did not become ready; last state=provisioning\" (evidence id: failed-check.message) indicates the probe's internal readiness poll observed the agent in a provisioning state at the point it gave up, even though the sibling state check had observed state=running roughly 5 minutes earlier. The runner branch in infra/evals/status/run-status-probes.mjs (lines 1372–1377) calls createAgent and then awaits runtime readiness; that readiness gate was never satisfied, so no evidence object was populated and all five required contract fields (orgId, agentId, model, provider, message) are missing (evidence id: expected-output.missing-required-evidence). The root cause is uncertain between two competing hypotheses: (1) the agent runtime process inside the VM was slow or failed to start after the VM reached running state, causing the readiness poll to time out; or (2) the eval probe's readiness polling logic or timeout threshold is insufficient to cover the actual time the runtime process needs to become reachable after VM boot. The check ran for 304,785 ms (evidence id: failed-check.timing), which exceeds the warningLatencyMs of 300,000 ms but is below the outageLatencyMs of 420,000 ms, suggesting the probe hit its own internal deadline before the configured outage threshold.",
-            "proof": [
-              "failed-check.message: check message is 'remote agent did not become ready; last state=provisioning', confirming the readiness poll never observed a ready state.",
-              "failed-check.timing: latencyMs=304785, which exceeds the warningLatencyMs threshold of 300000 ms defined in infra/evals/status/features.json line 153 (evidence id: source.infra/evals/status/features.json:153).",
-              "failed-check.evidence: the evidence object is empty ({}), confirming no runtime response was captured and all five required contract fields are absent.",
-              "expected-output.missing-required-evidence: all five required evidence fields (orgId, agentId, model, provider, message) are missing, matching the contract defined at infra/evals/status/check-expectations.json lines 194-198 (evidence id: source-context.infra/evals/status/check-expectations.json:190-198).",
-              "sibling.remote-agent-create: passed with remoteState=running and vmIdPresent=true at 15:03:54Z, confirming the VM was created and initially running before the runtime probe started.",
-              "sibling.remote-agent-state: passed with state=running and uptime_seconds=191 at 15:07:07Z (the same timestamp as the runtime probe's startedAt), confirming the VM was still running when the runtime probe began.",
-              "source-context.infra/evals/status/run-status-probes.mjs:1369-1377: the runner branch calls createAgent then awaits runtime readiness inside withCleanup; the probe returned a failure rather than a skip, confirming args.token was present and the runtime path was fully exercised."
-            ],
-            "possibleCauses": [
-              "The remote agent runtime process (harness) inside the VM was slow to start or failed to become reachable after the VM reached running state, causing the probe's internal readiness poll to exhaust its deadline. The sibling state check confirmed state=running at 15:07:07Z but the runtime probe ran from 15:07:07Z to 15:12:12Z (~305 s) without observing readiness, suggesting the runtime process lagged behind VM-level state.",
-              "The eval probe's internal readiness polling timeout or retry interval is too short relative to the actual time the remote agent runtime needs to become reachable after VM boot, causing a false failure even when the runtime would eventually become ready.",
-              "A transient infrastructure condition (e.g., network routing to the agent endpoint 10.0.3.90:8080 observed in sibling.remote-agent-state evidence, VM resource contention, or harness startup failure) prevented the runtime from becoming reachable within the probe window.",
-              "The createAgent call inside the runtime probe (run-status-probes.mjs line 1377) may have provisioned a second agent distinct from the one validated by the sibling checks, and that second agent's VM experienced a slower or failed startup."
-            ],
-            "reproductionSteps": [
-              {
-                "label": "Re-run only the remote-agent-runtime probe against production-api",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the provisioning stall."
-              },
-              {
-                "label": "Run the full remote-agents feature check suite to observe sibling pass/fail correlation",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-                "details": "Running all three checks in sequence will show whether the runtime probe consistently fails after the state check passes, and whether the timing gap between state=running and runtime readiness is reproducible."
-              },
-              {
-                "label": "Inspect the runner readiness polling logic in infra/evals/status/run-status-probes.mjs around and after line 1377",
-                "details": "Review the createAgent call and the subsequent readiness polling loop to identify the poll interval, maximum retry count, and the condition used to declare the agent ready for runtime interaction."
-              },
-              {
-                "label": "Review the agent endpoint reachability at the time of failure",
-                "details": "The sibling state check recorded endpoint=10.0.3.90:8080 for the agent. Determine whether the runtime probe attempts to connect to this endpoint and whether connectivity or TLS/auth issues could prevent readiness from being observed."
-              }
-            ],
-            "affectedAreas": [
-              {
-                "label": "remote-agent-runtime eval check",
-                "path": "infra/evals/status/run-status-probes.mjs",
-                "reason": "The runner branch at lines 1372-1377 executes the failing probe. The readiness polling logic within this branch is the immediate site of the timeout.",
-                "details": "Eval-layer failure only; not a confirmed user-facing outage."
-              },
-              {
-                "label": "remote-agent-runtime expected-output contract",
-                "path": "infra/evals/status/check-expectations.json",
-                "reason": "The contract at lines 194-198 requires orgId, agentId, model, provider, and message. All five are missing because the runtime was never reached.",
-                "details": "Contract validation error: Missing expected evidence: orgId, agentId, model, provider, message."
-              },
-              {
-                "label": "Remote agent VM runtime readiness (production-api)",
-                "reason": "The VM reached running state (confirmed by sibling checks) but the runtime process inside the VM did not become reachable within the probe window. This is the runtime area where the stall occurred.",
-                "details": "Localized to the remote agent runtime process startup path, not the VM provisioning or state-polling paths which both passed."
-              },
-              {
-                "label": "remote-agents feature registry entry",
-                "path": "infra/evals/status/features.json",
-                "reason": "The feature is configured with degradedAfterFailures=1, meaning this single failure is sufficient to mark the remote-agents feature as degraded in the observability dashboard.",
-                "details": "remote-agent-runtime is marked required=false, so this does not count toward an outage threshold on its own."
-              }
-            ],
-            "recommendedNextActions": [
-              "Re-run the remote-agent-runtime probe immediately using the reproduction command to determine if the failure is transient or persistent.",
-              "Inspect the readiness polling loop in infra/evals/status/run-status-probes.mjs after line 1377 to identify the exact poll interval and maximum wait duration used before the probe declares the agent not ready.",
-              "Correlate the probe's observed latency (304,785 ms) against the agent's actual runtime startup time using VM-side or harness logs to determine whether the runtime process started within the probe window or failed to start.",
-              "If the readiness poll timeout is confirmed to be shorter than the actual runtime startup time, adjust the polling parameters in infra/evals/status/run-status-probes.mjs to allow sufficient time for the remote agent runtime to become reachable after VM boot.",
-              "Verify whether the remote-agent-runtime check's required=false designation in features.json is intentional given that a failure marks the feature degraded (degradedAfterFailures=1); if runtime reachability is critical, consider whether the check severity should be elevated."
-            ],
-            "recommendedVerifierProbes": [
-              {
-                "label": "Re-run remote-agent-runtime probe in isolation",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-                "reason": "Directly reproduces the failing eval to determine if the provisioning stall is persistent or transient. A pass on re-run would indicate a transient infrastructure event; a repeated fail would confirm a systematic issue."
-              },
-              {
-                "label": "Run full remote-agents sibling suite together",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-                "reason": "Observing all three checks in a single run will reveal whether the runtime probe consistently fails after the state check passes and will capture the timing gap between VM running state and runtime readiness."
-              },
-              {
-                "label": "Inspect readiness polling logic in run-status-probes.mjs after line 1377",
-                "reason": "Reviewing the poll interval, retry count, and readiness condition after the createAgent call will determine whether the probe's internal deadline is shorter than the check's configured warningLatencyMs of 300,000 ms, which would explain the timeout."
-              }
-            ],
-            "whatWouldDisproveThis": [
-              "If a re-run of the remote-agent-runtime probe passes consistently and the agent reaches ready state well within the 300,000 ms warning threshold, this would suggest the failure was a transient infrastructure event rather than a systematic readiness timing problem.",
-              "If the runner's internal readiness poll is shown to have a timeout shorter than 304,785 ms (the observed latency), that would confirm the probe hit its own deadline before the configured check timeout, pointing to a probe configuration issue rather than a VM startup issue.",
-              "If the createAgent call in the runtime probe (run-status-probes.mjs line 1377) is confirmed to reuse the same agent validated by the sibling checks (rather than creating a new one), it would rule out the hypothesis that a second agent with a slower startup was provisioned.",
-              "If infrastructure logs show the harness process inside the VM started and became healthy within 305 seconds of VM creation, that would disprove the hypothesis that the runtime process itself failed to start and instead point to a connectivity or routing issue between the probe and the agent endpoint.",
-              "If the remote-agent-runtime check passes on the very next scheduled run without any changes, that would support a transient cause and weaken the hypothesis of a systematic readiness gap."
-            ],
-            "followUpEvals": [
-              "Add a dedicated eval that measures the time delta between VM state=running (as observed by remote-agent-state) and runtime readiness (as observed by remote-agent-runtime) to establish a baseline and detect regressions in runtime startup latency.",
-              "Add an eval that probes the agent runtime endpoint directly (e.g., the endpoint field observed in sibling state evidence) to distinguish VM-level readiness from runtime-process-level readiness.",
-              "Add a historical trend eval for remote-agent-runtime latency to detect if the probe is consistently approaching the warningLatencyMs threshold, which would indicate a growing startup time problem before it causes failures.",
-              "Add an eval that validates the readiness polling configuration in run-status-probes.mjs (poll interval and max retries) against the configured warningLatencyMs and outageLatencyMs thresholds to catch miscalibration at the eval-infrastructure level."
-            ],
-            "evidenceDigest": {
-              "message": "remote agent did not become ready; last state=provisioning",
-              "latencyMs": 304785,
-              "evidence": {}
-            }
+            "message": "hello from aura"
           }
         }
       ]
@@ -820,12 +704,12 @@
       "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
       "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:51.429Z",
+      "lastCheckedAt": "2026-06-17T15:19:36.407Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1604,
+      "latencyP95Ms": 777,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -838,13 +722,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:48.689Z",
-          "latencyMs": 1575,
+          "checkedAt": "2026-06-17T15:19:35.031Z",
+          "latencyMs": 395,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "fb9fb5c9-ac60-4db4-b7fe-6c515c367ea1",
+            "projectId": "e34c4b7d-3ab1-4555-89bb-679300cff9bb",
             "listed": true,
-            "projectName": "AURA Status Project 1781708447310"
+            "projectName": "AURA Status Project 1781709574706"
           }
         },
         {
@@ -857,13 +741,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:50.293Z",
-          "latencyMs": 1604,
+          "checkedAt": "2026-06-17T15:19:35.808Z",
+          "latencyMs": 777,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "61cdfca4-6c63-46fb-954d-0a7cd9166aeb",
-            "specId": "ad3e846b-276f-4174-ad0b-e5ae69fec16b",
-            "taskId": "f6bb6be9-5af1-487b-98f3-f08fa73b92b1",
+            "projectId": "4f7ad2c9-7574-4471-993a-8e81f5191dba",
+            "specId": "c0c1fb5d-4e7b-4495-8060-5734daf1d735",
+            "taskId": "417a159a-92b1-41dd-b4be-b3c0f7707da4",
             "specHashPresent": true,
             "taskCount": 1
           }
@@ -878,10 +762,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:50.935Z",
-          "latencyMs": 642,
+          "checkedAt": "2026-06-17T15:19:36.147Z",
+          "latencyMs": 339,
           "evidence": {
-            "projectId": "713a5aee-ea9c-433b-8bb3-b29a53500b68",
+            "projectId": "f5b378d2-c0e4-49c2-a7e2-90a12f098397",
             "keys": [
               "total_tasks",
               "pending_tasks",
@@ -913,10 +797,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:51.429Z",
-          "latencyMs": 494,
+          "checkedAt": "2026-06-17T15:19:36.407Z",
+          "latencyMs": 260,
           "evidence": {
-            "projectId": "09720aa6-d159-4d44-87e3-8f995c16a294",
+            "projectId": "29d0d03d-8d16-4608-a72c-67a2561ee318",
             "status": null,
             "keys": [
               "running",
@@ -938,12 +822,12 @@
       "description": "Storage-backed note folder, note, transition, comment, and project tree roundtrips.",
       "publicSummary": "Project notes can be created, updated, commented on, and listed.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:53.367Z",
+      "lastCheckedAt": "2026-06-17T15:19:37.382Z",
       "checksPassed": 1,
       "checksTotal": 1,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1938,
+      "latencyP95Ms": 975,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -956,14 +840,14 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:53.367Z",
-          "latencyMs": 1938,
+          "checkedAt": "2026-06-17T15:19:37.382Z",
+          "latencyMs": 975,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "f44f51ce-0c6b-414c-afdd-87d3562ce354",
-            "folderId": "41bad38d-9fc5-44b1-8d49-c207a1e7c70e",
-            "noteId": "14484ea6-8d48-4c92-a700-d48ef8ebaae1",
-            "commentId": "89cae941-e461-4b83-a9f8-402927603f52",
+            "projectId": "a46e6ca8-d680-40d3-8499-bcb0f252090b",
+            "folderId": "004e0743-8ed8-4dcd-9f91-8585c52440bf",
+            "noteId": "c6d9a299-c95a-4600-bff1-18d938a98a4f",
+            "commentId": "1bec89a6-aa9e-4258-8df7-a9979bbf66e0",
             "folderLinked": true,
             "titleUpdated": true,
             "transitionStatus": "draft",
@@ -982,7 +866,7 @@
       "description": "Process workflow lists, process creation, default ignition node creation, desktop release trigger/run lifecycle, and cleanup.",
       "publicSummary": "Process workflows can be listed, created, and triggered in the desktop release.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:54.766Z",
+      "lastCheckedAt": "2026-06-17T15:19:38.220Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
@@ -1000,8 +884,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:53.715Z",
-          "latencyMs": 348,
+          "checkedAt": "2026-06-17T15:19:37.573Z",
+          "latencyMs": 191,
           "evidence": {
             "processes": 0,
             "folders": 0
@@ -1017,11 +901,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:54.766Z",
-          "latencyMs": 1051,
+          "checkedAt": "2026-06-17T15:19:38.220Z",
+          "latencyMs": 647,
           "evidence": {
-            "projectId": "0d5223ae-dd3a-45b0-90ae-dec441516ff4",
-            "processId": "1a1f387b-5824-4907-b65b-d03c62bbe1d4",
+            "projectId": "ba1a0814-6db0-488e-a35a-4434f893414f",
+            "processId": "47979366-3e3a-4c73-8443-e5189ac6b722",
             "nodeCount": 1
           }
         },
@@ -1174,12 +1058,12 @@
       "description": "Marketplace agent catalog and harness bootstrap health.",
       "publicSummary": "Marketplace and bootstrap services are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:56.170Z",
+      "lastCheckedAt": "2026-06-17T15:19:39.104Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1159,
+      "latencyP95Ms": 712,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1192,8 +1076,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:55.925Z",
-          "latencyMs": 1159,
+          "checkedAt": "2026-06-17T15:19:38.932Z",
+          "latencyMs": 712,
           "evidence": {
             "count": 13
           }
@@ -1208,12 +1092,12 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:56.170Z",
-          "latencyMs": 245,
+          "checkedAt": "2026-06-17T15:19:39.104Z",
+          "latencyMs": 172,
           "evidence": {
             "reachable": true,
             "url": "https://aura-harness-latest.onrender.com",
-            "latencyMs": 72,
+            "latencyMs": 63,
             "status": 200
           }
         }
@@ -1227,12 +1111,12 @@
       "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
       "publicSummary": "Integrations and billing surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:47.114Z",
+      "lastCheckedAt": "2026-06-17T15:19:34.636Z",
       "checksPassed": 6,
       "checksTotal": 6,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 608,
+      "latencyP95Ms": 245,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1245,8 +1129,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:45.345Z",
-          "latencyMs": 357,
+          "checkedAt": "2026-06-17T15:19:33.757Z",
+          "latencyMs": 245,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 0
@@ -1262,8 +1146,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:45.637Z",
-          "latencyMs": 292,
+          "checkedAt": "2026-06-17T15:19:33.940Z",
+          "latencyMs": 183,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 4
@@ -1279,8 +1163,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:45.930Z",
-          "latencyMs": 293,
+          "checkedAt": "2026-06-17T15:19:34.107Z",
+          "latencyMs": 167,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "toolCount": 4,
@@ -1304,8 +1188,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:46.077Z",
-          "latencyMs": 147,
+          "checkedAt": "2026-06-17T15:19:34.206Z",
+          "latencyMs": 99,
           "evidence": {
             "keys": [
               "is_subscribed",
@@ -1326,8 +1210,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:46.506Z",
-          "latencyMs": 429,
+          "checkedAt": "2026-06-17T15:19:34.398Z",
+          "latencyMs": 192,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "keys": [
@@ -1347,8 +1231,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:47.114Z",
-          "latencyMs": 608,
+          "checkedAt": "2026-06-17T15:19:34.636Z",
+          "latencyMs": 238,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "accountKeys": [
@@ -1377,12 +1261,12 @@
       "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
       "publicSummary": "Community and feedback data surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:57.391Z",
+      "lastCheckedAt": "2026-06-17T15:19:39.996Z",
       "checksPassed": 5,
       "checksTotal": 5,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 301,
+      "latencyP95Ms": 386,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1395,8 +1279,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:56.673Z",
-          "latencyMs": 301,
+          "checkedAt": "2026-06-17T15:19:39.576Z",
+          "latencyMs": 386,
           "evidence": {
             "count": 50
           }
@@ -1411,8 +1295,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:56.768Z",
-          "latencyMs": 95,
+          "checkedAt": "2026-06-17T15:19:39.616Z",
+          "latencyMs": 40,
           "evidence": {
             "count": 0
           }
@@ -1427,8 +1311,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:56.970Z",
-          "latencyMs": 202,
+          "checkedAt": "2026-06-17T15:19:39.755Z",
+          "latencyMs": 139,
           "evidence": {
             "count": 50
           }
@@ -1443,8 +1327,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:57.262Z",
-          "latencyMs": 292,
+          "checkedAt": "2026-06-17T15:19:39.931Z",
+          "latencyMs": 176,
           "evidence": {
             "count": 50
           }
@@ -1459,8 +1343,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:57.391Z",
-          "latencyMs": 129,
+          "checkedAt": "2026-06-17T15:19:39.996Z",
+          "latencyMs": 65,
           "evidence": {
             "present": true,
             "keys": [
@@ -1557,12 +1441,12 @@
       "description": "Stream reattachment registry and debug run index.",
       "publicSummary": "Stream and debug inspection endpoints are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:00:56.372Z",
+      "lastCheckedAt": "2026-06-17T15:19:39.190Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 108,
+      "latencyP95Ms": 43,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1575,8 +1459,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:56.278Z",
-          "latencyMs": 108,
+          "checkedAt": "2026-06-17T15:19:39.147Z",
+          "latencyMs": 43,
           "evidence": {
             "count": 0
           }
@@ -1591,8 +1475,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:00:56.372Z",
-          "latencyMs": 94,
+          "checkedAt": "2026-06-17T15:19:39.190Z",
+          "latencyMs": 43,
           "evidence": {
             "keys": [
               "projects"
@@ -1609,12 +1493,12 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:12:16.385Z",
+      "lastCheckedAt": "2026-06-17T15:29:17.783Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 3,
+      "latencyP95Ms": 1,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1627,8 +1511,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "3/4 eval summary artifacts found",
-          "checkedAt": "2026-06-17T15:12:16.382Z",
-          "latencyMs": 2,
+          "checkedAt": "2026-06-17T15:29:17.782Z",
+          "latencyMs": 0,
           "evidence": {
             "files": [
               {
@@ -1638,19 +1522,19 @@
               {
                 "file": "infra/evals/reports/baselines/smoke-summary.json",
                 "exists": true,
-                "mtime": "2026-06-17T14:56:26.023Z",
+                "mtime": "2026-06-17T15:19:26.261Z",
                 "size": 2796
               },
               {
                 "file": "infra/evals/reports/baselines/chat-core-summary.json",
                 "exists": true,
-                "mtime": "2026-06-17T14:56:26.023Z",
+                "mtime": "2026-06-17T15:19:26.260Z",
                 "size": 11513
               },
               {
                 "file": "infra/evals/reports/baselines/workflow-summary.json",
                 "exists": true,
-                "mtime": "2026-06-17T14:56:26.023Z",
+                "mtime": "2026-06-17T15:19:26.261Z",
                 "size": 2219
               }
             ],
@@ -1668,8 +1552,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:16.385Z",
-          "latencyMs": 3,
+          "checkedAt": "2026-06-17T15:29:17.783Z",
+          "latencyMs": 1,
           "evidence": {
             "registryPresent": true,
             "eventCount": 45,
@@ -1693,12 +1577,12 @@
       "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "AURA's public web surfaces are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-17T15:12:16.380Z",
+      "lastCheckedAt": "2026-06-17T15:29:17.782Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 951,
+      "latencyP95Ms": 755,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1711,17 +1595,17 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Informational runtime check",
-          "checkedAt": "2026-06-17T15:12:15.248Z",
-          "latencyMs": 91,
+          "checkedAt": "2026-06-17T15:29:16.893Z",
+          "latencyMs": 142,
           "evidence": {
             "schemaVersion": 1,
-            "overall": "major_outage",
+            "overall": "degraded",
             "generatedAtPresent": true,
-            "source": "github-actions",
+            "source": "desktop-nightly-release",
             "featureCount": 19,
             "totalsFeatures": 19,
             "unknownFeatureCount": 0,
-            "snapshotAgeMinutes": 230,
+            "snapshotAgeMinutes": 14,
             "hasLiveSource": true,
             "hasNonUnknownFeatureData": true,
             "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
@@ -1738,8 +1622,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:15.157Z",
-          "latencyMs": 309,
+          "checkedAt": "2026-06-17T15:29:16.751Z",
+          "latencyMs": 170,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -1756,8 +1640,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:15.429Z",
-          "latencyMs": 181,
+          "checkedAt": "2026-06-17T15:29:17.027Z",
+          "latencyMs": 134,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -1774,8 +1658,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-17T15:12:16.380Z",
-          "latencyMs": 951,
+          "checkedAt": "2026-06-17T15:29:17.782Z",
+          "latencyMs": 755,
           "evidence": {
             "allRoutesOk": true,
             "routeCount": 8,
@@ -1828,128 +1712,5 @@
       ]
     }
   ],
-  "investigations": [
-    {
-      "schemaVersion": 1,
-      "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-runtime:3f14e5583682",
-      "featureId": "remote-agents",
-      "featureLabel": "Remote Agents",
-      "checkId": "remote-agent-runtime",
-      "runtimeEnvironment": "production-api",
-      "title": "remote-agent-runtime eval failure: agent stuck in provisioning state, runtime chat never reached",
-      "status": "ready",
-      "checkStatus": "fail",
-      "featureStatus": "degraded",
-      "generatedAt": "2026-06-17T15:12:16.615Z",
-      "environment": "production",
-      "source": "desktop-nightly-release",
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6",
-      "confidence": "medium",
-      "summary": "The remote-agent-runtime eval failed because the provisioned remote agent never advanced beyond the provisioning state within the allowed window, so the runner could not reach the agent runtime to collect the required response evidence. This is an eval-layer failure localized to the remote agent VM readiness-to-runtime transition; no user-traffic or incident signals are present in the packet.",
-      "rootCause": "The remote agent VM was created and its swarm state was confirmed as running by the preceding sibling checks (remote-agent-create and remote-agent-state both passed), but the remote-agent-runtime probe timed out waiting for the agent to become ready for runtime interaction. The check message \"remote agent did not become ready; last state=provisioning\" (evidence id: failed-check.message) indicates the probe's internal readiness poll observed the agent in a provisioning state at the point it gave up, even though the sibling state check had observed state=running roughly 5 minutes earlier. The runner branch in infra/evals/status/run-status-probes.mjs (lines 1372–1377) calls createAgent and then awaits runtime readiness; that readiness gate was never satisfied, so no evidence object was populated and all five required contract fields (orgId, agentId, model, provider, message) are missing (evidence id: expected-output.missing-required-evidence). The root cause is uncertain between two competing hypotheses: (1) the agent runtime process inside the VM was slow or failed to start after the VM reached running state, causing the readiness poll to time out; or (2) the eval probe's readiness polling logic or timeout threshold is insufficient to cover the actual time the runtime process needs to become reachable after VM boot. The check ran for 304,785 ms (evidence id: failed-check.timing), which exceeds the warningLatencyMs of 300,000 ms but is below the outageLatencyMs of 420,000 ms, suggesting the probe hit its own internal deadline before the configured outage threshold.",
-      "proof": [
-        "failed-check.message: check message is 'remote agent did not become ready; last state=provisioning', confirming the readiness poll never observed a ready state.",
-        "failed-check.timing: latencyMs=304785, which exceeds the warningLatencyMs threshold of 300000 ms defined in infra/evals/status/features.json line 153 (evidence id: source.infra/evals/status/features.json:153).",
-        "failed-check.evidence: the evidence object is empty ({}), confirming no runtime response was captured and all five required contract fields are absent.",
-        "expected-output.missing-required-evidence: all five required evidence fields (orgId, agentId, model, provider, message) are missing, matching the contract defined at infra/evals/status/check-expectations.json lines 194-198 (evidence id: source-context.infra/evals/status/check-expectations.json:190-198).",
-        "sibling.remote-agent-create: passed with remoteState=running and vmIdPresent=true at 15:03:54Z, confirming the VM was created and initially running before the runtime probe started.",
-        "sibling.remote-agent-state: passed with state=running and uptime_seconds=191 at 15:07:07Z (the same timestamp as the runtime probe's startedAt), confirming the VM was still running when the runtime probe began.",
-        "source-context.infra/evals/status/run-status-probes.mjs:1369-1377: the runner branch calls createAgent then awaits runtime readiness inside withCleanup; the probe returned a failure rather than a skip, confirming args.token was present and the runtime path was fully exercised."
-      ],
-      "possibleCauses": [
-        "The remote agent runtime process (harness) inside the VM was slow to start or failed to become reachable after the VM reached running state, causing the probe's internal readiness poll to exhaust its deadline. The sibling state check confirmed state=running at 15:07:07Z but the runtime probe ran from 15:07:07Z to 15:12:12Z (~305 s) without observing readiness, suggesting the runtime process lagged behind VM-level state.",
-        "The eval probe's internal readiness polling timeout or retry interval is too short relative to the actual time the remote agent runtime needs to become reachable after VM boot, causing a false failure even when the runtime would eventually become ready.",
-        "A transient infrastructure condition (e.g., network routing to the agent endpoint 10.0.3.90:8080 observed in sibling.remote-agent-state evidence, VM resource contention, or harness startup failure) prevented the runtime from becoming reachable within the probe window.",
-        "The createAgent call inside the runtime probe (run-status-probes.mjs line 1377) may have provisioned a second agent distinct from the one validated by the sibling checks, and that second agent's VM experienced a slower or failed startup."
-      ],
-      "reproductionSteps": [
-        {
-          "label": "Re-run only the remote-agent-runtime probe against production-api",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-          "details": "Use the same environment variables as the scheduled observability workflow to reproduce the provisioning stall."
-        },
-        {
-          "label": "Run the full remote-agents feature check suite to observe sibling pass/fail correlation",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-          "details": "Running all three checks in sequence will show whether the runtime probe consistently fails after the state check passes, and whether the timing gap between state=running and runtime readiness is reproducible."
-        },
-        {
-          "label": "Inspect the runner readiness polling logic in infra/evals/status/run-status-probes.mjs around and after line 1377",
-          "details": "Review the createAgent call and the subsequent readiness polling loop to identify the poll interval, maximum retry count, and the condition used to declare the agent ready for runtime interaction."
-        },
-        {
-          "label": "Review the agent endpoint reachability at the time of failure",
-          "details": "The sibling state check recorded endpoint=10.0.3.90:8080 for the agent. Determine whether the runtime probe attempts to connect to this endpoint and whether connectivity or TLS/auth issues could prevent readiness from being observed."
-        }
-      ],
-      "affectedAreas": [
-        {
-          "label": "remote-agent-runtime eval check",
-          "path": "infra/evals/status/run-status-probes.mjs",
-          "reason": "The runner branch at lines 1372-1377 executes the failing probe. The readiness polling logic within this branch is the immediate site of the timeout.",
-          "details": "Eval-layer failure only; not a confirmed user-facing outage."
-        },
-        {
-          "label": "remote-agent-runtime expected-output contract",
-          "path": "infra/evals/status/check-expectations.json",
-          "reason": "The contract at lines 194-198 requires orgId, agentId, model, provider, and message. All five are missing because the runtime was never reached.",
-          "details": "Contract validation error: Missing expected evidence: orgId, agentId, model, provider, message."
-        },
-        {
-          "label": "Remote agent VM runtime readiness (production-api)",
-          "reason": "The VM reached running state (confirmed by sibling checks) but the runtime process inside the VM did not become reachable within the probe window. This is the runtime area where the stall occurred.",
-          "details": "Localized to the remote agent runtime process startup path, not the VM provisioning or state-polling paths which both passed."
-        },
-        {
-          "label": "remote-agents feature registry entry",
-          "path": "infra/evals/status/features.json",
-          "reason": "The feature is configured with degradedAfterFailures=1, meaning this single failure is sufficient to mark the remote-agents feature as degraded in the observability dashboard.",
-          "details": "remote-agent-runtime is marked required=false, so this does not count toward an outage threshold on its own."
-        }
-      ],
-      "recommendedNextActions": [
-        "Re-run the remote-agent-runtime probe immediately using the reproduction command to determine if the failure is transient or persistent.",
-        "Inspect the readiness polling loop in infra/evals/status/run-status-probes.mjs after line 1377 to identify the exact poll interval and maximum wait duration used before the probe declares the agent not ready.",
-        "Correlate the probe's observed latency (304,785 ms) against the agent's actual runtime startup time using VM-side or harness logs to determine whether the runtime process started within the probe window or failed to start.",
-        "If the readiness poll timeout is confirmed to be shorter than the actual runtime startup time, adjust the polling parameters in infra/evals/status/run-status-probes.mjs to allow sufficient time for the remote agent runtime to become reachable after VM boot.",
-        "Verify whether the remote-agent-runtime check's required=false designation in features.json is intentional given that a failure marks the feature degraded (degradedAfterFailures=1); if runtime reachability is critical, consider whether the check severity should be elevated."
-      ],
-      "recommendedVerifierProbes": [
-        {
-          "label": "Re-run remote-agent-runtime probe in isolation",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-          "reason": "Directly reproduces the failing eval to determine if the provisioning stall is persistent or transient. A pass on re-run would indicate a transient infrastructure event; a repeated fail would confirm a systematic issue."
-        },
-        {
-          "label": "Run full remote-agents sibling suite together",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-          "reason": "Observing all three checks in a single run will reveal whether the runtime probe consistently fails after the state check passes and will capture the timing gap between VM running state and runtime readiness."
-        },
-        {
-          "label": "Inspect readiness polling logic in run-status-probes.mjs after line 1377",
-          "reason": "Reviewing the poll interval, retry count, and readiness condition after the createAgent call will determine whether the probe's internal deadline is shorter than the check's configured warningLatencyMs of 300,000 ms, which would explain the timeout."
-        }
-      ],
-      "whatWouldDisproveThis": [
-        "If a re-run of the remote-agent-runtime probe passes consistently and the agent reaches ready state well within the 300,000 ms warning threshold, this would suggest the failure was a transient infrastructure event rather than a systematic readiness timing problem.",
-        "If the runner's internal readiness poll is shown to have a timeout shorter than 304,785 ms (the observed latency), that would confirm the probe hit its own deadline before the configured check timeout, pointing to a probe configuration issue rather than a VM startup issue.",
-        "If the createAgent call in the runtime probe (run-status-probes.mjs line 1377) is confirmed to reuse the same agent validated by the sibling checks (rather than creating a new one), it would rule out the hypothesis that a second agent with a slower startup was provisioned.",
-        "If infrastructure logs show the harness process inside the VM started and became healthy within 305 seconds of VM creation, that would disprove the hypothesis that the runtime process itself failed to start and instead point to a connectivity or routing issue between the probe and the agent endpoint.",
-        "If the remote-agent-runtime check passes on the very next scheduled run without any changes, that would support a transient cause and weaken the hypothesis of a systematic readiness gap."
-      ],
-      "followUpEvals": [
-        "Add a dedicated eval that measures the time delta between VM state=running (as observed by remote-agent-state) and runtime readiness (as observed by remote-agent-runtime) to establish a baseline and detect regressions in runtime startup latency.",
-        "Add an eval that probes the agent runtime endpoint directly (e.g., the endpoint field observed in sibling state evidence) to distinguish VM-level readiness from runtime-process-level readiness.",
-        "Add a historical trend eval for remote-agent-runtime latency to detect if the probe is consistently approaching the warningLatencyMs threshold, which would indicate a growing startup time problem before it causes failures.",
-        "Add an eval that validates the readiness polling configuration in run-status-probes.mjs (poll interval and max retries) against the configured warningLatencyMs and outageLatencyMs thresholds to catch miscalibration at the eval-infrastructure level."
-      ],
-      "evidenceDigest": {
-        "message": "remote agent did not become ready; last state=provisioning",
-        "latencyMs": 304785,
-        "evidence": {}
-      }
-    }
-  ]
+  "investigations": []
 }
