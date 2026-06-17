@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useEffect,
   useState,
   type CSSProperties,
   type Dispatch,
@@ -155,6 +156,11 @@ function RemoteStatusContent({
 }: RemoteStatusContentProps) {
   const hasRemoteError = !!remoteStateError || !!remoteErrorMessage
   const [showLogs, setShowLogs] = useState(false)
+  // Auto-open the VM logs while the machine is provisioning so the user sees
+  // live boot/attestation output instead of an opaque "Starting up…" spinner.
+  useEffect(() => {
+    if (remoteStatus === "provisioning") setShowLogs(true)
+  }, [remoteStatus])
   return (
     <>
       <div className={styles.statusRow}>

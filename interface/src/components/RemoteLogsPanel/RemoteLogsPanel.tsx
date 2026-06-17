@@ -7,6 +7,9 @@ import styles from "./RemoteLogsPanel.module.css"
 /** Merged entries requested per refresh (newest kept by the gateway). */
 const LOG_TAIL = 200
 
+/** How often to auto-refresh the tail so boot/attestation output streams in. */
+const POLL_INTERVAL_MS = 3_000
+
 function formatLogTime(timestamp: string): string {
   const date = new Date(timestamp)
   if (Number.isNaN(date.getTime())) return timestamp
@@ -15,6 +18,13 @@ function formatLogTime(timestamp: string): string {
 
 interface RemoteLogsPanelProps {
   agentId: string
+  /**
+   * Poll the tail on an interval while mounted (default on). The gateway
+   * already merges live pod stdout with termination snapshots, so a periodic
+   * full-tail refetch is enough to stream boot/attestation output without a
+   * cursor.
+   */
+  live?: boolean
 }
 
 /**
@@ -23,30 +33,40 @@ interface RemoteLogsPanelProps {
  * hibernates/stops, each line tagged with its source. Detailed in-VM
  * agent logs stay sealed inside the guest and are not shown here.
  */
-export function RemoteLogsPanel({ agentId }: RemoteLogsPanelProps) {
+export function RemoteLogsPanel({ agentId, live = true }: RemoteLogsPanelProps) {
   const [entries, setEntries] = useState<RemoteVmLogEntry[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // No synchronous setState here: the initial-load effect calls this
-  // directly, and `loading` already starts true (refreshes flip it back
-  // on in the click handler).
-  const fetchLogs = useCallback(() => {
-    api.swarm
-      .getRemoteAgentLogs(agentId, LOG_TAIL)
-      .then((res) => {
-        setEntries(res.logs)
-        setError(null)
-      })
-      .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : "Failed to load logs")
-      })
-      .finally(() => setLoading(false))
-  }, [agentId])
+  // `silent` background polls must not flip the visible loading state or the
+  // panel would flash "Loading…" every few seconds. Only the initial load and
+  // the manual Refresh button surface the spinner.
+  const fetchLogs = useCallback(
+    (silent = false) => {
+      api.swarm
+        .getRemoteAgentLogs(agentId, LOG_TAIL)
+        .then((res) => {
+          setEntries(res.logs)
+          setError(null)
+        })
+        .catch((e: unknown) => {
+          if (!silent) {
+            setError(e instanceof Error ? e.message : "Failed to load logs")
+          }
+        })
+        .finally(() => {
+          if (!silent) setLoading(false)
+        })
+    },
+    [agentId],
+  )
 
   useEffect(() => {
     fetchLogs()
-  }, [fetchLogs])
+    if (!live) return
+    const interval = setInterval(() => fetchLogs(true), POLL_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [fetchLogs, live])
 
   return (
     <div className={styles.root}>
