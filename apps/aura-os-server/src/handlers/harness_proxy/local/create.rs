@@ -40,31 +40,47 @@ struct CreateSkillResponse {
     installed_on_agent: bool,
 }
 
-fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
-    let mut frontmatter = format!(
-        "---\ndescription: \"{}\"\n",
-        yaml_escape_scalar(&payload.description)
-    );
-    if let Some(ref tools) = payload.allowed_tools {
+/// Render the YAML frontmatter block for a user-authored skill.
+///
+/// Shared by the create and update flows so both emit byte-for-byte the
+/// same frontmatter shape — crucially including the `source:
+/// "user-created"` marker that `list_my_skills` / `delete_my_skill` rely
+/// on to tell user skills apart from shop-installed ones. Keeping a single
+/// renderer prevents the two endpoints from drifting.
+pub(super) fn render_skill_frontmatter(
+    description: &str,
+    allowed_tools: Option<&[String]>,
+    model: Option<&str>,
+    context: Option<&str>,
+    user_invocable: bool,
+    model_invocable: bool,
+) -> String {
+    let mut frontmatter = format!("---\ndescription: \"{}\"\n", yaml_escape_scalar(description));
+    if let Some(tools) = allowed_tools {
         frontmatter.push_str(&format!("allowed_tools: [{}]\n", tools.join(", ")));
     }
-    if let Some(ref model) = payload.model {
+    if let Some(model) = model {
         frontmatter.push_str(&format!("model: \"{}\"\n", yaml_escape_scalar(model)));
     }
-    if let Some(ref context) = payload.context {
+    if let Some(context) = context {
         frontmatter.push_str(&format!("context: \"{}\"\n", yaml_escape_scalar(context)));
     }
-    frontmatter.push_str(&format!(
-        "user_invocable: {}\n",
-        payload.user_invocable.unwrap_or(true)
-    ));
-    frontmatter.push_str(&format!(
-        "model_invocable: {}\n",
-        payload.model_invocable.unwrap_or(false)
-    ));
+    frontmatter.push_str(&format!("user_invocable: {user_invocable}\n"));
+    frontmatter.push_str(&format!("model_invocable: {model_invocable}\n"));
     frontmatter.push_str(&format!("source: \"{USER_CREATED_SOURCE_MARKER}\"\n"));
     frontmatter.push_str("---\n");
     frontmatter
+}
+
+fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
+    render_skill_frontmatter(
+        &payload.description,
+        payload.allowed_tools.as_deref(),
+        payload.model.as_deref(),
+        payload.context.as_deref(),
+        payload.user_invocable.unwrap_or(true),
+        payload.model_invocable.unwrap_or(false),
+    )
 }
 
 async fn maybe_install_on_agent(

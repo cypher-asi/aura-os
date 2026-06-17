@@ -1,4 +1,4 @@
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, post, put};
 use axum::Router;
 
 use crate::handlers::harness_proxy;
@@ -72,7 +72,7 @@ pub(super) fn harness_proxy_routes() -> Router<AppState> {
         )
         .route(
             "/api/harness/skills/mine/:name",
-            delete(harness_proxy::delete_my_skill),
+            put(harness_proxy::update_my_skill).delete(harness_proxy::delete_my_skill),
         )
         .route("/api/harness/skills/:name", get(harness_proxy::get_skill))
         .route(

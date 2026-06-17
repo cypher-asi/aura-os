@@ -13,3 +13,4 @@ mod proxy_forwards;
 mod skills_create;
 mod skills_delete;
 mod skills_list;
+mod skills_update;
