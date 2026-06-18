@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-06-18",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.691.1",
+    "title": "Editable user skills and faster eval smoke runs",
+    "intro": "A small but pointed day: user-authored skills can now be edited in place from the Agents panel with a strict consistency guarantee between disk and the live registry, and the functional evals workflow gets a meaningful speed and reliability tune-up.",
+    "entryCount": 1,
+    "highlights": [
+      "Edit user-authored skills directly from SkillsTab",
+      "Skill edits fail loud if the harness registry doesn't reload",
+      "Eval smoke jobs run in prebuilt Playwright containers with timeouts and concurrency guards"
+    ],
+    "rawCommitCount": 2,
+    "generatedAt": "2026-06-18T15:44:31.187Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.691.1",
+    "path": "history/2026-06-18.json"
+  },
+  {
     "date": "2026-06-17",
     "channel": "nightly",
     "version": "0.1.0-nightly.689.1",
