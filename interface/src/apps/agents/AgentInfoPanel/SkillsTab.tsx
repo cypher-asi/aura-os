@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Text, Button, ButtonMore, Modal } from "@cypher-asi/zui";
-import { Zap, Loader2, Plus, Trash2, FilePlus2, Store } from "lucide-react";
+import { Zap, Loader2, Plus, Trash2, Pencil, FilePlus2, Store } from "lucide-react";
 import { api } from "../../../api/client";
 import type { MySkillEntry, SkillInstalledAgentRef } from "../../../shared/api/harness-skills";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
@@ -9,6 +9,7 @@ import {
   type SidekickListSection,
 } from "../../../components/SidekickList";
 import { CreateSkillModal } from "./CreateSkillModal";
+import { SkillEditorModal } from "./SkillEditorModal";
 import { SkillShopModal } from "../../../components/SkillShopModal";
 import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
 import styles from "./SkillsTab.module.css";
@@ -38,6 +39,9 @@ interface SkillRowActionsProps {
   installed: boolean;
   loading: boolean;
   onAction: () => void;
+  /** When provided, the row shows an "Edit skill" action in its menu.
+   *  Only passed for user-authored ("My Skills") rows. */
+  onEdit?: () => void;
   /** When provided, the row shows a "Delete skill" action in its menu.
    *  Only passed for user-authored ("My Skills") rows — deleting
    *  removes the SKILL.md file and is a different operation from
@@ -57,6 +61,7 @@ function SkillRowActions({
   installed,
   loading,
   onAction,
+  onEdit,
   onDelete,
 }: SkillRowActionsProps) {
   const menuItems: Array<
@@ -66,6 +71,9 @@ function SkillRowActions({
     menuItems.push({ id: "uninstall", label: "Uninstall", icon: <Trash2 size={14} /> });
   } else if (onDelete) {
     menuItems.push({ id: "install", label: "Install", icon: <Plus size={14} /> });
+  }
+  if (onEdit) {
+    menuItems.push({ id: "edit", label: "Edit skill", icon: <Pencil size={14} /> });
   }
   if (onDelete) {
     if (menuItems.length > 0) {
@@ -77,6 +85,8 @@ function SkillRowActions({
   const handleSelect = (id: string) => {
     if (id === "delete") {
       onDelete?.();
+    } else if (id === "edit") {
+      onEdit?.();
     } else {
       onAction();
     }
@@ -89,7 +99,7 @@ function SkillRowActions({
       </div>
     );
   }
-  if (installed || onDelete) {
+  if (installed || onDelete || onEdit) {
     return (
       <ButtonMore
         items={menuItems}
@@ -204,6 +214,9 @@ export function SkillsTab({ agent }: SkillsTabProps) {
   // confirmation modal. `null` = modal closed.
   const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Name of the user-authored skill the user clicked "Edit skill" on;
+  // drives the edit modal. `null` = modal closed.
+  const [editingSkill, setEditingSkill] = useState<string | null>(null);
   // Populated from a 409 response body when the server refuses to delete
   // because the skill is still installed elsewhere. The modal renders these
   // inline so the user knows exactly which agents to clean up first.
@@ -336,6 +349,10 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     setPendingDeleteName(name);
   }, []);
 
+  const requestEditMySkill = useCallback((name: string) => {
+    setEditingSkill(name);
+  }, []);
+
   const closeDeleteConfirm = useCallback(() => {
     // Don't let the user dismiss the modal mid-delete — the in-flight
     // request would still complete and leave the UI in a half-state.
@@ -400,7 +417,12 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     const skillRow = (
       prefix: string,
       skill: HarnessSkill,
-      opts: { installed: boolean; onAction: () => void; onDelete?: () => void },
+      opts: {
+        installed: boolean;
+        onAction: () => void;
+        onEdit?: () => void;
+        onDelete?: () => void;
+      },
     ) => ({
       id: `${prefix}:${skill.name}`,
       icon: <Zap size={14} />,
@@ -413,6 +435,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
           installed={opts.installed}
           loading={!!actionLoading[skill.name]}
           onAction={opts.onAction}
+          onEdit={opts.onEdit}
           onDelete={opts.onDelete}
         />
       ),
@@ -440,6 +463,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
             installed,
             onAction: () =>
               installed ? handleUninstall(skill.name) : handleInstall(skill.name),
+            onEdit: () => requestEditMySkill(skill.name),
             onDelete: () => requestDeleteMySkill(skill.name),
           });
         }),
@@ -470,6 +494,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     viewSkill,
     handleInstall,
     handleUninstall,
+    requestEditMySkill,
     requestDeleteMySkill,
   ]);
 
@@ -524,6 +549,13 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         blockingAgents={blockingAgents}
         onClose={closeDeleteConfirm}
         onConfirm={confirmDeleteMySkill}
+      />
+
+      <SkillEditorModal
+        isOpen={editingSkill !== null}
+        skillName={editingSkill}
+        onClose={() => setEditingSkill(null)}
+        onSaved={() => fetchData({ silent: true })}
       />
     </div>
   );

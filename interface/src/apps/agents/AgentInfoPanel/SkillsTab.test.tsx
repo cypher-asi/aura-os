@@ -107,6 +107,18 @@ vi.mock("./CreateSkillModal", () => ({
   CreateSkillModal: () => null,
 }));
 
+// Flatten the edit modal to a marker that echoes the skill it was opened
+// for, so we can assert the row's "Edit skill" action wires through to it.
+vi.mock("./SkillEditorModal", () => ({
+  SkillEditorModal: ({
+    isOpen,
+    skillName,
+  }: {
+    isOpen: boolean;
+    skillName: string | null;
+  }) => (isOpen ? <div data-testid="edit-modal">{skillName}</div> : null),
+}));
+
 vi.mock("../../../components/SkillShopModal", () => ({
   SkillShopModal: () => null,
 }));
@@ -226,6 +238,36 @@ describe("SkillsTab", () => {
     // Regression: we must not quietly uninstall from the current agent.
     // That would mask the real "installed elsewhere" state from the user.
     expect(mockUninstallAgentSkill).not.toHaveBeenCalled();
+  });
+
+  it("opens the editor for a My Skills row via the Edit action", async () => {
+    mockListSkills.mockResolvedValue([]);
+    mockListAgentSkills.mockResolvedValue([]);
+    mockListMySkills.mockResolvedValue([
+      {
+        name: "editable-skill",
+        description: "x",
+        path: "/tmp/editable-skill/SKILL.md",
+        user_invocable: true,
+        model_invocable: false,
+      },
+    ]);
+
+    render(<SkillsTab agent={baseAgent} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("editable-skill")).toBeDefined();
+    });
+
+    // Editor is closed until the row's "Edit skill" action fires.
+    expect(screen.queryByTestId("edit-modal")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("menu-edit"));
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("edit-modal");
+      expect(modal.textContent).toContain("editable-skill");
+    });
   });
 
   it("does not pre-uninstall from current agent on successful delete", async () => {

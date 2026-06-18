@@ -33,6 +33,29 @@ export const harnessSkillsApi = {
     apiFetch<{ name: string; deleted: boolean }>(`/api/harness/skills/mine/${name}`, {
       method: "DELETE",
     }),
+  /**
+   * Rewrite an existing user-authored skill's SKILL.md (frontmatter +
+   * body). Only `description` is required; any omitted optional field is
+   * re-rendered as absent, so callers must round-trip `allowed_tools` /
+   * `model` / `context` they want to preserve. Rejects with
+   * `ApiClientError` 404 (no such user skill) or 403 (not user-created).
+   */
+  updateMySkill: (
+    name: string,
+    data: {
+      description: string;
+      body?: string;
+      allowed_tools?: string[];
+      model?: string;
+      context?: string;
+      user_invocable?: boolean;
+      model_invocable?: boolean;
+    },
+  ) =>
+    apiFetch<{ name: string; path: string; updated: boolean }>(`/api/harness/skills/mine/${name}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
   getSkill: (name: string) =>
     apiFetch<HarnessSkill>(`/api/harness/skills/${name}`),
   createSkill: (data: {

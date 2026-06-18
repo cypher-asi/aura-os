@@ -9,15 +9,18 @@
 //! * [`create`] — create-skill and install-from-shop flows.
 //! * [`discover`] — read-only skill content / on-disk discovery.
 //! * [`manage`] — list user-created skills and delete them.
+//! * [`update`] — rewrite an existing user-created skill's SKILL.md.
 
 mod create;
 mod discover;
 mod frontmatter;
 mod manage;
+mod update;
 
 pub(crate) use create::{create_skill, install_from_shop};
 pub(crate) use discover::{discover_skill_paths, get_skill_content};
 pub(crate) use manage::{delete_my_skill, list_my_skills};
+pub(crate) use update::update_my_skill;
 
 /// Marker written into the YAML frontmatter of every skill created via the
 /// `POST /api/harness/skills` endpoint. Used by `list_my_skills` to separate

@@ -211,6 +211,32 @@ describe("harnessSkillsApi", () => {
     );
   });
 
+  it("updateMySkill sends PUT /api/harness/skills/mine/:name with the payload", async () => {
+    const data = {
+      description: "Updated",
+      body: "# new body",
+      user_invocable: false,
+      model_invocable: true,
+      allowed_tools: ["read", "write"],
+    };
+    const fetchMock = mockFetch(200, {
+      name: "my-skill",
+      path: "/root/.aura/skills/my-skill/SKILL.md",
+      updated: true,
+    });
+    globalThis.fetch = fetchMock;
+    const result = await harnessSkillsApi.updateMySkill("my-skill", data);
+    expect(result).toEqual({
+      name: "my-skill",
+      path: "/root/.aura/skills/my-skill/SKILL.md",
+      updated: true,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/skills/mine/my-skill",
+      expect.objectContaining({ method: "PUT", body: JSON.stringify(data) }),
+    );
+  });
+
   it("installFromShop sends POST with name and category", async () => {
     const fetchMock = mockFetch(200, { name: "web-search", path: "/skills/web-search", installed: true });
     globalThis.fetch = fetchMock;
