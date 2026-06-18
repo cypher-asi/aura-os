@@ -5,7 +5,10 @@ import {
   isInsufficientCreditsError,
   dispatchInsufficientCredits,
 } from "../../api/client";
-import type { LoopStatusResponse } from "../../shared/api/loop";
+import type {
+  LoopEngineeringContract,
+  LoopStatusResponse,
+} from "../../shared/api/loop";
 import { useEventStore } from "../../stores/event-store/index";
 import { useLoopActivityStore } from "../../stores/loop-activity-store";
 import { hydrateActiveTasksFromLoopStatus } from "../../stores/run-pane-sync";
@@ -101,6 +104,8 @@ interface AutomationStatusData {
   confirmStop: boolean;
   setConfirmStop: (v: boolean) => void;
   handleStart: () => Promise<void>;
+  handleStartLoopEngineering: (contract: LoopEngineeringContract) => Promise<void>;
+  canStartLoopEngineering: boolean;
   handlePause: () => Promise<void>;
   handleStop: () => void;
   handleStopConfirm: () => Promise<void>;
@@ -349,6 +354,47 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   const status = statusOf(state);
   const agentCount = agentsOf(state).length;
 
+  const beginFreshLoop = useCallback(
+    async (start: () => Promise<LoopStatusResponse>) => {
+      setStartError(null);
+      // Optimistically flip into `starting` so the Run button spinner
+      // and the sidekick Run/Tasks tab loaders engage immediately on
+      // click, and stay engaged without flicker across three phases:
+      //   1. request in flight           -> kind: "starting"
+      //   2. loop_started WS arrives     -> kind: "preparing"
+      //   3. task_started WS arrives     -> kind: "active"
+      dispatch({ type: "startClicked" });
+      try {
+        const res = await start();
+        if (res.agent_instance_id) {
+          setBoundLoopId(projectId, res.agent_instance_id);
+        }
+        dispatch({
+          type: "statusFetched",
+          agents: res.active_agent_instances ?? [],
+          paused: false,
+        });
+        hydrateUiFromLoopStartResponse(res, projectId);
+        rehydrateLoopActivityForProject(projectId);
+        if (
+          (res.active_agent_instances ?? []).length > 0 &&
+          (res.active_tasks ?? []).length === 0
+        ) {
+          window.setTimeout(() => fetchLoopStatus(), 500);
+        }
+      } catch (err) {
+        dispatch({ type: "startFailed" });
+        if (isInsufficientCreditsError(err)) {
+          dispatchInsufficientCredits();
+        } else {
+          setStartError(describeStartLoopError(err));
+        }
+        console.error("Failed to start loop", err);
+      }
+    },
+    [fetchLoopStatus, projectId, setBoundLoopId],
+  );
+
   const handleStart = useCallback(async () => {
     setStartError(null);
     if (state.kind === "paused") {
@@ -370,72 +416,26 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
       }
       return;
     }
-    // Optimistically flip into `starting` so the Run button spinner
-    // and the sidekick Run/Tasks tab loaders engage immediately on
-    // click, and stay engaged without flicker across three phases:
-    //   1. request in flight           -> kind: "starting"
-    //   2. loop_started WS arrives     -> kind: "preparing"
-    //   3. task_started WS arrives     -> kind: "active"
-    // Without this the spinner would flash off between the HTTP
-    // response and the `loop_started` WS event, making the ramp-up
-    // look stalled on the first (or interrupted) task of a fresh run.
-    dispatch({ type: "startClicked" });
-    try {
-      // Omit `agent_instance_id`: the backend resolves to the
-      // project's `Loop`-role instance via
-      // `ensure_default_loop_instance`, lazily creating one if this
-      // is the first Start in the project. Passing the URL's
-      // currently-viewed chat agent here would force the loop onto
-      // that chat instance and the harness's "one in-flight turn per
-      // agent_id" policy would silently abort either the chat reply
-      // or the next loop turn -- exactly the regression we're fixing.
-      const res = await api.startLoop(projectId, undefined, selectedModel);
-      // Capture the Loop instance the backend resolved to so all
-      // subsequent pause / resume / stop calls scope themselves to
-      // it. `start_loop` populates `agent_instance_id` on the
-      // response with the resolved id, regardless of whether we
-      // passed one in.
-      if (res.agent_instance_id) {
-        setBoundLoopId(projectId, res.agent_instance_id);
-      }
-      // Reconcile the optimistic `starting` state with the server's
-      // authoritative agent list so the UI updates immediately, in
-      // step with the HTTP response, instead of waiting on the
-      // `loop_started` WS event.
-      dispatch({
-        type: "statusFetched",
-        agents: res.active_agent_instances ?? [],
-        paused: false,
-      });
-      // Seed the Run panel row + Tasks list "live" dot from the response
-      // so the user sees activity without waiting for task_started.
-      hydrateUiFromLoopStartResponse(res, projectId);
-      rehydrateLoopActivityForProject(projectId);
-      if (
-        (res.active_agent_instances ?? []).length > 0 &&
-        (res.active_tasks ?? []).length === 0
-      ) {
-        // `/loop/start` snapshots before the forwarder binds the first
-        // harness task; re-fetch once so active_tasks catches up without
-        // wiping WS-seeded Run pane rows (see run-pane-sync demote guard).
-        window.setTimeout(() => fetchLoopStatus(), 500);
-      }
-    } catch (err) {
-      dispatch({ type: "startFailed" });
-      if (isInsufficientCreditsError(err)) {
-        dispatchInsufficientCredits();
-      } else {
-        // Replace the previous silent `console.error` so the click is
-        // visibly resolved one way or another. The AutomationBar
-        // renders this `startError` as a ModalConfirm with a Reset
-        // affordance for the `automation_already_running` case, which
-        // is the wedge the user hit when the harness had a stale
-        // automaton from a prior aura-os-server session.
-        setStartError(describeStartLoopError(err));
-      }
-      console.error("Failed to start loop", err);
-    }
-  }, [projectId, state.kind, selectedModel, boundLoopId, setBoundLoopId]);
+    await beginFreshLoop(() => api.startLoop(projectId, undefined, selectedModel));
+  }, [beginFreshLoop, projectId, state.kind, selectedModel, boundLoopId]);
+
+  const canStartLoopEngineering =
+    status === "idle" || status === "stopped";
+
+  const handleStartLoopEngineering = useCallback(
+    async (contract: LoopEngineeringContract) => {
+      if (!canStartLoopEngineering) return;
+      await beginFreshLoop(() =>
+        api.startLoopEngineering(
+          projectId,
+          { loopEngineering: contract },
+          undefined,
+          selectedModel,
+        ),
+      );
+    },
+    [beginFreshLoop, canStartLoopEngineering, projectId, selectedModel],
+  );
 
   const handlePause = useCallback(async () => {
     try {
@@ -531,7 +531,8 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
     starting: state.kind === "starting",
     preparing: state.kind === "preparing",
     confirmStop, setConfirmStop,
-    handleStart, handlePause, handleStop, handleStopConfirm,
+    handleStart, handleStartLoopEngineering, canStartLoopEngineering,
+    handlePause, handleStop, handleStopConfirm,
     stopError, clearStopError,
     startError, clearStartError, handleResetAndRetry,
   };

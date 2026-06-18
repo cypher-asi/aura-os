@@ -8,6 +8,8 @@
 
 use aura_os_core::{AgentInstanceId, ProjectId, TaskId, UserId};
 
+use super::super::loop_engineering::LoopEngineeringContract;
+
 use crate::state::AppState;
 
 /// Mode flag selecting between long-lived dev-loop bootstrap and
@@ -59,6 +61,10 @@ pub(in crate::handlers::dev_loop) struct RunRequest {
     /// instance / agent default inside `resolve_start_context`.
     pub(in crate::handlers::dev_loop) model: Option<String>,
     pub(in crate::handlers::dev_loop) mode: RunMode,
+    /// Optional Loop Engineering contract layered onto a normal
+    /// long-lived dev-loop run. `None` keeps legacy automation and
+    /// single-task starts on their existing prompt path.
+    pub(in crate::handlers::dev_loop) loop_engineering: Option<LoopEngineeringContract>,
     /// Resolved typed user id for [`aura_os_events::LoopId`]
     /// construction. The adapter resolves this from the auth session
     /// (via `loop_user_id`) before dispatching.

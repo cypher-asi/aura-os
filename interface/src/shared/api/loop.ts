@@ -47,6 +47,36 @@ export interface LoopStatusResponse {
   active_tasks?: ActiveLoopTask[];
 }
 
+export type LoopEngineeringApprovalPolicy =
+  | "propose_only"
+  | "apply_within_workspace";
+
+export interface LoopEngineeringLearningPolicy {
+  captureTrace: boolean;
+  proposeEvals: boolean;
+  proposeSkills: boolean;
+  summarizeRegressions: boolean;
+}
+
+export interface LoopEngineeringVerifierCommand {
+  label: string;
+  command: string;
+  expectedOutcome?: string;
+}
+
+export interface LoopEngineeringContract {
+  goal: string;
+  successCriteria: string[];
+  verifierCommands: LoopEngineeringVerifierCommand[];
+  maxIterations: number;
+  approvalPolicy: LoopEngineeringApprovalPolicy;
+  learning: LoopEngineeringLearningPolicy;
+}
+
+export interface StartLoopEngineeringRequest {
+  loopEngineering: LoopEngineeringContract;
+}
+
 function loopQuery(agentInstanceId?: string, model?: string | null): string {
   const params = new URLSearchParams();
   if (agentInstanceId) params.set("agent_instance_id", agentInstanceId);
@@ -61,6 +91,18 @@ export const loopApi = {
     return apiFetch<LoopStatusResponse>(
       `/api/projects/${projectId}/loop/start${params}`,
       { method: "POST" },
+    );
+  },
+  startLoopEngineering: (
+    projectId: ProjectId,
+    request: StartLoopEngineeringRequest,
+    agentInstanceId?: string,
+    model?: string | null,
+  ) => {
+    const params = loopQuery(agentInstanceId, model);
+    return apiFetch<LoopStatusResponse>(
+      `/api/projects/${projectId}/loop/start${params}`,
+      { method: "POST", body: JSON.stringify(request) },
     );
   },
   pauseLoop: (projectId: ProjectId, agentInstanceId?: string) => {

@@ -53,6 +53,45 @@ describe("loopApi", () => {
     );
   });
 
+  it("startLoopEngineering sends the loop contract as an optional start body", async () => {
+    const fetchMock = mockFetch(200, loopStatus);
+    globalThis.fetch = fetchMock;
+    const contract = {
+      goal: "Fix checkout retries",
+      successCriteria: ["Retry errors recover", "Build passes"],
+      verifierCommands: [
+        {
+          label: "Tests",
+          command: "npm test -- --run",
+          expectedOutcome: "All tests pass",
+        },
+      ],
+      maxIterations: 4,
+      approvalPolicy: "apply_within_workspace" as const,
+      learning: {
+        captureTrace: true,
+        proposeEvals: true,
+        proposeSkills: true,
+        summarizeRegressions: true,
+      },
+    };
+
+    await loopApi.startLoopEngineering(
+      "p1" as string,
+      { loopEngineering: contract },
+      "ai1",
+      "aura-claude-opus-4-7",
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/loop/start?agent_instance_id=ai1&model=aura-claude-opus-4-7",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ loopEngineering: contract }),
+      }),
+    );
+  });
+
   it("pauseLoop sends POST without query param", async () => {
     const fetchMock = mockFetch(204, null);
     globalThis.fetch = fetchMock;

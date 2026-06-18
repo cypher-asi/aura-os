@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Button, Text, ModalConfirm } from "@cypher-asi/zui";
-import { Pause, Square } from "lucide-react";
+import { BrainCircuit, Pause, Square } from "lucide-react";
 import { StatusBadge } from "../StatusBadge";
 import { PlayLoopGlyph } from "../PlayLoopGlyph";
 import type { ProjectId } from "../../shared/types";
 import { useAutomationStatus } from "./useAutomationStatus";
 import { AutomationModelPicker } from "./AutomationModelPicker";
+import { LoopEngineeringPanel } from "./LoopEngineeringPanel";
 import styles from "./AutomationBar.module.css";
 
 interface AutomationBarProps {
@@ -12,10 +14,13 @@ interface AutomationBarProps {
 }
 
 export function AutomationBar({ projectId }: AutomationBarProps) {
+  const [loopEngineeringOpen, setLoopEngineeringOpen] = useState(false);
   const {
     status, agentCount, canPlay, canPause, canStop,
+    canStartLoopEngineering,
     confirmStop, setConfirmStop,
-    handleStart, handlePause, handleStop, handleStopConfirm,
+    handleStart, handleStartLoopEngineering,
+    handlePause, handleStop, handleStopConfirm,
     stopError, clearStopError,
     startError, clearStartError, handleResetAndRetry,
   } = useAutomationStatus(projectId);
@@ -45,52 +50,76 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
 
   return (
     <>
-      <div className={styles.automationBar}>
-        <div className={styles.automationLabel}>
-          <Text size="sm" className={styles.automationLabelBold}>
-            Automation
-          </Text>
-          <StatusBadge status={status} />
-          {agentCount > 1 && (
-            <Text size="xs" className={styles.automationAgentCount}>{agentCount} agents</Text>
-          )}
+      <div className={styles.automationStack}>
+        <div className={styles.automationBar}>
+          <div className={styles.automationLabel}>
+            <Text size="sm" className={styles.automationLabelBold}>
+              Automation
+            </Text>
+            <StatusBadge status={status} />
+            {agentCount > 1 && (
+              <Text size="xs" className={styles.automationAgentCount}>
+                {agentCount} agents
+              </Text>
+            )}
+          </div>
+          <div className={styles.automationModelSlot}>
+            <AutomationModelPicker
+              projectId={projectId}
+              disabled={modelPickerDisabled}
+            />
+          </div>
+          <div className={styles.automationControls}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<BrainCircuit size={14} />}
+              onClick={() => setLoopEngineeringOpen((open) => !open)}
+              title="Loop Engineering"
+              className={
+                loopEngineeringOpen ? styles.loopModeActive : undefined
+              }
+            >
+              Loop
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<PlayLoopGlyph active={loopWorking} size={14} />}
+              onClick={handleStart}
+              disabled={!canPlay}
+              title={status === "paused" ? "Resume" : "Start"}
+              className={loopWorking ? styles.playButtonActive : undefined}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<Pause size={14} />}
+              onClick={handlePause}
+              disabled={!canPause}
+              title="Pause"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<Square size={14} />}
+              onClick={handleStop}
+              disabled={!canStop}
+              title="Stop"
+            />
+          </div>
         </div>
-        <div className={styles.automationModelSlot}>
-          <AutomationModelPicker
+
+        {loopEngineeringOpen && (
+          <LoopEngineeringPanel
             projectId={projectId}
-            disabled={modelPickerDisabled}
+            canStart={canStartLoopEngineering}
+            onStart={handleStartLoopEngineering}
           />
-        </div>
-        <div className={styles.automationControls}>
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={<PlayLoopGlyph active={loopWorking} size={14} />}
-            onClick={handleStart}
-            disabled={!canPlay}
-            title={status === "paused" ? "Resume" : "Start"}
-            className={loopWorking ? styles.playButtonActive : undefined}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={<Pause size={14} />}
-            onClick={handlePause}
-            disabled={!canPause}
-            title="Pause"
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={<Square size={14} />}
-            onClick={handleStop}
-            disabled={!canStop}
-            title="Stop"
-          />
-        </div>
+        )}
       </div>
 
       <ModalConfirm

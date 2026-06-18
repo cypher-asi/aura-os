@@ -19,6 +19,27 @@
   position: relative;
 }
 
+.sidekickTaskbarWithPanel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: var(--control-height-sm, 32px);
+}
+
+.sidekickTaskbarPanel {
+  position: fixed;
+  z-index: 90;
+  max-height: min(70vh, 620px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--color-border-main-panel);
+  border-radius: 8px;
+  background: var(--color-sidekick-bg);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+}
+
 .sidekickTabBar {
   display: flex;
   align-items: center;

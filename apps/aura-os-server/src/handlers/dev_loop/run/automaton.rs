@@ -53,6 +53,7 @@ pub(super) async fn start_automaton(
         jwt: Some(req.jwt.clone()),
         user_id: Some(req.user_id.clone()),
         task_id: prep.task_id_str.clone(),
+        loop_engineering: req.loop_engineering.as_ref(),
     })
     .await;
 

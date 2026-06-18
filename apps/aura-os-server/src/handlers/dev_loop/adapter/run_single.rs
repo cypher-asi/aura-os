@@ -56,6 +56,7 @@ pub(crate) async fn run_single_task(
         jwt,
         model: params.model,
         mode: RunMode::SingleTask { task_id },
+        loop_engineering: None,
     };
     // run::run_automaton owns the cleanup-on-failure for the
     // ephemeral row at the pre-refactor failure points

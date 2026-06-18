@@ -1,10 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useLoopActivityStore } from "../../stores/loop-activity-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { SidekickTaskbar } from "./SidekickTaskbar";
+
+const { mockHandleStartLoopEngineering } = vi.hoisted(() => ({
+  mockHandleStartLoopEngineering: vi.fn(),
+}));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({ features: { linkedWorkspace: false } }),
@@ -29,17 +33,81 @@ vi.mock("../SidekickTabBar", () => ({
   SidekickTabBar: ({
     tabs,
     activeTab,
+    onInlineAction,
   }: {
-    tabs: Array<{ id: string; icon: React.ReactNode; title: string }>;
+    tabs: Array<{
+      id: string;
+      icon: React.ReactNode;
+      title: string;
+      kind?: "tab" | "action";
+    }>;
     activeTab: string;
+    onInlineAction?: (id: string) => void;
   }) => (
     <div data-testid="sidekick-tabbar" data-active-tab={activeTab}>
       {tabs.map((tab) => (
-        <span key={tab.id} data-testid={`tab-${tab.id}`}>
+        <button
+          key={tab.id}
+          data-testid={`tab-${tab.id}`}
+          onClick={() => {
+            if (tab.kind === "action") onInlineAction?.(tab.id);
+          }}
+        >
           {tab.icon}
           {tab.title}
-        </span>
+        </button>
       ))}
+    </div>
+  ),
+}));
+
+vi.mock("../AutomationBar/useAutomationStatus", () => ({
+  useAutomationStatus: () => ({
+    canStartLoopEngineering: true,
+    handleStartLoopEngineering: mockHandleStartLoopEngineering,
+    startError: null,
+    clearStartError: vi.fn(),
+  }),
+}));
+
+vi.mock("../AutomationBar/LoopEngineeringPanel", () => ({
+  LoopEngineeringPanel: ({
+    projectId,
+    canStart,
+    onStart,
+  }: {
+    projectId: string;
+    canStart: boolean;
+    onStart: (contract: unknown) => Promise<void>;
+  }) => (
+    <div data-testid="loop-engineering-panel" data-project-id={projectId}>
+      <button
+        data-testid="start-loop-engineering"
+        disabled={!canStart}
+        onClick={() =>
+          void onStart({
+            goal: "Fix a failing checkout flow",
+            successCriteria: ["Checkout completes", "Regression test passes"],
+            verifierCommands: [
+              {
+                label: "checkout test",
+                command: "npm test -- checkout",
+                expectedOutcome: "pass",
+              },
+            ],
+            maxIterations: 4,
+            approvalPolicy: "apply_within_workspace",
+            learning: {
+              captureTrace: true,
+              proposeEvals: true,
+              proposeSkills: true,
+              summarizeRegressions: true,
+            },
+          })
+        }
+      >
+        Start Loop Engineering
+      </button>
     </div>
   ),
 }));
@@ -92,6 +160,8 @@ describe("SidekickTaskbar", () => {
       canGoBack: false,
     });
     useLoopActivityStore.setState({ loops: {}, hydrated: false });
+    mockHandleStartLoopEngineering.mockReset();
+    mockHandleStartLoopEngineering.mockResolvedValue(undefined);
   });
 
   it("renders active run progress without recursive loop-activity updates", () => {
@@ -194,5 +264,43 @@ describe("SidekickTaskbar", () => {
     expect(runTab.querySelector("svg polygon")).toBeInTheDocument();
     expect(runTab.querySelector("[data-testid='play-loop-ring']"))
       .not.toBeInTheDocument();
+  });
+
+  it("opens Loop Engineering from the active sidekick taskbar and starts with a contract", async () => {
+    renderTaskbar();
+
+    fireEvent.click(screen.getByTestId("tab-loop-engineering"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("loop-engineering-panel")).toHaveAttribute(
+        "data-project-id",
+        "project-1",
+      ),
+    );
+
+    fireEvent.click(screen.getByTestId("start-loop-engineering"));
+
+    await waitFor(() =>
+      expect(mockHandleStartLoopEngineering).toHaveBeenCalledWith(
+        expect.objectContaining({
+          goal: "Fix a failing checkout flow",
+          successCriteria: ["Checkout completes", "Regression test passes"],
+          verifierCommands: [
+            {
+              label: "checkout test",
+              command: "npm test -- checkout",
+              expectedOutcome: "pass",
+            },
+          ],
+          approvalPolicy: "apply_within_workspace",
+          learning: expect.objectContaining({
+            captureTrace: true,
+            proposeEvals: true,
+            proposeSkills: true,
+            summarizeRegressions: true,
+          }),
+        }),
+      ),
+    );
   });
 });
