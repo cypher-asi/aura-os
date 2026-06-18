@@ -242,6 +242,44 @@ describe("AutomationBar", () => {
     });
   });
 
+  it("shows the active Loop Engineering contract from loop status", async () => {
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["loop-agent-1"],
+      paused: false,
+      loop_engineering: {
+        goal: "Fix checkout flakes and prove the regression is gone",
+        successCriteria: ["Checkout passes", "Regression test covers it"],
+        verifierCommands: [
+          {
+            label: "Checkout test",
+            command: "npm test -- checkout",
+            expectedOutcome: "passes",
+          },
+        ],
+        maxIterations: 5,
+        approvalPolicy: "apply_within_workspace",
+        learning: {
+          captureTrace: true,
+          proposeEvals: true,
+          proposeSkills: true,
+          summarizeRegressions: true,
+        },
+      },
+    });
+
+    renderBar();
+
+    await waitFor(() => {
+      expect(screen.getByText("Loop Engineering active")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("Fix checkout flakes and prove the regression is gone"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Loop Engineering")).toBeInTheDocument();
+    expect(screen.getByText(/5 iterations \/ 2 criteria \/ 1 verifier/))
+      .toBeInTheDocument();
+  });
+
   it("shows paused status", async () => {
     mockGetLoopStatus.mockResolvedValue({ active_agent_instances: ["a1"], paused: true });
     renderBar();

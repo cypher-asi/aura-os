@@ -291,6 +291,10 @@ async fn finalize_registration(inputs: FinalizeInputs<'_>) {
             automaton_id: started.automaton_id.clone(),
             project_id: req.project_id,
             template_agent_id: prep.start.agent_id,
+            loop_engineering: req
+                .loop_engineering
+                .as_ref()
+                .and_then(|contract| serde_json::to_value(contract).ok()),
             harness_base_url: prep.start.harness_base_url.clone(),
             paused: false,
             alive: handles.alive.clone(),

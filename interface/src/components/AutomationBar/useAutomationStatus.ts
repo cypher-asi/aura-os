@@ -114,6 +114,7 @@ interface AutomationStatusData {
   startError: StartLoopError | null;
   clearStartError: () => void;
   handleResetAndRetry: () => Promise<void>;
+  loopEngineeringContract: LoopEngineeringContract | null;
 }
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -178,6 +179,8 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   const [confirmStop, setConfirmStop] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
   const [startError, setStartError] = useState<StartLoopError | null>(null);
+  const [loopEngineeringContract, setLoopEngineeringContract] =
+    useState<LoopEngineeringContract | null>(null);
 
   // Bound `Loop`-role agent instance id for this project. Read by all
   // pause / resume / stop paths so the harness's "one in-flight turn
@@ -240,6 +243,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
             agents: res.active_agent_instances ?? [],
             paused: Boolean(res.paused),
           });
+          setLoopEngineeringContract(res.loop_engineering ?? null);
           hydrateUiFromLoopStartResponse(res, projectId);
           rehydrateLoopActivityForProject(projectId);
         })
@@ -258,6 +262,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
           agents: res.active_agent_instances ?? [],
           paused: Boolean(res.paused),
         });
+        setLoopEngineeringContract(res.loop_engineering ?? null);
         // Rehydrate Run panel rows from authoritative server state
         // so the "No tasks" emptiness after refresh doesn't stay out
         // of sync with the spinning nav icon. Any missed
@@ -364,6 +369,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
       //   2. loop_started WS arrives     -> kind: "preparing"
       //   3. task_started WS arrives     -> kind: "active"
       dispatch({ type: "startClicked" });
+      setLoopEngineeringContract(null);
       try {
         const res = await start();
         if (res.agent_instance_id) {
@@ -374,6 +380,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
           agents: res.active_agent_instances ?? [],
           paused: false,
         });
+        setLoopEngineeringContract(res.loop_engineering ?? null);
         hydrateUiFromLoopStartResponse(res, projectId);
         rehydrateLoopActivityForProject(projectId);
         if (
@@ -408,6 +415,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
           agents: res.active_agent_instances ?? [],
           paused: false,
         });
+        setLoopEngineeringContract(res.loop_engineering ?? null);
         hydrateUiFromLoopStartResponse(res, projectId);
         rehydrateLoopActivityForProject(projectId);
       } catch (err) {
@@ -501,6 +509,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         agents: res.active_agent_instances ?? [],
         paused: Boolean(res.paused),
       });
+      setLoopEngineeringContract(res.loop_engineering ?? null);
       fetchLoopStatus();
       // Also rehydrate the unified spinner store so any stale activity
       // row from the loop instance we just stopped is evicted on the
@@ -535,5 +544,6 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
     handlePause, handleStop, handleStopConfirm,
     stopError, clearStopError,
     startError, clearStartError, handleResetAndRetry,
+    loopEngineeringContract,
   };
 }

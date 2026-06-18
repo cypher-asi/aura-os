@@ -29,6 +29,72 @@ async fn loop_stop_without_running_is_idempotent() {
 }
 
 #[tokio::test]
+async fn loop_status_includes_active_loop_engineering_contract() {
+    use aura_os_core::AgentInstanceId;
+    use aura_os_server::ActiveAutomaton;
+
+    let (app, state, _db) = build_test_app();
+
+    let pid = ProjectId::new();
+    let aiid = AgentInstanceId::new();
+    let contract = serde_json::json!({
+        "goal": "Fix checkout flakes and prove the regression is gone",
+        "successCriteria": ["Checkout passes", "Regression test covers it"],
+        "verifierCommands": [
+            {
+                "label": "Checkout test",
+                "command": "npm test -- checkout",
+                "expectedOutcome": "passes"
+            }
+        ],
+        "maxIterations": 5,
+        "approvalPolicy": "apply_within_workspace",
+        "learning": {
+            "captureTrace": true,
+            "proposeEvals": true,
+            "proposeSkills": true,
+            "summarizeRegressions": true
+        }
+    });
+    {
+        let mut reg = state.automaton_registry.lock().await;
+        reg.insert(
+            (pid, aiid),
+            ActiveAutomaton {
+                automaton_id: "auto-loop-engineering".into(),
+                project_id: pid,
+                template_agent_id: AgentId::new(),
+                loop_engineering: Some(contract),
+                harness_base_url: "http://127.0.0.1:1".to_string(),
+                paused: false,
+                alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
+                forwarder: None,
+                ws_reader_handle: None,
+                loop_handle: None,
+                last_forwarder_event_at: std::sync::Arc::new(std::sync::atomic::AtomicI64::new(0)),
+                session_id: None,
+            },
+        );
+    }
+
+    let req = json_request("GET", &format!("/api/projects/{pid}/loop/status"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+
+    assert_eq!(body["running"], true);
+    assert_eq!(
+        body["loop_engineering"]["goal"],
+        "Fix checkout flakes and prove the regression is gone"
+    );
+    assert_eq!(body["loop_engineering"]["maxIterations"], 5);
+    assert_eq!(
+        body["loop_engineering"]["verifierCommands"][0]["command"],
+        "npm test -- checkout"
+    );
+}
+
+#[tokio::test]
 async fn loop_stop_clears_registry_even_when_harness_unreachable() {
     // If the registry has a live entry but the harness at harness_base_url
     // is unreachable, `client.stop()` errors. The handler should still
@@ -51,6 +117,7 @@ async fn loop_stop_clears_registry_even_when_harness_unreachable() {
                 automaton_id: "auto-1".into(),
                 project_id: pid,
                 template_agent_id: AgentId::new(),
+                loop_engineering: None,
                 harness_base_url: unreachable_harness,
                 paused: false,
                 alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
@@ -151,6 +218,7 @@ async fn loop_stop_publishes_loop_ended_synchronously() {
                 automaton_id: "auto-1".into(),
                 project_id: pid,
                 template_agent_id,
+                loop_engineering: None,
                 harness_base_url: unreachable_harness,
                 paused: false,
                 alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),

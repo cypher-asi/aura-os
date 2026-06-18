@@ -23,6 +23,7 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     handlePause, handleStop, handleStopConfirm,
     stopError, clearStopError,
     startError, clearStartError, handleResetAndRetry,
+    loopEngineeringContract,
   } = useAutomationStatus(projectId);
 
   // Whether the start error is the structured "harness has a stale
@@ -47,6 +48,15 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
   // old `starting || preparing` spinner did.
   const loopWorking =
     status === "starting" || status === "preparing" || status === "active";
+  const loopEngineeringActive =
+    loopEngineeringContract != null &&
+    status !== "idle" &&
+    status !== "stopped";
+  const activeLoopEngineering = loopEngineeringActive
+    ? loopEngineeringContract
+    : null;
+  const verifierCount = activeLoopEngineering?.verifierCommands.length ?? 0;
+  const criteriaCount = activeLoopEngineering?.successCriteria.length ?? 0;
 
   return (
     <>
@@ -57,6 +67,11 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
               Automation
             </Text>
             <StatusBadge status={status} />
+            {loopEngineeringActive ? (
+              <Text size="xs" className={styles.loopModeBadge}>
+                Loop Engineering
+              </Text>
+            ) : null}
             {agentCount > 1 && (
               <Text size="xs" className={styles.automationAgentCount}>
                 {agentCount} agents
@@ -120,6 +135,25 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
             onStart={handleStartLoopEngineering}
           />
         )}
+        {activeLoopEngineering && !loopEngineeringOpen ? (
+          <div className={styles.loopActiveSummary} role="status">
+            <BrainCircuit size={14} />
+            <div className={styles.loopActiveCopy}>
+              <Text size="xs" className={styles.loopActiveTitle}>
+                Loop Engineering active
+              </Text>
+              <Text size="xs" className={styles.loopActiveGoal}>
+                {activeLoopEngineering.goal}
+              </Text>
+            </div>
+            <Text size="xs" className={styles.loopActiveMeta}>
+              {activeLoopEngineering.maxIterations} iteration
+              {activeLoopEngineering.maxIterations === 1 ? "" : "s"} /{" "}
+              {criteriaCount} criteria / {verifierCount || "auto"} verifier
+              {verifierCount === 1 ? "" : "s"}
+            </Text>
+          </div>
+        ) : null}
       </div>
 
       <ModalConfirm

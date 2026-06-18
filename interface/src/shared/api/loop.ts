@@ -38,6 +38,12 @@ export interface LoopStatusResponse {
   agent_instance_id?: string | null;
   active_agent_instances?: string[];
   /**
+   * Present when the active automation run was started through Loop
+   * Engineering mode. The backend returns the normalized contract so
+   * the UI can show the actual run contract after refresh.
+   */
+  loop_engineering?: LoopEngineeringContract | null;
+  /**
    * Per-agent tasks currently streaming output, populated by the
    * server from the in-memory automaton registry. Used to rehydrate
    * the Run panel rows and the TaskList "live" indicator after a page

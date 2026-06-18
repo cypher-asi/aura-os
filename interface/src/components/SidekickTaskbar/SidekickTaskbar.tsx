@@ -162,24 +162,8 @@ export function SidekickTaskbar() {
     ];
   }, [project]);
 
-  if (showInfo) return null;
-
-  const handleAction = (id: string) => {
-    if (id === "archive") handleArchive?.();
-    if (id === "info") toggleInfo("Project Info", null);
-  };
-
-  const handleInlineAction = (id: string) => {
-    if (id === "loop-engineering") {
-      setLoopEngineeringOpen((open) => !open);
-    }
-  };
-
   useLayoutEffect(() => {
-    if (!loopEngineeringOpen) {
-      setLoopPanelStyle(null);
-      return;
-    }
+    if (!loopEngineeringOpen) return;
 
     const updatePanelPosition = () => {
       const rect = taskbarRef.current?.getBoundingClientRect();
@@ -204,6 +188,24 @@ export function SidekickTaskbar() {
       window.removeEventListener("resize", updatePanelPosition);
     };
   }, [loopEngineeringOpen]);
+
+  if (showInfo) return null;
+
+  const handleAction = (id: string) => {
+    if (id === "archive") handleArchive?.();
+    if (id === "info") toggleInfo("Project Info", null);
+  };
+
+  const handleInlineAction = (id: string) => {
+    if (id === "loop-engineering") {
+      if (loopEngineeringOpen) {
+        setLoopEngineeringOpen(false);
+        setLoopPanelStyle(null);
+      } else {
+        setLoopEngineeringOpen(true);
+      }
+    }
+  };
 
   return (
     <div ref={taskbarRef} className={styles.sidekickTaskbarWithPanel}>

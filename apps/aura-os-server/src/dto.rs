@@ -98,6 +98,8 @@ pub(crate) struct LoopStatusResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_agent_instances: Option<Vec<AgentInstanceId>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub loop_engineering: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cooldown_remaining_ms: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cooldown_reason: Option<String>,

@@ -93,6 +93,51 @@
   background: color-mix(in srgb, var(--accent-9, #7c8cff) 14%, transparent);
 }
 
+.loopModeBadge {
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-9, #7c8cff) 30%, transparent);
+  border-radius: 999px;
+  color: var(--accent-11, #b8c0ff);
+  background: color-mix(in srgb, var(--accent-9, #7c8cff) 10%, transparent);
+  white-space: nowrap;
+}
+
+.loopActiveSummary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: color-mix(in srgb, var(--accent-9, #7c8cff) 8%, transparent);
+}
+
+.loopActiveCopy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.loopActiveTitle {
+  font-weight: 600;
+}
+
+.loopActiveGoal,
+.loopActiveMeta {
+  min-width: 0;
+  opacity: 0.74;
+}
+
+.loopActiveGoal {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loopActiveMeta {
+  white-space: nowrap;
+}
+
 .loopEngineeringPanel {
   display: grid;
   gap: var(--space-2);
@@ -218,5 +263,14 @@
 
   .loopLearningGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .loopActiveSummary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .loopActiveMeta {
+    grid-column: 2;
+    white-space: normal;
   }
 }
