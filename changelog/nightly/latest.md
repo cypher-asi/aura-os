@@ -1,37 +1,45 @@
-# Live remote agent provisioning feedback and accurate VM reporting
+# Live remote agent boot UX and deeper desktop release probes
 
 - Date: `2026-06-17`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.688.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.688.1
+- Version: `0.1.0-nightly.689.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.689.1
 
-Today's nightly is centered on making remote agent cold starts feel transparent: the AgentEnvironment now streams real boot progress, accurately labels confidential VMs, and reports true VM sizing. A Windows desktop build warning was also silenced, and status probes were recalibrated to stop crying wolf on slow remote checks.
+Today's nightly focuses on making remote agent cold starts feel alive—accurate VM labels, streaming boot logs, and a real provisioning phase indicator—alongside a substantial expansion of desktop release observability covering tool calls, agent-to-agent messaging, and subagent workflows.
 
-## 10:41 PM — Clean Windows desktop builds for the sidecar harness
+## 10:41 PM — Cross-platform desktop build cleanup for sidecar port detection
 
-Silenced spurious dead-code warnings on non-Unix targets so the desktop harness builds cleanly across platforms.
+Quiets Windows build warnings caused by Unix-only sidecar helpers being matched on every platform.
 
-- Gated the managed sidecar port-detection helpers and ManagedSidecarKind variants behind cfg(any(unix, test)) so Windows builds of aura-os-desktop no longer surface dead-code warnings for Unix-only paths. (`0d90288`)
+- Gated the managed sidecar port-detection helpers and ManagedSidecarKind variants behind cfg(any(unix, test)) so non-Unix Desktop builds no longer trip dead-code warnings while still keeping the cross-platform match intact. (`0d90288`)
 
-## 11:50 PM — Transparent cold starts for remote agents
+## 11:50 PM — Live remote agent provisioning experience
 
-AgentEnvironment now shows what a provisioning VM is actually doing — accurate isolation and resources, a live boot phase, and streaming logs — instead of an opaque spinner.
+Remote agent status now shows accurate VM details and streams real-time boot progress instead of a static spinner during cold starts.
 
-- Confidential SEV-SNP VMs are now labeled "Confidential VM" instead of being misreported as "Container", and the Resources line shows real vCPU/GiB plus the backing AWS instance type (e.g. m6a.xlarge) forwarded from the gateway, rather than the stripped tier spec. (`220e459`)
-- The VM logs panel auto-opens while an agent is provisioning and silently re-polls the tail every 3 seconds, so boot and attestation output streams in live instead of showing "No platform logs yet" after a single fetch. (`41f9698`)
-- Added an adaptive ~2.5s state poll during provisioning (relaxing to 15s once settled) and a coarse phase label under the Provisioning badge that progresses from "Scheduling machine…" to "Booting & attesting…" as the VM gets an endpoint. (`46dcfda`)
+- Confidential SEV-SNP VMs are now correctly labeled as 'Confidential VM' (previously mislabeled 'Container') and the status card reports real vCPU/GiB with the AWS instance type via a new vm_instance_type field plumbed through the swarm state proxy, instead of the stripped tier spec. (`220e459`)
+- The remote logs panel now polls the tail every 3s in the background and auto-opens while the agent is provisioning, so boot and attestation output streams in live instead of stalling on 'No platform logs yet'. (`41f9698`)
+- Added an adaptive 2.5s VM state poll during provisioning (15s once settled) and a coarse phase label under the Provisioning badge—'Scheduling machine…' before an endpoint appears, then 'Booting & attesting…'—so slow cold starts show forward motion. (`46dcfda`)
 
-## 7:53 AM — Recalibrated remote agent status probes
+## 7:53 AM — Recalibrated remote agent probe latency budgets
 
-Tuned the observability probes so remote-agent checks reflect realistic cold-start latencies and dropped a noisy informational probe from the rotation.
+Observability and release workflows now tolerate realistic remote agent timings and drop a noisy image-generation probe.
 
-- Raised warning/outage latency thresholds for the remote-agent-create, remote-agent-state, and remote-agent-runtime probes (now in the 4–7 minute range) and bumped the default remote probe timeout to 5 minutes via a new AURA_STATUS_REMOTE_TIMEOUT_MS override, so legitimate slow boots stop firing as outages. (`70f1985`)
-- Dropped the image-generation-stream probe from the observability, nightly, and stable release workflows and from features.json to stop tracking it as a status signal. (`70f1985`)
+- Raised remote-agent probe warning/outage thresholds to multi-minute budgets (240s warning, 360–420s outage) and bumped the default remote probe timeout to 5 minutes via a new AURA_STATUS_REMOTE_TIMEOUT_MS override, reducing false-positive alerts on legitimate cold starts. (`70f1985`)
+- Removed the informational image-generation-stream check from the observability and release workflows along with its features.json entry, trimming a low-signal probe from production status reporting. (`70f1985`)
+
+## 8:31 PM — Desktop release probes for tools, A2A, subagents—and a context hydration fix
+
+Server-side context lookups now survive subagent sessions, and desktop release runs gained deep end-to-end probes for project agent workflows.
+
+- Fixed agent context contents and usage endpoints to consider every session across matching project_agents instead of only the newest—newer subagent bookkeeping sessions with no assistant usage no longer hide real context from the most recent active session. (`e74d791`)
+- Nightly and stable desktop release workflows now run new probes for project-bound tool round-trips (write_file/read_file/run_command), agent-to-agent send_to_agent delivery and callbacks, foreground subagent task completion with context hydration, and real harness skill invocation in a chat turn. (`6c66313`)
+- Documented the expanded coverage in aura-feature-health, adding 'Project Agent Workflows' and skill-invocation groups so the desktop release status page reflects the new end-to-end checks. (`6c66313`)
 
 ## Highlights
 
-- Live VM logs and boot phases during remote agent provisioning
-- Confidential SEV-SNP VMs now labeled correctly with real vCPU/GiB
-- Status probe thresholds recalibrated for realistic remote latencies
-- Clean cross-platform desktop builds on non-Unix targets
+- Confidential VMs now report real resources and the correct isolation label
+- Live VM logs and adaptive polling during agent provisioning
+- Desktop release probes now cover tools, A2A, and subagents
+- Context hydration fixed after subagent sessions
 

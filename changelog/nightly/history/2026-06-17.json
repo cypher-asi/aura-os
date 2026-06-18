@@ -3,23 +3,25 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-17T15:19:59.129Z",
+  "generatedAt": "2026-06-18T04:42:52.782Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.688.1",
+  "version": "0.1.0-nightly.689.1",
   "date": "2026-06-17",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.688.1",
-  "lastIncludedSha": "70f19851bfff83d05dbce2d1bdc9f4e349bb52de",
-  "previousProcessedSha": "46dcfdaaa96439ae7f85f5292bf50de4db9651cd",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.689.1",
+  "lastIncludedSha": "6c66313d78fa99a14ebe97d4225aeff08546c9f8",
+  "previousProcessedSha": "70f19851bfff83d05dbce2d1bdc9f4e349bb52de",
   "commitShas": [
     "0d902888fdb27e5eb9a967d4bf3d99bd705886ce",
     "220e459d571ec3df0f920e775ebdd85edab3bd3c",
     "41f9698d5827d1ba69a686833a87dfefd4f4c4d0",
     "46dcfdaaa96439ae7f85f5292bf50de4db9651cd",
-    "70f19851bfff83d05dbce2d1bdc9f4e349bb52de"
+    "70f19851bfff83d05dbce2d1bdc9f4e349bb52de",
+    "e74d791a865ad016da0dc2398fec42d8071eabcc",
+    "6c66313d78fa99a14ebe97d4225aeff08546c9f8"
   ],
-  "rawCommitCount": 5,
-  "filteredCommitCount": 5,
+  "rawCommitCount": 7,
+  "filteredCommitCount": 7,
   "rawCommits": [
     {
       "sha": "0d902888fdb27e5eb9a967d4bf3d99bd705886ce",
@@ -229,36 +231,126 @@
         "Release Infrastructure",
         "Other"
       ]
+    },
+    {
+      "sha": "e74d791a865ad016da0dc2398fec42d8071eabcc",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-17T23:31:36-04:00",
+      "subject": "Fix context hydration after subagent sessions",
+      "body": "",
+      "parents": [
+        "70f19851bfff83d05dbce2d1bdc9f4e349bb52de"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/context_contents.rs",
+        "apps/aura-os-server/src/handlers/agents/context_usage.rs",
+        "apps/aura-os-server/tests/agent_context_usage_test.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 221,
+        "deletions": 52
+      },
+      "committedAtMs": 1781753496000,
+      "cleanSubject": "Fix context hydration after subagent sessions",
+      "keywords": [
+        "context",
+        "hydration",
+        "after",
+        "subagent",
+        "sessions"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "6c66313d78fa99a14ebe97d4225aeff08546c9f8",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-17T23:48:52-04:00",
+      "subject": "Add desktop agent workflow observability probes",
+      "body": "",
+      "parents": [
+        "e74d791a865ad016da0dc2398fec42d8071eabcc"
+      ],
+      "files": [
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "docs/aura-feature-health.md",
+        "infra/evals/status/check-expectations.json",
+        "infra/evals/status/features.json",
+        "infra/evals/status/lib/status-probe-permissions.mjs",
+        "infra/evals/status/lib/status-probe-permissions.test.mjs",
+        "infra/evals/status/run-desktop-release-probes.mjs",
+        "infra/evals/status/run-status-probes.mjs"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 579,
+        "deletions": 13
+      },
+      "committedAtMs": 1781754532000,
+      "cleanSubject": "Add desktop agent workflow observability probes",
+      "keywords": [
+        "desktop",
+        "agent",
+        "workflow",
+        "observability",
+        "probes"
+      ],
+      "fileGroups": [
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "docs/aura-feature-health.md",
+        "infra/evals/status"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure",
+        "Docs"
+      ]
     }
   ],
-  "batchCount": 3,
+  "batchCount": 4,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.688.1",
+      "version": "0.1.0-nightly.689.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64810628
+          "sizeBytes": 64797486
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131467768
+          "sizeBytes": 131435000
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -268,29 +360,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.688.1",
+      "version": "0.1.0-nightly.689.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.688.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.689.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60767112
+          "sizeBytes": 60743769
         },
         {
-          "name": "AURA_0.1.0-nightly.688.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.689.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59809167
+          "sizeBytes": 59789367
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -300,29 +392,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.688.1",
+      "version": "0.1.0-nightly.689.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.688.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.689.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62875666
+          "sizeBytes": 62914855
         },
         {
-          "name": "AURA_0.1.0-nightly.688.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.689.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61894071
+          "sizeBytes": 61885751
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -332,17 +424,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.688.1",
+      "version": "0.1.0-nightly.689.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47987324
+          "sizeBytes": 48027529
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.688.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.689.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -351,19 +443,19 @@
     }
   ],
   "rendered": {
-    "title": "Live remote agent provisioning feedback and accurate VM reporting",
-    "intro": "Today's nightly is centered on making remote agent cold starts feel transparent: the AgentEnvironment now streams real boot progress, accurately labels confidential VMs, and reports true VM sizing. A Windows desktop build warning was also silenced, and status probes were recalibrated to stop crying wolf on slow remote checks.",
+    "title": "Live remote agent boot UX and deeper desktop release probes",
+    "intro": "Today's nightly focuses on making remote agent cold starts feel alive—accurate VM labels, streaming boot logs, and a real provisioning phase indicator—alongside a substantial expansion of desktop release observability covering tool calls, agent-to-agent messaging, and subagent workflows.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "10:41 PM",
         "started_at": "2026-06-17T05:41:03.000Z",
         "ended_at": "2026-06-17T05:41:03.000Z",
-        "title": "Clean Windows desktop builds for the sidecar harness",
-        "summary": "Silenced spurious dead-code warnings on non-Unix targets so the desktop harness builds cleanly across platforms.",
+        "title": "Cross-platform desktop build cleanup for sidecar port detection",
+        "summary": "Quiets Windows build warnings caused by Unix-only sidecar helpers being matched on every platform.",
         "items": [
           {
-            "text": "Gated the managed sidecar port-detection helpers and ManagedSidecarKind variants behind cfg(any(unix, test)) so Windows builds of aura-os-desktop no longer surface dead-code warnings for Unix-only paths.",
+            "text": "Gated the managed sidecar port-detection helpers and ManagedSidecarKind variants behind cfg(any(unix, test)) so non-Unix Desktop builds no longer trip dead-code warnings while still keeping the cross-platform match intact.",
             "commit_shas": [
               "0d902888fdb27e5eb9a967d4bf3d99bd705886ce"
             ],
@@ -376,25 +468,25 @@
         "time_label": "11:50 PM",
         "started_at": "2026-06-17T06:50:52.000Z",
         "ended_at": "2026-06-17T06:54:28.000Z",
-        "title": "Transparent cold starts for remote agents",
-        "summary": "AgentEnvironment now shows what a provisioning VM is actually doing — accurate isolation and resources, a live boot phase, and streaming logs — instead of an opaque spinner.",
+        "title": "Live remote agent provisioning experience",
+        "summary": "Remote agent status now shows accurate VM details and streams real-time boot progress instead of a static spinner during cold starts.",
         "items": [
           {
-            "text": "Confidential SEV-SNP VMs are now labeled \"Confidential VM\" instead of being misreported as \"Container\", and the Resources line shows real vCPU/GiB plus the backing AWS instance type (e.g. m6a.xlarge) forwarded from the gateway, rather than the stripped tier spec.",
+            "text": "Confidential SEV-SNP VMs are now correctly labeled as 'Confidential VM' (previously mislabeled 'Container') and the status card reports real vCPU/GiB with the AWS instance type via a new vm_instance_type field plumbed through the swarm state proxy, instead of the stripped tier spec.",
             "commit_shas": [
               "220e459d571ec3df0f920e775ebdd85edab3bd3c"
             ],
             "confidence": "high"
           },
           {
-            "text": "The VM logs panel auto-opens while an agent is provisioning and silently re-polls the tail every 3 seconds, so boot and attestation output streams in live instead of showing \"No platform logs yet\" after a single fetch.",
+            "text": "The remote logs panel now polls the tail every 3s in the background and auto-opens while the agent is provisioning, so boot and attestation output streams in live instead of stalling on 'No platform logs yet'.",
             "commit_shas": [
               "41f9698d5827d1ba69a686833a87dfefd4f4c4d0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added an adaptive ~2.5s state poll during provisioning (relaxing to 15s once settled) and a coarse phase label under the Provisioning badge that progresses from \"Scheduling machine…\" to \"Booting & attesting…\" as the VM gets an endpoint.",
+            "text": "Added an adaptive 2.5s VM state poll during provisioning (15s once settled) and a coarse phase label under the Provisioning badge—'Scheduling machine…' before an endpoint appears, then 'Booting & attesting…'—so slow cold starts show forward motion.",
             "commit_shas": [
               "46dcfdaaa96439ae7f85f5292bf50de4db9651cd"
             ],
@@ -407,20 +499,51 @@
         "time_label": "7:53 AM",
         "started_at": "2026-06-17T14:53:53.000Z",
         "ended_at": "2026-06-17T14:53:53.000Z",
-        "title": "Recalibrated remote agent status probes",
-        "summary": "Tuned the observability probes so remote-agent checks reflect realistic cold-start latencies and dropped a noisy informational probe from the rotation.",
+        "title": "Recalibrated remote agent probe latency budgets",
+        "summary": "Observability and release workflows now tolerate realistic remote agent timings and drop a noisy image-generation probe.",
         "items": [
           {
-            "text": "Raised warning/outage latency thresholds for the remote-agent-create, remote-agent-state, and remote-agent-runtime probes (now in the 4–7 minute range) and bumped the default remote probe timeout to 5 minutes via a new AURA_STATUS_REMOTE_TIMEOUT_MS override, so legitimate slow boots stop firing as outages.",
+            "text": "Raised remote-agent probe warning/outage thresholds to multi-minute budgets (240s warning, 360–420s outage) and bumped the default remote probe timeout to 5 minutes via a new AURA_STATUS_REMOTE_TIMEOUT_MS override, reducing false-positive alerts on legitimate cold starts.",
             "commit_shas": [
               "70f19851bfff83d05dbce2d1bdc9f4e349bb52de"
             ],
             "confidence": "high"
           },
           {
-            "text": "Dropped the image-generation-stream probe from the observability, nightly, and stable release workflows and from features.json to stop tracking it as a status signal.",
+            "text": "Removed the informational image-generation-stream check from the observability and release workflows along with its features.json entry, trimming a low-signal probe from production status reporting.",
             "commit_shas": [
               "70f19851bfff83d05dbce2d1bdc9f4e349bb52de"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "8:31 PM",
+        "started_at": "2026-06-18T03:31:36.000Z",
+        "ended_at": "2026-06-18T03:48:52.000Z",
+        "title": "Desktop release probes for tools, A2A, subagents—and a context hydration fix",
+        "summary": "Server-side context lookups now survive subagent sessions, and desktop release runs gained deep end-to-end probes for project agent workflows.",
+        "items": [
+          {
+            "text": "Fixed agent context contents and usage endpoints to consider every session across matching project_agents instead of only the newest—newer subagent bookkeeping sessions with no assistant usage no longer hide real context from the most recent active session.",
+            "commit_shas": [
+              "e74d791a865ad016da0dc2398fec42d8071eabcc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Nightly and stable desktop release workflows now run new probes for project-bound tool round-trips (write_file/read_file/run_command), agent-to-agent send_to_agent delivery and callbacks, foreground subagent task completion with context hydration, and real harness skill invocation in a chat turn.",
+            "commit_shas": [
+              "6c66313d78fa99a14ebe97d4225aeff08546c9f8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Documented the expanded coverage in aura-feature-health, adding 'Project Agent Workflows' and skill-invocation groups so the desktop release status page reflects the new end-to-end checks.",
+            "commit_shas": [
+              "6c66313d78fa99a14ebe97d4225aeff08546c9f8"
             ],
             "confidence": "high"
           }
@@ -428,11 +551,11 @@
       }
     ],
     "highlights": [
-      "Live VM logs and boot phases during remote agent provisioning",
-      "Confidential SEV-SNP VMs now labeled correctly with real vCPU/GiB",
-      "Status probe thresholds recalibrated for realistic remote latencies",
-      "Clean cross-platform desktop builds on non-Unix targets"
+      "Confidential VMs now report real resources and the correct isolation label",
+      "Live VM logs and adaptive polling during agent provisioning",
+      "Desktop release probes now cover tools, A2A, and subagents",
+      "Context hydration fixed after subagent sessions"
     ],
-    "raw_commit_count": 5
+    "raw_commit_count": 7
   }
 }
