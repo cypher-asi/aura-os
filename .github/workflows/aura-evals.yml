@@ -15,9 +15,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: aura-functional-evals-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   evals-registry:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v5
@@ -32,6 +37,11 @@ jobs:
 
   smoke:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    timeout-minutes: 20
+    env:
+      AURA_SKIP_PLAYWRIGHT_INSTALL: "1"
 
     defaults:
       run:
@@ -61,6 +71,11 @@ jobs:
 
   workflow-e2e:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    timeout-minutes: 20
+    env:
+      AURA_SKIP_PLAYWRIGHT_INSTALL: "1"
 
     defaults:
       run:
@@ -90,6 +105,11 @@ jobs:
 
   chat-core:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    timeout-minutes: 20
+    env:
+      AURA_SKIP_PLAYWRIGHT_INSTALL: "1"
 
     defaults:
       run:
@@ -120,6 +140,7 @@ jobs:
 
   behavior-evals:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     defaults:
       run:
@@ -147,6 +168,7 @@ jobs:
 
   bench-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     defaults:
       run:
@@ -168,7 +190,12 @@ jobs:
   live-benchmark:
     if: github.event_name == 'workflow_dispatch' && inputs.run_live_benchmark
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
     environment: production
+    timeout-minutes: 90
+    env:
+      AURA_SKIP_PLAYWRIGHT_INSTALL: "1"
 
     defaults:
       run:
@@ -204,6 +231,7 @@ jobs:
     name: Eval results (required)
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs:
       - evals-registry
       - smoke

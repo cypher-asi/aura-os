@@ -30,12 +30,20 @@ if (config.install === "npm-ci") {
   run("npm", ["ci"], { cwd, label: "evals:npm-ci", retries: 1 });
 }
 
-if (Array.isArray(config.playwrightBrowsers) && config.playwrightBrowsers.length > 0) {
+if (
+  Array.isArray(config.playwrightBrowsers)
+  && config.playwrightBrowsers.length > 0
+  && process.env.AURA_SKIP_PLAYWRIGHT_INSTALL !== "1"
+) {
   run("npx", playwrightInstallArgs(config.playwrightBrowsers), {
     cwd,
     label: "evals:playwright-install",
     retries: 1,
   });
+} else if (Array.isArray(config.playwrightBrowsers) && config.playwrightBrowsers.length > 0) {
+  console.log(
+    `\n> [evals:playwright-install] skipping install; AURA_SKIP_PLAYWRIGHT_INSTALL=1 for ${config.playwrightBrowsers.join(", ")}`,
+  );
 }
 
 run(config.testCommand[0], config.testCommand.slice(1), {
