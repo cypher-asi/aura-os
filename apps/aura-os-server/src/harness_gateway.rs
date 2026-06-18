@@ -67,6 +67,21 @@ impl HarnessHttpGateway {
         }
     }
 
+    /// POST JSON and report whether the harness accepted it (2xx status).
+    ///
+    /// Unlike [`Self::post_json_ignore_result`], the caller can react to a
+    /// failed registration instead of silently proceeding. Use this when the
+    /// harness call is load-bearing — e.g. the skill-edit path, where this
+    /// POST is what reloads the harness's in-memory skill registry and is the
+    /// only thing that makes an edit go live. Returns `false` on any
+    /// transport failure or non-2xx status.
+    pub(crate) async fn post_json_ok(&self, path: &str, body: String) -> bool {
+        match self.proxy_json(Method::POST, path, None, Some(body)).await {
+            Ok(resp) => resp.status().is_success(),
+            Err(_) => false,
+        }
+    }
+
     /// Fire-and-forget style POST used when the caller does not need the harness response.
     pub(crate) async fn post_json_ignore_result(&self, path: &str, body: String) {
         let path = path.trim_start_matches('/');

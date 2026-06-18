@@ -176,6 +176,39 @@ pub(crate) async fn start_recording_mock_harness() -> (String, Arc<Mutex<Vec<(St
     (url, calls)
 }
 
+/// Mock harness whose `POST /api/skills` always fails with a 500. Models
+/// the harness being unreachable/erroring during a skill edit so tests can
+/// assert the edit path fails loud (502) instead of silently serving stale
+/// content behind a 200. Other routes succeed so an initial create (which
+/// treats the harness POST as best-effort) still lands its marker file.
+#[cfg(unix)]
+#[allow(dead_code)]
+pub(crate) async fn start_failing_skills_mock_harness() -> String {
+    let fail_post = |_req: Request<Body>| async move {
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            axum::Json(json!({ "error": "boom" })),
+        )
+            .into_response()
+    };
+    let ok_post =
+        |_req: Request<Body>| async move { axum::Json(json!({ "ok": true })).into_response() };
+
+    let mock_app = Router::new()
+        .route("/api/skills", post(fail_post))
+        .route("/api/agents/:agent_id/skills", post(ok_post));
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let url = format!("http://{addr}");
+
+    tokio::spawn(async move {
+        axum::serve(listener, mock_app).await.ok();
+    });
+
+    url
+}
+
 /// Mock harness that reports the current installation state for each
 /// agent_id from a shared map. Used by the `delete_my_skill_*` cascade
 /// tests below to exercise the server-side precondition that blocks a

@@ -5,7 +5,7 @@ use serde_json::json;
 use tower::ServiceExt;
 
 use super::common::*;
-use super::mocks::start_recording_mock_harness;
+use super::mocks::{start_failing_skills_mock_harness, start_recording_mock_harness};
 use super::HARNESS_URL_ENV_LOCK;
 
 // `dirs::home_dir()` on Windows ignores env vars and reads the real user
@@ -129,6 +129,66 @@ async fn update_my_skill_rewrites_file_and_reregisters() {
     assert_eq!(reregister_body["name"], "edit-me");
     assert_eq!(reregister_body["description"], "Updated description");
     assert_eq!(reregister_body["body"], "# Updated body");
+}
+
+/// If the harness rejects the re-register POST, the edit must fail loud
+/// (502) and leave the on-disk SKILL.md untouched — never report success
+/// for a change that didn't go live. That harness POST is the only thing
+/// that reloads the live skill registry, so a silent failure would serve
+/// stale content behind a 200.
+#[tokio::test]
+async fn update_my_skill_harness_failure_returns_502_and_leaves_file() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let mock_url = start_failing_skills_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    // Create lands its marker file even though the harness POST is best-effort
+    // and fails here, so we have a real user-authored skill to try to edit.
+    let req = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "edit-me",
+            "description": "Original description",
+            "body": "# Original body",
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let skill_path = home_dir
+        .path()
+        .join(aura_os_core::Channel::current().skills_home_name())
+        .join("skills")
+        .join("edit-me")
+        .join("SKILL.md");
+    let before = std::fs::read_to_string(&skill_path).unwrap();
+
+    // The edit's re-register POST hits the failing harness → 502.
+    let req = json_request(
+        "PUT",
+        "/api/harness/skills/mine/edit-me",
+        Some(json!({
+            "description": "Updated description",
+            "body": "# Updated body",
+        })),
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
+
+    // The file must be exactly as it was — no partial "disk new / registry old".
+    let after = std::fs::read_to_string(&skill_path).unwrap();
+    assert_eq!(
+        before, after,
+        "a failed re-register must not rewrite the skill file"
+    );
 }
 
 /// Editing a skill that does not exist on disk is a 404.

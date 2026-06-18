@@ -81,9 +81,17 @@ pub(crate) async fn update_my_skill(
     // harness catalog FIRST (the harness writes its own marker-less
     // SKILL.md on this POST), then stamp our marker-bearing file last so
     // it wins the race and the skill keeps showing up under "My Skills".
-    state
+    //
+    // Unlike create, this POST is checked rather than fire-and-forget: it is
+    // the harness call that reloads the in-memory skill registry, and that
+    // registry — not the on-disk file — is what agents resolve a skill's
+    // content from. If it fails, the edit would NOT go live (every agent
+    // keeps serving the old body), so writing the new file below and
+    // returning 200 would be a lie. Fail loud and leave the on-disk skill
+    // untouched so disk and the live registry stay consistent (both pre-edit).
+    let registered = state
         .harness_http
-        .post_json_ignore_result(
+        .post_json_ok(
             "api/skills",
             serde_json::json!({
                 "name": name,
@@ -95,6 +103,9 @@ pub(crate) async fn update_my_skill(
             .to_string(),
         )
         .await;
+    if !registered {
+        return Err(StatusCode::BAD_GATEWAY);
+    }
 
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
