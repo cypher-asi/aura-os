@@ -145,6 +145,7 @@ For each iteration:
 5. Compare verifier output against every success criterion.
 6. Continue only when a criterion still lacks evidence and the iteration budget remains.
 7. Stop when the criteria are satisfied, blocked by missing access, or the budget is exhausted.
+8. Before calling `task_done`, write a visible "Loop Engineering Final Report" in the assistant transcript and copy the same report into the `task_done.notes` field. Do not call `task_done` with terse notes like "done" or "implemented".
 </loop_protocol>
 
 <learning_protocol>
@@ -159,13 +160,14 @@ After every iteration, keep a compact learning ledger with:
 </learning_protocol>
 
 <final_report>
-When the loop stops, report:
+When the loop stops, the visible "Loop Engineering Final Report" and the `task_done.notes` field must include:
 - final status: passed, failed, or blocked
 - evidence for each success criterion
 - commands run and their outcomes
 - changes made
 - remaining risks
 - learnings worth carrying into future Aura evals, skills, or workflow defaults
+If the report does not include these sections, the loop is not complete yet.
 </final_report>
 </loop_engineering_mode>"#,
         goal = contract.goal,
@@ -366,6 +368,9 @@ mod tests {
         assert!(prompt.contains("Maximum iterations: 3"));
         assert!(prompt.contains("Tests: `npm test -- --run`"));
         assert!(prompt.contains("learning ledger"));
+        assert!(prompt.contains("Loop Engineering Final Report"));
+        assert!(prompt.contains("task_done.notes"));
+        assert!(prompt.contains("Do not call `task_done` with terse notes"));
     }
 
     #[test]
