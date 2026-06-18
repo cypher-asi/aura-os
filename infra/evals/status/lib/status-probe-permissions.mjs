@@ -7,3 +7,19 @@ export function statusProbeAgentPermissions(orgId) {
     capabilities: [],
   };
 }
+
+export function statusProbeHarnessPermissions(orgId) {
+  const permissions = statusProbeAgentPermissions(orgId);
+  return {
+    ...permissions,
+    capabilities: [
+      "spawnAgent",
+      "controlAgent",
+      "readAgent",
+      "listAgents",
+      "invokeProcess",
+      "readAllProjects",
+      "writeAllProjects",
+    ].map((type) => ({ type })),
+  };
+}

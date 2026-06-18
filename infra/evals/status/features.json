@@ -101,6 +101,30 @@
           "outageLatencyMs": 90000
         },
         {
+          "id": "project-agent-tool-roundtrip",
+          "runtimeEnvironment": "desktop-release",
+          "required": true,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 60000,
+          "outageLatencyMs": 180000
+        },
+        {
+          "id": "project-agent-a2a-roundtrip",
+          "runtimeEnvironment": "desktop-release",
+          "required": true,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 90000,
+          "outageLatencyMs": 240000
+        },
+        {
+          "id": "project-agent-subagent-roundtrip",
+          "runtimeEnvironment": "desktop-release",
+          "required": true,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 90000,
+          "outageLatencyMs": 240000
+        },
+        {
           "id": "session-share-public-read",
           "runtimeEnvironment": "desktop-release",
           "required": false,
@@ -135,6 +159,14 @@
           "staleAfterMinutes": 1800,
           "warningLatencyMs": 10000,
           "outageLatencyMs": 30000
+        },
+        {
+          "id": "harness-skill-invocation",
+          "runtimeEnvironment": "desktop-release",
+          "required": true,
+          "staleAfterMinutes": 1800,
+          "warningLatencyMs": 30000,
+          "outageLatencyMs": 90000
         }
       ],
       "degradedAfterFailures": 1,

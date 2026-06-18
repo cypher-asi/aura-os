@@ -28,7 +28,10 @@ Current feature groups:
 - Core API: `/health`, authenticated session reads, and system metadata.
 - Identity and Organizations: auth validation, current user sync, and org membership.
 - Public Chat and APIs: guest setup, public chat streaming, feedback, models, and blog APIs.
-- Local Agents: local agent creation and runtime response.
+- Local Agents: local agent creation, scoped permissions, and runtime response.
+- Project Agent Workflows: project-bound chat streams, harness file/shell tool calls,
+  agent-to-agent `send_to_agent` callbacks, foreground subagents, and public
+  session share reads.
 - Remote Agents: swarm-backed agent creation, state polling, and runtime response.
 - Projects, Specs, and Tasks: project CRUD, spec CRUD, task CRUD, project stats, and loop status.
 - Processes: workflow lists, process creation, default node creation, and cleanup.
@@ -36,6 +39,8 @@ Current feature groups:
 - Media Generation: desktop-backed image generation, plus informational
   production-auth stream health.
 - Autonomous Build Loop: benchmark and harness fixture outputs.
+- Harness Memory and Skills: memory CRUD, skill create/install/delete, and real
+  skill invocation in a project chat turn.
 - Marketplace and Bootstrap: marketplace catalog and harness bootstrap health.
 - Integrations and Billing: integrations, tool actions, subscription status, and credits.
 - Community and Feedback: feedback, bug reports, feed, leaderboard, and platform stats.
@@ -108,7 +113,9 @@ npm run status:desktop-release
 
 By default this covers the binary-local API, authenticated session, org/profile
 reads, workspace defaults, terminal list, local agent creation, local agent
-runtime response, the local model matrix, and desktop-backed image generation.
+runtime response, project-bound chat, file/shell tool calls, agent-to-agent
+messaging, foreground subagents, skill invocation, the local model matrix, and
+desktop-backed image generation.
 Release workflows run this on the macOS arm64 release leg when
 `AURA_STATUS_USER_EMAIL` and
 `AURA_STATUS_USER_PASSWORD` are configured, then upload the generated check JSON

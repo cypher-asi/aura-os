@@ -517,7 +517,7 @@ jobs:
           AURA_STATUS_RUNTIME_ENVIRONMENT: desktop-release
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_DESKTOP_LOG_DIR: desktop-observability-logs
-          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,desktop-update-runtime,local-agent-create,local-agent-runtime,local-agent-permissions,project-agent-chat-stream,session-share-public-read,harness-memory-roundtrip,harness-skills-roundtrip,notes-crud,process-run-lifecycle,model-matrix,image-generation-stream,analytics-contract-artifacts
+          AURA_STATUS_DESKTOP_CHECKS: api-health,auth-session,orgs-list,user-profile,workspace-defaults,terminal-list,desktop-update-runtime,local-agent-create,local-agent-runtime,local-agent-permissions,project-agent-chat-stream,project-agent-tool-roundtrip,project-agent-a2a-roundtrip,project-agent-subagent-roundtrip,session-share-public-read,harness-memory-roundtrip,harness-skills-roundtrip,harness-skill-invocation,notes-crud,process-run-lifecycle,model-matrix,image-generation-stream,analytics-contract-artifacts
         shell: bash
         run: |
           if [ -z "$AURA_STATUS_USER_EMAIL" ] || [ -z "$AURA_STATUS_USER_PASSWORD" ]; then

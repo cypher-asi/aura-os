@@ -130,6 +130,59 @@
         { "path": "expectedPhrase", "equals": "hello from aura" }
       ]
     },
+    "project-agent-tool-roundtrip": {
+      "description": "A desktop release project-bound local agent can use the bundled harness to write a file, read it back, run a shell command, and report the expected completion marker.",
+      "requiredEvidence": ["orgId", "projectId", "agentId", "agentInstanceId", "frameTypes", "toolNames", "requiredToolsUsed", "writeOk", "readBackOk", "commandOk", "passMarkerPresent", "expectedFileName", "expectedFileMarker", "expectedShellMarker"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "projectId", "nonEmpty": true },
+        { "path": "agentId", "nonEmpty": true },
+        { "path": "agentInstanceId", "nonEmpty": true },
+        { "path": "toolNames", "contains": "write_file" },
+        { "path": "toolNames", "contains": "read_file" },
+        { "path": "toolNames", "contains": "run_command" },
+        { "path": "requiredToolsUsed", "equals": true },
+        { "path": "writeOk", "equals": true },
+        { "path": "readBackOk", "equals": true },
+        { "path": "commandOk", "equals": true },
+        { "path": "passMarkerPresent", "equals": true },
+        { "path": "expectedFileMarker", "equals": "AURA_TOOL_PROBE_OK" },
+        { "path": "expectedShellMarker", "equals": "AURA_SHELL_PROBE_OK" }
+      ]
+    },
+    "project-agent-a2a-roundtrip": {
+      "description": "A desktop release project-bound local agent can discover another local agent, send it a message through send_to_agent, and observe the target reply routed back to the sender.",
+      "requiredEvidence": ["orgId", "projectId", "plannerAgentId", "plannerAgentInstanceId", "reviewerAgentId", "reviewerAgentInstanceId", "frameTypes", "toolNames", "listAgentsUsed", "sendToAgentUsed", "delivered", "targetMatches", "reviewerAckObserved", "parentCallbackObserved", "expectedReply"],
+      "assertions": [
+        { "path": "plannerAgentId", "nonEmpty": true },
+        { "path": "reviewerAgentId", "nonEmpty": true },
+        { "path": "toolNames", "contains": "list_agents" },
+        { "path": "toolNames", "contains": "send_to_agent" },
+        { "path": "listAgentsUsed", "equals": true },
+        { "path": "sendToAgentUsed", "equals": true },
+        { "path": "delivered", "equals": true },
+        { "path": "targetMatches", "equals": true },
+        { "path": "reviewerAckObserved", "equals": true },
+        { "path": "parentCallbackObserved", "equals": true },
+        { "path": "expectedReply", "equals": "AURA_A2A_PROBE_ACK" }
+      ]
+    },
+    "project-agent-subagent-roundtrip": {
+      "description": "A desktop release project-bound local agent can spawn a foreground subagent with task, receive completion, and hydrate context usage/contents after the turn.",
+      "requiredEvidence": ["orgId", "projectId", "agentId", "agentInstanceId", "frameTypes", "toolNames", "taskToolUsed", "subagentSpawned", "subagentCompleted", "subagentReturnedMarker", "contextUtilization", "subagentContextCount", "expectedReply"],
+      "assertions": [
+        { "path": "agentId", "nonEmpty": true },
+        { "path": "agentInstanceId", "nonEmpty": true },
+        { "path": "toolNames", "contains": "task" },
+        { "path": "taskToolUsed", "equals": true },
+        { "path": "subagentSpawned", "equals": true },
+        { "path": "subagentCompleted", "equals": true },
+        { "path": "subagentReturnedMarker", "equals": true },
+        { "path": "contextUtilization", "min": 0.000001 },
+        { "path": "subagentContextCount", "min": 1 },
+        { "path": "expectedReply", "equals": "SUBAGENT_PROBE_OK" }
+      ]
+    },
     "session-share-public-read": {
       "description": "A desktop release project chat session can be shared and read through the anonymous public share endpoint.",
       "requiredEvidence": ["projectId", "agentInstanceId", "sessionId", "shareIdPresent", "shareUrlPresent", "publicMessageCount", "textSample"],
@@ -177,6 +230,22 @@
         { "path": "mineContainsSkill", "equals": true },
         { "path": "agentContainsSkill", "equals": true },
         { "path": "deleted", "equals": true }
+      ]
+    },
+    "harness-skill-invocation": {
+      "description": "A desktop release project-bound local agent receives an installed user-authored skill in context and follows it during a real chat turn.",
+      "requiredEvidence": ["orgId", "projectId", "agentId", "agentInstanceId", "skillName", "created", "installedOnAgent", "frameTypes", "textSample", "expectedPhrase", "textMatches", "skillLabels", "skillInContext"],
+      "assertions": [
+        { "path": "orgId", "nonEmpty": true },
+        { "path": "projectId", "nonEmpty": true },
+        { "path": "agentId", "nonEmpty": true },
+        { "path": "agentInstanceId", "nonEmpty": true },
+        { "path": "skillName", "nonEmpty": true },
+        { "path": "created", "equals": true },
+        { "path": "installedOnAgent", "equals": true },
+        { "path": "textMatches", "equals": true },
+        { "path": "skillInContext", "equals": true },
+        { "path": "expectedPhrase", "equals": "AURA_SKILL_PROBE_OK" }
       ]
     },
     "remote-agent-create": {

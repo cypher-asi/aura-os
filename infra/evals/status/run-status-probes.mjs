@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import { CHECK_STATUS } from "./lib/status-policy.mjs";
 import { validateCheckEvidence } from "./lib/check-expectations.mjs";
-import { statusProbeAgentPermissions } from "./lib/status-probe-permissions.mjs";
+import {
+  statusProbeAgentPermissions,
+  statusProbeHarnessPermissions,
+} from "./lib/status-probe-permissions.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
@@ -20,6 +23,13 @@ const EXPECTED_RUNTIME_PHRASE = "hello from aura";
 const DEFAULT_PUBLISHED_STATUS_JSON_URL = "https://cypher-asi.github.io/aura-os/observability/status.json";
 const PUBLISHED_STATUS_MAX_AGE_MINUTES = 300;
 const PROJECT_CHAT_EXPECTED_PHRASE = "hello from aura";
+const SKILL_INVOCATION_PHRASE = "AURA_SKILL_PROBE_OK";
+const TOOL_FILE_NAME = "AURA_STATUS_TOOL_PROBE.txt";
+const TOOL_FILE_MARKER = "AURA_TOOL_PROBE_OK";
+const TOOL_SHELL_MARKER = "AURA_SHELL_PROBE_OK";
+const TOOL_PASS_MARKER = "TOOL_PROBE_PASS";
+const A2A_REPLY_MARKER = "AURA_A2A_PROBE_ACK";
+const SUBAGENT_REPLY_MARKER = "SUBAGENT_PROBE_OK";
 const LIVE_STATUS_SNAPSHOT_SOURCES = new Set([
   "github-actions",
   "desktop-nightly-release",
@@ -492,22 +502,22 @@ async function artifactScan(globs) {
   return files;
 }
 
-async function createAgent(args, track, machineType, model = null, orgId = null) {
+async function createAgent(args, track, machineType, model = null, orgId = null, overrides = {}) {
   const environment = machineType === "remote" ? "swarm_microvm" : "local_host";
   const agent = await apiJson(args, "POST", "/api/agents", {
     org_id: orgId,
-    name: `aura-status-${machineType}-${Date.now()}`,
-    role: "status-probe",
-    personality: "Small, deterministic health-check agent.",
-    system_prompt: "You are an AURA status probe. Reply exactly as requested.",
-    skills: [],
+    name: overrides.name ?? `aura-status-${machineType}-${Date.now()}`,
+    role: overrides.role ?? "status-probe",
+    personality: overrides.personality ?? "Small, deterministic health-check agent.",
+    system_prompt: overrides.systemPrompt ?? "You are an AURA status probe. Reply exactly as requested.",
+    skills: overrides.skills ?? [],
     icon: null,
     machine_type: machineType,
     adapter_type: "aura_harness",
     environment,
     auth_source: "aura_managed",
     default_model: model,
-    permissions: statusProbeAgentPermissions(orgId),
+    permissions: overrides.permissions ?? statusProbeAgentPermissions(orgId),
     tags: ["aura-status-probe"],
   }, { timeoutMs: machineType === "remote" ? DEFAULT_REMOTE_TIMEOUT_MS : DEFAULT_TIMEOUT_MS });
   track("agent", agent.agent_id, `/api/agents/${agent.agent_id}`);
@@ -596,6 +606,388 @@ async function runProjectChatTurn(args, track) {
       textSample: text.slice(0, 120),
       sessionCount: sessions.length,
       expectedPhrase: PROJECT_CHAT_EXPECTED_PHRASE,
+    },
+  };
+}
+
+function frameTypes(frames) {
+  return frames.map((frame) => frame.event);
+}
+
+function toolUseNames(frames) {
+  return frames
+    .filter((frame) => frame.event === "tool_use_start" || frame.event === "tool_call_snapshot")
+    .map((frame) => frame.data?.name)
+    .filter((name) => typeof name === "string" && name.length > 0);
+}
+
+function toolResults(frames) {
+  return frames
+    .filter((frame) => frame.event === "tool_result" && frame.data && typeof frame.data === "object")
+    .map((frame) => ({
+      name: frame.data.name ?? null,
+      isError: Boolean(frame.data.is_error),
+      result: typeof frame.data.result === "string" ? frame.data.result : JSON.stringify(frame.data.result ?? null),
+    }));
+}
+
+function toolResult(results, name) {
+  return results.find((result) => result.name === name) ?? null;
+}
+
+function parseJsonMaybe(value) {
+  if (typeof value !== "string" || value.length === 0) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function assistantContextContents(frames) {
+  for (let index = frames.length - 1; index >= 0; index -= 1) {
+    const frame = frames[index];
+    const contents = frame.data?.usage?.context_contents;
+    if (contents && typeof contents === "object") return contents;
+  }
+  return null;
+}
+
+function contextBucketLabels(contents, bucket) {
+  const items = contents?.[bucket];
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => item?.label)
+    .filter((label) => typeof label === "string" && label.length > 0);
+}
+
+async function createHarnessProjectAgent(args, track, orgId, projectId, overrides = {}) {
+  const agent = await createAgent(args, track, "local", overrides.model ?? null, orgId, {
+    name: overrides.name,
+    role: overrides.role ?? "status-probe",
+    personality: overrides.personality,
+    systemPrompt: overrides.systemPrompt,
+    skills: overrides.skills,
+    permissions: statusProbeHarnessPermissions(orgId),
+  });
+  const { agentInstanceId } = await createProjectAgentInstance(args, projectId, agent.agent_id);
+  track("agent-instance", agentInstanceId, `/api/projects/${projectId}/agents/${agentInstanceId}`);
+  return { agent, agentInstanceId };
+}
+
+async function fetchEvents(args, endpoint) {
+  const payload = await apiJson(args, "GET", endpoint);
+  const items = collectionItems(payload, ["events", "messages", "items", "data"]);
+  return {
+    payload,
+    items,
+    text: JSON.stringify(payload ?? null),
+  };
+}
+
+async function waitForEventsContaining(args, endpoint, needle, timeoutMs = 90_000) {
+  return waitForValue(async () => {
+    const events = await fetchEvents(args, endpoint);
+    return events.text.includes(needle) ? events : null;
+  }, timeoutMs, 2000);
+}
+
+async function waitForEventsContainingOrEmpty(args, endpoint, needle, timeoutMs = 90_000) {
+  try {
+    return { ...(await waitForEventsContaining(args, endpoint, needle, timeoutMs)), error: null };
+  } catch (error) {
+    return {
+      payload: null,
+      items: [],
+      text: "",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function waitForInstanceContext(args, projectId, agentInstanceId, timeoutMs = 45_000) {
+  return waitForValue(async () => {
+    const [usage, contents] = await Promise.all([
+      apiJson(args, "GET", `/api/projects/${projectId}/agents/${agentInstanceId}/context-usage`),
+      apiJson(args, "GET", `/api/projects/${projectId}/agents/${agentInstanceId}/context-contents`),
+    ]);
+    const utilization = Number(usage?.context_utilization ?? 0);
+    const contextContents = contents?.context_contents ?? null;
+    const hasContents = contextContents && Object.values(contextContents).some((value) => {
+      if (Array.isArray(value)) return value.length > 0;
+      return typeof value === "string" && value.length > 0;
+    });
+    return utilization > 0 && hasContents ? { usage, contents: contextContents } : null;
+  }, timeoutMs, 2000);
+}
+
+async function waitForInstanceContextOrEmpty(args, projectId, agentInstanceId, timeoutMs = 45_000) {
+  try {
+    return { ...(await waitForInstanceContext(args, projectId, agentInstanceId, timeoutMs)), error: null };
+  } catch (error) {
+    return {
+      usage: null,
+      contents: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function runSkillInvocationTurn(args, track) {
+  const { orgId } = await requireOrgId(args);
+  const { projectId } = await createProject(args, track, orgId);
+  const skillName = `aura-status-skill-${Date.now()}`;
+  let agentId = null;
+  try {
+    const { agent, agentInstanceId } = await createHarnessProjectAgent(args, track, orgId, projectId, {
+      role: "SkillInvocationProbe",
+      systemPrompt: "You are an AURA skill invocation probe. Follow installed skill instructions exactly.",
+    });
+    agentId = agent.agent_id;
+
+    const created = await apiJson(args, "POST", "/api/harness/skills", {
+      name: skillName,
+      description: "Temporary skill proving installed skill instructions reach a real chat turn.",
+      body: `When asked about AURA_SKILL_PROBE, answer exactly: ${SKILL_INVOCATION_PHRASE}. Do not add extra words.`,
+      user_invocable: true,
+      model_invocable: false,
+      agent_id: agentId,
+    });
+
+    const frames = await apiSse(args, `/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`, {
+      content: "AURA_SKILL_PROBE",
+      action: "chat",
+      project_id: projectId,
+      new_session: true,
+    }, 120_000);
+    const text = sseTextSample(frames).trim();
+    const error = frames.find((frame) => frame.event === "error");
+    const contextContents = assistantContextContents(frames);
+    const skillLabels = contextBucketLabels(contextContents, "skills");
+    const textMatches = text === SKILL_INVOCATION_PHRASE;
+    const skillInContext = skillLabels.includes(skillName);
+    const ok = !error && textMatches && skillInContext;
+
+    return {
+      status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+      message: ok ? "" : "Installed skill was not invoked through a real project chat turn",
+      evidence: {
+        orgId,
+        projectId,
+        agentId,
+        agentInstanceId,
+        skillName,
+        created: Boolean(created?.created ?? created?.ok ?? true),
+        installedOnAgent: Boolean(created?.installed_on_agent ?? created?.installedOnAgent ?? true),
+        frameTypes: frameTypes(frames),
+        textSample: text.slice(0, 120),
+        expectedPhrase: SKILL_INVOCATION_PHRASE,
+        textMatches,
+        skillLabels,
+        skillInContext,
+      },
+    };
+  } finally {
+    if (agentId) {
+      try {
+        await apiJson(args, "DELETE", `/api/harness/agents/${agentId}/skills/${encodeURIComponent(skillName)}`);
+      } catch {}
+    }
+    try {
+      await apiJson(args, "DELETE", `/api/harness/skills/mine/${encodeURIComponent(skillName)}`);
+    } catch {}
+  }
+}
+
+async function runProjectToolRoundtrip(args, track) {
+  const { orgId } = await requireOrgId(args);
+  const { projectId } = await createProject(args, track, orgId);
+  const { agent, agentInstanceId } = await createHarnessProjectAgent(args, track, orgId, projectId, {
+    role: "ToolRoundtripProbe",
+    systemPrompt: "You are an AURA tool roundtrip probe. Use the requested tools exactly and report exact failures.",
+  });
+
+  const frames = await apiSse(args, `/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`, {
+    content: [
+      `Use write_file to create ${TOOL_FILE_NAME} with exactly: ${TOOL_FILE_MARKER}.`,
+      `Then use read_file to read ${TOOL_FILE_NAME}.`,
+      `Then use run_command with program "printf" and args ["${TOOL_SHELL_MARKER}\\n"].`,
+      `After those tool results, reply with exactly: ${TOOL_PASS_MARKER}.`,
+    ].join(" "),
+    action: "chat",
+    project_id: projectId,
+    new_session: true,
+  }, 180_000);
+
+  const text = sseTextSample(frames).trim();
+  const names = toolUseNames(frames);
+  const results = toolResults(frames);
+  const writeResult = toolResult(results, "write_file");
+  const readResult = toolResult(results, "read_file");
+  const commandResult = toolResult(results, "run_command");
+  const commandJson = parseJsonMaybe(commandResult?.result);
+  const writeOk = Boolean(writeResult && !writeResult.isError);
+  const readBackOk = !readResult?.isError && String(readResult?.result ?? "").includes(TOOL_FILE_MARKER);
+  const commandOk = !commandResult?.isError && (
+    String(commandResult?.result ?? "").includes(TOOL_SHELL_MARKER) ||
+    String(commandJson?.stdout ?? "").includes(TOOL_SHELL_MARKER)
+  );
+  const passMarkerPresent = text.includes(TOOL_PASS_MARKER);
+  const requiredToolsUsed = ["write_file", "read_file", "run_command"].every((name) => names.includes(name));
+  const error = frames.find((frame) => frame.event === "error");
+  const ok = !error && requiredToolsUsed && writeOk && readBackOk && commandOk && passMarkerPresent;
+
+  return {
+    status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+    message: ok ? "" : "Project agent did not complete file read/write and shell tool roundtrip",
+    evidence: {
+      orgId,
+      projectId,
+      agentId: agent.agent_id,
+      agentInstanceId,
+      frameTypes: frameTypes(frames),
+      toolNames: [...new Set(names)],
+      requiredToolsUsed,
+      writeOk,
+      readBackOk,
+      commandOk,
+      commandExitCode: commandJson?.exit_code ?? null,
+      passMarkerPresent,
+      textSample: text.slice(0, 120),
+      expectedFileName: TOOL_FILE_NAME,
+      expectedFileMarker: TOOL_FILE_MARKER,
+      expectedShellMarker: TOOL_SHELL_MARKER,
+    },
+  };
+}
+
+async function runProjectAgentToAgentRoundtrip(args, track) {
+  const { orgId } = await requireOrgId(args);
+  const { projectId } = await createProject(args, track, orgId);
+  const suffix = Date.now();
+  const reviewerName = `aura-status-reviewer-${suffix}`;
+  const planner = await createHarnessProjectAgent(args, track, orgId, projectId, {
+    name: `aura-status-planner-${suffix}`,
+    role: "AgentToAgentPlannerProbe",
+    systemPrompt: "You are an AURA agent-to-agent probe. Use list_agents before send_to_agent. After send_to_agent reports delivered, end the turn and wait for callback.",
+  });
+  const reviewer = await createHarnessProjectAgent(args, track, orgId, projectId, {
+    name: reviewerName,
+    role: "AgentToAgentReviewerProbe",
+    systemPrompt: `When another agent asks you to reply with ${A2A_REPLY_MARKER}, reply exactly: ${A2A_REPLY_MARKER}.`,
+  });
+
+  const frames = await apiSse(args, `/api/projects/${projectId}/agents/${planner.agentInstanceId}/events/stream`, {
+    content: `Use list_agents to find the agent named ${reviewerName}. Then use send_to_agent to ask that agent to reply exactly: ${A2A_REPLY_MARKER}. After send_to_agent says delivered, end your turn.`,
+    action: "chat",
+    project_id: projectId,
+    new_session: true,
+  }, 180_000);
+
+  const names = toolUseNames(frames);
+  const results = toolResults(frames);
+  const sendResult = toolResult(results, "send_to_agent");
+  const sendJson = parseJsonMaybe(sendResult?.result);
+  const delivered = sendJson?.delivered === true;
+  const targetMatches = sendJson?.target_agent_id === reviewer.agent.agent_id;
+  const [reviewerEvents, plannerEvents] = await Promise.all([
+    waitForEventsContainingOrEmpty(args, `/api/agents/${reviewer.agent.agent_id}/events`, A2A_REPLY_MARKER, 120_000),
+    waitForEventsContainingOrEmpty(args, `/api/agents/${planner.agent.agent_id}/events`, A2A_REPLY_MARKER, 120_000),
+  ]);
+  const listAgentsUsed = names.includes("list_agents");
+  const sendToAgentUsed = names.includes("send_to_agent");
+  const error = frames.find((frame) => frame.event === "error");
+  const ok = !error && listAgentsUsed && sendToAgentUsed && delivered && targetMatches && reviewerEvents.text.includes(A2A_REPLY_MARKER) && plannerEvents.text.includes(A2A_REPLY_MARKER);
+
+  return {
+    status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+    message: ok ? "" : "Agent-to-agent send/callback roundtrip did not complete",
+    evidence: {
+      orgId,
+      projectId,
+      plannerAgentId: planner.agent.agent_id,
+      plannerAgentInstanceId: planner.agentInstanceId,
+      reviewerAgentId: reviewer.agent.agent_id,
+      reviewerAgentInstanceId: reviewer.agentInstanceId,
+      frameTypes: frameTypes(frames),
+      toolNames: [...new Set(names)],
+      listAgentsUsed,
+      sendToAgentUsed,
+      delivered,
+      targetMatches,
+      reviewerAckObserved: reviewerEvents.text.includes(A2A_REPLY_MARKER),
+      parentCallbackObserved: plannerEvents.text.includes(A2A_REPLY_MARKER),
+      reviewerEventCount: reviewerEvents.items.length,
+      plannerEventCount: plannerEvents.items.length,
+      reviewerEventsError: reviewerEvents.error,
+      plannerEventsError: plannerEvents.error,
+      expectedReply: A2A_REPLY_MARKER,
+    },
+  };
+}
+
+async function runProjectSubagentRoundtrip(args, track) {
+  const { orgId } = await requireOrgId(args);
+  const { projectId } = await createProject(args, track, orgId);
+  const { agent, agentInstanceId } = await createHarnessProjectAgent(args, track, orgId, projectId, {
+    role: "SubagentRoundtripProbe",
+    systemPrompt: "You are an AURA subagent probe. Use the task tool exactly when asked and report exact failures.",
+  });
+
+  const frames = await apiSse(args, `/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`, {
+    content: `Use the task tool with subagent_type "explore" and spawn_mode "wait". Ask the subagent to list the project folder and return exactly: ${SUBAGENT_REPLY_MARKER}. Then relay ${SUBAGENT_REPLY_MARKER}.`,
+    action: "chat",
+    project_id: projectId,
+    new_session: true,
+  }, 180_000);
+
+  const names = toolUseNames(frames);
+  const results = toolResults(frames);
+  const taskResult = toolResult(results, "task");
+  const taskJson = parseJsonMaybe(taskResult?.result);
+  const spawned = frames.find((frame) => frame.event === "subagent_spawned");
+  const completed = frames.find((frame) => frame.event === "subagent_status" && frame.data?.state === "completed");
+  const text = sseTextSample(frames);
+  const subagentReturnedMarker =
+    text.includes(SUBAGENT_REPLY_MARKER) ||
+    String(taskResult?.result ?? "").includes(SUBAGENT_REPLY_MARKER) ||
+    String(taskJson?.final_message ?? "").includes(SUBAGENT_REPLY_MARKER);
+  const context = await waitForInstanceContextOrEmpty(args, projectId, agentInstanceId);
+  const contextUtilization = Number(context.usage?.context_utilization ?? 0);
+  const subagentContextLabels = contextBucketLabels(context.contents, "subagents");
+  const toolsContextLabels = contextBucketLabels(context.contents, "tools");
+  const error = frames.find((frame) => frame.event === "error");
+  const ok =
+    !error &&
+    names.includes("task") &&
+    Boolean(spawned) &&
+    Boolean(completed) &&
+    !taskResult?.isError &&
+    subagentReturnedMarker &&
+    contextUtilization > 0 &&
+    subagentContextLabels.length > 0;
+
+  return {
+    status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
+    message: ok ? "" : "Project agent subagent task did not complete with hydrated context evidence",
+    evidence: {
+      orgId,
+      projectId,
+      agentId: agent.agent_id,
+      agentInstanceId,
+      frameTypes: frameTypes(frames),
+      toolNames: [...new Set(names)],
+      taskToolUsed: names.includes("task"),
+      subagentSpawned: Boolean(spawned),
+      subagentCompleted: Boolean(completed),
+      subagentReturnedMarker,
+      childRunId: spawned?.data?.child_run_id ?? null,
+      contextUtilization,
+      subagentContextCount: subagentContextLabels.length,
+      subagentContextLabels,
+      toolsContextContainsTask: toolsContextLabels.includes("task"),
+      contextError: context.error,
+      expectedReply: SUBAGENT_REPLY_MARKER,
     },
   };
 }
@@ -1151,6 +1543,13 @@ async function runChecks(args) {
     }));
   }
 
+  if (selected("harness-skill-invocation")) {
+    checks.push(await probe("harness-skill-invocation", "harness-memory-skills", "Harness skill real chat invocation", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => runSkillInvocationTurn(args, track));
+    }));
+  }
+
   if (selected("active-streams")) {
     checks.push(await probe("active-streams", "streams-debug", "Active stream registry", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
@@ -1297,6 +1696,27 @@ async function runChecks(args) {
     checks.push(await probe("project-agent-chat-stream", "project-agent-workflows", "Project agent chat stream", args, async () => {
       if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
       return withCleanup(args, async (track) => runProjectChatTurn(args, track));
+    }));
+  }
+
+  if (selected("project-agent-tool-roundtrip")) {
+    checks.push(await probe("project-agent-tool-roundtrip", "project-agent-workflows", "Project agent tool roundtrip", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => runProjectToolRoundtrip(args, track));
+    }));
+  }
+
+  if (selected("project-agent-a2a-roundtrip")) {
+    checks.push(await probe("project-agent-a2a-roundtrip", "project-agent-workflows", "Project agent-to-agent roundtrip", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => runProjectAgentToAgentRoundtrip(args, track));
+    }));
+  }
+
+  if (selected("project-agent-subagent-roundtrip")) {
+    checks.push(await probe("project-agent-subagent-roundtrip", "project-agent-workflows", "Project agent subagent roundtrip", args, async () => {
+      if (!args.token) return { status: CHECK_STATUS.SKIP, message: "No access token configured" };
+      return withCleanup(args, async (track) => runProjectSubagentRoundtrip(args, track));
     }));
   }
 
