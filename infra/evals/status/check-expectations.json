@@ -168,18 +168,21 @@
       ]
     },
     "project-agent-subagent-roundtrip": {
-      "description": "A desktop release project-bound local agent can spawn a foreground subagent with task, receive completion, and hydrate context usage/contents after the turn.",
-      "requiredEvidence": ["orgId", "projectId", "agentId", "agentInstanceId", "frameTypes", "toolNames", "taskToolUsed", "subagentSpawned", "subagentCompleted", "subagentReturnedMarker", "contextUtilization", "subagentContextCount", "expectedReply"],
+      "description": "A desktop release project-bound local agent can spawn a foreground subagent with task, receive completion, and expose the persisted child thread on the session.",
+      "requiredEvidence": ["orgId", "projectId", "agentId", "agentInstanceId", "sessionId", "frameTypes", "toolNames", "taskToolUsed", "subagentSpawned", "subagentCompleted", "subagentReturnedMarker", "childRunId", "sessionSubagentThreadCount", "sessionSubagentThreadMatchesChild", "sessionSubagentCompleted", "expectedReply"],
       "assertions": [
         { "path": "agentId", "nonEmpty": true },
         { "path": "agentInstanceId", "nonEmpty": true },
+        { "path": "sessionId", "nonEmpty": true },
         { "path": "toolNames", "contains": "task" },
         { "path": "taskToolUsed", "equals": true },
         { "path": "subagentSpawned", "equals": true },
         { "path": "subagentCompleted", "equals": true },
         { "path": "subagentReturnedMarker", "equals": true },
-        { "path": "contextUtilization", "min": 0.000001 },
-        { "path": "subagentContextCount", "min": 1 },
+        { "path": "childRunId", "nonEmpty": true },
+        { "path": "sessionSubagentThreadCount", "min": 1 },
+        { "path": "sessionSubagentThreadMatchesChild", "equals": true },
+        { "path": "sessionSubagentCompleted", "equals": true },
         { "path": "expectedReply", "equals": "SUBAGENT_PROBE_OK" }
       ]
     },

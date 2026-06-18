@@ -30,6 +30,9 @@ const TOOL_SHELL_MARKER = "AURA_SHELL_PROBE_OK";
 const TOOL_PASS_MARKER = "TOOL_PROBE_PASS";
 const A2A_REPLY_MARKER = "AURA_A2A_PROBE_ACK";
 const SUBAGENT_REPLY_MARKER = "SUBAGENT_PROBE_OK";
+const HEADER_CHAT_PERSISTED = "x-aura-chat-persisted";
+const HEADER_CHAT_PROJECT_ID = "x-aura-chat-project-id";
+const HEADER_CHAT_SESSION_ID = "x-aura-chat-session-id";
 const LIVE_STATUS_SNAPSHOT_SOURCES = new Set([
   "github-actions",
   "desktop-nightly-release",
@@ -311,7 +314,7 @@ async function waitForValue(fn, timeoutMs = DEFAULT_TIMEOUT_MS, intervalMs = 100
   throw new Error(latestError || `Timed out after ${timeoutMs}ms waiting for expected value`);
 }
 
-async function apiSse(args, endpoint, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
+async function apiSseWithMeta(args, endpoint, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const response = await fetchWithTimeout(
     `${args.baseUrl}${endpoint}`,
     {
@@ -326,7 +329,19 @@ async function apiSse(args, endpoint, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
   );
   const text = await response.text();
   if (!response.ok) throw new Error(`POST ${endpoint} failed with ${response.status}: ${text}`);
-  return sseFramesFromText(text);
+  return {
+    frames: sseFramesFromText(text),
+    headers: {
+      persisted: response.headers.get(HEADER_CHAT_PERSISTED) === "true",
+      projectId: response.headers.get(HEADER_CHAT_PROJECT_ID),
+      sessionId: response.headers.get(HEADER_CHAT_SESSION_ID),
+    },
+  };
+}
+
+async function apiSse(args, endpoint, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  const { frames } = await apiSseWithMeta(args, endpoint, body, timeoutMs);
+  return frames;
 }
 
 async function publicSse(baseUrl, endpoint, body, token, timeoutMs = DEFAULT_TIMEOUT_MS) {
@@ -733,6 +748,40 @@ async function waitForInstanceContextOrEmpty(args, projectId, agentInstanceId, t
   }
 }
 
+function childRunIdFrom(value) {
+  return firstTruthyString(value, ["child_run_id", "childRunId", "run_id", "runId"]);
+}
+
+async function waitForSessionSubagentThread(args, projectId, agentInstanceId, sessionId, childRunId, timeoutMs = 45_000) {
+  if (!sessionId) throw new Error("Parent chat stream did not return a session id");
+  if (!childRunId) throw new Error("Parent chat stream did not emit a child run id");
+  return waitForValue(async () => {
+    const payload = await apiJson(
+      args,
+      "GET",
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/subagents`,
+    );
+    const items = collectionItems(payload, ["subagents", "items", "data"]);
+    const match = items.find((item) => childRunIdFrom(item) === childRunId) ?? null;
+    if (!match) return null;
+    const state = String(match.state ?? "").toLowerCase();
+    return state === "completed" ? { payload, items, match } : null;
+  }, timeoutMs, 2000);
+}
+
+async function waitForSessionSubagentThreadOrEmpty(args, projectId, agentInstanceId, sessionId, childRunId, timeoutMs = 45_000) {
+  try {
+    return { ...(await waitForSessionSubagentThread(args, projectId, agentInstanceId, sessionId, childRunId, timeoutMs)), error: null };
+  } catch (error) {
+    return {
+      payload: null,
+      items: [],
+      match: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 async function runSkillInvocationTurn(args, track) {
   const { orgId } = await requireOrgId(args);
   const { projectId } = await createProject(args, track, orgId);
@@ -869,7 +918,7 @@ async function runProjectAgentToAgentRoundtrip(args, track) {
   const planner = await createHarnessProjectAgent(args, track, orgId, projectId, {
     name: `aura-status-planner-${suffix}`,
     role: "AgentToAgentPlannerProbe",
-    systemPrompt: "You are an AURA agent-to-agent probe. Use list_agents before send_to_agent. After send_to_agent reports delivered, end the turn and wait for callback.",
+    systemPrompt: "You are an AURA agent-to-agent probe. Use the requested tool exactly once, then stop.",
   });
   const reviewer = await createHarnessProjectAgent(args, track, orgId, projectId, {
     name: reviewerName,
@@ -877,19 +926,35 @@ async function runProjectAgentToAgentRoundtrip(args, track) {
     systemPrompt: `When another agent asks you to reply with ${A2A_REPLY_MARKER}, reply exactly: ${A2A_REPLY_MARKER}.`,
   });
 
-  const frames = await apiSse(args, `/api/projects/${projectId}/agents/${planner.agentInstanceId}/events/stream`, {
-    content: `Use list_agents to find the agent named ${reviewerName}. Then use send_to_agent to ask that agent to reply exactly: ${A2A_REPLY_MARKER}. After send_to_agent says delivered, end your turn.`,
+  const listFrames = await apiSse(args, `/api/projects/${projectId}/agents/${planner.agentInstanceId}/events/stream`, {
+    content: `Call list_agents exactly once and confirm whether it contains an agent named ${reviewerName}. Do not call send_to_agent in this turn.`,
     action: "chat",
     project_id: projectId,
     new_session: true,
   }, 180_000);
 
+  const listResults = toolResults(listFrames);
+  const listResult = toolResult(listResults, "list_agents");
+  const listResultText = String(listResult?.result ?? "");
+  const listResultContainsReviewer =
+    listResultText.includes(reviewerName) || listResultText.includes(reviewer.agent.agent_id);
+
+  const sendFrames = await apiSse(args, `/api/projects/${projectId}/agents/${planner.agentInstanceId}/events/stream`, {
+    content: `Call send_to_agent exactly once with agent_id "${reviewer.agent.agent_id}" and message "Reply exactly: ${A2A_REPLY_MARKER}". Do not answer in text before the tool result. After the tool reports delivered, reply exactly: A2A_DELIVERED.`,
+    action: "chat",
+    project_id: projectId,
+    new_session: true,
+  }, 180_000);
+
+  const frames = [...listFrames, ...sendFrames];
   const names = toolUseNames(frames);
   const results = toolResults(frames);
   const sendResult = toolResult(results, "send_to_agent");
   const sendJson = parseJsonMaybe(sendResult?.result);
-  const delivered = sendJson?.delivered === true;
-  const targetMatches = sendJson?.target_agent_id === reviewer.agent.agent_id;
+  const sendResultText = String(sendResult?.result ?? "");
+  const delivered = sendJson?.delivered === true || /"delivered"\s*:\s*true/.test(sendResultText);
+  const targetAgentId = firstTruthyString(sendJson, ["target_agent_id", "targetAgentId", "agent_id", "agentId"]);
+  const targetMatches = targetAgentId === reviewer.agent.agent_id;
   const [reviewerEvents, plannerEvents] = await Promise.all([
     waitForEventsContainingOrEmpty(args, `/api/agents/${reviewer.agent.agent_id}/events`, A2A_REPLY_MARKER, 120_000),
     waitForEventsContainingOrEmpty(args, `/api/agents/${planner.agent.agent_id}/events`, A2A_REPLY_MARKER, 120_000),
@@ -897,7 +962,16 @@ async function runProjectAgentToAgentRoundtrip(args, track) {
   const listAgentsUsed = names.includes("list_agents");
   const sendToAgentUsed = names.includes("send_to_agent");
   const error = frames.find((frame) => frame.event === "error");
-  const ok = !error && listAgentsUsed && sendToAgentUsed && delivered && targetMatches && reviewerEvents.text.includes(A2A_REPLY_MARKER) && plannerEvents.text.includes(A2A_REPLY_MARKER);
+  const reviewerAckObserved = reviewerEvents.text.includes(A2A_REPLY_MARKER);
+  const parentCallbackObserved = plannerEvents.text.includes(A2A_REPLY_MARKER);
+  const ok =
+    !error &&
+    listAgentsUsed &&
+    sendToAgentUsed &&
+    delivered &&
+    targetMatches &&
+    reviewerAckObserved &&
+    parentCallbackObserved;
 
   return {
     status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
@@ -912,15 +986,19 @@ async function runProjectAgentToAgentRoundtrip(args, track) {
       frameTypes: frameTypes(frames),
       toolNames: [...new Set(names)],
       listAgentsUsed,
+      listResultContainsReviewer,
       sendToAgentUsed,
       delivered,
       targetMatches,
-      reviewerAckObserved: reviewerEvents.text.includes(A2A_REPLY_MARKER),
-      parentCallbackObserved: plannerEvents.text.includes(A2A_REPLY_MARKER),
+      targetAgentId,
+      reviewerAckObserved,
+      parentCallbackObserved,
       reviewerEventCount: reviewerEvents.items.length,
       plannerEventCount: plannerEvents.items.length,
       reviewerEventsError: reviewerEvents.error,
       plannerEventsError: plannerEvents.error,
+      listTurnTextSample: sseTextSample(listFrames).slice(0, 160),
+      sendTurnTextSample: sseTextSample(sendFrames).slice(0, 160),
       expectedReply: A2A_REPLY_MARKER,
     },
   };
@@ -934,12 +1012,13 @@ async function runProjectSubagentRoundtrip(args, track) {
     systemPrompt: "You are an AURA subagent probe. Use the task tool exactly when asked and report exact failures.",
   });
 
-  const frames = await apiSse(args, `/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`, {
+  const stream = await apiSseWithMeta(args, `/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`, {
     content: `Use the task tool with subagent_type "explore" and spawn_mode "wait". Ask the subagent to list the project folder and return exactly: ${SUBAGENT_REPLY_MARKER}. Then relay ${SUBAGENT_REPLY_MARKER}.`,
     action: "chat",
     project_id: projectId,
     new_session: true,
   }, 180_000);
+  const frames = stream.frames;
 
   const names = toolUseNames(frames);
   const results = toolResults(frames);
@@ -947,15 +1026,24 @@ async function runProjectSubagentRoundtrip(args, track) {
   const taskJson = parseJsonMaybe(taskResult?.result);
   const spawned = frames.find((frame) => frame.event === "subagent_spawned");
   const completed = frames.find((frame) => frame.event === "subagent_status" && frame.data?.state === "completed");
+  const childRunId = childRunIdFrom(spawned?.data);
   const text = sseTextSample(frames);
   const subagentReturnedMarker =
     text.includes(SUBAGENT_REPLY_MARKER) ||
     String(taskResult?.result ?? "").includes(SUBAGENT_REPLY_MARKER) ||
     String(taskJson?.final_message ?? "").includes(SUBAGENT_REPLY_MARKER);
-  const context = await waitForInstanceContextOrEmpty(args, projectId, agentInstanceId);
+  const [context, sessionSubagents] = await Promise.all([
+    waitForInstanceContextOrEmpty(args, projectId, agentInstanceId, 5_000),
+    waitForSessionSubagentThreadOrEmpty(args, projectId, agentInstanceId, stream.headers.sessionId, childRunId),
+  ]);
   const contextUtilization = Number(context.usage?.context_utilization ?? 0);
   const subagentContextLabels = contextBucketLabels(context.contents, "subagents");
   const toolsContextLabels = contextBucketLabels(context.contents, "tools");
+  const sessionSubagentStates = sessionSubagents.items
+    .map((item) => item?.state)
+    .filter((state) => typeof state === "string" && state.length > 0);
+  const sessionSubagentThreadMatchesChild = childRunIdFrom(sessionSubagents.match) === childRunId;
+  const sessionSubagentCompleted = String(sessionSubagents.match?.state ?? "").toLowerCase() === "completed";
   const error = frames.find((frame) => frame.event === "error");
   const ok =
     !error &&
@@ -964,24 +1052,31 @@ async function runProjectSubagentRoundtrip(args, track) {
     Boolean(completed) &&
     !taskResult?.isError &&
     subagentReturnedMarker &&
-    contextUtilization > 0 &&
-    subagentContextLabels.length > 0;
+    sessionSubagentThreadMatchesChild &&
+    sessionSubagentCompleted;
 
   return {
     status: ok ? CHECK_STATUS.PASS : CHECK_STATUS.FAIL,
-    message: ok ? "" : "Project agent subagent task did not complete with hydrated context evidence",
+    message: ok ? "" : "Project agent subagent task did not complete with persisted child-thread evidence",
     evidence: {
       orgId,
       projectId,
       agentId: agent.agent_id,
       agentInstanceId,
+      sessionId: stream.headers.sessionId,
+      streamPersisted: stream.headers.persisted,
       frameTypes: frameTypes(frames),
       toolNames: [...new Set(names)],
       taskToolUsed: names.includes("task"),
       subagentSpawned: Boolean(spawned),
       subagentCompleted: Boolean(completed),
       subagentReturnedMarker,
-      childRunId: spawned?.data?.child_run_id ?? null,
+      childRunId,
+      sessionSubagentThreadCount: sessionSubagents.items.length,
+      sessionSubagentThreadMatchesChild,
+      sessionSubagentCompleted,
+      sessionSubagentStates,
+      sessionSubagentError: sessionSubagents.error,
       contextUtilization,
       subagentContextCount: subagentContextLabels.length,
       subagentContextLabels,
