@@ -55,6 +55,17 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
     }
 }
 
+/// Whether a billing failure is worth retrying. Transport-level errors
+/// (connect/timeout) and 5xx responses are transient; definitive answers —
+/// insufficient credits, auth/account errors — are returned without retry.
+fn is_transient_billing_error(err: &aura_os_billing::BillingError) -> bool {
+    use aura_os_billing::BillingError;
+    matches!(
+        err,
+        BillingError::Request(_) | BillingError::ServerError { status: 500..=599, .. }
+    )
+}
+
 /// Pre-flight check: ensures the authenticated user has a positive credit balance.
 ///
 /// Results are cached for 60 seconds when credits are available to avoid
@@ -67,6 +78,10 @@ pub(crate) async fn require_credits(
     use std::time::{Duration, Instant};
 
     const CACHE_TTL: Duration = Duration::from_secs(60);
+    // Short backoffs applied only to transient billing failures (transport
+    // blips / 5xx). The happy path and definitive answers never sleep.
+    const RETRY_BACKOFFS: [Duration; 2] =
+        [Duration::from_millis(100), Duration::from_millis(250)];
 
     {
         let mut cache = state.credit_cache.lock().await;
@@ -78,16 +93,30 @@ pub(crate) async fn require_credits(
         }
     }
 
-    let result = state.billing_client.ensure_has_credits(jwt).await;
+    // A single dropped connection or a billing-server cold start shouldn't fail
+    // the user's turn outright. Retry transient failures (transport errors and
+    // 5xx) with a short backoff; definitive answers (insufficient credits,
+    // auth/account errors) are returned immediately without retry.
+    let mut result = state.billing_client.ensure_has_credits(jwt).await;
+    for backoff in RETRY_BACKOFFS {
+        if !matches!(&result, Err(e) if is_transient_billing_error(e)) {
+            break;
+        }
+        tokio::time::sleep(backoff).await;
+        result = state.billing_client.ensure_has_credits(jwt).await;
+    }
 
-    let has_credits = result.is_ok();
-    {
+    // Only a positive result is cached — that's the hot path that skips the
+    // billing round-trip for 60s. Failures are never cached: a transient blip
+    // must not linger, and the cache is only ever read as a positive
+    // "has credits" short-circuit, so a cached negative would be dead weight.
+    if result.is_ok() {
         let mut cache = state.credit_cache.lock().await;
         cache.insert(
             jwt.to_string(),
             CreditCache {
                 last_check: Instant::now(),
-                has_credits,
+                has_credits: true,
             },
         );
     }
@@ -243,6 +272,9 @@ mod tests {
     #[derive(Default)]
     struct MockBillingState {
         balance_calls: HashMap<String, usize>,
+        /// When > 0, the next `get_balance` call returns a 503 and decrements
+        /// this — lets tests simulate transient billing failures.
+        fail_balance_remaining: usize,
     }
 
     fn bearer_token(headers: &HeaderMap) -> String {
@@ -280,6 +312,14 @@ mod tests {
             let token = bearer_token(&headers);
             let mut guard = state.lock().await;
             *guard.balance_calls.entry(token.clone()).or_default() += 1;
+            if guard.fail_balance_remaining > 0 {
+                guard.fail_balance_remaining -= 1;
+                return (
+                    HttpStatusCode::SERVICE_UNAVAILABLE,
+                    "billing temporarily unavailable",
+                )
+                    .into_response();
+            }
             let balance_cents = if token == "tok-a" { 5000 } else { 0 };
             Json(serde_json::json!({
                 "balance_cents": balance_cents,
@@ -416,5 +456,63 @@ mod tests {
         let guard = billing_state.lock().await;
         assert_eq!(guard.balance_calls.get("tok-a"), Some(&1));
         assert_eq!(guard.balance_calls.get("tok-b"), Some(&1));
+    }
+
+    #[tokio::test]
+    async fn require_credits_retries_transient_billing_failure() {
+        let (billing_url, billing_state) = start_credit_server().await;
+        // Fail the balance check twice, then succeed — within the retry budget.
+        billing_state.lock().await.fail_balance_remaining = 2;
+        let billing_client = Arc::new(BillingClient::with_base_url(billing_url));
+        let (state, _store_dir) = build_test_state(billing_client);
+
+        // tok-a has credits; the two transient 503s should be absorbed by retry.
+        require_credits(&state, "tok-a").await.unwrap();
+
+        // 2 failed attempts + 1 success = 3 balance calls.
+        assert_eq!(
+            billing_state.lock().await.balance_calls.get("tok-a"),
+            Some(&3)
+        );
+    }
+
+    #[tokio::test]
+    async fn require_credits_surfaces_error_after_exhausting_retries_without_caching_it() {
+        let (billing_url, billing_state) = start_credit_server().await;
+        // More failures than the retry budget (1 initial + 2 retries = 3).
+        billing_state.lock().await.fail_balance_remaining = 5;
+        let billing_client = Arc::new(BillingClient::with_base_url(billing_url));
+        let (state, _store_dir) = build_test_state(billing_client);
+
+        // All 3 attempts fail → a 502 is surfaced, not silently swallowed.
+        let err = require_credits(&state, "tok-a").await.unwrap_err();
+        assert_eq!(err.0, HttpStatusCode::BAD_GATEWAY);
+        assert_eq!(
+            billing_state.lock().await.balance_calls.get("tok-a"),
+            Some(&3)
+        );
+
+        // The transient failure must NOT be cached as a denial: once billing
+        // recovers, the very next call succeeds with no lingering negative.
+        billing_state.lock().await.fail_balance_remaining = 0;
+        require_credits(&state, "tok-a").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn require_credits_does_not_retry_insufficient_credits() {
+        let (billing_url, billing_state) = start_credit_server().await;
+        let billing_client = Arc::new(BillingClient::with_base_url(billing_url));
+        let (state, _store_dir) = build_test_state(billing_client);
+
+        // tok-b has a zero balance → a definitive InsufficientCredits answer.
+        let err = require_credits(&state, "tok-b").await.unwrap_err();
+        assert_eq!(err.0, HttpStatusCode::PAYMENT_REQUIRED);
+
+        // Exactly one balance call — a definitive answer is never retried, so
+        // broke users don't pay a latency penalty on every message.
+        assert_eq!(
+            billing_state.lock().await.balance_calls.get("tok-b"),
+            Some(&1)
+        );
     }
 }
