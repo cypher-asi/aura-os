@@ -107,6 +107,29 @@ async fn seed_session_with_assistant_end(
     session.id
 }
 
+async fn seed_empty_session(
+    storage: &StorageClient,
+    project_agent_id: &str,
+    project_id: &str,
+) -> String {
+    storage
+        .create_session(
+            project_agent_id,
+            TEST_JWT,
+            &CreateSessionRequest {
+                project_id: project_id.into(),
+                org_id: None,
+                model: None,
+                status: Some("active".into()),
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .expect("create empty session")
+        .id
+}
+
 async fn fetch_context_usage(app: &axum::Router, agent_id: &AgentId) -> Value {
     let resp = app
         .clone()
@@ -118,6 +141,46 @@ async fn fetch_context_usage(app: &axum::Router, agent_id: &AgentId) -> Value {
         .await
         .expect("request");
     assert_eq!(resp.status(), StatusCode::OK, "GET /context-usage");
+    response_json(resp).await
+}
+
+async fn fetch_instance_context_usage(
+    app: &axum::Router,
+    project_id: &ProjectId,
+    pa_id: &str,
+) -> Value {
+    let resp = app
+        .clone()
+        .oneshot(json_request(
+            "GET",
+            &format!("/api/projects/{project_id}/agents/{pa_id}/context-usage"),
+            None,
+        ))
+        .await
+        .expect("request");
+    assert_eq!(resp.status(), StatusCode::OK, "GET instance /context-usage");
+    response_json(resp).await
+}
+
+async fn fetch_instance_context_contents(
+    app: &axum::Router,
+    project_id: &ProjectId,
+    pa_id: &str,
+) -> Value {
+    let resp = app
+        .clone()
+        .oneshot(json_request(
+            "GET",
+            &format!("/api/projects/{project_id}/agents/{pa_id}/context-contents"),
+            None,
+        ))
+        .await
+        .expect("request");
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "GET instance /context-contents"
+    );
     response_json(resp).await
 }
 
@@ -322,4 +385,110 @@ async fn context_usage_endpoint_forwards_session_cost_fields() {
     );
     assert_eq!(body["model"], json!("aura-claude-opus-4-8"));
     assert_eq!(body["provider"], json!("anthropic"));
+}
+
+#[tokio::test]
+async fn instance_context_usage_skips_newer_session_without_usage() {
+    // A foreground subagent run can leave a newer bookkeeping session on
+    // the same project-agent without an assistant usage payload. The
+    // context popover should hydrate from the newest observed usage, not
+    // collapse to zero just because the most recent session is empty.
+    let (app, state, storage, _db) = build_test_app_with_storage().await;
+
+    let project = state
+        .project_service
+        .create_project(CreateProjectInput {
+            org_id: OrgId::new(),
+            name: "Context Usage Empty Newer Session".into(),
+            description: "Regression: newest empty session must not mask prior usage".into(),
+            build_command: None,
+            test_command: None,
+            local_workspace_path: None,
+        })
+        .expect("create project");
+
+    let agent_id = AgentId::new();
+    let pa = seed_project_agent(&storage, &project.project_id.to_string(), &agent_id).await;
+
+    seed_session_with_assistant_end(
+        &storage,
+        &pa.id,
+        &project.project_id.to_string(),
+        json!({
+            "context_utilization": 0.31_f64,
+            "estimated_context_tokens": 62_000_u64,
+            "context_breakdown": {
+                "system_prompt_tokens": 1_000,
+                "tools_tokens": 2_000,
+                "skills_tokens": 300,
+                "mcp_tokens": 0,
+                "subagents_tokens": 120,
+                "conversation_tokens": 58_580,
+            },
+        }),
+    )
+    .await;
+    seed_empty_session(&storage, &pa.id, &project.project_id.to_string()).await;
+
+    let body = fetch_instance_context_usage(&app, &project.project_id, &pa.id).await;
+    assert!(
+        (body["context_utilization"].as_f64().unwrap() - 0.31).abs() < 1e-4,
+        "newer empty session must not mask previous usage; got {body}",
+    );
+    assert_eq!(body["estimated_context_tokens"], json!(62_000));
+    assert_eq!(body["context_breakdown"]["subagents_tokens"], json!(120));
+}
+
+#[tokio::test]
+async fn instance_context_contents_skips_newer_session_without_contents() {
+    // Same regression as context usage, but for the lazy bucket-content
+    // endpoint. The stream may have delivered context_contents correctly;
+    // reload hydration still needs to find the newest non-empty persisted
+    // assistant payload.
+    let (app, state, storage, _db) = build_test_app_with_storage().await;
+
+    let project = state
+        .project_service
+        .create_project(CreateProjectInput {
+            org_id: OrgId::new(),
+            name: "Context Contents Empty Newer Session".into(),
+            description: "Regression: newest empty session must not mask prior contents".into(),
+            build_command: None,
+            test_command: None,
+            local_workspace_path: None,
+        })
+        .expect("create project");
+
+    let agent_id = AgentId::new();
+    let pa = seed_project_agent(&storage, &project.project_id.to_string(), &agent_id).await;
+
+    seed_session_with_assistant_end(
+        &storage,
+        &pa.id,
+        &project.project_id.to_string(),
+        json!({
+            "context_utilization": 0.22_f64,
+            "context_contents": {
+                "system_prompt": "observed system prompt",
+                "tools": [{ "label": "task", "text": "Spawn a foreground subagent.", "tokens": 9 }],
+                "skills": [{ "label": "probe-skill", "text": "Probe skill contents.", "tokens": 7 }],
+                "subagents": [{ "label": "explore", "text": "Read-only explorer.", "tokens": 5 }],
+                "mcp": [],
+            },
+        }),
+    )
+    .await;
+    seed_empty_session(&storage, &pa.id, &project.project_id.to_string()).await;
+
+    let body = fetch_instance_context_contents(&app, &project.project_id, &pa.id).await;
+    assert_eq!(
+        body["context_contents"]["system_prompt"],
+        json!("observed system prompt"),
+        "newer empty session must not mask previous context contents; got {body}",
+    );
+    assert_eq!(body["context_contents"]["tools"][0]["label"], json!("task"));
+    assert_eq!(
+        body["context_contents"]["subagents"][0]["label"],
+        json!("explore")
+    );
 }

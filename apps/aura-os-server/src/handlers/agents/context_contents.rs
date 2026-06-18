@@ -123,17 +123,34 @@ pub(crate) async fn latest_context_contents_for_session(
         .find_map(|evt| context_contents_from_event_content(evt.content.as_ref()?))
 }
 
-/// Find the most recent session across every project_agent that shares
-/// this template agent id, ordered by [`storage_session_sort_key`].
-/// Factored out so the agent handler stays well under the 50-line limit.
-async fn latest_session_across_agents(
+async fn latest_context_contents_across_sessions(
+    storage: &StorageClient,
+    jwt: &str,
+    mut sessions: Vec<aura_os_storage::StorageSession>,
+) -> Option<ContextContents> {
+    sessions.sort_by_key(storage_session_sort_key);
+    sessions.reverse();
+
+    for session in sessions {
+        if let Some(contents) = latest_context_contents_for_session(storage, jwt, &session).await {
+            return Some(contents);
+        }
+    }
+    None
+}
+
+/// Collect sessions across every project_agent that shares this template
+/// agent id. Selection happens after we inspect each session for a real
+/// context payload, because newer child/subagent bookkeeping sessions can
+/// legitimately have no assistant usage of their own.
+async fn sessions_across_agents(
     state: &AppState,
     storage: &StorageClient,
     jwt: &str,
     agent_id_str: &str,
-) -> Option<aura_os_storage::StorageSession> {
+) -> Vec<aura_os_storage::StorageSession> {
     let matching = find_matching_project_agents(state, storage, jwt, agent_id_str).await;
-    let mut latest: Option<aura_os_storage::StorageSession> = None;
+    let mut all_sessions = Vec::new();
     for pa in &matching {
         let sessions = match storage.list_sessions(&pa.id, jwt).await {
             Ok(sessions) => sessions,
@@ -142,19 +159,9 @@ async fn latest_session_across_agents(
                 continue;
             }
         };
-        if let Some(candidate) = sessions.into_iter().max_by_key(storage_session_sort_key) {
-            latest = match latest {
-                Some(existing)
-                    if storage_session_sort_key(&existing)
-                        >= storage_session_sort_key(&candidate) =>
-                {
-                    Some(existing)
-                }
-                _ => Some(candidate),
-            };
-        }
+        all_sessions.extend(sessions);
     }
-    latest
+    all_sessions
 }
 
 /// GET `/api/agents/:agent_id/context-contents` — returns the latest
@@ -173,10 +180,8 @@ pub(crate) async fn get_agent_context_contents(
 
     let storage = state.require_storage_client()?;
     let agent_id_str = agent_id.to_string();
-    let contents = match latest_session_across_agents(&state, storage, &jwt, &agent_id_str).await {
-        Some(session) => latest_context_contents_for_session(storage, &jwt, &session).await,
-        None => None,
-    };
+    let sessions = sessions_across_agents(&state, storage, &jwt, &agent_id_str).await;
+    let contents = latest_context_contents_across_sessions(storage, &jwt, sessions).await;
     Ok(Json(ContextContentsResponse::from(contents)))
 }
 
@@ -199,10 +204,7 @@ pub(crate) async fn get_instance_context_contents(
         .await
         .map_err(map_storage_error)?;
 
-    let contents = match sessions.into_iter().max_by_key(storage_session_sort_key) {
-        Some(session) => latest_context_contents_for_session(storage, &jwt, &session).await,
-        None => None,
-    };
+    let contents = latest_context_contents_across_sessions(storage, &jwt, sessions).await;
     Ok(Json(ContextContentsResponse::from(contents)))
 }
 

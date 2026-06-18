@@ -196,6 +196,22 @@ pub(crate) async fn latest_context_usage_for_session(
     found.or_else(|| session.context_usage_estimate.map(fallback_usage))
 }
 
+async fn latest_context_usage_across_sessions(
+    storage: &StorageClient,
+    jwt: &str,
+    mut sessions: Vec<aura_os_storage::StorageSession>,
+) -> Option<SessionContextUsage> {
+    sessions.sort_by_key(storage_session_sort_key);
+    sessions.reverse();
+
+    for session in sessions {
+        if let Some(usage) = latest_context_usage_for_session(storage, jwt, &session).await {
+            return Some(usage);
+        }
+    }
+    None
+}
+
 /// GET `/api/agents/:agent_id/context-usage` — returns the latest
 /// observed usage across every session owned by every project_agent that
 /// shares this template agent id. Used by the UI to seed the bottom-bar
@@ -221,7 +237,7 @@ pub(crate) async fn get_agent_context_usage(
         return Ok(Json(ContextUsageResponse::default()));
     }
 
-    let mut latest: Option<aura_os_storage::StorageSession> = None;
+    let mut sessions_with_observations = Vec::new();
     for pa in &matching {
         let sessions = match storage.list_sessions(&pa.id, &jwt).await {
             Ok(sessions) => sessions,
@@ -230,25 +246,12 @@ pub(crate) async fn get_agent_context_usage(
                 continue;
             }
         };
-        if let Some(candidate) = sessions.into_iter().max_by_key(storage_session_sort_key) {
-            latest = match latest {
-                Some(existing)
-                    if storage_session_sort_key(&existing)
-                        >= storage_session_sort_key(&candidate) =>
-                {
-                    Some(existing)
-                }
-                _ => Some(candidate),
-            };
-        }
+        sessions_with_observations.extend(sessions);
     }
 
-    let usage = match latest {
-        Some(session) => latest_context_usage_for_session(storage, &jwt, &session)
-            .await
-            .unwrap_or_default(),
-        None => SessionContextUsage::default(),
-    };
+    let usage = latest_context_usage_across_sessions(storage, &jwt, sessions_with_observations)
+        .await
+        .unwrap_or_default();
     Ok(Json(usage.into()))
 }
 
@@ -270,13 +273,8 @@ pub(crate) async fn get_instance_context_usage(
         .await
         .map_err(map_storage_error)?;
 
-    let latest = sessions.into_iter().max_by_key(storage_session_sort_key);
-
-    let usage = match latest {
-        Some(session) => latest_context_usage_for_session(storage, &jwt, &session)
-            .await
-            .unwrap_or_default(),
-        None => SessionContextUsage::default(),
-    };
+    let usage = latest_context_usage_across_sessions(storage, &jwt, sessions)
+        .await
+        .unwrap_or_default();
     Ok(Json(usage.into()))
 }
