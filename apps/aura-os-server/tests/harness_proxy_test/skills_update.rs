@@ -329,3 +329,107 @@ async fn repair_user_skills_on_startup_backfills_name_and_spares_shop_skills() {
         "shop skill (no user-created marker) must not be modified"
     );
 }
+
+/// `get_my_skill` must return EVERY field the edit form needs, read from the
+/// marker file — including `user_invocable` / `model_invocable` /
+/// `allowed_tools`, which the harness-backed `get_skill` silently drops. This
+/// is what makes the edit round-trip faithful (no settings reset on save).
+#[tokio::test]
+async fn get_my_skill_returns_all_fields_for_the_edit_form() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    // Create with the full set of fields and NON-default invocable flags.
+    let req = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "rt",
+            "description": "round trip",
+            "body": "# body",
+            "allowed_tools": ["read_file", "write_file"],
+            "model": "claude-opus-4-8",
+            "context": "ctx",
+            "user_invocable": false,
+            "model_invocable": true,
+        })),
+    );
+    assert_eq!(
+        app.clone().oneshot(req).await.unwrap().status(),
+        StatusCode::CREATED
+    );
+
+    let req = json_request("GET", "/api/harness/skills/mine/rt", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body["name"], "rt");
+    assert_eq!(body["description"], "round trip");
+    assert!(body["body"].as_str().unwrap().contains("# body"));
+    // The three the harness-backed getSkill would have lost:
+    assert_eq!(body["user_invocable"], false);
+    assert_eq!(body["model_invocable"], true);
+    assert_eq!(body["allowed_tools"], json!(["read_file", "write_file"]));
+    // And the two it preserved:
+    assert_eq!(body["model"], "claude-opus-4-8");
+    assert_eq!(body["context"], "ctx");
+}
+
+/// Fetching a skill that doesn't exist on disk is a 404.
+#[tokio::test]
+async fn get_my_skill_missing_returns_404() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    let req = json_request("GET", "/api/harness/skills/mine/no-such-skill", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+/// Fetching a skill that lacks the `user-created` marker (a shop-installed
+/// one) is refused with 403 — never expose/edit a non-user skill.
+#[tokio::test]
+async fn get_my_skill_refuses_non_user_created() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    let shop_dir = home_dir
+        .path()
+        .join(aura_os_core::Channel::current().skills_home_name())
+        .join("skills")
+        .join("shop-skill");
+    std::fs::create_dir_all(&shop_dir).unwrap();
+    std::fs::write(
+        shop_dir.join("SKILL.md"),
+        "---\nname: \"shop-skill\"\ndescription: \"from shop\"\n---\n# body\n",
+    )
+    .unwrap();
+
+    let req = json_request("GET", "/api/harness/skills/mine/shop-skill", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}

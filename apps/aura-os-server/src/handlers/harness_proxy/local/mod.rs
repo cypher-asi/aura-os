@@ -20,7 +20,7 @@ mod update;
 
 pub(crate) use create::{create_skill, install_from_shop};
 pub(crate) use discover::{discover_skill_paths, get_skill_content};
-pub(crate) use manage::{delete_my_skill, list_my_skills};
+pub(crate) use manage::{delete_my_skill, get_my_skill, list_my_skills};
 pub(crate) use migrate::repair_user_created_skill_names;
 pub(crate) use update::update_my_skill;
 

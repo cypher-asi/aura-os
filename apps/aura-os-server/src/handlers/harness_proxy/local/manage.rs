@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 
 use crate::state::AppState;
 
-use super::frontmatter::extract_frontmatter_field;
+use super::frontmatter::{extract_frontmatter_field, strip_frontmatter};
 use super::{create_skill_name_valid, user_skills_root, USER_CREATED_SOURCE_MARKER};
 
 #[derive(serde::Serialize)]
@@ -54,6 +54,83 @@ fn skill_entry_from_dir(path: &std::path::Path) -> Option<MySkillEntry> {
         user_invocable,
         model_invocable,
     })
+}
+
+/// Full detail for a single user-authored skill, read from its marker file
+/// (the source of truth) to pre-fill the edit form. The harness's `get_skill`
+/// response can't be used for editing — it drops `user_invocable` /
+/// `model_invocable` / `allowed_tools` (field-name mismatches + no
+/// `model_invocable` concept in the harness), so editing through it would
+/// silently reset those fields. Reading the marker file round-trips every
+/// field faithfully.
+#[derive(serde::Serialize)]
+struct MySkillDetail {
+    name: String,
+    description: String,
+    body: String,
+    user_invocable: bool,
+    model_invocable: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    allowed_tools: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    context: Option<String>,
+}
+
+/// Parse the `allowed_tools: [a, b]` frontmatter value into a list. Returns
+/// `None` when the field is absent, not a `[...]` list, or empty.
+fn parse_allowed_tools(content: &str) -> Option<Vec<String>> {
+    let raw = extract_frontmatter_field(content, "allowed_tools")?;
+    let inner = raw.trim().strip_prefix('[')?.strip_suffix(']')?;
+    let tools: Vec<String> = inner
+        .split(',')
+        .map(|t| t.trim().to_string())
+        .filter(|t| !t.is_empty())
+        .collect();
+    (!tools.is_empty()).then_some(tools)
+}
+
+/// `GET /api/harness/skills/mine/{name}` — full detail for editing a
+/// user-authored skill, read from its on-disk marker file so every field
+/// round-trips. Mirrors `update_my_skill`'s preconditions: 400 on an invalid
+/// name, 404 when missing, 403 when the file isn't user-created.
+pub(crate) async fn get_my_skill(
+    Path(name): Path<String>,
+) -> Result<axum::response::Response, StatusCode> {
+    if !create_skill_name_valid(&name) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let skill_path = user_skills_root()
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .join(&name)
+        .join("SKILL.md");
+    let content = std::fs::read_to_string(&skill_path).map_err(|_| StatusCode::NOT_FOUND)?;
+    if extract_frontmatter_field(&content, "source").as_deref() != Some(USER_CREATED_SOURCE_MARKER) {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let detail = MySkillDetail {
+        name,
+        description: extract_frontmatter_field(&content, "description").unwrap_or_default(),
+        body: strip_frontmatter(&content),
+        user_invocable: extract_frontmatter_field(&content, "user_invocable")
+            .map(|v| v == "true")
+            .unwrap_or(true),
+        model_invocable: extract_frontmatter_field(&content, "model_invocable")
+            .map(|v| v == "true")
+            .unwrap_or(false),
+        allowed_tools: parse_allowed_tools(&content),
+        model: extract_frontmatter_field(&content, "model").filter(|s| !s.is_empty()),
+        context: extract_frontmatter_field(&content, "context").filter(|s| !s.is_empty()),
+    };
+    let body = serde_json::to_string(&detail).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        body,
+    )
+        .into_response())
 }
 
 /// List skills the current user authored via `POST /api/harness/skills`.

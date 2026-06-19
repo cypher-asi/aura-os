@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import type { ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 
-const { mockGetSkill, mockUpdateMySkill } = vi.hoisted(() => ({
-  mockGetSkill: vi.fn(),
+const { mockGetMySkill, mockUpdateMySkill } = vi.hoisted(() => ({
+  mockGetMySkill: vi.fn(),
   mockUpdateMySkill: vi.fn(),
 }));
 
@@ -29,7 +29,7 @@ vi.mock("@cypher-asi/zui", () => ({
 vi.mock("../../../api/client", () => ({
   api: {
     harnessSkills: {
-      getSkill: (...args: any[]) => mockGetSkill(...args),
+      getMySkill: (...args: any[]) => mockGetMySkill(...args),
       updateMySkill: (...args: any[]) => mockUpdateMySkill(...args),
     },
   },
@@ -40,13 +40,12 @@ import { SkillEditorModal } from "./SkillEditorModal";
 describe("SkillEditorModal", () => {
   it("clears the form on open so a failed load never shows the previously-edited skill", async () => {
     // First skill loads fine.
-    mockGetSkill.mockResolvedValueOnce({
+    mockGetMySkill.mockResolvedValueOnce({
       name: "skill-a",
       description: "Desc A",
       body: "Body A",
       user_invocable: true,
       model_invocable: false,
-      frontmatter: {},
     });
     const { rerender } = render(
       <SkillEditorModal isOpen skillName="skill-a" onClose={() => {}} onSaved={() => {}} />,
@@ -55,7 +54,7 @@ describe("SkillEditorModal", () => {
     expect(screen.getByDisplayValue("Body A")).toBeInTheDocument();
 
     // Open a different skill whose load FAILS (e.g. "skill not found").
-    mockGetSkill.mockRejectedValueOnce({ body: { error: "skill not found: skill-b" } });
+    mockGetMySkill.mockRejectedValueOnce({ body: { error: "skill not found: skill-b" } });
     rerender(
       <SkillEditorModal isOpen skillName="skill-b" onClose={() => {}} onSaved={() => {}} />,
     );

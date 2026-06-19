@@ -9,6 +9,18 @@ export interface MySkillEntry {
   model_invocable: boolean;
 }
 
+/** Full detail for editing a user-authored skill (from `GET /skills/mine/:name`). */
+export interface MySkillDetail {
+  name: string;
+  description: string;
+  body: string;
+  user_invocable: boolean;
+  model_invocable: boolean;
+  allowed_tools?: string[];
+  model?: string;
+  context?: string;
+}
+
 /** Entry in the 409 response body from `DELETE /api/harness/skills/mine/:name`. */
 export interface SkillInstalledAgentRef {
   agent_id: string;
@@ -20,6 +32,16 @@ export const harnessSkillsApi = {
     apiFetch<HarnessSkill[]>(`/api/harness/skills`),
   listMySkills: () =>
     apiFetch<MySkillEntry[]>(`/api/harness/skills/mine`),
+  /**
+   * Full detail for editing a user-authored skill, read from its on-disk
+   * marker file so every field (user_invocable / model_invocable /
+   * allowed_tools / model / context) round-trips faithfully. The generic
+   * getSkill is harness-backed and drops several of these, so the edit modal
+   * must use this. Rejects with `ApiClientError` 404 (no such user skill) or
+   * 403 (not user-created).
+   */
+  getMySkill: (name: string) =>
+    apiFetch<MySkillDetail>(`/api/harness/skills/mine/${name}`),
   /**
    * Permanently delete a user-authored skill.
    *

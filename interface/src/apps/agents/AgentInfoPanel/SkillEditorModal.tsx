@@ -71,20 +71,21 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
     setBody("");
     setUserInvocable(true);
     setPreserved({ model_invocable: false });
+    // Pre-fill from the user skill's marker file (getMySkill), not the generic
+    // harness-backed getSkill — the latter drops user_invocable /
+    // model_invocable / allowed_tools, so editing through it would silently
+    // reset them. getMySkill returns every field faithfully.
     api.harnessSkills
-      .getSkill(skillName)
+      .getMySkill(skillName)
       .then((skill) => {
         if (cancelled) return;
-        const fm = (skill.frontmatter ?? {}) as Record<string, unknown>;
         setDescription(skill.description ?? "");
         setBody(skill.body ?? "");
         setUserInvocable(skill.user_invocable ?? true);
         setPreserved({
-          allowed_tools: Array.isArray(fm.allowed_tools)
-            ? (fm.allowed_tools as string[])
-            : undefined,
-          model: typeof fm.model === "string" ? fm.model : undefined,
-          context: typeof fm.context === "string" ? fm.context : undefined,
+          allowed_tools: skill.allowed_tools,
+          model: skill.model,
+          context: skill.context,
           model_invocable: skill.model_invocable ?? false,
         });
       })
