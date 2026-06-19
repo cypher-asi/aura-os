@@ -188,6 +188,7 @@ mod tests {
             automaton_id: automaton_id.to_string(),
             project_id: ProjectId::new(),
             template_agent_id: template,
+            loop_engineering: None,
             harness_base_url: "http://127.0.0.1:1".to_string(),
             paused,
             alive: Arc::new(AtomicBool::new(alive)),

@@ -1,3 +1,8 @@
+.automationStack {
+  width: 100%;
+  min-width: 0;
+}
+
 .automationBar {
   display: flex;
   align-items: center;
@@ -82,4 +87,190 @@
 .automationControls button.playButtonActive,
 .automationControls button.playButtonActive > * {
   overflow: visible;
+}
+
+.automationControls button.loopModeActive {
+  background: color-mix(in srgb, var(--accent-9, #7c8cff) 14%, transparent);
+}
+
+.loopModeBadge {
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-9, #7c8cff) 30%, transparent);
+  border-radius: 999px;
+  color: var(--accent-11, #b8c0ff);
+  background: color-mix(in srgb, var(--accent-9, #7c8cff) 10%, transparent);
+  white-space: nowrap;
+}
+
+.loopActiveSummary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: color-mix(in srgb, var(--accent-9, #7c8cff) 8%, transparent);
+}
+
+.loopActiveCopy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.loopActiveTitle {
+  font-weight: 600;
+}
+
+.loopActiveGoal,
+.loopActiveMeta {
+  min-width: 0;
+  opacity: 0.74;
+}
+
+.loopActiveGoal {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loopActiveMeta {
+  white-space: nowrap;
+}
+
+.loopEngineeringPanel {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: var(--surface-2, rgba(255, 255, 255, 0.03));
+}
+
+.loopField {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.loopFieldLabel {
+  font-weight: 600;
+  opacity: 0.82;
+}
+
+.loopTextarea,
+.loopInput,
+.loopNumberInput,
+.loopSelect {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.11));
+  border-radius: 6px;
+  background: var(--surface-1, rgba(0, 0, 0, 0.18));
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.loopTextarea {
+  min-height: 68px;
+  resize: vertical;
+  padding: var(--space-2);
+}
+
+.loopInput,
+.loopNumberInput,
+.loopSelect {
+  height: 28px;
+  padding: 0 var(--space-2);
+}
+
+.loopNumberInput {
+  max-width: 88px;
+}
+
+.loopVerifierHeader,
+.loopPanelFooter,
+.loopOptions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.loopVerifierHeader {
+  justify-content: space-between;
+}
+
+.loopVerifierList {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.loopVerifierRow {
+  display: grid;
+  grid-template-columns: minmax(72px, 0.6fr) minmax(120px, 1.2fr) minmax(120px, 1fr) auto;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.loopOptions {
+  flex-wrap: wrap;
+}
+
+.loopInlineField {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 120px;
+}
+
+.loopLearningGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.loopToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  background: var(--surface-1, rgba(0, 0, 0, 0.16));
+}
+
+.loopMeta {
+  flex: 1;
+  min-width: 0;
+  opacity: 0.72;
+}
+
+.loopPanelFooter {
+  justify-content: space-between;
+}
+
+@media (max-width: 560px) {
+  .loopVerifierRow {
+    grid-template-columns: 1fr auto;
+  }
+
+  .loopVerifierRow .loopInput:nth-child(2),
+  .loopVerifierRow .loopInput:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .loopLearningGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .loopActiveSummary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .loopActiveMeta {
+    grid-column: 2;
+    white-space: normal;
+  }
 }

@@ -31,6 +31,7 @@ vi.mock("@cypher-asi/zui", () => ({
 
 const mockGetLoopStatus = vi.fn();
 const mockStartLoop = vi.fn();
+const mockStartLoopEngineering = vi.fn();
 const mockPauseLoop = vi.fn();
 const mockStopLoop = vi.fn();
 const mockResumeLoop = vi.fn();
@@ -72,6 +73,7 @@ vi.mock("../../api/client", () => {
     api: {
       getLoopStatus: (...args: unknown[]) => mockGetLoopStatus(...args),
       startLoop: (...args: unknown[]) => mockStartLoop(...args),
+      startLoopEngineering: (...args: unknown[]) => mockStartLoopEngineering(...args),
       pauseLoop: (...args: unknown[]) => mockPauseLoop(...args),
       stopLoop: (...args: unknown[]) => mockStopLoop(...args),
       resumeLoop: (...args: unknown[]) => mockResumeLoop(...args),
@@ -199,6 +201,10 @@ beforeEach(() => {
     // jsdom always supports localStorage, but stay defensive.
   }
   mockGetLoopStatus.mockResolvedValue({ active_agent_instances: [], paused: false });
+  mockStartLoopEngineering.mockResolvedValue({
+    active_agent_instances: ["loop-agent-1"],
+    agent_instance_id: "loop-agent-1",
+  });
   // The bar resolves the project's `Loop`-role instance on mount so
   // pause/resume/stop scope to it; default to a mature project that
   // already has one.
@@ -234,6 +240,44 @@ describe("AutomationBar", () => {
     await waitFor(() => {
       expect(screen.getByTestId("status")).toHaveTextContent("active");
     });
+  });
+
+  it("shows the active Loop Engineering contract from loop status", async () => {
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["loop-agent-1"],
+      paused: false,
+      loop_engineering: {
+        goal: "Fix checkout flakes and prove the regression is gone",
+        successCriteria: ["Checkout passes", "Regression test covers it"],
+        verifierCommands: [
+          {
+            label: "Checkout test",
+            command: "npm test -- checkout",
+            expectedOutcome: "passes",
+          },
+        ],
+        maxIterations: 5,
+        approvalPolicy: "apply_within_workspace",
+        learning: {
+          captureTrace: true,
+          proposeEvals: true,
+          proposeSkills: true,
+          summarizeRegressions: true,
+        },
+      },
+    });
+
+    renderBar();
+
+    await waitFor(() => {
+      expect(screen.getByText("Loop Engineering active")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("Fix checkout flakes and prove the regression is gone"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Loop Engineering")).toBeInTheDocument();
+    expect(screen.getByText(/5 iterations \/ 2 criteria \/ 1 verifier/))
+      .toBeInTheDocument();
   });
 
   it("shows paused status", async () => {
@@ -318,6 +362,64 @@ describe("AutomationBar", () => {
     await user.click(screen.getByTitle("Start"));
     expect(mockStartLoop).toHaveBeenCalledWith(
       "proj-1",
+      undefined,
+      "aura-claude-opus-4-7",
+    );
+  });
+
+  it("starts Loop Engineering with a goal, criteria, verifier, model, and learning policy", async () => {
+    const user = userEvent.setup();
+    useAutomationLoopStore
+      .getState()
+      .setLoopModel("proj-1" as ProjectId, "aura-claude-opus-4-7");
+    renderBar();
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
+
+    await user.click(screen.getByTitle("Loop Engineering"));
+    await user.type(
+      screen.getByLabelText("Goal"),
+      "Fix the action-item date drift",
+    );
+    await user.click(screen.getByTitle("Add verifier"));
+    await user.type(screen.getByLabelText("Verifier 1 label"), "Tests");
+    await user.type(
+      screen.getByLabelText("Verifier 1 command"),
+      "npm test -- --run",
+    );
+    await user.type(
+      screen.getByLabelText("Verifier 1 expected outcome"),
+      "All tests pass",
+    );
+    await user.click(screen.getByRole("button", { name: "Start Loop Engineering" }));
+
+    await waitFor(() => expect(mockStartLoopEngineering).toHaveBeenCalled());
+    expect(mockStartLoopEngineering).toHaveBeenCalledWith(
+      "proj-1",
+      {
+        loopEngineering: expect.objectContaining({
+          goal: "Fix the action-item date drift",
+          successCriteria: [
+            "Requested behavior works end to end",
+            "Existing tests, build, or project-native smoke checks pass",
+            "Final report includes evidence, changes, risks, and learnings",
+          ],
+          verifierCommands: [
+            {
+              label: "Tests",
+              command: "npm test -- --run",
+              expectedOutcome: "All tests pass",
+            },
+          ],
+          maxIterations: 4,
+          approvalPolicy: "apply_within_workspace",
+          learning: {
+            captureTrace: true,
+            proposeEvals: true,
+            proposeSkills: true,
+            summarizeRegressions: true,
+          },
+        }),
+      },
       undefined,
       "aura-claude-opus-4-7",
     );

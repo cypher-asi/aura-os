@@ -1,8 +1,18 @@
-import { useEffect, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { createPortal } from "react-dom";
 import { useParams } from "react-router-dom";
-import type { MenuItem } from "@cypher-asi/zui";
+import { ModalConfirm, type MenuItem } from "@cypher-asi/zui";
 import {
   Archive,
+  BrainCircuit,
   Info,
   File,
   ClipboardClock,
@@ -20,14 +30,23 @@ import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { SidekickTabBar, type TabItem } from "../SidekickTabBar";
 import { CheckLoopGlyph } from "../CheckLoopGlyph";
 import { PlayLoopGlyph } from "../PlayLoopGlyph";
+import { LoopEngineeringPanel } from "../AutomationBar/LoopEngineeringPanel";
+import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import {
   selectAgentInstanceActivity,
   selectProjectActivity,
   useLoopActivityStore,
 } from "../../stores/loop-activity-store";
 import { isLoopActivityActive } from "../../shared/types/aura-events";
+import type { LoopEngineeringContract } from "../../shared/api/loop";
+import type { ProjectId } from "../../shared/types";
+import styles from "../Sidekick/Sidekick.module.css";
 
 export function SidekickTaskbar() {
+  const [loopEngineeringOpen, setLoopEngineeringOpen] = useState(false);
+  const [loopPanelStyle, setLoopPanelStyle] =
+    useState<CSSProperties | null>(null);
+  const taskbarRef = useRef<HTMLDivElement>(null);
   const { activeTab, setActiveTab, showInfo, toggleInfo } = useSidekickStore(
     useShallow((s) => ({
       activeTab: s.activeTab,
@@ -53,7 +72,8 @@ export function SidekickTaskbar() {
   const runActivity = useLoopActivityStore(
     useShallow((s) => selectProjectActivity(s, projectId ?? null)),
   );
-  const tasksActive = !!tasksActivity && isLoopActivityActive(tasksActivity.status);
+  const tasksActive =
+    !!tasksActivity && isLoopActivityActive(tasksActivity.status);
   const runActive = !!runActivity && isLoopActivityActive(runActivity.status);
 
   useEffect(() => {
@@ -63,10 +83,19 @@ export function SidekickTaskbar() {
   }, [activeTab, canBrowseFiles, setActiveTab]);
   const project = ctx?.project;
   const handleArchive = ctx?.handleArchive;
-  const tabs = useMemo<TabItem[]>(
-    () => [
-      { id: "sessions", icon: <MessageSquare size={16} />, title: "Chats" },
-      { id: "terminal", icon: <SquareTerminal size={16} />, title: "Terminal" },
+  const loopProjectId = project?.project_id ?? projectId ?? null;
+  const tabs = useMemo<TabItem[]>(() => {
+    const items: TabItem[] = [
+      {
+        id: "sessions",
+        icon: <MessageSquare size={16} />,
+        title: "Chats",
+      },
+      {
+        id: "terminal",
+        icon: <SquareTerminal size={16} />,
+        title: "Terminal",
+      },
       { id: "browser", icon: <Globe size={16} />, title: "Browser" },
       { id: "specs", icon: <File size={16} />, title: "Plans" },
       {
@@ -81,6 +110,16 @@ export function SidekickTaskbar() {
         icon: <PlayLoopGlyph active={runActive} size={16} />,
         title: "Run",
       },
+      ...(loopProjectId
+        ? [
+            {
+              id: "loop-engineering",
+              kind: "action" as const,
+              icon: <BrainCircuit size={16} />,
+              title: "Loop Engineering",
+            },
+          ]
+        : []),
       {
         id: "tasks",
         // `CheckLoopGlyph` mirrors `PlayLoopGlyph`: the Check
@@ -99,13 +138,19 @@ export function SidekickTaskbar() {
       // default 320px width, so keeping Stats ahead of the more
       // secondary Log/Files tabs ensures Log/Files (not Stats) are the
       // ones that fall into the overflow "More" menu on narrow panels.
-      { id: "stats", icon: <ChartNoAxesColumnIncreasing size={16} />, title: "Stats" },
+      {
+        id: "stats",
+        icon: <ChartNoAxesColumnIncreasing size={16} />,
+        title: "Stats",
+      },
       { id: "log", icon: <ClipboardClock size={16} />, title: "Logs" },
       { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
-    ],
-    [tasksActive, runActive],
-  );
-  const visibleTabs = canBrowseFiles ? tabs : tabs.filter((tab) => tab.id !== "files");
+    ];
+    return items;
+  }, [tasksActive, runActive, loopProjectId]);
+  const visibleTabs = canBrowseFiles
+    ? tabs
+    : tabs.filter((tab) => tab.id !== "files");
 
   const actions = useMemo<MenuItem[]>(() => {
     if (!project) return [];
@@ -117,6 +162,33 @@ export function SidekickTaskbar() {
     ];
   }, [project]);
 
+  useLayoutEffect(() => {
+    if (!loopEngineeringOpen) return;
+
+    const updatePanelPosition = () => {
+      const rect = taskbarRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const viewportWidth = window.innerWidth || 1280;
+      setLoopPanelStyle({
+        top: rect.bottom + 4,
+        right: Math.max(12, viewportWidth - rect.right),
+        width: Math.min(560, viewportWidth - 24),
+      });
+    };
+
+    updatePanelPosition();
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" && taskbarRef.current
+        ? new ResizeObserver(updatePanelPosition)
+        : null;
+    if (taskbarRef.current) resizeObserver?.observe(taskbarRef.current);
+    window.addEventListener("resize", updatePanelPosition);
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updatePanelPosition);
+    };
+  }, [loopEngineeringOpen]);
+
   if (showInfo) return null;
 
   const handleAction = (id: string) => {
@@ -124,14 +196,86 @@ export function SidekickTaskbar() {
     if (id === "info") toggleInfo("Project Info", null);
   };
 
+  const handleInlineAction = (id: string) => {
+    if (id === "loop-engineering") {
+      if (loopEngineeringOpen) {
+        setLoopEngineeringOpen(false);
+        setLoopPanelStyle(null);
+      } else {
+        setLoopEngineeringOpen(true);
+      }
+    }
+  };
+
   return (
-    <SidekickTabBar
-      tabs={visibleTabs}
-      activeTab={activeTab}
-      onTabChange={(id) => setActiveTab(id as SidekickTab)}
-      actions={actions}
-      onAction={handleAction}
-      alwaysShowMore={!!project}
-    />
+    <div ref={taskbarRef} className={styles.sidekickTaskbarWithPanel}>
+      <SidekickTabBar
+        tabs={visibleTabs}
+        activeTab={activeTab}
+        onTabChange={(id) => setActiveTab(id as SidekickTab)}
+        onInlineAction={handleInlineAction}
+        actions={actions}
+        onAction={handleAction}
+        alwaysShowMore={!!project}
+      />
+      {loopEngineeringOpen &&
+      loopProjectId &&
+      loopPanelStyle &&
+      typeof document !== "undefined"
+        ? createPortal(
+            <SidekickLoopEngineeringPanel
+              projectId={loopProjectId}
+              style={loopPanelStyle}
+            />,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function SidekickLoopEngineeringPanel({
+  projectId,
+  style,
+}: {
+  projectId: ProjectId;
+  style: CSSProperties;
+}) {
+  const {
+    canStartLoopEngineering,
+    handleStartLoopEngineering,
+    startError,
+    clearStartError,
+  } = useAutomationStatus(projectId);
+
+  const handleStart = useCallback(
+    async (contract: LoopEngineeringContract) => {
+      await handleStartLoopEngineering(contract);
+    },
+    [handleStartLoopEngineering],
+  );
+
+  return (
+    <>
+      <div className={styles.sidekickTaskbarPanel} style={style}>
+        <LoopEngineeringPanel
+          projectId={projectId}
+          canStart={canStartLoopEngineering}
+          onStart={handleStart}
+        />
+      </div>
+
+      {startError ? (
+        <ModalConfirm
+          isOpen
+          onClose={clearStartError}
+          onConfirm={clearStartError}
+          title="Loop Engineering start failed"
+          message={startError.message}
+          confirmLabel="Dismiss"
+          cancelLabel="Close"
+        />
+      ) : null}
+    </>
   );
 }

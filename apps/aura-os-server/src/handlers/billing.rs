@@ -62,7 +62,11 @@ fn is_transient_billing_error(err: &aura_os_billing::BillingError) -> bool {
     use aura_os_billing::BillingError;
     matches!(
         err,
-        BillingError::Request(_) | BillingError::ServerError { status: 500..=599, .. }
+        BillingError::Request(_)
+            | BillingError::ServerError {
+                status: 500..=599,
+                ..
+            }
     )
 }
 
@@ -80,8 +84,7 @@ pub(crate) async fn require_credits(
     const CACHE_TTL: Duration = Duration::from_secs(60);
     // Short backoffs applied only to transient billing failures (transport
     // blips / 5xx). The happy path and definitive answers never sleep.
-    const RETRY_BACKOFFS: [Duration; 2] =
-        [Duration::from_millis(100), Duration::from_millis(250)];
+    const RETRY_BACKOFFS: [Duration; 2] = [Duration::from_millis(100), Duration::from_millis(250)];
 
     {
         let mut cache = state.credit_cache.lock().await;

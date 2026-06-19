@@ -55,7 +55,10 @@ pub(super) fn render_skill_frontmatter(
     user_invocable: bool,
     model_invocable: bool,
 ) -> String {
-    let mut frontmatter = format!("---\ndescription: \"{}\"\n", yaml_escape_scalar(description));
+    let mut frontmatter = format!(
+        "---\ndescription: \"{}\"\n",
+        yaml_escape_scalar(description)
+    );
     if let Some(tools) = allowed_tools {
         frontmatter.push_str(&format!("allowed_tools: [{}]\n", tools.join(", ")));
     }

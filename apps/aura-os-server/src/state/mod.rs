@@ -74,6 +74,10 @@ pub struct ActiveAutomaton {
     /// without doing async `agent_instance_service.get_instance`
     /// lookups while the registry mutex is held.
     pub template_agent_id: AgentId,
+    /// Normalized Loop Engineering contract for runs started through
+    /// that mode. Plain automation and single-task runs keep this
+    /// empty so the normal loop surface is unchanged.
+    pub loop_engineering: Option<serde_json::Value>,
     pub harness_base_url: String,
     pub paused: bool,
     /// Set to `true` while the `forward_automaton_events` task for this

@@ -38,6 +38,12 @@ export interface LoopStatusResponse {
   agent_instance_id?: string | null;
   active_agent_instances?: string[];
   /**
+   * Present when the active automation run was started through Loop
+   * Engineering mode. The backend returns the normalized contract so
+   * the UI can show the actual run contract after refresh.
+   */
+  loop_engineering?: LoopEngineeringContract | null;
+  /**
    * Per-agent tasks currently streaming output, populated by the
    * server from the in-memory automaton registry. Used to rehydrate
    * the Run panel rows and the TaskList "live" indicator after a page
@@ -45,6 +51,36 @@ export interface LoopStatusResponse {
    * the only HTTP path that reveals what task is running right now).
    */
   active_tasks?: ActiveLoopTask[];
+}
+
+export type LoopEngineeringApprovalPolicy =
+  | "propose_only"
+  | "apply_within_workspace";
+
+export interface LoopEngineeringLearningPolicy {
+  captureTrace: boolean;
+  proposeEvals: boolean;
+  proposeSkills: boolean;
+  summarizeRegressions: boolean;
+}
+
+export interface LoopEngineeringVerifierCommand {
+  label: string;
+  command: string;
+  expectedOutcome?: string;
+}
+
+export interface LoopEngineeringContract {
+  goal: string;
+  successCriteria: string[];
+  verifierCommands: LoopEngineeringVerifierCommand[];
+  maxIterations: number;
+  approvalPolicy: LoopEngineeringApprovalPolicy;
+  learning: LoopEngineeringLearningPolicy;
+}
+
+export interface StartLoopEngineeringRequest {
+  loopEngineering: LoopEngineeringContract;
 }
 
 function loopQuery(agentInstanceId?: string, model?: string | null): string {
@@ -61,6 +97,18 @@ export const loopApi = {
     return apiFetch<LoopStatusResponse>(
       `/api/projects/${projectId}/loop/start${params}`,
       { method: "POST" },
+    );
+  },
+  startLoopEngineering: (
+    projectId: ProjectId,
+    request: StartLoopEngineeringRequest,
+    agentInstanceId?: string,
+    model?: string | null,
+  ) => {
+    const params = loopQuery(agentInstanceId, model);
+    return apiFetch<LoopStatusResponse>(
+      `/api/projects/${projectId}/loop/start${params}`,
+      { method: "POST", body: JSON.stringify(request) },
     );
   },
   pauseLoop: (projectId: ProjectId, agentInstanceId?: string) => {

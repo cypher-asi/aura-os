@@ -160,7 +160,8 @@ pub(super) async fn status_response(
     project_id: ProjectId,
     agent_instance_id: Option<AgentInstanceId>,
 ) -> LoopStatusResponse {
-    let (active, paused) = snapshot_active_and_paused(state, project_id).await;
+    let (active, paused, loop_engineering) =
+        snapshot_active_paused_and_mode(state, project_id, agent_instance_id).await;
     // `current_task_id` lives on `LoopActivity` (Phase 5: LoopHandle is
     // the single authoritative source). Walk the loop registry for
     // every Automation / TaskRun loop bound to this project and pull
@@ -174,6 +175,7 @@ pub(super) async fn status_response(
         project_id: Some(project_id),
         agent_instance_id,
         active_agent_instances: Some(active),
+        loop_engineering,
         cooldown_remaining_ms: None,
         cooldown_reason: None,
         cooldown_kind: None,
@@ -185,10 +187,11 @@ pub(super) async fn status_response(
 /// with whether ANY automaton in the project is currently paused.
 /// Carved out of [`status_response`] so its body stays inside the
 /// 50-line per-function budget. Lock acquisition is identical.
-async fn snapshot_active_and_paused(
+async fn snapshot_active_paused_and_mode(
     state: &AppState,
     project_id: ProjectId,
-) -> (Vec<AgentInstanceId>, bool) {
+    agent_instance_id: Option<AgentInstanceId>,
+) -> (Vec<AgentInstanceId>, bool, Option<serde_json::Value>) {
     let reg = state.automaton_registry.lock().await;
     let active: Vec<AgentInstanceId> = reg
         .iter()
@@ -198,7 +201,12 @@ async fn snapshot_active_and_paused(
     let paused = reg
         .iter()
         .any(|((pid, _), entry)| *pid == project_id && entry.paused);
-    (active, paused)
+    let loop_engineering = reg
+        .iter()
+        .filter(|((pid, _), _)| *pid == project_id)
+        .filter(|((_, agent_id), _)| agent_instance_id.map_or(true, |wanted| *agent_id == wanted))
+        .find_map(|(_, entry)| entry.loop_engineering.clone());
+    (active, paused, loop_engineering)
 }
 
 /// Walk the loop registry for every `Automation`/`TaskRun` loop in

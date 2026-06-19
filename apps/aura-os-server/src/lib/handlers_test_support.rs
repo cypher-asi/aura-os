@@ -99,6 +99,7 @@ pub fn build_active_automaton_for_test(
         automaton_id: automaton_id.to_string(),
         project_id,
         template_agent_id: template,
+        loop_engineering: None,
         harness_base_url: "http://127.0.0.1:1".to_string(),
         paused: false,
         alive: Arc::new(std::sync::atomic::AtomicBool::new(true)),

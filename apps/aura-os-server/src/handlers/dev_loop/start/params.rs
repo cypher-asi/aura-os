@@ -11,6 +11,7 @@ use crate::handlers::agents::workspace_tools::{
 };
 use crate::state::AppState;
 
+use super::super::loop_engineering::{augment_system_prompt, LoopEngineeringContract};
 use super::super::types::StartContext;
 
 /// Inputs for [`build_start_params`]. Bundled to keep the helper
@@ -23,6 +24,7 @@ pub(crate) struct StartParamsInputs<'a> {
     pub(crate) jwt: Option<String>,
     pub(crate) user_id: Option<String>,
     pub(crate) task_id: Option<String>,
+    pub(crate) loop_engineering: Option<&'a LoopEngineeringContract>,
 }
 
 pub(crate) async fn build_start_params(inputs: StartParamsInputs<'_>) -> AutomatonStartParams {
@@ -33,6 +35,7 @@ pub(crate) async fn build_start_params(inputs: StartParamsInputs<'_>) -> Automat
         jwt,
         user_id,
         task_id,
+        loop_engineering,
     } = inputs;
     let installed_tools = resolve_installed_tools(state, ctx, jwt.as_deref()).await;
     let installed_integrations = resolve_installed_integrations(state, ctx, jwt.as_deref()).await;
@@ -55,6 +58,7 @@ pub(crate) async fn build_start_params(inputs: StartParamsInputs<'_>) -> Automat
         installed_integrations,
         aura_org_id,
         aura_session_id,
+        loop_engineering,
     })
 }
 
@@ -71,6 +75,7 @@ struct AssembleInputs<'a> {
     installed_integrations: Option<Vec<aura_os_harness::InstalledIntegration>>,
     aura_org_id: Option<String>,
     aura_session_id: Option<String>,
+    loop_engineering: Option<&'a LoopEngineeringContract>,
 }
 
 /// Project all the resolved-once inputs onto a fresh
@@ -89,6 +94,7 @@ fn assemble_automaton_start_params(inputs: AssembleInputs<'_>) -> AutomatonStart
         installed_integrations,
         aura_org_id,
         aura_session_id,
+        loop_engineering,
     } = inputs;
     let (git_repo_url, git_branch) = git_fields(ctx);
     AutomatonStartParams {
@@ -136,7 +142,7 @@ fn assemble_automaton_start_params(inputs: AssembleInputs<'_>) -> AutomatonStart
         // blank agent rows produce no `<agent_*>` bytes.
         agent_identity: start_agent_identity(ctx),
         agent_skills: ctx.agent_skills.clone(),
-        agent_system_prompt: Some(ctx.agent_system_prompt.clone()).filter(|s| !s.trim().is_empty()),
+        agent_system_prompt: augment_system_prompt(&ctx.agent_system_prompt, loop_engineering),
         // Forward the typed project descriptor so dev-loop / task-run
         // automata render the same `<project_context>` as chat and the
         // harness's `agents_md_from_workspace()` can locate `AGENTS.md`
