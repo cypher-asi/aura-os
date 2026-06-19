@@ -148,14 +148,14 @@ async fn create_task_without_spec_id_uses_manual_tasks_spec() {
         Some(serde_json::json!({
             "title": "Manual board task",
             "description": "Created directly from the task board",
-            "status": "backlog",
-            "order_index": 0
+            "status": "backlog"
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let created = response_json(resp).await;
     assert_eq!(created["title"], "Manual board task");
+    assert_eq!(created["order_index"], 0);
     let spec_id = created["spec_id"]
         .as_str()
         .expect("manual task should receive a backing spec id");
@@ -178,13 +178,13 @@ async fn create_task_without_spec_id_uses_manual_tasks_spec() {
         &format!("/api/projects/{project_id}/tasks"),
         Some(serde_json::json!({
             "title": "Second manual task",
-            "status": "backlog",
-            "order_index": 1
+            "status": "backlog"
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let second = response_json(resp).await;
+    assert_eq!(second["order_index"], 1);
     assert_eq!(
         second["spec_id"].as_str(),
         Some(spec_id),

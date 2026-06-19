@@ -1,5 +1,5 @@
-use axum::Json;
 use axum::extract::{Path, State};
+use axum::Json;
 use serde::Deserialize;
 
 use aura_os_core::{ProjectId, Spec, Task, TaskId, TaskStatus};
@@ -234,6 +234,9 @@ pub(crate) async fn create_task(
     let norm_title = req.title.trim().to_lowercase();
     let spec_id =
         resolve_create_task_spec_id(storage, &state, &jwt, &project_id, req.spec_id).await?;
+    let order_index =
+        resolve_create_task_order_index(storage, &jwt, &project_id, &spec_id, req.order_index)
+            .await;
 
     if !norm_title.is_empty() {
         match storage.list_tasks(&project_id.to_string(), &jwt).await {
@@ -269,7 +272,7 @@ pub(crate) async fn create_task(
                 org_id: None,
                 description: req.description,
                 status: Some(req.status.unwrap_or_else(|| "backlog".to_string())),
-                order_index: req.order_index,
+                order_index: Some(order_index),
                 dependency_ids: req.dependency_ids,
                 assigned_project_agent_id: req.assigned_agent_instance_id,
             },
@@ -353,6 +356,36 @@ async fn resolve_create_task_spec_id(
         "spec_id": spec_id.clone(),
     }));
     Ok(spec_id)
+}
+
+async fn resolve_create_task_order_index(
+    storage: &aura_os_storage::StorageClient,
+    jwt: &str,
+    project_id: &ProjectId,
+    spec_id: &str,
+    requested: Option<i32>,
+) -> i32 {
+    if let Some(order_index) = requested {
+        return order_index;
+    }
+
+    match storage.list_tasks(&project_id.to_string(), jwt).await {
+        Ok(tasks) => tasks
+            .into_iter()
+            .filter(|task| task.spec_id.as_deref() == Some(spec_id))
+            .filter_map(|task| task.order_index)
+            .max()
+            .map_or(0, |max| max.saturating_add(1)),
+        Err(error) => {
+            tracing::warn!(
+                %project_id,
+                %spec_id,
+                %error,
+                "create_task order_index fallback using zero after task list failed"
+            );
+            0
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Default)]
