@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-19T08:29:03.586Z",
+  "generatedAt": "2026-06-19T09:30:48.722Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.696.1",
+  "version": "0.1.0-nightly.697.1",
   "date": "2026-06-19",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.696.1",
-  "lastIncludedSha": "90752cd1b06070f3a63d775aaa07c652124215b9",
-  "previousProcessedSha": "31545eb2297ec776c64dfb405bb3a5e376bce9a6",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.697.1",
+  "lastIncludedSha": "617b30840745a384c5e21c5c31f18d7a90b19817",
+  "previousProcessedSha": "90752cd1b06070f3a63d775aaa07c652124215b9",
   "commitShas": [
-    "90752cd1b06070f3a63d775aaa07c652124215b9"
+    "90752cd1b06070f3a63d775aaa07c652124215b9",
+    "617b30840745a384c5e21c5c31f18d7a90b19817"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "90752cd1b06070f3a63d775aaa07c652124215b9",
@@ -60,36 +61,74 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "617b30840745a384c5e21c5c31f18d7a90b19817",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-19T10:08:11+01:00",
+      "subject": "feat(analytics): capture first-touch acquisition source",
+      "body": "Classify each visitor's first-touch referrer + utm_source into a clean\nacquisition_source label (x, google, direct, or the site's own domain for\nanything else) and stamp it once via register_once, so it survives return\nvisits and rides on every client event. Mirror it onto the user profile\nwith people.set_once at identify time so server-emitted events like\nsession_active (True DAU) can also be broken down by source. Lets us see\nwhere signups and engaged/retained users actually come from instead of\nguessing. Adds classifier + pipeline tests.",
+      "parents": [
+        "90752cd1b06070f3a63d775aaa07c652124215b9"
+      ],
+      "files": [
+        "interface/src/lib/analytics.test.ts",
+        "interface/src/lib/analytics.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 135,
+        "deletions": 2
+      },
+      "committedAtMs": 1781860091000,
+      "cleanSubject": "capture first-touch acquisition source",
+      "keywords": [
+        "capture",
+        "first",
+        "touch",
+        "acquisition",
+        "source"
+      ],
+      "fileGroups": [
+        "interface/src/lib"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.696.1",
+      "version": "0.1.0-nightly.697.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64866754
+          "sizeBytes": 64863788
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 131508728
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -99,29 +138,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.696.1",
+      "version": "0.1.0-nightly.697.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.696.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.697.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60871422
+          "sizeBytes": 60872228
         },
         {
-          "name": "AURA_0.1.0-nightly.696.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.697.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59852953
+          "sizeBytes": 59851577
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -131,29 +170,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.696.1",
+      "version": "0.1.0-nightly.697.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.696.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.697.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62955021
+          "sizeBytes": 62954172
         },
         {
-          "name": "AURA_0.1.0-nightly.696.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.697.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61957572
+          "sizeBytes": 61955138
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -163,17 +202,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.696.1",
+      "version": "0.1.0-nightly.697.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48049443
+          "sizeBytes": 48047467
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.696.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.697.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -182,46 +221,77 @@
     }
   ],
   "rendered": {
-    "title": "Reliable cleanup for swarm-hosted agents",
-    "intro": "A focused server-side fix today closes a long-standing gap in how remote, swarm-hosted agents get torn down — making status probes and agent deletion behave predictably even when the swarm gateway needs an extra step to stop a running agent.",
+    "title": "Reliable swarm agent deletion and first-touch acquisition analytics",
+    "intro": "Today's nightly tightens up two very different surfaces: the server now properly tears down remote swarm agents instead of leaving stale probes behind, and the web interface starts capturing where new users actually come from so growth and retention can be analyzed by source rather than guessed at.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "1:02 AM",
         "started_at": "2026-06-19T08:02:42.000Z",
         "ended_at": "2026-06-19T08:02:42.000Z",
-        "title": "Swarm agent deletion now drives the gateway to completion",
-        "summary": "Deleting an agent that lives on the swarm now properly tears it down through the swarm gateway, with retry-and-stop handling so status probe agents no longer linger as orphans.",
+        "title": "Swarm agent deletion now drains remote machines cleanly",
+        "summary": "Deleting an agent backed by the swarm gateway now coordinates a stop-and-retry flow with the remote machine instead of leaving orphaned status probe agents behind.",
         "items": [
           {
-            "text": "Agent delete on the server now detects swarm-hosted agents by machine type and routes the teardown through the configured swarm gateway, returning a clear service-unavailable error when SWARM_BASE_URL is missing instead of silently leaving remote state behind.",
+            "text": "Agent deletion now detects swarm-backed agents via machine type and routes them through the swarm gateway, returning a clear service-unavailable error when SWARM_BASE_URL isn't configured rather than silently leaving the remote agent running.",
             "commit_shas": [
               "90752cd1b06070f3a63d775aaa07c652124215b9"
             ],
             "confidence": "high"
           },
           {
-            "text": "The swarm delete path now recognizes 409 \"needs stop\" responses, issues a stop call, and retries the delete up to twelve times with a 5-second backoff before surfacing a bad-gateway error — so probe agents that are still running get cleaned up instead of failing outright.",
+            "text": "The swarm delete path now handles the gateway's 409 \"needs stop\" response by issuing a stop and retrying the delete up to a dozen times on a 5-second cadence, surfacing a bad-gateway error only if the remote agent never finishes stopping.",
             "commit_shas": [
               "90752cd1b06070f3a63d775aaa07c652124215b9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a remote-delete integration test suite and expanded the status-probe runner with its own test coverage, locking in the new teardown behavior used by observability probes.",
+            "text": "New server- and probe-side tests cover the remote-delete behavior end to end, so the cleanup path for status probe agents is exercised on every build.",
             "commit_shas": [
               "90752cd1b06070f3a63d775aaa07c652124215b9"
             ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "2:08 AM",
+        "started_at": "2026-06-19T09:08:11.000Z",
+        "ended_at": "2026-06-19T09:08:11.000Z",
+        "title": "First-touch acquisition source captured in web analytics",
+        "summary": "The interface now classifies each visitor's first referrer and utm_source into a tidy acquisition_source label and pins it for the lifetime of the user, so signups and engaged users can be broken down by where they actually came from.",
+        "items": [
+          {
+            "text": "A new classifier collapses referrers and utm_source into clean labels — x (covering t.co, twitter.com, x.com), google, youtube, reddit, github, linkedin, facebook, hackernews — falling back to the real domain for unlisted sources and \"direct\" when there's no referrer at all. An explicit utm_source always wins over the referrer.",
+            "commit_shas": [
+              "617b30840745a384c5e21c5c31f18d7a90b19817"
+            ],
             "confidence": "high"
+          },
+          {
+            "text": "The label is stamped once via register_once at init so it survives return visits and rides on every client event, and mirrored onto the user profile with people.set_once at identify time so server-emitted events like session_active (True DAU) can also be sliced by source.",
+            "commit_shas": [
+              "617b30840745a384c5e21c5c31f18d7a90b19817"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Classifier and pipeline tests lock in the mapping rules and the register_once / set_once behavior, including the no-op path when no source was ever captured.",
+            "commit_shas": [
+              "617b30840745a384c5e21c5c31f18d7a90b19817"
+            ],
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Remote swarm agents now delete cleanly via the gateway",
-      "Stuck agents are stopped and retried before deletion fails",
-      "New tests cover remote-delete and status probe flows"
+      "Remote swarm agents are now fully deleted, with a stop-then-retry handshake",
+      "First-touch acquisition source (x, google, direct, …) now rides on every analytics event",
+      "Acquisition source mirrored onto user profiles for server-emitted DAU breakdowns"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }

@@ -2,18 +2,18 @@
   {
     "date": "2026-06-19",
     "channel": "nightly",
-    "version": "0.1.0-nightly.696.1",
-    "title": "Reliable cleanup for swarm-hosted agents",
-    "intro": "A focused server-side fix today closes a long-standing gap in how remote, swarm-hosted agents get torn down — making status probes and agent deletion behave predictably even when the swarm gateway needs an extra step to stop a running agent.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.697.1",
+    "title": "Reliable swarm agent deletion and first-touch acquisition analytics",
+    "intro": "Today's nightly tightens up two very different surfaces: the server now properly tears down remote swarm agents instead of leaving stale probes behind, and the web interface starts capturing where new users actually come from so growth and retention can be analyzed by source rather than guessed at.",
+    "entryCount": 2,
     "highlights": [
-      "Remote swarm agents now delete cleanly via the gateway",
-      "Stuck agents are stopped and retried before deletion fails",
-      "New tests cover remote-delete and status probe flows"
+      "Remote swarm agents are now fully deleted, with a stop-then-retry handshake",
+      "First-touch acquisition source (x, google, direct, …) now rides on every analytics event",
+      "Acquisition source mirrored onto user profiles for server-emitted DAU breakdowns"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-06-19T08:29:03.586Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.696.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-06-19T09:30:48.722Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.697.1",
     "path": "history/2026-06-19.json"
   },
   {
