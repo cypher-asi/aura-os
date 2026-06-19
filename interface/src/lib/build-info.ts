@@ -51,6 +51,14 @@ export type AppPlatform = "desktop" | "web" | "mobile";
  * events carry a real version instead of "(not set)".
  */
 export function getAppVersion(): string {
+  // The web frontend is continuously redeployed, so its baked version is a
+  // per-deploy commit SHA (Render stamps APP_VERSION=$RENDER_GIT_COMMIT),
+  // which floods Mixpanel's app_version with a new hash per deploy. Web is a
+  // single rolling surface, so it reports the unversioned 0.0.0 label — one
+  // line in analytics. The exact build stays recoverable via
+  // getBuildInfo().commit (e.g. bug reports). Desktop/mobile keep their real
+  // baked release version.
+  if (getAppPlatform() === "web") return "0.0.0";
   return safeRead(typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : undefined, "0.0.0");
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBuildTime, getBuildInfo } from "./build-info";
+import { formatBuildTime, getAppVersion, getBuildInfo } from "./build-info";
 
 describe("getBuildInfo", () => {
   it("returns the values baked in at build time", () => {
@@ -12,6 +12,23 @@ describe("getBuildInfo", () => {
 
   it("flags non-dev builds", () => {
     expect(getBuildInfo().isDev).toBe(false);
+  });
+});
+
+describe("getAppVersion", () => {
+  it("collapses the continuously-deployed web surface to the 0.0.0 label", () => {
+    // jsdom has no Electron `ipc` / Capacitor globals -> platform is web.
+    expect(getAppVersion()).toBe("0.0.0");
+  });
+
+  it("reports the real baked release version on desktop", () => {
+    const w = window as unknown as { ipc?: object };
+    w.ipc = {};
+    try {
+      expect(getAppVersion()).toBe("0.0.0-test");
+    } finally {
+      delete w.ipc;
+    }
   });
 });
 
