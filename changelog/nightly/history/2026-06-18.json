@@ -3,20 +3,23 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-18T15:44:31.187Z",
+  "generatedAt": "2026-06-19T06:10:20.935Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.691.1",
+  "version": "0.1.0-nightly.694.1",
   "date": "2026-06-18",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.691.1",
-  "lastIncludedSha": "978e0a12aca8638d5e21cb4f36fd4223188859d4",
-  "previousProcessedSha": "6c66313d78fa99a14ebe97d4225aeff08546c9f8",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.694.1",
+  "lastIncludedSha": "31ba3379d7d641c096c315bdbc276852a373d978",
+  "previousProcessedSha": "978e0a12aca8638d5e21cb4f36fd4223188859d4",
   "commitShas": [
     "2e93d47a2aec0b602643518c5f7579cfa8a2c763",
-    "978e0a12aca8638d5e21cb4f36fd4223188859d4"
+    "978e0a12aca8638d5e21cb4f36fd4223188859d4",
+    "827f924bc5f4a569c4c9bfc02bb6938f738e2385",
+    "6e1814240f2456300fe5cb4266f1dbf9516744f6",
+    "31ba3379d7d641c096c315bdbc276852a373d978"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 5,
+  "filteredCommitCount": 5,
   "rawCommits": [
     {
       "sha": "2e93d47a2aec0b602643518c5f7579cfa8a2c763",
@@ -112,36 +115,151 @@
         "Other",
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "827f924bc5f4a569c4c9bfc02bb6938f738e2385",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-06-18T11:56:19-04:00",
+      "subject": "fix(observability): harden multi-agent workflow probes",
+      "body": "",
+      "parents": [
+        "978e0a12aca8638d5e21cb4f36fd4223188859d4"
+      ],
+      "files": [
+        "infra/evals/status/check-expectations.json",
+        "infra/evals/status/lib/check-expectations.test.mjs",
+        "infra/evals/status/run-status-probes.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 219,
+        "deletions": 20
+      },
+      "committedAtMs": 1781798179000,
+      "cleanSubject": "harden multi-agent workflow probes",
+      "keywords": [
+        "harden",
+        "multi",
+        "agent",
+        "workflow",
+        "probes"
+      ],
+      "fileGroups": [
+        "infra/evals/status"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "6e1814240f2456300fe5cb4266f1dbf9516744f6",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-18T18:41:45+01:00",
+      "subject": "fix(billing): retry transient credit pre-flight failures",
+      "body": "require_credits called the billing client once with no retry, so a single\ntransport blip or 5xx (e.g. a billing-server cold start) failed the user's\nchat turn outright with a 502. Retry transient failures (transport errors\nand 5xx) with short backoffs; definitive answers (insufficient credits,\nauth/account errors) return immediately without retry, so broke users pay\nno latency penalty. Cache only positive results, since the credit cache is\nread solely as a positive has-credits short-circuit. Adds tests for retry\nrecovery, error-surfaced-without-caching after exhaustion, and\nno-retry-on-insufficient-credits.",
+      "parents": [
+        "827f924bc5f4a569c4c9bfc02bb6938f738e2385"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/billing.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 102,
+        "deletions": 4
+      },
+      "committedAtMs": 1781804505000,
+      "cleanSubject": "retry transient credit pre-flight failures",
+      "keywords": [
+        "retry",
+        "transient",
+        "credit",
+        "flight",
+        "failures"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "31ba3379d7d641c096c315bdbc276852a373d978",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-19T01:51:14-04:00",
+      "subject": "fix(chat): preserve rapid multiline prompts (#67)",
+      "body": "",
+      "parents": [
+        "6e1814240f2456300fe5cb4266f1dbf9516744f6"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/InputBarShell.test.tsx",
+        "interface/src/components/InputBarShell/InputBarShell.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 197,
+        "deletions": 17
+      },
+      "committedAtMs": 1781848274000,
+      "cleanSubject": "preserve rapid multiline prompts (#67)",
+      "keywords": [
+        "preserve",
+        "rapid",
+        "multiline",
+        "prompts"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.691.1",
+      "version": "0.1.0-nightly.694.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64814904
+          "sizeBytes": 64826802
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131447288
+          "sizeBytes": 131471864
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -151,29 +269,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.691.1",
+      "version": "0.1.0-nightly.694.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.691.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.694.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60724932
+          "sizeBytes": 60783845
         },
         {
-          "name": "AURA_0.1.0-nightly.691.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.694.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59771383
+          "sizeBytes": 59822648
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -183,29 +301,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.691.1",
+      "version": "0.1.0-nightly.694.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.691.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.694.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62907949
+          "sizeBytes": 62919030
         },
         {
-          "name": "AURA_0.1.0-nightly.691.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.694.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61896340
+          "sizeBytes": 61918608
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -215,17 +333,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.691.1",
+      "version": "0.1.0-nightly.694.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48004170
+          "sizeBytes": 47989404
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.691.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.694.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -234,42 +352,59 @@
     }
   ],
   "rendered": {
-    "title": "Editable user skills and faster eval smoke runs",
-    "intro": "A small but pointed day: user-authored skills can now be edited in place from the Agents panel with a strict consistency guarantee between disk and the live registry, and the functional evals workflow gets a meaningful speed and reliability tune-up.",
+    "title": "Editable skills, sturdier chat turns, and faster eval CI",
+    "intro": "Today's nightly brings a long-requested skill editing flow for user-authored skills, tightens reliability around billing pre-flight and observability probes, trims eval CI setup time, and lands a careful fix for multiline prompts in chat.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:12 AM",
         "started_at": "2026-06-18T15:12:16.000Z",
-        "ended_at": "2026-06-18T15:14:07.000Z",
-        "title": "Editable user skills with consistent registry+disk semantics",
-        "summary": "User-created skills are now editable end-to-end, with a strict guard that prevents the on-disk SKILL.md and the live in-memory registry from diverging. Separately, the functional evals CI workflow was tightened for speed and predictability.",
+        "ended_at": "2026-06-18T17:41:45.000Z",
+        "title": "Editable user skills, retry-safe billing, and tightened eval probes",
+        "summary": "A morning-to-afternoon push shipped in-place editing for user-authored skills, made the credit pre-flight resilient to transient billing failures, hardened multi-agent observability probes, and slimmed down the functional smoke setup in CI.",
         "items": [
           {
-            "text": "Added a PUT /api/harness/skills/mine/{name} endpoint to rewrite a user-authored skill's SKILL.md, with 404/403/400 guards and a shared frontmatter renderer so create and update emit identical YAML — including the user-created source marker that listing and deletion rely on.",
+            "text": "User-authored skills can now be edited in place via a new PUT /api/harness/skills/mine/{name} endpoint and a repurposed editor modal in the Agents SkillsTab that pre-fills from getSkill, locks the name, and round-trips allowed_tools/model/context. The edit path is harness-first: if the harness re-register fails, the server returns 502 and leaves SKILL.md untouched so disk and the live registry never diverge behind a silent 200.",
             "commit_shas": [
               "2e93d47a2aec0b602643518c5f7579cfa8a2c763"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wired an \"Edit skill\" action into SkillsTab that opens the repurposed editor modal pre-filled from getSkill, locks the name, and round-trips allowed_tools, model, and context so fields the UI doesn't surface aren't silently dropped on save.",
+            "text": "Credit pre-flight (require_credits) now retries transient billing failures — transport errors and 5xx, e.g. a billing-server cold start — with short backoffs instead of failing a chat turn with a 502 on the first blip. Definitive answers like insufficient credits or auth errors still return immediately, and only positive results are cached so a transient failure can't linger.",
             "commit_shas": [
-              "2e93d47a2aec0b602643518c5f7579cfa8a2c763"
+              "6e1814240f2456300fe5cb4266f1dbf9516744f6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Closed a silent stale-serve bug: the re-register call into the harness is no longer fire-and-forget — via a new post_json_ok gateway helper, a failed reload now returns 502 and leaves SKILL.md untouched, so agents can never see a 200 response while still resolving the pre-edit body from the in-memory registry.",
+            "text": "Multi-agent status probes now require persisted child-thread evidence (sessionId, childRunId, sessionSubagentThreadMatchesChild, sessionSubagentCompleted) for the project-bound subagent roundtrip, replacing the looser context-utilization signal so a passing probe actually proves the session exposed the child thread.",
             "commit_shas": [
-              "2e93d47a2aec0b602643518c5f7579cfa8a2c763"
+              "827f924bc5f4a569c4c9bfc02bb6938f738e2385"
             ],
             "confidence": "high"
           },
           {
-            "text": "Sped up the aura-evals workflow by running smoke, workflow-e2e, chat-core and live-benchmark jobs inside the prebuilt mcr.microsoft.com/playwright:v1.58.2-noble image with AURA_SKIP_PLAYWRIGHT_INSTALL, added per-job timeouts and a cancel-in-progress concurrency group, and surfaced per-command elapsed times in the CI runner output.",
+            "text": "The aura-evals workflow now runs Playwright-bearing jobs inside the official Playwright container with browser install skipped, adds explicit per-job timeouts and in-progress cancellation for the same PR/ref, and the shared CI runner prints per-command elapsed time and retry duration for easier triage.",
             "commit_shas": [
               "978e0a12aca8638d5e21cb4f36fd4223188859d4"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "10:51 PM",
+        "started_at": "2026-06-19T05:51:14.000Z",
+        "ended_at": "2026-06-19T05:51:14.000Z",
+        "title": "Enter-to-send no longer eats fast multiline pastes in chat",
+        "summary": "Late-night fix to the chat input bar adds a short grace window after Enter so a quickly-arriving newline burst is treated as multiline input rather than an accidental submit.",
+        "items": [
+          {
+            "text": "InputBarShell now defers Enter submission by a 100ms grace period: if more text arrives before the timer fires, the keystroke is reinterpreted as a newline and the buffered value is stitched back together (e.g. \"Line one\" + \"Line two\" becomes \"Line one\\nLine two\") instead of submitting a half-written prompt. Clicking Send during the grace window still submits exactly once.",
+            "commit_shas": [
+              "31ba3379d7d641c096c315bdbc276852a373d978"
             ],
             "confidence": "high"
           }
@@ -277,10 +412,11 @@
       }
     ],
     "highlights": [
-      "Edit user-authored skills directly from SkillsTab",
-      "Skill edits fail loud if the harness registry doesn't reload",
-      "Eval smoke jobs run in prebuilt Playwright containers with timeouts and concurrency guards"
+      "Edit your own skills from the Agents panel",
+      "Chat turns survive transient billing blips",
+      "Rapid multiline prompts no longer get truncated",
+      "Eval CI runs leaner and with shared timing visibility"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 5
   }
 }

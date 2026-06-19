@@ -1,24 +1,31 @@
-# Editable user skills and faster eval smoke runs
+# Editable skills, sturdier chat turns, and faster eval CI
 
 - Date: `2026-06-18`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.691.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.691.1
+- Version: `0.1.0-nightly.694.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.694.1
 
-A small but pointed day: user-authored skills can now be edited in place from the Agents panel with a strict consistency guarantee between disk and the live registry, and the functional evals workflow gets a meaningful speed and reliability tune-up.
+Today's nightly brings a long-requested skill editing flow for user-authored skills, tightens reliability around billing pre-flight and observability probes, trims eval CI setup time, and lands a careful fix for multiline prompts in chat.
 
-## 8:12 AM — Editable user skills with consistent registry+disk semantics
+## 8:12 AM — Editable user skills, retry-safe billing, and tightened eval probes
 
-User-created skills are now editable end-to-end, with a strict guard that prevents the on-disk SKILL.md and the live in-memory registry from diverging. Separately, the functional evals CI workflow was tightened for speed and predictability.
+A morning-to-afternoon push shipped in-place editing for user-authored skills, made the credit pre-flight resilient to transient billing failures, hardened multi-agent observability probes, and slimmed down the functional smoke setup in CI.
 
-- Added a PUT /api/harness/skills/mine/{name} endpoint to rewrite a user-authored skill's SKILL.md, with 404/403/400 guards and a shared frontmatter renderer so create and update emit identical YAML — including the user-created source marker that listing and deletion rely on. (`2e93d47`)
-- Wired an "Edit skill" action into SkillsTab that opens the repurposed editor modal pre-filled from getSkill, locks the name, and round-trips allowed_tools, model, and context so fields the UI doesn't surface aren't silently dropped on save. (`2e93d47`)
-- Closed a silent stale-serve bug: the re-register call into the harness is no longer fire-and-forget — via a new post_json_ok gateway helper, a failed reload now returns 502 and leaves SKILL.md untouched, so agents can never see a 200 response while still resolving the pre-edit body from the in-memory registry. (`2e93d47`)
-- Sped up the aura-evals workflow by running smoke, workflow-e2e, chat-core and live-benchmark jobs inside the prebuilt mcr.microsoft.com/playwright:v1.58.2-noble image with AURA_SKIP_PLAYWRIGHT_INSTALL, added per-job timeouts and a cancel-in-progress concurrency group, and surfaced per-command elapsed times in the CI runner output. (`978e0a1`)
+- User-authored skills can now be edited in place via a new PUT /api/harness/skills/mine/{name} endpoint and a repurposed editor modal in the Agents SkillsTab that pre-fills from getSkill, locks the name, and round-trips allowed_tools/model/context. The edit path is harness-first: if the harness re-register fails, the server returns 502 and leaves SKILL.md untouched so disk and the live registry never diverge behind a silent 200. (`2e93d47`)
+- Credit pre-flight (require_credits) now retries transient billing failures — transport errors and 5xx, e.g. a billing-server cold start — with short backoffs instead of failing a chat turn with a 502 on the first blip. Definitive answers like insufficient credits or auth errors still return immediately, and only positive results are cached so a transient failure can't linger. (`6e18142`)
+- Multi-agent status probes now require persisted child-thread evidence (sessionId, childRunId, sessionSubagentThreadMatchesChild, sessionSubagentCompleted) for the project-bound subagent roundtrip, replacing the looser context-utilization signal so a passing probe actually proves the session exposed the child thread. (`827f924`)
+- The aura-evals workflow now runs Playwright-bearing jobs inside the official Playwright container with browser install skipped, adds explicit per-job timeouts and in-progress cancellation for the same PR/ref, and the shared CI runner prints per-command elapsed time and retry duration for easier triage. (`978e0a1`)
+
+## 10:51 PM — Enter-to-send no longer eats fast multiline pastes in chat
+
+Late-night fix to the chat input bar adds a short grace window after Enter so a quickly-arriving newline burst is treated as multiline input rather than an accidental submit.
+
+- InputBarShell now defers Enter submission by a 100ms grace period: if more text arrives before the timer fires, the keystroke is reinterpreted as a newline and the buffered value is stitched back together (e.g. "Line one" + "Line two" becomes "Line one\nLine two") instead of submitting a half-written prompt. Clicking Send during the grace window still submits exactly once. (`31ba337`)
 
 ## Highlights
 
-- Edit user-authored skills directly from SkillsTab
-- Skill edits fail loud if the harness registry doesn't reload
-- Eval smoke jobs run in prebuilt Playwright containers with timeouts and concurrency guards
+- Edit your own skills from the Agents panel
+- Chat turns survive transient billing blips
+- Rapid multiline prompts no longer get truncated
+- Eval CI runs leaner and with shared timing visibility
 
