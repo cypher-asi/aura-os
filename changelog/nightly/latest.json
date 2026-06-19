@@ -3,21 +3,27 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-19T09:55:09.569Z",
+  "generatedAt": "2026-06-19T14:50:42.656Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.698.1",
+  "version": "0.1.0-nightly.699.1",
   "date": "2026-06-19",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.698.1",
-  "lastIncludedSha": "f50b0817a750d00ee96d86248a24c742d4b01821",
-  "previousProcessedSha": "617b30840745a384c5e21c5c31f18d7a90b19817",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.699.1",
+  "lastIncludedSha": "cca0fdfc6d69dde571236e302fc1b6a45b98820c",
+  "previousProcessedSha": "f50b0817a750d00ee96d86248a24c742d4b01821",
   "commitShas": [
     "90752cd1b06070f3a63d775aaa07c652124215b9",
     "617b30840745a384c5e21c5c31f18d7a90b19817",
-    "f50b0817a750d00ee96d86248a24c742d4b01821"
+    "f50b0817a750d00ee96d86248a24c742d4b01821",
+    "652d5cd7eee604195c8f4212b929275b3b25f0c5",
+    "e170ba4b31deb10bf98081dd3c724969373f8acf",
+    "fe27f1e8aa3943afb251bbea93bf1c51f2a439b9",
+    "d71b125888fa3b2784d9adfac5f1a3e87f9515e5",
+    "bb61d790558e40c2c28a87a9675fd690f8c60ac5",
+    "cca0fdfc6d69dde571236e302fc1b6a45b98820c"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 3,
+  "rawCommitCount": 9,
+  "filteredCommitCount": 9,
   "rawCommits": [
     {
       "sha": "90752cd1b06070f3a63d775aaa07c652124215b9",
@@ -137,36 +143,287 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "652d5cd7eee604195c8f4212b929275b3b25f0c5",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-19T14:02:59+01:00",
+      "subject": "fix(skills): write the required name field into skill frontmatter",
+      "body": "User-created skills were written with a SKILL.md frontmatter that omitted\nthe name field. The harness parser requires it (SkillFrontmatter.name), so\na name-less file fails to load and the skill is dropped from the in-memory\nregistry on every reload — a skill worked right after creation (the\nregistry still held the harness's own name-bearing copy) but vanished with\n\"skill not found\" after the next harness restart, which is why editing\nbroke for existing skills after the last deploy.\n\nrender_skill_frontmatter now writes name (used by both create and edit), so\nthe marker file the harness reloads from is always loadable. Reproduced\nagainst the real harness: the name-less shape is rejected, the fixed shape\nloads. Tests assert the field is present on create and edit.",
+      "parents": [
+        "f50b0817a750d00ee96d86248a24c742d4b01821"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/harness_proxy/local/create.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/local/update.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/skills_create.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/skills_update.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 30,
+        "deletions": 6
+      },
+      "committedAtMs": 1781874179000,
+      "cleanSubject": "write the required name field into skill frontmatter",
+      "keywords": [
+        "write",
+        "required",
+        "name",
+        "field",
+        "into",
+        "skill",
+        "frontmatter"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "e170ba4b31deb10bf98081dd3c724969373f8acf",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-19T14:07:08+01:00",
+      "subject": "fix(skills): recover skills orphaned by the missing-name bug on startup",
+      "body": "Skills created before the name: frontmatter fix have a SKILL.md the harness\ncannot load (no name: field), so they were dropped from the registry and\nshow \"skill not found\". A startup repair pass backfills name: (derived from\nthe skill's directory) into any user-created skill missing it, so the harness\nloads them again on its next reload. Marker-gated (only touches files\ncarrying source: \"user-created\" — never shop skills), idempotent, and\nfail-soft; writes atomically (temp + rename) so a concurrent harness reload\ncannot read a half-written file.\n\nVerified end to end against the real harness: an orphaned skill returns 404\nbefore repair and loads (200) after. Unit tests cover backfill / idempotency\n/ name-bearing-untouched / no-marker-untouched / invalid-name-skipped; an\nintegration test exercises the real startup entry point.",
+      "parents": [
+        "652d5cd7eee604195c8f4212b929275b3b25f0c5"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/harness_proxy/local/migrate.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/local/mod.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/mod.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/main.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/skills_update.rs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 212,
+        "deletions": 1
+      },
+      "committedAtMs": 1781874428000,
+      "cleanSubject": "recover skills orphaned by the missing-name bug on startup",
+      "keywords": [
+        "recover",
+        "skills",
+        "orphaned",
+        "missing",
+        "name",
+        "startup"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "fe27f1e8aa3943afb251bbea93bf1c51f2a439b9",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-19T14:17:31+01:00",
+      "subject": "fix(skills): reset the edit modal's fields on open",
+      "body": "The skill editor reused its form state across opens, so a slow or failed\ngetSkill left the previously-edited skill's description/instructions in the\nform — which looked like it \"pulled up the last skill.\" Reset the fields at\nthe start of the load effect so the form only ever shows the skill actually\nbeing edited (empty + error on a failed load, never stale content). Adds a\ntest that switching to a skill whose load fails clears the prior content.",
+      "parents": [
+        "e170ba4b31deb10bf98081dd3c724969373f8acf"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/SkillEditorModal.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/SkillEditorModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 79,
+        "deletions": 0
+      },
+      "committedAtMs": 1781875051000,
+      "cleanSubject": "reset the edit modal's fields on open",
+      "keywords": [
+        "reset",
+        "edit",
+        "modal",
+        "fields",
+        "open"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d71b125888fa3b2784d9adfac5f1a3e87f9515e5",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-19T15:03:20+01:00",
+      "subject": "fix(skills): pre-fill the edit form from the marker file, not the harness",
+      "body": "Editing pre-filled the form from getSkill (a verbatim harness proxy), but the\nharness response drops user_invocable / model_invocable / allowed_tools\n(field-name mismatches + no model_invocable concept), so saving an edit\nsilently reset those — a regression unmasked once the name: fix made editing\nactually run.\n\nAdd GET /api/harness/skills/mine/{name} (get_my_skill) that reads the\nuser-created marker file (the source of truth) and returns every field\nfaithfully, with the same 400/404/403 guards as update_my_skill. The edit\nmodal now pre-fills from it. Verified: create with user_invocable=false /\nmodel_invocable=true / allowed_tools, and get_my_skill returns them intact\n(getSkill would have lost all three). Tests: round-trip + 404 + 403 backend,\nmodal pre-fill frontend.",
+      "parents": [
+        "fe27f1e8aa3943afb251bbea93bf1c51f2a439b9"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/harness_proxy/local/manage.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/local/mod.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/mod.rs",
+        "apps/aura-os-server/src/router/harness_proxy.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/skills_update.rs",
+        "interface/src/apps/agents/AgentInfoPanel/SkillEditorModal.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/SkillEditorModal.tsx",
+        "interface/src/shared/api/harness-skills.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 225,
+        "deletions": 19
+      },
+      "committedAtMs": 1781877800000,
+      "cleanSubject": "pre-fill the edit form from the marker file, not the harness",
+      "keywords": [
+        "fill",
+        "edit",
+        "form",
+        "from",
+        "marker",
+        "file",
+        "harness"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bb61d790558e40c2c28a87a9675fd690f8c60ac5",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-19T15:13:09+01:00",
+      "subject": "fix(skills): run skill recovery on the desktop startup path too",
+      "body": "The desktop embeds aura-os-server as a library (it calls build_app_state\ndirectly), so aura-os-server's own main() — where repair_user_skills_on_startup\nwas wired — never runs on desktop. That left the recovery dead for desktop\nusers, who are exactly the ones hitting orphaned skills. Call it from the\ndesktop's own main() (mirroring the adjacent ensure_user_bins_on_path), before\nthe server and harness start, so orphaned skills are repaired before the\nharness loads them.",
+      "parents": [
+        "d71b125888fa3b2784d9adfac5f1a3e87f9515e5"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/main.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 0
+      },
+      "committedAtMs": 1781878389000,
+      "cleanSubject": "run skill recovery on the desktop startup path too",
+      "keywords": [
+        "skill",
+        "recovery",
+        "desktop",
+        "startup",
+        "path"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "cca0fdfc6d69dde571236e302fc1b6a45b98820c",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-19T15:21:24+01:00",
+      "subject": "test(skills): verify the full edit cycle preserves every setting",
+      "body": "End-to-end proof for the round-trip fix: create a skill with non-default\nflags + allowed_tools/model/context, open it for edit (get_my_skill), save\nchanging only the description, and re-open — every other setting survives.\nGuards against a regression where editing silently reset user_invocable /\nmodel_invocable / allowed_tools.",
+      "parents": [
+        "bb61d790558e40c2c28a87a9675fd690f8c60ac5"
+      ],
+      "files": [
+        "apps/aura-os-server/tests/harness_proxy_test/skills_update.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 77,
+        "deletions": 0
+      },
+      "committedAtMs": 1781878884000,
+      "cleanSubject": "verify the full edit cycle preserves every setting",
+      "keywords": [
+        "verify",
+        "full",
+        "edit",
+        "cycle",
+        "preserves",
+        "every",
+        "setting"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.698.1",
+      "version": "0.1.0-nightly.699.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64862002
+          "sizeBytes": 64888192
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131508728
+          "sizeBytes": 131533304
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -176,29 +433,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.698.1",
+      "version": "0.1.0-nightly.699.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.698.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.699.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60879528
+          "sizeBytes": 60854822
         },
         {
-          "name": "AURA_0.1.0-nightly.698.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.699.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59854796
+          "sizeBytes": 59864407
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -208,29 +465,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.698.1",
+      "version": "0.1.0-nightly.699.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.698.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.699.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62955443
+          "sizeBytes": 62950633
         },
         {
-          "name": "AURA_0.1.0-nightly.698.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.699.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61962697
+          "sizeBytes": 61961680
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -240,17 +497,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.698.1",
+      "version": "0.1.0-nightly.699.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48046533
+          "sizeBytes": 48003583
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.698.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.699.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -259,37 +516,30 @@
     }
   ],
   "rendered": {
-    "title": "Cleaner remote agent teardown and sharper acquisition analytics",
-    "intro": "Today's nightly tightens two very different seams. On the server, deleting a swarm-hosted agent now actually finishes the job end-to-end, with a graceful stop-then-delete handshake against the swarm gateway. On the web interface, analytics gets meaningfully more trustworthy: every visitor now carries a stable first-touch acquisition source, and the web surface stops inventing a brand-new app_version on every Render deploy.",
+    "title": "Rescuing user-created skills end to end",
+    "intro": "Today's nightly is dominated by a deep fix for user-created skills that were silently disappearing after a harness restart — from writing the right frontmatter on create, to repairing already-broken skills on startup, to making sure the editor never resets or mis-loads fields. Alongside that, the web analytics pipeline got cleaner attribution and a stable app_version, and the swarm agent delete path learned to stop-then-delete remote agents.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "1:02 AM",
         "started_at": "2026-06-19T08:02:42.000Z",
         "ended_at": "2026-06-19T08:02:42.000Z",
-        "title": "Reliable deletion of swarm-hosted agents",
-        "summary": "The agent delete handler now understands swarm-mode machines and drives the swarm gateway through a proper stop-then-delete handshake instead of leaving orphaned remote agents behind.",
+        "title": "Swarm agent deletes now wait through the stop handshake",
+        "summary": "The delete path for remote agents was hardened so swarm-hosted agents are reliably torn down, with a follow-up cleanup for status probe agents.",
         "items": [
           {
-            "text": "Agent deletion now detects swarm-mode machines via HarnessMode and routes through the configured SWARM_BASE_URL, returning a clear service-unavailable error when the swarm gateway isn't configured rather than silently dropping the remote agent.",
+            "text": "Deleting a swarm-hosted agent now detects a 409 'needs stop' response, issues a stop, and retries the delete for up to a minute instead of failing the request — and surfaces a clear bad-gateway error if the swarm never finishes stopping.",
             "commit_shas": [
               "90752cd1b06070f3a63d775aaa07c652124215b9"
             ],
             "confidence": "high"
           },
           {
-            "text": "When the gateway reports a 409 that requires stopping first, the server now issues a stop and retries the delete up to twelve times with a 5s backoff, surfacing a bad-gateway error only if the remote agent never finishes stopping.",
+            "text": "Status probe agents created by the observability evals are properly cleaned up after each run, with new integration coverage for the remote-delete path.",
             "commit_shas": [
               "90752cd1b06070f3a63d775aaa07c652124215b9"
             ],
             "confidence": "high"
-          },
-          {
-            "text": "Backed by new integration coverage for remote delete behavior and refreshed status-probe tooling under infra/evals/status, raising confidence that observability probes exercise the new teardown path.",
-            "commit_shas": [
-              "90752cd1b06070f3a63d775aaa07c652124215b9"
-            ],
-            "confidence": "medium"
           }
         ]
       },
@@ -298,27 +548,102 @@
         "time_label": "2:08 AM",
         "started_at": "2026-06-19T09:08:11.000Z",
         "ended_at": "2026-06-19T09:31:56.000Z",
-        "title": "Trustworthy acquisition source and stable web app_version",
-        "summary": "Two analytics fixes on the web interface: visitors are now tagged with a clean first-touch acquisition source that survives return visits, and the web platform reports one stable app_version instead of a new commit SHA per Render deploy.",
+        "title": "Cleaner web analytics: first-touch source and stable app_version",
+        "summary": "Two analytics fixes make web telemetry actually usable for tracking acquisition and release health.",
         "items": [
           {
-            "text": "Each visitor's referrer and utm_source are classified into a tidy acquisition_source label (x, google, youtube, reddit, github, linkedin, facebook, hackernews, direct, or the raw domain) and stamped once via register_once so it rides on every client event and survives return visits.",
+            "text": "Each visitor's first-touch referrer and utm_source are now classified into a tidy acquisition_source label (x, google, youtube, reddit, github, linkedin, facebook, hackernews, direct, or the raw domain), stamped once via register_once and mirrored onto the user profile so server-side events like session_active can be broken down by source too.",
             "commit_shas": [
               "617b30840745a384c5e21c5c31f18d7a90b19817"
             ],
             "confidence": "high"
           },
           {
-            "text": "At identify time the source is mirrored onto the user profile with people.set_once, so server-emitted events like session_active (True DAU) can also be broken down by where users actually came from.",
-            "commit_shas": [
-              "617b30840745a384c5e21c5c31f18d7a90b19817"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "getAppVersion() now collapses the continuously-deployed web surface to a single 0.0.0 label so Mixpanel's app_version and the X-App-Version header stop fragmenting on every Render deploy; Desktop and Mobile keep their real baked release versions, and the exact web build remains recoverable via getBuildInfo().commit.",
+            "text": "The web surface now reports a single stable app_version of 0.0.0 in Mixpanel instead of a fresh commit SHA per Render deploy, while Desktop and mobile keep their real baked release versions; the exact web build is still recoverable via getBuildInfo().commit.",
             "commit_shas": [
               "f50b0817a750d00ee96d86248a24c742d4b01821"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "6:02 AM",
+        "started_at": "2026-06-19T13:02:59.000Z",
+        "ended_at": "2026-06-19T13:07:08.000Z",
+        "title": "User-created skills survive harness restarts again",
+        "summary": "A missing frontmatter field was causing user skills to vanish after every harness reload; this fix repairs both new and existing skills.",
+        "items": [
+          {
+            "text": "Skill creation and edit now write the required `name:` field into SKILL.md frontmatter, so user-authored skills stay loadable in the harness registry instead of disappearing with 'skill not found' after the next restart.",
+            "commit_shas": [
+              "652d5cd7eee604195c8f4212b929275b3b25f0c5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A startup repair pass backfills `name:` (derived from the skill's directory) into any user-created skill missing it, gated by the `source: \"user-created\"` marker so shop skills are never touched, and writing atomically via temp+rename so a concurrent harness reload can't read a half-written file.",
+            "commit_shas": [
+              "e170ba4b31deb10bf98081dd3c724969373f8acf"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "6:17 AM",
+        "started_at": "2026-06-19T13:17:31.000Z",
+        "ended_at": "2026-06-19T14:03:20.000Z",
+        "title": "Skill editor no longer leaks or resets fields",
+        "summary": "Two fixes make the skill edit modal show exactly the skill being edited and round-trip every setting on save.",
+        "items": [
+          {
+            "text": "The edit modal now resets its description, instructions, and invocability fields at the start of every load, so a slow or failed getSkill no longer leaves the previously-edited skill's content visible — the form either shows the new skill or an error.",
+            "commit_shas": [
+              "fe27f1e8aa3943afb251bbea93bf1c51f2a439b9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Editing now pre-fills from a new GET /api/harness/skills/mine/{name} endpoint that reads the on-disk marker file (the source of truth), fixing a regression where saving an edit silently reset user_invocable, model_invocable, and allowed_tools because the harness proxy response dropped them.",
+            "commit_shas": [
+              "d71b125888fa3b2784d9adfac5f1a3e87f9515e5"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "7:13 AM",
+        "started_at": "2026-06-19T14:13:09.000Z",
+        "ended_at": "2026-06-19T14:13:09.000Z",
+        "title": "Desktop now runs the skill recovery pass on startup",
+        "summary": "The orphaned-skill repair was wired into the Desktop app's own startup path, where it was previously dead code.",
+        "items": [
+          {
+            "text": "Because the Desktop app embeds aura-os-server as a library and never runs its main(), the skill recovery pass was never executing for the users most likely to hit orphaned skills; it's now invoked explicitly from the Desktop main before the server and harness start.",
+            "commit_shas": [
+              "bb61d790558e40c2c28a87a9675fd690f8c60ac5"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "7:21 AM",
+        "started_at": "2026-06-19T14:21:24.000Z",
+        "ended_at": "2026-06-19T14:21:24.000Z",
+        "title": "End-to-end guard against silent skill-edit resets",
+        "summary": "A new full-cycle test locks in the round-trip fix for editing skills.",
+        "items": [
+          {
+            "text": "An end-to-end test creates a skill with non-default user_invocable / model_invocable / allowed_tools / model / context, edits only its description, and confirms every other setting survives — guarding against any future regression that silently resets fields on save.",
+            "commit_shas": [
+              "cca0fdfc6d69dde571236e302fc1b6a45b98820c"
             ],
             "confidence": "high"
           }
@@ -326,10 +651,11 @@
       }
     ],
     "highlights": [
-      "Remote swarm agents now delete cleanly via stop-then-delete",
-      "First-touch acquisition source captured per visitor and mirrored to profiles",
-      "Web app_version collapsed to a single label so Mixpanel stops fragmenting per deploy"
+      "Skills survive harness restarts again",
+      "Orphaned skills auto-repaired on Desktop startup",
+      "Edit modal preserves every skill setting",
+      "Cleaner first-touch attribution in analytics"
     ],
-    "raw_commit_count": 3
+    "raw_commit_count": 9
   }
 }

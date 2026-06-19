@@ -2,18 +2,19 @@
   {
     "date": "2026-06-19",
     "channel": "nightly",
-    "version": "0.1.0-nightly.698.1",
-    "title": "Cleaner remote agent teardown and sharper acquisition analytics",
-    "intro": "Today's nightly tightens two very different seams. On the server, deleting a swarm-hosted agent now actually finishes the job end-to-end, with a graceful stop-then-delete handshake against the swarm gateway. On the web interface, analytics gets meaningfully more trustworthy: every visitor now carries a stable first-touch acquisition source, and the web surface stops inventing a brand-new app_version on every Render deploy.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.699.1",
+    "title": "Rescuing user-created skills end to end",
+    "intro": "Today's nightly is dominated by a deep fix for user-created skills that were silently disappearing after a harness restart — from writing the right frontmatter on create, to repairing already-broken skills on startup, to making sure the editor never resets or mis-loads fields. Alongside that, the web analytics pipeline got cleaner attribution and a stable app_version, and the swarm agent delete path learned to stop-then-delete remote agents.",
+    "entryCount": 6,
     "highlights": [
-      "Remote swarm agents now delete cleanly via stop-then-delete",
-      "First-touch acquisition source captured per visitor and mirrored to profiles",
-      "Web app_version collapsed to a single label so Mixpanel stops fragmenting per deploy"
+      "Skills survive harness restarts again",
+      "Orphaned skills auto-repaired on Desktop startup",
+      "Edit modal preserves every skill setting",
+      "Cleaner first-touch attribution in analytics"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-06-19T09:55:09.569Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.698.1",
+    "rawCommitCount": 9,
+    "generatedAt": "2026-06-19T14:50:42.656Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.699.1",
     "path": "history/2026-06-19.json"
   },
   {
