@@ -13,7 +13,7 @@ use url::Url;
 
 use crate::config::{BrowserConfig, ResolveOptions};
 use crate::session::probe::probe_dev_ports;
-use crate::session::settings::{ProjectBrowserSettings, SettingsStore};
+use crate::session::settings::{DetectionSource, ProjectBrowserSettings, SettingsStore};
 
 /// Outcome of [`resolve_initial_url`]: which URL to navigate to and whether
 /// the UI should focus the address bar on open.
@@ -30,7 +30,7 @@ pub struct ResolvedInitialUrl {
 /// Priority (first hit wins):
 ///
 /// 1. `settings.pinned_url`
-/// 2. Most-recent reachable entry in `settings.detected_urls`
+/// 2. Most-recent reachable non-probe entry in `settings.detected_urls`
 /// 3. Reachable `settings.last_url`
 /// 4. When `opts.allow_active_probe` is true, the first port that accepts a
 ///    TCP connection from [`probe_dev_ports`].
@@ -77,6 +77,9 @@ async fn pick_from_settings(
     }
     let deadline = Instant::now() + config.probe_budget;
     for entry in &settings.detected_urls {
+        if entry.source == DetectionSource::Probe {
+            continue;
+        }
         if Instant::now() >= deadline {
             break;
         }
@@ -208,5 +211,38 @@ mod tests {
         let resolved =
             resolve_initial_url(&store, Some(&project), &config, &ResolveOptions::default()).await;
         assert_eq!(resolved.url, Some(reachable));
+    }
+
+    #[tokio::test]
+    async fn probe_detected_url_is_advisory_for_initial_resolution() {
+        let dir = tempdir().unwrap();
+        let store = SettingsStore::new(dir.path().to_path_buf());
+        let project = ProjectId::new();
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let reachable = Url::parse(&format!("http://127.0.0.1:{}/", addr.port())).unwrap();
+
+        store
+            .record_detected(
+                Some(&project),
+                DetectedUrl {
+                    url: reachable,
+                    source: DetectionSource::Probe,
+                    at: chrono::Utc::now(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let config = BrowserConfig {
+            probe_per_port_timeout: Duration::from_millis(100),
+            probe_budget: Duration::from_millis(500),
+            ..BrowserConfig::default()
+        };
+        let resolved =
+            resolve_initial_url(&store, Some(&project), &config, &ResolveOptions::default()).await;
+        assert_eq!(resolved.url, None);
+        assert!(resolved.focus_address_bar);
     }
 }

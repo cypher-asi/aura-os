@@ -46,6 +46,17 @@ function stubMirrorHeights(heights: { content: number; baseline: number }) {
 }
 
 describe("InputBarShell", () => {
+  it("opts the prompt textarea out of smart text rewriting", () => {
+    const { container } = render(<InputBarShell {...makeProps()} />);
+
+    const textarea = container.querySelector("textarea");
+    expect(textarea).not.toBeNull();
+    expect(textarea!.getAttribute("autocomplete")).toBe("off");
+    expect(textarea!.getAttribute("autocorrect")).toBe("off");
+    expect(textarea!.getAttribute("autocapitalize")).toBe("off");
+    expect(textarea!.getAttribute("spellcheck")).toBe("false");
+  });
+
   it("keeps the start slot, end slot, and send button inline while the value fits one line", () => {
     // Default JSDOM: mirror scrollHeights are 0, so the content mirror
     // never exceeds the baseline → single-line layout.

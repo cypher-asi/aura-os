@@ -1,8 +1,8 @@
-use axum::extract::{Path, State};
 use axum::Json;
+use axum::extract::{Path, State};
 use serde::Deserialize;
 
-use aura_os_core::{ProjectId, Task, TaskId, TaskStatus};
+use aura_os_core::{ProjectId, Spec, Task, TaskId, TaskStatus};
 use aura_os_tasks::TaskService;
 
 use super::common::storage_task_to_task;
@@ -10,6 +10,8 @@ use super::preflight::try_preflight_decompose_task;
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
+
+const MANUAL_TASKS_SPEC_TITLE: &str = "Manual Tasks";
 
 pub(crate) async fn transition_task(
     State(state): State<AppState>,
@@ -206,7 +208,7 @@ pub(crate) async fn redo_task(
 pub(crate) struct CreateTaskBody {
     pub title: String,
     #[serde(alias = "spec_id")]
-    pub spec_id: String,
+    pub spec_id: Option<String>,
     pub description: Option<String>,
     pub status: Option<String>,
     #[serde(alias = "order_index")]
@@ -230,12 +232,14 @@ pub(crate) async fn create_task(
     let detection_title = req.title.clone();
     let detection_description = req.description.clone().unwrap_or_default();
     let norm_title = req.title.trim().to_lowercase();
+    let spec_id =
+        resolve_create_task_spec_id(storage, &state, &jwt, &project_id, req.spec_id).await?;
 
     if !norm_title.is_empty() {
         match storage.list_tasks(&project_id.to_string(), &jwt).await {
             Ok(existing) => {
                 if let Some(dup) = existing.into_iter().find(|t| {
-                    t.spec_id.as_deref() == Some(req.spec_id.as_str())
+                    t.spec_id.as_deref() == Some(spec_id.as_str())
                         && t.title
                             .as_deref()
                             .map(|title| title.trim().to_lowercase() == norm_title)
@@ -260,7 +264,7 @@ pub(crate) async fn create_task(
             &project_id.to_string(),
             &jwt,
             &aura_os_storage::CreateTaskRequest {
-                spec_id: req.spec_id,
+                spec_id,
                 title: req.title,
                 org_id: None,
                 description: req.description,
@@ -295,6 +299,60 @@ pub(crate) async fn create_task(
     }
 
     Ok(Json(task))
+}
+
+async fn resolve_create_task_spec_id(
+    storage: &aura_os_storage::StorageClient,
+    state: &AppState,
+    jwt: &str,
+    project_id: &ProjectId,
+    requested: Option<String>,
+) -> ApiResult<String> {
+    if let Some(spec_id) = requested.map(|value| value.trim().to_string()) {
+        if !spec_id.is_empty() {
+            return Ok(spec_id);
+        }
+    }
+
+    let specs = storage
+        .list_specs(&project_id.to_string(), jwt)
+        .await
+        .map_err(|e| ApiError::internal(format!("listing specs for manual task: {e}")))?;
+
+    if let Some(existing) = specs
+        .iter()
+        .find(|spec| spec.title.as_deref() == Some(MANUAL_TASKS_SPEC_TITLE))
+    {
+        return Ok(existing.id.clone());
+    }
+
+    let order_index = specs
+        .iter()
+        .filter_map(|spec| spec.order_index)
+        .max()
+        .map_or(0, |max| max + 1);
+    let created = storage
+        .create_spec(
+            &project_id.to_string(),
+            jwt,
+            &aura_os_storage::CreateSpecRequest {
+                title: MANUAL_TASKS_SPEC_TITLE.to_string(),
+                org_id: None,
+                order_index: Some(order_index),
+                markdown_contents: Some("Tasks created directly from the Tasks board.".to_string()),
+            },
+        )
+        .await
+        .map_err(|e| ApiError::internal(format!("creating manual task spec: {e}")))?;
+    let spec = Spec::try_from(created).map_err(ApiError::internal)?;
+    let spec_id = spec.spec_id.to_string();
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "spec_saved",
+        "project_id": project_id.to_string(),
+        "spec": spec,
+        "spec_id": spec_id.clone(),
+    }));
+    Ok(spec_id)
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -589,7 +647,7 @@ mod tests {
         )
         .expect("snake_case body should deserialize");
         assert_eq!(body.title, "T");
-        assert_eq!(body.spec_id, "s");
+        assert_eq!(body.spec_id.as_deref(), Some("s"));
         assert_eq!(body.description.as_deref(), Some("d"));
         assert_eq!(body.order_index, Some(3));
         assert_eq!(
@@ -617,7 +675,7 @@ mod tests {
             }"#,
         )
         .expect("camelCase body should deserialize");
-        assert_eq!(body.spec_id, "s");
+        assert_eq!(body.spec_id.as_deref(), Some("s"));
         assert_eq!(body.order_index, Some(3));
         assert_eq!(body.dependency_ids.as_deref(), Some(&["a".to_string()][..]));
         assert!(body.skip_auto_decompose);
@@ -642,11 +700,26 @@ mod tests {
             }"#,
         )
         .expect("dependencyTaskIds alias should deserialize");
-        assert_eq!(body.spec_id, "s");
+        assert_eq!(body.spec_id.as_deref(), Some("s"));
         assert_eq!(
             body.dependency_ids.as_deref(),
             Some(&["a".to_string(), "b".to_string()][..])
         );
+    }
+
+    #[test]
+    fn create_task_body_allows_missing_spec_id_for_manual_tasks() {
+        let body: CreateTaskBody = serde_json::from_str(
+            r#"{
+                "title": "Manual task",
+                "description": "Created from the task board",
+                "status": "backlog"
+            }"#,
+        )
+        .expect("manual task body should deserialize without a spec id");
+
+        assert_eq!(body.title, "Manual task");
+        assert_eq!(body.spec_id, None);
     }
 
     /// `task_updated` payload pins the wire shape consumed by the

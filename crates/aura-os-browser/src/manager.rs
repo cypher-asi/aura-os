@@ -149,7 +149,12 @@ impl BrowserManager {
                     opts.project_id.as_ref(),
                     &self.config,
                     &ResolveOptions {
-                        allow_active_probe: opts.project_id.is_some(),
+                        // Active probes discover every reachable localhost
+                        // dev server, not the server that belongs to this
+                        // project. Keep probe results advisory for the URL
+                        // picker; automatic startup should only trust pinned,
+                        // terminal-detected, or previously visited URLs.
+                        allow_active_probe: false,
                     },
                 )
                 .await
@@ -435,6 +440,34 @@ mod tests {
         opts.project_id = Some(project);
         let handle = manager.spawn(opts).await.unwrap();
         assert_eq!(manager.project_id_of(handle.id), Some(project));
+    }
+
+    #[tokio::test]
+    async fn project_spawn_does_not_auto_open_arbitrary_probe_port() {
+        use crate::session::discovery::PORT_WHITELIST;
+        let dir = tempdir().unwrap();
+        let manager = BrowserManager::new(test_config(&dir));
+        let _listener = bind_first_available_port(PORT_WHITELIST)
+            .await
+            .expect("at least one whitelisted dev-server port should be bindable in tests");
+
+        let project = ProjectId::new();
+        let mut opts = SpawnOptions::new(1280, 800);
+        opts.project_id = Some(project);
+
+        let handle = manager.spawn(opts).await.unwrap();
+
+        assert_eq!(handle.initial_url, None);
+        assert!(handle.focus_address_bar);
+    }
+
+    async fn bind_first_available_port(ports: &[u16]) -> Option<tokio::net::TcpListener> {
+        for port in ports {
+            if let Ok(listener) = tokio::net::TcpListener::bind(("127.0.0.1", *port)).await {
+                return Some(listener);
+            }
+        }
+        None
     }
 
     #[tokio::test]
