@@ -1,59 +1,59 @@
-# User-created skills come back to life, plus chat, browser, and tasks QA fixes
+# Skills recovery, manual tasks, and cleaner analytics
 
 - Date: `2026-06-19`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.700.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.700.1
+- Version: `0.1.0-nightly.701.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.701.1
 
-Today's nightly focused on rescuing user-authored skills broken by a missing frontmatter field, with a startup repair pass that also runs on desktop and a faithful round-trip for the skill editor. Alongside that, the team shipped QA fixes across chat, the browser session resolver, and the tasks board, plus sharper analytics on where new users actually come from.
+Today's nightly is anchored by a thorough rescue of user-created skills — a missing frontmatter field had been quietly orphaning them across reloads — alongside a real fix for adding tasks without a spec, sharper acquisition analytics, and a swarm cleanup that stops abandoned probe agents from piling up.
 
-## 1:02 AM — Reliable teardown for remote swarm agents
+## 1:02 AM — Swarm status probes get a real teardown path
 
-Deleting agents now cleans up their remote swarm counterparts instead of leaving status probes behind.
+Deleting a swarm-backed agent now drives the remote gateway through stop-then-delete, so observability probes stop accumulating as ghost agents.
 
-- Agent deletion now detects swarm-mode agents and tears down the remote agent through the swarm gateway, retrying with a stop-then-delete handshake for up to a minute when the gateway reports the agent is still running. (`90752cd`)
-- Surfaces a clear error when SWARM_BASE_URL isn't configured rather than silently orphaning remote agents, and adds end-to-end coverage for remote-delete and the status-probe runner. (`90752cd`)
+- Agent deletion now detects swarm-mode agents and calls the swarm gateway's delete endpoint, retrying through a stop step when the gateway returns 409, so remote probe agents are reliably removed instead of being left running. (`90752cd`)
+- The status-probe runner and its new tests round out the cleanup, giving the eval pipeline a way to verify probes are torn down end to end. (`90752cd`)
 
-## 2:08 AM — First-touch acquisition source and a stable web app_version
+## 2:08 AM — First-touch acquisition source in analytics
 
-Analytics now answers where users actually came from, and stops treating every web deploy as a new app version.
+The web analytics pipeline now tells us where users actually came from, and stops inventing a brand new app version on every deploy.
 
-- Each visitor's first-touch referrer and utm_source are classified into a tidy acquisition_source label (x, google, youtube, reddit, github, hackernews, direct, or the originating domain), stamped once via register_once and mirrored onto the user profile so server-side events like session_active can also be broken down by source. (`617b308`)
-- The web surface now reports a single 0.0.0 app_version in Mixpanel and the X-App-Version header instead of a new commit SHA per Render deploy; desktop and mobile keep their real baked versions, and the exact web build is still recoverable via getBuildInfo().commit. (`f50b081`)
+- Each visitor's first-touch referrer and utm_source are classified into a tidy acquisition_source label (x, google, direct, the site's own domain, etc.), stamped once via register_once, and mirrored onto the user profile at identify time so server-side events like session_active can be broken down by source. (`617b308`)
+- Web now reports a single stable app_version (0.0.0) to Mixpanel instead of a fresh commit SHA per Render deploy, while desktop and mobile keep their real baked release versions; the exact web build is still recoverable from getBuildInfo().commit. (`f50b081`)
 
-## 6:02 AM — User-created skills load, recover, and round-trip through editing
+## 6:02 AM — Rescuing user-created skills from the missing-name bug
 
-A cascade of skill bugs — missing name field, orphaned skills, stale editor state, and silent setting resets — all get fixed together.
+A four-part fix restores skills that had been silently dropped from the harness registry and stops the skill editor from quietly resetting fields on save.
 
-- Skill frontmatter now includes the required name field on both create and edit, so user-authored SKILL.md files actually load into the harness registry instead of vanishing as "skill not found" after the next reload. (`652d5cd`)
-- A startup repair pass backfills the missing name field into any pre-fix user-created skill (gated by the user-created marker, idempotent, atomic temp+rename write), bringing previously orphaned skills back into the registry on the next harness reload. (`e170ba4`)
-- The skill editor modal now clears its fields at the start of each load, so a slow or failed getSkill no longer leaves the previously-edited skill's description and instructions showing in the form. (`fe27f1e`)
-- A new GET /api/harness/skills/mine/{name} endpoint reads the on-disk marker file as the source of truth, so the edit form pre-fills user_invocable, model_invocable, and allowed_tools faithfully instead of silently resetting them on save. (`d71b125`)
+- Created and edited skills now write the required name: field into SKILL.md frontmatter, so the harness can load them on every reload instead of dropping them with "skill not found" after a restart. (`652d5cd`)
+- A startup repair pass backfills name: into any user-created skill missing it, marker-gated to user-authored files and written atomically so a concurrent harness reload can't read a half-written file — orphaned skills now load on the next reload. (`e170ba4`)
+- The skill editor now pre-fills from a new GET /api/harness/skills/mine/{name} endpoint that reads the marker file directly, so user_invocable, model_invocable, and allowed_tools round-trip faithfully instead of being silently reset on save. (`d71b125`)
+- The edit modal also clears its form at the start of every load, so a slow or failed fetch can no longer leave the previously-edited skill's description and instructions sitting in the form. (`fe27f1e`)
 
-## 7:13 AM — Desktop startup now runs the skill recovery pass
+## 7:13 AM — Skill recovery extended to the desktop startup path
 
-The skill repair routine is wired into the desktop entry point so orphaned skills are fixed before the embedded harness loads them.
+Desktop users — the ones most affected by orphaned skills — now actually run the new recovery pass.
 
-- Because the desktop embeds aura-os-server as a library and never runs its main(), the startup skill-recovery pass was dead on desktop — exactly where users were hitting orphaned skills. It's now called from the desktop's own main() before the server and harness start. (`bb61d79`)
+- Because desktop embeds aura-os-server as a library and never executes its main(), repair_user_skills_on_startup is now invoked explicitly from the desktop's own startup before the server and harness boot, so orphaned skills are repaired before the harness tries to load them. (`bb61d79`)
 
-## 7:21 AM — End-to-end guard against skill-edit setting resets
+## 7:21 AM — End-to-end guard for the skill edit round-trip
 
-A full create-edit-reopen test locks in the fix that stopped editing from silently wiping skill settings.
+A new integration test locks in the editor fix so flags and tool lists can't silently regress again.
 
-- Adds an end-to-end test that creates a skill with non-default user_invocable, model_invocable, allowed_tools, model, and context, edits only the description, and verifies every other setting survives — guarding against regressions of the silent-reset bug. (`cca0fdf`)
+- An end-to-end test creates a skill with non-default user_invocable, model_invocable, allowed_tools, model, and context, edits only its description, and re-opens it to confirm every other setting survives — closing the regression where editing silently reset those fields. (`cca0fdf`)
 
-## 11:04 AM — QA fixes across chat input, browser sessions, and manual tasks
+## 11:04 AM — Manual tasks, literal chat prompts, and steadier browser defaults
 
-A trio of app-level fixes addressing literal prompt handling, stale browser probe URLs, and spec-less manual task creation.
+A QA-blocker sweep across chat, browser, and the Tasks board unblocks adding ad-hoc tasks and stops a few small but visible misbehaviors.
 
-- Tasks can now be created manually without specifying a spec — the server resolves or auto-creates a "Manual Tasks" spec for the project, broadcasts the spec_saved event, and the AddTaskForm flow is covered end to end. (`c3cb315`)
-- Chat input now preserves literal prompt text in the InputBarShell instead of transforming what the user typed. (`c3cb315`)
-- The browser session resolver no longer falls back to stale probe URLs as defaults when selecting a session target. (`c3cb315`)
+- Tasks can now be created without a spec: the server auto-resolves (or creates) a "Manual Tasks" spec when none is supplied, broadcasts the new spec, and a follow-up fix gives manual tasks a sensible default order_index so they slot into the board correctly. (`c3cb315`, `fb6b20d`)
+- Chat now preserves literal prompt text in the input bar instead of transforming it, fixing cases where typed prompts were subtly altered before send. (`c3cb315`)
+- The browser session resolver no longer falls back to stale probe URLs as defaults, so new sessions start from a clean state. (`c3cb315`)
 
 ## Highlights
 
-- Skill loading bug fixed with on-disk recovery for orphaned skills
-- Desktop startup now repairs broken skills before the harness loads
-- Manual tasks no longer require a spec; chat preserves literal prompt text
-- First-touch acquisition source now captured for signups and DAU
+- User-created skills no longer vanish after a reload
+- Manual tasks can be added without picking a spec
+- First-touch acquisition source captured in analytics
+- Swarm status probes now actually get torn down
 

@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-19T18:28:33.094Z",
+  "generatedAt": "2026-06-19T20:06:03.839Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.700.1",
+  "version": "0.1.0-nightly.701.1",
   "date": "2026-06-19",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.700.1",
-  "lastIncludedSha": "c3cb3157931e843993c46cd8ac34f246de987501",
-  "previousProcessedSha": "cca0fdfc6d69dde571236e302fc1b6a45b98820c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.701.1",
+  "lastIncludedSha": "fb6b20d968cc42c830f92b337b71d8afb7eed654",
+  "previousProcessedSha": "c3cb3157931e843993c46cd8ac34f246de987501",
   "commitShas": [
     "90752cd1b06070f3a63d775aaa07c652124215b9",
     "617b30840745a384c5e21c5c31f18d7a90b19817",
@@ -21,10 +21,11 @@
     "d71b125888fa3b2784d9adfac5f1a3e87f9515e5",
     "bb61d790558e40c2c28a87a9675fd690f8c60ac5",
     "cca0fdfc6d69dde571236e302fc1b6a45b98820c",
-    "c3cb3157931e843993c46cd8ac34f246de987501"
+    "c3cb3157931e843993c46cd8ac34f246de987501",
+    "fb6b20d968cc42c830f92b337b71d8afb7eed654"
   ],
-  "rawCommitCount": 10,
-  "filteredCommitCount": 10,
+  "rawCommitCount": 11,
+  "filteredCommitCount": 11,
   "rawCommits": [
     {
       "sha": "90752cd1b06070f3a63d775aaa07c652124215b9",
@@ -446,6 +447,45 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "fb6b20d968cc42c830f92b337b71d8afb7eed654",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-19T15:39:42-04:00",
+      "subject": "fix(tasks): default order index for manual tasks (#71)",
+      "body": "",
+      "parents": [
+        "c3cb3157931e843993c46cd8ac34f246de987501"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/tasks/crud.rs",
+        "apps/aura-os-server/tests/api_tests/tasks.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 39,
+        "deletions": 6
+      },
+      "committedAtMs": 1781897982000,
+      "cleanSubject": "default order index for manual tasks (#71)",
+      "keywords": [
+        "default",
+        "order",
+        "index",
+        "manual",
+        "tasks"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -453,29 +493,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.700.1",
+      "version": "0.1.0-nightly.701.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64883734
+          "sizeBytes": 64874456
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131537400
+          "sizeBytes": 131533304
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -485,29 +525,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.700.1",
+      "version": "0.1.0-nightly.701.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.700.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.701.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60861362
+          "sizeBytes": 60927494
         },
         {
-          "name": "AURA_0.1.0-nightly.700.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.701.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59857463
+          "sizeBytes": 59890441
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -517,29 +557,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.700.1",
+      "version": "0.1.0-nightly.701.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.700.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.701.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62959841
+          "sizeBytes": 62973922
         },
         {
-          "name": "AURA_0.1.0-nightly.700.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.701.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61961876
+          "sizeBytes": 61975335
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -549,17 +589,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.700.1",
+      "version": "0.1.0-nightly.701.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48019207
+          "sizeBytes": 48052242
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.700.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.701.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -568,30 +608,30 @@
     }
   ],
   "rendered": {
-    "title": "User-created skills come back to life, plus chat, browser, and tasks QA fixes",
-    "intro": "Today's nightly focused on rescuing user-authored skills broken by a missing frontmatter field, with a startup repair pass that also runs on desktop and a faithful round-trip for the skill editor. Alongside that, the team shipped QA fixes across chat, the browser session resolver, and the tasks board, plus sharper analytics on where new users actually come from.",
+    "title": "Skills recovery, manual tasks, and cleaner analytics",
+    "intro": "Today's nightly is anchored by a thorough rescue of user-created skills — a missing frontmatter field had been quietly orphaning them across reloads — alongside a real fix for adding tasks without a spec, sharper acquisition analytics, and a swarm cleanup that stops abandoned probe agents from piling up.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "1:02 AM",
         "started_at": "2026-06-19T08:02:42.000Z",
         "ended_at": "2026-06-19T08:02:42.000Z",
-        "title": "Reliable teardown for remote swarm agents",
-        "summary": "Deleting agents now cleans up their remote swarm counterparts instead of leaving status probes behind.",
+        "title": "Swarm status probes get a real teardown path",
+        "summary": "Deleting a swarm-backed agent now drives the remote gateway through stop-then-delete, so observability probes stop accumulating as ghost agents.",
         "items": [
           {
-            "text": "Agent deletion now detects swarm-mode agents and tears down the remote agent through the swarm gateway, retrying with a stop-then-delete handshake for up to a minute when the gateway reports the agent is still running.",
+            "text": "Agent deletion now detects swarm-mode agents and calls the swarm gateway's delete endpoint, retrying through a stop step when the gateway returns 409, so remote probe agents are reliably removed instead of being left running.",
             "commit_shas": [
               "90752cd1b06070f3a63d775aaa07c652124215b9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Surfaces a clear error when SWARM_BASE_URL isn't configured rather than silently orphaning remote agents, and adds end-to-end coverage for remote-delete and the status-probe runner.",
+            "text": "The status-probe runner and its new tests round out the cleanup, giving the eval pipeline a way to verify probes are torn down end to end.",
             "commit_shas": [
               "90752cd1b06070f3a63d775aaa07c652124215b9"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -600,18 +640,18 @@
         "time_label": "2:08 AM",
         "started_at": "2026-06-19T09:08:11.000Z",
         "ended_at": "2026-06-19T09:31:56.000Z",
-        "title": "First-touch acquisition source and a stable web app_version",
-        "summary": "Analytics now answers where users actually came from, and stops treating every web deploy as a new app version.",
+        "title": "First-touch acquisition source in analytics",
+        "summary": "The web analytics pipeline now tells us where users actually came from, and stops inventing a brand new app version on every deploy.",
         "items": [
           {
-            "text": "Each visitor's first-touch referrer and utm_source are classified into a tidy acquisition_source label (x, google, youtube, reddit, github, hackernews, direct, or the originating domain), stamped once via register_once and mirrored onto the user profile so server-side events like session_active can also be broken down by source.",
+            "text": "Each visitor's first-touch referrer and utm_source are classified into a tidy acquisition_source label (x, google, direct, the site's own domain, etc.), stamped once via register_once, and mirrored onto the user profile at identify time so server-side events like session_active can be broken down by source.",
             "commit_shas": [
               "617b30840745a384c5e21c5c31f18d7a90b19817"
             ],
             "confidence": "high"
           },
           {
-            "text": "The web surface now reports a single 0.0.0 app_version in Mixpanel and the X-App-Version header instead of a new commit SHA per Render deploy; desktop and mobile keep their real baked versions, and the exact web build is still recoverable via getBuildInfo().commit.",
+            "text": "Web now reports a single stable app_version (0.0.0) to Mixpanel instead of a fresh commit SHA per Render deploy, while desktop and mobile keep their real baked release versions; the exact web build is still recoverable from getBuildInfo().commit.",
             "commit_shas": [
               "f50b0817a750d00ee96d86248a24c742d4b01821"
             ],
@@ -624,34 +664,34 @@
         "time_label": "6:02 AM",
         "started_at": "2026-06-19T13:02:59.000Z",
         "ended_at": "2026-06-19T14:03:20.000Z",
-        "title": "User-created skills load, recover, and round-trip through editing",
-        "summary": "A cascade of skill bugs — missing name field, orphaned skills, stale editor state, and silent setting resets — all get fixed together.",
+        "title": "Rescuing user-created skills from the missing-name bug",
+        "summary": "A four-part fix restores skills that had been silently dropped from the harness registry and stops the skill editor from quietly resetting fields on save.",
         "items": [
           {
-            "text": "Skill frontmatter now includes the required name field on both create and edit, so user-authored SKILL.md files actually load into the harness registry instead of vanishing as \"skill not found\" after the next reload.",
+            "text": "Created and edited skills now write the required name: field into SKILL.md frontmatter, so the harness can load them on every reload instead of dropping them with \"skill not found\" after a restart.",
             "commit_shas": [
               "652d5cd7eee604195c8f4212b929275b3b25f0c5"
             ],
             "confidence": "high"
           },
           {
-            "text": "A startup repair pass backfills the missing name field into any pre-fix user-created skill (gated by the user-created marker, idempotent, atomic temp+rename write), bringing previously orphaned skills back into the registry on the next harness reload.",
+            "text": "A startup repair pass backfills name: into any user-created skill missing it, marker-gated to user-authored files and written atomically so a concurrent harness reload can't read a half-written file — orphaned skills now load on the next reload.",
             "commit_shas": [
               "e170ba4b31deb10bf98081dd3c724969373f8acf"
             ],
             "confidence": "high"
           },
           {
-            "text": "The skill editor modal now clears its fields at the start of each load, so a slow or failed getSkill no longer leaves the previously-edited skill's description and instructions showing in the form.",
+            "text": "The skill editor now pre-fills from a new GET /api/harness/skills/mine/{name} endpoint that reads the marker file directly, so user_invocable, model_invocable, and allowed_tools round-trip faithfully instead of being silently reset on save.",
             "commit_shas": [
-              "fe27f1e8aa3943afb251bbea93bf1c51f2a439b9"
+              "d71b125888fa3b2784d9adfac5f1a3e87f9515e5"
             ],
             "confidence": "high"
           },
           {
-            "text": "A new GET /api/harness/skills/mine/{name} endpoint reads the on-disk marker file as the source of truth, so the edit form pre-fills user_invocable, model_invocable, and allowed_tools faithfully instead of silently resetting them on save.",
+            "text": "The edit modal also clears its form at the start of every load, so a slow or failed fetch can no longer leave the previously-edited skill's description and instructions sitting in the form.",
             "commit_shas": [
-              "d71b125888fa3b2784d9adfac5f1a3e87f9515e5"
+              "fe27f1e8aa3943afb251bbea93bf1c51f2a439b9"
             ],
             "confidence": "high"
           }
@@ -662,11 +702,11 @@
         "time_label": "7:13 AM",
         "started_at": "2026-06-19T14:13:09.000Z",
         "ended_at": "2026-06-19T14:13:09.000Z",
-        "title": "Desktop startup now runs the skill recovery pass",
-        "summary": "The skill repair routine is wired into the desktop entry point so orphaned skills are fixed before the embedded harness loads them.",
+        "title": "Skill recovery extended to the desktop startup path",
+        "summary": "Desktop users — the ones most affected by orphaned skills — now actually run the new recovery pass.",
         "items": [
           {
-            "text": "Because the desktop embeds aura-os-server as a library and never runs its main(), the startup skill-recovery pass was dead on desktop — exactly where users were hitting orphaned skills. It's now called from the desktop's own main() before the server and harness start.",
+            "text": "Because desktop embeds aura-os-server as a library and never executes its main(), repair_user_skills_on_startup is now invoked explicitly from the desktop's own startup before the server and harness boot, so orphaned skills are repaired before the harness tries to load them.",
             "commit_shas": [
               "bb61d790558e40c2c28a87a9675fd690f8c60ac5"
             ],
@@ -679,11 +719,11 @@
         "time_label": "7:21 AM",
         "started_at": "2026-06-19T14:21:24.000Z",
         "ended_at": "2026-06-19T14:21:24.000Z",
-        "title": "End-to-end guard against skill-edit setting resets",
-        "summary": "A full create-edit-reopen test locks in the fix that stopped editing from silently wiping skill settings.",
+        "title": "End-to-end guard for the skill edit round-trip",
+        "summary": "A new integration test locks in the editor fix so flags and tool lists can't silently regress again.",
         "items": [
           {
-            "text": "Adds an end-to-end test that creates a skill with non-default user_invocable, model_invocable, allowed_tools, model, and context, edits only the description, and verifies every other setting survives — guarding against regressions of the silent-reset bug.",
+            "text": "An end-to-end test creates a skill with non-default user_invocable, model_invocable, allowed_tools, model, and context, edits only its description, and re-opens it to confirm every other setting survives — closing the regression where editing silently reset those fields.",
             "commit_shas": [
               "cca0fdfc6d69dde571236e302fc1b6a45b98820c"
             ],
@@ -695,40 +735,41 @@
         "batch_id": "entry-6",
         "time_label": "11:04 AM",
         "started_at": "2026-06-19T18:04:29.000Z",
-        "ended_at": "2026-06-19T18:04:29.000Z",
-        "title": "QA fixes across chat input, browser sessions, and manual tasks",
-        "summary": "A trio of app-level fixes addressing literal prompt handling, stale browser probe URLs, and spec-less manual task creation.",
+        "ended_at": "2026-06-19T19:39:42.000Z",
+        "title": "Manual tasks, literal chat prompts, and steadier browser defaults",
+        "summary": "A QA-blocker sweep across chat, browser, and the Tasks board unblocks adding ad-hoc tasks and stops a few small but visible misbehaviors.",
         "items": [
           {
-            "text": "Tasks can now be created manually without specifying a spec — the server resolves or auto-creates a \"Manual Tasks\" spec for the project, broadcasts the spec_saved event, and the AddTaskForm flow is covered end to end.",
+            "text": "Tasks can now be created without a spec: the server auto-resolves (or creates) a \"Manual Tasks\" spec when none is supplied, broadcasts the new spec, and a follow-up fix gives manual tasks a sensible default order_index so they slot into the board correctly.",
+            "commit_shas": [
+              "c3cb3157931e843993c46cd8ac34f246de987501",
+              "fb6b20d968cc42c830f92b337b71d8afb7eed654"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat now preserves literal prompt text in the input bar instead of transforming it, fixing cases where typed prompts were subtly altered before send.",
             "commit_shas": [
               "c3cb3157931e843993c46cd8ac34f246de987501"
             ],
             "confidence": "high"
           },
           {
-            "text": "Chat input now preserves literal prompt text in the InputBarShell instead of transforming what the user typed.",
+            "text": "The browser session resolver no longer falls back to stale probe URLs as defaults, so new sessions start from a clean state.",
             "commit_shas": [
               "c3cb3157931e843993c46cd8ac34f246de987501"
             ],
-            "confidence": "medium"
-          },
-          {
-            "text": "The browser session resolver no longer falls back to stale probe URLs as defaults when selecting a session target.",
-            "commit_shas": [
-              "c3cb3157931e843993c46cd8ac34f246de987501"
-            ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Skill loading bug fixed with on-disk recovery for orphaned skills",
-      "Desktop startup now repairs broken skills before the harness loads",
-      "Manual tasks no longer require a spec; chat preserves literal prompt text",
-      "First-touch acquisition source now captured for signups and DAU"
+      "User-created skills no longer vanish after a reload",
+      "Manual tasks can be added without picking a spec",
+      "First-touch acquisition source captured in analytics",
+      "Swarm status probes now actually get torn down"
     ],
-    "raw_commit_count": 10
+    "raw_commit_count": 11
   }
 }
