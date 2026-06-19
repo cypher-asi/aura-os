@@ -35,6 +35,49 @@ function isOptedOut(): boolean {
   }
 }
 
+/**
+ * Boil the browser's "who sent you" signals down to one clean acquisition
+ * label. An explicit `utm_source` always wins (campaign tagging is
+ * intentional); otherwise we map the referring domain to a known source,
+ * keep the site's own domain for any other referrer, and return `direct`
+ * when there's no referrer at all (typed URL, or a client that stripped it).
+ */
+export function classifyAcquisitionSource(referrer: string, search: string): string {
+  try {
+    const utm = new URLSearchParams(search).get("utm_source");
+    if (utm?.trim()) return utm.trim().toLowerCase();
+  } catch {
+    // Malformed query string — fall through to the referrer.
+  }
+
+  if (!referrer) return "direct";
+
+  let host: string;
+  try {
+    host = new URL(referrer).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "direct";
+  }
+
+  const from = (...domains: string[]) =>
+    domains.some((d) => host === d || host.endsWith(`.${d}`));
+
+  if (from("x.com", "twitter.com", "t.co")) return "x";
+  if (/(^|\.)google\./.test(host)) return "google";
+  if (from("youtube.com", "youtu.be")) return "youtube";
+  if (from("reddit.com")) return "reddit";
+  if (from("github.com")) return "github";
+  if (from("linkedin.com", "lnkd.in")) return "linkedin";
+  if (from("facebook.com", "fb.com")) return "facebook";
+  if (from("news.ycombinator.com")) return "hackernews";
+
+  // Any other referrer keeps its real domain rather than collapsing into a
+  // generic bucket, so an unlisted source (a blog, Product Hunt, a
+  // newsletter) is still attributable without cross-referencing the raw
+  // Mixpanel referrer property.
+  return host;
+}
+
 /** Initialize analytics. Call once at app startup. */
 export function initAnalytics(): void {
   if (!MIXPANEL_TOKEN || initialized) return;
@@ -62,6 +105,19 @@ export function initAnalytics(): void {
       app_version: getAppVersion(),
       is_authenticated: false,
     });
+
+    // First-touch acquisition source: read the browser's referrer + any
+    // campaign tag on this first load, classify it, and stamp it ONCE so it
+    // survives return visits and rides on every client event (lets us break
+    // signups / engaged actions down by where the user came from).
+    if (typeof document !== "undefined" && typeof window !== "undefined") {
+      mixpanel.register_once({
+        acquisition_source: classifyAcquisitionSource(
+          document.referrer,
+          window.location.search,
+        ),
+      });
+    }
 
     initialized = true;
   } catch {
@@ -95,6 +151,14 @@ export function identifyUser(userId: string): void {
   try {
     mixpanel.identify(userId);
     mixpanel.register({ is_authenticated: true });
+    // Mirror the first-touch source onto the user PROFILE (set_once) so
+    // server-emitted events like session_active — which never carry client
+    // super-properties — can still be broken down by acquisition source
+    // (True DAU / retention by source).
+    const source = mixpanel.get_property("acquisition_source");
+    if (typeof source === "string" && source) {
+      mixpanel.people.set_once({ acquisition_source: source });
+    }
   } catch {
     // Silent fail.
   }
