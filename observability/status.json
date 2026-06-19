@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-06-19T06:05:51.200Z",
+  "generatedAt": "2026-06-19T06:13:13.705Z",
   "environment": "production",
-  "source": "desktop-nightly-release",
+  "source": "github-actions",
   "overall": "major_outage",
   "totals": {
     "features": 19,
@@ -38,12 +38,12 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:30.473Z",
+      "lastCheckedAt": "2026-06-19T06:09:58.141Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 91,
+      "latencyP95Ms": 239,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -56,11 +56,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:29.924Z",
-          "latencyMs": 71,
+          "checkedAt": "2026-06-19T06:09:57.585Z",
+          "latencyMs": 239,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-06-19T05:58:30.010284288+00:00"
+            "timestamp": "2026-06-19T06:09:57.549660618+00:00"
           }
         },
         {
@@ -73,8 +73,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:30.006Z",
-          "latencyMs": 82,
+          "checkedAt": "2026-06-19T06:09:57.672Z",
+          "latencyMs": 86,
           "evidence": {
             "userPresent": true,
             "keys": [
@@ -105,8 +105,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:30.473Z",
-          "latencyMs": 91,
+          "checkedAt": "2026-06-19T06:09:58.141Z",
+          "latencyMs": 98,
           "evidence": {
             "keys": [
               "os",
@@ -127,12 +127,12 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:30.707Z",
+      "lastCheckedAt": "2026-06-19T06:09:58.378Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 376,
+      "latencyP95Ms": 371,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -145,8 +145,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:30.382Z",
-          "latencyMs": 376,
+          "checkedAt": "2026-06-19T06:09:58.043Z",
+          "latencyMs": 371,
           "evidence": {
             "userIdPresent": true
           }
@@ -161,8 +161,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:30.591Z",
-          "latencyMs": 118,
+          "checkedAt": "2026-06-19T06:09:58.263Z",
+          "latencyMs": 122,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "orgCount": 1
@@ -178,8 +178,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:30.707Z",
-          "latencyMs": 116,
+          "checkedAt": "2026-06-19T06:09:58.378Z",
+          "latencyMs": 115,
           "evidence": {
             "userIdPresent": true,
             "keys": [
@@ -206,12 +206,12 @@
       "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
       "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T06:01:09.947Z",
+      "lastCheckedAt": "2026-06-19T06:10:16.570Z",
       "checksPassed": 7,
       "checksTotal": 7,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 868,
+      "latencyP95Ms": 2941,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -224,8 +224,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:08.066Z",
-          "latencyMs": 75,
+          "checkedAt": "2026-06-19T06:10:12.206Z",
+          "latencyMs": 88,
           "evidence": {
             "tokenPresent": true,
             "turnCount": 0,
@@ -242,8 +242,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:08.934Z",
-          "latencyMs": 868,
+          "checkedAt": "2026-06-19T06:10:15.147Z",
+          "latencyMs": 2941,
           "evidence": {
             "frameTypes": [
               "text_delta",
@@ -264,8 +264,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:09.129Z",
-          "latencyMs": 195,
+          "checkedAt": "2026-06-19T06:10:15.596Z",
+          "latencyMs": 449,
           "evidence": {
             "count": 100
           }
@@ -280,8 +280,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:09.227Z",
-          "latencyMs": 98,
+          "checkedAt": "2026-06-19T06:10:15.708Z",
+          "latencyMs": 112,
           "evidence": {
             "count": 7
           }
@@ -296,8 +296,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:09.799Z",
-          "latencyMs": 572,
+          "checkedAt": "2026-06-19T06:10:16.396Z",
+          "latencyMs": 688,
           "evidence": {
             "blogCount": 7,
             "blogDetailChecked": true,
@@ -324,8 +324,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:09.871Z",
-          "latencyMs": 72,
+          "checkedAt": "2026-06-19T06:10:16.484Z",
+          "latencyMs": 88,
           "evidence": {
             "object": "list",
             "modelCount": 1
@@ -341,8 +341,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:09.947Z",
-          "latencyMs": 76,
+          "checkedAt": "2026-06-19T06:10:16.570Z",
+          "latencyMs": 86,
           "evidence": {
             "status": 402,
             "payToPresent": true,
@@ -798,13 +798,13 @@
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-06-19T06:01:07.991Z",
+      "lastCheckedAt": "2026-06-19T06:10:12.118Z",
       "checksPassed": 0,
       "checksTotal": 3,
       "checksFailed": 3,
       "checksUnknown": 0,
-      "latencyP95Ms": 145144,
-      "message": "pod stuck unscheduled for 141s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+      "latencyP95Ms": 1330,
+      "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
       "checks": [
         {
           "id": "remote-agent-create",
@@ -815,142 +815,143 @@
           "required": true,
           "status": "fail",
           "featureStatus": "partial_outage",
-          "message": "pod stuck unscheduled for 141s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-          "checkedAt": "2026-06-19T06:01:05.688Z",
-          "latencyMs": 145144,
+          "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+          "checkedAt": "2026-06-19T06:10:09.845Z",
+          "latencyMs": 1330,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-create:d65a70d95a41",
+            "id": "remote-agents:production-api:remote-agent-create:8e73b4be36e2",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-create",
             "runtimeEnvironment": "production-api",
-            "title": "Remote Agent Creation Failing: Kubernetes kata.peerpods.io/vm Resource Exhaustion and Swarm Agent Quota Exceeded",
+            "title": "Remote Agent Creation Blocked by Swarm Agent Quota Limit (409 Conflict) — All Remote-Agent Checks Failing",
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-06-19T06:01:11.528Z",
+            "generatedAt": "2026-06-19T06:10:18.268Z",
             "environment": "production",
-            "source": "desktop-nightly-release",
+            "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "The remote-agent-create eval failed because the Kubernetes scheduler could not place the agent pod due to exhausted kata.peerpods.io/vm resources on the 2 eligible nodes, leaving the pod unscheduled for 141 seconds. Sibling checks remote-agent-state and remote-agent-runtime independently failed with HTTP 409 conflict errors indicating the swarm agent quota of 100 has been reached, meaning new agent creation attempts are being rejected at the API layer as well. All required evidence (orgId, agentId, vmIdPresent, remoteState) is absent because the agent never reached a running state.",
-            "rootCause": "Two compounding infrastructure-layer failures are blocking remote agent creation in the production-api environment. First, the Kubernetes cluster has exhausted the kata.peerpods.io/vm extended resource on the 2 nodes that match the pod's node affinity/selector; the remaining 4 nodes do not satisfy the pod's node affinity/selector at all, and preemption cannot help because no lower-priority victims exist. Second, the swarm layer is reporting that the org-scoped agent quota of 100 has been reached, causing POST /api/agents to return HTTP 409 for the sibling checks. The primary eval (remote-agent-create) failed at the VM scheduling layer before the quota error was even reached; the sibling checks hit the quota error directly. Neither failure is attributable to a code regression in the eval runner itself — the runner branch and expected-output contract are intact in source. This is an eval-observed infrastructure capacity/quota condition, not a confirmed user-traffic outage (no user-traffic or incident signals are present in the evidence).",
+            "summary": "Every POST /api/agents call made by the remote-agents eval suite is being rejected with HTTP 409 and the message \"conflict: agent quota exceeded: limit is 100\", preventing the eval from creating a new remote agent and collecting any required evidence. All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) share the identical failure message, confirming the failure originates at the shared agent-creation step before any downstream VM readiness or runtime logic is reached.",
+            "rootCause": "The production-api swarm backend is returning a 409 Conflict with error code \"agent quota exceeded: limit is 100\" on every POST /api/agents request issued by the eval runner. Because the eval probe calls createAgent() as its very first substantive step (infra/evals/status/run-status-probes.mjs line 1859), the 409 causes an immediate failure before any evidence (orgId, agentId, vmIdPresent, remoteState) can be collected. The quota condition is the earliest violated contract boundary: the API rejects agent creation entirely, so no subsequent VM readiness or runtime assertions can be evaluated. This is an eval-observed failure against the production-api endpoint; no user-traffic or incident signals are present in the supplied evidence, so impact to end users cannot be confirmed from this packet alone.",
             "proof": [
-              "failed-check.message: 'pod stuck unscheduled for 141s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.'",
-              "failed-check.timing: latencyMs=145144, status=fail, endedAt=2026-06-19T06:01:05.688Z — pod was stuck for ~141s before the eval timed out the check.",
-              "failed-check.evidence: evidence object is empty ({}) — none of the required fields orgId, agentId, vmIdPresent, remoteState were written, confirming the agent never reached a schedulable or ready state.",
-              "expected-output.missing-required-evidence: all 4 required evidence keys (orgId, agentId, vmIdPresent, remoteState) are missing, consistent with the probe aborting before createAgent could return.",
-              "sibling.remote-agent-state: POST /api/agents returned HTTP 409 with 'conflict: agent quota exceeded: limit is 100', confirming the swarm quota is at or above its ceiling.",
-              "sibling.remote-agent-runtime: same HTTP 409 quota-exceeded response, corroborating the quota exhaustion signal across two independent sibling checks.",
-              "source-context.infra/evals/status/run-status-probes.mjs:1854-1859: runner branch calls createAgent(args, track, 'remote', null, orgId) — the probe logic is present and structurally correct; the failure is not a missing code path.",
-              "source-context.infra/evals/status/check-expectations.json:254-258: expected-output contract requires vmIdPresent=true and remoteState oneOf [running, idle, ready] — neither assertion could be evaluated because the agent pod never started."
+              "failed-check.message: POST /api/agents failed with 409 — inner error is 'conflict: agent quota exceeded: limit is 100'",
+              "sibling.remote-agent-state: identical 409 message, latencyMs=1289, endedAt=2026-06-19T06:10:11.134Z",
+              "sibling.remote-agent-runtime: identical 409 message, latencyMs=984, endedAt=2026-06-19T06:10:12.118Z",
+              "expected-output.missing-required-evidence: all four required evidence keys (orgId, agentId, vmIdPresent, remoteState) are absent — consistent with the probe aborting at the createAgent() call before any evidence is written",
+              "source-context.infra/evals/status/run-status-probes.mjs:1851-1859: runner calls createAgent(args, track, 'remote', null, orgId) as the first action inside withCleanup; a 409 here terminates the probe before evidence is populated",
+              "source-context.infra/evals/status/check-expectations.json:250-258: contract requires vmIdPresent=true and remoteState in [running, idle, ready] — neither assertion can be evaluated because agent creation never succeeded",
+              "failed-check.timing: latencyMs=1330 — well under the warningLatencyMs of 240000, confirming the probe failed fast on the 409 rather than timing out"
             ],
             "possibleCauses": [
-              "PRIMARY — kata.peerpods.io/vm extended resource exhausted on the 2 affinity-matching nodes: the Kubernetes scheduler message explicitly states '2 Insufficient kata.peerpods.io/vm', meaning all available VM slots on eligible nodes are consumed by existing pods. No preemption victims exist, so the pod cannot be scheduled until capacity is freed.",
-              "SECONDARY — Swarm agent quota reached at limit=100: the HTTP 409 responses on sibling checks indicate the swarm control plane is also rejecting new agent creation independently of the Kubernetes scheduling failure. This may reflect leaked or un-cleaned agents from prior eval runs accumulating against the quota.",
-              "TERTIARY — Node affinity/selector mismatch on 4 of 6 nodes: 4 nodes are structurally ineligible for this pod type, reducing the effective scheduling pool to 2 nodes. If those 2 nodes are at VM capacity, there is zero scheduling headroom.",
-              "LOWER CONFIDENCE — Eval probe cleanup (withCleanup) may not be releasing VM resources or swarm agents from prior failed runs, causing quota and resource counts to grow over time. This is a hypothesis; no direct evidence of cleanup failure is present in the packet."
+              "Primary — Swarm agent quota at the org or account level used by the eval runner has reached its hard limit of 100. The 409 body explicitly states 'agent quota exceeded: limit is 100', and the same error is returned for all three independent check invocations, indicating the quota is exhausted before any new agent can be created.",
+              "Secondary — A previous eval run (or runs) created remote agents that were not cleaned up, consuming quota slots. The runner uses withCleanup() (run-status-probes.mjs line 1857) to track and delete resources, but if a prior run crashed or the cleanup path was not reached, orphaned agents may be holding quota.",
+              "Tertiary — The eval runner's probe account or org is shared with other workloads that independently consumed quota, leaving no headroom for the observability probes.",
+              "Lower confidence — A quota limit configuration change on the swarm backend reduced the per-org cap to a value already exceeded by existing agents; no source evidence in this packet supports this directly."
             ],
             "reproductionSteps": [
               {
-                "label": "Re-run the remote-agent-create eval in isolation against production-api",
+                "label": "Re-run only the remote-agent-create check against production-api",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the scheduling failure."
+                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the 409 response."
               },
               {
-                "label": "Attempt a direct POST /api/agents for a remote agent type and observe the HTTP response",
-                "details": "A 409 with 'agent quota exceeded: limit is 100' confirms the swarm quota is still exhausted. A successful 200/201 would indicate the quota has been freed."
+                "label": "Query the current remote agent count for the eval runner's org",
+                "details": "Use the API or admin tooling to list all remote agents under the org/account used by the eval runner and count how many exist. Compare against the quota limit of 100 stated in the error."
               },
               {
-                "label": "Inspect the Kubernetes node pool for kata.peerpods.io/vm resource availability",
-                "details": "Check the allocatable and allocated kata.peerpods.io/vm counts on the 2 affinity-matching nodes to confirm whether the resource is still exhausted."
+                "label": "Identify and delete orphaned eval-created remote agents",
+                "details": "Look for remote agents whose names or metadata match the eval runner's naming convention (created by createAgent() in run-status-probes.mjs). Delete any that were not cleaned up by withCleanup()."
               },
               {
-                "label": "List all existing remote agents under the eval org to check quota consumption",
-                "details": "If the count is at or near 100, confirm whether prior eval runs left agents un-deleted, which would explain both the quota error and the scheduling pressure."
-              },
-              {
-                "label": "Run sibling checks remote-agent-state and remote-agent-runtime to confirm whether the quota error persists",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state,remote-agent-runtime npm run status:probes",
-                "details": "If both still return 409, the quota has not been freed. If they pass, the condition was transient."
+                "label": "Re-run all three remote-agent checks after quota is freed",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "details": "Confirm all three checks pass once quota headroom is restored."
               }
             ],
             "affectedAreas": [
               {
-                "label": "Kubernetes kata.peerpods.io/vm node resource pool",
-                "reason": "The scheduler message in failed-check.message explicitly names 'Insufficient kata.peerpods.io/vm' on the 2 nodes that match the pod's affinity selector, making this the direct scheduling blocker."
+                "label": "POST /api/agents endpoint — swarm agent creation",
+                "reason": "This is the exact endpoint returning HTTP 409 with 'agent quota exceeded: limit is 100' for every eval invocation, as shown in failed-check.message and both sibling check messages."
               },
               {
-                "label": "Swarm agent quota enforcement (POST /api/agents)",
-                "reason": "Sibling checks sibling.remote-agent-state and sibling.remote-agent-runtime both received HTTP 409 'agent quota exceeded: limit is 100', indicating the swarm control plane is independently rejecting new agent creation."
-              },
-              {
-                "label": "Remote agent node affinity/selector configuration",
-                "reason": "4 of 6 nodes are structurally ineligible due to node affinity/selector mismatch, reducing the effective scheduling pool and amplifying the impact of VM resource exhaustion on the remaining 2 nodes."
-              },
-              {
-                "label": "remote-agents feature — production-api runtime environment",
-                "path": "infra/evals/status/features.json",
-                "reason": "All three checks under the remote-agents feature (remote-agent-create, remote-agent-state, remote-agent-runtime) are failing simultaneously, implicating the shared infrastructure backing this feature in production-api."
-              },
-              {
-                "label": "Eval runner probe: remote-agent-create branch",
+                "label": "remote-agent-create eval check",
                 "path": "infra/evals/status/run-status-probes.mjs",
-                "reason": "The runner branch at line 1854-1859 calls createAgent for a remote agent type; the probe never received a successful agent response, so no evidence was written and all contract assertions failed."
+                "reason": "The runner branch at line 1854-1859 calls createAgent() as its first step; the 409 prevents any evidence from being collected, causing the check to fail the expected-output contract."
+              },
+              {
+                "label": "remote-agent-state eval check",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "Sibling check sharing the same 409 failure message, indicating it also depends on POST /api/agents and fails at the same quota boundary."
+              },
+              {
+                "label": "remote-agent-runtime eval check",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "Sibling check sharing the same 409 failure message; also blocked at agent creation before runtime assertions can be reached."
+              },
+              {
+                "label": "remote-agents feature — expected-output contract",
+                "path": "infra/evals/status/check-expectations.json",
+                "reason": "Contract at line 254-259 requires orgId, agentId, vmIdPresent=true, and remoteState in [running, idle, ready]; all four evidence keys are missing because the probe never progresses past the failed createAgent() call."
+              },
+              {
+                "label": "Eval runner withCleanup / resource lifecycle",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "If prior runs did not complete cleanup (withCleanup at line 1857), orphaned agents may be occupying quota slots that prevent new agent creation."
               }
             ],
             "recommendedNextActions": [
-              "Investigate the kata.peerpods.io/vm resource allocation on the 2 affinity-matching Kubernetes nodes to determine whether the VM pool is fully consumed and whether any pods can be evicted or whether node capacity needs to be expanded.",
-              "Audit the current remote agent count for the eval org against the swarm quota limit of 100; if leaked agents from prior eval runs are accumulating, trigger cleanup of stale agents to restore quota headroom.",
-              "Review the withCleanup function in infra/evals/status/run-status-probes.mjs to confirm it reliably deletes remote agents after each eval run, including on failure paths, to prevent quota accumulation over time.",
-              "Determine whether the 4 nodes excluded by node affinity/selector can be made eligible for kata.peerpods.io/vm workloads, or whether additional nodes matching the affinity should be provisioned to increase scheduling headroom.",
-              "Monitor the next scheduled eval run for remote-agent-create to determine if the failure is sustained (infrastructure capacity problem) or transient (momentary resource spike); escalate to infrastructure/platform team if the failure persists.",
-              "This is an eval-observed infrastructure condition. Do not treat it as a confirmed user-facing outage unless user-traffic or incident signals are separately confirmed."
+              "Immediately audit the remote agent count for the org/account used by the eval runner and identify any agents that should have been deleted by prior eval cleanup runs.",
+              "Delete orphaned eval-created remote agents to restore quota headroom below the 100-agent limit.",
+              "Re-run the full remote-agents eval suite after cleanup to confirm all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime) return to passing.",
+              "Investigate whether the withCleanup() path in run-status-probes.mjs reliably deletes agents even when a probe run is interrupted or crashes, and add safeguards if it does not.",
+              "Consider adding a pre-flight quota check to the eval runner that queries the current agent count before attempting creation and emits a warning or skip if headroom is insufficient, to distinguish quota exhaustion from other 409 causes in future runs.",
+              "Determine whether the eval runner org's quota limit of 100 is appropriate for the volume of concurrent and historical probe runs, and request a limit increase or a dedicated low-quota eval account if needed."
             ],
             "recommendedVerifierProbes": [
               {
-                "label": "Re-run remote-agent-create eval in isolation",
+                "label": "List all remote agents for the eval runner org and count against the quota limit",
+                "reason": "Directly confirms whether the 100-agent quota is genuinely exhausted or whether the 409 is being returned erroneously. This is the highest-priority probe."
+              },
+              {
+                "label": "Re-run remote-agent-create in isolation to confirm the 409 is reproducible",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-                "reason": "Determines whether the scheduling and quota conditions are still active or have self-resolved since the failing run at 2026-06-19T06:01:05Z."
+                "reason": "Establishes whether the failure is persistent (quota exhausted) or transient (intermittent backend error)."
               },
               {
-                "label": "Re-run sibling checks to confirm quota status",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state,remote-agent-runtime npm run status:probes",
-                "reason": "Both siblings returned HTTP 409 quota-exceeded; re-running confirms whether the swarm quota is still exhausted or has been freed."
+                "label": "Inspect eval runner agent cleanup logs for prior runs to identify orphaned agents",
+                "reason": "Determines whether withCleanup() in run-status-probes.mjs failed to delete agents from previous probe runs, which would explain how quota reached the limit."
               },
               {
-                "label": "Inspect kata.peerpods.io/vm allocatable vs. allocated on affinity-matching nodes",
-                "reason": "Directly confirms whether the VM resource pool is still exhausted on the 2 eligible nodes, proving or disproving the primary scheduling blocker."
+                "label": "Attempt POST /api/agents with the eval runner credentials against a different org or a test org",
+                "reason": "Isolates whether the quota exhaustion is specific to the eval runner's org or affects the swarm backend more broadly."
               },
               {
-                "label": "Query the swarm agent count for the eval org",
-                "reason": "If the count equals or exceeds 100, confirms genuine quota exhaustion. If below 100, points to a quota enforcement anomaly rather than real exhaustion."
-              },
-              {
-                "label": "Inspect implicated eval runner and contract source files for any recent changes",
-                "reason": "infra/evals/status/run-status-probes.mjs, infra/evals/status/check-expectations.json, and infra/evals/status/features.json all share the most recent commit (31ba337); reviewing the diff would confirm whether any eval-side change affected remote agent probe behavior, though the commit message suggests a chat-only fix."
+                "label": "Re-run all three remote-agent checks after manually freeing quota headroom",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "reason": "Confirms that restoring quota headroom resolves all three sibling check failures simultaneously, validating the shared-dependency diagnosis."
               }
             ],
             "whatWouldDisproveThis": [
-              "If a fresh POST /api/agents for a remote agent type succeeds with HTTP 200/201 and returns a vmId and a running/idle/ready state, the kata.peerpods.io/vm exhaustion and quota conditions have resolved and the root cause diagnosis would not apply to the current state.",
-              "If kubectl or equivalent tooling shows kata.peerpods.io/vm allocatable capacity is available on the affinity-matching nodes and no pods are consuming it, the scheduling failure was transient rather than a sustained resource exhaustion.",
-              "If the swarm agent count for the eval org is well below 100, the 409 quota error would indicate a different quota enforcement bug rather than genuine quota exhaustion.",
-              "If the remote-agent-create eval passes on the next scheduled run without any infrastructure changes, the failure was a transient scheduling spike rather than a sustained capacity problem.",
-              "If the eval runner's withCleanup function is confirmed to have successfully deleted all prior remote agents from previous runs, leaked agent accumulation is not a contributing factor to the quota condition."
+              "If the current remote agent count for the eval runner's org is significantly below 100, the quota-exhaustion explanation would be weakened and a misconfigured quota cap or a backend bug returning a spurious 409 would need to be investigated.",
+              "If POST /api/agents succeeds for a different org or credential with the same payload, the issue is scoped to the specific org/account used by the eval runner rather than a global swarm backend outage.",
+              "If the 409 disappears after deleting orphaned agents but the count was already below 100, the quota limit may have been recently lowered rather than genuinely exhausted.",
+              "If a re-run immediately after this failure also returns 409 with the same message but the agent list shows fewer than 100 agents, a backend quota-accounting bug (not actual exhaustion) would be the more likely cause.",
+              "If any remote-agent check passed in a concurrent or immediately subsequent run, the failure would be transient rather than a persistent quota exhaustion."
             ],
             "followUpEvals": [
-              "Add an eval or verifier probe that directly checks kata.peerpods.io/vm allocatable vs. allocated capacity on the affinity-matching node pool before attempting agent creation, to surface resource exhaustion earlier and with a clearer signal.",
-              "Add an eval that checks the current remote agent count for the eval org against the configured quota limit (100), alerting when utilization exceeds a warning threshold (e.g., 80%) to catch quota exhaustion before it blocks creation.",
-              "Add a post-run cleanup verification step to the remote-agent-create eval that confirms the agent and VM were successfully deleted after each probe run, catching cleanup failures before they accumulate into quota exhaustion.",
-              "Add a dedicated eval for node affinity/selector health that verifies the expected number of nodes are eligible for kata.peerpods.io/vm scheduling, catching configuration drift that reduces the effective scheduling pool."
+              "Add a dedicated eval check that queries the remote agent count for the eval runner org and asserts it is below a safe threshold (e.g., below 90% of the quota limit), alerting before exhaustion blocks creation checks.",
+              "Add a post-run cleanup verification eval that confirms no eval-created remote agents persist beyond the expected lifecycle window, catching cleanup failures before they accumulate.",
+              "Add a quota-headroom check as a prerequisite gate in the remote-agents eval suite so that remote-agent-create, remote-agent-state, and remote-agent-runtime are skipped with a clear 'quota low' message rather than failing with a 409 when headroom is insufficient."
             ],
             "evidenceDigest": {
-              "message": "pod stuck unscheduled for 141s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-              "latencyMs": 145144,
+              "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+              "latencyMs": 1330,
               "evidence": {}
             }
           }
@@ -965,149 +966,136 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-          "checkedAt": "2026-06-19T06:01:06.988Z",
-          "latencyMs": 1300,
+          "checkedAt": "2026-06-19T06:10:11.134Z",
+          "latencyMs": 1289,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-state:e3a900497466",
+            "id": "remote-agents:production-api:remote-agent-state:0fe3b656d58a",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-state",
             "runtimeEnvironment": "production-api",
-            "title": "Remote Agent State Eval Failing: Swarm Agent Quota Exhausted (409 Conflict) Blocks createAgent, Preventing All Required Evidence Collection",
+            "title": "Remote Agents eval suite blocked by swarm agent quota exhaustion on POST /api/agents (HTTP 409)",
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-06-19T06:01:11.528Z",
+            "generatedAt": "2026-06-19T06:10:18.268Z",
             "environment": "production",
-            "source": "desktop-nightly-release",
+            "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "The remote-agent-state eval fails because POST /api/agents returns HTTP 409 with error code \"conflict: agent quota exceeded: limit is 100\", meaning the swarm backend refuses to create a new remote agent for the eval probe. Because agent creation is the prerequisite step in the runner (infra/evals/status/run-status-probes.mjs line 1879: createAgent), the probe never reaches the state-polling phase and therefore produces zero evidence, violating all four required evidence fields (orgId, agentId, readyState, state) defined in the expected-output contract at infra/evals/status/check-expectations.json line 264.",
-            "rootCause": "The swarm backend's per-org (or global) remote agent quota of 100 is at or above its limit at the time the eval runs. POST /api/agents returns 409 \"agent quota exceeded: limit is 100\" before a new agent can be provisioned. The eval runner's createAgent call (run-status-probes.mjs:1879) fails immediately on this 409, so the probe exits with the conflict error rather than proceeding to poll agent state. No evidence object is written, causing the contract validator to flag all four required evidence fields as missing. This is an eval infrastructure failure reflecting a real infrastructure capacity or cleanup constraint on the production-api swarm backend; no user-traffic or incident signals are present in the supplied evidence.",
+            "summary": "All three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed at 2026-06-19T06:10 with the identical 409 conflict response from POST /api/agents, indicating the swarm backend rejected every agent-creation attempt because the org-scoped agent quota of 100 has been reached. Because agent creation is the first step in the remote-agent-state probe (run-status-probes.mjs line 1879: createAgent), no evidence (orgId, agentId, readyState, state) was ever collected, causing the expected-output contract to be fully unmet.",
+            "rootCause": "The swarm backend returned HTTP 409 with error code \"conflict\" and message \"conflict: agent quota exceeded: limit is 100\" on every POST /api/agents call made by the eval runner. Because the remote-agent-state probe calls createAgent as its first substantive action (infra/evals/status/run-status-probes.mjs line 1879), the 409 caused an immediate failure before any evidence could be written, leaving all four required evidence fields (orgId, agentId, readyState, state) missing. The same 409 body was returned to all three sibling checks, confirming the quota condition is the single shared upstream blocker rather than a per-check code defect.",
             "proof": [
-              "failed-check.message: POST /api/agents failed with 409 — error body contains 'conflict: agent quota exceeded: limit is 100', confirming the swarm backend rejected agent creation before any state polling could occur.",
-              "failed-check.evidence: evidence object is empty ({}), confirming the runner never wrote orgId, agentId, readyState, or state.",
-              "expected-output.missing-required-evidence: all four required evidence fields (orgId, agentId, readyState, state) are missing, consistent with the probe aborting at the createAgent step.",
-              "source-context.infra/evals/status/run-status-probes.mjs:1871-1879: runner calls createAgent(args, track, 'remote', null, orgId) at line 1879 immediately after acquiring orgId — a 409 at this call would prevent all downstream state-polling and evidence writes.",
-              "sibling.remote-agent-create: sibling check remote-agent-create also fails with 'pod stuck unscheduled for 141s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm' — corroborating that the remote agent VM/pod layer is resource-constrained at the same timestamp (endedAt 2026-06-19T06:01:05.688Z).",
-              "sibling.remote-agent-runtime: sibling check remote-agent-runtime fails with the identical 409 quota-exceeded message, confirming the quota exhaustion affects all remote-agent eval probes that attempt agent creation in this run.",
-              "source-context.infra/evals/status/check-expectations.json:258-266: expected-output contract for remote-agent-state at line 264 requires [orgId, agentId, readyState, state] — none of which can be populated if createAgent fails.",
-              "source.infra/evals/status/features.json:184: remote-agent-state is marked required:true, so this failure contributes to the feature's degraded/outage threshold (degradedAfterFailures:1 per features.json lines 187-188)."
+              "failed-check.message: POST /api/agents failed with 409 — error body contains 'conflict: agent quota exceeded: limit is 100'",
+              "sibling.remote-agent-create: identical 409 message, latencyMs=1330, endedAt=2026-06-19T06:10:09.845Z",
+              "sibling.remote-agent-runtime: identical 409 message, latencyMs=984, endedAt=2026-06-19T06:10:12.118Z",
+              "expected-output.missing-required-evidence: all four contract fields (orgId, agentId, readyState, state) are absent — consistent with probe aborting at createAgent before any evidence write",
+              "source-context.infra/evals/status/run-status-probes.mjs:1871-1879: probe calls createAgent(args, track, 'remote', null, orgId) as its first action; a 409 here prevents all downstream evidence collection",
+              "verifierContext.siblingCorrelation.likelySharedDependencyFailure: true — all failing sibling IDs share the same message",
+              "failed-check.evidence: empty object — zero evidence keys captured, consistent with early abort on createAgent"
             ],
             "possibleCauses": [
-              "PRIMARY — Swarm agent quota at capacity: The production-api swarm backend has reached its hard limit of 100 remote agents for the org or globally. Prior eval runs, leaked agents from failed cleanup, or real user agents may have consumed all available slots, causing every new POST /api/agents to return 409.",
-              "SECONDARY — Leaked eval agents from prior runs not cleaned up: The eval runner uses withCleanup (run-status-probes.mjs:1877) to track and delete agents after each run. If cleanup failed in previous runs (e.g., due to the pod-scheduling failure seen in remote-agent-create), eval-created agents may have accumulated against the quota without being deleted.",
-              "TERTIARY — Kubernetes node resource exhaustion blocking new VM pods: The sibling remote-agent-create check reports 'Insufficient kata.peerpods.io/vm' on 2 of 6 nodes and node affinity mismatches on 4 nodes. This suggests the underlying VM pool for kata peer pods is also exhausted, which may be related to or compounding the quota issue.",
-              "LOWER — Transient quota enforcement race: The 409 could reflect a brief window where quota accounting is stale (e.g., agents being deleted but quota not yet decremented), though the identical failure across all three remote-agent checks in the same run makes a persistent quota exhaustion more likely than a transient race."
+              "PRIMARY — Org-scoped swarm agent quota (limit=100) is exhausted: the eval runner's probe account or org has accumulated 100 live swarm agents and the backend is refusing new creation requests. This is directly stated in the 409 error body and is consistent across all three sibling checks.",
+              "SECONDARY — Eval cleanup (withCleanup / track) from a previous run failed to delete agents, leaving stale agents counted against the quota. The runner wraps creation in withCleanup (run-status-probes.mjs line 1877), but if a prior run crashed before cleanup executed, orphaned agents would accumulate.",
+              "TERTIARY — The probe service account or org was recently migrated to a lower quota tier, reducing the effective limit below the number of agents already present.",
+              "LOW — A transient swarm-side enforcement bug is incorrectly counting agents against the quota. This is less likely given the deterministic 409 across all three independent check invocations within the same run."
             ],
             "reproductionSteps": [
               {
-                "label": "Re-run only the remote-agent-state eval probe against production-api",
+                "label": "Run only the remote-agent-state probe against production-api",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
-                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the 409 response."
+                "details": "Reproduces the 409 if the quota is still exhausted. Use the same environment variables as the scheduled observability workflow."
               },
               {
-                "label": "Query the current remote agent count for the eval org against the production-api swarm backend",
-                "details": "Use the API or admin tooling to list all remote agents for the org used by the eval probe and compare the count to the quota limit of 100."
+                "label": "Run all three remote-agents checks together to confirm shared failure",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "details": "Confirms that all siblings fail with the same 409 body, ruling out per-check code defects."
               },
               {
-                "label": "Check for leaked eval agents that were not cleaned up by prior runs",
-                "details": "List remote agents created by the eval probe identity (look for agents tracked via withCleanup in run-status-probes.mjs) and identify any that were not deleted after previous runs, particularly runs that ended with pod-scheduling failures."
+                "label": "Query the swarm backend directly for the current agent count on the probe org",
+                "details": "Issue a GET to the agents list endpoint for the probe org and count live agents. If the count is at or near 100, quota exhaustion is confirmed."
               },
               {
-                "label": "Inspect Kubernetes node capacity for kata.peerpods.io/vm resources",
-                "details": "Run kubectl describe nodes or equivalent to confirm available kata peer pod VM slots across all 6 nodes, correlating with the 'Insufficient kata.peerpods.io/vm' message from the remote-agent-create sibling failure."
+                "label": "Inspect the probe org for orphaned/stale swarm agents from prior eval runs",
+                "details": "List all agents in the probe org and identify any that were created by the eval runner but not cleaned up. Delete stale agents to free quota headroom."
               }
             ],
             "affectedAreas": [
               {
-                "label": "remote-agent-state eval check (production-api)",
-                "path": "infra/evals/status/run-status-probes.mjs",
-                "reason": "The eval runner branch at line 1874-1879 calls createAgent as its first substantive step; a 409 at that call causes the entire probe to fail with no evidence written.",
-                "details": "Runner branch confirmed at lines 1874-1879 of run-status-probes.mjs."
+                "label": "POST /api/agents — swarm agent creation endpoint",
+                "reason": "Returned HTTP 409 with 'agent quota exceeded: limit is 100' for every creation attempt; this is the earliest violated contract boundary."
               },
               {
-                "label": "remote-agent-create eval check (production-api)",
-                "reason": "Sibling check also failing — pod stuck unscheduled due to Insufficient kata.peerpods.io/vm resources, indicating the VM provisioning layer is resource-constrained.",
-                "details": "Evidence item sibling.remote-agent-create; latencyMs 145144 indicates the pod was pending for ~141s before the check timed out."
-              },
-              {
-                "label": "remote-agent-runtime eval check (production-api)",
-                "reason": "Sibling check fails with the identical 409 quota-exceeded message, confirming quota exhaustion affects all remote-agent creation attempts in this eval run.",
-                "details": "Evidence item sibling.remote-agent-runtime; sameMessage:true."
-              },
-              {
-                "label": "Swarm backend POST /api/agents endpoint (production-api)",
-                "reason": "The endpoint is returning 409 with 'agent quota exceeded: limit is 100', blocking all new remote agent provisioning for the eval probe org.",
-                "details": "Confirmed by failed-check.message and sibling.remote-agent-runtime evidence items."
-              },
-              {
-                "label": "Kata peer pod VM node pool (Kubernetes, production-api)",
-                "reason": "2 of 6 nodes report Insufficient kata.peerpods.io/vm; 4 nodes have affinity/selector mismatches. This resource exhaustion is correlated with the quota failure and may share a root cause.",
-                "details": "Confirmed by sibling.remote-agent-create message."
-              },
-              {
-                "label": "Remote Agents feature health (production-api)",
+                "label": "remote-agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
                 "path": "infra/evals/status/features.json",
-                "reason": "All three checks under the remote-agents feature (remote-agent-create, remote-agent-state, remote-agent-runtime) are failing in this run. With degradedAfterFailures:1 and outageAfterFailures:2 (features.json lines 187-188), the feature is at or past its outage threshold in the eval framework.",
-                "details": "This is an eval-framework health signal, not a confirmed user-facing outage — no user-traffic or incident signals are present in the supplied evidence."
+                "reason": "All checks under the remote-agents feature (lines 183-185) failed with the identical 409 message, indicating a shared upstream dependency failure."
+              },
+              {
+                "label": "remote-agent-state eval probe — createAgent call",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "The probe calls createAgent at line 1879 as its first action; the 409 at that point prevents all evidence collection, causing the full contract gap."
+              },
+              {
+                "label": "Eval runner cleanup mechanism (withCleanup / track)",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "If prior runs did not complete cleanup, orphaned agents may be accumulating against the quota. The withCleanup wrapper at line 1877 is the relevant boundary."
+              },
+              {
+                "label": "Swarm agent quota enforcement — production-api environment",
+                "reason": "The swarm backend enforces a hard limit of 100 agents per org; the probe org has reached or exceeded this limit."
               }
             ],
             "recommendedNextActions": [
-              "Investigate the current remote agent count for the eval probe org against the production-api swarm backend to confirm whether the quota of 100 is exhausted.",
-              "Audit and delete any leaked eval agents that were not cleaned up by prior runs — particularly agents created during runs that ended with pod-scheduling failures (as seen in the remote-agent-create sibling check), since withCleanup in run-status-probes.mjs may not have executed successfully in those cases.",
-              "Investigate the kata.peerpods.io/vm node resource shortage: determine whether the 2 nodes reporting insufficient VM resources are related to the quota exhaustion (e.g., VMs not being released) or are an independent capacity issue requiring node scaling.",
-              "Once leaked agents are cleared or quota is confirmed below the limit, re-run the remote-agent-state eval probe to verify the 409 resolves and all four required evidence fields (orgId, agentId, readyState, state) are populated.",
-              "Review the withCleanup logic in infra/evals/status/run-status-probes.mjs to ensure agent cleanup is robust against pod-scheduling failures and other partial-failure scenarios that could leave agents stranded against the quota.",
-              "Consider adding a pre-flight quota check to the remote-agent eval probes that warns (rather than fails silently) when the org's agent count is near the limit, to surface quota pressure before it causes eval failures."
+              "Immediately audit the probe org's live swarm agent count via the agents list API. If at or near 100, delete stale/orphaned agents to restore quota headroom before the next eval run.",
+              "Review the withCleanup / track cleanup path in infra/evals/status/run-status-probes.mjs to confirm that agent deletion is executed on all exit paths (success, error, and timeout). If cleanup can be skipped on crash or timeout, add a finally-block or equivalent guarantee.",
+              "After restoring quota headroom, re-run all three remote-agents checks and verify that all four required evidence fields (orgId, agentId, readyState, state) are present in the output.",
+              "Consider adding a pre-flight check to the eval runner that queries the current agent count for the probe org before attempting creation, and skips or alerts if the count is within a configurable threshold of the quota limit.",
+              "Investigate whether the probe org's quota limit (100) is appropriate for the eval workload, and request a limit increase or a dedicated low-quota probe org if repeated exhaustion is expected."
             ],
             "recommendedVerifierProbes": [
               {
-                "label": "Re-run remote-agent-state eval probe in isolation",
+                "label": "Re-run the remote-agent-state probe to confirm quota is still exhausted",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
-                "reason": "Confirms whether the 409 quota-exceeded error is persistent or transient, and whether all four required evidence fields remain missing.",
-                "details": "Supplied by reproductionHint and verifierContext.recommendedVerifierProbes."
+                "reason": "Determines whether the quota condition persists or was transient. A passing run after agent cleanup would confirm the quota-exhaustion hypothesis."
               },
               {
-                "label": "Re-run all three remote-agents checks together",
+                "label": "List all swarm agents for the probe org and count against the 100-agent limit",
+                "reason": "Directly verifies whether the probe org is at or near the quota ceiling. A count at or above 100 confirms the root cause."
+              },
+              {
+                "label": "Identify and delete orphaned eval-created agents in the probe org",
+                "reason": "If stale agents from prior runs are consuming quota, removing them should restore the ability to create new agents and allow the eval to pass."
+              },
+              {
+                "label": "Run all three remote-agents sibling checks together and compare error bodies",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-                "reason": "Determines whether all three sibling checks continue to fail together, confirming a shared upstream dependency (quota or VM pool) rather than isolated per-check failures."
+                "reason": "Confirms the shared-dependency hypothesis: if all three still return the identical 409, the cause is upstream of all checks. If one passes, the diagnosis narrows to a per-check issue."
               },
               {
-                "label": "Inspect implicated eval source paths for createAgent error handling and cleanup logic",
-                "reason": "Reviewing infra/evals/status/run-status-probes.mjs around the createAgent call (line 1879) and withCleanup (line 1877) will confirm whether a prior 409 or pod-scheduling failure could have left agents undeleted, contributing to quota accumulation.",
-                "details": "Candidate code path: infra/evals/status/run-status-probes.mjs (score 504)."
-              },
-              {
-                "label": "List current remote agents for the eval probe org via the production-api swarm backend",
-                "reason": "Directly confirms whether the quota of 100 is at or near its limit and whether leaked eval agents are present, proving or disproving the quota-exhaustion hypothesis."
-              },
-              {
-                "label": "Inspect Kubernetes node capacity for kata.peerpods.io/vm resources",
-                "command": "kubectl describe nodes | grep -A5 kata.peerpods.io/vm",
-                "reason": "Confirms whether the VM pool exhaustion reported in the remote-agent-create sibling failure is still present and whether it is related to the quota exhaustion or an independent constraint."
+                "label": "Inspect implicated source paths for cleanup logic correctness",
+                "reason": "Review infra/evals/status/run-status-probes.mjs around the withCleanup and track pattern to verify that agent deletion is guaranteed even on probe error paths, preventing future quota accumulation."
               }
             ],
             "whatWouldDisproveThis": [
-              "If POST /api/agents returns 2xx in a re-run immediately after this failure with no quota changes, the quota exhaustion hypothesis would be weakened and a transient API error would be more likely.",
-              "If the current remote agent count for the eval org is well below 100 (e.g., fewer than 90), the quota-at-limit hypothesis would be disproved and the 409 would need to be explained by a different enforcement mechanism (e.g., per-project quota, rate limiting, or a backend bug).",
-              "If all leaked eval agents are confirmed deleted and the quota count drops below the limit, but the 409 persists, the cause would be a quota accounting bug rather than actual slot exhaustion.",
-              "If the kata.peerpods.io/vm node resource shortage is resolved but the 409 quota error continues, the two failures (pod scheduling and quota) would be confirmed as independent rather than related.",
-              "If a subsequent eval run passes (all four required evidence fields present) without any quota or node changes, the failure would be classified as a transient condition rather than a persistent quota exhaustion."
+              "If a direct GET to the agents list endpoint for the probe org returns fewer than 100 live agents, quota exhaustion is not the cause and a swarm-side enforcement bug or misconfiguration should be investigated.",
+              "If deleting stale agents and re-running the probe still produces a 409, the quota limit itself may have been lowered or the account may be on a restricted tier.",
+              "If only one of the three sibling checks returned a 409 and the others passed, the failure would be localized to a single check's code path rather than a shared quota condition.",
+              "If the 409 error body changes to a different conflict code (e.g., 'agent already exists' without the quota message) on re-run, the cause would be a duplicate-name conflict rather than quota exhaustion.",
+              "If run history (currently zero previous runs in verifierContext.history) shows prior passing runs with no intervening agent deletions, it would suggest the quota was consumed by non-eval traffic rather than eval cleanup failures."
             ],
             "followUpEvals": [
-              "Add a dedicated eval check that queries the current remote agent count for the eval probe org and asserts it is below a warning threshold (e.g., 80% of the quota limit), to catch quota pressure before it causes agent-creation failures.",
-              "Add a post-run cleanup verification eval that confirms no eval-created agents remain after a run completes, catching withCleanup failures before they accumulate into quota exhaustion.",
-              "Add an eval check for kata.peerpods.io/vm node resource availability that asserts at least a minimum number of VM slots are schedulable across the node pool, providing early warning of VM pool exhaustion independent of the agent quota.",
-              "Consider a retry-with-backoff eval variant for remote-agent-create that distinguishes transient 409s (quota race) from persistent ones (quota exhausted), to improve signal quality in the eval results."
+              "Add a dedicated 'remote-agent-quota-headroom' eval that queries the probe org's live agent count and fails with a warning if it exceeds a configurable threshold (e.g., 80% of the limit), providing early warning before quota exhaustion blocks creation evals.",
+              "Add a 'remote-agent-cleanup-verification' eval that confirms the number of eval-created agents decreases after each probe run, detecting cleanup failures before they accumulate to the quota ceiling.",
+              "Add an assertion to the remote-agent-create contract that verifies the HTTP response code is 2xx, surfacing quota or conflict errors as a distinct contract violation rather than a generic failure message.",
+              "Consider a post-run agent inventory eval that lists all agents in the probe org and flags any whose names or metadata match eval-runner patterns but are older than a configurable staleness threshold."
             ],
             "evidenceDigest": {
               "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-              "latencyMs": 1300,
+              "latencyMs": 1289,
               "evidence": {}
             }
           }
@@ -1122,131 +1110,131 @@
           "status": "fail",
           "featureStatus": "degraded",
           "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-          "checkedAt": "2026-06-19T06:01:07.991Z",
-          "latencyMs": 1003,
+          "checkedAt": "2026-06-19T06:10:12.118Z",
+          "latencyMs": 984,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-runtime:777b0b6fbf05",
+            "id": "remote-agents:production-api:remote-agent-runtime:d5d5444031fd",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-runtime",
             "runtimeEnvironment": "production-api",
-            "title": "Remote Agent Runtime Eval Failing: Swarm Agent Quota Exhausted (HTTP 409) Blocks Agent Creation",
+            "title": "Remote Agent Eval Failure: POST /api/agents 409 — Swarm Agent Quota Exceeded (limit 100)",
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "degraded",
-            "generatedAt": "2026-06-19T06:01:11.528Z",
+            "generatedAt": "2026-06-19T06:10:18.268Z",
             "environment": "production",
-            "source": "desktop-nightly-release",
+            "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "The remote-agent-runtime eval failed because POST /api/agents returned HTTP 409 with error code \"conflict: agent quota exceeded: limit is 100\", meaning the swarm backend rejected the eval's attempt to create a new remote agent. Because agent creation was blocked, the eval runner never reached the runtime test step, so all five required evidence fields (orgId, agentId, model, provider, message) were never populated and the expected-output contract was fully unmet.",
-            "rootCause": "The production swarm backend has reached its configured agent quota limit of 100. When the eval runner called POST /api/agents (via createAgent at infra/evals/status/run-status-probes.mjs line 1892), the API immediately returned 409 with \"swarm agent already exists: conflict: agent quota exceeded: limit is 100\". This is an infrastructure-layer rejection at the /api/agents endpoint, not a code defect in the eval runner or its contracts. The failure is localized to the remote-agents feature in the production-api runtime environment. No user-traffic or incident signals are present in the evidence; this is an eval-level failure reflecting a real infrastructure capacity constraint.",
+            "summary": "All three remote-agents eval checks (remote-agent-runtime, remote-agent-create, remote-agent-state) failed at 2026-06-19T06:10Z with an identical 409 conflict response from POST /api/agents, indicating the swarm backend rejected agent creation because the org-scoped agent quota of 100 has been reached. Because agent creation is the first step in the eval runner (infra/evals/status/run-status-probes.mjs line 1892), no downstream evidence — orgId, agentId, model, provider, or message — was ever collected, causing a complete contract gap.",
+            "rootCause": "The production-api swarm backend returned HTTP 409 with error code \"conflict\" and message \"conflict: agent quota exceeded: limit is 100\" on every POST /api/agents call made by the eval runner. Because createAgent (run-status-probes.mjs:1892) is the prerequisite step for all three remote-agents checks, the quota rejection caused all checks to fail before any evidence could be gathered. This is an eval-infrastructure failure against the production-api endpoint; no user-traffic or incident signals are present in the supplied evidence, so a user-facing outage cannot be confirmed from this data alone.",
             "proof": [
               "failed-check.message: POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-              "sibling.remote-agent-state: identical 409 conflict message on POST /api/agents, confirming the quota rejection is consistent across multiple eval attempts in the same run",
-              "sibling.remote-agent-create: pod stuck unscheduled for 141s with 'Insufficient kata.peerpods.io/vm' on 2 of 6 nodes, indicating the underlying VM/node pool is also resource-constrained",
-              "expected-output.missing-required-evidence: all five required evidence fields (orgId, agentId, model, provider, message) are absent because agent creation never succeeded and the eval could not proceed past createAgent",
-              "source-context.infra/evals/status/run-status-probes.mjs:1884-1892: runner calls createAgent(args, track, 'remote', null, orgId) at line 1892 as the first substantive step; a 409 at this call aborts the entire probe before any evidence can be collected",
-              "failed-check.timing: latencyMs=1003 confirms the call returned almost immediately (quota check is fast), ruling out a timeout or network hang as the proximate cause"
+              "sibling.remote-agent-create: identical 409 message, endedAt 2026-06-19T06:10:09.845Z, latencyMs 1330",
+              "sibling.remote-agent-state: identical 409 message, endedAt 2026-06-19T06:10:11.134Z, latencyMs 1289",
+              "expected-output.missing-required-evidence: all five required evidence fields (orgId, agentId, model, provider, message) are absent — consistent with agent creation never succeeding",
+              "source-context.infra/evals/status/run-status-probes.mjs:1884-1892: runner calls createAgent(args, track, \"remote\", null, orgId) at line 1892 as the first substantive operation; a 409 here aborts the entire probe before any evidence is recorded",
+              "verifierContext.siblingCorrelation.likelySharedDependencyFailure: true — all failing sibling IDs share the same message, confirming a single upstream dependency (POST /api/agents) is the common failure point"
             ],
             "possibleCauses": [
-              "Primary: The swarm backend's agent quota (limit 100) is exhausted in the production-api environment, causing all new agent creation requests to be rejected with HTTP 409. This is directly stated in the API error message (failed-check.message).",
-              "Contributing: Leaked or un-cleaned eval agents from prior runs may be consuming quota slots. The eval runner uses a withCleanup wrapper (run-status-probes.mjs line 1890), but if previous runs crashed or cleanup failed, orphaned agents could accumulate against the quota.",
-              "Contributing: The sibling check remote-agent-create shows 'Insufficient kata.peerpods.io/vm' on 2 of 6 nodes (sibling.remote-agent-create), suggesting the underlying VM pool is also under pressure, which may be related to the same capacity ceiling.",
-              "Lower confidence: A previous eval run or external workload may have created agents that were not deleted, pushing the count to or past the limit. No history data is available (previousRunCount=0, lastPassingAt=null) to confirm a regression from a passing state."
+              "Primary: The eval runner's service account or org has accumulated 100 swarm agents in the production-api environment and the backend enforces a hard quota of 100, rejecting any further creation attempts. Prior eval runs may not have cleaned up agents (withCleanup may have failed or been skipped in earlier runs), causing agents to accumulate until the quota was hit.",
+              "Secondary: A prior eval run crashed or was interrupted before withCleanup could delete the provisioned agent, leaving a leaked agent that counts against the quota. Repeated runs over time would compound this.",
+              "Tertiary: The quota limit itself was recently lowered on the backend side, causing previously-passing runs to suddenly hit the ceiling. No suspect changes are present in sourceDiscovery.suspectChanges to support this, so it is lower confidence.",
+              "Out-of-scope hypothesis: The 409 body says 'swarm agent already exists' in addition to 'quota exceeded', which could indicate a naming collision (the eval always tries to create an agent with the same deterministic name) rather than a pure count-based quota. Both conditions are reported in the same error envelope."
             ],
             "reproductionSteps": [
               {
-                "label": "Run only the remote-agent-runtime probe against production-api",
+                "label": "Run only the remote-agent-runtime eval probe against production-api",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-                "details": "Use the same environment variables as the scheduled observability workflow. Expect a 409 conflict response if quota is still exhausted."
+                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the 409."
               },
               {
-                "label": "Run the remote-agent-create sibling probe to confirm VM scheduling failure persists",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-                "details": "Confirms whether the Insufficient kata.peerpods.io/vm condition on 2 of 6 nodes is still present alongside the quota issue."
+                "label": "Run all three remote-agents checks together to confirm shared dependency failure",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "details": "All three should fail with the same 409 message if the quota is still exceeded."
               },
               {
-                "label": "Run the remote-agent-state sibling probe to confirm the 409 is consistent",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
-                "details": "remote-agent-state returned the same 409 message; re-running confirms whether quota is still at the limit."
+                "label": "Query the production-api swarm for the current agent count under the eval org",
+                "details": "Use the production-api admin or management endpoint to list agents for the eval service account's org and confirm whether the count is at or above 100."
               },
               {
-                "label": "Query the swarm backend directly for current agent count against the quota",
-                "details": "Use the production API or admin tooling to list all active remote agents for the eval org and compare against the limit of 100. Identify any agents that should have been cleaned up by prior eval runs."
+                "label": "Inspect the withCleanup path in run-status-probes.mjs to verify cleanup is being invoked",
+                "details": "Review the withCleanup implementation (referenced at run-status-probes.mjs:1890) to confirm it deletes the agent on both success and failure paths, and that no prior run left agents behind."
               }
             ],
             "affectedAreas": [
               {
-                "label": "POST /api/agents endpoint (swarm agent creation)",
-                "reason": "This is the exact endpoint that returned HTTP 409 with the quota-exceeded error, as recorded in failed-check.message and sibling.remote-agent-state."
+                "label": "POST /api/agents — Remote Agent Creation Endpoint (production-api)",
+                "reason": "All three eval checks fail at this endpoint with HTTP 409 quota-exceeded. This is the earliest violated contract boundary (evidence: failed-check.message, sibling.remote-agent-create, sibling.remote-agent-state)."
               },
               {
-                "label": "remote-agent-runtime eval check",
-                "path": "infra/evals/status/run-status-probes.mjs",
-                "reason": "The eval runner branch at line 1887-1892 calls createAgent as its first step; a 409 at that call prevents all subsequent evidence collection and causes total contract failure.",
-                "details": "infra/evals/status/run-status-probes.mjs lines 1887-1892"
-              },
-              {
-                "label": "remote-agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+                "label": "remote-agents eval feature — all three checks",
                 "path": "infra/evals/status/features.json",
-                "reason": "All three checks under the remote-agents feature are failing in this run (sibling.remote-agent-create, sibling.remote-agent-state, failed-check.message), indicating the quota and VM scheduling issues affect the entire feature surface.",
-                "details": "infra/evals/status/features.json lines 183-185"
+                "reason": "remote-agent-create (required), remote-agent-state (required), and remote-agent-runtime (not required) are all failing. Per features.json lines 187-188, degradedAfterFailures=1 and outageAfterFailures=2, so two required check failures may trigger a feature outage signal (evidence: source-context.infra/evals/status/features.json:181-189)."
               },
               {
-                "label": "Swarm backend VM node pool (kata.peerpods.io/vm resource)",
-                "reason": "sibling.remote-agent-create reports 'Insufficient kata.peerpods.io/vm' on 2 of 6 nodes, indicating the VM-level resource backing remote agents is also constrained."
+                "label": "Eval runner createAgent call",
+                "path": "infra/evals/status/run-status-probes.mjs",
+                "reason": "The runner invokes createAgent at line 1892 as the first step of the remote-agent-runtime probe. A 409 here prevents all downstream evidence collection (evidence: source-context.infra/evals/status/run-status-probes.mjs:1884-1892)."
+              },
+              {
+                "label": "Swarm agent quota enforcement — production-api backend",
+                "reason": "The 409 response body explicitly names 'agent quota exceeded: limit is 100', localizing the rejection to the swarm quota enforcement layer on the production-api backend (evidence: failed-check.message)."
               }
             ],
             "recommendedNextActions": [
-              "Investigate the current remote agent count in the production swarm for the eval org. If the count is at or near 100, identify and delete orphaned or leaked eval agents to restore capacity below the quota limit.",
-              "Review the withCleanup logic in infra/evals/status/run-status-probes.mjs (around line 1890-1892) to confirm it handles mid-probe failures (including 409 responses) without leaving agents un-deleted. If cleanup is not guaranteed on error paths, harden the cleanup to run unconditionally.",
-              "Investigate the VM node pool pressure reported by remote-agent-create ('Insufficient kata.peerpods.io/vm' on 2 of 6 nodes). Determine whether the VM pool capacity is related to the agent quota ceiling or is an independent resource constraint.",
-              "Once agent count is reduced below the quota, re-run all three remote-agents checks to confirm the feature recovers.",
-              "Consider adding a pre-flight check in the eval runner that queries current agent count before attempting creation, and skips or warns if the count is near the quota limit, to produce a more actionable eval message than a raw 409."
+              "Immediately audit the eval service account's org in production-api to count live swarm agents. If the count is at or near 100, delete stale eval-created agents to restore capacity.",
+              "Review the withCleanup implementation in infra/evals/status/run-status-probes.mjs to ensure agents are deleted on both success and failure/exception paths, preventing future accumulation.",
+              "After clearing stale agents, re-run all three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) to confirm they pass and that evidence fields are populated.",
+              "Determine whether the eval runner has a history of no passing runs (verifierContext.history.lastPassingAt is null) — if so, investigate whether the eval org was ever properly provisioned or if the quota was always a constraint.",
+              "Consider adding a pre-flight agent-count check to the eval runner that warns or skips agent-creation probes when the org is near quota, rather than failing with a 409 mid-run.",
+              "Evaluate whether the eval org's agent quota should be raised or whether a dedicated low-quota eval org should be used to isolate eval-created agents from production agent counts."
             ],
             "recommendedVerifierProbes": [
               {
-                "label": "Re-run remote-agent-runtime probe to confirm quota is still exhausted",
+                "label": "Re-run remote-agent-runtime eval to confirm quota is still exceeded",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-                "reason": "Determines whether the 409 quota-exceeded condition persists or was transient. A pass would indicate the quota was temporarily at the limit and self-resolved.",
-                "details": "Matches the reproduction hint supplied in the investigation packet."
+                "reason": "Confirms the 409 is persistent and not a transient spike. If it passes, the quota was freed by another process (evidence: verifierContext.recommendedVerifierProbes)."
               },
               {
-                "label": "Re-run all three remote-agents checks together to assess full feature health",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-                "reason": "Determines whether the VM scheduling failure (remote-agent-create) and the quota conflict (remote-agent-state, remote-agent-runtime) are co-occurring or have resolved independently."
+                "label": "List all swarm agents for the eval org in production-api",
+                "reason": "Determines whether the agent count is genuinely at 100 or whether the error is a naming/uniqueness conflict. A count below 100 would disprove the quota-exhaustion hypothesis."
               },
               {
-                "label": "Inspect implicated eval runner and registry source files for cleanup logic",
-                "reason": "Review infra/evals/status/run-status-probes.mjs (withCleanup usage around createAgent at line 1892) and infra/evals/status/features.json to confirm cleanup paths are correct and would not leave orphaned agents if a probe errors mid-run.",
-                "details": "Focus on whether the withCleanup wrapper at line 1890 covers the createAgent call at line 1892 and handles 409 errors without leaving partial state."
+                "label": "Investigate the shared upstream dependency — POST /api/agents — before individual check code",
+                "reason": "All three sibling checks (production-api/remote-agent-create, production-api/remote-agent-state, production-api/remote-agent-runtime) share the same failure message, confirming a single upstream dependency failure (evidence: verifierContext.siblingCorrelation)."
               },
               {
-                "label": "Audit active remote agents in the production swarm for the eval org",
-                "reason": "Directly confirms whether the agent count is at or near the limit of 100 and identifies any orphaned eval agents that should have been cleaned up, validating or ruling out the leaked-agent hypothesis."
+                "label": "Audit withCleanup behavior in run-status-probes.mjs for agent leak paths",
+                "reason": "If cleanup is not guaranteed on failure, prior crashed runs may have leaked agents that accumulated to the quota limit.",
+                "details": "Review the withCleanup function referenced at run-status-probes.mjs:1890 to confirm it handles error and timeout paths and always attempts agent deletion."
+              },
+              {
+                "label": "Inspect implicated source paths for any cleanup or quota-handling logic",
+                "reason": "infra/evals/status/run-status-probes.mjs is the candidate code path (score 192) and contains the createAgent and withCleanup calls that govern agent lifecycle in the eval runner."
               }
             ],
             "whatWouldDisproveThis": [
-              "A successful POST /api/agents response (HTTP 200/201) in a re-run would disprove that the quota is currently exhausted.",
-              "Evidence that the swarm agent count is below 100 at the time of the failure would disprove the quota-exhaustion diagnosis and suggest the 409 is caused by a different conflict (e.g., duplicate agent name/ID collision).",
-              "A passing run of remote-agent-create (no pod scheduling failure) combined with a continued 409 on /api/agents would suggest the quota error is independent of the VM pool pressure.",
-              "Eval cleanup logs showing all prior eval agents were successfully deleted would weaken the leaked-agent hypothesis and point toward a non-eval workload consuming quota.",
-              "A prior passing run recorded in eval history (lastPassingAt non-null) immediately before this failure, with no change in agent count, would suggest a transient API error rather than a true quota ceiling."
+              "If a manual POST /api/agents call with a fresh agent name succeeds (HTTP 201/200) for the eval org, the quota is not actually exhausted and the cause is a naming collision or stale lock rather than a count-based quota.",
+              "If the current agent count for the eval org is below 100 in the production-api backend, the quota-exceeded message is misleading and the real cause is something else (e.g., a per-name uniqueness constraint).",
+              "If the eval checks pass immediately after a single agent deletion without any code change, the root cause is leaked agents from prior runs rather than a quota policy change.",
+              "If sibling checks for a different org or environment pass with the same runner version, the failure is scoped to this specific org's quota state rather than a systemic runner or API regression.",
+              "If run history shows these checks were never passing (lastPassingAt is null per verifierContext.history), the failure may be a configuration or environment setup issue rather than a regression."
             ],
             "followUpEvals": [
-              "Add an eval check that queries the swarm agent count for the eval org and asserts it is below a safe threshold (e.g., below 90% of the quota limit), providing early warning before the limit is reached.",
-              "Add an eval check that verifies eval-created agents are successfully cleaned up after each probe run, catching leaked agents before they accumulate against the quota.",
-              "Add a VM pool capacity check for kata.peerpods.io/vm resources that asserts at least one schedulable node is available, providing an independent signal for the VM-layer constraint seen in remote-agent-create.",
-              "Consider a post-run reconciliation eval that lists all agents created by the eval service account and flags any that are older than a configurable TTL as potential leaks."
+              "Add an eval check that queries the eval org's current swarm agent count and warns when it exceeds a configurable threshold (e.g., 80% of quota), catching quota exhaustion before it blocks agent-creation checks.",
+              "Add a post-run cleanup verification eval that confirms no eval-created agents persist after a probe run completes, catching withCleanup failures early.",
+              "Add a quota-headroom check as a prerequisite gate for all remote-agent-* checks so that downstream checks are skipped with a clear 'quota near limit' message rather than failing with a 409.",
+              "Consider a dedicated eval that periodically lists and deletes stale eval-created agents (those older than a configurable TTL) to prevent accumulation across runs."
             ],
             "evidenceDigest": {
               "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-              "latencyMs": 1003,
+              "latencyMs": 984,
               "evidence": {}
             }
           }
@@ -1261,12 +1249,12 @@
       "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
       "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:35.076Z",
+      "lastCheckedAt": "2026-06-19T06:10:03.028Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1120,
+      "latencyP95Ms": 1350,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1279,13 +1267,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:33.032Z",
-          "latencyMs": 714,
+          "checkedAt": "2026-06-19T06:10:00.680Z",
+          "latencyMs": 664,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "65961d81-3f3e-4db8-8451-591c5ecc53d4",
+            "projectId": "45381d55-a32a-47fd-8673-f9cc959a3300",
             "listed": true,
-            "projectName": "AURA Status Project 1781848712430"
+            "projectName": "AURA Status Project 1781849400129"
           }
         },
         {
@@ -1298,13 +1286,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:34.152Z",
-          "latencyMs": 1120,
+          "checkedAt": "2026-06-19T06:10:02.030Z",
+          "latencyMs": 1350,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "6715a4f4-d344-46ab-a67c-6d8f7075d9bc",
-            "specId": "03a2564e-13c1-466b-b730-f67c24a5b743",
-            "taskId": "a2b1a7e1-05a8-4df4-b8b5-144daddec0a8",
+            "projectId": "f7c6effd-1186-47df-85fb-80edb04fdf2b",
+            "specId": "272b7fbd-c179-4257-a2cf-1e0ac390f85b",
+            "taskId": "16967149-33c4-4401-adad-a0d8fb8bbe03",
             "specHashPresent": true,
             "taskCount": 1
           }
@@ -1319,10 +1307,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:34.656Z",
-          "latencyMs": 504,
+          "checkedAt": "2026-06-19T06:10:02.570Z",
+          "latencyMs": 540,
           "evidence": {
-            "projectId": "a266dddf-efbb-410e-be30-711c81d5583d",
+            "projectId": "4a17060f-22ce-4c98-b82f-efc22491d3e5",
             "keys": [
               "total_tasks",
               "pending_tasks",
@@ -1354,10 +1342,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:35.076Z",
-          "latencyMs": 420,
+          "checkedAt": "2026-06-19T06:10:03.028Z",
+          "latencyMs": 458,
           "evidence": {
-            "projectId": "f0b86e19-d70b-4df4-a0d6-d1386a184d52",
+            "projectId": "509b6433-330c-4c4e-9133-cf2288ea48ae",
             "status": null,
             "keys": [
               "running",
@@ -1379,12 +1367,12 @@
       "description": "Storage-backed note folder, note, transition, comment, and project tree roundtrips.",
       "publicSummary": "Project notes can be created, updated, commented on, and listed.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:36.630Z",
+      "lastCheckedAt": "2026-06-19T06:10:04.705Z",
       "checksPassed": 1,
       "checksTotal": 1,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1553,
+      "latencyP95Ms": 1677,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1397,14 +1385,14 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:36.630Z",
-          "latencyMs": 1553,
+          "checkedAt": "2026-06-19T06:10:04.705Z",
+          "latencyMs": 1677,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "68a3ba10-1325-4733-8747-fd3ecd7ca758",
-            "folderId": "5f38eafb-ba2e-4355-8c99-6b0913653690",
-            "noteId": "b9a0e63c-a23c-4738-8a0f-29dbd86af2d5",
-            "commentId": "40a0f4fe-2852-4253-a6c1-2303f075ba29",
+            "projectId": "57a95e11-f9ac-43d2-9e0a-04d3aa94e90a",
+            "folderId": "5db51424-bb07-49c4-80c5-180891b3fb0e",
+            "noteId": "55dddf52-f815-4e50-b042-19c9e3b55b41",
+            "commentId": "8da94501-df80-4f8f-8007-d6eb194007ba",
             "folderLinked": true,
             "titleUpdated": true,
             "transitionStatus": "draft",
@@ -1423,7 +1411,7 @@
       "description": "Process workflow lists, process creation, default ignition node creation, desktop release trigger/run lifecycle, and cleanup.",
       "publicSummary": "Process workflows can be listed, created, and triggered in the desktop release.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:37.922Z",
+      "lastCheckedAt": "2026-06-19T06:10:05.946Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
@@ -1441,8 +1429,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:37.012Z",
-          "latencyMs": 382,
+          "checkedAt": "2026-06-19T06:10:04.964Z",
+          "latencyMs": 259,
           "evidence": {
             "processes": 0,
             "folders": 0
@@ -1458,11 +1446,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:37.922Z",
-          "latencyMs": 910,
+          "checkedAt": "2026-06-19T06:10:05.946Z",
+          "latencyMs": 982,
           "evidence": {
-            "projectId": "afce0ec9-4ba3-4510-af88-5a94a8382a41",
-            "processId": "453c772e-60c0-4127-afe5-6299beebb9d3",
+            "projectId": "72c88f0b-314a-4e11-bc38-5bede7578b20",
+            "processId": "bf20ec6e-fdec-4071-a7a9-451172d32dcd",
             "nodeCount": 1
           }
         },
@@ -1615,12 +1603,12 @@
       "description": "Marketplace agent catalog and harness bootstrap health.",
       "publicSummary": "Marketplace and bootstrap services are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:39.388Z",
+      "lastCheckedAt": "2026-06-19T06:10:07.344Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1265,
+      "latencyP95Ms": 1189,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1633,8 +1621,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:39.187Z",
-          "latencyMs": 1265,
+          "checkedAt": "2026-06-19T06:10:07.135Z",
+          "latencyMs": 1189,
           "evidence": {
             "count": 13
           }
@@ -1649,12 +1637,12 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:39.388Z",
-          "latencyMs": 201,
+          "checkedAt": "2026-06-19T06:10:07.344Z",
+          "latencyMs": 209,
           "evidence": {
             "reachable": true,
             "url": "https://aura-harness-latest.onrender.com",
-            "latencyMs": 63,
+            "latencyMs": 60,
             "status": 200
           }
         }
@@ -1668,12 +1656,12 @@
       "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
       "publicSummary": "Integrations and billing surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:32.317Z",
+      "lastCheckedAt": "2026-06-19T06:10:00.016Z",
       "checksPassed": 6,
       "checksTotal": 6,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 390,
+      "latencyP95Ms": 351,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1686,8 +1674,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:31.029Z",
-          "latencyMs": 322,
+          "checkedAt": "2026-06-19T06:09:58.729Z",
+          "latencyMs": 351,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 0
@@ -1703,8 +1691,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:31.318Z",
-          "latencyMs": 289,
+          "checkedAt": "2026-06-19T06:09:59.021Z",
+          "latencyMs": 292,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 4
@@ -1720,8 +1708,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:31.560Z",
-          "latencyMs": 242,
+          "checkedAt": "2026-06-19T06:09:59.280Z",
+          "latencyMs": 259,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "toolCount": 4,
@@ -1745,8 +1733,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:31.679Z",
-          "latencyMs": 119,
+          "checkedAt": "2026-06-19T06:09:59.412Z",
+          "latencyMs": 132,
           "evidence": {
             "keys": [
               "is_subscribed",
@@ -1767,8 +1755,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:31.927Z",
-          "latencyMs": 248,
+          "checkedAt": "2026-06-19T06:09:59.683Z",
+          "latencyMs": 271,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "keys": [
@@ -1788,8 +1776,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:32.317Z",
-          "latencyMs": 390,
+          "checkedAt": "2026-06-19T06:10:00.016Z",
+          "latencyMs": 333,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "accountKeys": [
@@ -1818,12 +1806,12 @@
       "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
       "publicSummary": "Community and feedback data surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:40.544Z",
+      "lastCheckedAt": "2026-06-19T06:10:08.515Z",
       "checksPassed": 5,
       "checksTotal": 5,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 381,
+      "latencyP95Ms": 349,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1836,8 +1824,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:39.770Z",
-          "latencyMs": 221,
+          "checkedAt": "2026-06-19T06:10:07.873Z",
+          "latencyMs": 349,
           "evidence": {
             "count": 50
           }
@@ -1852,8 +1840,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:39.849Z",
-          "latencyMs": 79,
+          "checkedAt": "2026-06-19T06:10:07.962Z",
+          "latencyMs": 89,
           "evidence": {
             "count": 0
           }
@@ -1868,8 +1856,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:40.060Z",
-          "latencyMs": 211,
+          "checkedAt": "2026-06-19T06:10:08.162Z",
+          "latencyMs": 200,
           "evidence": {
             "count": 50
           }
@@ -1884,8 +1872,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:40.441Z",
-          "latencyMs": 381,
+          "checkedAt": "2026-06-19T06:10:08.395Z",
+          "latencyMs": 233,
           "evidence": {
             "count": 47
           }
@@ -1900,8 +1888,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:40.544Z",
-          "latencyMs": 103,
+          "checkedAt": "2026-06-19T06:10:08.515Z",
+          "latencyMs": 120,
           "evidence": {
             "present": true,
             "keys": [
@@ -1998,12 +1986,12 @@
       "description": "Stream reattachment registry and debug run index.",
       "publicSummary": "Stream and debug inspection endpoints are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T05:58:39.549Z",
+      "lastCheckedAt": "2026-06-19T06:10:07.524Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 82,
+      "latencyP95Ms": 91,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -2016,8 +2004,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:39.467Z",
-          "latencyMs": 78,
+          "checkedAt": "2026-06-19T06:10:07.433Z",
+          "latencyMs": 89,
           "evidence": {
             "count": 0
           }
@@ -2032,8 +2020,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T05:58:39.549Z",
-          "latencyMs": 82,
+          "checkedAt": "2026-06-19T06:10:07.524Z",
+          "latencyMs": 91,
           "evidence": {
             "keys": [
               "projects"
@@ -2050,12 +2038,12 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T06:01:11.337Z",
+      "lastCheckedAt": "2026-06-19T06:10:18.100Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 3,
+      "latencyP95Ms": 1,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -2068,7 +2056,7 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "3/4 eval summary artifacts found",
-          "checkedAt": "2026-06-19T06:01:11.334Z",
+          "checkedAt": "2026-06-19T06:10:18.099Z",
           "latencyMs": 1,
           "evidence": {
             "files": [
@@ -2079,19 +2067,19 @@
               {
                 "file": "infra/evals/reports/baselines/smoke-summary.json",
                 "exists": true,
-                "mtime": "2026-06-19T05:51:48.516Z",
+                "mtime": "2026-06-19T06:09:51.085Z",
                 "size": 2796
               },
               {
                 "file": "infra/evals/reports/baselines/chat-core-summary.json",
                 "exists": true,
-                "mtime": "2026-06-19T05:51:48.515Z",
+                "mtime": "2026-06-19T06:09:51.085Z",
                 "size": 11513
               },
               {
                 "file": "infra/evals/reports/baselines/workflow-summary.json",
                 "exists": true,
-                "mtime": "2026-06-19T05:51:48.516Z",
+                "mtime": "2026-06-19T06:09:51.085Z",
                 "size": 2219
               }
             ],
@@ -2109,8 +2097,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:11.337Z",
-          "latencyMs": 3,
+          "checkedAt": "2026-06-19T06:10:18.100Z",
+          "latencyMs": 1,
           "evidence": {
             "registryPresent": true,
             "eventCount": 45,
@@ -2134,12 +2122,12 @@
       "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "AURA's public web surfaces are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-06-19T06:01:11.333Z",
+      "lastCheckedAt": "2026-06-19T06:10:18.098Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 905,
+      "latencyP95Ms": 1058,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -2152,17 +2140,17 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Informational runtime check",
-          "checkedAt": "2026-06-19T06:01:10.259Z",
-          "latencyMs": 77,
+          "checkedAt": "2026-06-19T06:10:16.854Z",
+          "latencyMs": 46,
           "evidence": {
             "schemaVersion": 1,
             "overall": "major_outage",
             "generatedAtPresent": true,
-            "source": "github-actions",
+            "source": "desktop-nightly-release",
             "featureCount": 19,
             "totalsFeatures": 19,
             "unknownFeatureCount": 0,
-            "snapshotAgeMinutes": 24,
+            "snapshotAgeMinutes": 4,
             "hasLiveSource": true,
             "hasNonUnknownFeatureData": true,
             "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
@@ -2179,8 +2167,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:10.182Z",
-          "latencyMs": 235,
+          "checkedAt": "2026-06-19T06:10:16.808Z",
+          "latencyMs": 238,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -2197,8 +2185,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:10.428Z",
-          "latencyMs": 168,
+          "checkedAt": "2026-06-19T06:10:17.040Z",
+          "latencyMs": 186,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -2215,8 +2203,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-06-19T06:01:11.333Z",
-          "latencyMs": 905,
+          "checkedAt": "2026-06-19T06:10:18.098Z",
+          "latencyMs": 1058,
           "evidence": {
             "allRoutesOk": true,
             "routeCount": 8,
@@ -2273,403 +2261,391 @@
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-create:d65a70d95a41",
+      "id": "remote-agents:production-api:remote-agent-create:8e73b4be36e2",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-create",
       "runtimeEnvironment": "production-api",
-      "title": "Remote Agent Creation Failing: Kubernetes kata.peerpods.io/vm Resource Exhaustion and Swarm Agent Quota Exceeded",
+      "title": "Remote Agent Creation Blocked by Swarm Agent Quota Limit (409 Conflict) — All Remote-Agent Checks Failing",
       "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-06-19T06:01:11.528Z",
+      "generatedAt": "2026-06-19T06:10:18.268Z",
       "environment": "production",
-      "source": "desktop-nightly-release",
+      "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "high",
-      "summary": "The remote-agent-create eval failed because the Kubernetes scheduler could not place the agent pod due to exhausted kata.peerpods.io/vm resources on the 2 eligible nodes, leaving the pod unscheduled for 141 seconds. Sibling checks remote-agent-state and remote-agent-runtime independently failed with HTTP 409 conflict errors indicating the swarm agent quota of 100 has been reached, meaning new agent creation attempts are being rejected at the API layer as well. All required evidence (orgId, agentId, vmIdPresent, remoteState) is absent because the agent never reached a running state.",
-      "rootCause": "Two compounding infrastructure-layer failures are blocking remote agent creation in the production-api environment. First, the Kubernetes cluster has exhausted the kata.peerpods.io/vm extended resource on the 2 nodes that match the pod's node affinity/selector; the remaining 4 nodes do not satisfy the pod's node affinity/selector at all, and preemption cannot help because no lower-priority victims exist. Second, the swarm layer is reporting that the org-scoped agent quota of 100 has been reached, causing POST /api/agents to return HTTP 409 for the sibling checks. The primary eval (remote-agent-create) failed at the VM scheduling layer before the quota error was even reached; the sibling checks hit the quota error directly. Neither failure is attributable to a code regression in the eval runner itself — the runner branch and expected-output contract are intact in source. This is an eval-observed infrastructure capacity/quota condition, not a confirmed user-traffic outage (no user-traffic or incident signals are present in the evidence).",
+      "summary": "Every POST /api/agents call made by the remote-agents eval suite is being rejected with HTTP 409 and the message \"conflict: agent quota exceeded: limit is 100\", preventing the eval from creating a new remote agent and collecting any required evidence. All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) share the identical failure message, confirming the failure originates at the shared agent-creation step before any downstream VM readiness or runtime logic is reached.",
+      "rootCause": "The production-api swarm backend is returning a 409 Conflict with error code \"agent quota exceeded: limit is 100\" on every POST /api/agents request issued by the eval runner. Because the eval probe calls createAgent() as its very first substantive step (infra/evals/status/run-status-probes.mjs line 1859), the 409 causes an immediate failure before any evidence (orgId, agentId, vmIdPresent, remoteState) can be collected. The quota condition is the earliest violated contract boundary: the API rejects agent creation entirely, so no subsequent VM readiness or runtime assertions can be evaluated. This is an eval-observed failure against the production-api endpoint; no user-traffic or incident signals are present in the supplied evidence, so impact to end users cannot be confirmed from this packet alone.",
       "proof": [
-        "failed-check.message: 'pod stuck unscheduled for 141s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.'",
-        "failed-check.timing: latencyMs=145144, status=fail, endedAt=2026-06-19T06:01:05.688Z — pod was stuck for ~141s before the eval timed out the check.",
-        "failed-check.evidence: evidence object is empty ({}) — none of the required fields orgId, agentId, vmIdPresent, remoteState were written, confirming the agent never reached a schedulable or ready state.",
-        "expected-output.missing-required-evidence: all 4 required evidence keys (orgId, agentId, vmIdPresent, remoteState) are missing, consistent with the probe aborting before createAgent could return.",
-        "sibling.remote-agent-state: POST /api/agents returned HTTP 409 with 'conflict: agent quota exceeded: limit is 100', confirming the swarm quota is at or above its ceiling.",
-        "sibling.remote-agent-runtime: same HTTP 409 quota-exceeded response, corroborating the quota exhaustion signal across two independent sibling checks.",
-        "source-context.infra/evals/status/run-status-probes.mjs:1854-1859: runner branch calls createAgent(args, track, 'remote', null, orgId) — the probe logic is present and structurally correct; the failure is not a missing code path.",
-        "source-context.infra/evals/status/check-expectations.json:254-258: expected-output contract requires vmIdPresent=true and remoteState oneOf [running, idle, ready] — neither assertion could be evaluated because the agent pod never started."
+        "failed-check.message: POST /api/agents failed with 409 — inner error is 'conflict: agent quota exceeded: limit is 100'",
+        "sibling.remote-agent-state: identical 409 message, latencyMs=1289, endedAt=2026-06-19T06:10:11.134Z",
+        "sibling.remote-agent-runtime: identical 409 message, latencyMs=984, endedAt=2026-06-19T06:10:12.118Z",
+        "expected-output.missing-required-evidence: all four required evidence keys (orgId, agentId, vmIdPresent, remoteState) are absent — consistent with the probe aborting at the createAgent() call before any evidence is written",
+        "source-context.infra/evals/status/run-status-probes.mjs:1851-1859: runner calls createAgent(args, track, 'remote', null, orgId) as the first action inside withCleanup; a 409 here terminates the probe before evidence is populated",
+        "source-context.infra/evals/status/check-expectations.json:250-258: contract requires vmIdPresent=true and remoteState in [running, idle, ready] — neither assertion can be evaluated because agent creation never succeeded",
+        "failed-check.timing: latencyMs=1330 — well under the warningLatencyMs of 240000, confirming the probe failed fast on the 409 rather than timing out"
       ],
       "possibleCauses": [
-        "PRIMARY — kata.peerpods.io/vm extended resource exhausted on the 2 affinity-matching nodes: the Kubernetes scheduler message explicitly states '2 Insufficient kata.peerpods.io/vm', meaning all available VM slots on eligible nodes are consumed by existing pods. No preemption victims exist, so the pod cannot be scheduled until capacity is freed.",
-        "SECONDARY — Swarm agent quota reached at limit=100: the HTTP 409 responses on sibling checks indicate the swarm control plane is also rejecting new agent creation independently of the Kubernetes scheduling failure. This may reflect leaked or un-cleaned agents from prior eval runs accumulating against the quota.",
-        "TERTIARY — Node affinity/selector mismatch on 4 of 6 nodes: 4 nodes are structurally ineligible for this pod type, reducing the effective scheduling pool to 2 nodes. If those 2 nodes are at VM capacity, there is zero scheduling headroom.",
-        "LOWER CONFIDENCE — Eval probe cleanup (withCleanup) may not be releasing VM resources or swarm agents from prior failed runs, causing quota and resource counts to grow over time. This is a hypothesis; no direct evidence of cleanup failure is present in the packet."
+        "Primary — Swarm agent quota at the org or account level used by the eval runner has reached its hard limit of 100. The 409 body explicitly states 'agent quota exceeded: limit is 100', and the same error is returned for all three independent check invocations, indicating the quota is exhausted before any new agent can be created.",
+        "Secondary — A previous eval run (or runs) created remote agents that were not cleaned up, consuming quota slots. The runner uses withCleanup() (run-status-probes.mjs line 1857) to track and delete resources, but if a prior run crashed or the cleanup path was not reached, orphaned agents may be holding quota.",
+        "Tertiary — The eval runner's probe account or org is shared with other workloads that independently consumed quota, leaving no headroom for the observability probes.",
+        "Lower confidence — A quota limit configuration change on the swarm backend reduced the per-org cap to a value already exceeded by existing agents; no source evidence in this packet supports this directly."
       ],
       "reproductionSteps": [
         {
-          "label": "Re-run the remote-agent-create eval in isolation against production-api",
+          "label": "Re-run only the remote-agent-create check against production-api",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-          "details": "Use the same environment variables as the scheduled observability workflow to reproduce the scheduling failure."
-        },
-        {
-          "label": "Attempt a direct POST /api/agents for a remote agent type and observe the HTTP response",
-          "details": "A 409 with 'agent quota exceeded: limit is 100' confirms the swarm quota is still exhausted. A successful 200/201 would indicate the quota has been freed."
-        },
-        {
-          "label": "Inspect the Kubernetes node pool for kata.peerpods.io/vm resource availability",
-          "details": "Check the allocatable and allocated kata.peerpods.io/vm counts on the 2 affinity-matching nodes to confirm whether the resource is still exhausted."
-        },
-        {
-          "label": "List all existing remote agents under the eval org to check quota consumption",
-          "details": "If the count is at or near 100, confirm whether prior eval runs left agents un-deleted, which would explain both the quota error and the scheduling pressure."
-        },
-        {
-          "label": "Run sibling checks remote-agent-state and remote-agent-runtime to confirm whether the quota error persists",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state,remote-agent-runtime npm run status:probes",
-          "details": "If both still return 409, the quota has not been freed. If they pass, the condition was transient."
-        }
-      ],
-      "affectedAreas": [
-        {
-          "label": "Kubernetes kata.peerpods.io/vm node resource pool",
-          "reason": "The scheduler message in failed-check.message explicitly names 'Insufficient kata.peerpods.io/vm' on the 2 nodes that match the pod's affinity selector, making this the direct scheduling blocker."
-        },
-        {
-          "label": "Swarm agent quota enforcement (POST /api/agents)",
-          "reason": "Sibling checks sibling.remote-agent-state and sibling.remote-agent-runtime both received HTTP 409 'agent quota exceeded: limit is 100', indicating the swarm control plane is independently rejecting new agent creation."
-        },
-        {
-          "label": "Remote agent node affinity/selector configuration",
-          "reason": "4 of 6 nodes are structurally ineligible due to node affinity/selector mismatch, reducing the effective scheduling pool and amplifying the impact of VM resource exhaustion on the remaining 2 nodes."
-        },
-        {
-          "label": "remote-agents feature — production-api runtime environment",
-          "path": "infra/evals/status/features.json",
-          "reason": "All three checks under the remote-agents feature (remote-agent-create, remote-agent-state, remote-agent-runtime) are failing simultaneously, implicating the shared infrastructure backing this feature in production-api."
-        },
-        {
-          "label": "Eval runner probe: remote-agent-create branch",
-          "path": "infra/evals/status/run-status-probes.mjs",
-          "reason": "The runner branch at line 1854-1859 calls createAgent for a remote agent type; the probe never received a successful agent response, so no evidence was written and all contract assertions failed."
-        }
-      ],
-      "recommendedNextActions": [
-        "Investigate the kata.peerpods.io/vm resource allocation on the 2 affinity-matching Kubernetes nodes to determine whether the VM pool is fully consumed and whether any pods can be evicted or whether node capacity needs to be expanded.",
-        "Audit the current remote agent count for the eval org against the swarm quota limit of 100; if leaked agents from prior eval runs are accumulating, trigger cleanup of stale agents to restore quota headroom.",
-        "Review the withCleanup function in infra/evals/status/run-status-probes.mjs to confirm it reliably deletes remote agents after each eval run, including on failure paths, to prevent quota accumulation over time.",
-        "Determine whether the 4 nodes excluded by node affinity/selector can be made eligible for kata.peerpods.io/vm workloads, or whether additional nodes matching the affinity should be provisioned to increase scheduling headroom.",
-        "Monitor the next scheduled eval run for remote-agent-create to determine if the failure is sustained (infrastructure capacity problem) or transient (momentary resource spike); escalate to infrastructure/platform team if the failure persists.",
-        "This is an eval-observed infrastructure condition. Do not treat it as a confirmed user-facing outage unless user-traffic or incident signals are separately confirmed."
-      ],
-      "recommendedVerifierProbes": [
-        {
-          "label": "Re-run remote-agent-create eval in isolation",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-          "reason": "Determines whether the scheduling and quota conditions are still active or have self-resolved since the failing run at 2026-06-19T06:01:05Z."
-        },
-        {
-          "label": "Re-run sibling checks to confirm quota status",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state,remote-agent-runtime npm run status:probes",
-          "reason": "Both siblings returned HTTP 409 quota-exceeded; re-running confirms whether the swarm quota is still exhausted or has been freed."
-        },
-        {
-          "label": "Inspect kata.peerpods.io/vm allocatable vs. allocated on affinity-matching nodes",
-          "reason": "Directly confirms whether the VM resource pool is still exhausted on the 2 eligible nodes, proving or disproving the primary scheduling blocker."
-        },
-        {
-          "label": "Query the swarm agent count for the eval org",
-          "reason": "If the count equals or exceeds 100, confirms genuine quota exhaustion. If below 100, points to a quota enforcement anomaly rather than real exhaustion."
-        },
-        {
-          "label": "Inspect implicated eval runner and contract source files for any recent changes",
-          "reason": "infra/evals/status/run-status-probes.mjs, infra/evals/status/check-expectations.json, and infra/evals/status/features.json all share the most recent commit (31ba337); reviewing the diff would confirm whether any eval-side change affected remote agent probe behavior, though the commit message suggests a chat-only fix."
-        }
-      ],
-      "whatWouldDisproveThis": [
-        "If a fresh POST /api/agents for a remote agent type succeeds with HTTP 200/201 and returns a vmId and a running/idle/ready state, the kata.peerpods.io/vm exhaustion and quota conditions have resolved and the root cause diagnosis would not apply to the current state.",
-        "If kubectl or equivalent tooling shows kata.peerpods.io/vm allocatable capacity is available on the affinity-matching nodes and no pods are consuming it, the scheduling failure was transient rather than a sustained resource exhaustion.",
-        "If the swarm agent count for the eval org is well below 100, the 409 quota error would indicate a different quota enforcement bug rather than genuine quota exhaustion.",
-        "If the remote-agent-create eval passes on the next scheduled run without any infrastructure changes, the failure was a transient scheduling spike rather than a sustained capacity problem.",
-        "If the eval runner's withCleanup function is confirmed to have successfully deleted all prior remote agents from previous runs, leaked agent accumulation is not a contributing factor to the quota condition."
-      ],
-      "followUpEvals": [
-        "Add an eval or verifier probe that directly checks kata.peerpods.io/vm allocatable vs. allocated capacity on the affinity-matching node pool before attempting agent creation, to surface resource exhaustion earlier and with a clearer signal.",
-        "Add an eval that checks the current remote agent count for the eval org against the configured quota limit (100), alerting when utilization exceeds a warning threshold (e.g., 80%) to catch quota exhaustion before it blocks creation.",
-        "Add a post-run cleanup verification step to the remote-agent-create eval that confirms the agent and VM were successfully deleted after each probe run, catching cleanup failures before they accumulate into quota exhaustion.",
-        "Add a dedicated eval for node affinity/selector health that verifies the expected number of nodes are eligible for kata.peerpods.io/vm scheduling, catching configuration drift that reduces the effective scheduling pool."
-      ],
-      "evidenceDigest": {
-        "message": "pod stuck unscheduled for 141s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-        "latencyMs": 145144,
-        "evidence": {}
-      }
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-state:e3a900497466",
-      "featureId": "remote-agents",
-      "featureLabel": "Remote Agents",
-      "checkId": "remote-agent-state",
-      "runtimeEnvironment": "production-api",
-      "title": "Remote Agent State Eval Failing: Swarm Agent Quota Exhausted (409 Conflict) Blocks createAgent, Preventing All Required Evidence Collection",
-      "status": "ready",
-      "checkStatus": "fail",
-      "featureStatus": "partial_outage",
-      "generatedAt": "2026-06-19T06:01:11.528Z",
-      "environment": "production",
-      "source": "desktop-nightly-release",
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6",
-      "confidence": "high",
-      "summary": "The remote-agent-state eval fails because POST /api/agents returns HTTP 409 with error code \"conflict: agent quota exceeded: limit is 100\", meaning the swarm backend refuses to create a new remote agent for the eval probe. Because agent creation is the prerequisite step in the runner (infra/evals/status/run-status-probes.mjs line 1879: createAgent), the probe never reaches the state-polling phase and therefore produces zero evidence, violating all four required evidence fields (orgId, agentId, readyState, state) defined in the expected-output contract at infra/evals/status/check-expectations.json line 264.",
-      "rootCause": "The swarm backend's per-org (or global) remote agent quota of 100 is at or above its limit at the time the eval runs. POST /api/agents returns 409 \"agent quota exceeded: limit is 100\" before a new agent can be provisioned. The eval runner's createAgent call (run-status-probes.mjs:1879) fails immediately on this 409, so the probe exits with the conflict error rather than proceeding to poll agent state. No evidence object is written, causing the contract validator to flag all four required evidence fields as missing. This is an eval infrastructure failure reflecting a real infrastructure capacity or cleanup constraint on the production-api swarm backend; no user-traffic or incident signals are present in the supplied evidence.",
-      "proof": [
-        "failed-check.message: POST /api/agents failed with 409 — error body contains 'conflict: agent quota exceeded: limit is 100', confirming the swarm backend rejected agent creation before any state polling could occur.",
-        "failed-check.evidence: evidence object is empty ({}), confirming the runner never wrote orgId, agentId, readyState, or state.",
-        "expected-output.missing-required-evidence: all four required evidence fields (orgId, agentId, readyState, state) are missing, consistent with the probe aborting at the createAgent step.",
-        "source-context.infra/evals/status/run-status-probes.mjs:1871-1879: runner calls createAgent(args, track, 'remote', null, orgId) at line 1879 immediately after acquiring orgId — a 409 at this call would prevent all downstream state-polling and evidence writes.",
-        "sibling.remote-agent-create: sibling check remote-agent-create also fails with 'pod stuck unscheduled for 141s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm' — corroborating that the remote agent VM/pod layer is resource-constrained at the same timestamp (endedAt 2026-06-19T06:01:05.688Z).",
-        "sibling.remote-agent-runtime: sibling check remote-agent-runtime fails with the identical 409 quota-exceeded message, confirming the quota exhaustion affects all remote-agent eval probes that attempt agent creation in this run.",
-        "source-context.infra/evals/status/check-expectations.json:258-266: expected-output contract for remote-agent-state at line 264 requires [orgId, agentId, readyState, state] — none of which can be populated if createAgent fails.",
-        "source.infra/evals/status/features.json:184: remote-agent-state is marked required:true, so this failure contributes to the feature's degraded/outage threshold (degradedAfterFailures:1 per features.json lines 187-188)."
-      ],
-      "possibleCauses": [
-        "PRIMARY — Swarm agent quota at capacity: The production-api swarm backend has reached its hard limit of 100 remote agents for the org or globally. Prior eval runs, leaked agents from failed cleanup, or real user agents may have consumed all available slots, causing every new POST /api/agents to return 409.",
-        "SECONDARY — Leaked eval agents from prior runs not cleaned up: The eval runner uses withCleanup (run-status-probes.mjs:1877) to track and delete agents after each run. If cleanup failed in previous runs (e.g., due to the pod-scheduling failure seen in remote-agent-create), eval-created agents may have accumulated against the quota without being deleted.",
-        "TERTIARY — Kubernetes node resource exhaustion blocking new VM pods: The sibling remote-agent-create check reports 'Insufficient kata.peerpods.io/vm' on 2 of 6 nodes and node affinity mismatches on 4 nodes. This suggests the underlying VM pool for kata peer pods is also exhausted, which may be related to or compounding the quota issue.",
-        "LOWER — Transient quota enforcement race: The 409 could reflect a brief window where quota accounting is stale (e.g., agents being deleted but quota not yet decremented), though the identical failure across all three remote-agent checks in the same run makes a persistent quota exhaustion more likely than a transient race."
-      ],
-      "reproductionSteps": [
-        {
-          "label": "Re-run only the remote-agent-state eval probe against production-api",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
           "details": "Use the same environment variables as the scheduled observability workflow to reproduce the 409 response."
         },
         {
-          "label": "Query the current remote agent count for the eval org against the production-api swarm backend",
-          "details": "Use the API or admin tooling to list all remote agents for the org used by the eval probe and compare the count to the quota limit of 100."
+          "label": "Query the current remote agent count for the eval runner's org",
+          "details": "Use the API or admin tooling to list all remote agents under the org/account used by the eval runner and count how many exist. Compare against the quota limit of 100 stated in the error."
         },
         {
-          "label": "Check for leaked eval agents that were not cleaned up by prior runs",
-          "details": "List remote agents created by the eval probe identity (look for agents tracked via withCleanup in run-status-probes.mjs) and identify any that were not deleted after previous runs, particularly runs that ended with pod-scheduling failures."
+          "label": "Identify and delete orphaned eval-created remote agents",
+          "details": "Look for remote agents whose names or metadata match the eval runner's naming convention (created by createAgent() in run-status-probes.mjs). Delete any that were not cleaned up by withCleanup()."
         },
         {
-          "label": "Inspect Kubernetes node capacity for kata.peerpods.io/vm resources",
-          "details": "Run kubectl describe nodes or equivalent to confirm available kata peer pod VM slots across all 6 nodes, correlating with the 'Insufficient kata.peerpods.io/vm' message from the remote-agent-create sibling failure."
-        }
-      ],
-      "affectedAreas": [
-        {
-          "label": "remote-agent-state eval check (production-api)",
-          "path": "infra/evals/status/run-status-probes.mjs",
-          "reason": "The eval runner branch at line 1874-1879 calls createAgent as its first substantive step; a 409 at that call causes the entire probe to fail with no evidence written.",
-          "details": "Runner branch confirmed at lines 1874-1879 of run-status-probes.mjs."
-        },
-        {
-          "label": "remote-agent-create eval check (production-api)",
-          "reason": "Sibling check also failing — pod stuck unscheduled due to Insufficient kata.peerpods.io/vm resources, indicating the VM provisioning layer is resource-constrained.",
-          "details": "Evidence item sibling.remote-agent-create; latencyMs 145144 indicates the pod was pending for ~141s before the check timed out."
-        },
-        {
-          "label": "remote-agent-runtime eval check (production-api)",
-          "reason": "Sibling check fails with the identical 409 quota-exceeded message, confirming quota exhaustion affects all remote-agent creation attempts in this eval run.",
-          "details": "Evidence item sibling.remote-agent-runtime; sameMessage:true."
-        },
-        {
-          "label": "Swarm backend POST /api/agents endpoint (production-api)",
-          "reason": "The endpoint is returning 409 with 'agent quota exceeded: limit is 100', blocking all new remote agent provisioning for the eval probe org.",
-          "details": "Confirmed by failed-check.message and sibling.remote-agent-runtime evidence items."
-        },
-        {
-          "label": "Kata peer pod VM node pool (Kubernetes, production-api)",
-          "reason": "2 of 6 nodes report Insufficient kata.peerpods.io/vm; 4 nodes have affinity/selector mismatches. This resource exhaustion is correlated with the quota failure and may share a root cause.",
-          "details": "Confirmed by sibling.remote-agent-create message."
-        },
-        {
-          "label": "Remote Agents feature health (production-api)",
-          "path": "infra/evals/status/features.json",
-          "reason": "All three checks under the remote-agents feature (remote-agent-create, remote-agent-state, remote-agent-runtime) are failing in this run. With degradedAfterFailures:1 and outageAfterFailures:2 (features.json lines 187-188), the feature is at or past its outage threshold in the eval framework.",
-          "details": "This is an eval-framework health signal, not a confirmed user-facing outage — no user-traffic or incident signals are present in the supplied evidence."
-        }
-      ],
-      "recommendedNextActions": [
-        "Investigate the current remote agent count for the eval probe org against the production-api swarm backend to confirm whether the quota of 100 is exhausted.",
-        "Audit and delete any leaked eval agents that were not cleaned up by prior runs — particularly agents created during runs that ended with pod-scheduling failures (as seen in the remote-agent-create sibling check), since withCleanup in run-status-probes.mjs may not have executed successfully in those cases.",
-        "Investigate the kata.peerpods.io/vm node resource shortage: determine whether the 2 nodes reporting insufficient VM resources are related to the quota exhaustion (e.g., VMs not being released) or are an independent capacity issue requiring node scaling.",
-        "Once leaked agents are cleared or quota is confirmed below the limit, re-run the remote-agent-state eval probe to verify the 409 resolves and all four required evidence fields (orgId, agentId, readyState, state) are populated.",
-        "Review the withCleanup logic in infra/evals/status/run-status-probes.mjs to ensure agent cleanup is robust against pod-scheduling failures and other partial-failure scenarios that could leave agents stranded against the quota.",
-        "Consider adding a pre-flight quota check to the remote-agent eval probes that warns (rather than fails silently) when the org's agent count is near the limit, to surface quota pressure before it causes eval failures."
-      ],
-      "recommendedVerifierProbes": [
-        {
-          "label": "Re-run remote-agent-state eval probe in isolation",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
-          "reason": "Confirms whether the 409 quota-exceeded error is persistent or transient, and whether all four required evidence fields remain missing.",
-          "details": "Supplied by reproductionHint and verifierContext.recommendedVerifierProbes."
-        },
-        {
-          "label": "Re-run all three remote-agents checks together",
+          "label": "Re-run all three remote-agent checks after quota is freed",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-          "reason": "Determines whether all three sibling checks continue to fail together, confirming a shared upstream dependency (quota or VM pool) rather than isolated per-check failures."
-        },
-        {
-          "label": "Inspect implicated eval source paths for createAgent error handling and cleanup logic",
-          "reason": "Reviewing infra/evals/status/run-status-probes.mjs around the createAgent call (line 1879) and withCleanup (line 1877) will confirm whether a prior 409 or pod-scheduling failure could have left agents undeleted, contributing to quota accumulation.",
-          "details": "Candidate code path: infra/evals/status/run-status-probes.mjs (score 504)."
-        },
-        {
-          "label": "List current remote agents for the eval probe org via the production-api swarm backend",
-          "reason": "Directly confirms whether the quota of 100 is at or near its limit and whether leaked eval agents are present, proving or disproving the quota-exhaustion hypothesis."
-        },
-        {
-          "label": "Inspect Kubernetes node capacity for kata.peerpods.io/vm resources",
-          "command": "kubectl describe nodes | grep -A5 kata.peerpods.io/vm",
-          "reason": "Confirms whether the VM pool exhaustion reported in the remote-agent-create sibling failure is still present and whether it is related to the quota exhaustion or an independent constraint."
-        }
-      ],
-      "whatWouldDisproveThis": [
-        "If POST /api/agents returns 2xx in a re-run immediately after this failure with no quota changes, the quota exhaustion hypothesis would be weakened and a transient API error would be more likely.",
-        "If the current remote agent count for the eval org is well below 100 (e.g., fewer than 90), the quota-at-limit hypothesis would be disproved and the 409 would need to be explained by a different enforcement mechanism (e.g., per-project quota, rate limiting, or a backend bug).",
-        "If all leaked eval agents are confirmed deleted and the quota count drops below the limit, but the 409 persists, the cause would be a quota accounting bug rather than actual slot exhaustion.",
-        "If the kata.peerpods.io/vm node resource shortage is resolved but the 409 quota error continues, the two failures (pod scheduling and quota) would be confirmed as independent rather than related.",
-        "If a subsequent eval run passes (all four required evidence fields present) without any quota or node changes, the failure would be classified as a transient condition rather than a persistent quota exhaustion."
-      ],
-      "followUpEvals": [
-        "Add a dedicated eval check that queries the current remote agent count for the eval probe org and asserts it is below a warning threshold (e.g., 80% of the quota limit), to catch quota pressure before it causes agent-creation failures.",
-        "Add a post-run cleanup verification eval that confirms no eval-created agents remain after a run completes, catching withCleanup failures before they accumulate into quota exhaustion.",
-        "Add an eval check for kata.peerpods.io/vm node resource availability that asserts at least a minimum number of VM slots are schedulable across the node pool, providing early warning of VM pool exhaustion independent of the agent quota.",
-        "Consider a retry-with-backoff eval variant for remote-agent-create that distinguishes transient 409s (quota race) from persistent ones (quota exhausted), to improve signal quality in the eval results."
-      ],
-      "evidenceDigest": {
-        "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-        "latencyMs": 1300,
-        "evidence": {}
-      }
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-runtime:777b0b6fbf05",
-      "featureId": "remote-agents",
-      "featureLabel": "Remote Agents",
-      "checkId": "remote-agent-runtime",
-      "runtimeEnvironment": "production-api",
-      "title": "Remote Agent Runtime Eval Failing: Swarm Agent Quota Exhausted (HTTP 409) Blocks Agent Creation",
-      "status": "ready",
-      "checkStatus": "fail",
-      "featureStatus": "degraded",
-      "generatedAt": "2026-06-19T06:01:11.528Z",
-      "environment": "production",
-      "source": "desktop-nightly-release",
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-6",
-      "confidence": "high",
-      "summary": "The remote-agent-runtime eval failed because POST /api/agents returned HTTP 409 with error code \"conflict: agent quota exceeded: limit is 100\", meaning the swarm backend rejected the eval's attempt to create a new remote agent. Because agent creation was blocked, the eval runner never reached the runtime test step, so all five required evidence fields (orgId, agentId, model, provider, message) were never populated and the expected-output contract was fully unmet.",
-      "rootCause": "The production swarm backend has reached its configured agent quota limit of 100. When the eval runner called POST /api/agents (via createAgent at infra/evals/status/run-status-probes.mjs line 1892), the API immediately returned 409 with \"swarm agent already exists: conflict: agent quota exceeded: limit is 100\". This is an infrastructure-layer rejection at the /api/agents endpoint, not a code defect in the eval runner or its contracts. The failure is localized to the remote-agents feature in the production-api runtime environment. No user-traffic or incident signals are present in the evidence; this is an eval-level failure reflecting a real infrastructure capacity constraint.",
-      "proof": [
-        "failed-check.message: POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-        "sibling.remote-agent-state: identical 409 conflict message on POST /api/agents, confirming the quota rejection is consistent across multiple eval attempts in the same run",
-        "sibling.remote-agent-create: pod stuck unscheduled for 141s with 'Insufficient kata.peerpods.io/vm' on 2 of 6 nodes, indicating the underlying VM/node pool is also resource-constrained",
-        "expected-output.missing-required-evidence: all five required evidence fields (orgId, agentId, model, provider, message) are absent because agent creation never succeeded and the eval could not proceed past createAgent",
-        "source-context.infra/evals/status/run-status-probes.mjs:1884-1892: runner calls createAgent(args, track, 'remote', null, orgId) at line 1892 as the first substantive step; a 409 at this call aborts the entire probe before any evidence can be collected",
-        "failed-check.timing: latencyMs=1003 confirms the call returned almost immediately (quota check is fast), ruling out a timeout or network hang as the proximate cause"
-      ],
-      "possibleCauses": [
-        "Primary: The swarm backend's agent quota (limit 100) is exhausted in the production-api environment, causing all new agent creation requests to be rejected with HTTP 409. This is directly stated in the API error message (failed-check.message).",
-        "Contributing: Leaked or un-cleaned eval agents from prior runs may be consuming quota slots. The eval runner uses a withCleanup wrapper (run-status-probes.mjs line 1890), but if previous runs crashed or cleanup failed, orphaned agents could accumulate against the quota.",
-        "Contributing: The sibling check remote-agent-create shows 'Insufficient kata.peerpods.io/vm' on 2 of 6 nodes (sibling.remote-agent-create), suggesting the underlying VM pool is also under pressure, which may be related to the same capacity ceiling.",
-        "Lower confidence: A previous eval run or external workload may have created agents that were not deleted, pushing the count to or past the limit. No history data is available (previousRunCount=0, lastPassingAt=null) to confirm a regression from a passing state."
-      ],
-      "reproductionSteps": [
-        {
-          "label": "Run only the remote-agent-runtime probe against production-api",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-          "details": "Use the same environment variables as the scheduled observability workflow. Expect a 409 conflict response if quota is still exhausted."
-        },
-        {
-          "label": "Run the remote-agent-create sibling probe to confirm VM scheduling failure persists",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-          "details": "Confirms whether the Insufficient kata.peerpods.io/vm condition on 2 of 6 nodes is still present alongside the quota issue."
-        },
-        {
-          "label": "Run the remote-agent-state sibling probe to confirm the 409 is consistent",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
-          "details": "remote-agent-state returned the same 409 message; re-running confirms whether quota is still at the limit."
-        },
-        {
-          "label": "Query the swarm backend directly for current agent count against the quota",
-          "details": "Use the production API or admin tooling to list all active remote agents for the eval org and compare against the limit of 100. Identify any agents that should have been cleaned up by prior eval runs."
+          "details": "Confirm all three checks pass once quota headroom is restored."
         }
       ],
       "affectedAreas": [
         {
-          "label": "POST /api/agents endpoint (swarm agent creation)",
-          "reason": "This is the exact endpoint that returned HTTP 409 with the quota-exceeded error, as recorded in failed-check.message and sibling.remote-agent-state."
+          "label": "POST /api/agents endpoint — swarm agent creation",
+          "reason": "This is the exact endpoint returning HTTP 409 with 'agent quota exceeded: limit is 100' for every eval invocation, as shown in failed-check.message and both sibling check messages."
+        },
+        {
+          "label": "remote-agent-create eval check",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "The runner branch at line 1854-1859 calls createAgent() as its first step; the 409 prevents any evidence from being collected, causing the check to fail the expected-output contract."
+        },
+        {
+          "label": "remote-agent-state eval check",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "Sibling check sharing the same 409 failure message, indicating it also depends on POST /api/agents and fails at the same quota boundary."
         },
         {
           "label": "remote-agent-runtime eval check",
           "path": "infra/evals/status/run-status-probes.mjs",
-          "reason": "The eval runner branch at line 1887-1892 calls createAgent as its first step; a 409 at that call prevents all subsequent evidence collection and causes total contract failure.",
-          "details": "infra/evals/status/run-status-probes.mjs lines 1887-1892"
+          "reason": "Sibling check sharing the same 409 failure message; also blocked at agent creation before runtime assertions can be reached."
+        },
+        {
+          "label": "remote-agents feature — expected-output contract",
+          "path": "infra/evals/status/check-expectations.json",
+          "reason": "Contract at line 254-259 requires orgId, agentId, vmIdPresent=true, and remoteState in [running, idle, ready]; all four evidence keys are missing because the probe never progresses past the failed createAgent() call."
+        },
+        {
+          "label": "Eval runner withCleanup / resource lifecycle",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "If prior runs did not complete cleanup (withCleanup at line 1857), orphaned agents may be occupying quota slots that prevent new agent creation."
+        }
+      ],
+      "recommendedNextActions": [
+        "Immediately audit the remote agent count for the org/account used by the eval runner and identify any agents that should have been deleted by prior eval cleanup runs.",
+        "Delete orphaned eval-created remote agents to restore quota headroom below the 100-agent limit.",
+        "Re-run the full remote-agents eval suite after cleanup to confirm all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime) return to passing.",
+        "Investigate whether the withCleanup() path in run-status-probes.mjs reliably deletes agents even when a probe run is interrupted or crashes, and add safeguards if it does not.",
+        "Consider adding a pre-flight quota check to the eval runner that queries the current agent count before attempting creation and emits a warning or skip if headroom is insufficient, to distinguish quota exhaustion from other 409 causes in future runs.",
+        "Determine whether the eval runner org's quota limit of 100 is appropriate for the volume of concurrent and historical probe runs, and request a limit increase or a dedicated low-quota eval account if needed."
+      ],
+      "recommendedVerifierProbes": [
+        {
+          "label": "List all remote agents for the eval runner org and count against the quota limit",
+          "reason": "Directly confirms whether the 100-agent quota is genuinely exhausted or whether the 409 is being returned erroneously. This is the highest-priority probe."
+        },
+        {
+          "label": "Re-run remote-agent-create in isolation to confirm the 409 is reproducible",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
+          "reason": "Establishes whether the failure is persistent (quota exhausted) or transient (intermittent backend error)."
+        },
+        {
+          "label": "Inspect eval runner agent cleanup logs for prior runs to identify orphaned agents",
+          "reason": "Determines whether withCleanup() in run-status-probes.mjs failed to delete agents from previous probe runs, which would explain how quota reached the limit."
+        },
+        {
+          "label": "Attempt POST /api/agents with the eval runner credentials against a different org or a test org",
+          "reason": "Isolates whether the quota exhaustion is specific to the eval runner's org or affects the swarm backend more broadly."
+        },
+        {
+          "label": "Re-run all three remote-agent checks after manually freeing quota headroom",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "reason": "Confirms that restoring quota headroom resolves all three sibling check failures simultaneously, validating the shared-dependency diagnosis."
+        }
+      ],
+      "whatWouldDisproveThis": [
+        "If the current remote agent count for the eval runner's org is significantly below 100, the quota-exhaustion explanation would be weakened and a misconfigured quota cap or a backend bug returning a spurious 409 would need to be investigated.",
+        "If POST /api/agents succeeds for a different org or credential with the same payload, the issue is scoped to the specific org/account used by the eval runner rather than a global swarm backend outage.",
+        "If the 409 disappears after deleting orphaned agents but the count was already below 100, the quota limit may have been recently lowered rather than genuinely exhausted.",
+        "If a re-run immediately after this failure also returns 409 with the same message but the agent list shows fewer than 100 agents, a backend quota-accounting bug (not actual exhaustion) would be the more likely cause.",
+        "If any remote-agent check passed in a concurrent or immediately subsequent run, the failure would be transient rather than a persistent quota exhaustion."
+      ],
+      "followUpEvals": [
+        "Add a dedicated eval check that queries the remote agent count for the eval runner org and asserts it is below a safe threshold (e.g., below 90% of the quota limit), alerting before exhaustion blocks creation checks.",
+        "Add a post-run cleanup verification eval that confirms no eval-created remote agents persist beyond the expected lifecycle window, catching cleanup failures before they accumulate.",
+        "Add a quota-headroom check as a prerequisite gate in the remote-agents eval suite so that remote-agent-create, remote-agent-state, and remote-agent-runtime are skipped with a clear 'quota low' message rather than failing with a 409 when headroom is insufficient."
+      ],
+      "evidenceDigest": {
+        "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+        "latencyMs": 1330,
+        "evidence": {}
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "remote-agents:production-api:remote-agent-state:0fe3b656d58a",
+      "featureId": "remote-agents",
+      "featureLabel": "Remote Agents",
+      "checkId": "remote-agent-state",
+      "runtimeEnvironment": "production-api",
+      "title": "Remote Agents eval suite blocked by swarm agent quota exhaustion on POST /api/agents (HTTP 409)",
+      "status": "ready",
+      "checkStatus": "fail",
+      "featureStatus": "partial_outage",
+      "generatedAt": "2026-06-19T06:10:18.268Z",
+      "environment": "production",
+      "source": "github-actions",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "high",
+      "summary": "All three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed at 2026-06-19T06:10 with the identical 409 conflict response from POST /api/agents, indicating the swarm backend rejected every agent-creation attempt because the org-scoped agent quota of 100 has been reached. Because agent creation is the first step in the remote-agent-state probe (run-status-probes.mjs line 1879: createAgent), no evidence (orgId, agentId, readyState, state) was ever collected, causing the expected-output contract to be fully unmet.",
+      "rootCause": "The swarm backend returned HTTP 409 with error code \"conflict\" and message \"conflict: agent quota exceeded: limit is 100\" on every POST /api/agents call made by the eval runner. Because the remote-agent-state probe calls createAgent as its first substantive action (infra/evals/status/run-status-probes.mjs line 1879), the 409 caused an immediate failure before any evidence could be written, leaving all four required evidence fields (orgId, agentId, readyState, state) missing. The same 409 body was returned to all three sibling checks, confirming the quota condition is the single shared upstream blocker rather than a per-check code defect.",
+      "proof": [
+        "failed-check.message: POST /api/agents failed with 409 — error body contains 'conflict: agent quota exceeded: limit is 100'",
+        "sibling.remote-agent-create: identical 409 message, latencyMs=1330, endedAt=2026-06-19T06:10:09.845Z",
+        "sibling.remote-agent-runtime: identical 409 message, latencyMs=984, endedAt=2026-06-19T06:10:12.118Z",
+        "expected-output.missing-required-evidence: all four contract fields (orgId, agentId, readyState, state) are absent — consistent with probe aborting at createAgent before any evidence write",
+        "source-context.infra/evals/status/run-status-probes.mjs:1871-1879: probe calls createAgent(args, track, 'remote', null, orgId) as its first action; a 409 here prevents all downstream evidence collection",
+        "verifierContext.siblingCorrelation.likelySharedDependencyFailure: true — all failing sibling IDs share the same message",
+        "failed-check.evidence: empty object — zero evidence keys captured, consistent with early abort on createAgent"
+      ],
+      "possibleCauses": [
+        "PRIMARY — Org-scoped swarm agent quota (limit=100) is exhausted: the eval runner's probe account or org has accumulated 100 live swarm agents and the backend is refusing new creation requests. This is directly stated in the 409 error body and is consistent across all three sibling checks.",
+        "SECONDARY — Eval cleanup (withCleanup / track) from a previous run failed to delete agents, leaving stale agents counted against the quota. The runner wraps creation in withCleanup (run-status-probes.mjs line 1877), but if a prior run crashed before cleanup executed, orphaned agents would accumulate.",
+        "TERTIARY — The probe service account or org was recently migrated to a lower quota tier, reducing the effective limit below the number of agents already present.",
+        "LOW — A transient swarm-side enforcement bug is incorrectly counting agents against the quota. This is less likely given the deterministic 409 across all three independent check invocations within the same run."
+      ],
+      "reproductionSteps": [
+        {
+          "label": "Run only the remote-agent-state probe against production-api",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
+          "details": "Reproduces the 409 if the quota is still exhausted. Use the same environment variables as the scheduled observability workflow."
+        },
+        {
+          "label": "Run all three remote-agents checks together to confirm shared failure",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "details": "Confirms that all siblings fail with the same 409 body, ruling out per-check code defects."
+        },
+        {
+          "label": "Query the swarm backend directly for the current agent count on the probe org",
+          "details": "Issue a GET to the agents list endpoint for the probe org and count live agents. If the count is at or near 100, quota exhaustion is confirmed."
+        },
+        {
+          "label": "Inspect the probe org for orphaned/stale swarm agents from prior eval runs",
+          "details": "List all agents in the probe org and identify any that were created by the eval runner but not cleaned up. Delete stale agents to free quota headroom."
+        }
+      ],
+      "affectedAreas": [
+        {
+          "label": "POST /api/agents — swarm agent creation endpoint",
+          "reason": "Returned HTTP 409 with 'agent quota exceeded: limit is 100' for every creation attempt; this is the earliest violated contract boundary."
         },
         {
           "label": "remote-agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
           "path": "infra/evals/status/features.json",
-          "reason": "All three checks under the remote-agents feature are failing in this run (sibling.remote-agent-create, sibling.remote-agent-state, failed-check.message), indicating the quota and VM scheduling issues affect the entire feature surface.",
-          "details": "infra/evals/status/features.json lines 183-185"
+          "reason": "All checks under the remote-agents feature (lines 183-185) failed with the identical 409 message, indicating a shared upstream dependency failure."
         },
         {
-          "label": "Swarm backend VM node pool (kata.peerpods.io/vm resource)",
-          "reason": "sibling.remote-agent-create reports 'Insufficient kata.peerpods.io/vm' on 2 of 6 nodes, indicating the VM-level resource backing remote agents is also constrained."
+          "label": "remote-agent-state eval probe — createAgent call",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "The probe calls createAgent at line 1879 as its first action; the 409 at that point prevents all evidence collection, causing the full contract gap."
+        },
+        {
+          "label": "Eval runner cleanup mechanism (withCleanup / track)",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "If prior runs did not complete cleanup, orphaned agents may be accumulating against the quota. The withCleanup wrapper at line 1877 is the relevant boundary."
+        },
+        {
+          "label": "Swarm agent quota enforcement — production-api environment",
+          "reason": "The swarm backend enforces a hard limit of 100 agents per org; the probe org has reached or exceeded this limit."
         }
       ],
       "recommendedNextActions": [
-        "Investigate the current remote agent count in the production swarm for the eval org. If the count is at or near 100, identify and delete orphaned or leaked eval agents to restore capacity below the quota limit.",
-        "Review the withCleanup logic in infra/evals/status/run-status-probes.mjs (around line 1890-1892) to confirm it handles mid-probe failures (including 409 responses) without leaving agents un-deleted. If cleanup is not guaranteed on error paths, harden the cleanup to run unconditionally.",
-        "Investigate the VM node pool pressure reported by remote-agent-create ('Insufficient kata.peerpods.io/vm' on 2 of 6 nodes). Determine whether the VM pool capacity is related to the agent quota ceiling or is an independent resource constraint.",
-        "Once agent count is reduced below the quota, re-run all three remote-agents checks to confirm the feature recovers.",
-        "Consider adding a pre-flight check in the eval runner that queries current agent count before attempting creation, and skips or warns if the count is near the quota limit, to produce a more actionable eval message than a raw 409."
+        "Immediately audit the probe org's live swarm agent count via the agents list API. If at or near 100, delete stale/orphaned agents to restore quota headroom before the next eval run.",
+        "Review the withCleanup / track cleanup path in infra/evals/status/run-status-probes.mjs to confirm that agent deletion is executed on all exit paths (success, error, and timeout). If cleanup can be skipped on crash or timeout, add a finally-block or equivalent guarantee.",
+        "After restoring quota headroom, re-run all three remote-agents checks and verify that all four required evidence fields (orgId, agentId, readyState, state) are present in the output.",
+        "Consider adding a pre-flight check to the eval runner that queries the current agent count for the probe org before attempting creation, and skips or alerts if the count is within a configurable threshold of the quota limit.",
+        "Investigate whether the probe org's quota limit (100) is appropriate for the eval workload, and request a limit increase or a dedicated low-quota probe org if repeated exhaustion is expected."
       ],
       "recommendedVerifierProbes": [
         {
-          "label": "Re-run remote-agent-runtime probe to confirm quota is still exhausted",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-          "reason": "Determines whether the 409 quota-exceeded condition persists or was transient. A pass would indicate the quota was temporarily at the limit and self-resolved.",
-          "details": "Matches the reproduction hint supplied in the investigation packet."
+          "label": "Re-run the remote-agent-state probe to confirm quota is still exhausted",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
+          "reason": "Determines whether the quota condition persists or was transient. A passing run after agent cleanup would confirm the quota-exhaustion hypothesis."
         },
         {
-          "label": "Re-run all three remote-agents checks together to assess full feature health",
+          "label": "List all swarm agents for the probe org and count against the 100-agent limit",
+          "reason": "Directly verifies whether the probe org is at or near the quota ceiling. A count at or above 100 confirms the root cause."
+        },
+        {
+          "label": "Identify and delete orphaned eval-created agents in the probe org",
+          "reason": "If stale agents from prior runs are consuming quota, removing them should restore the ability to create new agents and allow the eval to pass."
+        },
+        {
+          "label": "Run all three remote-agents sibling checks together and compare error bodies",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-          "reason": "Determines whether the VM scheduling failure (remote-agent-create) and the quota conflict (remote-agent-state, remote-agent-runtime) are co-occurring or have resolved independently."
+          "reason": "Confirms the shared-dependency hypothesis: if all three still return the identical 409, the cause is upstream of all checks. If one passes, the diagnosis narrows to a per-check issue."
         },
         {
-          "label": "Inspect implicated eval runner and registry source files for cleanup logic",
-          "reason": "Review infra/evals/status/run-status-probes.mjs (withCleanup usage around createAgent at line 1892) and infra/evals/status/features.json to confirm cleanup paths are correct and would not leave orphaned agents if a probe errors mid-run.",
-          "details": "Focus on whether the withCleanup wrapper at line 1890 covers the createAgent call at line 1892 and handles 409 errors without leaving partial state."
-        },
-        {
-          "label": "Audit active remote agents in the production swarm for the eval org",
-          "reason": "Directly confirms whether the agent count is at or near the limit of 100 and identifies any orphaned eval agents that should have been cleaned up, validating or ruling out the leaked-agent hypothesis."
+          "label": "Inspect implicated source paths for cleanup logic correctness",
+          "reason": "Review infra/evals/status/run-status-probes.mjs around the withCleanup and track pattern to verify that agent deletion is guaranteed even on probe error paths, preventing future quota accumulation."
         }
       ],
       "whatWouldDisproveThis": [
-        "A successful POST /api/agents response (HTTP 200/201) in a re-run would disprove that the quota is currently exhausted.",
-        "Evidence that the swarm agent count is below 100 at the time of the failure would disprove the quota-exhaustion diagnosis and suggest the 409 is caused by a different conflict (e.g., duplicate agent name/ID collision).",
-        "A passing run of remote-agent-create (no pod scheduling failure) combined with a continued 409 on /api/agents would suggest the quota error is independent of the VM pool pressure.",
-        "Eval cleanup logs showing all prior eval agents were successfully deleted would weaken the leaked-agent hypothesis and point toward a non-eval workload consuming quota.",
-        "A prior passing run recorded in eval history (lastPassingAt non-null) immediately before this failure, with no change in agent count, would suggest a transient API error rather than a true quota ceiling."
+        "If a direct GET to the agents list endpoint for the probe org returns fewer than 100 live agents, quota exhaustion is not the cause and a swarm-side enforcement bug or misconfiguration should be investigated.",
+        "If deleting stale agents and re-running the probe still produces a 409, the quota limit itself may have been lowered or the account may be on a restricted tier.",
+        "If only one of the three sibling checks returned a 409 and the others passed, the failure would be localized to a single check's code path rather than a shared quota condition.",
+        "If the 409 error body changes to a different conflict code (e.g., 'agent already exists' without the quota message) on re-run, the cause would be a duplicate-name conflict rather than quota exhaustion.",
+        "If run history (currently zero previous runs in verifierContext.history) shows prior passing runs with no intervening agent deletions, it would suggest the quota was consumed by non-eval traffic rather than eval cleanup failures."
       ],
       "followUpEvals": [
-        "Add an eval check that queries the swarm agent count for the eval org and asserts it is below a safe threshold (e.g., below 90% of the quota limit), providing early warning before the limit is reached.",
-        "Add an eval check that verifies eval-created agents are successfully cleaned up after each probe run, catching leaked agents before they accumulate against the quota.",
-        "Add a VM pool capacity check for kata.peerpods.io/vm resources that asserts at least one schedulable node is available, providing an independent signal for the VM-layer constraint seen in remote-agent-create.",
-        "Consider a post-run reconciliation eval that lists all agents created by the eval service account and flags any that are older than a configurable TTL as potential leaks."
+        "Add a dedicated 'remote-agent-quota-headroom' eval that queries the probe org's live agent count and fails with a warning if it exceeds a configurable threshold (e.g., 80% of the limit), providing early warning before quota exhaustion blocks creation evals.",
+        "Add a 'remote-agent-cleanup-verification' eval that confirms the number of eval-created agents decreases after each probe run, detecting cleanup failures before they accumulate to the quota ceiling.",
+        "Add an assertion to the remote-agent-create contract that verifies the HTTP response code is 2xx, surfacing quota or conflict errors as a distinct contract violation rather than a generic failure message.",
+        "Consider a post-run agent inventory eval that lists all agents in the probe org and flags any whose names or metadata match eval-runner patterns but are older than a configurable staleness threshold."
       ],
       "evidenceDigest": {
         "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
-        "latencyMs": 1003,
+        "latencyMs": 1289,
+        "evidence": {}
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "llm-investigation",
+      "id": "remote-agents:production-api:remote-agent-runtime:d5d5444031fd",
+      "featureId": "remote-agents",
+      "featureLabel": "Remote Agents",
+      "checkId": "remote-agent-runtime",
+      "runtimeEnvironment": "production-api",
+      "title": "Remote Agent Eval Failure: POST /api/agents 409 — Swarm Agent Quota Exceeded (limit 100)",
+      "status": "ready",
+      "checkStatus": "fail",
+      "featureStatus": "degraded",
+      "generatedAt": "2026-06-19T06:10:18.268Z",
+      "environment": "production",
+      "source": "github-actions",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "confidence": "high",
+      "summary": "All three remote-agents eval checks (remote-agent-runtime, remote-agent-create, remote-agent-state) failed at 2026-06-19T06:10Z with an identical 409 conflict response from POST /api/agents, indicating the swarm backend rejected agent creation because the org-scoped agent quota of 100 has been reached. Because agent creation is the first step in the eval runner (infra/evals/status/run-status-probes.mjs line 1892), no downstream evidence — orgId, agentId, model, provider, or message — was ever collected, causing a complete contract gap.",
+      "rootCause": "The production-api swarm backend returned HTTP 409 with error code \"conflict\" and message \"conflict: agent quota exceeded: limit is 100\" on every POST /api/agents call made by the eval runner. Because createAgent (run-status-probes.mjs:1892) is the prerequisite step for all three remote-agents checks, the quota rejection caused all checks to fail before any evidence could be gathered. This is an eval-infrastructure failure against the production-api endpoint; no user-traffic or incident signals are present in the supplied evidence, so a user-facing outage cannot be confirmed from this data alone.",
+      "proof": [
+        "failed-check.message: POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+        "sibling.remote-agent-create: identical 409 message, endedAt 2026-06-19T06:10:09.845Z, latencyMs 1330",
+        "sibling.remote-agent-state: identical 409 message, endedAt 2026-06-19T06:10:11.134Z, latencyMs 1289",
+        "expected-output.missing-required-evidence: all five required evidence fields (orgId, agentId, model, provider, message) are absent — consistent with agent creation never succeeding",
+        "source-context.infra/evals/status/run-status-probes.mjs:1884-1892: runner calls createAgent(args, track, \"remote\", null, orgId) at line 1892 as the first substantive operation; a 409 here aborts the entire probe before any evidence is recorded",
+        "verifierContext.siblingCorrelation.likelySharedDependencyFailure: true — all failing sibling IDs share the same message, confirming a single upstream dependency (POST /api/agents) is the common failure point"
+      ],
+      "possibleCauses": [
+        "Primary: The eval runner's service account or org has accumulated 100 swarm agents in the production-api environment and the backend enforces a hard quota of 100, rejecting any further creation attempts. Prior eval runs may not have cleaned up agents (withCleanup may have failed or been skipped in earlier runs), causing agents to accumulate until the quota was hit.",
+        "Secondary: A prior eval run crashed or was interrupted before withCleanup could delete the provisioned agent, leaving a leaked agent that counts against the quota. Repeated runs over time would compound this.",
+        "Tertiary: The quota limit itself was recently lowered on the backend side, causing previously-passing runs to suddenly hit the ceiling. No suspect changes are present in sourceDiscovery.suspectChanges to support this, so it is lower confidence.",
+        "Out-of-scope hypothesis: The 409 body says 'swarm agent already exists' in addition to 'quota exceeded', which could indicate a naming collision (the eval always tries to create an agent with the same deterministic name) rather than a pure count-based quota. Both conditions are reported in the same error envelope."
+      ],
+      "reproductionSteps": [
+        {
+          "label": "Run only the remote-agent-runtime eval probe against production-api",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
+          "details": "Use the same environment variables as the scheduled observability workflow to reproduce the 409."
+        },
+        {
+          "label": "Run all three remote-agents checks together to confirm shared dependency failure",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "details": "All three should fail with the same 409 message if the quota is still exceeded."
+        },
+        {
+          "label": "Query the production-api swarm for the current agent count under the eval org",
+          "details": "Use the production-api admin or management endpoint to list agents for the eval service account's org and confirm whether the count is at or above 100."
+        },
+        {
+          "label": "Inspect the withCleanup path in run-status-probes.mjs to verify cleanup is being invoked",
+          "details": "Review the withCleanup implementation (referenced at run-status-probes.mjs:1890) to confirm it deletes the agent on both success and failure paths, and that no prior run left agents behind."
+        }
+      ],
+      "affectedAreas": [
+        {
+          "label": "POST /api/agents — Remote Agent Creation Endpoint (production-api)",
+          "reason": "All three eval checks fail at this endpoint with HTTP 409 quota-exceeded. This is the earliest violated contract boundary (evidence: failed-check.message, sibling.remote-agent-create, sibling.remote-agent-state)."
+        },
+        {
+          "label": "remote-agents eval feature — all three checks",
+          "path": "infra/evals/status/features.json",
+          "reason": "remote-agent-create (required), remote-agent-state (required), and remote-agent-runtime (not required) are all failing. Per features.json lines 187-188, degradedAfterFailures=1 and outageAfterFailures=2, so two required check failures may trigger a feature outage signal (evidence: source-context.infra/evals/status/features.json:181-189)."
+        },
+        {
+          "label": "Eval runner createAgent call",
+          "path": "infra/evals/status/run-status-probes.mjs",
+          "reason": "The runner invokes createAgent at line 1892 as the first step of the remote-agent-runtime probe. A 409 here prevents all downstream evidence collection (evidence: source-context.infra/evals/status/run-status-probes.mjs:1884-1892)."
+        },
+        {
+          "label": "Swarm agent quota enforcement — production-api backend",
+          "reason": "The 409 response body explicitly names 'agent quota exceeded: limit is 100', localizing the rejection to the swarm quota enforcement layer on the production-api backend (evidence: failed-check.message)."
+        }
+      ],
+      "recommendedNextActions": [
+        "Immediately audit the eval service account's org in production-api to count live swarm agents. If the count is at or near 100, delete stale eval-created agents to restore capacity.",
+        "Review the withCleanup implementation in infra/evals/status/run-status-probes.mjs to ensure agents are deleted on both success and failure/exception paths, preventing future accumulation.",
+        "After clearing stale agents, re-run all three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) to confirm they pass and that evidence fields are populated.",
+        "Determine whether the eval runner has a history of no passing runs (verifierContext.history.lastPassingAt is null) — if so, investigate whether the eval org was ever properly provisioned or if the quota was always a constraint.",
+        "Consider adding a pre-flight agent-count check to the eval runner that warns or skips agent-creation probes when the org is near quota, rather than failing with a 409 mid-run.",
+        "Evaluate whether the eval org's agent quota should be raised or whether a dedicated low-quota eval org should be used to isolate eval-created agents from production agent counts."
+      ],
+      "recommendedVerifierProbes": [
+        {
+          "label": "Re-run remote-agent-runtime eval to confirm quota is still exceeded",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
+          "reason": "Confirms the 409 is persistent and not a transient spike. If it passes, the quota was freed by another process (evidence: verifierContext.recommendedVerifierProbes)."
+        },
+        {
+          "label": "List all swarm agents for the eval org in production-api",
+          "reason": "Determines whether the agent count is genuinely at 100 or whether the error is a naming/uniqueness conflict. A count below 100 would disprove the quota-exhaustion hypothesis."
+        },
+        {
+          "label": "Investigate the shared upstream dependency — POST /api/agents — before individual check code",
+          "reason": "All three sibling checks (production-api/remote-agent-create, production-api/remote-agent-state, production-api/remote-agent-runtime) share the same failure message, confirming a single upstream dependency failure (evidence: verifierContext.siblingCorrelation)."
+        },
+        {
+          "label": "Audit withCleanup behavior in run-status-probes.mjs for agent leak paths",
+          "reason": "If cleanup is not guaranteed on failure, prior crashed runs may have leaked agents that accumulated to the quota limit.",
+          "details": "Review the withCleanup function referenced at run-status-probes.mjs:1890 to confirm it handles error and timeout paths and always attempts agent deletion."
+        },
+        {
+          "label": "Inspect implicated source paths for any cleanup or quota-handling logic",
+          "reason": "infra/evals/status/run-status-probes.mjs is the candidate code path (score 192) and contains the createAgent and withCleanup calls that govern agent lifecycle in the eval runner."
+        }
+      ],
+      "whatWouldDisproveThis": [
+        "If a manual POST /api/agents call with a fresh agent name succeeds (HTTP 201/200) for the eval org, the quota is not actually exhausted and the cause is a naming collision or stale lock rather than a count-based quota.",
+        "If the current agent count for the eval org is below 100 in the production-api backend, the quota-exceeded message is misleading and the real cause is something else (e.g., a per-name uniqueness constraint).",
+        "If the eval checks pass immediately after a single agent deletion without any code change, the root cause is leaked agents from prior runs rather than a quota policy change.",
+        "If sibling checks for a different org or environment pass with the same runner version, the failure is scoped to this specific org's quota state rather than a systemic runner or API regression.",
+        "If run history shows these checks were never passing (lastPassingAt is null per verifierContext.history), the failure may be a configuration or environment setup issue rather than a regression."
+      ],
+      "followUpEvals": [
+        "Add an eval check that queries the eval org's current swarm agent count and warns when it exceeds a configurable threshold (e.g., 80% of quota), catching quota exhaustion before it blocks agent-creation checks.",
+        "Add a post-run cleanup verification eval that confirms no eval-created agents persist after a probe run completes, catching withCleanup failures early.",
+        "Add a quota-headroom check as a prerequisite gate for all remote-agent-* checks so that downstream checks are skipped with a clear 'quota near limit' message rather than failing with a 409.",
+        "Consider a dedicated eval that periodically lists and deletes stale eval-created agents (those older than a configurable TTL) to prevent accumulation across runs."
+      ],
+      "evidenceDigest": {
+        "message": "POST /api/agents failed with 409: {\"error\":\"swarm agent already exists: {\\\"error\\\":{\\\"code\\\":\\\"conflict\\\",\\\"message\\\":\\\"conflict: agent quota exceeded: limit is 100\\\"}}\",\"code\":\"conflict\",\"details\":null}",
+        "latencyMs": 984,
         "evidence": {}
       }
     }
