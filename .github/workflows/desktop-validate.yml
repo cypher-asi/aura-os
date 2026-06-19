@@ -156,6 +156,7 @@ jobs:
   desktop-smoke:
     if: github.event_name != 'push'
     needs: desktop-matrix
+    timeout-minutes: 60
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
