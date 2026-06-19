@@ -449,6 +449,9 @@ function InputBarShellInner(
           {isMultiLine ? null : inputRowStart}
           <textarea
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             {...textareaProps}
             ref={textareaRef}
             className={styles.textarea}
