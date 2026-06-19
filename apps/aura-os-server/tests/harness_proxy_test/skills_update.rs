@@ -433,3 +433,80 @@ async fn get_my_skill_refuses_non_user_created() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
+
+/// Full edit cycle in one flow: create -> open for edit (get_my_skill) ->
+/// save while changing ONLY the description (sending the other fields back
+/// exactly as the modal does after pre-fill) -> re-open. Everything except
+/// the description must survive — this is the end-to-end proof that editing
+/// no longer silently resets user_invocable / model_invocable / allowed_tools.
+#[tokio::test]
+async fn editing_preserves_all_settings_full_round_trip() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    // Create with non-default flags + tools/model/context.
+    let req = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "cycle",
+            "description": "original",
+            "body": "# body",
+            "allowed_tools": ["read_file", "write_file"],
+            "model": "claude-opus-4-8",
+            "context": "ctx",
+            "user_invocable": false,
+            "model_invocable": true,
+        })),
+    );
+    assert_eq!(
+        app.clone().oneshot(req).await.unwrap().status(),
+        StatusCode::CREATED
+    );
+
+    // Open for edit — the modal pre-fills from this.
+    let req = json_request("GET", "/api/harness/skills/mine/cycle", None);
+    let pre = response_json(app.clone().oneshot(req).await.unwrap()).await;
+    assert_eq!(pre["user_invocable"], false);
+    assert_eq!(pre["model_invocable"], true);
+    assert_eq!(pre["allowed_tools"], json!(["read_file", "write_file"]));
+
+    // Save: change only the description, sending the rest back unchanged
+    // (exactly what the modal does with its pre-filled + preserved values).
+    let req = json_request(
+        "PUT",
+        "/api/harness/skills/mine/cycle",
+        Some(json!({
+            "description": "edited",
+            "body": "# body",
+            "user_invocable": false,
+            "model_invocable": true,
+            "allowed_tools": ["read_file", "write_file"],
+            "model": "claude-opus-4-8",
+            "context": "ctx",
+        })),
+    );
+    assert_eq!(app.clone().oneshot(req).await.unwrap().status(), StatusCode::OK);
+
+    // Re-open: description changed, everything else preserved.
+    let req = json_request("GET", "/api/harness/skills/mine/cycle", None);
+    let post = response_json(app.oneshot(req).await.unwrap()).await;
+    assert_eq!(post["description"], "edited");
+    assert_eq!(post["user_invocable"], false, "user_invocable must survive an edit");
+    assert_eq!(post["model_invocable"], true, "model_invocable must survive an edit");
+    assert_eq!(
+        post["allowed_tools"],
+        json!(["read_file", "write_file"]),
+        "allowed_tools must survive an edit"
+    );
+    assert_eq!(post["model"], "claude-opus-4-8");
+    assert_eq!(post["context"], "ctx");
+}
