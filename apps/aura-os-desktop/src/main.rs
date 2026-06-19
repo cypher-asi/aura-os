@@ -84,6 +84,11 @@ fn main() {
     dotenvy::dotenv().ok();
     apply_desktop_runtime_defaults();
     aura_os_server::ensure_user_bins_on_path();
+    // The desktop embeds the server as a library (calls build_app_state
+    // directly), so aura-os-server's own main() never runs here — the skill
+    // recovery must be invoked explicitly, before the server/harness start,
+    // so orphaned skills are repaired before the harness loads them.
+    aura_os_server::repair_user_skills_on_startup();
     init_logging();
     let _single_instance = acquire_single_instance_or_exit();
 
