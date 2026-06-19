@@ -281,3 +281,51 @@ async fn update_my_skill_invalid_name_returns_400() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
+
+/// End-to-end check of the startup recovery: the real public entry point
+/// (`repair_user_skills_on_startup`) resolves the channel-aware skills root
+/// from the home dir, backfills `name:` into a pre-fix user-created skill so
+/// the harness can load it again, and leaves a shop skill (no marker)
+/// untouched — proving the migration is safe and exercises the real flow,
+/// not just the parameterised unit logic.
+#[tokio::test]
+async fn repair_user_skills_on_startup_backfills_name_and_spares_shop_skills() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    let skills_root = home_dir
+        .path()
+        .join(aura_os_core::Channel::current().skills_home_name())
+        .join("skills");
+
+    // A user-created skill written the old way — no `name:` field.
+    let nameless = skills_root.join("recover-me");
+    std::fs::create_dir_all(&nameless).unwrap();
+    std::fs::write(
+        nameless.join("SKILL.md"),
+        "---\ndescription: \"x\"\nuser_invocable: true\nsource: \"user-created\"\n---\nbody\n",
+    )
+    .unwrap();
+
+    // A shop-installed skill (no marker) must never be rewritten.
+    let shop = skills_root.join("shop-skill");
+    std::fs::create_dir_all(&shop).unwrap();
+    let shop_original = "---\ndescription: \"from shop\"\n---\nbody\n";
+    std::fs::write(shop.join("SKILL.md"), shop_original).unwrap();
+
+    aura_os_server::repair_user_skills_on_startup();
+
+    let recovered = std::fs::read_to_string(nameless.join("SKILL.md")).unwrap();
+    assert!(
+        recovered.starts_with("---\nname: \"recover-me\"\n"),
+        "user-created skill should be backfilled with its name, got:\n{recovered}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(shop.join("SKILL.md")).unwrap(),
+        shop_original,
+        "shop skill (no user-created marker) must not be modified"
+    );
+}

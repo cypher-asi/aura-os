@@ -78,6 +78,10 @@ async fn main() {
 
     let store_path = data_dir.join("store");
     migrate_legacy_db_dir(&data_dir, &store_path);
+    // Recover user-created skills written before the `name:` frontmatter fix
+    // so they load into the harness registry again (otherwise "skill not
+    // found" on edit). Idempotent; runs before the harness picks up skills.
+    aura_os_server::repair_user_skills_on_startup();
     let state =
         aura_os_server::build_app_state(&store_path).expect("failed to open local settings store");
 

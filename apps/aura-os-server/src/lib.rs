@@ -43,6 +43,15 @@ pub use harness_gateway::HarnessHttpGateway;
 pub use router::{build_local_api_cors_layer, create_router_with_interface};
 pub use state::{ActiveAutomaton, AppState, CachedSession};
 
+/// Backfill the `name:` frontmatter field into user-created skills written
+/// before the fix that added it. Without `name:` the harness drops the skill
+/// from its registry on reload ("skill not found"); this recovers those
+/// orphaned skills so they load again. Call once at startup — idempotent and
+/// fail-soft (a missing skills directory or unreadable file is a no-op).
+pub fn repair_user_skills_on_startup() {
+    handlers::harness_proxy::repair_user_created_skill_names();
+}
+
 /// Discover common user-level binary directories (pip `--user` scripts, `~/.local/bin`,
 /// etc.) and append any that exist but are missing from `PATH`.  Call once at startup
 /// so child processes (the harness, terminals) inherit the augmented `PATH` and can
