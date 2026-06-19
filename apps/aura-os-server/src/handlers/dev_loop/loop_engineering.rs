@@ -170,7 +170,7 @@ When the loop stops, the visible "Loop Engineering Final Report" and the `task_d
 If the report does not include these sections, the loop is not complete yet.
 </final_report>
 </loop_engineering_mode>"#,
-        goal = contract.goal,
+        goal = prompt_escape(&contract.goal),
         success = success,
         verifiers = verifiers,
         max_iterations = contract.max_iterations,
@@ -229,7 +229,7 @@ fn numbered_lines(values: &[String]) -> String {
     values
         .iter()
         .enumerate()
-        .map(|(idx, value)| format!("{}. {}", idx + 1, value))
+        .map(|(idx, value)| format!("{}. {}", idx + 1, prompt_escape(value)))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -245,21 +245,30 @@ fn verifier_lines(values: &[VerifierCommand]) -> String {
             let label = if value.label.is_empty() {
                 format!("Verifier {}", idx + 1)
             } else {
-                value.label.clone()
+                prompt_escape(&value.label)
             };
+            let command = prompt_escape(&value.command);
             match value.expected_outcome.as_deref() {
                 Some(expected) => format!(
                     "{}. {}: `{}`\n   Expected: {}",
                     idx + 1,
                     label,
-                    value.command,
-                    expected
+                    command,
+                    prompt_escape(expected)
                 ),
-                None => format!("{}. {}: `{}`", idx + 1, label, value.command),
+                None => format!("{}. {}: `{}`", idx + 1, label, command),
             }
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn prompt_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('`', "\\`")
 }
 
 fn learning_lines(policy: LearningPolicy) -> String {
@@ -377,5 +386,25 @@ mod tests {
     fn plain_prompt_is_unchanged_without_contract() {
         let prompt = augment_system_prompt(" Base prompt ", None).unwrap();
         assert_eq!(prompt, "Base prompt");
+    }
+
+    #[test]
+    fn prompt_escapes_contract_text() {
+        let mut contract = normalize_contract(contract()).unwrap();
+        contract.goal = "Fix <script> & `date`".to_string();
+        contract.success_criteria = vec!["Do not emit </loop_engineering_mode>".to_string()];
+        contract.verifier_commands = vec![VerifierCommand {
+            label: "Run <tests>".to_string(),
+            command: "npm test -- `weird`".to_string(),
+            expected_outcome: Some("passes & reports <green>".to_string()),
+        }];
+
+        let prompt = render_loop_engineering_prompt(&contract);
+
+        assert!(prompt.contains("Fix &lt;script&gt; &amp; \\`date\\`"));
+        assert!(prompt.contains("Do not emit &lt;/loop_engineering_mode&gt;"));
+        assert!(prompt.contains("Run &lt;tests&gt;: `npm test -- \\`weird\\``"));
+        assert!(prompt.contains("Expected: passes &amp; reports &lt;green&gt;"));
+        assert!(!prompt.contains("Do not emit </loop_engineering_mode>"));
     }
 }
