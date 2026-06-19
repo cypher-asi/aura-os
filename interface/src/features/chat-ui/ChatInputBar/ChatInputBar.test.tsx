@@ -91,6 +91,7 @@ vi.mock("./useFileAttachments", () => ({
 
 import { ChatInputBar } from "../ChatInputBar";
 import { MobileChatInputBar } from "../../../mobile/chat/MobileChatInputBar";
+import { ENTER_SUBMIT_GRACE_MS } from "../../../components/InputBarShell/InputBarShell";
 import type { AttachmentItem } from "../ChatInputBar";
 
 function makeProps(overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {}) {
@@ -231,17 +232,24 @@ describe("ChatInputBar", () => {
     }
   });
 
-  it("calls onSend on Enter key (without shift)", async () => {
-    const user = userEvent.setup();
+  it("calls onSend on Enter key (without shift)", () => {
+    vi.useFakeTimers();
     const onSend = vi.fn();
-    render(<ChatInputBar {...makeProps({ input: "Test message", onSend })} />);
 
-    const textarea = screen.getByPlaceholderText("/ for commands, @ for context");
-    await user.click(textarea);
-    await user.keyboard("{Enter}");
-    // Mode is now read from the per-stream store inside `useChatPanelState.handleSend`,
-    // so the input bar no longer threads `generationMode` through this callback.
-    expect(onSend).toHaveBeenCalledWith("Test message", undefined, undefined);
+    try {
+      render(<ChatInputBar {...makeProps({ input: "Test message", onSend })} />);
+
+      const textarea = screen.getByPlaceholderText("/ for commands, @ for context");
+      fireEvent.keyDown(textarea, { key: "Enter" });
+      act(() => {
+        vi.advanceTimersByTime(ENTER_SUBMIT_GRACE_MS);
+      });
+      // Mode is now read from the per-stream store inside `useChatPanelState.handleSend`,
+      // so the input bar no longer threads `generationMode` through this callback.
+      expect(onSend).toHaveBeenCalledWith("Test message", undefined, undefined);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not call onSend on Shift+Enter", async () => {
