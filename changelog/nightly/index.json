@@ -2,19 +2,20 @@
   {
     "date": "2026-06-19",
     "channel": "nightly",
-    "version": "0.1.0-nightly.701.1",
-    "title": "Skills recovery, manual tasks, and cleaner analytics",
-    "intro": "Today's nightly is anchored by a thorough rescue of user-created skills — a missing frontmatter field had been quietly orphaning them across reloads — alongside a real fix for adding tasks without a spec, sharper acquisition analytics, and a swarm cleanup that stops abandoned probe agents from piling up.",
+    "version": "0.1.0-nightly.702.1",
+    "title": "Skill recovery, manual task fixes, and cleaner analytics",
+    "intro": "A heavy day of skill-system repair work: user-created skills that had gone missing are now backfilled and recoverable on both server and desktop startup, and the editor finally round-trips every field. Alongside that, manual task creation and chat/browser inputs got QA fixes, web analytics stopped fragmenting by deploy, and release CI gained timeouts to stop runaway probes.",
     "entryCount": 6,
     "highlights": [
-      "User-created skills no longer vanish after a reload",
-      "Manual tasks can be added without picking a spec",
-      "First-touch acquisition source captured in analytics",
-      "Swarm status probes now actually get torn down"
+      "Orphaned user skills auto-recover on startup",
+      "Skill editor round-trips every field again",
+      "Manual tasks no longer require a spec",
+      "Web analytics reports a stable app_version",
+      "Release workflows bounded with timeouts"
     ],
-    "rawCommitCount": 11,
-    "generatedAt": "2026-06-19T20:06:03.839Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.701.1",
+    "rawCommitCount": 13,
+    "generatedAt": "2026-06-19T20:51:18.753Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.702.1",
     "path": "history/2026-06-19.json"
   },
   {
