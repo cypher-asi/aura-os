@@ -2,19 +2,19 @@
   {
     "date": "2026-06-19",
     "channel": "nightly",
-    "version": "0.1.0-nightly.699.1",
-    "title": "Rescuing user-created skills end to end",
-    "intro": "Today's nightly is dominated by a deep fix for user-created skills that were silently disappearing after a harness restart — from writing the right frontmatter on create, to repairing already-broken skills on startup, to making sure the editor never resets or mis-loads fields. Alongside that, the web analytics pipeline got cleaner attribution and a stable app_version, and the swarm agent delete path learned to stop-then-delete remote agents.",
+    "version": "0.1.0-nightly.700.1",
+    "title": "User-created skills come back to life, plus chat, browser, and tasks QA fixes",
+    "intro": "Today's nightly focused on rescuing user-authored skills broken by a missing frontmatter field, with a startup repair pass that also runs on desktop and a faithful round-trip for the skill editor. Alongside that, the team shipped QA fixes across chat, the browser session resolver, and the tasks board, plus sharper analytics on where new users actually come from.",
     "entryCount": 6,
     "highlights": [
-      "Skills survive harness restarts again",
-      "Orphaned skills auto-repaired on Desktop startup",
-      "Edit modal preserves every skill setting",
-      "Cleaner first-touch attribution in analytics"
+      "Skill loading bug fixed with on-disk recovery for orphaned skills",
+      "Desktop startup now repairs broken skills before the harness loads",
+      "Manual tasks no longer require a spec; chat preserves literal prompt text",
+      "First-touch acquisition source now captured for signups and DAU"
     ],
-    "rawCommitCount": 9,
-    "generatedAt": "2026-06-19T14:50:42.656Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.699.1",
+    "rawCommitCount": 10,
+    "generatedAt": "2026-06-19T18:28:33.094Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.700.1",
     "path": "history/2026-06-19.json"
   },
   {
