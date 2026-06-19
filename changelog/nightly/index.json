@@ -2,18 +2,18 @@
   {
     "date": "2026-06-19",
     "channel": "nightly",
-    "version": "0.1.0-nightly.697.1",
-    "title": "Reliable swarm agent deletion and first-touch acquisition analytics",
-    "intro": "Today's nightly tightens up two very different surfaces: the server now properly tears down remote swarm agents instead of leaving stale probes behind, and the web interface starts capturing where new users actually come from so growth and retention can be analyzed by source rather than guessed at.",
+    "version": "0.1.0-nightly.698.1",
+    "title": "Cleaner remote agent teardown and sharper acquisition analytics",
+    "intro": "Today's nightly tightens two very different seams. On the server, deleting a swarm-hosted agent now actually finishes the job end-to-end, with a graceful stop-then-delete handshake against the swarm gateway. On the web interface, analytics gets meaningfully more trustworthy: every visitor now carries a stable first-touch acquisition source, and the web surface stops inventing a brand-new app_version on every Render deploy.",
     "entryCount": 2,
     "highlights": [
-      "Remote swarm agents are now fully deleted, with a stop-then-retry handshake",
-      "First-touch acquisition source (x, google, direct, …) now rides on every analytics event",
-      "Acquisition source mirrored onto user profiles for server-emitted DAU breakdowns"
+      "Remote swarm agents now delete cleanly via stop-then-delete",
+      "First-touch acquisition source captured per visitor and mirrored to profiles",
+      "Web app_version collapsed to a single label so Mixpanel stops fragmenting per deploy"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-06-19T09:30:48.722Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.697.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-06-19T09:55:09.569Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.698.1",
     "path": "history/2026-06-19.json"
   },
   {

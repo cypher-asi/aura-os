@@ -1,31 +1,31 @@
-# Reliable swarm agent deletion and first-touch acquisition analytics
+# Cleaner remote agent teardown and sharper acquisition analytics
 
 - Date: `2026-06-19`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.697.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.697.1
+- Version: `0.1.0-nightly.698.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.698.1
 
-Today's nightly tightens up two very different surfaces: the server now properly tears down remote swarm agents instead of leaving stale probes behind, and the web interface starts capturing where new users actually come from so growth and retention can be analyzed by source rather than guessed at.
+Today's nightly tightens two very different seams. On the server, deleting a swarm-hosted agent now actually finishes the job end-to-end, with a graceful stop-then-delete handshake against the swarm gateway. On the web interface, analytics gets meaningfully more trustworthy: every visitor now carries a stable first-touch acquisition source, and the web surface stops inventing a brand-new app_version on every Render deploy.
 
-## 1:02 AM — Swarm agent deletion now drains remote machines cleanly
+## 1:02 AM — Reliable deletion of swarm-hosted agents
 
-Deleting an agent backed by the swarm gateway now coordinates a stop-and-retry flow with the remote machine instead of leaving orphaned status probe agents behind.
+The agent delete handler now understands swarm-mode machines and drives the swarm gateway through a proper stop-then-delete handshake instead of leaving orphaned remote agents behind.
 
-- Agent deletion now detects swarm-backed agents via machine type and routes them through the swarm gateway, returning a clear service-unavailable error when SWARM_BASE_URL isn't configured rather than silently leaving the remote agent running. (`90752cd`)
-- The swarm delete path now handles the gateway's 409 "needs stop" response by issuing a stop and retrying the delete up to a dozen times on a 5-second cadence, surfacing a bad-gateway error only if the remote agent never finishes stopping. (`90752cd`)
-- New server- and probe-side tests cover the remote-delete behavior end to end, so the cleanup path for status probe agents is exercised on every build. (`90752cd`)
+- Agent deletion now detects swarm-mode machines via HarnessMode and routes through the configured SWARM_BASE_URL, returning a clear service-unavailable error when the swarm gateway isn't configured rather than silently dropping the remote agent. (`90752cd`)
+- When the gateway reports a 409 that requires stopping first, the server now issues a stop and retries the delete up to twelve times with a 5s backoff, surfacing a bad-gateway error only if the remote agent never finishes stopping. (`90752cd`)
+- Backed by new integration coverage for remote delete behavior and refreshed status-probe tooling under infra/evals/status, raising confidence that observability probes exercise the new teardown path. (`90752cd`)
 
-## 2:08 AM — First-touch acquisition source captured in web analytics
+## 2:08 AM — Trustworthy acquisition source and stable web app_version
 
-The interface now classifies each visitor's first referrer and utm_source into a tidy acquisition_source label and pins it for the lifetime of the user, so signups and engaged users can be broken down by where they actually came from.
+Two analytics fixes on the web interface: visitors are now tagged with a clean first-touch acquisition source that survives return visits, and the web platform reports one stable app_version instead of a new commit SHA per Render deploy.
 
-- A new classifier collapses referrers and utm_source into clean labels — x (covering t.co, twitter.com, x.com), google, youtube, reddit, github, linkedin, facebook, hackernews — falling back to the real domain for unlisted sources and "direct" when there's no referrer at all. An explicit utm_source always wins over the referrer. (`617b308`)
-- The label is stamped once via register_once at init so it survives return visits and rides on every client event, and mirrored onto the user profile with people.set_once at identify time so server-emitted events like session_active (True DAU) can also be sliced by source. (`617b308`)
-- Classifier and pipeline tests lock in the mapping rules and the register_once / set_once behavior, including the no-op path when no source was ever captured. (`617b308`)
+- Each visitor's referrer and utm_source are classified into a tidy acquisition_source label (x, google, youtube, reddit, github, linkedin, facebook, hackernews, direct, or the raw domain) and stamped once via register_once so it rides on every client event and survives return visits. (`617b308`)
+- At identify time the source is mirrored onto the user profile with people.set_once, so server-emitted events like session_active (True DAU) can also be broken down by where users actually came from. (`617b308`)
+- getAppVersion() now collapses the continuously-deployed web surface to a single 0.0.0 label so Mixpanel's app_version and the X-App-Version header stop fragmenting on every Render deploy; Desktop and Mobile keep their real baked release versions, and the exact web build remains recoverable via getBuildInfo().commit. (`f50b081`)
 
 ## Highlights
 
-- Remote swarm agents are now fully deleted, with a stop-then-retry handshake
-- First-touch acquisition source (x, google, direct, …) now rides on every analytics event
-- Acquisition source mirrored onto user profiles for server-emitted DAU breakdowns
+- Remote swarm agents now delete cleanly via stop-then-delete
+- First-touch acquisition source captured per visitor and mirrored to profiles
+- Web app_version collapsed to a single label so Mixpanel stops fragmenting per deploy
 
