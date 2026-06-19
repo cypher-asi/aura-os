@@ -62,6 +62,15 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
     let cancelled = false;
     setLoading(true);
     setError("");
+    // Reset fields up front: the modal instance is reused across opens, so a
+    // slow or failed load would otherwise leave the *previous* skill's
+    // description/instructions in the form (looking like it "pulled up the
+    // last skill"). Clearing here guarantees the form only ever shows the
+    // skill actually being edited.
+    setDescription("");
+    setBody("");
+    setUserInvocable(true);
+    setPreserved({ model_invocable: false });
     api.harnessSkills
       .getSkill(skillName)
       .then((skill) => {
