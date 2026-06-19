@@ -3,23 +3,24 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-19T06:10:20.935Z",
+  "generatedAt": "2026-06-19T06:45:20.084Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.694.1",
+  "version": "0.1.0-nightly.695.1",
   "date": "2026-06-18",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.694.1",
-  "lastIncludedSha": "31ba3379d7d641c096c315bdbc276852a373d978",
-  "previousProcessedSha": "978e0a12aca8638d5e21cb4f36fd4223188859d4",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.695.1",
+  "lastIncludedSha": "31545eb2297ec776c64dfb405bb3a5e376bce9a6",
+  "previousProcessedSha": "31ba3379d7d641c096c315bdbc276852a373d978",
   "commitShas": [
     "2e93d47a2aec0b602643518c5f7579cfa8a2c763",
     "978e0a12aca8638d5e21cb4f36fd4223188859d4",
     "827f924bc5f4a569c4c9bfc02bb6938f738e2385",
     "6e1814240f2456300fe5cb4266f1dbf9516744f6",
-    "31ba3379d7d641c096c315bdbc276852a373d978"
+    "31ba3379d7d641c096c315bdbc276852a373d978",
+    "31545eb2297ec776c64dfb405bb3a5e376bce9a6"
   ],
-  "rawCommitCount": 5,
-  "filteredCommitCount": 5,
+  "rawCommitCount": 6,
+  "filteredCommitCount": 6,
   "rawCommits": [
     {
       "sha": "2e93d47a2aec0b602643518c5f7579cfa8a2c763",
@@ -230,6 +231,70 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "31545eb2297ec776c64dfb405bb3a5e376bce9a6",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-19T02:26:47-04:00",
+      "subject": "Add Loop Engineering mode (#68)",
+      "body": "* feat: add loop engineering mode\n\n* fix: require loop engineering final reports\n\n* fix: surface active loop engineering state\n\n* fix(loop): escape loop engineering prompt text",
+      "parents": [
+        "31ba3379d7d641c096c315bdbc276852a373d978"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/busy.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/adapter/run_single.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/adapter/start_loop.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/loop_engineering.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/registry.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/run/automaton.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/run/register.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/run/request.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start/params.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/local/create.rs",
+        "apps/aura-os-server/src/lib/handlers_test_support.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/api_tests/loop_stop.rs",
+        "interface/src/components/AutomationBar/AutomationBar.module.css",
+        "interface/src/components/AutomationBar/AutomationBar.test.tsx",
+        "interface/src/components/AutomationBar/AutomationBar.tsx",
+        "interface/src/components/AutomationBar/LoopEngineeringPanel.tsx",
+        "interface/src/components/AutomationBar/useAutomationStatus.ts",
+        "interface/src/components/Sidekick/Sidekick.module.css",
+        "interface/src/components/SidekickTaskbar/SidekickTaskbar.test.tsx",
+        "interface/src/components/SidekickTaskbar/SidekickTaskbar.tsx",
+        "interface/src/shared/api/loop.test.ts",
+        "interface/src/shared/api/loop.ts"
+      ],
+      "stats": {
+        "fileCount": 26,
+        "insertions": 1814,
+        "deletions": 147
+      },
+      "committedAtMs": 1781850407000,
+      "cleanSubject": "Add Loop Engineering mode (#68)",
+      "keywords": [
+        "loop",
+        "engineering",
+        "mode"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/components",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
     }
   ],
   "batchCount": 2,
@@ -237,29 +302,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.694.1",
+      "version": "0.1.0-nightly.695.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64826802
+          "sizeBytes": 64869012
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131471864
+          "sizeBytes": 131504632
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -269,29 +334,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.694.1",
+      "version": "0.1.0-nightly.695.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.694.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.695.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60783845
+          "sizeBytes": 60847099
         },
         {
-          "name": "AURA_0.1.0-nightly.694.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.695.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59822648
+          "sizeBytes": 59848500
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -301,29 +366,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.694.1",
+      "version": "0.1.0-nightly.695.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.694.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.695.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62919030
+          "sizeBytes": 62940342
         },
         {
-          "name": "AURA_0.1.0-nightly.694.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.695.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61918608
+          "sizeBytes": 61944095
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -333,17 +398,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.694.1",
+      "version": "0.1.0-nightly.695.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 47989404
+          "sizeBytes": 47999247
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.694.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.695.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -352,40 +417,40 @@
     }
   ],
   "rendered": {
-    "title": "Editable skills, sturdier chat turns, and faster eval CI",
-    "intro": "Today's nightly brings a long-requested skill editing flow for user-authored skills, tightens reliability around billing pre-flight and observability probes, trims eval CI setup time, and lands a careful fix for multiline prompts in chat.",
+    "title": "Editable skills, Loop Engineering mode, and a sturdier chat turn",
+    "intro": "A substantial day for Aura: user-authored skills become editable end-to-end, a new Loop Engineering automation mode lands, and the chat turn gets meaningfully more resilient — from billing pre-flights that survive a cold start to an input bar that no longer eats rapid multiline prompts.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:12 AM",
         "started_at": "2026-06-18T15:12:16.000Z",
         "ended_at": "2026-06-18T17:41:45.000Z",
-        "title": "Editable user skills, retry-safe billing, and tightened eval probes",
-        "summary": "A morning-to-afternoon push shipped in-place editing for user-authored skills, made the credit pre-flight resilient to transient billing failures, hardened multi-agent observability probes, and slimmed down the functional smoke setup in CI.",
+        "title": "Editable user skills, retried credit pre-flights, and stronger eval probes",
+        "summary": "A morning block focused on making user-authored skills first-class and the chat turn more tolerant of upstream hiccups, alongside tighter observability for multi-agent workflows.",
         "items": [
           {
-            "text": "User-authored skills can now be edited in place via a new PUT /api/harness/skills/mine/{name} endpoint and a repurposed editor modal in the Agents SkillsTab that pre-fills from getSkill, locks the name, and round-trips allowed_tools/model/context. The edit path is harness-first: if the harness re-register fails, the server returns 502 and leaves SKILL.md untouched so disk and the live registry never diverge behind a silent 200.",
+            "text": "User-authored skills are now editable end-to-end: a new PUT /api/harness/skills/mine/{name} endpoint rewrites SKILL.md through a shared frontmatter renderer, and the Agents panel gains an Edit skill action backed by a pre-filled editor modal that preserves allowed_tools, model, and context fields the UI doesn't surface. The edit path also fails loud with a 502 if the harness re-register fails, so disk and the in-memory registry can't silently diverge behind a 200.",
             "commit_shas": [
               "2e93d47a2aec0b602643518c5f7579cfa8a2c763"
             ],
             "confidence": "high"
           },
           {
-            "text": "Credit pre-flight (require_credits) now retries transient billing failures — transport errors and 5xx, e.g. a billing-server cold start — with short backoffs instead of failing a chat turn with a 502 on the first blip. Definitive answers like insufficient credits or auth errors still return immediately, and only positive results are cached so a transient failure can't linger.",
+            "text": "Chat turns no longer 502 on a single billing blip: require_credits now retries transient transport errors and 5xx responses with short 100ms/250ms backoffs, while definitive answers like insufficient credits return immediately. Only positive results are cached, so a momentary outage can't linger as a stale negative.",
             "commit_shas": [
               "6e1814240f2456300fe5cb4266f1dbf9516744f6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Multi-agent status probes now require persisted child-thread evidence (sessionId, childRunId, sessionSubagentThreadMatchesChild, sessionSubagentCompleted) for the project-bound subagent roundtrip, replacing the looser context-utilization signal so a passing probe actually proves the session exposed the child thread.",
+            "text": "Multi-agent workflow status probes now assert against persisted child-thread evidence (sessionId, childRunId, session subagent thread match/completion) instead of softer context-utilization heuristics, making the subagent and A2A roundtrip checks far harder to false-pass.",
             "commit_shas": [
               "827f924bc5f4a569c4c9bfc02bb6938f738e2385"
             ],
             "confidence": "high"
           },
           {
-            "text": "The aura-evals workflow now runs Playwright-bearing jobs inside the official Playwright container with browser install skipped, adds explicit per-job timeouts and in-progress cancellation for the same PR/ref, and the shared CI runner prints per-command elapsed time and retry duration for easier triage.",
+            "text": "Functional eval CI is faster and more predictable: smoke, workflow-e2e, chat-core, and live-benchmark jobs now run inside the prebuilt Playwright container with browser installs skipped, every job has an explicit timeout, in-progress runs auto-cancel on new pushes, and the local runner prints per-step durations.",
             "commit_shas": [
               "978e0a12aca8638d5e21cb4f36fd4223188859d4"
             ],
@@ -397,12 +462,19 @@
         "batch_id": "entry-2",
         "time_label": "10:51 PM",
         "started_at": "2026-06-19T05:51:14.000Z",
-        "ended_at": "2026-06-19T05:51:14.000Z",
-        "title": "Enter-to-send no longer eats fast multiline pastes in chat",
-        "summary": "Late-night fix to the chat input bar adds a short grace window after Enter so a quickly-arriving newline burst is treated as multiline input rather than an accidental submit.",
+        "ended_at": "2026-06-19T06:26:47.000Z",
+        "title": "Loop Engineering mode and a fix for swallowed multiline prompts",
+        "summary": "Late-night work introduces a new automation mode and resolves a long-standing chat input race where fast typing after Enter could be lost.",
         "items": [
           {
-            "text": "InputBarShell now defers Enter submission by a 100ms grace period: if more text arrives before the timer fires, the keystroke is reinterpreted as a newline and the buffered value is stitched back together (e.g. \"Line one\" + \"Line two\" becomes \"Line one\\nLine two\") instead of submitting a half-written prompt. Clicking Send during the grace window still submits exactly once.",
+            "text": "New Loop Engineering automation mode: start_loop accepts a loop_engineering configuration, the dev_loop runtime carries it through RunRequest and surfaces an active loop_engineering state on LoopStatusResponse, and the Automation bar gains a dedicated LoopEngineeringPanel plus Sidekick taskbar wiring. Final reports are required and prompt text is properly escaped before reaching the harness.",
+            "commit_shas": [
+              "31545eb2297ec776c64dfb405bb3a5e376bce9a6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The chat input bar no longer drops the second line when you press Enter and immediately keep typing: Enter now waits a 100ms grace window before submitting, rapid text arriving during that window is folded back in as a newline, and clicking Send during the grace period can't double-submit.",
             "commit_shas": [
               "31ba3379d7d641c096c315bdbc276852a373d978"
             ],
@@ -412,11 +484,11 @@
       }
     ],
     "highlights": [
-      "Edit your own skills from the Agents panel",
-      "Chat turns survive transient billing blips",
-      "Rapid multiline prompts no longer get truncated",
-      "Eval CI runs leaner and with shared timing visibility"
+      "Edit your own skills directly from the Agents panel",
+      "New Loop Engineering automation mode with live status surfacing",
+      "Chat turns survive transient billing blips instead of 502-ing",
+      "Rapid Enter-then-type no longer drops the second line"
     ],
-    "raw_commit_count": 5
+    "raw_commit_count": 6
   }
 }

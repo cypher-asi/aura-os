@@ -2,19 +2,19 @@
   {
     "date": "2026-06-18",
     "channel": "nightly",
-    "version": "0.1.0-nightly.694.1",
-    "title": "Editable skills, sturdier chat turns, and faster eval CI",
-    "intro": "Today's nightly brings a long-requested skill editing flow for user-authored skills, tightens reliability around billing pre-flight and observability probes, trims eval CI setup time, and lands a careful fix for multiline prompts in chat.",
+    "version": "0.1.0-nightly.695.1",
+    "title": "Editable skills, Loop Engineering mode, and a sturdier chat turn",
+    "intro": "A substantial day for Aura: user-authored skills become editable end-to-end, a new Loop Engineering automation mode lands, and the chat turn gets meaningfully more resilient — from billing pre-flights that survive a cold start to an input bar that no longer eats rapid multiline prompts.",
     "entryCount": 2,
     "highlights": [
-      "Edit your own skills from the Agents panel",
-      "Chat turns survive transient billing blips",
-      "Rapid multiline prompts no longer get truncated",
-      "Eval CI runs leaner and with shared timing visibility"
+      "Edit your own skills directly from the Agents panel",
+      "New Loop Engineering automation mode with live status surfacing",
+      "Chat turns survive transient billing blips instead of 502-ing",
+      "Rapid Enter-then-type no longer drops the second line"
     ],
-    "rawCommitCount": 5,
-    "generatedAt": "2026-06-19T06:10:20.935Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.694.1",
+    "rawCommitCount": 6,
+    "generatedAt": "2026-06-19T06:45:20.084Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.695.1",
     "path": "history/2026-06-18.json"
   },
   {
