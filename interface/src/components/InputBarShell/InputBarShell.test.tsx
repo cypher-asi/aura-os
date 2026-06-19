@@ -1,11 +1,15 @@
-import { act, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { vi } from "vitest";
 
 vi.mock("./InputBarShell.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 
-import { InputBarShell, type InputBarShellProps } from "./InputBarShell";
+import {
+  ENTER_SUBMIT_GRACE_MS,
+  InputBarShell,
+  type InputBarShellProps,
+} from "./InputBarShell";
 
 function makeProps(
   overrides: Partial<InputBarShellProps> = {},
@@ -172,6 +176,85 @@ describe("InputBarShell", () => {
         delete (HTMLTextAreaElement.prototype as { scrollHeight?: unknown })
           .scrollHeight;
       }
+    }
+  });
+
+  it("submits on Enter after a short grace period", () => {
+    vi.useFakeTimers();
+    const onSubmit = vi.fn();
+
+    try {
+      const { container } = render(
+        <InputBarShell {...makeProps({ value: "send me", onSubmit })} />,
+      );
+      const textarea = container.querySelector("textarea")!;
+      textarea.setSelectionRange(7, 7);
+
+      fireEvent.keyDown(textarea, { key: "Enter" });
+
+      expect(onSubmit).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(ENTER_SUBMIT_GRACE_MS);
+      });
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not double-submit when Send is clicked during the Enter grace period", () => {
+    vi.useFakeTimers();
+    const onSubmit = vi.fn();
+
+    try {
+      const { container } = render(
+        <InputBarShell {...makeProps({ value: "send me", onSubmit })} />,
+      );
+      const textarea = container.querySelector("textarea")!;
+      textarea.setSelectionRange(7, 7);
+
+      fireEvent.keyDown(textarea, { key: "Enter" });
+      fireEvent.click(container.querySelector('button[aria-label="Send"]')!);
+      act(() => {
+        vi.advanceTimersByTime(ENTER_SUBMIT_GRACE_MS);
+      });
+
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("treats rapid text after Enter as a multiline input burst", () => {
+    vi.useFakeTimers();
+    const onSubmit = vi.fn();
+    const onValueChange = vi.fn();
+
+    try {
+      const { container } = render(
+        <InputBarShell
+          {...makeProps({
+            value: "Line one",
+            onSubmit,
+            onValueChange,
+          })}
+        />,
+      );
+      const textarea = container.querySelector("textarea")!;
+      textarea.setSelectionRange("Line one".length, "Line one".length);
+
+      fireEvent.keyDown(textarea, { key: "Enter" });
+      fireEvent.change(textarea, {
+        target: { value: "Line oneLine two" },
+      });
+      act(() => {
+        vi.advanceTimersByTime(ENTER_SUBMIT_GRACE_MS);
+      });
+
+      expect(onSubmit).not.toHaveBeenCalled();
+      expect(onValueChange).toHaveBeenLastCalledWith("Line one\nLine two");
+    } finally {
+      vi.useRealTimers();
     }
   });
 

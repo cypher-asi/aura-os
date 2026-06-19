@@ -17,6 +17,39 @@ import { ArrowUp } from "lucide-react";
 import styles from "./InputBarShell.module.css";
 import { useInputAutosize } from "./useInputAutosize";
 
+export const ENTER_SUBMIT_GRACE_MS = 100;
+
+interface PendingEnterSubmit {
+  valueBeforeEnter: string;
+  selectionStart: number;
+  selectionEnd: number;
+  timerId: number;
+}
+
+function valueWithPendingNewline(
+  valueBeforeEnter: string,
+  nextValue: string,
+  selectionStart: number,
+  selectionEnd: number,
+): string {
+  const prefix = valueBeforeEnter.slice(0, selectionStart);
+  const suffix = valueBeforeEnter.slice(selectionEnd);
+  if (
+    !nextValue.startsWith(prefix) ||
+    !nextValue.endsWith(suffix) ||
+    nextValue.length < prefix.length + suffix.length
+  ) {
+    return nextValue;
+  }
+
+  const insertedText = nextValue.slice(
+    prefix.length,
+    nextValue.length - suffix.length,
+  );
+  if (!insertedText) return nextValue;
+  return `${prefix}\n${insertedText}${suffix}`;
+}
+
 export interface InputBarShellHandle {
   focus: () => void;
   blur: () => void;
@@ -222,6 +255,7 @@ function InputBarShellInner(
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contentMirrorRef = useRef<HTMLDivElement>(null);
   const baselineMirrorRef = useRef<HTMLDivElement>(null);
+  const pendingEnterSubmitRef = useRef<PendingEnterSubmit | null>(null);
   const isMultiLine = useInputAutosize(
     { textareaRef, contentMirrorRef, baselineMirrorRef },
     value,
@@ -240,16 +274,73 @@ function InputBarShellInner(
   const sendEnabled = isSendEnabled ?? value.trim().length > 0;
   const canSubmit = sendEnabled && !disabled;
 
+  const clearPendingEnterSubmit = useCallback(() => {
+    const pending = pendingEnterSubmitRef.current;
+    if (pending) {
+      window.clearTimeout(pending.timerId);
+      pendingEnterSubmitRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearPendingEnterSubmit, [clearPendingEnterSubmit]);
+
+  useEffect(() => {
+    if (!canSubmit) clearPendingEnterSubmit();
+  }, [canSubmit, clearPendingEnterSubmit]);
+
+  const submitImmediately = useCallback(() => {
+    clearPendingEnterSubmit();
+    if (canSubmit) onSubmit();
+  }, [canSubmit, clearPendingEnterSubmit, onSubmit]);
+
+  const handleValueChange = useCallback(
+    (nextValue: string) => {
+      const pending = pendingEnterSubmitRef.current;
+      if (!pending) {
+        onValueChange(nextValue);
+        return;
+      }
+
+      window.clearTimeout(pending.timerId);
+      pendingEnterSubmitRef.current = null;
+      onValueChange(
+        valueWithPendingNewline(
+          pending.valueBeforeEnter,
+          nextValue,
+          pending.selectionStart,
+          pending.selectionEnd,
+        ),
+      );
+    },
+    [onValueChange],
+  );
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       onTextareaKeyDown?.(e);
       if (e.defaultPrevented) return;
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        if (canSubmit) onSubmit();
+        if (!canSubmit) return;
+        clearPendingEnterSubmit();
+
+        const textarea = e.currentTarget;
+        const selectionStart = textarea.selectionStart ?? value.length;
+        const selectionEnd = textarea.selectionEnd ?? selectionStart;
+        const timerId = window.setTimeout(() => {
+          pendingEnterSubmitRef.current = null;
+          onSubmit();
+        }, ENTER_SUBMIT_GRACE_MS);
+
+        pendingEnterSubmitRef.current = {
+          valueBeforeEnter: value,
+          selectionStart,
+          selectionEnd,
+          timerId,
+        };
       }
     },
-    [onTextareaKeyDown, canSubmit, onSubmit],
+    [onTextareaKeyDown, canSubmit, clearPendingEnterSubmit, onSubmit, value],
   );
 
   const wrapperClassName = [
@@ -304,9 +395,7 @@ function InputBarShellInner(
     <button
       type="button"
       className={styles.sendButton}
-      onClick={() => {
-        if (canSubmit) onSubmit();
-      }}
+      onClick={submitImmediately}
       disabled={!canSubmit}
       aria-label={sendAriaLabel}
     >
@@ -364,7 +453,7 @@ function InputBarShellInner(
             ref={textareaRef}
             className={styles.textarea}
             value={value}
-            onChange={(e) => onValueChange(e.target.value)}
+            onChange={(e) => handleValueChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={onTextareaPaste}
             placeholder={placeholder}
