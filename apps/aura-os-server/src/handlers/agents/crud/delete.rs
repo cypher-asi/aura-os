@@ -4,7 +4,7 @@ use axum::Json;
 use futures_util::future::join_all;
 use serde::Serialize;
 
-use aura_os_core::AgentId;
+use aura_os_core::{AgentId, HarnessMode};
 
 use crate::capture_auth::{
     demo_agent_id, demo_agent_instance_id, demo_project, is_capture_access_token,
@@ -26,12 +26,32 @@ pub(crate) async fn delete_agent(
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<()>> {
     let client = state.require_network_client()?;
+    let network_agent = client
+        .get_agent(&agent_id.to_string(), &jwt)
+        .await
+        .map_err(map_network_error)?;
 
     if let Some(ref storage) = state.storage_client {
         let bindings = resolve_agent_project_bindings(&state, storage, &jwt, &agent_id).await?;
         if !bindings.is_empty() {
             return Err(agent_delete_conflict(&bindings));
         }
+    }
+
+    let machine_type = network_agent.machine_type.as_deref().unwrap_or("local");
+    if HarnessMode::from_machine_type(machine_type) == HarnessMode::Swarm {
+        let swarm_base_url = state.swarm_base_url.as_deref().ok_or_else(|| {
+            ApiError::service_unavailable(
+                "swarm gateway is not configured (SWARM_BASE_URL); cannot delete remote agent",
+            )
+        })?;
+        super::swarm::delete_swarm_agent(
+            client.http_client(),
+            swarm_base_url,
+            &jwt,
+            &network_agent.id,
+        )
+        .await?;
     }
 
     client

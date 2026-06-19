@@ -426,10 +426,36 @@ async function withCleanup(args, work) {
     if (args.keepEntities) return;
     for (const item of cleanup.reverse()) {
       try {
-        await apiJson(args, "DELETE", item.endpoint);
+        await cleanupResource(args, item);
       } catch {
         // Cleanup is best-effort; probe result already captured the important failure.
       }
+    }
+  }
+}
+
+async function cleanupResource(args, item) {
+  if (item.resource === "agent") {
+    await removeAgentProjectBindings(args, item.id);
+  }
+  await apiJson(args, "DELETE", item.endpoint);
+}
+
+async function removeAgentProjectBindings(args, agentId) {
+  const bindings = await readOptionalJson(args, `/api/agents/${encodeURIComponent(agentId)}/projects`);
+  if (!bindings.ok) return;
+  for (const binding of collectionItems(bindings.payload)) {
+    const projectAgentId = firstTruthyString(binding, ["project_agent_id", "projectAgentId", "id"]);
+    if (!projectAgentId) continue;
+    try {
+      await apiJson(
+        args,
+        "DELETE",
+        `/api/agents/${encodeURIComponent(agentId)}/projects/${encodeURIComponent(projectAgentId)}`,
+      );
+    } catch {
+      // Best-effort. If a binding cannot be removed, the final agent delete
+      // will fail and withCleanup will swallow it as a cleanup failure.
     }
   }
 }
