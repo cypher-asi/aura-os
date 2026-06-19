@@ -137,6 +137,61 @@ async fn task_routes_support_storage_backed_crud_and_state_changes() {
     assert!(listed.as_array().unwrap().is_empty());
 }
 
+#[tokio::test]
+async fn create_task_without_spec_id_uses_manual_tasks_spec() {
+    let (app, _state, _storage, _db) = build_test_app_with_storage().await;
+    let project_id = ProjectId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/tasks"),
+        Some(serde_json::json!({
+            "title": "Manual board task",
+            "description": "Created directly from the task board",
+            "status": "backlog",
+            "order_index": 0
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let created = response_json(resp).await;
+    assert_eq!(created["title"], "Manual board task");
+    let spec_id = created["spec_id"]
+        .as_str()
+        .expect("manual task should receive a backing spec id");
+
+    let req = json_request("GET", &format!("/api/projects/{project_id}/specs"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let specs = response_json(resp).await;
+    let manual_specs: Vec<_> = specs
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|spec| spec["title"] == "Manual Tasks")
+        .collect();
+    assert_eq!(manual_specs.len(), 1);
+    assert_eq!(manual_specs[0]["spec_id"].as_str(), Some(spec_id));
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/tasks"),
+        Some(serde_json::json!({
+            "title": "Second manual task",
+            "status": "backlog",
+            "order_index": 1
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let second = response_json(resp).await;
+    assert_eq!(
+        second["spec_id"].as_str(),
+        Some(spec_id),
+        "subsequent manual tasks should reuse the Manual Tasks spec"
+    );
+}
+
 /// User-initiated "Re-do" of a previously completed task. Exercises
 /// the dedicated `done -> ready` edge added in
 /// `docs/migrations/2026-05-25-task-redo-transition.md` and verifies

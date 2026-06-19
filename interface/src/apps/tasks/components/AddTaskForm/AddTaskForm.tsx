@@ -15,6 +15,8 @@ const STATUS_OPTIONS = [
   { value: "to_do", label: "To Do" },
 ];
 
+const PENDING_MANUAL_SPEC_ID = "pending-manual-task-spec";
+
 interface AddTaskFormProps {
   isOpen: boolean;
   projectId: string;
@@ -71,14 +73,14 @@ export function AddTaskForm({
   const handleSubmit = useCallback(async () => {
     const trimmed = title.trim();
     if (!trimmed || submitting) return;
-    if (specs.length === 0) return;
+    const specId = specs[0]?.spec_id;
 
     const optimisticTaskId = `pending-task-${crypto.randomUUID()}`;
     const now = new Date().toISOString();
     const optimisticTask: Task = {
       task_id: optimisticTaskId,
       project_id: projectId,
-      spec_id: specs[0].spec_id,
+      spec_id: specId ?? PENDING_MANUAL_SPEC_ID,
       title: trimmed,
       description: description.trim(),
       status,
@@ -103,7 +105,7 @@ export function AddTaskForm({
     try {
       const task = await tasksApi.createTask(projectId, {
         title: trimmed,
-        spec_id: specs[0].spec_id,
+        ...(specId ? { spec_id: specId } : {}),
         description: description.trim() || undefined,
         status,
         assigned_agent_instance_id: assignee || undefined,
@@ -195,7 +197,7 @@ export function AddTaskForm({
               variant="primary"
               size="sm"
               onClick={handleSubmit}
-              disabled={!title.trim() || submitting || specs.length === 0}
+              disabled={!title.trim() || submitting}
             >
               {submitting ? <><Spinner size="sm" /> Creating...</> : "Create Task"}
             </Button>
