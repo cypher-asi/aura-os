@@ -621,6 +621,7 @@ jobs:
         id: desktop_observability
         if: matrix.target == 'macos' && matrix.arch == 'aarch64'
         continue-on-error: true
+        timeout-minutes: 12
         env:
           AURA_DESKTOP_BINARY: ${{ env.AURA_RELEASE_DIR }}/aura-os-desktop
           AURA_STATUS_USER_EMAIL: ${{ secrets.AURA_STATUS_USER_EMAIL }}
@@ -647,6 +648,7 @@ jobs:
       - name: Run production web observability probes
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
         continue-on-error: true
+        timeout-minutes: 12
         env:
           AURA_STATUS_API_BASE_URL: ${{ secrets.AURA_STATUS_API_BASE_URL || vars.AURA_STATUS_API_BASE_URL || 'https://api.aura.ai' }}
           AURA_STATUS_PUBLIC_BASE_URL: ${{ secrets.AURA_STATUS_PUBLIC_BASE_URL || vars.AURA_STATUS_PUBLIC_BASE_URL || 'https://aura.ai' }}
@@ -677,6 +679,7 @@ jobs:
 
       - name: Run desktop observability investigations
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
+        timeout-minutes: 10
         env:
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_INVESTIGATIONS_DIR: desktop-observability-investigations
@@ -691,6 +694,7 @@ jobs:
 
       - name: Run desktop observability learning
         if: always() && matrix.target == 'macos' && matrix.arch == 'aarch64' && steps.desktop_observability.outputs.ran == 'true'
+        timeout-minutes: 10
         env:
           AURA_STATUS_CHECKS_DIR: desktop-observability-checks
           AURA_STATUS_INVESTIGATIONS_DIR: desktop-observability-investigations
