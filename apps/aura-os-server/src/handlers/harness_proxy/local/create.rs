@@ -43,11 +43,19 @@ struct CreateSkillResponse {
 /// Render the YAML frontmatter block for a user-authored skill.
 ///
 /// Shared by the create and update flows so both emit byte-for-byte the
-/// same frontmatter shape — crucially including the `source:
-/// "user-created"` marker that `list_my_skills` / `delete_my_skill` rely
-/// on to tell user skills apart from shop-installed ones. Keeping a single
-/// renderer prevents the two endpoints from drifting.
+/// same frontmatter shape. Two fields are load-bearing:
+/// - `name`: REQUIRED by the harness parser (`SkillFrontmatter.name`). A
+///   SKILL.md without it fails to parse and the skill is silently dropped
+///   from the harness registry on every reload — which is why a skill works
+///   right after creation but vanishes ("skill not found") after the next
+///   harness restart. We write it here so the marker-bearing file the
+///   harness reloads from is always loadable.
+/// - `source: "user-created"`: the marker `list_my_skills` / `delete_my_skill`
+///   rely on to tell user skills apart from shop-installed ones.
+///
+/// Keeping a single renderer prevents the two endpoints from drifting.
 pub(super) fn render_skill_frontmatter(
+    name: &str,
     description: &str,
     allowed_tools: Option<&[String]>,
     model: Option<&str>,
@@ -56,8 +64,9 @@ pub(super) fn render_skill_frontmatter(
     model_invocable: bool,
 ) -> String {
     let mut frontmatter = format!(
-        "---\ndescription: \"{}\"\n",
-        yaml_escape_scalar(description)
+        "---\nname: \"{}\"\ndescription: \"{}\"\n",
+        yaml_escape_scalar(name),
+        yaml_escape_scalar(description),
     );
     if let Some(tools) = allowed_tools {
         frontmatter.push_str(&format!("allowed_tools: [{}]\n", tools.join(", ")));
@@ -77,6 +86,7 @@ pub(super) fn render_skill_frontmatter(
 
 fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
     render_skill_frontmatter(
+        &payload.name,
         &payload.description,
         payload.allowed_tools.as_deref(),
         payload.model.as_deref(),

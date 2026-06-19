@@ -66,6 +66,12 @@ async fn update_my_skill_rewrites_file_and_reregisters() {
         .join("edit-me")
         .join("SKILL.md");
     let content = std::fs::read_to_string(&skill_path).unwrap();
+    // The harness parser requires a `name:` field; an edit must keep it so
+    // the rewritten skill stays loadable in the registry.
+    assert!(
+        content.contains("name: \"edit-me\""),
+        "expected name field in rewritten frontmatter, got:\n{content}"
+    );
     assert!(
         content.contains("description: \"Updated description\""),
         "expected updated description, got:\n{content}"

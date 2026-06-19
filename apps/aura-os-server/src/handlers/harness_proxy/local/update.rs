@@ -67,6 +67,7 @@ pub(crate) async fn update_my_skill(
     }
 
     let frontmatter = render_skill_frontmatter(
+        &name,
         &payload.description,
         payload.allowed_tools.as_deref(),
         payload.model.as_deref(),

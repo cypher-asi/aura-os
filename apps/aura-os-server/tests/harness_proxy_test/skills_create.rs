@@ -55,6 +55,13 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
         skill_path.display()
     );
     let content = std::fs::read_to_string(&skill_path).unwrap();
+    // The harness parser requires a `name:` field; without it the skill
+    // fails to load and is dropped from the registry on reload ("skill not
+    // found"). It must be in the marker file we write last.
+    assert!(
+        content.contains("name: \"my-skill\""),
+        "expected name field in frontmatter, got:\n{content}"
+    );
     assert!(content.contains("description: \"A skill for tests\""));
     assert!(content.contains("# Instructions"));
     // The user-created marker must be present so list_my_skills can
