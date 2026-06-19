@@ -8,6 +8,7 @@ mod recovery;
 use aura_os_core::Agent;
 
 pub(super) use provision::provision_remote_agent;
+pub(super) use recovery::delete_swarm_agent;
 pub(crate) use recovery::recover_remote_agent_pipeline;
 
 /// Result of (re)provisioning a Swarm machine for an agent. Returned by both

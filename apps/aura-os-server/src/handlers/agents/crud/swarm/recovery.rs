@@ -1,6 +1,7 @@
 use aura_os_network::{NetworkAgent, NetworkClient};
 use axum::http::StatusCode;
 use axum::Json;
+use tokio::time::{sleep, Duration};
 use tracing::info;
 
 use crate::error::{ApiError, ApiResult};
@@ -166,7 +167,7 @@ fn handle_recovery_readiness_error(
     }
 }
 
-async fn delete_swarm_agent(
+pub(crate) async fn delete_swarm_agent(
     http: &reqwest::Client,
     swarm_base_url: &str,
     jwt: &str,
@@ -174,8 +175,40 @@ async fn delete_swarm_agent(
 ) -> ApiResult<()> {
     let url = format!("{}/v1/agents/{}", swarm_base_url, agent_id);
 
+    match send_swarm_delete(http, &url, jwt).await? {
+        SwarmDeleteAttempt::Deleted => return Ok(()),
+        SwarmDeleteAttempt::NeedsStop => {
+            stop_swarm_agent(http, swarm_base_url, jwt, agent_id).await?;
+        }
+    }
+
+    for attempt in 0..12 {
+        if attempt > 0 {
+            sleep(Duration::from_secs(5)).await;
+        }
+        match send_swarm_delete(http, &url, jwt).await? {
+            SwarmDeleteAttempt::Deleted => return Ok(()),
+            SwarmDeleteAttempt::NeedsStop => continue,
+        }
+    }
+
+    Err(ApiError::bad_gateway(
+        "swarm gateway did not finish stopping remote agent before deletion",
+    ))
+}
+
+enum SwarmDeleteAttempt {
+    Deleted,
+    NeedsStop,
+}
+
+async fn send_swarm_delete(
+    http: &reqwest::Client,
+    url: &str,
+    jwt: &str,
+) -> ApiResult<SwarmDeleteAttempt> {
     let resp = http
-        .delete(&url)
+        .delete(url)
         .header("Authorization", format!("Bearer {jwt}"))
         .send()
         .await
@@ -186,17 +219,59 @@ async fn delete_swarm_agent(
         })?;
 
     if resp.status().is_success() || resp.status().as_u16() == 404 {
-        return Ok(());
+        return Ok(SwarmDeleteAttempt::Deleted);
     }
 
     let status = resp.status().as_u16();
     let body = resp.text().await.unwrap_or_default();
+    if status == 409 && swarm_delete_requires_stop(&body) {
+        return Ok(SwarmDeleteAttempt::NeedsStop);
+    }
     Err(match status {
         401 => ApiError::unauthorized("swarm gateway rejected auth token"),
         _ => ApiError::bad_gateway(format!(
             "swarm gateway returned {status} during machine deletion: {body}"
         )),
     })
+}
+
+async fn stop_swarm_agent(
+    http: &reqwest::Client,
+    swarm_base_url: &str,
+    jwt: &str,
+    agent_id: &str,
+) -> ApiResult<()> {
+    let url = format!("{}/v1/agents/{}/stop", swarm_base_url, agent_id);
+    let resp = http
+        .post(&url)
+        .header("Authorization", format!("Bearer {jwt}"))
+        .send()
+        .await
+        .map_err(|e| {
+            ApiError::bad_gateway(format!(
+                "swarm gateway unreachable during machine stop: {e}"
+            ))
+        })?;
+    if resp.status().is_success() {
+        return Ok(());
+    }
+    let status = resp.status().as_u16();
+    let body = resp.text().await.unwrap_or_default();
+    if status == 409 && swarm_delete_requires_stop(&body) {
+        return Ok(());
+    }
+    Err(match status {
+        401 => ApiError::unauthorized("swarm gateway rejected auth token"),
+        _ => ApiError::bad_gateway(format!(
+            "swarm gateway returned {status} during machine stop: {body}"
+        )),
+    })
+}
+
+fn swarm_delete_requires_stop(body: &str) -> bool {
+    body.contains("cannot transition from Running to Stopped")
+        || body.contains("cannot transition from Hibernating to Stopped")
+        || body.contains("cannot transition from Stopping to Stopped")
 }
 
 fn broadcast_recovery_phase(state: &AppState, agent_id: &str, phase: &str, error: Option<&str>) {

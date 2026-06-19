@@ -4,6 +4,7 @@ mod common;
 
 mod create_local;
 mod create_remote;
+mod delete_remote;
 mod mocks;
 mod recover;
 mod remote_only;
