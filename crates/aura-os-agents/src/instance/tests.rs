@@ -78,6 +78,14 @@ fn pick_loop_template_returns_none_for_empty_slice() {
     assert!(pick_loop_template_from_instances(&[]).is_none());
 }
 
+#[test]
+fn validate_transition_allows_restoring_archived_instance() {
+    assert!(
+        AgentInstanceService::validate_transition(AgentStatus::Archived, AgentStatus::Idle)
+            .is_ok()
+    );
+}
+
 fn service_with_temp_store() -> (AgentInstanceService, tempfile::TempDir) {
     let dir = tempfile::tempdir().expect("create tempdir");
     let store = Arc::new(SettingsStore::open(dir.path()).expect("open settings store"));

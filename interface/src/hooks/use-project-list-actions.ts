@@ -247,25 +247,47 @@ export function useProjectListActions() {
       return;
     }
 
+    const nextStatus: AgentInstance["status"] = target.status === "archived" ? "idle" : "archived";
     const optimisticUpdatedAt = new Date().toISOString();
-    const archivedAgent: AgentInstance = {
+    const optimisticAgent: AgentInstance = {
       ...target,
-      status: "archived",
+      status: nextStatus,
       updated_at: optimisticUpdatedAt,
     };
+    const prevAgents = agentsByProject[pid];
     setArchivingAgentInstanceIds((prev) => [...prev, aid]);
     setAgentsByProject((prev) => ({
       ...prev,
       [pid]: (prev[pid] ?? []).map((agent) =>
         agent.agent_instance_id === aid
-          ? { ...agent, status: "archived", updated_at: optimisticUpdatedAt }
+          ? { ...agent, status: nextStatus, updated_at: optimisticUpdatedAt }
           : agent,
       ),
     }));
 
-    queryClient.setQueryData(projectQueryKeys.agentInstance(pid, aid), archivedAgent);
-    setArchivingAgentInstanceIds((prev) => prev.filter((id) => id !== aid));
-  }, [setAgentsByProject]);
+    queryClient.setQueryData(projectQueryKeys.agentInstance(pid, aid), optimisticAgent);
+    try {
+      const updated = await api.updateAgentInstance(pid, aid, { status: nextStatus });
+      queryClient.setQueryData(projectQueryKeys.agentInstance(pid, aid), updated);
+      setAgentsByProject((prev) => ({
+        ...prev,
+        [pid]: mergeAgentIntoProjectAgents(prev[pid], updated),
+      }));
+    } catch (err) {
+      console.error(
+        nextStatus === "archived"
+          ? "Failed to archive agent instance"
+          : "Failed to restore agent instance",
+        err,
+      );
+      queryClient.setQueryData(projectQueryKeys.agentInstance(pid, aid), target);
+      if (prevAgents) {
+        setAgentsByProject((prev) => ({ ...prev, [pid]: prevAgents }));
+      }
+    } finally {
+      setArchivingAgentInstanceIds((prev) => prev.filter((id) => id !== aid));
+    }
+  }, [agentsByProject, setAgentsByProject]);
 
   const handleProjectSaved = useCallback(
     (project: Project) => {

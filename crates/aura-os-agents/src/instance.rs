@@ -540,6 +540,7 @@ impl AgentInstanceService {
                 | (AgentStatus::Idle, AgentStatus::Stopped)
                 | (AgentStatus::Stopped, AgentStatus::Idle)
                 | (AgentStatus::Error, AgentStatus::Idle)
+                | (AgentStatus::Archived, AgentStatus::Idle)
                 | (_, AgentStatus::Archived)
         );
         if legal {

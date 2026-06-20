@@ -229,7 +229,7 @@ describe("useProjectListActions", () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it("handleArchiveAgent archives the target instance locally", async () => {
+  it("handleArchiveAgent optimistically archives the target instance locally", async () => {
     mockAgentsByProject = {
       "p-2": [
         {
@@ -262,7 +262,9 @@ describe("useProjectListActions", () => {
       });
     });
 
-    expect(api.updateAgentInstance).not.toHaveBeenCalled();
+    expect(api.updateAgentInstance).toHaveBeenCalledWith("p-2", "ai-2", {
+      status: "archived",
+    });
     expect(mockSetAgentsByProject).toHaveBeenCalled();
     const updater = mockSetAgentsByProject.mock.calls[0]?.[0] as
       | ((prev: typeof mockAgentsByProject) => typeof mockAgentsByProject)
@@ -270,6 +272,143 @@ describe("useProjectListActions", () => {
     expect(updater).toBeTypeOf("function");
     const nextState = updater?.(mockAgentsByProject);
     expect(nextState?.["p-2"]?.[0]?.status).toBe("archived");
+  });
+
+  it("handleArchiveAgent persists the archive status to the server", async () => {
+    mockAgentsByProject = {
+      "p-2": [
+        {
+          agent_instance_id: "ai-2",
+          project_id: "p-2",
+          status: "idle",
+        },
+      ],
+    };
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    await act(async () => {
+      await result.current.handleArchiveAgent({
+        agent_instance_id: "ai-2",
+        project_id: "p-2",
+        agent_id: "a-2",
+        name: "Agent",
+        role: "dev",
+        personality: "",
+        system_prompt: "",
+        skills: [],
+        icon: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    expect(api.updateAgentInstance).toHaveBeenCalledWith("p-2", "ai-2", {
+      status: "archived",
+    });
+  });
+
+  it("handleArchiveAgent rolls back the optimistic archive when persistence fails", async () => {
+    mockAgentsByProject = {
+      "p-2": [
+        {
+          agent_instance_id: "ai-2",
+          project_id: "p-2",
+          status: "idle",
+        },
+      ],
+    };
+    (api.updateAgentInstance as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("fail"));
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    await act(async () => {
+      await result.current.handleArchiveAgent({
+        agent_instance_id: "ai-2",
+        project_id: "p-2",
+        agent_id: "a-2",
+        name: "Agent",
+        role: "dev",
+        personality: "",
+        system_prompt: "",
+        skills: [],
+        icon: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    expect(api.updateAgentInstance).toHaveBeenCalledWith("p-2", "ai-2", {
+      status: "archived",
+    });
+    const rollback = mockSetAgentsByProject.mock.calls.at(-1)?.[0] as
+      | ((prev: typeof mockAgentsByProject) => typeof mockAgentsByProject)
+      | undefined;
+    expect(rollback?.({ "p-2": [] })).toEqual(mockAgentsByProject);
+  });
+
+  it("handleArchiveAgent restores an archived instance through the server", async () => {
+    mockAgentsByProject = {
+      "p-2": [
+        {
+          agent_instance_id: "ai-2",
+          project_id: "p-2",
+          status: "archived",
+        },
+      ],
+    };
+    (api.updateAgentInstance as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      agent_instance_id: "ai-2",
+      project_id: "p-2",
+      agent_id: "a-2",
+      name: "Restored Agent",
+      role: "dev",
+      personality: "",
+      system_prompt: "",
+      skills: [],
+      icon: null,
+      status: "idle",
+      current_task_id: null,
+      current_session_id: null,
+      total_input_tokens: 0,
+      total_output_tokens: 0,
+      created_at: "",
+      updated_at: "",
+    });
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    await act(async () => {
+      await result.current.handleArchiveAgent({
+        agent_instance_id: "ai-2",
+        project_id: "p-2",
+        agent_id: "a-2",
+        name: "Agent",
+        role: "dev",
+        personality: "",
+        system_prompt: "",
+        skills: [],
+        icon: null,
+        status: "archived",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    expect(api.updateAgentInstance).toHaveBeenCalledWith("p-2", "ai-2", {
+      status: "idle",
+    });
   });
 
   it("surfaces the unwrapped conflict message when deleting a project with agents", async () => {

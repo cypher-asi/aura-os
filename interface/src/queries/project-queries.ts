@@ -256,7 +256,8 @@ export function mergeAgentUpdate(
   if (incomingUpdate.status !== undefined) {
     const preserveArchivedStatus =
       currentAgent.status === "archived" &&
-      incomingUpdate.status !== "archived";
+      incomingUpdate.status !== "archived" &&
+      updatedAtComparison !== 1;
     if (!preserveArchivedStatus && updatedAtComparison !== -1) {
       nextAgent.status = incomingUpdate.status;
     }
