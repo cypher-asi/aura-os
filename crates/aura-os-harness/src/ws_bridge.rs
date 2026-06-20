@@ -623,6 +623,10 @@ mod tests {
             "{\"type\":\"token_usage\",\"input_tokens\":1,\"output_tokens\":259}",
             "{\"type\":\"tool_call_completed\",\"id\":\"abc\",\"name\":\"search_code\"}",
             "{\"type\":\"debug.iteration\",\"index\":3,\"tool_calls\":2}",
+            "{\"type\":\"log_line\",\"message\":\"Listening for harness events\"}",
+            "{\"type\":\"started\"}",
+            "{\"type\":\"loop_finished\",\"succeeded\":true}",
+            "{\"type\":\"stopped\"}",
         ] {
             let (typed_tx, mut typed_rx) = broadcast::channel(8);
             let (raw_tx, mut raw_rx) = broadcast::channel(8);

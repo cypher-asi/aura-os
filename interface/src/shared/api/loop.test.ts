@@ -88,6 +88,7 @@ describe("loopApi", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ loopEngineering: contract }),
+        signal: expect.any(AbortSignal),
       }),
     );
   });

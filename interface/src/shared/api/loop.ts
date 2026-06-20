@@ -91,6 +91,8 @@ function loopQuery(agentInstanceId?: string, model?: string | null): string {
   return query ? `?${query}` : "";
 }
 
+const LOOP_START_TIMEOUT_MS = 120_000;
+
 export const loopApi = {
   startLoop: (projectId: ProjectId, agentInstanceId?: string, model?: string | null) => {
     const params = loopQuery(agentInstanceId, model);
@@ -108,7 +110,11 @@ export const loopApi = {
     const params = loopQuery(agentInstanceId, model);
     return apiFetch<LoopStatusResponse>(
       `/api/projects/${projectId}/loop/start${params}`,
-      { method: "POST", body: JSON.stringify(request) },
+      {
+        method: "POST",
+        body: JSON.stringify(request),
+        timeoutMs: LOOP_START_TIMEOUT_MS,
+      },
     );
   },
   pauseLoop: (projectId: ProjectId, agentInstanceId?: string) => {

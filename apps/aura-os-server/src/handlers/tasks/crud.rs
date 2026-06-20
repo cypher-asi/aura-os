@@ -550,7 +550,7 @@ fn clear_loop_task_pointer_if_terminal(
     }
 }
 
-fn broadcast_task_saved(state: &AppState, project_id: &ProjectId, task: &Task) {
+pub(crate) fn broadcast_task_saved(state: &AppState, project_id: &ProjectId, task: &Task) {
     let _ = state.event_broadcast.send(serde_json::json!({
         "type": "task_saved",
         "project_id": project_id.to_string(),
