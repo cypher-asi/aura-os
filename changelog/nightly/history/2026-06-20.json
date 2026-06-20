@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-20T16:59:15.611Z",
+  "generatedAt": "2026-06-20T22:27:40.763Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.703.1",
+  "version": "0.1.0-nightly.704.1",
   "date": "2026-06-20",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.703.1",
-  "lastIncludedSha": "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286",
-  "previousProcessedSha": "505c430d20b4faeb81aab21d3fbc05f996cdec1c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.704.1",
+  "lastIncludedSha": "3df3ecaa1524455453e461a59c421cb06461829f",
+  "previousProcessedSha": "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286",
   "commitShas": [
-    "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286"
+    "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286",
+    "3df3ecaa1524455453e461a59c421cb06461829f"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286",
@@ -65,36 +66,84 @@
         "Core Rust",
         "Interface"
       ]
+    },
+    {
+      "sha": "3df3ecaa1524455453e461a59c421cb06461829f",
+      "author": {
+        "name": "Shahroz Khan",
+        "email": "shrozali@gmail.com"
+      },
+      "committedAt": "2026-06-20T18:04:03-04:00",
+      "subject": "Persist project agent archive status (#73)",
+      "body": "Co-authored-by: shahroz-wilder <shrozali@outlook.com>",
+      "parents": [
+        "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286"
+      ],
+      "files": [
+        "crates/aura-os-agents/src/instance.rs",
+        "crates/aura-os-agents/src/instance/tests.rs",
+        "interface/src/components/ProjectList/ProjectList.test.tsx",
+        "interface/src/components/ProjectList/project-list-explorer-node.tsx",
+        "interface/src/hooks/use-project-list-actions.test.tsx",
+        "interface/src/hooks/use-project-list-actions.ts",
+        "interface/src/queries/project-queries.test.ts",
+        "interface/src/queries/project-queries.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 242,
+        "deletions": 40
+      },
+      "committedAtMs": 1781993043000,
+      "cleanSubject": "Persist project agent archive status (#73)",
+      "keywords": [
+        "persist",
+        "project",
+        "agent",
+        "archive",
+        "status"
+      ],
+      "fileGroups": [
+        "crates/aura-os-agents/src",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/queries"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.703.1",
+      "version": "0.1.0-nightly.704.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64874426
+          "sizeBytes": 64875596
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131512824
+          "sizeBytes": 131516920
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -104,29 +153,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.703.1",
+      "version": "0.1.0-nightly.704.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.703.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.704.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60924256
+          "sizeBytes": 60925361
         },
         {
-          "name": "AURA_0.1.0-nightly.703.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.704.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59881900
+          "sizeBytes": 59882537
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -136,29 +185,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.703.1",
+      "version": "0.1.0-nightly.704.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.703.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.704.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62989486
+          "sizeBytes": 62989892
         },
         {
-          "name": "AURA_0.1.0-nightly.703.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.704.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61989774
+          "sizeBytes": 61988833
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -168,17 +217,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.703.1",
+      "version": "0.1.0-nightly.704.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48021995
+          "sizeBytes": 48016341
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.703.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.704.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -187,45 +236,62 @@
     }
   ],
   "rendered": {
-    "title": "Loop Engineering runs now seed their own tasks",
-    "intro": "A small but meaningful server-side change today: starting a Loop Engineering run now automatically materializes a task tied to the run, so work shows up in the task list instead of living only inside the loop.",
+    "title": "Loop Engineering task seeding and restorable archived agents",
+    "intro": "Today's nightly brings two focused improvements: Loop Engineering runs now automatically come with a backing task so work is tracked from the first kickoff, and archived project agents finally remember their archive state with a clear path to restore them from the project list.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:33 AM",
         "started_at": "2026-06-20T16:33:58.000Z",
         "ended_at": "2026-06-20T16:33:58.000Z",
-        "title": "Loop Engineering runs seed a tracked task on start",
-        "summary": "Kicking off a Loop Engineering run now ensures a corresponding task and parent spec exist, with the new task pushed to clients in real time.",
+        "title": "Loop Engineering runs now auto-create a tracked task",
+        "summary": "Starting a Loop Engineering run on a project now seeds a corresponding task so the work is visible and trackable from the moment the loop kicks off.",
         "items": [
           {
-            "text": "When a Loop Engineering run starts, the server now derives a title and description from the run's goal and creates a 'ready' task under a dedicated 'Loop Engineering' spec, reusing an existing task if one already matches so repeated starts don't duplicate work.",
+            "text": "When a Loop Engineering contract is submitted to start_loop, the server now ensures a 'Loop Engineering' spec exists and creates a ready-state task titled and described from the run's goal, assigned to the loop's agent instance.",
             "commit_shas": [
               "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286"
             ],
             "confidence": "high"
           },
           {
-            "text": "Newly seeded tasks are assigned to the resolved agent instance and broadcast via the task-saved channel so the interface picks them up live without a manual refresh.",
+            "text": "Seeded tasks are deduplicated against existing project tasks and broadcast over the task-saved channel so any open project view picks them up live.",
             "commit_shas": [
               "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "3:04 PM",
+        "started_at": "2026-06-20T22:04:03.000Z",
+        "ended_at": "2026-06-20T22:04:03.000Z",
+        "title": "Archived project agents persist and can be restored",
+        "summary": "Project agents now remember their archived status across sessions, and the project list exposes a dedicated Restore action to bring them back to idle.",
+        "items": [
+          {
+            "text": "The agent state machine now permits transitioning an Archived instance back to Idle, making restore a first-class lifecycle operation rather than a dead end.",
+            "commit_shas": [
+              "3df3ecaa1524455453e461a59c421cb06461829f"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "Supporting plumbing in the harness WebSocket bridge, automaton protocol, and the interface loop API client keeps the start-loop flow consistent end to end.",
+            "text": "In the project list explorer, archived agents now show an ArchiveRestore action with a 'Restore {agent}' label in place of the Archive button, wired through the project-list actions hook and queries.",
             "commit_shas": [
-              "0b49aab7c3c3845ff01c25b391dd0c4a3f81b286"
+              "3df3ecaa1524455453e461a59c421cb06461829f"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Loop Engineering runs auto-create a tracked task",
-      "New task is broadcast live to connected clients"
+      "Loop Engineering runs auto-seed a tracked task",
+      "Archived agents persist and can be restored from the project list"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }

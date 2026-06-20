@@ -2,17 +2,17 @@
   {
     "date": "2026-06-20",
     "channel": "nightly",
-    "version": "0.1.0-nightly.703.1",
-    "title": "Loop Engineering runs now seed their own tasks",
-    "intro": "A small but meaningful server-side change today: starting a Loop Engineering run now automatically materializes a task tied to the run, so work shows up in the task list instead of living only inside the loop.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.704.1",
+    "title": "Loop Engineering task seeding and restorable archived agents",
+    "intro": "Today's nightly brings two focused improvements: Loop Engineering runs now automatically come with a backing task so work is tracked from the first kickoff, and archived project agents finally remember their archive state with a clear path to restore them from the project list.",
+    "entryCount": 2,
     "highlights": [
-      "Loop Engineering runs auto-create a tracked task",
-      "New task is broadcast live to connected clients"
+      "Loop Engineering runs auto-seed a tracked task",
+      "Archived agents persist and can be restored from the project list"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-06-20T16:59:15.611Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.703.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-06-20T22:27:40.763Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.704.1",
     "path": "history/2026-06-20.json"
   },
   {
