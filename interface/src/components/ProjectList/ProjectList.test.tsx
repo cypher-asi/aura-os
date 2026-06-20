@@ -9,6 +9,7 @@ let latestSelectedId: string | null = null;
 type MockTreeNode = {
   id: string;
   label: string;
+  status?: React.ReactNode;
   children?: MockTreeNode[];
 };
 
@@ -58,6 +59,7 @@ vi.mock("../ListTree", () => ({
           return (
             <div key={node.id}>
               <span>{node.label}</span>
+              {node.status}
               {node.children?.map(renderNode)}
             </div>
           );
@@ -221,7 +223,13 @@ function renderList(path = "/projects") {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  localStorage.clear();
+  if (typeof localStorage.clear === "function") {
+    localStorage.clear();
+  } else {
+    for (const key of Object.keys(localStorage)) {
+      localStorage.removeItem(key);
+    }
+  }
   autoSelectDefaultIds = false;
   latestSelectedId = null;
   mockChatHandoffState.pendingCreateAgentHandoff = null;
@@ -285,6 +293,7 @@ describe("ProjectList", () => {
     expect(screen.getByText("No agents yet")).toBeInTheDocument();
     expect(screen.getByText("Archived")).toBeInTheDocument();
     expect(screen.getByText("Archived Agent")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Restore Archived Agent" })).toBeInTheDocument();
   });
 
   it("moves an archived agent out of its project children when project data updates", () => {

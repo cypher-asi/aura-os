@@ -137,7 +137,29 @@ describe("project-queries agent merging", () => {
     });
   });
 
-  it("preserves archived status against a newer non-archived update", () => {
+  it("preserves archived status against a stale non-archived update", () => {
+    const merged = mergeAgentIntoProjectAgents(
+      [
+        makeAgent({
+          status: "archived",
+          updated_at: "2026-04-13T10:00:05.000Z",
+        }),
+      ],
+      {
+        agent_instance_id: "ai-1",
+        project_id: "p-1",
+        status: "idle",
+        updated_at: "2026-04-13T10:00:04.000Z",
+      },
+    );
+
+    expect(merged[0]).toMatchObject({
+      status: "archived",
+      updated_at: "2026-04-13T10:00:05.000Z",
+    });
+  });
+
+  it("accepts a newer server unarchive update", () => {
     const merged = mergeAgentIntoProjectAgents(
       [
         makeAgent({
@@ -154,7 +176,7 @@ describe("project-queries agent merging", () => {
     );
 
     expect(merged[0]).toMatchObject({
-      status: "archived",
+      status: "idle",
       updated_at: "2026-04-13T10:00:10.000Z",
     });
   });

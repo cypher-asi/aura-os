@@ -1,5 +1,5 @@
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
-import { Archive, Folder, FolderOpen, Gauge, Loader2 } from "lucide-react";
+import { Archive, ArchiveRestore, Folder, FolderOpen, Gauge, Loader2 } from "lucide-react";
 import { Avatar } from "../Avatar";
 import { ProjectsPlusButton } from "../ProjectsPlusButton";
 import type { ListTreeNode } from "../ListTree";
@@ -130,9 +130,11 @@ export function buildAgentNode(
       <span className={explorerStyles.streamingDot} />
     </span>
   ) : null;
-  const canArchive = agent.status !== "archived";
+  const isArchived = agent.status === "archived";
   const isArchiving = context.archivingAgentInstanceIds.includes(agent.agent_instance_id);
   const displayName = agentDisplayName(agent.name);
+  const archiveActionLabel = isArchived ? "Restore" : "Archive";
+  const ArchiveActionIcon = isArchived ? ArchiveRestore : Archive;
 
   return {
     id: agent.agent_instance_id,
@@ -147,38 +149,36 @@ export function buildAgentNode(
         isLocal={isLocal}
       />
     ),
-    status: canArchive || statusIndicator ? (
+    status: (
       <span className={explorerStyles.agentTrailing}>
         <span className={explorerStyles.agentStatusWrap}>
           {statusIndicator}
         </span>
-        {canArchive ? (
-          <span className={explorerStyles.agentActionWrap}>
-            <span
-              role="button"
-              tabIndex={isArchiving ? -1 : 0}
-              className={explorerStyles.agentActionButton}
-              onClick={(event) =>
-                activateArchiveAction(event, () => context.handleArchiveAgent(agent), isArchiving)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  activateArchiveAction(
-                    event,
-                    () => context.handleArchiveAgent(agent),
-                    isArchiving,
-                  );
-                }
-              }}
-              aria-label={`Archive ${displayName}`}
-              aria-disabled={isArchiving}
-              title="Archive agent"
-            >
-              <Archive size={12} />
-            </span>
+        <span className={explorerStyles.agentActionWrap}>
+          <span
+            role="button"
+            tabIndex={isArchiving ? -1 : 0}
+            className={explorerStyles.agentActionButton}
+            onClick={(event) =>
+              activateArchiveAction(event, () => context.handleArchiveAgent(agent), isArchiving)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                activateArchiveAction(
+                  event,
+                  () => context.handleArchiveAgent(agent),
+                  isArchiving,
+                );
+              }
+            }}
+            aria-label={`${archiveActionLabel} ${displayName}`}
+            aria-disabled={isArchiving}
+            title={`${archiveActionLabel} agent`}
+          >
+            <ArchiveActionIcon size={12} />
           </span>
-        ) : null}
+        </span>
       </span>
-    ) : undefined,
+    ),
     metadata: { type: "agent", projectId },
   };
 }
