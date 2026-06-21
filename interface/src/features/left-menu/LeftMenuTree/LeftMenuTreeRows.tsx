@@ -51,6 +51,7 @@ function LeftMenuLeafRow({
   return (
     <button
       id={entry.id}
+      data-list-item=""
       type="button"
       className={className}
       aria-selected={entry.selected}
@@ -135,6 +136,7 @@ function LeftMenuGroup({
       >
         <button
           id={entry.id}
+          data-list-item=""
           type="button"
           className={buttonClassName}
           aria-expanded={entry.expanded}
