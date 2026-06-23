@@ -149,6 +149,12 @@ const OPENAI_MODEL_PRICING_PER_MTOK = {
 };
 
 const FIREWORKS_MODEL_PRICING_PER_MTOK = {
+  "kimi-k2p7-code": {
+    input: 0.95,
+    output: 4.0,
+    cacheWrite: 0.95,
+    cacheRead: 0.19,
+  },
   "kimi-k2p6": {
     input: 0.95,
     output: 4.0,
@@ -203,11 +209,23 @@ const FIREWORKS_MODEL_PRICING_PER_MTOK = {
     cacheWrite: 0.3,
     cacheRead: 0.06,
   },
+  "glm-5p2": {
+    input: 1.4,
+    output: 4.4,
+    cacheWrite: 1.4,
+    cacheRead: 0.26,
+  },
   "glm-5p1": {
     input: 1.4,
     output: 4.4,
     cacheWrite: 1.4,
     cacheRead: 0.26,
+  },
+  "qwen3p7-plus": {
+    input: 0.4,
+    output: 1.6,
+    cacheWrite: 0.4,
+    cacheRead: 0.08,
   },
   "qwen3p6-plus": {
     input: 0.5,
@@ -305,12 +323,15 @@ function normalizeModelKey(model) {
   const auraClaude = unprefixed.match(/^aura-(claude-.+)$/);
   if (auraClaude) return auraClaude[1];
   const auraFireworksModels = {
+    "aura-kimi-k2-7-code": "kimi-k2p7-code",
     "aura-kimi-k2-6": "kimi-k2p6",
     "aura-kimi-k2-5": "kimi-k2p5",
     "aura-oss-120b": "gpt-oss-120b",
     "aura-minimax-m3": "minimax-m3",
     "aura-minimax-m2-7": "minimax-m2p7",
+    "aura-glm-5-2": "glm-5p2",
     "aura-glm-5-1": "glm-5p1",
+    "aura-qwen3-7-plus": "qwen3p7-plus",
     "aura-qwen3-6-plus": "qwen3p6-plus",
   };
   if (auraFireworksModels[unprefixed]) return auraFireworksModels[unprefixed];

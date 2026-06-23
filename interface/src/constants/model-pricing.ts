@@ -72,12 +72,15 @@ const OPENAI_PRICING: Readonly<Record<string, ModelRates>> = {
 } as const;
 
 const FIREWORKS_PRICING: Readonly<Record<string, ModelRates>> = {
+  "kimi-k2p7-code": { input: 0.95, output: 4.0, cacheWrite: 0.95, cacheRead: 0.19 },
   "kimi-k2p6": { input: 0.95, output: 4.0, cacheWrite: 0.95, cacheRead: 0.16 },
   "kimi-k2p5": { input: 0.6, output: 3.0, cacheWrite: 0.6, cacheRead: 0.1 },
   "gpt-oss-120b": { input: 0.15, output: 0.6, cacheWrite: 0.15, cacheRead: 0.01 },
   "minimax-m3": { input: 0.4, output: 1.6, cacheWrite: 0.4, cacheRead: 0.08 },
   "minimax-m2p7": { input: 0.3, output: 1.2, cacheWrite: 0.3, cacheRead: 0.06 },
+  "glm-5p2": { input: 1.4, output: 4.4, cacheWrite: 1.4, cacheRead: 0.26 },
   "glm-5p1": { input: 1.4, output: 4.4, cacheWrite: 1.4, cacheRead: 0.26 },
+  "qwen3p7-plus": { input: 0.4, output: 1.6, cacheWrite: 0.4, cacheRead: 0.08 },
   "qwen3p6-plus": { input: 0.5, output: 3.0, cacheWrite: 0.5, cacheRead: 0.1 },
 } as const;
 
@@ -118,6 +121,7 @@ const ZERO_RATES: ModelRates = { input: 0, output: 0, cacheWrite: 0, cacheRead: 
 export function normalizePricingKey(model: string): string {
   const key = model.trim().toLowerCase();
   const directAura: Readonly<Record<string, string>> = {
+    "aura-kimi-k2-7-code": "kimi-k2p7-code",
     "aura-kimi-k2-6": "kimi-k2p6",
     "aura-kimi-k2-5": "kimi-k2p5",
     "aura-oss-120b": "gpt-oss-120b",
@@ -125,7 +129,9 @@ export function normalizePricingKey(model: string): string {
     "aura-deepseek-v4-flash": "deepseek-v4-flash",
     "aura-minimax-m3": "minimax-m3",
     "aura-minimax-m2-7": "minimax-m2p7",
+    "aura-glm-5-2": "glm-5p2",
     "aura-glm-5-1": "glm-5p1",
+    "aura-qwen3-7-plus": "qwen3p7-plus",
     "aura-qwen3-6-plus": "qwen3p6-plus",
     "aura-gemini-3-1-pro": "gemini-3.1-pro",
     "aura-gemini-3-5-flash": "gemini-3.5-flash",

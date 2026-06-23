@@ -353,6 +353,18 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   },
   // ── Moonshot AI ─────────────────────────────────────────────
   {
+    id: "aura-kimi-k2-7-code",
+    label: "Kimi K2.7 Code",
+    tier: "sonnet",
+    mode: "chat",
+    vendor: "moonshot",
+    creditMultiplier: 0.8,
+    contextWindow: 262_144,
+    provider: "Moonshot AI",
+    description:
+      "Moonshot's coding-focused Kimi variant with stronger agentic performance, ~30% fewer reasoning tokens, and a 256K context window.",
+  },
+  {
     id: "aura-kimi-k2-6",
     label: "Kimi K2.6",
     tier: "sonnet",
@@ -403,6 +415,18 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   },
   // ── z.ai ────────────────────────────────────────────────────
   {
+    id: "aura-glm-5-2",
+    label: "GLM 5.2",
+    tier: "sonnet",
+    mode: "chat",
+    vendor: "zai",
+    creditMultiplier: 0.7,
+    contextWindow: 1_048_576,
+    provider: "Z.ai",
+    description:
+      "Open-weight GLM model built for long-horizon agentic coding and engineering, with a 1M-token context window.",
+  },
+  {
     id: "aura-glm-5-1",
     label: "GLM 5.1",
     tier: "sonnet",
@@ -415,6 +439,18 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
       "Open-weight GLM reasoning model with strong agentic and tool-use performance and a 202K context window.",
   },
   // ── Qwen ────────────────────────────────────────────────────
+  {
+    id: "aura-qwen3-7-plus",
+    label: "Qwen3.7 Plus",
+    tier: "sonnet",
+    mode: "chat",
+    vendor: "qwen",
+    creditMultiplier: 0.3,
+    contextWindow: 262_144,
+    provider: "Alibaba Cloud",
+    description:
+      "Low-cost multimodal Qwen model with vision and video input and a 256K context window.",
+  },
   {
     id: "aura-qwen3-6-plus",
     label: "Qwen3.6 Plus",
@@ -861,8 +897,10 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "o4-mini": "aura-o4-mini",
   "aura-kimi-k2-5": "aura-kimi-k2-5",
   "aura-kimi-k2-6": "aura-kimi-k2-6",
+  "aura-kimi-k2-7-code": "aura-kimi-k2-7-code",
   "kimi-k2p5": "aura-kimi-k2-5",
   "kimi-k2p6": "aura-kimi-k2-6",
+  "kimi-k2p7-code": "aura-kimi-k2-7-code",
   "aura-deepseek-v4-pro": "aura-deepseek-v4-pro",
   "aura-deepseek-v4-flash": "aura-deepseek-v4-flash",
   "deepseek-v4-pro": "aura-deepseek-v4-pro",
@@ -877,8 +915,12 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "minimax-m2p7": "aura-minimax-m2-7",
   "aura-glm-5-1": "aura-glm-5-1",
   "glm-5p1": "aura-glm-5-1",
+  "aura-glm-5-2": "aura-glm-5-2",
+  "glm-5p2": "aura-glm-5-2",
   "aura-qwen3-6-plus": "aura-qwen3-6-plus",
   "qwen3p6-plus": "aura-qwen3-6-plus",
+  "aura-qwen3-7-plus": "aura-qwen3-7-plus",
+  "qwen3p7-plus": "aura-qwen3-7-plus",
   "aura-gemini-3-1-pro": "aura-gemini-3-1-pro",
   "gemini-3.1-pro-preview": "aura-gemini-3-1-pro",
   "aura-gemini-3-5-flash": "aura-gemini-3-5-flash",
@@ -896,12 +938,15 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "chatgpt-image-latest": "gpt-image-2",
   "accounts/fireworks/models/kimi-k2p5": "aura-kimi-k2-5",
   "accounts/fireworks/models/kimi-k2p6": "aura-kimi-k2-6",
+  "accounts/fireworks/models/kimi-k2p7-code": "aura-kimi-k2-7-code",
   "accounts/fireworks/models/gpt-oss-120b": "aura-oss-120b",
   "accounts/fireworks/models/qwen2p5-coder-7b": "aura-qwen2-5-coder-7b",
   "accounts/fireworks/models/minimax-m3": "aura-minimax-m3",
   "accounts/fireworks/models/minimax-m2p7": "aura-minimax-m2-7",
   "accounts/fireworks/models/glm-5p1": "aura-glm-5-1",
+  "accounts/fireworks/models/glm-5p2": "aura-glm-5-2",
   "accounts/fireworks/models/qwen3p6-plus": "aura-qwen3-6-plus",
+  "accounts/fireworks/models/qwen3p7-plus": "aura-qwen3-7-plus",
 };
 
 function normalizeManagedModelId(modelId?: string | null): string | null {
