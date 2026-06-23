@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  AURA_MANAGED_CHAT_MODELS,
   availableModelsForAdapter,
   effectiveCreditMultiplier,
   effortCreditFactor,
@@ -360,5 +361,32 @@ describe("effort-scaled credits", () => {
       };
       expect(effectiveCreditMultiplier(free, "high")).toBe(0);
     });
+  });
+});
+
+describe("reasoning-effort validity per model", () => {
+  it("never lists a defaultEffort that is not also an offered effort", () => {
+    for (const model of AURA_MANAGED_CHAT_MODELS) {
+      if (!model.defaultEffort) continue;
+      expect(
+        model.efforts ?? [],
+        `${model.id} defaultEffort "${model.defaultEffort}" must be in its efforts`,
+      ).toContain(model.defaultEffort);
+    }
+  });
+
+  it("does not offer 'minimal' on the GPT-5.4 family (its API rejects it)", () => {
+    // The 5.4 generation dropped `minimal` (native set is
+    // none/low/medium/high/xhigh), unlike GPT-5.5 which keeps it.
+    for (const id of ["aura-gpt-5-4", "aura-gpt-5-4-mini", "aura-gpt-5-4-nano"]) {
+      const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === id);
+      expect(model, `${id} should exist`).toBeDefined();
+      expect(model?.efforts ?? []).not.toContain("minimal");
+    }
+  });
+
+  it("keeps 'minimal' available on GPT-5.5", () => {
+    const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === "aura-gpt-5-5");
+    expect(model?.efforts ?? []).toContain("minimal");
   });
 });

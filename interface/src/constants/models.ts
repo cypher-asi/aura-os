@@ -117,10 +117,21 @@ const ANTHROPIC_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
 const ANTHROPIC_LITE_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
 /**
- * OpenAI `reasoning_effort` tiers. The native API accepts
- * `minimal`/`low`/`medium`/`high` (there is no `max`).
+ * OpenAI `reasoning_effort` tiers for the GPT-5.5 generation. The native
+ * API accepts `minimal`/`low`/`medium`/`high` (there is no `max`).
  */
 const OPENAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
+
+/**
+ * GPT-5.4 family (`gpt-5.4` / `-mini` / `-nano`) `reasoning_effort`
+ * tiers. Unlike GPT-5.5, the 5.4 generation dropped `minimal`: its
+ * native set is `none`/`low`/`medium`/`high`/`xhigh`. We expose
+ * `low`/`medium`/`high` (the router folds our `max` to OpenAI `high`,
+ * and `none` is not a user-facing tier), so `minimal` must not be
+ * offered or the API rejects the request with "Unsupported value:
+ * 'minimal'".
+ */
+const GPT_5_4_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
 /**
  * Open-weight reasoning tiers (e.g. GPT-OSS) — `reasoning_effort`
@@ -266,7 +277,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     vendor: "openai",
     creditMultiplier: 3,
     contextWindow: 400_000,
-    efforts: OPENAI_EFFORTS,
+    efforts: GPT_5_4_EFFORTS,
     defaultEffort: "medium",
     provider: "OpenAI",
     description:
@@ -280,7 +291,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     vendor: "openai",
     creditMultiplier: 0.9,
     contextWindow: 400_000,
-    efforts: OPENAI_EFFORTS,
+    efforts: GPT_5_4_EFFORTS,
     defaultEffort: "low",
     provider: "OpenAI",
     description:
@@ -294,8 +305,8 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     vendor: "openai",
     creditMultiplier: 0.25,
     contextWindow: 400_000,
-    efforts: OPENAI_EFFORTS,
-    defaultEffort: "minimal",
+    efforts: GPT_5_4_EFFORTS,
+    defaultEffort: "low",
     provider: "OpenAI",
     description:
       "The smallest, fastest GPT-5 tier for cheap, high-throughput workloads.",
