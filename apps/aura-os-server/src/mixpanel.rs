@@ -1,8 +1,9 @@
 //! Lightweight Mixpanel event tracker for server-side analytics.
 //!
-//! Fires `session_active` once per user per calendar day so True DAU
-//! is accurate regardless of client version. Uses an in-memory
-//! `DashMap` for deduplication — no external state required.
+//! Fires privacy-safe server analytics such as `session_active` once
+//! per user per calendar day so True DAU is accurate regardless of
+//! client version. Uses an in-memory `DashMap` for deduplication — no
+//! external state required.
 
 use dashmap::DashMap;
 use reqwest::Client;
@@ -11,14 +12,15 @@ use std::sync::Arc;
 use tracing::warn;
 use uuid::Uuid;
 
-/// Canonical server-emitted analytics event names. These are the only
-/// three events the server fires. They mirror the `server_events` list in
-/// the shared analytics manifest (`interface/src/lib/analytics-events.json`)
-/// and the TS registry's `SERVER_EVENTS`; the tests below verify they stay
-/// in sync and that `session_active` is emitted from exactly one site.
+/// Canonical server-emitted analytics event names. These mirror the
+/// `server_events` list in the shared analytics manifest
+/// (`interface/src/lib/analytics-events.json`) and the TS registry's
+/// `SERVER_EVENTS`; the tests below verify they stay in sync and that
+/// `session_active` is emitted from exactly one site.
 pub(crate) const EVENT_SESSION_ACTIVE: &str = "session_active";
 pub(crate) const EVENT_SHARE_LINK_GENERATED: &str = "share_link_generated";
 pub(crate) const EVENT_SHARE_LINK_OPENED: &str = "share_link_opened";
+pub(crate) const EVENT_AGENT_TURN_CLASSIFIED: &str = "agent_turn_classified";
 
 /// Tracks which users have already fired `session_active` today.
 /// Key: `"user_id:YYYY-MM-DD"`, Value: `()`.
@@ -600,7 +602,7 @@ mod tests {
         assert!(empty.platform.is_none());
     }
 
-    /// The three server event-name constants must exactly match the
+    /// The server event-name constants must exactly match the
     /// `server_events` list in the shared cross-language manifest
     /// (`interface/src/lib/analytics-events.json`). The TS contract test
     /// checks that same manifest against the TS registry, so this is the
@@ -633,6 +635,7 @@ mod tests {
             EVENT_SESSION_ACTIVE.to_string(),
             EVENT_SHARE_LINK_GENERATED.to_string(),
             EVENT_SHARE_LINK_OPENED.to_string(),
+            EVENT_AGENT_TURN_CLASSIFIED.to_string(),
         ];
         constants.sort();
 

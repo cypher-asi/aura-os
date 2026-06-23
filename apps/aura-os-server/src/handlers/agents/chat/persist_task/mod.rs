@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 
+use aura_os_billing::BillingClient;
 use aura_os_harness::HarnessOutbound;
 use serde_json::Value;
 use tokio::sync::broadcast;
@@ -56,6 +57,13 @@ pub(crate) struct ChatPersistTaskExtras {
     /// `persist_task_dispatch` unit tests can construct extras
     /// without needing a real `StabilityMetrics` instance.
     pub stability_metrics: Option<Arc<StabilityMetrics>>,
+    /// Optional observe-only usage classification context. The pure
+    /// scoring rules live outside the chat stack; the persist task
+    /// only combines this ingress metadata with completed-turn facts
+    /// and emits a signal for analytics.
+    pub usage_signal_context: Option<crate::usage_signals::UsageSignalContext>,
+    pub mixpanel: Option<crate::mixpanel::MixpanelTracker>,
+    pub billing_client: Option<Arc<BillingClient>>,
 }
 
 pub(crate) fn spawn_chat_persist_task(

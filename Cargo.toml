@@ -18,6 +18,7 @@ members = [
     "crates/aura-os-store",
     "crates/aura-os-tasks",
     "crates/aura-os-terminal",
+    "crates/aura-os-usage-signals",
     "crates/aura-protocol",
     "crates/aura-loop-log-schema",
     "crates/aura-run-heuristics",

@@ -1,7 +1,10 @@
 //! Chat-stream error paths and project-context-aware system prompt.
 
 use std::sync::Arc;
+use std::time::Duration;
 
+use axum::body;
+use axum::http::HeaderValue;
 use axum::routing::get;
 use axum::Json;
 use axum::Router;
@@ -9,6 +12,12 @@ use tokio::net::TcpListener;
 use tower::ServiceExt;
 
 use aura_os_core::*;
+use aura_os_harness::test_support::FakeHarness;
+use aura_os_harness::{
+    AssistantMessageEnd, FilesChanged, HarnessLink, HarnessOutbound, SessionUsage,
+};
+use aura_os_projects::CreateProjectInput;
+use aura_os_storage::CreateProjectAgentRequest;
 
 use super::common::*;
 
@@ -47,6 +56,22 @@ async fn start_mock_billing_for_test() -> String {
                 }))
             }),
         );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+    url
+}
+
+async fn start_404_network_for_test() -> String {
+    let app = Router::new().route(
+        "/api/agents/:agent_id",
+        get(|| async {
+            (
+                axum::http::StatusCode::NOT_FOUND,
+                axum::Json(serde_json::json!({ "error": "not found" })),
+            )
+        }),
+    );
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     tokio::spawn(async move { axum::serve(listener, app).await.ok() });
@@ -245,6 +270,209 @@ async fn remote_only_agent_chat_rejects_local_agent_before_persistence() {
         .as_str()
         .unwrap_or_default()
         .contains("desktop app"));
+}
+
+#[tokio::test]
+async fn bare_agent_chat_route_persists_usage_signal_from_harness_end() {
+    let (storage_url, db) = aura_os_storage::testutil::start_mock_storage().await;
+    let storage = Arc::new(aura_os_storage::StorageClient::with_base_url(&storage_url));
+    let billing_url = start_mock_billing_for_test().await;
+    let billing = Arc::new(aura_os_billing::BillingClient::with_base_url(billing_url));
+    let network_url = start_404_network_for_test().await;
+    let network = Arc::new(aura_os_network::NetworkClient::with_base_url(&network_url));
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(aura_os_store::SettingsStore::open(store_dir.path()).unwrap());
+    store_zero_auth_session(&store);
+
+    let (_unused_app, mut state) = build_test_app_from_store(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(network),
+        Some(storage.clone()),
+        None,
+        Some(billing),
+    );
+
+    let fake = Arc::new(FakeHarness::new());
+    let usage = SessionUsage {
+        input_tokens: 3_500,
+        output_tokens: 1_200,
+        model: "claude-test".to_string(),
+        provider: "anthropic".to_string(),
+        ..Default::default()
+    };
+    fake.set_script(vec![HarnessOutbound::AssistantMessageEnd(
+        AssistantMessageEnd {
+            message_id: "msg-1".to_string(),
+            stop_reason: "stop".to_string(),
+            usage,
+            files_changed: FilesChanged::default(),
+            originating_user_id: None,
+        },
+    )])
+    .await;
+    let harness: Arc<dyn HarnessLink> = fake.clone();
+    state.local_harness = harness.clone();
+    state.swarm_harness = harness;
+
+    let project = state
+        .project_service
+        .create_project(CreateProjectInput {
+            org_id: OrgId::new(),
+            name: "Usage Signal Route Test".into(),
+            description: "fixture project for usage signal route test".into(),
+            build_command: None,
+            test_command: None,
+            local_workspace_path: None,
+        })
+        .expect("create local project");
+
+    let agent_id = AgentId::new();
+    storage
+        .create_project_agent(
+            &project.project_id.to_string(),
+            TEST_JWT,
+            &CreateProjectAgentRequest {
+                agent_id: agent_id.to_string(),
+                name: "Usage Signal Agent".into(),
+                org_id: Some(project.org_id.to_string()),
+                role: Some("Generalist".into()),
+                instance_role: None,
+                source: Some("auto_home".into()),
+                personality: None,
+                system_prompt: None,
+                skills: Some(vec![]),
+                icon: None,
+                harness: None,
+                permissions: Some(AgentPermissions::empty()),
+                intent_classifier: None,
+            },
+        )
+        .await
+        .expect("create auto-home project_agent row");
+
+    state
+        .agent_service
+        .save_agent_shadow(&Agent {
+            agent_id,
+            user_id: "u1".into(),
+            org_id: Some(project.org_id),
+            name: "Usage Signal Agent".into(),
+            role: "Generalist".into(),
+            personality: String::new(),
+            system_prompt: String::new(),
+            skills: vec![],
+            icon: None,
+            machine_type: "local".into(),
+            adapter_type: "aura_harness".into(),
+            environment: "local_host".into(),
+            auth_source: "local".into(),
+            integration_id: None,
+            default_model: None,
+            vm_id: None,
+            wallet_address: None,
+            network_agent_id: None,
+            profile_id: None,
+            tags: vec![],
+            is_pinned: false,
+            listing_status: Default::default(),
+            expertise: vec![],
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
+            local_workspace_path: None,
+            permissions: AgentPermissions::empty(),
+            intent_classifier: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        })
+        .expect("save local agent shadow");
+
+    let app = aura_os_server::create_router_with_interface(state.clone(), None);
+    let mut req = json_request(
+        "POST",
+        &format!("/api/agents/{agent_id}/events/stream"),
+        Some(serde_json::json!({ "content": "Explain OAuth at length" })),
+    );
+    req.headers_mut()
+        .insert("x-forwarded-for", HeaderValue::from_static("203.0.113.10"));
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    let _sse = tokio::time::timeout(
+        Duration::from_secs(3),
+        body::to_bytes(resp.into_body(), usize::MAX),
+    )
+    .await
+    .expect("SSE stream should complete after assistant_message_end")
+    .expect("read SSE body");
+
+    let signal_payload = wait_for_usage_signal_payload(&db).await;
+    assert_eq!(fake.session_count().await, 1);
+    assert_eq!(signal_payload["route_kind"], "bare_agent");
+    assert_eq!(signal_payload["binding_source"], "auto_home");
+    assert!(signal_payload["account_age_days"].as_u64().is_some());
+    assert_eq!(signal_payload["account_age_bucket"], "91d_plus");
+    assert_eq!(signal_payload["is_zero_pro"], true);
+    assert_eq!(signal_payload["is_access_granted"], false);
+    assert!(signal_payload["turn_duration_ms"].as_u64().is_some());
+    assert_eq!(signal_payload["local_project_count"], 1);
+    assert_eq!(signal_payload["same_org_project_count"], 1);
+    assert_eq!(signal_payload["risk_bucket"], "high");
+    assert_eq!(signal_payload["usage_shape"], "generic_agent_chat");
+    assert_eq!(signal_payload["quota_review_candidate"], true);
+    assert_eq!(signal_payload["tool_use_count"], 0);
+    assert_eq!(signal_payload["files_changed_count"], 0);
+    assert_eq!(signal_payload["ip_cluster_bucket"], "1");
+    assert_eq!(signal_payload["model"], "claude-test");
+    assert_eq!(signal_payload["provider"], "anthropic");
+    assert!(signal_payload["billing_account_age_days"]
+        .as_u64()
+        .is_some());
+    assert_eq!(signal_payload["billing_account_age_bucket"], "91d_plus");
+    assert_eq!(signal_payload["billing_plan"], "free");
+    assert_eq!(signal_payload["billing_balance_cents"], 999_999);
+    assert_eq!(
+        signal_payload["billing_lifetime_purchased_cents"],
+        1_000_000
+    );
+    assert_eq!(signal_payload["billing_lifetime_granted_cents"], 0);
+    assert_eq!(signal_payload["billing_lifetime_used_cents"], 1);
+    assert_eq!(signal_payload["billing_auto_refill_enabled"], false);
+    assert_eq!(signal_payload["billing_funding_bucket"], "purchase_only");
+    assert_eq!(signal_payload["billing_grant_usage_bucket"], "no_grants");
+    assert!(signal_payload["billing_used_to_granted_ratio"].is_null());
+    assert!(signal_payload["billing_used_to_funded_ratio"]
+        .as_f64()
+        .is_some());
+
+    let db = db.lock().await;
+    let event_types: Vec<&str> = db
+        .events
+        .iter()
+        .filter_map(|event| event.event_type.as_deref())
+        .collect();
+    assert!(event_types.contains(&"user_message"));
+    assert!(event_types.contains(&"assistant_message_end"));
+    assert!(event_types.contains(&"turn_usage_signal"));
+}
+
+async fn wait_for_usage_signal_payload(
+    db: &aura_os_storage::testutil::SharedDb,
+) -> serde_json::Value {
+    for _ in 0..40 {
+        if let Some(payload) = {
+            let db = db.lock().await;
+            db.events
+                .iter()
+                .find(|event| event.event_type.as_deref() == Some("turn_usage_signal"))
+                .and_then(|event| event.content.clone())
+        } {
+            return payload;
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+    panic!("expected turn_usage_signal event to be persisted");
 }
 
 /// Chat-WS migration shape pin: aura-os no longer bakes the

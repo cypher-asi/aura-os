@@ -60,6 +60,11 @@ pub(in super::super) struct OpenChatStreamArgs {
     /// plan-mode steering on this turn. See
     /// `crate::handlers::plan_mode` for the contract.
     pub(in super::super) is_plan_mode: bool,
+    /// Observe-only usage signal context. Route handlers populate
+    /// request-time facts; this orchestrator corrects
+    /// `is_new_session` after the session resolver returns the actual
+    /// cold-vs-warm outcome.
+    pub(in super::super) usage_signal_context: Option<crate::usage_signals::UsageSignalContext>,
 }
 
 pub(in super::super) async fn open_harness_chat_stream(
@@ -77,6 +82,7 @@ pub(in super::super) async fn open_harness_chat_stream(
         commands,
         fork_info,
         is_plan_mode,
+        mut usage_signal_context,
     } = args;
 
     // Guiding invariant: no silent success. If the inbound user message
@@ -206,6 +212,9 @@ pub(in super::super) async fn open_harness_chat_stream(
         turn,
     )
     .await?;
+    if let Some(signal_ctx) = usage_signal_context.as_mut() {
+        signal_ctx.is_new_session = is_new;
+    }
 
     // Register this turn as a reattachable live stream so a
     // reconnecting / reloading UI can rejoin the in-flight delta stream
@@ -314,6 +323,9 @@ pub(in super::super) async fn open_harness_chat_stream(
             router_url: state.router_url.clone(),
             auto_fork_threshold: state.chat_auto_fork_threshold,
             stability_metrics: Some(Arc::clone(&state.stability_metrics)),
+            usage_signal_context,
+            mixpanel: state.mixpanel.clone(),
+            billing_client: Some(Arc::clone(&state.billing_client)),
         },
     );
 

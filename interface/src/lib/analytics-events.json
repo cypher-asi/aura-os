@@ -1,4 +1,9 @@
 {
   "_comment": "Cross-language analytics contract. Source of truth for client events is analytics-registry.ts (ANALYTICS_EVENTS); this file is the bridge the Rust server tests check against. The TS contract test asserts SERVER_EVENTS in the registry matches server_events here; the Rust test (mixpanel.rs) asserts its EVENT_* constants match server_events here. Keep server_events in sync with both.",
-  "server_events": ["session_active", "share_link_generated", "share_link_opened"]
+  "server_events": [
+    "session_active",
+    "share_link_generated",
+    "share_link_opened",
+    "agent_turn_classified"
+  ]
 }

@@ -95,6 +95,20 @@ pub(super) async fn run_persist_loop(
                         if let Some(metrics) = extras.stability_metrics.as_ref() {
                             metrics.inc_chat_turns_completed_ok();
                         }
+                        crate::usage_signals::emit_completed_turn_signal(
+                            &ctx,
+                            extras.usage_signal_context.as_ref(),
+                            extras.mixpanel.as_ref(),
+                            extras.billing_client.as_deref(),
+                            &end.usage,
+                            crate::usage_signals::CompletedTurnMetrics {
+                                tool_use_count: state.tool_use_count,
+                                files_changed_count: crate::usage_signals::count_files_changed(
+                                    &end.files_changed,
+                                ),
+                            },
+                        )
+                        .await;
                         // Phase 3 cross-agent reply delivery. When this
                         // turn was opened by another agent's
                         // `send_to_agent` call (Phase 1: harness sets
@@ -377,6 +391,16 @@ fn harness_outbound_kind(evt: &HarnessOutbound) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Arc, Mutex};
+
+    use aura_os_harness::{AssistantMessageEnd, FilesChanged, HarnessOutbound, SessionUsage};
+    use axum::{
+        extract::{Path, State},
+        response::IntoResponse,
+        routing::post,
+        Json, Router,
+    };
+    use tokio::net::TcpListener;
 
     #[test]
     fn normalize_and_collect_orphan_tool_uses_coerces_null_input_and_collects_id() {
@@ -483,5 +507,123 @@ mod tests {
         assert!(blocks[0]["input"].is_object(), "string must be coerced");
         assert_eq!(blocks[0]["input"], json!({}));
         assert_eq!(orphans.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn clean_assistant_end_persists_usage_signal_event() {
+        type Requests = Arc<Mutex<Vec<aura_os_storage::CreateSessionEventRequest>>>;
+
+        async fn create_event(
+            Path(session_id): Path<String>,
+            State(requests): State<Requests>,
+            Json(req): Json<aura_os_storage::CreateSessionEventRequest>,
+        ) -> axum::response::Response {
+            requests.lock().expect("requests lock").push(req.clone());
+            Json(aura_os_storage::StorageSessionEvent {
+                id: format!("evt-{session_id}"),
+                session_id: req.session_id,
+                user_id: req.user_id,
+                agent_id: req.agent_id,
+                sender: req.sender,
+                project_id: req.project_id,
+                org_id: req.org_id,
+                event_type: Some(req.event_type),
+                content: req.content,
+                created_at: Some("2026-06-22T00:00:00Z".to_string()),
+            })
+            .into_response()
+        }
+
+        let requests: Requests = Arc::new(Mutex::new(Vec::new()));
+        let app = Router::new()
+            .route("/api/sessions/:session_id/events", post(create_event))
+            .with_state(requests.clone());
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.ok();
+        });
+
+        let base_url = format!("http://{addr}");
+        let ctx = ChatPersistCtx {
+            storage: Arc::new(aura_os_storage::StorageClient::with_base_url(&base_url)),
+            session_id: aura_os_core::SessionId::new(),
+            project_id: "project-test".to_string(),
+            project_agent_id: "project-agent-test".to_string(),
+            agent_id: None,
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            jwt: "jwt".to_string(),
+            from_agent_id: None,
+        };
+
+        let signal_ctx = crate::usage_signals::UsageSignalContext {
+            user_id: "user-test".to_string(),
+            turn_started_at: std::time::Instant::now(),
+            route_kind: crate::usage_signals::TurnRouteKind::BareAgent,
+            binding_source: crate::usage_signals::AgentBindingSource::AutoHome,
+            account_age_days: Some(0),
+            is_zero_pro: Some(false),
+            is_access_granted: Some(false),
+            local_project_count: Some(1),
+            same_org_project_count: Some(1),
+            has_project_context: true,
+            has_user_project_instance: false,
+            is_auto_home_only: true,
+            is_plan_mode: false,
+            is_cross_agent: false,
+            is_council: false,
+            is_new_session: true,
+            attachment_count: 0,
+            installed_tool_count: 0,
+            installed_integration_count: 0,
+            client_ip_hash: Some("run-loop-usage-signal-test-ip".to_string()),
+        };
+        let usage = SessionUsage {
+            input_tokens: 3_500,
+            output_tokens: 1_200,
+            ..Default::default()
+        };
+
+        let (tx, rx) = broadcast::channel(4);
+        let (event_bus, _) = broadcast::channel(4);
+        tx.send(HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
+            message_id: "msg-1".to_string(),
+            stop_reason: "end_turn".to_string(),
+            usage,
+            files_changed: FilesChanged::default(),
+            originating_user_id: None,
+        }))
+        .expect("send terminal event");
+
+        run_persist_loop(
+            rx,
+            ctx,
+            event_bus,
+            Some("claude-test".to_string()),
+            ChatPersistTaskExtras {
+                http_client: reqwest::Client::new(),
+                router_url: "http://localhost:9999".to_string(),
+                auto_fork_threshold: 0.8,
+                stability_metrics: None,
+                usage_signal_context: Some(signal_ctx),
+                mixpanel: None,
+                billing_client: None,
+            },
+        )
+        .await;
+
+        let seen = requests.lock().expect("requests lock");
+        let event_types: Vec<&str> = seen.iter().map(|req| req.event_type.as_str()).collect();
+        assert_eq!(
+            event_types,
+            vec!["assistant_message_end", "turn_usage_signal"]
+        );
+        let signal_payload = seen[1].content.as_ref().expect("signal payload");
+        assert_eq!(signal_payload["risk_bucket"], "high");
+        assert_eq!(signal_payload["usage_shape"], "generic_agent_chat");
+        assert_eq!(signal_payload["quota_review_candidate"], true);
+        assert_eq!(signal_payload["route_kind"], "bare_agent");
+        assert_eq!(signal_payload["binding_source"], "auto_home");
     }
 }
