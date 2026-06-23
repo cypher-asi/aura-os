@@ -149,7 +149,7 @@ pub(crate) async fn require_verified_session(
 /// usable public IP is present (including loopback), so we never ask
 /// Mixpanel to geolocate the server itself — those events should simply
 /// carry no geo rather than a misleading one.
-fn client_ip_from_headers(headers: &axum::http::HeaderMap) -> Option<String> {
+pub(crate) fn client_ip_from_headers(headers: &axum::http::HeaderMap) -> Option<String> {
     let parse = |raw: &str| raw.trim().parse::<std::net::IpAddr>().ok();
 
     let candidate = headers

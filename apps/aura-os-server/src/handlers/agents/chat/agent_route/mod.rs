@@ -287,6 +287,57 @@ pub(crate) async fn send_agent_event_stream(
     .await;
 
     let (computer_use, computer_executor_url) = computer_use_session_fields();
+    let local_project_counts =
+        crate::usage_signals::local_project_counts(&state, effective_org_id.as_ref());
+    let binding_source = persist_ctx
+        .as_ref()
+        .map(|ctx| {
+            crate::usage_signals::binding_source_from_project_agents(
+                &ctx.project_agent_id,
+                &matching,
+            )
+        })
+        .unwrap_or(crate::usage_signals::AgentBindingSource::Unknown);
+    let has_explicit_project_id = body
+        .project_id
+        .as_deref()
+        .map(|pid| !pid.trim().is_empty())
+        .unwrap_or(false);
+    let usage_signal_context = Some(crate::usage_signals::UsageSignalContext {
+        user_id: auth_session.user_id.clone(),
+        turn_started_at: std::time::Instant::now(),
+        route_kind: crate::usage_signals::TurnRouteKind::BareAgent,
+        binding_source,
+        // ZeroAuthSession::created_at is auth validation time, not account creation time.
+        account_age_days: None,
+        is_zero_pro: Some(auth_session.is_zero_pro),
+        is_access_granted: Some(auth_session.is_access_granted),
+        local_project_count: local_project_counts.local_project_count,
+        same_org_project_count: local_project_counts.same_org_project_count,
+        has_project_context: effective_project_id.is_some(),
+        has_user_project_instance: crate::usage_signals::user_visible_binding(binding_source),
+        is_auto_home_only: matches!(
+            binding_source,
+            crate::usage_signals::AgentBindingSource::AutoHome
+        ) && !has_explicit_project_id,
+        is_plan_mode,
+        is_cross_agent: body
+            .originating_agent_id
+            .as_deref()
+            .map(|id| !id.trim().is_empty())
+            .unwrap_or(false)
+            || body
+                .from_agent_id
+                .as_deref()
+                .map(|id| !id.trim().is_empty())
+                .unwrap_or(false),
+        is_council: active_council.is_some(),
+        is_new_session: force_new,
+        attachment_count: crate::usage_signals::attachment_count(&body.attachments),
+        installed_tool_count: crate::usage_signals::option_vec_len(&installed_tools),
+        installed_integration_count: crate::usage_signals::option_vec_len(&installed_integrations),
+        client_ip_hash: crate::usage_signals::client_ip_hash_from_headers(&headers),
+    });
     let config = SessionConfig {
         agent_id: Some(partition_agent_id),
         template_agent_id: Some(agent_id.to_string()),
@@ -335,6 +386,7 @@ pub(crate) async fn send_agent_event_stream(
             commands: body.commands,
             fork_info,
             is_plan_mode,
+            usage_signal_context,
         },
     )
     .await

@@ -165,6 +165,9 @@ mod tests {
             router_url: "http://localhost:9999".to_string(),
             auto_fork_threshold: 0.8,
             stability_metrics: Some(Arc::clone(&metrics)),
+            usage_signal_context: None,
+            mixpanel: None,
+            billing_client: None,
         };
         let ctx = ChatPersistCtx {
             storage: Arc::new(aura_os_storage::StorageClient::with_base_url(
@@ -209,6 +212,9 @@ mod tests {
             router_url: "http://localhost:9999".to_string(),
             auto_fork_threshold: 0.8,
             stability_metrics: Some(Arc::clone(&metrics)),
+            usage_signal_context: None,
+            mixpanel: None,
+            billing_client: None,
         };
         let ctx = ChatPersistCtx {
             storage: Arc::new(aura_os_storage::StorageClient::with_base_url(

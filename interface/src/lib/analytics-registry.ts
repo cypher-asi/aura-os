@@ -85,4 +85,5 @@ export const SERVER_EVENTS = [
   "session_active",
   "share_link_generated",
   "share_link_opened",
+  "agent_turn_classified",
 ] as const;

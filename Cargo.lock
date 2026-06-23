@@ -702,6 +702,7 @@ dependencies = [
  "aura-os-store",
  "aura-os-tasks",
  "aura-os-terminal",
+ "aura-os-usage-signals",
  "aura-protocol",
  "aura-run-heuristics",
  "axum",
@@ -814,6 +815,13 @@ dependencies = [
  "tracing",
  "uuid",
  "which 7.0.3",
+]
+
+[[package]]
+name = "aura-os-usage-signals"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
