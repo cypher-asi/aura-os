@@ -10,7 +10,7 @@ import {
   useStreamHealth,
   useStuckStreamAutoTimeout,
   STUCK_THRESHOLD_MS,
-  FULLY_TIMED_OUT_MS,
+  ABSOLUTE_TIMEOUT_MS,
 } from "./use-stream-health";
 
 describe("useStreamHealth", () => {
@@ -188,7 +188,7 @@ describe("useStuckStreamAutoTimeout", () => {
     vi.useRealTimers();
   });
 
-  it("invokes onAutoTimeout exactly once when the stuck window crosses FULLY_TIMED_OUT_MS", () => {
+  it("invokes onAutoTimeout exactly once when the stuck window crosses ABSOLUTE_TIMEOUT_MS", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2025, 0, 1, 0, 0, 0));
 
@@ -209,15 +209,47 @@ describe("useStuckStreamAutoTimeout", () => {
     });
     expect(onAutoTimeout).not.toHaveBeenCalled();
 
-    // Cross the 60s wall-clock threshold.
+    // Cross the absolute-timeout wall-clock threshold.
     act(() => {
-      vi.advanceTimersByTime(FULLY_TIMED_OUT_MS - (STUCK_THRESHOLD_MS + 5_000) + 500);
+      vi.advanceTimersByTime(ABSOLUTE_TIMEOUT_MS - (STUCK_THRESHOLD_MS + 5_000) + 500);
     });
     expect(onAutoTimeout).toHaveBeenCalledTimes(1);
 
     // Subsequent ticks within the same stuck episode must not re-fire.
     act(() => {
       vi.advanceTimersByTime(10_000);
+    });
+    expect(onAutoTimeout).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT auto-abort at the old 60s mark — only at the absolute safety cap", () => {
+    // Pins the softening fix: the destructive auto-abort used to fire
+    // at 60s of silence, pre-empting the graceful SSE-idle reattach and
+    // killing (and billing) turns that were still alive. It must now
+    // stay quiet well past 60s and only fire at ABSOLUTE_TIMEOUT_MS.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 0, 1, 0, 0, 0));
+
+    ensureEntry("k1");
+    const setters = createSetters("k1");
+    setters.setIsStreaming(true);
+    setters.setStreamingText("seed");
+
+    const onAutoTimeout = vi.fn();
+    renderHook(() => {
+      const health = useStreamHealth("k1");
+      useStuckStreamAutoTimeout(health, onAutoTimeout);
+    });
+
+    // Past the legacy 60s threshold (and well beyond) — must NOT fire.
+    act(() => {
+      vi.advanceTimersByTime(120_000);
+    });
+    expect(onAutoTimeout).not.toHaveBeenCalled();
+
+    // Reaching the absolute cap — now it fires exactly once.
+    act(() => {
+      vi.advanceTimersByTime(ABSOLUTE_TIMEOUT_MS - 120_000 + 500);
     });
     expect(onAutoTimeout).toHaveBeenCalledTimes(1);
   });
@@ -238,17 +270,17 @@ describe("useStuckStreamAutoTimeout", () => {
     });
 
     act(() => {
-      vi.advanceTimersByTime(FULLY_TIMED_OUT_MS + 500);
+      vi.advanceTimersByTime(ABSOLUTE_TIMEOUT_MS + 500);
     });
     expect(onAutoTimeout).toHaveBeenCalledTimes(1);
 
     // Fresh wire event resets the clock, then go silent again past
-    // the 60s threshold.
+    // the absolute-timeout threshold.
     act(() => {
       setters.setStreamingText("seed-2");
     });
     act(() => {
-      vi.advanceTimersByTime(FULLY_TIMED_OUT_MS + 500);
+      vi.advanceTimersByTime(ABSOLUTE_TIMEOUT_MS + 500);
     });
     expect(onAutoTimeout).toHaveBeenCalledTimes(2);
   });
@@ -256,10 +288,10 @@ describe("useStuckStreamAutoTimeout", () => {
   it("treats markStreamProgress as a wire event so partial-image-only streams do not auto-timeout", () => {
     // Regression guard for the GPT Image 2 watchdog timeout: the
     // chat-stream handlers no-op'd on `generation_partial_image`,
-    // letting the 60s `useStuckStreamAutoTimeout` auto-abort a long
+    // letting `useStuckStreamAutoTimeout` auto-abort a long
     // partial-image render whose `progress` events were sparser than
-    // the 60s window. The handler now calls `markStreamProgress` on
-    // each partial-image frame; this test pins that contract by
+    // the timeout window. The handler now calls `markStreamProgress`
+    // on each partial-image frame; this test pins that contract by
     // asserting the watchdog stays quiet when ONLY `markStreamProgress`
     // ticks land between the seed event and the would-be timeout.
     vi.useFakeTimers();
@@ -276,12 +308,14 @@ describe("useStuckStreamAutoTimeout", () => {
       useStuckStreamAutoTimeout(health, onAutoTimeout);
     });
 
-    // Walk past the 60s window in 30s slices, acking each slice with
-    // a `markStreamProgress` (i.e. a partial-image SSE event arrived
-    // but no setter ran). Two ticks adds up to 60s of wall-clock —
-    // strictly more than `FULLY_TIMED_OUT_MS` — yet the watchdog must
-    // stay silent because the wire-event clock keeps resetting.
-    for (let slice = 0; slice < 4; slice += 1) {
+    // Walk PAST the absolute-timeout window in 30s slices, acking each
+    // slice with a `markStreamProgress` (i.e. a partial-image SSE event
+    // arrived but no setter ran). The total wall-clock deliberately
+    // exceeds `ABSOLUTE_TIMEOUT_MS` so that, without the per-slice
+    // resets, the watchdog WOULD fire — yet it must stay silent because
+    // the wire-event clock keeps resetting.
+    const slices = Math.ceil(ABSOLUTE_TIMEOUT_MS / 30_000) + 1;
+    for (let slice = 0; slice < slices; slice += 1) {
       act(() => {
         vi.advanceTimersByTime(30_000);
         markStreamProgress("k1");
@@ -294,7 +328,7 @@ describe("useStuckStreamAutoTimeout", () => {
     // above didn't pass for some unrelated reason (e.g. the watchdog
     // being globally disabled).
     act(() => {
-      vi.advanceTimersByTime(FULLY_TIMED_OUT_MS + 500);
+      vi.advanceTimersByTime(ABSOLUTE_TIMEOUT_MS + 500);
     });
     expect(onAutoTimeout).toHaveBeenCalledTimes(1);
   });

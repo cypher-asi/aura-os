@@ -11,12 +11,25 @@ import { useStreamStore } from "./store";
 export const STUCK_THRESHOLD_MS = 30_000;
 
 /**
- * Threshold (ms) past which a stuck stream is considered fully
- * timed out — the Phase 2 watchdog promotes a synthetic
- * `assistant_stuck_local_timeout` event at this point. Re-exported
- * here so consumers and tests have a single source of truth.
+ * Absolute safety cap (ms) past which a stuck stream is hard-aborted
+ * as a genuine last resort. This is deliberately high (5 min): a
+ * client-side abort cancels the turn (and the upstream still bills),
+ * so it must only fire when the turn is almost certainly dead — i.e.
+ * total wire silence for this long, with no heartbeat and no
+ * successful reattach.
+ *
+ * It is NOT a "taking longer than usual" signal — that is the
+ * non-destructive {@link STUCK_THRESHOLD_MS} pill (Stop/Retry/Report),
+ * which surfaces at 30s and stays up. Genuine socket drops are caught
+ * earlier and recovered transparently by the SSE idle reattach path
+ * (`SSEIdleTimeoutError`, recoverable). Previously this was 60s, which
+ * pre-empted that graceful reattach and abandoned (and billed) turns
+ * that were still alive — sparse-but-healthy long thinking/tool gaps
+ * on extended-thinking models being the worst case.
+ *
+ * Re-exported here so consumers and tests have a single source of truth.
  */
-export const FULLY_TIMED_OUT_MS = 60_000;
+export const ABSOLUTE_TIMEOUT_MS = 300_000;
 
 export interface StreamHealth {
   isStreaming: boolean;
@@ -94,10 +107,13 @@ export function useStreamHealth(key: string): StreamHealth {
 }
 
 /**
- * One-shot auto-timeout helper for the Phase 2 stuck-stream
+ * One-shot last-resort auto-abort helper for the stuck-stream
  * watchdog. Invokes `onAutoTimeout` exactly once per stuck episode
- * once `health.stuckForMs` reaches `FULLY_TIMED_OUT_MS - STUCK_THRESHOLD_MS`
- * (i.e. the last wire event landed `FULLY_TIMED_OUT_MS` ago).
+ * once the last wire event landed `ABSOLUTE_TIMEOUT_MS` ago. This is
+ * the destructive backstop (it aborts the turn), so it is gated on
+ * the high {@link ABSOLUTE_TIMEOUT_MS} cap — the user-facing
+ * "taking longer" affordance is the non-destructive 30s pill, not
+ * this.
  *
  * The "exactly once per episode" guarantee is keyed on
  * `lastEventAt`: when a fresh wire event lands, `lastEventAt`
@@ -140,7 +156,7 @@ export function useStuckStreamAutoTimeout(
       return;
     }
     if (health.lastEventAgeMs == null) return;
-    if (health.lastEventAgeMs < FULLY_TIMED_OUT_MS) return;
+    if (health.lastEventAgeMs < ABSOLUTE_TIMEOUT_MS) return;
     if (firedForLastEventAtRef.current === health.lastEventAt) return;
     firedForLastEventAtRef.current = health.lastEventAt;
     onAutoTimeoutRef.current();
