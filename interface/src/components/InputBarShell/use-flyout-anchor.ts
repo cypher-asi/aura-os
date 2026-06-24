@@ -88,6 +88,15 @@ export function useFlyoutAnchor(
 
   const [flyoutPos, setFlyoutPos] = useState<FlyoutPosition | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Synchronous open/closed intent, flipped the instant `openFlyout` /
+  // `immediateClose` run. `flyoutPos` (and therefore `isOpen`) only
+  // settles on the next commit, and the scroll listener that recomputes
+  // position is torn down in an async effect — so during a scroll event
+  // that also re-homes the pointer onto a new row, a just-closed row's
+  // reflow could fire and resurrect its flyout (re-setting `flyoutPos`),
+  // leaving multiple submenus stacked. This ref lets `reflow` bail
+  // synchronously when its flyout is no longer meant to be open.
+  const openRef = useRef(false);
 
   // Keep callbacks/flags reachable from stable handlers without widening
   // their dependency lists (and re-subscribing the reflow effect). Updated
@@ -127,6 +136,7 @@ export function useFlyoutAnchor(
 
   const immediateClose = useCallback(() => {
     clearCloseTimer();
+    openRef.current = false;
     setFlyoutPos(null);
     onCloseRef.current?.();
   }, [clearCloseTimer]);
@@ -145,6 +155,7 @@ export function useFlyoutAnchor(
     onBeforeOpenRef.current?.();
     const rect = rowRef.current?.getBoundingClientRect();
     if (!rect) return;
+    openRef.current = true;
     setFlyoutPos(computePos(rect));
   }, [clearCloseTimer, computePos, rowRef]);
 
@@ -163,6 +174,11 @@ export function useFlyoutAnchor(
   useEffect(() => {
     if (!isOpen) return;
     const reflow = () => {
+      // A scroll that re-homes the pointer onto another row can fire this
+      // listener after our flyout was already closed (its teardown effect
+      // hasn't run yet); without this guard that stale reflow would
+      // re-open the closed flyout, stacking multiple submenus.
+      if (!openRef.current) return;
       const rect = rowRef.current?.getBoundingClientRect();
       if (rect) setFlyoutPos(computePos(rect));
     };
