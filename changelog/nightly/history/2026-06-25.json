@@ -3,24 +3,25 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-25T08:43:45.568Z",
+  "generatedAt": "2026-06-25T11:16:24.850Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.709.1",
+  "version": "0.1.0-nightly.710.1",
   "date": "2026-06-25",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.709.1",
-  "lastIncludedSha": "f33920b0f48f77a38811b7df4bd4cec75a947d2b",
-  "previousProcessedSha": "3df3ecaa1524455453e461a59c421cb06461829f",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.710.1",
+  "lastIncludedSha": "574b6b215a9ba0244387e6bfd50c814c3de294cf",
+  "previousProcessedSha": "f33920b0f48f77a38811b7df4bd4cec75a947d2b",
   "commitShas": [
     "e0197730689771d0dae13785afe70366fb4c424a",
     "e2cc0228eb773e73e709f56deaeac19e3a0c1d70",
     "aa57d7884ed05fdbc57bd18aa292ac7d9f00d29c",
     "1fe8f07a4947fc57312ae6610b20145ab1c6b324",
     "9209a189322267d549729397d1f405336d999859",
-    "f33920b0f48f77a38811b7df4bd4cec75a947d2b"
+    "f33920b0f48f77a38811b7df4bd4cec75a947d2b",
+    "574b6b215a9ba0244387e6bfd50c814c3de294cf"
   ],
-  "rawCommitCount": 6,
-  "filteredCommitCount": 6,
+  "rawCommitCount": 7,
+  "filteredCommitCount": 7,
   "rawCommits": [
     {
       "sha": "e0197730689771d0dae13785afe70366fb4c424a",
@@ -287,36 +288,82 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "574b6b215a9ba0244387e6bfd50c814c3de294cf",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-25T11:52:58+01:00",
+      "subject": "fix(remote-agents): stop polling state of dead/stuck remote agents",
+      "body": "When a remote agent failed to provision (e.g. K8s pod unschedulable) or\ngot stuck, the frontend kept polling GET /api/agents/{id}/remote_agent/state\nforever — 30s app-wide from the profile-status store plus 2.5s from the\nAgentEnvironment popover — each returning 502/404. A failed agent left open\nflooded the console with hundreds of failed requests over many minutes and\nhammered the server + swarm gateway for no benefit.\n\nMake the pollers give up gracefully:\n- profile-status-store: stop polling once an agent reports a terminal state\n  (error/stopped) or fails MAX_CONSECUTIVE_POLL_FAILURES (3) times in a row,\n  keeping its last status. Re-arm via the RemoteAgentStateChanged WS push\n  (recovery) or a later registerRemoteAgents list refresh.\n- useRemoteAgentVm / useRemoteAgentState: back off the recursive poll to a\n  60s settled interval on terminal/repeated-failure, and auto-resume when a\n  later poll succeeds.\n\nThe provisioning -> ready happy path is unchanged (provisioning keeps the\nfast cadence; a successful poll resets the failure counter). No server\nchange — transport errors are still surfaced rather than masked.\n\nAdds tests for terminal-state pause, consecutive-failure pause, WS\nre-engagement, and the popover back-off cadence.",
+      "parents": [
+        "f33920b0f48f77a38811b7df4bd4cec75a947d2b"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentEnvironment/helpers.ts",
+        "interface/src/apps/agents/components/AgentEnvironment/useRemoteAgentVm.ts",
+        "interface/src/hooks/use-remote-agent-state.test.ts",
+        "interface/src/hooks/use-remote-agent-state.ts",
+        "interface/src/stores/profile-status-store.test.ts",
+        "interface/src/stores/profile-status-store.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 356,
+        "deletions": 33
+      },
+      "committedAtMs": 1782384778000,
+      "cleanSubject": "stop polling state of dead/stuck remote agents",
+      "keywords": [
+        "stop",
+        "polling",
+        "state",
+        "dead",
+        "stuck",
+        "remote",
+        "agents"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 5,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.709.1",
+      "version": "0.1.0-nightly.710.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 64928458
+          "sizeBytes": 64930848
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 131594744
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -326,29 +373,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.709.1",
+      "version": "0.1.0-nightly.710.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.709.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.710.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 60922880
+          "sizeBytes": 60947975
         },
         {
-          "name": "AURA_0.1.0-nightly.709.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.710.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 59903603
+          "sizeBytes": 59900485
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -358,29 +405,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.709.1",
+      "version": "0.1.0-nightly.710.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.709.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.710.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63043280
+          "sizeBytes": 63043581
         },
         {
-          "name": "AURA_0.1.0-nightly.709.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.710.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62030076
+          "sizeBytes": 62027701
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -390,17 +437,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.709.1",
+      "version": "0.1.0-nightly.710.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48046280
+          "sizeBytes": 48033561
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.709.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.710.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -409,19 +456,19 @@
     }
   ],
   "rendered": {
-    "title": "Stream watchdog softening, model catalog refresh, and sidebar context menus return",
-    "intro": "A focused nightly across chat reliability and the model picker: the stream watchdog no longer kills long extended-thinking turns you've already been billed for, the GPT-5.4 family stops 400-ing on an unsupported reasoning tier, and three new Fireworks-hosted models join the catalog. The projects sidebar also gets its right-click menu and F2 rename back, and the server starts emitting billing-enriched usage signals for completed turns.",
+    "title": "Sturdier streams, smarter pollers, and a refreshed model lineup",
+    "intro": "Today's nightly is a reliability-leaning release: long-running chat turns are no longer killed by an over-eager watchdog, dead remote agents stop hammering the backend, and the model picker behaves itself when scrolled. Alongside the fixes, three new Fireworks-hosted models land in the catalog and a new server-side usage-signal pipeline begins emitting enriched analytics for completed chat turns.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:21 AM",
         "started_at": "2026-06-22T10:21:09.000Z",
         "ended_at": "2026-06-22T10:21:09.000Z",
-        "title": "Projects sidebar right-click and F2 rename work again",
-        "summary": "A missing DOM marker on the migrated LeftMenuTree was silently breaking every context-menu action in the projects sidebar.",
+        "title": "Projects sidebar regains right-click and F2 rename",
+        "summary": "Restores the context menu and keyboard-rename actions that silently broke after the sidebar's migration to LeftMenuTree.",
         "items": [
           {
-            "text": "Restored Remove from Project, Rename, Add Agent, Delete Project, and F2-to-rename in the projects sidebar by emitting the `data-list-item` marker that `useExplorerMenus` uses to resolve the clicked row — also re-enabling the delete path for archived agents.",
+            "text": "Right-click actions (Remove from Project, Rename, Add Agent, Delete Project) and F2-to-rename work again in the projects sidebar — LeftMenuTree rows now emit the `data-list-item` marker that `useExplorerMenus` relies on to resolve the clicked node, which also re-enables deletion of archived agents.",
             "commit_shas": [
               "e0197730689771d0dae13785afe70366fb4c424a"
             ],
@@ -434,18 +481,18 @@
         "time_label": "11:44 PM",
         "started_at": "2026-06-23T06:44:45.000Z",
         "ended_at": "2026-06-23T06:44:45.000Z",
-        "title": "Per-turn usage-signal analytics with billing enrichment",
-        "summary": "The server now classifies completed chat turns and ships an enriched signal to Mixpanel, backed by a new `aura-os-usage-signals` crate.",
+        "title": "Server-side usage-signal analytics for chat turns",
+        "summary": "A new classifier emits an enriched `agent_turn_classified` event for each completed chat turn, persisted as `turn_usage_signal` and forwarded to Mixpanel.",
         "items": [
           {
-            "text": "Introduced a pure usage-signal classifier (new `aura-os-usage-signals` crate) and wired server-side emission for completed chat turns, persisted as `turn_usage_signal` and sent to Mixpanel as `agent_turn_classified`.",
+            "text": "Introduces a dedicated `aura-os-usage-signals` crate and server-side emission path that classifies completed chat turns with context like route kind, agent binding source, plan mode, council, cross-agent origin, attachment count, and project layout.",
             "commit_shas": [
               "e2cc0228eb773e73e709f56deaeac19e3a0c1d70"
             ],
             "confidence": "high"
           },
           {
-            "text": "Enriched each signal with z-billing context — account age, funding and grant-usage buckets, lifetime purchased/granted/used cents, and balance — plus per-turn shape (plan mode, council, cross-agent, attachments, project binding source).",
+            "text": "Enriches every signal with z-billing account data — account age, funding and grant-usage buckets, lifetime purchased/granted/used cents, and balance — so downstream analytics can segment turns by billing posture.",
             "commit_shas": [
               "e2cc0228eb773e73e709f56deaeac19e3a0c1d70"
             ],
@@ -458,20 +505,20 @@
         "time_label": "1:54 PM",
         "started_at": "2026-06-23T20:54:17.000Z",
         "ended_at": "2026-06-23T20:54:17.000Z",
-        "title": "GPT-5.4 reasoning tiers fixed and three Fireworks models added",
-        "summary": "The model picker stops offering an effort tier the GPT-5.4 API rejects, and Kimi K2.7 Code, GLM 5.2, and Qwen3.7 Plus join the catalog.",
+        "title": "Model catalog refresh: new Fireworks models and a GPT-5.4 effort fix",
+        "summary": "Adds three Fireworks-hosted chat models and corrects an effort-set mismatch that was 400-ing every GPT-5.4 nano call.",
         "items": [
           {
-            "text": "Removed the unsupported `minimal` reasoning effort from GPT-5.4 / -mini / -nano (their native set is none/low/medium/high/xhigh) and flipped nano's default from `minimal` to `low`, ending the 400s that had broken every nano call; persisted `minimal` self-heals via existing validation.",
+            "text": "Adds Kimi K2.7 Code (256K), GLM 5.2 (1M), and Qwen3.7 Plus (256K) to the catalog with matching display pricing, legacy-id aliases, and benchmark-pricing mirror entries.",
             "commit_shas": [
-              "aa57d7884ed05fdbc57bd18aa292ac7d9f00d29c"
+              "1fe8f07a4947fc57312ae6610b20145ab1c6b324"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added Kimi K2.7 Code (256K), GLM 5.2 (1M), and Qwen3.7 Plus (256K) as Fireworks-hosted chat models, including catalog entries, legacy-id aliases, display pricing, and the benchmark-pricing mirror.",
+            "text": "Stops the picker from offering `minimal` reasoning effort on GPT-5.4 / -mini / -nano (their API rejects it) and flips nano's default to `low`, so requests no longer 400; persisted `minimal` self-heals via the existing efforts validation.",
             "commit_shas": [
-              "1fe8f07a4947fc57312ae6610b20145ab1c6b324"
+              "aa57d7884ed05fdbc57bd18aa292ac7d9f00d29c"
             ],
             "confidence": "high"
           }
@@ -482,11 +529,11 @@
         "time_label": "5:16 AM",
         "started_at": "2026-06-24T12:16:35.000Z",
         "ended_at": "2026-06-24T12:16:35.000Z",
-        "title": "Model picker no longer stacks overlapping hover flyouts",
-        "summary": "Fixed a scroll-vs-coordinator race that let closed model rows resurrect their flyout, producing overlapping panels in the picker.",
+        "title": "Model picker no longer stacks overlapping flyouts on scroll",
+        "summary": "Fixes a race where scrolling the model list under a stationary pointer left multiple submenus open at once.",
         "items": [
           {
-            "text": "Tracked open/closed intent in a synchronous ref so a stale scroll-reflow on an already-closed model row bails instead of re-opening its flyout, while still letting genuinely-open flyouts reposition live; regression tests pin the single-open invariant and the close-then-scroll race.",
+            "text": "Tracks open/closed intent in a synchronous ref so a stale scroll-reflow on an already-closed flyout bails instead of resurrecting it, preserving the single-open invariant while keeping live repositioning intact; regression tests pin both the invariant and the close-then-scroll race.",
             "commit_shas": [
               "9209a189322267d549729397d1f405336d999859"
             ],
@@ -499,20 +546,44 @@
         "time_label": "10:11 AM",
         "started_at": "2026-06-24T17:11:29.000Z",
         "ended_at": "2026-06-24T17:11:29.000Z",
-        "title": "Stuck-stream watchdog stops killing live extended-thinking turns",
-        "summary": "The destructive 60s client-side auto-abort was cancelling long but still-alive turns that the upstream then billed; the hard cap moves to 5 minutes of truly dead silence.",
+        "title": "Stuck-stream watchdog stops killing live chat turns",
+        "summary": "The destructive 60s auto-abort that was cancelling long extended-thinking turns — and billing users for output they never saw — is replaced with a 5-minute absolute safety cap.",
         "items": [
           {
-            "text": "Moved the destructive auto-abort from 60s of wire silence to a 5-minute absolute safety cap (`ABSOLUTE_TIMEOUT_MS = 300_000`), so long extended-thinking turns are no longer cancelled — and no longer billed-but-shown-as-failed — and the 90s SSE idle reattach can recover genuine socket drops first.",
+            "text": "Raises the destructive auto-abort from 60s to a 5-minute `ABSOLUTE_TIMEOUT_MS` cap so long extended-thinking turns aren't cancelled mid-flight; the 90s SSE idle reattach can now recover real socket drops instead of being pre-empted, and users actually receive the output they were billed for.",
             "commit_shas": [
               "f33920b0f48f77a38811b7df4bd4cec75a947d2b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Kept the non-destructive 30s \"taking longer than usual\" pill (Stop / Retry / Report) unchanged, and added a regression test pinning that no auto-abort fires at the old 60s mark — only at the absolute cap.",
+            "text": "The non-destructive 30s \"taking longer than usual\" pill (Stop / Retry / Report) is unchanged; new tests pin that the abort no longer fires at the old 60s mark and that `markStreamProgress` keeps the watchdog quiet across the new window.",
             "commit_shas": [
               "f33920b0f48f77a38811b7df4bd4cec75a947d2b"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "3:52 AM",
+        "started_at": "2026-06-25T10:52:58.000Z",
+        "ended_at": "2026-06-25T10:52:58.000Z",
+        "title": "Remote-agent pollers back off on dead or stuck VMs",
+        "summary": "Failed or unschedulable remote agents no longer flood `/remote_agent/state` with hundreds of 502/404s.",
+        "items": [
+          {
+            "text": "The profile-status store stops polling once an agent reports a terminal `error`/`stopped` state or fails three polls in a row, then re-arms via the `RemoteAgentStateChanged` websocket push or a later `registerRemoteAgents` refresh.",
+            "commit_shas": [
+              "574b6b215a9ba0244387e6bfd50c814c3de294cf"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The AgentEnvironment popover's recursive poll backs off from its 2.5s provisioning cadence to a 60s settled interval on terminal or repeatedly-failing states, and auto-resumes the fast cadence when a poll succeeds again — leaving the provisioning→ready happy path untouched.",
+            "commit_shas": [
+              "574b6b215a9ba0244387e6bfd50c814c3de294cf"
             ],
             "confidence": "high"
           }
@@ -520,11 +591,11 @@
       }
     ],
     "highlights": [
-      "Stuck-stream auto-abort softened from 60s to a 5-minute safety cap",
-      "Kimi K2.7 Code, GLM 5.2, and Qwen3.7 Plus added",
-      "Right-click and F2 rename restored in the projects sidebar",
-      "Usage-signal analytics with billing enrichment now emitted per turn"
+      "Long extended-thinking turns no longer get auto-killed at 60s",
+      "Dead remote agents stop flooding the backend with state polls",
+      "Kimi K2.7 Code, GLM 5.2, and Qwen3.7 Plus join the model catalog",
+      "GPT-5.4 nano calls no longer 400 on unsupported 'minimal' effort"
     ],
-    "raw_commit_count": 6
+    "raw_commit_count": 7
   }
 }

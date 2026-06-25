@@ -2,19 +2,19 @@
   {
     "date": "2026-06-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.709.1",
-    "title": "Stream watchdog softening, model catalog refresh, and sidebar context menus return",
-    "intro": "A focused nightly across chat reliability and the model picker: the stream watchdog no longer kills long extended-thinking turns you've already been billed for, the GPT-5.4 family stops 400-ing on an unsupported reasoning tier, and three new Fireworks-hosted models join the catalog. The projects sidebar also gets its right-click menu and F2 rename back, and the server starts emitting billing-enriched usage signals for completed turns.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.710.1",
+    "title": "Sturdier streams, smarter pollers, and a refreshed model lineup",
+    "intro": "Today's nightly is a reliability-leaning release: long-running chat turns are no longer killed by an over-eager watchdog, dead remote agents stop hammering the backend, and the model picker behaves itself when scrolled. Alongside the fixes, three new Fireworks-hosted models land in the catalog and a new server-side usage-signal pipeline begins emitting enriched analytics for completed chat turns.",
+    "entryCount": 6,
     "highlights": [
-      "Stuck-stream auto-abort softened from 60s to a 5-minute safety cap",
-      "Kimi K2.7 Code, GLM 5.2, and Qwen3.7 Plus added",
-      "Right-click and F2 rename restored in the projects sidebar",
-      "Usage-signal analytics with billing enrichment now emitted per turn"
+      "Long extended-thinking turns no longer get auto-killed at 60s",
+      "Dead remote agents stop flooding the backend with state polls",
+      "Kimi K2.7 Code, GLM 5.2, and Qwen3.7 Plus join the model catalog",
+      "GPT-5.4 nano calls no longer 400 on unsupported 'minimal' effort"
     ],
-    "rawCommitCount": 6,
-    "generatedAt": "2026-06-25T08:43:45.568Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.709.1",
+    "rawCommitCount": 7,
+    "generatedAt": "2026-06-25T11:16:24.850Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.710.1",
     "path": "history/2026-06-25.json"
   },
   {
