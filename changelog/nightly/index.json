@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-06-25",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.709.1",
+    "title": "Stream watchdog softening, model catalog refresh, and sidebar context menus return",
+    "intro": "A focused nightly across chat reliability and the model picker: the stream watchdog no longer kills long extended-thinking turns you've already been billed for, the GPT-5.4 family stops 400-ing on an unsupported reasoning tier, and three new Fireworks-hosted models join the catalog. The projects sidebar also gets its right-click menu and F2 rename back, and the server starts emitting billing-enriched usage signals for completed turns.",
+    "entryCount": 5,
+    "highlights": [
+      "Stuck-stream auto-abort softened from 60s to a 5-minute safety cap",
+      "Kimi K2.7 Code, GLM 5.2, and Qwen3.7 Plus added",
+      "Right-click and F2 rename restored in the projects sidebar",
+      "Usage-signal analytics with billing enrichment now emitted per turn"
+    ],
+    "rawCommitCount": 6,
+    "generatedAt": "2026-06-25T08:43:45.568Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.709.1",
+    "path": "history/2026-06-25.json"
+  },
+  {
     "date": "2026-06-20",
     "channel": "nightly",
     "version": "0.1.0-nightly.704.1",
