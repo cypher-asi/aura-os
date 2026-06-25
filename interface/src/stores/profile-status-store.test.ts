@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const { mockEventStore, mockAuthStore, mockSidekickStore, mockApi } = vi.hoisted(() => {
   const subscribers: Record<string, ((...args: unknown[]) => void)[]> = {};
@@ -60,6 +60,7 @@ vi.mock("../api/client", () => ({
 
 import { useProfileStatusStore } from "./profile-status-store";
 import { ApiClientError } from "../shared/api/core";
+import { EventType } from "../shared/types/aura-events";
 
 beforeEach(() => {
   useProfileStatusStore.setState({ statuses: {}, machineTypes: {} });
@@ -169,6 +170,120 @@ describe("profile-status-store", () => {
           (args: unknown[]) => args[0] === "r-404",
         ),
       ).toBe(false);
+    });
+
+    it("pauses polling on a terminal `error` state but keeps the status", async () => {
+      // Unlike a 404 (agent gone -> dropped), a terminal lifecycle state
+      // means "dead until a user recovers it": stop polling but keep
+      // showing `error`. This is the core of the fix for the 502/404 flood
+      // on a failed remote agent.
+      mockApi.swarm.getRemoteAgentState.mockImplementation((id: string) =>
+        id === "r-term"
+          ? Promise.resolve({ state: "error" })
+          : Promise.resolve({ state: "idle" }),
+      );
+
+      useProfileStatusStore.getState().registerRemoteAgents([
+        { agent_id: "r-term" },
+      ]);
+
+      await vi.waitFor(() => {
+        expect(useProfileStatusStore.getState().statuses["r-term"]).toBe("error");
+      });
+      // Status + machineType are KEPT (contrast with the 404 case).
+      expect(useProfileStatusStore.getState().machineTypes["r-term"]).toBe("remote");
+
+      // No longer polled: a fresh register of another agent triggers a poll
+      // over the active set, which must not include r-term.
+      mockApi.swarm.getRemoteAgentState.mockClear();
+      useProfileStatusStore.getState().registerRemoteAgents([
+        { agent_id: "r-after-term" },
+      ]);
+      await vi.waitFor(() => {
+        expect(mockApi.swarm.getRemoteAgentState).toHaveBeenCalledWith("r-after-term");
+      });
+      expect(
+        mockApi.swarm.getRemoteAgentState.mock.calls.some(
+          (args: unknown[]) => args[0] === "r-term",
+        ),
+      ).toBe(false);
+    });
+
+    it("pauses polling after consecutive failures but keeps the status", async () => {
+      // The 502-flood fix for the app-wide poller: repeated transport/5xx
+      // failures (here a stuck/unreachable agent) must stop polling after
+      // MAX_CONSECUTIVE_POLL_FAILURES (3) rather than 502ing every 30s
+      // forever. Each registerRemoteAgents() triggers a full poll cycle, so
+      // registering further agents drives more consecutive failures without
+      // relying on the 30s interval / fake timers.
+      const callsFor = (id: string) =>
+        mockApi.swarm.getRemoteAgentState.mock.calls.filter(
+          (args: unknown[]) => args[0] === id,
+        ).length;
+
+      mockApi.swarm.getRemoteAgentState.mockImplementation((id: string) =>
+        id === "r-fail"
+          ? Promise.reject(new Error("502 Bad Gateway"))
+          : Promise.resolve({ state: "idle" }),
+      );
+
+      const store = useProfileStatusStore.getState();
+      // Drive several poll cycles — well past the 3-failure cap. The exact
+      // poll on which the pause lands is timing-sensitive (the pause runs in
+      // the rejection's `.catch` microtask), so we assert the count
+      // *stabilizes* rather than an exact value.
+      store.registerRemoteAgents([{ agent_id: "r-fail" }]);
+      for (const id of ["r-fail-d1", "r-fail-d2", "r-fail-d3", "r-fail-d4"]) {
+        store.registerRemoteAgents([{ agent_id: id }]);
+        await vi.waitFor(() => expect(callsFor(id)).toBeGreaterThanOrEqual(1));
+      }
+
+      // r-fail has now hit the failure cap and been paused.
+      const frozen = callsFor("r-fail");
+      // MAX_CONSECUTIVE_POLL_FAILURES in the store is 3.
+      expect(frozen).toBeGreaterThanOrEqual(3);
+      // Status is KEPT as "error" (not deleted, unlike the 404 case).
+      expect(useProfileStatusStore.getState().statuses["r-fail"]).toBe("error");
+
+      // A further poll cycle must NOT poll r-fail again — its count is frozen.
+      store.registerRemoteAgents([{ agent_id: "r-fail-d5" }]);
+      await vi.waitFor(() => expect(callsFor("r-fail-d5")).toBeGreaterThanOrEqual(1));
+      expect(callsFor("r-fail")).toBe(frozen);
+    });
+
+    it("re-arms polling when a paused agent reports a non-terminal state via WS", async () => {
+      // Re-engagement: after we pause a terminal agent, a recovery that
+      // moves it back to a live state (via the RemoteAgentStateChanged
+      // push) must resume polling so its VM details refresh again.
+      useProfileStatusStore.getState().init();
+
+      mockApi.swarm.getRemoteAgentState.mockImplementation((id: string) =>
+        id === "r-reeng"
+          ? Promise.resolve({ state: "error" })
+          : Promise.resolve({ state: "idle" }),
+      );
+      useProfileStatusStore.getState().registerRemoteAgents([
+        { agent_id: "r-reeng" },
+      ]);
+      await vi.waitFor(() => {
+        expect(useProfileStatusStore.getState().statuses["r-reeng"]).toBe("error");
+      });
+
+      // Recovery -> provisioning via WS push re-arms the poller.
+      mockApi.swarm.getRemoteAgentState.mockClear();
+      mockApi.swarm.getRemoteAgentState.mockResolvedValue({ state: "provisioning" });
+      mockEventStore._fire(EventType.RemoteAgentStateChanged, {
+        content: { agent_id: "r-reeng", state: "provisioning" },
+      });
+
+      // A subsequent poll cycle (triggered by registering another agent)
+      // now includes the re-armed r-reeng.
+      useProfileStatusStore.getState().registerRemoteAgents([
+        { agent_id: "r-reeng-trigger" },
+      ]);
+      await vi.waitFor(() => {
+        expect(mockApi.swarm.getRemoteAgentState).toHaveBeenCalledWith("r-reeng");
+      });
     });
   });
 

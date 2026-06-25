@@ -5,6 +5,18 @@ import { useEventStore } from "../stores/event-store/index";
 import { EventType } from "../shared/types/aura-events";
 
 const POLL_INTERVAL_MS = 30_000;
+/**
+ * Slow cadence once the VM has settled into a terminal state (`error` /
+ * `stopped`) or keeps failing — stops a dead/stuck machine from flooding
+ * `/remote_agent/state` every 30s. A later successful poll resets the
+ * cadence, and the WS push below keeps status live in the meantime.
+ */
+const SETTLED_POLL_INTERVAL_MS = 60_000;
+const MAX_CONSECUTIVE_POLL_FAILURES = 3;
+
+function isTerminalVmState(state: string | undefined): boolean {
+  return state === "error" || state === "stopped";
+}
 
 /**
  * Fetches and polls detailed remote VM state for a single agent.
@@ -23,26 +35,40 @@ export function useRemoteAgentState(agentId: string | undefined) {
   useEffect(() => {
     if (!agentId) return;
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let consecutiveFailures = 0;
 
-    const fetchState = () => {
+    // Recursive timeout (vs setInterval) so each tick can back off when the
+    // VM is terminal or unreachable — see SETTLED_POLL_INTERVAL_MS.
+    const tick = () => {
+      let terminal = false;
       api.swarm
         .getRemoteAgentState(agentId)
         .then((state) => {
-          if (!cancelled) {
-            setData(state);
-            setError(null);
-          }
+          if (cancelled) return;
+          consecutiveFailures = 0;
+          terminal = isTerminalVmState(state.state);
+          setData(state);
+          setError(null);
         })
         .catch((e) => {
-          if (!cancelled) setError(e.message);
+          if (cancelled) return;
+          consecutiveFailures += 1;
+          setError(e.message);
         })
         .finally(() => {
-          if (!cancelled) setLoading(false);
+          if (cancelled) return;
+          setLoading(false);
+          const settled =
+            terminal || consecutiveFailures >= MAX_CONSECUTIVE_POLL_FAILURES;
+          timer = setTimeout(
+            tick,
+            settled ? SETTLED_POLL_INTERVAL_MS : POLL_INTERVAL_MS,
+          );
         });
     };
 
-    fetchState();
-    const interval = setInterval(fetchState, POLL_INTERVAL_MS);
+    tick();
 
     const unsubscribe = subscribe(EventType.RemoteAgentStateChanged, (event) => {
       const c = event.content;
@@ -67,7 +93,7 @@ export function useRemoteAgentState(agentId: string | undefined) {
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (timer) clearTimeout(timer);
       unsubscribe();
     };
   }, [agentId, subscribe]);
