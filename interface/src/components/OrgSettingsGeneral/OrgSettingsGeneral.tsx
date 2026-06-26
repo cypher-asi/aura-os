@@ -5,6 +5,7 @@ import { formatBuildTime, getBuildInfo } from "../../lib/build-info";
 import { UpdateControl, formatLastChecked } from "../UpdateControl";
 import { useUpdateStatus } from "../UpdateControl/useUpdateStatus";
 import { ImageCropModal } from "../ImageCropModal";
+import { useUIModalStore } from "../../stores/ui-modal-store";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 
 interface Props {
@@ -33,6 +34,10 @@ export function OrgSettingsGeneral({
 }: Props) {
   const build = getBuildInfo();
   const channelLabel = build.channel.charAt(0).toUpperCase() + build.channel.slice(1);
+  // Open the in-app changelog modal (same one the Help menu uses) rather
+  // than linking out to the public web page — keeps desktop/web users in
+  // the app and shows the live, data-driven changelog.
+  const openChangelog = useUIModalStore((s) => s.openChangelog);
   const {
     supported: updaterSupported,
     status: updateStatus,
@@ -224,15 +229,22 @@ export function OrgSettingsGeneral({
                 </span>
               </>
             ) : null}
-            <a
-              href="https://aura.ai/changelog"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={openChangelog}
               className={styles.rowDescription}
-              style={{ color: "var(--color-brand-primary)", textDecoration: "none" }}
+              style={{
+                color: "var(--color-brand-primary)",
+                background: "none",
+                border: "none",
+                padding: 0,
+                font: "inherit",
+                textAlign: "left",
+                cursor: "pointer",
+              }}
             >
               Change Log
-            </a>
+            </button>
           </div>
           <div className={`${styles.rowControl} ${styles.rowControlWide}`}>
             <UpdateControl layout="inline" showLastChecked={false} />
