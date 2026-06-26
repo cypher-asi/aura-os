@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-06-26",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.711.1",
+    "title": "Changelog access lands directly inside Settings",
+    "intro": "Today's nightly threads a single feature end-to-end: a Change Log entry point in Settings that opens the live, in-app changelog instead of bouncing users out to the web. Follow-up polish trims the embedded view to fit its in-app context.",
+    "entryCount": 2,
+    "highlights": [
+      "Change Log shortcut added to Settings → Updates",
+      "In-app changelog modal replaces external web link",
+      "Embedded changelog hides Download and GitHub affordances"
+    ],
+    "rawCommitCount": 4,
+    "generatedAt": "2026-06-26T09:08:53.249Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.711.1",
+    "path": "history/2026-06-26.json"
+  },
+  {
     "date": "2026-06-25",
     "channel": "nightly",
     "version": "0.1.0-nightly.710.1",
