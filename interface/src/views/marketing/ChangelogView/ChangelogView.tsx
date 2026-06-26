@@ -395,8 +395,19 @@ function getMediaAltText(title: string, alt: string | undefined): string {
  * of the Next.js `async` server component. Page chrome (public-mode
  * `AuraShell` + `PublicMarketingPanel` scroll column) is owned by the
  * parent route.
+ *
+ * `embedded` renders the changelog inside the in-app modal (Settings /
+ * Help menu) rather than the public marketing page. In that mode the
+ * out-of-app affordances in the header are hidden — the `Download` and
+ * `GitHub` links, and the version's click-to-download — since an
+ * in-app user updates via Settings, not a web download, and shouldn't
+ * be punted out to GitHub. The version/"Released …" info still shows.
  */
-export function ChangelogView(): ReactNode {
+export function ChangelogView({
+  embedded = false,
+}: {
+  embedded?: boolean;
+} = {}): ReactNode {
   const { t, i18n } = useTranslation("marketing");
   const statNumberFormatter = useMemo(
     () => new Intl.NumberFormat(i18n.language),
@@ -623,21 +634,27 @@ export function ChangelogView(): ReactNode {
                   })}
                 </span>
                 {latestVersion ? (
-                  <button
-                    type="button"
-                    className="changelogStatValue changelogStatValueButton"
-                    onClick={handleVersionAutoDownload}
-                    aria-label={t("changelog.downloadVersionAriaLabel", {
-                      defaultValue: `Download AURA ${latestVersion} for your operating system`,
-                      version: latestVersion,
-                    })}
-                    title={t("changelog.downloadVersionTitle", {
-                      defaultValue:
-                        "Click to download the build for your operating system",
-                    })}
-                  >
-                    {latestVersion}
-                  </button>
+                  embedded ? (
+                    // In-app: no click-to-download (updates happen via
+                    // Settings), so the version is plain text.
+                    <span className="changelogStatValue">{latestVersion}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="changelogStatValue changelogStatValueButton"
+                      onClick={handleVersionAutoDownload}
+                      aria-label={t("changelog.downloadVersionAriaLabel", {
+                        defaultValue: `Download AURA ${latestVersion} for your operating system`,
+                        version: latestVersion,
+                      })}
+                      title={t("changelog.downloadVersionTitle", {
+                        defaultValue:
+                          "Click to download the build for your operating system",
+                      })}
+                    >
+                      {latestVersion}
+                    </button>
+                  )
                 ) : (
                   <span className="changelogStatValue">—</span>
                 )}
@@ -659,24 +676,26 @@ export function ChangelogView(): ReactNode {
                             defaultValue: "Released recently",
                           })}
                     </time>
-                    <div className="changelogStatVersionActions">
-                      <Link
-                        to="/download"
-                        className="changelogStatVersionLink"
-                      >
-                        {t("changelog.download", { defaultValue: "Download" })}
-                        <span aria-hidden="true">&nbsp;&rarr;</span>
-                      </Link>
-                      <a
-                        href="https://github.com/cypher-asi/aura-os"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="changelogStatVersionLink"
-                      >
-                        {t("changelog.github", { defaultValue: "GitHub" })}
-                        <span aria-hidden="true">&nbsp;&rarr;</span>
-                      </a>
-                    </div>
+                    {embedded ? null : (
+                      <div className="changelogStatVersionActions">
+                        <Link
+                          to="/download"
+                          className="changelogStatVersionLink"
+                        >
+                          {t("changelog.download", { defaultValue: "Download" })}
+                          <span aria-hidden="true">&nbsp;&rarr;</span>
+                        </Link>
+                        <a
+                          href="https://github.com/cypher-asi/aura-os"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="changelogStatVersionLink"
+                        >
+                          {t("changelog.github", { defaultValue: "GitHub" })}
+                          <span aria-hidden="true">&nbsp;&rarr;</span>
+                        </a>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </div>

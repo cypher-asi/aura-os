@@ -18,7 +18,7 @@ const CURRENT_PST_MONTH_KEY = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
 }).format(new Date());
 
-function renderChangelogView() {
+function renderChangelogView(embedded = false) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: Infinity },
@@ -27,7 +27,7 @@ function renderChangelogView() {
   return render(
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
-        <ChangelogView />
+        <ChangelogView embedded={embedded} />
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -378,6 +378,46 @@ describe("ChangelogView", () => {
     expect(githubLink.getAttribute("rel") ?? "").toMatch(/noopener/);
     expect(githubLink.getAttribute("rel") ?? "").toMatch(/noreferrer/);
     expect(githubLink.textContent).toMatch(/GitHub/);
+  });
+
+  it("hides the Download/GitHub links and version download in embedded mode", async () => {
+    // In the in-app modal (embedded), the out-of-app affordances are hidden:
+    // an in-app user updates via Settings, not a web download, and shouldn't
+    // be punted out to GitHub. The version/"Released …" info still shows.
+    const generatedAt = new Date(
+      Date.now() - 2 * 60 * 60 * 1000,
+    ).toISOString();
+    const fakeEntry: ChangelogEntry = {
+      repo: "aura-os",
+      date: "2026-05-28",
+      channel: "nightly",
+      version: "1.2.3",
+      generatedAt,
+      releaseUrl: "https://github.com/cypher-asi/aura-os/releases/tag/v1.2.3",
+      rawCommitCount: 0,
+      filteredCommitCount: 0,
+      rendered: { title: "Test release", intro: "", highlights: [], entries: [] },
+    };
+
+    vi.spyOn(changelogApi, "fetchChangelogEntries").mockResolvedValue([
+      fakeEntry,
+    ]);
+
+    renderChangelogView(true);
+
+    const label = await screen.findByText(/Current version/i);
+    const stat = label.closest(".changelogStat")!;
+
+    // Version + release age still show (info, not links).
+    const value = stat.querySelector(".changelogStatValue");
+    expect(value?.textContent).toBe("1.2.3");
+    expect(stat.querySelector("time")?.textContent).toMatch(/Released 2 hours ago/);
+
+    // No Download/GitHub links, and the version is plain text — not the
+    // click-to-download button used on the public page.
+    expect(stat.querySelectorAll("a").length).toBe(0);
+    expect(stat.querySelector(".changelogStatValueButton")).toBeNull();
+    expect(stat.querySelector("button")).toBeNull();
   });
 
   it("auto-downloads the platform-specific installer when the version button is clicked", async () => {
