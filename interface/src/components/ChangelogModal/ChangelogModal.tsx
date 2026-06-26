@@ -18,7 +18,7 @@ export function ChangelogModal({
       fullHeight
       className={styles.wideModal}
     >
-      <ChangelogView />
+      <ChangelogView embedded />
     </Modal>
   );
 }
