@@ -416,49 +416,45 @@ export function drawInfoStrip(
   ctx.clearRect(0, 0, w, h);
 
   const padL = 84;
-  const padR = 84;
-  const valueX = w - padR;
-  // Vertical center of the (short) nameplate canvas; both the name baseline and
-  // the role pill are positioned relative to it so they stay centered as the
-  // plate height changes.
-  const cy = h / 2;
 
   const light = opts.theme === "light";
 
-  // Name (stamped) on the left, 20% smaller than before (154 -> 123). Dark ink
-  // with a light highlight in light mode; bright engraved text in dark mode.
+  // Name (stamped) on the top line, left-aligned. Sized a touch smaller than
+  // before (123 -> 104) and lifted toward the top of the plate so the role can
+  // sit on its own line underneath instead of a right-aligned pill that
+  // overlapped long names.
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
-  ctx.font = `700 123px ${STRIP_SANS}`;
+  ctx.font = `700 104px ${STRIP_SANS}`;
   engrave(
     ctx,
     opts.name || "Unnamed",
     padL,
-    cy + 42,
+    h * 0.46,
     light ? "#15181c" : "#f4f6f9",
     light ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)",
   );
 
-  // Role pill, right-aligned, vertically centered on the name. Light mode uses a
+  // Role pill on its own line beneath the name, left-aligned. Light mode uses a
   // pale fill with dark text so the tag stays readable on the near-white plate.
   const role = (opts.role || "").trim();
   if (role) {
-    ctx.font = `600 60px ${STRIP_SANS}`;
+    ctx.font = `600 48px ${STRIP_SANS}`;
     const label = role.toUpperCase();
     const tw = ctx.measureText(label).width;
-    const pillPad = 48;
-    const pillH = 103;
+    const pillPad = 36;
+    const pillH = 72;
     const pillW = tw + pillPad * 2;
-    const pillX = valueX - pillW;
-    const pillY = cy - pillH / 2;
-    roundRectPath(ctx, pillX, pillY, pillW, pillH, 24);
+    const pillX = padL;
+    const pillY = h - pillH - 6;
+    roundRectPath(ctx, pillX, pillY, pillW, pillH, 20);
     ctx.fillStyle = light ? "rgba(240,242,246,0.85)" : "rgba(8,10,13,0.7)";
     ctx.fill();
     ctx.lineWidth = 2;
     ctx.strokeStyle = light ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.18)";
     ctx.stroke();
     ctx.fillStyle = light ? "#15181c" : "#eef1f5";
-    ctx.fillText(label, pillX + pillPad, pillY + pillH / 2 + 22);
+    ctx.fillText(label, pillX + pillPad, pillY + pillH / 2 + 17);
   }
 
   ctx.textAlign = "left";
