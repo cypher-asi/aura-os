@@ -68,6 +68,29 @@ fn get_missing_setting_returns_not_found() {
 }
 
 #[test]
+fn open_rejects_parent_directory_segments() {
+    let dir = TempDir::new().expect("failed to create temp dir");
+    let bad_path = dir.path().join("..").join("outside-store");
+
+    let err = match SettingsStore::open(&bad_path) {
+        Ok(_) => panic!("parent segments must be rejected"),
+        Err(err) => err,
+    };
+
+    assert!(matches!(err, StoreError::Io(_)));
+}
+
+#[test]
+fn unknown_column_family_is_rejected() {
+    let (store, _dir) = open_temp_store();
+    let err = store
+        .put_cf_bytes("../settings", b"key", b"value")
+        .expect_err("unknown column family must be rejected");
+
+    assert!(matches!(err, StoreError::NotFound(_)));
+}
+
+#[test]
 fn list_settings_with_prefix_returns_org_integration_keys() {
     let (store, _dir) = open_temp_store();
 
@@ -95,11 +118,11 @@ fn list_settings_with_prefix_returns_org_integration_keys() {
 // silently: a previous crash left `settings.json` the right size but
 // full of NUL bytes (or otherwise unparseable), and the next launch
 // panicked the embedded server thread on `serde_json::from_str`. The
-// store now quarantines the bad file and starts with an empty CF so
-// the app can boot.
+// store now ignores the bad file while loading and starts with an empty CF so
+// the app can boot. The next successful write replaces the bad file.
 
 #[test]
-fn open_quarantines_all_zero_settings_file_and_starts_fresh() {
+fn open_ignores_all_zero_settings_file_and_next_write_replaces_it() {
     let dir = TempDir::new().expect("failed to create temp dir");
     // Pre-stage a 1KiB all-NUL `settings.json`, the exact shape the
     // real Windows install left on disk after a torn write.
@@ -108,47 +131,29 @@ fn open_quarantines_all_zero_settings_file_and_starts_fresh() {
 
     let store = SettingsStore::open(dir.path()).expect("open must self-heal corrupt cf file");
 
-    let entries: Vec<_> = std::fs::read_dir(dir.path())
-        .expect("readdir tmp")
-        .filter_map(|e| e.ok())
-        .map(|e| e.file_name().to_string_lossy().into_owned())
-        .collect();
-    assert!(
-        entries
-            .iter()
-            .any(|name| name.starts_with("settings.json.corrupt-")),
-        "expected a quarantined sibling file, found: {entries:?}"
-    );
-    assert!(
-        !entries.iter().any(|name| name == "settings.json"),
-        "the corrupt original must have been moved aside, found: {entries:?}"
-    );
-
     // The store is usable: writes go through and round-trip cleanly.
     store.put_setting("k", b"v").expect("put after self-heal");
     assert_eq!(store.get_setting("k").expect("get after self-heal"), b"v");
+    drop(store);
+
+    let reopened = SettingsStore::open(dir.path()).expect("reopen after self-heal write");
+    assert_eq!(reopened.get_setting("k").expect("get after reopen"), b"v");
 }
 
 #[test]
-fn open_quarantines_garbage_json_settings_file_and_starts_fresh() {
+fn open_ignores_garbage_json_settings_file_and_next_write_replaces_it() {
     let dir = TempDir::new().expect("failed to create temp dir");
     std::fs::write(dir.path().join("settings.json"), b"not json {")
         .expect("failed to stage garbage settings.json");
 
     let store = SettingsStore::open(dir.path()).expect("open must self-heal garbage cf file");
 
-    let quarantined = std::fs::read_dir(dir.path())
-        .expect("readdir tmp")
-        .filter_map(|e| e.ok())
-        .any(|e| {
-            e.file_name()
-                .to_string_lossy()
-                .starts_with("settings.json.corrupt-")
-        });
-    assert!(quarantined, "expected a quarantined sibling file");
-
     store.put_setting("k", b"v").expect("put after self-heal");
     assert_eq!(store.get_setting("k").expect("get after self-heal"), b"v");
+    drop(store);
+
+    let reopened = SettingsStore::open(dir.path()).expect("reopen after self-heal write");
+    assert_eq!(reopened.get_setting("k").expect("get after reopen"), b"v");
 }
 
 #[test]

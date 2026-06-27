@@ -51,6 +51,7 @@ import { swarmApi } from "../shared/api/swarm";
 import { channelsApi } from "../shared/api/channels";
 import { processApi } from "../shared/api/process";
 import { memoryApi } from "../shared/api/memory";
+import { agentImprovementsApi } from "../shared/api/agent-improvements";
 import { harnessSkillsApi } from "../shared/api/harness-skills";
 import { notesApi } from "../shared/api/notes";
 import { marketplaceApi } from "./marketplace";
@@ -83,6 +84,7 @@ export const api = {
   superAgent: superAgentApi,
   process: processApi,
   memory: memoryApi,
+  agentImprovements: agentImprovementsApi,
   harnessSkills: harnessSkillsApi,
   notes: notesApi,
   marketplace: marketplaceApi,

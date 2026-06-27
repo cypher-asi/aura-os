@@ -5,7 +5,10 @@ use std::sync::Arc;
 use aura_os_core::{Agent, AgentId, AgentPermissions, AgentScope, Capability, OrgId};
 use aura_os_store::SettingsStore;
 
-use super::AgentService;
+use super::{
+    AgentImprovementKind, AgentImprovementProposal, AgentImprovementStatus,
+    AgentSelfImprovementConfig, AgentSelfImprovementMode, AgentService,
+};
 
 fn sample_agent(name: &str) -> Agent {
     let now = chrono::Utc::now();
@@ -637,4 +640,83 @@ fn sentinel_survives_across_service_instances() {
             .is_ok(),
         "sentinel must persist across AgentService instances backed by the same store"
     );
+}
+
+#[test]
+fn self_improvement_config_defaults_off_and_persists() {
+    let (service, _dir) = open_service();
+    let agent_id = AgentId::new();
+
+    let default_config = service
+        .load_agent_self_improvement_config(&agent_id)
+        .expect("default config");
+    assert_eq!(default_config.mode, AgentSelfImprovementMode::Off);
+    assert!(default_config.allow_memory);
+    assert!(default_config.allow_skills);
+    assert!(!default_config.allow_background_review);
+
+    let config = AgentSelfImprovementConfig {
+        mode: AgentSelfImprovementMode::Propose,
+        allow_memory: true,
+        allow_skills: false,
+        allow_background_review: true,
+    };
+    service
+        .save_agent_self_improvement_config(&agent_id, &config)
+        .expect("save config");
+
+    let reloaded = service
+        .load_agent_self_improvement_config(&agent_id)
+        .expect("reload config");
+    assert_eq!(reloaded, config);
+}
+
+#[test]
+fn improvement_proposals_round_trip_and_replace_by_id() {
+    let (service, _dir) = open_service();
+    let agent_id = AgentId::new();
+    let now = chrono::Utc::now();
+    let proposal = AgentImprovementProposal {
+        id: "proposal-1".to_string(),
+        agent_id,
+        kind: AgentImprovementKind::MemoryFact,
+        title: "Remember repo package manager".to_string(),
+        rationale: "The user corrected this twice.".to_string(),
+        source_session_id: Some("session-1".to_string()),
+        evidence: Vec::new(),
+        provenance: Default::default(),
+        dedup_key: None,
+        payload: serde_json::json!({
+            "key": "repo.package_manager",
+            "value": "pnpm"
+        }),
+        status: AgentImprovementStatus::Pending,
+        error: None,
+        created_at: now,
+        updated_at: now,
+        applied_at: None,
+    };
+
+    service
+        .save_agent_improvement_proposal(proposal.clone())
+        .expect("save proposal");
+
+    let listed = service
+        .list_agent_improvement_proposals(&agent_id)
+        .expect("list proposals");
+    assert_eq!(listed, vec![proposal.clone()]);
+
+    let mut applied = proposal;
+    applied.status = AgentImprovementStatus::Applied;
+    applied.updated_at = now + chrono::Duration::seconds(1);
+    service
+        .save_agent_improvement_proposal(applied.clone())
+        .expect("replace proposal");
+
+    let listed = service
+        .list_agent_improvement_proposals(&agent_id)
+        .expect("list replaced proposals");
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].status, AgentImprovementStatus::Applied);
+    assert_eq!(listed[0].updated_at, applied.updated_at);
 }

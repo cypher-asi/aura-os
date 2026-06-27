@@ -429,6 +429,7 @@ dependencies = [
  "aura-os-storage",
  "aura-os-store",
  "chrono",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror 1.0.69",

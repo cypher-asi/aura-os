@@ -18,11 +18,13 @@ mod manage;
 mod migrate;
 mod update;
 
-pub(crate) use create::{create_skill, install_from_shop};
+pub(crate) use create::{
+    create_skill, create_skill_from_payload, install_from_shop, CreateSkillBody,
+};
 pub(crate) use discover::{discover_skill_paths, get_skill_content};
 pub(crate) use manage::{delete_my_skill, get_my_skill, list_my_skills};
 pub(crate) use migrate::repair_user_created_skill_names;
-pub(crate) use update::update_my_skill;
+pub(crate) use update::{update_my_skill, update_my_skill_from_payload, UpdateSkillBody};
 
 /// Marker written into the YAML frontmatter of every skill created via the
 /// `POST /api/harness/skills` endpoint. Used by `list_my_skills` to separate

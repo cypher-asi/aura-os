@@ -81,8 +81,7 @@ fn pick_loop_template_returns_none_for_empty_slice() {
 #[test]
 fn validate_transition_allows_restoring_archived_instance() {
     assert!(
-        AgentInstanceService::validate_transition(AgentStatus::Archived, AgentStatus::Idle)
-            .is_ok()
+        AgentInstanceService::validate_transition(AgentStatus::Archived, AgentStatus::Idle).is_ok()
     );
 }
 

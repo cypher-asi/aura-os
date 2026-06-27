@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs;
+use std::io;
+use std::path::Component;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
@@ -9,7 +11,11 @@ use serde::de::DeserializeOwned;
 use crate::batch::BatchOp;
 use crate::error::{StoreError, StoreResult};
 
-/// Logical column families. Each maps to a `<name>.json` file on disk.
+pub(crate) const ZERO_AUTH_SESSION_KEY: &str = "zero_auth_session";
+
+type CfMap = BTreeMap<String, Vec<u8>>;
+
+/// Logical column families. Each maps to a static `<name>.json` file on disk.
 ///
 /// This is a historical holdover from the RocksDB-backed predecessor; the
 /// current implementation is a plain JSON-file store per family.
@@ -20,15 +26,59 @@ use crate::error::{StoreError, StoreResult};
 /// family here would require a data migration (existing on-disk
 /// JSON files are keyed by this CF name), so the legacy name is
 /// retained intentionally. Comments only — storage key is stable.
-pub(crate) const CF_NAMES: &[&str] = &[
-    "settings",
-    "super_agent_orchestrations",
-    "bug_reports",
-    "channels",
-];
-pub(crate) const ZERO_AUTH_SESSION_KEY: &str = "zero_auth_session";
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+enum KnownCf {
+    Settings,
+    SuperAgentOrchestrations,
+    BugReports,
+    Channels,
+}
 
-type CfMap = BTreeMap<String, Vec<u8>>;
+impl KnownCf {
+    const ALL: [Self; 4] = [
+        Self::Settings,
+        Self::SuperAgentOrchestrations,
+        Self::BugReports,
+        Self::Channels,
+    ];
+
+    fn parse(cf_name: &str) -> StoreResult<Self> {
+        match cf_name {
+            "settings" => Ok(Self::Settings),
+            "super_agent_orchestrations" => Ok(Self::SuperAgentOrchestrations),
+            "bug_reports" => Ok(Self::BugReports),
+            "channels" => Ok(Self::Channels),
+            _ => Err(StoreError::NotFound(format!("column family '{cf_name}'"))),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Settings => "settings",
+            Self::SuperAgentOrchestrations => "super_agent_orchestrations",
+            Self::BugReports => "bug_reports",
+            Self::Channels => "channels",
+        }
+    }
+
+    fn file_name(self) -> &'static str {
+        match self {
+            Self::Settings => "settings.json",
+            Self::SuperAgentOrchestrations => "super_agent_orchestrations.json",
+            Self::BugReports => "bug_reports.json",
+            Self::Channels => "channels.json",
+        }
+    }
+
+    fn tmp_file_name(self) -> &'static str {
+        match self {
+            Self::Settings => "settings.json.tmp",
+            Self::SuperAgentOrchestrations => "super_agent_orchestrations.json.tmp",
+            Self::BugReports => "bug_reports.json.tmp",
+            Self::Channels => "channels.json.tmp",
+        }
+    }
+}
 
 /// Local JSON-backed key-value store (see crate-level docs for why the name).
 pub struct SettingsStore {
@@ -39,20 +89,55 @@ pub struct SettingsStore {
 
 impl SettingsStore {
     pub fn open(path: &Path) -> StoreResult<Self> {
-        fs::create_dir_all(path)?;
+        let dir = Self::normalize_store_dir(path)?;
+        fs::create_dir_all(&dir)?;
+        let dir = dir.canonicalize()?;
 
         let mut data = BTreeMap::new();
-        for &cf in CF_NAMES {
-            let loaded = Self::load_cf(path, cf)?;
-            data.insert(cf.to_string(), loaded);
+        for cf in KnownCf::ALL {
+            let loaded = Self::load_cf(&dir, cf)?;
+            data.insert(cf.as_str().to_string(), loaded);
         }
         let session_cache = Self::load_session_cache(&data);
 
         Ok(Self {
             data: RwLock::new(data),
             session_cache: RwLock::new(session_cache),
-            dir: path.to_path_buf(),
+            dir,
         })
+    }
+
+    fn normalize_store_dir(path: &Path) -> StoreResult<PathBuf> {
+        if path.as_os_str().is_empty() {
+            return Err(Self::invalid_path("store path must not be empty"));
+        }
+
+        let absolute = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            std::env::current_dir()?.join(path)
+        };
+
+        let mut normalized = PathBuf::new();
+        for component in absolute.components() {
+            match component {
+                Component::Prefix(prefix) => normalized.push(prefix.as_os_str()),
+                Component::RootDir => normalized.push(component.as_os_str()),
+                Component::CurDir => {}
+                Component::Normal(part) => normalized.push(part),
+                Component::ParentDir => {
+                    return Err(Self::invalid_path(
+                        "store path must not contain parent-directory segments",
+                    ));
+                }
+            }
+        }
+
+        Ok(normalized)
+    }
+
+    fn invalid_path(message: &'static str) -> StoreError {
+        StoreError::Io(io::Error::new(io::ErrorKind::InvalidInput, message))
     }
 
     fn load_session_cache(data: &BTreeMap<String, CfMap>) -> Option<ZeroAuthSession> {
@@ -66,12 +151,16 @@ impl SettingsStore {
         }
     }
 
-    fn cf_path(dir: &Path, cf_name: &str) -> PathBuf {
-        dir.join(format!("{cf_name}.json"))
+    fn cf_path(dir: &Path, cf: KnownCf) -> PathBuf {
+        dir.join(cf.file_name())
     }
 
-    fn load_cf(dir: &Path, cf_name: &str) -> StoreResult<CfMap> {
-        let path = Self::cf_path(dir, cf_name);
+    fn cf_tmp_path(dir: &Path, cf: KnownCf) -> PathBuf {
+        dir.join(cf.tmp_file_name())
+    }
+
+    fn load_cf(dir: &Path, cf: KnownCf) -> StoreResult<CfMap> {
+        let path = Self::cf_path(dir, cf);
         if !path.exists() {
             return Ok(BTreeMap::new());
         }
@@ -88,28 +177,18 @@ impl SettingsStore {
         // the ready-channel sender and panicked the main thread with a
         // RecvError. On a windows-subsystem build that means the app
         // exits silently with no UI and only `crash.log` to show for it.
-        // Quarantining the bad file and starting with an empty CF lets
-        // the user keep launching the app; the auth cache will be
-        // re-bootstrapped on next login and any other state in this CF
-        // is best-effort recoverable from remote services.
+        // Starting with an empty in-memory CF lets the user keep
+        // launching the app; the next successful write replaces the bad
+        // file through the normal atomic persist path. The auth cache
+        // will be re-bootstrapped on next login and any other state in
+        // this CF is best-effort recoverable from remote services.
         let encoded: BTreeMap<String, String> = match serde_json::from_str(&raw) {
             Ok(value) => value,
             Err(err) => {
-                let backup = path.with_extension(format!(
-                    "json.corrupt-{}",
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_secs())
-                        .unwrap_or(0)
-                ));
-                let rename_result = fs::rename(&path, &backup);
                 tracing::warn!(
-                    cf = cf_name,
+                    cf = cf.as_str(),
                     error = %err,
-                    path = %path.display(),
-                    backup = %backup.display(),
-                    rename_ok = rename_result.is_ok(),
-                    "settings store file unreadable; quarantined and starting with an empty column family"
+                    "settings store file unreadable; starting with an empty column family"
                 );
                 return Ok(BTreeMap::new());
             }
@@ -129,10 +208,15 @@ impl SettingsStore {
         Ok(map)
     }
 
-    fn persist_cf(dir: &Path, cf_name: &str, map: &CfMap) -> StoreResult<()> {
+    fn persist_cf(dir: &Path, cf: KnownCf, map: &CfMap) -> StoreResult<()> {
+        let path = Self::cf_path(dir, cf);
+        let tmp = Self::cf_tmp_path(dir, cf);
+        let json = Self::encode_cf(map)?;
+        Self::write_atomic_json(&tmp, &path, json.as_bytes())
+    }
+
+    fn encode_cf(map: &CfMap) -> StoreResult<String> {
         use base64::Engine;
-        use std::io::Write;
-        fs::create_dir_all(dir)?;
         let encoded: BTreeMap<&str, String> = map
             .iter()
             .map(|(k, v)| {
@@ -142,9 +226,11 @@ impl SettingsStore {
                 )
             })
             .collect();
-        let json = serde_json::to_string_pretty(&encoded)?;
-        let path = Self::cf_path(dir, cf_name);
-        let tmp = path.with_extension("json.tmp");
+        Ok(serde_json::to_string_pretty(&encoded)?)
+    }
+
+    fn write_atomic_json(tmp: &Path, path: &Path, bytes: &[u8]) -> StoreResult<()> {
+        use std::io::Write;
         // Write + flush + fsync the tmp file BEFORE rename so the
         // atomic-rename promise actually holds across crashes. NTFS
         // happily renames a file whose contents the OS hasn't yet
@@ -161,7 +247,7 @@ impl SettingsStore {
                 .create(true)
                 .truncate(true)
                 .open(&tmp)?;
-            f.write_all(json.as_bytes())?;
+            f.write_all(bytes)?;
             f.sync_all()?;
         }
         fs::rename(&tmp, &path)?;
@@ -172,23 +258,25 @@ impl SettingsStore {
     where
         F: FnOnce(&CfMap) -> StoreResult<R>,
     {
+        let cf = KnownCf::parse(cf_name)?;
         let guard = self.data.read().expect("store lock poisoned");
-        let cf = guard
-            .get(cf_name)
+        let map = guard
+            .get(cf.as_str())
             .ok_or_else(|| StoreError::NotFound(format!("column family '{cf_name}'")))?;
-        f(cf)
+        f(map)
     }
 
     pub(crate) fn with_cf_mut<F, R>(&self, cf_name: &str, f: F) -> StoreResult<R>
     where
         F: FnOnce(&mut CfMap) -> StoreResult<R>,
     {
+        let cf = KnownCf::parse(cf_name)?;
         let mut guard = self.data.write().expect("store lock poisoned");
-        let cf = guard
-            .get_mut(cf_name)
+        let map = guard
+            .get_mut(cf.as_str())
             .ok_or_else(|| StoreError::NotFound(format!("column family '{cf_name}'")))?;
-        let result = f(cf)?;
-        Self::persist_cf(&self.dir, cf_name, cf)?;
+        let result = f(map)?;
+        Self::persist_cf(&self.dir, cf, map)?;
         Ok(result)
     }
 
@@ -247,24 +335,26 @@ impl SettingsStore {
         for op in ops {
             match op {
                 BatchOp::Put { cf, key, value } => {
+                    let cf_name = KnownCf::parse(&cf)?;
                     let map = guard
-                        .get_mut(&cf)
+                        .get_mut(cf_name.as_str())
                         .ok_or_else(|| StoreError::NotFound(format!("column family '{cf}'")))?;
                     map.insert(key, value);
-                    touched_cfs.insert(cf);
+                    touched_cfs.insert(cf_name);
                 }
                 BatchOp::Delete { cf, key } => {
+                    let cf_name = KnownCf::parse(&cf)?;
                     let map = guard
-                        .get_mut(&cf)
+                        .get_mut(cf_name.as_str())
                         .ok_or_else(|| StoreError::NotFound(format!("column family '{cf}'")))?;
                     map.remove(&key);
-                    touched_cfs.insert(cf);
+                    touched_cfs.insert(cf_name);
                 }
             }
         }
-        for cf_name in touched_cfs {
-            if let Some(cf) = guard.get(&cf_name) {
-                Self::persist_cf(&self.dir, &cf_name, cf)?;
+        for cf in touched_cfs {
+            if let Some(map) = guard.get(cf.as_str()) {
+                Self::persist_cf(&self.dir, cf, map)?;
             }
         }
         Ok(())

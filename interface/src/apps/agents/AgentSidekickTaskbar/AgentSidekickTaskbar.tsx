@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   AtSign,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { useAgentSidekickStore, type AgentSidekickTab } from "../stores/agent-sidekick-store";
 import { useShallow } from "zustand/react/shallow";
@@ -21,6 +22,7 @@ import { useSelectedAgent } from "../stores";
 import { useAuth } from "../../../stores/auth-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
 import type { Agent } from "../../../shared/types";
+import { isAgentOwnedByUser } from "../utils/agent-ownership";
 
 const TAB_ICONS: TabItem[] = [
   { id: "profile", icon: <User size={16} />, title: "Agent" },
@@ -28,6 +30,7 @@ const TAB_ICONS: TabItem[] = [
   { id: "skills", icon: <Zap size={16} />, title: "Skills" },
   { id: "permissions", icon: <ShieldCheck size={16} />, title: "Permissions" },
   { id: "messaging", icon: <AtSign size={16} />, title: "Messaging" },
+  { id: "learning", icon: <Sparkles size={16} />, title: "Learning" },
   { id: "memory", icon: <Database size={16} />, title: "Memory" },
   { id: "projects", icon: <FolderOpen size={16} />, title: "Projects" },
   { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
@@ -58,10 +61,7 @@ export function AgentSidekickTaskbar({ agent: agentOverride }: AgentSidekickTask
   const selectedAgent = agentOverride ?? storeSelectedAgent;
   const { user } = useAuth();
 
-  const isOwnAgent =
-    !!user?.network_user_id &&
-    !!selectedAgent &&
-    user.network_user_id === selectedAgent.user_id;
+  const isOwnAgent = isAgentOwnedByUser(selectedAgent, user);
 
   const actions = useMemo<MenuItem[]>(
     () =>
