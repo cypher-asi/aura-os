@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-06-27",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.712.1",
+    "title": "Self-improving agents land with a new Learning tab",
+    "intro": "Today's nightly is anchored by a single substantial change: Aura agents can now propose improvements to themselves. A new server-side workflow, harness-proxy plumbing, and a dedicated Learning tab in the agent panel turn self-improvement into a first-class, reviewable feature across the stack.",
+    "entryCount": 1,
+    "highlights": [
+      "Agents can now propose self-improvements",
+      "New Learning tab in the Agent Info panel",
+      "Self-improvement tool wired into agent and instance chat sessions"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-06-27T09:25:42.366Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.712.1",
+    "path": "history/2026-06-27.json"
+  },
+  {
     "date": "2026-06-26",
     "channel": "nightly",
     "version": "0.1.0-nightly.711.1",
