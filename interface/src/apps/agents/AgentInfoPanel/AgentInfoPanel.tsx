@@ -23,6 +23,7 @@ import { DeleteAgentConfirmModal } from "../hooks/DeleteAgentConfirmModal";
 import { useDeferredModalOpen } from "../../../shared/hooks/use-deferred-modal-open";
 import { SkillsTab } from "./SkillsTab";
 import { MemoryTab } from "./MemoryTab";
+import { LearningTab } from "./LearningTab";
 import { SkillPreview } from "./SkillPreview";
 import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
 import { ProfileTab } from "./ProfileTab";
@@ -31,6 +32,7 @@ import { PermissionsTab } from "./PermissionsTab";
 import { MessagingTab } from "./MessagingTab";
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
+import { isAgentOwnedByUser } from "../utils/agent-ownership";
 import styles from "./AgentInfoPanel.module.css";
 
 interface AgentInfoPanelProps {
@@ -250,7 +252,7 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
   }
 
   const a = selectedAgent;
-  const isOwnAgent = !!user?.network_user_id && user.network_user_id === a.user_id;
+  const isOwnAgent = isAgentOwnedByUser(a, user);
   const isMobileStandalone = variant === "mobileStandalone";
   const effectiveTab = isMobileStandalone ? "profile" : activeTab;
 
@@ -278,6 +280,9 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
           <PermissionsTab agent={a} isOwnAgent={isOwnAgent} />
         )}
         {effectiveTab === "messaging" && <MessagingTab agent={a} />}
+        {effectiveTab === "learning" && (
+          <LearningTab agent={a} isOwnAgent={isOwnAgent} />
+        )}
         {effectiveTab === "projects" && (
           <ProjectsTab
             projectBindings={cascade.bindings}

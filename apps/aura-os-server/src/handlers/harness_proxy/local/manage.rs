@@ -106,7 +106,8 @@ pub(crate) async fn get_my_skill(
         .join(&name)
         .join("SKILL.md");
     let content = std::fs::read_to_string(&skill_path).map_err(|_| StatusCode::NOT_FOUND)?;
-    if extract_frontmatter_field(&content, "source").as_deref() != Some(USER_CREATED_SOURCE_MARKER) {
+    if extract_frontmatter_field(&content, "source").as_deref() != Some(USER_CREATED_SOURCE_MARKER)
+    {
         return Err(StatusCode::FORBIDDEN);
     }
 

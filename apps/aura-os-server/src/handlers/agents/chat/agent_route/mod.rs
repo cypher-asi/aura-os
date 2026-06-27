@@ -224,6 +224,7 @@ pub(crate) async fn send_agent_event_stream(
 
     let org_integrations = fetch_org_integrations(&state, effective_org_id.as_ref(), &jwt).await;
     let normalized_perms = normalize_agent_perms(&agent, effective_project_id.as_deref());
+    let agent_id_string = agent_id.to_string();
 
     let installed_tools = build_session_installed_tools(
         &InstalledToolsCtx {
@@ -231,7 +232,8 @@ pub(crate) async fn send_agent_event_stream(
             org_id: effective_org_id.as_ref(),
             jwt: &jwt,
             context: "agent_chat",
-            agent_id: &agent_id.to_string(),
+            agent_id: &agent_id_string,
+            template_agent_id: &agent_id_string,
             integrations: org_integrations.as_deref(),
         },
         &normalized_perms,

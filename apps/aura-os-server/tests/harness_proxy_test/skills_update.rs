@@ -494,14 +494,23 @@ async fn editing_preserves_all_settings_full_round_trip() {
             "context": "ctx",
         })),
     );
-    assert_eq!(app.clone().oneshot(req).await.unwrap().status(), StatusCode::OK);
+    assert_eq!(
+        app.clone().oneshot(req).await.unwrap().status(),
+        StatusCode::OK
+    );
 
     // Re-open: description changed, everything else preserved.
     let req = json_request("GET", "/api/harness/skills/mine/cycle", None);
     let post = response_json(app.oneshot(req).await.unwrap()).await;
     assert_eq!(post["description"], "edited");
-    assert_eq!(post["user_invocable"], false, "user_invocable must survive an edit");
-    assert_eq!(post["model_invocable"], true, "model_invocable must survive an edit");
+    assert_eq!(
+        post["user_invocable"], false,
+        "user_invocable must survive an edit"
+    );
+    assert_eq!(
+        post["model_invocable"], true,
+        "model_invocable must survive an edit"
+    );
     assert_eq!(
         post["allowed_tools"],
         json!(["read_file", "write_file"]),

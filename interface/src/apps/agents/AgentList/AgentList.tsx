@@ -35,6 +35,7 @@ import { useCascadeDeleteAgent } from "../hooks/use-cascade-delete-agent";
 import { DeleteAgentConfirmModal } from "../hooks/DeleteAgentConfirmModal";
 import { useDeferredModalOpen } from "../../../shared/hooks/use-deferred-modal-open";
 import { agentDisplayName } from "../../../lib/derive-project-agent-title";
+import { isAgentOwnedByUser } from "../utils/agent-ownership";
 
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent as isSuperAgentByPerms } from "../../../shared/types/permissions";
@@ -538,7 +539,7 @@ export function AgentList({ mode = "default" }: AgentListProps) {
                 ctxMenu.agent,
                 pinnedIds,
                 favoriteIds,
-                !!user?.network_user_id && user.network_user_id === ctxMenu.agent.user_id,
+                isAgentOwnedByUser(ctxMenu.agent, user),
               )}
               onChange={handleMenuAction}
               background="solid"

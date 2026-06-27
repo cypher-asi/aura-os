@@ -59,6 +59,12 @@ pub(crate) async fn delete_agent(
         .await
         .map_err(map_network_error)?;
     let _ = state.agent_service.delete_agent_runtime_config(&agent_id);
+    let _ = state
+        .agent_service
+        .delete_agent_self_improvement_config(&agent_id);
+    let _ = state
+        .agent_service
+        .delete_agent_improvement_proposals(&agent_id);
     let _ = state.agent_service.delete_agent_shadow(&agent_id);
     Ok(Json(()))
 }

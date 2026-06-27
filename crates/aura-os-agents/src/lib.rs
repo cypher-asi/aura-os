@@ -32,7 +32,11 @@ pub use convert::parse_agent_status;
 pub use errors::AgentError;
 pub use instance::AgentInstanceService;
 pub use merge::merge_agent_instance;
-pub use service::AgentService;
+pub use service::{
+    AgentImprovementEvidence, AgentImprovementKind, AgentImprovementProposal,
+    AgentImprovementProvenance, AgentImprovementSource, AgentImprovementStatus,
+    AgentLearningReviewResult, AgentSelfImprovementConfig, AgentSelfImprovementMode, AgentService,
+};
 
 /// Shared mutable map of volatile agent-instance runtime state
 /// (current task / session). Owned by `app_builder` and threaded

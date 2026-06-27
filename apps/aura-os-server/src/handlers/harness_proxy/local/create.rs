@@ -32,12 +32,12 @@ pub(crate) struct CreateSkillBody {
 }
 
 #[derive(serde::Serialize)]
-struct CreateSkillResponse {
-    name: String,
-    path: String,
-    created: bool,
-    registered: bool,
-    installed_on_agent: bool,
+pub(crate) struct CreateSkillResponse {
+    pub(crate) name: String,
+    pub(crate) path: String,
+    pub(crate) created: bool,
+    pub(crate) registered: bool,
+    pub(crate) installed_on_agent: bool,
 }
 
 /// Render the YAML frontmatter block for a user-authored skill.
@@ -124,6 +124,20 @@ pub(crate) async fn create_skill(
     State(state): State<AppState>,
     Json(payload): Json<CreateSkillBody>,
 ) -> Result<axum::response::Response, StatusCode> {
+    let resp = create_skill_from_payload(&state, payload).await?;
+    let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        StatusCode::CREATED,
+        [(header::CONTENT_TYPE, "application/json")],
+        body,
+    )
+        .into_response())
+}
+
+pub(crate) async fn create_skill_from_payload(
+    state: &AppState,
+    payload: CreateSkillBody,
+) -> Result<CreateSkillResponse, StatusCode> {
     if !create_skill_name_valid(&payload.name) {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -172,20 +186,13 @@ pub(crate) async fn create_skill(
     let installed_on_agent =
         maybe_install_on_agent(&state, &payload.name, payload.agent_id.as_deref()).await;
 
-    let resp = CreateSkillResponse {
+    Ok(CreateSkillResponse {
         name: payload.name,
         path: skill_path.to_string_lossy().into_owned(),
         created: true,
         registered: true,
         installed_on_agent,
-    };
-    let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok((
-        StatusCode::CREATED,
-        [(header::CONTENT_TYPE, "application/json")],
-        body,
-    )
-        .into_response())
+    })
 }
 
 #[derive(Deserialize)]
