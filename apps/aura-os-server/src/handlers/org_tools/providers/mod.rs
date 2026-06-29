@@ -9,7 +9,7 @@ use aura_os_core::OrgId;
 use aura_os_integrations::{trusted_integration_method_by_tool, AppProviderKind};
 use serde_json::Value;
 
-use super::resolve::resolve_org_integration;
+use super::resolve::resolve_org_integration_fail_loud;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::trusted_runtime::execute_trusted_integration_tool;
 use crate::state::AppState;
@@ -35,8 +35,13 @@ pub(super) async fn dispatch_app_provider_tool(
     args: &Value,
 ) -> ApiResult<Value> {
     if let Some(method) = trusted_integration_method_by_tool(tool_name) {
+        // A-H2: trusted integration tools are cost-incurring. Resolve via the
+        // fail-loud path so a degraded canonical integrations service returns
+        // 503 instead of silently executing a paid call with a possibly-stale
+        // local-shadow secret.
         let integration =
-            resolve_org_integration(state, org_id, &method.provider, Some(user_id), args).await?;
+            resolve_org_integration_fail_loud(state, org_id, &method.provider, Some(user_id), args)
+                .await?;
         return execute_trusted_integration_tool(
             &state.http_client,
             kind,

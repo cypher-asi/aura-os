@@ -6,7 +6,9 @@
 //! their contracts.
 
 use super::list::list_org_integrations;
-use super::resolve::{resolve_mcp_server_integration, resolve_org_integration};
+use super::resolve::{
+    resolve_mcp_server_integration, resolve_org_integration, resolve_org_integration_fail_loud,
+};
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
 use aura_os_integrations::{
     app_provider_authenticated_url, app_provider_contract_by_tool, app_provider_contracts,
@@ -596,4 +598,190 @@ async fn resolve_mcp_server_integration_uses_shadow_secret_when_canonical_secret
 
     assert_eq!(resolved.metadata, canonical);
     assert_eq!(resolved.secret, "local-mcp-secret");
+}
+
+/// Spins up a mock canonical integrations server whose metadata endpoints
+/// succeed but whose secret endpoint always returns HTTP 500, modelling a
+/// canonical service that is configured but degraded (A-H2).
+async fn start_mock_integrations_server_with_failing_secret(integration: OrgIntegration) -> String {
+    let list_integration = integration.clone();
+    let get_integration = integration.clone();
+    let app = Router::new()
+        .route(
+            "/internal/orgs/:org_id/integrations",
+            get(move |Path(_org_id): Path<String>| {
+                let integration = list_integration.clone();
+                async move { Json(vec![integration]) }
+            }),
+        )
+        .route(
+            "/internal/orgs/:org_id/integrations/:integration_id",
+            get(
+                move |Path((_org_id, integration_id)): Path<(String, String)>| {
+                    let integration = get_integration.clone();
+                    async move {
+                        if integration.integration_id == integration_id {
+                            Ok::<_, axum::http::StatusCode>(Json(integration))
+                        } else {
+                            Err(axum::http::StatusCode::NOT_FOUND)
+                        }
+                    }
+                },
+            ),
+        )
+        .route(
+            "/internal/orgs/:org_id/integrations/:integration_id/secret",
+            get(move |Path((_org_id, _integration_id)): Path<(String, String)>| async move {
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR
+            }),
+        );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    format!("http://{address}")
+}
+
+#[tokio::test]
+async fn fail_loud_returns_503_when_canonical_secret_service_is_down() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let mut state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+    let integration_id = "brave-ops";
+
+    // A stale-but-present local shadow that the fail-loud path must NOT use.
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some(integration_id),
+            "Local Shadow Brave".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("stale-shadow-secret".to_string()),
+        )
+        .expect("save local shadow");
+
+    let canonical = sample_integration(
+        org_id,
+        integration_id,
+        "Canonical Brave",
+        "brave_search",
+        true,
+        true,
+    );
+    let base_url = start_mock_integrations_server_with_failing_secret(canonical).await;
+    state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+        &base_url,
+        "internal-token",
+    )));
+
+    let result = resolve_org_integration_fail_loud(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": integration_id }),
+    )
+    .await;
+
+    let (status, _body) = match result {
+        Ok(_) => panic!("degraded canonical service must fail loud"),
+        Err(err) => err,
+    };
+    assert_eq!(
+        status,
+        axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        "a degraded canonical service must return 503, not a stale-shadow execution"
+    );
+}
+
+#[tokio::test]
+async fn fail_loud_returns_not_found_when_canonical_integration_missing() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let mut state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    // Canonical server only knows about a different integration id, so a
+    // lookup by id resolves to a healthy 404.
+    let canonical = sample_integration(
+        org_id,
+        "some-other-id",
+        "Canonical Brave",
+        "brave_search",
+        true,
+        true,
+    );
+    let base_url =
+        start_mock_integrations_server(canonical, Some("canonical-secret")).await;
+    state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+        &base_url,
+        "internal-token",
+    )));
+
+    let result = resolve_org_integration_fail_loud(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": "missing-id" }),
+    )
+    .await;
+
+    let (status, _body) = match result {
+        Ok(_) => panic!("missing canonical integration must error"),
+        Err(err) => err,
+    };
+    assert_eq!(
+        status,
+        axum::http::StatusCode::NOT_FOUND,
+        "a healthy not-found must keep the existing 4xx semantics"
+    );
+}
+
+#[tokio::test]
+async fn fail_loud_uses_shadow_when_no_canonical_client_configured() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let mut state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+    let integration_id = "brave-local";
+
+    // Deliberate dev/local mode: no canonical integrations client configured.
+    state.integrations_client = None;
+
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some(integration_id),
+            "Local Brave".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("local-brave-secret".to_string()),
+        )
+        .expect("save local shadow");
+
+    // No `integrations_client` configured → deliberate dev/local mode that
+    // must keep resolving via the local shadow even on the fail-loud path.
+    let resolved = resolve_org_integration_fail_loud(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": integration_id }),
+    )
+    .await
+    .expect("local/dev mode resolves via shadow");
+
+    assert_eq!(resolved.secret, "local-brave-secret");
 }
