@@ -14,6 +14,7 @@ use serde_json::{json, Value};
 
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::workspace_tools::installed_workspace_app_tool_catalog;
+use crate::handlers::permissions::require_org_role;
 use crate::handlers::trusted_mcp;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
@@ -44,6 +45,13 @@ pub(crate) async fn call_tool(
     Path((org_id, tool_name)): Path<(OrgId, String)>,
     Json(args): Json<Value>,
 ) -> ApiResult<Json<Value>> {
+    // Authorization (A-C1a): reject any caller that is not a member of `org_id`
+    // before any provider dispatch occurs. This must run for ALL branches
+    // (list_org_integrations, generation tools, app-provider tools) and must be
+    // independent of the best-effort integration hydration below. "member" is
+    // the least-privileged role in the taxonomy (owner > admin > member).
+    require_org_role(&state, &org_id.to_string(), &jwt, &session, "member").await?;
+
     hydrate_canonical_integration_shadow(&state, &org_id, &jwt).await;
     let result = if tool_name == "list_org_integrations" {
         list_org_integrations(&state, &org_id, &args).await?

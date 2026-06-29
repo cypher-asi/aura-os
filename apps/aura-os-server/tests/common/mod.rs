@@ -421,6 +421,71 @@ pub fn build_test_app_from_store_with_remote_only(
     (app, state)
 }
 
+/// Build a test app wired to a network mock whose `/api/orgs/:org_id/members`
+/// endpoint reports the session user (`u1`) as an `owner` of every org.
+///
+/// Tool-action dispatch now performs an org-membership authorization check
+/// (`require_org_role`) which requires a configured network client. Tests that
+/// exercise in-org flows need this membership backing; `build_test_app()`
+/// (no network client) would otherwise 503 on the authZ gate.
+#[allow(dead_code)]
+pub async fn build_test_app_with_org_membership() -> (Router, AppState, tempfile::TempDir) {
+    let members_app = Router::new().route(
+        "/api/orgs/:org_id/members",
+        get(|Path(org_id): Path<String>| async move {
+            Json(vec![serde_json::json!({
+                "userId": "u1",
+                "orgId": org_id,
+                "role": "owner",
+            })])
+        }),
+    );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let net_url = format!("http://{}", addr);
+    tokio::spawn(async move { axum::serve(listener, members_app).await.ok() });
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
+    let (app, state) = build_test_app_from_store(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(Arc::new(NetworkClient::with_base_url(&net_url))),
+        None,
+        None,
+        None,
+    );
+    (app, state, store_dir)
+}
+
+/// Build a test app wired to a network mock whose `/api/orgs/:org_id/members`
+/// endpoint reports an empty membership list, so the session user (`u1`) is
+/// treated as a non-member of every org. Used to assert the tool-action
+/// authorization gate rejects callers outside the org.
+#[allow(dead_code)]
+pub async fn build_test_app_without_org_membership() -> (Router, AppState, tempfile::TempDir) {
+    let members_app = Router::new().route(
+        "/api/orgs/:org_id/members",
+        get(|| async { Json::<Vec<Value>>(vec![]) }),
+    );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let net_url = format!("http://{}", addr);
+    tokio::spawn(async move { axum::serve(listener, members_app).await.ok() });
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
+    let (app, state) = build_test_app_from_store(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(Arc::new(NetworkClient::with_base_url(&net_url))),
+        None,
+        None,
+        None,
+    );
+    (app, state, store_dir)
+}
+
 #[allow(dead_code)]
 pub fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
     let store_dir = tempfile::tempdir().unwrap();

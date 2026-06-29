@@ -12,7 +12,7 @@ use super::integration_setup::{create_test_integrations, ProviderEnvGuard};
 async fn org_tool_actions_use_saved_integrations() {
     let _env = ProviderEnvGuard::set_up().await;
 
-    let (app, _state, _db) = build_test_app();
+    let (app, _state, _db) = build_test_app_with_org_membership().await;
     let org_id = OrgId::new();
 
     create_test_integrations(&app, &org_id).await;
@@ -42,7 +42,7 @@ async fn org_tool_actions_use_saved_integrations() {
 
 #[tokio::test]
 async fn disabled_workspace_integrations_are_kept_but_not_exposed_as_active_capabilities() {
-    let (app, _state, _db) = build_test_app();
+    let (app, _state, _db) = build_test_app_with_org_membership().await;
     let org_id = OrgId::new();
 
     let req = json_request(
@@ -83,3 +83,32 @@ async fn disabled_workspace_integrations_are_kept_but_not_exposed_as_active_capa
     let body = response_json(resp).await;
     assert_eq!(body["code"], "bad_request");
 }
+
+#[tokio::test]
+async fn non_member_cannot_invoke_tool_actions() {
+    // A-C1a: a user who is not a member of the org must be rejected by the
+    // authorization gate before any provider dispatch occurs. The provider
+    // env is intentionally NOT set up, so a successful response could only
+    // mean dispatch happened — i.e. the guard failed to short-circuit.
+    let (app, _state, _db) = build_test_app_without_org_membership().await;
+    let org_id = OrgId::new();
+
+    // App-provider tool path.
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+        Some(serde_json::json!({ "query": "aura" })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+    // Special-case branch (list_org_integrations) must also be gated.
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/list_org_integrations"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
