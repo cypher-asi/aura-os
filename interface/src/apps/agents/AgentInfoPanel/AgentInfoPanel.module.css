@@ -93,9 +93,9 @@
      shrink-wrap to its content, so `max-width` above the content width is a
      no-op; `min(100%, ...)` keeps it from overflowing a narrow sidekick lane. */
   width: min(100%, calc(265px * 0.9 / 1.036));
-  /* Negative top margin pulls the card up under the 3D card; -10px tightens the
-     gap to the top section. */
-  margin: calc(-1 * var(--space-2) - 10px) auto 0;
+  /* The channel bar now tucks under the 3D card; the spec card sits below it
+     with a normal gap. */
+  margin: var(--space-2) auto 0;
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
@@ -227,6 +227,15 @@
   padding: 2px;
 }
 
+/* Standalone wrapper that lifts the channel logo bar out of the spec card and
+   tucks it up under the 3D card, centered to the same width as the spec card. */
+.channelBar {
+  width: min(100%, calc(265px * 0.9 / 1.036));
+  /* Negative top margin pulls the bar up under the 3D card; -10px tightens the
+     gap to the top section (mirrors the spec card's former offset). */
+  margin: calc(-1 * var(--space-2) - 10px) auto 0;
+}
+
 /* Recessed pill holding the engraved channel logos. */
 .specChannels {
   display: flex;
@@ -250,6 +259,49 @@
   color: var(--color-text-secondary);
   /* Engraved: a subtle theme-aware drop shadow under the glyph. */
   filter: drop-shadow(0 1px 0 color-mix(in srgb, var(--color-bg) 55%, transparent));
+}
+
+/* Connected channel (e.g. Telegram linked): tint the glyph green. */
+.specChannelIconConnected {
+  color: var(--color-success);
+}
+
+/* The interactive Telegram logo: a bare button wrapping the engraved glyph so
+   it lines up with the decorative icons but reads (and behaves) as clickable. */
+.specChannelButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  transition: transform 120ms ease, color 120ms ease;
+}
+
+.specChannelButton:hover:not(:disabled) .specChannelIcon {
+  color: var(--color-text-primary);
+}
+
+/* Keep the connected (green) tint on hover instead of the generic highlight. */
+.specChannelButton:hover:not(:disabled) .specChannelIconConnected {
+  color: var(--color-success);
+}
+
+.specChannelButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.specChannelButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.specChannelButton:focus-visible {
+  outline: 2px solid var(--color-accent, currentColor);
+  outline-offset: 2px;
 }
 
 .specLinks {

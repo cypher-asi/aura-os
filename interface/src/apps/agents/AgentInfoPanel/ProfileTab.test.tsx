@@ -39,9 +39,23 @@ vi.mock("../../../components/FollowEditButton", () => ({
 }));
 
 // TelegramConnect uses react-query (`useQuery`), which would require a
-// QueryClientProvider; it has its own tests, so stub it out here.
+// QueryClientProvider; it has its own tests, so stub it out here. ProfileTab
+// drives the shared `useTelegramLink` controller and renders `TelegramConnectView`.
 vi.mock("../components/TelegramConnect", () => ({
   TelegramConnect: () => null,
+  TelegramConnectView: () => null,
+  useTelegramLink: () => ({
+    isRemote: false,
+    link: null,
+    linking: false,
+    linkError: null,
+    disconnecting: false,
+    telegramChannel: null,
+    isConnected: false,
+    needsRelink: false,
+    startLink: async () => {},
+    disconnect: async () => {},
+  }),
 }));
 
 vi.mock("./AgentInfoPanel.module.css", () => ({
