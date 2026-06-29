@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-06-29",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.713.1",
+    "title": "Agent profile cards stop clipping long names",
+    "intro": "A small but visible polish day for the Agents app: the 3D profile card nameplate was reflowed so long agent names no longer collide with the role tag. Desktop builds shipped for Linux, macOS (Intel and Apple Silicon), and Windows.",
+    "entryCount": 1,
+    "highlights": [
+      "Agent profile card nameplate redesigned to prevent role/name overlap",
+      "Nightly desktop builds shipped for Linux, macOS, and Windows"
+    ],
+    "rawCommitCount": 2,
+    "generatedAt": "2026-06-29T09:27:24.706Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.713.1",
+    "path": "history/2026-06-29.json"
+  },
+  {
     "date": "2026-06-27",
     "channel": "nightly",
     "version": "0.1.0-nightly.712.1",
