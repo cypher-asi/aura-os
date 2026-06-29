@@ -218,13 +218,12 @@ pub fn build_provider_mock() -> Router {
             "/brave/res/v1/news/search",
             get(|| async {
                 Json(serde_json::json!({
-                    "news": {
-                        "results": [{
-                            "title": "Brave news",
-                            "url": "https://news.example.com",
-                            "description": "Headline"
-                        }]
-                    },
+                    "type": "news",
+                    "results": [{
+                        "title": "Brave news",
+                        "url": "https://news.example.com",
+                        "description": "Headline"
+                    }],
                     "query": { "more_results_available": false }
                 }))
             }),
