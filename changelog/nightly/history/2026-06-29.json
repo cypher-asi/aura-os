@@ -3,20 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-29T18:15:16.098Z",
+  "generatedAt": "2026-06-29T22:07:27.727Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.714.1",
+  "version": "0.1.0-nightly.715.1",
   "date": "2026-06-29",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.714.1",
-  "lastIncludedSha": "dcaad51596922e895a5c287c5062d9c79c8deaf7",
-  "previousProcessedSha": "1f82c69d2e5620fb2a435e5ea32139e23bc235bb",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.715.1",
+  "lastIncludedSha": "63be9a385d7983a29bd3aa74da4e6523417c6a4a",
+  "previousProcessedSha": "dcaad51596922e895a5c287c5062d9c79c8deaf7",
   "commitShas": [
     "c8a6f9bc968f4a906e016df68220acb8a693cdab",
-    "dcaad51596922e895a5c287c5062d9c79c8deaf7"
+    "dcaad51596922e895a5c287c5062d9c79c8deaf7",
+    "63be9a385d7983a29bd3aa74da4e6523417c6a4a"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "c8a6f9bc968f4a906e016df68220acb8a693cdab",
@@ -131,36 +132,77 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "63be9a385d7983a29bd3aa74da4e6523417c6a4a",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-29T22:40:45+01:00",
+      "subject": "test(integrations): align Brave news mock with real top-level results shape",
+      "body": "The Brave News API returns results at the top-level `results` array (envelope type `news`), not under a `news` wrapper. The mock encoded the old wrapper shape, so assert_brave_actions failed against the corrected parser. Mock now matches the real API and the parser.",
+      "parents": [
+        "dcaad51596922e895a5c287c5062d9c79c8deaf7"
+      ],
+      "files": [
+        "apps/aura-os-server/tests/api_tests/integration_provider_mock.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 7
+      },
+      "committedAtMs": 1782769245000,
+      "cleanSubject": "align Brave news mock with real top-level results shape",
+      "keywords": [
+        "align",
+        "brave",
+        "news",
+        "mock",
+        "with",
+        "real",
+        "level",
+        "results",
+        "shape"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.714.1",
+      "version": "0.1.0-nightly.715.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65108418
+          "sizeBytes": 65115226
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131709432
+          "sizeBytes": 131717624
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -170,29 +212,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.714.1",
+      "version": "0.1.0-nightly.715.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.714.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.715.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61123939
+          "sizeBytes": 61118793
         },
         {
-          "name": "AURA_0.1.0-nightly.714.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.715.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60095648
+          "sizeBytes": 60093487
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -202,29 +244,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.714.1",
+      "version": "0.1.0-nightly.715.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.714.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.715.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63147867
+          "sizeBytes": 63139339
         },
         {
-          "name": "AURA_0.1.0-nightly.714.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.715.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62237341
+          "sizeBytes": 62225870
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -234,17 +276,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.714.1",
+      "version": "0.1.0-nightly.715.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48173147
+          "sizeBytes": 48167487
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.714.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.715.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -253,19 +295,26 @@
     }
   ],
   "rendered": {
-    "title": "Readable agent nameplates and a Brave News results fix",
-    "intro": "Today's nightly pairs a small but visible polish on the 3D agent profile card with a real bug fix for workspace Brave News searches, which had been silently returning no results on the live server path.",
+    "title": "Brave news search starts returning results again",
+    "intro": "A small but high-impact day: workspace Brave news searches that had been silently coming back empty now return real headlines, backed by a corrected parser and a matching test fixture. The 3D agent profile card also got a layout fix so long agent names no longer collide with the role pill.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:12 AM",
         "started_at": "2026-06-27T15:12:04.000Z",
         "ended_at": "2026-06-27T15:12:04.000Z",
-        "title": "Agent profile card nameplate no longer collides with long names",
-        "summary": "The 3D agent card's nameplate was redrawn so the role sits on its own line beneath the name instead of as a right-aligned pill that overlapped longer names.",
+        "title": "Agent profile card nameplate stacks name and role",
+        "summary": "The 3D agent profile card stopped overlapping long names with the role pill by moving the role onto its own line beneath the name.",
         "items": [
           {
-            "text": "On the 3D agent profile card, the name now occupies the top line and the role renders as a left-aligned pill on a second line within the same nameplate strip, eliminating the overlap that occurred when an agent's name was long. Name and role type sizes and the pill geometry were retuned to fit the stacked layout.",
+            "text": "Reworked the agent profile card nameplate so the name sits on a top line and the role renders as a left-aligned pill underneath, eliminating the collision that occurred when long agent names ran into the previously right-aligned, vertically centered role pill.",
+            "commit_shas": [
+              "c8a6f9bc968f4a906e016df68220acb8a693cdab"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tightened nameplate typography for the new layout — name drops from 123px to 104px and the role pill shrinks to 48px text in a slimmer 72px pill — so both lines fit cleanly within the same strip in light and dark themes.",
             "commit_shas": [
               "c8a6f9bc968f4a906e016df68220acb8a693cdab"
             ],
@@ -278,20 +327,37 @@
         "time_label": "10:49 AM",
         "started_at": "2026-06-29T17:49:18.000Z",
         "ended_at": "2026-06-29T17:49:18.000Z",
-        "title": "Workspace Brave News searches return results again",
-        "summary": "The server-side trusted-integration executor was looking for Brave News results under the wrong JSON path, so news queries silently came back empty; it now reads from the correct top-level array.",
+        "title": "Brave news search now reads results from the correct envelope",
+        "summary": "Workspace Brave news searches were silently returning empty because the server-side parser looked under the wrong JSON path. The trusted-integration executor now uses a vertical-aware pointer.",
         "items": [
           {
-            "text": "Brave's News Search API returns its hits at the top-level `results` array (no `news` wrapper), but the live trusted-integration executor was pointing at `/news/results` and getting nothing back. The transform now uses a vertical-aware pointer — `/results` for news, `/{vertical}/results` for web — so workspace Brave news searches return real results while web search behavior is unchanged.",
+            "text": "Fixed a silent-empty bug in workspace Brave search: the server-side trusted-integration executor was reading news results from `/news/results`, but Brave's News API returns them at the top-level `results` array. News queries now use `/results` while web queries continue to read from `web.results`.",
             "commit_shas": [
               "dcaad51596922e895a5c287c5062d9c79c8deaf7"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added regression tests covering both the nested `web.results` path and the top-level `results` path for news, locking in the fix against future drift.",
+            "text": "Added regression tests covering both verticals — including the previously untested news path — so the correct pointer is locked in against future envelope changes.",
             "commit_shas": [
               "dcaad51596922e895a5c287c5062d9c79c8deaf7"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "2:40 PM",
+        "started_at": "2026-06-29T21:40:45.000Z",
+        "ended_at": "2026-06-29T21:40:45.000Z",
+        "title": "Brave provider mock realigned with the live news envelope",
+        "summary": "The integration provider mock was updated to mirror Brave's real top-level news response shape, restoring the assert_brave_actions end-to-end test.",
+        "items": [
+          {
+            "text": "Updated the Brave provider mock to emit news results at the top level with an `envelope type: \"news\"` payload, matching the real API and the corrected parser so the assert_brave_actions integration test passes again.",
+            "commit_shas": [
+              "63be9a385d7983a29bd3aa74da4e6523417c6a4a"
             ],
             "confidence": "high"
           }
@@ -299,9 +365,10 @@
       }
     ],
     "highlights": [
-      "Agent profile cards no longer overlap long names",
-      "Brave News searches now actually return results"
+      "Brave news search no longer returns silently empty results",
+      "Agent profile card nameplate redesigned for long names",
+      "Regression tests added for both Brave web and news verticals"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 3
   }
 }

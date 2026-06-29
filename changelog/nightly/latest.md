@@ -1,27 +1,35 @@
-# Readable agent nameplates and a Brave News results fix
+# Brave news search starts returning results again
 
 - Date: `2026-06-29`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.714.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.714.1
+- Version: `0.1.0-nightly.715.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.715.1
 
-Today's nightly pairs a small but visible polish on the 3D agent profile card with a real bug fix for workspace Brave News searches, which had been silently returning no results on the live server path.
+A small but high-impact day: workspace Brave news searches that had been silently coming back empty now return real headlines, backed by a corrected parser and a matching test fixture. The 3D agent profile card also got a layout fix so long agent names no longer collide with the role pill.
 
-## 8:12 AM — Agent profile card nameplate no longer collides with long names
+## 8:12 AM — Agent profile card nameplate stacks name and role
 
-The 3D agent card's nameplate was redrawn so the role sits on its own line beneath the name instead of as a right-aligned pill that overlapped longer names.
+The 3D agent profile card stopped overlapping long names with the role pill by moving the role onto its own line beneath the name.
 
-- On the 3D agent profile card, the name now occupies the top line and the role renders as a left-aligned pill on a second line within the same nameplate strip, eliminating the overlap that occurred when an agent's name was long. Name and role type sizes and the pill geometry were retuned to fit the stacked layout. (`c8a6f9b`)
+- Reworked the agent profile card nameplate so the name sits on a top line and the role renders as a left-aligned pill underneath, eliminating the collision that occurred when long agent names ran into the previously right-aligned, vertically centered role pill. (`c8a6f9b`)
+- Tightened nameplate typography for the new layout — name drops from 123px to 104px and the role pill shrinks to 48px text in a slimmer 72px pill — so both lines fit cleanly within the same strip in light and dark themes. (`c8a6f9b`)
 
-## 10:49 AM — Workspace Brave News searches return results again
+## 10:49 AM — Brave news search now reads results from the correct envelope
 
-The server-side trusted-integration executor was looking for Brave News results under the wrong JSON path, so news queries silently came back empty; it now reads from the correct top-level array.
+Workspace Brave news searches were silently returning empty because the server-side parser looked under the wrong JSON path. The trusted-integration executor now uses a vertical-aware pointer.
 
-- Brave's News Search API returns its hits at the top-level `results` array (no `news` wrapper), but the live trusted-integration executor was pointing at `/news/results` and getting nothing back. The transform now uses a vertical-aware pointer — `/results` for news, `/{vertical}/results` for web — so workspace Brave news searches return real results while web search behavior is unchanged. (`dcaad51`)
-- Added regression tests covering both the nested `web.results` path and the top-level `results` path for news, locking in the fix against future drift. (`dcaad51`)
+- Fixed a silent-empty bug in workspace Brave search: the server-side trusted-integration executor was reading news results from `/news/results`, but Brave's News API returns them at the top-level `results` array. News queries now use `/results` while web queries continue to read from `web.results`. (`dcaad51`)
+- Added regression tests covering both verticals — including the previously untested news path — so the correct pointer is locked in against future envelope changes. (`dcaad51`)
+
+## 2:40 PM — Brave provider mock realigned with the live news envelope
+
+The integration provider mock was updated to mirror Brave's real top-level news response shape, restoring the assert_brave_actions end-to-end test.
+
+- Updated the Brave provider mock to emit news results at the top level with an `envelope type: "news"` payload, matching the real API and the corrected parser so the assert_brave_actions integration test passes again. (`63be9a3`)
 
 ## Highlights
 
-- Agent profile cards no longer overlap long names
-- Brave News searches now actually return results
+- Brave news search no longer returns silently empty results
+- Agent profile card nameplate redesigned for long names
+- Regression tests added for both Brave web and news verticals
 
