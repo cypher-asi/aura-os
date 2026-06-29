@@ -112,3 +112,47 @@ async fn non_member_cannot_invoke_tool_actions() {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
+#[tokio::test]
+async fn tool_action_rate_limit_returns_429_after_burst() {
+    // A-C1b: a burst of N+1 tool-action calls for one (user, org) must end in a
+    // 429 once the per-(user, org) window limit is exceeded, and a *different*
+    // org for the same user must remain unaffected (per-user AND per-org keying).
+    let (app, _state, _db) = build_test_app_with_org_membership().await;
+    let org_id = OrgId::new();
+
+    let max = aura_os_server::tool_action_rate_limit::MAX_CALLS_PER_WINDOW;
+
+    // `list_org_integrations` needs no provider env and returns 200 under-limit,
+    // so it isolates the rate-limit behavior from provider dispatch.
+    for _ in 0..max {
+        let req = json_request(
+            "POST",
+            &format!("/api/orgs/{org_id}/tool-actions/list_org_integrations"),
+            Some(serde_json::json!({})),
+        );
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    // The call that exceeds the window limit is rejected with 429.
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/list_org_integrations"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "tool_action_rate_limited");
+
+    // A different org (same user) is its own bucket and is not throttled.
+    let other_org_id = OrgId::new();
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{other_org_id}/tool-actions/list_org_integrations"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+

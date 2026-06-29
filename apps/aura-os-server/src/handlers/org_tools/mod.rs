@@ -52,6 +52,23 @@ pub(crate) async fn call_tool(
     // the least-privileged role in the taxonomy (owner > admin > member).
     require_org_role(&state, &org_id.to_string(), &jwt, &session, "member").await?;
 
+    // Rate limiting (A-C1b): platform-funded tool-actions cost real money per
+    // invocation, so cap how often a single `(user, org)` may call this
+    // endpoint. Keyed per-user AND per-org so a noisy caller cannot throttle a
+    // different user or a different org. Applied AFTER the membership check and
+    // BEFORE any provider dispatch / hydration.
+    if !crate::tool_action_rate_limit::check(
+        crate::tool_action_rate_limit::ToolActionRateKey::new(
+            session.user_id.to_string(),
+            org_id.to_string(),
+        ),
+    ) {
+        return Err(ApiError::tool_action_rate_limited(
+            crate::tool_action_rate_limit::MAX_CALLS_PER_WINDOW,
+            crate::tool_action_rate_limit::WINDOW.as_secs(),
+        ));
+    }
+
     hydrate_canonical_integration_shadow(&state, &org_id, &jwt).await;
     let result = if tool_name == "list_org_integrations" {
         list_org_integrations(&state, &org_id, &args).await?
