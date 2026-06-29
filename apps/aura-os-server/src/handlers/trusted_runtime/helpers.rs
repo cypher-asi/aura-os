@@ -293,8 +293,18 @@ pub(super) fn apply_result_transform(
         }
         TrustedIntegrationResultTransform::BraveSearch { vertical } => {
             let query = required_string(args, &["query", "q"])?;
+            // Brave nests *web* results under `web.results`, but the News
+            // Search API returns its results at the top-level `results` array
+            // (envelope `type: "news"`, no `news` wrapper). Use a
+            // vertical-aware pointer — `/{vertical}/results` is correct for
+            // web, but news would silently parse as empty under that path.
+            let results_pointer = if vertical.as_str() == "news" {
+                "/results".to_string()
+            } else {
+                format!("/{vertical}/results")
+            };
             let items = response
-                .pointer(&format!("/{vertical}/results"))
+                .pointer(&results_pointer)
                 .and_then(Value::as_array)
                 .cloned()
                 .unwrap_or_default()
@@ -713,5 +723,46 @@ mod tests {
 
         let api_error = (err.1).0;
         assert!(api_error.error.contains("cannot contain newlines"));
+    }
+
+    #[test]
+    fn brave_web_results_parse_from_nested_web_object() {
+        // Brave web responses nest results under `web.results`.
+        let response = json!({
+            "web": { "results": [ { "title": "AURA", "url": "https://aura.ai", "description": "desc" } ] },
+            "query": { "more_results_available": true }
+        });
+        let out = apply_result_transform(
+            &response,
+            &TrustedIntegrationResultTransform::BraveSearch { vertical: "web".to_string() },
+            &json!({ "query": "aura os" }),
+        )
+        .unwrap();
+        let results = out["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["title"], "AURA");
+        assert_eq!(out["more_results_available"], true);
+    }
+
+    #[test]
+    fn brave_news_results_parse_from_top_level_results() {
+        // Regression guard for the live (server-side) brave path: Brave's News
+        // API returns results at the TOP-LEVEL `results` array (no `news`
+        // wrapper). The old `/news/results` pointer silently returned empty.
+        let response = json!({
+            "type": "news",
+            "results": [ { "title": "Headline", "url": "https://news.example/x", "source": "Example" } ],
+            "query": { "more_results_available": false }
+        });
+        let out = apply_result_transform(
+            &response,
+            &TrustedIntegrationResultTransform::BraveSearch { vertical: "news".to_string() },
+            &json!({ "query": "aura os" }),
+        )
+        .unwrap();
+        let results = out["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1, "news results must parse from top-level `results`");
+        assert_eq!(results[0]["title"], "Headline");
+        assert_eq!(results[0]["source"], "Example");
     }
 }
