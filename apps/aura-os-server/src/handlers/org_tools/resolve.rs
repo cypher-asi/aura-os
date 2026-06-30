@@ -112,16 +112,27 @@ async fn pick_org_integration_metadata(
     {
         return Ok(integration);
     }
-    if let Some(integration_id) = integration_id {
-        return load_shadow_org_integration_by_id(
-            state,
-            org_id,
-            provider,
-            user_id,
-            &integration_id,
-        );
+    let resolved = if let Some(integration_id) = integration_id {
+        load_shadow_org_integration_by_id(state, org_id, provider, user_id, &integration_id)
+    } else {
+        load_shadow_org_integration_for_provider(state, org_id, provider, user_id)
+    };
+    // Gate D (Spec 02): no real org integration resolved. When the platform Brave
+    // key is configured and this is the brave provider, synthesize the gating-only
+    // platform integration in-memory so the platform-key branch in
+    // `load_org_integration_secret` is reachable. A real `enabled && has_secret`
+    // brave integration always wins above, so this is a fallback (never an
+    // override), and it is never persisted to storage or the REST list.
+    match resolved {
+        Ok(integration) => Ok(integration),
+        Err(not_found) => {
+            if provider == "brave_search" && platform_brave_key_present() {
+                Ok(synthetic_platform_brave_integration(org_id))
+            } else {
+                Err(not_found)
+            }
+        }
     }
-    load_shadow_org_integration_for_provider(state, org_id, provider, user_id)
 }
 
 async fn load_org_integration_secret(
@@ -236,6 +247,38 @@ fn load_platform_brave_secret() -> ApiResult<String> {
         _ => Err(ApiError::bad_request(
             "platform brave search is not configured",
         )),
+    }
+}
+
+/// Whether the cloud-only platform Brave key is configured. Gates the
+/// synthetic-metadata fallback (Gate D) so platform web search is off unless the
+/// deployment set `BRAVE_SEARCH_PLATFORM_KEY`.
+fn platform_brave_key_present() -> bool {
+    std::env::var(PLATFORM_BRAVE_KEY_ENV)
+        .map(|key| !key.trim().is_empty())
+        .unwrap_or(false)
+}
+
+/// The gating-only synthetic platform Brave integration, materialized in-memory
+/// at resolution time (Gate D) so the platform-key branch in
+/// [`load_org_integration_secret`] is reachable when no real org brave
+/// integration exists. Carries no stored secret (`has_secret: false`); the key is
+/// loaded from the env var. Never written to storage or the REST list.
+fn synthetic_platform_brave_integration(org_id: &OrgId) -> OrgIntegration {
+    let now = chrono::Utc::now();
+    OrgIntegration {
+        integration_id: PLATFORM_BRAVE_INTEGRATION_ID.to_string(),
+        org_id: *org_id,
+        name: "Brave Search".to_string(),
+        provider: "brave_search".to_string(),
+        kind: OrgIntegrationKind::WorkspaceIntegration,
+        default_model: None,
+        provider_config: None,
+        has_secret: false,
+        enabled: true,
+        secret_last4: None,
+        created_at: now,
+        updated_at: now,
     }
 }
 

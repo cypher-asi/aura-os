@@ -50,8 +50,16 @@ impl Drop for PlatformKeyEnvGuard {
     }
 }
 
+#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn org_tool_actions_use_saved_integrations() {
+    // Serialize with the platform e2e (the other ProviderEnvGuard user) so the
+    // shared provider base-URL env vars are never torn down mid-request; keep the
+    // platform key unset so this exercises the saved-key path, not the synthesis.
+    let _lock = platform_key_env_lock()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let _platform_off = PlatformKeyEnvGuard::unset();
     let _env = ProviderEnvGuard::set_up().await;
 
     let (app, _state, _db) = build_test_app_with_org_membership().await;
@@ -182,8 +190,75 @@ async fn platform_key_set_does_not_leak_synthetic_into_rest_list() {
     );
 }
 
+/// Spec 02 end-to-end (web): with `BRAVE_SEARCH_PLATFORM_KEY` set and NO real
+/// org brave key, a brave tool-action resolves the *platform* key (not a saved
+/// secret), dispatches the outbound Brave call to the provider mock, and
+/// returns shaped results. This exercises the execution half of the feature
+/// that no single test covers: platform-key resolution in
+/// `load_org_integration_secret` (the synthetic id short-circuits before any
+/// shadow secret is read) → outbound Brave via mock → transform → 200. (Tool
+/// *emission* — GATE A — is a separate surface, proven by the unit-level
+/// `installed_workspace_app_tools` tests; the tool-action endpoint dispatches
+/// by name and does not re-run emission filtering.)
+///
+/// No org brave integration is seeded and no `integration_id` is passed — this is
+/// exactly the production path (a real agent calls `brave_search_web` with just a
+/// query). Resolution must synthesize the gating-only platform integration
+/// in-memory (Gate D) so the platform-key branch in `load_org_integration_secret`
+/// is reached; the synthetic is never written to storage. Complements (does not
+/// duplicate) the unit-level emission and soft-fallback tests.
+#[allow(clippy::await_holding_lock)]
+#[tokio::test]
+async fn platform_key_brave_tool_action_resolves_platform_key_end_to_end() {
+    // The tool-action dispatches an outbound Brave call, so the provider mock
+    // must back `AURA_BRAVE_SEARCH_API_BASE_URL` (same setup as
+    // `org_tool_actions_use_saved_integrations` / `assert_brave_actions`).
+    // Hold the brave-test lock outermost (released last) so the provider mock's
+    // base-URL env vars and the platform key are never mutated/torn down by a
+    // concurrent brave test mid-request.
+    let _lock = platform_key_env_lock()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let _env_provider = ProviderEnvGuard::set_up().await;
+    let _env = PlatformKeyEnvGuard::set("platform-key-123");
+
+    let (app, _state, _db) = build_test_app_with_org_membership().await;
+    let org_id = OrgId::new();
+
+    // Production path: NO org brave integration in storage and NO integration_id
+    // in the call. Resolution must synthesize the platform brave integration and
+    // load the key from BRAVE_SEARCH_PLATFORM_KEY.
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+        Some(serde_json::json!({ "query": "aura" })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let brave_web = response_json(resp).await;
+    assert_eq!(brave_web["results"][0]["title"], "Brave result");
+
+    // News search: same platform-key path, distinct mock route.
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_news"),
+        Some(serde_json::json!({ "query": "aura" })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let brave_news = response_json(resp).await;
+    assert_eq!(brave_news["results"][0]["title"], "Brave news");
+}
+
+#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn disabled_workspace_integrations_are_kept_but_not_exposed_as_active_capabilities() {
+    // Keep the platform key unset (and serialized) so Gate D synthesis can't turn
+    // this disabled-integration path into a platform fallback.
+    let _lock = platform_key_env_lock()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let _platform_off = PlatformKeyEnvGuard::unset();
     let (app, _state, _db) = build_test_app_with_org_membership().await;
     let org_id = OrgId::new();
 
