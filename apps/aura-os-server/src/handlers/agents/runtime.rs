@@ -180,7 +180,7 @@ pub(crate) fn resolve_mixture_members(
         ));
     }
 
-    let mut members = Vec::with_capacity(mixture.references.len() + 1);
+    let mut members = Vec::with_capacity(MAX_MIXTURE_REFERENCES + 1);
     members.push(resolve_multi_model_slot(
         default_model,
         &mixture.aggregator,
