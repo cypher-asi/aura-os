@@ -28,6 +28,8 @@ mod resolve;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use resolve::PLATFORM_BRAVE_INTEGRATION_ID;
+
 use hydrate::hydrate_canonical_integration_shadow;
 use list::list_org_integrations;
 use providers::dispatch_app_provider_tool;

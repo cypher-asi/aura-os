@@ -37,7 +37,7 @@ fn tool_timeout_ms(tool_name: &str) -> u64 {
 }
 
 fn available_workspace_integration_providers(integrations: &[OrgIntegration]) -> HashSet<&str> {
-    integrations
+    let mut providers: HashSet<&str> = integrations
         .iter()
         .filter(|integration| {
             integration.enabled
@@ -45,7 +45,18 @@ fn available_workspace_integration_providers(integrations: &[OrgIntegration]) ->
                 && matches!(integration.kind, OrgIntegrationKind::WorkspaceIntegration)
         })
         .map(|integration| integration.provider.as_str())
-        .collect()
+        .collect();
+    // When the platform Brave key is configured, unconditionally surface
+    // brave_search as an available provider so that brave_search_web /
+    // brave_search_news pass the provider gate in build_installed_workspace_app_tools.
+    // The emitted tools retain runtime_execution: None (server-callback path, D5).
+    if std::env::var("BRAVE_SEARCH_PLATFORM_KEY")
+        .map(|v| !v.is_empty())
+        .unwrap_or(false)
+    {
+        providers.insert("brave_search");
+    }
+    providers
 }
 
 pub fn installed_workspace_app_tools(
@@ -552,6 +563,62 @@ mod tests {
                     .and_then(|req| req.provider.as_deref())
                     .is_none(),
             "generate_image must not be gated on any workspace integration provider",
+        );
+    }
+
+    // --- Platform-key gate tests (Spec 02, Gates A + D5) ---
+
+    #[test]
+    fn platform_key_set_no_org_brave_emits_brave_tools() {
+        std::env::set_var("BRAVE_SEARCH_PLATFORM_KEY", "test-platform-key");
+        let org_id = OrgId::new();
+        let integrations: Vec<OrgIntegration> = Vec::new();
+        let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
+        std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY");
+        let names: HashSet<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert!(
+            names.contains("brave_search_web"),
+            "brave_search_web must be emitted when platform key is set"
+        );
+        assert!(
+            names.contains("brave_search_news"),
+            "brave_search_news must be emitted when platform key is set"
+        );
+    }
+
+    #[test]
+    fn platform_key_absent_no_org_brave_no_brave_tools() {
+        std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY");
+        let org_id = OrgId::new();
+        let integrations: Vec<OrgIntegration> = Vec::new();
+        let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
+        let names: HashSet<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert!(
+            !names.contains("brave_search_web"),
+            "brave_search_web must not be emitted when platform key is absent"
+        );
+        assert!(
+            !names.contains("brave_search_news"),
+            "brave_search_news must not be emitted when platform key is absent"
+        );
+    }
+
+    #[test]
+    fn platform_brave_tool_runtime_execution_is_none() {
+        // D5 invariant: emitted tool must keep runtime_execution: None so
+        // the harness dispatches it via the server-callback path.
+        std::env::set_var("BRAVE_SEARCH_PLATFORM_KEY", "test-platform-key");
+        let org_id = OrgId::new();
+        let integrations: Vec<OrgIntegration> = Vec::new();
+        let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
+        std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY");
+        let brave = tools
+            .iter()
+            .find(|t| t.name == "brave_search_web")
+            .expect("brave_search_web must be present when platform key is set");
+        assert!(
+            brave.runtime_execution.is_none(),
+            "brave_search_web runtime_execution must be None (D5 server-callback path)"
         );
     }
 

@@ -78,12 +78,38 @@ pub(super) fn installed_workspace_integrations(
 ) -> Option<Vec<aura_os_harness::InstalledIntegration>> {
     match (org_id, org_integrations) {
         (Some(_), Some(ints)) => {
-            let installed =
+            let mut installed =
                 crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
                     ints,
                 );
+            // Gating-only synthetic platform Brave integration (Spec 02, Gate B).
+            // Injected only when the platform key is present and no real org brave
+            // integration already covers it (soft-fallback: real org key wins).
+            // The synthetic carries no secret; the tool's runtime_execution stays
+            // None so the server-callback path (D5) resolves the platform key.
+            if platform_brave_key_present()
+                && !installed.iter().any(|i| i.provider == "brave_search")
+            {
+                installed.push(synthetic_platform_brave_integration());
+            }
             (!installed.is_empty()).then_some(installed)
         }
         _ => None,
+    }
+}
+
+fn platform_brave_key_present() -> bool {
+    std::env::var("BRAVE_SEARCH_PLATFORM_KEY")
+        .map(|v| !v.is_empty())
+        .unwrap_or(false)
+}
+
+fn synthetic_platform_brave_integration() -> aura_os_harness::InstalledIntegration {
+    aura_os_harness::InstalledIntegration {
+        integration_id: crate::handlers::org_tools::PLATFORM_BRAVE_INTEGRATION_ID.to_string(),
+        name: "Brave Search".to_string(),
+        provider: "brave_search".to_string(),
+        kind: "workspace_integration".to_string(),
+        metadata: std::collections::HashMap::new(),
     }
 }
