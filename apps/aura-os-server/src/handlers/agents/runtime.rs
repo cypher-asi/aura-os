@@ -167,9 +167,16 @@ pub(crate) fn resolve_mixture_members(
     cache_key: Option<&str>,
     retention: Option<&str>,
 ) -> ApiResult<Vec<CouncilMemberConfig>> {
+    const MAX_MIXTURE_REFERENCES: usize = 4;
+
     if mixture.references.is_empty() {
         return Err(ApiError::bad_request(
             "mixture.references must contain at least one model",
+        ));
+    }
+    if mixture.references.len() > MAX_MIXTURE_REFERENCES {
+        return Err(ApiError::bad_request(
+            "mixture.references exceeds the maximum allowed models",
         ));
     }
 
@@ -527,6 +534,26 @@ mod tests {
                 .expect("deserialize mixture body");
         let err = resolve_mixture_members(Some("default"), &body, None, None)
             .expect_err("empty references should fail");
+        assert_eq!(err.0, axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn resolve_mixture_members_rejects_too_many_references() {
+        let references = (0..5)
+            .map(|index| CouncilModelRequestBody {
+                id: format!("ref-{index}"),
+                reasoning_effort: None,
+            })
+            .collect();
+        let body = MixtureRequestBody {
+            aggregator: CouncilModelRequestBody {
+                id: "final".to_string(),
+                reasoning_effort: None,
+            },
+            references,
+        };
+        let err = resolve_mixture_members(Some("default"), &body, None, None)
+            .expect_err("too many references should fail");
         assert_eq!(err.0, axum::http::StatusCode::BAD_REQUEST);
     }
 
