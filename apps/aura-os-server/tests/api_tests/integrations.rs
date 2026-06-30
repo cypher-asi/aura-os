@@ -170,6 +170,43 @@ async fn non_member_cannot_invoke_tool_actions() {
 }
 
 #[tokio::test]
+async fn authz_gate_fails_closed_on_upstream_500() {
+    // A-C1a regression: the authZ gate must fail closed even when the
+    // aura-network members endpoint itself returns a 5xx error. The
+    // NetworkError::Server { status: 500 } arm of map_network_error propagates
+    // the upstream status, so the response is 500 — never 200 (no dispatch).
+    let (app, _state, _db) = build_test_app_with_members_upstream_error().await;
+    let org_id = OrgId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+        Some(serde_json::json!({ "query": "aura" })),
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    // Upstream 500 → NetworkError::Server { status: 500 } → propagated as 500.
+    assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+}
+
+#[tokio::test]
+async fn authz_gate_fails_closed_on_transport_failure() {
+    // A-C1a regression: a transport error on the members lookup (connection
+    // refused) must produce NetworkError::Request, caught by the _ arm of
+    // map_network_error, which emits 502 Bad Gateway — never 200 (no dispatch).
+    let (app, _state, _db) = build_test_app_with_members_transport_failure().await;
+    let org_id = OrgId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+        Some(serde_json::json!({ "query": "aura" })),
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    // Connection refused → NetworkError::Request → _ arm → 502 Bad Gateway.
+    assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
+}
+
+#[tokio::test]
 async fn tool_action_rate_limit_returns_429_after_burst() {
     // A-C1b: a burst of N+1 tool-action calls for one (user, org) must end in a
     // 429 once the per-(user, org) window limit is exceeded, and a *different*
@@ -212,4 +249,3 @@ async fn tool_action_rate_limit_returns_429_after_burst() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 }
-

@@ -486,6 +486,59 @@ pub async fn build_test_app_without_org_membership() -> (Router, AppState, tempf
     (app, state, store_dir)
 }
 
+/// Build a test app wired to a network mock whose `/api/orgs/:org_id/members`
+/// endpoint responds with HTTP 500 Internal Server Error. Used to verify the
+/// tool-action authorization gate fails closed (does not dispatch) when the
+/// upstream members service returns a 5xx error.
+#[allow(dead_code)]
+pub async fn build_test_app_with_members_upstream_error() -> (Router, AppState, tempfile::TempDir) {
+    let members_app = Router::new().route(
+        "/api/orgs/:org_id/members",
+        get(|| async { StatusCode::INTERNAL_SERVER_ERROR }),
+    );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let net_url = format!("http://{}", addr);
+    tokio::spawn(async move { axum::serve(listener, members_app).await.ok() });
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
+    let (app, state) = build_test_app_from_store(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(Arc::new(NetworkClient::with_base_url(&net_url))),
+        None,
+        None,
+        None,
+    );
+    (app, state, store_dir)
+}
+
+/// Build a test app whose `NetworkClient` points at a closed port so every
+/// members lookup fails with a transport error (connection refused). Used to
+/// verify the authorization gate fails closed on network layer failures.
+#[allow(dead_code)]
+pub async fn build_test_app_with_members_transport_failure() -> (Router, AppState, tempfile::TempDir)
+{
+    // Bind and immediately drop — nothing will be listening on this port.
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    drop(listener);
+    let net_url = format!("http://{}", addr);
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
+    let (app, state) = build_test_app_from_store(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(Arc::new(NetworkClient::with_base_url(&net_url))),
+        None,
+        None,
+        None,
+    );
+    (app, state, store_dir)
+}
+
 #[allow(dead_code)]
 pub fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
     let store_dir = tempfile::tempdir().unwrap();
