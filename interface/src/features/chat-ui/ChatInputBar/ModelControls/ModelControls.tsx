@@ -6,6 +6,7 @@ import {
   ModelMenuGroup,
   ModelMenuScroll,
   CouncilCountRow,
+  SecondOpinionRow,
   CouncilMechanismRow,
 } from "../../../../components/InputBarShell";
 import {
@@ -20,6 +21,7 @@ import {
   type ModelVendorGroup,
 } from "../../../../constants/models";
 import type {
+  AnswerStrategy,
   CouncilCount,
   CouncilMechanism,
   CouncilSlot,
@@ -46,6 +48,8 @@ export interface ModelControlsProps {
   councilCount: CouncilCount;
   councilModels: readonly CouncilSlot[];
   councilMechanism: CouncilMechanism;
+  answerStrategy: AnswerStrategy;
+  secondOpinionReference: CouncilSlot | null;
   /** Store actions (referentially stable zustand actions). */
   setCouncilCount: (streamKey: string, count: CouncilCount) => void;
   setCouncilModel: (
@@ -57,6 +61,17 @@ export interface ModelControlsProps {
   setCouncilMechanism: (
     streamKey: string,
     mechanism: CouncilMechanism,
+  ) => void;
+  setAnswerStrategy: (
+    streamKey: string,
+    strategy: AnswerStrategy,
+    adapterType?: string,
+    defaultModel?: string | null,
+  ) => void;
+  setSecondOpinionReference: (
+    streamKey: string,
+    modelId: string,
+    effort?: ModelEffort,
   ) => void;
   /** Derived by `useModelSelection` in the orchestrator (memoized). */
   sortedModelsForMode: readonly ModelOption[];
@@ -86,9 +101,13 @@ export const ModelControls = memo(function ModelControls({
   councilCount,
   councilModels,
   councilMechanism,
+  answerStrategy,
+  secondOpinionReference,
   setCouncilCount,
   setCouncilModel,
   setCouncilMechanism,
+  setAnswerStrategy,
+  setSecondOpinionReference,
   sortedModelsForMode,
   vendorGroups,
   shouldUseCondensedAuraMenu,
@@ -109,6 +128,8 @@ export const ModelControls = memo(function ModelControls({
   // Which AURA Council slot picker (if any) is open, so only one slot
   // menu is mounted at a time once the council fans out.
   const [openCouncilSlot, setOpenCouncilSlot] = useState<number | null>(null);
+  const [openSecondOpinionReference, setOpenSecondOpinionReference] =
+    useState(false);
 
   const toggleVendor = useCallback((vendor: ModelVendor) => {
     setCollapsedVendors((prev) => {
@@ -156,6 +177,34 @@ export const ModelControls = memo(function ModelControls({
           onSelect={(n) => setCouncilCount(streamKey, n)}
         />
       ) : null;
+      const secondOpinionActive =
+        generationMode === "chat" && answerStrategy === "second_opinion";
+      const referenceLabel =
+        secondOpinionReference?.id != null
+          ? modelLabelWithEffort(
+              secondOpinionReference.id,
+              secondOpinionReference.effort,
+              adapterType,
+              defaultModel,
+            )
+          : null;
+      const secondOpinionRow =
+        cfg.includeCouncilRow && generationMode === "chat" ? (
+          <SecondOpinionRow
+            key="__second_opinion__"
+            active={secondOpinionActive}
+            referenceLabel={referenceLabel}
+            onToggle={(enabled) => {
+              setAnswerStrategy(
+                streamKey,
+                enabled ? "second_opinion" : "single",
+                adapterType,
+                defaultModel,
+              );
+              close();
+            }}
+          />
+        ) : null;
       // Combine-mechanism picker sits directly under the count row and
       // is only relevant once the council fans out (`count > 1`).
       const mechanismRow =
@@ -173,6 +222,7 @@ export const ModelControls = memo(function ModelControls({
             data-agent-surface="model-picker"
             data-agent-proof="chat-model-picker-visible"
           >
+            {secondOpinionRow}
             {councilRow}
             {mechanismRow}
             {vendorGroups.map((group) => (
@@ -204,6 +254,7 @@ export const ModelControls = memo(function ModelControls({
           data-agent-surface="model-picker"
           data-agent-proof="chat-model-picker-visible"
         >
+          {secondOpinionRow}
           {councilRow}
           {mechanismRow}
           {sortedModelsForMode.map((m) => {
@@ -236,7 +287,13 @@ export const ModelControls = memo(function ModelControls({
       setCouncilCount,
       councilMechanism,
       setCouncilMechanism,
+      answerStrategy,
+      secondOpinionReference,
+      setAnswerStrategy,
       streamKey,
+      generationMode,
+      adapterType,
+      defaultModel,
     ],
   );
 
@@ -354,6 +411,48 @@ export const ModelControls = memo(function ModelControls({
   // council count row so the AURA Council control stays reachable from
   // any model selector once the council has fanned out.
   const councilActive = councilCount > 1;
+  const secondOpinionActive =
+    generationMode === "chat" && answerStrategy === "second_opinion" && !councilActive;
+  const reference = secondOpinionReference ?? {
+    id: selectedModel ?? "",
+    effort: selectedEffort,
+  };
+  const secondOpinionSlotNodes = secondOpinionActive && hasModels ? (
+    <>
+      <div className={styles.secondOpinionSlot} data-second-opinion-slot="reference">
+        <span className={styles.strategySlotLabel}>Reference</span>
+        <ModelPicker
+          selectedLabel={modelLabelWithEffort(
+            reference.id,
+            reference.effort,
+            adapterType,
+            defaultModel,
+          )}
+          isInteractive={isModelPickerInteractive}
+          renderMenu={(close) =>
+            renderModelMenuList(close, {
+              activeModelId: reference.id,
+              activeEffort: reference.effort,
+              onSelect: (id, effort) =>
+                setSecondOpinionReference(streamKey, id, effort),
+              includeCouncilRow: false,
+            })
+          }
+          onOpen={handleModelPickerOpen}
+          open={openSecondOpinionReference}
+          onOpenChange={setOpenSecondOpinionReference}
+          triggerProps={{
+            "data-agent-action": "open-second-opinion-reference",
+          }}
+          className={styles.inlineModelPicker}
+        />
+      </div>
+      <div className={styles.secondOpinionSlot} data-second-opinion-slot="final">
+        <span className={styles.strategySlotLabel}>Final</span>
+        {modelPickerNode}
+      </div>
+    </>
+  ) : null;
   const councilSlotNodes = councilActive && hasModels
     ? Array.from({ length: councilCount }, (_, slot) => {
         const member = councilModels[slot];
@@ -397,11 +496,23 @@ export const ModelControls = memo(function ModelControls({
       className={
         councilActive
           ? `${styles.bottomChromeRow} ${styles.councilSlotsRow}`
+          : secondOpinionActive
+            ? `${styles.bottomChromeRow} ${styles.secondOpinionSlotsRow}`
           : styles.bottomChromeRow
       }
-      data-agent-surface={councilActive ? "council-slots" : undefined}
+      data-agent-surface={
+        councilActive
+          ? "council-slots"
+          : secondOpinionActive
+            ? "second-opinion-slots"
+            : undefined
+      }
     >
-      {councilActive ? councilSlotNodes : modelPickerNode}
+      {councilActive
+        ? councilSlotNodes
+        : secondOpinionActive
+          ? secondOpinionSlotNodes
+          : modelPickerNode}
       {qualityPickerNode}
     </div>
   );

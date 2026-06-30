@@ -154,6 +154,27 @@ pub struct CouncilMember {
     pub id: String,
     /// Model driving this member.
     pub model: ModelSelection,
+    /// Optional semantic role for specialized Council-backed flows.
+    /// Ordinary AURA Council requests omit this field. Second Opinion
+    /// stamps `aggregator` on the final-answer model and `reference` on
+    /// advisor models so newer runtimes can apply Hermes-style behavior,
+    /// while older runtimes ignore the unknown JSON field and keep using
+    /// the classic Council path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<CouncilMemberRole>,
+}
+
+/// Optional role for a [`CouncilMember`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+#[serde(rename_all = "snake_case")]
+pub enum CouncilMemberRole {
+    /// Final-answer model. In Second Opinion this model hosts the parent
+    /// run and receives private reference guidance.
+    Aggregator,
+    /// Advisory model. The runtime asks it for private critique/context
+    /// rather than letting it act as the final user-facing agent.
+    Reference,
 }
 
 /// How an AURA Council combines its members' answers once every member
@@ -500,6 +521,29 @@ mod tests {
             }
             other => panic!("expected council, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn council_member_role_is_optional_and_round_trips() {
+        let legacy: CouncilMember = serde_json::from_str(r#"{"id":"0","model":{"id":"final"}}"#)
+            .expect("deserialize legacy council member");
+        assert_eq!(legacy.role, None);
+
+        let member = CouncilMember {
+            id: "1".to_string(),
+            model: ModelSelection {
+                id: Some("reference".to_string()),
+                ..ModelSelection::default()
+            },
+            role: Some(CouncilMemberRole::Reference),
+        };
+        let json = serde_json::to_string(&member).expect("serialize role");
+        assert!(
+            json.contains(r#""role":"reference""#),
+            "role must be present for second-opinion members: {json}"
+        );
+        let back: CouncilMember = serde_json::from_str(&json).expect("deserialize role");
+        assert_eq!(back.role, Some(CouncilMemberRole::Reference));
     }
 
     #[test]

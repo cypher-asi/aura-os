@@ -280,6 +280,16 @@ export function generateSpecsStream(
 
 /* ── Chat / agent message streams ────────────────────────────────── */
 
+export interface MultiModelSlot {
+  id: string;
+  reasoning_effort?: string;
+}
+
+export interface MixtureRequest {
+  references: MultiModelSlot[];
+  aggregator: MultiModelSlot;
+}
+
 export function sendAgentEventStream(
   agentId: string,
   content: string,
@@ -313,9 +323,16 @@ export function sendAgentEventStream(
    * `contrast` / `side_by_side`).
    */
   council?: {
-    models: { id: string; reasoning_effort?: string }[];
+    models: MultiModelSlot[];
     mechanism?: string;
   },
+  /**
+   * Second Opinion / Mixture-of-Agents request. The selected chat model
+   * is the aggregator/final answer; reference models advise it. Aura OS
+   * maps this onto the existing Council runtime today while preserving a
+   * distinct request shape and UI presentation.
+   */
+  mixture?: MixtureRequest,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (model) {
@@ -328,6 +345,7 @@ export function sendAgentEventStream(
     if (effort) body.reasoning_effort = effort;
   }
   if (council) body.council = council;
+  if (mixture) body.mixture = mixture;
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }
@@ -580,9 +598,11 @@ export function sendEventStream(
    * `contrast` / `side_by_side`).
    */
   council?: {
-    models: { id: string; reasoning_effort?: string }[];
+    models: MultiModelSlot[];
     mechanism?: string;
   },
+  /** See {@link sendAgentEventStream}. */
+  mixture?: MixtureRequest,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (model) {
@@ -593,6 +613,7 @@ export function sendEventStream(
     if (effort) body.reasoning_effort = effort;
   }
   if (council) body.council = council;
+  if (mixture) body.mixture = mixture;
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }

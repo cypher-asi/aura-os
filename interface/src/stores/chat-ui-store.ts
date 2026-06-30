@@ -91,9 +91,19 @@ export interface CouncilSlot {
  */
 export type CouncilMechanism = "synthesize" | "contrast" | "side_by_side";
 
+/**
+ * How a normal chat answer should be produced. This is intentionally
+ * separate from `AgentMode`: Code/Plan/Image describe the task/output,
+ * while the answer strategy describes the model orchestration used for
+ * a chat turn.
+ */
+export type AnswerStrategy = "single" | "second_opinion";
+
 const DEFAULT_COUNCIL_COUNT: CouncilCount = 1;
 
 const DEFAULT_COUNCIL_MECHANISM: CouncilMechanism = "synthesize";
+
+const DEFAULT_ANSWER_STRATEGY: AnswerStrategy = "single";
 
 /**
  * Stable empty slot list so the `useChatUI` selector returns a
@@ -111,6 +121,10 @@ function isCouncilMechanism(value: unknown): value is CouncilMechanism {
   return (
     value === "synthesize" || value === "contrast" || value === "side_by_side"
   );
+}
+
+function isAnswerStrategy(value: unknown): value is AnswerStrategy {
+  return value === "single" || value === "second_opinion";
 }
 
 function isModelEffort(value: unknown): value is ModelEffort {
@@ -136,6 +150,14 @@ function councilModelsStorageKey(streamKey: string): string {
 
 function councilMechanismStorageKey(streamKey: string): string {
   return `aura-council-mechanism:${streamKey}`;
+}
+
+function answerStrategyStorageKey(streamKey: string): string {
+  return `aura-answer-strategy:${streamKey}`;
+}
+
+function secondOpinionReferenceStorageKey(streamKey: string): string {
+  return `aura-second-opinion-reference:${streamKey}`;
 }
 
 function persistCouncilCount(streamKey: string, count: CouncilCount): void {
@@ -190,6 +212,78 @@ function clearPersistedCouncil(streamKey: string): void {
     localStorage.removeItem(councilCountStorageKey(streamKey));
     localStorage.removeItem(councilModelsStorageKey(streamKey));
     localStorage.removeItem(councilMechanismStorageKey(streamKey));
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+function persistAnswerStrategy(
+  streamKey: string,
+  strategy: AnswerStrategy,
+): void {
+  try {
+    if (strategy === DEFAULT_ANSWER_STRATEGY) {
+      localStorage.removeItem(answerStrategyStorageKey(streamKey));
+    } else {
+      localStorage.setItem(answerStrategyStorageKey(streamKey), strategy);
+    }
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+function loadPersistedAnswerStrategy(streamKey: string): AnswerStrategy {
+  try {
+    const stored = localStorage.getItem(answerStrategyStorageKey(streamKey));
+    if (isAnswerStrategy(stored)) return stored;
+  } catch {
+    // localStorage may be unavailable
+  }
+  return DEFAULT_ANSWER_STRATEGY;
+}
+
+function persistSecondOpinionReference(
+  streamKey: string,
+  reference: CouncilSlot,
+): void {
+  try {
+    localStorage.setItem(
+      secondOpinionReferenceStorageKey(streamKey),
+      JSON.stringify(reference),
+    );
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+function loadPersistedSecondOpinionReference(
+  streamKey: string,
+): CouncilSlot | null {
+  try {
+    const stored = localStorage.getItem(secondOpinionReferenceStorageKey(streamKey));
+    if (!stored) return null;
+    const parsed: unknown = JSON.parse(stored);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as { id?: unknown }).id === "string"
+    ) {
+      const effort = (parsed as { effort?: unknown }).effort;
+      return {
+        id: (parsed as { id: string }).id,
+        effort: isModelEffort(effort) ? effort : null,
+      };
+    }
+  } catch {
+    // localStorage may be unavailable / malformed
+  }
+  return null;
+}
+
+function clearPersistedSecondOpinion(streamKey: string): void {
+  try {
+    localStorage.removeItem(answerStrategyStorageKey(streamKey));
+    localStorage.removeItem(secondOpinionReferenceStorageKey(streamKey));
   } catch {
     // localStorage may be unavailable
   }
@@ -257,6 +351,14 @@ interface StreamState {
    * Only consulted when the council is active (`councilCount > 1`).
    */
   councilMechanism: CouncilMechanism;
+  /**
+   * Answer-production strategy. `single` is ordinary chat; `second_opinion`
+   * runs one private reference model and lets the selected model produce
+   * the final answer.
+   */
+  answerStrategy: AnswerStrategy;
+  /** Reference model used when `answerStrategy === "second_opinion"`. */
+  secondOpinionReference: CouncilSlot | null;
 }
 
 interface ChatUIState {
@@ -323,6 +425,20 @@ interface ChatUIActions {
     mechanism: CouncilMechanism,
   ) => void;
   getCouncilMechanism: (streamKey: string) => CouncilMechanism;
+  setAnswerStrategy: (
+    streamKey: string,
+    strategy: AnswerStrategy,
+    adapterType?: string,
+    defaultModel?: string | null,
+  ) => void;
+  getAnswerStrategy: (streamKey: string) => AnswerStrategy;
+  setSecondOpinionReference: (
+    streamKey: string,
+    modelId: string,
+    effort?: ModelEffort,
+  ) => void;
+  getSecondOpinionReference: (streamKey: string) => CouncilSlot | null;
+  resetAnswerStrategy: (streamKey: string) => void;
   /**
    * Reset AURA Council for a stream back to `1x` (council off): clear
    * the per-slot picks and drop the persisted count/models so a brand
@@ -396,7 +512,43 @@ const getStream = (state: ChatUIState, key: string): StreamState =>
     councilCount: DEFAULT_COUNCIL_COUNT,
     councilModels: EMPTY_COUNCIL_MODELS,
     councilMechanism: DEFAULT_COUNCIL_MECHANISM,
+    answerStrategy: DEFAULT_ANSWER_STRATEGY,
+    secondOpinionReference: null,
   };
+
+function defaultSecondOpinionReference(
+  modelId: string | null,
+  adapterType?: string,
+  defaultModel?: string | null,
+): CouncilSlot {
+  const fallbackModel = defaultModelForAdapter(adapterType, defaultModel);
+  const finalId = modelId ?? fallbackModel;
+  const models = availableModelsForAdapter(adapterType).filter(
+    (model) => model.mode === "chat",
+  );
+  const finalModel = models.find((model) => model.id === finalId);
+  const differentVendor = models.find(
+    (model) =>
+      model.id !== finalId &&
+      finalModel?.vendor != null &&
+      model.vendor !== finalModel.vendor,
+  );
+  const distinct = differentVendor ?? models.find((model) => model.id !== finalId);
+  const id = distinct?.id ?? finalId ?? DEFAULT_CHAT_MODEL_ID;
+  return { id, effort: loadPersistedModelEffort(id) };
+}
+
+function normalizeSecondOpinionReference(
+  reference: CouncilSlot | null,
+  finalModelId: string | null,
+  adapterType?: string,
+  defaultModel?: string | null,
+): CouncilSlot {
+  if (reference && reference.id !== finalModelId) {
+    return reference;
+  }
+  return defaultSecondOpinionReference(finalModelId, adapterType, defaultModel);
+}
 
 export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
   streams: {},
@@ -410,6 +562,26 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
     // model (or the image default), not a stale chat model id that
     // would later be sent to `/api/generate/image/stream` and rejected.
     const model = modelForMode(mode, adapterType, defaultModel, agentId);
+    const answerStrategy = loadPersistedAnswerStrategy(streamKey);
+    const persistedSecondOpinionReference =
+      answerStrategy === "second_opinion"
+        ? loadPersistedSecondOpinionReference(streamKey)
+        : null;
+    const secondOpinionReference =
+      answerStrategy === "second_opinion"
+        ? normalizeSecondOpinionReference(
+            persistedSecondOpinionReference,
+            model,
+            adapterType,
+            defaultModel,
+          )
+        : null;
+    if (
+      secondOpinionReference &&
+      secondOpinionReference !== persistedSecondOpinionReference
+    ) {
+      persistSecondOpinionReference(streamKey, secondOpinionReference);
+    }
     if (existing && existing.selectedModel !== null) {
       // Only refresh if this agent has its own persisted value and it
       // disagrees with what we installed on an earlier pass (e.g. the
@@ -443,6 +615,8 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
           councilCount: loadPersistedCouncilCount(streamKey),
           councilModels: loadPersistedCouncilModels(streamKey),
           councilMechanism: loadPersistedCouncilMechanism(streamKey),
+          answerStrategy,
+          secondOpinionReference,
         },
       },
     }));
@@ -457,16 +631,28 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
     void import("../lib/analytics").then(({ track }) =>
       track("model_selected", { model_name: model, effort: nextEffort }),
     );
-    set((s) => ({
-      streams: {
-        ...s.streams,
-        [streamKey]: {
-          ...getStream(s, streamKey),
-          selectedModel: model,
-          selectedEffort: nextEffort,
+    set((s) => {
+      const current = getStream(s, streamKey);
+      const nextReference =
+        current.answerStrategy === "second_opinion" &&
+        current.secondOpinionReference?.id === model
+          ? defaultSecondOpinionReference(model, adapterType)
+          : current.secondOpinionReference;
+      if (nextReference && nextReference !== current.secondOpinionReference) {
+        persistSecondOpinionReference(streamKey, nextReference);
+      }
+      return {
+        streams: {
+          ...s.streams,
+          [streamKey]: {
+            ...current,
+            selectedModel: model,
+            selectedEffort: nextEffort,
+            secondOpinionReference: nextReference,
+          },
         },
-      },
-    }));
+      };
+    });
   },
 
   getSelectedModel: (streamKey) => getStream(get(), streamKey).selectedModel,
@@ -499,10 +685,23 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
       }
       persistCouncilCount(streamKey, count);
       persistCouncilModels(streamKey, councilModels);
+      if (count > 1) {
+        clearPersistedSecondOpinion(streamKey);
+      }
       return {
         streams: {
           ...s.streams,
-          [streamKey]: { ...current, councilCount: count, councilModels },
+          [streamKey]: {
+            ...current,
+            councilCount: count,
+            councilModels,
+            ...(count > 1
+              ? {
+                  answerStrategy: DEFAULT_ANSWER_STRATEGY,
+                  secondOpinionReference: null,
+                }
+              : {}),
+          },
         },
       };
     });
@@ -544,6 +743,96 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
 
   getCouncilMechanism: (streamKey) =>
     getStream(get(), streamKey).councilMechanism,
+
+  setAnswerStrategy: (streamKey, strategy, adapterType, defaultModel) => {
+    set((s) => {
+      const current = getStream(s, streamKey);
+      if (strategy === "second_opinion") {
+        const reference = normalizeSecondOpinionReference(
+          current.secondOpinionReference,
+          current.selectedModel,
+          adapterType,
+          defaultModel,
+        );
+        clearPersistedCouncil(streamKey);
+        persistAnswerStrategy(streamKey, strategy);
+        persistSecondOpinionReference(streamKey, reference);
+        return {
+          streams: {
+            ...s.streams,
+            [streamKey]: {
+              ...current,
+              answerStrategy: strategy,
+              secondOpinionReference: reference,
+              councilCount: DEFAULT_COUNCIL_COUNT,
+              councilModels: EMPTY_COUNCIL_MODELS,
+              councilMechanism: DEFAULT_COUNCIL_MECHANISM,
+            },
+          },
+        };
+      }
+      clearPersistedSecondOpinion(streamKey);
+      return {
+        streams: {
+          ...s.streams,
+          [streamKey]: {
+            ...current,
+            answerStrategy: DEFAULT_ANSWER_STRATEGY,
+            secondOpinionReference: null,
+          },
+        },
+      };
+    });
+  },
+
+  getAnswerStrategy: (streamKey) => getStream(get(), streamKey).answerStrategy,
+
+  setSecondOpinionReference: (streamKey, modelId, effort) => {
+    set((s) => {
+      const current = getStream(s, streamKey);
+      const next = {
+        id: modelId,
+        effort: effort ?? loadPersistedModelEffort(modelId),
+      };
+      persistSecondOpinionReference(streamKey, next);
+      if (current.answerStrategy === "second_opinion") {
+        persistAnswerStrategy(streamKey, "second_opinion");
+      }
+      return {
+        streams: {
+          ...s.streams,
+          [streamKey]: { ...current, secondOpinionReference: next },
+        },
+      };
+    });
+  },
+
+  getSecondOpinionReference: (streamKey) =>
+    getStream(get(), streamKey).secondOpinionReference,
+
+  resetAnswerStrategy: (streamKey) => {
+    clearPersistedSecondOpinion(streamKey);
+    set((s) => {
+      const current = s.streams[streamKey];
+      if (
+        current &&
+        current.answerStrategy === DEFAULT_ANSWER_STRATEGY &&
+        current.secondOpinionReference == null
+      ) {
+        return s;
+      }
+      return {
+        streams: {
+          ...s.streams,
+          [streamKey]: {
+            ...getStream(s, streamKey),
+            answerStrategy: DEFAULT_ANSWER_STRATEGY,
+            secondOpinionReference: null,
+          },
+        },
+      };
+    });
+  },
 
   resetCouncil: (streamKey) => {
     clearPersistedCouncil(streamKey);
@@ -863,10 +1152,20 @@ export function useChatUI(streamKey: string) {
   const councilMechanism = useChatUIStore(
     (s) => s.streams[streamKey]?.councilMechanism ?? DEFAULT_COUNCIL_MECHANISM,
   );
+  const answerStrategy = useChatUIStore(
+    (s) => s.streams[streamKey]?.answerStrategy ?? DEFAULT_ANSWER_STRATEGY,
+  );
+  const secondOpinionReference = useChatUIStore(
+    (s) => s.streams[streamKey]?.secondOpinionReference ?? null,
+  );
   const setSelectedModel = useChatUIStore((s) => s.setSelectedModel);
   const setCouncilCount = useChatUIStore((s) => s.setCouncilCount);
   const setCouncilModel = useChatUIStore((s) => s.setCouncilModel);
   const setCouncilMechanism = useChatUIStore((s) => s.setCouncilMechanism);
+  const setAnswerStrategy = useChatUIStore((s) => s.setAnswerStrategy);
+  const setSecondOpinionReference = useChatUIStore(
+    (s) => s.setSecondOpinionReference,
+  );
   const setSelectedEffort = useChatUIStore((s) => s.setSelectedEffort);
   const setImageQuality = useChatUIStore((s) => s.setImageQuality);
   const setProjectId = useChatUIStore((s) => s.setProjectId);
@@ -884,11 +1183,15 @@ export function useChatUI(streamKey: string) {
     councilCount,
     councilModels,
     councilMechanism,
+    answerStrategy,
+    secondOpinionReference,
     setSelectedMode,
     setSelectedModel,
     setCouncilCount,
     setCouncilModel,
     setCouncilMechanism,
+    setAnswerStrategy,
+    setSecondOpinionReference,
     setSelectedEffort,
     setImageQuality,
     setProjectId,

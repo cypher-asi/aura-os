@@ -14,6 +14,7 @@ import { useChatUIStore } from "../../stores/chat-ui-store";
 import type { ChatAttachment, StreamEventHandler } from "../../api/streams";
 import {
   DEFAULT_IMAGE_MODEL_ID,
+  loadPersistedModelEffort,
   modelSupportsQuality,
   type GenerationMode,
 } from "../../constants/models";
@@ -644,6 +645,9 @@ export function useChatStream({
         } | undefined => {
           if (_generationMode) return undefined;
           const uiState = useChatUIStore.getState();
+          if (uiState.getAnswerStrategy(getPartitionKey()) === "second_opinion") {
+            return undefined;
+          }
           if (uiState.getCouncilCount(getPartitionKey()) <= 1) return undefined;
           const models = uiState
             .getCouncilModels(getPartitionKey())
@@ -655,6 +659,33 @@ export function useChatStream({
           if (models.length < 2) return undefined;
           const mechanism = uiState.getCouncilMechanism(getPartitionKey());
           return { models, mechanism };
+        })();
+        const mixture = ((): {
+          references: { id: string; reasoning_effort?: string }[];
+          aggregator: { id: string; reasoning_effort?: string };
+        } | undefined => {
+          if (_generationMode || !selectedModel) return undefined;
+          const uiState = useChatUIStore.getState();
+          if (uiState.getAnswerStrategy(getPartitionKey()) !== "second_opinion") {
+            return undefined;
+          }
+          const reference = uiState.getSecondOpinionReference(getPartitionKey());
+          if (!reference?.id) return undefined;
+          const aggregatorEffort = loadPersistedModelEffort(selectedModel);
+          return {
+            references: [
+              {
+                id: reference.id,
+                ...(reference.effort ? { reasoning_effort: reference.effort } : {}),
+              },
+            ],
+            aggregator: {
+              id: selectedModel,
+              ...(aggregatorEffort
+                ? { reasoning_effort: aggregatorEffort }
+                : {}),
+            },
+          };
         })();
         await api.sendEventStream(
           capturedProjectId,
@@ -670,6 +701,7 @@ export function useChatStream({
           shouldStartNewSession ? null : sessionIdRef.current,
           clientRetryAttempt,
           council,
+          mixture,
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;

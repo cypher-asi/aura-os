@@ -85,6 +85,7 @@ export type RuntimeRequestType =
 export interface CouncilMember {
   id: string;
   model: ModelSelection;
+  role: "aggregator" | "reference" | null;
 }
 
 export interface AgentIdentity {
