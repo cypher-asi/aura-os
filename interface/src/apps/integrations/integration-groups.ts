@@ -59,7 +59,6 @@ const PROVIDER_GROUP: Record<string, IntegrationGroupId> = {
   apify: "scraping",
   mailchimp: "email",
   resend: "email",
-  brave_search: "search",
   mcp_server: "mcp_servers",
 };
 

@@ -98,20 +98,6 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     runtimeCompatibleAdapters: [],
   },
   {
-    id: "brave_search",
-    label: "Brave Search",
-    kind: "workspace_integration",
-    description:
-      "Web search, research, and competitive-intelligence workflows for the workspace.",
-    secretLabel: "Brave Search API Key",
-    secretPlaceholder: "Paste the Brave Search API key",
-    authHint:
-      "Use a Brave Search API key when the workspace should access Brave-powered web search tools.",
-    docsUrl: "https://api-dashboard.search.brave.com/app/documentation",
-    supportsDefaultModel: false,
-    runtimeCompatibleAdapters: [],
-  },
-  {
     id: "freepik",
     label: "Freepik",
     kind: "workspace_integration",

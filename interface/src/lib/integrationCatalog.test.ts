@@ -34,7 +34,6 @@ describe("integrationCatalog auth labels", () => {
       "linear",
       "slack",
       "notion",
-      "brave_search",
       "freepik",
       "buffer",
       "apify",

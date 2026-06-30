@@ -31,7 +31,6 @@ import {
   NotebookPen,
   Palette,
   Puzzle,
-  Search,
   Send,
   Server,
   Share2,
@@ -296,7 +295,6 @@ export const ONBOARDING_INTEGRATIONS: readonly OnboardingIntegration[] = [
   { id: "github", label: "GitHub", description: "Repos, issues, and pull requests.", Icon: GitBranch, tier: "standard" },
   { id: "slack", label: "Slack", description: "Messages across your workspace.", Icon: MessagesSquare, tier: "standard" },
   { id: "notion", label: "Notion", description: "Docs and knowledge base.", Icon: FileText, tier: "standard" },
-  { id: "brave_search", label: "Brave Search", description: "Private web search.", Icon: Search, tier: "standard" },
 ];
 
 // ── Automations ──────────────────────────────────────────────────────────────
