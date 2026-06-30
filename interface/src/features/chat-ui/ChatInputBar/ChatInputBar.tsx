@@ -282,9 +282,13 @@ export const DesktopChatInputBar = memo(
     const councilCount = chatUI.councilCount;
     const councilModels = chatUI.councilModels;
     const councilMechanism = chatUI.councilMechanism;
+    const answerStrategy = chatUI.answerStrategy;
+    const secondOpinionReference = chatUI.secondOpinionReference;
     const setCouncilCount = chatUI.setCouncilCount;
     const setCouncilModel = chatUI.setCouncilModel;
     const setCouncilMechanism = chatUI.setCouncilMechanism;
+    const setAnswerStrategy = chatUI.setAnswerStrategy;
+    const setSecondOpinionReference = chatUI.setSecondOpinionReference;
     const setSelectedMode = chatUI.setSelectedMode;
     const clearGenerationCommands = useCallback(() => {
       if (onCommandsChange && selectedCommands.some((c) => isGenerationCommand(c.id))) {
@@ -597,9 +601,13 @@ export const DesktopChatInputBar = memo(
       councilCount,
       councilModels,
       councilMechanism,
+      answerStrategy,
+      secondOpinionReference,
       setCouncilCount,
       setCouncilModel,
       setCouncilMechanism,
+      setAnswerStrategy,
+      setSecondOpinionReference,
       sortedModelsForMode,
       vendorGroups,
       shouldUseCondensedAuraMenu,
@@ -676,6 +684,8 @@ export const DesktopChatInputBar = memo(
     // into the bottom row so the N model slots get a full-width strip to
     // sit in, regardless of textarea height.
     const councilActive = councilCount > 1;
+    const secondOpinionActive =
+      generationMode === "chat" && answerStrategy === "second_opinion";
     // Command chips read as part of the prompt, but cramming them into
     // the narrow inline `inputRowEnd` slot truncates the label (e.g.
     // `/Record Demo` -> `/R…`). When any chip is present we expand the
@@ -683,14 +693,20 @@ export const DesktopChatInputBar = memo(
     // to the bottom row so each sits on its own line, fully legible.
     const hasCommandChips = selectedCommands.length > 0;
     const showPickerInline =
-      hasPicker && !isMultiLine && !councilActive && !hasCommandChips;
+      hasPicker &&
+      !isMultiLine &&
+      !councilActive &&
+      !secondOpinionActive &&
+      !hasCommandChips;
     const showPickerInBottomRow =
-      hasPicker && (isMultiLine || councilActive || hasCommandChips);
+      hasPicker &&
+      (isMultiLine || councilActive || secondOpinionActive || hasCommandChips);
     // State-independent version of `showPickerInline` for the shell's
     // wrap measurement: "would the picker sit inline if the prompt were
     // a single line?" must not vary with `isMultiLine` itself, or the
     // measurement reference would shift with the state it drives.
-    const reserveInlineEnd = hasPicker && !councilActive && !hasCommandChips;
+    const reserveInlineEnd =
+      hasPicker && !councilActive && !secondOpinionActive && !hasCommandChips;
     const inputRowEnd = showPickerInline ? (
       <ModelControls placement="inline" {...modelControlsProps} />
     ) : null;

@@ -190,6 +190,27 @@ describe("registerSpawnedSubagent", () => {
     expect(members.map((m) => m.councilIndex)).toEqual([0, 1]);
     expect(members.map((m) => m.childRunId)).toEqual(["child-a", "child-b"]);
   });
+
+  it("preserves second-opinion presentation on the shared parent entry", () => {
+    const h = makeHarness([]);
+    registerSpawnedSubagent(
+      h.refs,
+      h.setters,
+      spawn({
+        child_run_id: "child-final",
+        parent_tool_use_id: "toolu_second_opinion",
+        subagent_type: "second-opinion",
+        model: "final-model",
+        council_index: 0,
+      }),
+    );
+
+    const entry = h.refs.toolCalls.current.find(
+      (tc) => tc.id === "toolu_second_opinion",
+    );
+    expect(entry?.subagentType).toBe("second-opinion");
+    expect(entry?.councilMembers?.[0].councilIndex).toBe(0);
+  });
 });
 
 describe("applySubagentStatus", () => {

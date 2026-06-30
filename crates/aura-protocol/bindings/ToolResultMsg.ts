@@ -2,5 +2,34 @@
 
 /**
  * Payload for `tool_result`.
+ *
+ * `result` carries the textual tool output (the string-only contract
+ * used by every existing tool). Computer-use / vision tools may
+ * additionally attach a single rendered frame via the optional
+ * `image_base64` + `image_media_type` pair: the harness (the
+ * producer of this message) base64-encodes a PNG/JPEG screenshot and
+ * stamps its media type so the server can persist it and replay it to
+ * the model as an Anthropic `image` content block inside the
+ * `tool_result`.
+ *
+ * Both image fields are strictly additive and backward compatible:
+ * `#[serde(default)]` lets older producers omit them on the wire, and
+ * `skip_serializing_if = "Option::is_none"` keeps the JSON
+ * byte-identical to today's shape when no image is present. A message
+ * with neither field behaves exactly as before — a string result.
+ *
+ * Never log the base64 payload; log `image_media_type` and the
+ * encoded byte length only.
  */
-export type ToolResultMsg = { name: string, result: string, is_error: boolean, tool_use_id: string | null, };
+export type ToolResultMsg = { name: string, result: string, is_error: boolean, tool_use_id: string | null,
+/**
+ * Base64-encoded PNG/JPEG payload of an image tool-result (e.g. a
+ * computer-use screenshot). `None` for the ordinary string-only
+ * path. Pairs with [`Self::image_media_type`].
+ */
+image_base64: string | null,
+/**
+ * IANA media type of [`Self::image_base64`] (e.g. `"image/png"`).
+ * `None` when no image is attached.
+ */
+image_media_type: string | null, };

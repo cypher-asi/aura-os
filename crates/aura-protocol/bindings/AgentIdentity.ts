@@ -22,8 +22,12 @@ partition_id: string | null,
  */
 persona: AgentPersona | null, 
 /**
- * Operator-curated skill names rendered as `<agent_skills>` in
- * the assembled system prompt.
+ * Operator-curated skill names rendered verbatim as `<agent_skills>`
+ * in the assembled system prompt. This is a lightweight prompt hint
+ * only — it is distinct from the harness's per-agent skill *install*
+ * store (keyed by `template_id`), which independently resolves
+ * SKILL.md content, grants tools/permissions, and populates
+ * `SessionReady.skills`. These two lists are not required to match.
  */
 skills: Array<string>, 
 /**

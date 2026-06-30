@@ -11,6 +11,10 @@ export {
 export { ModelMenuRow, type ModelMenuRowProps } from "./ModelMenuRow";
 export { CouncilCountRow, type CouncilCountRowProps } from "./CouncilCountRow";
 export {
+  SecondOpinionRow,
+  type SecondOpinionRowProps,
+} from "./SecondOpinionRow";
+export {
   CouncilMechanismRow,
   type CouncilMechanismRowProps,
 } from "./CouncilMechanismRow";

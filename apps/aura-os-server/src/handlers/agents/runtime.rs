@@ -1,16 +1,19 @@
 use std::time::Duration;
 
+use aura_protocol::CouncilMemberRole;
 use axum::extract::{Path, State};
 use axum::Json;
 use tokio::time::timeout;
 
 use aura_os_core::{Agent, AgentId};
 use aura_os_harness::{
-    CouncilMechanism, CouncilMemberConfig, HarnessInbound, HarnessOutbound, SessionConfig,
-    SessionModelOverrides, SessionUsage, UserMessage,
+    CouncilMechanism, CouncilMemberConfig, CouncilPresentation, HarnessInbound, HarnessOutbound,
+    SessionConfig, SessionModelOverrides, SessionUsage, UserMessage,
 };
 
-use crate::dto::{AgentRuntimeTestResponse, CouncilRequestBody};
+use crate::dto::{
+    AgentRuntimeTestResponse, CouncilModelRequestBody, CouncilRequestBody, MixtureRequestBody,
+};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::errors::map_harness_error_to_api;
 use crate::handlers::agents::session_identity::{
@@ -123,9 +126,77 @@ pub(crate) fn resolve_council_members(
                 model,
                 reasoning_effort: member.reasoning_effort.clone(),
                 provider_overrides,
+                role: None,
             }
         })
         .collect())
+}
+
+fn resolve_multi_model_slot(
+    default_model: Option<&str>,
+    member: &CouncilModelRequestBody,
+    cache_key: Option<&str>,
+    retention: Option<&str>,
+    cache_suffix: &str,
+    role: Option<CouncilMemberRole>,
+) -> CouncilMemberConfig {
+    let model = if member.id.trim().is_empty() {
+        default_model.map(ToString::to_string)
+    } else {
+        Some(member.id.clone())
+    };
+    let member_cache_key = cache_key.map(|key| format!("{key}:{cache_suffix}"));
+    let provider_overrides =
+        session_model_overrides_with_cache(model.as_deref(), member_cache_key, retention);
+    CouncilMemberConfig {
+        model,
+        reasoning_effort: member.reasoning_effort.clone(),
+        provider_overrides,
+        role,
+    }
+}
+
+/// Resolve a Second Opinion / Mixture request into Council-compatible
+/// member configs with the aggregator in slot 0. The runtime Council
+/// synthesizer is the final-answer model, so this preserves the MoA
+/// invariant Aura exposes in the UI: references advise, aggregator
+/// produces the answer the user sees.
+pub(crate) fn resolve_mixture_members(
+    default_model: Option<&str>,
+    mixture: &MixtureRequestBody,
+    cache_key: Option<&str>,
+    retention: Option<&str>,
+) -> ApiResult<Vec<CouncilMemberConfig>> {
+    if mixture.references.is_empty() {
+        return Err(ApiError::bad_request(
+            "mixture.references must contain at least one model",
+        ));
+    }
+
+    let mut members = Vec::with_capacity(mixture.references.len() + 1);
+    members.push(resolve_multi_model_slot(
+        default_model,
+        &mixture.aggregator,
+        cache_key,
+        retention,
+        "second_opinion:aggregator",
+        Some(CouncilMemberRole::Aggregator),
+    ));
+    for (index, reference) in mixture.references.iter().enumerate() {
+        members.push(resolve_multi_model_slot(
+            default_model,
+            reference,
+            cache_key,
+            retention,
+            &format!("second_opinion:reference:{index}"),
+            Some(CouncilMemberRole::Reference),
+        ));
+    }
+    Ok(members)
+}
+
+pub(crate) fn second_opinion_presentation() -> CouncilPresentation {
+    CouncilPresentation::SecondOpinion
 }
 
 /// Resolve the council combine mechanism from the chat client's wire
@@ -413,6 +484,50 @@ mod tests {
         let without: CouncilRequestBody =
             serde_json::from_str(r#"{"models":[{"id":"m"}]}"#).expect("deserialize legacy body");
         assert!(without.mechanism.is_none());
+    }
+
+    #[test]
+    fn mixture_request_body_deserializes_and_resolves_aggregator_first() {
+        let body: MixtureRequestBody = serde_json::from_str(
+            r#"{"aggregator":{"id":"final","reasoning_effort":"medium"},"references":[{"id":"ref","reasoning_effort":"high"}]}"#,
+        )
+        .expect("deserialize mixture body");
+
+        let members =
+            resolve_mixture_members(Some("default"), &body, Some("agent:a1"), Some("24h"))
+                .expect("resolve mixture members");
+
+        assert_eq!(members.len(), 2);
+        assert_eq!(members[0].model.as_deref(), Some("final"));
+        assert_eq!(members[0].reasoning_effort.as_deref(), Some("medium"));
+        assert_eq!(members[0].role, Some(CouncilMemberRole::Aggregator));
+        assert_eq!(
+            members[0]
+                .provider_overrides
+                .as_ref()
+                .and_then(|o| o.prompt_cache_key.as_deref()),
+            Some("agent:a1:second_opinion:aggregator"),
+        );
+        assert_eq!(members[1].model.as_deref(), Some("ref"));
+        assert_eq!(members[1].reasoning_effort.as_deref(), Some("high"));
+        assert_eq!(members[1].role, Some(CouncilMemberRole::Reference));
+        assert_eq!(
+            members[1]
+                .provider_overrides
+                .as_ref()
+                .and_then(|o| o.prompt_cache_key.as_deref()),
+            Some("agent:a1:second_opinion:reference:0"),
+        );
+    }
+
+    #[test]
+    fn resolve_mixture_members_rejects_empty_references() {
+        let body: MixtureRequestBody =
+            serde_json::from_str(r#"{"aggregator":{"id":"final"},"references":[]}"#)
+                .expect("deserialize mixture body");
+        let err = resolve_mixture_members(Some("default"), &body, None, None)
+            .expect_err("empty references should fail");
+        assert_eq!(err.0, axum::http::StatusCode::BAD_REQUEST);
     }
 
     #[test]

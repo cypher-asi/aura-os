@@ -355,6 +355,13 @@ pub(crate) struct SendChatRequest {
     /// `council: { models: [{ id, reasoning_effort }] }`.
     #[serde(default)]
     pub council: Option<CouncilRequestBody>,
+    /// Optional Second Opinion / Mixture-of-Agents config. The
+    /// aggregator is the acting/final model and references advise it.
+    /// Aura OS resolves this through the same model/cache path as
+    /// Council and currently executes it on the Council runtime with
+    /// aggregator first, preserving a distinct UI/request contract.
+    #[serde(default)]
+    pub mixture: Option<MixtureRequestBody>,
 }
 
 /// AURA Council selection from the chat client. See
@@ -379,6 +386,14 @@ pub(crate) struct CouncilModelRequestBody {
     pub id: String,
     #[serde(default)]
     pub reasoning_effort: Option<String>,
+}
+
+/// Second Opinion / Mixture-of-Agents selection from the chat client.
+/// The aggregator is the final-answer model; references are advisory.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct MixtureRequestBody {
+    pub references: Vec<CouncilModelRequestBody>,
+    pub aggregator: CouncilModelRequestBody,
 }
 
 #[derive(Debug, Deserialize)]

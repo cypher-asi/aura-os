@@ -386,6 +386,39 @@ describe("sendEventStream", () => {
     await sendEventStream("p1" as string, "ai1", "x", null, undefined, undefined, handler, controller.signal);
     expect(streamSSE.mock.calls[0][3]).toBe(controller.signal);
   });
+
+  it("includes mixture payload when provided", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    };
+
+    await sendEventStream(
+      "p1" as string,
+      "ai1",
+      "review this",
+      "chat",
+      "final-model",
+      undefined,
+      handler,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        references: [{ id: "reference-model", reasoning_effort: "high" }],
+        aggregator: { id: "final-model", reasoning_effort: "medium" },
+      },
+    );
+
+    const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.mixture).toEqual({
+      references: [{ id: "reference-model", reasoning_effort: "high" }],
+      aggregator: { id: "final-model", reasoning_effort: "medium" },
+    });
+  });
 });
 
 function makeStream(over: Partial<ActiveStreamSummary> = {}): ActiveStreamSummary {

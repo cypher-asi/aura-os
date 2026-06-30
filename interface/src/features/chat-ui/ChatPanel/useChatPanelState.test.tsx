@@ -23,18 +23,50 @@ const mockSetDraft = vi.fn();
 const mockChatUI: {
   selectedMode: "code" | "plan" | "image" | "3d" | "video";
   selectedModel: string | null;
+  selectedEffort: null;
+  imageQuality: "medium";
   pinnedSourceImage: { imageUrl: string; originalUrl?: string; prompt: string } | null;
+  councilCount: 1;
+  councilModels: [];
+  councilMechanism: "synthesize";
+  answerStrategy: "single";
+  secondOpinionReference: null;
   init: ReturnType<typeof vi.fn>;
   syncAvailableModels: ReturnType<typeof vi.fn>;
   setSelectedMode: ReturnType<typeof vi.fn>;
+  setSelectedModel: ReturnType<typeof vi.fn>;
+  setCouncilCount: ReturnType<typeof vi.fn>;
+  setCouncilModel: ReturnType<typeof vi.fn>;
+  setCouncilMechanism: ReturnType<typeof vi.fn>;
+  setAnswerStrategy: ReturnType<typeof vi.fn>;
+  setSecondOpinionReference: ReturnType<typeof vi.fn>;
+  setSelectedEffort: ReturnType<typeof vi.fn>;
+  setImageQuality: ReturnType<typeof vi.fn>;
+  setProjectId: ReturnType<typeof vi.fn>;
   setPinnedSourceImage: ReturnType<typeof vi.fn>;
 } = {
   selectedMode: "code",
   selectedModel: "gpt-5.4",
+  selectedEffort: null,
+  imageQuality: "medium",
   pinnedSourceImage: null,
+  councilCount: 1,
+  councilModels: [],
+  councilMechanism: "synthesize",
+  answerStrategy: "single",
+  secondOpinionReference: null,
   init: vi.fn(),
   syncAvailableModels: vi.fn(),
   setSelectedMode: vi.fn(),
+  setSelectedModel: vi.fn(),
+  setCouncilCount: vi.fn(),
+  setCouncilModel: vi.fn(),
+  setCouncilMechanism: vi.fn(),
+  setAnswerStrategy: vi.fn(),
+  setSecondOpinionReference: vi.fn(),
+  setSelectedEffort: vi.fn(),
+  setImageQuality: vi.fn(),
+  setProjectId: vi.fn(),
   setPinnedSourceImage: vi.fn(),
 };
 

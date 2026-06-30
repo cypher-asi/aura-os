@@ -24,6 +24,7 @@ import { useProjectsListStore } from "../stores/projects-list-store";
 import type { AnnotatedSession } from "../components/SessionsList";
 import { useContextUsage, useContextUsageStore } from "../stores/context-usage-store";
 import { useMessageQueueStore } from "../stores/message-queue-store";
+import { useChatUIStore } from "../stores/chat-ui-store";
 import { useHydrateContextUtilization } from "./use-hydrate-context-utilization";
 import { usePriorSessions } from "./use-prior-sessions";
 import { useAuraCapabilities } from "./use-aura-capabilities";
@@ -442,6 +443,9 @@ export function useStandaloneAgentChat(
     // as the first send of the new session and re-inject the user's
     // old prompt, which looks like the chat ignored the `+` press.
     useMessageQueueStore.getState().clear(streamKey);
+    const { resetCouncil, resetAnswerStrategy } = useChatUIStore.getState();
+    resetCouncil(streamKey);
+    resetAnswerStrategy(streamKey);
     const ctxStore = useContextUsageStore.getState();
     ctxStore.clearContextUtilization(streamKey);
     ctxStore.markResetPending(streamKey);

@@ -61,6 +61,10 @@ function mechanismLabel(mechanism: string | undefined): string {
   }
 }
 
+function isSecondOpinionEntry(entry: ToolCallEntry): boolean {
+  return entry.subagentType === "second-opinion";
+}
+
 /** Short subtitle clause describing what slot 0 does for the mechanism. */
 function mechanismSubtitle(mechanism: string | undefined): string {
   switch (mechanism) {
@@ -106,6 +110,7 @@ interface CouncilColumnProps {
   parentAgentId: string | undefined;
   prompt: string;
   openPane: OpenPane;
+  variant: "council" | "second_opinion";
 }
 
 /**
@@ -122,6 +127,7 @@ function CouncilColumn({
   parentAgentId,
   prompt,
   openPane,
+  variant,
 }: CouncilColumnProps) {
   const thread = useSubagentChatStream(
     member.childRunId,
@@ -136,8 +142,14 @@ function CouncilColumn({
 
   const state: SubagentState = member.status ?? "running";
   const isSynthesizer = member.councilIndex === 0;
+  const isSecondOpinion = variant === "second_opinion";
   const label = modelLabel(member.model) ?? "Member";
   const canOpen = !!parentStreamKey;
+  const slotLabel = isSecondOpinion
+    ? isSynthesizer
+      ? "Final"
+      : "Reference"
+    : `${ordinalLabel(member.councilIndex)}${isSynthesizer ? " · synthesizes" : ""}`;
 
   const liveText =
     streamingText.trim().length > 0
@@ -176,8 +188,7 @@ function CouncilColumn({
         title={canOpen ? "Open this member's thread" : undefined}
       >
         <span className={styles.slot}>
-          {ordinalLabel(member.councilIndex)}
-          {isSynthesizer ? " · synthesizes" : ""}
+          {slotLabel}
         </span>
         <span className={styles.model}>{label}</span>
         <Badge
@@ -217,19 +228,31 @@ export function CouncilPanel({ entry }: CouncilPanelProps) {
   if (ordered.length === 0) return null;
 
   const mechanism = entry.councilMechanism;
+  const secondOpinion = isSecondOpinionEntry(entry);
+  const nonFinalCount = ordered.filter((member) => member.councilIndex !== 0).length;
+  const referenceCount = secondOpinion
+    ? nonFinalCount || ordered.length
+    : Math.max(ordered.length - 1, 1);
 
   return (
     <div
       className={styles.panel}
       data-council-panel="true"
       data-council-mechanism={mechanism ?? "synthesize"}
+      data-second-opinion-panel={secondOpinion ? "true" : undefined}
     >
       <div className={styles.header}>
         <Users size={12} className={styles.headerIcon} />
-        <span className={styles.title}>AURA Council</span>
-        <span className={styles.mechanism}>{mechanismLabel(mechanism)}</span>
+        <span className={styles.title}>
+          {secondOpinion ? "Second Opinion" : "AURA Council"}
+        </span>
+        <span className={styles.mechanism}>
+          {secondOpinion ? "References -> final" : mechanismLabel(mechanism)}
+        </span>
         <span className={styles.subtitle}>
-          {ordered.length} members · {mechanismSubtitle(mechanism)}
+          {secondOpinion
+            ? `${referenceCount} ${referenceCount === 1 ? "reference" : "references"} · final answer below`
+            : `${ordered.length} members · ${mechanismSubtitle(mechanism)}`}
         </span>
       </div>
       <div className={styles.columns}>
@@ -242,6 +265,7 @@ export function CouncilPanel({ entry }: CouncilPanelProps) {
             parentAgentId={parentAgentId}
             prompt={prompt}
             openPane={openPane}
+            variant={secondOpinion ? "second_opinion" : "council"}
           />
         ))}
       </div>

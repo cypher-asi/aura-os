@@ -61,9 +61,9 @@ pub use permissions::{
     AgentPermissionsWire, AgentScopeWire, AgentToolPermissionsWire, CapabilityWire,
 };
 pub use runtime_request::{
-    AgentCapabilities, AgentIdentity, CouncilMechanism, CouncilMember, ModelSelection,
-    ProjectContext, ReasoningEffort, RuntimeRequest, RuntimeRequestType, RuntimeRunResponse,
-    WorkspaceLocation,
+    AgentCapabilities, AgentIdentity, CouncilMechanism, CouncilMember, CouncilMemberRole,
+    ModelSelection, ProjectContext, ReasoningEffort, RuntimeRequest, RuntimeRequestType,
+    RuntimeRunResponse, WorkspaceLocation,
 };
 pub use server::{
     AssistantMessageEnd, AssistantMessageStart, ErrorMsg, FileDiff, FileOp, FilesChanged,
