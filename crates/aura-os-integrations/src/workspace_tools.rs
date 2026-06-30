@@ -568,13 +568,56 @@ mod tests {
 
     // --- Platform-key gate tests (Spec 02, Gates A + D5) ---
 
+    // `BRAVE_SEARCH_PLATFORM_KEY` is process-global; cargo runs these tests on
+    // parallel threads. Serialize the env-var-mutating tests with a local lock
+    // (mirrors `trusted_mcp_script_test_lock` in the server crate) so they
+    // never observe each other's writes, and snapshot/restore the variable via
+    // an RAII guard (mirrors `EnvGuard` in the server crate's
+    // `remote_harness_base_url_test`) so a value is restored even if an
+    // assertion panics mid-test.
+    fn platform_key_env_lock() -> &'static std::sync::Mutex<()> {
+        static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        &LOCK
+    }
+
+    struct PlatformKeyEnvGuard {
+        prev: Option<String>,
+    }
+
+    impl PlatformKeyEnvGuard {
+        const KEY: &'static str = "BRAVE_SEARCH_PLATFORM_KEY";
+
+        fn set(value: &str) -> Self {
+            let prev = std::env::var(Self::KEY).ok();
+            std::env::set_var(Self::KEY, value);
+            Self { prev }
+        }
+
+        fn unset() -> Self {
+            let prev = std::env::var(Self::KEY).ok();
+            std::env::remove_var(Self::KEY);
+            Self { prev }
+        }
+    }
+
+    impl Drop for PlatformKeyEnvGuard {
+        fn drop(&mut self) {
+            match &self.prev {
+                Some(value) => std::env::set_var(Self::KEY, value),
+                None => std::env::remove_var(Self::KEY),
+            }
+        }
+    }
+
     #[test]
     fn platform_key_set_no_org_brave_emits_brave_tools() {
-        std::env::set_var("BRAVE_SEARCH_PLATFORM_KEY", "test-platform-key");
+        let _lock = platform_key_env_lock()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _env = PlatformKeyEnvGuard::set("test-platform-key");
         let org_id = OrgId::new();
         let integrations: Vec<OrgIntegration> = Vec::new();
         let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
-        std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY");
         let names: HashSet<&str> = tools.iter().map(|t| t.name.as_str()).collect();
         assert!(
             names.contains("brave_search_web"),
@@ -588,7 +631,10 @@ mod tests {
 
     #[test]
     fn platform_key_absent_no_org_brave_no_brave_tools() {
-        std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY");
+        let _lock = platform_key_env_lock()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _env = PlatformKeyEnvGuard::unset();
         let org_id = OrgId::new();
         let integrations: Vec<OrgIntegration> = Vec::new();
         let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
@@ -607,11 +653,13 @@ mod tests {
     fn platform_brave_tool_runtime_execution_is_none() {
         // D5 invariant: emitted tool must keep runtime_execution: None so
         // the harness dispatches it via the server-callback path.
-        std::env::set_var("BRAVE_SEARCH_PLATFORM_KEY", "test-platform-key");
+        let _lock = platform_key_env_lock()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _env = PlatformKeyEnvGuard::set("test-platform-key");
         let org_id = OrgId::new();
         let integrations: Vec<OrgIntegration> = Vec::new();
         let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
-        std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY");
         let brave = tools
             .iter()
             .find(|t| t.name == "brave_search_web")

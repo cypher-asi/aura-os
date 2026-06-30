@@ -8,6 +8,48 @@ use crate::common::*;
 use super::integration_actions::*;
 use super::integration_setup::{create_test_integrations, ProviderEnvGuard};
 
+/// Serializes tests that mutate the process-global `BRAVE_SEARCH_PLATFORM_KEY`
+/// so they never observe one another's writes under cargo's parallel test
+/// threads. Mirrors the `env_lock` pattern in
+/// `tests/remote_harness_base_url_test.rs`.
+fn platform_key_env_lock() -> &'static std::sync::Mutex<()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    &LOCK
+}
+
+/// RAII snapshot/restore guard for `BRAVE_SEARCH_PLATFORM_KEY`. Restores the
+/// previous value (or unset state) on drop, so an assertion panic mid-test
+/// cannot leak a dirty env var into another test. Mirrors `EnvGuard` in
+/// `tests/remote_harness_base_url_test.rs`.
+struct PlatformKeyEnvGuard {
+    prev: Option<String>,
+}
+
+impl PlatformKeyEnvGuard {
+    const KEY: &'static str = "BRAVE_SEARCH_PLATFORM_KEY";
+
+    fn set(value: &str) -> Self {
+        let prev = std::env::var(Self::KEY).ok();
+        std::env::set_var(Self::KEY, value);
+        Self { prev }
+    }
+
+    fn unset() -> Self {
+        let prev = std::env::var(Self::KEY).ok();
+        std::env::remove_var(Self::KEY);
+        Self { prev }
+    }
+}
+
+impl Drop for PlatformKeyEnvGuard {
+    fn drop(&mut self) {
+        match &self.prev {
+            Some(value) => std::env::set_var(Self::KEY, value),
+            None => std::env::remove_var(Self::KEY),
+        }
+    }
+}
+
 #[tokio::test]
 async fn org_tool_actions_use_saved_integrations() {
     let _env = ProviderEnvGuard::set_up().await;
@@ -47,15 +89,20 @@ async fn org_tool_actions_use_saved_integrations() {
 /// (env set → platform key resolves) is proven by the unit-level precedence
 /// test in `org_tools::tests`, which avoids clobbering the process-global
 /// provider base-url env vars shared by the saved-integrations test.
+#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn platform_brave_fallback_is_off_without_platform_key() {
     use aura_os_orgs::IntegrationSecretUpdate;
 
     // This test deliberately does NOT use `ProviderEnvGuard`: the unset-key
     // path fails before any provider HTTP call, so no provider mock is needed,
-    // and we must not race the shared `AURA_*_API_BASE_URL` vars.
-    let saved = std::env::var("BRAVE_SEARCH_PLATFORM_KEY").ok();
-    unsafe { std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY") };
+    // and we must not race the shared `AURA_*_API_BASE_URL` vars. We hold the
+    // platform-key lock across `.await` so a concurrent test cannot flip
+    // `BRAVE_SEARCH_PLATFORM_KEY` while we drive the unset-key path.
+    let _lock = platform_key_env_lock()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let _env = PlatformKeyEnvGuard::unset();
 
     let (app, state, _db) = build_test_app_with_org_membership().await;
     let org_id = OrgId::new();
@@ -90,11 +137,49 @@ async fn platform_brave_fallback_is_off_without_platform_key() {
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     let body = response_json(resp).await;
     assert_eq!(body["code"], "bad_request");
+}
 
-    match saved {
-        Some(value) => unsafe { std::env::set_var("BRAVE_SEARCH_PLATFORM_KEY", value) },
-        None => unsafe { std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY") },
-    }
+/// Spec 02 Gate C: the gating-only synthetic platform Brave integration is
+/// injected solely into the agent capabilities builder, never into the
+/// storage-backed feed behind `GET /api/orgs/{id}/integrations`. So even with
+/// `BRAVE_SEARCH_PLATFORM_KEY` SET, the REST list must be unchanged: exactly
+/// the 12 saved integrations, and the reserved `platform-brave-search` id must
+/// not appear. Holds by construction; pinned here so a future regression that
+/// leaks the synthetic into the REST feed fails loudly.
+#[allow(clippy::await_holding_lock)]
+#[tokio::test]
+async fn platform_key_set_does_not_leak_synthetic_into_rest_list() {
+    let _lock = platform_key_env_lock()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let _env = PlatformKeyEnvGuard::set("platform-key-123");
+
+    let (app, _state, _db) = build_test_app_with_org_membership().await;
+    let org_id = OrgId::new();
+
+    create_test_integrations(&app, &org_id).await;
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/list_org_integrations"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+
+    let integrations = listed["integrations"].as_array().unwrap();
+    assert_eq!(
+        integrations.len(),
+        12,
+        "platform key must not add a synthetic entry to the REST list"
+    );
+    assert!(
+        integrations
+            .iter()
+            .all(|i| i["integration_id"].as_str() != Some("platform-brave-search")),
+        "the gating-only synthetic platform-brave-search id must never appear in the REST list"
+    );
 }
 
 #[tokio::test]
