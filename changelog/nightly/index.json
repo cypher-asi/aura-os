@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-06-30",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.716.1",
+    "title": "Leaderboard stays live while it's open",
+    "intro": "A focused nightly that fixes a long-standing staleness bug in the feed's leaderboard: reopening the view now pulls fresh data, and a periodic refresh keeps the standings current while you're looking at them.",
+    "entryCount": 1,
+    "highlights": [
+      "Leaderboard refreshes on every open, not just first launch",
+      "Live 60s polling while the view is mounted, torn down on close"
+    ],
+    "rawCommitCount": 3,
+    "generatedAt": "2026-06-30T10:22:11.414Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.716.1",
+    "path": "history/2026-06-30.json"
+  },
+  {
     "date": "2026-06-29",
     "channel": "nightly",
     "version": "0.1.0-nightly.715.1",
