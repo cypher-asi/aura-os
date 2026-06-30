@@ -499,10 +499,15 @@ async fn platform_brave_key_is_soft_fallback_behind_real_byok() {
         )
         .expect("save real org brave integration");
 
-    let by_provider =
-        resolve_org_integration(&state, &org_id, "brave_search", None, &serde_json::json!({}))
-            .await
-            .expect("real org brave integration resolves by provider");
+    let by_provider = resolve_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({}),
+    )
+    .await
+    .expect("real org brave integration resolves by provider");
     assert_eq!(
         by_provider.secret, "real-org-brave-key",
         "a real org brave key must win over the platform fallback"
@@ -517,7 +522,6 @@ async fn platform_brave_key_is_soft_fallback_behind_real_byok() {
         None => unsafe { std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY") },
     }
 }
-
 
 #[tokio::test]
 async fn resolve_google_canonical_denies_before_secret_fetch_when_owner_mismatches() {
@@ -732,9 +736,11 @@ async fn start_mock_integrations_server_with_failing_secret(integration: OrgInte
         )
         .route(
             "/internal/orgs/:org_id/integrations/:integration_id/secret",
-            get(move |Path((_org_id, _integration_id)): Path<(String, String)>| async move {
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR
-            }),
+            get(
+                move |Path((_org_id, _integration_id)): Path<(String, String)>| async move {
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                },
+            ),
         );
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
@@ -819,8 +825,7 @@ async fn fail_loud_returns_not_found_when_canonical_integration_missing() {
         true,
         true,
     );
-    let base_url =
-        start_mock_integrations_server(canonical, Some("canonical-secret")).await;
+    let base_url = start_mock_integrations_server(canonical, Some("canonical-secret")).await;
     state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
         &base_url,
         "internal-token",

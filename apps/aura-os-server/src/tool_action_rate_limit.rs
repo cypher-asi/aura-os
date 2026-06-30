@@ -58,7 +58,13 @@ fn registry() -> &'static DashMap<ToolActionRateKey, WindowState> {
 /// Record one call for `key` and return `true` if it is allowed (under the
 /// limit for the current window), `false` if it exceeds the limit.
 pub(crate) fn check(key: ToolActionRateKey) -> bool {
-    check_at(registry(), key, Instant::now(), MAX_CALLS_PER_WINDOW, WINDOW)
+    check_at(
+        registry(),
+        key,
+        Instant::now(),
+        MAX_CALLS_PER_WINDOW,
+        WINDOW,
+    )
 }
 
 fn check_at(
@@ -112,7 +118,13 @@ mod tests {
         let key = fresh_key("reset");
         let now = Instant::now();
         assert!(check_at(&map, key.clone(), now, 1, Duration::from_secs(60)));
-        assert!(!check_at(&map, key.clone(), now, 1, Duration::from_secs(60)));
+        assert!(!check_at(
+            &map,
+            key.clone(),
+            now,
+            1,
+            Duration::from_secs(60)
+        ));
         let later = now + Duration::from_secs(60);
         assert!(check_at(&map, key, later, 1, Duration::from_secs(60)));
     }
@@ -125,11 +137,29 @@ mod tests {
         let key_b_other_user = ToolActionRateKey::new("user-b", "org-1");
         let key_a_other_org = ToolActionRateKey::new("user-a", "org-2");
 
-        assert!(check_at(&map, key_a.clone(), now, 1, Duration::from_secs(60)));
+        assert!(check_at(
+            &map,
+            key_a.clone(),
+            now,
+            1,
+            Duration::from_secs(60)
+        ));
         assert!(!check_at(&map, key_a, now, 1, Duration::from_secs(60)));
         // Same org, different user is unaffected.
-        assert!(check_at(&map, key_b_other_user, now, 1, Duration::from_secs(60)));
+        assert!(check_at(
+            &map,
+            key_b_other_user,
+            now,
+            1,
+            Duration::from_secs(60)
+        ));
         // Same user, different org is unaffected.
-        assert!(check_at(&map, key_a_other_org, now, 1, Duration::from_secs(60)));
+        assert!(check_at(
+            &map,
+            key_a_other_org,
+            now,
+            1,
+            Duration::from_secs(60)
+        ));
     }
 }

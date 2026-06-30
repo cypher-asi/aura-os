@@ -57,12 +57,10 @@ pub(crate) async fn call_tool(
     // endpoint. Keyed per-user AND per-org so a noisy caller cannot throttle a
     // different user or a different org. Applied AFTER the membership check and
     // BEFORE any provider dispatch / hydration.
-    if !crate::tool_action_rate_limit::check(
-        crate::tool_action_rate_limit::ToolActionRateKey::new(
-            session.user_id.to_string(),
-            org_id.to_string(),
-        ),
-    ) {
+    if !crate::tool_action_rate_limit::check(crate::tool_action_rate_limit::ToolActionRateKey::new(
+        session.user_id.to_string(),
+        org_id.to_string(),
+    )) {
         return Err(ApiError::tool_action_rate_limited(
             crate::tool_action_rate_limit::MAX_CALLS_PER_WINDOW,
             crate::tool_action_rate_limit::WINDOW.as_secs(),

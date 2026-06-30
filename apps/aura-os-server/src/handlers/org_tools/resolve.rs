@@ -83,13 +83,8 @@ async fn resolve_org_integration_inner(
         fail_loud_on_service_down,
     )
     .await?;
-    let secret = load_org_integration_secret(
-        state,
-        org_id,
-        &integration,
-        fail_loud_on_service_down,
-    )
-    .await?;
+    let secret =
+        load_org_integration_secret(state, org_id, &integration, fail_loud_on_service_down).await?;
 
     Ok(ResolvedOrgIntegration {
         metadata: integration,

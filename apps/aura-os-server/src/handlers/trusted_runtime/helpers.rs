@@ -734,7 +734,9 @@ mod tests {
         });
         let out = apply_result_transform(
             &response,
-            &TrustedIntegrationResultTransform::BraveSearch { vertical: "web".to_string() },
+            &TrustedIntegrationResultTransform::BraveSearch {
+                vertical: "web".to_string(),
+            },
             &json!({ "query": "aura os" }),
         )
         .unwrap();
@@ -756,12 +758,18 @@ mod tests {
         });
         let out = apply_result_transform(
             &response,
-            &TrustedIntegrationResultTransform::BraveSearch { vertical: "news".to_string() },
+            &TrustedIntegrationResultTransform::BraveSearch {
+                vertical: "news".to_string(),
+            },
             &json!({ "query": "aura os" }),
         )
         .unwrap();
         let results = out["results"].as_array().unwrap();
-        assert_eq!(results.len(), 1, "news results must parse from top-level `results`");
+        assert_eq!(
+            results.len(),
+            1,
+            "news results must parse from top-level `results`"
+        );
         assert_eq!(results[0]["title"], "Headline");
         assert_eq!(results[0]["source"], "Example");
     }
