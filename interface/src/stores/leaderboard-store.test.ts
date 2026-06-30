@@ -18,7 +18,11 @@ const { mockApi } = vi.hoisted(() => ({
 
 vi.mock("../api/client", () => ({ api: mockApi }));
 
-import { useLeaderboardStore } from "./leaderboard-store";
+import {
+  useLeaderboardStore,
+  startLeaderboardRefresh,
+  stopLeaderboardRefresh,
+} from "./leaderboard-store";
 
 const sampleEntry: LeaderboardEntry = {
   profile_id: "p1",
@@ -123,6 +127,36 @@ describe("leaderboard-store", () => {
       await useLeaderboardStore.getState().fetchEntries();
 
       expect(useLeaderboardStore.getState().loading).toBe(false);
+    });
+  });
+
+  describe("startLeaderboardRefresh", () => {
+    it("periodically refreshes while initialized and stops when stopped", () => {
+      const realFetch = useLeaderboardStore.getState().fetchEntries;
+      const fetchSpy = vi.fn(() => Promise.resolve());
+      vi.useFakeTimers();
+      try {
+        useLeaderboardStore.setState({ fetchEntries: fetchSpy });
+        // init() flips the module's initialized flag (the poll is a no-op
+        // until then) and triggers the first fetch.
+        useLeaderboardStore.getState().init();
+        fetchSpy.mockClear();
+
+        startLeaderboardRefresh();
+        vi.advanceTimersByTime(60_000);
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        vi.advanceTimersByTime(60_000);
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+        // Stopping tears the interval down — no further polling.
+        stopLeaderboardRefresh();
+        vi.advanceTimersByTime(180_000);
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+      } finally {
+        stopLeaderboardRefresh();
+        useLeaderboardStore.setState({ fetchEntries: realFetch });
+        vi.useRealTimers();
+      }
     });
   });
 });
