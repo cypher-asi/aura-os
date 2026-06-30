@@ -40,6 +40,63 @@ async fn org_tool_actions_use_saved_integrations() {
     assert_google_actions(&app, &org_id).await;
 }
 
+/// Spec 02 §9 soft-fallback at the HTTP dispatch layer: when the only brave
+/// integration available is the reserved synthetic platform id and
+/// `BRAVE_SEARCH_PLATFORM_KEY` is unset, the tool-action endpoint fails cleanly
+/// (clean 4xx, no panic) — the feature is effectively off. The success path
+/// (env set → platform key resolves) is proven by the unit-level precedence
+/// test in `org_tools::tests`, which avoids clobbering the process-global
+/// provider base-url env vars shared by the saved-integrations test.
+#[tokio::test]
+async fn platform_brave_fallback_is_off_without_platform_key() {
+    use aura_os_orgs::IntegrationSecretUpdate;
+
+    // This test deliberately does NOT use `ProviderEnvGuard`: the unset-key
+    // path fails before any provider HTTP call, so no provider mock is needed,
+    // and we must not race the shared `AURA_*_API_BASE_URL` vars.
+    let saved = std::env::var("BRAVE_SEARCH_PLATFORM_KEY").ok();
+    unsafe { std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY") };
+
+    let (app, state, _db) = build_test_app_with_org_membership().await;
+    let org_id = OrgId::new();
+
+    // Seed the gating-only synthetic platform brave integration into the local
+    // shadow store. Its stored secret is a sentinel that must never be used —
+    // the platform branch resolves from the env var instead.
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some("platform-brave-search"),
+            "Platform Brave Search".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("shadow-should-not-be-used".to_string()),
+        )
+        .expect("seed synthetic platform integration");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+        Some(serde_json::json!({
+            "query": "aura",
+            "integration_id": "platform-brave-search"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_request");
+
+    match saved {
+        Some(value) => unsafe { std::env::set_var("BRAVE_SEARCH_PLATFORM_KEY", value) },
+        None => unsafe { std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY") },
+    }
+}
+
 #[tokio::test]
 async fn disabled_workspace_integrations_are_kept_but_not_exposed_as_active_capabilities() {
     let (app, _state, _db) = build_test_app_with_org_membership().await;

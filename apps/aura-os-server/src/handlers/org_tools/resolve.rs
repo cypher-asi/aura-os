@@ -15,6 +15,22 @@ use super::args::optional_string;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
+/// Reserved integration id for the gating-only synthetic platform Brave
+/// integration (Spec 02). It carries no stored secret in canonical/shadow
+/// storage; its secret is resolved cloud-side from the
+/// `BRAVE_SEARCH_PLATFORM_KEY` environment variable as a *fallback* only.
+///
+/// Shared with Task 2.1 (synthetic injection/advertising). Kept here so the
+/// soft-fallback precedence and the synthetic injection use a single source of
+/// truth.
+pub(crate) const PLATFORM_BRAVE_INTEGRATION_ID: &str = "platform-brave-search";
+
+/// Environment variable that carries the platform-provided Brave Search key.
+/// Cloud-only: it must never be written into a session payload or shipped to
+/// desktop. Used solely as a soft fallback when no real org brave integration
+/// resolves.
+const PLATFORM_BRAVE_KEY_ENV: &str = "BRAVE_SEARCH_PLATFORM_KEY";
+
 pub(crate) struct ResolvedOrgIntegration {
     pub(super) metadata: OrgIntegration,
     pub(super) secret: String,
@@ -119,6 +135,17 @@ async fn load_org_integration_secret(
     integration: &OrgIntegration,
     fail_loud_on_service_down: bool,
 ) -> ApiResult<String> {
+    // Soft-fallback (Spec 02 §9): the reserved synthetic platform brave
+    // integration carries no stored credential in canonical/shadow storage.
+    // Its key is resolved cloud-side from the platform env var, and only ever
+    // reached when no *real* org brave integration resolved first — a real
+    // `enabled && has_secret` brave provider match always wins the selection
+    // in `pick_org_integration_metadata`/`load_canonical_by_provider`, so this
+    // branch is a fallback, never an override.
+    if integration.integration_id == PLATFORM_BRAVE_INTEGRATION_ID {
+        return load_platform_brave_secret();
+    }
+
     let Some(client) = &state.integrations_client else {
         return load_shadow_secret(state, &integration.integration_id);
     };
@@ -200,6 +227,21 @@ fn integrations_service_down_error() -> (axum::http::StatusCode, axum::Json<ApiE
     ApiError::service_unavailable(
         "the integrations service is unavailable; refusing to run a trusted tool action with possibly-stale credentials",
     )
+}
+
+/// Resolve the platform-provided Brave Search key from the environment.
+///
+/// Cloud-only soft fallback for the reserved synthetic platform brave
+/// integration (Spec 02). When `BRAVE_SEARCH_PLATFORM_KEY` is unset or empty
+/// the feature is effectively off, so we return a clean `ApiError` rather than
+/// panicking — behaviour elsewhere is unchanged.
+fn load_platform_brave_secret() -> ApiResult<String> {
+    match std::env::var(PLATFORM_BRAVE_KEY_ENV) {
+        Ok(key) if !key.trim().is_empty() => Ok(key),
+        _ => Err(ApiError::bad_request(
+            "platform brave search is not configured",
+        )),
+    }
 }
 
 fn load_shadow_secret(state: &AppState, integration_id: &str) -> ApiResult<String> {
@@ -555,7 +597,13 @@ fn matches_org_tool_provider(
     provider: &str,
     user_id: Option<&str>,
 ) -> bool {
-    integration.provider == provider
+    // Soft-fallback precedence (Spec 02 §9): the gating-only synthetic platform
+    // brave integration must never win provider-based first-match selection, so
+    // a real BYOK integration is always chosen when one exists. The synthetic
+    // id is only resolved when selected explicitly by its reserved id, and even
+    // then its key is a *fallback*, never an override of a real org key.
+    integration.integration_id != PLATFORM_BRAVE_INTEGRATION_ID
+        && integration.provider == provider
         && integration.has_secret
         && integration.enabled
         && integration.kind == OrgIntegrationKind::WorkspaceIntegration

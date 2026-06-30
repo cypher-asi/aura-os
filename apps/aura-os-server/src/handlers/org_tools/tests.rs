@@ -418,6 +418,107 @@ async fn resolve_google_integration_denies_blank_owner_user() {
     );
 }
 
+/// Spec 02 §9 soft-fallback: the reserved synthetic platform brave integration
+/// resolves its secret from `BRAVE_SEARCH_PLATFORM_KEY` only when selected by
+/// its reserved id, a real org brave integration always wins provider-based
+/// selection, and an unset env var yields a clean error (no panic).
+#[tokio::test]
+async fn platform_brave_key_is_soft_fallback_behind_real_byok() {
+    use super::resolve::PLATFORM_BRAVE_INTEGRATION_ID;
+
+    // Keep this test self-contained: snapshot and restore the env var so it
+    // does not leak into other tests sharing the process.
+    let saved = std::env::var("BRAVE_SEARCH_PLATFORM_KEY").ok();
+    unsafe { std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY") };
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    // Synthetic gating-only platform integration: enabled, provider brave_search,
+    // but its stored secret must never be used — the platform branch returns the
+    // env key instead.
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some(PLATFORM_BRAVE_INTEGRATION_ID),
+            "Platform Brave Search".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("shadow-should-not-be-used".to_string()),
+        )
+        .expect("save synthetic platform integration");
+
+    // (c) env unset → clean error, feature effectively off (no panic).
+    let unset = resolve_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": PLATFORM_BRAVE_INTEGRATION_ID }),
+    )
+    .await;
+    assert!(
+        unset.is_err(),
+        "platform brave fallback must error cleanly when the env var is unset"
+    );
+
+    // (a) env set + no real org brave key → resolving the synthetic id returns
+    // the platform key (not the shadow secret).
+    unsafe { std::env::set_var("BRAVE_SEARCH_PLATFORM_KEY", "platform-key-123") };
+    let fallback = resolve_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": PLATFORM_BRAVE_INTEGRATION_ID }),
+    )
+    .await
+    .expect("platform fallback resolves when env var is set");
+    assert_eq!(fallback.secret, "platform-key-123");
+
+    // (b) a real org brave integration (enabled + secret) wins provider-based
+    // selection; the platform key never overrides it.
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some("org-brave"),
+            "Org Brave Search".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("real-org-brave-key".to_string()),
+        )
+        .expect("save real org brave integration");
+
+    let by_provider =
+        resolve_org_integration(&state, &org_id, "brave_search", None, &serde_json::json!({}))
+            .await
+            .expect("real org brave integration resolves by provider");
+    assert_eq!(
+        by_provider.secret, "real-org-brave-key",
+        "a real org brave key must win over the platform fallback"
+    );
+    assert_ne!(
+        by_provider.metadata.integration_id, PLATFORM_BRAVE_INTEGRATION_ID,
+        "provider selection must not pick the synthetic platform integration when a real key exists"
+    );
+
+    match saved {
+        Some(value) => unsafe { std::env::set_var("BRAVE_SEARCH_PLATFORM_KEY", value) },
+        None => unsafe { std::env::remove_var("BRAVE_SEARCH_PLATFORM_KEY") },
+    }
+}
+
+
 #[tokio::test]
 async fn resolve_google_canonical_denies_before_secret_fetch_when_owner_mismatches() {
     let store_dir = tempfile::tempdir().unwrap();
