@@ -15,7 +15,6 @@ use crate::handlers::trusted_runtime::execute_trusted_integration_tool;
 use crate::state::AppState;
 
 mod apify;
-mod brave;
 mod buffer;
 mod freepik;
 mod github;
@@ -58,7 +57,13 @@ pub(super) async fn dispatch_app_provider_tool(
         AppProviderKind::Linear => linear::dispatch(state, org_id, tool_name, args).await,
         AppProviderKind::Slack => slack::dispatch(state, org_id, tool_name, args).await,
         AppProviderKind::Notion => notion::dispatch(state, org_id, tool_name, args).await,
-        AppProviderKind::BraveSearch => brave::dispatch(state, org_id, tool_name, args).await,
+        // BraveSearch tools always match trusted_integration_method_by_tool above and
+        // return early, so this arm is unreachable in practice. Fail loud with a
+        // server error (rather than panicking) if a future change ever routes a
+        // brave tool through the app-provider match.
+        AppProviderKind::BraveSearch => Err(ApiError::internal(
+            "brave search tools must dispatch through the trusted-integration path",
+        )),
         AppProviderKind::Freepik => freepik::dispatch(state, org_id, tool_name, args).await,
         AppProviderKind::Buffer => buffer::dispatch(state, org_id, tool_name, args).await,
         AppProviderKind::Apify => apify::dispatch(state, org_id, tool_name, args).await,
