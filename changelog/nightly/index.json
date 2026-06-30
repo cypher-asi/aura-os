@@ -2,17 +2,17 @@
   {
     "date": "2026-06-30",
     "channel": "nightly",
-    "version": "0.1.0-nightly.716.1",
-    "title": "Leaderboard stays live while it's open",
-    "intro": "A focused nightly that fixes a long-standing staleness bug in the feed's leaderboard: reopening the view now pulls fresh data, and a periodic refresh keeps the standings current while you're looking at them.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.717.1",
+    "title": "Second Opinion chat strategy and a live leaderboard",
+    "intro": "Today's nightly introduces a new multi-agent \"Second Opinion\" chat strategy alongside the existing Council flow, and fixes a long-standing staleness issue in the Feed leaderboard so it stays current while you're looking at it.",
+    "entryCount": 2,
     "highlights": [
-      "Leaderboard refreshes on every open, not just first launch",
-      "Live 60s polling while the view is mounted, torn down on close"
+      "New Second Opinion (Mixture-of-Agents) chat strategy",
+      "Feed leaderboard now refreshes live instead of going stale"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-06-30T10:22:11.414Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.716.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-06-30T20:31:18.724Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.717.1",
     "path": "history/2026-06-30.json"
   },
   {

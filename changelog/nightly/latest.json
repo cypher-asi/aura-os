@@ -3,21 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-30T10:22:11.414Z",
+  "generatedAt": "2026-06-30T20:31:18.724Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.716.1",
+  "version": "0.1.0-nightly.717.1",
   "date": "2026-06-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.716.1",
-  "lastIncludedSha": "552e0727aa2e7e0de21ca8ddcaef983707799530",
-  "previousProcessedSha": "63be9a385d7983a29bd3aa74da4e6523417c6a4a",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.717.1",
+  "lastIncludedSha": "38cc49b36e39f3b964e8da5ad4ad4bfe35c8effc",
+  "previousProcessedSha": "552e0727aa2e7e0de21ca8ddcaef983707799530",
   "commitShas": [
     "4b9dcfddf9ea76979521650d2860dddd14df8551",
     "206324089c3cf44b475f0df9dc58543fd98946dd",
-    "552e0727aa2e7e0de21ca8ddcaef983707799530"
+    "552e0727aa2e7e0de21ca8ddcaef983707799530",
+    "38cc49b36e39f3b964e8da5ad4ad4bfe35c8effc"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 3,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "4b9dcfddf9ea76979521650d2860dddd14df8551",
@@ -135,36 +136,115 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "38cc49b36e39f3b964e8da5ad4ad4bfe35c8effc",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-06-30T16:03:56-04:00",
+      "subject": "Add Second Opinion chat strategy (#79)",
+      "body": "* Add Second Opinion chat strategy\n\n* Cap Second Opinion reference models\n\n* Use fixed Second Opinion allocation capacity",
+      "parents": [
+        "552e0727aa2e7e0de21ca8ddcaef983707799530"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route/route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming/orchestrator.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming/session.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "crates/aura-os-harness/src/harness.rs",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-protocol/bindings/AgentCapabilities.ts",
+        "crates/aura-protocol/bindings/AgentIdentity.ts",
+        "crates/aura-protocol/bindings/CouncilMember.ts",
+        "crates/aura-protocol/bindings/CouncilMemberRole.ts",
+        "crates/aura-protocol/bindings/ToolResultMsg.ts",
+        "crates/aura-protocol/src/lib.rs",
+        "crates/aura-protocol/src/runtime_request.rs",
+        "interface/src/api/streams.test.ts",
+        "interface/src/api/streams.ts",
+        "interface/src/components/CouncilPanel/CouncilPanel.tsx",
+        "interface/src/components/InputBarShell/SecondOpinionRow.tsx",
+        "interface/src/components/InputBarShell/index.ts",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.rerenders.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ModelControls/ModelControls.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/ModelControls/ModelControls.tsx",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/subagent-cards.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/shared/types/harness-protocol.ts",
+        "interface/src/stores/chat-ui-store.test.ts",
+        "interface/src/stores/chat-ui-store.ts"
+      ],
+      "stats": {
+        "fileCount": 33,
+        "insertions": 1495,
+        "deletions": 79
+      },
+      "committedAtMs": 1782849836000,
+      "cleanSubject": "Add Second Opinion chat strategy (#79)",
+      "keywords": [
+        "second",
+        "opinion",
+        "chat",
+        "strategy"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src",
+        "crates/aura-protocol/bindings",
+        "crates/aura-protocol/src",
+        "interface/src/api",
+        "interface/src/components",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.716.1",
+      "version": "0.1.0-nightly.717.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65117834
+          "sizeBytes": 65130930
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131713528
+          "sizeBytes": 131734008
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -174,29 +254,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.716.1",
+      "version": "0.1.0-nightly.717.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.716.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.717.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61120570
+          "sizeBytes": 61122003
         },
         {
-          "name": "AURA_0.1.0-nightly.716.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.717.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60097262
+          "sizeBytes": 60087492
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -206,29 +286,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.716.1",
+      "version": "0.1.0-nightly.717.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.716.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.717.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63142078
+          "sizeBytes": 63336342
         },
         {
-          "name": "AURA_0.1.0-nightly.716.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.717.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62226530
+          "sizeBytes": 62339203
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -238,17 +318,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.716.1",
+      "version": "0.1.0-nightly.717.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48170880
+          "sizeBytes": 48257585
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.716.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.717.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -257,26 +337,19 @@
     }
   ],
   "rendered": {
-    "title": "Leaderboard stays live while it's open",
-    "intro": "A focused nightly that fixes a long-standing staleness bug in the feed's leaderboard: reopening the view now pulls fresh data, and a periodic refresh keeps the standings current while you're looking at them.",
+    "title": "Second Opinion chat strategy and a live leaderboard",
+    "intro": "Today's nightly introduces a new multi-agent \"Second Opinion\" chat strategy alongside the existing Council flow, and fixes a long-standing staleness issue in the Feed leaderboard so it stays current while you're looking at it.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:42 AM",
         "started_at": "2026-06-30T09:42:47.000Z",
         "ended_at": "2026-06-30T09:56:07.000Z",
-        "title": "Feed leaderboard refreshes on open and polls while visible",
-        "summary": "The feed's leaderboard no longer shows cached entries until the app is restarted — it now refetches every time you open it and stays live via a periodic refresh that's cleanly torn down on close.",
+        "title": "Feed leaderboard stays live while open",
+        "summary": "The Feed leaderboard now pulls fresh data every time it's opened and keeps itself current on a timed refresh, instead of showing cached entries until the app was restarted.",
         "items": [
           {
-            "text": "Revisiting the leaderboard now fetches fresh entries on mount instead of relying on a once-per-app-lifetime init, so standings reflect current data without restarting Aura.",
-            "commit_shas": [
-              "4b9dcfddf9ea76979521650d2860dddd14df8551"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "While the leaderboard is on screen, a 60-second refresh keeps it live; the interval is stopped on unmount so nothing keeps polling in the background.",
+            "text": "Opening the leaderboard now fetches fresh entries and starts a periodic refresh that ticks every 60 seconds, with the interval torn down on close so nothing keeps polling in the background.",
             "commit_shas": [
               "4b9dcfddf9ea76979521650d2860dddd14df8551",
               "552e0727aa2e7e0de21ca8ddcaef983707799530"
@@ -284,7 +357,7 @@
             "confidence": "high"
           },
           {
-            "text": "New tests lock in the open/close behavior and the start–tick–stop lifecycle of the poll, guarding against regressions where the leaderboard could go stale or leak a background interval.",
+            "text": "Locked in the new behavior with view-level and store-level coverage for refresh-on-open, the live poll cadence, and clean teardown on unmount.",
             "commit_shas": [
               "206324089c3cf44b475f0df9dc58543fd98946dd",
               "552e0727aa2e7e0de21ca8ddcaef983707799530"
@@ -292,12 +365,50 @@
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "1:03 PM",
+        "started_at": "2026-06-30T20:03:56.000Z",
+        "ended_at": "2026-06-30T20:03:56.000Z",
+        "title": "Second Opinion (Mixture-of-Agents) chat strategy",
+        "summary": "A new multi-agent chat mode lands across the Rust server, protocol, and chat UI: an aggregator model produces the final answer while reference models advise it, served as a distinct strategy alongside Council.",
+        "items": [
+          {
+            "text": "Adds a Mixture request contract to the chat API with an aggregator plus advisory reference models, routed through the same model/cache path as Council and rejected if a request tries to combine both strategies at once.",
+            "commit_shas": [
+              "38cc49b36e39f3b964e8da5ad4ad4bfe35c8effc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Extends the streaming orchestrator, session handling, and runtime to resolve mixture members, run the aggregator first on the Council runtime, and surface a dedicated Second Opinion presentation in the protocol bindings.",
+            "commit_shas": [
+              "38cc49b36e39f3b964e8da5ad4ad4bfe35c8effc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Wires Second Opinion into the chat UI with a new input-bar row, model controls, and Council panel updates, plus chat-stream hooks and store state so reference picks and the aggregator flow through end-to-end.",
+            "commit_shas": [
+              "38cc49b36e39f3b964e8da5ad4ad4bfe35c8effc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Caps the number of reference models and uses a fixed allocation capacity for Second Opinion to keep resource usage predictable.",
+            "commit_shas": [
+              "38cc49b36e39f3b964e8da5ad4ad4bfe35c8effc"
+            ],
+            "confidence": "high"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Leaderboard refreshes on every open, not just first launch",
-      "Live 60s polling while the view is mounted, torn down on close"
+      "New Second Opinion (Mixture-of-Agents) chat strategy",
+      "Feed leaderboard now refreshes live instead of going stale"
     ],
-    "raw_commit_count": 3
+    "raw_commit_count": 4
   }
 }
