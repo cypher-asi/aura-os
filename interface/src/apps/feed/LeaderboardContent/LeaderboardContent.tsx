@@ -1,13 +1,28 @@
 import { useEffect, useMemo } from "react";
 import { Text } from "@cypher-asi/zui";
 import { Avatar } from "../../../components/Avatar";
-import { useLeaderboard, useLeaderboardStore } from "../../../stores/leaderboard-store";
+import {
+  useLeaderboard,
+  useLeaderboardStore,
+  startLeaderboardRefresh,
+  stopLeaderboardRefresh,
+} from "../../../stores/leaderboard-store";
 import { formatTokens, formatCurrency } from "../../../shared/utils/format";
 import styles from "./LeaderboardContent.module.css";
 
 export function LeaderboardContent() {
   const init = useLeaderboardStore((s) => s.init);
-  useEffect(() => { init(); }, [init]);
+  const fetchEntries = useLeaderboardStore((s) => s.fetchEntries);
+  // Refresh whenever the leaderboard is opened (init() only fetches once per
+  // app lifetime, so a revisit would otherwise show stale cached entries), and
+  // keep it live with the periodic refresh while it's on screen. The interval
+  // is torn down on unmount so nothing polls in the background.
+  useEffect(() => {
+    init();
+    void fetchEntries();
+    startLeaderboardRefresh();
+    return () => stopLeaderboardRefresh();
+  }, [init, fetchEntries]);
   const { selectedUserId, selectUser, entries } = useLeaderboard();
   const users = entries;
 
