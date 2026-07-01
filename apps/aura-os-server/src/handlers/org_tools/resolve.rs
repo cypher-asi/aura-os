@@ -6,7 +6,7 @@
 //! line limit.
 
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
-use aura_os_integrations::IntegrationsError;
+use aura_os_integrations::{platform_brave_key_present, IntegrationsError, PLATFORM_BRAVE_KEY_ENV};
 use aura_os_orgs::IntegrationSecretUpdate;
 use serde_json::Value;
 use tracing::warn;
@@ -25,11 +25,11 @@ use crate::state::AppState;
 /// truth.
 pub(crate) const PLATFORM_BRAVE_INTEGRATION_ID: &str = "platform-brave-search";
 
-/// Environment variable that carries the platform-provided Brave Search key.
-/// Cloud-only: it must never be written into a session payload or shipped to
-/// desktop. Used solely as a soft fallback when no real org brave integration
-/// resolves.
-const PLATFORM_BRAVE_KEY_ENV: &str = "BRAVE_SEARCH_PLATFORM_KEY";
+/// The platform-provided Brave Search key is carried by the
+/// [`PLATFORM_BRAVE_KEY_ENV`] environment variable (re-exported from
+/// `aura-os-integrations` so every gate shares one definition). Cloud-only: it
+/// must never be written into a session payload or shipped to desktop. Used
+/// solely as a soft fallback when no real org brave integration resolves.
 
 pub(crate) struct ResolvedOrgIntegration {
     pub(super) metadata: OrgIntegration,
@@ -250,15 +250,6 @@ fn load_platform_brave_secret() -> ApiResult<String> {
     }
 }
 
-/// Whether the cloud-only platform Brave key is configured. Gates the
-/// synthetic-metadata fallback (Gate D) so platform web search is off unless the
-/// deployment set `BRAVE_SEARCH_PLATFORM_KEY`.
-fn platform_brave_key_present() -> bool {
-    std::env::var(PLATFORM_BRAVE_KEY_ENV)
-        .map(|key| !key.trim().is_empty())
-        .unwrap_or(false)
-}
-
 /// The gating-only synthetic platform Brave integration, materialized in-memory
 /// at resolution time (Gate D) so the platform-key branch in
 /// [`load_org_integration_secret`] is reachable when no real org brave
@@ -406,13 +397,26 @@ async fn load_canonical_by_provider(
             }
             let integration = integrations
                 .into_iter()
-                .find(|integration| matches_org_tool_provider(integration, provider, user_id))
-                .ok_or_else(|| {
-                    ApiError::bad_request(format!(
-                        "no enabled `{provider}` org integration with a key is available"
-                    ))
-                })?;
-            Ok(Some(integration))
+                .find(|integration| matches_org_tool_provider(integration, provider, user_id));
+            match integration {
+                Some(integration) => Ok(Some(integration)),
+                // Spec 02 (Gate D reachability): the canonical service is
+                // healthy and answered, but this org has no matching brave
+                // integration. For every provider EXCEPT platform-gated brave we
+                // preserve the historical hard error (fail closed: no key, no
+                // call). For brave with the platform key configured we instead
+                // return `Ok(None)` so `pick_org_integration_metadata` falls
+                // through to the shadow lookup and then Gate D, which synthesizes
+                // the gating-only platform integration in-memory. Without this,
+                // the `?` on this call short-circuited before Gate D whenever a
+                // canonical client was configured (the cloud config), so platform
+                // web search only worked on the shadow path exercised by tests —
+                // never in production.
+                None if provider == "brave_search" && platform_brave_key_present() => Ok(None),
+                None => Err(ApiError::bad_request(format!(
+                    "no enabled `{provider}` org integration with a key is available"
+                ))),
+            }
         }
         Err(error) => {
             // A-H2: degraded canonical service → fail loud on the trusted path.
