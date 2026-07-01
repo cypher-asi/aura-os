@@ -29,6 +29,26 @@ const GENERATION_TOOL_TIMEOUT_MS: u64 = 600_000;
 /// Default timeout for ordinary (non-generation) org tool callbacks.
 const DEFAULT_TOOL_TIMEOUT_MS: u64 = 30_000;
 
+/// Environment variable holding the cloud-only platform Brave Search key.
+///
+/// Set only in the hosted/cloud deployment; never on the desktop sidecar. When
+/// present it turns on platform-default web search (no user BYOK key required).
+pub const PLATFORM_BRAVE_KEY_ENV: &str = "BRAVE_SEARCH_PLATFORM_KEY";
+
+/// Whether the cloud-only platform Brave key is configured (trimmed, non-empty).
+///
+/// Single source of truth shared by every gate in the platform-search feature:
+/// Gate A (tool emission, below), Gate B (synthetic injection in the chat
+/// capability builders), and Gate D (in-memory synthesis at secret
+/// resolution). Keeping one trim-consistent check here prevents a
+/// whitespace-only key from making one gate advertise a tool that another gate
+/// then refuses to execute (the "advertised-but-broken tool" inconsistency).
+pub fn platform_brave_key_present() -> bool {
+    std::env::var(PLATFORM_BRAVE_KEY_ENV)
+        .map(|key| !key.trim().is_empty())
+        .unwrap_or(false)
+}
+
 fn tool_timeout_ms(tool_name: &str) -> u64 {
     match tool_name {
         "generate_image" | "generate_video" | "generate_3d_model" => GENERATION_TOOL_TIMEOUT_MS,
@@ -50,10 +70,7 @@ fn available_workspace_integration_providers(integrations: &[OrgIntegration]) ->
     // brave_search as an available provider so that brave_search_web /
     // brave_search_news pass the provider gate in build_installed_workspace_app_tools.
     // The emitted tools retain runtime_execution: None (server-callback path, D5).
-    if std::env::var("BRAVE_SEARCH_PLATFORM_KEY")
-        .map(|v| !v.is_empty())
-        .unwrap_or(false)
-    {
+    if platform_brave_key_present() {
         providers.insert("brave_search");
     }
     providers

@@ -87,7 +87,7 @@ pub(super) fn installed_workspace_integrations(
             // integration already covers it (soft-fallback: real org key wins).
             // The synthetic carries no secret; the tool's runtime_execution stays
             // None so the server-callback path (D5) resolves the platform key.
-            if platform_brave_key_present()
+            if aura_os_integrations::platform_brave_key_present()
                 && !installed.iter().any(|i| i.provider == "brave_search")
             {
                 installed.push(synthetic_platform_brave_integration());
@@ -96,12 +96,6 @@ pub(super) fn installed_workspace_integrations(
         }
         _ => None,
     }
-}
-
-fn platform_brave_key_present() -> bool {
-    std::env::var("BRAVE_SEARCH_PLATFORM_KEY")
-        .map(|v| !v.is_empty())
-        .unwrap_or(false)
 }
 
 fn synthetic_platform_brave_integration() -> aura_os_harness::InstalledIntegration {

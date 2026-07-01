@@ -47,4 +47,7 @@ pub use trusted_methods::{
     TrustedIntegrationResultTransform, TrustedIntegrationRuntimeSpec,
     TrustedIntegrationSuccessGuard, TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY,
 };
-pub use workspace_tools::{installed_workspace_app_tools, installed_workspace_integrations};
+pub use workspace_tools::{
+    installed_workspace_app_tools, installed_workspace_integrations, platform_brave_key_present,
+    PLATFORM_BRAVE_KEY_ENV,
+};
