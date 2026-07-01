@@ -236,7 +236,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     defaultEffort: "medium",
     provider: "Anthropic",
     description:
-      "Anthropic's latest Sonnet: the best blend of speed and intelligence with a 1M-token context window.",
+      "The default everyday model: Anthropic's latest Sonnet — the best blend of speed and intelligence, with a 1M-token context window.",
     featured: true,
   },
   {
@@ -251,7 +251,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     defaultEffort: "medium",
     provider: "Anthropic",
     description:
-      "The default everyday model: fast, sharp, and great at coding with a 1M-token context window.",
+      "Fast, sharp Sonnet tier, great at coding, with a 1M-token context window.",
     featured: true,
   },
   {
@@ -619,7 +619,7 @@ export interface ModelVendorGroup {
  * element of {@link AURA_MANAGED_CHAT_MODELS}) so the picker's display
  * order can change freely without shifting the default.
  */
-export const DEFAULT_CHAT_MODEL_ID = "aura-claude-sonnet-4-6";
+export const DEFAULT_CHAT_MODEL_ID = "aura-claude-sonnet-5";
 
 /**
  * Groups chat models into ordered, non-empty vendor sections for the

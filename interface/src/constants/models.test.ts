@@ -73,9 +73,9 @@ describe("model persistence", () => {
 
   it("loadPersistedModel returns the adapter default when neither key is set", () => {
     expect(loadPersistedModel("default", null, "new-agent")).toBe(
-      "aura-claude-sonnet-4-6",
+      "aura-claude-sonnet-5",
     );
-    expect(loadPersistedModel("default", null)).toBe("aura-claude-sonnet-4-6");
+    expect(loadPersistedModel("default", null)).toBe("aura-claude-sonnet-5");
   });
 
   it("loadPersistedModel prefers the per-agent key over the global fallback", () => {
@@ -118,7 +118,7 @@ describe("model persistence", () => {
 
   it("ignores raw Claude Fable 5 while it is unavailable", () => {
     expect(loadPersistedModel("default", "claude-fable-5")).toBe(
-      "aura-claude-sonnet-4-6",
+      "aura-claude-sonnet-5",
     );
   });
 
@@ -135,7 +135,7 @@ describe("model persistence", () => {
     store["aura-selected-model:default"] = "aura-claude-fable-5";
 
     expect(loadPersistedModel("default", null, "agent-fable")).toBe(
-      "aura-claude-sonnet-4-6",
+      "aura-claude-sonnet-5",
     );
   });
 
@@ -152,7 +152,7 @@ describe("model persistence", () => {
       "gpt-image-2",
     );
     expect(loadPersistedModel("default", null, "agent-image")).toBe(
-      "aura-claude-sonnet-4-6",
+      "aura-claude-sonnet-5",
     );
   });
 
