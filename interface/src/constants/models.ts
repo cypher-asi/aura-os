@@ -48,6 +48,7 @@ export const EFFORT_SHORT_LABELS: Record<ModelEffort, string> = {
 export type ModelVendor =
   | "anthropic"
   | "openai"
+  | "xai"
   | "google"
   | "deepseek"
   | "moonshot"
@@ -151,6 +152,12 @@ const GEMINI_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
  */
 const GEMINI_FLASH_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
+/**
+ * Grok 4.3 supports `reasoning_effort` as `none`/`low`/`medium`/`high`.
+ * The router maps Aura's `minimal` UI tier to xAI's `none` value.
+ */
+const XAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
+
 export type ModelProviderGroup =
   | "aura"
   | "image"
@@ -170,8 +177,8 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
 ];
 
 /**
- * Chat models, grouped by vendor (Anthropic, OpenAI, DeepSeek AI, Moonshot
- * AI, MiniMax, Z.ai, Alibaba Cloud, Google) and newest-first within each
+ * Chat models, grouped by vendor (Anthropic, OpenAI, xAI, DeepSeek AI,
+ * Moonshot AI, MiniMax, Z.ai, Alibaba Cloud, Google) and newest-first within each
  * vendor. The picker's section order is controlled separately by
  * {@link MODEL_VENDOR_ORDER} (which surfaces Google ahead of DeepSeek), so
  * this array's grouping need not match the on-screen order. The default
@@ -325,6 +332,34 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     provider: "OpenAI",
     description:
       "Open-weight 120B reasoning model with selectable effort tiers and a 128K context window.",
+  },
+  // ── xAI ─────────────────────────────────────────────────────
+  {
+    id: "aura-grok-4-3",
+    label: "Grok 4.3",
+    tier: "opus",
+    mode: "chat",
+    vendor: "xai",
+    creditMultiplier: 0.6,
+    contextWindow: 1_000_000,
+    efforts: XAI_EFFORTS,
+    defaultEffort: "low",
+    provider: "xAI",
+    description:
+      "xAI's current Grok flagship for fast general reasoning, agentic tool use, and long-context work.",
+    featured: true,
+  },
+  {
+    id: "aura-grok-build-0-1",
+    label: "Grok Build 0.1",
+    tier: "sonnet",
+    mode: "chat",
+    vendor: "xai",
+    creditMultiplier: 0.45,
+    contextWindow: 256_000,
+    provider: "xAI",
+    description:
+      "xAI's coding-focused Grok model trained for agentic software-building workflows.",
   },
   // ── DeepSeek ────────────────────────────────────────────────
   {
@@ -573,6 +608,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
 const MODEL_VENDOR_ORDER: readonly ModelVendor[] = [
   "anthropic",
   "openai",
+  "xai",
   "google",
   "deepseek",
   "moonshot",
@@ -584,6 +620,7 @@ const MODEL_VENDOR_ORDER: readonly ModelVendor[] = [
 const MODEL_VENDOR_LABELS: Record<ModelVendor, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
+  xai: "xAI",
   deepseek: "DeepSeek AI",
   moonshot: "Moonshot AI",
   minimax: "MiniMax",
@@ -891,6 +928,12 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "gpt-5.4": "aura-gpt-5-4",
   "gpt-5.4-mini": "aura-gpt-5-4-mini",
   "gpt-5.4-nano": "aura-gpt-5-4-nano",
+  "aura-grok-4-3": "aura-grok-4-3",
+  "grok-4.3": "aura-grok-4-3",
+  "xai/grok-4.3": "aura-grok-4-3",
+  "aura-grok-build-0-1": "aura-grok-build-0-1",
+  "grok-build-0.1": "aura-grok-build-0-1",
+  "xai/grok-build-0.1": "aura-grok-build-0-1",
   "aura-o3": "aura-o3",
   o3: "aura-o3",
   "aura-o4-mini": "aura-o4-mini",

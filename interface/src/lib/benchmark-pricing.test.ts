@@ -140,6 +140,38 @@ describe("benchmark pricing", () => {
     expect(pricing.output).toBe(30);
   });
 
+  it.each([
+    ["aura-grok-4-3", "grok-4.3", 1.25, 0.2, 2.5],
+    ["xai/grok-4.3", "grok-4.3", 1.25, 0.2, 2.5],
+    ["aura-grok-build-0-1", "grok-build-0.1", 1, 0.2, 2],
+  ])(
+    "resolves xAI Grok pricing for %s",
+    (modelId, expectedModel, input, cacheRead, output) => {
+      const pricing = resolvePricing(modelId);
+
+      expect(pricing.provider).toBe("xai");
+      expect(pricing.source).toBe("xai-pricing");
+      expect(pricing.model).toBe(expectedModel);
+      expect(pricing.input).toBe(input);
+      expect(pricing.cacheRead).toBe(cacheRead);
+      expect(pricing.output).toBe(output);
+    },
+  );
+
+  it("does not double-charge xAI cache-hit input tokens", () => {
+    const { estimatedCostUsd, pricing } = calculateEstimatedCostUsd({
+      model: "aura-grok-4-3",
+      provider: "xai",
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 400_000,
+    });
+
+    expect(pricing.source).toBe("xai-pricing");
+    expect(estimatedCostUsd).toBeCloseTo(2.08, 6);
+  });
+
   it("resolves Kimi pricing for Aura-managed Fireworks model IDs", () => {
     const pricing = resolvePricing("aura-kimi-k2-6");
 

@@ -43,6 +43,20 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     runtimeCompatibleAdapters: [],
   },
   {
+    id: "xai",
+    label: "xAI",
+    kind: "workspace_connection",
+    description:
+      "Workspace-level xAI access for Grok chat and coding models.",
+    secretLabel: "xAI API Key",
+    secretPlaceholder: "Paste the xAI API key",
+    authHint:
+      "Use an xAI API key from the xAI Console when the workspace should route Grok model requests directly.",
+    docsUrl: "https://docs.x.ai/developers/quickstart",
+    supportsDefaultModel: true,
+    runtimeCompatibleAdapters: [],
+  },
+  {
     id: "github",
     label: "GitHub",
     kind: "workspace_integration",
@@ -269,6 +283,11 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
         key: "secretEnvVar",
         label: "Secret Env Var",
         placeholder: "GITHUB_PERSONAL_ACCESS_TOKEN",
+      },
+      {
+        key: "allowedTools",
+        label: "Allowed Tools",
+        placeholder: "search_repo list_issues",
       },
     ],
   },

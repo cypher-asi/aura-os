@@ -21,6 +21,7 @@ export const USD_PER_Z = 0.01;
 export type PricingProvider =
   | "anthropic"
   | "openai"
+  | "xai"
   | "fireworks"
   | "deepseek"
   | "google"
@@ -71,6 +72,14 @@ const OPENAI_PRICING: Readonly<Record<string, ModelRates>> = {
   "gpt-5.4-nano": { input: 0.2, output: 1.25, cacheWrite: 0.2, cacheRead: 0.02 },
 } as const;
 
+// xAI publishes a discounted cached-input rate for Grok. It does not
+// publish a separate cache-write rate for these models, so cache writes use
+// the base input rate when a caller reports them.
+const XAI_PRICING: Readonly<Record<string, ModelRates>> = {
+  "grok-4.3": { input: 1.25, output: 2.5, cacheWrite: 1.25, cacheRead: 0.2 },
+  "grok-build-0.1": { input: 1, output: 2, cacheWrite: 1, cacheRead: 0.2 },
+} as const;
+
 const FIREWORKS_PRICING: Readonly<Record<string, ModelRates>> = {
   "kimi-k2p7-code": { input: 0.95, output: 4.0, cacheWrite: 0.95, cacheRead: 0.19 },
   "kimi-k2p6": { input: 0.95, output: 4.0, cacheWrite: 0.95, cacheRead: 0.16 },
@@ -106,6 +115,7 @@ const PROVIDER_TABLES: Readonly<
 > = {
   anthropic: ANTHROPIC_PRICING,
   openai: OPENAI_PRICING,
+  xai: XAI_PRICING,
   fireworks: FIREWORKS_PRICING,
   deepseek: DEEPSEEK_PRICING,
   google: GOOGLE_PRICING,
@@ -120,6 +130,7 @@ const ZERO_RATES: ModelRates = { input: 0, output: 0, cacheWrite: 0, cacheRead: 
  */
 export function normalizePricingKey(model: string): string {
   const key = model.trim().toLowerCase();
+  const unprefixed = key.startsWith("xai/") ? key.slice("xai/".length) : key;
   const directAura: Readonly<Record<string, string>> = {
     "aura-kimi-k2-7-code": "kimi-k2p7-code",
     "aura-kimi-k2-6": "kimi-k2p6",
@@ -127,6 +138,8 @@ export function normalizePricingKey(model: string): string {
     "aura-oss-120b": "gpt-oss-120b",
     "aura-deepseek-v4-pro": "deepseek-v4-pro",
     "aura-deepseek-v4-flash": "deepseek-v4-flash",
+    "aura-grok-4-3": "grok-4.3",
+    "aura-grok-build-0-1": "grok-build-0.1",
     "aura-minimax-m3": "minimax-m3",
     "aura-minimax-m2-7": "minimax-m2p7",
     "aura-glm-5-2": "glm-5p2",
@@ -145,21 +158,23 @@ export function normalizePricingKey(model: string): string {
     "gemini-3.1-pro-preview": "gemini-3.1-pro",
     "gemini-3-flash-preview": "gemini-3-flash",
   };
-  if (directAura[key]) return directAura[key];
-  const auraClaude = key.match(/^aura-(claude-.+)$/);
+  if (directAura[unprefixed]) return directAura[unprefixed];
+  const auraClaude = unprefixed.match(/^aura-(claude-.+)$/);
   if (auraClaude) return auraClaude[1];
-  const auraGpt = key.match(/^aura-gpt-(\d+)-(\d+)(.*)$/);
+  const auraGpt = unprefixed.match(/^aura-gpt-(\d+)-(\d+)(.*)$/);
   if (auraGpt) return `gpt-${auraGpt[1]}.${auraGpt[2]}${auraGpt[3]}`;
-  return key;
+  return unprefixed;
 }
 
 function inferProvider(model: string, provider?: string): PricingProvider {
   const explicit = provider?.trim().toLowerCase();
   if (explicit === "anthropic" || explicit === "openai") return explicit;
+  if (explicit === "xai") return explicit;
   if (explicit === "fireworks" || explicit === "deepseek") return explicit;
   if (explicit === "google") return explicit;
   const key = normalizePricingKey(model);
   if (key.startsWith("claude")) return "anthropic";
+  if (key.startsWith("grok")) return "xai";
   if (key.startsWith("deepseek")) return "deepseek";
   if (key.startsWith("gemini")) return "google";
   if (
@@ -227,10 +242,10 @@ export interface SessionCostBreakdown {
 export function computeSessionCost(usage: SessionTokenUsage): SessionCostBreakdown {
   const pricing = getBilledPricing(usage.model, usage.provider);
   const cacheTokens = usage.cacheCreationTokens + usage.cacheReadTokens;
-  // DeepSeek and Google report the cached tokens *within* the prompt token
+  // DeepSeek, xAI, and Google report the cached tokens *within* the prompt token
   // count, so subtract them to avoid charging the full input rate twice.
   const inputIncludesCacheTokens =
-    pricing.provider === "deepseek" || pricing.provider === "google";
+    pricing.provider === "deepseek" || pricing.provider === "xai" || pricing.provider === "google";
   const billedInputTokens =
     inputIncludesCacheTokens && cacheTokens > 0
       ? Math.max(0, usage.inputTokens - cacheTokens)
