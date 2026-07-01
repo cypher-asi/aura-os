@@ -99,12 +99,6 @@
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  /* Height must follow the content, not the app window. This card sits in a
-     flex-column scroll area, and the `overflow: hidden` above makes it a scroll
-     container — which drops its automatic min-height from content-size to 0. So
-     without this, a short sidekick would let flex-shrink compress the card and
-     the `overflow: hidden` would clip its own rows. `flex-shrink: 0` keeps it at
-     full content height; the scroll area (`overflow-y: auto`) handles spillover. */
   flex-shrink: 0;
   gap: var(--space-3);
   /* Corners rounded to visually match the 3D metal card's rounded bottom. */
