@@ -250,6 +250,50 @@ async fn platform_key_brave_tool_action_resolves_platform_key_end_to_end() {
     assert_eq!(brave_news["results"][0]["title"], "Brave news");
 }
 
+/// Canonical-path regression (the production-path gap): identical to the end-to-end test
+/// above, but the app is built with a canonical `IntegrationsClient` configured
+/// (`state.integrations_client = Some`) pointed at a mock aura-integrations
+/// server that reports NO integrations for the org. This is the cloud shape.
+///
+/// Before the fix, `load_canonical_by_provider` returned `Ok(Some)` only on a
+/// match and otherwise hard-errored (`ok_or_else(bad_request)?`), which
+/// short-circuited `pick_org_integration_metadata` BEFORE Gate D — so platform
+/// web search 4xx'd in production even though every shadow-path test passed.
+/// The fix returns `Ok(None)` for the brave-with-platform-key case so the
+/// fallback reaches Gate D. This test 4xx's without the fix and 200s with it.
+#[allow(clippy::await_holding_lock)]
+#[tokio::test]
+async fn platform_key_brave_resolves_on_canonical_path_when_no_org_integration() {
+    let _lock = platform_key_env_lock()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let _env_provider = ProviderEnvGuard::set_up().await;
+    let _env = PlatformKeyEnvGuard::set("platform-key-123");
+
+    // Canonical client configured + canonical service healthy + org has no
+    // brave integration (mock returns an empty list). This is the exact path
+    // production takes and no other test exercises.
+    let (app, _state, _db) = build_test_app_with_empty_canonical_integrations().await;
+    let org_id = OrgId::new();
+
+    // No org brave integration and no integration_id: resolution must fall
+    // through the canonical "no match" to Gate D, synthesize the platform brave
+    // integration, and load the key from BRAVE_SEARCH_PLATFORM_KEY.
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+        Some(serde_json::json!({ "query": "aura" })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "canonical path with platform key + no org brave must reach Gate D and 200"
+    );
+    let brave_web = response_json(resp).await;
+    assert_eq!(brave_web["results"][0]["title"], "Brave result");
+}
+
 #[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn disabled_workspace_integrations_are_kept_but_not_exposed_as_active_capabilities() {

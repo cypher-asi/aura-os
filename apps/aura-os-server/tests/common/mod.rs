@@ -286,6 +286,36 @@ pub fn build_test_app_from_store_with_remote_only(
     billing_client: Option<Arc<BillingClient>>,
     remote_only: bool,
 ) -> (Router, AppState) {
+    build_test_app_from_store_with_integrations(
+        store,
+        data_dir,
+        network_client,
+        storage_client,
+        swarm_base_url,
+        billing_client,
+        remote_only,
+        None,
+    )
+}
+
+/// Like [`build_test_app_from_store_with_remote_only`] but lets a test inject a
+/// canonical [`IntegrationsClient`] (`state.integrations_client`). Production
+/// (cloud) runs with this `Some`; every other test builder leaves it `None`
+/// (the local-shadow path). Exercising the `Some` path is what proves Gate D
+/// synthesis is reachable when the canonical service is up and answers "no
+/// brave".
+#[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
+pub fn build_test_app_from_store_with_integrations(
+    store: Arc<SettingsStore>,
+    data_dir: std::path::PathBuf,
+    network_client: Option<Arc<NetworkClient>>,
+    storage_client: Option<Arc<StorageClient>>,
+    swarm_base_url: Option<String>,
+    billing_client: Option<Arc<BillingClient>>,
+    remote_only: bool,
+    integrations_client: Option<Arc<aura_os_integrations::IntegrationsClient>>,
+) -> (Router, AppState) {
     let billing_client = billing_client.unwrap_or_else(|| Arc::new(BillingClient::new()));
     let org_service = Arc::new(OrgService::new(store.clone()));
     let auth_service = Arc::new(AuthService::new());
@@ -387,7 +417,7 @@ pub fn build_test_app_from_store_with_remote_only(
         feedback_network_client: network_client.clone(),
         network_client,
         storage_client,
-        integrations_client: None,
+        integrations_client,
         require_zero_pro: false,
         remote_only,
         harness_http,
@@ -458,10 +488,77 @@ pub async fn build_test_app_with_org_membership() -> (Router, AppState, tempfile
     (app, state, store_dir)
 }
 
+/// Build a test app with BOTH an org-membership network mock (so the authZ gate
+/// passes) AND a canonical `IntegrationsClient` pointed at a mock
+/// aura-integrations server that reports NO integrations for the org.
+///
+/// This is the production-shaped path (`state.integrations_client = Some`) that
+/// no other test builder exercises: canonical service healthy, answers "no
+/// brave integration". Used by the canonical-path regression to prove Gate D
+/// synthesis is reachable on the canonical path (before the fix, the canonical
+/// "no match" hard-errored and short-circuited Gate D).
+#[allow(dead_code)]
+pub async fn build_test_app_with_empty_canonical_integrations(
+) -> (Router, AppState, tempfile::TempDir) {
+    // Membership mock: session user u1 owns every org.
+    let members_app = Router::new().route(
+        "/api/orgs/:org_id/members",
+        get(|Path(org_id): Path<String>| async move {
+            Json(vec![serde_json::json!({
+                "userId": "u1",
+                "orgId": org_id,
+                "role": "owner",
+            })])
+        }),
+    );
+    let members_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let members_addr = members_listener.local_addr().unwrap();
+    let net_url = format!("http://{}", members_addr);
+    tokio::spawn(async move { axum::serve(members_listener, members_app).await.ok() });
+
+    // Canonical aura-integrations mock: both the public (JWT) list and the
+    // internal list return an empty set, i.e. the org has connected nothing.
+    // `load_canonical_by_provider` hits the internal route; the per-turn
+    // `hydrate_canonical_integration_shadow` hits the public route.
+    let integrations_app = Router::new()
+        .route(
+            "/api/orgs/:org_id/integrations",
+            get(|| async { Json::<Vec<Value>>(vec![]) }),
+        )
+        .route(
+            "/internal/orgs/:org_id/integrations",
+            get(|| async { Json::<Vec<Value>>(vec![]) }),
+        );
+    let integrations_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let integrations_addr = integrations_listener.local_addr().unwrap();
+    let integrations_url = format!("http://{}", integrations_addr);
+    tokio::spawn(async move {
+        axum::serve(integrations_listener, integrations_app)
+            .await
+            .ok()
+    });
+    let integrations_client = Arc::new(aura_os_integrations::IntegrationsClient::with_base_url(
+        &integrations_url,
+        "test-internal-token",
+    ));
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
+    let (app, state) = build_test_app_from_store_with_integrations(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(Arc::new(NetworkClient::with_base_url(&net_url))),
+        None,
+        None,
+        None,
+        false,
+        Some(integrations_client),
+    );
+    (app, state, store_dir)
+}
+
 /// Build a test app wired to a network mock whose `/api/orgs/:org_id/members`
-/// endpoint reports an empty membership list, so the session user (`u1`) is
-/// treated as a non-member of every org. Used to assert the tool-action
-/// authorization gate rejects callers outside the org.
+
 #[allow(dead_code)]
 pub async fn build_test_app_without_org_membership() -> (Router, AppState, tempfile::TempDir) {
     let members_app = Router::new().route(
