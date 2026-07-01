@@ -121,9 +121,73 @@ pub fn installed_workspace_integrations(
                 OrgIntegrationKind::McpServer => "mcp_server",
             }
             .to_string(),
-            metadata: HashMap::new(),
+            metadata: installed_integration_metadata(integration),
         })
         .collect()
+}
+
+const XAI_REMOTE_MCP_METADATA_KEY: &str = "xai_remote_mcp";
+
+fn installed_integration_metadata(
+    integration: &OrgIntegration,
+) -> HashMap<String, serde_json::Value> {
+    let mut metadata = HashMap::new();
+    if let Some(config) = xai_remote_mcp_metadata(integration) {
+        metadata.insert(XAI_REMOTE_MCP_METADATA_KEY.to_string(), config);
+    }
+    metadata
+}
+
+fn xai_remote_mcp_metadata(integration: &OrgIntegration) -> Option<serde_json::Value> {
+    if integration.kind != OrgIntegrationKind::McpServer {
+        return None;
+    }
+    let config = integration.provider_config.as_ref()?.as_object()?;
+    let transport = config.get("transport")?.as_str()?.trim();
+    if !matches!(transport, "http" | "streamable_http") {
+        return None;
+    }
+    let server_url = config.get("url")?.as_str()?.trim();
+    if !server_url.starts_with("https://") {
+        return None;
+    }
+
+    let mut remote = serde_json::Map::new();
+    remote.insert(
+        "type".to_string(),
+        serde_json::Value::String("mcp".to_string()),
+    );
+    remote.insert(
+        "server_url".to_string(),
+        serde_json::Value::String(server_url.to_string()),
+    );
+    remote.insert(
+        "server_label".to_string(),
+        serde_json::Value::String(integration.name.clone()),
+    );
+    remote.insert(
+        "server_description".to_string(),
+        serde_json::Value::String(format!("Aura workspace MCP server {}", integration.name)),
+    );
+    if let Some(allowed_tools) = config
+        .get("allowedTools")
+        .and_then(serde_json::Value::as_array)
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|value| value.as_str().map(str::trim))
+                .filter(|value| !value.is_empty())
+                .map(|value| serde_json::Value::String(value.to_string()))
+                .collect::<Vec<_>>()
+        })
+        .filter(|values| !values.is_empty())
+    {
+        remote.insert(
+            "allowed_tools".to_string(),
+            serde_json::Value::Array(allowed_tools),
+        );
+    }
+    Some(serde_json::Value::Object(remote))
 }
 
 #[cfg(test)]
@@ -282,6 +346,19 @@ mod tests {
         }
     }
 
+    fn test_integration_with_config(
+        name: &str,
+        provider: &str,
+        kind: OrgIntegrationKind,
+        has_secret: bool,
+        enabled: bool,
+        provider_config: serde_json::Value,
+    ) -> OrgIntegration {
+        let mut integration = test_integration(name, provider, kind, has_secret, enabled);
+        integration.provider_config = Some(provider_config);
+        integration
+    }
+
     #[test]
     fn installed_workspace_app_tools_only_include_enabled_provider_tools() {
         let org_id = OrgId::new();
@@ -326,6 +403,58 @@ mod tests {
             .expect("brave tool");
         assert!(brave.endpoint.ends_with("/tool-actions/brave_search_web"));
         assert!(matches!(brave.auth, ToolAuth::Bearer { .. }));
+    }
+
+    #[test]
+    fn installed_mcp_integrations_include_xai_remote_mcp_metadata_for_https_servers() {
+        let integrations = vec![
+            test_integration_with_config(
+                "DeepWiki",
+                "mcp_server",
+                OrgIntegrationKind::McpServer,
+                false,
+                true,
+                serde_json::json!({
+                    "transport": "streamable_http",
+                    "url": "https://mcp.deepwiki.com/mcp",
+                    "allowedTools": ["read_wiki", "search_wiki"]
+                }),
+            ),
+            test_integration_with_config(
+                "Local GitHub",
+                "mcp_server",
+                OrgIntegrationKind::McpServer,
+                false,
+                true,
+                serde_json::json!({
+                    "transport": "stdio",
+                    "command": "npx"
+                }),
+            ),
+        ];
+
+        let installed = installed_workspace_integrations(&integrations);
+        let deepwiki = installed
+            .iter()
+            .find(|integration| integration.name == "DeepWiki")
+            .expect("deepwiki integration");
+        assert_eq!(
+            deepwiki.metadata["xai_remote_mcp"]["server_url"],
+            "https://mcp.deepwiki.com/mcp"
+        );
+        assert_eq!(
+            deepwiki.metadata["xai_remote_mcp"]["allowed_tools"][1],
+            "search_wiki"
+        );
+
+        let local = installed
+            .iter()
+            .find(|integration| integration.name == "Local GitHub")
+            .expect("local integration");
+        assert!(
+            !local.metadata.contains_key("xai_remote_mcp"),
+            "stdio MCP servers are projected through Aura's trusted MCP bridge, not xAI Remote MCP"
+        );
     }
 
     #[test]

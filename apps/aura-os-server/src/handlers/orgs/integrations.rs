@@ -55,6 +55,7 @@ fn validate_mcp_server_config(
     validate_mcp_env(config)?;
     validate_mcp_optional_string(config, "secretEnvVar")?;
     validate_mcp_optional_string(config, "cwd")?;
+    validate_mcp_optional_string_array(config, "allowedTools")?;
     Ok(())
 }
 
@@ -85,7 +86,7 @@ fn validate_mcp_transport(
             Ok(())
         }
         other => Err(ApiError::bad_request(format!(
-            "Unsupported MCP transport `{other}`. Expected `stdio` or `http`."
+            "Unsupported MCP transport `{other}`. Expected `stdio`, `http`, or `streamable_http`."
         ))),
     }
 }
@@ -121,6 +122,36 @@ fn validate_mcp_optional_string(
         return Err(ApiError::bad_request(format!(
             "MCP server `{key}` cannot be empty when provided."
         )));
+    }
+    Ok(())
+}
+
+fn validate_mcp_optional_string_array(
+    config: &serde_json::Map<String, Value>,
+    key: &str,
+) -> ApiResult<()> {
+    let Some(raw) = config.get(key) else {
+        return Ok(());
+    };
+    let values = raw.as_array().ok_or_else(|| {
+        ApiError::bad_request(format!(
+            "MCP server `{key}` must be an array of strings when provided."
+        ))
+    })?;
+    if values.is_empty() {
+        return Err(ApiError::bad_request(format!(
+            "MCP server `{key}` cannot be empty when provided."
+        )));
+    }
+    for value in values {
+        let value = value.as_str().map(str::trim).ok_or_else(|| {
+            ApiError::bad_request(format!("MCP server `{key}` must only contain strings."))
+        })?;
+        if value.is_empty() {
+            return Err(ApiError::bad_request(format!(
+                "MCP server `{key}` cannot contain empty strings."
+            )));
+        }
     }
     Ok(())
 }
