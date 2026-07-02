@@ -3,22 +3,23 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-01T19:03:24.111Z",
+  "generatedAt": "2026-07-02T06:00:39.399Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.719.1",
+  "version": "0.1.0-nightly.720.1",
   "date": "2026-07-01",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.719.1",
-  "lastIncludedSha": "a25d38fc687079dc3ad44f8f5530bbe9fc72f27b",
-  "previousProcessedSha": "89c4e68c02eb4c00f4a819c157ccfe89eba14ab5",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.720.1",
+  "lastIncludedSha": "b19997454364ec9e29267b4f7f8c2390f0a20d5a",
+  "previousProcessedSha": "a25d38fc687079dc3ad44f8f5530bbe9fc72f27b",
   "commitShas": [
     "7b0b1312ce5bb77870f542799046acb3ce4c475d",
     "89c4e68c02eb4c00f4a819c157ccfe89eba14ab5",
     "9cf477089c27f19193dfb60baac0c9ccb9d299d2",
-    "957816243f591c7ed51f0cfa0fce9ad8af901962"
+    "957816243f591c7ed51f0cfa0fce9ad8af901962",
+    "b19997454364ec9e29267b4f7f8c2390f0a20d5a"
   ],
-  "rawCommitCount": 5,
-  "filteredCommitCount": 4,
+  "rawCommitCount": 6,
+  "filteredCommitCount": 5,
   "rawCommits": [
     {
       "sha": "7b0b1312ce5bb77870f542799046acb3ce4c475d",
@@ -213,36 +214,81 @@
       "fileGroups": [],
       "primaryArea": "Other",
       "areas": []
+    },
+    {
+      "sha": "b19997454364ec9e29267b4f7f8c2390f0a20d5a",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-02T00:59:16-04:00",
+      "subject": "Complete Notion workspace integration",
+      "body": "",
+      "parents": [
+        "a25d38fc687079dc3ad44f8f5530bbe9fc72f27b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/workspace_tools/tests/catalog.rs",
+        "apps/aura-os-server/src/handlers/org_tools/providers/notion.rs",
+        "apps/aura-os-server/tests/api_tests/integration_actions.rs",
+        "apps/aura-os-server/tests/api_tests/integration_provider_mock.rs",
+        "crates/aura-os-integrations/src/provider/catalog.rs",
+        "infra/shared/org-integration-tools.json"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 1240,
+        "deletions": 92
+      },
+      "committedAtMs": 1782968356000,
+      "cleanSubject": "Complete Notion workspace integration",
+      "keywords": [
+        "complete",
+        "notion",
+        "workspace",
+        "integration"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-integrations/src",
+        "infra/shared/org-integration-tools.json"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
     }
   ],
-  "batchCount": 3,
+  "batchCount": 4,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.719.1",
+      "version": "0.1.0-nightly.720.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65135248
+          "sizeBytes": 65223316
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131729912
+          "sizeBytes": 131820024
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -252,29 +298,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.719.1",
+      "version": "0.1.0-nightly.720.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.719.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.720.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61116594
+          "sizeBytes": 61148676
         },
         {
-          "name": "AURA_0.1.0-nightly.719.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.720.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60084796
+          "sizeBytes": 60112209
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -284,29 +330,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.719.1",
+      "version": "0.1.0-nightly.720.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.719.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.720.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63327549
+          "sizeBytes": 63339375
         },
         {
-          "name": "AURA_0.1.0-nightly.719.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.720.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62334643
+          "sizeBytes": 62358944
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -316,17 +362,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.719.1",
+      "version": "0.1.0-nightly.720.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48257850
+          "sizeBytes": 48237380
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.719.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.720.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -335,8 +381,8 @@
     }
   ],
   "rendered": {
-    "title": "Sonnet 5 becomes the everyday default",
-    "intro": "Today's nightly promotes Claude Sonnet 5 to Aura's default chat model and lands a small but visible fix to the agent profile card so it stops clipping in short windows.",
+    "title": "Sonnet 5 becomes the default, and Notion ships end to end",
+    "intro": "Today's nightly promotes Anthropic's Sonnet 5 to Aura's default chat model, brings the Notion workspace integration to feature parity with a full tool suite, and quietly fixes a layout bug that was clipping the agent profile card on shorter windows.",
     "entries": [
       {
         "batch_id": "entry-1",
@@ -344,26 +390,19 @@
         "started_at": "2026-07-01T08:38:42.000Z",
         "ended_at": "2026-07-01T08:38:42.000Z",
         "title": "Claude Sonnet 5 lands and takes over as the default chat model",
-        "summary": "Sonnet 5 joins the model picker with a 1M-token context window and immediately replaces Sonnet 4.6 as Aura's default everyday chat model.",
+        "summary": "Sonnet 5 joins the model picker with 1M-token context and immediately becomes Aura's everyday default.",
         "items": [
           {
-            "text": "Added Claude Sonnet 5 to the model catalog as a featured Anthropic option with a 1M-token context window, medium default effort, and Sonnet-tier pricing ($3 in / $15 out, plus cache rates), wired through both the picker and the benchmark pricing table.",
+            "text": "Added Claude Sonnet 5 to the model catalog as a featured Sonnet-tier option with a 1M-token context window, ANTHROPIC_EFFORTS, credit multiplier 3, and $3/$15 pricing (plus cache rates) wired into both model-pricing.ts and the benchmark pricing script, alongside legacy alias mappings.",
             "commit_shas": [
               "7b0b1312ce5bb77870f542799046acb3ce4c475d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Pointed DEFAULT_CHAT_MODEL_ID at aura-claude-sonnet-5 and moved the 'default everyday model' copy onto Sonnet 5, so new sessions and default-fallback paths now resolve to Sonnet 5 instead of Sonnet 4.6.",
+            "text": "Promoted Sonnet 5 to DEFAULT_CHAT_MODEL_ID so new sessions and fallback paths (including unknown or unavailable model IDs) now resolve to aura-claude-sonnet-5, with the \"default everyday model\" description moving over from Sonnet 4.6.",
             "commit_shas": [
               "89c4e68c02eb4c00f4a819c157ccfe89eba14ab5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Registered legacy alias mappings for claude-sonnet-5 so existing persisted preferences and older identifiers route cleanly to the new aura-claude-sonnet-5 entry.",
-            "commit_shas": [
-              "7b0b1312ce5bb77870f542799046acb3ce4c475d"
             ],
             "confidence": "high"
           }
@@ -374,11 +413,11 @@
         "time_label": "6:19 AM",
         "started_at": "2026-07-01T13:19:28.000Z",
         "ended_at": "2026-07-01T13:19:28.000Z",
-        "title": "Agent profile spec card stops clipping in short windows",
-        "summary": "Fixed a layout bug where the Org/IP/Wallet spec card in the agent sidekick would get compressed and hide its own rows when the app window was short.",
+        "title": "Agent profile spec card stops clipping on short windows",
+        "summary": "A CSS fix keeps the Org / IP / Wallet card at full content height inside the sidekick scroll area.",
         "items": [
           {
-            "text": "Pinned the AgentInfoPanel spec card to its content height with flex-shrink: 0, so the surrounding scroll area handles overflow instead of the card collapsing and clipping its channel icons and nav links.",
+            "text": "Added flex-shrink: 0 to the AgentInfoPanel spec card so it no longer collapses to a zero min-height inside its flex-column scroll parent — the card now stays at content height and the surrounding scroll area handles overflow, preventing rows from being clipped when the app window is short.",
             "commit_shas": [
               "9cf477089c27f19193dfb60baac0c9ccb9d299d2"
             ],
@@ -391,24 +430,55 @@
         "time_label": "11:20 AM",
         "started_at": "2026-07-01T18:20:21.000Z",
         "ended_at": "2026-07-01T18:20:21.000Z",
-        "title": "Cleanup of the spec-card fix",
-        "summary": "Follow-up polish on the earlier AgentInfoPanel fix, removing the inline explanatory comment now that the behavior is settled.",
+        "title": "Cleanup of the spec-card fix rationale",
+        "summary": "Follow-up tidy that removes the inline explanation now that the fix has landed.",
         "items": [
           {
-            "text": "Dropped the explanatory CSS comment left behind by the spec-card flex-shrink fix; behavior is unchanged.",
+            "text": "Dropped the multi-line explanatory comment left behind by the AgentInfoPanel flex-shrink fix, keeping the CSS rule itself in place.",
             "commit_shas": [
               "957816243f591c7ed51f0cfa0fce9ad8af901962"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "9:59 PM",
+        "started_at": "2026-07-02T04:59:16.000Z",
+        "ended_at": "2026-07-02T04:59:16.000Z",
+        "title": "Notion workspace integration reaches full tool coverage",
+        "summary": "Agents can now search, read, write, and model data inside connected Notion workspaces via a complete set of provider tools.",
+        "items": [
+          {
+            "text": "Expanded the Notion provider from a minimal search/create surface to a full workspace toolset: notion_fetch_page, notion_get_block_children, notion_append_block_children, notion_update_page, notion_update_page_markdown, notion_query_data_source, notion_create_database, and notion_create_data_source now dispatch alongside the existing search_pages and create_page handlers.",
+            "commit_shas": [
+              "b19997454364ec9e29267b4f7f8c2390f0a20d5a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Wired the new tools into the org integrations catalog and workspace-tools installation flow, so saving a Notion integration for an org exposes all ten tools to agents with the correct Bearer auth, Notion-Version 2026-03-11 header, and workspace_integration requirement.",
+            "commit_shas": [
+              "b19997454364ec9e29267b4f7f8c2390f0a20d5a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Backed the integration with new server-side coverage across the workspace tool catalog tests and the API integration_actions and provider mock suites to lock in tool registration, routing, and provider behavior.",
+            "commit_shas": [
+              "b19997454364ec9e29267b4f7f8c2390f0a20d5a"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Claude Sonnet 5 added and set as the default chat model",
-      "1M-token context now available out of the box",
-      "Agent profile spec card no longer clips in short windows"
+      "Sonnet 5 is now the default chat model",
+      "Full Notion workspace toolset now available to agents",
+      "Agent profile card no longer clips on short windows"
     ],
-    "raw_commit_count": 4
+    "raw_commit_count": 5
   }
 }

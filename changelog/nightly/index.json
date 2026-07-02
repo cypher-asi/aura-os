@@ -2,18 +2,18 @@
   {
     "date": "2026-07-01",
     "channel": "nightly",
-    "version": "0.1.0-nightly.719.1",
-    "title": "Sonnet 5 becomes the everyday default",
-    "intro": "Today's nightly promotes Claude Sonnet 5 to Aura's default chat model and lands a small but visible fix to the agent profile card so it stops clipping in short windows.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.720.1",
+    "title": "Sonnet 5 becomes the default, and Notion ships end to end",
+    "intro": "Today's nightly promotes Anthropic's Sonnet 5 to Aura's default chat model, brings the Notion workspace integration to feature parity with a full tool suite, and quietly fixes a layout bug that was clipping the agent profile card on shorter windows.",
+    "entryCount": 4,
     "highlights": [
-      "Claude Sonnet 5 added and set as the default chat model",
-      "1M-token context now available out of the box",
-      "Agent profile spec card no longer clips in short windows"
+      "Sonnet 5 is now the default chat model",
+      "Full Notion workspace toolset now available to agents",
+      "Agent profile card no longer clips on short windows"
     ],
-    "rawCommitCount": 5,
-    "generatedAt": "2026-07-01T19:03:24.111Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.719.1",
+    "rawCommitCount": 6,
+    "generatedAt": "2026-07-02T06:00:39.399Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.720.1",
     "path": "history/2026-07-01.json"
   },
   {
