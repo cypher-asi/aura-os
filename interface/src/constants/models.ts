@@ -104,9 +104,10 @@ export interface ModelOption {
 }
 
 /**
- * Anthropic extended-thinking tiers. Claude exposes a thinking budget
- * (mapped per tier in the router), so the flagship models offer the
- * full low→max ladder.
+ * Anthropic extended-thinking tiers. Claude models with explicit thinking
+ * controls expose a budget mapped per tier in the router. Adaptive-only
+ * models such as Fable intentionally omit `efforts` so no picker tier is
+ * sent on the wire.
  */
 const ANTHROPIC_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
 
@@ -181,6 +182,19 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
  */
 export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   // ── Anthropic ───────────────────────────────────────────────
+  {
+    id: "aura-claude-fable-5",
+    label: "Fable 5",
+    tier: "opus",
+    mode: "chat",
+    vendor: "anthropic",
+    creditMultiplier: 10,
+    contextWindow: 1_000_000,
+    provider: "Anthropic",
+    description:
+      "Anthropic's most capable widely released model for demanding reasoning and long-running agents.",
+    featured: true,
+  },
   {
     id: "aura-claude-opus-4-8",
     label: "Opus 4.8",
