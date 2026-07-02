@@ -73,9 +73,9 @@ describe("model persistence", () => {
 
   it("loadPersistedModel returns the adapter default when neither key is set", () => {
     expect(loadPersistedModel("default", null, "new-agent")).toBe(
-      "aura-claude-sonnet-4-6",
+      "aura-claude-sonnet-5",
     );
-    expect(loadPersistedModel("default", null)).toBe("aura-claude-sonnet-4-6");
+    expect(loadPersistedModel("default", null)).toBe("aura-claude-sonnet-5");
   });
 
   it("loadPersistedModel prefers the per-agent key over the global fallback", () => {
@@ -123,26 +123,33 @@ describe("model persistence", () => {
     );
   });
 
-  it("ignores raw Claude Fable 5 while it is unavailable", () => {
+  it("normalizes raw Claude Fable 5 to the Aura-managed chat model", () => {
     expect(loadPersistedModel("default", "claude-fable-5")).toBe(
-      "aura-claude-sonnet-4-6",
+      "aura-claude-fable-5",
     );
   });
 
-  it("excludes Claude Fable 5 from the selectable chat model list while unavailable", () => {
+  it("includes Claude Fable 5 in the Anthropic chat model list", () => {
     const fable = availableModelsForAdapter("default").find(
       (model) => model.id === "aura-claude-fable-5",
     );
 
-    expect(fable).toBeUndefined();
+    expect(fable).toMatchObject({
+      label: "Fable 5",
+      vendor: "anthropic",
+      creditMultiplier: 10,
+      contextWindow: 1_000_000,
+    });
+    expect(fable?.efforts).toBeUndefined();
+    expect(fable?.defaultEffort).toBeUndefined();
   });
 
-  it("ignores a persisted Claude Fable 5 selection while it is unavailable", () => {
+  it("restores a persisted Claude Fable 5 selection now that it is available", () => {
     store["aura-selected-model:agent:agent-fable"] = "aura-claude-fable-5";
     store["aura-selected-model:default"] = "aura-claude-fable-5";
 
     expect(loadPersistedModel("default", null, "agent-fable")).toBe(
-      "aura-claude-sonnet-4-6",
+      "aura-claude-fable-5",
     );
   });
 
@@ -159,7 +166,7 @@ describe("model persistence", () => {
       "gpt-image-2",
     );
     expect(loadPersistedModel("default", null, "agent-image")).toBe(
-      "aura-claude-sonnet-4-6",
+      "aura-claude-sonnet-5",
     );
   });
 

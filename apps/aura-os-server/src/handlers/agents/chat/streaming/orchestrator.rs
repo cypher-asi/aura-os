@@ -6,8 +6,9 @@
 use std::sync::Arc;
 
 use aura_os_core::HarnessMode;
-use aura_os_harness::{SessionBridgeTurn, SessionConfig};
+use aura_os_harness::{CouncilPresentation, HarnessOutbound, SessionBridgeTurn, SessionConfig};
 use axum::response::sse::{KeepAlive, Sse};
+use tokio::sync::broadcast;
 use tracing::{debug, error};
 
 use crate::dto::ChatAttachmentDto;
@@ -28,7 +29,9 @@ use super::super::types::{SseResponse, SseStream};
 
 use super::attachments::dto_attachments_to_protocol;
 use super::prefix::build_sse_stream;
-use super::session::{get_or_create_delegated_chat_session, SessionForTurn};
+use super::session::{
+    apply_council_presentation_to_event, get_or_create_delegated_chat_session, SessionForTurn,
+};
 use super::title::spawn_session_title_task;
 use super::tool_hints::build_turn_tool_hints;
 
@@ -203,6 +206,7 @@ pub(in super::super) async fn open_harness_chat_stream(
         slot_guard,
         commands_tx,
         pending_events,
+        council_presentation,
     } = get_or_create_delegated_chat_session(
         state,
         &session_key,
@@ -215,6 +219,12 @@ pub(in super::super) async fn open_harness_chat_stream(
     if let Some(signal_ctx) = usage_signal_context.as_mut() {
         signal_ctx.is_new_session = is_new;
     }
+
+    let PresentedTurnStream {
+        rx,
+        events_tx,
+        pending_events,
+    } = present_turn_stream(rx, events_tx, pending_events, council_presentation);
 
     // Register this turn as a reattachable live stream so a
     // reconnecting / reloading UI can rejoin the in-flight delta stream
@@ -406,5 +416,114 @@ fn persist_error_ctx(ctx: &ChatPersistCtx) -> crate::error::ChatPersistErrorCtx 
         session_id: Some(ctx.session_id.to_string()),
         project_id: Some(ctx.project_id.clone()),
         project_agent_id: Some(ctx.project_agent_id.clone()),
+    }
+}
+
+struct PresentedTurnStream {
+    rx: broadcast::Receiver<HarnessOutbound>,
+    events_tx: broadcast::Sender<HarnessOutbound>,
+    pending_events: Vec<HarnessOutbound>,
+}
+
+fn present_turn_stream(
+    rx: broadcast::Receiver<HarnessOutbound>,
+    events_tx: broadcast::Sender<HarnessOutbound>,
+    pending_events: Vec<HarnessOutbound>,
+    presentation: Option<CouncilPresentation>,
+) -> PresentedTurnStream {
+    let Some(presentation) = presentation else {
+        return PresentedTurnStream {
+            rx,
+            events_tx,
+            pending_events,
+        };
+    };
+
+    let (presented_tx, presented_rx) =
+        broadcast::channel(aura_os_harness::ws_bridge_config::read_broadcast_capacity_from_env());
+    spawn_presentation_relay(rx, presented_tx.clone(), presentation);
+
+    PresentedTurnStream {
+        rx: presented_rx,
+        events_tx: presented_tx,
+        pending_events,
+    }
+}
+
+fn spawn_presentation_relay(
+    mut raw_rx: broadcast::Receiver<HarnessOutbound>,
+    presented_tx: broadcast::Sender<HarnessOutbound>,
+    presentation: CouncilPresentation,
+) {
+    tokio::spawn(async move {
+        loop {
+            match raw_rx.recv().await {
+                Ok(evt) => {
+                    let evt = apply_council_presentation_to_event(evt, Some(presentation));
+                    let _ = presented_tx.send(evt);
+                }
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    debug!(
+                        target: "aura::council",
+                        skipped,
+                        "presentation relay lagged while relabeling council events"
+                    );
+                }
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use aura_os_harness::SubagentSpawned;
+
+    use super::*;
+
+    fn council_spawn(subagent_type: &str) -> HarnessOutbound {
+        HarnessOutbound::SubagentSpawned(SubagentSpawned {
+            child_run_id: "child-1".to_string(),
+            parent_tool_use_id: Some("council-parent".to_string()),
+            subagent_type: subagent_type.to_string(),
+            prompt: "check the answer".to_string(),
+            model: Some("model-a".to_string()),
+            council_index: Some(0),
+            council_mechanism: Some("synthesize".to_string()),
+        })
+    }
+
+    #[tokio::test]
+    async fn present_turn_stream_relabels_live_second_opinion_spawns() {
+        let (raw_tx, raw_rx) = broadcast::channel(8);
+        let PresentedTurnStream {
+            mut rx,
+            events_tx: _presented_tx,
+            pending_events,
+        } = present_turn_stream(
+            raw_rx,
+            raw_tx.clone(),
+            Vec::new(),
+            Some(CouncilPresentation::SecondOpinion),
+        );
+
+        assert!(pending_events.is_empty());
+        raw_tx
+            .send(council_spawn("general_purpose"))
+            .expect("send raw spawn");
+
+        let evt = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+            .await
+            .expect("presentation event")
+            .expect("receive presentation event");
+        match evt {
+            HarnessOutbound::SubagentSpawned(spawned) => {
+                assert_eq!(spawned.subagent_type, "second-opinion");
+                assert_eq!(spawned.council_index, Some(0));
+            }
+            other => panic!("expected subagent spawn, got {other:?}"),
+        }
     }
 }

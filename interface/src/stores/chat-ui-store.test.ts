@@ -1,26 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useChatUIStore } from "./chat-ui-store";
 
-const mockLoadPersistedModel = vi.fn(
-  (_adapterType?: string, _defaultModel?: string | null, _agentId?: string) =>
-    "claude-opus-4-6",
-);
-const mockHasAgentScopedModel = vi.fn((_agentId: string) => false);
-const mockLoadPersistedImageModel = vi.fn((_agentId?: string) => "gpt-image-2");
+const mockLoadPersistedModel = vi.fn(() => "claude-opus-4-6");
+const mockHasAgentScopedModel = vi.fn(() => false);
+const mockLoadPersistedImageModel = vi.fn(() => "gpt-image-2");
 const mockLoadPersistedVideoModel = vi.fn(
-  (_agentId?: string) => "veo-3.1-fast-generate-preview",
+  () => "veo-3.1-fast-generate-preview",
 );
-const mockLoadPersistedThreeDModel = vi.fn(
-  (_agentId?: string) => "tripo-v2",
-);
-const mockLoadPersistedImageQuality = vi.fn((_agentId?: string) => "medium");
+const mockLoadPersistedThreeDModel = vi.fn(() => "tripo-v2");
+const mockLoadPersistedImageQuality = vi.fn(() => "medium");
 
 vi.mock("../constants/models", () => ({
-  availableModelsForAdapter: (_adapterType?: string) => [
+  availableModelsForAdapter: () => [
     { id: "claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
     { id: "claude-sonnet-4-6", label: "Sonnet 4.6", tier: "sonnet", mode: "chat" },
   ],
-  defaultModelForAdapter: (_adapterType?: string) => "claude-opus-4-6",
+  defaultModelForAdapter: () => "claude-opus-4-6",
   loadPersistedModel: (
     adapterType?: string,
     defaultModel?: string | null,
@@ -32,7 +27,7 @@ vi.mock("../constants/models", () => ({
     mockLoadPersistedVideoModel(agentId),
   loadPersistedThreeDModel: (agentId?: string) =>
     mockLoadPersistedThreeDModel(agentId),
-  loadPersistedModelEffort: (_modelId?: string | null) => null,
+  loadPersistedModelEffort: () => null,
   persistModelEffort: vi.fn(),
   DEFAULT_IMAGE_QUALITY: "medium",
   loadPersistedImageQuality: (agentId?: string) =>
@@ -54,10 +49,7 @@ describe("chat-ui-store", () => {
     } catch {
       // localStorage may be unavailable
     }
-    mockLoadPersistedModel.mockImplementation(
-      (_adapterType?: string, _defaultModel?: string | null, _agentId?: string) =>
-        "claude-opus-4-6",
-    );
+    mockLoadPersistedModel.mockImplementation(() => "claude-opus-4-6");
     mockHasAgentScopedModel.mockImplementation(() => false);
     mockLoadPersistedImageModel.mockImplementation(() => "gpt-image-2");
     mockLoadPersistedVideoModel.mockImplementation(
@@ -580,6 +572,97 @@ describe("chat-ui-store", () => {
       expect(
         useChatUIStore.getState().streams["stream-1"]?.councilMechanism,
       ).toBe("synthesize");
+    });
+  });
+
+  describe("answer strategy", () => {
+    it("enables second opinion with a default reference and clears council", () => {
+      const store = useChatUIStore.getState();
+      store.init("stream-1");
+      store.setCouncilCount("stream-1", 3);
+
+      store.setAnswerStrategy("stream-1", "second_opinion");
+
+      const next = useChatUIStore.getState().streams["stream-1"];
+      expect(next?.answerStrategy).toBe("second_opinion");
+      expect(next?.secondOpinionReference).toEqual({
+        id: "claude-sonnet-4-6",
+        effort: null,
+      });
+      expect(next?.councilCount).toBe(1);
+      expect(next?.councilModels).toEqual([]);
+      expect(localStorage.getItem("aura-council-count:stream-1")).toBeNull();
+      expect(localStorage.getItem("aura-answer-strategy:stream-1")).toBe(
+        "second_opinion",
+      );
+    });
+
+    it("rehydrates a same-model second opinion reference to a distinct default", () => {
+      localStorage.setItem("aura-answer-strategy:stream-1", "second_opinion");
+      localStorage.setItem(
+        "aura-second-opinion-reference:stream-1",
+        JSON.stringify({ id: "claude-opus-4-6", effort: null }),
+      );
+
+      useChatUIStore.getState().init("stream-1");
+
+      expect(
+        useChatUIStore.getState().getSecondOpinionReference("stream-1"),
+      ).toEqual({ id: "claude-sonnet-4-6", effort: null });
+    });
+
+    it("keeps second opinion distinct when the final model changes to the reference", () => {
+      const store = useChatUIStore.getState();
+      store.init("stream-1");
+      store.setAnswerStrategy("stream-1", "second_opinion");
+      expect(store.getSecondOpinionReference("stream-1")?.id).toBe(
+        "claude-sonnet-4-6",
+      );
+
+      store.setSelectedModel("stream-1", "claude-sonnet-4-6");
+
+      expect(
+        useChatUIStore.getState().getSecondOpinionReference("stream-1"),
+      ).toEqual({ id: "claude-opus-4-6", effort: null });
+    });
+
+    it("turning council on clears second opinion", () => {
+      const store = useChatUIStore.getState();
+      store.init("stream-1");
+      store.setAnswerStrategy("stream-1", "second_opinion");
+
+      store.setCouncilCount("stream-1", 2);
+
+      const next = useChatUIStore.getState().streams["stream-1"];
+      expect(next?.answerStrategy).toBe("single");
+      expect(next?.secondOpinionReference).toBeNull();
+      expect(localStorage.getItem("aura-answer-strategy:stream-1")).toBeNull();
+      expect(localStorage.getItem("aura-second-opinion-reference:stream-1")).toBeNull();
+    });
+
+    it("persists and resets the second opinion reference", () => {
+      const store = useChatUIStore.getState();
+      store.init("stream-1");
+      store.setAnswerStrategy("stream-1", "second_opinion");
+      store.setSecondOpinionReference("stream-1", "claude-sonnet-4-6");
+
+      resetStore();
+      useChatUIStore.getState().init("stream-1");
+      expect(useChatUIStore.getState().getAnswerStrategy("stream-1")).toBe(
+        "second_opinion",
+      );
+      expect(
+        useChatUIStore.getState().getSecondOpinionReference("stream-1"),
+      ).toEqual({ id: "claude-sonnet-4-6", effort: null });
+
+      useChatUIStore.getState().resetAnswerStrategy("stream-1");
+      expect(useChatUIStore.getState().getAnswerStrategy("stream-1")).toBe(
+        "single",
+      );
+      expect(
+        useChatUIStore.getState().getSecondOpinionReference("stream-1"),
+      ).toBeNull();
+      expect(localStorage.getItem("aura-answer-strategy:stream-1")).toBeNull();
     });
   });
 

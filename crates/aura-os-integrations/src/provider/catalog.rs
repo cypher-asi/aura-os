@@ -55,7 +55,7 @@ pub fn app_provider_contracts() -> &'static [AppProviderContract] {
                 env_base_url_key: Some("AURA_NOTION_API_BASE_URL"),
                 default_base_url: Some("https://api.notion.com/v1"),
                 auth_scheme: AppProviderAuthScheme::AuthorizationBearer,
-                static_headers: &[("Notion-Version", "2022-06-28")],
+                static_headers: &[("Notion-Version", "2026-03-11")],
             },
         },
         AppProviderContract {

@@ -67,12 +67,24 @@ function syncUserOnlineStatus() {
 }
 
 /**
- * Remove an agent from the polled set. Stops the shared poll interval when
- * the set empties so a later `registerRemoteAgents` call can re-arm it.
+ * Stop the shared poll interval when no agents remain in the active set.
+ */
+function stopPollIntervalIfIdle(): void {
+  if (_remoteAgentIds.size === 0 && _pollInterval) {
+    clearInterval(_pollInterval);
+    _pollInterval = undefined;
+  }
+}
+
+/**
+ * Remove an agent from the polled set entirely AND clear its status. Used
+ * when the agent is gone / no longer a remote agent (HTTP 400/404/410) so a
+ * later `registerRemoteAgents` call can re-arm it.
  */
 function unregisterRemoteAgent(agentId: string): void {
   _remoteAgentIds.delete(agentId);
   _polledAgentIds.delete(agentId);
+  _pollFailureCounts.delete(agentId);
   useProfileStatusStore.setState((s) => {
     if (!(agentId in s.statuses) && !(agentId in s.machineTypes)) return s;
     const nextStatuses = { ...s.statuses };
@@ -81,9 +93,36 @@ function unregisterRemoteAgent(agentId: string): void {
     delete nextMachineTypes[agentId];
     return { statuses: nextStatuses, machineTypes: nextMachineTypes };
   });
-  if (_remoteAgentIds.size === 0 && _pollInterval) {
-    clearInterval(_pollInterval);
-    _pollInterval = undefined;
+  stopPollIntervalIfIdle();
+}
+
+/**
+ * Stop polling an agent that has settled into a terminal state (`error` /
+ * `stopped`) or has failed too many times, WITHOUT clearing its status —
+ * the badge keeps showing the terminal state. Re-armed by a later
+ * `registerRemoteAgents` (list refresh) or a non-terminal
+ * `RemoteAgentStateChanged` push (see the WS handler in `init`). This is
+ * what stops the `/remote_agent/state` 502/404 flood on a dead or
+ * stuck-provisioning remote agent instead of polling every 30 s forever.
+ */
+function pauseRemoteAgentPolling(agentId: string): void {
+  _remoteAgentIds.delete(agentId);
+  // Drop from `_polledAgentIds` too so `registerRemoteAgents` treats the
+  // agent as new and re-arms polling on the next list refresh.
+  _polledAgentIds.delete(agentId);
+  _pollFailureCounts.delete(agentId);
+  stopPollIntervalIfIdle();
+}
+
+/**
+ * Re-add a remote agent to the active poll set and (re-)arm the shared
+ * interval. Shared by `registerRemoteAgents` and the WS re-engagement path.
+ */
+function armRemoteAgentPolling(agentId: string): void {
+  _polledAgentIds.add(agentId);
+  _remoteAgentIds.add(agentId);
+  if (!_pollInterval) {
+    _pollInterval = setInterval(pollRemoteAgents, REMOTE_POLL_MS);
   }
 }
 
@@ -94,11 +133,33 @@ function unregisterRemoteAgent(agentId: string): void {
  */
 const TERMINAL_REMOTE_STATUSES = new Set<number>([400, 404, 410]);
 
+/**
+ * VM lifecycle states that won't change without an explicit user action
+ * (recover / start). Polling stops here and re-engages via the WS push.
+ */
+const TERMINAL_VM_STATES = new Set<string>(["error", "stopped"]);
+
+/**
+ * Consecutive transport/5xx failures (e.g. `502` while the runtime is
+ * unreachable) tolerated before we pause polling. A handful of retries
+ * rides out a transient gateway blip on a healthy agent; a persistently
+ * unreachable agent (e.g. pod stuck unschedulable) settles after this.
+ */
+const MAX_CONSECUTIVE_POLL_FAILURES = 3;
+const _pollFailureCounts = new Map<string, number>();
+
 function pollRemoteAgents() {
   for (const agentId of _remoteAgentIds) {
     api.swarm
       .getRemoteAgentState(agentId)
-      .then((vm) => setStatus(agentId, vm.state))
+      .then((vm) => {
+        _pollFailureCounts.delete(agentId);
+        setStatus(agentId, vm.state);
+        // Settled terminal state — stop polling but keep showing it.
+        if (TERMINAL_VM_STATES.has(vm.state)) {
+          pauseRemoteAgentPolling(agentId);
+        }
+      })
       .catch((err: unknown) => {
         if (
           err instanceof ApiClientError &&
@@ -108,6 +169,11 @@ function pollRemoteAgents() {
           return;
         }
         setStatus(agentId, "error");
+        const failures = (_pollFailureCounts.get(agentId) ?? 0) + 1;
+        _pollFailureCounts.set(agentId, failures);
+        if (failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+          pauseRemoteAgentPolling(agentId);
+        }
       });
   }
 }
@@ -124,7 +190,23 @@ export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
 
     subscribe(EventType.RemoteAgentStateChanged, (event) => {
       const { agent_id, state } = event.content ?? {};
-      if (agent_id && state) setStatus(agent_id, state);
+      if (!agent_id || !state) return;
+      setStatus(agent_id, state);
+      // Re-engagement: if a known remote agent that we paused (terminal /
+      // too many failures) reports a non-terminal state again — e.g. a
+      // user-triggered recovery moved it back to `provisioning` — resume
+      // polling so its live VM details refresh. Agents dropped via
+      // `unregisterRemoteAgent` (404/410) have their `machineTypes` entry
+      // cleared, so they intentionally do NOT re-engage here — they re-arm
+      // only when a later `registerRemoteAgents` (list refresh) re-adds them.
+      if (
+        get().machineTypes[agent_id] === "remote" &&
+        !TERMINAL_VM_STATES.has(state) &&
+        !_remoteAgentIds.has(agent_id)
+      ) {
+        _pollFailureCounts.delete(agent_id);
+        armRemoteAgentPolling(agent_id);
+      }
     });
 
     subscribe(EventType.AgentInstanceUpdated, (event) => {
@@ -259,8 +341,7 @@ export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
     for (const a of agents) {
       mtUpdates[a.agent_id] = "remote";
       if (!_polledAgentIds.has(a.agent_id)) {
-        _polledAgentIds.add(a.agent_id);
-        _remoteAgentIds.add(a.agent_id);
+        armRemoteAgentPolling(a.agent_id);
         newAgents = true;
       }
     }
@@ -268,10 +349,6 @@ export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
     if (!newAgents) return;
 
     pollRemoteAgents();
-
-    if (!_pollInterval) {
-      _pollInterval = setInterval(pollRemoteAgents, REMOTE_POLL_MS);
-    }
   },
 }));
 

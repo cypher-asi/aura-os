@@ -25,8 +25,8 @@ use super::typed_session::TypedSessionFields;
 use super::types::SseResponse;
 
 use super::super::runtime::{
-    effective_model, resolve_council_mechanism, resolve_council_members,
-    session_model_overrides_with_cache,
+    effective_model, resolve_council_mechanism, resolve_council_members, resolve_mixture_members,
+    second_opinion_presentation, session_model_overrides_with_cache,
 };
 
 mod helpers;
@@ -209,21 +209,37 @@ pub(crate) async fn send_agent_event_stream(
     // same `effective_model` / override-cache path the single model
     // uses, sharing the per-agent cache-key prefix + 24h retention.
     let active_council = body.council.as_ref().filter(|c| c.models.len() >= 2);
-    let council = match active_council {
-        Some(council_body) => Some(resolve_council_members(
+    let active_mixture = body.mixture.as_ref();
+    if active_council.is_some() && active_mixture.is_some() {
+        return Err(ApiError::bad_request(
+            "send one multi-agent strategy: council or mixture, not both",
+        ));
+    }
+    let council = match (active_council, active_mixture) {
+        (Some(council_body), None) => Some(resolve_council_members(
             agent.default_model.as_deref(),
             council_body,
             Some(&format!("agent:{agent_id}")),
             Some("24h"),
         )?),
-        None => None,
+        (None, Some(mixture_body)) => Some(resolve_mixture_members(
+            agent.default_model.as_deref(),
+            mixture_body,
+            Some(&format!("agent:{agent_id}")),
+            Some("24h"),
+        )?),
+        _ => None,
     };
     // Council-wide combine mechanism (synthesize / contrast /
     // side_by_side); only meaningful when the council is active.
-    let council_mechanism = active_council.map(resolve_council_mechanism);
+    let council_mechanism = active_council
+        .map(resolve_council_mechanism)
+        .or_else(|| active_mixture.map(|_| aura_os_harness::CouncilMechanism::Synthesize));
+    let council_presentation = active_mixture.map(|_| second_opinion_presentation());
 
     let org_integrations = fetch_org_integrations(&state, effective_org_id.as_ref(), &jwt).await;
     let normalized_perms = normalize_agent_perms(&agent, effective_project_id.as_deref());
+    let agent_id_string = agent_id.to_string();
 
     let installed_tools = build_session_installed_tools(
         &InstalledToolsCtx {
@@ -231,7 +247,8 @@ pub(crate) async fn send_agent_event_stream(
             org_id: effective_org_id.as_ref(),
             jwt: &jwt,
             context: "agent_chat",
-            agent_id: &agent_id.to_string(),
+            agent_id: &agent_id_string,
+            template_agent_id: &agent_id_string,
             integrations: org_integrations.as_deref(),
         },
         &normalized_perms,
@@ -331,7 +348,7 @@ pub(crate) async fn send_agent_event_stream(
                 .as_deref()
                 .map(|id| !id.trim().is_empty())
                 .unwrap_or(false),
-        is_council: active_council.is_some(),
+        is_council: active_council.is_some() || active_mixture.is_some(),
         is_new_session: force_new,
         attachment_count: crate::usage_signals::attachment_count(&body.attachments),
         installed_tool_count: crate::usage_signals::option_vec_len(&installed_tools),
@@ -368,6 +385,7 @@ pub(crate) async fn send_agent_event_stream(
         reasoning_effort: body.reasoning_effort.clone(),
         council,
         council_mechanism,
+        council_presentation,
         computer_use,
         computer_executor_url,
         ..Default::default()

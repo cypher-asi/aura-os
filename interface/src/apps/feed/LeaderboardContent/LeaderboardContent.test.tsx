@@ -44,8 +44,22 @@ vi.mock("../../../stores/event-store", () => ({
   },
 }));
 
+vi.mock("../../../stores/leaderboard-store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../stores/leaderboard-store")>();
+  return {
+    ...actual,
+    startLeaderboardRefresh: vi.fn(),
+    stopLeaderboardRefresh: vi.fn(),
+  };
+});
+
 import { LeaderboardContent } from "./LeaderboardContent";
-import { useLeaderboardStore } from "../../../stores/leaderboard-store";
+import {
+  useLeaderboardStore,
+  startLeaderboardRefresh,
+  stopLeaderboardRefresh,
+} from "../../../stores/leaderboard-store";
 
 const entries: LeaderboardUser[] = [
   {
@@ -67,11 +81,13 @@ const entries: LeaderboardUser[] = [
 ];
 
 beforeEach(() => {
+  vi.clearAllMocks();
   useLeaderboardStore.setState({
     entries,
     selectedUserId: null,
     loading: false,
     init: vi.fn(),
+    fetchEntries: vi.fn(() => Promise.resolve()),
     selectUser: (id) => useLeaderboardStore.setState({ selectedUserId: id }),
   });
 });
@@ -95,5 +111,20 @@ describe("LeaderboardContent", () => {
 
     expect(aliceRow).not.toHaveClass("rowActive");
     expect(bobRow).toHaveClass("rowActive");
+  });
+
+  it("refreshes on open and tears down the live refresh on close", () => {
+    const { init, fetchEntries } = useLeaderboardStore.getState();
+    const { unmount } = render(<LeaderboardContent />);
+
+    // Opening the leaderboard pulls fresh data and starts the live refresh.
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(fetchEntries).toHaveBeenCalledTimes(1);
+    expect(startLeaderboardRefresh).toHaveBeenCalledTimes(1);
+    expect(stopLeaderboardRefresh).not.toHaveBeenCalled();
+
+    // Leaving the leaderboard stops the poll so nothing runs in the background.
+    unmount();
+    expect(stopLeaderboardRefresh).toHaveBeenCalledTimes(1);
   });
 });

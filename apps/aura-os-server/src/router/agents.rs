@@ -35,6 +35,30 @@ pub(super) fn agent_routes() -> Router<AppState> {
             get(agents::get_agent_state_snapshot),
         )
         .route(
+            "/api/agents/:agent_id/self-improvement",
+            get(agents::get_self_improvement_config).put(agents::update_self_improvement_config),
+        )
+        .route(
+            "/api/agents/:agent_id/improvements",
+            get(agents::list_improvement_proposals),
+        )
+        .route(
+            "/api/agents/:agent_id/improvements/propose",
+            post(agents::propose_improvement),
+        )
+        .route(
+            "/api/agents/:agent_id/improvements/review",
+            post(agents::run_learning_review),
+        )
+        .route(
+            "/api/agents/:agent_id/improvements/:proposal_id/apply",
+            post(agents::apply_improvement_proposal),
+        )
+        .route(
+            "/api/agents/:agent_id/improvements/:proposal_id/reject",
+            post(agents::reject_improvement_proposal),
+        )
+        .route(
             "/api/agents/:agent_id/remote_agent/state",
             get(swarm::get_remote_agent_state),
         )

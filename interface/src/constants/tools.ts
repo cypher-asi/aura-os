@@ -102,6 +102,7 @@ export const TOOL_LABELS: Record<string, string> = {
   generate_video: "Generate video",
   get_3d_status: "3D generation status",
   load_domain_tools: "Load tools",
+  propose_agent_improvement: "Propose improvement",
   task: "Subagent",
 };
 
@@ -179,6 +180,7 @@ export const TOOL_PHASE_LABELS: Record<string, string> = {
   generate_3d_model: "Generating 3D model...",
   generate_video: "Generating video...",
   load_domain_tools: "Loading additional tools...",
+  propose_agent_improvement: "Saving improvement proposal...",
   send_to_agent: "Sending message to agent...",
 };
 

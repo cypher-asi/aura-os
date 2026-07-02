@@ -6,16 +6,32 @@ import type { IntentClassifierSpec } from "./IntentClassifierSpec";
 /**
  * "What tools / integrations / intent classifier the agent can use."
  */
-export type AgentCapabilities = { 
+export type AgentCapabilities = {
 /**
  * Installed tools registered for this run.
  */
-installed_tools: Array<InstalledTool>, 
+installed_tools: Array<InstalledTool>,
 /**
  * Installed integrations authorized for this run.
  */
-installed_integrations: Array<InstalledIntegration>, 
+installed_integrations: Array<InstalledIntegration>,
 /**
  * Optional keyword-driven intent classifier spec.
  */
-intent_classifier: IntentClassifierSpec | null, };
+intent_classifier: IntentClassifierSpec | null,
+/**
+ * Computer-use capability flag. When `true`, the harness exposes
+ * the Anthropic computer-use tool for this run so the agent can
+ * drive the real OS cursor/keyboard and read back screenshots.
+ * Off by default; strictly additive (older producers omit it and
+ * it deserializes to `false`).
+ */
+computer_use: boolean,
+/**
+ * Base URL of the desktop computer-use executor the harness should
+ * forward `computer` actions to (e.g.
+ * `"http://127.0.0.1:<port>"`). `None` disables forwarding even
+ * when [`Self::computer_use`] is set. Additive and omitted from
+ * the wire when absent.
+ */
+computer_executor_url: string | null, };

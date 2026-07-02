@@ -5,6 +5,7 @@
 
 use axum::http::{header, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
+use url::Url;
 
 /// Gateway for JSON HTTP calls to the harness (`LOCAL_HARNESS_URL`).
 #[derive(Debug, Clone)]
@@ -30,17 +31,13 @@ impl HarnessHttpGateway {
         query: Option<String>,
         body: Option<String>,
     ) -> Result<Response, StatusCode> {
-        let path = path.trim_start_matches('/');
-        let url = match query {
-            Some(q) => format!("{}/{path}?{q}", self.base_url),
-            None => format!("{}/{path}", self.base_url),
-        };
+        let url = self.harness_url(path, query.as_deref())?;
 
         let mut req = match method {
-            Method::GET => self.client.get(&url),
-            Method::POST => self.client.post(&url),
-            Method::PUT => self.client.put(&url),
-            Method::DELETE => self.client.delete(&url),
+            Method::GET => self.client.get(url),
+            Method::POST => self.client.post(url),
+            Method::PUT => self.client.put(url),
+            Method::DELETE => self.client.delete(url),
             _ => return Err(StatusCode::METHOD_NOT_ALLOWED),
         };
 
@@ -84,11 +81,12 @@ impl HarnessHttpGateway {
 
     /// Fire-and-forget style POST used when the caller does not need the harness response.
     pub(crate) async fn post_json_ignore_result(&self, path: &str, body: String) {
-        let path = path.trim_start_matches('/');
-        let url = format!("{}/{path}", self.base_url);
+        let Ok(url) = self.harness_url(path, None) else {
+            return;
+        };
         let _ = self
             .client
-            .post(&url)
+            .post(url)
             .header("Content-Type", "application/json")
             .body(body)
             .send()
@@ -103,13 +101,12 @@ impl HarnessHttpGateway {
     /// `None` on any transport/status/parse failure — callers should treat
     /// failures as "no data" (best-effort).
     pub(crate) async fn fetch_json(&self, method: Method, path: &str) -> Option<serde_json::Value> {
-        let path = path.trim_start_matches('/');
-        let url = format!("{}/{path}", self.base_url);
+        let url = self.harness_url(path, None).ok()?;
         let req = match method {
-            Method::GET => self.client.get(&url),
-            Method::POST => self.client.post(&url),
-            Method::PUT => self.client.put(&url),
-            Method::DELETE => self.client.delete(&url),
+            Method::GET => self.client.get(url),
+            Method::POST => self.client.post(url),
+            Method::PUT => self.client.put(url),
+            Method::DELETE => self.client.delete(url),
             _ => return None,
         };
         let resp = req
@@ -122,5 +119,48 @@ impl HarnessHttpGateway {
         }
         let text = resp.text().await.ok()?;
         serde_json::from_str(&text).ok()
+    }
+
+    fn harness_url(&self, path: &str, query: Option<&str>) -> Result<Url, StatusCode> {
+        let base = format!("{}/", self.base_url.trim_end_matches('/'));
+        let mut url = Url::parse(&base).map_err(|_| StatusCode::BAD_GATEWAY)?;
+        {
+            let mut path_segments = url
+                .path_segments_mut()
+                .map_err(|_| StatusCode::BAD_GATEWAY)?;
+            path_segments.pop_if_empty();
+            for segment in path.trim_start_matches('/').split('/') {
+                if segment.is_empty() || segment == "." || segment == ".." {
+                    return Err(StatusCode::BAD_REQUEST);
+                }
+                path_segments.push(segment);
+            }
+        }
+        url.set_query(query);
+        Ok(url)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::HarnessHttpGateway;
+
+    #[test]
+    fn harness_url_keeps_base_host_and_encodes_segments() {
+        let gateway = HarnessHttpGateway::new("http://127.0.0.1:9999/base");
+        let url = gateway
+            .harness_url("/api/agents/agent 1/memory/facts", Some("limit=10"))
+            .expect("valid harness url");
+
+        assert_eq!(
+            url.as_str(),
+            "http://127.0.0.1:9999/base/api/agents/agent%201/memory/facts?limit=10"
+        );
+    }
+
+    #[test]
+    fn harness_url_rejects_relative_path_traversal_segments() {
+        let gateway = HarnessHttpGateway::new("http://127.0.0.1:9999");
+        assert!(gateway.harness_url("api/agents/../skills", None).is_err());
     }
 }

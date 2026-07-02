@@ -25,10 +25,10 @@ pub(crate) struct UpdateSkillBody {
 }
 
 #[derive(serde::Serialize)]
-struct UpdateSkillResponse {
-    name: String,
-    path: String,
-    updated: bool,
+pub(crate) struct UpdateSkillResponse {
+    pub(crate) name: String,
+    pub(crate) path: String,
+    pub(crate) updated: bool,
 }
 
 /// Rewrite an existing user-authored skill's `SKILL.md` (frontmatter +
@@ -49,6 +49,21 @@ pub(crate) async fn update_my_skill(
     Path(name): Path<String>,
     Json(payload): Json<UpdateSkillBody>,
 ) -> Result<axum::response::Response, StatusCode> {
+    let resp = update_my_skill_from_payload(&state, name, payload).await?;
+    let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        body,
+    )
+        .into_response())
+}
+
+pub(crate) async fn update_my_skill_from_payload(
+    state: &AppState,
+    name: String,
+    payload: UpdateSkillBody,
+) -> Result<UpdateSkillResponse, StatusCode> {
     if !create_skill_name_valid(&name) {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -110,16 +125,9 @@ pub(crate) async fn update_my_skill(
 
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let resp = UpdateSkillResponse {
+    Ok(UpdateSkillResponse {
         name,
         path: skill_path.to_string_lossy().into_owned(),
         updated: true,
-    };
-    let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok((
-        StatusCode::OK,
-        [(header::CONTENT_TYPE, "application/json")],
-        body,
-    )
-        .into_response())
+    })
 }

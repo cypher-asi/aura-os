@@ -9,6 +9,7 @@ mod installed_tools;
 mod instances;
 mod marketplace_fields;
 mod runtime;
+mod self_improvement;
 pub(crate) mod session_identity;
 pub(crate) mod session_titles;
 pub(crate) mod sessions;
@@ -39,6 +40,11 @@ pub(crate) use instances::{
     update_agent_instance,
 };
 pub(crate) use runtime::{session_model_overrides_with_cache, test_agent_runtime};
+pub(crate) use self_improvement::{
+    apply_improvement_proposal, get_self_improvement_config, list_improvement_proposals,
+    propose_improvement, reject_improvement_proposal, run_learning_review,
+    update_self_improvement_config,
+};
 pub(crate) use sessions::{
     delete_session, get_session, list_my_sessions, list_project_sessions, list_session_events,
     list_session_tasks, list_sessions, summarize_session,

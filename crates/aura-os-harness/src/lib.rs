@@ -42,7 +42,8 @@ pub use client::{
 pub use error::HarnessError;
 pub use harness::{
     build_runtime_request, validate_runtime_request_identity, CouncilMemberConfig,
-    HarnessCommandSender, HarnessLink, HarnessSession, RunHandle, SessionConfig,
+    CouncilPresentation, HarnessCommandSender, HarnessLink, HarnessSession, RunHandle,
+    SessionConfig,
 };
 pub use harness_url::local_harness_base_url;
 pub use local_harness::LocalHarness;

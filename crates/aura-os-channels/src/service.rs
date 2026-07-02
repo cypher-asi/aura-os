@@ -14,7 +14,7 @@ use crate::records::{ChannelLink, PendingLink};
 /// `scan_cf_prefix` / `write_batch`) accepts an arbitrary column-family
 /// name, so channel records live in their own `"channels"` column family
 /// (a dedicated `channels.json` file) rather than polluting the `settings`
-/// CF. The matching CF name is registered in `aura_os_store`'s `CF_NAMES`.
+/// CF. The matching CF name is registered in `aura_os_store`.
 /// Records are JSON-serialized; deletes go through `write_batch` because
 /// the public API has no per-CF delete helper.
 pub const CHANNELS_CF: &str = "channels";

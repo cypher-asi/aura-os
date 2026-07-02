@@ -105,9 +105,10 @@ export interface ModelOption {
 }
 
 /**
- * Anthropic extended-thinking tiers. Claude exposes a thinking budget
- * (mapped per tier in the router), so the flagship models offer the
- * full low→max ladder.
+ * Anthropic extended-thinking tiers. Claude models with explicit thinking
+ * controls expose a budget mapped per tier in the router. Adaptive-only
+ * models such as Fable intentionally omit `efforts` so no picker tier is
+ * sent on the wire.
  */
 const ANTHROPIC_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
 
@@ -189,6 +190,19 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
 export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   // ── Anthropic ───────────────────────────────────────────────
   {
+    id: "aura-claude-fable-5",
+    label: "Fable 5",
+    tier: "opus",
+    mode: "chat",
+    vendor: "anthropic",
+    creditMultiplier: 10,
+    contextWindow: 1_000_000,
+    provider: "Anthropic",
+    description:
+      "Anthropic's most capable widely released model for demanding reasoning and long-running agents.",
+    featured: true,
+  },
+  {
     id: "aura-claude-opus-4-8",
     label: "Opus 4.8",
     tier: "opus",
@@ -232,6 +246,21 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
       "High-capability Opus tier balancing extended thinking with a 200K context window.",
   },
   {
+    id: "aura-claude-sonnet-5",
+    label: "Sonnet 5",
+    tier: "sonnet",
+    mode: "chat",
+    vendor: "anthropic",
+    creditMultiplier: 3,
+    contextWindow: 1_000_000,
+    efforts: ANTHROPIC_EFFORTS,
+    defaultEffort: "medium",
+    provider: "Anthropic",
+    description:
+      "The default everyday model: Anthropic's latest Sonnet — the best blend of speed and intelligence, with a 1M-token context window.",
+    featured: true,
+  },
+  {
     id: "aura-claude-sonnet-4-6",
     label: "Sonnet 4.6",
     tier: "sonnet",
@@ -243,7 +272,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     defaultEffort: "medium",
     provider: "Anthropic",
     description:
-      "The default everyday model: fast, sharp, and great at coding with a 1M-token context window.",
+      "Fast, sharp Sonnet tier, great at coding, with a 1M-token context window.",
     featured: true,
   },
   {
@@ -641,7 +670,7 @@ export interface ModelVendorGroup {
  * element of {@link AURA_MANAGED_CHAT_MODELS}) so the picker's display
  * order can change freely without shifting the default.
  */
-export const DEFAULT_CHAT_MODEL_ID = "aura-claude-sonnet-4-6";
+export const DEFAULT_CHAT_MODEL_ID = "aura-claude-sonnet-5";
 
 /**
  * Groups chat models into ordered, non-empty vendor sections for the
@@ -917,6 +946,8 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "aura-claude-opus-4-8": "aura-claude-opus-4-8",
   "claude-opus-4-7": "aura-claude-opus-4-7",
   "claude-opus-4-6": "aura-claude-opus-4-6",
+  "aura-claude-sonnet-5": "aura-claude-sonnet-5",
+  "claude-sonnet-5": "aura-claude-sonnet-5",
   "aura-claude-sonnet-4-6": "aura-claude-sonnet-4-6",
   "claude-sonnet-4-6": "aura-claude-sonnet-4-6",
   "aura-claude-haiku-4-5": "aura-claude-haiku-4-5",

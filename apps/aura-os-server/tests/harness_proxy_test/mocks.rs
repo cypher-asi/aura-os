@@ -163,7 +163,12 @@ pub(crate) async fn start_recording_mock_harness() -> (String, Arc<Mutex<Vec<(St
 
     let mock_app = Router::new()
         .route("/api/skills", post(record.clone()))
-        .route("/api/agents/:agent_id/skills", post(record.clone()));
+        .route("/api/agents/:agent_id/skills", post(record.clone()))
+        .route("/api/agents/:agent_id/memory/facts", post(record.clone()))
+        .route(
+            "/api/agents/:agent_id/memory/procedures",
+            post(record.clone()),
+        );
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();

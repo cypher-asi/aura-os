@@ -40,3 +40,26 @@
 .councilSlot .inlineModelPicker {
   margin-left: 0;
 }
+
+.secondOpinionSlotsRow {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.secondOpinionSlot {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.strategySlotLabel {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.secondOpinionSlot .inlineModelPicker {
+  margin-left: 0;
+}

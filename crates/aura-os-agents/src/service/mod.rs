@@ -7,6 +7,7 @@
 mod network;
 mod permissions;
 mod runtime_config;
+mod self_improvement;
 mod shadow;
 
 #[cfg(test)]
@@ -19,6 +20,12 @@ use aura_os_core::{Agent, AgentId, JwtProvider};
 use aura_os_store::SettingsStore;
 
 use crate::errors::AgentError;
+
+pub use self_improvement::{
+    AgentImprovementEvidence, AgentImprovementKind, AgentImprovementProposal,
+    AgentImprovementProvenance, AgentImprovementSource, AgentImprovementStatus,
+    AgentLearningReviewResult, AgentSelfImprovementConfig, AgentSelfImprovementMode,
+};
 
 pub struct AgentService {
     pub(super) store: Arc<SettingsStore>,

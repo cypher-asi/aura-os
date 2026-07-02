@@ -8,14 +8,14 @@ use std::sync::Arc;
 
 use aura_os_core::HarnessMode;
 use aura_os_harness::{
-    HarnessCommandSender, HarnessOutbound, SessionBridge, SessionBridgeStarted, SessionBridgeTurn,
-    SessionConfig,
+    CouncilPresentation, HarnessCommandSender, HarnessOutbound, SessionBridge,
+    SessionBridgeStarted, SessionBridgeTurn, SessionConfig,
 };
 use tokio::sync::{broadcast, Mutex};
 
 use crate::error::{ApiError, ApiResult};
 use crate::stability_metrics::StabilityMetrics;
-use crate::state::{AppState, ChatSession, ChatSessionKey};
+use crate::state::{AppState, ChatSession, ChatSessionKey, ChatSessionRegistry};
 
 use super::super::errors::{map_session_bridge_error, map_session_bridge_start_error};
 use super::super::turn_slot::{acquire_turn_slot, TurnSlotGuard};
@@ -87,6 +87,10 @@ pub(super) struct SessionForTurn {
     /// columns render live and persist. Empty for warm reuse and for runs
     /// that emit no subagent frames during init.
     pub(super) pending_events: Vec<HarnessOutbound>,
+    /// Optional presentation override for this turn's council-style
+    /// subagent events. Second Opinion uses the council runtime but
+    /// needs its spawned model passes to render under a distinct label.
+    pub(super) council_presentation: Option<CouncilPresentation>,
 }
 
 pub(super) async fn get_or_create_delegated_chat_session(
@@ -110,6 +114,7 @@ pub(super) async fn get_or_create_delegated_chat_session(
     // force a cold open whenever council is active and let this turn
     // open its own `Council` session.
     let council_active = session_config.council.is_some();
+    let council_presentation = session_config.council_presentation;
     if !council_active {
         if let Some(reused) =
             try_reuse_session(state, key, &requested_model, &requested_effort).await
@@ -182,8 +187,36 @@ pub(super) async fn get_or_create_delegated_chat_session(
         session_agent_id,
         session_template_agent_id,
         started,
+        council_presentation,
+        !council_active,
     )
     .await
+}
+
+pub(super) fn apply_council_presentation_to_event(
+    evt: HarnessOutbound,
+    presentation: Option<CouncilPresentation>,
+) -> HarnessOutbound {
+    let Some(presentation) = presentation else {
+        return evt;
+    };
+    match evt {
+        HarnessOutbound::SubagentSpawned(mut spawned) if spawned.council_index.is_some() => {
+            spawned.subagent_type = presentation.subagent_type().to_string();
+            HarnessOutbound::SubagentSpawned(spawned)
+        }
+        other => other,
+    }
+}
+
+fn apply_council_presentation(
+    pending_events: Vec<HarnessOutbound>,
+    presentation: Option<CouncilPresentation>,
+) -> Vec<HarnessOutbound> {
+    pending_events
+        .into_iter()
+        .map(|evt| apply_council_presentation_to_event(evt, presentation))
+        .collect()
 }
 
 /// Handles the cloned turn-slot from an alive registry entry —
@@ -220,6 +253,7 @@ async fn reuse_with_turn_slot(
         // frames to replay. AURA Council always forces a cold open (see
         // `council_active` above), so this path is never a council turn.
         pending_events: Vec::new(),
+        council_presentation: None,
     })
 }
 
@@ -283,6 +317,8 @@ async fn insert_delegated_chat_session(
     session_agent_id: Option<String>,
     session_template_agent_id: Option<String>,
     started: SessionBridgeStarted,
+    council_presentation: Option<CouncilPresentation>,
+    register_warm_session: bool,
 ) -> ApiResult<SessionForTurn> {
     // Build the per-partition turn slot up front and acquire it BEFORE
     // exposing the new session through the registry. The first user
@@ -305,10 +341,13 @@ async fn insert_delegated_chat_session(
     // Move the captured pre-`session_ready` subagent frames out of the
     // session before its remaining fields are consumed into the registry
     // entry below; the orchestrator replays these onto `events_tx`.
-    let pending_events = started.session.pending_events;
-    let composite_key = ChatSessionKey::with_effort(key, requested_model.clone(), requested_effort);
-    state.chat_sessions.insert(
-        composite_key,
+    let pending_events =
+        apply_council_presentation(started.session.pending_events, council_presentation);
+    maybe_register_warm_chat_session(
+        &state.chat_sessions,
+        key,
+        requested_model.clone(),
+        requested_effort,
         ChatSession {
             session_id: started.session.session_id,
             commands_tx: started.session.commands_tx,
@@ -319,6 +358,7 @@ async fn insert_delegated_chat_session(
             turn_slot,
             turn_pending_count,
         },
+        register_warm_session,
     );
     Ok(SessionForTurn {
         is_new: true,
@@ -328,5 +368,109 @@ async fn insert_delegated_chat_session(
         slot_guard: acquired.guard,
         commands_tx,
         pending_events,
+        council_presentation,
     })
+}
+
+fn maybe_register_warm_chat_session(
+    registry: &ChatSessionRegistry,
+    key: &str,
+    requested_model: Option<String>,
+    requested_effort: Option<String>,
+    session: ChatSession,
+    register_warm_session: bool,
+) {
+    if !register_warm_session {
+        return;
+    }
+    let composite_key = ChatSessionKey::with_effort(key, requested_model, requested_effort);
+    registry.insert(composite_key, session);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dashmap::DashMap;
+
+    #[test]
+    fn apply_council_presentation_labels_second_opinion_spawns() {
+        let events = vec![HarnessOutbound::SubagentSpawned(
+            aura_os_harness::SubagentSpawned {
+                child_run_id: "child-1".to_string(),
+                parent_tool_use_id: Some("toolu_1".to_string()),
+                subagent_type: "council-member".to_string(),
+                prompt: "review".to_string(),
+                model: Some("final-model".to_string()),
+                council_index: Some(0),
+                council_mechanism: Some("synthesize".to_string()),
+            },
+        )];
+
+        let patched = apply_council_presentation(events, Some(CouncilPresentation::SecondOpinion));
+
+        match &patched[0] {
+            HarnessOutbound::SubagentSpawned(spawned) => {
+                assert_eq!(spawned.subagent_type, "second-opinion");
+                assert_eq!(spawned.council_index, Some(0));
+            }
+            other => panic!("expected subagent spawn, got {other:?}"),
+        }
+    }
+
+    fn test_chat_session(id: &str) -> ChatSession {
+        let (commands_tx, _commands_rx) = tokio::sync::mpsc::channel(1);
+        let (events_tx, _events_rx) = broadcast::channel(1);
+        ChatSession {
+            session_id: id.to_string(),
+            commands_tx,
+            events_tx,
+            model: Some("sonnet".to_string()),
+            agent_id: Some("agent::default".to_string()),
+            template_agent_id: Some("agent".to_string()),
+            turn_slot: Arc::new(Mutex::new(())),
+            turn_pending_count: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    #[test]
+    fn council_turns_do_not_register_warm_sessions() {
+        let registry: ChatSessionRegistry = Arc::new(DashMap::new());
+        let key = "agent::default::session-a";
+        let model = Some("sonnet".to_string());
+        let effort = Some("high".to_string());
+
+        maybe_register_warm_chat_session(
+            &registry,
+            key,
+            model.clone(),
+            effort.clone(),
+            test_chat_session("second-opinion-parent"),
+            false,
+        );
+
+        assert!(
+            registry
+                .get(&ChatSessionKey::with_effort(
+                    key,
+                    model.clone(),
+                    effort.clone()
+                ))
+                .is_none(),
+            "Second Opinion/Council parents must not become reusable warm chat sessions"
+        );
+
+        maybe_register_warm_chat_session(
+            &registry,
+            key,
+            model.clone(),
+            effort.clone(),
+            test_chat_session("normal-chat"),
+            true,
+        );
+
+        let stored = registry
+            .get(&ChatSessionKey::with_effort(key, model, effort))
+            .expect("normal chat should still register a reusable warm session");
+        assert_eq!(stored.session_id, "normal-chat");
+    }
 }

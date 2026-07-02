@@ -6,6 +6,24 @@ import { getApiErrorMessage } from "../../../../shared/utils/api-errors"
 export const POLL_INTERVAL = 15_000
 /** Faster poll cadence while the VM is provisioning, for live boot feedback. */
 export const PROVISIONING_POLL_INTERVAL = 2_500
+/**
+ * Slow cadence once a VM has settled into a terminal state (`error` /
+ * `stopped`) or has failed too many times in a row. Keeps the loop alive so
+ * it auto-resumes when the VM recovers (a later successful poll resets the
+ * cadence), but stops the fast provisioning poll from flooding
+ * `/remote_agent/state` with 502s on a dead or stuck-provisioning machine.
+ */
+export const SETTLED_POLL_INTERVAL = 60_000
+/**
+ * Consecutive failed polls (e.g. `502` while the runtime is unreachable)
+ * tolerated before backing off to {@link SETTLED_POLL_INTERVAL}. A few
+ * retries ride out a transient blip; a persistently-down machine settles.
+ */
+export const MAX_CONSECUTIVE_VM_POLL_FAILURES = 3
+/** VM lifecycle states that won't change without an explicit user action. */
+export function isTerminalVmState(state: string | undefined): boolean {
+  return state === "error" || state === "stopped"
+}
 export const STATUS_CARD_GAP = 6
 export const STATUS_CARD_MIN_WIDTH = 220
 export const STATUS_CARD_VIEWPORT_MARGIN = 8

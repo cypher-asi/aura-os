@@ -71,6 +71,12 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
     cacheWrite: 18.75,
     cacheRead: 1.5,
   },
+  "claude-sonnet-5": {
+    input: 3,
+    output: 15,
+    cacheWrite: 3.75,
+    cacheRead: 0.3,
+  },
   "claude-sonnet-4-6": {
     input: 3,
     output: 15,

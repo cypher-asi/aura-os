@@ -3,15 +3,19 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 type SubscribeCallback = (event: { content: Record<string, unknown> }) => void;
 const subscribeMap = new Map<string, Set<SubscribeCallback>>();
 
+// Stable `subscribe` reference (mirrors the real zustand selector) so the
+// polling effect's deps don't churn and re-run the effect on every
+// re-render — otherwise each setState would spawn an extra poll loop and
+// break cadence assertions.
+const stableSubscribe = (type: string, cb: SubscribeCallback) => {
+  if (!subscribeMap.has(type)) subscribeMap.set(type, new Set());
+  subscribeMap.get(type)!.add(cb);
+  return () => subscribeMap.get(type)!.delete(cb);
+};
+
 vi.mock("../stores/event-store/index", () => ({
   useEventStore: (selector: (s: { subscribe: unknown }) => unknown) =>
-    selector({
-      subscribe: (type: string, cb: SubscribeCallback) => {
-        if (!subscribeMap.has(type)) subscribeMap.set(type, new Set());
-        subscribeMap.get(type)!.add(cb);
-        return () => subscribeMap.get(type)!.delete(cb);
-      },
-    }),
+    selector({ subscribe: stableSubscribe }),
 }));
 
 const mockGetRemoteAgentState = vi.fn();
@@ -80,6 +84,74 @@ describe("useRemoteAgentState", () => {
 
     expect(result.current.error).toBe("connection refused");
     expect(result.current.data).toBeNull();
+  });
+
+  it("backs off to the settled interval once the VM is terminal", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGetRemoteAgentState.mockResolvedValue({
+        state: "error",
+        uptime_seconds: 0,
+        active_sessions: 0,
+        error_message: "pod unschedulable",
+      });
+
+      renderHook(() => useRemoteAgentState("agent-term"));
+
+      // First poll fires immediately.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(mockGetRemoteAgentState).toHaveBeenCalledTimes(1);
+
+      // At the normal 30s cadence it must NOT re-poll — a terminal state
+      // backs off to the 60s settled interval.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(mockGetRemoteAgentState).toHaveBeenCalledTimes(1);
+
+      // The settled poll fires at 60s.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(mockGetRemoteAgentState).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("backs off after consecutive poll failures (e.g. repeated 502s)", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGetRemoteAgentState.mockRejectedValue(new Error("502 Bad Gateway"));
+
+      renderHook(() => useRemoteAgentState("agent-fail"));
+
+      // 3 failures (immediate + two 30s ticks) trips the backoff.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(mockGetRemoteAgentState).toHaveBeenCalledTimes(3);
+
+      // Now settled: the next poll is 60s out, not 30s.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(mockGetRemoteAgentState).toHaveBeenCalledTimes(3);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(mockGetRemoteAgentState).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("updates data from WebSocket event", async () => {

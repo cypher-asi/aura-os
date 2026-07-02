@@ -5,11 +5,14 @@ import { api } from "../../../../api/client"
 import type { RemoteVmState } from "../../../../shared/types"
 import type { LifecycleAction } from "../../../../shared/api/swarm"
 import {
+  MAX_CONSECUTIVE_VM_POLL_FAILURES,
   PHASE_NOTICES,
   POLL_INTERVAL,
   PROVISIONING_POLL_INTERVAL,
+  SETTLED_POLL_INTERVAL,
   getRemoteStateErrorMessage,
   isRecoverableRemoteStateError,
+  isTerminalVmState,
   type RecoveryNotice,
 } from "./helpers"
 
@@ -78,11 +81,23 @@ export function useRemoteAgentVm({
     // progress feels live, then back off to the steady interval once it
     // settles. A recursive timeout (vs setInterval) lets each tick choose the
     // next delay from the freshly-observed state.
+    //
+    // Once the VM hits a terminal state (`error`/`stopped`) or keeps failing
+    // (e.g. repeated 502s on a stuck-provisioning machine), back off hard to
+    // SETTLED_POLL_INTERVAL so we stop flooding `/remote_agent/state`. The
+    // loop stays alive at the slow cadence, so a recovery (which produces a
+    // successful poll) resets `consecutiveFailures` and the cadence resumes.
+    let consecutiveFailures = 0
     const tick = async () => {
       const state = await refreshState()
       if (cancelled) return
-      const next =
-        state?.state === "provisioning"
+      consecutiveFailures = state ? 0 : consecutiveFailures + 1
+      const settled =
+        isTerminalVmState(state?.state) ||
+        consecutiveFailures >= MAX_CONSECUTIVE_VM_POLL_FAILURES
+      const next = settled
+        ? SETTLED_POLL_INTERVAL
+        : state?.state === "provisioning"
           ? PROVISIONING_POLL_INTERVAL
           : POLL_INTERVAL
       timer = setTimeout(tick, next)

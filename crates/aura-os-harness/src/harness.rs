@@ -84,6 +84,11 @@ pub struct SessionConfig {
     /// members). `None` lets [`build_runtime_request`] fall back to
     /// [`CouncilMechanism::Synthesize`], the original behavior.
     pub council_mechanism: Option<CouncilMechanism>,
+    /// Presentation hint for Council-backed multi-agent runs. This is
+    /// Aura OS-side metadata only: the runtime request still uses the
+    /// existing Council wire shape, while the server annotates spawned
+    /// member cards so the UI can render variants like Second Opinion.
+    pub council_presentation: Option<CouncilPresentation>,
     /// Computer-use capability flag forwarded onto
     /// [`aura_protocol::AgentCapabilities::computer_use`]. When `true`
     /// the harness exposes the Anthropic computer-use tool so the agent
@@ -112,6 +117,24 @@ pub struct CouncilMemberConfig {
     /// Per-member provider overrides (default model + prompt-cache
     /// key/retention) layered on the harness env defaults.
     pub provider_overrides: Option<SessionModelOverrides>,
+    /// Optional semantic role for specialized Council-backed flows.
+    /// Ordinary Council leaves this unset. Second Opinion sets the
+    /// final model to `aggregator` and advisor models to `reference`.
+    pub role: Option<aura_protocol::CouncilMemberRole>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CouncilPresentation {
+    SecondOpinion,
+}
+
+impl CouncilPresentation {
+    #[must_use]
+    pub const fn subagent_type(self) -> &'static str {
+        match self {
+            Self::SecondOpinion => "second-opinion",
+        }
+    }
 }
 
 pub struct HarnessSession {
@@ -301,6 +324,7 @@ pub fn build_runtime_request(cfg: &SessionConfig) -> RuntimeRequest {
                         provider_overrides: member.provider_overrides.clone(),
                         ..Default::default()
                     },
+                    role: member.role,
                 })
                 .collect::<Vec<_>>()
         });
@@ -572,6 +596,39 @@ mod tests {
         match build_runtime_request(&cfg).r#type {
             RuntimeRequestType::Council { mechanism, .. } => {
                 assert_eq!(mechanism, CouncilMechanism::SideBySide);
+            }
+            other => panic!("expected council request, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_runtime_request_forwards_second_opinion_roles() {
+        let cfg = SessionConfig {
+            council: Some(vec![
+                CouncilMemberConfig {
+                    model: Some("final".into()),
+                    role: Some(aura_protocol::CouncilMemberRole::Aggregator),
+                    ..Default::default()
+                },
+                CouncilMemberConfig {
+                    model: Some("reference".into()),
+                    role: Some(aura_protocol::CouncilMemberRole::Reference),
+                    ..Default::default()
+                },
+            ]),
+            ..Default::default()
+        };
+
+        match build_runtime_request(&cfg).r#type {
+            RuntimeRequestType::Council { members, .. } => {
+                assert_eq!(
+                    members[0].role,
+                    Some(aura_protocol::CouncilMemberRole::Aggregator)
+                );
+                assert_eq!(
+                    members[1].role,
+                    Some(aura_protocol::CouncilMemberRole::Reference)
+                );
             }
             other => panic!("expected council request, got {other:?}"),
         }
