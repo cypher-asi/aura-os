@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-07-02",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.721.1",
+    "title": "Notion integration rejects unauthorized requests",
+    "intro": "A focused nightly centered on tightening how Aura's Notion integration handles authentication, with matching test coverage to lock the behavior in.",
+    "entryCount": 1,
+    "highlights": [
+      "Notion provider now enforces bearer token auth",
+      "Mock server exercises the unauthorized path end-to-end"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-02T09:43:53.063Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.721.1",
+    "path": "history/2026-07-02.json"
+  },
+  {
     "date": "2026-07-01",
     "channel": "nightly",
     "version": "0.1.0-nightly.720.1",
