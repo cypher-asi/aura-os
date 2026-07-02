@@ -116,6 +116,13 @@ describe("model persistence", () => {
     expect(loadPersistedModel("default", "gpt-5.5")).toBe("aura-gpt-5-5");
   });
 
+  it("normalizes raw Grok model ids to Aura-managed chat models", () => {
+    expect(loadPersistedModel("default", "grok-4.3")).toBe("aura-grok-4-3");
+    expect(loadPersistedModel("default", "xai/grok-build-0.1")).toBe(
+      "aura-grok-build-0-1",
+    );
+  });
+
   it("normalizes raw Claude Fable 5 to the Aura-managed chat model", () => {
     expect(loadPersistedModel("default", "claude-fable-5")).toBe(
       "aura-claude-fable-5",
@@ -395,5 +402,11 @@ describe("reasoning-effort validity per model", () => {
   it("keeps 'minimal' available on GPT-5.5", () => {
     const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === "aura-gpt-5-5");
     expect(model?.efforts ?? []).toContain("minimal");
+  });
+
+  it("maps Grok 4.3 onto the xAI reasoning effort ladder", () => {
+    const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === "aura-grok-4-3");
+    expect(model?.efforts ?? []).toEqual(["minimal", "low", "medium", "high"]);
+    expect(model?.defaultEffort).toBe("low");
   });
 });

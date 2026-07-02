@@ -61,10 +61,12 @@ describe("integrationCatalog auth labels", () => {
     );
 
     expect(connectionIds.has("aura_proxy")).toBe(false);
+    expect(connectionIds.has("xai")).toBe(true);
     expect(connectionIds.has("anthropic")).toBe(false);
     expect(getIntegrationDefinition("aura_proxy")?.kind).toBe(
       "workspace_connection",
     );
+    expect(getIntegrationDefinition("xai")?.kind).toBe("workspace_connection");
   });
 
   it("shows the connection provider list when the feature flag is enabled", () => {
@@ -78,6 +80,7 @@ describe("integrationCatalog auth labels", () => {
     );
 
     expect(connectionIds.has("aura_proxy")).toBe(false);
+    expect(connectionIds.has("xai")).toBe(true);
     expect(connectionIds.has("anthropic")).toBe(false);
   });
 });

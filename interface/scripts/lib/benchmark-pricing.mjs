@@ -154,6 +154,24 @@ const OPENAI_MODEL_PRICING_PER_MTOK = {
   },
 };
 
+// xAI publishes a discounted cached-input rate for Grok. It does not
+// publish a separate cache-write rate for these models, so cache writes use
+// the base input rate when a caller reports them.
+const XAI_MODEL_PRICING_PER_MTOK = {
+  "grok-4.3": {
+    input: 1.25,
+    output: 2.5,
+    cacheWrite: 1.25,
+    cacheRead: 0.2,
+  },
+  "grok-build-0.1": {
+    input: 1.0,
+    output: 2.0,
+    cacheWrite: 1.0,
+    cacheRead: 0.2,
+  },
+};
+
 const FIREWORKS_MODEL_PRICING_PER_MTOK = {
   "kimi-k2p7-code": {
     input: 0.95,
@@ -319,6 +337,8 @@ function normalizeModelKey(model) {
   const modelKey = typeof model === "string" ? model.trim().toLowerCase() : "";
   const unprefixed = modelKey.startsWith("openai/")
     ? modelKey.slice("openai/".length)
+    : modelKey.startsWith("xai/")
+      ? modelKey.slice("xai/".length)
     : modelKey.startsWith("deepseek/")
       ? modelKey.slice("deepseek/".length)
       : modelKey;
@@ -346,6 +366,11 @@ function normalizeModelKey(model) {
     "aura-deepseek-v4-flash": "deepseek-v4-flash",
   };
   if (auraDeepSeekModels[unprefixed]) return auraDeepSeekModels[unprefixed];
+  const auraXaiModels = {
+    "aura-grok-4-3": "grok-4.3",
+    "aura-grok-build-0-1": "grok-build-0.1",
+  };
+  if (auraXaiModels[unprefixed]) return auraXaiModels[unprefixed];
   const auraGoogleModels = {
     "aura-gemini-3-1-pro": "gemini-3.1-pro",
     "aura-gemini-3-5-flash": "gemini-3.5-flash",
@@ -367,6 +392,7 @@ function inferProvider(model, provider) {
   if (typeof provider === "string" && provider.trim()) return provider.trim().toLowerCase();
   const modelKey = normalizeModelKey(model);
   if (modelKey.startsWith("claude")) return "anthropic";
+  if (modelKey.startsWith("grok")) return "xai";
   if (modelKey.startsWith("deepseek-v4") || modelKey === "deepseek-chat" || modelKey === "deepseek-reasoner") {
     return "deepseek";
   }
@@ -428,6 +454,29 @@ function findOpenAIPricing(modelKey) {
   return {
     model: matchedModel,
     source: "openai-pricing-family-match",
+    ...pricing,
+  };
+}
+
+function findXaiPricing(modelKey) {
+  const exactMatch = XAI_MODEL_PRICING_PER_MTOK[modelKey];
+  if (exactMatch) {
+    return {
+      model: modelKey,
+      source: "xai-pricing",
+      ...exactMatch,
+    };
+  }
+
+  const partialEntry = Object.entries(XAI_MODEL_PRICING_PER_MTOK).find(([candidate]) =>
+    modelKey.startsWith(candidate) || candidate.startsWith(modelKey),
+  );
+  if (!partialEntry) return null;
+
+  const [matchedModel, pricing] = partialEntry;
+  return {
+    model: matchedModel,
+    source: "xai-pricing-family-match",
     ...pricing,
   };
 }
@@ -526,6 +575,16 @@ export function resolvePricing(model, provider) {
     }
   }
 
+  if (inferredProvider === "xai") {
+    const pricing = findXaiPricing(modelKey);
+    if (pricing) {
+      return {
+        provider: inferredProvider,
+        ...pricing,
+      };
+    }
+  }
+
   if (inferredProvider === "fireworks") {
     const pricing = findFireworksPricing(modelKey);
     if (pricing) {
@@ -571,9 +630,9 @@ export function calculateEstimatedCostUsd(usage) {
   const pricing = resolvePricing(usage.model, usage.provider);
   const cacheInputTokens =
     usage.cacheCreationInputTokens + usage.cacheReadInputTokens;
-  // DeepSeek and Google report cached tokens within the prompt token count.
+  // DeepSeek, xAI, and Google report cached tokens within the prompt token count.
   const inputIncludesCacheTokens =
-    pricing.provider === "deepseek" || pricing.provider === "google";
+    pricing.provider === "deepseek" || pricing.provider === "xai" || pricing.provider === "google";
   const inputTokens =
     inputIncludesCacheTokens && cacheInputTokens > 0
       ? Math.max(0, usage.inputTokens - cacheInputTokens)

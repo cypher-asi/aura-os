@@ -77,7 +77,7 @@ function normalizeProviderConfig(provider: string, values: Record<string, string
   for (const field of fields) {
     const raw = values[field.key]?.trim();
     if (!raw) continue;
-    if (field.key === "args") {
+    if (field.key === "args" || field.key === "allowedTools") {
       config[field.key] = raw.split(/\s+/).filter(Boolean);
     } else {
       config[field.key] = raw;
