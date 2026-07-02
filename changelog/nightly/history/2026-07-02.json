@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-02T09:43:53.063Z",
+  "generatedAt": "2026-07-02T10:57:58.156Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.721.1",
+  "version": "0.1.0-nightly.722.1",
   "date": "2026-07-02",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.721.1",
-  "lastIncludedSha": "c5d2e62179088c0153a984f4090134b95ed258cc",
-  "previousProcessedSha": "b19997454364ec9e29267b4f7f8c2390f0a20d5a",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.722.1",
+  "lastIncludedSha": "31b3f1912f6937a6b96bc3d0e1fee0b74e957de3",
+  "previousProcessedSha": "c5d2e62179088c0153a984f4090134b95ed258cc",
   "commitShas": [
-    "c5d2e62179088c0153a984f4090134b95ed258cc"
+    "c5d2e62179088c0153a984f4090134b95ed258cc",
+    "31b3f1912f6937a6b96bc3d0e1fee0b74e957de3"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "c5d2e62179088c0153a984f4090134b95ed258cc",
@@ -56,36 +57,75 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "31b3f1912f6937a6b96bc3d0e1fee0b74e957de3",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-02T05:52:47-04:00",
+      "subject": "feat(models): restore Claude Fable support",
+      "body": "",
+      "parents": [
+        "c5d2e62179088c0153a984f4090134b95ed258cc"
+      ],
+      "files": [
+        "interface/src/constants/models.test.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 32,
+        "deletions": 11
+      },
+      "committedAtMs": 1782985967000,
+      "cleanSubject": "restore Claude Fable support",
+      "keywords": [
+        "restore",
+        "claude",
+        "fable",
+        "support"
+      ],
+      "fileGroups": [
+        "interface/src/constants",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.721.1",
+      "version": "0.1.0-nightly.722.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65232762
+          "sizeBytes": 65230344
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 131820024
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -95,29 +135,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.721.1",
+      "version": "0.1.0-nightly.722.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.721.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.722.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61149255
+          "sizeBytes": 61153848
         },
         {
-          "name": "AURA_0.1.0-nightly.721.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.722.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60111930
+          "sizeBytes": 60112320
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -127,29 +167,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.721.1",
+      "version": "0.1.0-nightly.722.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.721.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.722.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63330176
+          "sizeBytes": 63337836
         },
         {
-          "name": "AURA_0.1.0-nightly.721.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.722.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62360524
+          "sizeBytes": 62362758
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -159,17 +199,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.721.1",
+      "version": "0.1.0-nightly.722.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48224577
+          "sizeBytes": 48225676
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.721.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.722.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -178,28 +218,52 @@
     }
   ],
   "rendered": {
-    "title": "Notion integration rejects unauthorized requests",
-    "intro": "A focused nightly centered on tightening how Aura's Notion integration handles authentication, with matching test coverage to lock the behavior in.",
+    "title": "Claude Fable 5 returns and Notion auth gets stricter",
+    "intro": "Today's nightly brings back Claude Fable 5 as a first-class chat model and tightens how the Notion integration validates provider credentials end to end.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:17 AM",
         "started_at": "2026-07-02T09:17:54.000Z",
         "ended_at": "2026-07-02T09:17:54.000Z",
-        "title": "Notion provider enforces bearer token auth",
-        "summary": "The Notion integration runtime and its mock server now validate the Authorization header and return a clear 401 when credentials are missing or wrong.",
+        "title": "Notion provider rejects missing or invalid bearer tokens",
+        "summary": "The Notion integration runtime now enforces authorization on every request path, and the mock provider used in server tests validates the bearer token instead of blindly returning fixtures.",
         "items": [
           {
-            "text": "Notion provider requests without a valid bearer token are now rejected with a 401 and a descriptive error instead of silently returning fixture data, hardening the integration against misconfigured or unauthenticated callers.",
+            "text": "Notion endpoints in the provider mock (search, pages, markdown, blocks, data sources, databases) now inspect the Authorization header and return 401 with a clear \"missing or invalid Notion authorization\" error when the bearer token is absent or wrong, closing a gap where unauthenticated calls silently succeeded.",
             "commit_shas": [
               "c5d2e62179088c0153a984f4090134b95ed258cc"
             ],
             "confidence": "high"
           },
           {
-            "text": "The provider mock used in integration tests was reworked to inspect the Authorization header on every Notion route (search, pages, markdown, blocks, databases, data sources) so the new auth path is verified end-to-end.",
+            "text": "Provider runtime was updated alongside the mock to exercise the hardened auth path, raising confidence that real Notion credentials are validated consistently across integration surfaces.",
             "commit_shas": [
               "c5d2e62179088c0153a984f4090134b95ed258cc"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "2:52 AM",
+        "started_at": "2026-07-02T09:52:47.000Z",
+        "ended_at": "2026-07-02T09:52:47.000Z",
+        "title": "Claude Fable 5 is selectable again in chat",
+        "summary": "Fable 5 has been re-added to the Aura-managed Anthropic lineup, with persisted selections restored and picker behavior updated to match its adaptive thinking model.",
+        "items": [
+          {
+            "text": "Fable 5 is back in the chat model list as a featured Anthropic option with a 1M context window and a 10× credit multiplier, and previously persisted Fable 5 selections now load correctly instead of falling back to Sonnet 5.",
+            "commit_shas": [
+              "31b3f1912f6937a6b96bc3d0e1fee0b74e957de3"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Because Fable uses adaptive thinking, the model intentionally omits explicit effort tiers so no picker-level thinking budget is sent on the wire — keeping the UI honest about what the model actually supports.",
+            "commit_shas": [
+              "31b3f1912f6937a6b96bc3d0e1fee0b74e957de3"
             ],
             "confidence": "high"
           }
@@ -207,9 +271,10 @@
       }
     ],
     "highlights": [
-      "Notion provider now enforces bearer token auth",
-      "Mock server exercises the unauthorized path end-to-end"
+      "Claude Fable 5 available again in the model picker",
+      "Notion provider now rejects unauthorized calls",
+      "Nightly artifacts shipped for macOS, Windows, and Linux"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }

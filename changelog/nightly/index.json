@@ -2,17 +2,18 @@
   {
     "date": "2026-07-02",
     "channel": "nightly",
-    "version": "0.1.0-nightly.721.1",
-    "title": "Notion integration rejects unauthorized requests",
-    "intro": "A focused nightly centered on tightening how Aura's Notion integration handles authentication, with matching test coverage to lock the behavior in.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.722.1",
+    "title": "Claude Fable 5 returns and Notion auth gets stricter",
+    "intro": "Today's nightly brings back Claude Fable 5 as a first-class chat model and tightens how the Notion integration validates provider credentials end to end.",
+    "entryCount": 2,
     "highlights": [
-      "Notion provider now enforces bearer token auth",
-      "Mock server exercises the unauthorized path end-to-end"
+      "Claude Fable 5 available again in the model picker",
+      "Notion provider now rejects unauthorized calls",
+      "Nightly artifacts shipped for macOS, Windows, and Linux"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-07-02T09:43:53.063Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.721.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-07-02T10:57:58.156Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.722.1",
     "path": "history/2026-07-02.json"
   },
   {
