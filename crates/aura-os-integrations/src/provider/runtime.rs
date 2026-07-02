@@ -12,8 +12,8 @@ use aura_os_harness::{
     InstalledToolRuntimeAuth, InstalledToolRuntimeExecution, InstalledToolRuntimeIntegration,
     InstalledToolRuntimeProviderExecution,
 };
-use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
+use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde_json::Value;
 
 use super::catalog::app_provider_request_contract;
@@ -228,6 +228,24 @@ mod tests {
                 .get(AUTHORIZATION)
                 .and_then(|value| value.to_str().ok()),
             Some("lin_test")
+        );
+    }
+
+    #[test]
+    fn notion_headers_use_bearer_and_required_api_version() {
+        let headers =
+            app_provider_headers(AppProviderKind::Notion, "secret_test").expect("notion headers");
+        assert_eq!(
+            headers
+                .get(AUTHORIZATION)
+                .and_then(|value| value.to_str().ok()),
+            Some("Bearer secret_test")
+        );
+        assert_eq!(
+            headers
+                .get("Notion-Version")
+                .and_then(|value| value.to_str().ok()),
+            Some("2026-03-11")
         );
     }
 

@@ -1,7 +1,8 @@
-use axum::http::StatusCode;
-use axum::routing::{get, patch, post};
 use axum::Json;
 use axum::Router;
+use axum::http::{HeaderMap, StatusCode, header::AUTHORIZATION};
+use axum::response::{IntoResponse, Response};
+use axum::routing::{get, patch, post};
 
 pub fn build_provider_mock() -> Router {
     Router::new()
@@ -171,8 +172,8 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/notion/search",
-            post(|| async {
-                Json(serde_json::json!({
+            post(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "results": [{
                         "id": "page-1",
                         "url": "https://notion.so/page-1",
@@ -187,8 +188,8 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/notion/pages",
-            post(|| async {
-                Json(serde_json::json!({
+            post(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "id": "page-2",
                     "url": "https://notion.so/page-2",
                     "properties": {
@@ -201,8 +202,8 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/notion/pages/page-1",
-            get(|| async {
-                Json(serde_json::json!({
+            get(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "id": "page-1",
                     "url": "https://notion.so/page-1",
                     "properties": {
@@ -212,8 +213,8 @@ pub fn build_provider_mock() -> Router {
                     }
                 }))
             })
-            .patch(|| async {
-                Json(serde_json::json!({
+            .patch(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "id": "page-1",
                     "url": "https://notion.so/page-1",
                     "properties": {
@@ -228,8 +229,8 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/notion/pages/page-1/markdown",
-            get(|| async {
-                Json(serde_json::json!({
+            get(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "object": "page_markdown",
                     "id": "page-1",
                     "markdown": "# Team Notes\n\nPlanning notes",
@@ -237,8 +238,8 @@ pub fn build_provider_mock() -> Router {
                     "unknown_block_ids": []
                 }))
             })
-            .patch(|| async {
-                Json(serde_json::json!({
+            .patch(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "object": "page_markdown",
                     "id": "page-1",
                     "markdown": "# Updated Notes\n\nShipped the prototype.",
@@ -249,8 +250,8 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/notion/blocks/page-1/children",
-            get(|| async {
-                Json(serde_json::json!({
+            get(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "object": "list",
                     "type": "block",
                     "results": [{
@@ -265,8 +266,8 @@ pub fn build_provider_mock() -> Router {
                     "has_more": false
                 }))
             })
-            .patch(|| async {
-                Json(serde_json::json!({
+            .patch(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "object": "list",
                     "type": "block",
                     "results": [{
@@ -284,8 +285,8 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/notion/data_sources/ds-1/query",
-            post(|| async {
-                Json(serde_json::json!({
+            post(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "object": "list",
                     "results": [{
                         "id": "page-3",
@@ -303,8 +304,8 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/notion/databases",
-            post(|| async {
-                Json(serde_json::json!({
+            post(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "object": "database",
                     "id": "db-1",
                     "url": "https://notion.so/db-1",
@@ -320,8 +321,8 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/notion/data_sources",
-            post(|| async {
-                Json(serde_json::json!({
+            post(|headers: HeaderMap| async move {
+                notion_response(headers, serde_json::json!({
                     "object": "data_source",
                     "id": "ds-2",
                     "title": [{ "plain_text": "Archive" }],
@@ -704,4 +705,36 @@ pub fn build_provider_mock() -> Router {
             })
             .delete(|| async { StatusCode::NO_CONTENT }),
         )
+}
+
+fn notion_response(headers: HeaderMap, body: serde_json::Value) -> Response {
+    match headers
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+    {
+        Some("Bearer secret_test") => {}
+        _ => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "missing or invalid Notion authorization"
+                })),
+            )
+                .into_response();
+        }
+    }
+
+    match headers
+        .get("Notion-Version")
+        .and_then(|value| value.to_str().ok())
+    {
+        Some("2026-03-11") => Json(body).into_response(),
+        _ => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "missing or invalid Notion-Version"
+            })),
+        )
+            .into_response(),
+    }
 }
