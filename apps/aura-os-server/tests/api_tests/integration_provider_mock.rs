@@ -200,6 +200,138 @@ pub fn build_provider_mock() -> Router {
             }),
         )
         .route(
+            "/notion/pages/page-1",
+            get(|| async {
+                Json(serde_json::json!({
+                    "id": "page-1",
+                    "url": "https://notion.so/page-1",
+                    "properties": {
+                        "title": {
+                            "title": [{ "plain_text": "Team Notes" }]
+                        }
+                    }
+                }))
+            })
+            .patch(|| async {
+                Json(serde_json::json!({
+                    "id": "page-1",
+                    "url": "https://notion.so/page-1",
+                    "properties": {
+                        "title": {
+                            "title": [{ "plain_text": "Updated Notes" }]
+                        }
+                    },
+                    "in_trash": false,
+                    "is_locked": false
+                }))
+            }),
+        )
+        .route(
+            "/notion/pages/page-1/markdown",
+            get(|| async {
+                Json(serde_json::json!({
+                    "object": "page_markdown",
+                    "id": "page-1",
+                    "markdown": "# Team Notes\n\nPlanning notes",
+                    "truncated": false,
+                    "unknown_block_ids": []
+                }))
+            })
+            .patch(|| async {
+                Json(serde_json::json!({
+                    "object": "page_markdown",
+                    "id": "page-1",
+                    "markdown": "# Updated Notes\n\nShipped the prototype.",
+                    "truncated": false,
+                    "unknown_block_ids": []
+                }))
+            }),
+        )
+        .route(
+            "/notion/blocks/page-1/children",
+            get(|| async {
+                Json(serde_json::json!({
+                    "object": "list",
+                    "type": "block",
+                    "results": [{
+                        "object": "block",
+                        "id": "block-1",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [{ "plain_text": "Planning notes" }]
+                        }
+                    }],
+                    "next_cursor": null,
+                    "has_more": false
+                }))
+            })
+            .patch(|| async {
+                Json(serde_json::json!({
+                    "object": "list",
+                    "type": "block",
+                    "results": [{
+                        "object": "block",
+                        "id": "block-2",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [{ "plain_text": "Follow up" }]
+                        }
+                    }],
+                    "next_cursor": null,
+                    "has_more": false
+                }))
+            }),
+        )
+        .route(
+            "/notion/data_sources/ds-1/query",
+            post(|| async {
+                Json(serde_json::json!({
+                    "object": "list",
+                    "results": [{
+                        "id": "page-3",
+                        "url": "https://notion.so/page-3",
+                        "properties": {
+                            "Name": {
+                                "title": [{ "plain_text": "Roadmap Item" }]
+                            }
+                        }
+                    }],
+                    "next_cursor": null,
+                    "has_more": false
+                }))
+            }),
+        )
+        .route(
+            "/notion/databases",
+            post(|| async {
+                Json(serde_json::json!({
+                    "object": "database",
+                    "id": "db-1",
+                    "url": "https://notion.so/db-1",
+                    "title": [{ "plain_text": "Roadmap" }],
+                    "initial_data_source": {
+                        "properties": {
+                            "Name": { "title": {} }
+                        }
+                    },
+                    "data_sources": [{ "id": "ds-1", "name": "Roadmap" }]
+                }))
+            }),
+        )
+        .route(
+            "/notion/data_sources",
+            post(|| async {
+                Json(serde_json::json!({
+                    "object": "data_source",
+                    "id": "ds-2",
+                    "title": [{ "plain_text": "Archive" }],
+                    "properties": {
+                        "Name": { "title": {} }
+                    }
+                }))
+            }),
+        )
+        .route(
             "/brave/res/v1/web/search",
             get(|| async {
                 Json(serde_json::json!({

@@ -233,32 +233,231 @@
     "name": "notion_search_pages",
     "provider": "notion",
     "description": "Search Notion pages through a saved org integration.",
-    "promptSignature": "notion_search_pages(query, integration_id?)",
+    "promptSignature": "notion_search_pages(query, page_size?, start_cursor?, integration_id?)",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "integration_id": { "type": "string" },
-        "query": { "type": "string", "description": "Search query." }
+        "query": { "type": "string", "description": "Search query." },
+        "page_size": { "type": "integer", "description": "Maximum results to return, capped at 100." },
+        "start_cursor": { "type": "string", "description": "Pagination cursor from a previous response." }
       },
       "required": ["query"]
     }
   },
   {
+    "name": "notion_fetch_page",
+    "provider": "notion",
+    "description": "Fetch Notion page metadata and optionally page content as markdown or blocks.",
+    "promptSignature": "notion_fetch_page(page_id, content_mode?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "page_id": { "type": "string", "description": "Notion page id or URL." },
+        "content_mode": {
+          "type": "string",
+          "description": "metadata, markdown, blocks, both, summary, full, or none.",
+          "enum": ["metadata", "markdown", "blocks", "both", "summary", "full", "none"]
+        },
+        "page_size": { "type": "integer", "description": "Maximum block children to return when content_mode is blocks or both." },
+        "start_cursor": { "type": "string", "description": "Block pagination cursor when content_mode is blocks or both." },
+        "include_transcript": { "type": "boolean", "description": "Include meeting note transcripts in markdown responses." }
+      },
+      "required": ["page_id"]
+    }
+  },
+  {
+    "name": "notion_get_block_children",
+    "provider": "notion",
+    "description": "Read first-level Notion child blocks for a page or block.",
+    "promptSignature": "notion_get_block_children(block_id, page_size?, start_cursor?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "block_id": { "type": "string", "description": "Notion block or page id/URL." },
+        "page_size": { "type": "integer", "description": "Maximum blocks to return, capped at 100." },
+        "start_cursor": { "type": "string", "description": "Pagination cursor from a previous response." }
+      },
+      "required": ["block_id"]
+    }
+  },
+  {
+    "name": "notion_append_block_children",
+    "provider": "notion",
+    "description": "Append blocks or simple paragraph content to a Notion page or block.",
+    "promptSignature": "notion_append_block_children(block_id, content?|children?, position?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "block_id": { "type": "string", "description": "Notion block or page id/URL." },
+        "content": { "type": "string", "description": "Plain text split into paragraph blocks." },
+        "children": { "type": "array", "description": "Provider-native Notion block children payload." },
+        "position": { "type": "object", "description": "Notion 2026 position object such as {type:'start'} or after_block." },
+        "after_block_id": { "type": "string", "description": "Convenience id for an after_block position." }
+      },
+      "required": ["block_id"]
+    }
+  },
+  {
     "name": "notion_create_page",
     "provider": "notion",
-    "description": "Create a Notion page under a parent page through a saved org integration.",
-    "promptSignature": "notion_create_page(parent_page_id, title, content?, integration_id?)",
+    "description": "Create a Notion page under a parent page, data source, database, or explicit parent object.",
+    "promptSignature": "notion_create_page(parent_page_id|data_source_id|database_id, title?, properties?, content?, markdown?, integration_id?)",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "integration_id": { "type": "string" },
         "parent_page_id": { "type": "string", "description": "Parent Notion page id." },
+        "data_source_id": { "type": "string", "description": "Parent Notion data source id." },
+        "database_id": { "type": "string", "description": "Parent Notion database id." },
+        "parent": { "type": "object", "description": "Provider-native Notion parent object." },
+        "workspace": { "type": "boolean", "description": "Create at workspace level when supported by the token type." },
         "title": { "type": "string", "description": "Page title." },
-        "content": { "type": "string", "description": "Optional page body content." }
+        "title_property": { "type": "string", "description": "Title property name for data source/database pages. Defaults to Name there and title for parent pages." },
+        "properties": { "type": "object", "description": "Provider-native Notion page properties object." },
+        "content": { "type": "string", "description": "Plain text split into paragraph blocks." },
+        "markdown": { "type": "string", "description": "Notion-flavored markdown page body." },
+        "children": { "type": "array", "description": "Provider-native Notion block children payload." },
+        "icon": { "type": "object", "description": "Provider-native Notion icon object." },
+        "cover": { "type": "object", "description": "Provider-native Notion cover object." },
+        "template": { "type": "object", "description": "Provider-native Notion template object." },
+        "position": { "type": "object", "description": "Provider-native Notion position object." }
       },
-      "required": ["parent_page_id", "title"]
+      "anyOf": [
+        { "required": ["parent_page_id", "title"] },
+        { "required": ["data_source_id", "properties"] },
+        { "required": ["database_id", "properties"] },
+        { "required": ["parent", "properties"] },
+        { "required": ["workspace", "title"] }
+      ]
+    }
+  },
+  {
+    "name": "notion_update_page",
+    "provider": "notion",
+    "description": "Update Notion page properties, title, icon, cover, lock state, or trash state.",
+    "promptSignature": "notion_update_page(page_id, title?|properties?|in_trash?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "page_id": { "type": "string", "description": "Notion page id or URL." },
+        "title": { "type": "string", "description": "Convenience title update." },
+        "title_property": { "type": "string", "description": "Title property name. Defaults to title." },
+        "properties": { "type": "object", "description": "Provider-native Notion properties object." },
+        "icon": { "type": "object", "description": "Provider-native Notion icon object." },
+        "cover": { "type": "object", "description": "Provider-native Notion cover object." },
+        "template": { "type": "object", "description": "Provider-native Notion template object." },
+        "in_trash": { "type": "boolean", "description": "Trash or restore the page." },
+        "is_locked": { "type": "boolean", "description": "Lock or unlock the page in Notion UI." },
+        "erase_content": { "type": "boolean", "description": "Delete all child blocks. Use only when intentionally destructive." },
+        "payload": { "type": "object", "description": "Provider-native PATCH /pages/{page_id} payload." }
+      },
+      "required": ["page_id"]
+    }
+  },
+  {
+    "name": "notion_update_page_markdown",
+    "provider": "notion",
+    "description": "Replace a Notion page body with Notion-flavored markdown.",
+    "promptSignature": "notion_update_page_markdown(page_id, markdown, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "page_id": { "type": "string", "description": "Notion page id or URL." },
+        "markdown": { "type": "string", "description": "Replacement Notion-flavored markdown body. Sent as a replace_content operation." },
+        "allow_deleting_content": { "type": "boolean", "description": "Permit replacement to delete child pages or databases when Notion would otherwise reject it." },
+        "allow_async": { "type": "boolean", "description": "Allow Notion to return an async task for large markdown updates." },
+        "payload": { "type": "object", "description": "Provider-native PATCH /pages/{page_id}/markdown payload." }
+      },
+      "required": ["page_id"],
+      "anyOf": [
+        { "required": ["markdown"] },
+        { "required": ["payload"] }
+      ]
+    }
+  },
+  {
+    "name": "notion_query_data_source",
+    "provider": "notion",
+    "description": "Query rows/pages in a Notion data source through a saved org integration.",
+    "promptSignature": "notion_query_data_source(data_source_id, filter?, sorts?, page_size?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "data_source_id": { "type": "string", "description": "Notion data source id." },
+        "filter": { "type": "object", "description": "Provider-native Notion filter object." },
+        "sorts": { "type": "array", "description": "Provider-native Notion sorts array." },
+        "page_size": { "type": "integer", "description": "Maximum rows to return, capped at 100." },
+        "start_cursor": { "type": "string", "description": "Pagination cursor from a previous response." },
+        "query": { "type": "object", "description": "Provider-native query payload override." },
+        "payload": { "type": "object", "description": "Provider-native query payload override." }
+      },
+      "required": ["data_source_id"]
+    }
+  },
+  {
+    "name": "notion_create_database",
+    "provider": "notion",
+    "description": "Create a Notion database and initial data source under a page.",
+    "promptSignature": "notion_create_database(parent_page_id, title, properties?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "parent_page_id": { "type": "string", "description": "Parent Notion page id." },
+        "parent": { "type": "object", "description": "Provider-native Notion parent object." },
+        "workspace": { "type": "boolean", "description": "Create at workspace level when supported by the token type." },
+        "title": { "type": "string", "description": "Database title." },
+        "description": { "type": "string", "description": "Optional database description." },
+        "properties": { "type": "object", "description": "Initial data source property schema. Defaults to Name title." },
+        "initial_data_source": { "type": "object", "description": "Provider-native initial_data_source object." },
+        "is_inline": { "type": "boolean", "description": "Whether the database should be inline in the parent page." },
+        "icon": { "type": "object", "description": "Provider-native Notion icon object." },
+        "cover": { "type": "object", "description": "Provider-native Notion cover object." }
+      },
+      "required": ["title"],
+      "anyOf": [
+        { "required": ["parent_page_id"] },
+        { "required": ["parent"] },
+        { "required": ["workspace"] }
+      ]
+    }
+  },
+  {
+    "name": "notion_create_data_source",
+    "provider": "notion",
+    "description": "Create an additional Notion data source under an existing database.",
+    "promptSignature": "notion_create_data_source(database_id, title?, properties?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "database_id": { "type": "string", "description": "Parent Notion database id." },
+        "parent": { "type": "object", "description": "Provider-native Notion parent object." },
+        "title": { "type": "string", "description": "Data source title." },
+        "properties": { "type": "object", "description": "Data source property schema. Defaults to Name title." },
+        "icon": { "type": "object", "description": "Provider-native Notion icon object." }
+      },
+      "anyOf": [
+        { "required": ["database_id"] },
+        { "required": ["parent"] }
+      ]
     }
   },
   {

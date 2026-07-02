@@ -201,6 +201,116 @@ pub async fn assert_notion_actions(app: &Router, org_id: &OrgId) {
     assert_eq!(resp.status(), StatusCode::OK);
     let notion_page = response_json(resp).await;
     assert_eq!(notion_page["page"]["id"], "page-2");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/notion_fetch_page"),
+        Some(serde_json::json!({
+            "page_id": "page-1",
+            "content_mode": "markdown"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let notion_page = response_json(resp).await;
+    assert_eq!(notion_page["page"]["title"], "Team Notes");
+    assert_eq!(
+        notion_page["markdown"]["markdown"],
+        "# Team Notes\n\nPlanning notes"
+    );
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/notion_update_page_markdown"),
+        Some(serde_json::json!({
+            "page_id": "page-1",
+            "markdown": "# Updated Notes\n\nShipped the prototype."
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated_markdown = response_json(resp).await;
+    assert_eq!(
+        updated_markdown["markdown"],
+        "# Updated Notes\n\nShipped the prototype."
+    );
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/notion_get_block_children"),
+        Some(serde_json::json!({
+            "block_id": "page-1"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let notion_blocks = response_json(resp).await;
+    assert_eq!(notion_blocks["blocks"][0]["id"], "block-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/notion_append_block_children"),
+        Some(serde_json::json!({
+            "block_id": "page-1",
+            "content": "Follow up"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let appended = response_json(resp).await;
+    assert_eq!(appended["blocks"][0]["id"], "block-2");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/notion_update_page"),
+        Some(serde_json::json!({
+            "page_id": "page-1",
+            "title": "Updated Notes"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated = response_json(resp).await;
+    assert_eq!(updated["page"]["title"], "Updated Notes");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/notion_query_data_source"),
+        Some(serde_json::json!({
+            "data_source_id": "ds-1",
+            "page_size": 10
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let data_source_rows = response_json(resp).await;
+    assert_eq!(data_source_rows["pages"][0]["title"], "Roadmap Item");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/notion_create_database"),
+        Some(serde_json::json!({
+            "parent_page_id": "page-1",
+            "title": "Roadmap"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let database = response_json(resp).await;
+    assert_eq!(database["database"]["id"], "db-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/notion_create_data_source"),
+        Some(serde_json::json!({
+            "database_id": "db-1",
+            "title": "Archive"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let data_source = response_json(resp).await;
+    assert_eq!(data_source["data_source"]["id"], "ds-2");
 }
 
 pub async fn assert_brave_actions(app: &Router, org_id: &OrgId) {

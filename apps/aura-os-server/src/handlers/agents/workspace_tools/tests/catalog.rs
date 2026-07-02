@@ -33,6 +33,21 @@ async fn installed_workspace_app_tools_include_saved_provider_tools() {
         )
         .expect("save brave integration");
 
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            None,
+            "Notion".to_string(),
+            "notion".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("notion-secret".to_string()),
+        )
+        .expect("save notion integration");
+
     let tools = installed_workspace_app_tools(&state, &org_id, "jwt-123").await;
     let tool_names = tools
         .iter()
@@ -42,6 +57,21 @@ async fn installed_workspace_app_tools_include_saved_provider_tools() {
     assert!(tool_names.contains(&"list_org_integrations"));
     assert!(tool_names.contains(&"brave_search_web"));
     assert!(tool_names.contains(&"brave_search_news"));
+    let notion_tool_names = [
+        "notion_search_pages",
+        "notion_fetch_page",
+        "notion_get_block_children",
+        "notion_append_block_children",
+        "notion_create_page",
+        "notion_update_page",
+        "notion_update_page_markdown",
+        "notion_query_data_source",
+        "notion_create_database",
+        "notion_create_data_source",
+    ];
+    for name in notion_tool_names {
+        assert!(tool_names.contains(&name), "{name} installed");
+    }
 
     let brave = tools
         .iter()
@@ -65,6 +95,44 @@ async fn installed_workspace_app_tools_include_saved_provider_tools() {
     );
     assert_eq!(
         brave
+            .required_integration
+            .as_ref()
+            .and_then(|requirement| requirement.kind.as_deref()),
+        Some("workspace_integration")
+    );
+
+    let notion = tools
+        .iter()
+        .find(|tool| tool.name == "notion_search_pages")
+        .expect("notion_search_pages installed");
+    assert!(notion.endpoint.contains("/api/orgs/"));
+    assert!(notion
+        .endpoint
+        .ends_with("/tool-actions/notion_search_pages"));
+    assert!(matches!(notion.auth, ToolAuth::Bearer { .. }));
+    match &notion.runtime_execution {
+        Some(aura_os_harness::InstalledToolRuntimeExecution::AppProvider(provider)) => {
+            assert_eq!(provider.provider, "notion");
+            assert_eq!(
+                provider
+                    .static_headers
+                    .get("Notion-Version")
+                    .map(String::as_str),
+                Some("2026-03-11")
+            );
+            assert_eq!(provider.integrations.len(), 1);
+        }
+        other => panic!("expected Notion app-provider runtime execution, got {other:?}"),
+    }
+    assert_eq!(
+        notion
+            .required_integration
+            .as_ref()
+            .and_then(|requirement| requirement.provider.as_deref()),
+        Some("notion")
+    );
+    assert_eq!(
+        notion
             .required_integration
             .as_ref()
             .and_then(|requirement| requirement.kind.as_deref()),
