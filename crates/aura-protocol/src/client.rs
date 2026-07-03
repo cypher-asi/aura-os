@@ -70,8 +70,9 @@ pub struct IntentClassifierRule {
 }
 
 /// Per-session model overrides applied on top of the harness's
-/// env-default router config.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+/// env-default router config, plus provider credentials resolved by
+/// aura-os for this session.
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "typescript", derive(TS), ts(export))]
 pub struct SessionModelOverrides {
     /// Optional default model for this session.
@@ -91,6 +92,29 @@ pub struct SessionModelOverrides {
     /// Optional retention hint paired with [`Self::prompt_cache_key`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_cache_retention: Option<String>,
+    /// Per-provider user-supplied API keys resolved by aura-os for the
+    /// current session. The runtime forwards only the key matching the
+    /// selected upstream provider to aura-router.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub provider_api_keys: HashMap<String, String>,
+}
+
+impl std::fmt::Debug for SessionModelOverrides {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let providers = self
+            .provider_api_keys
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
+        f.debug_struct("SessionModelOverrides")
+            .field("default_model", &self.default_model)
+            .field("fallback_model", &self.fallback_model)
+            .field("prompt_caching_enabled", &self.prompt_caching_enabled)
+            .field("prompt_cache_key", &self.prompt_cache_key)
+            .field("prompt_cache_retention", &self.prompt_cache_retention)
+            .field("provider_api_key_providers", &providers)
+            .finish()
+    }
 }
 
 /// Payload for `user_message`.

@@ -14,10 +14,13 @@ import { useChatUIStore } from "../../stores/chat-ui-store";
 import type { ChatAttachment, StreamEventHandler } from "../../api/streams";
 import {
   DEFAULT_IMAGE_MODEL_ID,
-  loadPersistedModelEffort,
   modelSupportsQuality,
   type GenerationMode,
 } from "../../constants/models";
+import {
+  persistedReasoningEffort,
+  supportedReasoningEffort,
+} from "../../lib/model-effort";
 import { STYLE_LOCK_SUFFIX } from "../../constants/generation";
 import { EventType } from "../../shared/types/aura-events";
 import {
@@ -652,10 +655,13 @@ export function useChatStream({
           const models = uiState
             .getCouncilModels(getPartitionKey())
             .filter((slot) => typeof slot.id === "string" && slot.id.length > 0)
-            .map((slot) => ({
-              id: slot.id,
-              ...(slot.effort ? { reasoning_effort: slot.effort } : {}),
-            }));
+            .map((slot) => {
+              const effort = supportedReasoningEffort(slot.id, slot.effort);
+              return {
+                id: slot.id,
+                ...(effort ? { reasoning_effort: effort } : {}),
+              };
+            });
           if (models.length < 2) return undefined;
           const mechanism = uiState.getCouncilMechanism(getPartitionKey());
           return { models, mechanism };
@@ -671,12 +677,18 @@ export function useChatStream({
           }
           const reference = uiState.getSecondOpinionReference(getPartitionKey());
           if (!reference?.id) return undefined;
-          const aggregatorEffort = loadPersistedModelEffort(selectedModel);
+          const aggregatorEffort = persistedReasoningEffort(selectedModel);
+          const referenceEffort = supportedReasoningEffort(
+            reference.id,
+            reference.effort,
+          );
           return {
             references: [
               {
                 id: reference.id,
-                ...(reference.effort ? { reasoning_effort: reference.effort } : {}),
+                ...(referenceEffort
+                  ? { reasoning_effort: referenceEffort }
+                  : {}),
               },
             ],
             aggregator: {

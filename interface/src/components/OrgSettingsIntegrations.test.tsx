@@ -200,6 +200,7 @@ describe("OrgSettingsIntegrations", () => {
     await user.type(screen.getByLabelText("New Command"), "npx");
     await user.type(screen.getByLabelText("New Args"), "-y @modelcontextprotocol/server-github");
     await user.type(screen.getByLabelText("New Secret Env Var"), "GITHUB_PERSONAL_ACCESS_TOKEN");
+    await user.type(screen.getByLabelText("New Allowed Tools"), "search_repo list_issues");
     await user.type(screen.getByLabelText("New Optional MCP Token"), "ghp_test");
     await user.click(screen.getByRole("button", { name: "Add" }));
 
@@ -213,6 +214,7 @@ describe("OrgSettingsIntegrations", () => {
         command: "npx",
         args: ["-y", "@modelcontextprotocol/server-github"],
         secretEnvVar: "GITHUB_PERSONAL_ACCESS_TOKEN",
+        allowedTools: ["search_repo", "list_issues"],
       },
       api_key: "ghp_test",
     });

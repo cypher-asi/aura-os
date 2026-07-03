@@ -343,22 +343,23 @@ pub(crate) async fn project_tool_session_config(
             }),
         },
     );
-    let provider_overrides = session_model_overrides_with_cache(
-        model.as_deref(),
-        Some(format!("tool:{project_id}:{tool_agent_name}")),
-        Some("24h"),
-    );
-    let aura_org_id = agent_instance
+    let aura_org = agent_instance
         .as_ref()
         .and_then(|instance| instance.org_id.as_ref())
-        .map(ToString::to_string)
+        .cloned()
         .or_else(|| {
             state
                 .project_service
                 .get_project(project_id)
                 .ok()
-                .map(|project| project.org_id.to_string())
+                .map(|project| project.org_id)
         });
+    let provider_overrides = session_model_overrides_with_cache(
+        model.as_deref(),
+        Some(format!("tool:{project_id}:{tool_agent_name}")),
+        Some("24h"),
+    );
+    let aura_org_id = aura_org.as_ref().map(ToString::to_string);
     let cfg = SessionConfig {
         agent_id: agent_id_field,
         template_agent_id: template_agent_id_field,

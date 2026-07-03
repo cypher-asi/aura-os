@@ -116,26 +116,43 @@ describe("model persistence", () => {
     expect(loadPersistedModel("default", "gpt-5.5")).toBe("aura-gpt-5-5");
   });
 
-  it("ignores raw Claude Fable 5 while it is unavailable", () => {
-    expect(loadPersistedModel("default", "claude-fable-5")).toBe(
-      "aura-claude-sonnet-5",
+  it("normalizes raw Grok model ids to Aura-managed chat models", () => {
+    expect(loadPersistedModel("default", "grok-4.3")).toBe("aura-grok-4-3");
+    expect(loadPersistedModel("default", "grok-build-0.1")).toBe(
+      "aura-grok-build-0-1",
+    );
+    expect(loadPersistedModel("default", "grok-code-fast-1")).toBe(
+      "aura-grok-build-0-1",
     );
   });
 
-  it("excludes Claude Fable 5 from the selectable chat model list while unavailable", () => {
+  it("normalizes raw Claude Fable 5 to the Aura-managed chat model", () => {
+    expect(loadPersistedModel("default", "claude-fable-5")).toBe(
+      "aura-claude-fable-5",
+    );
+  });
+
+  it("includes Claude Fable 5 in the Anthropic chat model list", () => {
     const fable = availableModelsForAdapter("default").find(
       (model) => model.id === "aura-claude-fable-5",
     );
 
-    expect(fable).toBeUndefined();
+    expect(fable).toMatchObject({
+      label: "Fable 5",
+      vendor: "anthropic",
+      creditMultiplier: 10,
+      contextWindow: 1_000_000,
+    });
+    expect(fable?.efforts).toBeUndefined();
+    expect(fable?.defaultEffort).toBeUndefined();
   });
 
-  it("ignores a persisted Claude Fable 5 selection while it is unavailable", () => {
+  it("restores a persisted Claude Fable 5 selection now that it is available", () => {
     store["aura-selected-model:agent:agent-fable"] = "aura-claude-fable-5";
     store["aura-selected-model:default"] = "aura-claude-fable-5";
 
     expect(loadPersistedModel("default", null, "agent-fable")).toBe(
-      "aura-claude-sonnet-5",
+      "aura-claude-fable-5",
     );
   });
 
@@ -388,5 +405,23 @@ describe("reasoning-effort validity per model", () => {
   it("keeps 'minimal' available on GPT-5.5", () => {
     const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === "aura-gpt-5-5");
     expect(model?.efforts ?? []).toContain("minimal");
+  });
+
+  it("maps Grok 4.3 onto the xAI reasoning effort ladder", () => {
+    const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === "aura-grok-4-3");
+    expect(model?.efforts ?? []).toEqual(["minimal", "low", "medium", "high"]);
+    expect(model?.defaultEffort).toBe("low");
+  });
+
+  it("offers Grok Build as a cheaper xAI model without effort controls", () => {
+    const model = AURA_MANAGED_CHAT_MODELS.find(
+      (m) => m.id === "aura-grok-build-0-1",
+    );
+    expect(model).toBeDefined();
+    expect(model?.vendor).toBe("xai");
+    expect(model?.creditMultiplier).toBe(0.48);
+    expect(model?.contextWindow).toBe(256_000);
+    expect(model?.efforts).toBeUndefined();
+    expect(model?.defaultEffort).toBeUndefined();
   });
 });

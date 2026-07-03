@@ -158,6 +158,7 @@ fn automaton_start_params_serializes_proxy_identity_context() {
             prompt_caching_enabled: Some(true),
             prompt_cache_key: None,
             prompt_cache_retention: None,
+            provider_api_keys: Default::default(),
         }),
         user_id: Some("user-1".into()),
         intent_classifier: None,

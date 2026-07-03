@@ -91,7 +91,8 @@ async fn org_integrations_support_mcp_server_provider_config() {
                 "transport": "stdio",
                 "command": "npx",
                 "args": ["-y", "@modelcontextprotocol/server-github"],
-                "secretEnvVar": "GITHUB_PERSONAL_ACCESS_TOKEN"
+                "secretEnvVar": "GITHUB_PERSONAL_ACCESS_TOKEN",
+                "allowedTools": ["search_repo", "list_issues"]
             },
             "api_key": "ghp_test_123"
         })),
@@ -108,6 +109,7 @@ async fn org_integrations_support_mcp_server_provider_config() {
         created["provider_config"]["secretEnvVar"],
         "GITHUB_PERSONAL_ACCESS_TOKEN"
     );
+    assert_eq!(created["provider_config"]["allowedTools"][0], "search_repo");
     assert_eq!(
         state
             .org_service
@@ -124,6 +126,10 @@ async fn org_integrations_support_mcp_server_provider_config() {
     assert_eq!(listed.as_array().unwrap().len(), 1);
     assert_eq!(listed[0]["kind"], "mcp_server");
     assert_eq!(listed[0]["provider_config"]["command"], "npx");
+    assert_eq!(
+        listed[0]["provider_config"]["allowedTools"][1],
+        "list_issues"
+    );
 
     let req = json_request(
         "PUT",
@@ -178,6 +184,25 @@ async fn org_integrations_reject_invalid_mcp_server_configs() {
             "provider_config": {
                 "transport": "http",
                 "url": "not-a-url"
+            }
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_request");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/integrations"),
+        Some(serde_json::json!({
+            "name": "Broken Allowed Tools",
+            "provider": "mcp_server",
+            "kind": "mcp_server",
+            "provider_config": {
+                "transport": "http",
+                "url": "https://example.com/mcp",
+                "allowedTools": ["search", ""]
             }
         })),
     );

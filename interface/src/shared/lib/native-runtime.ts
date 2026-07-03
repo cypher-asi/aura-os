@@ -5,7 +5,7 @@ interface CapacitorWindow extends Window {
   };
 }
 
-const LOCALHOST_WEBVIEW_ORIGINS = new Set(["http://localhost", "https://localhost"]);
+const LOOPBACK_WEBVIEW_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function hasWindow() {
   return typeof window !== "undefined";
@@ -19,7 +19,7 @@ export function isNativeRuntime(): boolean {
     return Boolean(nativeCheck());
   }
 
-  return window.location.protocol === "capacitor:" || LOCALHOST_WEBVIEW_ORIGINS.has(window.location.origin);
+  return window.location.protocol === "capacitor:" || isLoopbackWebviewOrigin();
 }
 
 export function inferNativePlatform(): "android" | "ios" | null {
@@ -40,6 +40,12 @@ export function inferNativePlatform(): "android" | "ios" | null {
   const userAgent = window.navigator.userAgent.toLowerCase();
   if (userAgent.includes("android")) return "android";
   if (userAgent.includes("iphone") || userAgent.includes("ipad") || userAgent.includes("ipod")) return "ios";
-  if (LOCALHOST_WEBVIEW_ORIGINS.has(window.location.origin)) return null;
+  if (isLoopbackWebviewOrigin()) return null;
   return null;
+}
+
+function isLoopbackWebviewOrigin(): boolean {
+  if (!hasWindow()) return false;
+  if (window.location.protocol !== "http:" && window.location.protocol !== "https:") return false;
+  return LOOPBACK_WEBVIEW_HOSTS.has(window.location.hostname);
 }

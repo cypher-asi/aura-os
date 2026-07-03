@@ -48,6 +48,7 @@ export const EFFORT_SHORT_LABELS: Record<ModelEffort, string> = {
 export type ModelVendor =
   | "anthropic"
   | "openai"
+  | "xai"
   | "google"
   | "deepseek"
   | "moonshot"
@@ -104,9 +105,10 @@ export interface ModelOption {
 }
 
 /**
- * Anthropic extended-thinking tiers. Claude exposes a thinking budget
- * (mapped per tier in the router), so the flagship models offer the
- * full low→max ladder.
+ * Anthropic extended-thinking tiers. Claude models with explicit thinking
+ * controls expose a budget mapped per tier in the router. Adaptive-only
+ * models such as Fable intentionally omit `efforts` so no picker tier is
+ * sent on the wire.
  */
 const ANTHROPIC_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
 
@@ -151,6 +153,12 @@ const GEMINI_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
  */
 const GEMINI_FLASH_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
+/**
+ * Grok 4.3 supports `reasoning_effort` as `none`/`low`/`medium`/`high`.
+ * The router maps Aura's `minimal` UI tier to xAI's `none` value.
+ */
+const XAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
+
 export type ModelProviderGroup =
   | "aura"
   | "image"
@@ -170,8 +178,8 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
 ];
 
 /**
- * Chat models, grouped by vendor (Anthropic, OpenAI, DeepSeek AI, Moonshot
- * AI, MiniMax, Z.ai, Alibaba Cloud, Google) and newest-first within each
+ * Chat models, grouped by vendor (Anthropic, OpenAI, xAI, DeepSeek AI,
+ * Moonshot AI, MiniMax, Z.ai, Alibaba Cloud, Google) and newest-first within each
  * vendor. The picker's section order is controlled separately by
  * {@link MODEL_VENDOR_ORDER} (which surfaces Google ahead of DeepSeek), so
  * this array's grouping need not match the on-screen order. The default
@@ -181,6 +189,19 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
  */
 export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   // ── Anthropic ───────────────────────────────────────────────
+  {
+    id: "aura-claude-fable-5",
+    label: "Fable 5",
+    tier: "opus",
+    mode: "chat",
+    vendor: "anthropic",
+    creditMultiplier: 10,
+    contextWindow: 1_000_000,
+    provider: "Anthropic",
+    description:
+      "Anthropic's most capable widely released model for demanding reasoning and long-running agents.",
+    featured: true,
+  },
   {
     id: "aura-claude-opus-4-8",
     label: "Opus 4.8",
@@ -340,6 +361,34 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     provider: "OpenAI",
     description:
       "Open-weight 120B reasoning model with selectable effort tiers and a 128K context window.",
+  },
+  // ── xAI ─────────────────────────────────────────────────────
+  {
+    id: "aura-grok-4-3",
+    label: "Grok 4.3",
+    tier: "opus",
+    mode: "chat",
+    vendor: "xai",
+    creditMultiplier: 0.6,
+    contextWindow: 1_000_000,
+    efforts: XAI_EFFORTS,
+    defaultEffort: "low",
+    provider: "xAI",
+    description:
+      "xAI's current Grok flagship for fast general reasoning, agentic tool use, and long-context work.",
+    featured: true,
+  },
+  {
+    id: "aura-grok-build-0-1",
+    label: "Grok Build 0.1",
+    tier: "sonnet",
+    mode: "chat",
+    vendor: "xai",
+    creditMultiplier: 0.48,
+    contextWindow: 256_000,
+    provider: "xAI",
+    description:
+      "xAI's lower-cost coding-focused Grok model for software-building workflows.",
   },
   // ── DeepSeek ────────────────────────────────────────────────
   {
@@ -588,6 +637,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
 const MODEL_VENDOR_ORDER: readonly ModelVendor[] = [
   "anthropic",
   "openai",
+  "xai",
   "google",
   "deepseek",
   "moonshot",
@@ -599,6 +649,7 @@ const MODEL_VENDOR_ORDER: readonly ModelVendor[] = [
 const MODEL_VENDOR_LABELS: Record<ModelVendor, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
+  xai: "xAI",
   deepseek: "DeepSeek AI",
   moonshot: "Moonshot AI",
   minimax: "MiniMax",
@@ -908,6 +959,18 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "gpt-5.4": "aura-gpt-5-4",
   "gpt-5.4-mini": "aura-gpt-5-4-mini",
   "gpt-5.4-nano": "aura-gpt-5-4-nano",
+  "aura-grok-4-3": "aura-grok-4-3",
+  "grok-4.3": "aura-grok-4-3",
+  "xai/grok-4.3": "aura-grok-4-3",
+  "aura-grok-build-0-1": "aura-grok-build-0-1",
+  "grok-build-0.1": "aura-grok-build-0-1",
+  "xai/grok-build-0.1": "aura-grok-build-0-1",
+  "grok-code-fast": "aura-grok-build-0-1",
+  "xai/grok-code-fast": "aura-grok-build-0-1",
+  "grok-code-fast-1": "aura-grok-build-0-1",
+  "xai/grok-code-fast-1": "aura-grok-build-0-1",
+  "grok-code-fast-1-0825": "aura-grok-build-0-1",
+  "xai/grok-code-fast-1-0825": "aura-grok-build-0-1",
   "aura-o3": "aura-o3",
   o3: "aura-o3",
   "aura-o4-mini": "aura-o4-mini",

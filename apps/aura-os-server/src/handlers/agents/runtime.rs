@@ -267,6 +267,7 @@ pub(crate) fn session_model_overrides_with_cache(
         prompt_caching_enabled: Some(true),
         prompt_cache_key: cache_key,
         prompt_cache_retention: retention,
+        provider_api_keys: Default::default(),
     })
 }
 

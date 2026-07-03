@@ -236,7 +236,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     label: "Custom MCP Server",
     kind: "mcp_server",
     description:
-      "Attach a custom MCP server so its tools can be registered into the workspace tool surface.",
+      "Attach a custom MCP server, including X account MCP servers, so its tools can be registered into the workspace tool surface.",
     secretLabel: "Optional MCP Token",
     secretPlaceholder: "Optional bearer token or API key",
     authHint:
@@ -269,6 +269,11 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
         key: "secretEnvVar",
         label: "Secret Env Var",
         placeholder: "GITHUB_PERSONAL_ACCESS_TOKEN",
+      },
+      {
+        key: "allowedTools",
+        label: "Allowed Tools",
+        placeholder: "search_repo list_issues",
       },
     ],
   },

@@ -805,7 +805,7 @@ describe("ChatPanel", () => {
     getPartitionSendControl("stream-1").lastSendArgs = {
       content: "Build Launch Brief",
       action: null,
-      selectedModel: "aura-claude-fable-5",
+      selectedModel: "aura-retired-model",
     };
 
     renderPanel({
@@ -818,7 +818,7 @@ describe("ChatPanel", () => {
           role: "assistant",
           content: "",
           displayVariant: "streamDropped",
-          errorMessage: "Claude Fable 5 is not available.",
+          errorMessage: "The retired model is not available.",
         } as DisplaySessionEvent,
       ],
     });
