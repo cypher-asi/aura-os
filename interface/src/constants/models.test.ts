@@ -118,9 +118,6 @@ describe("model persistence", () => {
 
   it("normalizes raw Grok model ids to Aura-managed chat models", () => {
     expect(loadPersistedModel("default", "grok-4.3")).toBe("aura-grok-4-3");
-    expect(loadPersistedModel("default", "xai/grok-build-0.1")).toBe(
-      "aura-grok-build-0-1",
-    );
   });
 
   it("normalizes raw Claude Fable 5 to the Aura-managed chat model", () => {

@@ -378,18 +378,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
       "xAI's current Grok flagship for fast general reasoning, agentic tool use, and long-context work.",
     featured: true,
   },
-  {
-    id: "aura-grok-build-0-1",
-    label: "Grok Build 0.1",
-    tier: "sonnet",
-    mode: "chat",
-    vendor: "xai",
-    creditMultiplier: 0.45,
-    contextWindow: 256_000,
-    provider: "xAI",
-    description:
-      "xAI's coding-focused Grok model trained for agentic software-building workflows.",
-  },
   // ── DeepSeek ────────────────────────────────────────────────
   {
     id: "aura-deepseek-v4-pro",
@@ -962,9 +950,6 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "aura-grok-4-3": "aura-grok-4-3",
   "grok-4.3": "aura-grok-4-3",
   "xai/grok-4.3": "aura-grok-4-3",
-  "aura-grok-build-0-1": "aura-grok-build-0-1",
-  "grok-build-0.1": "aura-grok-build-0-1",
-  "xai/grok-build-0.1": "aura-grok-build-0-1",
   "aura-o3": "aura-o3",
   o3: "aura-o3",
   "aura-o4-mini": "aura-o4-mini",
