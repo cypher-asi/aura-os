@@ -111,38 +111,6 @@ describe("OrgSettingsIntegrations", () => {
     });
   });
 
-  it("submits xAI as a workspace connection", async () => {
-    vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "true");
-    const user = userEvent.setup();
-    const onCreate = vi.fn().mockResolvedValue(null);
-
-    render(
-      <OrgSettingsIntegrations
-        integrations={[]}
-        busyId={null}
-        canManage
-        onCreate={onCreate}
-        onUpdate={vi.fn().mockResolvedValue(null)}
-        onDelete={vi.fn().mockResolvedValue(undefined)}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Add Integration" }));
-    await user.click(screen.getByRole("button", { name: "xAI" }));
-    await user.type(screen.getByLabelText("New integration name"), "xAI Grok");
-    await user.type(screen.getByLabelText("New xAI API Key"), "xai_test_123");
-    await user.click(screen.getByRole("button", { name: "Add" }));
-
-    expect(onCreate).toHaveBeenCalledWith({
-      name: "xAI Grok",
-      provider: "xai",
-      kind: "workspace_connection",
-      default_model: null,
-      provider_config: null,
-      api_key: "xai_test_123",
-    });
-  });
-
   it("starts Google OAuth instead of asking for an API key", async () => {
     const user = userEvent.setup();
     const onConnectGoogle = vi.fn().mockResolvedValue(true);

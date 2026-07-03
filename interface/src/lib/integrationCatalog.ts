@@ -43,20 +43,6 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     runtimeCompatibleAdapters: [],
   },
   {
-    id: "xai",
-    label: "xAI",
-    kind: "workspace_connection",
-    description:
-      "Workspace-level xAI access for Grok chat and coding models.",
-    secretLabel: "xAI API Key",
-    secretPlaceholder: "Paste the xAI API key",
-    authHint:
-      "Use an xAI API key from the xAI Console when the workspace should route Grok model requests directly.",
-    docsUrl: "https://docs.x.ai/developers/quickstart",
-    supportsDefaultModel: true,
-    runtimeCompatibleAdapters: [],
-  },
-  {
     id: "github",
     label: "GitHub",
     kind: "workspace_integration",
@@ -250,7 +236,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     label: "Custom MCP Server",
     kind: "mcp_server",
     description:
-      "Attach a custom MCP server so its tools can be registered into the workspace tool surface.",
+      "Attach a custom MCP server, including X account MCP servers, so its tools can be registered into the workspace tool surface.",
     secretLabel: "Optional MCP Token",
     secretPlaceholder: "Optional bearer token or API key",
     authHint:

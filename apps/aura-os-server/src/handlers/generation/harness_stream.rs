@@ -239,6 +239,7 @@ async fn run_harness_generation_task(
             prompt_caching_enabled: Some(true),
             prompt_cache_key: None,
             prompt_cache_retention: None,
+            provider_api_keys: Default::default(),
         }),
         ..Default::default()
     };
