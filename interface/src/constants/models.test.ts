@@ -118,6 +118,12 @@ describe("model persistence", () => {
 
   it("normalizes raw Grok model ids to Aura-managed chat models", () => {
     expect(loadPersistedModel("default", "grok-4.3")).toBe("aura-grok-4-3");
+    expect(loadPersistedModel("default", "grok-build-0.1")).toBe(
+      "aura-grok-build-0-1",
+    );
+    expect(loadPersistedModel("default", "grok-code-fast-1")).toBe(
+      "aura-grok-build-0-1",
+    );
   });
 
   it("normalizes raw Claude Fable 5 to the Aura-managed chat model", () => {
@@ -405,5 +411,17 @@ describe("reasoning-effort validity per model", () => {
     const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === "aura-grok-4-3");
     expect(model?.efforts ?? []).toEqual(["minimal", "low", "medium", "high"]);
     expect(model?.defaultEffort).toBe("low");
+  });
+
+  it("offers Grok Build as a cheaper xAI model without effort controls", () => {
+    const model = AURA_MANAGED_CHAT_MODELS.find(
+      (m) => m.id === "aura-grok-build-0-1",
+    );
+    expect(model).toBeDefined();
+    expect(model?.vendor).toBe("xai");
+    expect(model?.creditMultiplier).toBe(0.48);
+    expect(model?.contextWindow).toBe(256_000);
+    expect(model?.efforts).toBeUndefined();
+    expect(model?.defaultEffort).toBeUndefined();
   });
 });

@@ -78,6 +78,7 @@ const OPENAI_PRICING: Readonly<Record<string, ModelRates>> = {
 // the base input rate when a caller reports them.
 const XAI_PRICING: Readonly<Record<string, ModelRates>> = {
   "grok-4.3": { input: 1.25, output: 2.5, cacheWrite: 1.25, cacheRead: 0.2 },
+  "grok-build-0.1": { input: 1, output: 2, cacheWrite: 1, cacheRead: 0.2 },
 } as const;
 
 const FIREWORKS_PRICING: Readonly<Record<string, ModelRates>> = {
@@ -139,6 +140,10 @@ export function normalizePricingKey(model: string): string {
     "aura-deepseek-v4-pro": "deepseek-v4-pro",
     "aura-deepseek-v4-flash": "deepseek-v4-flash",
     "aura-grok-4-3": "grok-4.3",
+    "aura-grok-build-0-1": "grok-build-0.1",
+    "grok-code-fast": "grok-build-0.1",
+    "grok-code-fast-1": "grok-build-0.1",
+    "grok-code-fast-1-0825": "grok-build-0.1",
     "aura-minimax-m3": "minimax-m3",
     "aura-minimax-m2-7": "minimax-m2p7",
     "aura-glm-5-2": "glm-5p2",

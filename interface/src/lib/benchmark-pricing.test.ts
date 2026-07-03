@@ -143,6 +143,8 @@ describe("benchmark pricing", () => {
   it.each([
     ["aura-grok-4-3", "grok-4.3", 1.25, 0.2, 2.5],
     ["xai/grok-4.3", "grok-4.3", 1.25, 0.2, 2.5],
+    ["aura-grok-build-0-1", "grok-build-0.1", 1, 0.2, 2],
+    ["xai/grok-build-0.1", "grok-build-0.1", 1, 0.2, 2],
   ])(
     "resolves xAI Grok pricing for %s",
     (modelId, expectedModel, input, cacheRead, output) => {

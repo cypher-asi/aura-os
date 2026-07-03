@@ -164,6 +164,12 @@ const XAI_MODEL_PRICING_PER_MTOK = {
     cacheWrite: 1.25,
     cacheRead: 0.2,
   },
+  "grok-build-0.1": {
+    input: 1,
+    output: 2,
+    cacheWrite: 1,
+    cacheRead: 0.2,
+  },
 };
 
 const FIREWORKS_MODEL_PRICING_PER_MTOK = {
@@ -362,6 +368,10 @@ function normalizeModelKey(model) {
   if (auraDeepSeekModels[unprefixed]) return auraDeepSeekModels[unprefixed];
   const auraXaiModels = {
     "aura-grok-4-3": "grok-4.3",
+    "aura-grok-build-0-1": "grok-build-0.1",
+    "grok-code-fast": "grok-build-0.1",
+    "grok-code-fast-1": "grok-build-0.1",
+    "grok-code-fast-1-0825": "grok-build-0.1",
   };
   if (auraXaiModels[unprefixed]) return auraXaiModels[unprefixed];
   const auraGoogleModels = {

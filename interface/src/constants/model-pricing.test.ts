@@ -16,6 +16,9 @@ describe("normalizePricingKey", () => {
     expect(normalizePricingKey("aura-gpt-5-4-mini")).toBe("gpt-5.4-mini");
     expect(normalizePricingKey("aura-grok-4-3")).toBe("grok-4.3");
     expect(normalizePricingKey("xai/grok-4.3")).toBe("grok-4.3");
+    expect(normalizePricingKey("aura-grok-build-0-1")).toBe("grok-build-0.1");
+    expect(normalizePricingKey("xai/grok-build-0.1")).toBe("grok-build-0.1");
+    expect(normalizePricingKey("grok-code-fast-1")).toBe("grok-build-0.1");
     expect(normalizePricingKey("aura-kimi-k2-6")).toBe("kimi-k2p6");
     expect(normalizePricingKey("aura-deepseek-v4-pro")).toBe("deepseek-v4-pro");
     expect(normalizePricingKey("aura-gemini-2-5-pro")).toBe("gemini-2.5-pro");
@@ -33,6 +36,12 @@ describe("resolvePricing for xAI Grok", () => {
     expect(grok.output).toBe(2.5);
     expect(grok.cacheRead).toBe(0.2);
 
+    const build = resolvePricing("aura-grok-build-0-1");
+    expect(build.provider).toBe("xai");
+    expect(build.model).toBe("grok-build-0.1");
+    expect(build.input).toBe(1);
+    expect(build.output).toBe(2);
+    expect(build.cacheRead).toBe(0.2);
   });
 
   it("treats cached prompt tokens as already counted in input", () => {
