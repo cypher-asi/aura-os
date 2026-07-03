@@ -56,6 +56,20 @@ describe("native-runtime", () => {
     expect(inferNativePlatform()).toBeNull();
   });
 
+  it("treats ported localhost dev webviews as native", () => {
+    setLocation("http://localhost:5173/login");
+
+    expect(isNativeRuntime()).toBe(true);
+    expect(inferNativePlatform()).toBeNull();
+  });
+
+  it("treats loopback dev webviews as native", () => {
+    setLocation("http://127.0.0.1:5173/login");
+
+    expect(isNativeRuntime()).toBe(true);
+    expect(inferNativePlatform()).toBeNull();
+  });
+
   it("treats the iOS capacitor protocol as native", () => {
     setLocation("capacitor://localhost/login");
 
