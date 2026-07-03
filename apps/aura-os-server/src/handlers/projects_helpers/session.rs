@@ -13,10 +13,13 @@ use crate::handlers::agents::conversions_pub::resolve_workspace_path;
 use crate::handlers::agents::session_identity::{
     validate_session_identity, SessionIdentityRequirements,
 };
-use crate::handlers::agents::session_model_overrides_with_cache;
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
+    integrations_for_org_with_token, provider_api_keys_for_model,
+};
+use crate::handlers::agents::{
+    attach_provider_api_keys_to_overrides, session_model_overrides_with_cache,
 };
 use crate::state::AppState;
 
@@ -343,22 +346,38 @@ pub(crate) async fn project_tool_session_config(
             }),
         },
     );
-    let provider_overrides = session_model_overrides_with_cache(
-        model.as_deref(),
-        Some(format!("tool:{project_id}:{tool_agent_name}")),
-        Some("24h"),
-    );
-    let aura_org_id = agent_instance
+    let aura_org = agent_instance
         .as_ref()
         .and_then(|instance| instance.org_id.as_ref())
-        .map(ToString::to_string)
+        .cloned()
         .or_else(|| {
             state
                 .project_service
                 .get_project(project_id)
                 .ok()
-                .map(|project| project.org_id.to_string())
+                .map(|project| project.org_id)
         });
+    let org_integrations = match aura_org.as_ref() {
+        Some(org_id) => Some(integrations_for_org_with_token(state, org_id, Some(jwt)).await),
+        None => None,
+    };
+    let provider_api_keys = provider_api_keys_for_model(
+        state,
+        aura_org.as_ref(),
+        org_integrations.as_deref(),
+        Some(jwt),
+        model.as_deref(),
+    )
+    .await;
+    let provider_overrides = attach_provider_api_keys_to_overrides(
+        session_model_overrides_with_cache(
+            model.as_deref(),
+            Some(format!("tool:{project_id}:{tool_agent_name}")),
+            Some("24h"),
+        ),
+        provider_api_keys,
+    );
+    let aura_org_id = aura_org.as_ref().map(ToString::to_string);
     let cfg = SessionConfig {
         agent_id: agent_id_field,
         template_agent_id: template_agent_id_field,

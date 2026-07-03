@@ -1,5 +1,6 @@
 mod catalog;
 mod integrations;
+mod provider_credentials;
 mod runtime;
 mod secrets;
 mod trusted_mcp;
@@ -19,6 +20,7 @@ pub(crate) use integrations::{
     installed_workspace_integrations_with_integrations, integrations_for_org,
     integrations_for_org_with_token,
 };
+pub(crate) use provider_credentials::provider_api_keys_for_model;
 
 #[cfg(test)]
 pub(crate) use integrations::installed_workspace_integrations_for_org;

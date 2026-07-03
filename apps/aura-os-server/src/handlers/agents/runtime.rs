@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::time::Duration;
 
 use aura_protocol::CouncilMemberRole;
@@ -267,7 +268,30 @@ pub(crate) fn session_model_overrides_with_cache(
         prompt_caching_enabled: Some(true),
         prompt_cache_key: cache_key,
         prompt_cache_retention: retention,
+        provider_api_keys: Default::default(),
     })
+}
+
+pub(crate) fn attach_provider_api_keys_to_overrides(
+    mut overrides: Option<SessionModelOverrides>,
+    provider_api_keys: HashMap<String, String>,
+) -> Option<SessionModelOverrides> {
+    if provider_api_keys.is_empty() {
+        return overrides;
+    }
+    let entry = overrides.get_or_insert_with(|| SessionModelOverrides {
+        default_model: None,
+        fallback_model: None,
+        prompt_caching_enabled: None,
+        prompt_cache_key: None,
+        prompt_cache_retention: None,
+        provider_api_keys: Default::default(),
+    });
+    entry.provider_api_keys = provider_api_keys;
+    entry
+        .provider_api_keys
+        .retain(|provider, key| !provider.trim().is_empty() && !key.trim().is_empty());
+    overrides
 }
 
 /// Backwards-compatible shorthand used by call sites that don't yet
@@ -284,7 +308,28 @@ async fn run_harness_test(
     user_id: &str,
     model: Option<String>,
 ) -> ApiResult<RuntimeOutcome> {
-    let config = runtime_session_config(agent, jwt, user_id, model);
+    let mut config = runtime_session_config(agent, jwt, user_id, model.clone());
+    let org_integrations = match agent.org_id.as_ref() {
+        Some(org_id) => Some(
+            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
+                state,
+                org_id,
+                Some(jwt),
+            )
+            .await,
+        ),
+        None => None,
+    };
+    let provider_api_keys = crate::handlers::agents::workspace_tools::provider_api_keys_for_model(
+        state,
+        agent.org_id.as_ref(),
+        org_integrations.as_deref(),
+        Some(jwt),
+        model.as_deref(),
+    )
+    .await;
+    config.provider_overrides =
+        attach_provider_api_keys_to_overrides(config.provider_overrides, provider_api_keys);
     validate_session_identity(
         &config,
         SessionIdentityRequirements::CHAT,
@@ -412,6 +457,42 @@ mod tests {
         assert!(session_model_overrides_with_cache(None, None, None).is_none());
         assert!(
             session_model_overrides_with_cache(Some(""), Some("  ".into()), Some("")).is_none()
+        );
+    }
+
+    #[test]
+    fn attach_provider_api_keys_preserves_existing_model_overrides() {
+        let overrides = session_model_overrides_with_cache(
+            Some("aura-grok-4-3"),
+            Some("agent:abc-123".into()),
+            Some("24h"),
+        );
+        let overrides = attach_provider_api_keys_to_overrides(
+            overrides,
+            HashMap::from([("xai".to_string(), "xai-test-key".to_string())]),
+        )
+        .expect("provider key should keep overrides present");
+
+        assert_eq!(overrides.default_model.as_deref(), Some("aura-grok-4-3"));
+        assert_eq!(overrides.prompt_cache_key.as_deref(), Some("agent:abc-123"));
+        assert_eq!(
+            overrides.provider_api_keys.get("xai").map(String::as_str),
+            Some("xai-test-key")
+        );
+    }
+
+    #[test]
+    fn attach_provider_api_keys_creates_override_when_only_credentials_exist() {
+        let overrides = attach_provider_api_keys_to_overrides(
+            None,
+            HashMap::from([("xai".to_string(), "xai-test-key".to_string())]),
+        )
+        .expect("provider key should create overrides");
+
+        assert!(overrides.default_model.is_none());
+        assert_eq!(
+            overrides.provider_api_keys.get("xai").map(String::as_str),
+            Some("xai-test-key")
         );
     }
 

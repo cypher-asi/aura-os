@@ -2,7 +2,8 @@
 
 /**
  * Per-session model overrides applied on top of the harness's
- * env-default router config.
+ * env-default router config, plus provider credentials resolved by
+ * aura-os for this session.
  */
 export type SessionModelOverrides = { 
 /**
@@ -26,4 +27,10 @@ prompt_cache_key: string | null,
 /**
  * Optional retention hint paired with [`Self::prompt_cache_key`].
  */
-prompt_cache_retention: string | null, };
+prompt_cache_retention: string | null,
+/**
+ * Per-provider user-supplied API keys resolved by aura-os for the
+ * current session. The runtime forwards only the key matching the
+ * selected upstream provider to aura-router.
+ */
+provider_api_keys: Record<string, string>, };

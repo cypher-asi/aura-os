@@ -39,7 +39,9 @@ pub(crate) use instances::{
     create_agent_instance, delete_agent_instance, get_agent_instance, list_agent_instances,
     update_agent_instance,
 };
-pub(crate) use runtime::{session_model_overrides_with_cache, test_agent_runtime};
+pub(crate) use runtime::{
+    attach_provider_api_keys_to_overrides, session_model_overrides_with_cache, test_agent_runtime,
+};
 pub(crate) use self_improvement::{
     apply_improvement_proposal, get_self_improvement_config, list_improvement_proposals,
     propose_improvement, reject_improvement_proposal, run_learning_review,

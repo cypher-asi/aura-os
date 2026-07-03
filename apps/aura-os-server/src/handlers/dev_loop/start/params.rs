@@ -1,13 +1,18 @@
 //! `AutomatonStartParams` assembly plus the stable per-(project, agent-instance, task) session UUID derivation that keeps Cloudflare's WAF score from restarting on every dev-loop tick.
 
+use std::collections::HashMap;
+
 use aura_os_core::{harness_agent_id, AgentInstanceId, Project};
 use aura_os_harness::AutomatonStartParams;
 use aura_protocol::{AgentPersona, ChatProjectInfoWire};
 
-use crate::handlers::agents::session_model_overrides_with_cache;
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
+    integrations_for_org_with_token, provider_api_keys_for_model,
+};
+use crate::handlers::agents::{
+    attach_provider_api_keys_to_overrides, session_model_overrides_with_cache,
 };
 use crate::state::AppState;
 
@@ -40,6 +45,22 @@ pub(crate) async fn build_start_params(inputs: StartParamsInputs<'_>) -> Automat
     let installed_tools = resolve_installed_tools(state, ctx, jwt.as_deref()).await;
     let installed_integrations = resolve_installed_integrations(state, ctx, jwt.as_deref()).await;
     let aura_org_id = resolve_aura_org_id(ctx);
+    let aura_org = ctx
+        .agent_org_id
+        .clone()
+        .or_else(|| ctx.project.as_ref().map(|project| project.org_id.clone()));
+    let org_integrations = match aura_org.as_ref() {
+        Some(org_id) => Some(integrations_for_org_with_token(state, org_id, jwt.as_deref()).await),
+        None => None,
+    };
+    let provider_api_keys = provider_api_keys_for_model(
+        state,
+        aura_org.as_ref(),
+        org_integrations.as_deref(),
+        jwt.as_deref(),
+        ctx.model.as_deref(),
+    )
+    .await;
     // Stable per-(project, agent-instance, task) session UUID so
     // Cloudflare's `(IP, X-Aura-Session-Id)` bucket score doesn't
     // reset on every dev-loop restart. See [`stable_dev_loop_session_id`].
@@ -56,6 +77,7 @@ pub(crate) async fn build_start_params(inputs: StartParamsInputs<'_>) -> Automat
         task_id,
         installed_tools,
         installed_integrations,
+        provider_api_keys,
         aura_org_id,
         aura_session_id,
         loop_engineering,
@@ -73,6 +95,7 @@ struct AssembleInputs<'a> {
     task_id: Option<String>,
     installed_tools: Option<Vec<aura_os_harness::InstalledTool>>,
     installed_integrations: Option<Vec<aura_os_harness::InstalledIntegration>>,
+    provider_api_keys: HashMap<String, String>,
     aura_org_id: Option<String>,
     aura_session_id: Option<String>,
     loop_engineering: Option<&'a LoopEngineeringContract>,
@@ -92,6 +115,7 @@ fn assemble_automaton_start_params(inputs: AssembleInputs<'_>) -> AutomatonStart
         task_id,
         installed_tools,
         installed_integrations,
+        provider_api_keys,
         aura_org_id,
         aura_session_id,
         loop_engineering,
@@ -108,7 +132,7 @@ fn assemble_automaton_start_params(inputs: AssembleInputs<'_>) -> AutomatonStart
         template_agent_id: Some(ctx.agent_id.to_string()),
         auth_token: jwt,
         model: ctx.model.clone(),
-        provider_overrides: start_provider_overrides(ctx, agent_instance_id),
+        provider_overrides: start_provider_overrides(ctx, agent_instance_id, provider_api_keys),
         user_id,
         intent_classifier: ctx.intent_classifier.clone(),
         // Wire-level dead field: the harness's `AutomatonStartRequest`
@@ -195,11 +219,15 @@ fn start_agent_identity(ctx: &StartContext) -> Option<AgentPersona> {
 fn start_provider_overrides(
     ctx: &StartContext,
     agent_instance_id: AgentInstanceId,
+    provider_api_keys: HashMap<String, String>,
 ) -> Option<aura_protocol::SessionModelOverrides> {
-    session_model_overrides_with_cache(
-        ctx.model.as_deref(),
-        Some(format!("devloop:{}:{}", ctx.project_id, agent_instance_id)),
-        Some("24h"),
+    attach_provider_api_keys_to_overrides(
+        session_model_overrides_with_cache(
+            ctx.model.as_deref(),
+            Some(format!("devloop:{}:{}", ctx.project_id, agent_instance_id)),
+            Some("24h"),
+        ),
+        provider_api_keys,
     )
 }
 /// Project git fields off the start context: the project's
