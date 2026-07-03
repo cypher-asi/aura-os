@@ -2,18 +2,18 @@
   {
     "date": "2026-07-02",
     "channel": "nightly",
-    "version": "0.1.0-nightly.722.1",
-    "title": "Claude Fable 5 returns and Notion auth gets stricter",
-    "intro": "Today's nightly brings back Claude Fable 5 as a first-class chat model and tightens how the Notion integration validates provider credentials end to end.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.723.1",
+    "title": "Grok models, Fable 5 returns, and tighter Notion auth",
+    "intro": "Today's nightly expands Aura's model roster with xAI Grok and brings back Claude Fable 5, while backend work hardens Notion authorization and extends Remote MCP configuration on the server side.",
+    "entryCount": 3,
     "highlights": [
-      "Claude Fable 5 available again in the model picker",
-      "Notion provider now rejects unauthorized calls",
-      "Nightly artifacts shipped for macOS, Windows, and Linux"
+      "xAI Grok models and Remote MCP metadata added",
+      "Claude Fable 5 restored as a selectable chat model",
+      "Notion provider now enforces bearer token auth"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-07-02T10:57:58.156Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.722.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-07-03T00:02:24.390Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.723.1",
     "path": "history/2026-07-02.json"
   },
   {
