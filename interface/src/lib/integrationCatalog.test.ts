@@ -50,7 +50,7 @@ describe("integrationCatalog auth labels", () => {
     }
   });
 
-  it("omits AURA Proxy from connections when provider selection is off", () => {
+  it("omits model provider connections from user-facing settings", () => {
     vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "");
 
     const connections = integrationSections().find(
@@ -61,15 +61,15 @@ describe("integrationCatalog auth labels", () => {
     );
 
     expect(connectionIds.has("aura_proxy")).toBe(false);
-    expect(connectionIds.has("xai")).toBe(true);
+    expect(connectionIds.has("xai")).toBe(false);
     expect(connectionIds.has("anthropic")).toBe(false);
     expect(getIntegrationDefinition("aura_proxy")?.kind).toBe(
       "workspace_connection",
     );
-    expect(getIntegrationDefinition("xai")?.kind).toBe("workspace_connection");
+    expect(getIntegrationDefinition("xai")).toBeUndefined();
   });
 
-  it("shows the connection provider list when the feature flag is enabled", () => {
+  it("keeps provider-selection flag from exposing model provider BYOK", () => {
     vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "true");
 
     const connections = integrationSections().find(
@@ -80,7 +80,7 @@ describe("integrationCatalog auth labels", () => {
     );
 
     expect(connectionIds.has("aura_proxy")).toBe(false);
-    expect(connectionIds.has("xai")).toBe(true);
+    expect(connectionIds.has("xai")).toBe(false);
     expect(connectionIds.has("anthropic")).toBe(false);
   });
 });

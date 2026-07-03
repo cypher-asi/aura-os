@@ -32,8 +32,8 @@ use super::super::typed_session::{
 use super::super::types::SseResponse;
 
 use super::super::super::runtime::{
-    attach_provider_api_keys_to_overrides, resolve_council_mechanism, resolve_council_members,
-    resolve_mixture_members, second_opinion_presentation, session_model_overrides_with_cache,
+    resolve_council_mechanism, resolve_council_members, resolve_mixture_members,
+    second_opinion_presentation, session_model_overrides_with_cache,
 };
 
 use super::client_retry::header_indicates_client_retry;
@@ -209,7 +209,7 @@ pub(crate) async fn send_event_stream(
             "send one multi-agent strategy: council or mixture, not both",
         ));
     }
-    let mut council = match (active_council, active_mixture) {
+    let council = match (active_council, active_mixture) {
         (Some(council_body), None) => Some(resolve_council_members(
             instance.default_model.as_deref(),
             council_body,
@@ -234,31 +234,6 @@ pub(crate) async fn send_event_stream(
 
     let effective_org_id = resolve_effective_org_id(&state, instance.org_id.as_ref(), &project_id);
     let org_integrations = fetch_org_integrations(&state, effective_org_id.as_ref(), &jwt).await;
-    if let Some(members) = council.as_mut() {
-        for member in members {
-            let provider_api_keys =
-                crate::handlers::agents::workspace_tools::provider_api_keys_for_model(
-                    &state,
-                    effective_org_id.as_ref(),
-                    org_integrations.as_deref(),
-                    Some(&jwt),
-                    member.model.as_deref(),
-                )
-                .await;
-            member.provider_overrides = attach_provider_api_keys_to_overrides(
-                member.provider_overrides.take(),
-                provider_api_keys,
-            );
-        }
-    }
-    let provider_api_keys = crate::handlers::agents::workspace_tools::provider_api_keys_for_model(
-        &state,
-        effective_org_id.as_ref(),
-        org_integrations.as_deref(),
-        Some(&jwt),
-        model.as_deref(),
-    )
-    .await;
     let normalized_instance_perms = normalize_instance_perms(&state, &instance, &pid_str).await;
     let agent_instance_id_string = agent_instance_id.to_string();
     let template_agent_id_string = instance.agent_id.to_string();
@@ -384,13 +359,10 @@ pub(crate) async fn send_event_stream(
         project_path,
         aura_org_id: effective_org_id.as_ref().map(ToString::to_string),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.to_string()),
-        provider_overrides: attach_provider_api_keys_to_overrides(
-            session_model_overrides_with_cache(
-                model.as_deref(),
-                Some(format!("instance:{agent_instance_id}")),
-                Some("24h"),
-            ),
-            provider_api_keys,
+        provider_overrides: session_model_overrides_with_cache(
+            model.as_deref(),
+            Some(format!("instance:{agent_instance_id}")),
+            Some("24h"),
         ),
         installed_tools,
         installed_integrations,
