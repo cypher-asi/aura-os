@@ -5,6 +5,7 @@ import { useAgentStore } from "../../apps/agents/stores/agent-store";
 import { useAura3DStore } from "../../stores/aura3d-store";
 import { useMessageStore } from "../../stores/message-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
+import { useStreamStore } from "../../hooks/stream/store";
 import { track } from "../../lib/analytics";
 import { ONBOARDING_TASKS } from "./onboarding-constants";
 
@@ -12,6 +13,13 @@ const TOTAL = ONBOARDING_TASKS.length;
 
 function progressLabel(completed: number): string {
   return `${completed}/${TOTAL}`;
+}
+
+function completeOnboardingTask(taskId: string): void {
+  useOnboardingStore.getState().completeTask(taskId);
+  const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
+  track("onboarding_task_completed", { task_id: taskId, progress: progressLabel(completed) });
+  if (completed >= TOTAL) track("onboarding_completed");
 }
 
 /**
@@ -37,13 +45,26 @@ export function useOnboardingTaskWatcher(): void {
             for (const id of newIds) {
               const msg = state.messages[id];
               if (msg && "role" in msg && msg.role === "user") {
-                useOnboardingStore.getState().completeTask("send_message");
-                const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
-                track("onboarding_task_completed", { task_id: "send_message", progress: progressLabel(completed) });
-                if (completed >= TOTAL) track("onboarding_completed");
+                completeOnboardingTask("send_message");
                 return;
               }
             }
+          }
+        }
+      }),
+    );
+
+    unsubs.push(
+      useStreamStore.subscribe((state, prev) => {
+        if (useOnboardingStore.getState().checklistTasks.send_message) return;
+        for (const key of Object.keys(state.entries)) {
+          const curr = state.entries[key]?.events ?? [];
+          const prevLen = prev.entries[key]?.events.length ?? 0;
+          if (curr.length <= prevLen) continue;
+          const newEvents = curr.slice(prevLen);
+          if (newEvents.some((event) => "role" in event && event.role === "user")) {
+            completeOnboardingTask("send_message");
+            return;
           }
         }
       }),
@@ -54,10 +75,7 @@ export function useOnboardingTaskWatcher(): void {
       useProjectsListStore.subscribe((state, prev) => {
         if (useOnboardingStore.getState().checklistTasks.create_project) return;
         if (state.projects.length > prev.projects.length && prev.projects.length >= 1) {
-          useOnboardingStore.getState().completeTask("create_project");
-          const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
-          track("onboarding_task_completed", { task_id: "create_project", progress: progressLabel(completed) });
-          if (completed >= TOTAL) track("onboarding_completed");
+          completeOnboardingTask("create_project");
         }
       }),
     );
@@ -67,10 +85,7 @@ export function useOnboardingTaskWatcher(): void {
       useAgentStore.subscribe((state, prev) => {
         if (useOnboardingStore.getState().checklistTasks.create_agent) return;
         if (state.agents.length > prev.agents.length && prev.agents.length >= 1) {
-          useOnboardingStore.getState().completeTask("create_agent");
-          const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
-          track("onboarding_task_completed", { task_id: "create_agent", progress: progressLabel(completed) });
-          if (completed >= TOTAL) track("onboarding_completed");
+          completeOnboardingTask("create_agent");
         }
       }),
     );
@@ -80,10 +95,7 @@ export function useOnboardingTaskWatcher(): void {
       useAura3DStore.subscribe((state, prev) => {
         if (useOnboardingStore.getState().checklistTasks.try_3d) return;
         if (state.images.length > prev.images.length) {
-          useOnboardingStore.getState().completeTask("try_3d");
-          const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
-          track("onboarding_task_completed", { task_id: "try_3d", progress: progressLabel(completed) });
-          if (completed >= TOTAL) track("onboarding_completed");
+          completeOnboardingTask("try_3d");
         }
       }),
     );
@@ -93,10 +105,7 @@ export function useOnboardingTaskWatcher(): void {
       useUIModalStore.subscribe((state) => {
         if (useOnboardingStore.getState().checklistTasks.view_billing) return;
         if (state.orgSettingsOpen && state.orgInitialSection === "billing") {
-          useOnboardingStore.getState().completeTask("view_billing");
-          const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
-          track("onboarding_task_completed", { task_id: "view_billing", progress: progressLabel(completed) });
-          if (completed >= TOTAL) track("onboarding_completed");
+          completeOnboardingTask("view_billing");
         }
       }),
     );

@@ -2,7 +2,7 @@
  * Behavioural tests for `MobilePublicChatView`.
  *
  * The mobile public surface lands on a Creator-pinned hero
- * (`MobileLandingHero`) with a "Create your agent" CTA (no inline
+ * (`MobileLandingHero`) with Chat / Desktop CTAs (no inline
  * composer), scrolling into the lazily-embedded `/agents` sections;
  * `/chat` is a scrollable transcript + sticky composer. These tests
  * pin that contract and the SSE dispatch wiring.
@@ -82,25 +82,39 @@ afterEach(() => {
 });
 
 describe("MobilePublicChatView", () => {
-  it("renders the Creator landing hero with the CTA (no inline composer) on the landing route", () => {
+  it("renders the Creator landing hero with chat-first CTAs on the landing route", () => {
     renderView("/");
     expect(screen.getByTestId("mobile-public-chat-view")).toBeInTheDocument();
     // Creator-pinned hero (the first / default persona).
     const hero = screen.getByTestId("mobile-landing-hero");
     expect(hero).toHaveAttribute("data-persona-id", "creator");
-    // The composer no longer renders on the landing route — the hero
-    // carries the shared "Create your agent" CTA instead, and the
-    // composer only exists on `/chat`.
+    // The composer only exists on `/chat`; the landing route starts
+    // with direct Chat / Desktop choices.
     expect(
       screen.queryByRole("textbox", { name: "Message Aura" }),
     ).not.toBeInTheDocument();
-    const cta = screen.getByRole("button", { name: "Create your agent" });
-    expect(hero.contains(cta)).toBe(true);
+    const chatCta = screen.getByRole("button", { name: /start chatting/i });
+    const desktopCta = screen.getByRole("button", { name: /get aura desktop/i });
+    expect(hero.contains(chatCta)).toBe(true);
+    expect(hero.contains(desktopCta)).toBe(true);
     // The heavy /agents embed stays unmounted until first interaction
     // or idle — neither has happened yet at first paint.
     expect(
       screen.getByTestId("mobile-public-landing-scroll"),
     ).toBeInTheDocument();
+  });
+
+  it("routes mobile landing CTAs to chat and desktop download", () => {
+    const first = renderView("/");
+    const probe = screen.getByTestId("location-probe");
+
+    fireEvent.click(screen.getByRole("button", { name: /start chatting/i }));
+    expect(probe).toHaveAttribute("data-pathname", "/chat");
+
+    first.unmount();
+    renderView("/");
+    fireEvent.click(screen.getByRole("button", { name: /get aura desktop/i }));
+    expect(screen.getByTestId("location-probe")).toHaveAttribute("data-pathname", "/download");
   });
 
   it("submits the composer on /chat, rewrites the URL to /chat?session=<id>, and renders the streamed reply", async () => {

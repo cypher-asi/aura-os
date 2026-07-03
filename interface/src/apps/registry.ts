@@ -256,12 +256,12 @@ export const apps: AuraApp[] = [
   createAppDefinition(
     {
       id: "projects",
-      label: "Projects",
-      agentDescription: "Project workspace, specs, tasks, and agent entry points.",
-      agentKeywords: ["project", "projects", "workspace", "spec", "task", "planning"],
+      label: "Build",
+      agentDescription: "Build workspace for projects, code, specs, tasks, and agent entry points.",
+      agentKeywords: ["build", "code", "project", "projects", "workspace", "spec", "task", "planning"],
       icon: FolderOpen,
       basePath: "/projects",
-      searchPlaceholder: "Search",
+      searchPlaceholder: "Search projects",
       routes: projectsRoutes,
     },
     loadProjectsApp,

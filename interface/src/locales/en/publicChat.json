@@ -18,6 +18,10 @@
   "compose": {
     "startConversationAriaLabel": "Start a new conversation"
   },
+  "choiceCtas": {
+    "getDesktop": "Get Aura Desktop",
+    "startChat": "Start chatting"
+  },
   "createAgent": {
     "label": "Create your agent"
   },

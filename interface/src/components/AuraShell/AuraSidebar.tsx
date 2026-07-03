@@ -200,15 +200,15 @@ function SidebarBody({ mode }: { mode: UIMode }): React.ReactElement {
   return <AuthedSidebarBody />;
 }
 
-// Apps that share the Agents <-> Projects neumorphic switch at the top
+// Apps that share the Build <-> Agents neumorphic switch at the top
 // of the sidebar body. Both are workspace surfaces the user flips
 // between frequently, so the switch lives above whichever app's nav is
 // currently mounted. Options + paths are module-level constants so the
 // memoized `AppSwitchToggle` keeps reference-stable props and stays inert
 // while the sidebar body re-renders for unrelated reasons.
 const APP_SWITCH_OPTIONS: readonly AppSwitchOption[] = [
+  { id: "projects", label: "Build" },
   { id: "agents", label: "Agents" },
-  { id: "projects", label: "Projects" },
 ];
 const APP_SWITCH_PATHS: Record<string, string> = {
   agents: "/agents",

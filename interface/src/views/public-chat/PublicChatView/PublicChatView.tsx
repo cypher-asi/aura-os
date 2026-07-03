@@ -27,7 +27,7 @@ import {
 import { usePublicGateShown, usePublicPageViewed } from "../use-public-shell-analytics";
 import { track } from "../../../lib/analytics";
 import { ComposePanel } from "../ComposePanel";
-import { CreateAgentButton } from "../CreateAgentButton";
+import { PublicChoiceCtas } from "../PublicChoiceCtas";
 import { PersonaTickRail } from "../PersonaTickRail";
 import { PublicChatBubble } from "../PublicChatBubble";
 import { TypewriterText } from "../TypewriterText";
@@ -933,7 +933,7 @@ export function PublicChatView(): React.ReactElement {
               />
             </div>
             <div className={styles.ctaSlot}>
-              <CreateAgentButton source="public_chat" />
+              <PublicChoiceCtas source="public_chat" />
             </div>
           </div>
           <div

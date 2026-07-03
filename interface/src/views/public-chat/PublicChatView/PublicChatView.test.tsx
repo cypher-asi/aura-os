@@ -102,7 +102,6 @@ vi.mock("../../marketing/ProductView/AgentsPageSections", () => {
 
 import { PublicChatView } from "./PublicChatView";
 import { usePublicChatStore } from "../../../stores/public-chat-store";
-import { useAgentOnboardingStore } from "../AgentOnboarding/agent-onboarding-store";
 
 function renderView(initialPath = "/") {
   return render(
@@ -179,7 +178,6 @@ afterEach(() => {
   window.localStorage.clear();
   streamPublicChatMock.mockReset();
   setupPublicSessionMock.mockReset();
-  useAgentOnboardingStore.setState({ isOpen: false, source: null, currentStep: 0 });
   usePublicChatStore.setState({
     sessions: {},
     sessionOrder: [],
@@ -198,36 +196,35 @@ describe("PublicChatView", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the single 'Create your agent' CTA button", () => {
+  it("renders chat-first public landing CTAs", () => {
     renderView();
-    const buttons = screen.getAllByRole("button", { name: /create your agent/i });
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveAttribute(
-      "data-agent-surface",
-      "public-landing-cta",
-    );
+    expect(screen.getByRole("button", { name: /start chatting/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /get aura desktop/i })).toBeInTheDocument();
   });
 
-  it("opens the agent onboarding wizard (no navigation) when the CTA button is clicked", () => {
-    // The CTA no longer deep-links to /login?tab=register. It opens
-    // the multi-step agent onboarding wizard in place (the wizard
-    // itself ends in account creation), recording which surface
-    // launched it for the landing→signup funnel.
+  it("navigates to public chat when Start chatting is clicked", () => {
     renderViewWithProbe();
     const probe = screen.getByTestId("location-probe");
     expect(probe).toHaveAttribute("data-pathname", "/");
     expect(probe).toHaveAttribute("data-search", "");
-    expect(useAgentOnboardingStore.getState().isOpen).toBe(false);
 
     fireEvent.click(
-      screen.getByRole("button", { name: /create your agent/i }),
+      screen.getByRole("button", { name: /start chatting/i }),
     );
 
-    // No route change — the wizard mounts as an overlay.
-    expect(probe).toHaveAttribute("data-pathname", "/");
+    expect(probe).toHaveAttribute("data-pathname", "/chat");
     expect(probe).toHaveAttribute("data-search", "");
-    expect(useAgentOnboardingStore.getState().isOpen).toBe(true);
-    expect(useAgentOnboardingStore.getState().source).toBe("public_chat");
+  });
+
+  it("routes the public Desktop handoff to the download path", () => {
+    renderViewWithProbe();
+    const probe = screen.getByTestId("location-probe");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /get aura desktop/i }),
+    );
+
+    expect(probe).toHaveAttribute("data-pathname", "/download");
   });
 
   it("shows the simple chat input on /chat WITHOUT auto-minting a session", async () => {

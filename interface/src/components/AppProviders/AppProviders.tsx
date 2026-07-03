@@ -6,7 +6,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { desktopApi } from "../../shared/api/desktop";
-import { preloadAppForPathname, resolveActiveApp } from "../../stores/app-store";
+import { findActiveApp, preloadAppForPathname } from "../../stores/app-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useEffectiveMode } from "../../stores/use-effective-mode";
 import { sanitizeRestorePath } from "../../utils/last-app-path";
@@ -39,12 +39,14 @@ function AppSync(): null {
     // Logged-out visitors are on the public marketing surface: don't
     // prefetch authenticated app modules (e.g. the Agents app for `/` or
     // `/agents`) they cannot use.
+    const activeApp = findActiveApp(pathname);
+    if (!activeApp) return;
+
     if (!isPublic) {
       preloadAppForPathname(pathname);
     }
-    const activeAppId = resolveActiveApp(pathname).id;
-    markAppVisited(activeAppId);
-    setLastApp(activeAppId);
+    markAppVisited(activeApp.id);
+    setLastApp(activeApp.id);
   }, [hash, isPublic, pathname, search, markAppVisited, setPreviousPath]);
 
   return null;

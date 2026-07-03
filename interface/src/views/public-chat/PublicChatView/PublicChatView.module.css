@@ -6,9 +6,8 @@
  *   .heroSlot     — fills the available area and hosts the decorative
  *                  `MockAuraApp` (mounted via `ComposePanel`).
  *   .inputBarSlot — anchors the simple public chat composer on `/chat`.
- *   .ctaSlot      — floats at `bottom: 5vh` and holds a single
- *                  horizontally-centered "Create your agent" CTA pill
- *                  on the non-chat public view.
+ *   .ctaSlot      — floats at `bottom: 5vh` and holds Chat / Desktop
+ *                  actions on the non-chat public view.
  *
  * The site bg is no longer painted as inline `background-image` on
  * `.chatView` — that approach made every persona swap a hard snap
@@ -539,19 +538,6 @@
 .tickRailSlot > * {
   pointer-events: auto;
 }
-
-/*
- * The "Create your agent" CTA pill — formerly defined here as
- * `.ctaButton` — has been extracted into the shared
- * `<CreateAgentButton />` component
- * (`interface/src/views/public-chat/CreateAgentButton/`). The styles
- * now live alongside the component in its own CSS module so the
- * marketing `/product` hero can mount the same pill via
- * `<PageHero headlineCta={<CreateAgentButton />} />` without
- * duplicating chrome. `--public-cta-glow-color` (still published
- * inline on `.chatView` above) drives the rim + bloom hue and the
- * extracted styles read it through the same custom property.
- */
 
 @media (max-width: 640px) {
   .heroSlot {

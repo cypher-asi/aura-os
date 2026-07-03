@@ -1,12 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  DESKTOP_DEFAULT_APP_PATH,
   DEFAULT_APP_PATH,
+  WEB_DEFAULT_APP_PATH,
+  getCapabilityDefaultShellPath,
   getInitialShellPath,
   isValidRestorePath,
   sanitizeRestorePath,
 } from "./last-app-path";
 
 describe("getInitialShellPath", () => {
+  beforeEach(() => {
+    delete (window as Window & { ipc?: { postMessage: () => void } }).ipc;
+  });
+
   it("prefers the last visited in-app route when available", () => {
     expect(getInitialShellPath("projects", "/projects/project-123/agents/agent-456?session=abc")).toBe(
       "/projects/project-123/agents/agent-456?session=abc",
@@ -15,11 +22,35 @@ describe("getInitialShellPath", () => {
 
   it("restores the last visited app", () => {
     expect(getInitialShellPath("projects")).toBe("/projects");
+    expect(getInitialShellPath("chat")).toBe("/chat");
   });
 
   it("falls back to the default app when there is no valid last app", () => {
     expect(getInitialShellPath(null)).toBe(DEFAULT_APP_PATH);
     expect(getInitialShellPath("unknown")).toBe(DEFAULT_APP_PATH);
+  });
+
+  it("allows callers to override the default app", () => {
+    expect(getInitialShellPath(null, null, "/projects")).toBe("/projects");
+    expect(getInitialShellPath("unknown", null, "/projects")).toBe("/projects");
+  });
+});
+
+describe("getCapabilityDefaultShellPath", () => {
+  afterEach(() => {
+    delete (window as Window & { ipc?: { postMessage: () => void } }).ipc;
+  });
+
+  it("defaults web users to chat", () => {
+    expect(getCapabilityDefaultShellPath()).toBe(WEB_DEFAULT_APP_PATH);
+  });
+
+  it("defaults desktop bridge users to build", () => {
+    (window as Window & { ipc?: { postMessage: () => void } }).ipc = {
+      postMessage: vi.fn(),
+    };
+
+    expect(getCapabilityDefaultShellPath()).toBe(DESKTOP_DEFAULT_APP_PATH);
   });
 });
 
