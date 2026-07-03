@@ -1,23 +1,32 @@
-# Aura-managed Grok routing arrives
+# Aura-managed Grok routing and a cheaper Grok Build tier
 
 - Date: `2026-07-03`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.724.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.724.1
+- Version: `0.1.0-nightly.725.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.725.1
 
-A quiet nightly with one focused change: Grok now runs through Aura-managed xAI credentials, so users no longer need to bring their own key to chat with it. The plumbing also picks up a fix for native auth on loopback dev origins.
+Today's nightly centers on xAI's Grok lineup: chat sessions now flow through Aura-managed xAI credentials, and the Grok Build catalog entry was rebuilt around a cheaper pricing tier with broader model-id aliasing.
 
-## 1:01 AM — Grok routes through Aura-managed xAI credentials
+## 1:01 AM — Aura-managed xAI credentials for Grok sessions
 
-Grok sessions now attach xAI workspace keys server-side, removing the need for user-supplied credentials, and native auth is fixed on loopback dev origins.
+Grok chats now use Aura-managed xAI credentials, plumbed end-to-end from the desktop runtime through the session protocol.
 
-- Grok requests now resolve xAI credentials through Aura's workspace-managed keys, so users can chat with Grok without configuring their own provider key. A new per-session provider_api_keys map is threaded through SessionModelOverrides and forwarded only to the matching upstream provider by the runtime. (`09a6673`)
-- Fixed native authentication when running against loopback dev origins, unblocking local development flows that previously failed to authenticate. (`09a6673`)
-- Simplified the integrations catalog and org-settings integrations surface as xAI moves from a user-configured integration to an Aura-managed one. (`09a6673`)
+- Grok requests now flow through Aura-managed xAI credentials instead of user-attached workspace keys, with per-session provider API keys resolved by aura-os and forwarded only to the matching upstream provider. (`09a6673`)
+- Extended the SessionModelOverrides protocol with a provider_api_keys map and threaded it through the harness, agent runtime, and project tool session config so credentials travel alongside model overrides. (`09a6673`)
+- Fixed native auth on loopback dev origins so local desktop builds can complete the xAI credential handshake during development. (`09a6673`)
+
+## 9:13 AM — Grok Build 0.1 relaunched as a cheaper xAI coding model
+
+The Grok Build catalog entry was removed and reintroduced at a lower credit multiplier, with expanded aliasing so grok-code-fast IDs resolve to the same model.
+
+- Relaunched Grok Build 0.1 in the Aura-managed catalog at a lower 0.48 credit multiplier (down from 0.45 on the previous entry that was removed earlier in the day), positioned as xAI's lower-cost coding-focused model with a 256K context window and no reasoning-effort controls. (`60405a4`, `10bb79a`)
+- Broadened model-id normalization so grok-code-fast, grok-code-fast-1, and grok-code-fast-1-0825 all resolve to aura-grok-build-0-1 for both pricing and persisted model selection. (`10bb79a`)
+- Refreshed Grok Build pricing to $1 input / $2 output per Mtok with a $0.20 cache-read rate across the interface pricing tables and benchmark script. (`10bb79a`)
+- Updated the agent and chat stream hooks to handle the new Grok Build model in streaming sessions. (`10bb79a`)
 
 ## Highlights
 
-- Grok now uses Aura-managed xAI credentials
-- Native auth works on loopback dev origins
-- Per-session provider API keys plumbed end to end
+- Grok now routes through Aura-managed xAI keys
+- Grok Build 0.1 relaunched at a lower price
+- grok-code-fast IDs alias to Grok Build
 

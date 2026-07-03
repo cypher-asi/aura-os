@@ -2,18 +2,18 @@
   {
     "date": "2026-07-03",
     "channel": "nightly",
-    "version": "0.1.0-nightly.724.1",
-    "title": "Aura-managed Grok routing arrives",
-    "intro": "A quiet nightly with one focused change: Grok now runs through Aura-managed xAI credentials, so users no longer need to bring their own key to chat with it. The plumbing also picks up a fix for native auth on loopback dev origins.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.725.1",
+    "title": "Aura-managed Grok routing and a cheaper Grok Build tier",
+    "intro": "Today's nightly centers on xAI's Grok lineup: chat sessions now flow through Aura-managed xAI credentials, and the Grok Build catalog entry was rebuilt around a cheaper pricing tier with broader model-id aliasing.",
+    "entryCount": 2,
     "highlights": [
-      "Grok now uses Aura-managed xAI credentials",
-      "Native auth works on loopback dev origins",
-      "Per-session provider API keys plumbed end to end"
+      "Grok now routes through Aura-managed xAI keys",
+      "Grok Build 0.1 relaunched at a lower price",
+      "grok-code-fast IDs alias to Grok Build"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-07-03T08:26:17.395Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.724.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-07-03T17:22:14.180Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.725.1",
     "path": "history/2026-07-03.json"
   },
   {
