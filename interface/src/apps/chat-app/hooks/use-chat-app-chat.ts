@@ -31,7 +31,11 @@ export function useChatAppChat(
 ): ChatPanelProps {
   const base = useStandaloneAgentChat(agentId, pinnedSessionId, opts);
   return useMemo<ChatPanelProps>(
-    () => ({ ...base, defaultModel: CHAT_APP_DEFAULT_MODEL }),
+    () => ({
+      ...base,
+      defaultModel: CHAT_APP_DEFAULT_MODEL,
+      composerTone: "chat",
+    }),
     [base],
   );
 }

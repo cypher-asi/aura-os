@@ -71,7 +71,7 @@
 .plate {
   position: relative;
   width: 100%;
-  height: 48px;
+  height: var(--app-switch-height, 48px);
   box-sizing: border-box;
   padding: 7px;
   border-radius: 15px;
@@ -280,9 +280,13 @@
 }
 
 .label {
-  font-size: 11px;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
   font-weight: 400;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   line-height: 1;
   text-transform: uppercase;
   color: var(--sw-text);
@@ -298,6 +302,19 @@
   color: var(--color-text-glow);
   text-shadow: var(--text-glow-shadow);
   opacity: 1;
+}
+
+.wrapPrimary {
+  --app-switch-height: 54px;
+}
+
+.wrapPrimary .label {
+  max-width: calc(100% - 10px);
+  white-space: normal;
+  overflow-wrap: normal;
+  text-overflow: clip;
+  font-size: 10px;
+  line-height: 1.08;
 }
 
 .half:focus-visible {

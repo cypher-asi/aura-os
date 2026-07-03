@@ -104,6 +104,7 @@ export interface ChatPanelProps {
   /** Lazy fetcher for the Context Composition popover's bucket
    * contents, forwarded to the input bar via {@link ChatSurface}. */
   onFetchContextContents?: ContextContentsFetcher;
+  composerTone?: ChatInputBarProps["composerTone"];
   /**
    * Optional ChatGPT-style "+" new-chat handler. When set, the input
    * bar shows a small Plus button that wipes the visible transcript and
@@ -165,6 +166,7 @@ export function ChatPanel({
   onInitialHandoffReady,
   contextUsage,
   onFetchContextContents,
+  composerTone,
   onNewChat,
   sendDisabled = false,
   sendDisabledReason,
@@ -272,6 +274,7 @@ export function ChatPanel({
           onInitialHandoffReady={onInitialHandoffReady}
           contextUsage={contextUsage}
           onFetchContextContents={onFetchContextContents}
+          composerTone={composerTone}
           onNewChat={onNewChat}
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}

@@ -56,6 +56,7 @@ vi.mock("../../../hooks/use-environment-info", () => ({
 }));
 
 let mockSelectedModel: string | null = null;
+let mockSelectedEffort: "minimal" | "low" | "medium" | "high" | "max" | null = null;
 let mockSelectedMode: "code" | "plan" | "image" | "video" | "3d" = "code";
 let mockPinnedSourceImage: {
   imageUrl: string;
@@ -71,7 +72,7 @@ vi.mock("../../../stores/chat-ui-store", () => ({
   useChatUI: () => ({
     selectedMode: mockSelectedMode,
     selectedModel: mockSelectedModel,
-    selectedEffort: null,
+    selectedEffort: mockSelectedEffort,
     imageQuality: "medium",
     projectId: null,
     pinnedSourceImage: mockPinnedSourceImage,
@@ -185,6 +186,7 @@ beforeEach(() => {
   mockIsStreaming = false;
   mockIsMobileLayout = false;
   mockSelectedModel = null;
+  mockSelectedEffort = null;
   mockSelectedMode = "code";
   mockPinnedSourceImage = null;
   mockSetSelectedModel.mockClear();
@@ -198,6 +200,13 @@ describe("ChatInputBar", () => {
   it("renders the textarea with placeholder", () => {
     render(<ChatInputBar {...makeProps()} />);
     expect(screen.getByPlaceholderText("/ for commands, @ for context")).toBeInTheDocument();
+  });
+
+  it("uses chat-first copy when rendered by the Chat app", () => {
+    render(<ChatInputBar {...makeProps({ composerTone: "chat" })} />);
+    expect(screen.getByPlaceholderText("Ask Aura anything...")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Chat mode" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Code mode" })).not.toBeInTheDocument();
   });
 
   it("renders the current input value", () => {
@@ -658,6 +667,29 @@ describe("ChatInputBar", () => {
     await user.click(screen.getAllByText("GPT-5.4")[0]);
 
     expect(screen.queryByText("GPT Image 2")).not.toBeInTheDocument();
+  });
+
+  it("surfaces thinking effort directly in the model picker", async () => {
+    const user = userEvent.setup();
+    mockSelectedModel = "aura-gpt-5-4";
+    mockSelectedEffort = "low";
+    render(<ChatInputBar {...makeProps()} />);
+
+    await user.click(screen.getAllByText("GPT-5.4 L")[0]);
+
+    expect(screen.getByText("Thinking")).toBeInTheDocument();
+    expect(screen.getByText("Low")).toBeInTheDocument();
+    expect(screen.getByText("Medium")).toBeInTheDocument();
+    expect(screen.getByText("High")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Medium"));
+    expect(mockSetSelectedModel).toHaveBeenCalledWith(
+      "test-stream",
+      "aura-gpt-5-4",
+      undefined,
+      undefined,
+      "medium",
+    );
   });
 
   it("shows image models when Image mode is active", async () => {

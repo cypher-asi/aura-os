@@ -13,6 +13,7 @@ export interface ChatModeBarProps {
    * active mode) route here.
    */
   onModeSelect?: (mode: AgentMode) => void;
+  modeLabels?: Partial<Record<AgentMode, string>>;
   /**
    * When provided, the bar renders as a tab row with a collapse chevron
    * and a "+" new-chat button; when omitted it renders the detached
@@ -30,6 +31,7 @@ export const ChatModeBar = memo(function ChatModeBar({
   selectedMode,
   onModeChange,
   onModeSelect,
+  modeLabels,
   onNewChat,
 }: ChatModeBarProps) {
   // Collapses the mode-selector pills, leaving the balanced chevron
@@ -42,6 +44,7 @@ export const ChatModeBar = memo(function ChatModeBar({
         selectedMode={selectedMode}
         onChange={onModeChange}
         onSelect={onModeSelect}
+        labels={modeLabels}
         className={styles.modeSelectorDetached}
       />
     );
@@ -73,6 +76,7 @@ export const ChatModeBar = memo(function ChatModeBar({
           selectedMode={selectedMode}
           onChange={onModeChange}
           onSelect={onModeSelect}
+          labels={modeLabels}
           className={styles.modeSelectorFlex}
         />
       )}

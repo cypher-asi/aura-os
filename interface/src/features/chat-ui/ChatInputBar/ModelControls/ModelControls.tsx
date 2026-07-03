@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, type ReactElement } from "react";
 import {
   inputBarShellStyles,
   ModelPicker,
@@ -10,7 +10,11 @@ import {
   CouncilMechanismRow,
 } from "../../../../components/InputBarShell";
 import {
+  EFFORT_LABELS,
   IMAGE_QUALITY_OPTIONS,
+  effectiveCreditMultiplier,
+  formatCreditMultiplier,
+  getModelById,
   modelLabelWithEffort,
   modelSupportsQuality,
   type GenerationMode,
@@ -27,6 +31,65 @@ import type {
   CouncilSlot,
 } from "../../../../stores/chat-ui-store";
 import styles from "./ModelControls.module.css";
+
+interface ActiveModelEffortRowProps {
+  model: ModelOption;
+  activeEffort: ModelEffort | null;
+  onSelect: (modelId: string, effort: ModelEffort) => void;
+}
+
+function ActiveModelEffortRow({
+  model,
+  activeEffort,
+  onSelect,
+}: ActiveModelEffortRowProps): ReactElement | null {
+  if (!model.efforts || model.efforts.length === 0) return null;
+  const selectedEffort = activeEffort ?? model.defaultEffort ?? model.efforts[0];
+  return (
+    <div
+      className={inputBarShellStyles.modelEffortInline}
+      data-agent-surface="thinking-effort-picker"
+    >
+      <div className={inputBarShellStyles.modelEffortInlineHeader}>
+        <span className={inputBarShellStyles.modelEffortInlineTitle}>
+          Thinking
+        </span>
+        <span className={inputBarShellStyles.modelEffortInlineModel}>
+          {model.label}
+        </span>
+      </div>
+      <div
+        className={inputBarShellStyles.modelEffortInlineOptions}
+        role="group"
+        aria-label={`Thinking effort for ${model.label}`}
+      >
+        {model.efforts.map((effort) => {
+          const selected = selectedEffort === effort;
+          const multiplier = formatCreditMultiplier(
+            effectiveCreditMultiplier(model, effort),
+          );
+          return (
+            <button
+              key={effort}
+              type="button"
+              className={inputBarShellStyles.modelEffortInlineOption}
+              aria-pressed={selected}
+              data-agent-effort={effort}
+              onClick={() => onSelect(model.id, effort)}
+            >
+              <span>{EFFORT_LABELS[effort]}</span>
+              {multiplier ? (
+                <span className={inputBarShellStyles.modelEffortInlineMultiplier}>
+                  {multiplier}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export interface ModelControlsProps {
   /**
@@ -215,6 +278,16 @@ export const ModelControls = memo(function ModelControls({
             onSelect={(m) => setCouncilMechanism(streamKey, m)}
           />
         ) : null;
+      const activeModel = cfg.activeModelId ? getModelById(cfg.activeModelId) : undefined;
+      const effortRow =
+        generationMode === "chat" && activeModel?.efforts?.length ? (
+          <ActiveModelEffortRow
+            key="__active_effort__"
+            model={activeModel}
+            activeEffort={cfg.activeEffort}
+            onSelect={cfg.onSelect}
+          />
+        ) : null;
       if (shouldUseCondensedAuraMenu) {
         return (
           <ModelMenuScroll
@@ -225,6 +298,7 @@ export const ModelControls = memo(function ModelControls({
             {secondOpinionRow}
             {councilRow}
             {mechanismRow}
+            {effortRow}
             {vendorGroups.map((group) => (
               <ModelMenuGroup
                 key={group.vendor}
@@ -257,6 +331,7 @@ export const ModelControls = memo(function ModelControls({
           {secondOpinionRow}
           {councilRow}
           {mechanismRow}
+          {effortRow}
           {sortedModelsForMode.map((m) => {
             const isComingSoon = m.id.startsWith("dreamina-seedance");
             return (

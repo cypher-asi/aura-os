@@ -118,6 +118,7 @@ export interface ChatSurfaceProps {
   /** Forwarded to the input bar so the Context Composition popover can
    * lazily fetch a bucket's contents when a row is clicked. */
   onFetchContextContents?: ContextContentsFetcher;
+  composerTone?: ChatInputBarProps["composerTone"];
   onNewChat?: () => void;
   sendDisabled?: boolean;
   sendDisabledReason?: string;
@@ -188,6 +189,7 @@ export function ChatSurface({
   onInitialHandoffReady,
   contextUsage,
   onFetchContextContents,
+  composerTone,
   onNewChat,
   sendDisabled = false,
   sendDisabledReason,
@@ -848,6 +850,7 @@ export function ChatSurface({
           isCentered={centerInputWhenEmpty && isThreadEmpty}
           contextUsage={contextUsage}
           onFetchContextContents={onFetchContextContents}
+          composerTone={composerTone}
           onNewChat={onNewChat ? handleNewChat : undefined}
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}

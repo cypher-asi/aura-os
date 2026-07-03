@@ -150,6 +150,61 @@ async fn start_mock_network_for_ceo_setup(
     url
 }
 
+async fn start_mock_network_with_existing_local_ceo(
+    vm_id_for_update: String,
+    update_capture: Arc<tokio::sync::Mutex<Option<Value>>>,
+) -> String {
+    let mut local_ceo = network_agent_json("local", None);
+    local_ceo["name"] = Value::String("CEO".to_string());
+    local_ceo["role"] = Value::String("CEO".to_string());
+    local_ceo["orgId"] = Value::String(ORG_UUID.to_string());
+    let local_ceo_for_list = local_ceo.clone();
+    let local_ceo_for_get = local_ceo.clone();
+    let app = Router::new()
+        .route(
+            "/api/agents",
+            get(move || {
+                let agent = local_ceo_for_list.clone();
+                async move { Json(vec![agent]) }
+            }),
+        )
+        .route(
+            "/api/agents/:agent_id",
+            get(move |Path(_agent_id): Path<String>| {
+                let agent = local_ceo_for_get.clone();
+                async move { Json(agent) }
+            })
+            .put(
+                move |Path(_agent_id): Path<String>, Json(body): Json<Value>| {
+                    let capture = update_capture.clone();
+                    let vm = vm_id_for_update.clone();
+                    async move {
+                        *capture.lock().await = Some(body);
+                        let mut updated = network_agent_json("remote", Some(&vm));
+                        updated["name"] = Value::String("CEO".to_string());
+                        updated["role"] = Value::String("CEO".to_string());
+                        updated["orgId"] = Value::String(ORG_UUID.to_string());
+                        Json(updated)
+                    }
+                },
+            ),
+        )
+        .route(
+            "/api/orgs",
+            get(|| async {
+                Json(vec![serde_json::json!({
+                    "id": ORG_UUID,
+                    "name": "Test Org",
+                    "ownerUserId": "u1"
+                })])
+            }),
+        );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+    url
+}
+
 #[tokio::test]
 async fn remote_only_ceo_setup_creates_remote_agent() {
     let store_dir = tempfile::tempdir().unwrap();
@@ -194,6 +249,57 @@ async fn remote_only_ceo_setup_creates_remote_agent() {
         .as_ref()
         .expect("CEO setup should create an aura-network agent");
     assert_eq!(create_body["machineType"], "remote");
+}
+
+#[tokio::test]
+async fn remote_only_ceo_setup_rehomes_existing_local_ceo() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
+    store_zero_auth_session(&store);
+
+    let update_capture = Arc::new(tokio::sync::Mutex::new(None));
+    let network_url = start_mock_network_with_existing_local_ceo(
+        "pod-ceo-existing".to_string(),
+        update_capture.clone(),
+    )
+    .await;
+    let swarm_url = start_mock_swarm(
+        StatusCode::OK,
+        serde_json::json!({
+            "agent_id": AGENT_UUID,
+            "status": "running",
+            "pod_id": "pod-ceo-existing"
+        }),
+    )
+    .await;
+    let (app, _state) = build_test_app_from_store_with_remote_only(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(Arc::new(NetworkClient::with_base_url(&network_url))),
+        None,
+        Some(swarm_url),
+        None,
+        true,
+    );
+
+    let resp = app
+        .oneshot(json_request("POST", "/api/agents/harness/setup", None))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body["created"], false);
+    assert_eq!(body["agent"]["machine_type"], "remote");
+    assert_eq!(body["agent"]["environment"], "swarm_microvm");
+    assert_eq!(body["agent"]["vm_id"], "pod-ceo-existing");
+
+    let captured = update_capture.lock().await;
+    let update_body = captured
+        .as_ref()
+        .expect("existing local CEO should be patched to remote");
+    assert_eq!(update_body["machineType"], "remote");
+    assert_eq!(update_body["vmId"], "pod-ceo-existing");
+    assert_eq!(update_body["orgId"], ORG_UUID);
 }
 
 #[tokio::test]

@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { ChatAppRoute } from "./ChatAppRoute";
 
@@ -102,7 +102,11 @@ describe("ChatAppRoute", () => {
 
     render(<ChatAppRoute />);
 
-    expect(mocks.useChatAppChat).toHaveBeenCalledWith("out-of-org-agent", "s1");
+    expect(mocks.useChatAppChat).toHaveBeenCalledWith(
+      "out-of-org-agent",
+      "s1",
+      { freshCanvasPending: false },
+    );
     expect(mocks.setSelectedAgent).toHaveBeenCalledWith("out-of-org-agent");
   });
 
@@ -114,7 +118,9 @@ describe("ChatAppRoute", () => {
 
     render(<ChatAppRoute />);
 
-    expect(mocks.useChatAppChat).toHaveBeenCalledWith("agent-2", "s1");
+    expect(mocks.useChatAppChat).toHaveBeenCalledWith("agent-2", "s1", {
+      freshCanvasPending: false,
+    });
   });
 
   it("falls back to the CEO chat agent for the fresh-canvas (no params) form", () => {
@@ -122,6 +128,35 @@ describe("ChatAppRoute", () => {
 
     render(<ChatAppRoute />);
 
-    expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null);
+    expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
+      freshCanvasPending: false,
+    });
+  });
+
+  it("treats the fresh route flag as an empty chat canvas", () => {
+    mocks.searchParams = new URLSearchParams("fresh=abc");
+
+    render(<ChatAppRoute />);
+
+    expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
+      freshCanvasPending: true,
+    });
+  });
+
+  it("disables send instead of silently dropping cold-start sends before setup resolves", () => {
+    mocks.searchParams = new URLSearchParams();
+    mocks.chatAgent = null;
+    mocks.agentStatus = "loading";
+
+    render(<ChatAppRoute />);
+
+    expect(mocks.useChatAppChat).toHaveBeenCalledWith(undefined, null, {
+      freshCanvasPending: false,
+    });
+    const props = JSON.parse(
+      screen.getByTestId("chat-panel").getAttribute("data-props") ?? "{}",
+    );
+    expect(props.sendDisabled).toBe(true);
+    expect(props.sendDisabledReason).toBe("Starting chat...");
   });
 });

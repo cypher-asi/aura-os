@@ -403,6 +403,7 @@ function useOnboardingHydration() {
   const { hasDesktopBridge } = useAuraCapabilities();
   const hydrateForUser = useOnboardingStore((s) => s.hydrateForUser);
   const completeWelcomeIfNeeded = useOnboardingStore((s) => s.completeWelcomeIfNeeded);
+  const dismissChecklist = useOnboardingStore((s) => s.dismissChecklist);
   const trackedUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!user?.user_id) return;
@@ -411,13 +412,16 @@ function useOnboardingHydration() {
     completeWelcomeIfNeeded(getDefaultOnboardingIntent(runtime), {
       checklistDismissed: runtime === "web",
     });
+    if (runtime === "web") {
+      dismissChecklist();
+    }
     if (trackedUserIdRef.current !== user.user_id) {
       trackedUserIdRef.current = user.user_id;
       import("../../lib/analytics").then(({ identifyUser }) => {
         identifyUser(user.user_id);
       });
     }
-  }, [completeWelcomeIfNeeded, hasDesktopBridge, hydrateForUser, user?.user_id]);
+  }, [completeWelcomeIfNeeded, dismissChecklist, hasDesktopBridge, hydrateForUser, user?.user_id]);
 }
 
 function AppContent() {

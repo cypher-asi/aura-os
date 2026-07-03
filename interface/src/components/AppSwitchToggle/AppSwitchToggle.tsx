@@ -16,6 +16,8 @@ export interface AppSwitchToggleProps {
   onChange: (id: string) => void;
   /** Accessible label for the group. */
   ariaLabel?: string;
+  /** Slightly roomier treatment for the top-level Chat / Build switch. */
+  variant?: "default" | "primary";
 }
 
 // Crossfade duration. Only used to release the optimistic `pending` pin
@@ -51,6 +53,7 @@ function AppSwitchToggleBase({
   active,
   onChange,
   ariaLabel = "Switch",
+  variant = "default",
 }: AppSwitchToggleProps): React.ReactElement {
   const [pending, setPending] = useState<string | null>(null);
   const pendingTimerRef = useRef<number | null>(null);
@@ -68,7 +71,7 @@ function AppSwitchToggleBase({
   );
 
   return (
-    <div className={styles.wrap}>
+    <div className={cn(styles.wrap, variant === "primary" && styles.wrapPrimary)}>
       <div className={styles.plate}>
         <div
           className={styles.panel}

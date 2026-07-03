@@ -364,6 +364,7 @@ export function AgentChatPanel({
     isLoading: deferredLoading,
     historyResolved,
     errorMessage: historyError ? historyError : null,
+    emptyMessage: "Ready for the next build.",
     initialHandoff: shouldUseCreateHandoff ? "create-agent" : undefined,
     onInitialHandoffReady,
     scrollResetKey: panelKey,

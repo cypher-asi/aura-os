@@ -13,6 +13,7 @@ use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::agent_from_network;
 use crate::handlers::agents::{
     create_and_provision_remote_agent, ensure_agent_home_project_and_binding, prepare_create,
+    provision_existing_agent_as_remote,
 };
 use crate::harness_client::HarnessClient;
 use crate::orchestration_store::OrchestrationStore;
@@ -333,7 +334,13 @@ pub(crate) async fn setup_ceo_agent(
         // if the patch fails.
         ensure_canonical_ceo_permissions_persisted(network, &jwt, canonical).await;
         let mut agent = agent_from_network(canonical);
-        let _ = state.agent_service.apply_runtime_config(&mut agent);
+        if state.remote_only && agent.machine_type != "remote" {
+            agent =
+                provision_existing_agent_as_remote(&state, network, &jwt, canonical, Some(&org_id))
+                    .await?;
+        } else {
+            let _ = state.agent_service.apply_runtime_config(&mut agent);
+        }
         if agent.icon.is_none() {
             if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
                 agent.icon = shadow.icon;

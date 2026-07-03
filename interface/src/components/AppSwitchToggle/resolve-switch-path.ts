@@ -6,7 +6,7 @@ import {
   getLastStandaloneAgentId,
 } from "../../utils/storage";
 
-export type AppSwitchTargetId = "agents" | "projects";
+export type AppSwitchTargetId = "agents" | "chat" | "projects";
 
 /**
  * Resolve where the Agents <-> Projects switch should land.
@@ -29,7 +29,25 @@ export function resolveAppSwitchPath(
   if (targetId === "projects") {
     return resolveProjectsPath(route);
   }
+  if (targetId === "chat") {
+    return resolveChatPath(route);
+  }
   return resolveAgentsPath(route);
+}
+
+function resolveChatPath(
+  route: ReturnType<typeof parseConversationRoute>,
+): string {
+  if (route.agentId) {
+    return chatPath(route.agentId, route.queryProjectId, route.queryInstanceId, route.sessionId);
+  }
+  if (route.projectId && route.agentInstanceId) {
+    const agentId = findAgentIdForInstance(route.projectId, route.agentInstanceId);
+    if (agentId) {
+      return chatPath(agentId, route.projectId, route.agentInstanceId, route.sessionId);
+    }
+  }
+  return route.sessionId ? `/chat?session=${encodeURIComponent(route.sessionId)}` : "/chat";
 }
 
 function resolveProjectsPath(
@@ -77,6 +95,20 @@ function resolveAgentsPath(
   const lastId = getLastStandaloneAgentId();
   if (lastId) return `/agents/${lastId}`;
   return "/agents";
+}
+
+function chatPath(
+  agentId: string,
+  projectId: string | null,
+  agentInstanceId: string | null,
+  sessionId: string | null,
+): string {
+  const params = new URLSearchParams();
+  params.set("agent", agentId);
+  if (projectId) params.set("project", projectId);
+  if (agentInstanceId) params.set("instance", agentInstanceId);
+  if (sessionId) params.set("session", sessionId);
+  return `/chat?${params.toString()}`;
 }
 
 function projectChatPath(
