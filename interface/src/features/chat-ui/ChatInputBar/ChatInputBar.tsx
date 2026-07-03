@@ -41,7 +41,10 @@ import { AttachmentPreviews } from "./AttachmentPreviews";
 import { AttachControl } from "./AttachControl";
 import { AgentInfoBar } from "./AgentInfoBar";
 import { ChatModeBar } from "./ChatModeBar";
-import { InputStatusHints } from "./InputStatusHints";
+import {
+  InputStatusHints,
+  type InputStatusAction,
+} from "./InputStatusHints";
 import { ModelControls } from "./ModelControls";
 import { ProjectPicker } from "./ProjectPicker";
 import { useChatUI } from "../../../stores/chat-ui-store";
@@ -199,6 +202,7 @@ export interface ChatInputBarProps {
   onFetchContextContents?: ContextContentsFetcher;
   sendDisabled?: boolean;
   sendDisabledReason?: string;
+  sendDisabledAction?: InputStatusAction;
   /**
    * Optional handler for the "+" new-chat button rendered at the
    * right end of the mode row (directly above the send button).
@@ -269,6 +273,7 @@ export const DesktopChatInputBar = memo(
       attachAccent,
       sendDisabled = false,
       sendDisabledReason,
+      sendDisabledAction,
     },
     ref,
   ) {
@@ -278,6 +283,11 @@ export const DesktopChatInputBar = memo(
     const selectedModel = chatUI.selectedModel;
     const selectedEffort = chatUI.selectedEffort;
     const selectedMode = selectedModeOverride ?? chatUI.selectedMode;
+    const effectiveSendDisabledAction =
+      sendDisabledAction ??
+      (sendDisabled && machineType === "local"
+        ? { label: "Get desktop app", to: "/download" }
+        : undefined);
     const imageQuality = chatUI.imageQuality;
     const councilCount = chatUI.councilCount;
     const councilModels = chatUI.councilModels;
@@ -650,6 +660,7 @@ export const DesktopChatInputBar = memo(
           queuedHint={queuedHint}
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}
+          sendDisabledAction={effectiveSendDisabledAction}
         />
         {modelsForMode.length > 0 ? (
           <ModelControls placement="mobileBar" {...modelControlsProps} />

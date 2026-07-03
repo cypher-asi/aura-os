@@ -14,12 +14,14 @@ export const WEB_DEFAULT_APP_PATH = "/chat";
 export const DESKTOP_DEFAULT_APP_PATH = "/projects";
 export const DEFAULT_APP_PATH = WEB_DEFAULT_APP_PATH;
 
+export function getPlatformEntryShellPath(hasDesktopBridge: boolean): string {
+  return hasDesktopBridge ? DESKTOP_DEFAULT_APP_PATH : WEB_DEFAULT_APP_PATH;
+}
+
 export function getCapabilityDefaultShellPath(): string {
   if (typeof window === "undefined") return WEB_DEFAULT_APP_PATH;
   const ipc = (window as Window & { ipc?: { postMessage?: unknown } }).ipc;
-  return typeof ipc?.postMessage === "function"
-    ? DESKTOP_DEFAULT_APP_PATH
-    : WEB_DEFAULT_APP_PATH;
+  return getPlatformEntryShellPath(typeof ipc?.postMessage === "function");
 }
 
 export function getPathname(path: string): string {

@@ -42,9 +42,9 @@ function AppSync(): null {
     const activeApp = findActiveApp(pathname);
     if (!activeApp) return;
 
-    if (!isPublic) {
-      preloadAppForPathname(pathname);
-    }
+    if (isPublic) return;
+
+    preloadAppForPathname(pathname);
     markAppVisited(activeApp.id);
     setLastApp(activeApp.id);
   }, [hash, isPublic, pathname, search, markAppVisited, setPreviousPath]);

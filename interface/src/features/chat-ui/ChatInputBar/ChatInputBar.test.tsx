@@ -1,5 +1,6 @@
 import { act, createEvent, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 
 let mockIsStreaming = false;
 let mockIsMobileLayout = false;
@@ -1080,20 +1081,27 @@ describe("ChatInputBar", () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
     render(
-      <ChatInputBar
-        {...makeProps({
-          input: "hello",
-          machineType: "local",
-          onSend,
-          sendDisabled: true,
-          sendDisabledReason: "This is a local agent and can only be used in the desktop app.",
-        })}
-      />,
+      <MemoryRouter>
+        <ChatInputBar
+          {...makeProps({
+            input: "hello",
+            machineType: "local",
+            onSend,
+            sendDisabled: true,
+            sendDisabledReason: "This local agent runs in the desktop app.",
+            sendDisabledAction: { label: "Get desktop app", to: "/download" },
+          })}
+        />
+      </MemoryRouter>,
     );
 
     expect(
-      screen.getByText("This is a local agent and can only be used in the desktop app."),
+      screen.getByText("This local agent runs in the desktop app."),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Get desktop app" })).toHaveAttribute(
+      "href",
+      "/download",
+    );
     const send = screen.getByRole("button", { name: "Send" });
     expect(send).toBeDisabled();
     await user.click(send);

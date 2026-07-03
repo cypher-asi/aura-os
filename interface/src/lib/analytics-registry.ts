@@ -2,7 +2,7 @@
 // Canonical inventory of client analytics events. Do NOT re-derive via
 // grep/search — dynamic-import call sites make string search unreliable; the
 // contract test enforces this set against the actual call sites instead.
-// 47 client events; session_active is server-only and deliberately absent.
+// 43 client events; session_active is server-only and deliberately absent.
 export const ANALYTICS_EVENTS = {
   // lifecycle / auth
   app_opened: {}, // main.tsx:76
@@ -39,10 +39,6 @@ export const ANALYTICS_EVENTS = {
   subscription_checkout_started: { props: ["plan"] }, // TierSubscriptionModal.tsx:107
   credits_checkout_started: { props: ["amount_usd"] }, // BuyCreditsModal.tsx:56
   // onboarding
-  onboarding_started: {}, // WelcomeModal.tsx:61
-  onboarding_welcome_completed: { props: ["intent", "recommended_intent", "runtime"] }, // WelcomeModal.tsx:67
-  onboarding_welcome_skipped: { props: ["recommended_intent", "runtime"] }, // WelcomeModal.tsx:79
-  onboarding_desktop_download_clicked: { props: ["source", "recommended_intent", "runtime"] }, // WelcomeModal.tsx:89
   onboarding_task_clicked: { props: ["task_id", "selected_intent", "runtime"] }, // OnboardingChecklist.tsx:39
   onboarding_task_completed: { props: ["task_id", "progress"] }, // useOnboardingTaskWatcher.ts:42+
   onboarding_completed: {},
@@ -60,7 +56,7 @@ export const ANALYTICS_EVENTS = {
   public_create_agent_clicked: { props: ["source"] },
   public_start_chat_clicked: { props: ["source"] },
 } as const satisfies Record<string, { props?: readonly string[] }>;
-// 47 entries — the complete client analytics event set.
+// 43 entries — the complete client analytics event set.
 
 export type AnalyticsEventName = keyof typeof ANALYTICS_EVENTS;
 

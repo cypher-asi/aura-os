@@ -1,7 +1,6 @@
 import type { AuraApp } from "../apps/types";
 import { apps } from "../apps/registry";
-import { getLastApp } from "../utils/storage";
-import { getInitialShellPath } from "../utils/last-app-path";
+import { getCapabilityDefaultShellPath } from "../utils/last-app-path";
 import { reportBootError } from "./boot-diagnostics";
 
 /**
@@ -25,7 +24,7 @@ function findAppForPath(path: string, appList: readonly AuraApp[]): AuraApp | un
 }
 
 function resolveInitialApp(appList: readonly AuraApp[]): AuraApp | undefined {
-  const initialPath = getInitialShellPath(getLastApp(), null);
+  const initialPath = getCapabilityDefaultShellPath();
   return findAppForPath(initialPath, appList);
 }
 
@@ -37,9 +36,9 @@ interface PreloadOptions {
 }
 
 /**
- * Kicks off the lazy-import of the app the shell will render first (last-used app,
- * or the default when none is remembered) and returns a Promise that resolves when
- * that module is in hand — or after the safety timeout, whichever comes first.
+ * Kicks off the lazy-import of the platform's entry app and returns a Promise
+ * that resolves when that module is in hand — or after the safety timeout,
+ * whichever comes first.
  *
  * Call this exactly once at `App.tsx` module load, BEFORE React commits its first
  * render, so that by the time React's Suspense boundary tries to render the initial

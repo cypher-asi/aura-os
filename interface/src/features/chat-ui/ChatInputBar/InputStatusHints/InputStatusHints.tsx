@@ -1,5 +1,11 @@
 import { memo } from "react";
+import { Link } from "react-router-dom";
 import styles from "./InputStatusHints.module.css";
+
+export interface InputStatusAction {
+  label: string;
+  to: string;
+}
 
 export interface InputStatusHintsProps {
   /**
@@ -13,6 +19,7 @@ export interface InputStatusHintsProps {
   queuedHint?: string;
   sendDisabled: boolean;
   sendDisabledReason?: string;
+  sendDisabledAction?: InputStatusAction;
 }
 
 /** Inline status chips above the textarea: queued-send and send-disabled. */
@@ -21,6 +28,7 @@ export const InputStatusHints = memo(function InputStatusHints({
   queuedHint,
   sendDisabled,
   sendDisabledReason,
+  sendDisabledAction,
 }: InputStatusHintsProps) {
   return (
     <>
@@ -48,6 +56,15 @@ export const InputStatusHints = memo(function InputStatusHints({
             {sendDisabledReason ??
               "This is a local agent and can only be used in the desktop app."}
           </span>
+          {sendDisabledAction ? (
+            <Link
+              className={styles.hintAction}
+              to={sendDisabledAction.to}
+              data-agent-action="chat-disabled-handoff"
+            >
+              {sendDisabledAction.label}
+            </Link>
+          ) : null}
         </div>
       ) : null}
     </>

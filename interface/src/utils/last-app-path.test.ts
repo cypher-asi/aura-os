@@ -5,6 +5,7 @@ import {
   WEB_DEFAULT_APP_PATH,
   getCapabilityDefaultShellPath,
   getInitialShellPath,
+  getPlatformEntryShellPath,
   isValidRestorePath,
   sanitizeRestorePath,
 } from "./last-app-path";
@@ -33,6 +34,13 @@ describe("getInitialShellPath", () => {
   it("allows callers to override the default app", () => {
     expect(getInitialShellPath(null, null, "/projects")).toBe("/projects");
     expect(getInitialShellPath("unknown", null, "/projects")).toBe("/projects");
+  });
+});
+
+describe("getPlatformEntryShellPath", () => {
+  it("routes web entry to chat and desktop entry to build", () => {
+    expect(getPlatformEntryShellPath(false)).toBe(WEB_DEFAULT_APP_PATH);
+    expect(getPlatformEntryShellPath(true)).toBe(DESKTOP_DEFAULT_APP_PATH);
   });
 });
 

@@ -96,6 +96,10 @@ interface OnboardingState {
   // Actions
   hydrateForUser: (userId: string) => void;
   completeWelcome: (intent?: OnboardingIntent) => void;
+  completeWelcomeIfNeeded: (
+    intent: OnboardingIntent,
+    options?: { checklistDismissed?: boolean },
+  ) => void;
   skipWelcome: () => void;
   setWelcomeStep: (step: number) => void;
   setSelectedIntent: (intent: OnboardingIntent) => void;
@@ -139,6 +143,17 @@ export const useOnboardingStore = create<OnboardingState>()((set, get) => {
         welcomeCompleted: true,
         selectedIntent: intent ?? s.selectedIntent,
       }));
+      persist();
+    },
+
+    completeWelcomeIfNeeded: (intent, options) => {
+      const s = get();
+      if (s.welcomeCompleted || s.welcomeSkipped) return;
+      set({
+        welcomeCompleted: true,
+        selectedIntent: intent,
+        checklistDismissed: options?.checklistDismissed ?? s.checklistDismissed,
+      });
       persist();
     },
 

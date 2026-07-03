@@ -99,6 +99,33 @@ describe("useOnboardingStore onboarding intent persistence", () => {
     });
   });
 
+  it("silently completes first-run onboarding with the platform default intent", () => {
+    const { result } = renderHook(() => useOnboardingStore());
+
+    act(() => result.current.hydrateForUser("user-1"));
+    act(() => result.current.completeWelcomeIfNeeded("chat", { checklistDismissed: true }));
+
+    expect(result.current.welcomeCompleted).toBe(true);
+    expect(result.current.selectedIntent).toBe("chat");
+    expect(result.current.checklistDismissed).toBe(true);
+    expect(JSON.parse(localStorage.getItem(key("user-1")) ?? "{}")).toMatchObject({
+      welcomeCompleted: true,
+      selectedIntent: "chat",
+      checklistDismissed: true,
+    });
+  });
+
+  it("does not override an existing welcome decision during implicit completion", () => {
+    const { result } = renderHook(() => useOnboardingStore());
+
+    act(() => result.current.hydrateForUser("user-1"));
+    act(() => result.current.completeWelcome("build"));
+    act(() => result.current.completeWelcomeIfNeeded("chat", { checklistDismissed: true }));
+
+    expect(result.current.selectedIntent).toBe("build");
+    expect(result.current.checklistDismissed).toBe(false);
+  });
+
   it("resets the selected intent with onboarding reset", () => {
     const { result } = renderHook(() => useOnboardingStore());
 

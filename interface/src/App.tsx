@@ -21,8 +21,7 @@ import { LoginOverlay } from "./views/public-chat/LoginOverlay";
 import { AgentOnboardingModal } from "./views/public-chat/AgentOnboarding/AgentOnboardingModal";
 import { CaptureLoginView } from "./views/CaptureLoginView";
 import { apps } from "./apps/registry";
-import { getInitialShellPath } from "./utils/last-app-path";
-import { getLastApp } from "./utils/storage";
+import { getPlatformEntryShellPath } from "./utils/last-app-path";
 import { useEffectiveMode } from "./stores/use-effective-mode";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
 import { hydrateStoredAuth, isLoggedInSync } from "./shared/lib/auth-token";
@@ -100,9 +99,14 @@ if (initiallyLoggedIn) {
   void preloadInitialShellApp();
 }
 
-function LastAppRedirect(): React.ReactElement {
-  const lastAppId = getLastApp();
-  return <Navigate to={getInitialShellPath(lastAppId, null)} replace />;
+function EntryAppRedirect(): React.ReactElement {
+  const { hasDesktopBridge } = useAuraCapabilities();
+  return (
+    <Navigate
+      to={getPlatformEntryShellPath(hasDesktopBridge)}
+      replace
+    />
+  );
 }
 
 function RouteFallback(): React.ReactElement {
@@ -154,7 +158,8 @@ function ChatRouteSwitch(): React.ReactElement {
 /**
  * Phase 3 landing (`/`) route element. Public users see the public
  * chat surface (matching the previous `LoggedOutChatView` route);
- * authenticated users are redirected into their last-visited app.
+ * authenticated users are redirected into the platform's primary app.
+ * Web starts in chat; desktop starts in build/projects.
  */
 function LandingRoute(): React.ReactElement {
   const effectiveMode = useEffectiveMode();
@@ -162,7 +167,7 @@ function LandingRoute(): React.ReactElement {
   if (effectiveMode === "public") {
     return isMobileLayout ? <MobilePublicChatView /> : <PublicChatView />;
   }
-  return <LastAppRedirect />;
+  return <EntryAppRedirect />;
 }
 
 function UnknownRouteRedirect(): React.ReactElement {
@@ -312,7 +317,7 @@ function AppRoutes(): React.ReactElement {
         <Route element={<AppShell />}>
           <Route element={<RequireAuth />}>
             <Route element={<ShellOutletSuspense />}>
-              <Route index element={<LastAppRedirect />} />
+              <Route index element={<EntryAppRedirect />} />
               {renderRoutes(shellAppRoutes)}
               <Route path="chat" element={<ChatRouteSwitch />} />
               <Route
