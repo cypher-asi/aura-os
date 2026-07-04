@@ -56,7 +56,26 @@ Analytics-enabled Vite builds and the `desktop-frontend-assets-validate.mjs --re
 |----------|-------|
 | `REQUIRE_ZERO_PRO` | `true` (default) or `false` |
 | `SWARM_BASE_URL` | Swarm gateway URL if using remote agents |
-| `LOCAL_HARNESS_URL` | Harness URL (not needed on Render — no local harness) |
+| `LOCAL_HARNESS_URL` | Hosted harness URL when web should support `machine_type: "local"` agents through a separately deployed harness service. Leave unset for remote-only Render deployments. |
+| `LOCAL_HARNESS_AUTH_TOKEN` | Shared transport bearer for a hosted harness. Must match that harness service's `AURA_NODE_AUTH_TOKEN`; leave unset unless `LOCAL_HARNESS_URL` points at a protected hosted harness. |
+
+### Hosted local harness
+
+Aura web can run local-agent traffic through a separately deployed harness
+service instead of a loopback sidecar. Configure the two services as a pair:
+
+| Service | Variable | Value |
+|---------|----------|-------|
+| aura-os web service | `LOCAL_HARNESS_URL` | `https://YOUR-HARNESS-SERVICE.onrender.com` |
+| aura-os web service | `LOCAL_HARNESS_AUTH_TOKEN` | Shared secret value |
+| aura-os web service | `AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN` | `1` |
+| harness image service | `AURA_NODE_REQUIRE_AUTH` | `1` |
+| harness image service | `AURA_NODE_AUTH_TOKEN` | Same shared secret value |
+| harness image service | `AURA_OS_SERVER_URL` | Public aura-os web service URL |
+
+`LOCAL_HARNESS_AUTH_TOKEN` authenticates only the server-to-harness transport.
+The signed-in user's JWT still travels inside `RuntimeRequest.auth_jwt`, and
+must not be replaced with the harness shared secret.
 
 ## Prerequisites
 
@@ -86,7 +105,7 @@ open https://YOUR-SERVICE.onrender.com
 - `VITE_API_URL` (or the explicit `AURA_SERVER_BASE_URL` override) is the server's own public URL. It's stamped into cross-agent tool endpoints (`send_to_agent`, `spawn_agent`, etc.) so the remote harness / `aura-swarm` can call back in. Without it the server falls back to `http://<AURA_SERVER_HOST>:<AURA_SERVER_PORT>`, and `0.0.0.0` is normalized to `127.0.0.1` — which is unreachable from any other host.
 - Render instances still have ephemeral local disk. Browser-owned persisted state remains in the browser, server auth uses the in-memory validation cache, and any local backend compatibility state should be treated as rebuildable.
 - The build takes ~2-3 minutes (Node frontend + Rust backend).
-- `LOCAL_HARNESS_URL` should NOT be set on Render unless a harness service is deployed alongside.
+- `LOCAL_HARNESS_URL` should NOT be set on Render unless a harness service is deployed alongside and protected with the matching token pair above.
 
 ## Troubleshooting
 

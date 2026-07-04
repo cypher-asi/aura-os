@@ -96,6 +96,7 @@ Edit `.env` and set:
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
 | `SWARM_BASE_URL` | No | **aura-swarm gateway** URL for remote agents (confidential SEV-SNP VMs). Agents with `machine_type` other than `local` route their sessions, lifecycle, files, and VM logs through this gateway. Omit for local-only agents. See [docs/aura-swarm.md](./docs/aura-swarm.md). |
 | `LOCAL_HARNESS_URL` | No | Local aura-harness URL for `local` agents (default port `8080`; dev channel `8081`). If nothing is listening there at startup, the server auto-spawns the harness from `AURA_HARNESS_DIR` (or `../aura-harness`). |
+| `LOCAL_HARNESS_AUTH_TOKEN` | No | Shared transport bearer used only when `LOCAL_HARNESS_URL` points at a hosted/protected harness. Must match the harness service's `AURA_NODE_AUTH_TOKEN`; user/model auth still travels separately in `RuntimeRequest.auth_jwt`. Leave unset for the bundled desktop sidecar and normal loopback local development. |
 | `AURA_HARNESS_DIR` | No | Path to a sibling `aura-harness` checkout used for harness auto-spawn and desktop packaging. |
 | `AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN` | No | Set `1`/`true` to never auto-spawn the local harness (e.g. remote-only deployments such as Render). |
 | `Z_BILLING_API_KEY` | No | Service API key for z-billing. Required when the public x402 chat endpoint settles actual token usage from z-billing quotes. |
@@ -213,6 +214,7 @@ Notes:
 - The server forwards the signed-in user's zOS JWT to the gateway on every call — there is no separate swarm credential to configure.
 - If `SWARM_BASE_URL` is unset, remote-agent creation and lifecycle actions fail with `503 remote agent runtime is not configured (SWARM_BASE_URL)`; local agents are unaffected.
 - When sessions route off-box (a `SWARM_BASE_URL` is set, or `LOCAL_HARNESS_URL` is non-loopback), also set `AURA_SERVER_BASE_URL` (or `VITE_API_URL`) so cross-agent tool callbacks can reach back into the server.
+- For a hosted local-harness service, set `LOCAL_HARNESS_AUTH_TOKEN` on aura-os and the same value as `AURA_NODE_AUTH_TOKEN` on the harness service with `AURA_NODE_REQUIRE_AUTH=1`. This authenticates only the server-to-harness hop; it is not a replacement for the signed-in user's JWT.
 - Desktop builds ship a baked-in default `SWARM_BASE_URL` (see `apps/aura-os-desktop/build.rs`); set the env var to override it.
 - Remote-agent operations (wake/hibernate, tier changes, usage and cost queries, VM logs) are covered in [docs/runbooks/swarm-operations.md](./docs/runbooks/swarm-operations.md), and the architecture split in [docs/aura-swarm.md](./docs/aura-swarm.md).
 
