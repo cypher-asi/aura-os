@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-04T12:38:59.589Z",
+  "generatedAt": "2026-07-04T15:57:04.386Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.726.1",
+  "version": "0.1.0-nightly.727.1",
   "date": "2026-07-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.726.1",
-  "lastIncludedSha": "204526ccaa79556bf5896a2efb5bc0890d7f8f83",
-  "previousProcessedSha": "10bb79a4ea4c9b652fe953fcdd7a5dc6eb1b09e9",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.727.1",
+  "lastIncludedSha": "9f38fe85cd0ac79831e136567742a55453502904",
+  "previousProcessedSha": "204526ccaa79556bf5896a2efb5bc0890d7f8f83",
   "commitShas": [
-    "cf021f8018c2b725e20c253e8cf93987c09c53c1"
+    "cf021f8018c2b725e20c253e8cf93987c09c53c1",
+    "9f38fe85cd0ac79831e136567742a55453502904"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "cf021f8018c2b725e20c253e8cf93987c09c53c1",
@@ -88,36 +89,77 @@
       "fileGroups": [],
       "primaryArea": "Other",
       "areas": []
+    },
+    {
+      "sha": "9f38fe85cd0ac79831e136567742a55453502904",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-04T11:33:59-04:00",
+      "subject": "fix(native-runtime): guard desktop loopback detection (#86)",
+      "body": "",
+      "parents": [
+        "204526ccaa79556bf5896a2efb5bc0890d7f8f83"
+      ],
+      "files": [
+        "interface/src/hooks/use-aura-capabilities.test.ts",
+        "interface/src/shared/lib/device-info.ts",
+        "interface/src/shared/lib/host-config.test.ts",
+        "interface/src/shared/lib/native-runtime.test.ts",
+        "interface/src/shared/lib/native-runtime.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 146,
+        "deletions": 29
+      },
+      "committedAtMs": 1783179239000,
+      "cleanSubject": "guard desktop loopback detection (#86)",
+      "keywords": [
+        "guard",
+        "desktop",
+        "loopback",
+        "detection"
+      ],
+      "fileGroups": [
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.726.1",
+      "version": "0.1.0-nightly.727.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65216850
+          "sizeBytes": 65206596
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 131803640
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -127,29 +169,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.726.1",
+      "version": "0.1.0-nightly.727.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.726.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.727.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61105361
+          "sizeBytes": 61106946
         },
         {
-          "name": "AURA_0.1.0-nightly.726.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.727.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60110432
+          "sizeBytes": 60111791
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -159,29 +201,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.726.1",
+      "version": "0.1.0-nightly.727.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.726.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.727.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63336487
+          "sizeBytes": 63337998
         },
         {
-          "name": "AURA_0.1.0-nightly.726.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.727.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62367986
+          "sizeBytes": 62369066
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -191,17 +233,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.726.1",
+      "version": "0.1.0-nightly.727.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48249936
+          "sizeBytes": 48248920
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.726.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.727.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -211,27 +253,58 @@
   ],
   "rendered": {
     "title": "Desktop shell stops masquerading as a mobile client",
-    "intro": "A small but high-impact fix restores the correct desktop experience on Mac, Windows, and Linux, where the loopback-served shell had been misidentified as a native mobile runtime and pushed users into the wrong UI.",
+    "intro": "Today's nightly is a targeted fix for desktop users: because the Tauri shell loads Aura from a loopback origin, runtime detection had been misclassifying it as a native mobile client and pushing users into the wrong login view and shell. Two commits land the fix and lock it in with regression coverage across Mac, Windows, and Linux desktop builds.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "5:11 AM",
         "started_at": "2026-07-04T12:11:29.000Z",
         "ended_at": "2026-07-04T12:11:29.000Z",
-        "title": "Desktop runtime detection no longer treats the Tauri shell as mobile",
-        "summary": "Because the desktop app is served from a loopback origin, runtime detection was classifying it as a native mobile client and swapping in the wrong login view, shell, and host resolution. Presence of the Tauri/desktop bridge globals now correctly identifies it as a desktop client.",
+        "title": "Desktop loopback origin no longer triggers native mobile mode",
+        "summary": "The desktop shell is served from 127.0.0.1, which was tripping the loopback-webview heuristic and forcing Aura into the native/mobile experience. Runtime detection now recognizes the desktop bridge and treats the app as a desktop client.",
         "items": [
           {
-            "text": "Desktop builds on Mac, Windows, and Linux are once again rendered with the desktop UI instead of falling through to the mobile login and shell, by short-circuiting isNativeRuntime() when a desktop bridge global (__AURA_BOOT_AUTH__, __TAURI__, or __TAURI_INTERNALS__) is present on window.",
+            "text": "isNativeRuntime() now short-circuits to false when a desktop bridge global (__AURA_BOOT_AUTH__, __TAURI__, or __TAURI_INTERNALS__) is present, so the Tauri desktop shell stops being classified as native and users no longer land on the mobile login view or mobile shell.",
             "commit_shas": [
               "cf021f8018c2b725e20c253e8cf93987c09c53c1"
             ],
             "confidence": "high"
           },
           {
-            "text": "Capability and host-config detection stop demanding an explicit host origin on desktop, while Capacitor and loopback mobile-dev webviews continue to be treated as native runtimes.",
+            "text": "Capacitor and genuine loopback mobile-dev webviews still resolve as native, preserving mobile behavior while unblocking desktop host-config resolution.",
             "commit_shas": [
               "cf021f8018c2b725e20c253e8cf93987c09c53c1"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "8:33 AM",
+        "started_at": "2026-07-04T15:33:59.000Z",
+        "ended_at": "2026-07-04T15:33:59.000Z",
+        "title": "Regression coverage and shared desktop-runtime helper",
+        "summary": "A follow-up hardens the loopback guard with a reusable isDesktopRuntime() helper and adds tests across useAuraCapabilities, host-config, and native-runtime so desktop, mobile, and web clients each stay on their intended UI path.",
+        "items": [
+          {
+            "text": "Extracted an isDesktopRuntime() helper and routed detectClientPlatform() through it, giving device-info, host-config, and capability checks a single source of truth for the desktop shell.",
+            "commit_shas": [
+              "9f38fe85cd0ac79831e136567742a55453502904"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a useAuraCapabilities case that loads from http://127.0.0.1 with a desktop IPC bridge and asserts hasDesktopBridge is true while isNativeApp, isMobileClient, and the mobile-client dataset flag all stay false — locking in the fix from earlier in the day.",
+            "commit_shas": [
+              "9f38fe85cd0ac79831e136567742a55453502904"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Expanded host-config and native-runtime tests with proper window.location mocking and cleanup of Capacitor, __AURA_BOOT_AUTH__, and ipc globals so desktop, Android, and macOS web scenarios are each covered without cross-test leakage.",
+            "commit_shas": [
+              "9f38fe85cd0ac79831e136567742a55453502904"
             ],
             "confidence": "high"
           }
@@ -239,9 +312,10 @@
       }
     ],
     "highlights": [
-      "Desktop app no longer flips into the mobile login and shell",
-      "Tauri bridge globals now authoritatively mark the runtime as desktop"
+      "Desktop shell no longer flips into the mobile UI",
+      "Loopback detection now defers to the desktop bridge globals",
+      "Regression tests added for desktop, mobile, and web runtimes"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }

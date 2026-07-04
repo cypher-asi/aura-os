@@ -2,17 +2,18 @@
   {
     "date": "2026-07-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.726.1",
+    "version": "0.1.0-nightly.727.1",
     "title": "Desktop shell stops masquerading as a mobile client",
-    "intro": "A small but high-impact fix restores the correct desktop experience on Mac, Windows, and Linux, where the loopback-served shell had been misidentified as a native mobile runtime and pushed users into the wrong UI.",
-    "entryCount": 1,
+    "intro": "Today's nightly is a targeted fix for desktop users: because the Tauri shell loads Aura from a loopback origin, runtime detection had been misclassifying it as a native mobile client and pushing users into the wrong login view and shell. Two commits land the fix and lock it in with regression coverage across Mac, Windows, and Linux desktop builds.",
+    "entryCount": 2,
     "highlights": [
-      "Desktop app no longer flips into the mobile login and shell",
-      "Tauri bridge globals now authoritatively mark the runtime as desktop"
+      "Desktop shell no longer flips into the mobile UI",
+      "Loopback detection now defers to the desktop bridge globals",
+      "Regression tests added for desktop, mobile, and web runtimes"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-07-04T12:38:59.589Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.726.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-07-04T15:57:04.386Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.727.1",
     "path": "history/2026-07-04.json"
   },
   {
