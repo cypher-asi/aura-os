@@ -1,4 +1,4 @@
-import { inferNativePlatform, isNativeRuntime } from "./native-runtime";
+import { inferNativePlatform, isDesktopRuntime, isNativeRuntime } from "./native-runtime";
 
 export type ClientPlatform = "desktop" | "mobile" | "web";
 
@@ -11,12 +11,7 @@ export type ClientPlatform = "desktop" | "mobile" | "web";
  */
 export function detectClientPlatform(): ClientPlatform {
   try {
-    const w = window as unknown as Record<string, unknown>;
-    const isDesktop =
-      typeof w.__AURA_BOOT_AUTH__ !== "undefined" ||
-      typeof w.__TAURI__ !== "undefined" ||
-      typeof w.__TAURI_INTERNALS__ !== "undefined";
-    if (isDesktop) return "desktop";
+    if (isDesktopRuntime()) return "desktop";
     if (isNativeRuntime() || inferNativePlatform() !== null) return "mobile";
     return "web";
   } catch {
