@@ -47,7 +47,8 @@ pub(crate) fn public_demo_agent_id() -> AgentId {
 /// because the public chat surface should feel like a usable assistant;
 /// the full CEO bootstrap prompt only makes sense once the user has
 /// signed in and accepted an org.
-pub(crate) const PUBLIC_DEMO_SYSTEM_PROMPT: &str = "You are Aura, a concise AI assistant on Aura's public chat. \
+pub(crate) const PUBLIC_DEMO_SYSTEM_PROMPT: &str =
+    "You are Aura, a concise AI assistant on Aura's public chat. \
 Answer the visitor's latest message directly before describing Aura. Do not open with \
 a generic welcome, demo disclaimer, or marketing pitch. Mention sign-in only when the \
 visitor asks to save work, use private data, run long jobs, deploy, or connect accounts.";

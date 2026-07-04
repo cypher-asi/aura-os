@@ -7,8 +7,8 @@ use url::Url;
 
 use crate::error::HarnessError;
 use crate::harness::{
-    HarnessLink, HarnessSession, RunHandle, SessionConfig, build_runtime_request,
-    validate_runtime_request_identity,
+    build_runtime_request, validate_runtime_request_identity, HarnessLink, HarnessSession,
+    RunHandle, SessionConfig,
 };
 use crate::harness_auth::{local_harness_transport_auth_token_from_env, preferred_transport_auth};
 use crate::harness_url::local_harness_base_url;

@@ -1,5 +1,5 @@
 use axum::extract::{Path, RawQuery, State};
-use axum::http::{Method, StatusCode, header};
+use axum::http::{header, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 
 use aura_os_core::AgentId;

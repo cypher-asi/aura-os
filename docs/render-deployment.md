@@ -69,6 +69,7 @@ service instead of a loopback sidecar. Configure the two services as a pair:
 | aura-os web service | `LOCAL_HARNESS_URL` | `https://YOUR-HARNESS-SERVICE.onrender.com` |
 | aura-os web service | `LOCAL_HARNESS_AUTH_TOKEN` | Shared secret value |
 | aura-os web service | `AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN` | `1` |
+| aura-os web service | `AURA_REMOTE_ONLY` | unset / `false` when local-agent chat or dev-loop should use the hosted harness |
 | harness image service | `AURA_NODE_REQUIRE_AUTH` | `1` |
 | harness image service | `AURA_NODE_AUTH_TOKEN` | Same shared secret value |
 | harness image service | `AURA_OS_SERVER_URL` | Public aura-os web service URL |
@@ -76,6 +77,9 @@ service instead of a loopback sidecar. Configure the two services as a pair:
 `LOCAL_HARNESS_AUTH_TOKEN` authenticates only the server-to-harness transport.
 The signed-in user's JWT still travels inside `RuntimeRequest.auth_jwt`, and
 must not be replaced with the harness shared secret.
+
+Do not enable `AURA_REMOTE_ONLY=1` for this mode. Remote-only deployments reject
+local-agent chat/dev-loop routes before they reach the hosted local harness.
 
 ## Prerequisites
 

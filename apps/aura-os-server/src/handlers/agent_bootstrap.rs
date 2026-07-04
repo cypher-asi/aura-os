@@ -1,5 +1,5 @@
-use axum::Json;
 use axum::extract::{Path, State};
+use axum::Json;
 use serde::Serialize;
 use tracing::{info, warn};
 
@@ -9,7 +9,7 @@ use aura_os_network::NetworkAgent;
 use crate::agent_events::AgentEvent;
 use crate::capture_auth::{demo_agent, is_capture_access_token};
 use crate::dto::CreateAgentRequest;
-use crate::error::{ApiError, ApiResult, map_network_error};
+use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::agent_from_network;
 use crate::handlers::agents::{
     create_and_provision_remote_agent, ensure_agent_home_project_and_binding, prepare_create,
@@ -545,7 +545,7 @@ mod tests {
     use aura_os_core::AgentPermissions;
     use aura_os_network::NetworkAgent;
 
-    use super::{CEO_SYSTEM_PROMPT_PREFIX, ceo_system_prompt, looks_like_ceo};
+    use super::{ceo_system_prompt, looks_like_ceo, CEO_SYSTEM_PROMPT_PREFIX};
 
     fn network_agent(
         name: &str,

@@ -1,4 +1,4 @@
-use aura_os_core::{Agent, AgentId, LATEST_FRONTIER_MODEL, ProcessRunId, ProcessRunTrigger};
+use aura_os_core::{Agent, AgentId, ProcessRunId, ProcessRunTrigger, LATEST_FRONTIER_MODEL};
 use aura_os_harness::{HarnessAutomatonStartParams, HarnessClient, HarnessClientError};
 use aura_os_storage::{
     CreateProcessRunRequest, StorageClient, StorageProcess, StorageProcessNode, StorageProcessRun,
@@ -6,10 +6,10 @@ use aura_os_storage::{
 };
 use chrono::Utc;
 
-use axum::Json;
 use axum::http::StatusCode;
+use axum::Json;
 
-use crate::error::{ApiError, ApiResult, map_storage_error};
+use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::AppState;
 
 const SCHEDULED_PROCESS_AUTOMATON_KIND: &str = "scheduled_process";
@@ -241,7 +241,7 @@ async fn mark_run_failed(
     jwt: &str,
     error: &(StatusCode, Json<ApiError>),
 ) {
-    let message = error.1.0.error.clone();
+    let message = error.1 .0.error.clone();
     let _ = client
         .update_process_run(
             process_id,

@@ -215,6 +215,7 @@ Notes:
 - If `SWARM_BASE_URL` is unset, remote-agent creation and lifecycle actions fail with `503 remote agent runtime is not configured (SWARM_BASE_URL)`; local agents are unaffected.
 - When sessions route off-box (a `SWARM_BASE_URL` is set, or `LOCAL_HARNESS_URL` is non-loopback), also set `AURA_SERVER_BASE_URL` (or `VITE_API_URL`) so cross-agent tool callbacks can reach back into the server.
 - For a hosted local-harness service, set `LOCAL_HARNESS_AUTH_TOKEN` on aura-os and the same value as `AURA_NODE_AUTH_TOKEN` on the harness service with `AURA_NODE_REQUIRE_AUTH=1`. This authenticates only the server-to-harness hop; it is not a replacement for the signed-in user's JWT.
+- Do not combine hosted local-harness routing with `AURA_REMOTE_ONLY=1`; remote-only mode rejects local-agent chat/dev-loop routes before they reach the harness.
 - Desktop builds ship a baked-in default `SWARM_BASE_URL` (see `apps/aura-os-desktop/build.rs`); set the env var to override it.
 - Remote-agent operations (wake/hibernate, tier changes, usage and cost queries, VM logs) are covered in [docs/runbooks/swarm-operations.md](./docs/runbooks/swarm-operations.md), and the architecture split in [docs/aura-swarm.md](./docs/aura-swarm.md).
 

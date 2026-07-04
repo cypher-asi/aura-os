@@ -3,13 +3,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use tokio::sync::{Mutex, OnceCell, broadcast};
+use tokio::sync::{broadcast, Mutex, OnceCell};
 use tracing::{info, warn};
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
-use aura_os_harness::{HarnessLink, LocalHarness, SwarmHarness, local_harness_base_url};
+use aura_os_harness::{local_harness_base_url, HarnessLink, LocalHarness, SwarmHarness};
 use aura_os_integrations::IntegrationsClient;
 
 use crate::agent_events::AgentEventListener;

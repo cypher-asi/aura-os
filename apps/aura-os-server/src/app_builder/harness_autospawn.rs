@@ -21,11 +21,44 @@ pub(super) fn find_harness_dir() -> Option<PathBuf> {
         .find(|p| p.join("Cargo.toml").exists())
 }
 
-/// Parse host:port from a URL like `http://127.0.0.1:8080`.
-pub(super) fn parse_host_port(url: &str) -> Option<String> {
-    url.strip_prefix("http://")
-        .or_else(|| url.strip_prefix("https://"))
-        .map(|s| s.trim_end_matches('/').to_string())
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct HarnessBindTarget {
+    pub(super) bind_addr: String,
+    pub(super) probe_addr: std::net::SocketAddr,
+}
+
+/// Parse a loopback harness URL into the bind/probe target used for autospawn.
+///
+/// Autospawn is only valid for a local child process. Hosted harness URLs must
+/// return `None` so a remote `LOCAL_HARNESS_URL` can never fall back to
+/// `127.0.0.1:8080` and accidentally launch an unrelated local harness.
+pub(super) fn parse_harness_bind_target(url: &str) -> Option<HarnessBindTarget> {
+    let parsed = url::Url::parse(url.trim()).ok()?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return None;
+    }
+    let host = parsed
+        .host_str()?
+        .trim_start_matches('[')
+        .trim_end_matches(']');
+    let port = parsed.port()?;
+    let probe_ip = match host {
+        "127.0.0.1" => std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
+        "::1" => std::net::IpAddr::V6(std::net::Ipv6Addr::LOCALHOST),
+        value if value.eq_ignore_ascii_case("localhost") => {
+            std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)
+        }
+        _ => return None,
+    };
+    let bind_host = if host.contains(':') {
+        format!("[{host}]")
+    } else {
+        host.to_string()
+    };
+    Some(HarnessBindTarget {
+        bind_addr: format!("{bind_host}:{port}"),
+        probe_addr: std::net::SocketAddr::new(probe_ip, port),
+    })
 }
 
 /// Try to auto-spawn the local aura-harness process if nothing is listening.
@@ -43,13 +76,15 @@ pub(super) fn maybe_spawn_local_harness() {
 
     let harness_url = local_harness_base_url();
 
-    let Some(host_port) = parse_host_port(&harness_url) else {
+    let Some(bind_target) = parse_harness_bind_target(&harness_url) else {
+        info!(
+            url = %harness_url,
+            "configured LOCAL_HARNESS_URL is not a loopback URL with an explicit port; skipping local harness autospawn"
+        );
         return;
     };
-
-    let addr: std::net::SocketAddr = host_port
-        .parse()
-        .unwrap_or_else(|_| std::net::SocketAddr::from(([127, 0, 0, 1], 8080)));
+    let host_port = bind_target.bind_addr;
+    let addr = bind_target.probe_addr;
 
     if std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(200)).is_ok() {
         info!("Local harness already running at {harness_url}");
@@ -276,6 +311,51 @@ mod tests {
                 .iter()
                 .find(|(k, _)| *k == key)
                 .map(|(_, v)| (*v).to_string())
+        }
+    }
+
+    #[test]
+    fn parse_harness_bind_target_accepts_loopback_with_port() {
+        assert_eq!(
+            parse_harness_bind_target("http://127.0.0.1:8080"),
+            Some(HarnessBindTarget {
+                bind_addr: "127.0.0.1:8080".to_string(),
+                probe_addr: std::net::SocketAddr::from(([127, 0, 0, 1], 8080)),
+            })
+        );
+        assert_eq!(
+            parse_harness_bind_target("http://localhost:8081/"),
+            Some(HarnessBindTarget {
+                bind_addr: "localhost:8081".to_string(),
+                probe_addr: std::net::SocketAddr::from(([127, 0, 0, 1], 8081)),
+            })
+        );
+        assert_eq!(
+            parse_harness_bind_target("http://[::1]:8082"),
+            Some(HarnessBindTarget {
+                bind_addr: "[::1]:8082".to_string(),
+                probe_addr: std::net::SocketAddr::new(
+                    std::net::IpAddr::V6(std::net::Ipv6Addr::LOCALHOST),
+                    8082,
+                ),
+            })
+        );
+    }
+
+    #[test]
+    fn parse_harness_bind_target_rejects_hosted_and_portless_urls() {
+        for url in [
+            "https://aura-harness-latest.onrender.com",
+            "https://aura-harness-latest.onrender.com:443",
+            "http://localhost",
+            "https://127.0.0.1",
+            "not-a-url",
+        ] {
+            assert_eq!(
+                parse_harness_bind_target(url),
+                None,
+                "autospawn must skip {url:?}"
+            );
         }
     }
 

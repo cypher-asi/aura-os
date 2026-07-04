@@ -4,7 +4,7 @@
 //! [`reqwest::Client`] reuse, and common request/response handling for harness proxy routes.
 
 use aura_os_harness::{local_harness_base_url, local_harness_transport_auth_token_from_env};
-use axum::http::{Method, StatusCode, header};
+use axum::http::{header, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use url::Url;
 

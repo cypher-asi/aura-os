@@ -3,12 +3,12 @@ use std::sync::Arc;
 #[cfg(unix)]
 use std::sync::Mutex;
 
-use axum::Router;
 use axum::body::Body;
 use axum::extract::Path;
 use axum::http::{Request, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{delete, get, post};
+use axum::Router;
 use serde_json::json;
 use tokio::net::TcpListener;
 
