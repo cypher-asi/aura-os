@@ -1,13 +1,13 @@
 use axum::extract::{Path, RawQuery, State};
-use axum::http::{header, Method, StatusCode};
+use axum::http::{Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 
 use aura_os_core::AgentId;
 
+use super::require_agent_proxy_access;
 use super::skill_exists_on_disk;
 use crate::capture_auth::is_capture_access_token;
-use crate::state::AppState;
-use crate::state::AuthJwt;
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 /// Proxies `GET api/skills` to the harness catalog, but filters out any
 /// entries whose `~/.aura/skills/<name>/SKILL.md` is gone. The external
@@ -112,6 +112,7 @@ pub(crate) async fn activate_skill(
 pub(crate) async fn list_agent_skills(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
@@ -123,6 +124,7 @@ pub(crate) async fn list_agent_skills(
         )
             .into_response());
     }
+    require_agent_proxy_access(&state, &jwt, &session, &agent_id).await?;
 
     let resp = state
         .harness_http
@@ -148,9 +150,12 @@ pub(crate) async fn list_agent_skills(
 
 pub(crate) async fn install_agent_skill(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
+    require_agent_proxy_access(&state, &jwt, &session, &agent_id).await?;
     let path = format!("api/agents/{agent_id}/skills");
 
     let clean_body = serde_json::from_str::<serde_json::Value>(&body)
@@ -182,8 +187,11 @@ pub(crate) async fn install_agent_skill(
 
 pub(crate) async fn uninstall_agent_skill(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path((agent_id, name)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
+    require_agent_proxy_access(&state, &jwt, &session, &agent_id).await?;
     state
         .harness_http
         .proxy_json(

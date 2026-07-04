@@ -3,17 +3,30 @@
 //! Centralizes base URL resolution (via [`AppState`](crate::state::AppState) wiring at startup),
 //! [`reqwest::Client`] reuse, and common request/response handling for harness proxy routes.
 
-use aura_os_harness::local_harness_transport_auth_token_from_env;
-use axum::http::{header, Method, StatusCode};
+use aura_os_harness::{local_harness_base_url, local_harness_transport_auth_token_from_env};
+use axum::http::{Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use url::Url;
 
 /// Gateway for JSON HTTP calls to the harness (`LOCAL_HARNESS_URL`).
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HarnessHttpGateway {
     base_url: String,
     client: reqwest::Client,
     transport_auth_token: Option<String>,
+}
+
+impl std::fmt::Debug for HarnessHttpGateway {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HarnessHttpGateway")
+            .field("base_url", &self.base_url)
+            .field("client", &self.client)
+            .field(
+                "transport_auth_token",
+                &self.transport_auth_token.as_ref().map(|_| "[redacted]"),
+            )
+            .finish()
+    }
 }
 
 impl HarnessHttpGateway {
@@ -22,8 +35,32 @@ impl HarnessHttpGateway {
         Self {
             base_url,
             client: reqwest::Client::new(),
-            transport_auth_token: local_harness_transport_auth_token_from_env(),
+            transport_auth_token: None,
         }
+    }
+
+    pub fn with_transport_auth_token(
+        base_url: impl Into<String>,
+        transport_auth_token: Option<String>,
+    ) -> Self {
+        let mut gateway = Self::new(base_url);
+        gateway.transport_auth_token = transport_auth_token;
+        gateway
+    }
+
+    pub fn for_configured_local_base_url(base_url: impl Into<String>) -> Self {
+        let base_url = base_url.into();
+        let transport_auth_token =
+            if normalized_base_url(&base_url) == normalized_base_url(&local_harness_base_url()) {
+                local_harness_transport_auth_token_from_env()
+            } else {
+                None
+            };
+        Self::with_transport_auth_token(base_url, transport_auth_token)
+    }
+
+    pub(crate) fn has_transport_auth(&self) -> bool {
+        self.transport_auth_token.is_some()
     }
 
     fn apply_transport_auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
@@ -154,6 +191,10 @@ impl HarnessHttpGateway {
         url.set_query(query);
         Ok(url)
     }
+}
+
+fn normalized_base_url(url: &str) -> String {
+    url.trim().trim_end_matches('/').to_string()
 }
 
 #[cfg(test)]

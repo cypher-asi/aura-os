@@ -1,5 +1,5 @@
-use axum::extract::{Path, State};
 use axum::Json;
+use axum::extract::{Path, State};
 use serde::Serialize;
 use tracing::{info, warn};
 
@@ -9,7 +9,7 @@ use aura_os_network::NetworkAgent;
 use crate::agent_events::AgentEvent;
 use crate::capture_auth::{demo_agent, is_capture_access_token};
 use crate::dto::CreateAgentRequest;
-use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::error::{ApiError, ApiResult, map_network_error};
 use crate::handlers::agents::conversions_pub::agent_from_network;
 use crate::handlers::agents::{
     create_and_provision_remote_agent, ensure_agent_home_project_and_binding, prepare_create,
@@ -491,14 +491,14 @@ pub(crate) async fn list_pending_events(
 /// harness URL is reachable so the agent editor can show a Cloud
 /// health pill. Purely advisory; never blocks chat.
 ///
-/// Forwards the caller's JWT so the probed endpoint behaves the same way
-/// it would during a real hand-off (this doubles as a JWT-forwarding
-/// sanity check for the remote-harness flow).
+/// Uses the configured hosted-local transport bearer when present, so
+/// protected hosted harnesses can be probed without exposing the service
+/// secret to browsers. Without that env, falls back to the caller's JWT.
 pub(crate) async fn harness_health(
     State(_state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
 ) -> Json<crate::harness_client::HarnessProbeResult> {
-    let client = HarnessClient::from_env();
+    let client = HarnessClient::from_env_with_transport_auth();
     Json(client.probe(Some(&jwt)).await)
 }
 
@@ -545,7 +545,7 @@ mod tests {
     use aura_os_core::AgentPermissions;
     use aura_os_network::NetworkAgent;
 
-    use super::{ceo_system_prompt, looks_like_ceo, CEO_SYSTEM_PROMPT_PREFIX};
+    use super::{CEO_SYSTEM_PROMPT_PREFIX, ceo_system_prompt, looks_like_ceo};
 
     fn network_agent(
         name: &str,

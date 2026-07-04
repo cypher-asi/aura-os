@@ -1,10 +1,21 @@
 use axum::http::StatusCode;
 use serde_json::json;
+use std::sync::Arc;
 use tower::ServiceExt;
 
+use super::HARNESS_URL_ENV_LOCK;
 use super::common::*;
 use super::mocks::start_mock_harness;
-use super::HARNESS_URL_ENV_LOCK;
+
+struct EnvVarReset(&'static str);
+
+impl Drop for EnvVarReset {
+    fn drop(&mut self) {
+        unsafe {
+            std::env::remove_var(self.0);
+        }
+    }
+}
 
 #[tokio::test]
 async fn proxy_forwards_get_facts() {
@@ -26,10 +37,141 @@ async fn proxy_forwards_get_facts() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "GET");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/memory/facts")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/memory/facts"))
+    );
+}
+
+#[tokio::test]
+async fn proxy_with_transport_auth_rejects_unowned_agent_before_forwarding() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _handle) = start_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+        std::env::set_var("LOCAL_HARNESS_AUTH_TOKEN", "harness-secret");
+    }
+    let _reset_url = EnvVarReset("LOCAL_HARNESS_URL");
+    let _reset_auth = EnvVarReset("LOCAL_HARNESS_AUTH_TOKEN");
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let agent = "00000000-0000-0000-0000-000000000001";
+    let req = json_request(
+        "GET",
+        &format!("/api/harness/agents/{agent}/memory/facts"),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn proxy_with_transport_auth_allows_network_owned_agent() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _handle) = start_mock_harness().await;
+    let agent = "00000000-0000-0000-0000-000000000001";
+    let network_url = super::mocks::start_mock_network_serving_agent(agent.to_string()).await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+        std::env::set_var("LOCAL_HARNESS_AUTH_TOKEN", "harness-secret");
+    }
+    let _reset_url = EnvVarReset("LOCAL_HARNESS_URL");
+    let _reset_auth = EnvVarReset("LOCAL_HARNESS_AUTH_TOKEN");
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(aura_os_store::SettingsStore::open(store_dir.path()).unwrap());
+    store_zero_auth_session(&store);
+    let (app, _) = build_test_app_from_store(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(Arc::new(aura_os_network::NetworkClient::with_base_url(
+            &network_url,
+        ))),
+        None,
+        None,
+        None,
+    );
+
+    let req = json_request(
+        "GET",
+        &format!("/api/harness/agents/{agent}/memory/facts"),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body["echoed_method"], "GET");
+    assert_eq!(
+        body["echoed_authorization"].as_str(),
+        Some("Bearer harness-secret")
+    );
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/memory/facts"))
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn proxy_with_transport_auth_allows_local_shadow_agent() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _handle) = start_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+        std::env::set_var("LOCAL_HARNESS_AUTH_TOKEN", "harness-secret");
+    }
+    let _reset_url = EnvVarReset("LOCAL_HARNESS_URL");
+    let _reset_auth = EnvVarReset("LOCAL_HARNESS_AUTH_TOKEN");
+
+    let (app, state, _db) = build_test_app();
+    let agent = super::mocks::persist_test_agent(&state, "local proxy");
+    let req = json_request(
+        "GET",
+        &format!("/api/harness/agents/{agent}/memory/facts"),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body["echoed_method"], "GET");
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/memory/facts"))
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn proxy_with_transport_auth_rejects_unowned_local_shadow_agent() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _handle) = start_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+        std::env::set_var("LOCAL_HARNESS_AUTH_TOKEN", "harness-secret");
+    }
+    let _reset_url = EnvVarReset("LOCAL_HARNESS_URL");
+    let _reset_auth = EnvVarReset("LOCAL_HARNESS_AUTH_TOKEN");
+
+    let (app, state, _db) = build_test_app();
+    let agent =
+        super::mocks::persist_test_agent_for_user(&state, "someone else's proxy", "other-user");
+    let req = json_request(
+        "GET",
+        &format!("/api/harness/agents/{agent}/memory/facts"),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
 #[tokio::test]
@@ -78,10 +220,12 @@ async fn proxy_forwards_delete() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "DELETE");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/memory/facts/f1")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/memory/facts/f1"))
+    );
 }
 
 #[tokio::test]
@@ -118,10 +262,12 @@ async fn proxy_forwards_skill_activate() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "POST");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains("/api/skills/deploy/activate"));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains("/api/skills/deploy/activate")
+    );
 }
 
 #[tokio::test]
@@ -140,10 +286,12 @@ async fn proxy_forwards_agent_skills_list() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "GET");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/skills")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/skills"))
+    );
 }
 
 #[tokio::test]
@@ -189,10 +337,12 @@ async fn proxy_forwards_agent_skill_uninstall() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "DELETE");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/skills/deploy")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/skills/deploy"))
+    );
 }
 
 #[tokio::test]

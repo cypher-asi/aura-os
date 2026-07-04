@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 
+use axum::Json;
+use axum::Router;
 use axum::body::Body;
 use axum::extract::{Path, Query};
 use axum::http::{Request, StatusCode};
 use axum::routing::get;
-use axum::Json;
-use axum::Router;
 use serde_json::Value;
 use tokio::net::TcpListener;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
@@ -48,8 +48,12 @@ pub fn store_zero_auth_session(store: &SettingsStore) {
 }
 
 #[allow(dead_code)]
-pub async fn build_test_app_with_storage(
-) -> (Router, AppState, Arc<StorageClient>, tempfile::TempDir) {
+pub async fn build_test_app_with_storage() -> (
+    Router,
+    AppState,
+    Arc<StorageClient>,
+    tempfile::TempDir,
+) {
     let (app, state, storage, _db, dir) = build_test_app_with_storage_db().await;
     (app, state, storage, dir)
 }
@@ -314,10 +318,13 @@ pub fn build_test_app_from_store_with_remote_only(
     ));
     let harness_base =
         std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:19080".to_string());
-    let local_harness: Arc<dyn HarnessLink> = Arc::new(LocalHarness::new(harness_base.clone()));
+    let local_harness: Arc<dyn HarnessLink> = Arc::new(
+        LocalHarness::for_configured_local_base_url(harness_base.clone()),
+    );
 
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(256);
-    let harness_http = Arc::new(aura_os_server::HarnessHttpGateway::new(harness_base));
+    let harness_http =
+        Arc::new(aura_os_server::HarnessHttpGateway::for_configured_local_base_url(harness_base));
     let validation_cache = Arc::new(dashmap::DashMap::new());
     validation_cache.insert(
         TEST_JWT.to_string(),

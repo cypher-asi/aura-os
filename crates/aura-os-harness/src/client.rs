@@ -2,15 +2,16 @@
 
 use std::time::Duration;
 
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use tokio_tungstenite::tungstenite::http::header::AUTHORIZATION as WS_AUTHORIZATION;
 use tokio_tungstenite::tungstenite::http::HeaderValue as WsHeaderValue;
+use tokio_tungstenite::tungstenite::http::header::AUTHORIZATION as WS_AUTHORIZATION;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::instrument;
 
 use crate::harness_auth::{local_harness_transport_auth_token_from_env, preferred_transport_auth};
+use crate::harness_url::local_harness_base_url;
 
 const DEFAULT_HTTP_TIMEOUT_SECS: u64 = 30;
 
@@ -119,11 +120,24 @@ pub enum HarnessClientError {
 }
 
 /// Lightweight client for the aura-harness node HTTP + WebSocket surface.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HarnessClient {
     base_url: String,
     http: reqwest::Client,
     transport_auth_token: Option<String>,
+}
+
+impl std::fmt::Debug for HarnessClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HarnessClient")
+            .field("base_url", &self.base_url)
+            .field("http", &self.http)
+            .field(
+                "transport_auth_token",
+                &self.transport_auth_token.as_ref().map(|_| "[redacted]"),
+            )
+            .finish()
+    }
 }
 
 impl HarnessClient {
@@ -138,7 +152,7 @@ impl HarnessClient {
         Self {
             base_url,
             http,
-            transport_auth_token: local_harness_transport_auth_token_from_env(),
+            transport_auth_token: None,
         }
     }
 
@@ -153,12 +167,20 @@ impl HarnessClient {
         client
     }
 
-    /// Build a client from `LOCAL_HARNESS_URL`, defaulting to localhost.
+    /// Build a client from the canonical local harness URL.
     #[must_use]
     pub fn from_env() -> Self {
-        let base = std::env::var("LOCAL_HARNESS_URL")
-            .unwrap_or_else(|_| "http://localhost:8080".to_string());
-        Self::new(base)
+        Self::new(local_harness_base_url())
+    }
+
+    /// Build a client from `LOCAL_HARNESS_URL` with the hosted local
+    /// harness transport bearer, when configured.
+    #[must_use]
+    pub fn from_env_with_transport_auth() -> Self {
+        Self::with_transport_auth_token(
+            local_harness_base_url(),
+            local_harness_transport_auth_token_from_env(),
+        )
     }
 
     /// Return the normalized base URL.
