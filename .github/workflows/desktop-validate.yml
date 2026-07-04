@@ -173,7 +173,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.desktop-matrix.outputs.matrix) }}
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
