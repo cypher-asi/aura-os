@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const storageState = new Map<string, string>();
+const originalLocation = window.location;
 
 const mockStorage = {
   getItem: vi.fn((key: string) => storageState.get(key) ?? null),
@@ -13,7 +14,21 @@ const mockStorage = {
 };
 
 function setLocation(url: string) {
-  window.history.replaceState({}, "", url);
+  const parsed = new URL(url, "http://app.local");
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: {
+      ...originalLocation,
+      href: parsed.toString(),
+      origin: parsed.origin,
+      protocol: parsed.protocol,
+      host: parsed.host,
+      hostname: parsed.hostname,
+      pathname: parsed.pathname,
+      search: parsed.search,
+      hash: parsed.hash,
+    } satisfies Partial<Location>,
+  });
 }
 
 function clearHostStorage() {
@@ -41,6 +56,8 @@ describe("host-config", () => {
     });
     setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
     delete (window as Window & { Capacitor?: unknown }).Capacitor;
+    delete (window as Window & { __AURA_BOOT_AUTH__?: unknown }).__AURA_BOOT_AUTH__;
+    delete (window as Window & { ipc?: unknown }).ipc;
     setLocation("/login");
   });
 
@@ -50,6 +67,8 @@ describe("host-config", () => {
     vi.unstubAllEnvs();
     setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
     delete (window as Window & { Capacitor?: unknown }).Capacitor;
+    delete (window as Window & { __AURA_BOOT_AUTH__?: unknown }).__AURA_BOOT_AUTH__;
+    delete (window as Window & { ipc?: unknown }).ipc;
     setLocation("/login");
   });
 
@@ -60,6 +79,31 @@ describe("host-config", () => {
     expect(hostConfig.getTargetHostOrigin()).toBeNull();
     expect(hostConfig.getResolvedHostOrigin()).toBe(window.location.origin);
     expect(hostConfig.resolveApiUrl("/api/auth/session")).toBe("/api/auth/session");
+  });
+
+  it("keeps desktop loopback origins on same-origin host resolution", async () => {
+    setLocation("http://127.0.0.1:19847/projects");
+
+    const hostConfig = await import("./host-config");
+
+    expect(hostConfig.requiresExplicitHostOrigin()).toBe(false);
+    expect(hostConfig.getTargetHostOrigin()).toBeNull();
+    expect(hostConfig.getResolvedHostOrigin()).toBe("http://127.0.0.1:19847");
+    expect(hostConfig.resolveApiUrl("/api/auth/session")).toBe("/api/auth/session");
+    expect(hostConfig.getHostDisplayLabel()).toBe("Current origin");
+  });
+
+  it("uses the Android build default for mobile loopback dev webviews", async () => {
+    vi.stubEnv("VITE_ANDROID_DEFAULT_HOST", "http://10.0.2.2:3100");
+    setLocation("http://127.0.0.1:5173/login");
+    setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 3a)");
+
+    const hostConfig = await import("./host-config");
+
+    expect(hostConfig.requiresExplicitHostOrigin()).toBe(true);
+    expect(hostConfig.getNativeDefaultHostOrigin()).toBe("http://10.0.2.2:3100");
+    expect(hostConfig.getTargetHostOrigin()).toBe("http://10.0.2.2:3100");
+    expect(hostConfig.resolveApiUrl("/api/auth/session")).toBe("http://10.0.2.2:3100/api/auth/session");
   });
 
   it("uses the Android build default host for native shells when no custom host is set", async () => {
