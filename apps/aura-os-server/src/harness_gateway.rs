@@ -3,6 +3,7 @@
 //! Centralizes base URL resolution (via [`AppState`](crate::state::AppState) wiring at startup),
 //! [`reqwest::Client`] reuse, and common request/response handling for harness proxy routes.
 
+use aura_os_harness::local_harness_transport_auth_token_from_env;
 use axum::http::{header, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use url::Url;
@@ -12,6 +13,7 @@ use url::Url;
 pub struct HarnessHttpGateway {
     base_url: String,
     client: reqwest::Client,
+    transport_auth_token: Option<String>,
 }
 
 impl HarnessHttpGateway {
@@ -20,6 +22,14 @@ impl HarnessHttpGateway {
         Self {
             base_url,
             client: reqwest::Client::new(),
+            transport_auth_token: local_harness_transport_auth_token_from_env(),
+        }
+    }
+
+    fn apply_transport_auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        match self.transport_auth_token.as_deref() {
+            Some(token) => req.bearer_auth(token),
+            None => req,
         }
     }
 
@@ -41,7 +51,9 @@ impl HarnessHttpGateway {
             _ => return Err(StatusCode::METHOD_NOT_ALLOWED),
         };
 
-        req = req.header("Content-Type", "application/json");
+        req = self
+            .apply_transport_auth(req)
+            .header("Content-Type", "application/json");
         if let Some(body) = body {
             req = req.body(body);
         }
@@ -85,10 +97,12 @@ impl HarnessHttpGateway {
             return;
         };
         let _ = self
-            .client
-            .post(url)
-            .header("Content-Type", "application/json")
-            .body(body)
+            .apply_transport_auth(
+                self.client
+                    .post(url)
+                    .header("Content-Type", "application/json")
+                    .body(body),
+            )
             .send()
             .await;
     }
@@ -109,7 +123,8 @@ impl HarnessHttpGateway {
             Method::DELETE => self.client.delete(url),
             _ => return None,
         };
-        let resp = req
+        let resp = self
+            .apply_transport_auth(req)
             .header("Content-Type", "application/json")
             .send()
             .await

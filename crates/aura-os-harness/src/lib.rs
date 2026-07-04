@@ -9,6 +9,7 @@ pub mod client;
 mod error;
 mod event_normalization;
 mod harness;
+mod harness_auth;
 mod harness_url;
 mod local_harness;
 pub mod runner;
@@ -45,6 +46,7 @@ pub use harness::{
     CouncilPresentation, HarnessCommandSender, HarnessLink, HarnessSession, RunHandle,
     SessionConfig,
 };
+pub use harness_auth::{local_harness_transport_auth_token_from_env, LOCAL_HARNESS_AUTH_TOKEN_ENV};
 pub use harness_url::local_harness_base_url;
 pub use local_harness::LocalHarness;
 pub use runner::automaton_event_kinds;

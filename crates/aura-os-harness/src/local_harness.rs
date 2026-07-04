@@ -6,9 +6,10 @@ use tracing::info;
 
 use crate::error::HarnessError;
 use crate::harness::{
-    build_runtime_request, validate_runtime_request_identity, HarnessLink, HarnessSession,
-    RunHandle, SessionConfig,
+    HarnessLink, HarnessSession, RunHandle, SessionConfig, build_runtime_request,
+    validate_runtime_request_identity,
 };
+use crate::harness_auth::{local_harness_transport_auth_token_from_env, preferred_transport_auth};
 use crate::harness_url::local_harness_base_url;
 use crate::stability_metrics;
 use crate::ws_bridge::spawn_ws_bridge;
@@ -81,15 +82,34 @@ pub(crate) fn next_backoff(attempt: u32) -> Duration {
 #[derive(Debug, Clone)]
 pub struct LocalHarness {
     base_url: String,
+    transport_auth_token: Option<String>,
 }
 
 impl LocalHarness {
     pub fn new(base_url: String) -> Self {
-        Self { base_url }
+        Self {
+            base_url,
+            transport_auth_token: local_harness_transport_auth_token_from_env(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_transport_auth_token(
+        base_url: String,
+        transport_auth_token: Option<String>,
+    ) -> Self {
+        Self {
+            base_url,
+            transport_auth_token,
+        }
     }
 
     pub fn from_env() -> Self {
         Self::new(local_harness_base_url())
+    }
+
+    fn transport_auth<'a>(&'a self, caller_token: Option<&'a str>) -> Option<&'a str> {
+        preferred_transport_auth(self.transport_auth_token.as_deref(), caller_token)
     }
 
     fn ws_base(&self) -> String {
@@ -222,7 +242,7 @@ impl HarnessLink for LocalHarness {
         let mut req = Self::lifecycle_http_client()?
             .get(&url)
             .query(&[("project_name", project_name)]);
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token) {
             req = req.bearer_auth(token);
         }
         let resp = req.send().await?;
@@ -245,7 +265,7 @@ impl HarnessLink for LocalHarness {
     ) -> anyhow::Result<serde_json::Value> {
         let url = format!("{}/v1/run/{run_id}/status", self.base_url);
         let mut req = Self::lifecycle_http_client()?.get(&url);
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token) {
             req = req.bearer_auth(token);
         }
         let resp = req.send().await?;
@@ -337,7 +357,7 @@ impl LocalHarness {
     ) -> anyhow::Result<()> {
         let url = format!("{}/v1/run/{run_id}/{action}", self.base_url);
         let mut req = Self::lifecycle_http_client()?.post(&url);
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token) {
             req = req.bearer_auth(token);
         }
         let resp = req.send().await?;
@@ -404,7 +424,7 @@ impl LocalHarness {
         let mut http_req = http_client
             .post(format!("{}/v1/run", self.base_url))
             .json(request_body);
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token) {
             http_req = http_req.bearer_auth(token);
         }
         let resp = http_req.send().await.map_err(|e| {
@@ -469,7 +489,7 @@ impl LocalHarness {
         let mut ws_req = ws_url.to_string().into_client_request().map_err(|e| {
             OpenAttemptError::Other(anyhow::anyhow!("failed to build ws request: {e}"))
         })?;
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token) {
             let value = format!("Bearer {token}").parse().map_err(|e| {
                 OpenAttemptError::Other(anyhow::anyhow!("bad authorization header value: {e}"))
             })?;
@@ -529,7 +549,7 @@ impl LocalHarness {
                 Err(_) => {
                     return Err(OpenAttemptError::Other(anyhow::anyhow!(
                         "Timed out waiting for SessionReady from local harness (30s)"
-                    )))
+                    )));
                 }
             }
         } else {

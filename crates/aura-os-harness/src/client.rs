@@ -10,6 +10,8 @@ use tokio_tungstenite::tungstenite::http::HeaderValue as WsHeaderValue;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::instrument;
 
+use crate::harness_auth::{local_harness_transport_auth_token_from_env, preferred_transport_auth};
+
 const DEFAULT_HTTP_TIMEOUT_SECS: u64 = 30;
 
 /// Transaction kinds accepted by the harness `POST /tx` endpoint.
@@ -121,6 +123,7 @@ pub enum HarnessClientError {
 pub struct HarnessClient {
     base_url: String,
     http: reqwest::Client,
+    transport_auth_token: Option<String>,
 }
 
 impl HarnessClient {
@@ -132,7 +135,22 @@ impl HarnessClient {
             .timeout(Duration::from_secs(DEFAULT_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
-        Self { base_url, http }
+        Self {
+            base_url,
+            http,
+            transport_auth_token: local_harness_transport_auth_token_from_env(),
+        }
+    }
+
+    /// Build a client with an explicit transport bearer override.
+    #[must_use]
+    pub fn with_transport_auth_token(
+        base_url: impl Into<String>,
+        transport_auth_token: Option<String>,
+    ) -> Self {
+        let mut client = Self::new(base_url);
+        client.transport_auth_token = transport_auth_token;
+        client
     }
 
     /// Build a client from `LOCAL_HARNESS_URL`, defaulting to localhost.
@@ -147,6 +165,10 @@ impl HarnessClient {
     #[must_use]
     pub fn base_url(&self) -> &str {
         &self.base_url
+    }
+
+    fn transport_auth<'a>(&'a self, caller_token: Option<&'a str>) -> Option<&'a str> {
+        preferred_transport_auth(self.transport_auth_token.as_deref(), caller_token)
     }
 
     /// Submit a transaction to the harness.
@@ -166,7 +188,7 @@ impl HarnessClient {
             "payload": base64::engine::general_purpose::STANDARD.encode(payload),
         });
         let req = self.http.post(format!("{}/tx", self.base_url)).json(&body);
-        let resp = apply_jwt(req, jwt)?.send().await?;
+        let resp = apply_jwt(req, self.transport_auth(jwt))?.send().await?;
         json_response(resp).await
     }
 
@@ -236,7 +258,7 @@ impl HarnessClient {
             .http
             .post(format!("{}/v1/run", self.base_url))
             .json(&body);
-        let resp = apply_jwt(req, jwt)?.send().await?;
+        let resp = apply_jwt(req, self.transport_auth(jwt))?.send().await?;
         json_response(resp).await
     }
 
@@ -250,7 +272,7 @@ impl HarnessClient {
         let req = self
             .http
             .get(format!("{}/agents/{agent_id}/head", self.base_url));
-        let resp = apply_jwt(req, jwt)?.send().await?;
+        let resp = apply_jwt(req, self.transport_auth(jwt))?.send().await?;
         json_response(resp).await
     }
 
@@ -267,7 +289,9 @@ impl HarnessClient {
             "{}/agents/{agent_id}/record?from_seq={from_seq}&limit={limit}",
             self.base_url
         );
-        let resp = apply_jwt(self.http.get(url), jwt)?.send().await?;
+        let resp = apply_jwt(self.http.get(url), self.transport_auth(jwt))?
+            .send()
+            .await?;
         json_response(resp).await
     }
 
@@ -277,7 +301,7 @@ impl HarnessClient {
         let nil = uuid::Uuid::nil().to_string();
         let url = format!("{}/agents/{nil}/head", self.base_url);
         let start = std::time::Instant::now();
-        let req = match apply_jwt(self.http.get(url), jwt) {
+        let req = match apply_jwt(self.http.get(url), self.transport_auth(jwt)) {
             Ok(req) => req,
             Err(err) => return self.probe_error(start, format!("invalid jwt header: {err}")),
         };
@@ -311,7 +335,7 @@ impl HarnessClient {
         let ws_url = http_to_ws(&self.base_url)
             .ok_or_else(|| HarnessClientError::InvalidBaseUrl(self.base_url.clone()))?;
         let mut request = format!("{ws_url}/stream/{run_id}").into_client_request()?;
-        if let Some(jwt) = jwt {
+        if let Some(jwt) = self.transport_auth(jwt) {
             let value = WsHeaderValue::from_str(&format!("Bearer {jwt}"))
                 .map_err(|err| HarnessClientError::InvalidJwt(err.to_string()))?;
             request.headers_mut().insert(WS_AUTHORIZATION, value);
