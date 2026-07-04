@@ -27,6 +27,13 @@ function setLocation(url: string) {
   });
 }
 
+function setUserAgent(userAgent: string) {
+  Object.defineProperty(window.navigator, "userAgent", {
+    configurable: true,
+    value: userAgent,
+  });
+}
+
 function createMockMatchMedia() {
   const listeners = new Map<string, Set<MediaQueryHandler>>();
 
@@ -56,6 +63,7 @@ describe("useAuraCapabilities", () => {
 
   beforeEach(() => {
     origMatchMedia = window.matchMedia;
+    setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
     setLocation("/login");
     vi.stubGlobal(
       "fetch",
@@ -67,7 +75,11 @@ describe("useAuraCapabilities", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     window.matchMedia = origMatchMedia;
+    setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
     setLocation("/login");
+    delete (window as Window & { Capacitor?: unknown }).Capacitor;
+    delete (window as Window & { __AURA_BOOT_AUTH__?: unknown }).__AURA_BOOT_AUTH__;
+    delete (window as Window & { ipc?: unknown }).ipc;
     delete document.documentElement.dataset.mobileClient;
     delete document.documentElement.dataset.mobileLayout;
     resetAuraCapabilitiesForTests();
@@ -210,10 +222,27 @@ describe("useAuraCapabilities", () => {
     const { matchMedia } = createMockMatchMedia();
     window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
     setLocation("http://localhost/login");
+    setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 3a)");
 
     const { result } = renderHook(() => useAuraCapabilities());
 
     expect(result.current.isNativeApp).toBe(true);
+  });
+
+  it("keeps desktop loopback clients out of native mobile mode", () => {
+    const { matchMedia } = createMockMatchMedia();
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    setLocation("http://127.0.0.1:19847/projects");
+    (window as Window & { ipc?: { postMessage: () => void } }).ipc = {
+      postMessage: vi.fn(),
+    };
+
+    const { result } = renderHook(() => useAuraCapabilities());
+
+    expect(result.current.hasDesktopBridge).toBe(true);
+    expect(result.current.isNativeApp).toBe(false);
+    expect(result.current.isMobileClient).toBe(false);
+    expect(document.documentElement.dataset.mobileClient).toBe("false");
   });
 
   it("cleans up listeners on unmount", () => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { inferNativePlatform, isNativeRuntime } from "./native-runtime";
+import { inferNativePlatform, isDesktopRuntime, isNativeRuntime } from "./native-runtime";
 
 const originalLocation = window.location;
 
@@ -31,12 +31,20 @@ function setUserAgent(userAgent: string) {
 describe("native-runtime", () => {
   beforeEach(() => {
     delete (window as Window & { Capacitor?: unknown }).Capacitor;
+    delete (window as Window & { __AURA_BOOT_AUTH__?: unknown }).__AURA_BOOT_AUTH__;
+    delete (window as Window & { __TAURI__?: unknown }).__TAURI__;
+    delete (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+    delete (window as Window & { ipc?: unknown }).ipc;
     setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
     setLocation("/login");
   });
 
   afterEach(() => {
     delete (window as Window & { Capacitor?: unknown }).Capacitor;
+    delete (window as Window & { __AURA_BOOT_AUTH__?: unknown }).__AURA_BOOT_AUTH__;
+    delete (window as Window & { __TAURI__?: unknown }).__TAURI__;
+    delete (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+    delete (window as Window & { ipc?: unknown }).ipc;
     setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
     setLocation("/login");
   });
@@ -49,25 +57,54 @@ describe("native-runtime", () => {
     expect(inferNativePlatform()).toBe("android");
   });
 
-  it("leaves localhost webviews without platform hints unresolved", () => {
+  it("leaves desktop localhost browser origins non-native without mobile evidence", () => {
     setLocation("http://localhost/login");
 
-    expect(isNativeRuntime()).toBe(true);
+    expect(isNativeRuntime()).toBe(false);
     expect(inferNativePlatform()).toBeNull();
   });
 
-  it("treats ported localhost dev webviews as native", () => {
+  it("treats mobile localhost dev webviews as native without a Capacitor bridge", () => {
     setLocation("http://localhost:5173/login");
+    setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 3a)");
 
     expect(isNativeRuntime()).toBe(true);
+    expect(inferNativePlatform()).toBe("android");
+  });
+
+  it("treats mobile loopback dev webviews as native without a Capacitor bridge", () => {
+    setLocation("http://127.0.0.1:5173/login");
+    setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 3a)");
+
+    expect(isNativeRuntime()).toBe(true);
+    expect(inferNativePlatform()).toBe("android");
+  });
+
+  it("keeps desktop loopback origins non-native before bridge globals load", () => {
+    setLocation("http://127.0.0.1:19847/projects");
+
+    expect(isDesktopRuntime()).toBe(false);
+    expect(isNativeRuntime()).toBe(false);
     expect(inferNativePlatform()).toBeNull();
   });
 
-  it("treats loopback dev webviews as native", () => {
-    setLocation("http://127.0.0.1:5173/login");
+  it("lets desktop bridge globals override loopback mobile heuristics", () => {
+    setLocation("http://127.0.0.1:19847/projects");
+    setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 3a)");
+    (window as Window & { __AURA_BOOT_AUTH__?: unknown }).__AURA_BOOT_AUTH__ = { isLoggedIn: true };
 
-    expect(isNativeRuntime()).toBe(true);
+    expect(isDesktopRuntime()).toBe(true);
+    expect(isNativeRuntime()).toBe(false);
     expect(inferNativePlatform()).toBeNull();
+  });
+
+  it("detects the desktop ipc bridge as desktop", () => {
+    (window as Window & { ipc?: { postMessage: () => void } }).ipc = {
+      postMessage: () => undefined,
+    };
+
+    expect(isDesktopRuntime()).toBe(true);
+    expect(isNativeRuntime()).toBe(false);
   });
 
   it("treats the iOS capacitor protocol as native", () => {

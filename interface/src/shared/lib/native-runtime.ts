@@ -5,27 +5,50 @@ interface CapacitorWindow extends Window {
   };
 }
 
-const LOOPBACK_WEBVIEW_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+type RuntimeWindow = CapacitorWindow & {
+  __AURA_BOOT_AUTH__?: unknown;
+  __TAURI__?: unknown;
+  __TAURI_INTERNALS__?: unknown;
+  ipc?: {
+    postMessage?: unknown;
+  };
+};
+
+const LOOPBACK_WEBVIEW_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+const MOBILE_USER_AGENT_PATTERN = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i;
 
 function hasWindow() {
   return typeof window !== "undefined";
 }
 
-export function isNativeRuntime(): boolean {
+export function isDesktopRuntime(): boolean {
   if (!hasWindow()) return false;
 
-  const nativeCheck = (window as CapacitorWindow).Capacitor?.isNativePlatform;
+  const runtimeWindow = window as RuntimeWindow;
+  return (
+    typeof runtimeWindow.ipc?.postMessage === "function" ||
+    typeof runtimeWindow.__AURA_BOOT_AUTH__ !== "undefined" ||
+    typeof runtimeWindow.__TAURI__ !== "undefined" ||
+    typeof runtimeWindow.__TAURI_INTERNALS__ !== "undefined"
+  );
+}
+
+export function isNativeRuntime(): boolean {
+  if (!hasWindow()) return false;
+  if (isDesktopRuntime()) return false;
+
+  const nativeCheck = (window as RuntimeWindow).Capacitor?.isNativePlatform;
   if (typeof nativeCheck === "function") {
     return Boolean(nativeCheck());
   }
 
-  return window.location.protocol === "capacitor:" || isLoopbackWebviewOrigin();
+  return window.location.protocol === "capacitor:" || (isLoopbackWebviewOrigin() && hasMobileUserAgent());
 }
 
 export function inferNativePlatform(): "android" | "ios" | null {
   if (!hasWindow() || !isNativeRuntime()) return null;
 
-  const platformCheck = (window as CapacitorWindow).Capacitor?.getPlatform;
+  const platformCheck = (window as RuntimeWindow).Capacitor?.getPlatform;
   if (typeof platformCheck === "function") {
     try {
       const platform = platformCheck();
@@ -48,4 +71,9 @@ function isLoopbackWebviewOrigin(): boolean {
   if (!hasWindow()) return false;
   if (window.location.protocol !== "http:" && window.location.protocol !== "https:") return false;
   return LOOPBACK_WEBVIEW_HOSTS.has(window.location.hostname);
+}
+
+function hasMobileUserAgent(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return MOBILE_USER_AGENT_PATTERN.test(navigator.userAgent);
 }
