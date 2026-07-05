@@ -204,6 +204,16 @@
   overflow: hidden;
 }
 
+.emptyState {
+  display: flex;
+  flex: 1;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  text-align: center;
+}
+
 @media (max-width: 680px) {
   .container {
     overflow: hidden;

@@ -81,6 +81,11 @@ export function SidekickTaskbar() {
       setActiveTab("tasks");
     }
   }, [activeTab, canBrowseFiles, setActiveTab]);
+  useEffect(() => {
+    if (canBrowseFiles || !loopEngineeringOpen) return;
+    setLoopEngineeringOpen(false);
+    setLoopPanelStyle(null);
+  }, [canBrowseFiles, loopEngineeringOpen]);
   const project = ctx?.project;
   const handleArchive = ctx?.handleArchive;
   const loopProjectId = project?.project_id ?? projectId ?? null;
@@ -110,7 +115,7 @@ export function SidekickTaskbar() {
         icon: <PlayLoopGlyph active={runActive} size={16} />,
         title: "Run",
       },
-      ...(loopProjectId
+      ...(loopProjectId && canBrowseFiles
         ? [
             {
               id: "loop-engineering",
@@ -147,7 +152,7 @@ export function SidekickTaskbar() {
       { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
     ];
     return items;
-  }, [tasksActive, runActive, loopProjectId]);
+	  }, [tasksActive, runActive, loopProjectId, canBrowseFiles]);
   const visibleTabs = canBrowseFiles
     ? tabs
     : tabs.filter((tab) => tab.id !== "files");

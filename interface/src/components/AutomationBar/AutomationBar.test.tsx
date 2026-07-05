@@ -37,6 +37,23 @@ const mockStopLoop = vi.fn();
 const mockResumeLoop = vi.fn();
 const mockListAgentInstances = vi.fn();
 const mockListLoops = vi.fn();
+let mockLinkedWorkspace = true;
+let mockTerminalTarget = {
+  remoteAgentId: undefined as string | undefined,
+  remoteWorkspacePath: undefined as string | undefined,
+  workspacePath: "/Users/demo/project" as string | undefined,
+  status: "ready" as "loading" | "ready" | "error",
+};
+
+vi.mock("../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => ({
+    features: { linkedWorkspace: mockLinkedWorkspace },
+  }),
+}));
+
+vi.mock("../../hooks/use-terminal-target", () => ({
+  useTerminalTarget: () => mockTerminalTarget,
+}));
 
 vi.mock("../../api/client", () => {
   // Defined inside the factory so the hoisted `vi.mock` does not
@@ -190,6 +207,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   subscribeMap.clear();
   useAutomationLoopStore.getState().reset();
+  mockLinkedWorkspace = true;
+  mockTerminalTarget = {
+    remoteAgentId: undefined,
+    remoteWorkspacePath: undefined,
+    workspacePath: "/Users/demo/project",
+    status: "ready",
+  };
   // The automation model selector falls back to localStorage when the
   // in-memory map is empty, so tests must clear both halves of the
   // persistence chain to start from a clean slate. Without this, a
@@ -312,6 +336,25 @@ describe("AutomationBar", () => {
       undefined,
       "aura-claude-opus-4-7",
     );
+  });
+
+  it("disables build automation for a local workspace when the desktop bridge is unavailable", async () => {
+    mockLinkedWorkspace = false;
+    mockTerminalTarget = {
+      remoteAgentId: undefined,
+      remoteWorkspacePath: undefined,
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    };
+
+    renderBar();
+
+    const blockedButtons = screen.getAllByTitle(
+      "Build tools for local workspaces are available in Aura Desktop",
+    );
+    expect(blockedButtons).toHaveLength(2);
+    blockedButtons.forEach((button) => expect(button).toBeDisabled());
+    expect(screen.getByRole("button", { name: /Loop/i })).toBeDisabled();
   });
 
   it("start uses the model shown in the AutomationBar picker even before an explicit per-project pick", async () => {

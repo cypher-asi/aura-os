@@ -6,20 +6,26 @@ import { useLoopActivityStore } from "../../stores/loop-activity-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { SidekickTaskbar } from "./SidekickTaskbar";
 
-const { mockHandleStartLoopEngineering } = vi.hoisted(() => ({
+const { mockHandleStartLoopEngineering, mockWorkspaceState } = vi.hoisted(() => ({
   mockHandleStartLoopEngineering: vi.fn(),
+  mockWorkspaceState: {
+    linkedWorkspace: false,
+    terminalTarget: {
+      remoteAgentId: null as string | null,
+      remoteWorkspacePath: null as string | null,
+      workspacePath: null as string | null,
+    },
+  },
 }));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
-  useAuraCapabilities: () => ({ features: { linkedWorkspace: false } }),
+  useAuraCapabilities: () => ({
+    features: { linkedWorkspace: mockWorkspaceState.linkedWorkspace },
+  }),
 }));
 
 vi.mock("../../hooks/use-terminal-target", () => ({
-  useTerminalTarget: () => ({
-    remoteAgentId: null,
-    remoteWorkspacePath: null,
-    workspacePath: null,
-  }),
+  useTerminalTarget: () => mockWorkspaceState.terminalTarget,
 }));
 
 vi.mock("../../stores/project-action-store", () => ({
@@ -162,6 +168,12 @@ describe("SidekickTaskbar", () => {
     useLoopActivityStore.setState({ loops: {}, hydrated: false });
     mockHandleStartLoopEngineering.mockReset();
     mockHandleStartLoopEngineering.mockResolvedValue(undefined);
+    mockWorkspaceState.linkedWorkspace = false;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: null,
+      remoteWorkspacePath: null,
+      workspacePath: null,
+    };
   });
 
   it("renders active run progress without recursive loop-activity updates", () => {
@@ -175,6 +187,12 @@ describe("SidekickTaskbar", () => {
     );
     expect(screen.getAllByLabelText("running").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("tab-files")).not.toBeInTheDocument();
+  });
+
+  it("hides Loop Engineering when no project workspace is reachable", () => {
+    renderTaskbar();
+
+    expect(screen.queryByTestId("tab-loop-engineering")).not.toBeInTheDocument();
   });
 
   it("keeps the Run tab's Play glyph visible and overlays a progress ring while the loop is active", () => {
@@ -267,6 +285,13 @@ describe("SidekickTaskbar", () => {
   });
 
   it("opens Loop Engineering from the active sidekick taskbar and starts with a contract", async () => {
+    mockWorkspaceState.linkedWorkspace = true;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: null,
+      remoteWorkspacePath: null,
+      workspacePath: "/Users/demo/project",
+    };
+
     renderTaskbar();
 
     fireEvent.click(screen.getByTestId("tab-loop-engineering"));

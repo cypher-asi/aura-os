@@ -94,6 +94,15 @@ const project = {
   name: "Demo Project",
 };
 
+function capabilities(overrides: Record<string, unknown> = {}) {
+  return {
+    isMobileLayout: false,
+    isMobileClient: false,
+    features: { linkedWorkspace: false },
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   currentSearchParams = new URLSearchParams();
@@ -110,7 +119,7 @@ beforeEach(() => {
 
 describe("ProjectFilesView", () => {
   it("keeps the mobile files route on-page and shows the remote explorer", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
 
     render(<MobileProjectFilesScreen />);
 
@@ -120,7 +129,7 @@ describe("ProjectFilesView", () => {
   });
 
   it("records the selected mobile file in search params for preview", async () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
 
     render(<MobileProjectFilesScreen />);
 
@@ -131,7 +140,7 @@ describe("ProjectFilesView", () => {
   });
 
   it("loads a mobile remote-file preview without sending users into the IDE", async () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     currentSearchParams = new URLSearchParams("file=%2Fworkspace%2FREADME.md");
 
     render(<MobileProjectFilesScreen />);
@@ -144,7 +153,7 @@ describe("ProjectFilesView", () => {
   });
 
   it("shows a workspace empty state on mobile when no remote workspace is available", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
       remoteWorkspacePath: undefined,
@@ -159,7 +168,7 @@ describe("ProjectFilesView", () => {
   });
 
   it("shows a loading state while the remote workspace target is still resolving on mobile", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
       remoteWorkspacePath: undefined,
@@ -174,7 +183,7 @@ describe("ProjectFilesView", () => {
   });
 
   it("shows an error state instead of a no-workspace state when remote target resolution fails", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
       remoteWorkspacePath: undefined,
@@ -189,7 +198,7 @@ describe("ProjectFilesView", () => {
   });
 
   it("keeps the desktop explorer even in a narrow responsive layout when the client is not mobile", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: false });
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: false }));
 
     render(<ProjectFilesView />);
 
@@ -199,7 +208,7 @@ describe("ProjectFilesView", () => {
   });
 
   it("keeps the desktop explorer behavior unchanged", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false, isMobileClient: false });
+    mockUseAuraCapabilities.mockReturnValue(capabilities());
 
     render(<ProjectFilesView />);
 
@@ -207,5 +216,35 @@ describe("ProjectFilesView", () => {
     expect(screen.getByTestId("panel-search")).toBeInTheDocument();
     expect(screen.getByTestId("file-explorer")).toHaveAttribute("data-root-path", "p/demo-project");
     expect(screen.queryByText(/Workspace files will appear here when this project has a live remote workspace/i)).not.toBeInTheDocument();
+  });
+
+  it("does not mount the desktop file explorer for a local workspace on web", () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ features: { linkedWorkspace: false } }));
+    mockUseTerminalTarget.mockReturnValue({
+      remoteAgentId: undefined,
+      remoteWorkspacePath: undefined,
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    });
+
+    render(<ProjectFilesView />);
+
+    expect(screen.getByText(/File browsing for local workspaces is available in Aura Desktop/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
+  });
+
+  it("keeps local desktop file browsing when the desktop workspace bridge is linked", () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({ features: { linkedWorkspace: true } }));
+    mockUseTerminalTarget.mockReturnValue({
+      remoteAgentId: undefined,
+      remoteWorkspacePath: undefined,
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    });
+
+    render(<ProjectFilesView />);
+
+    expect(screen.getByTestId("file-explorer")).toHaveAttribute("data-root-path", "/Users/demo/project");
+    expect(screen.queryByText(/File browsing for local workspaces is available in Aura Desktop/i)).not.toBeInTheDocument();
   });
 });
