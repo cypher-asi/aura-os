@@ -215,6 +215,14 @@ export async function installWorkflowMockApp(page: Page, scenario: WorkflowE2ESc
       return json(route, { update: { status: "idle" }, channel: "stable", current_version: "0.0.0" });
     }
 
+    if (pathname === "/api/system/runtime-capabilities") {
+      return json(route, {
+        remoteOnly: false,
+        localAgentRuntimeAvailable: true,
+        hostedLocalHarness: false,
+      });
+    }
+
     if (pathname === "/api/users/me") {
       return json(route, {
         id: "user-1",

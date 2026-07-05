@@ -223,6 +223,9 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     };
 
     const agentInstances = options.agentInstances ?? [defaultAgentInstance];
+    const hasLocalAgentRuntime = agentInstances.some(
+      (instance) => instance.machine_type === "local",
+    );
 
     const tasks = options.tasks ?? [
       {
@@ -367,6 +370,13 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (path === "/api/auth/validate") return json(session);
     if (path === "/api/update-status") {
       return json({ update: { status: "idle" }, channel: "stable", current_version: "0.0.0" });
+    }
+    if (pathname === "/api/system/runtime-capabilities") {
+      return json({
+        remoteOnly: !hasLocalAgentRuntime,
+        localAgentRuntimeAvailable: hasLocalAgentRuntime,
+        hostedLocalHarness: false,
+      });
     }
     if (pathname === "/api/users/me") {
       return json({
