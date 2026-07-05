@@ -4,7 +4,7 @@
 //! [`reqwest::Client`] reuse, and common request/response handling for harness proxy routes.
 
 use aura_os_harness::{local_harness_base_url, local_harness_transport_auth_token_from_env};
-use axum::http::{header, Method, StatusCode};
+use axum::http::{Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use url::Url;
 
@@ -61,6 +61,14 @@ impl HarnessHttpGateway {
 
     pub(crate) fn has_transport_auth(&self) -> bool {
         self.transport_auth_token.is_some()
+    }
+
+    pub(crate) fn hosted_local_runtime_available(&self) -> bool {
+        is_hosted_harness_base_url(&self.base_url) && self.has_transport_auth()
+    }
+
+    pub(crate) fn hosted_base_requires_transport_auth(&self) -> bool {
+        is_hosted_harness_base_url(&self.base_url) && !self.has_transport_auth()
     }
 
     fn apply_transport_auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
@@ -174,6 +182,9 @@ impl HarnessHttpGateway {
     }
 
     fn harness_url(&self, path: &str, query: Option<&str>) -> Result<Url, StatusCode> {
+        if self.hosted_base_requires_transport_auth() {
+            return Err(StatusCode::SERVICE_UNAVAILABLE);
+        }
         let base = format!("{}/", self.base_url.trim_end_matches('/'));
         let mut url = Url::parse(&base).map_err(|_| StatusCode::BAD_GATEWAY)?;
         {
@@ -197,6 +208,27 @@ fn normalized_base_url(url: &str) -> String {
     url.trim().trim_end_matches('/').to_string()
 }
 
+fn is_hosted_harness_base_url(raw: &str) -> bool {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    let Ok(parsed) = Url::parse(trimmed) else {
+        return false;
+    };
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return false;
+    }
+    match parsed.host_str() {
+        Some(host) => {
+            let normalized = host.trim_start_matches('[').trim_end_matches(']');
+            !matches!(normalized, "127.0.0.1" | "::1")
+                && !normalized.eq_ignore_ascii_case("localhost")
+        }
+        None => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::HarnessHttpGateway;
@@ -218,5 +250,28 @@ mod tests {
     fn harness_url_rejects_relative_path_traversal_segments() {
         let gateway = HarnessHttpGateway::new("http://127.0.0.1:9999");
         assert!(gateway.harness_url("api/agents/../skills", None).is_err());
+    }
+
+    #[test]
+    fn hosted_local_runtime_requires_non_loopback_base_and_transport_auth() {
+        let hosted_without_auth =
+            HarnessHttpGateway::new("https://aura-harness-latest.onrender.com");
+        assert!(!hosted_without_auth.hosted_local_runtime_available());
+        assert!(hosted_without_auth.hosted_base_requires_transport_auth());
+        assert_eq!(
+            hosted_without_auth.harness_url("api/skills", None),
+            Err(axum::http::StatusCode::SERVICE_UNAVAILABLE)
+        );
+
+        let hosted_with_auth = HarnessHttpGateway::with_transport_auth_token(
+            "https://aura-harness-latest.onrender.com",
+            Some("secret".to_string()),
+        );
+        assert!(hosted_with_auth.hosted_local_runtime_available());
+        assert!(!hosted_with_auth.hosted_base_requires_transport_auth());
+
+        let loopback_without_auth = HarnessHttpGateway::new("http://127.0.0.1:9999");
+        assert!(!loopback_without_auth.hosted_local_runtime_available());
+        assert!(!loopback_without_auth.hosted_base_requires_transport_auth());
     }
 }

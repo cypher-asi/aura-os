@@ -3,9 +3,9 @@ use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;
 
+use super::HARNESS_URL_ENV_LOCK;
 use super::common::*;
 use super::mocks::start_mock_harness;
-use super::HARNESS_URL_ENV_LOCK;
 
 struct EnvVarReset(&'static str);
 
@@ -37,10 +37,57 @@ async fn proxy_forwards_get_facts() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "GET");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/memory/facts")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/memory/facts"))
+    );
+}
+
+#[tokio::test]
+async fn hosted_proxy_without_transport_auth_fails_closed() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    unsafe {
+        std::env::set_var(
+            "LOCAL_HARNESS_URL",
+            "https://aura-harness-latest.onrender.com",
+        );
+        std::env::remove_var("LOCAL_HARNESS_AUTH_TOKEN");
+    }
+    let _reset_url = EnvVarReset("LOCAL_HARNESS_URL");
+    let _reset_auth = EnvVarReset("LOCAL_HARNESS_AUTH_TOKEN");
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let agent = "00000000-0000-0000-0000-000000000001";
+    let req = json_request(
+        "GET",
+        &format!("/api/harness/agents/{agent}/memory/facts"),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+
+    assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[tokio::test]
+async fn hosted_direct_harness_path_without_transport_auth_fails_closed() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    unsafe {
+        std::env::set_var(
+            "LOCAL_HARNESS_URL",
+            "https://aura-harness-latest.onrender.com",
+        );
+        std::env::remove_var("LOCAL_HARNESS_AUTH_TOKEN");
+    }
+    let _reset_url = EnvVarReset("LOCAL_HARNESS_URL");
+    let _reset_auth = EnvVarReset("LOCAL_HARNESS_AUTH_TOKEN");
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let req = json_request("GET", "/api/harness/skills", None);
+    let resp = app.oneshot(req).await.unwrap();
+
+    assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
 }
 
 #[tokio::test]
@@ -107,10 +154,12 @@ async fn proxy_with_transport_auth_allows_network_owned_agent() {
         body["echoed_authorization"].as_str(),
         Some("Bearer harness-secret")
     );
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/memory/facts")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/memory/facts"))
+    );
 }
 
 #[cfg(unix)]
@@ -137,10 +186,12 @@ async fn proxy_with_transport_auth_allows_local_shadow_agent() {
     assert_eq!(resp.status(), StatusCode::OK);
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "GET");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/memory/facts")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/memory/facts"))
+    );
 }
 
 #[cfg(unix)]
@@ -214,10 +265,12 @@ async fn proxy_forwards_delete() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "DELETE");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/memory/facts/f1")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/memory/facts/f1"))
+    );
 }
 
 #[tokio::test]
@@ -254,10 +307,12 @@ async fn proxy_forwards_skill_activate() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "POST");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains("/api/skills/deploy/activate"));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains("/api/skills/deploy/activate")
+    );
 }
 
 #[tokio::test]
@@ -276,10 +331,12 @@ async fn proxy_forwards_agent_skills_list() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "GET");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/skills")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/skills"))
+    );
 }
 
 #[tokio::test]
@@ -325,10 +382,12 @@ async fn proxy_forwards_agent_skill_uninstall() {
 
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "DELETE");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/skills/deploy")));
+    assert!(
+        body["echoed_uri"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("/api/agents/{agent}/skills/deploy"))
+    );
 }
 
 #[tokio::test]

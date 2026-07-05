@@ -13,6 +13,14 @@ pub(crate) async fn require_agent_proxy_access(
     session: &ZeroAuthSession,
     agent_id: &AgentId,
 ) -> Result<(), StatusCode> {
+    if state.harness_http.hosted_base_requires_transport_auth() {
+        warn!(
+            %agent_id,
+            "refusing hosted local harness proxy without LOCAL_HARNESS_AUTH_TOKEN"
+        );
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+
     if !state.harness_http.has_transport_auth() {
         return Ok(());
     }
