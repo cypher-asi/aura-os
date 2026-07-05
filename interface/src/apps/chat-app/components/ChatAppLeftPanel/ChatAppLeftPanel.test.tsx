@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   loadUserSessions: vi.fn().mockResolvedValue(undefined),
   loadAgentBindings: vi.fn().mockResolvedValue(undefined),
   setAction: vi.fn(),
+  remoteOnly: false,
 }));
 
 vi.mock("react-router-dom", () => ({
@@ -141,6 +142,10 @@ vi.mock("../../../../hooks/use-sidebar-search", () => ({
   useSidebarSearch: () => ({ query: "", setAction: mocks.setAction }),
 }));
 
+vi.mock("../../../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => ({ remoteOnly: mocks.remoteOnly }),
+}));
+
 vi.mock("../../../agents/stores", () => ({
   useAgents: () => ({ agents: mocks.agents }),
   useAgentStore: {
@@ -153,7 +158,10 @@ vi.mock("../../../agents/stores", () => ({
 }));
 
 vi.mock("../../hooks/use-chat-app-agent", () => ({
-  useChatAppAgent: () => ({ agent: mocks.chatAgent, status: "ready" }),
+  useChatAppAgent: (_options?: { remoteOnly?: boolean }) => ({
+    agent: mocks.chatAgent,
+    status: "ready",
+  }),
 }));
 
 vi.mock("../../hooks/use-chat-app-sessions", () => ({
@@ -174,6 +182,7 @@ describe("ChatAppLeftPanel", () => {
     mocks.agents = [];
     mocks.storeAgents = [];
     mocks.sessions = [];
+    mocks.remoteOnly = false;
   });
 
   // Regression: a session owned by an agent the active org doesn't

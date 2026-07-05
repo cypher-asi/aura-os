@@ -37,10 +37,10 @@ import { useImportPublicChatsOnAuth } from "../../hooks/use-public-chat-import";
  * agent owns the active conversation.
  */
 export function ChatAppRoute() {
-  const { agent: chatAgent, status, error } = useChatAppAgent();
   const { agents } = useAgents();
   const { setSelectedAgent } = useSelectedAgent();
-  const { isMobileLayout } = useAuraCapabilities();
+  const { isMobileLayout, remoteOnly } = useAuraCapabilities();
+  const { agent: chatAgent, status, error } = useChatAppAgent({ remoteOnly });
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
   const freshChatId = searchParams.get("fresh");

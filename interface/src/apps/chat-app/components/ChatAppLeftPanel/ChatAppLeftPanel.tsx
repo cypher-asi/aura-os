@@ -22,6 +22,7 @@ import { keyForAgentSession } from "../../../../hooks/stream/store";
 import { useSidebarSearch } from "../../../../hooks/use-sidebar-search";
 import { useAgentStore, useAgents } from "../../../agents/stores";
 import type { Agent } from "../../../../shared/types";
+import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useChatAppAgent } from "../../hooks/use-chat-app-agent";
 import { useChatAppSessions } from "../../hooks/use-chat-app-sessions";
 import styles from "./ChatAppLeftPanel.module.css";
@@ -60,7 +61,8 @@ export function ChatAppLeftPanel() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedSessionId = searchParams.get("session");
-  const { agent: chatAgent, status: agentStatus } = useChatAppAgent();
+  const { remoteOnly } = useAuraCapabilities();
+  const { agent: chatAgent, status: agentStatus } = useChatAppAgent({ remoteOnly });
   const { agents } = useAgents();
   const sessionsVersion = useSessionsListStore((s) => s.version);
   const {

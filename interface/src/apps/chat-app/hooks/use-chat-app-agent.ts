@@ -13,11 +13,16 @@ interface ChatAppAgentSlice {
   retry: () => void;
 }
 
+interface UseChatAppAgentOptions {
+  remoteOnly?: boolean;
+}
+
 interface CachedAgentState {
   agent: Agent | null;
   status: ChatAppAgentStatus;
   error: string | null;
   inflight: Promise<void> | null;
+  inflightRemoteOnly: boolean | null;
 }
 
 const LAST_AGENT_ID_KEY = "aura-chat-app:last-agent-id";
@@ -61,15 +66,20 @@ function writeLastAgentId(agentId: string): void {
  * Returns the seeded agent or `null` when no warm cache is available;
  * the caller still kicks off `setup()` to heal in the background.
  */
-function seedAgentFromWarmStores(): Agent | null {
+function canUseAgentInRuntime(agent: Agent | null | undefined, remoteOnly: boolean): agent is Agent {
+  if (!agent) return false;
+  return !remoteOnly || agent.machine_type === "remote";
+}
+
+function seedAgentFromWarmStores(remoteOnly = false): Agent | null {
   const agents = useAgentStore.getState().agents;
   if (agents.length === 0) return null;
   const lastId = readLastAgentId();
   if (lastId) {
     const fromLast = agents.find((a) => a.agent_id === lastId);
-    if (fromLast) return fromLast;
+    if (canUseAgentInRuntime(fromLast, remoteOnly)) return fromLast;
   }
-  return agents.find((a) => isSuperAgent(a)) ?? null;
+  return agents.find((a) => isSuperAgent(a) && canUseAgentInRuntime(a, remoteOnly)) ?? null;
 }
 
 const cache: CachedAgentState = (() => {
@@ -79,22 +89,31 @@ const cache: CachedAgentState = (() => {
     status: seeded ? "ready" : "loading",
     error: null,
     inflight: null,
+    inflightRemoteOnly: null,
   };
 })();
 const subscribers = new Set<() => void>();
+let setupRequestId = 0;
 
 function notify(): void {
   for (const fn of subscribers) fn();
 }
 
-function ensureSetup(): Promise<void> {
-  if (cache.inflight) return cache.inflight;
+function ensureSetup(remoteOnly = false): Promise<void> {
+  if (!canUseAgentInRuntime(cache.agent, remoteOnly) && cache.agent !== null) {
+    cache.agent = null;
+    cache.status = "loading";
+    cache.error = null;
+    notify();
+  }
+
+  if (cache.inflight && cache.inflightRemoteOnly === remoteOnly) return cache.inflight;
 
   // If the in-memory cache is empty, take one more pass at the warm
   // stores in case `fetchAgents()` resolved between module-load and
   // this call. Cheap: just a `find()` over a few rows.
   if (!cache.agent) {
-    const seeded = seedAgentFromWarmStores();
+    const seeded = seedAgentFromWarmStores(remoteOnly);
     if (seeded) {
       cache.agent = seeded;
       cache.status = "ready";
@@ -104,15 +123,21 @@ function ensureSetup(): Promise<void> {
   }
 
   const isHealing = cache.agent !== null;
+  const requestId = ++setupRequestId;
   if (!isHealing) {
     cache.status = "loading";
     cache.error = null;
     notify();
   }
+  cache.inflightRemoteOnly = remoteOnly;
 
   cache.inflight = api.superAgent
     .setup()
     .then(({ agent }) => {
+      if (requestId !== setupRequestId) return;
+      if (!canUseAgentInRuntime(agent, remoteOnly)) {
+        throw new Error("Couldn't start web chat. Aura returned a desktop-only agent.");
+      }
       writeLastAgentId(agent.agent_id);
       cache.agent = agent;
       cache.status = "ready";
@@ -130,6 +155,7 @@ function ensureSetup(): Promise<void> {
       }
     })
     .catch((err: unknown) => {
+      if (requestId !== setupRequestId) return;
       // Heal-in-the-background errors must not blank a working seed.
       // If we already have an agent (warm seed), keep showing it; the
       // user can still chat. Surface the error only when we have
@@ -144,8 +170,11 @@ function ensureSetup(): Promise<void> {
       }
     })
     .finally(() => {
-      cache.inflight = null;
-      notify();
+      if (requestId === setupRequestId) {
+        cache.inflight = null;
+        cache.inflightRemoteOnly = null;
+        notify();
+      }
     });
 
   return cache.inflight;
@@ -168,21 +197,25 @@ function ensureSetup(): Promise<void> {
  * lands. This eliminates the serial "blank canvas → Starting chat… →
  * panel" sequence the route used to walk through on every navigation.
  */
-export function useChatAppAgent(): ChatAppAgentSlice {
+export function useChatAppAgent(options: UseChatAppAgentOptions = {}): ChatAppAgentSlice {
   const [, setTick] = useState(0);
+  const remoteOnly = options.remoteOnly === true;
+  const visibleAgent = canUseAgentInRuntime(cache.agent, remoteOnly) ? cache.agent : null;
+  const visibleStatus: ChatAppAgentStatus =
+    visibleAgent !== null ? cache.status : cache.status === "error" ? "error" : "loading";
 
   useEffect(() => {
     const fn = () => setTick((n) => n + 1);
     subscribers.add(fn);
-    void ensureSetup();
+    void ensureSetup(remoteOnly);
     return () => {
       subscribers.delete(fn);
     };
-  }, []);
+  }, [remoteOnly]);
 
   return {
-    agent: cache.agent,
-    status: cache.status,
+    agent: visibleAgent,
+    status: visibleStatus,
     error: cache.error,
     retry: () => {
       // Force a fresh attempt after an error.
@@ -191,7 +224,7 @@ export function useChatAppAgent(): ChatAppAgentSlice {
         cache.status = "loading";
         cache.error = null;
         notify();
-        void ensureSetup();
+        void ensureSetup(remoteOnly);
       }
     },
   };
@@ -207,5 +240,7 @@ export function __resetChatAppAgentCacheForTests(): void {
   cache.status = "loading";
   cache.error = null;
   cache.inflight = null;
+  cache.inflightRemoteOnly = null;
+  setupRequestId += 1;
   subscribers.clear();
 }

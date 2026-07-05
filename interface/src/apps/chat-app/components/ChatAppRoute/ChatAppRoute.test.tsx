@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   agents: [] as FakeAgent[],
   setSelectedAgent: vi.fn(),
   isMobileLayout: false,
+  remoteOnly: false,
   bindingsByAgent: {} as Record<
     string,
     { project_agent_id: string; project_id: string; project_name: string }[]
@@ -47,7 +48,10 @@ vi.mock("../../../agents/stores", () => ({
 }));
 
 vi.mock("../../../../hooks/use-aura-capabilities", () => ({
-  useAuraCapabilities: () => ({ isMobileLayout: mocks.isMobileLayout }),
+  useAuraCapabilities: () => ({
+    isMobileLayout: mocks.isMobileLayout,
+    remoteOnly: mocks.remoteOnly,
+  }),
 }));
 
 vi.mock("../../../../stores/sessions-list-store", () => ({
@@ -57,10 +61,11 @@ vi.mock("../../../../stores/sessions-list-store", () => ({
 }));
 
 vi.mock("../../hooks/use-chat-app-agent", () => ({
-  useChatAppAgent: () => ({
+  useChatAppAgent: (options?: { remoteOnly?: boolean }) => ({
     agent: mocks.chatAgent,
     status: mocks.agentStatus,
     error: null,
+    options,
   }),
 }));
 
@@ -70,6 +75,10 @@ vi.mock("../../hooks/use-chat-app-chat", () => ({
 
 vi.mock("../../hooks/use-chat-app-sessions", () => ({
   useChatAppSessions: () => ({ sessions: mocks.sessions, loading: false }),
+}));
+
+vi.mock("../../hooks/use-public-chat-import", () => ({
+  useImportPublicChatsOnAuth: vi.fn(),
 }));
 
 describe("ChatAppRoute", () => {
@@ -83,6 +92,7 @@ describe("ChatAppRoute", () => {
     mocks.setSelectedAgent.mockReset();
     mocks.useChatAppChat.mockReset();
     mocks.useChatAppChat.mockReturnValue({});
+    mocks.remoteOnly = false;
   });
 
   // Regression: after the aura-storage migration 0015 deploy,
@@ -124,6 +134,17 @@ describe("ChatAppRoute", () => {
   });
 
   it("falls back to the CEO chat agent for the fresh-canvas (no params) form", () => {
+    mocks.searchParams = new URLSearchParams();
+
+    render(<ChatAppRoute />);
+
+    expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
+      freshCanvasPending: false,
+    });
+  });
+
+  it("asks the chat-agent resolver for a web-safe agent on remote-only clients", () => {
+    mocks.remoteOnly = true;
     mocks.searchParams = new URLSearchParams();
 
     render(<ChatAppRoute />);
