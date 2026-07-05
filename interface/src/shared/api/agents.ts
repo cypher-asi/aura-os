@@ -451,8 +451,38 @@ export interface CleanupCeoResponse {
   failed: string[];
 }
 
+export type PublicChatImportRole = "user" | "assistant";
+
+export interface PublicChatImportTurn {
+  role: PublicChatImportRole;
+  content: string;
+}
+
+export interface PublicChatImportRequest {
+  publicSessionId: string;
+  title?: string;
+  turns: PublicChatImportTurn[];
+}
+
+export interface PublicChatImportResponse {
+  agentId: AgentId;
+  agentInstanceId: AgentInstanceId;
+  projectId: ProjectId;
+  sessionId: string;
+  importedTurnCount: number;
+  reusedExisting: boolean;
+}
+
 export const superAgentApi = {
   setup: () => apiFetch<{ agent: Agent; created: boolean }>("/api/agents/harness/setup", { method: "POST" }),
+  importPublicSession: (agentId: AgentId, body: PublicChatImportRequest) =>
+    apiFetch<PublicChatImportResponse>(
+      `/api/agents/${agentId}/public-chat/import`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
   /**
    * Dedupe CEO bootstrap agents on the server: keep the oldest CEO,
    * delete the rest. Never creates a new agent.

@@ -20,6 +20,7 @@ mod loaders;
 mod persist;
 mod persist_task;
 mod persist_task_dispatch;
+mod public_import;
 mod request;
 mod runtime_gate;
 mod session_access;
@@ -45,6 +46,7 @@ pub(crate) use events::{
 pub(crate) use instance_route::send_event_stream;
 pub(crate) use persist::{persist_user_message, ChatPersistCtx, ChatPersistRequest};
 pub(crate) use persist_task::persist_event;
+pub(crate) use public_import::import_public_chat_session;
 pub(crate) use session_pagination::{
     list_agent_session_events_paginated, list_session_events_paginated,
 };

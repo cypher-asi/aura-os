@@ -10,6 +10,7 @@ import type { Agent } from "../../../../shared/types";
 import { useChatAppAgent } from "../../hooks/use-chat-app-agent";
 import { useChatAppChat } from "../../hooks/use-chat-app-chat";
 import { useChatAppSessions } from "../../hooks/use-chat-app-sessions";
+import { useImportPublicChatsOnAuth } from "../../hooks/use-public-chat-import";
 
 /**
  * Top-level Chat app route. Resolves the canonical chat agent via
@@ -46,6 +47,7 @@ export function ChatAppRoute() {
   const agentIdParam = searchParams.get("agent");
   const { sessions } = useChatAppSessions(agents);
   const freshCanvasPending = !sessionId && freshChatId != null;
+  useImportPublicChatsOnAuth(chatAgent);
 
   const agentById = useMemo(() => {
     const map = new Map<string, Agent>();

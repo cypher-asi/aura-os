@@ -111,6 +111,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
                 .layer(DefaultBodyLimit::max(ATTACHMENT_REQUEST_MAX_BYTES)),
         )
         .route(
+            "/api/agents/:agent_id/public-chat/import",
+            post(agents::import_public_chat_session),
+        )
+        .route(
             "/api/agents/:agent_id/reset-session",
             post(agents::reset_agent_session),
         )
