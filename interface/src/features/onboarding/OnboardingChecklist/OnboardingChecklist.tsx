@@ -9,11 +9,16 @@ import {
   selectTotalTasks,
   selectProgressPercent,
 } from "../onboarding-store";
-import { ONBOARDING_TASKS } from "../onboarding-constants";
+import {
+  getDefaultOnboardingIntent,
+  getOnboardingTasks,
+  type OnboardingRuntime,
+} from "../onboarding-constants";
 import { ChecklistTaskRow } from "./ChecklistTaskRow";
 import { useProjectsList } from "../../../apps/projects/useProjectsList";
 import { useUIModalStore } from "../../../stores/ui-modal-store";
 import { useAgentStore } from "../../../apps/agents/stores/agent-store";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { track } from "../../../lib/analytics";
 import styles from "./OnboardingChecklist.module.css";
 
@@ -21,19 +26,28 @@ export function OnboardingChecklist() {
   const isVisible = useOnboardingStore(selectIsChecklistVisible);
   const tasks = useOnboardingStore((s) => s.checklistTasks);
   const collapsed = useOnboardingStore((s) => s.checklistCollapsed);
+  const selectedIntent = useOnboardingStore((s) => s.selectedIntent);
   const toggleCollapsed = useOnboardingStore((s) => s.toggleChecklistCollapsed);
   const dismissChecklist = useOnboardingStore((s) => s.dismissChecklist);
   const completedCount = useOnboardingStore(selectCompletedCount);
   const totalTasks = selectTotalTasks();
   const progressPercent = useOnboardingStore(selectProgressPercent);
+  const { supportsDesktopWorkspace } = useAuraCapabilities();
   const navigate = useNavigate();
   const { openNewProjectModal } = useProjectsList();
   const openOrgBilling = useUIModalStore((s) => s.openOrgBilling);
   const openCreateAgentModal = useAgentStore((s) => s.openCreateAgentModal);
+  const runtime: OnboardingRuntime = supportsDesktopWorkspace ? "desktop" : "web";
+  const resolvedIntent = selectedIntent ?? getDefaultOnboardingIntent(runtime);
+  const onboardingTasks = getOnboardingTasks(selectedIntent, runtime);
 
   const handleTaskClick = useCallback(
     (taskId: string, route: string | null) => {
-      track("onboarding_task_clicked", { task_id: taskId });
+      track("onboarding_task_clicked", {
+        task_id: taskId,
+        selected_intent: resolvedIntent,
+        runtime,
+      });
       if (taskId === "create_project") {
         openNewProjectModal();
       } else if (taskId === "create_agent") {
@@ -45,7 +59,14 @@ export function OnboardingChecklist() {
         navigate(route);
       }
     },
-    [navigate, openNewProjectModal, openCreateAgentModal, openOrgBilling],
+    [
+      navigate,
+      openNewProjectModal,
+      openCreateAgentModal,
+      openOrgBilling,
+      resolvedIntent,
+      runtime,
+    ],
   );
 
   const handleDismiss = useCallback(() => {
@@ -80,7 +101,7 @@ export function OnboardingChecklist() {
 
       {!collapsed && (
         <div className={styles.taskList}>
-          {ONBOARDING_TASKS.map((task) => (
+          {onboardingTasks.map((task) => (
             <ChecklistTaskRow
               key={task.id}
               task={task}

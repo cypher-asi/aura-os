@@ -44,6 +44,25 @@ pub(crate) async fn get_environment_info() -> ApiResult<Json<EnvironmentInfoResp
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RuntimeCapabilitiesResponse {
+    pub remote_only: bool,
+    pub local_agent_runtime_available: bool,
+    pub hosted_local_harness: bool,
+}
+
+pub(crate) async fn get_runtime_capabilities(
+    State(state): State<AppState>,
+) -> Json<RuntimeCapabilitiesResponse> {
+    let hosted_local_harness = state.harness_http.hosted_local_runtime_available();
+    Json(RuntimeCapabilitiesResponse {
+        remote_only: state.remote_only,
+        local_agent_runtime_available: !state.remote_only && hosted_local_harness,
+        hosted_local_harness,
+    })
+}
+
+#[derive(Debug, Serialize)]
 pub(crate) struct WorkspaceDefaultsResponse {
     /// Base directory where aura-os stores per-project workspaces by default.
     /// A specific project's default folder is `{workspace_root}/{project_id}`.

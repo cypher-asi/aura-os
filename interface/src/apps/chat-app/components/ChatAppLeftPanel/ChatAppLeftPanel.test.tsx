@@ -26,6 +26,8 @@ const mocks = vi.hoisted(() => ({
   patchAgent: vi.fn(),
   loadUserSessions: vi.fn().mockResolvedValue(undefined),
   loadAgentBindings: vi.fn().mockResolvedValue(undefined),
+  setAction: vi.fn(),
+  remoteOnly: false,
 }));
 
 vi.mock("react-router-dom", () => ({
@@ -75,11 +77,15 @@ vi.mock("../../../../components/Avatar", () => ({
 }));
 
 vi.mock("../../../../components/ProjectsPlusButton", () => ({
-  ProjectsPlusButton: () => <button data-testid="plus" />,
-}));
-
-vi.mock("../../../agents/components/AgentSelectorModal", () => ({
-  AgentSelectorModal: () => <div data-testid="agent-selector-modal" />,
+  ProjectsPlusButton: ({
+    onClick,
+    disabled,
+  }: {
+    onClick: () => void;
+    disabled?: boolean;
+  }) => (
+    <button data-testid="plus" disabled={disabled} onClick={onClick} />
+  ),
 }));
 
 vi.mock("../../../../stores/sessions-list-store", () => ({
@@ -133,7 +139,11 @@ vi.mock("../../../../queries/project-queries", () => ({
 }));
 
 vi.mock("../../../../hooks/use-sidebar-search", () => ({
-  useSidebarSearch: () => ({ query: "", setAction: vi.fn() }),
+  useSidebarSearch: () => ({ query: "", setAction: mocks.setAction }),
+}));
+
+vi.mock("../../../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => ({ remoteOnly: mocks.remoteOnly }),
 }));
 
 vi.mock("../../../agents/stores", () => ({
@@ -148,7 +158,10 @@ vi.mock("../../../agents/stores", () => ({
 }));
 
 vi.mock("../../hooks/use-chat-app-agent", () => ({
-  useChatAppAgent: () => ({ agent: mocks.chatAgent, status: "ready" }),
+  useChatAppAgent: (_options?: { remoteOnly?: boolean }) => ({
+    agent: mocks.chatAgent,
+    status: "ready",
+  }),
 }));
 
 vi.mock("../../hooks/use-chat-app-sessions", () => ({
@@ -163,11 +176,13 @@ describe("ChatAppLeftPanel", () => {
     mocks.listSessionEvents.mockReset();
     mocks.listSessionEvents.mockResolvedValue([]);
     mocks.fetchHistory.mockReset();
+    mocks.setAction.mockReset();
     mocks.searchParams = new URLSearchParams();
     mocks.chatAgent = { agent_id: "ceo", name: "CEO" };
     mocks.agents = [];
     mocks.storeAgents = [];
     mocks.sessions = [];
+    mocks.remoteOnly = false;
   });
 
   // Regression: a session owned by an agent the active org doesn't
@@ -232,5 +247,22 @@ describe("ChatAppLeftPanel", () => {
     const params = new URLSearchParams(url.split("?")[1]);
     expect(params.get("agent")).toBe("ceo");
     expect(mocks.agentsGet).not.toHaveBeenCalled();
+  });
+
+  it("wires the sidebar plus button to a fresh chat route instead of the agent selector", () => {
+    render(<ChatAppLeftPanel />);
+
+    const action = mocks.setAction.mock.calls.find(
+      ([key, node]) => key === "chat" && node != null,
+    )?.[1] as React.ReactElement;
+    expect(action).toBeTruthy();
+    render(action);
+    fireEvent.click(screen.getByTestId("plus"));
+
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
+    const url = mocks.navigate.mock.calls[0][0] as string;
+    expect(url.startsWith("/chat?fresh=")).toBe(true);
+    expect(url).not.toContain("agent=");
+    expect(url).not.toContain("project=");
   });
 });

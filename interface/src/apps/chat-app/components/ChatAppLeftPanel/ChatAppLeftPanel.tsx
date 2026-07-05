@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../../../api/client";
@@ -11,7 +11,6 @@ import {
 import { EmptyState } from "../../../../components/EmptyState";
 import { Avatar } from "../../../../components/Avatar";
 import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
-import { AgentSelectorModal } from "../../../agents/components/AgentSelectorModal";
 import {
   userSessionsSurfaceKey,
   useSessionsDeleteError,
@@ -20,15 +19,10 @@ import {
 } from "../../../../stores/sessions-list-store";
 import { useChatHistoryStore } from "../../../../stores/chat-history-store";
 import { keyForAgentSession } from "../../../../hooks/stream/store";
-import { useProjectsListStore } from "../../../../stores/projects-list-store";
-import { queryClient } from "../../../../shared/lib/query-client";
-import {
-  mergeAgentIntoProjectAgents,
-  projectQueryKeys,
-} from "../../../../queries/project-queries";
 import { useSidebarSearch } from "../../../../hooks/use-sidebar-search";
 import { useAgentStore, useAgents } from "../../../agents/stores";
-import type { Agent, AgentInstance } from "../../../../shared/types";
+import type { Agent } from "../../../../shared/types";
+import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useChatAppAgent } from "../../hooks/use-chat-app-agent";
 import { useChatAppSessions } from "../../hooks/use-chat-app-sessions";
 import styles from "./ChatAppLeftPanel.module.css";
@@ -60,24 +54,18 @@ import styles from "./ChatAppLeftPanel.module.css";
  *
  * Header surfaces a `+` button via `useSidebarSearch("chat").setAction`
  * so it lands in the shared sidebar search header next to the search
- * input -- same UX as the Agents and Projects apps. Clicking it opens
- * the same `AgentSelectorModal` the Projects app uses for its
- * project-row "+", scoped to the CEO chat agent's auto-Home project so
- * picking an agent attaches it to that project and lands the user in
- * a fresh `/chat` canvas against the new instance. The "+" button's
- * `ceoHomeProjectId` lookup still needs the chat agent's project
- * bindings, so `loadAgentBindings(chatAgent.agent_id)` runs
- * separately -- one bindings fetch, no per-binding session fan-out.
+ * input. Clicking it creates a plain fresh chat canvas on the canonical
+ * chat agent; selecting/creating agents belongs to Build with Aura.
  */
 export function ChatAppLeftPanel() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedSessionId = searchParams.get("session");
-  const { agent: chatAgent, status: agentStatus } = useChatAppAgent();
+  const { remoteOnly } = useAuraCapabilities();
+  const { agent: chatAgent, status: agentStatus } = useChatAppAgent({ remoteOnly });
   const { agents } = useAgents();
   const sessionsVersion = useSessionsListStore((s) => s.version);
   const {
-    loadAgentBindings,
     loadUserSessions,
     removeSession,
     restoreSession,
@@ -97,17 +85,6 @@ export function ChatAppLeftPanel() {
   useEffect(() => {
     void loadUserSessions();
   }, [sessionsVersion, loadUserSessions]);
-
-  // Bindings-only refresh for the chat agent so the "+" button below
-  // can resolve `ceoHomeProjectId` from `bindingsByAgent`. We don't
-  // call `loadAgentSessions` here because that would re-introduce
-  // the per-binding session fan-out we just collapsed; binding
-  // discovery is a single
-  // `GET /api/agents/:id/projects` call regardless.
-  useEffect(() => {
-    if (!chatAgent) return;
-    void loadAgentBindings(chatAgent.agent_id);
-  }, [chatAgent, loadAgentBindings]);
 
   // Resolve each row's owning `Agent` from `_agentId` -- stamped
   // by `loadUserSessions` from the `/api/me/sessions` enriched
@@ -217,119 +194,29 @@ export function ChatAppLeftPanel() {
     [resolveSessionAgent],
   );
 
-  // Resolve the CEO chat agent's auto-Home project_id from the
-  // server-authoritative bindings populated by the
-  // `loadAgentBindings(chatAgent.agent_id)` call above. We prefer the
-  // binding whose project name is "Home" (matches
-  // `AGENT_HOME_PROJECT_NAME` in `use-standalone-agent-chat.ts`) and
-  // fall back to the first binding for legacy agents that don't have
-  // a Home row yet -- same fallback shape as
-  // `useStandaloneAgentChat.effectiveProjectId`.
-  const chatAgentBindings = useSessionsListStore((s) =>
-    chatAgent ? s.bindingsByAgent[chatAgent.agent_id] : undefined,
-  );
-  const ceoHomeProjectId = useMemo<string | null>(() => {
-    if (!chatAgentBindings || chatAgentBindings.length === 0) return null;
-    const homeBinding =
-      chatAgentBindings.find((b) => b.project_name === "Home") ??
-      chatAgentBindings[0];
-    return homeBinding?.project_id ?? null;
-  }, [chatAgentBindings]);
-
-  const [selectorOpen, setSelectorOpen] = useState(false);
-
-  const handleOpenSelector = useCallback(() => {
-    if (!ceoHomeProjectId) return;
-    setSelectorOpen(true);
-  }, [ceoHomeProjectId]);
-
-  const handleCloseSelector = useCallback(() => {
-    setSelectorOpen(false);
-  }, []);
-
-  // Mirror the projects-app's `handleAgentCreated` cache writes
-  // (`use-project-list-actions.ts`) so the new instance shows up in
-  // `useProjectsListStore.agentsByProject` immediately. That feeds
-  // `useStandaloneAgentChat.agentProjects` on the destination route so
-  // the first turn ships the right `body.project_id` instead of falling
-  // back to `undefined`. We then route into `/chat?...` rather than
-  // `/projects/.../agents/...` so the user stays in the Chat app.
-  //
-  // The "Standard Agent" row in `AgentSelectorModal` creates a brand-new
-  // project-local agent (`build_general_agent` in
-  // `apps/aura-os-server/src/handlers/agents/instances/mod.rs`) whose
-  // `agent_id` is NOT yet in `useAgentStore.agents`. `ChatAppRoute`
-  // resolves `?agent=<id>` against that store and falls back to the CEO
-  // agent on a miss — which is why selecting "Standard Agent" used to
-  // look like a no-op. Fetch the new agent and mirror it into the
-  // store (matching the CEO-side pattern in `use-chat-app-agent.ts`)
-  // before navigating so the destination route mounts the right agent
-  // on its first render. The forced `fetchAgents({ force: true })` is
-  // a background heal so any other surface that reads `useAgents()`
-  // converges without a reload.
-  const handleAgentCreated = useCallback(
-    async (instance: AgentInstance) => {
-      const pid = instance.project_id;
-      const projectsStore = useProjectsListStore.getState();
-      projectsStore.setAgentsByProject((prev) => ({
-        ...prev,
-        [pid]: mergeAgentIntoProjectAgents(prev[pid], instance),
-      }));
-      queryClient.setQueryData(
-        projectQueryKeys.agentInstance(pid, instance.agent_instance_id),
-        instance,
-      );
-      void projectsStore.refreshProjectAgents(pid);
-
-      const agentStore = useAgentStore.getState();
-      const alreadyPresent = agentStore.agents.some(
-        (a) => a.agent_id === instance.agent_id,
-      );
-      if (!alreadyPresent) {
-        try {
-          const newAgent = await api.agents.get(instance.agent_id);
-          const store = useAgentStore.getState();
-          const present = store.agents.some(
-            (a) => a.agent_id === newAgent.agent_id,
-          );
-          if (present) {
-            store.patchAgent(newAgent);
-          } else {
-            useAgentStore.setState((s) => ({
-              agents: [...s.agents, newAgent],
-            }));
-          }
-        } catch (err) {
-          console.warn(
-            "Failed to hydrate newly-created agent into store; route will rely on background fetchAgents",
-            err,
-          );
-        }
-      }
-      void agentStore.fetchAgents({ force: true });
-
-      setSelectorOpen(false);
-      const params = new URLSearchParams({
-        agent: instance.agent_id,
-        project: pid,
-        instance: instance.agent_instance_id,
-      });
-      navigate(`/chat?${params.toString()}`);
-    },
-    [navigate],
-  );
+  const handleNewChat = useCallback(() => {
+    if (!chatAgent) return;
+    void import("../../../../lib/analytics").then(({ track }) =>
+      track("chat_new_chat"),
+    );
+    const freshId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}`;
+    navigate(`/chat?fresh=${encodeURIComponent(freshId)}`);
+  }, [chatAgent, navigate]);
 
   useEffect(() => {
     setAction(
       "chat",
       <ProjectsPlusButton
-        onClick={handleOpenSelector}
+        onClick={handleNewChat}
         title="New chat"
-        disabled={!ceoHomeProjectId}
+        disabled={!chatAgent}
       />,
     );
     return () => setAction("chat", null);
-  }, [ceoHomeProjectId, handleOpenSelector, setAction]);
+  }, [chatAgent, handleNewChat, setAction]);
 
   const handleSessionClick = useCallback(
     (target: AnnotatedSession) => {
@@ -403,18 +290,17 @@ export function ChatAppLeftPanel() {
   // `userSessionsSurfaceKey()` surface (single fetch via
   // `loadUserSessions`), so delete / restore / error must land on
   // that surface -- not the per-agent or per-project surface the
-  // older fan-out reader used. The `_unused` underscore on the row
-  // is intentional: the surface key here is independent of the row,
-  // we keep the helper signature stable so the existing `handleDelete`
-  // call shape doesn't have to change.
+  // older fan-out reader used. The surface key here is independent
+  // of the row because every row in this panel renders from the same
+  // user-scoped session surface.
   const surfaceKeyForSession = useCallback(
-    (_target: AnnotatedSession): string => userSessionsSurfaceKey(),
+    (): string => userSessionsSurfaceKey(),
     [],
   );
 
   const handleDelete = useCallback(
     (target: AnnotatedSession) => {
-      const surfaceKey = surfaceKeyForSession(target);
+      const surfaceKey = surfaceKeyForSession();
       setDeleteError(surfaceKey, null);
       removeSession(surfaceKey, target.session_id);
       api
@@ -497,14 +383,6 @@ export function ChatAppLeftPanel() {
         renderRowSuffix={renderRowSuffix}
         streamKeyForSession={streamKeyForSession}
       />
-      {ceoHomeProjectId && (
-        <AgentSelectorModal
-          isOpen={selectorOpen}
-          projectId={ceoHomeProjectId}
-          onClose={handleCloseSelector}
-          onCreated={handleAgentCreated}
-        />
-      )}
     </div>
   );
 }

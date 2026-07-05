@@ -13,6 +13,7 @@ import { useAppUIStore } from "../../stores/app-ui-store";
 import { useAuth } from "../../stores/auth-store";
 import { useAura3DStore } from "../../stores/aura3d-store";
 import { DEFAULT_IMAGE_MODEL_ID } from "../../constants/models";
+import { getDefaultOnboardingIntent, type OnboardingRuntime } from "../../features/onboarding/onboarding-constants";
 import { useOnboardingStore } from "../../features/onboarding/onboarding-store";
 import { useOnboardingTaskWatcher } from "../../features/onboarding/useOnboardingTaskWatcher";
 import { useApplyAgentOnboarding } from "../../views/public-chat/AgentOnboarding/useApplyAgentOnboarding";
@@ -48,9 +49,6 @@ const NewProjectModal = lazy(() =>
 );
 const AppsModal = lazy(() =>
   import("../AppsModal").then((module) => ({ default: module.AppsModal })),
-);
-const WelcomeModal = lazy(() =>
-  import("../../features/onboarding/WelcomeModal/WelcomeModal").then((module) => ({ default: module.WelcomeModal })),
 );
 const OnboardingChecklist = lazy(() =>
   import("../../features/onboarding/OnboardingChecklist/OnboardingChecklist").then((module) => ({ default: module.OnboardingChecklist })),
@@ -402,18 +400,28 @@ function DemoBridgeHost() {
 
 function useOnboardingHydration() {
   const user = useAuth().user;
+  const { hasDesktopBridge } = useAuraCapabilities();
   const hydrateForUser = useOnboardingStore((s) => s.hydrateForUser);
+  const completeWelcomeIfNeeded = useOnboardingStore((s) => s.completeWelcomeIfNeeded);
+  const dismissChecklist = useOnboardingStore((s) => s.dismissChecklist);
   const trackedUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!user?.user_id) return;
     hydrateForUser(user.user_id);
+    const runtime: OnboardingRuntime = hasDesktopBridge ? "desktop" : "web";
+    completeWelcomeIfNeeded(getDefaultOnboardingIntent(runtime), {
+      checklistDismissed: runtime === "web",
+    });
+    if (runtime === "web") {
+      dismissChecklist();
+    }
     if (trackedUserIdRef.current !== user.user_id) {
       trackedUserIdRef.current = user.user_id;
       import("../../lib/analytics").then(({ identifyUser }) => {
         identifyUser(user.user_id);
       });
     }
-  }, [user?.user_id, hydrateForUser]);
+  }, [completeWelcomeIfNeeded, dismissChecklist, hasDesktopBridge, hydrateForUser, user?.user_id]);
 }
 
 function AppContent() {
@@ -473,14 +481,9 @@ function AppContent() {
       ) : null}
       <ProjectCreationModalHost />
       {uiMode === "standard" && (
-        <>
-          <LazyModalBoundary>
-            <WelcomeModal />
-          </LazyModalBoundary>
-          <LazyModalBoundary>
-            <OnboardingChecklist />
-          </LazyModalBoundary>
-        </>
+        <LazyModalBoundary>
+          <OnboardingChecklist />
+        </LazyModalBoundary>
       )}
       <ForcedUpgradeOverlay />
     </>

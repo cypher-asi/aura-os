@@ -41,7 +41,10 @@ import { AttachmentPreviews } from "./AttachmentPreviews";
 import { AttachControl } from "./AttachControl";
 import { AgentInfoBar } from "./AgentInfoBar";
 import { ChatModeBar } from "./ChatModeBar";
-import { InputStatusHints } from "./InputStatusHints";
+import {
+  InputStatusHints,
+  type InputStatusAction,
+} from "./InputStatusHints";
 import { ModelControls } from "./ModelControls";
 import { ProjectPicker } from "./ProjectPicker";
 import { useChatUI } from "../../../stores/chat-ui-store";
@@ -199,6 +202,13 @@ export interface ChatInputBarProps {
   onFetchContextContents?: ContextContentsFetcher;
   sendDisabled?: boolean;
   sendDisabledReason?: string;
+  sendDisabledAction?: InputStatusAction;
+  /**
+   * Presentation copy for the same underlying chat runtime.
+   * `chat` is used by the top-level Chat app; build/product surfaces
+   * keep their creation-oriented prompts.
+   */
+  composerTone?: "build" | "chat";
   /**
    * Optional handler for the "+" new-chat button rendered at the
    * right end of the mode row (directly above the send button).
@@ -227,6 +237,9 @@ export interface ChatInputBarProps {
 const EMPTY_ATTACHMENTS: AttachmentItem[] = [];
 const EMPTY_COMMANDS: SlashCommand[] = [];
 const EMPTY_PROJECTS: Project[] = [];
+const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
+  code: "Chat",
+};
 
 export const DesktopChatInputBar = memo(
   forwardRef<ChatInputBarHandle, ChatInputBarProps>(function DesktopChatInputBar(
@@ -269,6 +282,8 @@ export const DesktopChatInputBar = memo(
       attachAccent,
       sendDisabled = false,
       sendDisabledReason,
+      sendDisabledAction,
+      composerTone = "build",
     },
     ref,
   ) {
@@ -278,6 +293,11 @@ export const DesktopChatInputBar = memo(
     const selectedModel = chatUI.selectedModel;
     const selectedEffort = chatUI.selectedEffort;
     const selectedMode = selectedModeOverride ?? chatUI.selectedMode;
+    const effectiveSendDisabledAction =
+      sendDisabledAction ??
+      (sendDisabled && machineType === "local"
+        ? { label: "Get desktop app", to: "/download" }
+        : undefined);
     const imageQuality = chatUI.imageQuality;
     const councilCount = chatUI.councilCount;
     const councilModels = chatUI.councilModels;
@@ -650,6 +670,7 @@ export const DesktopChatInputBar = memo(
           queuedHint={queuedHint}
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}
+          sendDisabledAction={effectiveSendDisabledAction}
         />
         {modelsForMode.length > 0 ? (
           <ModelControls placement="mobileBar" {...modelControlsProps} />
@@ -767,6 +788,9 @@ export const DesktopChatInputBar = memo(
         selectedMode={selectedMode}
         onModeChange={onModeChange}
         onModeSelect={onSelectedModeOverrideChange ? onModeSelect : undefined}
+        modeLabels={
+          composerTone === "chat" ? CHAT_COMPOSER_MODE_LABELS : undefined
+        }
         onNewChat={onNewChat}
       />
     );
@@ -790,10 +814,16 @@ export const DesktopChatInputBar = memo(
         ? "Refine your 3D model (optional)"
         : "Describe an image to generate\u2026"
       : selectedMode === "code" && !isStatic
-        ? "/ for commands, @ for context"
+        ? composerTone === "chat"
+          ? "Ask Aura anything..."
+          : "/ for commands, @ for context"
         : isCentered
-          ? "Describe what you want to create\u2026"
-          : "What do you want to create?";
+          ? composerTone === "chat"
+            ? "Ask Aura anything..."
+            : "Describe what you want to create\u2026"
+          : composerTone === "chat"
+            ? "Ask Aura anything..."
+            : "What do you want to create?";
 
     const isUploading = generationMode !== "image" && attachments.some((a) => a.uploading);
 
@@ -821,7 +851,11 @@ export const DesktopChatInputBar = memo(
         isSendEnabled={!sendDisabled && isSendEnabled}
         isVisible={isVisible}
         isCentered={isCentered}
-        centeredHeading="What do you want to create?"
+        centeredHeading={
+          composerTone === "chat"
+            ? "What can I help with?"
+            : "What do you want to create?"
+        }
         isStatic={isStatic}
         pill
         expanded={inputExpanded}

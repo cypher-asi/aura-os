@@ -13,6 +13,7 @@ use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::agent_from_network;
 use crate::handlers::agents::{
     create_and_provision_remote_agent, ensure_agent_home_project_and_binding, prepare_create,
+    provision_existing_agent_as_remote,
 };
 use crate::harness_client::HarnessClient;
 use crate::orchestration_store::OrchestrationStore;
@@ -333,7 +334,13 @@ pub(crate) async fn setup_ceo_agent(
         // if the patch fails.
         ensure_canonical_ceo_permissions_persisted(network, &jwt, canonical).await;
         let mut agent = agent_from_network(canonical);
-        let _ = state.agent_service.apply_runtime_config(&mut agent);
+        if state.remote_only && agent.machine_type != "remote" {
+            agent =
+                provision_existing_agent_as_remote(&state, network, &jwt, canonical, Some(&org_id))
+                    .await?;
+        } else {
+            let _ = state.agent_service.apply_runtime_config(&mut agent);
+        }
         if agent.icon.is_none() {
             if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
                 agent.icon = shadow.icon;
@@ -484,14 +491,14 @@ pub(crate) async fn list_pending_events(
 /// harness URL is reachable so the agent editor can show a Cloud
 /// health pill. Purely advisory; never blocks chat.
 ///
-/// Forwards the caller's JWT so the probed endpoint behaves the same way
-/// it would during a real hand-off (this doubles as a JWT-forwarding
-/// sanity check for the remote-harness flow).
+/// Uses the configured hosted-local transport bearer when present, so
+/// protected hosted harnesses can be probed without exposing the service
+/// secret to browsers. Without that env, falls back to the caller's JWT.
 pub(crate) async fn harness_health(
     State(_state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
 ) -> Json<crate::harness_client::HarnessProbeResult> {
-    let client = HarnessClient::from_env();
+    let client = HarnessClient::from_env_with_transport_auth();
     Json(client.probe(Some(&jwt)).await)
 }
 

@@ -9,7 +9,7 @@ import type { AuraAppModule } from "../types";
 
 export const ProjectsApp: AuraAppModule = {
   id: "projects",
-  label: "Projects",
+  label: "Build",
   icon: FolderOpen,
   basePath: "/projects",
   LeftPanel: ProjectsNav,
@@ -20,5 +20,5 @@ export const ProjectsApp: AuraAppModule = {
   SidekickTaskbar: SidekickTaskbar,
   PreviewPanel: PreviewContent,
   PreviewHeader: PreviewHeader,
-  searchPlaceholder: "Search",
+  searchPlaceholder: "Search projects",
 };

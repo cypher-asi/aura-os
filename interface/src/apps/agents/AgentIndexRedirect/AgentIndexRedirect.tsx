@@ -25,8 +25,9 @@ export function AgentIndexRedirect() {
   // fall through to the first sorted agent.
   const lastId = isMobileLayout ? null : getLastStandaloneAgentId();
   const isFleetReady = status === "ready" || status === "error";
-  // In the browser, local agents are hidden, so a cached id pointing at one
-  // must not resolve — fall through to the first visible (remote) agent.
+  // When the current runtime can't reach local agents, a cached id pointing at
+  // one must not resolve — fall through to the first visible remote-capable
+  // agent.
   const lastIdResolves =
     lastId != null &&
     agents.some(

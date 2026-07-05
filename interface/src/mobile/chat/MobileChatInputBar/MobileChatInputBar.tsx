@@ -43,6 +43,10 @@ import { useChatUI } from "../../../stores/chat-ui-store";
 import { track } from "../../../lib/analytics";
 import styles from "./MobileChatInputBar.module.css";
 
+const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
+  code: "Chat",
+};
+
 function AttachmentPreviews({
   attachments,
   onRemove,
@@ -101,6 +105,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       contextUsage,
       onNewChat,
       sendDisabled = false,
+      composerTone = "build",
     },
     ref,
   ) {
@@ -609,6 +614,11 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               <ModeSelector
                 selectedMode={selectedMode}
                 onChange={onModeChange}
+                labels={
+                  composerTone === "chat"
+                    ? CHAT_COMPOSER_MODE_LABELS
+                    : undefined
+                }
                 className={`${styles.modeSelector} ${styles.modeSelectorFlex}`}
               />
               <button
@@ -626,6 +636,9 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             <ModeSelector
               selectedMode={selectedMode}
               onChange={onModeChange}
+              labels={
+                composerTone === "chat" ? CHAT_COMPOSER_MODE_LABELS : undefined
+              }
               className={styles.modeSelector}
             />
           )}
@@ -689,7 +702,9 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
                     ? has3DSource
                       ? "Refine your 3D model (optional)"
                       : "Describe an image to generate\u2026"
-                    : "Message agent"
+                    : composerTone === "chat"
+                      ? "Ask Aura anything..."
+                      : "Message agent"
               }
               rows={1}
               data-agent-field="chat-input"

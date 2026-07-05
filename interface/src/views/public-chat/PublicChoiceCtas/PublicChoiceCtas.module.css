@@ -1,0 +1,116 @@
+.group {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(8, 8, 12, 0.42);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.stacked {
+  width: min(100%, 300px);
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: 22px;
+}
+
+.primaryCta,
+.secondaryCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 200ms ease,
+    background 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.stacked .primaryCta,
+.stacked .secondaryCta {
+  width: 100%;
+}
+
+.primaryCta {
+  --glow: var(--public-cta-glow-color, #e8cd89);
+  padding: 0 20px;
+  color: #0c0816;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)),
+    #f3efe7;
+  border-color: color-mix(in srgb, var(--glow) 55%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--glow) 22%, transparent),
+    0 0 18px color-mix(in srgb, var(--glow) 32%, transparent);
+}
+
+.primaryCta > svg {
+  color: #9a6b16;
+}
+
+.secondaryCta {
+  padding: 0 16px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.primaryCta:hover,
+.secondaryCta:hover {
+  transform: translateY(-1px);
+}
+
+.primaryCta:hover {
+  border-color: color-mix(in srgb, var(--glow) 75%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--glow) 32%, transparent),
+    0 0 26px color-mix(in srgb, var(--glow) 42%, transparent);
+}
+
+.secondaryCta:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.primaryCta:active,
+.secondaryCta:active {
+  transform: translateY(1px);
+}
+
+.primaryCta:focus-visible,
+.secondaryCta:focus-visible {
+  outline: 2px solid var(--color-overlay-focus, rgba(255, 255, 255, 0.85));
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .group:not(.stacked) {
+    width: min(100%, 360px);
+    flex-direction: column;
+    align-items: stretch;
+    border-radius: 22px;
+  }
+
+  .group:not(.stacked) .primaryCta,
+  .group:not(.stacked) .secondaryCta {
+    width: 100%;
+  }
+}

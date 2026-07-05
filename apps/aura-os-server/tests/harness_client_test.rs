@@ -21,7 +21,7 @@ use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite;
 
-use aura_os_harness::HarnessAutomatonStartParams;
+use aura_os_harness::{HarnessAutomatonStartParams, HarnessLink, LocalHarness, SessionConfig};
 use aura_os_server::{HarnessClient, HarnessTxKind};
 
 /// Observations collected by the mock server for post-hoc assertions.
@@ -114,9 +114,8 @@ async fn run_stream_handler(
         .and_then(|h| h.to_str().ok().map(str::to_string));
     rec.lock().await.seen_authorizations.push(auth);
 
-    let _ = run_id;
     ws.on_upgrade(move |socket| async move {
-        let _ = serve_stream(socket).await;
+        let _ = serve_stream(socket, run_id).await;
     })
 }
 
@@ -132,19 +131,34 @@ async fn run_start_handler(
         .await
         .unwrap_or_default();
     let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap_or_default();
+    let run_id = if json["auth_jwt"] == "body-user-jwt" {
+        "local-run-id"
+    } else {
+        "fixed-run-id"
+    };
     let mut r = rec.lock().await;
     r.seen_authorizations.push(auth);
     r.last_run_body = Some(json);
+
     Json(serde_json::json!({
-        "run_id": "fixed-run-id",
-        "event_stream_url": "/stream/fixed-run-id",
+        "run_id": run_id,
+        "event_stream_url": format!("/stream/{run_id}"),
     }))
 }
 
-async fn serve_stream(mut socket: WebSocket) -> Result<(), axum::Error> {
-    socket
-        .send(Message::Text("hello-from-harness".into()))
-        .await?;
+async fn serve_stream(mut socket: WebSocket, run_id: String) -> Result<(), axum::Error> {
+    let message = if run_id == "local-run-id" {
+        serde_json::json!({
+            "type": "session_ready",
+            "session_id": "local-session-id",
+            "tools": [],
+            "skills": [],
+        })
+        .to_string()
+    } else {
+        "hello-from-harness".to_string()
+    };
+    socket.send(Message::Text(message.into())).await?;
     socket.close().await?;
     Ok(())
 }
@@ -301,6 +315,67 @@ async fn subscribe_stream_receives_text_frame_and_forwards_jwt() {
 }
 
 #[tokio::test]
+async fn subscribe_stream_prefers_transport_auth_token_over_user_jwt() {
+    let (url, rec, _h) = start_mock_harness().await;
+    let client =
+        HarnessClient::with_transport_auth_token(url, Some("harness-transport-token".into()));
+
+    let mut stream = client
+        .subscribe_stream("fixed-run-id", Some("user-jwt"))
+        .await
+        .expect("ws connect succeeded");
+
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(2), stream.next())
+        .await
+        .expect("frame arrived within timeout")
+        .expect("frame present")
+        .expect("frame ok");
+
+    let r = rec.lock().await;
+    let auth = r
+        .seen_authorizations
+        .iter()
+        .find_map(|a| a.clone())
+        .expect("authorization header present on ws upgrade");
+    assert_eq!(auth, "Bearer harness-transport-token");
+}
+
+#[tokio::test]
+async fn local_harness_open_session_prefers_transport_auth_but_keeps_body_jwt() {
+    let (url, rec, _h) = start_mock_harness().await;
+    let harness =
+        LocalHarness::with_transport_auth_token(url, Some("harness-transport-token".into()));
+
+    let session = harness
+        .open_session(SessionConfig {
+            aura_org_id: Some("org-123".into()),
+            aura_session_id: Some("session-123".into()),
+            template_agent_id: Some("agent-template".into()),
+            agent_id: Some("agent-template::instance".into()),
+            user_id: Some("user-123".into()),
+            token: Some("body-user-jwt".into()),
+            ..Default::default()
+        })
+        .await
+        .expect("local harness session opened");
+
+    assert_eq!(session.session_id, "local-session-id");
+    assert_eq!(session.run_id, "local-run-id");
+
+    let r = rec.lock().await;
+    assert_eq!(
+        r.seen_authorizations,
+        vec![
+            Some("Bearer harness-transport-token".to_string()),
+            Some("Bearer harness-transport-token".to_string()),
+        ],
+        "POST /v1/run and WS /stream must use the hosted harness transport bearer"
+    );
+    let body = r.last_run_body.as_ref().expect("run body recorded");
+    assert_eq!(body["auth_jwt"], "body-user-jwt");
+}
+
+#[tokio::test]
 async fn start_automaton_forwards_model_selection() {
     let (url, rec, _h) = start_mock_harness().await;
     let client = HarnessClient::new(url);
@@ -337,6 +412,41 @@ async fn start_automaton_forwards_model_selection() {
     assert_eq!(body["project"]["project_id"], "project-123");
     assert_eq!(body["project"]["aura_org_id"], "org-123");
     assert_eq!(body["project"]["aura_session_id"], "session-123");
+    assert_eq!(body["auth_jwt"], "body-jwt");
+}
+
+#[tokio::test]
+async fn start_automaton_prefers_transport_auth_but_keeps_body_jwt() {
+    let (url, rec, _h) = start_mock_harness().await;
+    let client =
+        HarnessClient::with_transport_auth_token(url, Some("harness-transport-token".into()));
+
+    client
+        .start_automaton(
+            &HarnessAutomatonStartParams {
+                kind: "scheduled_process".to_string(),
+                project_id: "project-123".to_string(),
+                auth_token: Some("body-jwt".to_string()),
+                process_id: Some("process-123".to_string()),
+                model: Some("aura-claude-sonnet-4-6".to_string()),
+                input: None,
+                aura_org_id: Some("org-123".to_string()),
+                aura_session_id: Some("session-123".to_string()),
+            },
+            Some("user-jwt"),
+        )
+        .await
+        .expect("start_automaton succeeded");
+
+    let r = rec.lock().await;
+    let auth = r
+        .seen_authorizations
+        .iter()
+        .find_map(|value| value.clone())
+        .expect("authorization header present");
+    assert_eq!(auth, "Bearer harness-transport-token");
+
+    let body = r.last_run_body.as_ref().expect("run body recorded");
     assert_eq!(body["auth_jwt"], "body-jwt");
 }
 

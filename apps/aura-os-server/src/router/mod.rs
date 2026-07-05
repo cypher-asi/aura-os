@@ -106,6 +106,10 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
 
     let api_router = Router::new()
         .route("/health", get(system::health))
+        .route(
+            "/api/system/runtime-capabilities",
+            get(system::get_runtime_capabilities),
+        )
         .merge(auth_routes())
         // Public anonymous endpoints (`/api/public/*`). Merged at this
         // level, OUTSIDE `protected_api_router`, so the global

@@ -130,7 +130,7 @@ async fn start_scheduled_process_automaton(
     let aura_session_id = Some(stable_process_run_session_id(&process.id, run_id));
     let auth_token = Some(jwt.to_string());
     let model = resolve_process_model(state, storage, &process.id, jwt).await?;
-    let client = HarnessClient::new(aura_os_harness::local_harness_base_url());
+    let client = HarnessClient::from_env_with_transport_auth();
 
     client
         .start_automaton(

@@ -3,13 +3,15 @@ use tokio::time::Duration;
 use tokio_tungstenite::tungstenite;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::info;
+use url::Url;
 
 use crate::error::HarnessError;
 use crate::harness::{
-    build_runtime_request, validate_runtime_request_identity, HarnessLink, HarnessSession,
-    RunHandle, SessionConfig,
+    HarnessLink, HarnessSession, RunHandle, SessionConfig, build_runtime_request,
+    validate_runtime_request_identity,
 };
-use crate::harness_url::local_harness_base_url;
+use crate::harness_auth::{local_harness_transport_auth_token_from_env, preferred_transport_auth};
+use crate::harness_url::{is_hosted_harness_base_url, local_harness_base_url};
 use crate::stability_metrics;
 use crate::ws_bridge::spawn_ws_bridge;
 use aura_protocol::OutboundMessage;
@@ -78,18 +80,75 @@ pub(crate) fn next_backoff(attempt: u32) -> Duration {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct LocalHarness {
     base_url: String,
+    transport_auth_token: Option<String>,
+}
+
+impl std::fmt::Debug for LocalHarness {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LocalHarness")
+            .field("base_url", &self.base_url)
+            .field(
+                "transport_auth_token",
+                &self.transport_auth_token.as_ref().map(|_| "[redacted]"),
+            )
+            .finish()
+    }
 }
 
 impl LocalHarness {
     pub fn new(base_url: String) -> Self {
-        Self { base_url }
+        Self {
+            base_url,
+            transport_auth_token: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_transport_auth_token(
+        base_url: String,
+        transport_auth_token: Option<String>,
+    ) -> Self {
+        Self {
+            base_url,
+            transport_auth_token,
+        }
     }
 
     pub fn from_env() -> Self {
-        Self::new(local_harness_base_url())
+        Self::with_transport_auth_token(
+            local_harness_base_url(),
+            local_harness_transport_auth_token_from_env(),
+        )
+    }
+
+    pub fn for_configured_local_base_url(base_url: String) -> Self {
+        let transport_auth_token =
+            if normalized_base_url(&base_url) == normalized_base_url(&local_harness_base_url()) {
+                local_harness_transport_auth_token_from_env()
+            } else {
+                None
+            };
+        Self::with_transport_auth_token(base_url, transport_auth_token)
+    }
+
+    fn hosted_base_requires_transport_auth(&self) -> bool {
+        is_hosted_harness_base_url(&self.base_url) && self.transport_auth_token.is_none()
+    }
+
+    fn transport_auth<'a>(
+        &'a self,
+        caller_token: Option<&'a str>,
+    ) -> anyhow::Result<Option<&'a str>> {
+        if self.hosted_base_requires_transport_auth() {
+            anyhow::bail!("hosted local harness requires LOCAL_HARNESS_AUTH_TOKEN");
+        }
+        Ok(preferred_transport_auth(
+            self.transport_auth_token.as_deref(),
+            caller_token,
+        ))
     }
 
     fn ws_base(&self) -> String {
@@ -111,13 +170,49 @@ impl LocalHarness {
     /// supplied (e.g. when adopting an existing run whose start-time URL
     /// is no longer available). Ported from the legacy automaton
     /// client's `resolve_event_stream_url`.
-    fn resolve_event_stream_url(&self, run_id: &str, event_stream_url: Option<&str>) -> String {
-        match event_stream_url {
+    fn resolve_event_stream_url(
+        &self,
+        run_id: &str,
+        event_stream_url: Option<&str>,
+    ) -> anyhow::Result<String> {
+        let url = match event_stream_url {
             Some(u) if u.starts_with("ws://") || u.starts_with("wss://") => u.to_string(),
             Some(u) => format!("{}/{}", self.ws_base(), u.trim_start_matches('/')),
             None => self.ws_url_for_run(run_id),
+        };
+        if self.transport_auth_token.is_some() && !ws_url_matches_base_origin(&self.base_url, &url)
+        {
+            anyhow::bail!("refusing to send local harness transport auth to off-origin stream URL");
         }
+        Ok(url)
     }
+}
+
+fn normalized_base_url(url: &str) -> String {
+    url.trim().trim_end_matches('/').to_string()
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct CanonicalOrigin {
+    scheme: &'static str,
+    host: String,
+    port: u16,
+}
+
+fn canonical_origin(url: &str) -> Option<CanonicalOrigin> {
+    let parsed = Url::parse(url).ok()?;
+    let scheme = match parsed.scheme().to_ascii_lowercase().as_str() {
+        "http" | "ws" => "http",
+        "https" | "wss" => "https",
+        _ => return None,
+    };
+    let host = parsed.host_str()?.to_ascii_lowercase();
+    let port = parsed.port_or_known_default()?;
+    Some(CanonicalOrigin { scheme, host, port })
+}
+
+fn ws_url_matches_base_origin(base_url: &str, ws_url: &str) -> bool {
+    canonical_origin(base_url).is_some_and(|base| canonical_origin(ws_url) == Some(base))
 }
 
 /// HTTP client timeout for the `POST /v1/run` step of the two-step
@@ -187,7 +282,7 @@ impl HarnessLink for LocalHarness {
         wait_for_ready: bool,
     ) -> anyhow::Result<HarnessSession> {
         let per_attempt_timeout = read_connect_timeout_from_env();
-        let ws_url = self.resolve_event_stream_url(run_id, event_stream_url);
+        let ws_url = self.resolve_event_stream_url(run_id, event_stream_url)?;
         self.attach_run_at_ws_url(
             &ws_url,
             run_id,
@@ -222,7 +317,7 @@ impl HarnessLink for LocalHarness {
         let mut req = Self::lifecycle_http_client()?
             .get(&url)
             .query(&[("project_name", project_name)]);
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token)? {
             req = req.bearer_auth(token);
         }
         let resp = req.send().await?;
@@ -245,7 +340,7 @@ impl HarnessLink for LocalHarness {
     ) -> anyhow::Result<serde_json::Value> {
         let url = format!("{}/v1/run/{run_id}/status", self.base_url);
         let mut req = Self::lifecycle_http_client()?.get(&url);
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token)? {
             req = req.bearer_auth(token);
         }
         let resp = req.send().await?;
@@ -337,7 +432,7 @@ impl LocalHarness {
     ) -> anyhow::Result<()> {
         let url = format!("{}/v1/run/{run_id}/{action}", self.base_url);
         let mut req = Self::lifecycle_http_client()?.post(&url);
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token)? {
             req = req.bearer_auth(token);
         }
         let resp = req.send().await?;
@@ -404,7 +499,7 @@ impl LocalHarness {
         let mut http_req = http_client
             .post(format!("{}/v1/run", self.base_url))
             .json(request_body);
-        if let Some(token) = auth_token {
+        if let Some(token) = self.transport_auth(auth_token)? {
             http_req = http_req.bearer_auth(token);
         }
         let resp = http_req.send().await.map_err(|e| {
@@ -469,7 +564,10 @@ impl LocalHarness {
         let mut ws_req = ws_url.to_string().into_client_request().map_err(|e| {
             OpenAttemptError::Other(anyhow::anyhow!("failed to build ws request: {e}"))
         })?;
-        if let Some(token) = auth_token {
+        let transport_auth = self
+            .transport_auth(auth_token)
+            .map_err(OpenAttemptError::Other)?;
+        if let Some(token) = transport_auth {
             let value = format!("Bearer {token}").parse().map_err(|e| {
                 OpenAttemptError::Other(anyhow::anyhow!("bad authorization header value: {e}"))
             })?;
@@ -529,7 +627,7 @@ impl LocalHarness {
                 Err(_) => {
                     return Err(OpenAttemptError::Other(anyhow::anyhow!(
                         "Timed out waiting for SessionReady from local harness (30s)"
-                    )))
+                    )));
                 }
             }
         } else {
@@ -740,6 +838,73 @@ mod tests {
             "nope",
         ));
         assert!(!is_capacity_exhausted_ws_error(&err));
+    }
+
+    #[test]
+    fn transport_auth_accepts_same_origin_absolute_stream_url() {
+        let harness = LocalHarness::with_transport_auth_token(
+            "https://harness.example.com/base".to_string(),
+            Some("transport-secret".to_string()),
+        );
+
+        let resolved = harness
+            .resolve_event_stream_url("run-1", Some("wss://harness.example.com/stream/run-1"))
+            .expect("same-origin stream is accepted");
+
+        assert_eq!(resolved, "wss://harness.example.com/stream/run-1");
+    }
+
+    #[test]
+    fn transport_auth_accepts_same_origin_stream_url_with_default_port() {
+        let harness = LocalHarness::with_transport_auth_token(
+            "https://harness.example.com".to_string(),
+            Some("transport-secret".to_string()),
+        );
+
+        let resolved = harness
+            .resolve_event_stream_url("run-1", Some("wss://harness.example.com:443/stream/run-1"))
+            .expect("same-origin stream with explicit default port is accepted");
+
+        assert_eq!(resolved, "wss://harness.example.com:443/stream/run-1");
+    }
+
+    #[test]
+    fn transport_auth_rejects_off_origin_absolute_stream_url() {
+        let harness = LocalHarness::with_transport_auth_token(
+            "https://harness.example.com".to_string(),
+            Some("transport-secret".to_string()),
+        );
+
+        let error = harness
+            .resolve_event_stream_url("run-1", Some("wss://evil.example.com/stream/run-1"))
+            .expect_err("off-origin stream must not receive transport auth");
+
+        assert!(error.to_string().contains("off-origin stream URL"));
+    }
+
+    #[test]
+    fn hosted_base_without_transport_auth_rejects_caller_token_fallback() {
+        let harness = LocalHarness::with_transport_auth_token(
+            "https://harness.example.com".to_string(),
+            None,
+        );
+
+        let error = harness
+            .transport_auth(Some("user-jwt"))
+            .expect_err("hosted base without transport auth must fail closed");
+
+        assert!(error.to_string().contains("LOCAL_HARNESS_AUTH_TOKEN"));
+    }
+
+    #[test]
+    fn loopback_base_without_transport_auth_still_uses_caller_token() {
+        let harness =
+            LocalHarness::with_transport_auth_token("http://127.0.0.1:8081".to_string(), None);
+
+        assert_eq!(
+            harness.transport_auth(Some("user-jwt")).unwrap(),
+            Some("user-jwt")
+        );
     }
 
     #[tokio::test]

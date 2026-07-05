@@ -101,7 +101,7 @@ pub(super) async fn persist_vm_id(
         skills: None,
         icon: None,
         harness: None,
-        machine_type: None,
+        machine_type: Some("remote".to_string()),
         org_id: resolved_org.clone(),
         vm_id: Some(vm_id.to_string()),
         tags: None,

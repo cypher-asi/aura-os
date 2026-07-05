@@ -3,6 +3,7 @@
 mod common;
 
 mod history;
+mod public_import;
 mod sessions;
 mod storage;
 mod streaming;

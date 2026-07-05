@@ -1,7 +1,8 @@
 use axum::extract::State;
 use axum::Json;
 
-use aura_os_core::{Agent, AgentRuntimeConfig, HarnessMode};
+use aura_os_core::{Agent, AgentId, AgentRuntimeConfig, HarnessMode};
+use aura_os_network::NetworkAgent;
 
 use crate::dto::CreateAgentRequest;
 use crate::error::{map_network_error, ApiError, ApiResult};
@@ -92,6 +93,39 @@ pub(crate) async fn create_and_provision_remote_agent(
     // apply to remote agents today — keeps the value stable if the user
     // later converts the agent back to local.
     agent.local_workspace_path = prepared.submitted_local_path.clone();
+    Ok(agent)
+}
+
+pub(crate) async fn provision_existing_agent_as_remote(
+    state: &AppState,
+    client: &aura_os_network::NetworkClient,
+    jwt: &str,
+    net_agent: &NetworkAgent,
+    intended_org: Option<&str>,
+) -> ApiResult<Agent> {
+    let agent_id = net_agent
+        .id
+        .parse::<AgentId>()
+        .map_err(|_| ApiError::internal("network agent id was not a valid Aura agent id"))?;
+    let runtime_config = build_runtime_config(RuntimeConfigInputs {
+        adapter_type: Some("aura_harness".to_string()),
+        environment: Some("swarm_microvm".to_string()),
+        auth_source: Some("aura_managed".to_string()),
+        integration_id: None,
+        default_model: None,
+        machine_type: Some("remote".to_string()),
+    })?;
+    let reprovisioned = provision_remote_agent(state, client, jwt, net_agent, intended_org).await?;
+    state
+        .agent_service
+        .save_agent_runtime_config(&agent_id, &runtime_config)
+        .map_err(|e| ApiError::internal(format!("saving remote agent runtime config: {e}")))?;
+    let mut agent = reprovisioned.agent;
+    state
+        .agent_service
+        .apply_runtime_config(&mut agent)
+        .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
+    let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(agent)
 }
 

@@ -6,7 +6,6 @@ import {
   awaitInitialShellAppReady,
   __resetInitialShellAppReadyForTests,
 } from "./boot-shell";
-import { LAST_APP_KEY } from "../constants";
 
 const MockIcon = (() => null) as unknown as LucideIcon;
 const MockComponent = () => null;
@@ -29,6 +28,7 @@ describe("preloadInitialShellApp", () => {
 
   beforeEach(() => {
     __resetInitialShellAppReadyForTests();
+    delete (window as Window & { ipc?: { postMessage: () => void } }).ipc;
     store = {};
     vi.stubGlobal("localStorage", {
       getItem: vi.fn((key: string) => store[key] ?? null),
@@ -43,40 +43,55 @@ describe("preloadInitialShellApp", () => {
 
   afterEach(() => {
     __resetInitialShellAppReadyForTests();
+    delete (window as Window & { ipc?: { postMessage: () => void } }).ipc;
     vi.unstubAllGlobals();
   });
 
-  it("invokes preload() on the app matching the last-used-app base path", async () => {
-    store[LAST_APP_KEY] = "projects";
-
+  it("invokes preload() on the web entry app even when a last app is remembered", async () => {
+    store["aura-last-app"] = "projects";
+    const chatPreload = vi.fn(() => Promise.resolve({}));
     const projectsPreload = vi.fn(() => Promise.resolve({}));
-    const agentsPreload = vi.fn(() => Promise.resolve({}));
 
     await preloadInitialShellApp({
-      appList: [makeApp("agents", "/agents", agentsPreload), makeApp("projects", "/projects", projectsPreload)],
+      appList: [makeApp("chat", "/chat", chatPreload), makeApp("projects", "/projects", projectsPreload)],
+      timeoutMs: 0,
+    });
+
+    expect(chatPreload).toHaveBeenCalledTimes(1);
+    expect(projectsPreload).not.toHaveBeenCalled();
+  });
+
+  it("invokes preload() on the desktop entry app when the bridge is present", async () => {
+    store["aura-last-app"] = "chat";
+    (window as Window & { ipc?: { postMessage: () => void } }).ipc = {
+      postMessage: vi.fn(),
+    };
+    const chatPreload = vi.fn(() => Promise.resolve({}));
+    const projectsPreload = vi.fn(() => Promise.resolve({}));
+
+    await preloadInitialShellApp({
+      appList: [makeApp("chat", "/chat", chatPreload), makeApp("projects", "/projects", projectsPreload)],
       timeoutMs: 0,
     });
 
     expect(projectsPreload).toHaveBeenCalledTimes(1);
-    expect(agentsPreload).not.toHaveBeenCalled();
+    expect(chatPreload).not.toHaveBeenCalled();
   });
 
   it("falls back to the default app when no last-used app is remembered", async () => {
-    const agentsPreload = vi.fn(() => Promise.resolve({}));
+    const chatPreload = vi.fn(() => Promise.resolve({}));
 
     await preloadInitialShellApp({
-      appList: [makeApp("agents", "/agents", agentsPreload)],
+      appList: [makeApp("chat", "/chat", chatPreload)],
       timeoutMs: 0,
     });
 
-    expect(agentsPreload).toHaveBeenCalledTimes(1);
+    expect(chatPreload).toHaveBeenCalledTimes(1);
   });
 
   it("resolves immediately when the matched app has no preload()", async () => {
-    store[LAST_APP_KEY] = "projects";
-
     const promise = preloadInitialShellApp({
-      appList: [makeApp("projects", "/projects", undefined)],
+      appList: [makeApp("chat", "/chat", undefined)],
       timeoutMs: 0,
     });
 
@@ -85,8 +100,8 @@ describe("preloadInitialShellApp", () => {
 
   it("is idempotent — repeated calls return the same Promise", async () => {
     const preload = vi.fn(() => Promise.resolve({}));
-    const a = preloadInitialShellApp({ appList: [makeApp("agents", "/agents", preload)], timeoutMs: 0 });
-    const b = preloadInitialShellApp({ appList: [makeApp("agents", "/agents", preload)], timeoutMs: 0 });
+    const a = preloadInitialShellApp({ appList: [makeApp("chat", "/chat", preload)], timeoutMs: 0 });
+    const b = preloadInitialShellApp({ appList: [makeApp("chat", "/chat", preload)], timeoutMs: 0 });
 
     expect(a).toBe(b);
     await a;
@@ -103,7 +118,7 @@ describe("preloadInitialShellApp", () => {
     );
 
     const ready = preloadInitialShellApp({
-      appList: [makeApp("agents", "/agents", preload)],
+      appList: [makeApp("chat", "/chat", preload)],
       timeoutMs: 10_000,
     });
 
@@ -117,7 +132,7 @@ describe("preloadInitialShellApp", () => {
       const preload = vi.fn(() => new Promise<void>(() => {}));
 
       const ready = preloadInitialShellApp({
-        appList: [makeApp("agents", "/agents", preload)],
+        appList: [makeApp("chat", "/chat", preload)],
         timeoutMs: 25,
       });
 
@@ -134,13 +149,13 @@ describe("preloadInitialShellApp", () => {
 
     try {
       const ready = preloadInitialShellApp({
-        appList: [makeApp("agents", "/agents", preload)],
+        appList: [makeApp("chat", "/chat", preload)],
         timeoutMs: 0,
       });
 
       await expect(ready).resolves.toBeUndefined();
       expect(errorSpy).toHaveBeenCalledWith(
-        "[aura-boot] preload agents failed",
+        "[aura-boot] preload chat failed",
         expect.any(Error),
       );
     } finally {
@@ -151,7 +166,7 @@ describe("preloadInitialShellApp", () => {
   it("exposes the same Promise via awaitInitialShellAppReady()", () => {
     const preload = vi.fn(() => Promise.resolve({}));
     const ready = preloadInitialShellApp({
-      appList: [makeApp("agents", "/agents", preload)],
+      appList: [makeApp("chat", "/chat", preload)],
       timeoutMs: 0,
     });
     expect(awaitInitialShellAppReady()).toBe(ready);

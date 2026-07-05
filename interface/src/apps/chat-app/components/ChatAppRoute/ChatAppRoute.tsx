@@ -10,6 +10,7 @@ import type { Agent } from "../../../../shared/types";
 import { useChatAppAgent } from "../../hooks/use-chat-app-agent";
 import { useChatAppChat } from "../../hooks/use-chat-app-chat";
 import { useChatAppSessions } from "../../hooks/use-chat-app-sessions";
+import { useImportPublicChatsOnAuth } from "../../hooks/use-public-chat-import";
 
 /**
  * Top-level Chat app route. Resolves the canonical chat agent via
@@ -36,14 +37,17 @@ import { useChatAppSessions } from "../../hooks/use-chat-app-sessions";
  * agent owns the active conversation.
  */
 export function ChatAppRoute() {
-  const { agent: chatAgent, status, error } = useChatAppAgent();
   const { agents } = useAgents();
   const { setSelectedAgent } = useSelectedAgent();
-  const { isMobileLayout } = useAuraCapabilities();
+  const { isMobileLayout, remoteOnly } = useAuraCapabilities();
+  const { agent: chatAgent, status, error } = useChatAppAgent({ remoteOnly });
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
+  const freshChatId = searchParams.get("fresh");
   const agentIdParam = searchParams.get("agent");
   const { sessions } = useChatAppSessions(agents);
+  const freshCanvasPending = !sessionId && freshChatId != null;
+  useImportPublicChatsOnAuth(chatAgent);
 
   const agentById = useMemo(() => {
     const map = new Map<string, Agent>();
@@ -123,6 +127,7 @@ export function ChatAppRoute() {
   const sharedChatProps = useChatAppChat(
     effectiveAgentId,
     sessionId,
+    { freshCanvasPending },
   );
 
   // Pre-resolve panel props so the chat surface can mount on the very
@@ -141,6 +146,10 @@ export function ChatAppRoute() {
     : {
         ...sharedChatProps,
         scrollToBottomOnReset: false,
+        sendDisabled: effectiveAgentId ? sharedChatProps.sendDisabled : true,
+        sendDisabledReason: effectiveAgentId
+          ? sharedChatProps.sendDisabledReason
+          : "Starting chat...",
         // `useStandaloneAgentChat` returns `historyResolved: false`
         // when no agentId is set; flip to `true` so the panel skips
         // the cold-load reveal cycle and the empty-state slot below

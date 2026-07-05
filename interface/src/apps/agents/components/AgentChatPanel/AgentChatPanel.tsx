@@ -98,7 +98,7 @@ export function AgentChatPanel({
     useAgentChatMeta("project", { projectId, agentInstanceId });
   const sendDisabled = remoteOnly && machineType === "local";
   const sendDisabledReason = sendDisabled
-    ? "This is a local agent and can only be used in the desktop app."
+    ? "This local agent is not available in this browser."
     : undefined;
 
   // Resolves the project's workspace path (and remote-agent id when
@@ -364,6 +364,7 @@ export function AgentChatPanel({
     isLoading: deferredLoading,
     historyResolved,
     errorMessage: historyError ? historyError : null,
+    emptyMessage: "Ready for the next build.",
     initialHandoff: shouldUseCreateHandoff ? "create-agent" : undefined,
     onInitialHandoffReady,
     scrollResetKey: panelKey,

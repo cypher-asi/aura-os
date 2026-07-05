@@ -249,7 +249,9 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         .or_else(|| network_client.clone());
     match (&feedback_network_client, &network_client) {
         (Some(fb), Some(main)) if Arc::ptr_eq(fb, main) => {
-            info!("feedback routes share the main aura-network client (AURA_NETWORK_FEEDBACK_URL not set)");
+            info!(
+                "feedback routes share the main aura-network client (AURA_NETWORK_FEEDBACK_URL not set)"
+            );
         }
         (Some(fb), _) => {
             info!(base_url = %fb.base_url(), "feedback routes using dedicated aura-network client");
@@ -340,7 +342,9 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     };
 
     let harness_base = local_harness_base_url();
-    let harness_http = Arc::new(HarnessHttpGateway::new(harness_base));
+    let harness_http = Arc::new(HarnessHttpGateway::for_configured_local_base_url(
+        harness_base,
+    ));
 
     // Dev-loop debug bundles are always captured so the Debug app and
     // `aura-run-analyze` CLI can inspect any past run without an

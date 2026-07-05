@@ -43,14 +43,15 @@ pub(crate) fn public_demo_agent_id() -> AgentId {
     AgentId::from_uuid(Uuid::from_u128(1))
 }
 
-/// System-prompt baked into the public demo agent shadow. Kept short
-/// because the public chat surface is a teaser experience — the full
-/// CEO bootstrap prompt only makes sense once the user has signed in
-/// and accepted an org.
-pub(crate) const PUBLIC_DEMO_SYSTEM_PROMPT: &str = "You are the AURA public demo assistant. \
-Briefly help the visitor explore what AURA can do. Stay friendly and concise. \
-If the visitor asks for anything that requires a sign-in (saving work, running long \
-jobs, deploying), tell them they can sign in at any time to unlock the full surface.";
+/// System-prompt baked into the public chat agent shadow. Kept short
+/// because the public chat surface should feel like a usable assistant;
+/// the full CEO bootstrap prompt only makes sense once the user has
+/// signed in and accepted an org.
+pub(crate) const PUBLIC_DEMO_SYSTEM_PROMPT: &str =
+    "You are Aura, a concise AI assistant on Aura's public chat. \
+Answer the visitor's latest message directly before describing Aura. Do not open with \
+a generic welcome, demo disclaimer, or marketing pitch. Mention sign-in only when the \
+visitor asks to save work, use private data, run long jobs, deploy, or connect accounts.";
 
 /// Model the public demo runs on. The router requires an explicit,
 /// non-empty model id (it no longer falls back to an env default), and
@@ -149,9 +150,7 @@ mod tests {
     fn build_demo_agent_carries_system_prompt_and_owner() {
         let agent = build_demo_agent(public_demo_agent_id());
         assert_eq!(agent.user_id, SYSTEM_DEMO_USER_ID);
-        assert!(agent
-            .system_prompt
-            .starts_with("You are the AURA public demo"));
+        assert!(agent.system_prompt.starts_with("You are Aura"));
         assert_eq!(agent.machine_type, "local");
     }
 }

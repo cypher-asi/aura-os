@@ -3,15 +3,32 @@
 //! Centralizes base URL resolution (via [`AppState`](crate::state::AppState) wiring at startup),
 //! [`reqwest::Client`] reuse, and common request/response handling for harness proxy routes.
 
-use axum::http::{header, Method, StatusCode};
+use aura_os_harness::{
+    is_hosted_harness_base_url, local_harness_base_url, local_harness_transport_auth_token_from_env,
+};
+use axum::http::{Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use url::Url;
 
 /// Gateway for JSON HTTP calls to the harness (`LOCAL_HARNESS_URL`).
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HarnessHttpGateway {
     base_url: String,
     client: reqwest::Client,
+    transport_auth_token: Option<String>,
+}
+
+impl std::fmt::Debug for HarnessHttpGateway {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HarnessHttpGateway")
+            .field("base_url", &self.base_url)
+            .field("client", &self.client)
+            .field(
+                "transport_auth_token",
+                &self.transport_auth_token.as_ref().map(|_| "[redacted]"),
+            )
+            .finish()
+    }
 }
 
 impl HarnessHttpGateway {
@@ -20,6 +37,46 @@ impl HarnessHttpGateway {
         Self {
             base_url,
             client: reqwest::Client::new(),
+            transport_auth_token: None,
+        }
+    }
+
+    pub fn with_transport_auth_token(
+        base_url: impl Into<String>,
+        transport_auth_token: Option<String>,
+    ) -> Self {
+        let mut gateway = Self::new(base_url);
+        gateway.transport_auth_token = transport_auth_token;
+        gateway
+    }
+
+    pub fn for_configured_local_base_url(base_url: impl Into<String>) -> Self {
+        let base_url = base_url.into();
+        let transport_auth_token =
+            if normalized_base_url(&base_url) == normalized_base_url(&local_harness_base_url()) {
+                local_harness_transport_auth_token_from_env()
+            } else {
+                None
+            };
+        Self::with_transport_auth_token(base_url, transport_auth_token)
+    }
+
+    pub(crate) fn has_transport_auth(&self) -> bool {
+        self.transport_auth_token.is_some()
+    }
+
+    pub(crate) fn hosted_local_runtime_available(&self) -> bool {
+        is_hosted_harness_base_url(&self.base_url) && self.has_transport_auth()
+    }
+
+    pub(crate) fn hosted_base_requires_transport_auth(&self) -> bool {
+        is_hosted_harness_base_url(&self.base_url) && !self.has_transport_auth()
+    }
+
+    fn apply_transport_auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        match self.transport_auth_token.as_deref() {
+            Some(token) => req.bearer_auth(token),
+            None => req,
         }
     }
 
@@ -41,7 +98,9 @@ impl HarnessHttpGateway {
             _ => return Err(StatusCode::METHOD_NOT_ALLOWED),
         };
 
-        req = req.header("Content-Type", "application/json");
+        req = self
+            .apply_transport_auth(req)
+            .header("Content-Type", "application/json");
         if let Some(body) = body {
             req = req.body(body);
         }
@@ -85,10 +144,12 @@ impl HarnessHttpGateway {
             return;
         };
         let _ = self
-            .client
-            .post(url)
-            .header("Content-Type", "application/json")
-            .body(body)
+            .apply_transport_auth(
+                self.client
+                    .post(url)
+                    .header("Content-Type", "application/json")
+                    .body(body),
+            )
             .send()
             .await;
     }
@@ -109,7 +170,8 @@ impl HarnessHttpGateway {
             Method::DELETE => self.client.delete(url),
             _ => return None,
         };
-        let resp = req
+        let resp = self
+            .apply_transport_auth(req)
             .header("Content-Type", "application/json")
             .send()
             .await
@@ -122,6 +184,9 @@ impl HarnessHttpGateway {
     }
 
     fn harness_url(&self, path: &str, query: Option<&str>) -> Result<Url, StatusCode> {
+        if self.hosted_base_requires_transport_auth() {
+            return Err(StatusCode::SERVICE_UNAVAILABLE);
+        }
         let base = format!("{}/", self.base_url.trim_end_matches('/'));
         let mut url = Url::parse(&base).map_err(|_| StatusCode::BAD_GATEWAY)?;
         {
@@ -139,6 +204,10 @@ impl HarnessHttpGateway {
         url.set_query(query);
         Ok(url)
     }
+}
+
+fn normalized_base_url(url: &str) -> String {
+    url.trim().trim_end_matches('/').to_string()
 }
 
 #[cfg(test)]
@@ -162,5 +231,28 @@ mod tests {
     fn harness_url_rejects_relative_path_traversal_segments() {
         let gateway = HarnessHttpGateway::new("http://127.0.0.1:9999");
         assert!(gateway.harness_url("api/agents/../skills", None).is_err());
+    }
+
+    #[test]
+    fn hosted_local_runtime_requires_non_loopback_base_and_transport_auth() {
+        let hosted_without_auth =
+            HarnessHttpGateway::new("https://aura-harness-latest.onrender.com");
+        assert!(!hosted_without_auth.hosted_local_runtime_available());
+        assert!(hosted_without_auth.hosted_base_requires_transport_auth());
+        assert_eq!(
+            hosted_without_auth.harness_url("api/skills", None),
+            Err(axum::http::StatusCode::SERVICE_UNAVAILABLE)
+        );
+
+        let hosted_with_auth = HarnessHttpGateway::with_transport_auth_token(
+            "https://aura-harness-latest.onrender.com",
+            Some("secret".to_string()),
+        );
+        assert!(hosted_with_auth.hosted_local_runtime_available());
+        assert!(!hosted_with_auth.hosted_base_requires_transport_auth());
+
+        let loopback_without_auth = HarnessHttpGateway::new("http://127.0.0.1:9999");
+        assert!(!loopback_without_auth.hosted_local_runtime_available());
+        assert!(!loopback_without_auth.hosted_base_requires_transport_auth());
     }
 }

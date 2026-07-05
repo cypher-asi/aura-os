@@ -156,7 +156,7 @@ pub(super) async fn find_detached_run(
         if has_live_entry {
             continue;
         }
-        let client = LocalHarness::new(handle.harness_base_url.clone());
+        let client = LocalHarness::for_configured_local_base_url(handle.harness_base_url.clone());
         match client.run_status(&handle.automaton_id, None).await {
             Ok(status) if run_status_indicates_active(&status) => {
                 info!(

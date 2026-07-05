@@ -29,11 +29,12 @@ function matchesBasePath(pathname: string, basePath: string): boolean {
  * state. Keeping the lookup synchronous prevents the one-render lag that used
  * to let the outgoing panel run URL-driven effects during a route transition.
  */
+export function findActiveApp(pathname: string): AuraApp | undefined {
+  return registeredApps.find((a) => matchesBasePath(pathname, a.basePath));
+}
+
 export function resolveActiveApp(pathname: string): AuraApp {
-  return (
-    registeredApps.find((a) => matchesBasePath(pathname, a.basePath)) ??
-    registeredApps[0]
-  );
+  return findActiveApp(pathname) ?? registeredApps[0];
 }
 
 function isPinnedTaskbarApp(app: AuraApp): boolean {

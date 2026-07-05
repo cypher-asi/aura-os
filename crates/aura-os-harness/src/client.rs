@@ -2,13 +2,16 @@
 
 use std::time::Duration;
 
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use tokio_tungstenite::tungstenite::http::header::AUTHORIZATION as WS_AUTHORIZATION;
 use tokio_tungstenite::tungstenite::http::HeaderValue as WsHeaderValue;
+use tokio_tungstenite::tungstenite::http::header::AUTHORIZATION as WS_AUTHORIZATION;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::instrument;
+
+use crate::harness_auth::{local_harness_transport_auth_token_from_env, preferred_transport_auth};
+use crate::harness_url::{is_hosted_harness_base_url, local_harness_base_url};
 
 const DEFAULT_HTTP_TIMEOUT_SECS: u64 = 30;
 
@@ -114,13 +117,29 @@ pub enum HarnessClientError {
     InvalidJwt(String),
     #[error("invalid base url: {0}")]
     InvalidBaseUrl(String),
+    #[error("hosted local harness requires LOCAL_HARNESS_AUTH_TOKEN")]
+    MissingTransportAuth,
 }
 
 /// Lightweight client for the aura-harness node HTTP + WebSocket surface.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HarnessClient {
     base_url: String,
     http: reqwest::Client,
+    transport_auth_token: Option<String>,
+}
+
+impl std::fmt::Debug for HarnessClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HarnessClient")
+            .field("base_url", &self.base_url)
+            .field("http", &self.http)
+            .field(
+                "transport_auth_token",
+                &self.transport_auth_token.as_ref().map(|_| "[redacted]"),
+            )
+            .finish()
+    }
 }
 
 impl HarnessClient {
@@ -132,21 +151,61 @@ impl HarnessClient {
             .timeout(Duration::from_secs(DEFAULT_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
-        Self { base_url, http }
+        Self {
+            base_url,
+            http,
+            transport_auth_token: None,
+        }
     }
 
-    /// Build a client from `LOCAL_HARNESS_URL`, defaulting to localhost.
+    /// Build a client with an explicit transport bearer override.
+    #[must_use]
+    pub fn with_transport_auth_token(
+        base_url: impl Into<String>,
+        transport_auth_token: Option<String>,
+    ) -> Self {
+        let mut client = Self::new(base_url);
+        client.transport_auth_token = transport_auth_token;
+        client
+    }
+
+    /// Build a client from the canonical local harness URL.
     #[must_use]
     pub fn from_env() -> Self {
-        let base = std::env::var("LOCAL_HARNESS_URL")
-            .unwrap_or_else(|_| "http://localhost:8080".to_string());
-        Self::new(base)
+        Self::new(local_harness_base_url())
+    }
+
+    /// Build a client from `LOCAL_HARNESS_URL` with the hosted local
+    /// harness transport bearer, when configured.
+    #[must_use]
+    pub fn from_env_with_transport_auth() -> Self {
+        Self::with_transport_auth_token(
+            local_harness_base_url(),
+            local_harness_transport_auth_token_from_env(),
+        )
     }
 
     /// Return the normalized base URL.
     #[must_use]
     pub fn base_url(&self) -> &str {
         &self.base_url
+    }
+
+    fn hosted_base_requires_transport_auth(&self) -> bool {
+        is_hosted_harness_base_url(&self.base_url) && self.transport_auth_token.is_none()
+    }
+
+    fn transport_auth<'a>(
+        &'a self,
+        caller_token: Option<&'a str>,
+    ) -> Result<Option<&'a str>, HarnessClientError> {
+        if self.hosted_base_requires_transport_auth() {
+            return Err(HarnessClientError::MissingTransportAuth);
+        }
+        Ok(preferred_transport_auth(
+            self.transport_auth_token.as_deref(),
+            caller_token,
+        ))
     }
 
     /// Submit a transaction to the harness.
@@ -166,7 +225,7 @@ impl HarnessClient {
             "payload": base64::engine::general_purpose::STANDARD.encode(payload),
         });
         let req = self.http.post(format!("{}/tx", self.base_url)).json(&body);
-        let resp = apply_jwt(req, jwt)?.send().await?;
+        let resp = apply_jwt(req, self.transport_auth(jwt)?)?.send().await?;
         json_response(resp).await
     }
 
@@ -236,7 +295,7 @@ impl HarnessClient {
             .http
             .post(format!("{}/v1/run", self.base_url))
             .json(&body);
-        let resp = apply_jwt(req, jwt)?.send().await?;
+        let resp = apply_jwt(req, self.transport_auth(jwt)?)?.send().await?;
         json_response(resp).await
     }
 
@@ -250,7 +309,7 @@ impl HarnessClient {
         let req = self
             .http
             .get(format!("{}/agents/{agent_id}/head", self.base_url));
-        let resp = apply_jwt(req, jwt)?.send().await?;
+        let resp = apply_jwt(req, self.transport_auth(jwt)?)?.send().await?;
         json_response(resp).await
     }
 
@@ -267,7 +326,9 @@ impl HarnessClient {
             "{}/agents/{agent_id}/record?from_seq={from_seq}&limit={limit}",
             self.base_url
         );
-        let resp = apply_jwt(self.http.get(url), jwt)?.send().await?;
+        let resp = apply_jwt(self.http.get(url), self.transport_auth(jwt)?)?
+            .send()
+            .await?;
         json_response(resp).await
     }
 
@@ -277,7 +338,11 @@ impl HarnessClient {
         let nil = uuid::Uuid::nil().to_string();
         let url = format!("{}/agents/{nil}/head", self.base_url);
         let start = std::time::Instant::now();
-        let req = match apply_jwt(self.http.get(url), jwt) {
+        let transport_auth = match self.transport_auth(jwt) {
+            Ok(transport_auth) => transport_auth,
+            Err(err) => return self.probe_error(start, err.to_string()),
+        };
+        let req = match apply_jwt(self.http.get(url), transport_auth) {
             Ok(req) => req,
             Err(err) => return self.probe_error(start, format!("invalid jwt header: {err}")),
         };
@@ -311,7 +376,7 @@ impl HarnessClient {
         let ws_url = http_to_ws(&self.base_url)
             .ok_or_else(|| HarnessClientError::InvalidBaseUrl(self.base_url.clone()))?;
         let mut request = format!("{ws_url}/stream/{run_id}").into_client_request()?;
-        if let Some(jwt) = jwt {
+        if let Some(jwt) = self.transport_auth(jwt)? {
             let value = WsHeaderValue::from_str(&format!("Bearer {jwt}"))
                 .map_err(|err| HarnessClientError::InvalidJwt(err.to_string()))?;
             request.headers_mut().insert(WS_AUTHORIZATION, value);
@@ -410,6 +475,27 @@ mod tests {
     fn base_url_trailing_slash_is_stripped() {
         let client = HarnessClient::new("http://localhost:8080/");
         assert_eq!(client.base_url(), "http://localhost:8080");
+    }
+
+    #[test]
+    fn hosted_base_without_transport_auth_rejects_caller_token_fallback() {
+        let client = HarnessClient::with_transport_auth_token("https://harness.example.com", None);
+
+        let error = client
+            .transport_auth(Some("user-jwt"))
+            .expect_err("hosted base without transport auth must fail closed");
+
+        assert!(matches!(error, HarnessClientError::MissingTransportAuth));
+    }
+
+    #[test]
+    fn loopback_base_without_transport_auth_still_uses_caller_token() {
+        let client = HarnessClient::with_transport_auth_token("http://localhost:8080", None);
+
+        assert_eq!(
+            client.transport_auth(Some("user-jwt")).unwrap(),
+            Some("user-jwt")
+        );
     }
 
     #[test]

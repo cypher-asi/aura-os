@@ -203,6 +203,13 @@ export async function installChatCoreMockApp(
     if (pathname === "/api/update-status") {
       return json(route, { update: { status: "idle" }, channel: "stable", current_version: "0.0.0" });
     }
+    if (pathname === "/api/system/runtime-capabilities") {
+      return json(route, {
+        remoteOnly: scenario.agent.machineType !== "local",
+        localAgentRuntimeAvailable: scenario.agent.machineType === "local",
+        hostedLocalHarness: false,
+      });
+    }
     if (pathname === "/api/system/info") {
       return json(route, { version: "0.0.0-eval", environment: "eval" });
     }

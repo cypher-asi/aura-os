@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
-import { CreateAgentButton } from "../CreateAgentButton";
+import { PublicChoiceCtas } from "../PublicChoiceCtas";
 import { TypewriterText } from "../TypewriterText";
 import type { Persona } from "../personas";
 import styles from "./MobileLandingHero.module.css";
@@ -20,8 +20,8 @@ import styles from "./MobileLandingHero.module.css";
  * decorative machinery on a phone's budget.
  *
  * Same looping typewriter tagline (and i18n keys) as the desktop
- * hero, the shared `CreateAgentButton` CTA, and a `children` slot
- * for the composer the parent owns.
+ * hero, Chat / Desktop CTAs, and a `children` slot for the composer the
+ * parent owns.
  */
 
 // Mirrors `HERO_PHRASES` in `PublicChatView.tsx` (same i18n keys under
@@ -132,11 +132,10 @@ export function MobileLandingHero({
 
       {/* CTA zone — mirrors the headline zone, growing to fill the
           space between the card and the bottom of the shell so the
-          "Create your agent" pill sits vertically centered below the
-          card. */}
+          Chat / Desktop actions sit vertically centered below the card. */}
       <div className={styles.ctaZone}>
         <div className={styles.ctaSlot}>
-          <CreateAgentButton source="public_chat_mobile" />
+          <PublicChoiceCtas source="public_chat_mobile" layout="stacked" />
         </div>
       </div>
 

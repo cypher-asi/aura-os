@@ -200,18 +200,22 @@ function SidebarBody({ mode }: { mode: UIMode }): React.ReactElement {
   return <AuthedSidebarBody />;
 }
 
-// Apps that share the Agents <-> Projects neumorphic switch at the top
-// of the sidebar body. Both are workspace surfaces the user flips
-// between frequently, so the switch lives above whichever app's nav is
-// currently mounted. Options + paths are module-level constants so the
-// memoized `AppSwitchToggle` keeps reference-stable props and stays inert
-// while the sidebar body re-renders for unrelated reasons.
-const APP_SWITCH_OPTIONS: readonly AppSwitchOption[] = [
+// Primary product switch: conversational assistant vs. coding/build
+// workspace. These are the two product modes users need to understand
+// before Agents / Marketplace / Tasks become relevant.
+const PRIMARY_SWITCH_OPTIONS: readonly AppSwitchOption[] = [
+  { id: "chat", label: "Chat" },
+  { id: "projects", label: "Build with Aura" },
+];
+
+// Advanced workspace switch for users already managing agents.
+const WORKSPACE_SWITCH_OPTIONS: readonly AppSwitchOption[] = [
+  { id: "projects", label: "Build" },
   { id: "agents", label: "Agents" },
-  { id: "projects", label: "Projects" },
 ];
 const APP_SWITCH_PATHS: Record<string, string> = {
   agents: "/agents",
+  chat: "/chat",
   projects: "/projects",
 };
 
@@ -243,7 +247,7 @@ function AuthedSidebarBody(): React.ReactElement {
   // keeps the same lane key mounted across the switch — instant, no remount.
   const handleSwitch = useCallback(
     (id: string): void => {
-      if (id !== "agents" && id !== "projects") return;
+      if (id !== "agents" && id !== "chat" && id !== "projects") return;
       // Kick the target app's lazy module so its LeftPanel / Sidekick don't
       // flash a Suspense fallback on first switch. The main chat never
       // flashes — it lives in the eager `ConversationSurfaceHost`.
@@ -272,17 +276,29 @@ function AuthedSidebarBody(): React.ReactElement {
     </div>
   );
 
-  if (!APP_SWITCH_PATHS[activeApp.id]) {
+  const switchOptions =
+    activeApp.id === "chat" || activeApp.id === "projects"
+      ? PRIMARY_SWITCH_OPTIONS
+      : activeApp.id === "agents"
+        ? WORKSPACE_SWITCH_OPTIONS
+        : null;
+
+  if (!switchOptions || !APP_SWITCH_PATHS[activeApp.id]) {
     return body;
   }
 
   return (
     <div className={styles.appSwitchBody}>
       <AppSwitchToggle
-        options={APP_SWITCH_OPTIONS}
+        options={switchOptions}
         active={activeApp.id}
         onChange={handleSwitch}
-        ariaLabel="Switch between Agents and Projects"
+        variant={switchOptions === PRIMARY_SWITCH_OPTIONS ? "primary" : "default"}
+        ariaLabel={
+          switchOptions === PRIMARY_SWITCH_OPTIONS
+            ? "Switch between Chat and Build with Aura"
+            : "Switch between Build and Agents"
+        }
       />
       <div className={styles.appSwitchPanelFill}>{body}</div>
     </div>

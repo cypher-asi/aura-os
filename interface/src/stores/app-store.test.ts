@@ -32,6 +32,7 @@ vi.mock("../utils/storage", () => ({
 }));
 
 import {
+  findActiveApp,
   getOrderedTaskbarApps,
   preloadAppForPathname,
   resolveActiveApp,
@@ -86,6 +87,14 @@ describe("app-store", () => {
       expect(resolveActiveApp("/feed/activity").id).toBe("feed");
       expect(resolveActiveApp("/feedback").id).toBe("feedback");
       expect(resolveActiveApp("/feedback/fb-1").id).toBe("feedback");
+    });
+  });
+
+  describe("findActiveApp", () => {
+    it("returns undefined instead of the fallback app for non-app routes", () => {
+      expect(findActiveApp("/")).toBeUndefined();
+      expect(findActiveApp("/download")).toBeUndefined();
+      expect(findActiveApp("/projects/123")?.id).toBe("projects");
     });
   });
 

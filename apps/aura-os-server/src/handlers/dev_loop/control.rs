@@ -76,9 +76,10 @@ async fn stop_detached_runs(
             // `abort_and_remove` dropped the handle.
             continue;
         }
-        if let Err(error) = LocalHarness::new(handle.harness_base_url.clone())
-            .stop_run(&handle.automaton_id, None)
-            .await
+        if let Err(error) =
+            LocalHarness::for_configured_local_base_url(handle.harness_base_url.clone())
+                .stop_run(&handle.automaton_id, None)
+                .await
         {
             warn!(
                 automaton_id = %handle.automaton_id,
@@ -124,7 +125,7 @@ async fn control_target(inputs: ControlTargetInputs<'_>) {
         base_url,
         action,
     } = inputs;
-    let client = LocalHarness::new(base_url.clone());
+    let client = LocalHarness::for_configured_local_base_url(base_url.clone());
     let harness_error = match dispatch_control_action(&client, &automaton_id, action).await {
         Ok(()) => None,
         Err(error) => {

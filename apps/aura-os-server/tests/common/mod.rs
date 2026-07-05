@@ -314,10 +314,13 @@ pub fn build_test_app_from_store_with_remote_only(
     ));
     let harness_base =
         std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:19080".to_string());
-    let local_harness: Arc<dyn HarnessLink> = Arc::new(LocalHarness::new(harness_base.clone()));
+    let local_harness: Arc<dyn HarnessLink> = Arc::new(
+        LocalHarness::for_configured_local_base_url(harness_base.clone()),
+    );
 
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(256);
-    let harness_http = Arc::new(aura_os_server::HarnessHttpGateway::new(harness_base));
+    let harness_http =
+        Arc::new(aura_os_server::HarnessHttpGateway::for_configured_local_base_url(harness_base));
     let validation_cache = Arc::new(dashmap::DashMap::new());
     validation_cache.insert(
         TEST_JWT.to_string(),

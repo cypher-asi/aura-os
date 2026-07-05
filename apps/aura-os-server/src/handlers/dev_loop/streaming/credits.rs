@@ -24,7 +24,7 @@ pub(super) async fn stop_automaton_for_credit_exhaustion(
     let Some(base_url) = base_url else {
         return;
     };
-    if let Err(error) = LocalHarness::new(base_url)
+    if let Err(error) = LocalHarness::for_configured_local_base_url(base_url)
         .stop_run(automaton_id, None)
         .await
     {

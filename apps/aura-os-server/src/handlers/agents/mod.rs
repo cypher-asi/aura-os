@@ -20,15 +20,17 @@ pub(crate) mod tool_dedupe;
 pub(crate) mod workspace_tools;
 
 pub(crate) use chat::{
-    cancel_agent_turn, cancel_instance_turn, list_agent_events, list_agent_events_paginated,
-    list_agent_session_events, list_agent_session_events_paginated, list_events,
-    list_session_events_paginated, reset_agent_session, reset_instance_session,
+    cancel_agent_turn, cancel_instance_turn, import_public_chat_session, list_agent_events,
+    list_agent_events_paginated, list_agent_session_events, list_agent_session_events_paginated,
+    list_events, list_session_events_paginated, reset_agent_session, reset_instance_session,
     send_agent_event_stream, send_event_stream,
 };
 pub(crate) use context_contents::{get_agent_context_contents, get_instance_context_contents};
 pub(crate) use context_usage::{get_agent_context_usage, get_instance_context_usage};
 pub(crate) use control::{delegate_agent_task, get_agent_state_snapshot};
-pub(crate) use crud::create::{create_and_provision_remote_agent, prepare_create};
+pub(crate) use crud::create::{
+    create_and_provision_remote_agent, prepare_create, provision_existing_agent_as_remote,
+};
 pub(crate) use crud::{
     create_agent, delete_agent, get_agent, list_agent_project_bindings, list_agents,
     recover_remote_agent_pipeline, remove_agent_project_binding, update_agent,

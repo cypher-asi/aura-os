@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { ONBOARDING_STORAGE_PREFIX, ONBOARDING_TASKS } from "./onboarding-constants";
+import {
+  ONBOARDING_STORAGE_PREFIX,
+  ONBOARDING_TASKS,
+  type OnboardingIntent,
+} from "./onboarding-constants";
 
 const TOTAL_TASKS = ONBOARDING_TASKS.length;
 
@@ -12,6 +16,7 @@ function defaultTasks(): Record<string, boolean> {
 interface PersistedState {
   welcomeCompleted: boolean;
   welcomeSkipped: boolean;
+  selectedIntent: OnboardingIntent | null;
   checklistDismissed: boolean;
   checklistTasks: Record<string, boolean>;
 }
@@ -20,23 +25,45 @@ function storageKey(userId: string): string {
   return `${ONBOARDING_STORAGE_PREFIX}:${userId}`;
 }
 
+function isOnboardingIntent(value: unknown): value is OnboardingIntent {
+  return value === "chat" || value === "build";
+}
+
+function readChecklistTasks(value: unknown): Record<string, boolean> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return defaultTasks();
+  }
+  return { ...defaultTasks(), ...(value as Record<string, boolean>) };
+}
+
+function defaultPersistedState(): PersistedState {
+  return {
+    welcomeCompleted: false,
+    welcomeSkipped: false,
+    selectedIntent: null,
+    checklistDismissed: false,
+    checklistTasks: defaultTasks(),
+  };
+}
+
 function readState(userId: string): PersistedState {
   try {
     const raw = localStorage.getItem(storageKey(userId));
-    if (!raw) return { welcomeCompleted: false, welcomeSkipped: false, checklistDismissed: false, checklistTasks: defaultTasks() };
+    if (!raw) return defaultPersistedState();
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === "object") {
       return {
         welcomeCompleted: !!parsed.welcomeCompleted,
         welcomeSkipped: !!parsed.welcomeSkipped,
+        selectedIntent: isOnboardingIntent(parsed.selectedIntent) ? parsed.selectedIntent : null,
         checklistDismissed: !!parsed.checklistDismissed,
-        checklistTasks: { ...defaultTasks(), ...(parsed.checklistTasks ?? {}) },
+        checklistTasks: readChecklistTasks(parsed.checklistTasks),
       };
     }
   } catch {
     // ignore malformed data
   }
-  return { welcomeCompleted: false, welcomeSkipped: false, checklistDismissed: false, checklistTasks: defaultTasks() };
+  return defaultPersistedState();
 }
 
 function writeState(userId: string, state: PersistedState): void {
@@ -59,6 +86,7 @@ interface OnboardingState {
   welcomeCompleted: boolean;
   welcomeSkipped: boolean;
   welcomeStep: number;
+  selectedIntent: OnboardingIntent | null;
 
   // Checklist
   checklistDismissed: boolean;
@@ -67,9 +95,14 @@ interface OnboardingState {
 
   // Actions
   hydrateForUser: (userId: string) => void;
-  completeWelcome: () => void;
+  completeWelcome: (intent?: OnboardingIntent) => void;
+  completeWelcomeIfNeeded: (
+    intent: OnboardingIntent,
+    options?: { checklistDismissed?: boolean },
+  ) => void;
   skipWelcome: () => void;
   setWelcomeStep: (step: number) => void;
+  setSelectedIntent: (intent: OnboardingIntent) => void;
   completeTask: (taskId: string) => void;
   dismissChecklist: () => void;
   reopenChecklist: () => void;
@@ -84,6 +117,7 @@ export const useOnboardingStore = create<OnboardingState>()((set, get) => {
     writeState(s.userId, {
       welcomeCompleted: s.welcomeCompleted,
       welcomeSkipped: s.welcomeSkipped,
+      selectedIntent: s.selectedIntent,
       checklistDismissed: s.checklistDismissed,
       checklistTasks: s.checklistTasks,
     });
@@ -94,6 +128,7 @@ export const useOnboardingStore = create<OnboardingState>()((set, get) => {
     welcomeCompleted: false,
     welcomeSkipped: false,
     welcomeStep: 0,
+    selectedIntent: null,
     checklistDismissed: false,
     checklistTasks: defaultTasks(),
     checklistCollapsed: false,
@@ -103,8 +138,22 @@ export const useOnboardingStore = create<OnboardingState>()((set, get) => {
       set({ userId, ...saved, welcomeStep: 0, checklistCollapsed: false });
     },
 
-    completeWelcome: () => {
-      set({ welcomeCompleted: true });
+    completeWelcome: (intent) => {
+      set((s) => ({
+        welcomeCompleted: true,
+        selectedIntent: intent ?? s.selectedIntent,
+      }));
+      persist();
+    },
+
+    completeWelcomeIfNeeded: (intent, options) => {
+      const s = get();
+      if (s.welcomeCompleted || s.welcomeSkipped) return;
+      set({
+        welcomeCompleted: true,
+        selectedIntent: intent,
+        checklistDismissed: options?.checklistDismissed ?? s.checklistDismissed,
+      });
       persist();
     },
 
@@ -115,6 +164,11 @@ export const useOnboardingStore = create<OnboardingState>()((set, get) => {
 
     setWelcomeStep: (step) => {
       set({ welcomeStep: step });
+    },
+
+    setSelectedIntent: (intent) => {
+      set({ selectedIntent: intent });
+      persist();
     },
 
     completeTask: (taskId) => {
@@ -144,6 +198,7 @@ export const useOnboardingStore = create<OnboardingState>()((set, get) => {
         welcomeCompleted: false,
         welcomeSkipped: false,
         welcomeStep: 0,
+        selectedIntent: null,
         checklistDismissed: false,
         checklistTasks: defaultTasks(),
         checklistCollapsed: false,
@@ -185,4 +240,8 @@ export function selectIsFullyComplete(s: OnboardingState): boolean {
 
 export function selectHasSentFirstMessage(s: OnboardingState): boolean {
   return s.userId !== null && s.checklistTasks.send_message === true;
+}
+
+export function selectOnboardingIntent(s: OnboardingState): OnboardingIntent | null {
+  return s.selectedIntent;
 }

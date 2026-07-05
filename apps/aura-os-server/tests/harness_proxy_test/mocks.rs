@@ -4,7 +4,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use axum::body::Body;
-use axum::http::Request;
+use axum::extract::Path;
+use axum::http::{Request, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{delete, get, post};
 use axum::Router;
@@ -16,6 +17,11 @@ pub(crate) async fn start_mock_harness() -> (String, tokio::task::JoinHandle<()>
     let echo_handler = |req: Request<Body>| async move {
         let method = req.method().to_string();
         let uri = req.uri().to_string();
+        let authorization = req
+            .headers()
+            .get(axum::http::header::AUTHORIZATION)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_string);
         let body_bytes = axum::body::to_bytes(req.into_body(), usize::MAX)
             .await
             .unwrap_or_default();
@@ -23,6 +29,7 @@ pub(crate) async fn start_mock_harness() -> (String, tokio::task::JoinHandle<()>
         let resp = json!({
             "echoed_method": method,
             "echoed_uri": uri,
+            "echoed_authorization": authorization,
             "echoed_body": body_str,
         });
         axum::Json(resp).into_response()
@@ -181,6 +188,48 @@ pub(crate) async fn start_recording_mock_harness() -> (String, Arc<Mutex<Vec<(St
     (url, calls)
 }
 
+#[allow(dead_code)]
+pub(crate) async fn start_mock_network_serving_agent(agent_id: String) -> String {
+    let app = Router::new().route(
+        "/api/agents/:id",
+        get(move |Path(id): Path<String>| {
+            let agent_id = agent_id.clone();
+            async move {
+                if id == agent_id {
+                    (
+                        StatusCode::OK,
+                        axum::Json(json!({
+                            "id": agent_id,
+                            "name": "Owned Agent",
+                            "userId": "u1",
+                            "machineType": "local",
+                            "createdAt": "2024-01-01T00:00:00Z",
+                            "updatedAt": "2024-01-01T00:00:00Z",
+                        })),
+                    )
+                        .into_response()
+                } else {
+                    (
+                        StatusCode::NOT_FOUND,
+                        axum::Json(json!({ "error": "not found" })),
+                    )
+                        .into_response()
+                }
+            }
+        }),
+    );
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let url = format!("http://{addr}");
+
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.ok();
+    });
+
+    url
+}
+
 /// Mock harness whose `POST /api/skills` always fails with a 500. Models
 /// the harness being unreachable/erroring during a skill edit so tests can
 /// assert the edit path fails loud (502) instead of silently serving stale
@@ -285,11 +334,21 @@ pub(crate) fn persist_test_agent(
     state: &aura_os_server::AppState,
     name: &str,
 ) -> aura_os_core::AgentId {
+    persist_test_agent_for_user(state, name, "u1")
+}
+
+#[cfg(unix)]
+#[allow(dead_code)]
+pub(crate) fn persist_test_agent_for_user(
+    state: &aura_os_server::AppState,
+    name: &str,
+    user_id: &str,
+) -> aura_os_core::AgentId {
     use aura_os_core::*;
     let agent_id = AgentId::new();
     let agent = Agent {
         agent_id,
-        user_id: "u1".into(),
+        user_id: user_id.into(),
         org_id: None,
         name: name.into(),
         role: "dev".into(),
