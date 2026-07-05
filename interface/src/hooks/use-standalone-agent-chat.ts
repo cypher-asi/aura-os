@@ -306,7 +306,7 @@ export function useStandaloneAgentChat(
     useStandaloneAgentMeta(agentId);
   const sendDisabled = remoteOnly && machineType === "local";
   const sendDisabledReason = sendDisabled
-    ? "This local agent runs in the desktop app."
+    ? "This local agent is not available in this browser."
     : undefined;
 
   const contextUsage = useContextUsage(streamKey);

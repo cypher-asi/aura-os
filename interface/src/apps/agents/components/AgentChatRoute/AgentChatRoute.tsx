@@ -39,8 +39,9 @@ export function AgentChatRoute(): null {
   // Only fires on the standalone `/agents/:agentId` route (`agentId` is
   // undefined on the project route, whose param is `agentInstanceId`). Gated
   // on `ready` so a transient `idle`/`loading`/`error` fleet never triggers a
-  // bounce (which could loop). In the browser, local agents are hidden, so a
-  // direct deep link to one is treated as not viewable and bounces too.
+  // bounce (which could loop). When the current runtime can't reach local
+  // agents, a direct deep link to one is treated as not viewable and bounces
+  // too.
   const resolvedAgent =
     agentId != null ? agents.find((a) => a.agent_id === agentId) : undefined;
   const agentMissing =

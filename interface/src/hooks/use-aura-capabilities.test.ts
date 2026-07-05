@@ -1,5 +1,9 @@
-import { renderHook, act } from "@testing-library/react";
-import { useAuraCapabilities, AURA_BREAKPOINTS } from "./use-aura-capabilities";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import {
+  useAuraCapabilities,
+  AURA_BREAKPOINTS,
+  resetAuraCapabilitiesForTests,
+} from "./use-aura-capabilities";
 
 type MediaQueryHandler = (e: { matches: boolean }) => void;
 
@@ -53,13 +57,20 @@ describe("useAuraCapabilities", () => {
   beforeEach(() => {
     origMatchMedia = window.matchMedia;
     setLocation("/login");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("runtime capabilities unavailable"))),
+    );
+    resetAuraCapabilitiesForTests();
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     window.matchMedia = origMatchMedia;
     setLocation("/login");
     delete document.documentElement.dataset.mobileClient;
     delete document.documentElement.dataset.mobileLayout;
+    resetAuraCapabilitiesForTests();
   });
 
   it("returns default desktop capabilities", () => {
@@ -73,6 +84,7 @@ describe("useAuraCapabilities", () => {
     expect(result.current.isTabletLayout).toBe(false);
     expect(result.current.hasDesktopBridge).toBe(false);
     expect(result.current.remoteOnly).toBe(true);
+    expect(result.current.localAgentRuntimeAvailable).toBe(false);
     expect(result.current.isNativeApp).toBe(false);
     expect(result.current.features.hostRetargeting).toBe(true);
     expect(document.documentElement.dataset.mobileClient).toBe("false");
@@ -90,6 +102,70 @@ describe("useAuraCapabilities", () => {
 
     expect(result.current.hasDesktopBridge).toBe(true);
     expect(result.current.remoteOnly).toBe(false);
+    expect(result.current.localAgentRuntimeAvailable).toBe(true);
+
+    delete (window as Window & { ipc?: { postMessage: () => void } }).ipc;
+  });
+
+  it("unlocks local-agent runtime on web when the server reports hosted harness support", async () => {
+    const { matchMedia } = createMockMatchMedia();
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              remoteOnly: false,
+              localAgentRuntimeAvailable: true,
+              hostedLocalHarness: true,
+            }),
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useAuraCapabilities());
+
+    expect(result.current.hasDesktopBridge).toBe(false);
+    expect(result.current.remoteOnly).toBe(true);
+    await waitFor(() => {
+      expect(result.current.remoteOnly).toBe(false);
+      expect(result.current.localAgentRuntimeAvailable).toBe(true);
+      expect(result.current.hostedLocalHarness).toBe(true);
+    });
+  });
+
+  it("honors server remote-only mode even inside the desktop shell", async () => {
+    const { matchMedia } = createMockMatchMedia();
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    (window as Window & { ipc?: { postMessage: () => void } }).ipc = {
+      postMessage: vi.fn(),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              remoteOnly: true,
+              localAgentRuntimeAvailable: false,
+              hostedLocalHarness: false,
+            }),
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useAuraCapabilities());
+
+    expect(result.current.hasDesktopBridge).toBe(true);
+    expect(result.current.remoteOnly).toBe(false);
+    await waitFor(() => {
+      expect(result.current.remoteOnly).toBe(true);
+      expect(result.current.localAgentRuntimeAvailable).toBe(false);
+      expect(result.current.serverRemoteOnly).toBe(true);
+    });
 
     delete (window as Window & { ipc?: { postMessage: () => void } }).ipc;
   });

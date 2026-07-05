@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
+import { resolveApiUrl, subscribeToHostChanges } from "../shared/lib/host-config";
 import { isNativeRuntime } from "../shared/lib/native-runtime";
 
 export const AURA_BREAKPOINTS = {
@@ -22,6 +23,9 @@ export interface AuraFeatureAvailability {
 export interface AuraCapabilities {
   hasDesktopBridge: boolean;
   remoteOnly: boolean;
+  localAgentRuntimeAvailable: boolean;
+  hostedLocalHarness: boolean;
+  serverRemoteOnly: boolean;
   isMobileClient: boolean;
   isMobileLayout: boolean;
   isPhoneLayout: boolean;
@@ -35,6 +39,14 @@ export interface AuraCapabilities {
   supportsHostRetargeting: boolean;
 }
 
+interface ServerRuntimeCapabilities {
+  remoteOnly: boolean;
+  localAgentRuntimeAvailable: boolean;
+  hostedLocalHarness: boolean;
+}
+
+const RUNTIME_CAPABILITIES_PATH = "/api/system/runtime-capabilities";
+
 function buildFeatureAvailability(hasDesktopBridge: boolean, isMobileLayout: boolean): AuraFeatureAvailability {
   return {
     windowControls: hasDesktopBridge,
@@ -45,12 +57,70 @@ function buildFeatureAvailability(hasDesktopBridge: boolean, isMobileLayout: boo
   };
 }
 
+let serverRuntimeCapabilities: ServerRuntimeCapabilities | null = null;
+let runtimeCapabilitiesStatus: "idle" | "loading" | "loaded" | "failed" = "idle";
+let runtimeCapabilitiesRequest: Promise<void> | null = null;
+
+function isServerRuntimeCapabilities(value: unknown): value is ServerRuntimeCapabilities {
+  if (value == null || typeof value !== "object") return false;
+  const candidate = value as Partial<ServerRuntimeCapabilities>;
+  return (
+    typeof candidate.remoteOnly === "boolean" &&
+    typeof candidate.localAgentRuntimeAvailable === "boolean" &&
+    typeof candidate.hostedLocalHarness === "boolean"
+  );
+}
+
+function localAgentRuntimeAvailable(hasDesktopBridge: boolean): boolean {
+  if (serverRuntimeCapabilities?.remoteOnly === true) return false;
+  return hasDesktopBridge || serverRuntimeCapabilities?.localAgentRuntimeAvailable === true;
+}
+
+function resetRuntimeCapabilities() {
+  serverRuntimeCapabilities = null;
+  runtimeCapabilitiesStatus = "idle";
+  runtimeCapabilitiesRequest = null;
+}
+
+function requestRuntimeCapabilities(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (runtimeCapabilitiesStatus === "loaded" || runtimeCapabilitiesStatus === "loading") {
+    return runtimeCapabilitiesRequest ?? Promise.resolve();
+  }
+  runtimeCapabilitiesStatus = "loading";
+  runtimeCapabilitiesRequest = fetch(resolveApiUrl(RUNTIME_CAPABILITIES_PATH), {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        runtimeCapabilitiesStatus = "failed";
+        return;
+      }
+      const data: unknown = await response.json();
+      if (!isServerRuntimeCapabilities(data)) {
+        runtimeCapabilitiesStatus = "failed";
+        return;
+      }
+      serverRuntimeCapabilities = data;
+      runtimeCapabilitiesStatus = "loaded";
+      scheduleRecompute();
+    })
+    .catch(() => {
+      runtimeCapabilitiesStatus = "failed";
+    });
+  return runtimeCapabilitiesRequest;
+}
+
 function readCapabilities(): AuraCapabilities {
   if (typeof window === "undefined") {
     const features = buildFeatureAvailability(false, false);
     return {
       hasDesktopBridge: false,
       remoteOnly: true,
+      localAgentRuntimeAvailable: false,
+      hostedLocalHarness: false,
+      serverRemoteOnly: false,
       isMobileClient: false,
       isMobileLayout: false,
       isPhoneLayout: false,
@@ -85,10 +155,14 @@ function readCapabilities(): AuraCapabilities {
     );
   const isMobileClient = isNativeApp || isMobileUserAgent;
   const features = buildFeatureAvailability(hasDesktopBridge, isMobileLayout);
+  const localRuntimeAvailable = localAgentRuntimeAvailable(hasDesktopBridge);
 
   return {
     hasDesktopBridge,
-    remoteOnly: !hasDesktopBridge,
+    remoteOnly: !localRuntimeAvailable,
+    localAgentRuntimeAvailable: localRuntimeAvailable,
+    hostedLocalHarness: serverRuntimeCapabilities?.hostedLocalHarness === true,
+    serverRemoteOnly: serverRuntimeCapabilities?.remoteOnly === true,
     isMobileClient,
     isMobileLayout,
     isPhoneLayout,
@@ -117,6 +191,9 @@ function capabilitiesEqual(a: AuraCapabilities, b: AuraCapabilities): boolean {
   return (
     a.hasDesktopBridge === b.hasDesktopBridge &&
     a.remoteOnly === b.remoteOnly &&
+    a.localAgentRuntimeAvailable === b.localAgentRuntimeAvailable &&
+    a.hostedLocalHarness === b.hostedLocalHarness &&
+    a.serverRemoteOnly === b.serverRemoteOnly &&
     a.isMobileClient === b.isMobileClient &&
     a.isMobileLayout === b.isMobileLayout &&
     a.isPhoneLayout === b.isPhoneLayout &&
@@ -156,6 +233,7 @@ let phoneQuery: MediaQueryList | null = null;
 let tabletQuery: MediaQueryList | null = null;
 let pointerQuery: MediaQueryList | null = null;
 let displayQuery: MediaQueryList | null = null;
+let unsubscribeHostChanges: (() => void) | null = null;
 let rafHandle: number | null = null;
 
 function recompute() {
@@ -192,6 +270,11 @@ function attachListeners() {
     pointerQuery.addEventListener("change", scheduleRecompute);
     displayQuery.addEventListener("change", scheduleRecompute);
   }
+  unsubscribeHostChanges = subscribeToHostChanges(() => {
+    resetRuntimeCapabilities();
+    scheduleRecompute();
+    void requestRuntimeCapabilities();
+  });
   window.addEventListener("resize", scheduleRecompute);
 }
 
@@ -201,6 +284,8 @@ function detachListeners() {
   tabletQuery?.removeEventListener("change", scheduleRecompute);
   pointerQuery?.removeEventListener("change", scheduleRecompute);
   displayQuery?.removeEventListener("change", scheduleRecompute);
+  unsubscribeHostChanges?.();
+  unsubscribeHostChanges = null;
   window.removeEventListener("resize", scheduleRecompute);
   phoneQuery = null;
   tabletQuery = null;
@@ -249,6 +334,10 @@ export function useAuraCapabilities(): AuraCapabilities {
   const capabilities = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
+    void requestRuntimeCapabilities();
+  }, []);
+
+  useEffect(() => {
     if (typeof document === "undefined") return;
 
     const root = document.documentElement;
@@ -262,4 +351,9 @@ export function useAuraCapabilities(): AuraCapabilities {
   }, [capabilities.isMobileClient, capabilities.isMobileLayout]);
 
   return capabilities;
+}
+
+export function resetAuraCapabilitiesForTests() {
+  resetRuntimeCapabilities();
+  cachedSnapshot = readCapabilities();
 }
