@@ -47,7 +47,7 @@ pub use harness::{
     SessionConfig,
 };
 pub use harness_auth::{local_harness_transport_auth_token_from_env, LOCAL_HARNESS_AUTH_TOKEN_ENV};
-pub use harness_url::local_harness_base_url;
+pub use harness_url::{is_hosted_harness_base_url, local_harness_base_url};
 pub use local_harness::LocalHarness;
 pub use runner::automaton_event_kinds;
 pub use runner::{

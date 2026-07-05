@@ -3,7 +3,9 @@
 //! Centralizes base URL resolution (via [`AppState`](crate::state::AppState) wiring at startup),
 //! [`reqwest::Client`] reuse, and common request/response handling for harness proxy routes.
 
-use aura_os_harness::{local_harness_base_url, local_harness_transport_auth_token_from_env};
+use aura_os_harness::{
+    is_hosted_harness_base_url, local_harness_base_url, local_harness_transport_auth_token_from_env,
+};
 use axum::http::{Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use url::Url;
@@ -206,27 +208,6 @@ impl HarnessHttpGateway {
 
 fn normalized_base_url(url: &str) -> String {
     url.trim().trim_end_matches('/').to_string()
-}
-
-fn is_hosted_harness_base_url(raw: &str) -> bool {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return false;
-    }
-    let Ok(parsed) = Url::parse(trimmed) else {
-        return false;
-    };
-    if !matches!(parsed.scheme(), "http" | "https") {
-        return false;
-    }
-    match parsed.host_str() {
-        Some(host) => {
-            let normalized = host.trim_start_matches('[').trim_end_matches(']');
-            !matches!(normalized, "127.0.0.1" | "::1")
-                && !normalized.eq_ignore_ascii_case("localhost")
-        }
-        None => false,
-    }
 }
 
 #[cfg(test)]
