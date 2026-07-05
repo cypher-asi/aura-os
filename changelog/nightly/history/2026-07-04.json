@@ -3,20 +3,35 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-04T15:57:04.386Z",
+  "generatedAt": "2026-07-05T05:57:48.550Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.727.1",
+  "version": "0.1.0-nightly.728.1",
   "date": "2026-07-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.727.1",
-  "lastIncludedSha": "9f38fe85cd0ac79831e136567742a55453502904",
-  "previousProcessedSha": "204526ccaa79556bf5896a2efb5bc0890d7f8f83",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.728.1",
+  "lastIncludedSha": "cc92ced27d4ab2d5f417788d28898420a2498d20",
+  "previousProcessedSha": "9f38fe85cd0ac79831e136567742a55453502904",
   "commitShas": [
     "cf021f8018c2b725e20c253e8cf93987c09c53c1",
-    "9f38fe85cd0ac79831e136567742a55453502904"
+    "9f38fe85cd0ac79831e136567742a55453502904",
+    "3dc1cc59c80fa3522fb59dbf0aab6db3c1a2b611",
+    "81f739b78bd07907149057eb51a0ebb3aeef7da8",
+    "52149ec8fbb47fb6c3ab947faed42a9a9b7bca33",
+    "5a400c226cc00f75905e23978a099b3bbced42de",
+    "8213491cf89acf706935d32e1008d3918c87a59a",
+    "90b08976e8df8f46324b6beefc407134ce2b5973",
+    "b4709af0d501d8c029eab6860ecb524ad2826e0c",
+    "e695517ce851e535b57d7259b13044d32019c0c1",
+    "d0229e6d1fa5cc061fcafcda0ce06a9347db1920",
+    "558b0c81b3c4a28a091a74d72b14850d47c58b78",
+    "801dab211cdf66ed4ddb2e640d922ad46851ddd0",
+    "833b6b599ef8dfac3ce46a04a41a5becf4ba7769",
+    "49dc4ec68842b39b5f8ba231d5478587faf94698",
+    "e4d2395c6f5f1a333ea0a09a6cab7574b84d1eba",
+    "97647091e797b34ed134d7c75578609f0221cf3d"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 20,
+  "filteredCommitCount": 17,
   "rawCommits": [
     {
       "sha": "cf021f8018c2b725e20c253e8cf93987c09c53c1",
@@ -130,36 +145,854 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "3dc1cc59c80fa3522fb59dbf0aab6db3c1a2b611",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-03T02:26:50-04:00",
+      "subject": "Add platform-aware Aura onboarding flow",
+      "body": "",
+      "parents": [
+        "c5d2e62179088c0153a984f4090134b95ed258cc"
+      ],
+      "files": [
+        "interface/src/apps/projects/ProjectsApp.ts",
+        "interface/src/apps/registry.ts",
+        "interface/src/components/AppProviders/AppProviders.tsx",
+        "interface/src/components/AuraShell/AuraSidebar.tsx",
+        "interface/src/features/onboarding/OnboardingChecklist/OnboardingChecklist.tsx",
+        "interface/src/features/onboarding/WelcomeModal/WelcomeModal.module.css",
+        "interface/src/features/onboarding/WelcomeModal/WelcomeModal.test.tsx",
+        "interface/src/features/onboarding/WelcomeModal/WelcomeModal.tsx",
+        "interface/src/features/onboarding/onboarding-constants.test.ts",
+        "interface/src/features/onboarding/onboarding-constants.ts",
+        "interface/src/features/onboarding/onboarding-store.test.ts",
+        "interface/src/features/onboarding/onboarding-store.ts",
+        "interface/src/features/onboarding/useOnboardingTaskWatcher.test.tsx",
+        "interface/src/features/onboarding/useOnboardingTaskWatcher.ts",
+        "interface/src/lib/analytics-registry.ts",
+        "interface/src/locales/en/publicChat.json",
+        "interface/src/stores/app-store.test.ts",
+        "interface/src/stores/app-store.ts",
+        "interface/src/utils/last-app-path.test.ts",
+        "interface/src/utils/last-app-path.ts",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.module.css",
+        "interface/src/views/public-chat/MobileLandingHero/MobileLandingHero.tsx",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.test.tsx",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.module.css",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.test.tsx",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.tsx",
+        "interface/src/views/public-chat/PublicChoiceCtas/PublicChoiceCtas.module.css",
+        "interface/src/views/public-chat/PublicChoiceCtas/PublicChoiceCtas.tsx",
+        "interface/src/views/public-chat/PublicChoiceCtas/index.ts"
+      ],
+      "stats": {
+        "fileCount": 29,
+        "insertions": 1116,
+        "deletions": 215
+      },
+      "committedAtMs": 1783060010000,
+      "cleanSubject": "Add platform-aware Aura onboarding flow",
+      "keywords": [
+        "platform",
+        "aware",
+        "aura",
+        "onboarding",
+        "flow"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/features",
+        "interface/src/lib",
+        "interface/src/locales",
+        "interface/src/stores",
+        "interface/src/utils",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "81f739b78bd07907149057eb51a0ebb3aeef7da8",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-03T03:32:26-04:00",
+      "subject": "Make onboarding platform-aware and chat-first",
+      "body": "",
+      "parents": [
+        "3dc1cc59c80fa3522fb59dbf0aab6db3c1a2b611"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/components/AppProviders/AppProviders.test.tsx",
+        "interface/src/components/AppProviders/AppProviders.tsx",
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/InputStatusHints/InputStatusHints.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/InputStatusHints/InputStatusHints.tsx",
+        "interface/src/features/onboarding/HelpButton/HelpButton.tsx",
+        "interface/src/features/onboarding/WelcomeModal/WelcomeModal.module.css",
+        "interface/src/features/onboarding/WelcomeModal/WelcomeModal.test.tsx",
+        "interface/src/features/onboarding/WelcomeModal/WelcomeModal.tsx",
+        "interface/src/features/onboarding/index.ts",
+        "interface/src/features/onboarding/onboarding-store.test.ts",
+        "interface/src/features/onboarding/onboarding-store.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/lib/analytics-registry.ts",
+        "interface/src/lib/boot-shell.test.ts",
+        "interface/src/lib/boot-shell.ts",
+        "interface/src/utils/last-app-path.test.ts",
+        "interface/src/utils/last-app-path.ts"
+      ],
+      "stats": {
+        "fileCount": 21,
+        "insertions": 280,
+        "deletions": 618
+      },
+      "committedAtMs": 1783063946000,
+      "cleanSubject": "Make onboarding platform-aware and chat-first",
+      "keywords": [
+        "make",
+        "onboarding",
+        "platform",
+        "aware",
+        "chat",
+        "first"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/components",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "52149ec8fbb47fb6c3ab947faed42a9a9b7bca33",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-03T12:14:13-04:00",
+      "subject": "Make Aura onboarding chat-first and platform-aware",
+      "body": "",
+      "parents": [
+        "81f739b78bd07907149057eb51a0ebb3aeef7da8"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agent_bootstrap.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/create.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/swarm/provision.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/public/demo_agent.rs",
+        "apps/aura-os-server/tests/agent_create_test/remote_only.rs",
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.test.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.test.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.tsx",
+        "interface/src/apps/chat-app/hooks/use-chat-app-chat.ts",
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/components/AppSwitchToggle/AppSwitchToggle.module.css",
+        "interface/src/components/AppSwitchToggle/AppSwitchToggle.tsx",
+        "interface/src/components/AppSwitchToggle/resolve-switch-path.ts",
+        "interface/src/components/AuraShell/AuraSidebar.tsx",
+        "interface/src/components/InputBarShell/InputBarShell.module.css",
+        "interface/src/components/InputBarShell/ModeSelector.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatModeBar/ChatModeBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ModelControls/ModelControls.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatSurface.tsx",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 26,
+        "insertions": 608,
+        "deletions": 200
+      },
+      "committedAtMs": 1783095253000,
+      "cleanSubject": "Make Aura onboarding chat-first and platform-aware",
+      "keywords": [
+        "make",
+        "aura",
+        "onboarding",
+        "chat",
+        "first",
+        "platform",
+        "aware"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/features",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "88d9466a4397a4bcc77fb3fd2ff5c36b4e26e1ee",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-03T14:56:14-04:00",
+      "subject": "Merge remote-tracking branch 'origin/main' into feature/platform-aware-onboarding",
+      "body": "",
+      "parents": [
+        "52149ec8fbb47fb6c3ab947faed42a9a9b7bca33",
+        "10bb79a4ea4c9b652fe953fcdd7a5dc6eb1b09e9"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 620,
+        "deletions": 57
+      },
+      "committedAtMs": 1783104974000,
+      "cleanSubject": "Merge remote-tracking branch 'origin/main' into feature/platform-aware-onboarding",
+      "keywords": [
+        "merge",
+        "remote",
+        "tracking",
+        "branch",
+        "origin",
+        "main",
+        "into",
+        "feature",
+        "platform",
+        "aware",
+        "onboarding"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "5a400c226cc00f75905e23978a099b3bbced42de",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T13:52:50-04:00",
+      "subject": "feat: support hosted harness transport auth",
+      "body": "",
+      "parents": [
+        "88d9466a4397a4bcc77fb3fd2ff5c36b4e26e1ee"
+      ],
+      "files": [
+        "apps/aura-os-server/src/harness_gateway.rs",
+        "apps/aura-os-server/tests/harness_client_test.rs",
+        "crates/aura-os-harness/src/client.rs",
+        "crates/aura-os-harness/src/harness_auth.rs",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-os-harness/src/local_harness.rs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 215,
+        "deletions": 22
+      },
+      "committedAtMs": 1783187570000,
+      "cleanSubject": "support hosted harness transport auth",
+      "keywords": [
+        "support",
+        "hosted",
+        "harness",
+        "transport",
+        "auth"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "8213491cf89acf706935d32e1008d3918c87a59a",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T16:44:15-04:00",
+      "subject": "fix: scope hosted harness transport auth",
+      "body": "",
+      "parents": [
+        "5a400c226cc00f75905e23978a099b3bbced42de"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/handlers/agent_bootstrap.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/control.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/run_handles.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/credits.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/access.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/memory.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/mod.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/skills.rs",
+        "apps/aura-os-server/src/harness_gateway.rs",
+        "apps/aura-os-server/src/process_automaton.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/mocks.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/proxy_forwards.rs",
+        "crates/aura-os-harness/Cargo.toml",
+        "crates/aura-os-harness/src/client.rs",
+        "crates/aura-os-harness/src/local_harness.rs"
+      ],
+      "stats": {
+        "fileCount": 18,
+        "insertions": 825,
+        "deletions": 271
+      },
+      "committedAtMs": 1783197855000,
+      "cleanSubject": "scope hosted harness transport auth",
+      "keywords": [
+        "scope",
+        "hosted",
+        "harness",
+        "transport",
+        "auth"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/Cargo.toml",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "90b08976e8df8f46324b6beefc407134ce2b5973",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T18:39:36-04:00",
+      "subject": "docs: document hosted harness deployment",
+      "body": "",
+      "parents": [
+        "8213491cf89acf706935d32e1008d3918c87a59a"
+      ],
+      "files": [
+        "README.md",
+        "docs/render-deployment.md"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 23,
+        "deletions": 2
+      },
+      "committedAtMs": 1783204776000,
+      "cleanSubject": "document hosted harness deployment",
+      "keywords": [
+        "document",
+        "hosted",
+        "harness",
+        "deployment"
+      ],
+      "fileGroups": [
+        "README.md",
+        "docs/render-deployment.md"
+      ],
+      "primaryArea": "Docs",
+      "areas": [
+        "Docs",
+        "Other"
+      ]
+    },
+    {
+      "sha": "b4709af0d501d8c029eab6860ecb524ad2826e0c",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T18:50:35-04:00",
+      "subject": "fix: harden hosted harness autospawn",
+      "body": "",
+      "parents": [
+        "90b08976e8df8f46324b6beefc407134ce2b5973"
+      ],
+      "files": [
+        "README.md",
+        "apps/aura-os-server/src/app_builder/harness_autospawn.rs",
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/handlers/agent_bootstrap.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/mod.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/skills.rs",
+        "apps/aura-os-server/src/handlers/public/demo_agent.rs",
+        "apps/aura-os-server/src/harness_gateway.rs",
+        "apps/aura-os-server/src/process_automaton.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "apps/aura-os-server/tests/harness_client_test.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/mocks.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/proxy_forwards.rs",
+        "crates/aura-os-harness/src/client.rs",
+        "crates/aura-os-harness/src/local_harness.rs",
+        "docs/render-deployment.md"
+      ],
+      "stats": {
+        "fileCount": 16,
+        "insertions": 209,
+        "deletions": 92
+      },
+      "committedAtMs": 1783205435000,
+      "cleanSubject": "harden hosted harness autospawn",
+      "keywords": [
+        "harden",
+        "hosted",
+        "harness",
+        "autospawn"
+      ],
+      "fileGroups": [
+        "README.md",
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/src",
+        "docs/render-deployment.md"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Docs"
+      ]
+    },
+    {
+      "sha": "e695517ce851e535b57d7259b13044d32019c0c1",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T19:45:30-04:00",
+      "subject": "ci: pin desktop validation macos runner",
+      "body": "",
+      "parents": [
+        "b4709af0d501d8c029eab6860ecb524ad2826e0c"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1783208730000,
+      "cleanSubject": "pin desktop validation macos runner",
+      "keywords": [
+        "desktop",
+        "validation",
+        "macos",
+        "runner"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "d0229e6d1fa5cc061fcafcda0ce06a9347db1920",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T20:03:25-04:00",
+      "subject": "fix: expose hosted local runtime capability",
+      "body": "",
+      "parents": [
+        "e695517ce851e535b57d7259b13044d32019c0c1"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/system.rs",
+        "apps/aura-os-server/src/router/mod.rs",
+        "interface/src/apps/agents/AgentIndexRedirect/AgentIndexRedirect.tsx",
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/InputStatusHints/InputStatusHints.tsx",
+        "interface/src/hooks/use-aura-capabilities.test.ts",
+        "interface/src/hooks/use-aura-capabilities.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/shared/lib/agent-runtime-visibility.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 264,
+        "deletions": 18
+      },
+      "committedAtMs": 1783209805000,
+      "cleanSubject": "expose hosted local runtime capability",
+      "keywords": [
+        "expose",
+        "hosted",
+        "local",
+        "runtime",
+        "capability"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/apps",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "558b0c81b3c4a28a091a74d72b14850d47c58b78",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T20:12:15-04:00",
+      "subject": "test: mock runtime capabilities in e2e harnesses",
+      "body": "",
+      "parents": [
+        "d0229e6d1fa5cc061fcafcda0ce06a9347db1920"
+      ],
+      "files": [
+        "interface/tests/e2e/evals/chatCoreMockApp.ts",
+        "interface/tests/e2e/evals/workflowMockApp.ts",
+        "interface/tests/e2e/helpers/mockAuthenticatedApp.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 25,
+        "deletions": 0
+      },
+      "committedAtMs": 1783210335000,
+      "cleanSubject": "mock runtime capabilities in e2e harnesses",
+      "keywords": [
+        "mock",
+        "runtime",
+        "capabilities",
+        "harnesses"
+      ],
+      "fileGroups": [
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "801dab211cdf66ed4ddb2e640d922ad46851ddd0",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T21:15:29-04:00",
+      "subject": "fix: fail closed for hosted harness auth",
+      "body": "",
+      "parents": [
+        "558b0c81b3c4a28a091a74d72b14850d47c58b78"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/harness_proxy/access.rs",
+        "apps/aura-os-server/src/handlers/system.rs",
+        "apps/aura-os-server/src/harness_gateway.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/proxy_forwards.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 153,
+        "deletions": 82
+      },
+      "committedAtMs": 1783214129000,
+      "cleanSubject": "fail closed for hosted harness auth",
+      "keywords": [
+        "fail",
+        "closed",
+        "hosted",
+        "harness",
+        "auth"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "833b6b599ef8dfac3ce46a04a41a5becf4ba7769",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T21:15:43-04:00",
+      "subject": "feat: import public chats after sign-in",
+      "body": "",
+      "parents": [
+        "801dab211cdf66ed4ddb2e640d922ad46851ddd0"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/public_import.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/tests/chat_events_test/main.rs",
+        "apps/aura-os-server/tests/chat_events_test/public_import.rs",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.tsx",
+        "interface/src/apps/chat-app/hooks/use-public-chat-import.test.ts",
+        "interface/src/apps/chat-app/hooks/use-public-chat-import.ts",
+        "interface/src/shared/api/agents.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 1101,
+        "deletions": 3
+      },
+      "committedAtMs": 1783214143000,
+      "cleanSubject": "import public chats after sign-in",
+      "keywords": [
+        "import",
+        "public",
+        "chats",
+        "after",
+        "sign"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "49dc4ec68842b39b5f8ba231d5478587faf94698",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-04T21:23:52-04:00",
+      "subject": "fix: require auth for hosted local harness runtime",
+      "body": "",
+      "parents": [
+        "833b6b599ef8dfac3ce46a04a41a5becf4ba7769"
+      ],
+      "files": [
+        "apps/aura-os-server/src/harness_gateway.rs",
+        "crates/aura-os-harness/src/client.rs",
+        "crates/aura-os-harness/src/harness_url.rs",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-os-harness/src/local_harness.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 145,
+        "deletions": 44
+      },
+      "committedAtMs": 1783214632000,
+      "cleanSubject": "require auth for hosted local harness runtime",
+      "keywords": [
+        "require",
+        "auth",
+        "hosted",
+        "local",
+        "harness",
+        "runtime"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "e4d2395c6f5f1a333ea0a09a6cab7574b84d1eba",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-05T01:02:16-04:00",
+      "subject": "fix: keep web chat off cached local agents",
+      "body": "",
+      "parents": [
+        "49dc4ec68842b39b5f8ba231d5478587faf94698"
+      ],
+      "files": [
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.test.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.test.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.tsx",
+        "interface/src/apps/chat-app/hooks/use-chat-app-agent.test.tsx",
+        "interface/src/apps/chat-app/hooks/use-chat-app-agent.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 178,
+        "deletions": 20
+      },
+      "committedAtMs": 1783227736000,
+      "cleanSubject": "keep web chat off cached local agents",
+      "keywords": [
+        "keep",
+        "chat",
+        "cached",
+        "local",
+        "agents"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "97647091e797b34ed134d7c75578609f0221cf3d",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-05T01:06:12-04:00",
+      "subject": "fix(native-runtime): guard desktop loopback detection (#86)",
+      "body": "",
+      "parents": [
+        "e4d2395c6f5f1a333ea0a09a6cab7574b84d1eba"
+      ],
+      "files": [
+        "interface/src/hooks/use-aura-capabilities.test.ts",
+        "interface/src/shared/lib/device-info.ts",
+        "interface/src/shared/lib/host-config.test.ts",
+        "interface/src/shared/lib/native-runtime.test.ts",
+        "interface/src/shared/lib/native-runtime.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 151,
+        "deletions": 18
+      },
+      "committedAtMs": 1783227972000,
+      "cleanSubject": "guard desktop loopback detection (#86)",
+      "keywords": [
+        "guard",
+        "desktop",
+        "loopback",
+        "detection"
+      ],
+      "fileGroups": [
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cc92ced27d4ab2d5f417788d28898420a2498d20",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-05T01:28:51-04:00",
+      "subject": "Merge feature/platform-aware-onboarding",
+      "body": "",
+      "parents": [
+        "9f38fe85cd0ac79831e136567742a55453502904",
+        "97647091e797b34ed134d7c75578609f0221cf3d"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 4482,
+        "deletions": 927
+      },
+      "committedAtMs": 1783229331000,
+      "cleanSubject": "Merge feature/platform-aware-onboarding",
+      "keywords": [
+        "merge",
+        "feature",
+        "platform",
+        "aware",
+        "onboarding"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
     }
   ],
-  "batchCount": 2,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.727.1",
+      "version": "0.1.0-nightly.728.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65206596
+          "sizeBytes": 65322340
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131803640
+          "sizeBytes": 131918328
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -169,29 +1002,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.727.1",
+      "version": "0.1.0-nightly.728.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.727.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.728.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61106946
+          "sizeBytes": 61132814
         },
         {
-          "name": "AURA_0.1.0-nightly.727.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.728.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60111791
+          "sizeBytes": 60167992
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -201,29 +1034,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.727.1",
+      "version": "0.1.0-nightly.728.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.727.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.728.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63337998
+          "sizeBytes": 63369433
         },
         {
-          "name": "AURA_0.1.0-nightly.727.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.728.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62369066
+          "sizeBytes": 62396368
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -233,17 +1066,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.727.1",
+      "version": "0.1.0-nightly.728.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48248920
+          "sizeBytes": 48256458
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.727.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.728.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -252,28 +1085,38 @@
     }
   ],
   "rendered": {
-    "title": "Desktop shell stops masquerading as a mobile client",
-    "intro": "Today's nightly is a targeted fix for desktop users: because the Tauri shell loads Aura from a loopback origin, runtime detection had been misclassifying it as a native mobile client and pushing users into the wrong login view and shell. Two commits land the fix and lock it in with regression coverage across Mac, Windows, and Linux desktop builds.",
+    "title": "Chat-first onboarding and a hardened hosted harness path",
+    "intro": "Today's nightly reshapes Aura's first-run experience around chat, teaches the web and desktop shells to pick the right entry point for their platform, and lands a substantial reliability pass on the hosted local-harness transport — including auth scoping, autospawn safety, and a runtime-capability API so the UI stops offering local agents it can't actually reach.",
     "entries": [
       {
         "batch_id": "entry-1",
-        "time_label": "5:11 AM",
-        "started_at": "2026-07-04T12:11:29.000Z",
-        "ended_at": "2026-07-04T12:11:29.000Z",
-        "title": "Desktop loopback origin no longer triggers native mobile mode",
-        "summary": "The desktop shell is served from 127.0.0.1, which was tripping the loopback-webview heuristic and forcing Aura into the native/mobile experience. Runtime detection now recognizes the desktop bridge and treats the app as a desktop client.",
+        "time_label": "11:26 PM",
+        "started_at": "2026-07-03T06:26:50.000Z",
+        "ended_at": "2026-07-04T15:33:59.000Z",
+        "title": "Platform-aware, chat-first onboarding",
+        "summary": "Onboarding was rebuilt around the chat surface and now branches by platform, and the desktop shell is correctly classified as a desktop client rather than a native/mobile runtime.",
         "items": [
           {
-            "text": "isNativeRuntime() now short-circuits to false when a desktop bridge global (__AURA_BOOT_AUTH__, __TAURI__, or __TAURI_INTERNALS__) is present, so the Tauri desktop shell stops being classified as native and users no longer land on the mobile login view or mobile shell.",
+            "text": "Rebuilt the welcome and onboarding checklist to be chat-first and platform-aware: web users land on the public chat surface, while desktop opens directly into the Build workspace via a new platform entry redirect.",
             "commit_shas": [
-              "cf021f8018c2b725e20c253e8cf93987c09c53c1"
+              "3dc1cc59c80fa3522fb59dbf0aab6db3c1a2b611",
+              "81f739b78bd07907149057eb51a0ebb3aeef7da8",
+              "52149ec8fbb47fb6c3ab947faed42a9a9b7bca33"
             ],
             "confidence": "high"
           },
           {
-            "text": "Capacitor and genuine loopback mobile-dev webviews still resolve as native, preserving mobile behavior while unblocking desktop host-config resolution.",
+            "text": "Renamed the Projects app to Build across the sidebar switch, registry, and search placeholders, and reordered the Build ↔ Agents toggle to match the new default.",
             "commit_shas": [
-              "cf021f8018c2b725e20c253e8cf93987c09c53c1"
+              "3dc1cc59c80fa3522fb59dbf0aab6db3c1a2b611"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed a desktop misclassification where the loopback origin made isNativeRuntime() return true, which was serving the mobile login view and shell to Desktop; the check now defers to the Tauri/desktop bridge globals so Capacitor and mobile-dev webviews remain native.",
+            "commit_shas": [
+              "cf021f8018c2b725e20c253e8cf93987c09c53c1",
+              "9f38fe85cd0ac79831e136567742a55453502904"
             ],
             "confidence": "high"
           }
@@ -281,41 +1124,136 @@
       },
       {
         "batch_id": "entry-2",
-        "time_label": "8:33 AM",
-        "started_at": "2026-07-04T15:33:59.000Z",
-        "ended_at": "2026-07-04T15:33:59.000Z",
-        "title": "Regression coverage and shared desktop-runtime helper",
-        "summary": "A follow-up hardens the loopback guard with a reusable isDesktopRuntime() helper and adds tests across useAuraCapabilities, host-config, and native-runtime so desktop, mobile, and web clients each stay on their intended UI path.",
+        "time_label": "10:52 AM",
+        "started_at": "2026-07-04T17:52:50.000Z",
+        "ended_at": "2026-07-04T22:50:35.000Z",
+        "title": "Hosted harness transport auth and autospawn safety",
+        "summary": "The hosted local-harness path gained a scoped transport bearer, safer autospawn behavior, and matching deployment docs so remote harnesses can be reached without leaking service secrets or accidentally launching a stray local process.",
         "items": [
           {
-            "text": "Extracted an isDesktopRuntime() helper and routed detectClientPlatform() through it, giving device-info, host-config, and capability checks a single source of truth for the desktop shell.",
+            "text": "Added a dedicated hosted-harness transport auth token that authenticates the server-to-harness hop, and reworked the harness gateway, proxy access layer, and clients to scope it distinctly from the caller's JWT.",
             "commit_shas": [
-              "9f38fe85cd0ac79831e136567742a55453502904"
+              "5a400c226cc00f75905e23978a099b3bbced42de",
+              "8213491cf89acf706935d32e1008d3918c87a59a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a useAuraCapabilities case that loads from http://127.0.0.1 with a desktop IPC bridge and asserts hasDesktopBridge is true while isNativeApp, isMobileClient, and the mobile-client dataset flag all stay false — locking in the fix from earlier in the day.",
+            "text": "Hardened autospawn so it only fires for real loopback URLs with an explicit port — a hosted LOCAL_HARNESS_URL can no longer silently fall back to 127.0.0.1:8080 and launch an unrelated local harness.",
             "commit_shas": [
-              "9f38fe85cd0ac79831e136567742a55453502904"
+              "b4709af0d501d8c029eab6860ecb524ad2826e0c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Expanded host-config and native-runtime tests with proper window.location mocking and cleanup of Capacitor, __AURA_BOOT_AUTH__, and ipc globals so desktop, Android, and macOS web scenarios are each covered without cross-test leakage.",
+            "text": "Documented the hosted-harness deployment story in the README and render-deployment guide, including the LOCAL_HARNESS_AUTH_TOKEN / AURA_NODE_AUTH_TOKEN pairing and the incompatibility with AURA_REMOTE_ONLY=1.",
             "commit_shas": [
-              "9f38fe85cd0ac79831e136567742a55453502904"
+              "90b08976e8df8f46324b6beefc407134ce2b5973",
+              "b4709af0d501d8c029eab6860ecb524ad2826e0c"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "4:45 PM",
+        "started_at": "2026-07-04T23:45:30.000Z",
+        "ended_at": "2026-07-04T23:45:30.000Z",
+        "title": "Pinned macOS runner for desktop validation",
+        "summary": "The desktop validation workflow now runs on a pinned macOS image to stabilize signing and packaging checks against GitHub runner drift.",
+        "items": [
+          {
+            "text": "Pinned the macOS runner used by the desktop-validate workflow to keep desktop bundle validation reproducible across nightly runs.",
+            "commit_shas": [
+              "e695517ce851e535b57d7259b13044d32019c0c1"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "5:03 PM",
+        "started_at": "2026-07-05T00:03:25.000Z",
+        "ended_at": "2026-07-05T00:12:15.000Z",
+        "title": "Runtime capabilities API for hosted local agents",
+        "summary": "The server now advertises whether a hosted local-harness runtime is actually reachable, and the interface uses that signal instead of assuming based on browser vs. desktop.",
+        "items": [
+          {
+            "text": "Added a /api/system/runtime-capabilities endpoint that reports remote_only, hosted_local_harness, and local_agent_runtime_available, gated on a non-loopback LOCAL_HARNESS_URL.",
+            "commit_shas": [
+              "d0229e6d1fa5cc061fcafcda0ce06a9347db1920"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Wired the new capability into useAuraCapabilities and the agent index/chat routes so cached local-agent ids no longer resolve on clients that can't reach them, and updated the disabled-send copy to say the local agent isn't available in this browser.",
+            "commit_shas": [
+              "d0229e6d1fa5cc061fcafcda0ce06a9347db1920",
+              "558b0c81b3c4a28a091a74d72b14850d47c58b78"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "6:15 PM",
+        "started_at": "2026-07-05T01:15:29.000Z",
+        "ended_at": "2026-07-05T01:23:52.000Z",
+        "title": "Fail-closed harness auth and public chat import after sign-in",
+        "summary": "Hosted-harness auth now fails closed when misconfigured, and signed-in users can promote their guest public-chat transcripts into a real Aura chat session.",
+        "items": [
+          {
+            "text": "Made hosted local-harness routes require and validate the transport bearer, rejecting requests when auth is missing or misconfigured instead of silently falling through.",
+            "commit_shas": [
+              "801dab211cdf66ed4ddb2e640d922ad46851ddd0",
+              "49dc4ec68842b39b5f8ba231d5478587faf94698"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added an authenticated import path that copies a guest's localStorage-only public chat turns into a first-class agent chat session on sign-in, with de-duplication, size limits, and a lazy home-project repair for chat agents lacking a project binding.",
+            "commit_shas": [
+              "833b6b599ef8dfac3ce46a04a41a5becf4ba7769"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "10:02 PM",
+        "started_at": "2026-07-05T05:02:16.000Z",
+        "ended_at": "2026-07-05T05:06:12.000Z",
+        "title": "Web chat no longer selects cached local agents",
+        "summary": "The chat app now consults runtime capabilities when picking an agent, so remote-only clients stop landing on a cached local agent that can't run there.",
+        "items": [
+          {
+            "text": "Threaded remoteOnly into the chat-app agent resolver and left panel so the web selects a web-safe agent (falling back to the CEO agent) instead of restoring a cached local-agent id it can't use.",
+            "commit_shas": [
+              "e4d2395c6f5f1a333ea0a09a6cab7574b84d1eba"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Followed up on the desktop loopback detection fix with expanded tests around device-info, host-config, and native-runtime to lock in the desktop-vs-native classification.",
+            "commit_shas": [
+              "97647091e797b34ed134d7c75578609f0221cf3d"
+            ],
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Desktop shell no longer flips into the mobile UI",
-      "Loopback detection now defers to the desktop bridge globals",
-      "Regression tests added for desktop, mobile, and web runtimes"
+      "Chat-first, platform-aware onboarding",
+      "Desktop shell no longer misdetected as native",
+      "Hosted harness transport auth scoped and fail-closed",
+      "Public chat transcripts import after sign-in",
+      "Web chat stops selecting unreachable local agents"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 17
   }
 }

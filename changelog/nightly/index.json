@@ -2,18 +2,20 @@
   {
     "date": "2026-07-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.727.1",
-    "title": "Desktop shell stops masquerading as a mobile client",
-    "intro": "Today's nightly is a targeted fix for desktop users: because the Tauri shell loads Aura from a loopback origin, runtime detection had been misclassifying it as a native mobile client and pushing users into the wrong login view and shell. Two commits land the fix and lock it in with regression coverage across Mac, Windows, and Linux desktop builds.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.728.1",
+    "title": "Chat-first onboarding and a hardened hosted harness path",
+    "intro": "Today's nightly reshapes Aura's first-run experience around chat, teaches the web and desktop shells to pick the right entry point for their platform, and lands a substantial reliability pass on the hosted local-harness transport — including auth scoping, autospawn safety, and a runtime-capability API so the UI stops offering local agents it can't actually reach.",
+    "entryCount": 6,
     "highlights": [
-      "Desktop shell no longer flips into the mobile UI",
-      "Loopback detection now defers to the desktop bridge globals",
-      "Regression tests added for desktop, mobile, and web runtimes"
+      "Chat-first, platform-aware onboarding",
+      "Desktop shell no longer misdetected as native",
+      "Hosted harness transport auth scoped and fail-closed",
+      "Public chat transcripts import after sign-in",
+      "Web chat stops selecting unreachable local agents"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-07-04T15:57:04.386Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.727.1",
+    "rawCommitCount": 20,
+    "generatedAt": "2026-07-05T05:57:48.550Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.728.1",
     "path": "history/2026-07-04.json"
   },
   {
