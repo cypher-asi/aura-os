@@ -6,6 +6,7 @@ type FakeAgent = { agent_id: string; name: string; icon?: string | null };
 type FakeRow = {
   session_id: string;
   _projectId: string;
+  _projectName?: string;
   _agentInstanceId: string;
   _agentId?: string;
 };
@@ -51,6 +52,8 @@ vi.mock("../../../../components/SessionsList", () => ({
     sessions: FakeRow[];
     onSessionClick: (s: FakeRow) => void;
     onSessionHover?: (s: FakeRow) => void;
+    renderRowDetail?: (s: FakeRow) => React.ReactNode;
+    renderRowSuffix?: (s: FakeRow) => React.ReactNode;
   }) => (
     <div data-testid="sessions-list">
       {props.sessions.map((s) => (
@@ -59,7 +62,14 @@ vi.mock("../../../../components/SessionsList", () => ({
           data-testid={`row-${s.session_id}`}
           onClick={() => props.onSessionClick(s)}
           onMouseEnter={() => props.onSessionHover?.(s)}
-        />
+        >
+          <span data-testid={`detail-${s.session_id}`}>
+            {props.renderRowDetail?.(s)}
+          </span>
+          <span data-testid={`suffix-${s.session_id}`}>
+            {props.renderRowSuffix?.(s)}
+          </span>
+        </button>
       ))}
     </div>
   ),
@@ -264,5 +274,25 @@ describe("ChatAppLeftPanel", () => {
     expect(url.startsWith("/chat?fresh=")).toBe(true);
     expect(url).not.toContain("agent=");
     expect(url).not.toContain("project=");
+  });
+
+  it("labels chat rows with the owning agent and project", () => {
+    mocks.sessions = [
+      {
+        session_id: "s3",
+        _projectId: "p3",
+        _projectName: "Client Workspace",
+        _agentInstanceId: "i3",
+        _agentId: "agent-designer",
+      },
+    ];
+    mocks.agents = [{ agent_id: "agent-designer", name: "Designer" }];
+
+    render(<ChatAppLeftPanel />);
+
+    expect(screen.getByTestId("detail-s3")).toHaveTextContent(
+      "Designer · Client Workspace",
+    );
+    expect(screen.getByLabelText("Agent: Designer")).toBeInTheDocument();
   });
 });

@@ -181,15 +181,38 @@ export function ChatAppLeftPanel() {
     (target: AnnotatedSession) => {
       const agent = resolveSessionAgent(target);
       if (!agent) return null;
+      const label = `Agent: ${agent.name}`;
       return (
-        <Avatar
-          avatarUrl={agent.icon ?? undefined}
-          name={agent.name}
-          type="agent"
-          size={20}
-          className={styles.rowAvatar}
-        />
+        <span
+          className={styles.rowAvatarWrap}
+          aria-label={label}
+          title={label}
+        >
+          <Avatar
+            avatarUrl={agent.icon ?? undefined}
+            name={agent.name}
+            type="agent"
+            size={20}
+            className={styles.rowAvatar}
+          />
+        </span>
       );
+    },
+    [resolveSessionAgent],
+  );
+
+  const renderRowDetail = useCallback(
+    (target: AnnotatedSession) => {
+      const agent = resolveSessionAgent(target);
+      const parts = [
+        agent?.name,
+        target._projectName && target._projectName !== agent?.name
+          ? target._projectName
+          : null,
+      ].filter((part): part is string => !!part?.trim());
+      if (parts.length === 0) return null;
+      const label = parts.join(" · ");
+      return <span title={label}>{label}</span>;
     },
     [resolveSessionAgent],
   );
@@ -381,6 +404,7 @@ export function ChatAppLeftPanel() {
         deleteError={deleteError}
         onDismissError={handleDismissError}
         renderRowSuffix={renderRowSuffix}
+        renderRowDetail={renderRowDetail}
         streamKeyForSession={streamKeyForSession}
       />
     </div>

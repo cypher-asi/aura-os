@@ -60,6 +60,12 @@ interface SessionsListProps {
    */
   renderRowSuffix?: (session: AnnotatedSession) => ReactNode;
   /**
+   * Optional muted second line rendered under the session title. The
+   * chat app uses this to clarify the owning agent/project while
+   * keeping the primary row text as the conversation title.
+   */
+  renderRowDetail?: (session: AnnotatedSession) => ReactNode;
+  /**
    * Per-session stream-lane key resolver. Mirrors `useStreamCore`'s
    * deps shape so the per-row streaming indicator subscribes to the
    * exact lane the chat panel writes to:
@@ -139,6 +145,7 @@ export function SessionsList({
   deleteError,
   onDismissError,
   renderRowSuffix,
+  renderRowDetail,
   streamKeyForSession,
 }: SessionsListProps) {
   // Track which rows are currently scrolled into view so the lazy
@@ -272,6 +279,7 @@ export function SessionsList({
           return {
             id: session.session_id,
             label,
+            detail: renderRowDetail?.(session) ?? undefined,
             leadingIndicator: (
               <SessionStreamingDot
                 session={session}
@@ -290,6 +298,7 @@ export function SessionsList({
     [
       buckets,
       renderRowSuffix,
+      renderRowDetail,
       hasMultipleProjects,
       streamKeyForSession,
       onSessionClick,
