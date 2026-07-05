@@ -201,22 +201,6 @@ export function ChatAppLeftPanel() {
     [resolveSessionAgent],
   );
 
-  const renderRowDetail = useCallback(
-    (target: AnnotatedSession) => {
-      const agent = resolveSessionAgent(target);
-      const parts = [
-        agent?.name,
-        target._projectName && target._projectName !== agent?.name
-          ? target._projectName
-          : null,
-      ].filter((part): part is string => !!part?.trim());
-      if (parts.length === 0) return null;
-      const label = parts.join(" · ");
-      return <span title={label}>{label}</span>;
-    },
-    [resolveSessionAgent],
-  );
-
   const handleNewChat = useCallback(() => {
     if (!chatAgent) return;
     void import("../../../../lib/analytics").then(({ track }) =>
@@ -404,7 +388,6 @@ export function ChatAppLeftPanel() {
         deleteError={deleteError}
         onDismissError={handleDismissError}
         renderRowSuffix={renderRowSuffix}
-        renderRowDetail={renderRowDetail}
         streamKeyForSession={streamKeyForSession}
       />
     </div>

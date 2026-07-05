@@ -489,31 +489,4 @@ describe("SessionsList", () => {
     expect(screen.getByTestId("suffix-s2")).toHaveTextContent("inst-b");
   });
 
-  it("renders renderRowDetail output as the row secondary line when provided", () => {
-    const sessions = [
-      makeSession("s1", isoToday, "Alpha", {
-        _agentId: "agent-a",
-        _projectName: "Project A",
-      }),
-    ];
-
-    render(
-      <SessionsList
-        sessions={sessions}
-        loading={false}
-        selectedSessionId={null}
-        onSessionClick={vi.fn()}
-        renderRowDetail={(session) => (
-          <span data-testid={`detail-${session.session_id}`}>
-            {session._agentId} · {session._projectName}
-          </span>
-        )}
-      />,
-    );
-
-    expect(screen.getByText("Alpha")).toBeInTheDocument();
-    expect(screen.getByTestId("detail-s1")).toHaveTextContent(
-      "agent-a · Project A",
-    );
-  });
 });
