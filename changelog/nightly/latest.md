@@ -1,41 +1,47 @@
-# Chat routing that survives fresh sends, taskbar returns, and mobile onboarding
+# Fresh-chat routing, session hydration, and public chat polish
 
 - Date: `2026-07-06`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.740.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.740.1
+- Version: `0.1.0-nightly.741.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.741.1
 
-Today's nightly is a deep pass on chat session routing: fresh canvases now correctly promote themselves into real session URLs, the taskbar remembers where you left a conversation, and web session hydration is far more resilient. Mobile public chat also picks up polished onboarding, and the macOS desktop shell finally shows its window on launch outside of CI.
+Today's nightly centered on making chat routes durable across fresh sends, taskbar returns, and reloads, with a parallel pass of polish on the public chat experience and a small but important fix to how the macOS desktop window comes up on launch.
 
-## 3:10 AM — Fresh chat canvas promotes to a real session route
+## 3:10 AM — Fresh chat canvases bind to real sessions after first send
 
-Reworked how fresh chat canvases bind to a session so the first send transitions cleanly into a persisted, shareable route.
+Reworked how the chat app treats a fresh canvas so the first send reliably materializes into a persisted session and the URL follows along.
 
-- Fresh chat canvases now consistently mark the next send as a new session and carry a stable freshCanvasKey through the chat hook, fixing binding issues where a fresh canvas could silently reuse or drop session state. (`378f600`)
-- After the first send on a fresh canvas, the route now swaps itself in place to the concrete session — populating project, instance, session, and agent params via replace navigation once the new session materializes in the sessions list. (`8a544bb`, `164f2d2`)
-- Message share links now read canonical project and instance params from the URL (including /projects/:id/agents/:instance paths) instead of guessing from the stream key, so copy-share works correctly on agent-scoped chat routes. (`8a544bb`)
+- Fixed the fresh-canvas state so any URL without a session id is treated as pending, and the fresh key is threaded through so a new send is correctly armed as a new session instead of getting bound to a stale one. (`378f600`)
+- After the first send lands, the chat route now swaps the throwaway fresh=... param for a canonical project/instance/session/agent URL, and share links read from that canonical route so copied links point at the real session. (`8a544bb`, `164f2d2`)
 
-## 4:46 AM — macOS desktop window visible on launch, hidden under CI
+## 4:46 AM — macOS desktop window visible on launch
 
-The desktop shell now shows its main window on macOS startup for real users, while keeping it hidden during automated CI runs.
+The desktop app now shows its main window on launch on macOS, while keeping the headless behavior CI depends on.
 
-- On macOS, the main desktop window now starts visible instead of relying on a later reveal, so launching AURA surfaces the app immediately. (`2665200`)
-- Initial window visibility is now gated on a CI-mode check, so automated environments keep the window hidden while user launches show it — with detection updated to recognize standard CI environment signals. (`c9d2b5c`, `a3ca860`)
+- The macOS desktop build now presents the main window on launch instead of starting hidden, so first-run and relaunch actually surface the app. (`2665200`)
+- CI runs still launch the desktop hidden by detecting standard CI environment variables, so the visible-on-launch change doesn't destabilize automated desktop tests. (`c9d2b5c`, `a3ca860`)
 
-## 5:47 AM — Taskbar recall, safer session hydration, and mobile public chat polish
+## 5:47 AM — Taskbar remembers your last chat, and web session lists stop breaking on bad data
 
-The chat app now remembers concrete session routes for taskbar returns, guards web session hydration against bad data and legacy hosts, and refreshes the mobile public chat shell.
+The chat taskbar entry now returns you to the exact session you were last in, session list hydration is hardened against malformed data, and the mobile public chat shell got a real touch-target and safe-area pass.
 
-- The taskbar entry for Chat now returns you to your last real session: ChatAppRoute persists the current project, instance, session, and agent as the remembered route, deriving missing params from the session list for legacy session-only links and skipping fresh canvases. (`5f2505a`)
-- Remembered chat routes now require a resolved agent owner before being stored, preventing the taskbar from latching onto a half-loaded session URL that has no known agent. (`debe58e`)
-- Web session hydration is hardened: the sessions list renders a clean empty state instead of throwing when it receives non-array data, and host-config now canonicalizes the legacy Render API origin to https://api.aura.ai on production web even when a stale value is stored locally. (`17db544`)
-- Mobile public chat onboarding gets a native-feeling refresh: 60px top bars with safe-area padding, 48px touch targets on menu, close, and delete buttons, and a new free-message limit state with title, body, and composer placeholder prompting login. (`3329590`)
+- Clicking the chat app from the nav rail now restores the last concrete session route (project, instance, session, agent) instead of dropping you on a blank canvas, with legacy session-only links upgraded to share-capable URLs. (`5f2505a`)
+- Tightened the rule for remembering a route so no-agent session URLs are only persisted once the session's real owner has loaded, preventing a bad agent from being written into the remembered route. (`debe58e`)
+- Hardened the web sessions list against polluted or non-array session payloads (renders an empty state instead of throwing) and canonicalized the legacy Render API origin to api.aura.ai on production web so stale stored hosts self-heal. (`17db544`)
+- Polished the mobile public chat shell: 60px header, 48px menu/close/delete buttons with touch-action manipulation, proper safe-area padding, and new copy for the free-message limit state. (`3329590`)
+
+## 10:38 AM — Free-message limit gate for public chat
+
+Public chat now has a first-class limit-reached state on both web and mobile, with dedicated copy and clear log-in / sign-up actions instead of a generic send error.
+
+- Added a shared limit-error detector and a styled limit notice in the public chat input bar, with pill-shaped primary and secondary actions prompting users to log in or sign up to continue. (`be5b4cc`)
+- On the mobile public chat view, hitting the limit now snaps the turn count to the configured limit and clears the transient send error, so the UI transitions cleanly into the limit-reached state instead of showing a failure toast. (`be5b4cc`)
+- Added localized strings for the limit title, body, and input placeholder ("Free chat limit reached" / "Log in to keep chatting") so the gate reads as an onboarding prompt rather than an error. (`be5b4cc`)
 
 ## Highlights
 
-- Fresh chat canvases adopt the real session route after first send
-- Taskbar remembers your last real chat session
-- Hardened web session hydration against bad data and legacy hosts
-- Mobile public chat gets a free-message limit and larger touch targets
-- macOS desktop window now visible on launch, hidden in CI
+- Fresh chat routes now upgrade to real session URLs after the first send
+- Taskbar returns reopen the exact chat you were in
+- Public chat gains a proper free-message limit gate on mobile and web
+- macOS desktop window now shows on launch outside of CI
 

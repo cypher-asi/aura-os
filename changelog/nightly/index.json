@@ -2,20 +2,19 @@
   {
     "date": "2026-07-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.740.1",
-    "title": "Chat routing that survives fresh sends, taskbar returns, and mobile onboarding",
-    "intro": "Today's nightly is a deep pass on chat session routing: fresh canvases now correctly promote themselves into real session URLs, the taskbar remembers where you left a conversation, and web session hydration is far more resilient. Mobile public chat also picks up polished onboarding, and the macOS desktop shell finally shows its window on launch outside of CI.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.741.1",
+    "title": "Fresh-chat routing, session hydration, and public chat polish",
+    "intro": "Today's nightly centered on making chat routes durable across fresh sends, taskbar returns, and reloads, with a parallel pass of polish on the public chat experience and a small but important fix to how the macOS desktop window comes up on launch.",
+    "entryCount": 4,
     "highlights": [
-      "Fresh chat canvases adopt the real session route after first send",
-      "Taskbar remembers your last real chat session",
-      "Hardened web session hydration against bad data and legacy hosts",
-      "Mobile public chat gets a free-message limit and larger touch targets",
-      "macOS desktop window now visible on launch, hidden in CI"
+      "Fresh chat routes now upgrade to real session URLs after the first send",
+      "Taskbar returns reopen the exact chat you were in",
+      "Public chat gains a proper free-message limit gate on mobile and web",
+      "macOS desktop window now shows on launch outside of CI"
     ],
-    "rawCommitCount": 10,
-    "generatedAt": "2026-07-06T16:18:12.350Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.740.1",
+    "rawCommitCount": 11,
+    "generatedAt": "2026-07-06T18:02:54.171Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.741.1",
     "path": "history/2026-07-06.json"
   },
   {
