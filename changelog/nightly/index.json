@@ -2,18 +2,18 @@
   {
     "date": "2026-07-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.736.1",
-    "title": "Fresh chat sessions settle cleanly and Mac desktop shows on launch",
-    "intro": "Today's nightly tightens how new chat sessions transition from a fresh canvas into a real, shareable route, and restores an immediately visible window when Aura launches on macOS while keeping headless CI runs invisible.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.738.1",
+    "title": "Fresh-chat routing gets durable, and macOS launches visibly again",
+    "intro": "Today's nightly centers on making chat routes behave predictably across sends, reloads, and taskbar returns, plus a fix that restores the macOS desktop window on launch while keeping CI runs headless.",
+    "entryCount": 3,
     "highlights": [
-      "Fresh chats now adopt their real session route after the first send",
-      "Share links resolve correctly from the active chat route",
-      "macOS desktop window is visible on launch, hidden under CI"
+      "Fresh chats now promote to real session URLs after the first send",
+      "Taskbar re-entry returns you to your last real chat conversation",
+      "macOS desktop window is visible on launch again, CI stays headless"
     ],
-    "rawCommitCount": 6,
-    "generatedAt": "2026-07-06T12:35:16.839Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.736.1",
+    "rawCommitCount": 8,
+    "generatedAt": "2026-07-06T13:27:40.485Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.738.1",
     "path": "history/2026-07-06.json"
   },
   {
