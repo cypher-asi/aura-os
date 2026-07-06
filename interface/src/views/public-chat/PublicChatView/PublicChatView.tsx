@@ -11,7 +11,12 @@ import {
   type FormEvent,
 } from "react";
 import { useTheme } from "@cypher-asi/zui";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   isGuestAuthError,
@@ -20,6 +25,7 @@ import {
   type PublicChatTurn,
 } from "../../../api/public-chat";
 import {
+  selectShouldShowGate,
   usePublicChatStore,
   type PublicMessage,
   type PublicSession,
@@ -31,6 +37,7 @@ import { PublicChoiceCtas } from "../PublicChoiceCtas";
 import { PersonaTickRail } from "../PersonaTickRail";
 import { PublicChatBubble } from "../PublicChatBubble";
 import { TypewriterText } from "../TypewriterText";
+import { isPublicLimitReachedError } from "../limit-error";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { deriveChatPalette } from "../MockAuraApp/derive-chat-palette";
 import { PERSONAS, getPersonaAt, type Persona } from "../personas";
@@ -232,6 +239,8 @@ export function PublicChatView(): React.ReactElement {
   const appendAssistantToken = usePublicChatStore((s) => s.appendAssistantToken);
   const commitAssistant = usePublicChatStore((s) => s.commitAssistant);
   const setTurnCount = usePublicChatStore((s) => s.setTurnCount);
+  const limit = usePublicChatStore((s) => s.limit);
+  const limitReached = usePublicChatStore(selectShouldShowGate);
 
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [draft, setDraft] = useState("");
@@ -315,6 +324,14 @@ export function PublicChatView(): React.ReactElement {
   const unableToSendMessage = t("chat.errors.unableToSend", {
     defaultValue: "Unable to send message",
   });
+  const limitReachedPlaceholder = t("chat.limitReachedPlaceholder", {
+    defaultValue: "Log in to keep chatting",
+  });
+  const signinSearch = location.search || "";
+  const signupParams = new URLSearchParams(location.search);
+  signupParams.set("tab", "register");
+  const signupSearch = `?${signupParams.toString()}`;
+  const backgroundState = { backgroundLocation: location };
 
   // Note: `/chat` without a valid `?session=` deliberately does NOT
   // auto-mint a session here. Sessions are minted by exactly two
@@ -388,9 +405,14 @@ export function PublicChatView(): React.ReactElement {
       const message = draft.trim();
       if (!message || isSending) return;
 
+      const state = usePublicChatStore.getState();
+      if (state.turnCount >= state.limit) {
+        setSendError(null);
+        return;
+      }
+
       track("public_message_sent", { mode: "code" });
 
-      const state = usePublicChatStore.getState();
       const targetSessionId =
         activeSessionId && state.sessions[activeSessionId]
           ? activeSessionId
@@ -441,6 +463,13 @@ export function PublicChatView(): React.ReactElement {
                   setIsSending(false);
                   streamRef.current = null;
                 });
+              return;
+            }
+            if (isPublicLimitReachedError(err)) {
+              setTurnCount(usePublicChatStore.getState().limit);
+              setSendError(null);
+              setIsSending(false);
+              streamRef.current = null;
               return;
             }
             setSendError(err.message || unableToSendMessage);
@@ -988,22 +1017,78 @@ export function PublicChatView(): React.ReactElement {
       ) : null}
       {isChatPage ? (
         <form
-          className={styles.inputBarSlot}
+          className={
+            limitReached
+              ? `${styles.inputBarSlot} ${styles.inputBarSlotLimitReached}`
+              : styles.inputBarSlot
+          }
           onSubmit={handleSubmit}
           autoComplete="off"
         >
           <label className={styles.inputLabel} htmlFor="public-chat-input">
             {t("chat.inputLabel", { defaultValue: "Message Aura" })}
           </label>
+          {limitReached ? (
+            <section
+              className={styles.limitNotice}
+              aria-label={t("chat.limitReachedTitle", {
+                defaultValue: "Free chat limit reached",
+              })}
+            >
+              <div className={styles.limitCopy}>
+                <h2 className={styles.limitTitle}>
+                  {t("chat.limitReachedTitle", {
+                    defaultValue: "Free chat limit reached",
+                  })}
+                </h2>
+                <p className={styles.limitBody}>
+                  {t("chat.limitReachedBody", {
+                    defaultValue: `You've used your ${limit} free messages. Log in or sign up to keep this conversation going.`,
+                    limit,
+                  })}
+                </p>
+              </div>
+              <div className={styles.limitActions}>
+                <Link
+                  to={{ pathname: "/login", search: signinSearch }}
+                  state={backgroundState}
+                  className={`${styles.limitAction} ${styles.limitActionSecondary}`}
+                  onClick={() =>
+                    track("public_login_clicked", {
+                      source: "desktop_limit_gate",
+                    })
+                  }
+                >
+                  {t("auth:logIn", { defaultValue: "Log In" })}
+                </Link>
+                <Link
+                  to={{ pathname: "/login", search: signupSearch }}
+                  state={backgroundState}
+                  className={`${styles.limitAction} ${styles.limitActionPrimary}`}
+                  onClick={() =>
+                    track("public_signup_clicked", {
+                      source: "desktop_limit_gate",
+                    })
+                  }
+                >
+                  {t("auth:signUp", { defaultValue: "Sign Up" })}
+                </Link>
+              </div>
+            </section>
+          ) : null}
           <input
             id="public-chat-input"
             className={styles.chatInput}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder={t("chat.inputPlaceholder", {
-              defaultValue: "Ask Aura anything...",
-            })}
-            disabled={isSending}
+            placeholder={
+              limitReached
+                ? limitReachedPlaceholder
+                : t("chat.inputPlaceholder", {
+                    defaultValue: "Ask Aura anything...",
+                  })
+            }
+            disabled={isSending || limitReached}
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -1012,13 +1097,15 @@ export function PublicChatView(): React.ReactElement {
           <button
             type="submit"
             className={styles.sendButton}
-            disabled={isSending || draft.trim().length === 0}
+            disabled={isSending || limitReached || draft.trim().length === 0}
           >
             {isSending
               ? t("chat.sending", { defaultValue: "Sending" })
               : t("chat.send", { defaultValue: "Send" })}
           </button>
-          {sendError ? <p className={styles.sendError}>{sendError}</p> : null}
+          {sendError && !limitReached ? (
+            <p className={styles.sendError}>{sendError}</p>
+          ) : null}
         </form>
       ) : (
         <OverlayScrollbar scrollRef={scrollerRef} />

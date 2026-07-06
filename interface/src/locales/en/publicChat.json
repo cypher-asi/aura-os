@@ -11,6 +11,9 @@
     },
     "inputLabel": "Message Aura",
     "inputPlaceholder": "Ask Aura anything...",
+    "limitReachedBody": "You've used your {{limit}} free messages. Log in or sign up to keep this conversation going.",
+    "limitReachedPlaceholder": "Log in to keep chatting",
+    "limitReachedTitle": "Free chat limit reached",
     "send": "Send",
     "sending": "Sending",
     "transcriptAriaLabel": "Chat transcript"

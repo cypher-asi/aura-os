@@ -27,6 +27,7 @@ import { track } from "../../../lib/analytics";
 import { PublicChatBubble } from "../PublicChatBubble";
 import { MobileLandingHero } from "../MobileLandingHero";
 import { PERSONAS } from "../personas";
+import { isPublicLimitReachedError } from "../limit-error";
 import styles from "./MobilePublicChatView.module.css";
 
 /**
@@ -281,6 +282,13 @@ export function MobilePublicChatView(): React.ReactElement {
                   setIsSending(false);
                   streamRef.current = null;
                 });
+              return;
+            }
+            if (isPublicLimitReachedError(err)) {
+              setTurnCount(usePublicChatStore.getState().limit);
+              setSendError(null);
+              setIsSending(false);
+              streamRef.current = null;
               return;
             }
             setSendError(err.message || unableToSendMessage);

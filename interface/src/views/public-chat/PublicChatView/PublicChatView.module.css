@@ -442,6 +442,11 @@
   backdrop-filter: blur(18px);
 }
 
+.inputBarSlotLimitReached {
+  width: min(680px, calc(100% - 48px));
+  border-radius: 28px;
+}
+
 .inputLabel {
   position: absolute;
   width: 1px;
@@ -449,6 +454,66 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.limitNotice {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 4px 4px 8px;
+}
+
+.limitCopy {
+  min-width: 0;
+}
+
+.limitTitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 650;
+  color: var(--color-text-primary);
+}
+
+.limitBody {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+.limitActions {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.limitAction {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.limitActionSecondary {
+  color: var(--color-text-primary);
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 24%, transparent);
+  background: transparent;
+}
+
+.limitActionPrimary {
+  color: var(--color-bg-canvas);
+  border: 1px solid transparent;
+  background: var(--color-text-primary);
 }
 
 .chatInput {
@@ -561,5 +626,20 @@
   .inputBarSlot {
     width: calc(100% - 24px);
     bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .inputBarSlotLimitReached {
+    border-radius: 24px;
+  }
+
+  .limitNotice {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .limitActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }

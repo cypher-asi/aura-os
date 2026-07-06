@@ -337,6 +337,65 @@ describe("PublicChatView", () => {
     expect(screen.getByText("Hello from Aura")).toBeInTheDocument();
   });
 
+  it("shows a contextual login gate and disables the composer when the guest limit is reached", () => {
+    act(() => {
+      usePublicChatStore.setState({ turnCount: 3, limit: 3 });
+    });
+
+    renderView("/chat");
+
+    expect(screen.getByText("Free chat limit reached")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "You've used your 3 free messages. Log in or sign up to keep this conversation going.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("limit_reached")).not.toBeInTheDocument();
+
+    const input = screen.getByRole("textbox", { name: "Message Aura" });
+    expect(input).toBeDisabled();
+    expect(input).toHaveAttribute("placeholder", "Log in to keep chatting");
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      "/login",
+    );
+    expect(screen.getByRole("link", { name: "Sign Up" })).toHaveAttribute(
+      "href",
+      "/login?tab=register",
+    );
+    expect(streamPublicChatMock).not.toHaveBeenCalled();
+  });
+
+  it("maps a raw limit_reached stream error into the login gate instead of rendering the raw code", async () => {
+    const user = userEvent.setup();
+    let sessionId = "";
+    act(() => {
+      sessionId = usePublicChatStore.getState().createSession();
+      usePublicChatStore.setState({ turnCount: 2, limit: 3 });
+    });
+    streamPublicChatMock.mockImplementationOnce(
+      (args: { onError: (e: Error) => void }) => {
+        args.onError(new Error("limit_reached"));
+        return { close: vi.fn() };
+      },
+    );
+
+    renderView(`/chat?session=${sessionId}`);
+    await user.type(
+      screen.getByRole("textbox", { name: "Message Aura" }),
+      "Guest test message 4",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Free chat limit reached")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("limit_reached")).not.toBeInTheDocument();
+    expect(usePublicChatStore.getState().turnCount).toBe(3);
+    expect(screen.getByRole("textbox", { name: "Message Aura" })).toBeDisabled();
+  });
+
   it("re-mints a fresh guest token and retries once when the stream rejects a stale token", async () => {
     // Simulates the post-deploy state: the cached guest token was
     // signed with the previous server secret, so the first stream
