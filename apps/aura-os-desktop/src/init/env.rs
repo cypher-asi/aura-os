@@ -9,9 +9,7 @@
 //! - the compile-time fallbacks emitted by `build.rs`
 
 pub(crate) fn ci_mode_enabled() -> bool {
-    std::env::var("AURA_DESKTOP_CI")
-        .ok()
-        .is_some_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+    env_flag_enabled("AURA_DESKTOP_CI") || env_flag_enabled("CI")
 }
 
 pub(crate) fn env_flag_enabled(name: &str) -> bool {
