@@ -139,7 +139,7 @@ describe("ChatAppRoute", () => {
     render(<ChatAppRoute />);
 
     expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
-      freshCanvasPending: false,
+      freshCanvasPending: true,
     });
   });
 
@@ -150,7 +150,7 @@ describe("ChatAppRoute", () => {
     render(<ChatAppRoute />);
 
     expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
-      freshCanvasPending: false,
+      freshCanvasPending: true,
     });
   });
 
@@ -161,6 +161,7 @@ describe("ChatAppRoute", () => {
 
     expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
       freshCanvasPending: true,
+      freshCanvasKey: "abc",
     });
   });
 
@@ -172,7 +173,7 @@ describe("ChatAppRoute", () => {
     render(<ChatAppRoute />);
 
     expect(mocks.useChatAppChat).toHaveBeenCalledWith(undefined, null, {
-      freshCanvasPending: false,
+      freshCanvasPending: true,
     });
     const props = JSON.parse(
       screen.getByTestId("chat-panel").getAttribute("data-props") ?? "{}",

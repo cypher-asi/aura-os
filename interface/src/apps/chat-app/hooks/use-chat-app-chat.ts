@@ -27,7 +27,7 @@ const CHAT_APP_DEFAULT_MODEL = "aura-gpt-5-4-mini";
 export function useChatAppChat(
   agentId: string | undefined,
   pinnedSessionId: string | null,
-  opts: { freshCanvasPending?: boolean } = {},
+  opts: { freshCanvasPending?: boolean; freshCanvasKey?: string | null } = {},
 ): ChatPanelProps {
   const base = useStandaloneAgentChat(agentId, pinnedSessionId, opts);
   return useMemo<ChatPanelProps>(

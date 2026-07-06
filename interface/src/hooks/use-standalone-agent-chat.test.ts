@@ -1,8 +1,9 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 
 const mockSendMessage = vi.fn();
 const mockStopStreaming = vi.fn();
 const mockResetEvents = vi.fn();
+const mockMarkNextSendAsNewSession = vi.fn();
 const mockGetIsStreaming = vi.fn(() => false);
 const { mockListSessionEventsPaginated } = vi.hoisted(() => ({
   mockListSessionEventsPaginated: vi.fn(() =>
@@ -21,7 +22,7 @@ vi.mock("./use-agent-chat-stream", () => ({
     sendMessage: mockSendMessage,
     stopStreaming: mockStopStreaming,
     resetEvents: mockResetEvents,
-    markNextSendAsNewSession: vi.fn(),
+    markNextSendAsNewSession: mockMarkNextSendAsNewSession,
   })),
 }));
 
@@ -221,6 +222,7 @@ describe("useStandaloneAgentChat", () => {
     mockSendMessage.mockReset();
     mockStopStreaming.mockReset();
     mockResetEvents.mockReset();
+    mockMarkNextSendAsNewSession.mockReset();
     mockGetIsStreaming.mockReset();
     mockGetIsStreaming.mockImplementation(() => false);
     mockSetSelectedAgent.mockReset();
@@ -291,6 +293,35 @@ describe("useStandaloneAgentChat", () => {
 
     expect(typeof result.current.onSend).toBe("function");
     expect(typeof result.current.onStop).toBe("function");
+  });
+
+  it("arms the next send as a new session for a fresh chat route", async () => {
+    mockProjects = [{ project_id: "proj-1", name: "Alpha", description: "" }];
+    mockAgentsByProject = { "proj-1": [{ agent_id: "agent-1" }] };
+
+    const { result, rerender } = renderHook(
+      ({ freshKey }: { freshKey: string }) =>
+        useStandaloneAgentChat("agent-1", null, {
+          freshCanvasPending: true,
+          freshCanvasKey: freshKey,
+        }),
+      { initialProps: { freshKey: "fresh-a" } },
+    );
+
+    expect(mockMarkNextSendAsNewSession).toHaveBeenCalledTimes(1);
+
+    rerender({ freshKey: "fresh-a" });
+    expect(mockMarkNextSendAsNewSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await result.current.onSend("hello");
+    });
+
+    expect(mockAddOptimisticSession).toHaveBeenCalledTimes(2);
+    expect(mockSendMessage).toHaveBeenCalledWith("hello");
+
+    rerender({ freshKey: "fresh-b" });
+    expect(mockMarkNextSendAsNewSession).toHaveBeenCalledTimes(2);
   });
 
   it("collapses the project picker to a single non-interactive entry", () => {

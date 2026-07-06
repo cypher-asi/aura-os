@@ -112,7 +112,7 @@ function loadPersistedProject(agentId: string): string | undefined {
 export function useStandaloneAgentChat(
   agentId: string | undefined,
   pinnedSessionId: string | null = null,
-  opts: { freshCanvasPending?: boolean } = {},
+  opts: { freshCanvasPending?: boolean; freshCanvasKey?: string | null } = {},
 ): ChatPanelProps {
   const { remoteOnly } = useAuraCapabilities();
   const agentProjects = useProjectsListStore(useShallow(selectProjectsForAgent(agentId)));
@@ -226,6 +226,10 @@ export function useStandaloneAgentChat(
   // `SessionReady` lands, we swap the synthetic id for the real one
   // in place. See the matching ref in `AgentChatPanel`.
   const pendingOptimisticIdRef = useRef<string | null>(null);
+  // Armed by both the standalone "+" handler and the Chat app
+  // `/chat?fresh=...` route. The next send inserts the optimistic row;
+  // `SessionReady` later swaps that placeholder id for the real one.
+  const pendingOptimisticArmedRef = useRef(false);
   // Mirror `agentId` and the project binding via refs so the
   // `SessionReady`-side reconciliation doesn't ride along in
   // `handleSessionReady`'s deps. The chat input bar's `onSend`/internal
@@ -312,12 +316,27 @@ export function useStandaloneAgentChat(
   const contextUsage = useContextUsage(streamKey);
   const [freshChatNonce, setFreshChatNonce] = useState(0);
   const freshCanvasPending = !pinnedSessionId && (opts.freshCanvasPending || freshChatNonce > 0);
+  const freshRouteArmKey = opts.freshCanvasPending
+    ? opts.freshCanvasKey ?? "__route_fresh__"
+    : null;
+  const lastArmedFreshRouteKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (pinnedSessionId) {
       setFreshChatNonce(0);
     }
   }, [pinnedSessionId]);
+
+  useEffect(() => {
+    if (!agentId || pinnedSessionId || !freshRouteArmKey) {
+      lastArmedFreshRouteKeyRef.current = null;
+      return;
+    }
+    if (lastArmedFreshRouteKeyRef.current === freshRouteArmKey) return;
+    lastArmedFreshRouteKeyRef.current = freshRouteArmKey;
+    markNextSendAsNewSession();
+    pendingOptimisticArmedRef.current = true;
+  }, [agentId, freshRouteArmKey, markNextSendAsNewSession, pinnedSessionId]);
 
   // Clear the stream slot whenever the user navigates between two
   // historical sessions. Mirrors the same effect in
@@ -399,11 +418,6 @@ export function useStandaloneAgentChat(
   const onClear = useCallback(() => {
     resetEvents([], { allowWhileStreaming: true });
   }, [resetEvents]);
-
-  // Set in `handleNewChat`, consumed inside the `wrappedSend` wrapper
-  // to decide whether to insert an optimistic SessionsList row on the
-  // very next send. See the matching ref in `AgentChatPanel`.
-  const pendingOptimisticArmedRef = useRef(false);
 
   const handleNewChat = useCallback(() => {
     if (!agentId) return;

@@ -46,7 +46,7 @@ export function ChatAppRoute() {
   const freshChatId = searchParams.get("fresh");
   const agentIdParam = searchParams.get("agent");
   const { sessions } = useChatAppSessions(agents);
-  const freshCanvasPending = !sessionId && freshChatId != null;
+  const freshCanvasPending = !sessionId;
   useImportPublicChatsOnAuth(chatAgent);
 
   const agentById = useMemo(() => {
@@ -124,10 +124,18 @@ export function ChatAppRoute() {
     }
   }, [effectiveAgentId, effectiveAgent, setSelectedAgent]);
 
+  const chatOptions = useMemo(
+    () =>
+      freshChatId != null
+        ? { freshCanvasPending, freshCanvasKey: freshChatId }
+        : { freshCanvasPending },
+    [freshCanvasPending, freshChatId],
+  );
+
   const sharedChatProps = useChatAppChat(
     effectiveAgentId,
     sessionId,
-    { freshCanvasPending },
+    chatOptions,
   );
 
   // Pre-resolve panel props so the chat surface can mount on the very
