@@ -30,7 +30,7 @@ describe("useAgentOnboardingStore", () => {
     expect(store().currentStep).toBe(0);
 
     store().goTo(99);
-    expect(store().currentStep).toBe(5);
+    expect(store().currentStep).toBe(2);
   });
 
   it("toggles skill selection on and off", () => {

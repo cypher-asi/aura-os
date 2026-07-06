@@ -48,6 +48,15 @@ type AgentState = {
   agentsStatus: FetchStatus;
   agentsError: string | null;
 
+  /**
+   * True when this session's agent fetch found an account with no agents at
+   * all — i.e. a brand-new user — recorded *before* the idempotent CEO/Home
+   * ensure creates the default agent. Drives the first-run onboarding choice
+   * surface (`OnboardingChoice`), which needs "had no agents" rather than the
+   * post-ensure list (that always contains the auto-created CEO).
+   */
+  firstRunDetected: boolean;
+
   history: Record<string, HistoryEntry>;
 
   selectedAgentId: string | null;
@@ -152,6 +161,7 @@ export const useAgentStore = create<AgentState>()(
       agents: [],
       agentsStatus: "idle",
       agentsError: null,
+      firstRunDetected: false,
       history: {},
       selectedAgentId: null,
       pinnedAgentIds: readIdSet(PINNED_KEY),
@@ -276,6 +286,9 @@ export const useAgentStore = create<AgentState>()(
                 }));
               }
             } else {
+              if (!isAuraCaptureSessionActive()) {
+                set({ firstRunDetected: true });
+              }
               const createdAgent = await ensureCeoHome();
               commitAgents(createdAgent ? [...agents, createdAgent] : agents);
             }
@@ -438,6 +451,7 @@ useAuthStore.subscribe((state) => {
       agents: [],
       agentsStatus: "idle",
       agentsError: null,
+      firstRunDetected: false,
       history: {},
       selectedAgentId: null,
       pinnedAgentIds: new Set(),

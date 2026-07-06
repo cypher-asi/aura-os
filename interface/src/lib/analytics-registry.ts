@@ -2,7 +2,7 @@
 // Canonical inventory of client analytics events. Do NOT re-derive via
 // grep/search — dynamic-import call sites make string search unreliable; the
 // contract test enforces this set against the actual call sites instead.
-// 43 client events; session_active is server-only and deliberately absent.
+// 44 client events; session_active is server-only and deliberately absent.
 export const ANALYTICS_EVENTS = {
   // lifecycle / auth
   app_opened: {}, // main.tsx:76
@@ -45,6 +45,7 @@ export const ANALYTICS_EVENTS = {
   onboarding_checklist_dismissed: { props: ["tasks_completed"] },
   onboarding_reopened: {}, // use-menu-actions.ts:225
   onboarding_agent_configured: {}, // useApplyAgentOnboarding.ts:42
+  onboarding_lane_selected: { props: ["lane"] }, // OnboardingChoice.tsx
   // public / marketing
   public_page_viewed: {}, // use-public-shell-analytics.ts:18
   public_gate_shown: {}, // use-public-shell-analytics.ts:37
@@ -56,7 +57,7 @@ export const ANALYTICS_EVENTS = {
   public_create_agent_clicked: { props: ["source"] },
   public_start_chat_clicked: { props: ["source"] },
 } as const satisfies Record<string, { props?: readonly string[] }>;
-// 43 entries — the complete client analytics event set.
+// 44 entries — the complete client analytics event set.
 
 export type AnalyticsEventName = keyof typeof ANALYTICS_EVENTS;
 
