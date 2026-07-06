@@ -3,21 +3,24 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-06T11:35:52.592Z",
+  "generatedAt": "2026-07-06T12:35:16.839Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.733.1",
+  "version": "0.1.0-nightly.736.1",
   "date": "2026-07-06",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.733.1",
-  "lastIncludedSha": "164f2d284ed67ccf98905fb5d36ac7c73e4f767b",
-  "previousProcessedSha": "8a544bb1af43f8c12af172696475bc79ccf5f9ce",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.736.1",
+  "lastIncludedSha": "a3ca860b5a2cb427c1d20bcb6b4df8f8beb8b6d9",
+  "previousProcessedSha": "164f2d284ed67ccf98905fb5d36ac7c73e4f767b",
   "commitShas": [
     "378f600c5228f09599987bac03d044eb54172742",
     "8a544bb1af43f8c12af172696475bc79ccf5f9ce",
-    "164f2d284ed67ccf98905fb5d36ac7c73e4f767b"
+    "164f2d284ed67ccf98905fb5d36ac7c73e4f767b",
+    "26652002eccb3224a38fc46f43e80fdb8ac07fd9",
+    "c9d2b5c3280f2d0dd169b255ef381836fbe8d8c0",
+    "a3ca860b5a2cb427c1d20bcb6b4df8f8beb8b6d9"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 3,
+  "rawCommitCount": 6,
+  "filteredCommitCount": 6,
   "rawCommits": [
     {
       "sha": "378f600c5228f09599987bac03d044eb54172742",
@@ -145,36 +148,146 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "26652002eccb3224a38fc46f43e80fdb8ac07fd9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-06T07:46:11-04:00",
+      "subject": "Show macOS desktop window on launch",
+      "body": "",
+      "parents": [
+        "164f2d284ed67ccf98905fb5d36ac7c73e4f767b"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/ui/main_window.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 1
+      },
+      "committedAtMs": 1783338371000,
+      "cleanSubject": "Show macOS desktop window on launch",
+      "keywords": [
+        "show",
+        "macos",
+        "desktop",
+        "window",
+        "launch"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "c9d2b5c3280f2d0dd169b255ef381836fbe8d8c0",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-06T07:54:48-04:00",
+      "subject": "Keep CI desktop launch hidden",
+      "body": "",
+      "parents": [
+        "26652002eccb3224a38fc46f43e80fdb8ac07fd9"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/ui/main_window.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 9,
+        "deletions": 3
+      },
+      "committedAtMs": 1783338888000,
+      "cleanSubject": "Keep CI desktop launch hidden",
+      "keywords": [
+        "keep",
+        "desktop",
+        "launch",
+        "hidden"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "a3ca860b5a2cb427c1d20bcb6b4df8f8beb8b6d9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-06T08:06:07-04:00",
+      "subject": "Detect standard CI for desktop launch mode",
+      "body": "",
+      "parents": [
+        "c9d2b5c3280f2d0dd169b255ef381836fbe8d8c0"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/init/env.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 3
+      },
+      "committedAtMs": 1783339567000,
+      "cleanSubject": "Detect standard CI for desktop launch mode",
+      "keywords": [
+        "detect",
+        "standard",
+        "desktop",
+        "launch",
+        "mode"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.733.1",
+      "version": "0.1.0-nightly.736.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65327392
+          "sizeBytes": 65330026
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131918328
+          "sizeBytes": 131901944
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -184,29 +297,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.733.1",
+      "version": "0.1.0-nightly.736.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.733.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.736.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61135335
+          "sizeBytes": 61130456
         },
         {
-          "name": "AURA_0.1.0-nightly.733.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.736.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60178008
+          "sizeBytes": 60167783
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -216,29 +329,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.733.1",
+      "version": "0.1.0-nightly.736.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.733.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.736.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63369633
+          "sizeBytes": 63369392
         },
         {
-          "name": "AURA_0.1.0-nightly.733.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.736.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62404816
+          "sizeBytes": 62395944
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -248,17 +361,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.733.1",
+      "version": "0.1.0-nightly.736.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48262603
+          "sizeBytes": 48265856
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.733.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.736.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -267,35 +380,61 @@
     }
   ],
   "rendered": {
-    "title": "Fresh chat sessions land on a stable route",
-    "intro": "Today's nightly is a focused fix for the chat app's \"fresh chat\" flow: new conversations now bind to their session correctly, swap the temporary fresh URL for the canonical session route once the backend catches up, and share links pick up the right project and instance from the URL.",
+    "title": "Fresh chat sessions settle cleanly and Mac desktop shows on launch",
+    "intro": "Today's nightly tightens how new chat sessions transition from a fresh canvas into a real, shareable route, and restores an immediately visible window when Aura launches on macOS while keeping headless CI runs invisible.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:10 AM",
         "started_at": "2026-07-06T10:10:14.000Z",
         "ended_at": "2026-07-06T11:12:59.000Z",
-        "title": "Fresh chat route adopts the real session after first send",
-        "summary": "The chat app's fresh-canvas flow now correctly arms a new session, swaps the ephemeral fresh URL for the persisted session route, and hands share actions the right project and instance context.",
+        "title": "Fresh chat canvases adopt their real session route after first send",
+        "summary": "The chat app now holds a fresh canvas until a session actually materializes, then rewrites the URL to the persisted session so navigation, sharing, and reloads all point at the real chat.",
         "items": [
           {
-            "text": "Fresh chats now stay in the pending-canvas state until a real session exists and pass a stable freshCanvasKey through to the chat hook, so the next send is reliably armed as a new session instead of being dropped or misbound.",
+            "text": "Fresh chat routes now correctly stay in the pending canvas state until a session exists, and pass a stable freshCanvasKey so the next send is armed exactly once as a new session instead of misbinding to a stale one.",
             "commit_shas": [
               "378f600c5228f09599987bac03d044eb54172742"
             ],
             "confidence": "high"
           },
           {
-            "text": "Once a fresh chat's first send materializes in the session list, ChatAppRoute rewrites the URL in place — dropping the fresh= param and filling in session, project, instance, and agent — so refreshes and back-navigation land on the persisted conversation instead of a blank canvas.",
+            "text": "Once the first message in a fresh chat produces a real session, the URL is replaced in-place with the persisted project, instance, session, and agent params, dropping the transient fresh=… marker so reloads and back-navigation land on the actual conversation.",
             "commit_shas": [
+              "8a544bb1af43f8c12af172696475bc79ccf5f9ce",
               "164f2d284ed67ccf98905fb5d36ac7c73e4f767b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Message share links now read project and instance from the current chat route (including /projects/:id/agents/:id paths) rather than relying solely on the stream key, fixing share-link creation for agent-scoped streams.",
+            "text": "Copy-share-link on a message now reads project and instance from the active chat route (query params or /projects/:id/agents/:id path) instead of only the stream key, so shares from an agent-scoped stream resolve to the correct session.",
             "commit_shas": [
               "8a544bb1af43f8c12af172696475bc79ccf5f9ce"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "4:46 AM",
+        "started_at": "2026-07-06T11:46:11.000Z",
+        "ended_at": "2026-07-06T12:06:07.000Z",
+        "title": "macOS launches with a visible window, CI stays headless",
+        "summary": "The desktop app now shows its main window on launch for macOS users while automatically staying hidden in CI environments, including standard CI runners.",
+        "items": [
+          {
+            "text": "On macOS the main window is now created visible at launch instead of starting hidden, so users see Aura immediately after opening the app; Windows and Linux continue to defer visibility as before.",
+            "commit_shas": [
+              "26652002eccb3224a38fc46f43e80fdb8ac07fd9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "CI runs keep the desktop window hidden by gating macOS visibility behind ci_mode_enabled(), and that check now also honors the standard CI environment variable in addition to AURA_DESKTOP_CI, so generic CI providers automatically get the headless launch path.",
+            "commit_shas": [
+              "c9d2b5c3280f2d0dd169b255ef381836fbe8d8c0",
+              "a3ca860b5a2cb427c1d20bcb6b4df8f8beb8b6d9"
             ],
             "confidence": "high"
           }
@@ -303,10 +442,10 @@
       }
     ],
     "highlights": [
-      "Fresh chat sessions bind reliably on first send",
-      "Chat URL swaps to the canonical session route after send",
-      "Share links resolve project and instance from the active route"
+      "Fresh chats now adopt their real session route after the first send",
+      "Share links resolve correctly from the active chat route",
+      "macOS desktop window is visible on launch, hidden under CI"
     ],
-    "raw_commit_count": 3
+    "raw_commit_count": 6
   }
 }
