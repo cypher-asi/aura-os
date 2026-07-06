@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-07-06",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.731.1",
+    "title": "Reliable fresh-session handoff in the chat app",
+    "intro": "A focused nightly with a single, targeted fix to how the chat app opens brand-new sessions, making the transition from a fresh canvas to a live conversation behave predictably.",
+    "entryCount": 1,
+    "highlights": [
+      "Fresh chat sessions bind correctly on the first send",
+      "Fresh-canvas state now keyed per new conversation"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-06T10:34:08.564Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.731.1",
+    "path": "history/2026-07-06.json"
+  },
+  {
     "date": "2026-07-05",
     "channel": "nightly",
     "version": "0.1.0-nightly.730.1",
