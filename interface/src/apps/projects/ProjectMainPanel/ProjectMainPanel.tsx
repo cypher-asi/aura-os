@@ -3,30 +3,58 @@ import { useParams } from "react-router-dom";
 import { useTerminalPanelStore } from "../../../stores/terminal-panel-store";
 import { useSidekickStore } from "../../../stores/sidekick-store";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
+import { resolveWorkspaceAccess } from "../../../shared/lib/workspace-access";
 
 export function ProjectMainPanel({ children }: { children?: ReactNode }) {
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
   const setTerminalTarget = useTerminalPanelStore((s) => s.setTerminalTarget);
+  const clearTerminalTarget = useTerminalPanelStore((s) => s.clearTerminalTarget);
+  const { features } = useAuraCapabilities();
 
-  const { remoteAgentId, workspacePath, status } = useTerminalTarget({ projectId, agentInstanceId });
+  const { remoteAgentId, remoteWorkspacePath, workspacePath, status } =
+    useTerminalTarget({ projectId, agentInstanceId });
+  const workspaceAccess = resolveWorkspaceAccess({
+    workspacePath,
+    remoteWorkspacePath,
+    remoteAgentId,
+    linkedWorkspace: features.linkedWorkspace,
+  });
 
-  // Force the Projects-app sidekick to start on the Terminal tab. The shared
-  // sidekick store persists the last tab to localStorage and is also mutated
-  // by the Tasks app (writes "tasks") and the spec-generation stream (writes
-  // "specs"), which otherwise leaks foreign defaults into Projects entry.
-  // Guard with a ref so this only runs once per ProjectMainPanel mount, not
-  // on every project switch — switching tabs within the session still sticks.
+  // The Projects app should start on Terminal only when the active workspace is
+  // reachable. Web users can chat with hosted agents, but browser sessions
+  // cannot attach to desktop-local workspaces, so their safe default is Chats.
   const didInitSidekickTab = useRef(false);
   useEffect(() => {
     if (didInitSidekickTab.current) return;
+    if (status !== "ready") return;
     didInitSidekickTab.current = true;
-    useSidekickStore.getState().setActiveTab("terminal");
-  }, []);
+    useSidekickStore.getState().setActiveTab(
+      workspaceAccess.canUseWorkspace ? "terminal" : "sessions",
+    );
+  }, [status, workspaceAccess.canUseWorkspace]);
 
   useEffect(() => {
     if (status !== "ready") return;
-    setTerminalTarget({ cwd: workspacePath, remoteAgentId, projectId });
-  }, [projectId, remoteAgentId, setTerminalTarget, status, workspacePath]);
+    if (!workspaceAccess.canUseWorkspace) {
+      clearTerminalTarget(projectId);
+      return;
+    }
+    setTerminalTarget({
+      cwd: workspaceAccess.workspacePath,
+      remoteAgentId: workspaceAccess.kind === "remote" ? remoteAgentId : undefined,
+      projectId,
+    });
+  }, [
+    clearTerminalTarget,
+    projectId,
+    remoteAgentId,
+    setTerminalTarget,
+    status,
+    workspaceAccess.canUseWorkspace,
+    workspaceAccess.kind,
+    workspaceAccess.workspacePath,
+  ]);
 
   return <>{children}</>;
 }

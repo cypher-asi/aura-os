@@ -10,9 +10,14 @@ const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectContext = vi.fn();
 const mockGetLastAgent = vi.fn();
 const mockUseMobileTasks = vi.fn();
+const mockUseTerminalTarget = vi.fn();
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
+}));
+
+vi.mock("../../hooks/use-terminal-target", () => ({
+  useTerminalTarget: () => mockUseTerminalTarget(),
 }));
 
 vi.mock("../../stores/project-action-store", () => ({
@@ -94,6 +99,17 @@ import { ProjectWorkView } from "./ProjectWorkView";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUseAuraCapabilities.mockReturnValue({
+    isMobileLayout: true,
+    features: { linkedWorkspace: true },
+  });
+  mockUseTerminalTarget.mockReturnValue({
+    remoteAgentId: undefined,
+    remoteAgentInstanceId: undefined,
+    remoteWorkspacePath: undefined,
+    workspacePath: "/Users/demo/project",
+    status: "ready",
+  });
   mockGetLastAgent.mockReturnValue(null);
   mockUseProjectContext.mockReturnValue({
     project: { project_id: "proj-1" },
@@ -129,7 +145,10 @@ beforeEach(() => {
 
 describe("ProjectWorkView", () => {
   it("keeps the desktop execution view unchanged", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    mockUseAuraCapabilities.mockReturnValue({
+      isMobileLayout: false,
+      features: { linkedWorkspace: true },
+    });
 
     render(<ProjectWorkView />);
 
@@ -138,8 +157,6 @@ describe("ProjectWorkView", () => {
   });
 
   it("keeps the mobile work flow focused on execution and specs", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
-
     render(<ProjectWorkView />);
 
     expect(screen.getByText("Recent activity")).toBeInTheDocument();
@@ -151,7 +168,6 @@ describe("ProjectWorkView", () => {
   });
 
   it("uses the remembered current agent in the mobile execution summary", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
     mockGetLastAgent.mockReturnValue("agent-b");
 
     render(<ProjectWorkView />);
@@ -162,7 +178,6 @@ describe("ProjectWorkView", () => {
   });
 
   it("shows a mobile-first empty state when there is no recent activity yet", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
     mockUseMobileTasks.mockReturnValue({
       tasks: [],
       tasksBySpec: new Map(),
@@ -174,5 +189,45 @@ describe("ProjectWorkView", () => {
 
     expect(screen.getByText("No recent work yet")).toBeInTheDocument();
     expect(screen.getByText("Start the loop to see live task progress and planning activity here.")).toBeInTheDocument();
+  });
+
+  it("disables mobile start when a local workspace is not reachable from web", () => {
+    mockUseAuraCapabilities.mockReturnValue({
+      isMobileLayout: true,
+      features: { linkedWorkspace: false },
+    });
+    mockUseTerminalTarget.mockReturnValue({
+      remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
+      remoteWorkspacePath: undefined,
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    });
+
+    render(<ProjectWorkView />);
+
+    expect(screen.getByRole("button", { name: "Start remote work" })).toBeDisabled();
+    expect(
+      screen.getByText("Build tools for local workspaces are available in Aura Desktop"),
+    ).toBeInTheDocument();
+  });
+
+  it("disables mobile start when a remote workspace has no startable instance", () => {
+    mockUseAuraCapabilities.mockReturnValue({
+      isMobileLayout: true,
+      features: { linkedWorkspace: false },
+    });
+    mockUseTerminalTarget.mockReturnValue({
+      remoteAgentId: "remote-template-1",
+      remoteAgentInstanceId: undefined,
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    });
+
+    render(<ProjectWorkView />);
+
+    expect(screen.getByRole("button", { name: "Start remote work" })).toBeDisabled();
+    expect(screen.getByText("Remote workspace is not available yet")).toBeInTheDocument();
   });
 });

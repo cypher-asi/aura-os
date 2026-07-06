@@ -47,13 +47,13 @@ interface ServerRuntimeCapabilities {
 
 const RUNTIME_CAPABILITIES_PATH = "/api/system/runtime-capabilities";
 
-function buildFeatureAvailability(hasDesktopBridge: boolean, isMobileLayout: boolean): AuraFeatureAvailability {
+function buildFeatureAvailability(hasDesktopBridge: boolean): AuraFeatureAvailability {
   return {
     windowControls: hasDesktopBridge,
-    linkedWorkspace: hasDesktopBridge && !isMobileLayout,
+    linkedWorkspace: hasDesktopBridge,
     nativeUpdater: hasDesktopBridge,
     hostRetargeting: !hasDesktopBridge,
-    ideIntegration: hasDesktopBridge && !isMobileLayout,
+    ideIntegration: hasDesktopBridge,
   };
 }
 
@@ -114,7 +114,7 @@ function requestRuntimeCapabilities(): Promise<void> {
 
 function readCapabilities(): AuraCapabilities {
   if (typeof window === "undefined") {
-    const features = buildFeatureAvailability(false, false);
+    const features = buildFeatureAvailability(false);
     return {
       hasDesktopBridge: false,
       remoteOnly: true,
@@ -154,7 +154,7 @@ function readCapabilities(): AuraCapabilities {
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
     );
   const isMobileClient = isNativeApp || isMobileUserAgent;
-  const features = buildFeatureAvailability(hasDesktopBridge, isMobileLayout);
+  const features = buildFeatureAvailability(hasDesktopBridge);
   const localRuntimeAvailable = localAgentRuntimeAvailable(hasDesktopBridge);
 
   return {

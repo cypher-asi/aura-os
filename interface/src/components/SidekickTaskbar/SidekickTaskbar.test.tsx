@@ -6,20 +6,32 @@ import { useLoopActivityStore } from "../../stores/loop-activity-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { SidekickTaskbar } from "./SidekickTaskbar";
 
-const { mockHandleStartLoopEngineering } = vi.hoisted(() => ({
+const {
+  mockHandleStartLoopEngineering,
+  mockUseAutomationStatus,
+  mockWorkspaceState,
+} = vi.hoisted(() => ({
   mockHandleStartLoopEngineering: vi.fn(),
+  mockUseAutomationStatus: vi.fn(),
+  mockWorkspaceState: {
+    linkedWorkspace: false,
+    terminalTarget: {
+      remoteAgentId: null as string | null,
+      remoteAgentInstanceId: null as string | null,
+      remoteWorkspacePath: null as string | null,
+      workspacePath: null as string | null,
+    },
+  },
 }));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
-  useAuraCapabilities: () => ({ features: { linkedWorkspace: false } }),
+  useAuraCapabilities: () => ({
+    features: { linkedWorkspace: mockWorkspaceState.linkedWorkspace },
+  }),
 }));
 
 vi.mock("../../hooks/use-terminal-target", () => ({
-  useTerminalTarget: () => ({
-    remoteAgentId: null,
-    remoteWorkspacePath: null,
-    workspacePath: null,
-  }),
+  useTerminalTarget: () => mockWorkspaceState.terminalTarget,
 }));
 
 vi.mock("../../stores/project-action-store", () => ({
@@ -62,12 +74,7 @@ vi.mock("../SidekickTabBar", () => ({
 }));
 
 vi.mock("../AutomationBar/useAutomationStatus", () => ({
-  useAutomationStatus: () => ({
-    canStartLoopEngineering: true,
-    handleStartLoopEngineering: mockHandleStartLoopEngineering,
-    startError: null,
-    clearStartError: vi.fn(),
-  }),
+  useAutomationStatus: (...args: unknown[]) => mockUseAutomationStatus(...args),
 }));
 
 vi.mock("../AutomationBar/LoopEngineeringPanel", () => ({
@@ -162,6 +169,20 @@ describe("SidekickTaskbar", () => {
     useLoopActivityStore.setState({ loops: {}, hydrated: false });
     mockHandleStartLoopEngineering.mockReset();
     mockHandleStartLoopEngineering.mockResolvedValue(undefined);
+    mockUseAutomationStatus.mockReset();
+    mockUseAutomationStatus.mockReturnValue({
+      canStartLoopEngineering: true,
+      handleStartLoopEngineering: mockHandleStartLoopEngineering,
+      startError: null,
+      clearStartError: vi.fn(),
+    });
+    mockWorkspaceState.linkedWorkspace = false;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: null,
+      remoteAgentInstanceId: null,
+      remoteWorkspacePath: null,
+      workspacePath: null,
+    };
   });
 
   it("renders active run progress without recursive loop-activity updates", () => {
@@ -175,6 +196,72 @@ describe("SidekickTaskbar", () => {
     );
     expect(screen.getAllByLabelText("running").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("tab-files")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("tab-terminal")).not.toBeInTheDocument();
+  });
+
+  it("hides Loop Engineering when no project workspace is reachable", () => {
+    renderTaskbar();
+
+    expect(screen.queryByTestId("tab-loop-engineering")).not.toBeInTheDocument();
+  });
+
+  it("redirects stale Terminal state to Chats when workspace tools are unavailable", async () => {
+    useSidekickStore.setState({ activeTab: "terminal" });
+
+    renderTaskbar();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("sidekick-tabbar")).toHaveAttribute(
+        "data-active-tab",
+        "sessions",
+      ),
+    );
+  });
+
+  it("shows Terminal and Files for linked desktop workspaces", () => {
+    mockWorkspaceState.linkedWorkspace = true;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: null,
+      remoteAgentInstanceId: null,
+      remoteWorkspacePath: null,
+      workspacePath: "/Users/demo/project",
+    };
+
+    renderTaskbar();
+
+    expect(screen.getByTestId("tab-terminal")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-files")).toBeInTheDocument();
+  });
+
+  it("shows Terminal and Files for remote workspaces in web", () => {
+    mockWorkspaceState.linkedWorkspace = false;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: "remote-agent-1",
+      remoteAgentInstanceId: "remote-inst-1",
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/workspace/project",
+    };
+
+    renderTaskbar();
+
+    expect(screen.getByTestId("tab-terminal")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-files")).toBeInTheDocument();
+  });
+
+  it("keeps browseable remote tabs but hides Loop Engineering without a remote instance id", () => {
+    mockWorkspaceState.linkedWorkspace = false;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: "remote-agent-1",
+      remoteAgentInstanceId: null,
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/Users/demo/project",
+    };
+
+    renderTaskbar();
+
+    expect(screen.getByTestId("tab-terminal")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-files")).toBeInTheDocument();
+    expect(screen.queryByTestId("tab-loop-engineering")).not.toBeInTheDocument();
   });
 
   it("keeps the Run tab's Play glyph visible and overlays a progress ring while the loop is active", () => {
@@ -267,6 +354,14 @@ describe("SidekickTaskbar", () => {
   });
 
   it("opens Loop Engineering from the active sidekick taskbar and starts with a contract", async () => {
+    mockWorkspaceState.linkedWorkspace = true;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: null,
+      remoteAgentInstanceId: null,
+      remoteWorkspacePath: null,
+      workspacePath: "/Users/demo/project",
+    };
+
     renderTaskbar();
 
     fireEvent.click(screen.getByTestId("tab-loop-engineering"));
@@ -300,6 +395,31 @@ describe("SidekickTaskbar", () => {
             summarizeRegressions: true,
           }),
         }),
+      ),
+    );
+  });
+
+  it("starts Sidekick Loop Engineering against the resolved remote project-agent instance", async () => {
+    mockWorkspaceState.linkedWorkspace = false;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: "remote-template-1",
+      remoteAgentInstanceId: "remote-inst-1",
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/workspace/project",
+    };
+
+    renderTaskbar();
+
+    fireEvent.click(screen.getByTestId("tab-loop-engineering"));
+
+    await waitFor(() =>
+      expect(mockUseAutomationStatus).toHaveBeenCalledWith(
+        "project-1",
+        "remote-inst-1",
+        {
+          allowDetachedReattach: true,
+          detachedReattachAgentInstanceId: "remote-inst-1",
+        },
       ),
     );
   });

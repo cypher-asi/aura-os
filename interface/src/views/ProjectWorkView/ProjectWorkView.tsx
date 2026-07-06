@@ -6,12 +6,17 @@ import { ExecutionView } from "../ExecutionView";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { getLastAgent } from "../../utils/storage";
 import { useMobileSpecs } from "../../mobile/hooks/useMobileSpecs";
 import { useMobileTasks } from "../../mobile/hooks/useMobileTasks";
 import { getTaskDisplayStatus } from "../../shared/utils/task-display-status";
+import {
+  canStartWorkspaceAutomation,
+  resolveWorkspaceAccess,
+} from "../../shared/lib/workspace-access";
 import styles from "./ProjectWorkView.module.css";
 
 const EMPTY_PROJECT_AGENTS: ReadonlyArray<{
@@ -38,16 +43,22 @@ function ExecutionAction({
   label,
   className,
   onPress,
+  disabled,
+  title,
 }: {
   label: string;
   className: string;
   onPress: () => void;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       className={className}
       onClick={onPress}
+      disabled={disabled}
+      title={title}
     >
       {label}
     </button>
@@ -57,6 +68,27 @@ function ExecutionAction({
 function ExecutionSummary({ projectId }: { projectId: string }) {
   const connected = useEventStore((s) => s.connected);
   const [confirmStopOpen, setConfirmStopOpen] = useState(false);
+  const { features } = useAuraCapabilities();
+  const terminalTarget = useTerminalTarget({ projectId });
+  const workspaceAccess = resolveWorkspaceAccess({
+    workspacePath: terminalTarget.workspacePath,
+    remoteWorkspacePath: terminalTarget.remoteWorkspacePath,
+    remoteAgentId: terminalTarget.remoteAgentId,
+    linkedWorkspace: features.linkedWorkspace,
+  });
+  const startAgentInstanceId =
+    workspaceAccess.kind === "remote"
+      ? terminalTarget.remoteAgentInstanceId
+      : undefined;
+  const workspaceGateActive =
+    terminalTarget.status === "loading" ||
+    !canStartWorkspaceAutomation(workspaceAccess, startAgentInstanceId);
+  const workspaceGateTitle =
+    terminalTarget.status === "loading"
+      ? "Workspace is still loading"
+      : terminalTarget.remoteAgentId
+        ? "Remote workspace is not available yet"
+        : "Build tools for local workspaces are available in Aura Desktop";
   const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId] ?? EMPTY_PROJECT_AGENTS);
   const activeAgent = useMemo(() => {
     const rememberedAgentId = getLastAgent(projectId);
@@ -66,7 +98,7 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
     return projectAgents.find((agent) => agent.agent_instance_id === rememberedAgentId) ?? projectAgents[0] ?? null;
   }, [projectAgents, projectId]);
   const { loopRunning, loopPaused, error, handleStart, handlePause, handleStop } =
-    useLoopControl(projectId);
+    useLoopControl(projectId, startAgentInstanceId);
   const loopStatus = loopRunning ? (loopPaused ? "Paused" : "Running") : "Idle";
   const hasSecondaryAction = loopRunning || loopPaused;
 
@@ -111,6 +143,8 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
                 label="Start remote work"
                 className={`${styles.executionButton} ${styles.executionButtonPrimary}`}
                 onPress={() => { void handleStart(); }}
+                disabled={workspaceGateActive}
+                title={workspaceGateActive ? workspaceGateTitle : "Start remote work"}
               />
             )}
             {loopPaused && (
@@ -118,6 +152,8 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
                 label="Resume remote work"
                 className={`${styles.executionButton} ${styles.executionButtonPrimary}`}
                 onPress={() => { void handleStart(); }}
+                disabled={workspaceGateActive}
+                title={workspaceGateActive ? workspaceGateTitle : "Resume remote work"}
               />
             )}
             {loopRunning && !loopPaused && (
@@ -138,6 +174,11 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
           {error && (
             <Text variant="muted" size="sm" className={styles.executionError}>
               {error}
+            </Text>
+          )}
+          {workspaceGateActive && !loopRunning && !loopPaused && (
+            <Text variant="muted" size="sm" className={styles.executionError}>
+              {workspaceGateTitle}
             </Text>
           )}
         </div>

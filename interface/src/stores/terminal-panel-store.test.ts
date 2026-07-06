@@ -17,6 +17,7 @@ beforeEach(() => {
     contentReady: false,
     cwd: undefined,
     remoteAgentId: undefined,
+    projectId: undefined,
     modeReady: false,
     targetVersion: 0,
   });
@@ -96,6 +97,33 @@ describe("terminal-panel-store", () => {
       expect(state.cwd).toBe("/project/one");
       expect(state.targetVersion).toBe(2);
       expect(state.terminals).toHaveLength(1);
+    });
+  });
+
+  describe("clearTerminalTarget", () => {
+    it("kills registered hooks and clears stale terminal target state", () => {
+      useTerminalPanelStore.getState().setTerminalTarget({
+        cwd: "/project/one",
+        remoteAgentId: "remote-1",
+        projectId: "project-1",
+      });
+      const terminalId = useTerminalPanelStore.getState().terminals[0].id;
+      const hook = { kill: vi.fn() } as unknown as UseTerminalReturn;
+      useTerminalPanelStore.getState().registerHook(terminalId, hook);
+      const beforeVersion = useTerminalPanelStore.getState().targetVersion;
+
+      useTerminalPanelStore.getState().clearTerminalTarget("project-2");
+
+      const state = useTerminalPanelStore.getState();
+      expect(hook.kill).toHaveBeenCalledTimes(1);
+      expect(state.terminals).toHaveLength(0);
+      expect(state.activeId).toBeNull();
+      expect(state.cwd).toBeUndefined();
+      expect(state.remoteAgentId).toBeUndefined();
+      expect(state.projectId).toBe("project-2");
+      expect(state.modeReady).toBe(false);
+      expect(state.targetVersion).toBe(beforeVersion + 1);
+      expect(state.collapsed).toBe(true);
     });
   });
 

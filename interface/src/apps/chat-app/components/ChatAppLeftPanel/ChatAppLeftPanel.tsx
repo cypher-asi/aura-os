@@ -181,14 +181,21 @@ export function ChatAppLeftPanel() {
     (target: AnnotatedSession) => {
       const agent = resolveSessionAgent(target);
       if (!agent) return null;
+      const label = `Agent: ${agent.name}`;
       return (
-        <Avatar
-          avatarUrl={agent.icon ?? undefined}
-          name={agent.name}
-          type="agent"
-          size={20}
-          className={styles.rowAvatar}
-        />
+        <span
+          className={styles.rowAvatarWrap}
+          aria-label={label}
+          title={label}
+        >
+          <Avatar
+            avatarUrl={agent.icon ?? undefined}
+            name={agent.name}
+            type="agent"
+            size={20}
+            className={styles.rowAvatar}
+          />
+        </span>
       );
     },
     [resolveSessionAgent],

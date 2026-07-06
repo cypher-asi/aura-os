@@ -488,4 +488,5 @@ describe("SessionsList", () => {
     expect(screen.getByTestId("suffix-s1")).toHaveTextContent("inst-a");
     expect(screen.getByTestId("suffix-s2")).toHaveTextContent("inst-b");
   });
+
 });

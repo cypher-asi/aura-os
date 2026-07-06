@@ -84,6 +84,7 @@ vi.mock("react-router-dom", () => ({
 vi.mock("../../hooks/use-terminal-target", () => ({
   useTerminalTarget: () => ({
     remoteAgentId: undefined,
+    remoteAgentInstanceId: undefined,
     remoteWorkspacePath: undefined,
     workspacePath: "/test/path",
     status: "ready",
@@ -185,6 +186,7 @@ describe("SidekickTaskbar", () => {
       "Browser",
       "Plans",
       "Run",
+      "Loop Engineering",
       "Tasks",
       "Stats",
       "Logs",

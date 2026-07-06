@@ -35,6 +35,7 @@ import { FileMentionMenu } from "./FileMentionMenu";
 import { useProjectFiles } from "./useProjectFiles";
 import { useInputTriggers } from "./useInputTriggers";
 import { useModelSelection } from "./useModelSelection";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { CommandChips } from "./CommandChips";
 import { DemoRecordSettings } from "./DemoRecordSettings";
 import { AttachmentPreviews } from "./AttachmentPreviews";
@@ -50,6 +51,7 @@ import { ProjectPicker } from "./ProjectPicker";
 import { useChatUI } from "../../../stores/chat-ui-store";
 import type { SlashCommand } from "../../../constants/commands";
 import type { Project } from "../../../shared/types";
+import { resolveWorkspaceAccess } from "../../../shared/lib/workspace-access";
 import {
   desktopApi,
   DEFAULT_DEMO_RECORD_OPTIONS,
@@ -289,6 +291,7 @@ export const DesktopChatInputBar = memo(
   ) {
     const isChatStreaming = useIsStreaming(streamKey);
     const isStreaming = isChatStreaming || isExternallyBusy;
+    const { features } = useAuraCapabilities();
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
     const selectedEffort = chatUI.selectedEffort;
@@ -391,7 +394,17 @@ export const DesktopChatInputBar = memo(
     const [localDemoOptions, setLocalDemoOptions] = useState<DemoRecordOptions>(
       DEFAULT_DEMO_RECORD_OPTIONS,
     );
-    const canUseMentions = Boolean(workspacePath);
+    const workspaceAccess = resolveWorkspaceAccess({
+      workspacePath,
+      remoteAgentId,
+      linkedWorkspace: features.linkedWorkspace,
+    });
+    const mentionWorkspacePath = workspaceAccess.workspacePath;
+    const canUseMentions = Boolean(mentionWorkspacePath);
+    const infoBarWorkspacePath =
+      workspaceAccess.canUseWorkspace || !workspacePath || remoteAgentId
+        ? workspacePath
+        : null;
     const shellRef = useRef<InputBarShellHandle>(null);
     useImperativeHandle(ref, () => ({
       focus: () => shellRef.current?.focus(),
@@ -449,7 +462,7 @@ export const DesktopChatInputBar = memo(
     });
 
     const projectFiles = useProjectFiles({
-      workspacePath: canUseMentions ? workspacePath : undefined,
+      workspacePath: mentionWorkspacePath,
       remoteAgentId,
       refreshNonce: mentionRefreshNonce,
     });
@@ -754,7 +767,7 @@ export const DesktopChatInputBar = memo(
       <AgentInfoBar
         machineType={machineType}
         agentId={templateAgentId ?? agentId}
-        workspacePath={workspacePath}
+        workspacePath={infoBarWorkspacePath}
         project={selectedProject}
       />
     );

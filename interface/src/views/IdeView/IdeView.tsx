@@ -51,6 +51,8 @@ export function IdeView() {
             onCloseTab={ide.closeTab}
             dirty={ide.dirty}
             saving={ide.saving}
+            readOnly={ide.readOnly}
+            readOnlyReason={ide.readOnlyReason}
             onSave={ide.handleSave}
           />
           <EditorBody
@@ -60,6 +62,7 @@ export function IdeView() {
             lineCount={ide.lineCount}
             highlightedHtml={ide.highlightedHtml}
             onContentChange={ide.handleContentChange}
+            readOnly={ide.readOnly}
             textareaRef={ide.textareaRef}
             gutterRef={ide.gutterRef}
             highlightRef={ide.highlightRef}
@@ -71,6 +74,7 @@ export function IdeView() {
         <span className={styles.statusItem}>{ide.language ?? "plain text"}</span>
         {ide.lineCount > 0 && <span className={styles.statusItem}>{ide.lineCount} lines</span>}
         {ide.saveError && <span className={styles.statusItem} style={{ color: "var(--color-danger)" }}>{ide.saveError}</span>}
+        {ide.readOnlyReason && !ide.saveError && <span className={styles.statusItem}>{ide.readOnlyReason}</span>}
         {ide.saving && <span className={styles.statusItem}>Saving…</span>}
         <span style={{ flex: 1 }} />
         {ide.activeTab && <span className={styles.statusItem}>{ide.activeTab.path}</span>}

@@ -8,7 +8,7 @@ export interface AgentInfoBarProps {
   machineType?: "local" | "remote";
   /** Resolved agent identity (template id preferred over instance id). */
   agentId?: string;
-  workspacePath?: string;
+  workspacePath?: string | null;
   /** Selected project; drives the orbit indicator and the divider. */
   project?: Project;
 }

@@ -11,6 +11,8 @@ interface LoopControlsProps {
   onStart: () => void;
   onPause: () => void;
   onStop: () => void;
+  startDisabled?: boolean;
+  startDisabledTitle?: string;
 }
 
 export function LoopControls({
@@ -20,6 +22,8 @@ export function LoopControls({
   onStart,
   onPause,
   onStop,
+  startDisabled = false,
+  startDisabledTitle,
 }: LoopControlsProps) {
   void projectId;
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -38,6 +42,8 @@ export function LoopControls({
             size="sm"
             icon={<Play size={14} />}
             onClick={onStart}
+            disabled={startDisabled}
+            title={startDisabled ? startDisabledTitle : "Start"}
             className={styles.startButton}
           >
             Start
@@ -49,6 +55,8 @@ export function LoopControls({
             size="sm"
             icon={<Play size={14} />}
             onClick={onStart}
+            disabled={startDisabled}
+            title={startDisabled ? startDisabledTitle : "Resume"}
             className={styles.startButton}
           >
             Resume

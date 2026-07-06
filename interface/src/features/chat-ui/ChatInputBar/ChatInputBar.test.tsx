@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 
 let mockIsStreaming = false;
 let mockIsMobileLayout = false;
+let mockLinkedWorkspace = true;
 vi.mock("../../../hooks/stream/hooks", () => ({
   useIsStreaming: () => mockIsStreaming,
 }));
@@ -45,7 +46,10 @@ vi.mock("../../../mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
 }));
 
 vi.mock("../../../hooks/use-aura-capabilities", () => ({
-  useAuraCapabilities: () => ({ isMobileLayout: mockIsMobileLayout }),
+  useAuraCapabilities: () => ({
+    isMobileLayout: mockIsMobileLayout,
+    features: { linkedWorkspace: mockLinkedWorkspace },
+  }),
 }));
 
 // AgentEnvironment now always mounts (it renders an inert placeholder while
@@ -101,6 +105,7 @@ vi.mock("./useFileAttachments", () => ({
   useFileAttachments: () => ({
     canAddMore: true,
     addFiles: mockAddFiles,
+    addFileFromPath: vi.fn(),
     handleRemove: mockHandleRemove,
   }),
 }));
@@ -185,6 +190,7 @@ function withMockDataTransfer(fileList: FileList, run: () => void) {
 beforeEach(() => {
   mockIsStreaming = false;
   mockIsMobileLayout = false;
+  mockLinkedWorkspace = true;
   mockSelectedModel = null;
   mockSelectedEffort = null;
   mockSelectedMode = "code";
@@ -254,6 +260,32 @@ describe("ChatInputBar", () => {
     } finally {
       Element.prototype.scrollIntoView = originalScrollIntoView;
     }
+  });
+
+  it("does not open file mentions for a local workspace outside the desktop app", () => {
+    mockLinkedWorkspace = false;
+    const onInputChange = vi.fn();
+    render(
+      <ChatInputBar
+        {...makeProps({
+          onInputChange,
+          workspacePath: "/Users/demo/project",
+          machineType: "local",
+        })}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText("/ for commands, @ for context");
+    fireEvent.change(textarea, {
+      target: {
+        value: "@",
+        selectionStart: 1,
+        selectionEnd: 1,
+      },
+    });
+
+    expect(onInputChange).toHaveBeenLastCalledWith("@");
+    expect(screen.queryByText("No matching files")).not.toBeInTheDocument();
   });
 
   it("calls onSend on Enter key (without shift)", () => {

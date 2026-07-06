@@ -4,6 +4,12 @@ import { BrainCircuit, Pause, Square } from "lucide-react";
 import { StatusBadge } from "../StatusBadge";
 import { PlayLoopGlyph } from "../PlayLoopGlyph";
 import type { ProjectId } from "../../shared/types";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useTerminalTarget } from "../../hooks/use-terminal-target";
+import {
+  canStartWorkspaceAutomation,
+  resolveWorkspaceAccess,
+} from "../../shared/lib/workspace-access";
 import { useAutomationStatus } from "./useAutomationStatus";
 import { AutomationModelPicker } from "./AutomationModelPicker";
 import { LoopEngineeringPanel } from "./LoopEngineeringPanel";
@@ -15,6 +21,29 @@ interface AutomationBarProps {
 
 export function AutomationBar({ projectId }: AutomationBarProps) {
   const [loopEngineeringOpen, setLoopEngineeringOpen] = useState(false);
+  const { features } = useAuraCapabilities();
+  const terminalTarget = useTerminalTarget({ projectId });
+  const workspaceAccess = resolveWorkspaceAccess({
+    workspacePath: terminalTarget.workspacePath,
+    remoteWorkspacePath: terminalTarget.remoteWorkspacePath,
+    remoteAgentId: terminalTarget.remoteAgentId,
+    linkedWorkspace: features.linkedWorkspace,
+  });
+  const startAgentInstanceId =
+    workspaceAccess.kind === "remote"
+      ? terminalTarget.remoteAgentInstanceId
+      : undefined;
+  const workspaceGateActive =
+    terminalTarget.status === "loading" ||
+    !canStartWorkspaceAutomation(workspaceAccess, startAgentInstanceId);
+  const automationStartAvailable =
+    !workspaceGateActive;
+  const workspaceGateTitle =
+    terminalTarget.status === "loading"
+      ? "Workspace is still loading"
+      : terminalTarget.remoteAgentId
+        ? "Remote workspace is not available yet"
+        : "Build tools for local workspaces are available in Aura Desktop";
   const {
     status, agentCount, canPlay, canPause, canStop,
     canStartLoopEngineering,
@@ -24,7 +53,11 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     stopError, clearStopError,
     startError, clearStartError, handleResetAndRetry,
     loopEngineeringContract,
-  } = useAutomationStatus(projectId);
+  } = useAutomationStatus(projectId, startAgentInstanceId, {
+    allowDetachedReattach: automationStartAvailable,
+    detachedReattachAgentInstanceId:
+      workspaceAccess.kind === "remote" ? startAgentInstanceId : undefined,
+  });
 
   // Whether the start error is the structured "harness has a stale
   // automaton" 409. Drives the modal copy (Reset vs Dismiss) so the
@@ -57,6 +90,9 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     : null;
   const verifierCount = activeLoopEngineering?.verifierCommands.length ?? 0;
   const criteriaCount = activeLoopEngineering?.successCriteria.length ?? 0;
+  const canPlayWithWorkspace = canPlay && automationStartAvailable;
+  const canStartLoopEngineeringWithWorkspace =
+    canStartLoopEngineering && automationStartAvailable;
 
   return (
     <>
@@ -90,7 +126,8 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
               size="sm"
               icon={<BrainCircuit size={14} />}
               onClick={() => setLoopEngineeringOpen((open) => !open)}
-              title="Loop Engineering"
+              disabled={workspaceGateActive}
+              title={workspaceGateActive ? workspaceGateTitle : "Loop Engineering"}
               className={
                 loopEngineeringOpen ? styles.loopModeActive : undefined
               }
@@ -103,8 +140,14 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
               iconOnly
               icon={<PlayLoopGlyph active={loopWorking} size={14} />}
               onClick={handleStart}
-              disabled={!canPlay}
-              title={status === "paused" ? "Resume" : "Start"}
+              disabled={!canPlayWithWorkspace}
+              title={
+                workspaceGateActive
+                  ? workspaceGateTitle
+                  : status === "paused"
+                    ? "Resume"
+                    : "Start"
+              }
               className={loopWorking ? styles.playButtonActive : undefined}
             />
             <Button
@@ -131,7 +174,7 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
         {loopEngineeringOpen && (
           <LoopEngineeringPanel
             projectId={projectId}
-            canStart={canStartLoopEngineering}
+            canStart={canStartLoopEngineeringWithWorkspace}
             onStart={handleStartLoopEngineering}
           />
         )}

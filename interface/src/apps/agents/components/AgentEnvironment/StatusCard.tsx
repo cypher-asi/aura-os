@@ -313,7 +313,10 @@ interface LocalStatusContentProps {
 }
 
 function LocalStatusContent({ isLocal, envInfo, workspacePath }: LocalStatusContentProps) {
-  const displayWorkspace = workspacePath ?? envInfo?.cwd ?? "—"
+  const displayWorkspace =
+    workspacePath === null
+      ? "Available in Aura Desktop"
+      : workspacePath ?? envInfo?.cwd ?? "—"
   return (
     <>
       <div className={styles.statusRow}>

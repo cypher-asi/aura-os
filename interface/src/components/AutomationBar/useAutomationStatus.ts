@@ -117,6 +117,24 @@ interface AutomationStatusData {
   loopEngineeringContract: LoopEngineeringContract | null;
 }
 
+interface AutomationStatusOptions {
+  /**
+   * Detached-loop reattach calls POST /loop/start as a side effect of
+   * status polling. Only enable it from surfaces where the current
+   * runtime can actually use the workspace; status-only web surfaces
+   * must be able to observe local detached loops without starting
+   * local-only work.
+   */
+  allowDetachedReattach?: boolean;
+  /**
+   * When set, detached reattach is allowed only for this exact
+   * agent-instance id. Remote web workspaces use this to avoid
+   * reattaching a stale local loop id returned by project-level
+   * status polling.
+   */
+  detachedReattachAgentInstanceId?: string | null;
+}
+
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message;
   if (typeof err === "string" && err.length > 0) return err;
@@ -158,7 +176,11 @@ function describeStartLoopError(err: unknown): StartLoopError {
   };
 }
 
-export function useAutomationStatus(projectId: ProjectId): AutomationStatusData {
+export function useAutomationStatus(
+  projectId: ProjectId,
+  startAgentInstanceId?: string | null,
+  options: AutomationStatusOptions = {},
+): AutomationStatusData {
   const subscribe = useEventStore((s) => s.subscribe);
   const connected = useEventStore((s) => s.connected);
   // Model the user picked in the AutomationBar's own picker. This is
@@ -189,6 +211,10 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   // `agent_instance_id`).
   const boundLoopId = useAutomationLoopStore((s) => s.loopByProject[projectId] ?? null);
   const setBoundLoopId = useAutomationLoopStore((s) => s.setLoopAgent);
+  const startTargetAgentInstanceId = startAgentInstanceId?.trim() || undefined;
+  const allowDetachedReattach = options.allowDetachedReattach ?? true;
+  const detachedReattachAgentInstanceId =
+    options.detachedReattachAgentInstanceId?.trim() || undefined;
 
   const isForProject = useCallback(
     (event: { project_id?: string }) => event.project_id === projectId,
@@ -270,12 +296,25 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         hydrateUiFromLoopStartResponse(res, projectId);
         const detachedId =
           res.agent_instance_id ?? res.active_agent_instances?.[0] ?? null;
-        if (res.loop_state === "detached" && detachedId) {
+        const canReattachDetachedId =
+          !detachedReattachAgentInstanceId ||
+          detachedId === detachedReattachAgentInstanceId;
+        if (
+          allowDetachedReattach &&
+          res.loop_state === "detached" &&
+          detachedId &&
+          canReattachDetachedId
+        ) {
           reattachDetachedLoop(detachedId);
         }
       })
       .catch(() => {});
-  }, [projectId, reattachDetachedLoop]);
+  }, [
+    allowDetachedReattach,
+    detachedReattachAgentInstanceId,
+    projectId,
+    reattachDetachedLoop,
+  ]);
 
   useEffect(() => { fetchLoopStatus(); }, [fetchLoopStatus]);
 
@@ -424,8 +463,17 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
       }
       return;
     }
-    await beginFreshLoop(() => api.startLoop(projectId, undefined, selectedModel));
-  }, [beginFreshLoop, projectId, state.kind, selectedModel, boundLoopId]);
+    await beginFreshLoop(() =>
+      api.startLoop(projectId, startTargetAgentInstanceId, selectedModel)
+    );
+  }, [
+    beginFreshLoop,
+    projectId,
+    state.kind,
+    selectedModel,
+    boundLoopId,
+    startTargetAgentInstanceId,
+  ]);
 
   const canStartLoopEngineering =
     status === "idle" || status === "stopped";
@@ -437,12 +485,18 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         api.startLoopEngineering(
           projectId,
           { loopEngineering: contract },
-          undefined,
+          startTargetAgentInstanceId,
           selectedModel,
         ),
       );
     },
-    [beginFreshLoop, canStartLoopEngineering, projectId, selectedModel],
+    [
+      beginFreshLoop,
+      canStartLoopEngineering,
+      projectId,
+      selectedModel,
+      startTargetAgentInstanceId,
+    ],
   );
 
   const handlePause = useCallback(async () => {

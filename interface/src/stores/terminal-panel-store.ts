@@ -81,6 +81,7 @@ interface TerminalPanelState {
   targetVersion: number;
 
   setTerminalTarget: (target: TerminalTarget) => void;
+  clearTerminalTarget: (projectId?: string) => void;
   setCwd: (cwd: string | undefined) => void;
   setRemoteAgentId: (id: string | undefined) => void;
   addTerminal: () => void;
@@ -120,6 +121,27 @@ export const useTerminalPanelStore = create<TerminalPanelState>()((set, get) => 
       targetVersion: state.targetVersion + 1,
       terminals,
       activeId: state.activeId ?? terminals[0]?.id ?? null,
+    });
+  },
+
+  clearTerminalTarget: (projectId) => {
+    hookRefs.forEach((hook) => hook.kill());
+    hookRefs.clear();
+    if (contentReadyTimer) {
+      clearTimeout(contentReadyTimer);
+      contentReadyTimer = null;
+    }
+    const state = get();
+    set({
+      terminals: [],
+      activeId: null,
+      cwd: undefined,
+      remoteAgentId: undefined,
+      projectId,
+      modeReady: false,
+      targetVersion: state.targetVersion + 1,
+      contentReady: false,
+      collapsed: true,
     });
   },
 
@@ -232,4 +254,3 @@ function scheduleContentReady(set: (partial: Partial<TerminalPanelState>) => voi
 useTerminalPanelStore.subscribe((s) => {
   savePanelState(s.panelHeight, s.collapsed);
 });
-
