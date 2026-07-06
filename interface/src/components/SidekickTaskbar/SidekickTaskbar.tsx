@@ -27,7 +27,10 @@ import { useShallow } from "zustand/react/shallow";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
-import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
+import {
+  canStartWorkspaceAutomation,
+  resolveWorkspaceAccess,
+} from "../../shared/lib/workspace-access";
 import { SidekickTabBar, type TabItem } from "../SidekickTabBar";
 import { CheckLoopGlyph } from "../CheckLoopGlyph";
 import { PlayLoopGlyph } from "../PlayLoopGlyph";
@@ -71,9 +74,9 @@ export function SidekickTaskbar() {
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId
       : undefined;
-  const canStartWorkspaceAutomation =
+  const automationStartAvailable =
     canUseWorkspace &&
-    (workspaceAccess.kind !== "remote" || Boolean(startAgentInstanceId));
+    canStartWorkspaceAutomation(workspaceAccess, startAgentInstanceId);
   // Tasks tab lights up whenever ANY loop is open for this (project,
   // agent_instance) — this covers the live task runs in this project.
   // Run tab uses a project-wide scope so cross-agent activity inside
@@ -94,10 +97,10 @@ export function SidekickTaskbar() {
     }
   }, [activeTab, canUseWorkspace, setActiveTab]);
   useEffect(() => {
-    if (canStartWorkspaceAutomation || !loopEngineeringOpen) return;
+    if (automationStartAvailable || !loopEngineeringOpen) return;
     setLoopEngineeringOpen(false);
     setLoopPanelStyle(null);
-  }, [canStartWorkspaceAutomation, loopEngineeringOpen]);
+  }, [automationStartAvailable, loopEngineeringOpen]);
   const project = ctx?.project;
   const handleArchive = ctx?.handleArchive;
   const loopProjectId = project?.project_id ?? projectId ?? null;
@@ -131,7 +134,7 @@ export function SidekickTaskbar() {
         icon: <PlayLoopGlyph active={runActive} size={16} />,
         title: "Run",
       },
-      ...(loopProjectId && canStartWorkspaceAutomation
+      ...(loopProjectId && automationStartAvailable
         ? [
             {
               id: "loop-engineering",
@@ -168,7 +171,7 @@ export function SidekickTaskbar() {
       { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
     ];
     return items;
-  }, [tasksActive, runActive, loopProjectId, canUseWorkspace, canStartWorkspaceAutomation]);
+  }, [tasksActive, runActive, loopProjectId, canUseWorkspace, automationStartAvailable]);
   const visibleTabs = canUseWorkspace
     ? tabs
     : tabs.filter((tab) => tab.id !== "files" && tab.id !== "terminal");
@@ -247,7 +250,7 @@ export function SidekickTaskbar() {
             <SidekickLoopEngineeringPanel
               projectId={loopProjectId}
               startAgentInstanceId={startAgentInstanceId}
-              allowDetachedReattach={canStartWorkspaceAutomation}
+              allowDetachedReattach={automationStartAvailable}
               style={loopPanelStyle}
             />,
             document.body,

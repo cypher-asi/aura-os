@@ -6,7 +6,10 @@ import { PlayLoopGlyph } from "../PlayLoopGlyph";
 import type { ProjectId } from "../../shared/types";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
-import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
+import {
+  canStartWorkspaceAutomation,
+  resolveWorkspaceAccess,
+} from "../../shared/lib/workspace-access";
 import { useAutomationStatus } from "./useAutomationStatus";
 import { AutomationModelPicker } from "./AutomationModelPicker";
 import { LoopEngineeringPanel } from "./LoopEngineeringPanel";
@@ -30,15 +33,11 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId
       : undefined;
-  const remoteAutomationTargetMissing =
-    workspaceAccess.kind === "remote" && !startAgentInstanceId;
   const workspaceGateActive =
     terminalTarget.status === "loading" ||
-    !workspaceAccess.canUseWorkspace ||
-    remoteAutomationTargetMissing;
-  const canStartWorkspaceAutomation =
-    !workspaceGateActive &&
-    (workspaceAccess.kind !== "remote" || Boolean(startAgentInstanceId));
+    !canStartWorkspaceAutomation(workspaceAccess, startAgentInstanceId);
+  const automationStartAvailable =
+    !workspaceGateActive;
   const workspaceGateTitle =
     terminalTarget.status === "loading"
       ? "Workspace is still loading"
@@ -55,7 +54,7 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     startError, clearStartError, handleResetAndRetry,
     loopEngineeringContract,
   } = useAutomationStatus(projectId, startAgentInstanceId, {
-    allowDetachedReattach: canStartWorkspaceAutomation,
+    allowDetachedReattach: automationStartAvailable,
     detachedReattachAgentInstanceId:
       workspaceAccess.kind === "remote" ? startAgentInstanceId : undefined,
   });
@@ -91,9 +90,9 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     : null;
   const verifierCount = activeLoopEngineering?.verifierCommands.length ?? 0;
   const criteriaCount = activeLoopEngineering?.successCriteria.length ?? 0;
-  const canPlayWithWorkspace = canPlay && canStartWorkspaceAutomation;
+  const canPlayWithWorkspace = canPlay && automationStartAvailable;
   const canStartLoopEngineeringWithWorkspace =
-    canStartLoopEngineering && canStartWorkspaceAutomation;
+    canStartLoopEngineering && automationStartAvailable;
 
   return (
     <>

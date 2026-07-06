@@ -211,4 +211,23 @@ describe("ProjectWorkView", () => {
       screen.getByText("Build tools for local workspaces are available in Aura Desktop"),
     ).toBeInTheDocument();
   });
+
+  it("disables mobile start when a remote workspace has no startable instance", () => {
+    mockUseAuraCapabilities.mockReturnValue({
+      isMobileLayout: true,
+      features: { linkedWorkspace: false },
+    });
+    mockUseTerminalTarget.mockReturnValue({
+      remoteAgentId: "remote-template-1",
+      remoteAgentInstanceId: undefined,
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    });
+
+    render(<ProjectWorkView />);
+
+    expect(screen.getByRole("button", { name: "Start remote work" })).toBeDisabled();
+    expect(screen.getByText("Remote workspace is not available yet")).toBeInTheDocument();
+  });
 });

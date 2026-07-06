@@ -8,7 +8,10 @@ import { LoopControls } from "../LoopControls";
 import { Badge, Text } from "@cypher-asi/zui";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
-import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
+import {
+  canStartWorkspaceAutomation,
+  resolveWorkspaceAccess,
+} from "../../shared/lib/workspace-access";
 import styles from "./ExecutionView.module.css";
 
 export function ExecutionView() {
@@ -22,12 +25,13 @@ export function ExecutionView() {
     remoteAgentId: terminalTarget.remoteAgentId,
     linkedWorkspace: features.linkedWorkspace,
   });
-  const workspaceGateActive =
-    terminalTarget.status === "loading" || !workspaceAccess.canUseWorkspace;
   const startAgentInstanceId =
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId
       : undefined;
+  const workspaceGateActive =
+    terminalTarget.status === "loading" ||
+    !canStartWorkspaceAutomation(workspaceAccess, startAgentInstanceId);
   const { loopRunning, loopPaused, error, handleStart, handlePause, handleStop } =
     useLoopControl(projectId, startAgentInstanceId);
   const workspaceGateTitle =

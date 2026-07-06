@@ -60,3 +60,12 @@ export function resolveWorkspaceAccess({
     workspacePath: undefined,
   };
 }
+
+export function canStartWorkspaceAutomation(
+  access: Pick<WorkspaceAccess, "canUseWorkspace" | "kind">,
+  remoteAgentInstanceId?: string | null,
+): boolean {
+  if (!access.canUseWorkspace) return false;
+  if (access.kind !== "remote") return true;
+  return Boolean(remoteAgentInstanceId?.trim());
+}

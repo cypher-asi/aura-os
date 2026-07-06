@@ -360,6 +360,28 @@ describe("AutomationBar", () => {
     expect(screen.getByRole("button", { name: /Loop/i })).toBeDisabled();
   });
 
+  it("disables remote automation starts when the remote workspace instance is missing", async () => {
+    const user = userEvent.setup();
+    mockLinkedWorkspace = false;
+    mockTerminalTarget = {
+      remoteAgentId: "remote-template-1",
+      remoteAgentInstanceId: undefined,
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    };
+
+    renderBar();
+
+    const blockedButtons = screen.getAllByTitle("Remote workspace is not available yet");
+    expect(blockedButtons).toHaveLength(2);
+    blockedButtons.forEach((button) => expect(button).toBeDisabled());
+    expect(screen.getByRole("button", { name: /Loop/i })).toBeDisabled();
+
+    await user.click(blockedButtons[1]);
+    expect(mockStartLoop).not.toHaveBeenCalled();
+  });
+
   it("does not reattach detached local loops when the local workspace is unavailable on web", async () => {
     mockLinkedWorkspace = false;
     mockTerminalTarget = {

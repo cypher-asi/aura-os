@@ -13,7 +13,10 @@ import { getLastAgent } from "../../utils/storage";
 import { useMobileSpecs } from "../../mobile/hooks/useMobileSpecs";
 import { useMobileTasks } from "../../mobile/hooks/useMobileTasks";
 import { getTaskDisplayStatus } from "../../shared/utils/task-display-status";
-import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
+import {
+  canStartWorkspaceAutomation,
+  resolveWorkspaceAccess,
+} from "../../shared/lib/workspace-access";
 import styles from "./ProjectWorkView.module.css";
 
 const EMPTY_PROJECT_AGENTS: ReadonlyArray<{
@@ -73,12 +76,13 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
     remoteAgentId: terminalTarget.remoteAgentId,
     linkedWorkspace: features.linkedWorkspace,
   });
-  const workspaceGateActive =
-    terminalTarget.status === "loading" || !workspaceAccess.canUseWorkspace;
   const startAgentInstanceId =
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId
       : undefined;
+  const workspaceGateActive =
+    terminalTarget.status === "loading" ||
+    !canStartWorkspaceAutomation(workspaceAccess, startAgentInstanceId);
   const workspaceGateTitle =
     terminalTarget.status === "loading"
       ? "Workspace is still loading"

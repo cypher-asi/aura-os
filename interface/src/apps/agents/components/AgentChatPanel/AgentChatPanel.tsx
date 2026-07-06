@@ -26,7 +26,10 @@ import type { AgentInstance, Project } from "../../../../shared/types";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useAgentBusy } from "../../../../hooks/use-agent-busy";
 import { useTerminalTarget } from "../../../../hooks/use-terminal-target";
-import { resolveWorkspaceAccess } from "../../../../shared/lib/workspace-access";
+import {
+  canStartWorkspaceAutomation,
+  resolveWorkspaceAccess,
+} from "../../../../shared/lib/workspace-access";
 import { useFreshCanvas } from "../../hooks/use-fresh-canvas";
 import { useOptimisticSessionRow } from "../../hooks/use-optimistic-session-row";
 import { useAutoRenameFromPrompt } from "../../hooks/use-auto-rename-from-prompt";
@@ -114,7 +117,11 @@ export function AgentChatPanel({
     linkedWorkspace: features.linkedWorkspace,
   });
   const workspaceToolsEnabled =
-    terminalTarget.status === "ready" && workspaceAccess.canUseWorkspace;
+    terminalTarget.status === "ready" &&
+    canStartWorkspaceAutomation(
+      workspaceAccess,
+      terminalTarget.remoteAgentInstanceId,
+    );
   const workspaceStartAgentInstanceId =
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId

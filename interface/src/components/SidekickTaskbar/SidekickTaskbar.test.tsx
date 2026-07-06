@@ -248,6 +248,22 @@ describe("SidekickTaskbar", () => {
     expect(screen.getByTestId("tab-files")).toBeInTheDocument();
   });
 
+  it("keeps browseable remote tabs but hides Loop Engineering without a remote instance id", () => {
+    mockWorkspaceState.linkedWorkspace = false;
+    mockWorkspaceState.terminalTarget = {
+      remoteAgentId: "remote-agent-1",
+      remoteAgentInstanceId: null,
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/Users/demo/project",
+    };
+
+    renderTaskbar();
+
+    expect(screen.getByTestId("tab-terminal")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-files")).toBeInTheDocument();
+    expect(screen.queryByTestId("tab-loop-engineering")).not.toBeInTheDocument();
+  });
+
   it("keeps the Run tab's Play glyph visible and overlays a progress ring while the loop is active", () => {
     setRunningLoop();
 

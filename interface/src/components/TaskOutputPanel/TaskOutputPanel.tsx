@@ -10,7 +10,10 @@ import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import { AutomationModelPicker } from "../AutomationBar/AutomationModelPicker";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
-import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
+import {
+  canStartWorkspaceAutomation,
+  resolveWorkspaceAccess,
+} from "../../shared/lib/workspace-access";
 import { useScrollAnchorV2 } from "../../shared/hooks/use-scroll-anchor-v2";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { TerminalPanelBody } from "../TerminalPanelBody";
@@ -271,12 +274,9 @@ export function RunSidekickPane({ searchQuery = "" }: { searchQuery?: string }) 
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId
       : undefined;
-  const remoteAutomationTargetMissing =
-    workspaceAccess.kind === "remote" && !startAgentInstanceId;
   const workspaceGateActive =
     terminalTarget.status === "loading" ||
-    !workspaceAccess.canUseWorkspace ||
-    remoteAutomationTargetMissing;
+    !canStartWorkspaceAutomation(workspaceAccess, startAgentInstanceId);
   const workspaceGateTitle =
     terminalTarget.status === "loading"
       ? "Workspace is still loading"
