@@ -18,7 +18,10 @@ interface LoopControlResult {
   handleStop: () => Promise<void>;
 }
 
-export function useLoopControl(projectId: string | undefined): LoopControlResult {
+export function useLoopControl(
+  projectId: string | undefined,
+  startAgentInstanceId?: string | null,
+): LoopControlResult {
   const subscribe = useEventStore((s) => s.subscribe);
   const connected = useEventStore((s) => s.connected);
   // The URL's agentInstanceId reflects the chat surface the user is
@@ -46,6 +49,7 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
     projectId ? s.loopByProject[projectId] ?? null : null,
   );
   const setBoundLoopId = useAutomationLoopStore((s) => s.setLoopAgent);
+  const startTargetAgentInstanceId = startAgentInstanceId?.trim() || undefined;
 
   const projectIdRef = useRef(projectId);
   useEffect(() => {
@@ -139,7 +143,11 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
       // `ensure_default_loop_instance`. Capture the resolved id from
       // the response so subsequent pause / resume / stop hit exactly
       // that instance, not the chat thread the user is viewing.
-      const res = await api.startLoop(projectId, undefined, selectedModel);
+      const res = await api.startLoop(
+        projectId,
+        startTargetAgentInstanceId,
+        selectedModel,
+      );
       if (res.agent_instance_id) {
         setBoundLoopId(projectId as ProjectId, res.agent_instance_id);
       }
@@ -148,7 +156,14 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start loop");
     }
-  }, [projectId, loopPaused, boundLoopId, selectedModel, setBoundLoopId]);
+  }, [
+    projectId,
+    loopPaused,
+    boundLoopId,
+    selectedModel,
+    setBoundLoopId,
+    startTargetAgentInstanceId,
+  ]);
 
   const handlePause = useCallback(async () => {
     if (!projectId) return;

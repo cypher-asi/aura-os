@@ -125,6 +125,13 @@ export interface DispatchDeps {
    * post-migration setter call lands on the new lane.
    */
   onPartitionMigrated?: (newKey: string) => void;
+  /**
+   * Whether project workspace tools are reachable in the current client.
+   * Web can chat through hosted harnesses even when desktop-local files,
+   * terminals, and dev loops are intentionally unavailable.
+   */
+  workspaceToolsEnabled?: boolean;
+  workspaceStartAgentInstanceId?: string;
 }
 
 interface SessionReadyPayload {
@@ -133,21 +140,27 @@ interface SessionReadyPayload {
 
 /** Mirrors the play button (POST /loop/*). Server is authoritative; avoid extra start calls when status already shows a loop.
  *
- * Loop control here always targets the project's `Loop`-role agent
- * instance, NOT the chat surface's `agentInstanceId`. Sending the
- * chat instance id would either collide with the in-flight chat turn
- * (harness "one in-flight turn per agent_id" rule) or — worse — turn
- * the chat thread into a loop runner. We omit the id on start so the
- * backend resolves / creates the canonical loop instance, capture it
- * in the shared store, and use the bound id for pause / resume / stop.
+ * Loop control defaults to the project's `Loop`-role agent instance.
+ * Web remote workspaces can pass an explicit reachable instance id so
+ * the backend never promotes an unrelated local chat binding; pause /
+ * resume / stop still use the bound id returned by the server.
  */
 async function bridgeLoopToolResult(
   name: string,
   isError: boolean,
   projectId: string,
   selectedModel: string | null | undefined,
+  workspaceToolsEnabled: boolean,
+  workspaceStartAgentInstanceId: string | undefined,
 ) {
   if (isError) return;
+  if (!workspaceToolsEnabled) {
+    console.info("Skipping dev-loop bridge because workspace tools are not available in this client", {
+      projectId,
+      tool: name,
+    });
+    return;
+  }
   const loopStore = useAutomationLoopStore.getState();
   const boundLoopId = loopStore.loopByProject[projectId] ?? null;
   switch (name) {
@@ -166,7 +179,11 @@ async function bridgeLoopToolResult(
             if (status.paused) await api.resumeLoop(projectId, boundLoopId ?? undefined);
             return;
           }
-          const res = await api.startLoop(projectId, undefined, selectedModel);
+          const res = await api.startLoop(
+            projectId,
+            workspaceStartAgentInstanceId,
+            selectedModel,
+          );
           if (res.agent_instance_id) {
             useAutomationLoopStore
               .getState()
@@ -207,6 +224,8 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
     pendingSpecIdsRef, pendingTaskIdsRef, onSessionReady,
     onAssistantTurnCompleted, onMaybeAutoRetry, onStreamFinalized,
     breadcrumbContext, onPartitionMigrated,
+    workspaceToolsEnabled = true,
+    workspaceStartAgentInstanceId,
   } = deps;
   // Track the last session id we forwarded to `onSessionReady` so a
   // chatty stream that re-emits `SessionReady` (e.g. mid-stream
@@ -361,7 +380,14 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
             .getState()
             .bumpEstimatedTokens(activeKey, approxTokensFromText(c.result));
         }
-        void bridgeLoopToolResult(c.name, c.is_error, projectId, selectedModel);
+        void bridgeLoopToolResult(
+          c.name,
+          c.is_error,
+          projectId,
+          selectedModel,
+          workspaceToolsEnabled,
+          workspaceStartAgentInstanceId,
+        );
         if (c.name === "create_spec") {
           if (c.is_error) removePendingArtifact(c.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
           else promotePendingSpec(c, projectId, sidekickRef.current, pendingSpecIdsRef);

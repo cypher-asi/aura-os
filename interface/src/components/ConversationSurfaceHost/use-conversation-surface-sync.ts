@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 
 import type { ConversationTarget } from "../../apps/agents/hooks/use-conversation-target";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { useAgentStore } from "../../apps/agents/stores";
+import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
 import { setLastStandaloneAgentId } from "../../utils/storage";
 
 type ConversationSurfaceSyncInput = {
@@ -34,6 +36,8 @@ export function useConversationSurfaceSync({
 }: ConversationSurfaceSyncInput): void {
   const setSelectedAgent = useAgentStore((s) => s.setSelectedAgent);
   const setTerminalTarget = useTerminalPanelStore((s) => s.setTerminalTarget);
+  const clearTerminalTarget = useTerminalPanelStore((s) => s.clearTerminalTarget);
+  const { features } = useAuraCapabilities();
 
   const ready = target.kind === "ready" ? target : null;
   const terminal = useTerminalTarget({
@@ -53,14 +57,27 @@ export function useConversationSurfaceSync({
   useEffect(() => {
     if (!isConversationRoute || !ready) return;
     if (terminal.status !== "ready") return;
-    setTerminalTarget({
-      cwd: terminal.workspacePath,
+    const workspaceAccess = resolveWorkspaceAccess({
+      workspacePath: terminal.workspacePath,
+      remoteWorkspacePath: terminal.remoteWorkspacePath,
       remoteAgentId: terminal.remoteAgentId,
+      linkedWorkspace: features.linkedWorkspace,
+    });
+    if (!workspaceAccess.canUseWorkspace) {
+      clearTerminalTarget(ready.projectId);
+      return;
+    }
+    setTerminalTarget({
+      cwd: workspaceAccess.workspacePath,
+      remoteAgentId: workspaceAccess.kind === "remote" ? terminal.remoteAgentId : undefined,
       projectId: ready.projectId,
     });
   }, [
+    clearTerminalTarget,
+    features.linkedWorkspace,
     isConversationRoute,
     ready,
+    terminal.remoteWorkspacePath,
     terminal.status,
     terminal.workspacePath,
     terminal.remoteAgentId,

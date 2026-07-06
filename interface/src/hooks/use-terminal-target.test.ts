@@ -41,6 +41,7 @@ describe("useTerminalTarget", () => {
 
   it("resolves a single agent instance for project + agentInstanceId", async () => {
     mockGetAgentInstance.mockResolvedValue({
+      agent_instance_id: "inst-1",
       agent_id: "agent-1",
       machine_type: "remote",
       workspace_path: "/home/user/project",
@@ -59,6 +60,7 @@ describe("useTerminalTarget", () => {
     });
 
     expect(result.current.remoteAgentId).toBe("agent-1");
+    expect(result.current.remoteAgentInstanceId).toBe("inst-1");
     expect(result.current.remoteWorkspacePath).toBe("/home/user/project");
     expect(result.current.workspacePath).toBe("/home/user/project");
     expect(mockGetAgentInstance).toHaveBeenCalledWith("proj-1", "inst-1");
@@ -84,6 +86,7 @@ describe("useTerminalTarget", () => {
 
   it("resolves local agent instance (no remote fields)", async () => {
     mockGetAgentInstance.mockResolvedValue({
+      agent_instance_id: "inst-1",
       agent_id: "agent-1",
       machine_type: "local",
       workspace_path: "/local/path",
@@ -102,14 +105,25 @@ describe("useTerminalTarget", () => {
     });
 
     expect(result.current.remoteAgentId).toBeUndefined();
+    expect(result.current.remoteAgentInstanceId).toBeUndefined();
     expect(result.current.remoteWorkspacePath).toBeUndefined();
     expect(result.current.workspacePath).toBe("/local/path");
   });
 
   it("resolves from agent list for project without agentInstanceId", async () => {
     mockListAgentInstances.mockResolvedValue([
-      { agent_id: "agent-local", machine_type: "local", workspace_path: "/local" },
-      { agent_id: "agent-remote", machine_type: "remote", workspace_path: "/remote" },
+      {
+        agent_instance_id: "inst-local",
+        agent_id: "agent-local",
+        machine_type: "local",
+        workspace_path: "/local",
+      },
+      {
+        agent_instance_id: "inst-remote",
+        agent_id: "agent-remote",
+        machine_type: "remote",
+        workspace_path: "/remote",
+      },
     ]);
 
     const { result } = renderHook(() => useTerminalTarget({ projectId: "proj-1" }), {
@@ -121,13 +135,25 @@ describe("useTerminalTarget", () => {
     });
 
     expect(result.current.remoteAgentId).toBe("agent-remote");
+    expect(result.current.remoteAgentInstanceId).toBe("inst-remote");
     expect(result.current.workspacePath).toBe("/remote");
     expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1");
   });
 
-  it("falls back to local agent workspace when no remote instance", async () => {
+  it("falls back to a local workspace when remote instances have not reported one", async () => {
     mockListAgentInstances.mockResolvedValue([
-      { agent_id: "agent-local", machine_type: "local", workspace_path: "/local/project" },
+      {
+        agent_instance_id: "inst-remote",
+        agent_id: "agent-remote",
+        machine_type: "remote",
+        workspace_path: null,
+      },
+      {
+        agent_instance_id: "inst-local",
+        agent_id: "agent-local",
+        machine_type: "local",
+        workspace_path: "/local/project",
+      },
     ]);
 
     const { result } = renderHook(() => useTerminalTarget({ projectId: "proj-1" }), {
@@ -139,6 +165,55 @@ describe("useTerminalTarget", () => {
     });
 
     expect(result.current.remoteAgentId).toBeUndefined();
+    expect(result.current.remoteAgentInstanceId).toBeUndefined();
+    expect(result.current.remoteWorkspacePath).toBeUndefined();
+    expect(result.current.workspacePath).toBe("/local/project");
+  });
+
+  it("keeps a remote placeholder when no workspace fallback exists", async () => {
+    mockListAgentInstances.mockResolvedValue([
+      {
+        agent_instance_id: "inst-remote",
+        agent_id: "agent-remote",
+        machine_type: "remote",
+        workspace_path: null,
+      },
+    ]);
+
+    const { result } = renderHook(() => useTerminalTarget({ projectId: "proj-1" }), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.status).toBe("ready");
+    });
+
+    expect(result.current.remoteAgentId).toBe("agent-remote");
+    expect(result.current.remoteAgentInstanceId).toBe("inst-remote");
+    expect(result.current.remoteWorkspacePath).toBeUndefined();
+    expect(result.current.workspacePath).toBeUndefined();
+  });
+
+  it("falls back to local agent workspace when no remote instance", async () => {
+    mockListAgentInstances.mockResolvedValue([
+      {
+        agent_instance_id: "inst-local",
+        agent_id: "agent-local",
+        machine_type: "local",
+        workspace_path: "/local/project",
+      },
+    ]);
+
+    const { result } = renderHook(() => useTerminalTarget({ projectId: "proj-1" }), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.status).toBe("ready");
+    });
+
+    expect(result.current.remoteAgentId).toBeUndefined();
+    expect(result.current.remoteAgentInstanceId).toBeUndefined();
     expect(result.current.workspacePath).toBe("/local/project");
   });
 

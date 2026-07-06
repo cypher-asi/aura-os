@@ -19,6 +19,12 @@ vi.mock("../../hooks/use-terminal-target", () => ({
   useTerminalTarget: useTerminalTargetMock,
 }));
 
+vi.mock("../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => ({
+    features: { linkedWorkspace: true },
+  }),
+}));
+
 const setSelectedAgent = vi.hoisted(() => vi.fn());
 
 vi.mock("../../apps/agents/stores", () => ({
@@ -146,6 +152,7 @@ beforeEach(() => {
       if (projectId === "p1" && agentInstanceId === "a1") {
         return {
           remoteAgentId: undefined,
+          remoteAgentInstanceId: undefined,
           remoteWorkspacePath: undefined,
           workspacePath: "/workspace/project-one",
           status: "ready" as const,
@@ -155,6 +162,7 @@ beforeEach(() => {
       if (projectId === "p2" && agentInstanceId === "a2") {
         return {
           remoteAgentId: undefined,
+          remoteAgentInstanceId: undefined,
           remoteWorkspacePath: undefined,
           workspacePath: "/workspace/project-two",
           status: "ready" as const,
@@ -163,6 +171,7 @@ beforeEach(() => {
 
       return {
         remoteAgentId: undefined,
+        remoteAgentInstanceId: undefined,
         remoteWorkspacePath: undefined,
         workspacePath: undefined,
         status: "loading" as const,

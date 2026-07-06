@@ -119,6 +119,34 @@ describe("useAuraCapabilities", () => {
     delete (window as Window & { ipc?: { postMessage: () => void } }).ipc;
   });
 
+  it("keeps desktop workspace features when the desktop window is narrow", () => {
+    const matchMedia = vi.fn((query: string) => ({
+      matches: query === `(max-width: ${AURA_BREAKPOINTS.phoneMax}px)` ||
+               query === `(max-width: ${AURA_BREAKPOINTS.tabletMax}px)`,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      onchange: null,
+      dispatchEvent: vi.fn(),
+    }));
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    (window as Window & { ipc?: { postMessage: () => void } }).ipc = {
+      postMessage: vi.fn(),
+    };
+
+    const { result } = renderHook(() => useAuraCapabilities());
+
+    expect(result.current.isMobileLayout).toBe(true);
+    expect(result.current.hasDesktopBridge).toBe(true);
+    expect(result.current.features.linkedWorkspace).toBe(true);
+    expect(result.current.features.ideIntegration).toBe(true);
+    expect(result.current.supportsDesktopWorkspace).toBe(true);
+
+    delete (window as Window & { ipc?: { postMessage: () => void } }).ipc;
+  });
+
   it("unlocks local-agent runtime on web when the server reports hosted harness support", async () => {
     const { matchMedia } = createMockMatchMedia();
     window.matchMedia = matchMedia as unknown as typeof window.matchMedia;

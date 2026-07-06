@@ -26,6 +26,7 @@ import type { AgentInstance, Project } from "../../../../shared/types";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useAgentBusy } from "../../../../hooks/use-agent-busy";
 import { useTerminalTarget } from "../../../../hooks/use-terminal-target";
+import { resolveWorkspaceAccess } from "../../../../shared/lib/workspace-access";
 import { useFreshCanvas } from "../../hooks/use-fresh-canvas";
 import { useOptimisticSessionRow } from "../../hooks/use-optimistic-session-row";
 import { useAutoRenameFromPrompt } from "../../hooks/use-auto-rename-from-prompt";
@@ -80,7 +81,7 @@ export function AgentChatPanel({
 }: AgentChatPanelProps) {
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
-  const { isMobileLayout, remoteOnly } = useAuraCapabilities();
+  const { features, isMobileLayout, remoteOnly } = useAuraCapabilities();
   const currentProject = useProjectsListStore(useShallow(selectCurrentProject(projectId)));
   const projectName = currentProject[0]?.name ?? "";
   const projectAgents = useProjectsListStore(
@@ -106,6 +107,18 @@ export function AgentChatPanel({
   // explorer + terminal use, so @-mention reads the same tree the
   // user sees in the side panel.
   const terminalTarget = useTerminalTarget({ projectId, agentInstanceId });
+  const workspaceAccess = resolveWorkspaceAccess({
+    workspacePath: terminalTarget.workspacePath,
+    remoteWorkspacePath: terminalTarget.remoteWorkspacePath,
+    remoteAgentId: terminalTarget.remoteAgentId,
+    linkedWorkspace: features.linkedWorkspace,
+  });
+  const workspaceToolsEnabled =
+    terminalTarget.status === "ready" && workspaceAccess.canUseWorkspace;
+  const workspaceStartAgentInstanceId =
+    workspaceAccess.kind === "remote"
+      ? terminalTarget.remoteAgentInstanceId
+      : undefined;
 
   const optimisticRow = useOptimisticSessionRow({
     projectId,
@@ -125,6 +138,8 @@ export function AgentChatPanel({
       agentInstanceId,
       sessionId,
       onSessionReady: handleSessionReady,
+      workspaceToolsEnabled,
+      workspaceStartAgentInstanceId,
     });
 
   const contextUsage = useContextUsage(streamKey);

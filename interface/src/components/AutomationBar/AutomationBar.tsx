@@ -26,8 +26,19 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     remoteAgentId: terminalTarget.remoteAgentId,
     linkedWorkspace: features.linkedWorkspace,
   });
+  const startAgentInstanceId =
+    workspaceAccess.kind === "remote"
+      ? terminalTarget.remoteAgentInstanceId
+      : undefined;
+  const remoteAutomationTargetMissing =
+    workspaceAccess.kind === "remote" && !startAgentInstanceId;
   const workspaceGateActive =
-    terminalTarget.status === "loading" || !workspaceAccess.canUseWorkspace;
+    terminalTarget.status === "loading" ||
+    !workspaceAccess.canUseWorkspace ||
+    remoteAutomationTargetMissing;
+  const canStartWorkspaceAutomation =
+    !workspaceGateActive &&
+    (workspaceAccess.kind !== "remote" || Boolean(startAgentInstanceId));
   const workspaceGateTitle =
     terminalTarget.status === "loading"
       ? "Workspace is still loading"
@@ -43,7 +54,11 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     stopError, clearStopError,
     startError, clearStartError, handleResetAndRetry,
     loopEngineeringContract,
-  } = useAutomationStatus(projectId);
+  } = useAutomationStatus(projectId, startAgentInstanceId, {
+    allowDetachedReattach: canStartWorkspaceAutomation,
+    detachedReattachAgentInstanceId:
+      workspaceAccess.kind === "remote" ? startAgentInstanceId : undefined,
+  });
 
   // Whether the start error is the structured "harness has a stale
   // automaton" 409. Drives the modal copy (Reset vs Dismiss) so the
@@ -76,9 +91,9 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     : null;
   const verifierCount = activeLoopEngineering?.verifierCommands.length ?? 0;
   const criteriaCount = activeLoopEngineering?.successCriteria.length ?? 0;
-  const canPlayWithWorkspace = canPlay && !workspaceGateActive;
+  const canPlayWithWorkspace = canPlay && canStartWorkspaceAutomation;
   const canStartLoopEngineeringWithWorkspace =
-    canStartLoopEngineering && !workspaceGateActive;
+    canStartLoopEngineering && canStartWorkspaceAutomation;
 
   return (
     <>

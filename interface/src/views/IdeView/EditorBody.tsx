@@ -10,6 +10,7 @@ interface Props {
   lineCount: number;
   highlightedHtml: string;
   onContentChange: (content: string) => void;
+  readOnly?: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   gutterRef: RefObject<HTMLDivElement | null>;
   highlightRef: RefObject<HTMLPreElement | null>;
@@ -17,7 +18,7 @@ interface Props {
 
 export function EditorBody({
   activeTab, tabCount, language, lineCount, highlightedHtml,
-  onContentChange, textareaRef, gutterRef, highlightRef,
+  onContentChange, readOnly = false, textareaRef, gutterRef, highlightRef,
 }: Props) {
   const handleScroll = useCallback(() => {
     const ta = textareaRef.current;
@@ -32,6 +33,7 @@ export function EditorBody({
   const handleTab = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Tab") {
       e.preventDefault();
+      if (readOnly) return;
       const ta = e.currentTarget;
       const start = ta.selectionStart;
       const end = ta.selectionEnd;
@@ -39,7 +41,7 @@ export function EditorBody({
       onContentChange(newValue);
       requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = start + 2; });
     }
-  }, [onContentChange]);
+  }, [onContentChange, readOnly]);
 
   if (activeTab?.loading) {
     return <div className={styles.loading}><Spinner size="md" /></div>;
@@ -71,6 +73,7 @@ export function EditorBody({
           className={styles.codeArea}
           value={activeTab.content}
           onChange={(e) => onContentChange(e.target.value)}
+          readOnly={readOnly}
           onScroll={handleScroll}
           onKeyDown={handleTab}
           spellCheck={false}

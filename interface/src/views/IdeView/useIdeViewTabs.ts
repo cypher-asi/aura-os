@@ -18,6 +18,10 @@ export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const readOnly = Boolean(remoteAgentId);
+  const readOnlyReason = readOnly
+    ? "Remote IDE preview is read-only. Use Aura Desktop or a remote agent task to change files."
+    : null;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
@@ -67,11 +71,16 @@ export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
   const language = useMemo(() => (activeTab ? langFromPath(activeTab.path) ?? null : null), [activeTab?.path]);
 
   const handleContentChange = useCallback((newContent: string) => {
+    if (readOnly) return;
     setTabs((prev) => prev.map((t) => t.path !== activeTabPath ? t : { ...t, content: newContent }));
-  }, [activeTabPath]);
+  }, [activeTabPath, readOnly]);
 
   const handleSave = useCallback(async () => {
     if (!activeTab || activeTab.content == null || saving) return;
+    if (readOnly) {
+      setSaveError(readOnlyReason);
+      return;
+    }
     const tabPath = activeTab.path;
     const tabContent = activeTab.content;
     setSaving(true); setSaveError(null);
@@ -81,7 +90,7 @@ export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
       else setSaveError(res.error ?? "Failed to save");
     } catch (e) { setSaveError(String(e)); }
     finally { setSaving(false); }
-  }, [activeTab, saving]);
+  }, [activeTab, saving, readOnly, readOnlyReason]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -108,7 +117,7 @@ export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
   return {
     tabs, activeTab, activeTabPath, setActiveTabPath,
     openTab, closeTab,
-    saving, saveError, dirty, language,
+    saving, saveError, dirty, language, readOnly, readOnlyReason,
     handleContentChange, handleSave,
     textareaRef, gutterRef, highlightRef,
     highlightedHtml, lineCount,

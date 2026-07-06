@@ -85,6 +85,12 @@ interface UseChatStreamOptions {
    * extended.
    */
   onSessionReady?: (sessionId: string) => void;
+  /**
+   * Whether workspace tools such as dev-loop bridging are reachable in the
+   * current client. Plain chat can remain enabled even when this is false.
+   */
+  workspaceToolsEnabled?: boolean;
+  workspaceStartAgentInstanceId?: string;
 }
 
 /** Captured partition-of-record. The send and any auto-retry replay
@@ -102,6 +108,8 @@ export function useChatStream({
   agentInstanceId,
   sessionId,
   onSessionReady,
+  workspaceToolsEnabled = true,
+  workspaceStartAgentInstanceId,
 }: UseChatStreamOptions) {
   const sidekickRef = useRef(useSidekickStore.getState());
   const projectCtx = useProjectActions();
@@ -138,6 +146,14 @@ export function useChatStream({
   }, [sessionId]);
   const onSessionReadyRef = useRef(onSessionReady);
   useEffect(() => { onSessionReadyRef.current = onSessionReady; }, [onSessionReady]);
+  const workspaceToolsEnabledRef = useRef(workspaceToolsEnabled);
+  useEffect(() => {
+    workspaceToolsEnabledRef.current = workspaceToolsEnabled;
+  }, [workspaceToolsEnabled]);
+  const workspaceStartAgentInstanceIdRef = useRef(workspaceStartAgentInstanceId);
+  useEffect(() => {
+    workspaceStartAgentInstanceIdRef.current = workspaceStartAgentInstanceId;
+  }, [workspaceStartAgentInstanceId]);
 
   // Track the partition key this hook is currently bound to so the
   // unmount cleanup can hygienically clear THIS hook's last partition's
@@ -447,6 +463,8 @@ export function useChatStream({
           ctrl.autoRetryCount = 0;
         },
         onMaybeAutoRetry: tryAutoRetry,
+        workspaceToolsEnabled: workspaceToolsEnabledRef.current,
+        workspaceStartAgentInstanceId: workspaceStartAgentInstanceIdRef.current,
         // Keep `ctrl.inFlight` consistent with `isStreaming` so the
         // dequeue-on-completion effect in `useChatPanelState` can
         // re-enter `performSend` the moment the turn ends. The outer
@@ -907,6 +925,8 @@ export function useChatStream({
           ctrl.autoRetryCount = 0;
         },
         onMaybeAutoRetry: onMaybeReconnect,
+        workspaceToolsEnabled: workspaceToolsEnabledRef.current,
+        workspaceStartAgentInstanceId: workspaceStartAgentInstanceIdRef.current,
         onStreamFinalized: () => {
           ctrl.inFlight = false;
         },

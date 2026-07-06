@@ -13,6 +13,15 @@ const handlePause = vi.fn();
 const handleStop = vi.fn();
 const handleStopConfirm = vi.fn();
 const setConfirmStop = vi.fn();
+const mockUseAutomationStatus = vi.fn(() => automationStatus);
+let mockLinkedWorkspace = true;
+let mockTerminalTarget = {
+  remoteAgentId: undefined as string | undefined,
+  remoteAgentInstanceId: undefined as string | undefined,
+  remoteWorkspacePath: undefined as string | undefined,
+  workspacePath: "/Users/demo/project" as string | undefined,
+  status: "ready" as "loading" | "ready" | "error",
+};
 
 let mockTasks = [
   { taskId: "task-1", title: "Active task", status: "active", projectId: "proj-1" },
@@ -75,6 +84,16 @@ vi.mock("react-router-dom", () => ({
   useParams: () => ({ agentInstanceId: "agent-inst-1" }),
 }));
 
+vi.mock("../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => ({
+    features: { linkedWorkspace: mockLinkedWorkspace },
+  }),
+}));
+
+vi.mock("../../hooks/use-terminal-target", () => ({
+  useTerminalTarget: () => mockTerminalTarget,
+}));
+
 vi.mock("../../stores/project-action-store", () => ({
   useProjectActions: () => projectCtx,
 }));
@@ -95,7 +114,7 @@ vi.mock("../../stores/terminal-panel-store", () => ({
 }));
 
 vi.mock("../AutomationBar/useAutomationStatus", () => ({
-  useAutomationStatus: () => automationStatus,
+  useAutomationStatus: (...args: unknown[]) => mockUseAutomationStatus(...args),
 }));
 
 vi.mock("../AutomationBar/AutomationModelPicker", () => ({
@@ -162,6 +181,7 @@ function setScrollMetrics(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUseAutomationStatus.mockImplementation(() => automationStatus);
   mockTasks = [
     { taskId: "task-1", title: "Active task", status: "active", projectId: "proj-1" },
     { taskId: "task-2", title: "Completed task", status: "completed", projectId: "proj-1" },
@@ -191,6 +211,14 @@ beforeEach(() => {
     handleStop,
     handleStopConfirm,
   };
+  mockLinkedWorkspace = true;
+  mockTerminalTarget = {
+    remoteAgentId: undefined,
+    remoteAgentInstanceId: undefined,
+    remoteWorkspacePath: undefined,
+    workspacePath: "/Users/demo/project",
+    status: "ready",
+  };
 });
 
 describe("RunSidekickPane", () => {
@@ -200,6 +228,43 @@ describe("RunSidekickPane", () => {
     expect(screen.getByRole("button", { name: "Run automation" })).toBeInTheDocument();
     expect(screen.getByTestId("active-task")).toHaveTextContent("Active task");
     expect(screen.getByTestId("completed-task")).toHaveTextContent("Completed task");
+  });
+
+  it("disables run controls when a local workspace is unavailable on web", () => {
+    mockLinkedWorkspace = false;
+    mockTerminalTarget = {
+      remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
+      remoteWorkspacePath: undefined,
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    };
+
+    render(<RunSidekickPane />);
+
+    const runButton = screen.getByRole("button", { name: "Run automation" });
+    expect(runButton).toBeDisabled();
+    expect(runButton).toHaveAttribute(
+      "title",
+      "Build tools for local workspaces are available in Aura Desktop",
+    );
+    expect(mockUseAutomationStatus).toHaveBeenCalledWith(
+      "proj-1",
+      undefined,
+      { allowDetachedReattach: false },
+    );
+  });
+
+  it("mounts passive run status helpers in observe-only mode", () => {
+    mockTasks = [];
+
+    render(<RunSidekickPane />);
+
+    expect(mockUseAutomationStatus).toHaveBeenCalledWith(
+      "proj-1",
+      undefined,
+      { allowDetachedReattach: false },
+    );
   });
 
   it("filters run rows by the inline search query", () => {

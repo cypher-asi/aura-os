@@ -27,6 +27,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
+import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
 import { SidekickTabBar, type TabItem } from "../SidekickTabBar";
 import { CheckLoopGlyph } from "../CheckLoopGlyph";
 import { PlayLoopGlyph } from "../PlayLoopGlyph";
@@ -58,10 +59,21 @@ export function SidekickTaskbar() {
   const ctx = useProjectActions();
   const { features } = useAuraCapabilities();
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
-  const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId, agentInstanceId });
-  const canBrowseLocal = features.linkedWorkspace && !remoteAgentId && Boolean(workspacePath);
-  const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteWorkspacePath);
-  const canBrowseFiles = canBrowseLocal || canBrowseRemote;
+  const terminalTarget = useTerminalTarget({ projectId, agentInstanceId });
+  const workspaceAccess = resolveWorkspaceAccess({
+    workspacePath: terminalTarget.workspacePath,
+    remoteWorkspacePath: terminalTarget.remoteWorkspacePath,
+    remoteAgentId: terminalTarget.remoteAgentId,
+    linkedWorkspace: features.linkedWorkspace,
+  });
+  const canUseWorkspace = workspaceAccess.canUseWorkspace;
+  const startAgentInstanceId =
+    workspaceAccess.kind === "remote"
+      ? terminalTarget.remoteAgentInstanceId
+      : undefined;
+  const canStartWorkspaceAutomation =
+    canUseWorkspace &&
+    (workspaceAccess.kind !== "remote" || Boolean(startAgentInstanceId));
   // Tasks tab lights up whenever ANY loop is open for this (project,
   // agent_instance) — this covers the live task runs in this project.
   // Run tab uses a project-wide scope so cross-agent activity inside
@@ -77,15 +89,15 @@ export function SidekickTaskbar() {
   const runActive = !!runActivity && isLoopActivityActive(runActivity.status);
 
   useEffect(() => {
-    if (!canBrowseFiles && activeTab === "files") {
-      setActiveTab("tasks");
+    if (!canUseWorkspace && (activeTab === "files" || activeTab === "terminal")) {
+      setActiveTab("sessions");
     }
-  }, [activeTab, canBrowseFiles, setActiveTab]);
+  }, [activeTab, canUseWorkspace, setActiveTab]);
   useEffect(() => {
-    if (canBrowseFiles || !loopEngineeringOpen) return;
+    if (canStartWorkspaceAutomation || !loopEngineeringOpen) return;
     setLoopEngineeringOpen(false);
     setLoopPanelStyle(null);
-  }, [canBrowseFiles, loopEngineeringOpen]);
+  }, [canStartWorkspaceAutomation, loopEngineeringOpen]);
   const project = ctx?.project;
   const handleArchive = ctx?.handleArchive;
   const loopProjectId = project?.project_id ?? projectId ?? null;
@@ -96,11 +108,15 @@ export function SidekickTaskbar() {
         icon: <MessageSquare size={16} />,
         title: "Chats",
       },
-      {
-        id: "terminal",
-        icon: <SquareTerminal size={16} />,
-        title: "Terminal",
-      },
+      ...(canUseWorkspace
+        ? [
+            {
+              id: "terminal",
+              icon: <SquareTerminal size={16} />,
+              title: "Terminal",
+            },
+          ]
+        : []),
       { id: "browser", icon: <Globe size={16} />, title: "Browser" },
       { id: "specs", icon: <File size={16} />, title: "Plans" },
       {
@@ -115,7 +131,7 @@ export function SidekickTaskbar() {
         icon: <PlayLoopGlyph active={runActive} size={16} />,
         title: "Run",
       },
-      ...(loopProjectId && canBrowseFiles
+      ...(loopProjectId && canStartWorkspaceAutomation
         ? [
             {
               id: "loop-engineering",
@@ -152,10 +168,10 @@ export function SidekickTaskbar() {
       { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
     ];
     return items;
-	  }, [tasksActive, runActive, loopProjectId, canBrowseFiles]);
-  const visibleTabs = canBrowseFiles
+  }, [tasksActive, runActive, loopProjectId, canUseWorkspace, canStartWorkspaceAutomation]);
+  const visibleTabs = canUseWorkspace
     ? tabs
-    : tabs.filter((tab) => tab.id !== "files");
+    : tabs.filter((tab) => tab.id !== "files" && tab.id !== "terminal");
 
   const actions = useMemo<MenuItem[]>(() => {
     if (!project) return [];
@@ -230,6 +246,8 @@ export function SidekickTaskbar() {
         ? createPortal(
             <SidekickLoopEngineeringPanel
               projectId={loopProjectId}
+              startAgentInstanceId={startAgentInstanceId}
+              allowDetachedReattach={canStartWorkspaceAutomation}
               style={loopPanelStyle}
             />,
             document.body,
@@ -241,9 +259,13 @@ export function SidekickTaskbar() {
 
 function SidekickLoopEngineeringPanel({
   projectId,
+  startAgentInstanceId,
+  allowDetachedReattach,
   style,
 }: {
   projectId: ProjectId;
+  startAgentInstanceId?: string;
+  allowDetachedReattach: boolean;
   style: CSSProperties;
 }) {
   const {
@@ -251,7 +273,10 @@ function SidekickLoopEngineeringPanel({
     handleStartLoopEngineering,
     startError,
     clearStartError,
-  } = useAutomationStatus(projectId);
+  } = useAutomationStatus(projectId, startAgentInstanceId, {
+    allowDetachedReattach,
+    detachedReattachAgentInstanceId: startAgentInstanceId,
+  });
 
   const handleStart = useCallback(
     async (contract: LoopEngineeringContract) => {

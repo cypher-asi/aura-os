@@ -15,6 +15,7 @@ import {
 
 const mockSubagentOnSend = vi.hoisted(() => vi.fn());
 const mockSubagentOnStop = vi.hoisted(() => vi.fn());
+const mockUseSubagentChatStream = vi.hoisted(() => vi.fn());
 const mockModelPersistence = vi.hoisted(() => {
   let selectedModel = "gpt-5.4";
   const persistModel = vi.fn((model: string) => {
@@ -45,12 +46,7 @@ vi.mock("@cypher-asi/zui", () => ({
 
 vi.mock("../../../hooks/use-subagent-chat-stream", () => ({
   subagentStreamKey: (childRunId: string) => `subagent:${childRunId}`,
-  useSubagentChatStream: () => ({
-    streamKey: "subagent:child-1",
-    status: "live",
-    onSend: mockSubagentOnSend,
-    onStop: mockSubagentOnStop,
-  }),
+  useSubagentChatStream: (...args: unknown[]) => mockUseSubagentChatStream(...args),
 }));
 
 vi.mock("../../../hooks/stream/hooks", () => ({
@@ -228,6 +224,13 @@ describe("ChatPanel", () => {
     mockClearQueue.mockReset();
     mockSubagentOnSend.mockReset();
     mockSubagentOnStop.mockReset();
+    mockUseSubagentChatStream.mockReset();
+    mockUseSubagentChatStream.mockReturnValue({
+      streamKey: "subagent:child-1",
+      status: "live",
+      onSend: mockSubagentOnSend,
+      onStop: mockSubagentOnStop,
+    });
     mockModelPersistence.reset();
     _resetAllPartitionSendControl();
     useMessageStore.setState({ messages: {}, orderedIds: {} });
@@ -986,5 +989,36 @@ describe("ChatPanel", () => {
     expect(
       screen.queryByRole("button", { name: "Back to parent thread" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("attaches subagent streams with the parent template agent id", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    const descriptor: SubAgentPaneDescriptor = {
+      childRunId: "child-1",
+      parentToolUseId: "tool-1",
+      subagentType: "explore",
+      prompt: "Look around the repo",
+      state: "running",
+    };
+
+    renderPanel({
+      historyResolved: true,
+      isLoading: false,
+      agentId: "project-agent-instance-1",
+      templateAgentId: "template-agent-1",
+    });
+
+    act(() => {
+      useSubAgentPaneStore.getState().openPane("stream-1", descriptor);
+    });
+
+    expect(mockUseSubagentChatStream).toHaveBeenCalledWith(
+      "child-1",
+      "tool-1",
+      true,
+      undefined,
+      "template-agent-1",
+    );
   });
 });

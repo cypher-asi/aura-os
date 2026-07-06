@@ -110,6 +110,7 @@ beforeEach(() => {
   mockUseProjectsListStore.mockReturnValue({ projects: [project] });
   mockUseTerminalTarget.mockReturnValue({
     remoteAgentId: "remote-agent-1",
+    remoteAgentInstanceId: "remote-inst-1",
     remoteWorkspacePath: "p/demo-project",
     workspacePath: "p/demo-project",
     status: "ready",
@@ -156,6 +157,7 @@ describe("ProjectFilesView", () => {
     mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
       remoteWorkspacePath: undefined,
       workspacePath: "/Users/demo/project",
       status: "ready",
@@ -171,6 +173,7 @@ describe("ProjectFilesView", () => {
     mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
       remoteWorkspacePath: undefined,
       workspacePath: undefined,
       status: "loading",
@@ -186,6 +189,7 @@ describe("ProjectFilesView", () => {
     mockUseAuraCapabilities.mockReturnValue(capabilities({ isMobileLayout: true, isMobileClient: true }));
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
       remoteWorkspacePath: undefined,
       workspacePath: undefined,
       status: "error",
@@ -222,6 +226,7 @@ describe("ProjectFilesView", () => {
     mockUseAuraCapabilities.mockReturnValue(capabilities({ features: { linkedWorkspace: false } }));
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
       remoteWorkspacePath: undefined,
       workspacePath: "/Users/demo/project",
       status: "ready",
@@ -237,6 +242,7 @@ describe("ProjectFilesView", () => {
     mockUseAuraCapabilities.mockReturnValue(capabilities({ features: { linkedWorkspace: true } }));
     mockUseTerminalTarget.mockReturnValue({
       remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
       remoteWorkspacePath: undefined,
       workspacePath: "/Users/demo/project",
       status: "ready",

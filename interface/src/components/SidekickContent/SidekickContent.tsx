@@ -18,6 +18,7 @@ import { SidekickLog } from "../../views/SidekickLog";
 import { FileExplorer } from "../FileExplorer";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
+import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
 import { InfoPanel } from "./InfoPanel";
 import styles from "../Sidekick/Sidekick.module.css";
 
@@ -86,24 +87,29 @@ export function SidekickContent() {
   }
 
   const { project } = ctx;
-  const remoteRoot = remoteWorkspacePath ?? null;
-  const localRoot = !remoteAgentId ? (workspacePath ?? null) : null;
-  const workspaceRoot = remoteAgentId ? remoteRoot : localRoot;
-  const canBrowseLocal = features.linkedWorkspace && Boolean(localRoot);
-  const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteRoot);
-  const canBrowseFiles = canBrowseLocal || canBrowseRemote;
+  const workspaceAccess = resolveWorkspaceAccess({
+    workspacePath,
+    remoteWorkspacePath,
+    remoteAgentId,
+    linkedWorkspace: features.linkedWorkspace,
+  });
   const filesEmptyMessage = remoteAgentId
     ? "The attached remote agent has not reported a live workspace yet."
     : features.linkedWorkspace
       ? "This project does not currently expose a live local agent workspace."
       : "File browsing stays in the desktop app for now.";
+  const terminalEmptyMessage = remoteAgentId
+    ? "The attached remote agent has not reported a live terminal workspace yet."
+    : features.linkedWorkspace
+      ? "This project does not currently expose a live local agent workspace."
+      : "Terminal access for local workspaces is available in Aura Desktop.";
 
   if (showInfo) {
     return (
       <InfoPanel
         project={project}
-        workspacePath={workspacePath}
-        remoteAgentId={remoteAgentId}
+        workspacePath={workspaceAccess.workspacePath}
+        remoteAgentId={workspaceAccess.kind === "remote" ? remoteAgentId : undefined}
         onClose={() => toggleInfo("", null)}
       />
     );
@@ -114,9 +120,9 @@ export function SidekickContent() {
     activeTab !== "terminal" &&
     activeTab !== "browser";
 
-  const filesContent = canBrowseFiles ? (
+  const filesContent = workspaceAccess.canUseWorkspace ? (
     <FileExplorer
-      rootPath={workspaceRoot ?? undefined}
+      rootPath={workspaceAccess.workspacePath}
       searchQuery={searchQuery}
       remoteAgentId={remoteAgentId}
       onFileSelect={remoteAgentId ? handleRemoteFileSelect : undefined}
@@ -132,9 +138,13 @@ export function SidekickContent() {
   );
   const activeContent =
     activeTab === "terminal" ? (
-      <Suspense fallback={sidekickPaneFallback}>
-        <TerminalSidekickPane />
-      </Suspense>
+      workspaceAccess.canUseWorkspace ? (
+        <Suspense fallback={sidekickPaneFallback}>
+          <TerminalSidekickPane />
+        </Suspense>
+      ) : (
+        <EmptyState>{terminalEmptyMessage}</EmptyState>
+      )
     ) : activeTab === "browser" ? (
       <Suspense fallback={sidekickPaneFallback}>
         <BrowserPanel projectId={projectId} />

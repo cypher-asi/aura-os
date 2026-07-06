@@ -123,6 +123,23 @@ describe("useLoopControl", () => {
     expect(result.current.loopPaused).toBe(false);
   });
 
+  it("handleStart can pin an explicit remote workspace agent instance", async () => {
+    const { result } = renderHook(() =>
+      useLoopControl("proj-1", "remote-inst-1"),
+    );
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
+
+    await act(async () => {
+      await result.current.handleStart();
+    });
+
+    expect(mockStartLoop).toHaveBeenCalledWith(
+      "proj-1",
+      "remote-inst-1",
+      "aura-gpt-4.1",
+    );
+  });
+
   it("handleStart sets error on failure", async () => {
     mockStartLoop.mockRejectedValue(new Error("server down"));
 

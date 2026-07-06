@@ -64,6 +64,7 @@ export function SubAgentSurface({
   contextUsage,
   InputBarComponent,
 }: SubAgentSurfaceProps) {
+  const parentAgentIdForAttach = templateAgentId ?? agentId;
   const subagentThread = useSubagentChatStream(
     descriptor.childRunId,
     descriptor.parentToolUseId,
@@ -72,7 +73,7 @@ export function SubAgentSurface({
     // Parent agent id so a remote (swarm) parent's child run attaches over
     // the matching harness transport (server `?agent_id=`); local parents
     // pass `undefined` and the server defaults to the local harness.
-    agentId,
+    parentAgentIdForAttach,
   );
   const subStreamKey = subagentThread.streamKey;
   const subEvents = useStreamEvents(subStreamKey);

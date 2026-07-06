@@ -10,10 +10,25 @@ interface Props {
   onCloseTab: (path: string) => void;
   dirty: boolean;
   saving: boolean;
+  readOnly?: boolean;
+  readOnlyReason?: string | null;
   onSave: () => void;
 }
 
-export function EditorTabBar({ tabs, activeTabPath, onSelectTab, onCloseTab, dirty, saving, onSave }: Props) {
+export function EditorTabBar({
+  tabs,
+  activeTabPath,
+  onSelectTab,
+  onCloseTab,
+  dirty,
+  saving,
+  readOnly = false,
+  readOnlyReason,
+  onSave,
+}: Props) {
+  const saveTitle = readOnly
+    ? (readOnlyReason ?? "This editor is read-only")
+    : "Save (Ctrl+S)";
   return (
     <div className={styles.tabBar}>
       <div className={styles.tabList}>
@@ -30,9 +45,14 @@ export function EditorTabBar({ tabs, activeTabPath, onSelectTab, onCloseTab, dir
           );
         })}
       </div>
-      <button className={styles.saveButton} disabled={!dirty || saving} onClick={onSave} title="Save (Ctrl+S)">
+      <button
+        className={styles.saveButton}
+        disabled={readOnly || !dirty || saving}
+        onClick={onSave}
+        title={saveTitle}
+      >
         <Save size={14} />
-        {saving ? "Saving…" : "Save"}
+        {readOnly ? "Read only" : saving ? "Saving…" : "Save"}
       </button>
     </div>
   );

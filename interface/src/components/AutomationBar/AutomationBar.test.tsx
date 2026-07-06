@@ -40,6 +40,7 @@ const mockListLoops = vi.fn();
 let mockLinkedWorkspace = true;
 let mockTerminalTarget = {
   remoteAgentId: undefined as string | undefined,
+  remoteAgentInstanceId: undefined as string | undefined,
   remoteWorkspacePath: undefined as string | undefined,
   workspacePath: "/Users/demo/project" as string | undefined,
   status: "ready" as "loading" | "ready" | "error",
@@ -210,6 +211,7 @@ beforeEach(() => {
   mockLinkedWorkspace = true;
   mockTerminalTarget = {
     remoteAgentId: undefined,
+    remoteAgentInstanceId: undefined,
     remoteWorkspacePath: undefined,
     workspacePath: "/Users/demo/project",
     status: "ready",
@@ -342,6 +344,7 @@ describe("AutomationBar", () => {
     mockLinkedWorkspace = false;
     mockTerminalTarget = {
       remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
       remoteWorkspacePath: undefined,
       workspacePath: "/Users/demo/project",
       status: "ready",
@@ -355,6 +358,149 @@ describe("AutomationBar", () => {
     expect(blockedButtons).toHaveLength(2);
     blockedButtons.forEach((button) => expect(button).toBeDisabled());
     expect(screen.getByRole("button", { name: /Loop/i })).toBeDisabled();
+  });
+
+  it("does not reattach detached local loops when the local workspace is unavailable on web", async () => {
+    mockLinkedWorkspace = false;
+    mockTerminalTarget = {
+      remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
+      remoteWorkspacePath: undefined,
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    };
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["local-loop-1"],
+      agent_instance_id: "local-loop-1",
+      loop_state: "detached",
+      paused: false,
+    });
+    mockStartLoop.mockResolvedValue({
+      active_agent_instances: ["local-loop-1"],
+      agent_instance_id: "local-loop-1",
+    });
+
+    renderBar();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("active");
+    });
+    expect(mockStartLoop).not.toHaveBeenCalled();
+  });
+
+  it("reattaches detached local loops when the desktop workspace is available", async () => {
+    useAutomationLoopStore
+      .getState()
+      .setLoopModel("proj-1" as ProjectId, "aura-claude-opus-4-7");
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["local-loop-1"],
+      agent_instance_id: "local-loop-1",
+      loop_state: "detached",
+      paused: false,
+    });
+    mockStartLoop.mockResolvedValue({
+      active_agent_instances: ["local-loop-1"],
+      agent_instance_id: "local-loop-1",
+    });
+
+    renderBar();
+
+    await waitFor(() =>
+      expect(mockStartLoop).toHaveBeenCalledWith(
+        "proj-1",
+        "local-loop-1",
+        "aura-claude-opus-4-7",
+      ),
+    );
+  });
+
+  it("does not reattach a detached local loop when a web remote workspace is selected", async () => {
+    mockLinkedWorkspace = false;
+    mockTerminalTarget = {
+      remoteAgentId: "remote-template-1",
+      remoteAgentInstanceId: "remote-inst-1",
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    };
+    useAutomationLoopStore
+      .getState()
+      .setLoopModel("proj-1" as ProjectId, "aura-claude-opus-4-7");
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["local-loop-1"],
+      agent_instance_id: "local-loop-1",
+      loop_state: "detached",
+      paused: false,
+    });
+    mockStartLoop.mockResolvedValue({
+      active_agent_instances: ["local-loop-1"],
+      agent_instance_id: "local-loop-1",
+    });
+
+    renderBar();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("active");
+    });
+    expect(mockStartLoop).not.toHaveBeenCalled();
+  });
+
+  it("reattaches detached remote loops when the detached id matches the resolved remote instance", async () => {
+    mockLinkedWorkspace = false;
+    mockTerminalTarget = {
+      remoteAgentId: "remote-template-1",
+      remoteAgentInstanceId: "remote-inst-1",
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/Users/demo/project",
+      status: "ready",
+    };
+    useAutomationLoopStore
+      .getState()
+      .setLoopModel("proj-1" as ProjectId, "aura-claude-opus-4-7");
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["remote-inst-1"],
+      agent_instance_id: "remote-inst-1",
+      loop_state: "detached",
+      paused: false,
+    });
+    mockStartLoop.mockResolvedValue({
+      active_agent_instances: ["remote-inst-1"],
+      agent_instance_id: "remote-inst-1",
+    });
+
+    renderBar();
+
+    await waitFor(() =>
+      expect(mockStartLoop).toHaveBeenCalledWith(
+        "proj-1",
+        "remote-inst-1",
+        "aura-claude-opus-4-7",
+      ),
+    );
+  });
+
+  it("pins remote workspace starts to the resolved project-agent instance", async () => {
+    const user = userEvent.setup();
+    mockTerminalTarget = {
+      remoteAgentId: "remote-template-1",
+      remoteAgentInstanceId: "remote-inst-1",
+      remoteWorkspacePath: "/workspace/project",
+      workspacePath: "/workspace/project",
+      status: "ready",
+    };
+    useAutomationLoopStore
+      .getState()
+      .setLoopModel("proj-1" as ProjectId, "aura-claude-opus-4-7");
+    renderBar();
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
+
+    await user.click(screen.getByTitle("Start"));
+
+    expect(mockStartLoop).toHaveBeenCalledWith(
+      "proj-1",
+      "remote-inst-1",
+      "aura-claude-opus-4-7",
+    );
   });
 
   it("start uses the model shown in the AutomationBar picker even before an explicit per-project pick", async () => {

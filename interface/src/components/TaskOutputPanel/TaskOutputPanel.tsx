@@ -8,6 +8,9 @@ import { useProjectActions } from "../../stores/project-action-store";
 import { selectProjectActivity, useLoopActivityStore } from "../../stores/loop-activity-store";
 import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import { AutomationModelPicker } from "../AutomationBar/AutomationModelPicker";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useTerminalTarget } from "../../hooks/use-terminal-target";
+import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
 import { useScrollAnchorV2 } from "../../shared/hooks/use-scroll-anchor-v2";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { TerminalPanelBody } from "../TerminalPanelBody";
@@ -19,13 +22,26 @@ import { CookingIndicator } from "../CookingIndicator";
 import { StatusBadge } from "../StatusBadge";
 import styles from "./TaskOutputPanel.module.css";
 
-function AutomationControls({ projectId }: { projectId: string }) {
+function AutomationControls({
+  projectId,
+  workspaceGateActive,
+  workspaceGateTitle,
+  startAgentInstanceId,
+}: {
+  projectId: string;
+  workspaceGateActive: boolean;
+  workspaceGateTitle: string;
+  startAgentInstanceId?: string;
+}) {
   const {
     status, canPlay, canPause, canStop, starting, preparing,
     handleStart, handlePause, handleStop, handleStopConfirm,
     confirmStop, setConfirmStop,
     stopError, clearStopError,
-  } = useAutomationStatus(projectId);
+  } = useAutomationStatus(projectId, startAgentInstanceId, {
+    allowDetachedReattach: !workspaceGateActive,
+    detachedReattachAgentInstanceId: startAgentInstanceId,
+  });
 
   const showStopPause = canPause || canStop;
   // The loop is doing work across the same three sub-phases the
@@ -42,8 +58,8 @@ function AutomationControls({ projectId }: { projectId: string }) {
           type="button"
           className={loopWorking ? `${styles.runBtnGroup} ${styles.runBtnGroupActive}` : styles.runBtnGroup}
           onClick={handleStart}
-          disabled={!canPlay}
-          title="Run"
+          disabled={!canPlay || workspaceGateActive}
+          title={workspaceGateActive ? workspaceGateTitle : "Run"}
           aria-label="Run automation"
         >
           {starting || preparing
@@ -59,8 +75,9 @@ function AutomationControls({ projectId }: { projectId: string }) {
               type="button"
               className={styles.runBtnGroup}
               onClick={handleStart}
-              title="Resume"
+              title={workspaceGateActive ? workspaceGateTitle : "Resume"}
               aria-label="Resume automation"
+              disabled={workspaceGateActive}
             >
               <Play size={14} />
               <span>Run</span>
@@ -130,7 +147,9 @@ function AutomationControls({ projectId }: { projectId: string }) {
  * in lockstep and both flow into the next `startLoop` call.
  */
 function RunPaneModelPicker({ projectId }: { projectId: string }) {
-  const { status } = useAutomationStatus(projectId);
+  const { status } = useAutomationStatus(projectId, undefined, {
+    allowDetachedReattach: false,
+  });
   const disabled = status !== "idle" && status !== "stopped";
   return (
     <div className={styles.headerModelSlot}>
@@ -150,7 +169,9 @@ function RunPaneModelPicker({ projectId }: { projectId: string }) {
  * `useAutomationStatus` only mounts with a real `projectId`.
  */
 function RunPaneStatus({ projectId }: { projectId: string }) {
-  const { status } = useAutomationStatus(projectId);
+  const { status } = useAutomationStatus(projectId, undefined, {
+    allowDetachedReattach: false,
+  });
   if (status === "idle" || status === "stopped") return null;
   return (
     <div className={styles.headerStatus}>
@@ -177,7 +198,9 @@ function RunPaneCookingIndicator({
   projectId: string;
   taskId: string | undefined;
 }) {
-  const { status } = useAutomationStatus(projectId);
+  const { status } = useAutomationStatus(projectId, undefined, {
+    allowDetachedReattach: false,
+  });
   const loopWorking =
     status === "starting" || status === "preparing" || status === "active";
   if (!loopWorking && !taskId) return null;
@@ -210,7 +233,9 @@ function loopPlanningLabel(
  * Falls back to the static empty state when the loop is idle.
  */
 function RunPaneEmptyState({ projectId }: { projectId: string }) {
-  const { status } = useAutomationStatus(projectId);
+  const { status } = useAutomationStatus(projectId, undefined, {
+    allowDetachedReattach: false,
+  });
   const loopWorking =
     status === "starting" || status === "preparing" || status === "active";
   const activity = useLoopActivityStore(
@@ -234,6 +259,30 @@ export function RunSidekickPane({ searchQuery = "" }: { searchQuery?: string }) 
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
+  const { features } = useAuraCapabilities();
+  const terminalTarget = useTerminalTarget({ projectId });
+  const workspaceAccess = resolveWorkspaceAccess({
+    workspacePath: terminalTarget.workspacePath,
+    remoteWorkspacePath: terminalTarget.remoteWorkspacePath,
+    remoteAgentId: terminalTarget.remoteAgentId,
+    linkedWorkspace: features.linkedWorkspace,
+  });
+  const startAgentInstanceId =
+    workspaceAccess.kind === "remote"
+      ? terminalTarget.remoteAgentInstanceId
+      : undefined;
+  const remoteAutomationTargetMissing =
+    workspaceAccess.kind === "remote" && !startAgentInstanceId;
+  const workspaceGateActive =
+    terminalTarget.status === "loading" ||
+    !workspaceAccess.canUseWorkspace ||
+    remoteAutomationTargetMissing;
+  const workspaceGateTitle =
+    terminalTarget.status === "loading"
+      ? "Workspace is still loading"
+      : terminalTarget.remoteAgentId
+        ? "Remote workspace is not available yet"
+        : "Build tools for local workspaces are available in Aura Desktop";
   // The Run pane shows project-scoped automation activity. Don't filter by
   // the URL's `agentInstanceId` here: that param is the *chat* agent the
   // user is currently viewing, while the loop runs on a separate
@@ -328,7 +377,12 @@ export function RunSidekickPane({ searchQuery = "" }: { searchQuery?: string }) 
         )}
         {projectId && (
           <div className={styles.runControlBar}>
-            <AutomationControls projectId={projectId} />
+            <AutomationControls
+              projectId={projectId}
+              workspaceGateActive={workspaceGateActive}
+              workspaceGateTitle={workspaceGateTitle}
+              startAgentInstanceId={startAgentInstanceId}
+            />
             <RunPaneStatus projectId={projectId} />
             <RunPaneModelPicker projectId={projectId} />
           </div>
