@@ -1,11 +1,19 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { ChatAppRoute } from "./ChatAppRoute";
 
 type FakeAgent = { agent_id: string; name: string };
+type FakeSession = {
+  session_id: string;
+  _projectId: string;
+  _agentInstanceId: string;
+  _agentId?: string;
+  started_at: string;
+};
 
 const mocks = vi.hoisted(() => ({
   searchParams: new URLSearchParams(),
+  setSearchParams: vi.fn(),
   chatAgent: { agent_id: "ceo", name: "CEO" } as FakeAgent | null,
   agentStatus: "ready" as "loading" | "ready" | "error",
   agents: [] as FakeAgent[],
@@ -16,12 +24,12 @@ const mocks = vi.hoisted(() => ({
     string,
     { project_agent_id: string; project_id: string; project_name: string }[]
   >,
-  sessions: [] as { session_id: string; _agentInstanceId: string }[],
+  sessions: [] as FakeSession[],
   useChatAppChat: vi.fn(() => ({})),
 }));
 
 vi.mock("react-router-dom", () => ({
-  useSearchParams: () => [mocks.searchParams, vi.fn()],
+  useSearchParams: () => [mocks.searchParams, mocks.setSearchParams],
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -90,6 +98,7 @@ describe("ChatAppRoute", () => {
     mocks.bindingsByAgent = {};
     mocks.sessions = [];
     mocks.setSelectedAgent.mockReset();
+    mocks.setSearchParams.mockReset();
     mocks.useChatAppChat.mockReset();
     mocks.useChatAppChat.mockReturnValue({});
     mocks.remoteOnly = false;
@@ -115,7 +124,7 @@ describe("ChatAppRoute", () => {
     expect(mocks.useChatAppChat).toHaveBeenCalledWith(
       "out-of-org-agent",
       "s1",
-      { freshCanvasPending: false },
+      expect.objectContaining({ freshCanvasPending: false }),
     );
     expect(mocks.setSelectedAgent).toHaveBeenCalledWith("out-of-org-agent");
   });
@@ -130,6 +139,7 @@ describe("ChatAppRoute", () => {
 
     expect(mocks.useChatAppChat).toHaveBeenCalledWith("agent-2", "s1", {
       freshCanvasPending: false,
+      onFreshSendStarted: expect.any(Function),
     });
   });
 
@@ -140,6 +150,7 @@ describe("ChatAppRoute", () => {
 
     expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
       freshCanvasPending: true,
+      onFreshSendStarted: expect.any(Function),
     });
   });
 
@@ -151,6 +162,7 @@ describe("ChatAppRoute", () => {
 
     expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
       freshCanvasPending: true,
+      onFreshSendStarted: expect.any(Function),
     });
   });
 
@@ -162,7 +174,56 @@ describe("ChatAppRoute", () => {
     expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
       freshCanvasPending: true,
       freshCanvasKey: "abc",
+      onFreshSendStarted: expect.any(Function),
     });
+  });
+
+  it("adopts the persisted session route after a fresh chat first send materializes in the session list", async () => {
+    mocks.searchParams = new URLSearchParams("fresh=abc");
+    const { rerender } = render(<ChatAppRoute />);
+    const firstCallOptions = mocks.useChatAppChat.mock.calls.at(-1)?.[2] as
+      | { onFreshSendStarted?: () => void }
+      | undefined;
+    firstCallOptions?.onFreshSendStarted?.();
+
+    mocks.sessions = [
+      {
+        session_id: "s-new",
+        _projectId: "p-new",
+        _agentInstanceId: "i-new",
+        _agentId: "ceo",
+        started_at: new Date().toISOString(),
+      },
+    ];
+    rerender(<ChatAppRoute />);
+
+    await waitFor(() => expect(mocks.setSearchParams).toHaveBeenCalled());
+    const [updater, options] = mocks.setSearchParams.mock.calls[0];
+    const next = updater(new URLSearchParams("fresh=abc")) as URLSearchParams;
+    expect(options).toEqual({ replace: true });
+    expect(next.get("fresh")).toBeNull();
+    expect(next.get("session")).toBe("s-new");
+    expect(next.get("project")).toBe("p-new");
+    expect(next.get("instance")).toBe("i-new");
+    expect(next.get("agent")).toBe("ceo");
+  });
+
+  it("does not adopt a fresh route before the active chat sends", () => {
+    mocks.searchParams = new URLSearchParams("fresh=abc");
+    const { rerender } = render(<ChatAppRoute />);
+
+    mocks.sessions = [
+      {
+        session_id: "s-existing",
+        _projectId: "p-existing",
+        _agentInstanceId: "i-existing",
+        _agentId: "ceo",
+        started_at: new Date().toISOString(),
+      },
+    ];
+    rerender(<ChatAppRoute />);
+
+    expect(mocks.setSearchParams).not.toHaveBeenCalled();
   });
 
   it("disables send instead of silently dropping cold-start sends before setup resolves", () => {
@@ -174,6 +235,7 @@ describe("ChatAppRoute", () => {
 
     expect(mocks.useChatAppChat).toHaveBeenCalledWith(undefined, null, {
       freshCanvasPending: true,
+      onFreshSendStarted: expect.any(Function),
     });
     const props = JSON.parse(
       screen.getByTestId("chat-panel").getAttribute("data-props") ?? "{}",
