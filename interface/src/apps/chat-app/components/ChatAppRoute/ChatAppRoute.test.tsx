@@ -161,6 +161,35 @@ describe("ChatAppRoute", () => {
     );
   });
 
+  it("does not remember no-agent session routes before the session owner loads", () => {
+    mocks.searchParams = new URLSearchParams("project=p1&instance=i1&session=s1");
+
+    render(<ChatAppRoute />);
+
+    expect(mocks.setLastChatRoute).not.toHaveBeenCalled();
+  });
+
+  it("remembers no-agent session routes once the session owner loads", () => {
+    mocks.searchParams = new URLSearchParams("project=p1&instance=i1&session=s1");
+    const { rerender } = render(<ChatAppRoute />);
+    expect(mocks.setLastChatRoute).not.toHaveBeenCalled();
+
+    mocks.sessions = [
+      {
+        session_id: "s1",
+        _projectId: "p1",
+        _agentInstanceId: "i1",
+        _agentId: "agent-2",
+        started_at: new Date().toISOString(),
+      },
+    ];
+    rerender(<ChatAppRoute />);
+
+    expect(mocks.setLastChatRoute).toHaveBeenCalledWith(
+      "/chat?project=p1&instance=i1&session=s1&agent=agent-2",
+    );
+  });
+
   it("derives a share-capable remembered route for legacy session-only links", () => {
     mocks.searchParams = new URLSearchParams("session=s1");
     mocks.sessions = [

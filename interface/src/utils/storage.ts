@@ -100,7 +100,7 @@ function normalizeChatSessionRoute(route: string | null): string | null {
     const query = route.slice(route.indexOf("?") + 1);
     const params = new URLSearchParams(query);
     if (!params.get("session")) return null;
-    if (!params.get("project") || !params.get("instance")) return null;
+    if (!params.get("agent") || !params.get("project") || !params.get("instance")) return null;
     return `/chat?${params.toString()}`;
   } catch {
     return null;

@@ -131,20 +131,14 @@ export function ChatAppRoute() {
     const agentId =
       next.get("agent") ??
       session?._agentId ??
-      agentIdParam ??
-      effectiveAgentId ??
-      chatAgent?.agent_id;
-    if (agentId) {
-      next.set("agent", agentId);
-    } else {
-      next.delete("agent");
-    }
+      (session ? agentByInstance.get(agentInstanceId)?.agent_id : null);
+    if (!agentId) return;
+    next.set("agent", agentId);
     setLastChatRoute(`/chat?${next.toString()}`);
   }, [
     agentIdParam,
     agentInstanceIdParam,
-    chatAgent?.agent_id,
-    effectiveAgentId,
+    agentByInstance,
     projectIdParam,
     searchParamString,
     sessionId,

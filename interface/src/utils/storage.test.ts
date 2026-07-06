@@ -182,6 +182,7 @@ describe("storage", () => {
       setLastChatRoute("/chat");
       setLastChatRoute("/chat?fresh=abc");
       setLastChatRoute("/chat?session=s1");
+      setLastChatRoute("/chat?project=p1&instance=i1&session=s1");
 
       expect(localStorage.setItem).not.toHaveBeenCalledWith(
         LAST_CHAT_ROUTE_KEY,
