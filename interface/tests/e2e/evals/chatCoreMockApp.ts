@@ -16,6 +16,7 @@ export interface ChatCoreMockHarness {
   agentAttachRequests: Array<{ agentId?: unknown; rawBody: JsonRecord }>;
   agentCreateRequests: Array<{ name?: unknown; machineType?: unknown; rawBody: JsonRecord }>;
   remoteAgentStateRequests: string[];
+  summarizeRequests: string[];
   unhandledApiRequests: string[];
   historyRequests: string[];
   streamEventTypes: string[];
@@ -150,7 +151,7 @@ export async function installChatCoreMockApp(
     created_at: nowIso(),
     updated_at: nowIso(),
   };
-  const chatSession = {
+  let chatSession = {
     session_id: "sess-chat-core-1",
     agent_instance_id: scenario.agent.agentInstanceId,
     project_id: scenario.project.projectId,
@@ -172,6 +173,7 @@ export async function installChatCoreMockApp(
   const agentAttachRequests: ChatCoreMockHarness["agentAttachRequests"] = [];
   const agentCreateRequests: ChatCoreMockHarness["agentCreateRequests"] = [];
   const remoteAgentStateRequests: string[] = [];
+  const summarizeRequests: string[] = [];
   const unhandledApiRequests: string[] = [];
   const historyRequests: string[] = [];
   const streamEventTypes: string[] = [];
@@ -311,6 +313,26 @@ export async function installChatCoreMockApp(
     if (pathname === `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions`) {
       return json(route, [chatSession]);
     }
+    if (
+      pathname ===
+        `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions/${chatSession.session_id}/summarize` &&
+      method === "POST"
+    ) {
+      summarizeRequests.push(`${method} ${pathname}`);
+      const firstUserMessage =
+        history.find((entry) => entry.role === "user")?.content ??
+        scenario.turn.input ??
+        "";
+      const summary =
+        typeof firstUserMessage === "string" && firstUserMessage.trim()
+          ? firstUserMessage.trim().replace(/[.?!]+$/, "")
+          : "";
+      chatSession = {
+        ...chatSession,
+        summary_of_previous_context: summary,
+      };
+      return json(route, chatSession);
+    }
     if (pathname === `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/context-usage`) {
       return json(route, {
         context_utilization: scenario.verification.expectedContextUtilization,
@@ -443,6 +465,7 @@ export async function installChatCoreMockApp(
     agentAttachRequests,
     agentCreateRequests,
     remoteAgentStateRequests,
+    summarizeRequests,
     unhandledApiRequests,
     historyRequests,
     streamEventTypes,

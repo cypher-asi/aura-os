@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
   collectFixtureFiles,
@@ -12,6 +12,15 @@ test.use({ serviceWorkers: "block" });
 test.describe.configure({ mode: "serial" });
 
 const scenarios = await loadWorkflowE2EScenarios();
+
+async function expectStatsReachable(page: Page) {
+  const inlineStats = page.getByRole("button", { name: "Stats", exact: true });
+  if (await inlineStats.isVisible().catch(() => false)) return;
+
+  await page.getByRole("button", { name: "More actions", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Stats", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+}
 
 for (const scenario of scenarios) {
   test(`${scenario.title} @workflow`, async ({ page }, testInfo) => {
@@ -85,12 +94,7 @@ for (const scenario of scenarios) {
     await expect(page.getByRole("button", { name: "Run", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Task Feed/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Log Output", exact: true })).toBeVisible();
-    // Stats is the last sidekick tab and overflows into the "More" menu at
-    // the default panel width, so assert it's still reachable there rather
-    // than as a top-level button. Widening the panel brings it back inline.
-    await page.getByRole("button", { name: "More actions", exact: true }).click();
-    await expect(page.getByRole("menuitem", { name: "Stats", exact: true })).toBeVisible();
-    await page.keyboard.press("Escape");
+    await expectStatsReachable(page);
 
     await timed("start_loop", async () => {
       await browserApiFetch<void>(

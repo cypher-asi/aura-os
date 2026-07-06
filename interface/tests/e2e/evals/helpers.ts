@@ -32,6 +32,7 @@ interface BrowserStepExpectation {
   urlMatches?: string;
   visibleTexts?: string[];
   visibleRoles?: RoleTarget[];
+  visibleRoleAlternatives?: RoleTarget[][];
   hiddenRoles?: RoleTarget[];
   roleValues?: RoleValueExpectation[];
 }
@@ -389,6 +390,21 @@ async function assertExpectations(page: Page, expectation?: BrowserStepExpectati
     await expect(roleLocator(page, target)).toBeVisible({
       timeout: evalExpectationTimeoutMs,
     });
+  }
+
+  for (const alternatives of expectation.visibleRoleAlternatives ?? []) {
+    const locators = alternatives.map((target) => roleLocator(page, target));
+    await expect
+      .poll(
+        async () => {
+          for (const locator of locators) {
+            if (await locator.isVisible().catch(() => false)) return true;
+          }
+          return false;
+        },
+        { timeout: evalExpectationTimeoutMs },
+      )
+      .toBe(true);
   }
 
   for (const target of expectation.hiddenRoles ?? []) {

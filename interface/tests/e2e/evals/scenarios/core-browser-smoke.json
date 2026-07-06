@@ -79,8 +79,11 @@
           "clickRole": { "role": "button", "name": "More actions", "exact": true }
         },
         "expect": {
-          "visibleRoles": [
-            { "role": "menuitem", "name": "Stats", "exact": true }
+          "visibleRoleAlternatives": [
+            [
+              { "role": "menuitem", "name": "Stats", "exact": true },
+              { "role": "button", "name": "Stats", "exact": true }
+            ]
           ]
         }
       }
