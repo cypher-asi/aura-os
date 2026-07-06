@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-06T14:42:12.006Z",
+  "generatedAt": "2026-07-06T16:18:12.350Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.739.1",
+  "version": "0.1.0-nightly.740.1",
   "date": "2026-07-06",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.739.1",
-  "lastIncludedSha": "17db544af8b08aadeb4e3103b91eab6032110f32",
-  "previousProcessedSha": "debe58e330f55ee702957f896b6a7e4eccf5ad92",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.740.1",
+  "lastIncludedSha": "3329590558a86db906226705f1fa1dd37fa43531",
+  "previousProcessedSha": "17db544af8b08aadeb4e3103b91eab6032110f32",
   "commitShas": [
     "378f600c5228f09599987bac03d044eb54172742",
     "8a544bb1af43f8c12af172696475bc79ccf5f9ce",
@@ -20,10 +20,11 @@
     "a3ca860b5a2cb427c1d20bcb6b4df8f8beb8b6d9",
     "5f2505a149201c5c6445d84b738a7586f86b98ef",
     "debe58e330f55ee702957f896b6a7e4eccf5ad92",
-    "17db544af8b08aadeb4e3103b91eab6032110f32"
+    "17db544af8b08aadeb4e3103b91eab6032110f32",
+    "3329590558a86db906226705f1fa1dd37fa43531"
   ],
-  "rawCommitCount": 9,
-  "filteredCommitCount": 9,
+  "rawCommitCount": 10,
+  "filteredCommitCount": 10,
   "rawCommits": [
     {
       "sha": "378f600c5228f09599987bac03d044eb54172742",
@@ -391,6 +392,52 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "3329590558a86db906226705f1fa1dd37fa43531",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-07-06T11:19:13-04:00",
+      "subject": "Polish mobile public chat onboarding",
+      "body": "",
+      "parents": [
+        "17db544af8b08aadeb4e3103b91eab6032110f32"
+      ],
+      "files": [
+        "interface/src/locales/en/publicChat.json",
+        "interface/src/mobile/shell/MobilePublicMenu/MobilePublicMenu.module.css",
+        "interface/src/mobile/shell/MobilePublicShell.module.css",
+        "interface/src/mobile/shell/MobilePublicShell.test.tsx",
+        "interface/src/mobile/shell/MobilePublicShell.tsx",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.module.css",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.test.tsx",
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 230,
+        "deletions": 61
+      },
+      "committedAtMs": 1783351153000,
+      "cleanSubject": "Polish mobile public chat onboarding",
+      "keywords": [
+        "polish",
+        "mobile",
+        "public",
+        "chat",
+        "onboarding"
+      ],
+      "fileGroups": [
+        "interface/src/locales",
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 3,
@@ -398,29 +445,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.739.1",
+      "version": "0.1.0-nightly.740.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65334564
+          "sizeBytes": 65331728
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131906040
+          "sizeBytes": 131901944
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -430,29 +477,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.739.1",
+      "version": "0.1.0-nightly.740.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.739.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.740.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61132506
+          "sizeBytes": 61140120
         },
         {
-          "name": "AURA_0.1.0-nightly.739.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.740.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60174771
+          "sizeBytes": 60182639
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -462,29 +509,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.739.1",
+      "version": "0.1.0-nightly.740.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.739.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.740.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63369779
+          "sizeBytes": 63377477
         },
         {
-          "name": "AURA_0.1.0-nightly.739.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.740.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62398338
+          "sizeBytes": 62400689
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -494,17 +541,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.739.1",
+      "version": "0.1.0-nightly.740.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48262705
+          "sizeBytes": 48267177
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.739.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.740.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -513,21 +560,99 @@
     }
   ],
   "rendered": {
-    "title": "Fresh chat routes stick, and macOS windows finally show up on launch",
-    "intro": "Today's nightly focused on making chat sessions feel durable across navigation and getting the macOS desktop app to actually appear when you open it. Fresh canvases now graduate cleanly into real session URLs, the taskbar remembers where you were, and session hydration no longer trips on unexpected data shapes.",
+    "title": "Chat routing that survives fresh sends, taskbar returns, and mobile onboarding",
+    "intro": "Today's nightly is a deep pass on chat session routing: fresh canvases now correctly promote themselves into real session URLs, the taskbar remembers where you left a conversation, and web session hydration is far more resilient. Mobile public chat also picks up polished onboarding, and the macOS desktop shell finally shows its window on launch outside of CI.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:10 AM",
         "started_at": "2026-07-06T10:10:14.000Z",
         "ended_at": "2026-07-06T11:12:59.000Z",
-        "title": "Fresh chat canvases graduate into real session URLs",
-        "summary": "E arly-mo rning wo rk gav e f res h ch at ro ut e s a re li ab l e h an do ff into a con crete se ssi on U RL o nce the first send lan ds.",
+        "title": "Fresh chat canvas promotes to a real session route",
+        "summary": "Reworked how fresh chat canvases bind to a session so the first send transitions cleanly into a persisted, shareable route.",
         "items": [
           {
-            "text": "No w tr eats an y bl ank chat as a pen ding fresh canv as and threads a `freshCanvasKey` through so the next send can be armed as a new session.",
+            "text": "Fresh chat canvases now consistently mark the next send as a new session and carry a stable freshCanvasKey through the chat hook, fixing binding issues where a fresh canvas could silently reuse or drop session state.",
             "commit_shas": [
               "378f600c5228f09599987bac03d044eb54172742"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "After the first send on a fresh canvas, the route now swaps itself in place to the concrete session — populating project, instance, session, and agent params via replace navigation once the new session materializes in the sessions list.",
+            "commit_shas": [
+              "8a544bb1af43f8c12af172696475bc79ccf5f9ce",
+              "164f2d284ed67ccf98905fb5d36ac7c73e4f767b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Message share links now read canonical project and instance params from the URL (including /projects/:id/agents/:instance paths) instead of guessing from the stream key, so copy-share works correctly on agent-scoped chat routes.",
+            "commit_shas": [
+              "8a544bb1af43f8c12af172696475bc79ccf5f9ce"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "4:46 AM",
+        "started_at": "2026-07-06T11:46:11.000Z",
+        "ended_at": "2026-07-06T12:06:07.000Z",
+        "title": "macOS desktop window visible on launch, hidden under CI",
+        "summary": "The desktop shell now shows its main window on macOS startup for real users, while keeping it hidden during automated CI runs.",
+        "items": [
+          {
+            "text": "On macOS, the main desktop window now starts visible instead of relying on a later reveal, so launching AURA surfaces the app immediately.",
+            "commit_shas": [
+              "26652002eccb3224a38fc46f43e80fdb8ac07fd9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Initial window visibility is now gated on a CI-mode check, so automated environments keep the window hidden while user launches show it — with detection updated to recognize standard CI environment signals.",
+            "commit_shas": [
+              "c9d2b5c3280f2d0dd169b255ef381836fbe8d8c0",
+              "a3ca860b5a2cb427c1d20bcb6b4df8f8beb8b6d9"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "5:47 AM",
+        "started_at": "2026-07-06T12:47:35.000Z",
+        "ended_at": "2026-07-06T15:19:13.000Z",
+        "title": "Taskbar recall, safer session hydration, and mobile public chat polish",
+        "summary": "The chat app now remembers concrete session routes for taskbar returns, guards web session hydration against bad data and legacy hosts, and refreshes the mobile public chat shell.",
+        "items": [
+          {
+            "text": "The taskbar entry for Chat now returns you to your last real session: ChatAppRoute persists the current project, instance, session, and agent as the remembered route, deriving missing params from the session list for legacy session-only links and skipping fresh canvases.",
+            "commit_shas": [
+              "5f2505a149201c5c6445d84b738a7586f86b98ef"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Remembered chat routes now require a resolved agent owner before being stored, preventing the taskbar from latching onto a half-loaded session URL that has no known agent.",
+            "commit_shas": [
+              "debe58e330f55ee702957f896b6a7e4eccf5ad92"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Web session hydration is hardened: the sessions list renders a clean empty state instead of throwing when it receives non-array data, and host-config now canonicalizes the legacy Render API origin to https://api.aura.ai on production web even when a stale value is stored locally.",
+            "commit_shas": [
+              "17db544af8b08aadeb4e3103b91eab6032110f32"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Mobile public chat onboarding gets a native-feeling refresh: 60px top bars with safe-area padding, 48px touch targets on menu, close, and delete buttons, and a new free-message limit state with title, body, and composer placeholder prompting login.",
+            "commit_shas": [
+              "3329590558a86db906226705f1fa1dd37fa43531"
             ],
             "confidence": "high"
           }
@@ -535,11 +660,12 @@
       }
     ],
     "highlights": [
-      "Fresh chat canvases upgrade to real session URLs after first send",
-      "Taskbar returns land back on your last real chat session",
-      "macOS desktop window is visible on launch again, CI still headless",
-      "Session list survives malformed data and canonicalizes the production API host"
+      "Fresh chat canvases adopt the real session route after first send",
+      "Taskbar remembers your last real chat session",
+      "Hardened web session hydration against bad data and legacy hosts",
+      "Mobile public chat gets a free-message limit and larger touch targets",
+      "macOS desktop window now visible on launch, hidden in CI"
     ],
-    "raw_commit_count": 9
+    "raw_commit_count": 10
   }
 }
