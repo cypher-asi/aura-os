@@ -5,6 +5,10 @@ const mockStopStreaming = vi.fn();
 const mockResetEvents = vi.fn();
 const mockMarkNextSendAsNewSession = vi.fn();
 const mockGetIsStreaming = vi.fn(() => false);
+const { mockUseAgentChatStream, mockSetSearchParams } = vi.hoisted(() => ({
+  mockUseAgentChatStream: vi.fn(),
+  mockSetSearchParams: vi.fn(),
+}));
 const { mockListSessionEventsPaginated } = vi.hoisted(() => ({
   mockListSessionEventsPaginated: vi.fn(() =>
     Promise.resolve({ events: [], has_more: false, next_before: null }),
@@ -17,13 +21,13 @@ vi.mock("./stream/store", () => ({
 }));
 
 vi.mock("./use-agent-chat-stream", () => ({
-  useAgentChatStream: vi.fn(() => ({
+  useAgentChatStream: (options: unknown) => mockUseAgentChatStream(options) ?? ({
     streamKey: "test-stream-key",
     sendMessage: mockSendMessage,
     stopStreaming: mockStopStreaming,
     resetEvents: mockResetEvents,
     markNextSendAsNewSession: mockMarkNextSendAsNewSession,
-  })),
+  }),
 }));
 
 interface MockUseChatHistorySyncArgs {
@@ -112,7 +116,7 @@ interface MockProject {
   description?: string;
 }
 let mockProjects: MockProject[] = [];
-let mockAgentsByProject: Record<string, { agent_id: string }[]> = {};
+let mockAgentsByProject: Record<string, { agent_id: string; agent_instance_id?: string }[]> = {};
 const mockRefreshProjects = vi.fn(() => Promise.resolve());
 
 vi.mock("../stores/projects-list-store", () => {
@@ -209,7 +213,7 @@ vi.mock("./use-hydrate-context-utilization", () => ({
 }));
 
 vi.mock("react-router-dom", () => ({
-  useSearchParams: vi.fn(() => [new URLSearchParams(), vi.fn()]),
+  useSearchParams: vi.fn(() => [new URLSearchParams(), mockSetSearchParams]),
 }));
 
 import { useStandaloneAgentChat } from "./use-standalone-agent-chat";
@@ -223,6 +227,15 @@ describe("useStandaloneAgentChat", () => {
     mockStopStreaming.mockReset();
     mockResetEvents.mockReset();
     mockMarkNextSendAsNewSession.mockReset();
+    mockUseAgentChatStream.mockClear();
+    mockUseAgentChatStream.mockImplementation(() => ({
+      streamKey: "test-stream-key",
+      sendMessage: mockSendMessage,
+      stopStreaming: mockStopStreaming,
+      resetEvents: mockResetEvents,
+      markNextSendAsNewSession: mockMarkNextSendAsNewSession,
+    }));
+    mockSetSearchParams.mockReset();
     mockGetIsStreaming.mockReset();
     mockGetIsStreaming.mockImplementation(() => false);
     mockSetSelectedAgent.mockReset();
@@ -322,6 +335,54 @@ describe("useStandaloneAgentChat", () => {
 
     rerender({ freshKey: "fresh-b" });
     expect(mockMarkNextSendAsNewSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("adopts the real session id and canonical chat route params after SessionReady", async () => {
+    mockProjects = [{ project_id: "proj-1", name: "Alpha", description: "" }];
+    mockAgentsByProject = {
+      "proj-1": [{ agent_id: "agent-1", agent_instance_id: "inst-1" }],
+    };
+
+    const { result } = renderHook(() =>
+      useStandaloneAgentChat("agent-1", null, {
+        freshCanvasPending: true,
+        freshCanvasKey: "fresh-a",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.onSend("hello");
+    });
+
+    const streamOptions = mockUseAgentChatStream.mock.calls.at(-1)?.[0] as {
+      onSessionReady?: (sessionId: string) => void;
+    };
+    expect(streamOptions.onSessionReady).toBeTypeOf("function");
+
+    act(() => {
+      streamOptions.onSessionReady?.("real-session");
+    });
+
+    expect(mockReplaceSessionId).toHaveBeenCalledWith(
+      "agent:agent-1",
+      expect.stringMatching(/^optimistic:/),
+      "real-session",
+    );
+    expect(mockReplaceSessionId).toHaveBeenCalledWith(
+      "project:proj-1",
+      expect.stringMatching(/^optimistic:/),
+      "real-session",
+    );
+    expect(mockSetSearchParams).toHaveBeenCalledTimes(1);
+
+    const [updater, options] = mockSetSearchParams.mock.calls[0];
+    const next = updater(new URLSearchParams("fresh=fresh-a"));
+    expect(options).toEqual({ replace: true });
+    expect(next.get("session")).toBe("real-session");
+    expect(next.get("project")).toBe("proj-1");
+    expect(next.get("instance")).toBe("inst-1");
+    expect(next.get("agent")).toBe("agent-1");
+    expect(next.has("fresh")).toBe(false);
   });
 
   it("collapses the project picker to a single non-interactive entry", () => {

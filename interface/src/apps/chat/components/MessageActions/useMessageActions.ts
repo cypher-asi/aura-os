@@ -29,9 +29,30 @@ export interface MessageActionsState {
 
 const SHARED_RESET_MS = 1800;
 
-function readSessionIdFromLocation(): string | null {
-  if (typeof window === "undefined") return null;
-  return new URLSearchParams(window.location.search).get("session");
+function readShareContextFromLocation(): {
+  projectId: string | null;
+  agentInstanceId: string | null;
+  sessionId: string | null;
+} {
+  if (typeof window === "undefined") {
+    return { projectId: null, agentInstanceId: null, sessionId: null };
+  }
+  const params = new URLSearchParams(window.location.search);
+  let projectId = params.get("project");
+  let agentInstanceId = params.get("instance");
+  const sessionId = params.get("session");
+
+  if (!projectId || !agentInstanceId) {
+    const match = window.location.pathname.match(
+      /^\/projects\/([^/]+)\/agents\/([^/?#]+)/,
+    );
+    if (match) {
+      projectId = projectId ?? decodeURIComponent(match[1]);
+      agentInstanceId = agentInstanceId ?? decodeURIComponent(match[2]);
+    }
+  }
+
+  return { projectId, agentInstanceId, sessionId };
 }
 
 /**
@@ -48,9 +69,10 @@ export function useMessageActions(
   message: DisplaySessionEvent,
 ): MessageActionsState {
   const parsed = parseStreamKey(streamKey);
-  const projectId = parsed?.projectId ?? "";
-  const agentInstanceId = parsed?.agentInstanceId ?? "";
-  const sessionId = parsed?.sessionId ?? readSessionIdFromLocation();
+  const routeContext = readShareContextFromLocation();
+  const projectId = routeContext.projectId ?? parsed?.projectId ?? "";
+  const agentInstanceId = routeContext.agentInstanceId ?? parsed?.agentInstanceId ?? "";
+  const sessionId = routeContext.sessionId ?? parsed?.sessionId ?? null;
 
   const projectName = useProjectsListStore(
     (state) =>

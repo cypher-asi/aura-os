@@ -82,6 +82,29 @@ describe("MessageActions", () => {
     );
   });
 
+  it("uses canonical chat route params when the stream key is agent-scoped", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/chat?project=p1&instance=ai1&session=s-from-chat&agent=agent-1",
+    );
+    createSessionShare.mockResolvedValue({
+      shareId: "t_abc",
+      url: "https://aura.ai/s/t_abc",
+    });
+    render(<MessageActions message={message} streamKey="agent-1:s-from-chat" />);
+
+    fireEvent.click(screen.getByLabelText("Copy share link"));
+
+    await waitFor(() =>
+      expect(createSessionShare).toHaveBeenCalledWith({
+        projectId: "p1",
+        agentInstanceId: "ai1",
+        sessionId: "s-from-chat",
+      }),
+    );
+  });
+
   it("keeps the share button visible but disabled before a session exists", () => {
     render(<MessageActions message={message} streamKey="p1:ai1:fresh" />);
 

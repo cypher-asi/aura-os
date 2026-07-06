@@ -256,10 +256,11 @@ export function useStandaloneAgentChat(
   const handleSessionReady = useCallback(
     (newSessionId: string) => {
       const pendingOptimisticId = pendingOptimisticIdRef.current;
+      const resolvedAgentId = agentIdRef.current;
+      let adoptedBinding: typeof optimisticBindingRef.current = null;
       if (pendingOptimisticId) {
         pendingOptimisticIdRef.current = null;
         const sessionsStore = useSessionsListStore.getState();
-        const resolvedAgentId = agentIdRef.current;
         if (resolvedAgentId) {
           sessionsStore.replaceSessionId(
             agentSessionsSurfaceKey(resolvedAgentId),
@@ -269,6 +270,7 @@ export function useStandaloneAgentChat(
         }
         const binding = optimisticBindingRef.current;
         optimisticBindingRef.current = null;
+        adoptedBinding = binding;
         if (binding) {
           sessionsStore.replaceSessionId(
             projectSessionsSurfaceKey(binding.projectId),
@@ -290,7 +292,15 @@ export function useStandaloneAgentChat(
         (prev) => {
           const next = new URLSearchParams(prev);
           if (next.get("session") === newSessionId) return prev;
+          next.delete("fresh");
           next.set("session", newSessionId);
+          if (adoptedBinding) {
+            next.set("project", adoptedBinding.projectId);
+            next.set("instance", adoptedBinding.agentInstanceId);
+          }
+          if (resolvedAgentId) {
+            next.set("agent", resolvedAgentId);
+          }
           return next;
         },
         { replace: true },
