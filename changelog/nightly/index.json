@@ -2,17 +2,18 @@
   {
     "date": "2026-07-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.732.1",
-    "title": "Fresh chat sessions bind cleanly to their route",
-    "intro": "A focused nightly centered on getting fresh chat sessions right: the chat app now correctly arms a new session when you open a blank canvas, and share links pick up the real project, agent, and session from the current route instead of guessing.",
+    "version": "0.1.0-nightly.733.1",
+    "title": "Fresh chat sessions land on a stable route",
+    "intro": "Today's nightly is a focused fix for the chat app's \"fresh chat\" flow: new conversations now bind to their session correctly, swap the temporary fresh URL for the canonical session route once the backend catches up, and share links pick up the right project and instance from the URL.",
     "entryCount": 1,
     "highlights": [
-      "Fresh chat canvases reliably start a new session on first send",
-      "Share links now resolve project, agent, and session from the chat route"
+      "Fresh chat sessions bind reliably on first send",
+      "Chat URL swaps to the canonical session route after send",
+      "Share links resolve project and instance from the active route"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-07-06T11:05:17.958Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.732.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-07-06T11:35:52.592Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.733.1",
     "path": "history/2026-07-06.json"
   },
   {
