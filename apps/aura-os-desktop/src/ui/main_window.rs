@@ -15,6 +15,10 @@ use crate::ui::chrome::{
 use crate::ui::icon::IconData;
 
 const INITIAL_BLANK_PAGE_URL: &str = "about:blank";
+#[cfg(target_os = "macos")]
+const INITIAL_MAIN_WINDOW_VISIBLE: bool = true;
+#[cfg(not(target_os = "macos"))]
+const INITIAL_MAIN_WINDOW_VISIBLE: bool = false;
 
 /// Forward a webview new-window request to the OS default browser, but only
 /// for real external links. Page scripts that call `window.open()` without a
@@ -98,7 +102,7 @@ pub(crate) fn create_main_window(
     let window = WindowBuilder::new()
         .with_title(aura_os_core::Channel::current().window_title())
         .with_decorations(false)
-        .with_visible(false)
+        .with_visible(INITIAL_MAIN_WINDOW_VISIBLE)
         .with_window_icon(Some(icon_data.to_icon()))
         .with_inner_size(tao::dpi::LogicalSize::new(1280.0, 800.0))
         .build(event_loop)
