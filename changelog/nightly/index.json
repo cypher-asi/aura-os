@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-07-05",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.730.1",
+    "title": "Workspace access gating and web fallbacks across chat surfaces",
+    "intro": "Today's nightly centers on making Aura behave predictably when the desktop bridge or a remote workspace isn't fully available: build tools now gate cleanly on workspace access, browse-only remote sessions can't kick off automations they can't finish, and the chat history sidebar gets a brief, reverted experiment in richer row context. E2E onboarding coverage was hardened alongside.",
+    "entryCount": 3,
+    "highlights": [
+      "Workspace-aware gating for automation and build tools",
+      "Web sessions no longer dead-end into missing local workspaces",
+      "Browse-only remote agents blocked from starting automations",
+      "Onboarding eval suite made resilient to Stats overflow"
+    ],
+    "rawCommitCount": 7,
+    "generatedAt": "2026-07-06T03:37:20.341Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.730.1",
+    "path": "history/2026-07-05.json"
+  },
+  {
     "date": "2026-07-04",
     "channel": "nightly",
     "version": "0.1.0-nightly.728.1",
