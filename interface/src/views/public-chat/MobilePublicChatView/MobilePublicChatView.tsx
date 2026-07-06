@@ -7,7 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUp } from "lucide-react";
 import {
@@ -17,6 +17,7 @@ import {
   type PublicChatTurn,
 } from "../../../api/public-chat";
 import {
+  selectShouldShowGate,
   usePublicChatStore,
   type PublicMessage,
   type PublicSession,
@@ -134,6 +135,8 @@ export function MobilePublicChatView(): React.ReactElement {
   const appendAssistantToken = usePublicChatStore((s) => s.appendAssistantToken);
   const commitAssistant = usePublicChatStore((s) => s.commitAssistant);
   const setTurnCount = usePublicChatStore((s) => s.setTurnCount);
+  const limit = usePublicChatStore((s) => s.limit);
+  const limitReached = usePublicChatStore(selectShouldShowGate);
 
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -181,6 +184,14 @@ export function MobilePublicChatView(): React.ReactElement {
   const unableToSendMessage = t("chat.errors.unableToSend", {
     defaultValue: "Unable to send message",
   });
+  const limitReachedPlaceholder = t("mobileChat.limitReachedPlaceholder", {
+    defaultValue: "Log in to keep chatting",
+  });
+  const signinSearch = location.search || "";
+  const signupParams = new URLSearchParams(location.search);
+  signupParams.set("tab", "register");
+  const signupSearch = `?${signupParams.toString()}`;
+  const backgroundState = { backgroundLocation: location };
 
   // Note: `/chat` without a valid `?session=` deliberately does NOT
   // auto-mint a session here. Sessions are minted by `handleSubmit`
@@ -212,9 +223,14 @@ export function MobilePublicChatView(): React.ReactElement {
       const message = draft.trim();
       if (!message || isSending) return;
 
+      const state = usePublicChatStore.getState();
+      if (state.turnCount >= state.limit) {
+        setSendError(null);
+        return;
+      }
+
       track("public_message_sent", { mode: "code" });
 
-      const state = usePublicChatStore.getState();
       const targetSessionId =
         activeSessionId && state.sessions[activeSessionId]
           ? activeSessionId
@@ -314,6 +330,48 @@ export function MobilePublicChatView(): React.ReactElement {
       }
       onSubmit={handleSubmit}
     >
+      {limitReached ? (
+        <section
+          className={styles.limitCard}
+          aria-label={t("mobileChat.limitReachedTitle", {
+            defaultValue: "Free chat limit reached",
+          })}
+        >
+          <h2 className={styles.limitTitle}>
+            {t("mobileChat.limitReachedTitle", {
+              defaultValue: "Free chat limit reached",
+            })}
+          </h2>
+          <p className={styles.limitBody}>
+            {t("mobileChat.limitReachedBody", {
+              defaultValue: `You've used your ${limit} free messages. Log in to keep this conversation and continue in Aura.`,
+              limit,
+            })}
+          </p>
+          <div className={styles.limitActions}>
+            <Link
+              to={{ pathname: "/login", search: signinSearch }}
+              state={backgroundState}
+              className={`${styles.limitAction} ${styles.limitActionSecondary}`}
+              onClick={() =>
+                track("public_login_clicked", { source: "mobile_limit_gate" })
+              }
+            >
+              {t("auth:logIn", { defaultValue: "Log In" })}
+            </Link>
+            <Link
+              to={{ pathname: "/login", search: signupSearch }}
+              state={backgroundState}
+              className={`${styles.limitAction} ${styles.limitActionPrimary}`}
+              onClick={() =>
+                track("public_signup_clicked", { source: "mobile_limit_gate" })
+              }
+            >
+              {t("auth:signUp", { defaultValue: "Sign Up" })}
+            </Link>
+          </div>
+        </section>
+      ) : null}
       <label className={styles.composerLabel} htmlFor="mobile-public-chat-input">
         {t("chat.inputLabel", { defaultValue: "Message Aura" })}
       </label>
@@ -322,8 +380,8 @@ export function MobilePublicChatView(): React.ReactElement {
         className={styles.composerInput}
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
-        placeholder={composerPlaceholder}
-        disabled={isSending}
+        placeholder={limitReached ? limitReachedPlaceholder : composerPlaceholder}
+        disabled={isSending || limitReached}
         autoComplete="off"
         autoCorrect="on"
         spellCheck="true"
@@ -332,7 +390,7 @@ export function MobilePublicChatView(): React.ReactElement {
       <button
         type="submit"
         className={styles.composerSend}
-        disabled={isSending || draft.trim().length === 0}
+        disabled={isSending || limitReached || draft.trim().length === 0}
         aria-label={
           isSending
             ? t("chat.sending", { defaultValue: "Sending" })

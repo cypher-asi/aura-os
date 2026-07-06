@@ -53,37 +53,39 @@ const TOPBAR_SCROLL_DELTA_PX = 6;
  * them. Instead we listen in the capture phase on the shell root, which
  * observes scroll from whichever descendant container is active.
  */
-function useHideTopbarOnScroll(resetKey: string): {
+function useHideTopbarOnScroll(
+  resetKey: string,
+  enabled: boolean,
+): {
   shellRef: React.RefObject<HTMLDivElement | null>;
   hidden: boolean;
-  instant: boolean;
 } {
   const shellRef = useRef<HTMLDivElement>(null);
-  const [hidden, setHidden] = useState(false);
-  // While true, the topbar reveal is applied without its transition so it
-  // doesn't "unfold" on every navigation (the bar may have been hidden by
-  // the previous page's scroll). Re-enabled on the next frame so live
-  // scroll hide/show still animates.
-  const [instant, setInstant] = useState(false);
+  const [hiddenState, setHiddenState] = useState(() => ({
+    resetKey,
+    hidden: false,
+  }));
   const lastYRef = useRef(0);
   const lastSourceRef = useRef<unknown>(null);
 
-  // Always reveal the bar on navigation so a new page never opens with a
-  // stale hidden state carried over from the previous page's scroll, and
-  // snap it (no animation) so the route change reads as a clean cut rather
-  // than the bar sliding back in.
-  useEffect(() => {
-    setHidden(false);
-    setInstant(true);
-    lastSourceRef.current = null;
-    lastYRef.current = 0;
-    const frame = window.requestAnimationFrame(() => setInstant(false));
-    return () => window.cancelAnimationFrame(frame);
-  }, [resetKey]);
+  if (hiddenState.resetKey !== resetKey) {
+    setHiddenState({ resetKey, hidden: false });
+  }
 
   useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
     const shell = shellRef.current;
     if (shell == null) return undefined;
+
+    const setHiddenForRoute = (hidden: boolean): void => {
+      setHiddenState((prev) =>
+        prev.resetKey === resetKey && prev.hidden === hidden
+          ? prev
+          : { resetKey, hidden },
+      );
+    };
 
     // Apply the hide/show decision for a given scroll position + source.
     // `source` keys the baseline so switching scrollers (an inner
@@ -92,16 +94,16 @@ function useHideTopbarOnScroll(resetKey: string): {
       if (source !== lastSourceRef.current) {
         lastSourceRef.current = source;
         lastYRef.current = y;
-        if (y <= TOPBAR_SHOW_NEAR_TOP_PX) setHidden(false);
+        if (y <= TOPBAR_SHOW_NEAR_TOP_PX) setHiddenForRoute(false);
         return;
       }
       const delta = y - lastYRef.current;
       if (Math.abs(delta) < TOPBAR_SCROLL_DELTA_PX) return;
       lastYRef.current = y;
       if (y <= TOPBAR_SHOW_NEAR_TOP_PX || delta < 0) {
-        setHidden(false);
+        setHiddenForRoute(false);
       } else {
-        setHidden(true);
+        setHiddenForRoute(true);
       }
     };
 
@@ -125,9 +127,13 @@ function useHideTopbarOnScroll(resetKey: string): {
       shell.removeEventListener("scroll", onInnerScroll, options);
       window.removeEventListener("scroll", onWindowScroll);
     };
-  }, []);
+  }, [enabled, resetKey]);
 
-  return { shellRef, hidden, instant };
+  return {
+    shellRef,
+    hidden:
+      enabled && hiddenState.resetKey === resetKey ? hiddenState.hidden : false,
+  };
 }
 
 export function MobilePublicShell(): React.ReactElement {
@@ -135,13 +141,6 @@ export function MobilePublicShell(): React.ReactElement {
   const navigate = useNavigate();
   const { t } = useTranslation(["publicChat"]);
   const [searchParams] = useSearchParams();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const {
-    shellRef,
-    hidden: topbarHidden,
-    instant: topbarInstant,
-  } = useHideTopbarOnScroll(location.pathname);
-
   // The landing (`/`) and chat (`/chat`) surfaces are app-like: a pinned
   // WebGL hero background and a fixed bottom composer that depend on the
   // shell owning the viewport height, so they keep the inner-scroll model.
@@ -151,6 +150,11 @@ export function MobilePublicShell(): React.ReactElement {
   const isAppLikeRoute =
     location.pathname === "/" || location.pathname === PUBLIC_CHAT_PATH;
   const documentScroll = !isAppLikeRoute;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const {
+    shellRef,
+    hidden: topbarHidden,
+  } = useHideTopbarOnScroll(location.pathname, documentScroll);
 
   useEffect(() => {
     if (!documentScroll) return undefined;
@@ -222,7 +226,6 @@ export function MobilePublicShell(): React.ReactElement {
       <header
         className={styles.topbar}
         data-hidden={topbarHidden ? "true" : undefined}
-        data-instant={topbarInstant ? "true" : undefined}
       >
         <Link
           to="/"

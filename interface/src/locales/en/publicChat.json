@@ -34,6 +34,9 @@
     "chatNav": "Chat",
     "composerPlaceholder": "What do you want to create?",
     "heroBlurb": "Send Aura a prompt and start building.",
+    "limitReachedBody": "You've used your {{limit}} free messages. Log in to keep this conversation and continue in Aura.",
+    "limitReachedPlaceholder": "Log in to keep chatting",
+    "limitReachedTitle": "Free chat limit reached",
     "openChat": "Chat with Aura"
   },
   "personas": {

@@ -44,8 +44,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
-  padding: 0 8px 0 16px;
+  height: 60px;
+  padding:
+    0 max(12px, env(safe-area-inset-right, 0px))
+    0 max(16px, env(safe-area-inset-left, 0px));
   flex-shrink: 0;
 }
 
@@ -60,12 +62,12 @@
 .headerActions {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 .closeButton {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -74,6 +76,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .closeButton:hover,
@@ -208,8 +211,9 @@
  * suppressed to keep the two-character footprint tight.
  */
 .languageSelect {
-  height: 36px;
-  padding: 0 6px;
+  min-width: 48px;
+  height: 40px;
+  padding: 0 8px;
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--color-text-primary) 22%, transparent);
   background: transparent;
@@ -221,6 +225,7 @@
   text-align: center;
   text-align-last: center;
   cursor: pointer;
+  touch-action: manipulation;
   appearance: none;
   -webkit-appearance: none;
 }

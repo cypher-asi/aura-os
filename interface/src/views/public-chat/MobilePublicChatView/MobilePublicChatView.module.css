@@ -194,6 +194,66 @@
   border: 0;
 }
 
+.limitCard {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border, #334155) 72%, transparent);
+  background: color-mix(in srgb, var(--color-bg-canvas, #0b0b0e) 82%, transparent);
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 26%, transparent);
+}
+
+.limitTitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 650;
+  color: var(--color-text-primary);
+}
+
+.limitBody {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-text-secondary, #c9c9cf);
+}
+
+.limitActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.limitAction {
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 650;
+  touch-action: manipulation;
+}
+
+.limitActionSecondary {
+  color: var(--color-text-primary);
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 24%, transparent);
+  background: transparent;
+}
+
+.limitActionPrimary {
+  color: var(--color-bg-canvas, #0b0b0e);
+  border: 1px solid transparent;
+  background: var(--color-text-primary, #ffffff);
+}
+
 .composerInput {
   height: 40px;
   padding: 0 14px;
@@ -218,6 +278,7 @@
 
 .composerInput:disabled {
   opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .composerSend {

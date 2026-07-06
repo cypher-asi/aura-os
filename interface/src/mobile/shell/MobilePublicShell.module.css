@@ -70,9 +70,11 @@
   /* Standard mobile top-app-bar height (vs. the slim 32px desktop
      titlebar) so the wordmark + hamburger get a comfortable touch
      target and the bar reads as a native mobile header. */
-  height: 56px;
-  min-height: 56px;
-  padding: 0 10px 0 16px;
+  height: 60px;
+  min-height: 60px;
+  padding:
+    0 max(12px, env(safe-area-inset-right, 0px))
+    0 max(16px, env(safe-area-inset-left, 0px));
   /* Floats transparent on the shell backdrop, exactly like the desktop
      titlebar. No border below — the framed page sits flush beneath it. */
   background: transparent;
@@ -98,12 +100,6 @@
   pointer-events: none;
 }
 
-/* On route change the bar is snapped back to visible without animating so
-   it doesn't visibly "unfold" on every navigation. */
-.topbar[data-instant="true"] {
-  transition: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .topbar {
     transition: none;
@@ -126,12 +122,12 @@
 .topbarActions {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .menuButton {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -140,6 +136,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .menuButton:hover,
@@ -154,8 +151,8 @@
  * chat you're on is the only delete entry point.
  */
 .deleteButton {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -164,6 +161,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .deleteButton:hover,

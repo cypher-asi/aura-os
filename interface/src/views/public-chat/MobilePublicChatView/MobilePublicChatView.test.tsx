@@ -8,7 +8,7 @@
  * pin that contract and the SSE dispatch wiring.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -177,6 +177,35 @@ describe("MobilePublicChatView", () => {
     const order = usePublicChatStore.getState().sessionOrder;
     expect(order).toHaveLength(1);
     expect(probe.getAttribute("data-search")).toBe(`?session=${order[0]}`);
+  });
+
+  it("shows a clear login gate and disables the composer once the guest limit is reached", () => {
+    act(() => {
+      usePublicChatStore.setState({ turnCount: 3, limit: 3 });
+    });
+
+    renderView("/chat");
+
+    expect(screen.getByText("Free chat limit reached")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "You've used your 3 free messages. Log in to keep this conversation and continue in Aura.",
+      ),
+    ).toBeInTheDocument();
+
+    const input = screen.getByRole("textbox", { name: "Message Aura" });
+    expect(input).toBeDisabled();
+    expect(input).toHaveAttribute("placeholder", "Log in to keep chatting");
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      "/login",
+    );
+    expect(screen.getByRole("link", { name: "Sign Up" })).toHaveAttribute(
+      "href",
+      "/login?tab=register",
+    );
+    expect(streamPublicChatMock).not.toHaveBeenCalled();
   });
 
   it("re-mints a fresh guest token and retries once when the stream rejects a stale token", async () => {

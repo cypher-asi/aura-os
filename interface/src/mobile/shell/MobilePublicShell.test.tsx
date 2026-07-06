@@ -8,7 +8,7 @@
  * is the only entry point for removing a chat.
  */
 
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -157,6 +157,18 @@ describe("MobilePublicShell trash affordance", () => {
 });
 
 describe("MobilePublicShell full-screen menu", () => {
+  it("keeps the topbar visible on fixed chat surfaces while inner content scrolls", () => {
+    renderShell("/chat");
+
+    const shell = screen.getByTestId("mobile-public-shell");
+    const topbar = shell.querySelector("header");
+    expect(topbar).toBeInTheDocument();
+
+    fireEvent.scroll(shell, { target: { scrollTop: 240 } });
+
+    expect(topbar).not.toHaveAttribute("data-hidden");
+  });
+
   it("opens the menu from the hamburger and closes it from the X", async () => {
     const user = userEvent.setup();
     renderShell("/");
