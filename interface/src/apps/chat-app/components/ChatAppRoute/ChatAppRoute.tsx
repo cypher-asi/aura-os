@@ -7,6 +7,7 @@ import { useAgents, useSelectedAgent } from "../../../agents/stores";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useSessionsListStore } from "../../../../stores/sessions-list-store";
 import type { Agent } from "../../../../shared/types";
+import { setLastChatRoute } from "../../../../utils/storage";
 import { useChatAppAgent } from "../../hooks/use-chat-app-agent";
 import { useChatAppChat } from "../../hooks/use-chat-app-chat";
 import { useChatAppSessions } from "../../hooks/use-chat-app-sessions";
@@ -43,9 +44,12 @@ export function ChatAppRoute() {
   const { agent: chatAgent, status, error } = useChatAppAgent({ remoteOnly });
   const [searchParams, setSearchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
+  const searchParamString = searchParams.toString();
   const freshChatId = searchParams.get("fresh");
   const freshRouteKey = sessionId ? null : freshChatId ?? "__chat__";
   const agentIdParam = searchParams.get("agent");
+  const projectIdParam = searchParams.get("project");
+  const agentInstanceIdParam = searchParams.get("instance");
   const { sessions } = useChatAppSessions(agents);
   const freshCanvasPending = !sessionId;
   useImportPublicChatsOnAuth(chatAgent);
@@ -111,6 +115,41 @@ export function ChatAppRoute() {
   // a different agent. Honour `agentIdParam` first; fall back to the
   // resolved `Agent` (legacy `?session=` form / fresh canvas).
   const effectiveAgentId = agentIdParam ?? effectiveAgent?.agent_id;
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const session = sessions.find((s) => s.session_id === sessionId);
+    const projectId = projectIdParam ?? session?._projectId;
+    const agentInstanceId = agentInstanceIdParam ?? session?._agentInstanceId;
+    if (!projectId || !agentInstanceId) return;
+
+    const next = new URLSearchParams(searchParamString);
+    next.delete("fresh");
+    next.set("project", projectId);
+    next.set("instance", agentInstanceId);
+    next.set("session", sessionId);
+    const agentId =
+      next.get("agent") ??
+      session?._agentId ??
+      agentIdParam ??
+      effectiveAgentId ??
+      chatAgent?.agent_id;
+    if (agentId) {
+      next.set("agent", agentId);
+    } else {
+      next.delete("agent");
+    }
+    setLastChatRoute(`/chat?${next.toString()}`);
+  }, [
+    agentIdParam,
+    agentInstanceIdParam,
+    chatAgent?.agent_id,
+    effectiveAgentId,
+    projectIdParam,
+    searchParamString,
+    sessionId,
+    sessions,
+  ]);
 
   // Mirror the effective agent into the shared selected-agent slot so
   // the sidekick (`AgentInfoPanel` / `AgentSidekickTaskbar`) renders

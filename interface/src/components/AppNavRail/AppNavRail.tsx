@@ -16,6 +16,7 @@ import { getOrderedTaskbarApps, useAppStore } from "../../stores/app-store";
 import { useIsSysAdmin } from "../../stores/auth-store";
 import { useActiveApp } from "../../hooks/use-active-app";
 import {
+  getLastChatRoute,
   getLastAgent,
   getLastProcessId,
   getLastProject,
@@ -32,6 +33,9 @@ export { TaskbarIconButton, TASKBAR_ICON_SIZE };
 export type { TaskbarIconButtonProps };
 
 function resolveAppPath(app: { id: string; basePath: string }): string {
+  if (app.id === "chat") {
+    return getLastChatRoute() ?? app.basePath;
+  }
   if (app.id === "agents") {
     const lastId = getLastStandaloneAgentId();
     if (lastId) return `/agents/${lastId}`;

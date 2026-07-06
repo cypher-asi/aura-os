@@ -26,6 +26,7 @@ const state = {
 };
 
 const navigationMemory = {
+  lastChatRoute: null as string | null,
   lastSelectedAgentId: null as string | null,
   lastProject: null as string | null,
   lastAgent: null as string | null,
@@ -74,6 +75,7 @@ vi.mock("../../stores/app-store", () => ({
 }));
 
 vi.mock("../../utils/storage", () => ({
+  getLastChatRoute: () => navigationMemory.lastChatRoute,
   getLastStandaloneAgentId: () => navigationMemory.lastSelectedAgentId,
   getLastProject: () => navigationMemory.lastProject,
   getLastAgent: () => navigationMemory.lastAgent,
@@ -88,8 +90,10 @@ import { AppNavRail } from "./AppNavRail";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  state.apps = mockApps;
   state.activeApp = mockApps[1];
   state.taskbarAppOrder = ["agents", "projects", "tasks", "process", "feed"];
+  navigationMemory.lastChatRoute = null;
   navigationMemory.lastSelectedAgentId = null;
   navigationMemory.lastProject = null;
   navigationMemory.lastAgent = null;
@@ -233,5 +237,29 @@ describe("AppNavRail", () => {
     await user.click(screen.getByRole("button", { name: "Projects" }));
 
     expect(mockNavigate).toHaveBeenCalledWith("/projects/project-1/agents/agent-9");
+  });
+
+  it("returns to the remembered concrete chat session when Chat is clicked", async () => {
+    const user = userEvent.setup();
+    const chatApp = {
+      id: "chat",
+      label: "Chat",
+      agentDescription: "Everyday chat",
+      agentKeywords: ["chat"],
+      basePath: "/chat",
+      icon: MockIcon,
+      onPrefetch: vi.fn(),
+    };
+    state.apps = [chatApp, ...mockApps];
+    navigationMemory.lastChatRoute =
+      "/chat?project=p1&instance=i1&session=s1&agent=a1";
+
+    render(<AppNavRail layout="taskbar" includeIds={["chat"]} />);
+
+    await user.click(screen.getByRole("button", { name: "Chat" }));
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/chat?project=p1&instance=i1&session=s1&agent=a1",
+    );
   });
 });

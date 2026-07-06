@@ -1,6 +1,8 @@
 import {
   addRecentLoginEmail,
+  clearLastChatRoute,
   clearLastAgentIf,
+  getLastChatRoute,
   getLastAgent,
   getLastProject,
   getProjectOrder,
@@ -9,6 +11,7 @@ import {
   getTaskbarAppsCollapsed,
   getTaskbarRightCollapsed,
   removeRecentLoginEmail,
+  setLastChatRoute,
   setLastAgent,
   setLastProject,
   setProjectOrder,
@@ -24,6 +27,7 @@ const TASKBAR_APP_ORDER_KEY = "aura-taskbar-app-order";
 const TASKBAR_APPS_COLLAPSED_KEY = "aura-taskbar-apps-collapsed";
 const TASKBAR_RIGHT_COLLAPSED_KEY = "aura-taskbar-right-collapsed";
 const RECENT_LOGIN_EMAILS_KEY = "aura-recent-login-emails";
+const LAST_CHAT_ROUTE_KEY = "aura:lastChatRoute";
 
 describe("storage", () => {
   let store: Record<string, string>;
@@ -158,6 +162,47 @@ describe("storage", () => {
       store[LAST_PROJECT_KEY] = "p1";
       setLastProject("p2");
       expect(localStorage.setItem).toHaveBeenCalledWith(LAST_PROJECT_KEY, "p2");
+    });
+  });
+
+  describe("last chat route", () => {
+    it("stores and returns only concrete chat session routes", () => {
+      setLastChatRoute("/chat?project=p1&instance=i1&session=s1&agent=a1");
+
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        LAST_CHAT_ROUTE_KEY,
+        "/chat?project=p1&instance=i1&session=s1&agent=a1",
+      );
+      expect(getLastChatRoute()).toBe(
+        "/chat?project=p1&instance=i1&session=s1&agent=a1",
+      );
+    });
+
+    it("ignores bare, fresh, or incomplete chat routes", () => {
+      setLastChatRoute("/chat");
+      setLastChatRoute("/chat?fresh=abc");
+      setLastChatRoute("/chat?session=s1");
+
+      expect(localStorage.setItem).not.toHaveBeenCalledWith(
+        LAST_CHAT_ROUTE_KEY,
+        expect.any(String),
+      );
+      expect(getLastChatRoute()).toBeNull();
+    });
+
+    it("clears invalid stored routes on read", () => {
+      store[LAST_CHAT_ROUTE_KEY] = "/projects/p1/agents/i1";
+
+      expect(getLastChatRoute()).toBeNull();
+      expect(localStorage.removeItem).toHaveBeenCalledWith(LAST_CHAT_ROUTE_KEY);
+    });
+
+    it("clears the remembered chat route", () => {
+      store[LAST_CHAT_ROUTE_KEY] = "/chat?session=s1";
+
+      clearLastChatRoute();
+
+      expect(localStorage.removeItem).toHaveBeenCalledWith(LAST_CHAT_ROUTE_KEY);
     });
   });
 

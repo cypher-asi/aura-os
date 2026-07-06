@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   >,
   sessions: [] as FakeSession[],
   useChatAppChat: vi.fn(() => ({})),
+  setLastChatRoute: vi.fn(),
 }));
 
 vi.mock("react-router-dom", () => ({
@@ -89,6 +90,10 @@ vi.mock("../../hooks/use-public-chat-import", () => ({
   useImportPublicChatsOnAuth: vi.fn(),
 }));
 
+vi.mock("../../../../utils/storage", () => ({
+  setLastChatRoute: (...args: unknown[]) => mocks.setLastChatRoute(...args),
+}));
+
 describe("ChatAppRoute", () => {
   beforeEach(() => {
     mocks.searchParams = new URLSearchParams();
@@ -99,6 +104,7 @@ describe("ChatAppRoute", () => {
     mocks.sessions = [];
     mocks.setSelectedAgent.mockReset();
     mocks.setSearchParams.mockReset();
+    mocks.setLastChatRoute.mockReset();
     mocks.useChatAppChat.mockReset();
     mocks.useChatAppChat.mockReturnValue({});
     mocks.remoteOnly = false;
@@ -141,6 +147,45 @@ describe("ChatAppRoute", () => {
       freshCanvasPending: false,
       onFreshSendStarted: expect.any(Function),
     });
+  });
+
+  it("remembers concrete chat session routes for later taskbar returns", () => {
+    mocks.searchParams = new URLSearchParams(
+      "agent=agent-2&project=p1&instance=i1&session=s1",
+    );
+
+    render(<ChatAppRoute />);
+
+    expect(mocks.setLastChatRoute).toHaveBeenCalledWith(
+      "/chat?agent=agent-2&project=p1&instance=i1&session=s1",
+    );
+  });
+
+  it("derives a share-capable remembered route for legacy session-only links", () => {
+    mocks.searchParams = new URLSearchParams("session=s1");
+    mocks.sessions = [
+      {
+        session_id: "s1",
+        _projectId: "p1",
+        _agentInstanceId: "i1",
+        _agentId: "agent-2",
+        started_at: new Date().toISOString(),
+      },
+    ];
+
+    render(<ChatAppRoute />);
+
+    expect(mocks.setLastChatRoute).toHaveBeenCalledWith(
+      "/chat?session=s1&project=p1&instance=i1&agent=agent-2",
+    );
+  });
+
+  it("does not remember fresh chat canvases as last session routes", () => {
+    mocks.searchParams = new URLSearchParams("fresh=abc");
+
+    render(<ChatAppRoute />);
+
+    expect(mocks.setLastChatRoute).not.toHaveBeenCalled();
   });
 
   it("falls back to the CEO chat agent for the fresh-canvas (no params) form", () => {

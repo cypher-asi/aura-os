@@ -21,6 +21,7 @@ type LastAgentMap = Record<string, string>;
 const LAST_STANDALONE_AGENT_KEY = "aura:lastAgentId";
 const LAST_PROCESS_ID_KEY = "aura:lastProcessId";
 const LAST_NOTE_KEY = "aura:lastNote";
+const LAST_CHAT_ROUTE_KEY = "aura:lastChatRoute";
 
 function getMap(): LastAgentMap {
   try {
@@ -86,6 +87,52 @@ export function setLastStandaloneAgentId(agentId: string): void {
 export function clearLastStandaloneAgentId(): void {
   try {
     localStorage.removeItem(LAST_STANDALONE_AGENT_KEY);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function normalizeChatSessionRoute(route: string | null): string | null {
+  if (!route) return null;
+  if (route === "/chat" || route.startsWith("/chat#")) return null;
+  if (!route.startsWith("/chat?")) return null;
+  try {
+    const query = route.slice(route.indexOf("?") + 1);
+    const params = new URLSearchParams(query);
+    if (!params.get("session")) return null;
+    if (!params.get("project") || !params.get("instance")) return null;
+    return `/chat?${params.toString()}`;
+  } catch {
+    return null;
+  }
+}
+
+export function getLastChatRoute(): string | null {
+  try {
+    const route = normalizeChatSessionRoute(localStorage.getItem(LAST_CHAT_ROUTE_KEY));
+    if (!route) {
+      localStorage.removeItem(LAST_CHAT_ROUTE_KEY);
+      return null;
+    }
+    return route;
+  } catch {
+    return null;
+  }
+}
+
+export function setLastChatRoute(route: string): void {
+  try {
+    const normalized = normalizeChatSessionRoute(route);
+    if (!normalized) return;
+    localStorage.setItem(LAST_CHAT_ROUTE_KEY, normalized);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function clearLastChatRoute(): void {
+  try {
+    localStorage.removeItem(LAST_CHAT_ROUTE_KEY);
   } catch {
     // ignore storage failures
   }
