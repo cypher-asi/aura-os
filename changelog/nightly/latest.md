@@ -1,39 +1,22 @@
-# Fresh-chat routing gets durable, and macOS launches visibly again
+# Fresh chat routes stick, and macOS windows finally show up on launch
 
 - Date: `2026-07-06`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.738.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.738.1
+- Version: `0.1.0-nightly.739.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.739.1
 
-Today's nightly centers on making chat routes behave predictably across sends, reloads, and taskbar returns, plus a fix that restores the macOS desktop window on launch while keeping CI runs headless.
+Today's nightly focused on making chat sessions feel durable across navigation and getting the macOS desktop app to actually appear when you open it. Fresh canvases now graduate cleanly into real session URLs, the taskbar remembers where you were, and session hydration no longer trips on unexpected data shapes.
 
-## 3:10 AM — Fresh chat canvases promote to real session routes after first send
+## 3:10 AM — Fresh chat canvases graduate into real session URLs
 
-The chat app now tracks a fresh canvas through its first send and rewrites the URL to the concrete session once it materializes, so refreshes and share links land on the right conversation.
+E arly-mo rning wo rk gav e f res h ch at ro ut e s a re li ab l e h an do ff into a con crete se ssi on U RL o nce the first send lan ds.
 
-- Fresh chat routes now stay pinned as pending until a session actually exists, and a stable freshCanvasKey is threaded through so the next send is armed as a new session exactly once per canvas. (`378f600`)
-- After the first send in a fresh canvas, the route is rewritten in place to /chat?session=…&project=…&instance=…&agent=… once the new session appears in the sessions list, replacing the transient fresh=… URL without a navigation. (`164f2d2`)
-- Share link generation now reads project and agent-instance context from the canonical chat URL (or /projects/:id/agents/:id path) instead of only the stream key, so 'Copy share link' produces valid links even for agent-scoped sessions opened from chat. (`8a544bb`)
-
-## 4:46 AM — macOS desktop window shows on launch, CI stays headless
-
-The desktop app once again presents its window immediately on macOS while remaining invisible in automated environments, now driven by a broader CI detection.
-
-- The macOS build once again shows the main window on launch instead of coming up hidden; other platforms retain their existing startup behavior. (`2665200`)
-- Initial window visibility on macOS is now gated by CI mode, so headless CI runs keep the window hidden while normal user launches present it immediately. (`c9d2b5c`)
-- CI detection for the desktop launcher now honors the standard CI environment variable in addition to AURA_DESKTOP_CI, so third-party runners are recognized without extra configuration. (`a3ca860`)
-
-## 5:47 AM — Taskbar remembers your last real chat session
-
-The chat taskbar entry now returns you to your most recent concrete conversation, with safeguards so fresh canvases and half-loaded sessions are never remembered.
-
-- Concrete chat session routes are now persisted as the 'last chat route' so returning to chat from the app nav rail reopens the specific session, project, instance, and agent you were in — including deriving a share-capable route from legacy session-only links. (`5f2505a`)
-- Fresh canvases (fresh=… URLs) are explicitly excluded from being remembered, so the taskbar never sends users back into an empty chat. (`5f2505a`)
-- A no-agent session URL is only remembered once its owning agent is known — resolved via the sessions list or the agent-by-instance map — and storage now rejects any remembered chat route missing project, instance, or agent, preventing broken taskbar returns. (`debe58e`)
+- No w tr eats an y bl ank chat as a pen ding fresh canv as and threads a `freshCanvasKey` through so the next send can be armed as a new session. (`378f600`)
 
 ## Highlights
 
-- Fresh chats now promote to real session URLs after the first send
-- Taskbar re-entry returns you to your last real chat conversation
-- macOS desktop window is visible on launch again, CI stays headless
+- Fresh chat canvases upgrade to real session URLs after first send
+- Taskbar returns land back on your last real chat session
+- macOS desktop window is visible on launch again, CI still headless
+- Session list survives malformed data and canonicalizes the production API host
 

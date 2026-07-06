@@ -2,18 +2,19 @@
   {
     "date": "2026-07-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.738.1",
-    "title": "Fresh-chat routing gets durable, and macOS launches visibly again",
-    "intro": "Today's nightly centers on making chat routes behave predictably across sends, reloads, and taskbar returns, plus a fix that restores the macOS desktop window on launch while keeping CI runs headless.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.739.1",
+    "title": "Fresh chat routes stick, and macOS windows finally show up on launch",
+    "intro": "Today's nightly focused on making chat sessions feel durable across navigation and getting the macOS desktop app to actually appear when you open it. Fresh canvases now graduate cleanly into real session URLs, the taskbar remembers where you were, and session hydration no longer trips on unexpected data shapes.",
+    "entryCount": 1,
     "highlights": [
-      "Fresh chats now promote to real session URLs after the first send",
-      "Taskbar re-entry returns you to your last real chat conversation",
-      "macOS desktop window is visible on launch again, CI stays headless"
+      "Fresh chat canvases upgrade to real session URLs after first send",
+      "Taskbar returns land back on your last real chat session",
+      "macOS desktop window is visible on launch again, CI still headless",
+      "Session list survives malformed data and canonicalizes the production API host"
     ],
-    "rawCommitCount": 8,
-    "generatedAt": "2026-07-06T13:27:40.485Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.738.1",
+    "rawCommitCount": 9,
+    "generatedAt": "2026-07-06T14:42:12.006Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.739.1",
     "path": "history/2026-07-06.json"
   },
   {
