@@ -93,6 +93,31 @@ describe("host-config", () => {
     expect(hostConfig.getHostDisplayLabel()).toBe("Current origin");
   });
 
+  it("canonicalizes the legacy Render API origin on production web", async () => {
+    vi.stubEnv("VITE_API_URL", "https://aura-os-t565.onrender.com");
+    setLocation("https://aura.ai/chat");
+
+    const hostConfig = await import("./host-config");
+
+    expect(hostConfig.getTargetHostOrigin()).toBe("https://api.aura.ai");
+    expect(hostConfig.resolveApiUrl("/api/auth/session")).toBe(
+      "https://api.aura.ai/api/auth/session",
+    );
+  });
+
+  it("canonicalizes a stale stored Render host on production web", async () => {
+    storageState.set("aura-host-origin", "https://aura-os-t565.onrender.com");
+    vi.stubEnv("VITE_API_URL", "https://aura-os-t565.onrender.com");
+    setLocation("https://aura.ai/chat");
+
+    const hostConfig = await import("./host-config");
+
+    expect(hostConfig.getConfiguredHostOrigin()).toBe(
+      "https://aura-os-t565.onrender.com",
+    );
+    expect(hostConfig.getTargetHostOrigin()).toBe("https://api.aura.ai");
+  });
+
   it("uses the Android build default for mobile loopback dev webviews", async () => {
     vi.stubEnv("VITE_ANDROID_DEFAULT_HOST", "http://10.0.2.2:3100");
     setLocation("http://127.0.0.1:5173/login");

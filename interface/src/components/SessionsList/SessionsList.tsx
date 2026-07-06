@@ -141,6 +141,7 @@ export function SessionsList({
   renderRowSuffix,
   streamKeyForSession,
 }: SessionsListProps) {
+  const safeSessions = Array.isArray(sessions) ? sessions : [];
   // Track which rows are currently scrolled into view so the lazy
   // /summarize backfill in `useSessionSummaries` only fires for rows
   // the user can actually see. Without this gate, opening the
@@ -170,7 +171,7 @@ export function SessionsList({
     [],
   );
 
-  const summaries = useSessionSummaries(sessions, visibleSessionIds);
+  const summaries = useSessionSummaries(safeSessions, visibleSessionIds);
   const lastHoveredSessionIdRef = useRef<string | null>(null);
 
   // Live-update of the row label when the backend's on-send title
@@ -185,28 +186,28 @@ export function SessionsList({
   // would have to refresh the app to see the title.
 
   const sessionById = useMemo(
-    () => new Map(sessions.map((s) => [s.session_id, s])),
-    [sessions],
+    () => new Map(safeSessions.map((s) => [s.session_id, s])),
+    [safeSessions],
   );
 
   const titledRows = useMemo<SessionRow[]>(() => {
     const out: SessionRow[] = [];
     const needle = searchQuery?.trim().toLowerCase() ?? "";
-    for (const session of sessions) {
+    for (const session of safeSessions) {
       const label = deriveSessionLabel(session, summaries[session.session_id]);
       if (needle && !label.toLowerCase().includes(needle)) continue;
       out.push({ session, label });
     }
     return out;
-  }, [sessions, summaries, searchQuery]);
+  }, [safeSessions, summaries, searchQuery]);
 
   const buckets = useMemo(() => bucketizeByDate(titledRows), [titledRows]);
   // Check if sessions span multiple projects — only show the project
   // prefix when there's more than one to avoid noise in the common case.
   const hasMultipleProjects = useMemo(() => {
-    const projectIds = new Set(sessions.map((s) => s._projectId));
+    const projectIds = new Set(safeSessions.map((s) => s._projectId));
     return projectIds.size > 1;
-  }, [sessions]);
+  }, [safeSessions]);
 
   // Highlight the row the user is actively in even when the URL hasn't
   // settled yet:
@@ -320,7 +321,7 @@ export function SessionsList({
       <SidekickList
         sections={sections}
         selectedId={effectiveSelectedSessionId}
-        loading={loading && sessions.length === 0}
+        loading={loading && safeSessions.length === 0}
         loadingLabel="Loading sessions..."
         empty={<EmptyState>No sessions yet</EmptyState>}
         menuActions={onDeleteSession ? ["delete"] : undefined}

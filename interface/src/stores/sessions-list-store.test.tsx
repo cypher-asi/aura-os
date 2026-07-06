@@ -483,6 +483,57 @@ describe("sessions-list-store", () => {
       expect(rows?.[1]._agentId).toBe("agent-b");
     });
 
+    it("does not poison the chat surface when /api/me/sessions returns a malformed non-array", async () => {
+      listMySessions.mockResolvedValue({ sessions: null } as never);
+      const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      await act(async () => {
+        await useSessionsListStore.getState().loadUserSessions();
+      });
+
+      expect(listMySessions).toHaveBeenCalledTimes(1);
+      expect(listProjectBindings).not.toHaveBeenCalled();
+      expect(listSessions).not.toHaveBeenCalled();
+      expect(
+        useSessionsListStore.getState().sessionsBySurface[
+          USER_SESSIONS_SURFACE_KEY
+        ],
+      ).toEqual([]);
+      expect(consoleWarn).toHaveBeenCalledWith(
+        "GET /api/me/sessions returned a non-array session list; ignoring",
+        { receivedType: "object" },
+      );
+      consoleWarn.mockRestore();
+    });
+
+    it("ignores malformed session rows from /api/me/sessions instead of crashing renderers", async () => {
+      listMySessions.mockResolvedValue({
+        sessions: [
+          {
+            ...makeSession("s-good", "2026-04-16T05:00:00Z", "i1", "p1"),
+            agent_id: "agent-a",
+          },
+          { session_id: "s-bad" },
+        ],
+      } as never);
+      const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      await act(async () => {
+        await useSessionsListStore.getState().loadUserSessions();
+      });
+
+      const rows =
+        useSessionsListStore.getState().sessionsBySurface[
+          USER_SESSIONS_SURFACE_KEY
+        ];
+      expect(rows?.map((r) => r.session_id)).toEqual(["s-good"]);
+      expect(consoleWarn).toHaveBeenCalledWith(
+        "GET /api/me/sessions returned malformed session rows; ignoring invalid rows",
+        { received: 2, accepted: 1 },
+      );
+      consoleWarn.mockRestore();
+    });
+
     it("falls back to per-agent fan-out when /api/me/sessions returns 404 (storage migration not yet live)", async () => {
       // Reproduces the post-19f5203ad / pre-aura-storage-deploy window
       // where `/api/me/sessions` 404s. Without the FE fallback the

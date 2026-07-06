@@ -416,6 +416,19 @@ describe("SessionsList", () => {
     expect(screen.getByTestId("empty-state")).toHaveTextContent("No sessions yet");
   });
 
+  it("renders an empty state instead of throwing when sessions is polluted", () => {
+    render(
+      <SessionsList
+        sessions={{ sessions: null } as never}
+        loading={false}
+        selectedSessionId={null}
+        onSessionClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("empty-state")).toHaveTextContent("No sessions yet");
+  });
+
   it("renders the inline delete-error banner and dismiss button", () => {
     const onDismiss = vi.fn();
     render(

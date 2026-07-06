@@ -1,7 +1,10 @@
-import { inferNativePlatform, isNativeRuntime } from "./native-runtime";
+import { inferNativePlatform, isDesktopRuntime, isNativeRuntime } from "./native-runtime";
 
 const HOST_STORAGE_KEY = "aura-host-origin";
 const HOST_CHANGE_EVENT = "aura-host-change";
+const CANONICAL_PROD_WEB_HOSTS = new Set(["aura.ai", "www.aura.ai"]);
+const CANONICAL_PROD_API_ORIGIN = "https://api.aura.ai";
+const LEGACY_PROD_API_ORIGINS = new Set(["https://aura-os-t565.onrender.com"]);
 
 function hasWindow() {
   return typeof window !== "undefined";
@@ -75,7 +78,16 @@ export function getTargetHostOrigin(): string | null {
   // without overriding a user-selected host in Settings.
   // VITE_API_URL is the lowest priority — a user-configured host or native
   // default always wins.
-  return getConfiguredHostOrigin() ?? getNativeDefaultHostOrigin() ?? normalizeHostOrigin(import.meta.env.VITE_API_URL);
+  return normalizeProdWebApiOrigin(
+    getConfiguredHostOrigin() ?? getNativeDefaultHostOrigin() ?? normalizeHostOrigin(import.meta.env.VITE_API_URL),
+  );
+}
+
+function normalizeProdWebApiOrigin(origin: string | null): string | null {
+  if (!origin || !hasWindow()) return origin;
+  if (isDesktopRuntime() || isNativeRuntime()) return origin;
+  if (!CANONICAL_PROD_WEB_HOSTS.has(window.location.hostname)) return origin;
+  return LEGACY_PROD_API_ORIGINS.has(origin) ? CANONICAL_PROD_API_ORIGIN : origin;
 }
 
 export function getResolvedHostOrigin(): string {

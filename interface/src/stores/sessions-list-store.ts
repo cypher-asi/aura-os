@@ -127,6 +127,82 @@ export function buildOptimisticSession(args: {
 
 const EMPTY_SESSIONS: AnnotatedSession[] = [];
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function isSessionLike(value: unknown): value is Session {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.session_id === "string" &&
+    typeof value.agent_instance_id === "string" &&
+    typeof value.project_id === "string" &&
+    typeof value.started_at === "string"
+  );
+}
+
+function coerceSessionArray<T extends Session>(
+  value: unknown,
+  source: string,
+): T[] {
+  const candidate = Array.isArray(value)
+    ? value
+    : isRecord(value) && Array.isArray(value.sessions)
+      ? value.sessions
+      : null;
+
+  if (!candidate) {
+    console.warn(`${source} returned a non-array session list; ignoring`, {
+      receivedType: value === null ? "null" : typeof value,
+    });
+    return [];
+  }
+
+  const sessions = candidate.filter(isSessionLike) as T[];
+  if (sessions.length !== candidate.length) {
+    console.warn(`${source} returned malformed session rows; ignoring invalid rows`, {
+      received: candidate.length,
+      accepted: sessions.length,
+    });
+  }
+  return sessions;
+}
+
+function isAgentProjectBinding(value: unknown): value is AgentProjectBinding {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.project_agent_id === "string" &&
+    typeof value.project_id === "string" &&
+    typeof value.project_name === "string"
+  );
+}
+
+function coerceAgentProjectBindings(
+  value: unknown,
+  source: string,
+): AgentProjectBinding[] {
+  if (!Array.isArray(value)) {
+    console.warn(`${source} returned a non-array binding list; ignoring`, {
+      receivedType: value === null ? "null" : typeof value,
+    });
+    return [];
+  }
+  const bindings = value.filter(isAgentProjectBinding);
+  if (bindings.length !== value.length) {
+    console.warn(`${source} returned malformed bindings; ignoring invalid rows`, {
+      received: value.length,
+      accepted: bindings.length,
+    });
+  }
+  return bindings;
+}
+
+function ensureAnnotatedSessionArray(
+  value: AnnotatedSession[] | undefined,
+): AnnotatedSession[] {
+  return Array.isArray(value) ? value : EMPTY_SESSIONS;
+}
+
 export function agentSessionsSurfaceKey(agentId: string): string {
   return `agent:${agentId}`;
 }
@@ -442,7 +518,10 @@ async function loadUserSessionsLegacy(): Promise<AnnotatedSession[]> {
     agents.map(async (agent): Promise<AnnotatedSession[]> => {
       let bindings: AgentProjectBinding[];
       try {
-        bindings = await api.agents.listProjectBindings(agent.agent_id);
+        bindings = coerceAgentProjectBindings(
+          await api.agents.listProjectBindings(agent.agent_id),
+          "GET /api/agents/:agentId/projects",
+        );
       } catch (err) {
         console.warn(
           "loadUserSessionsLegacy: listProjectBindings failed; skipping agent",
@@ -455,7 +534,10 @@ async function loadUserSessionsLegacy(): Promise<AnnotatedSession[]> {
           api
             .listSessions(b.project_id, b.project_agent_id)
             .then((list) =>
-              list.map<AnnotatedSession>((s) => ({
+              coerceSessionArray<Session>(
+                list,
+                "GET /api/projects/:projectId/agents/:agentInstanceId/sessions",
+              ).map<AnnotatedSession>((s) => ({
                 ...s,
                 _projectName: b.project_name,
                 _projectId: b.project_id,
@@ -510,7 +592,10 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
     // existed in storage.
     let bindings: AgentProjectBinding[];
     try {
-      bindings = await api.agents.listProjectBindings(agentId);
+      bindings = coerceAgentProjectBindings(
+        await api.agents.listProjectBindings(agentId),
+        "GET /api/agents/:agentId/projects",
+      );
     } catch (err) {
       if (surfaceRequestIds[surfaceKey] !== requestId) return;
       console.error("Failed to load agent project bindings", err);
@@ -539,7 +624,10 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
           api
             .listSessions(b.project_id, b.project_agent_id)
             .then((list) =>
-              list.map<AnnotatedSession>((s) => ({
+              coerceSessionArray<Session>(
+                list,
+                "GET /api/projects/:projectId/agents/:agentInstanceId/sessions",
+              ).map<AnnotatedSession>((s) => ({
                 ...s,
                 _projectName: b.project_name,
                 _projectId: b.project_id,
@@ -593,7 +681,10 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
       },
     }));
     try {
-      const bindings = await api.agents.listProjectBindings(agentId);
+      const bindings = coerceAgentProjectBindings(
+        await api.agents.listProjectBindings(agentId),
+        "GET /api/agents/:agentId/projects",
+      );
       set((state) => ({
         bindingsByAgent: { ...state.bindingsByAgent, [agentId]: bindings },
         bindingsLoadStatusByAgent: {
@@ -665,8 +756,11 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
             .projects.map((p) => [p.project_id, p.name]),
         );
 
+        const safeFastList = coerceSessionArray<
+          Awaited<ReturnType<typeof sessionsApi.listMySessions>>[number]
+        >(fastList, "GET /api/me/sessions");
         annotated = sortSessionsDesc(
-          fastList.map<AnnotatedSession>((s) => ({
+          safeFastList.map<AnnotatedSession>((s) => ({
             ...s,
             _projectName: projectsById.get(s.project_id) ?? "",
             _projectId: s.project_id,
@@ -723,7 +817,10 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
     }));
 
     try {
-      const list = await api.listProjectSessions(projectId);
+      const list = coerceSessionArray<Session>(
+        await api.listProjectSessions(projectId),
+        "GET /api/projects/:projectId/sessions",
+      );
       if (surfaceRequestIds[surfaceKey] !== requestId) return;
       const annotated = sortSessionsDesc(
         list.map<AnnotatedSession>((s) => ({
@@ -768,8 +865,10 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
   },
 
   removeSession: (surfaceKey, sessionId) => {
-    const current = get().sessionsBySurface[surfaceKey];
-    if (!current) return;
+    const current = ensureAnnotatedSessionArray(
+      get().sessionsBySurface[surfaceKey],
+    );
+    if (current.length === 0) return;
     const next = current.filter((s) => s.session_id !== sessionId);
     if (next.length === current.length) return;
     set((state) => {
@@ -785,7 +884,9 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
   },
 
   restoreSession: (surfaceKey, session) => {
-    const current = get().sessionsBySurface[surfaceKey] ?? EMPTY_SESSIONS;
+    const current = ensureAnnotatedSessionArray(
+      get().sessionsBySurface[surfaceKey],
+    );
     if (current.some((s) => s.session_id === session.session_id)) return;
     const next = sortSessionsDesc([...current, session]);
     set((state) => ({
@@ -794,7 +895,9 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
   },
 
   addOptimisticSession: (surfaceKey, session) => {
-    const current = get().sessionsBySurface[surfaceKey] ?? EMPTY_SESSIONS;
+    const current = ensureAnnotatedSessionArray(
+      get().sessionsBySurface[surfaceKey],
+    );
     if (current.some((s) => s.session_id === session.session_id)) return;
     const next = sortSessionsDesc([...current, session]);
     set((state) => ({
@@ -804,8 +907,10 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
 
   replaceSessionId: (surfaceKey, oldSessionId, newSessionId) => {
     if (oldSessionId === newSessionId) return;
-    const current = get().sessionsBySurface[surfaceKey];
-    if (!current) return;
+    const current = ensureAnnotatedSessionArray(
+      get().sessionsBySurface[surfaceKey],
+    );
+    if (current.length === 0) return;
     const idx = current.findIndex((s) => s.session_id === oldSessionId);
     if (idx === -1) return;
     // If a row with `newSessionId` already exists (e.g. a parallel
@@ -863,7 +968,8 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
     let mutated = false;
     let foundRow = false;
     const nextBySurface: Record<string, AnnotatedSession[]> = {};
-    for (const [key, list] of Object.entries(sessionsBySurface)) {
+    for (const [key, listValue] of Object.entries(sessionsBySurface)) {
+      const list = ensureAnnotatedSessionArray(listValue);
       const idx = list.findIndex((s) => s.session_id === sessionId);
       if (idx === -1) {
         nextBySurface[key] = list;
@@ -918,7 +1024,7 @@ export function useSessionsForSurface(
   return useSessionsListStore(
     useShallow((state) => {
       if (!surfaceKey) return EMPTY_SESSIONS;
-      return state.sessionsBySurface[surfaceKey] ?? EMPTY_SESSIONS;
+      return ensureAnnotatedSessionArray(state.sessionsBySurface[surfaceKey]);
     }),
   );
 }
@@ -960,7 +1066,9 @@ export function useMostRecentSession(
 ): AnnotatedSession | null {
   return useSessionsListStore((state) => {
     if (!surfaceKey) return null;
-    return findMostRecentRealSession(state.sessionsBySurface[surfaceKey]);
+    return findMostRecentRealSession(
+      ensureAnnotatedSessionArray(state.sessionsBySurface[surfaceKey]),
+    );
   });
 }
 
