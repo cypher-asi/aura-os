@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-06T18:02:54.171Z",
+  "generatedAt": "2026-07-07T06:00:03.139Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.741.1",
+  "version": "0.1.0-nightly.742.1",
   "date": "2026-07-06",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.741.1",
-  "lastIncludedSha": "be5b4cc846c0a0b4578073959626616980eb451f",
-  "previousProcessedSha": "3329590558a86db906226705f1fa1dd37fa43531",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.742.1",
+  "lastIncludedSha": "4604c18c53cf50cbe9b969973cab9091d1e15249",
+  "previousProcessedSha": "be5b4cc846c0a0b4578073959626616980eb451f",
   "commitShas": [
     "378f600c5228f09599987bac03d044eb54172742",
     "8a544bb1af43f8c12af172696475bc79ccf5f9ce",
@@ -22,10 +22,11 @@
     "debe58e330f55ee702957f896b6a7e4eccf5ad92",
     "17db544af8b08aadeb4e3103b91eab6032110f32",
     "3329590558a86db906226705f1fa1dd37fa43531",
-    "be5b4cc846c0a0b4578073959626616980eb451f"
+    "be5b4cc846c0a0b4578073959626616980eb451f",
+    "4604c18c53cf50cbe9b969973cab9091d1e15249"
   ],
-  "rawCommitCount": 11,
-  "filteredCommitCount": 11,
+  "rawCommitCount": 12,
+  "filteredCommitCount": 12,
   "rawCommits": [
     {
       "sha": "378f600c5228f09599987bac03d044eb54172742",
@@ -482,36 +483,92 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "4604c18c53cf50cbe9b969973cab9091d1e15249",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-07T01:37:12-04:00",
+      "subject": "feat(onboarding): add two-lane first-run flow (#88)",
+      "body": "* feat(onboarding): two-lane onboarding — Just Start or Set Up My Agent\n\nReplace the auto-opening 6-step wizard with a two-lane choice screen:\n\nLane 1 — Just Start:\n- Relies on the existing ensureCeoHome() auto-provisioning\n- Desktop: navigates to /chat with a one-shot folder prompt banner\n- Web: navigates straight to /chat\n- Zero configuration, user customizes later in settings\n\nLane 2 — Set Up My Agent:\n- Opens the existing wizard, shortened from 6 steps to 3\n- Keeps: Identity (avatar + personality), Expertise (skills), Launch\n- Removes: Integrations, Connections, Automations (data was never\n  applied during onboarding — code comments say 'deferred, post-signup')\n- Step components are kept on disk for future reuse\n\nNew components:\n- OnboardingChoice: two-card GlassModal with surface-aware text\n- ProjectFolderPrompt: desktop-only dismissable banner in chat\n- folder-prompt-storage: localStorage one-shot flag\n\nAlso:\n- agent-store gains firstRunDetected flag (set before ensureCeoHome)\n- Analytics event: onboarding_lane_selected with lane value\n- Mobile layout: cards stack vertically at <=680px\n\n* fix(onboarding): address review findings — unlatch firstRun, scope storage per-user, add in-memory fallback\n\n1. firstRunDetected false-positive: unlatch the flag when a subsequent\n   org-scoped fetch finds agents (the prior unscoped fetch with null\n   activeOrgId could falsely trigger it).\n\n2. Folder prompt key now per-user: setFolderPromptUser(userId) scopes\n   the localStorage key so multi-account desktops don't bleed state.\n\n3. OnboardingChoice in-memory fallback: if localStorage is blocked\n   (private mode / quota), the in-memory Set still suppresses the\n   modal for the current session so it can't become undismissable.\n\n4. Bundle budget: confirmed already failing on main (1,188,465 main\n   vs 1,188,225 branch — branch is 240 bytes smaller). Not a\n   regression from this PR.\n\n* fix(onboarding): address round-2 review findings\n\n1. Revert the firstRunDetected unlatch — the previous fix (clearing\n   the flag when a subsequent fetch finds agents) would race with\n   ensureCeoHome: the auto-created CEO makes the next fetch return\n   agents, clearing the flag before the user picks a lane. The flag\n   now latches once and is only cleared on logout. OnboardingChoice\n   suppresses itself via its own localStorage/in-memory choice flag,\n   which is the correct layer for this decision.\n\n2. Wire up setFolderPromptUser — OnboardingChoice now calls\n   setFolderPromptUser(userId) before markFolderPromptPending(), and\n   ProjectFolderPrompt calls it before isFolderPromptPending(). The\n   storage key is now actually per-user on multi-account desktops.\n\n3. Lazy-load OnboardingChoice — moved from static import to\n   lazy(() => import(...)) with Suspense fallback={null} so\n   agent-store and its dependencies are not in the public/logged-out\n   startup graph.\n\n* fix(onboarding): require org-scoped fetch for firstRun, gate lazy chunk behind auth\n\n1. firstRunDetected false-positive: only latch the flag when\n   activeOrgId is set (org state has settled). The early unscoped\n   fetch (activeOrgId === undefined) can return empty for existing\n   users whose agents are only visible under their org — that empty\n   list is not authoritative. A true new user will still trigger\n   the flag on the org-scoped fetch that follows.\n\n2. Gate OnboardingChoice render behind isAuthenticated so the lazy\n   chunk is never requested for public/logged-out visitors. The\n   lazy() import keeps it out of the static graph, and the auth\n   gate prevents React from even mounting the Suspense boundary\n   until the user is signed in.\n\n* fix(onboarding): defer ensureCeoHome until org-scoped fetch to preserve first-run signal\n\nThe previous fix gated firstRunDetected behind activeOrgId, but still\nran ensureCeoHome() during the unscoped empty fetch. This created the\nCEO before the org-scoped refetch arrived, so the refetch found agents\nand never set firstRunDetected — hiding the choice modal from real new\nusers.\n\nNow the entire empty-list branch (firstRunDetected + ensureCeoHome +\ncommitAgents) only runs when activeOrgId is set. The unscoped pre-org\nfetch commits an empty agent list and exits, leaving CEO creation to\nthe authoritative org-scoped fetch that follows.\n\nFlow for a new user:\n  1. Unscoped fetch → empty → commit empty, no CEO created\n  2. Org settles → org-scoped fetch → empty → latch firstRunDetected,\n     run ensureCeoHome, create CEO, commit\n  3. OnboardingChoice sees firstRunDetected → shows modal\n\nFlow for an existing user:\n  1. Unscoped fetch → empty → commit empty, no CEO created\n  2. Org settles → org-scoped fetch → finds agents → agents.length > 0\n     branch, no firstRunDetected\n\n* fix(onboarding): make firstRunDetected a latched, authority-gated decision\n\nThe first-run signal kept regressing because \"empty agent list\" was being\nread at moments when the list's scope wasn't trustworthy. This commit makes\nthe state machine explicit:\n\n1. Authority requires a network-confirmed org roster. org-store gains\n   `orgsResolved`, set only by a successful network refreshOrgs() (the\n   IndexedDB org cache can be stale) and cleared on logout/refresh start.\n   An empty list may decide the first-run question only when the roster is\n   resolved AND the fetch was scoped to the settled org — or the roster\n   proved the user has zero orgs, in which case the unscoped own-agents\n   list IS the full picture (previously a zero-org new user never got a\n   CEO or the onboarding choice at all).\n\n2. The decision latches once per signed-in session\n   (firstRunSignalSettledThisSession). Any fetch returning agents closes\n   the question as \"not first run\"; the first authoritative empty closes\n   it as \"first run\" — recorded BEFORE ensureCeoHome creates the default\n   CEO. Later empty results (switching to a freshly created empty org)\n   can no longer flip firstRunDetected on for existing users.\n\n3. The swallowed-refetch race is fixed. When the org settles while the\n   initial unscoped fetch is in flight, the org subscription's forced\n   refetch was returned the in-flight promise and dropped — the org only\n   settles once, so nothing retried and a new user saw no CEO/onboarding\n   until the 30s TTL. fetchAgents now re-runs itself from finally() when\n   the org scope drifted (org id changed, or authority rose while the\n   committed list is still empty).\n\n4. The org subscription fires on authority rising, not just org-id\n   change, covering the cached-org-confirmed and zero-org cases where the\n   id never changes at settle time (skipped when a fleet is already\n   painted, so the common warm path stays at one fetch).\n\n5. Auth identity changes (including direct A->B account switches that\n   never pass through signed-out) now fully reset the store and both\n   per-session latches, so one user's firstRunDetected/agents can't leak\n   into the next session.\n\nAdds state-machine tests driving auth/org settle timing for all four\nonboarding scenarios plus the mid-flight settle race, zero-org users,\nmid-session org switches, and account switches.\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "parents": [
+        "be5b4cc846c0a0b4578073959626616980eb451f"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/apps/agents/stores/agent-store.test.ts",
+        "interface/src/apps/agents/stores/agent-store.ts",
+        "interface/src/apps/chat-app/components/ChatAppMainPanel/ChatAppMainPanel.tsx",
+        "interface/src/apps/chat-app/components/ProjectFolderPrompt/ProjectFolderPrompt.module.css",
+        "interface/src/apps/chat-app/components/ProjectFolderPrompt/ProjectFolderPrompt.tsx",
+        "interface/src/apps/chat-app/components/ProjectFolderPrompt/index.ts",
+        "interface/src/features/onboarding/folder-prompt-storage.ts",
+        "interface/src/lib/analytics-registry.ts",
+        "interface/src/stores/org-store.ts",
+        "interface/src/views/public-chat/AgentOnboarding/AgentOnboardingModal/AgentOnboardingModal.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingChoice/OnboardingChoice.module.css",
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingChoice/OnboardingChoice.tsx",
+        "interface/src/views/public-chat/AgentOnboarding/OnboardingChoice/index.ts",
+        "interface/src/views/public-chat/AgentOnboarding/agent-onboarding-store.test.ts",
+        "interface/src/views/public-chat/AgentOnboarding/agent-onboarding-store.ts",
+        "interface/src/views/public-chat/AgentOnboarding/index.ts"
+      ],
+      "stats": {
+        "fileCount": 17,
+        "insertions": 839,
+        "deletions": 61
+      },
+      "committedAtMs": 1783402632000,
+      "cleanSubject": "add two-lane first-run flow (#88)",
+      "keywords": [
+        "lane",
+        "first",
+        "flow"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/apps",
+        "interface/src/features",
+        "interface/src/lib",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 4,
+  "batchCount": 5,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.741.1",
+      "version": "0.1.0-nightly.742.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65324790
+          "sizeBytes": 65328160
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131906040
+          "sizeBytes": 131901944
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -521,29 +578,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.741.1",
+      "version": "0.1.0-nightly.742.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.741.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.742.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61136404
+          "sizeBytes": 61140688
         },
         {
-          "name": "AURA_0.1.0-nightly.741.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.742.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60178614
+          "sizeBytes": 60183095
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -553,29 +610,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.741.1",
+      "version": "0.1.0-nightly.742.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.741.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.742.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63368718
+          "sizeBytes": 63372017
         },
         {
-          "name": "AURA_0.1.0-nightly.741.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.742.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62403508
+          "sizeBytes": 62405827
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -585,17 +642,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.741.1",
+      "version": "0.1.0-nightly.742.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48261975
+          "sizeBytes": 48264015
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.741.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.742.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -604,29 +661,36 @@
     }
   ],
   "rendered": {
-    "title": "Fresh-chat routing, session hydration, and public chat polish",
-    "intro": "Today's nightly centered on making chat routes durable across fresh sends, taskbar returns, and reloads, with a parallel pass of polish on the public chat experience and a small but important fix to how the macOS desktop window comes up on launch.",
+    "title": "First-run onboarding gets a two-lane choice, plus chat routing that actually remembers where you were",
+    "intro": "Today's nightly reworks the very first moments in Aura and tightens the chat surface around it. New users now pick between \"Just Start\" and \"Set Up My Agent\" instead of being dropped into a six-step wizard, and the chat app learned to preserve, restore, and share concrete session routes across taskbar returns, fresh canvases, and public visitors. The desktop shell also stops flashing hidden windows in CI, and the public chat's free-message limit finally has a real UI.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:10 AM",
         "started_at": "2026-07-06T10:10:14.000Z",
         "ended_at": "2026-07-06T11:12:59.000Z",
-        "title": "Fresh chat canvases bind to real sessions after first send",
-        "summary": "Reworked how the chat app treats a fresh canvas so the first send reliably materializes into a persisted session and the URL follows along.",
+        "title": "Fresh chat canvases bind to a real session after first send",
+        "summary": "The chat app's fresh-canvas flow now correctly hands off to the persisted session route as soon as the first message materializes, without racing the session list.",
         "items": [
           {
-            "text": "Fixed the fresh-canvas state so any URL without a session id is treated as pending, and the fresh key is threaded through so a new send is correctly armed as a new session instead of getting bound to a stale one.",
+            "text": "Fresh chat routes now consistently flag as pending until a session exists, and the fresh canvas key is threaded through to the standalone chat hook so the next send is armed as a new session exactly once per canvas.",
             "commit_shas": [
-              "378f600c5228f09599987bac03d044eb54172742"
+              "378f600c5228f09599987bac03d044eb54172742",
+              "8a544bb1af43f8c12af172696475bc79ccf5f9ce"
             ],
             "confidence": "high"
           },
           {
-            "text": "After the first send lands, the chat route now swaps the throwaway fresh=... param for a canonical project/instance/session/agent URL, and share links read from that canonical route so copied links point at the real session.",
+            "text": "After a fresh send lands, ChatAppRoute swaps the `fresh=` param for a full `session/project/instance/agent` URL via a replace navigation, so reloads and back-navigation land on the real session instead of a blank canvas.",
             "commit_shas": [
-              "8a544bb1af43f8c12af172696475bc79ccf5f9ce",
               "164f2d284ed67ccf98905fb5d36ac7c73e4f767b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Share links from the message actions menu now read the canonical `project`/`instance`/`session` params from the URL, fixing shares started from agent-scoped stream keys.",
+            "commit_shas": [
+              "8a544bb1af43f8c12af172696475bc79ccf5f9ce"
             ],
             "confidence": "high"
           }
@@ -637,18 +701,18 @@
         "time_label": "4:46 AM",
         "started_at": "2026-07-06T11:46:11.000Z",
         "ended_at": "2026-07-06T12:06:07.000Z",
-        "title": "macOS desktop window visible on launch",
-        "summary": "The desktop app now shows its main window on launch on macOS, while keeping the headless behavior CI depends on.",
+        "title": "macOS desktop launches visibly, CI stays headless",
+        "summary": "The desktop shell now opens its main window on launch for real users while suppressing it on CI runners so automated builds don't pop UI.",
         "items": [
           {
-            "text": "The macOS desktop build now presents the main window on launch instead of starting hidden, so first-run and relaunch actually surface the app.",
+            "text": "The macOS main window is shown on launch by default, restoring the expected first-open behavior for desktop users.",
             "commit_shas": [
               "26652002eccb3224a38fc46f43e80fdb8ac07fd9"
             ],
             "confidence": "high"
           },
           {
-            "text": "CI runs still launch the desktop hidden by detecting standard CI environment variables, so the visible-on-launch change doesn't destabilize automated desktop tests.",
+            "text": "Standard CI environments are detected via env and keep the desktop window hidden, so builds and headless tests no longer flash a window.",
             "commit_shas": [
               "c9d2b5c3280f2d0dd169b255ef381836fbe8d8c0",
               "a3ca860b5a2cb427c1d20bcb6b4df8f8beb8b6d9"
@@ -662,32 +726,26 @@
         "time_label": "5:47 AM",
         "started_at": "2026-07-06T12:47:35.000Z",
         "ended_at": "2026-07-06T15:19:13.000Z",
-        "title": "Taskbar remembers your last chat, and web session lists stop breaking on bad data",
-        "summary": "The chat taskbar entry now returns you to the exact session you were last in, session list hydration is hardened against malformed data, and the mobile public chat shell got a real touch-target and safe-area pass.",
+        "title": "Taskbar returns, session hydration, and mobile public chat polish",
+        "summary": "The chat app now remembers the concrete session route you last had open, the web session list survives malformed data and legacy API hosts, and the mobile public chat shell gets a touch-friendly refresh.",
         "items": [
           {
-            "text": "Clicking the chat app from the nav rail now restores the last concrete session route (project, instance, session, agent) instead of dropping you on a blank canvas, with legacy session-only links upgraded to share-capable URLs.",
+            "text": "Opening chat from the taskbar or nav rail restores the exact `session/project/instance/agent` route you were last on, including derivation from legacy session-only links, while fresh canvases are explicitly not remembered.",
             "commit_shas": [
-              "5f2505a149201c5c6445d84b738a7586f86b98ef"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Tightened the rule for remembering a route so no-agent session URLs are only persisted once the session's real owner has loaded, preventing a bad agent from being written into the remembered route.",
-            "commit_shas": [
+              "5f2505a149201c5c6445d84b738a7586f86b98ef",
               "debe58e330f55ee702957f896b6a7e4eccf5ad92"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened the web sessions list against polluted or non-array session payloads (renders an empty state instead of throwing) and canonicalized the legacy Render API origin to api.aura.ai on production web so stale stored hosts self-heal.",
+            "text": "Web session hydration is hardened: SessionsList tolerates a polluted `sessions` prop by rendering the empty state, and host-config canonicalizes the legacy Render API origin to `https://api.aura.ai` on production web even when a stale value is stored.",
             "commit_shas": [
               "17db544af8b08aadeb4e3103b91eab6032110f32"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished the mobile public chat shell: 60px header, 48px menu/close/delete buttons with touch-action manipulation, proper safe-area padding, and new copy for the free-message limit state.",
+            "text": "The mobile public chat shell bumps top-bar and button targets to 48px with safe-area-aware padding, adds `touch-action: manipulation`, and ships new copy for the free-message limit state.",
             "commit_shas": [
               "3329590558a86db906226705f1fa1dd37fa43531"
             ],
@@ -700,27 +758,58 @@
         "time_label": "10:38 AM",
         "started_at": "2026-07-06T17:38:53.000Z",
         "ended_at": "2026-07-06T17:38:53.000Z",
-        "title": "Free-message limit gate for public chat",
-        "summary": "Public chat now has a first-class limit-reached state on both web and mobile, with dedicated copy and clear log-in / sign-up actions instead of a generic send error.",
+        "title": "Public chat gets a real free-limit gate",
+        "summary": "When a public visitor hits the free-message cap, the composer is replaced with a titled notice and login/sign-up actions instead of surfacing a raw error.",
         "items": [
           {
-            "text": "Added a shared limit-error detector and a styled limit notice in the public chat input bar, with pill-shaped primary and secondary actions prompting users to log in or sign up to continue.",
+            "text": "PublicChatView detects the limit-reached error, swaps the input bar for a rounded limit notice with title, body, and primary/secondary CTAs, and mirrors the same handling in the mobile view so streams stop cleanly at the cap.",
             "commit_shas": [
               "be5b4cc846c0a0b4578073959626616980eb451f"
             ],
             "confidence": "high"
           },
           {
-            "text": "On the mobile public chat view, hitting the limit now snaps the turn count to the configured limit and clears the transient send error, so the UI transitions cleanly into the limit-reached state instead of showing a failure toast.",
+            "text": "New localized strings introduce a dedicated title, body, and placeholder for the free-chat limit state driving both the desktop and mobile public views.",
             "commit_shas": [
               "be5b4cc846c0a0b4578073959626616980eb451f"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "10:37 PM",
+        "started_at": "2026-07-07T05:37:12.000Z",
+        "ended_at": "2026-07-07T05:37:12.000Z",
+        "title": "Two-lane first-run onboarding replaces the six-step wizard",
+        "summary": "New users now see a two-card choice — Just Start or Set Up My Agent — backed by a latched, authority-gated first-run signal so the modal only appears for genuine new accounts.",
+        "items": [
+          {
+            "text": "The auto-opening 6-step wizard is replaced by an OnboardingChoice modal: Just Start relies on `ensureCeoHome()` auto-provisioning and (on desktop) shows a one-shot project folder prompt banner, while Set Up My Agent opens the wizard trimmed to Identity, Expertise, and Launch. Lane selection is instrumented via an `onboarding_lane_selected` analytics event.",
+            "commit_shas": [
+              "4604c18c53cf50cbe9b969973cab9091d1e15249"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "Added localized strings for the limit title, body, and input placeholder (\"Free chat limit reached\" / \"Log in to keep chatting\") so the gate reads as an onboarding prompt rather than an error.",
+            "text": "`firstRunDetected` is now a latched, authority-gated decision in agent-store: it only settles once per signed-in session and only from an org-scoped fetch (or a confirmed zero-org roster), so existing users switching into an empty org can no longer be misclassified as new.",
             "commit_shas": [
-              "be5b4cc846c0a0b4578073959626616980eb451f"
+              "4604c18c53cf50cbe9b969973cab9091d1e15249"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "`ensureCeoHome` is deferred until the org-scoped fetch, and a swallowed-refetch race is fixed by re-running `fetchAgents` when the org scope drifts — so a brand-new user reliably gets a default CEO and sees the onboarding choice instead of waiting for a 30s TTL.",
+            "commit_shas": [
+              "4604c18c53cf50cbe9b969973cab9091d1e15249"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "OnboardingChoice is lazy-loaded and gated behind `isAuthenticated`, the folder-prompt storage key is scoped per user with an in-memory fallback when localStorage is blocked, and account switches fully reset the store so one user's onboarding state can't leak into another's session.",
+            "commit_shas": [
+              "4604c18c53cf50cbe9b969973cab9091d1e15249"
             ],
             "confidence": "high"
           }
@@ -728,11 +817,12 @@
       }
     ],
     "highlights": [
-      "Fresh chat routes now upgrade to real session URLs after the first send",
-      "Taskbar returns reopen the exact chat you were in",
-      "Public chat gains a proper free-message limit gate on mobile and web",
-      "macOS desktop window now shows on launch outside of CI"
+      "New two-lane first-run onboarding replaces the 6-step wizard",
+      "Fresh chat canvases now adopt a real session URL after the first send",
+      "Taskbar returns preserve the exact chat session route",
+      "Public chat has a proper free-limit gate with login CTAs",
+      "macOS desktop window shows on launch but stays hidden in CI"
     ],
-    "raw_commit_count": 11
+    "raw_commit_count": 12
   }
 }

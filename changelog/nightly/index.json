@@ -2,19 +2,20 @@
   {
     "date": "2026-07-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.741.1",
-    "title": "Fresh-chat routing, session hydration, and public chat polish",
-    "intro": "Today's nightly centered on making chat routes durable across fresh sends, taskbar returns, and reloads, with a parallel pass of polish on the public chat experience and a small but important fix to how the macOS desktop window comes up on launch.",
-    "entryCount": 4,
+    "version": "0.1.0-nightly.742.1",
+    "title": "First-run onboarding gets a two-lane choice, plus chat routing that actually remembers where you were",
+    "intro": "Today's nightly reworks the very first moments in Aura and tightens the chat surface around it. New users now pick between \"Just Start\" and \"Set Up My Agent\" instead of being dropped into a six-step wizard, and the chat app learned to preserve, restore, and share concrete session routes across taskbar returns, fresh canvases, and public visitors. The desktop shell also stops flashing hidden windows in CI, and the public chat's free-message limit finally has a real UI.",
+    "entryCount": 5,
     "highlights": [
-      "Fresh chat routes now upgrade to real session URLs after the first send",
-      "Taskbar returns reopen the exact chat you were in",
-      "Public chat gains a proper free-message limit gate on mobile and web",
-      "macOS desktop window now shows on launch outside of CI"
+      "New two-lane first-run onboarding replaces the 6-step wizard",
+      "Fresh chat canvases now adopt a real session URL after the first send",
+      "Taskbar returns preserve the exact chat session route",
+      "Public chat has a proper free-limit gate with login CTAs",
+      "macOS desktop window shows on launch but stays hidden in CI"
     ],
-    "rawCommitCount": 11,
-    "generatedAt": "2026-07-06T18:02:54.171Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.741.1",
+    "rawCommitCount": 12,
+    "generatedAt": "2026-07-07T06:00:03.139Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.742.1",
     "path": "history/2026-07-06.json"
   },
   {
