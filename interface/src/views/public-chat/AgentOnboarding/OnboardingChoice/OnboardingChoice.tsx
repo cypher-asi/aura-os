@@ -5,7 +5,7 @@ import { GlassModal } from "../../../../components/GlassModal";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useAuth } from "../../../../stores/auth-store";
 import { useAgentStore } from "../../../../apps/agents/stores/agent-store";
-import { markFolderPromptPending } from "../../../../features/onboarding/folder-prompt-storage";
+import { markFolderPromptPending, setFolderPromptUser } from "../../../../features/onboarding/folder-prompt-storage";
 import { track } from "../../../../lib/analytics";
 import { useAgentOnboardingStore } from "../agent-onboarding-store";
 import styles from "./OnboardingChoice.module.css";
@@ -111,6 +111,7 @@ export function OnboardingChoice(): React.ReactElement | null {
     track("onboarding_lane_selected", { lane: "just_start" });
     settle("just_start");
     if (hasDesktopBridge) {
+      if (userId) setFolderPromptUser(userId);
       markFolderPromptPending();
     }
     navigate("/chat");

@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FolderOpen } from "lucide-react";
 import { Button } from "@cypher-asi/zui";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
+import { useAuth } from "../../../../stores/auth-store";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import {
   isFolderPromptPending,
+  setFolderPromptUser,
   settleFolderPrompt,
 } from "../../../../features/onboarding/folder-prompt-storage";
 import styles from "./ProjectFolderPrompt.module.css";
@@ -19,8 +21,20 @@ import styles from "./ProjectFolderPrompt.module.css";
  */
 export function ProjectFolderPrompt(): React.ReactElement | null {
   const { hasDesktopBridge } = useAuraCapabilities();
+  const { user } = useAuth();
+  const userId = user?.user_id ?? null;
   const openNewProjectModal = useProjectsListStore((s) => s.openNewProjectModal);
-  const [visible, setVisible] = useState(isFolderPromptPending);
+  const [visible, setVisible] = useState(false);
+
+  // Scope the storage key to the current user and re-evaluate visibility.
+  useEffect(() => {
+    if (userId && hasDesktopBridge) {
+      setFolderPromptUser(userId);
+      setVisible(isFolderPromptPending());
+    } else {
+      setVisible(false);
+    }
+  }, [userId, hasDesktopBridge]);
 
   if (!hasDesktopBridge || !visible) return null;
 
