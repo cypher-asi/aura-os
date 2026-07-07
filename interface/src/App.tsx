@@ -19,6 +19,11 @@ import { MobilePublicChatView } from "./views/public-chat/MobilePublicChatView";
 import { PublicMarketingPanel } from "./views/public-chat/PublicMarketingPanel";
 import { LoginOverlay } from "./views/public-chat/LoginOverlay";
 import { AgentOnboardingModal } from "./views/public-chat/AgentOnboarding/AgentOnboardingModal";
+const OnboardingChoice = lazy(() =>
+  import("./views/public-chat/AgentOnboarding/OnboardingChoice").then((m) => ({
+    default: m.OnboardingChoice,
+  })),
+);
 import { CaptureLoginView } from "./views/CaptureLoginView";
 import { apps } from "./apps/registry";
 import { getPlatformEntryShellPath } from "./utils/last-app-path";
@@ -637,6 +642,7 @@ function AppRoutes(): React.ReactElement {
     </Routes>
     {showLoginOverlay && <LoginOverlay />}
     <AgentOnboardingModal />
+    {isAuthenticated && <Suspense fallback={null}><OnboardingChoice /></Suspense>}
     </>
   );
 }

@@ -48,6 +48,20 @@ type AgentState = {
   agentsStatus: FetchStatus;
   agentsError: string | null;
 
+  /**
+   * True when this session's first *authoritative* agent fetch (org roster
+   * network-confirmed — see `isOrgScopeAuthoritative`) found an account with
+   * no agents at all — i.e. a brand-new user — recorded *before* the
+   * idempotent CEO/Home ensure creates the default agent. Drives the
+   * first-run onboarding choice surface (`OnboardingChoice`), which needs
+   * "had no agents" rather than the post-ensure list (that always contains
+   * the auto-created CEO). Latches via `firstRunSignalSettledThisSession`:
+   * decided at most once per signed-in session, stays true until the auth
+   * identity changes, and is never set by pre-settle (unscoped) fetches or
+   * by later empty org switches.
+   */
+  firstRunDetected: boolean;
+
   history: Record<string, HistoryEntry>;
 
   selectedAgentId: string | null;
@@ -80,6 +94,34 @@ const PLACEHOLDER_AGENT_NAME = "New Agent";
 /// sign-out/sign-in cycle to a different account would skip the
 /// ensure-home call).
 let hasEnsuredCeoHomeThisSession = false;
+
+/// Per-user-session latch for the first-run decision. The question "is this a
+/// brand-new user?" must be answered exactly once per signed-in session, by
+/// the first *authoritative* fetch (see `isOrgScopeAuthoritative`):
+///   - authoritative fetch returns agents  -> not first run, latch closes
+///   - authoritative fetch returns nothing -> first run, latch closes
+///   - any fetch returns agents            -> not first run, latch closes
+///     (even an unscoped fetch: having any agent anywhere rules out "new")
+/// Once latched, later empty results (e.g. the user switches to a freshly
+/// created empty org mid-session) can never flip `firstRunDetected` on.
+/// Reset alongside `hasEnsuredCeoHomeThisSession` on any auth identity change.
+let firstRunSignalSettledThisSession = false;
+
+/**
+ * An agent list result can only decide the first-run question when we know it
+ * reflects the user's real scope. That requires the org roster to have been
+ * confirmed by the network for this session (`orgsResolved` — the IndexedDB
+ * org cache can be stale) AND either the fetch was scoped to the settled
+ * active org, or the roster settled to "this user has no orgs at all" (then
+ * the unscoped, own-agents list IS the full picture). Evaluated at fetch
+ * start so the verdict matches the scope the request was actually made with.
+ */
+function isOrgScopeAuthoritative(
+  orgState: ReturnType<typeof useOrgStore.getState>,
+  activeOrgId: string | undefined,
+): boolean {
+  return orgState.orgsResolved && (activeOrgId !== undefined || orgState.orgs.length === 0);
+}
 
 function agentStateKey(userId: string): string {
   return `state:${userId}`;
@@ -152,6 +194,7 @@ export const useAgentStore = create<AgentState>()(
       agents: [],
       agentsStatus: "idle",
       agentsError: null,
+      firstRunDetected: false,
       history: {},
       selectedAgentId: null,
       pinnedAgentIds: readIdSet(PINNED_KEY),
@@ -193,7 +236,9 @@ export const useAgentStore = create<AgentState>()(
         // teammates' agents. `activeOrg` may briefly be null on first
         // mount before `refreshOrgs()` settles; in that window we
         // fall back to the unscoped list (current behaviour).
-        const activeOrgId = useOrgStore.getState().activeOrg?.org_id;
+        const orgStateAtFetch = useOrgStore.getState();
+        const activeOrgId = orgStateAtFetch.activeOrg?.org_id;
+        const orgScopeAuthoritative = isOrgScopeAuthoritative(orgStateAtFetch, activeOrgId);
         // Ensure the canonical CEO exists *and* has a Home project binding so
         // direct chats can persist. `setup()` is idempotent on both fronts, so
         // calling it once per app session heals three cases in one hop:
@@ -263,6 +308,10 @@ export const useAgentStore = create<AgentState>()(
             // empty there is nothing to show yet, so wait for `setup()` (it may
             // create the very first agent) before committing.
             if (agents.length > 0) {
+              // Any agent anywhere means this is not a brand-new user; close
+              // the first-run question for the rest of the session so a later
+              // empty (e.g. brand-new org) fetch can't reopen it.
+              firstRunSignalSettledThisSession = true;
               commitAgents(agents);
               const createdAgent = await ensureCeoHome();
               if (createdAgent && !isAuraCaptureSessionActive()) {
@@ -276,8 +325,32 @@ export const useAgentStore = create<AgentState>()(
                 }));
               }
             } else {
-              const createdAgent = await ensureCeoHome();
-              commitAgents(createdAgent ? [...agents, createdAgent] : agents);
+              // Only treat an empty list as "first run" AND only create the
+              // default CEO when the fetch's scope was authoritative (the
+              // network-confirmed org roster says we queried the right
+              // scope — see `isOrgScopeAuthoritative`). The first mount can
+              // fire before org state settles; that pre-settle list can be
+              // empty even for existing users whose agents are only visible
+              // under their org. If we ran ensureCeoHome here, the CEO would
+              // exist by the time the authoritative refetch arrives, masking
+              // the true first-run signal.
+              if (!isAuraCaptureSessionActive() && orgScopeAuthoritative) {
+                if (!firstRunSignalSettledThisSession) {
+                  // First authoritative answer of the session and it's
+                  // "zero agents": this is a genuinely new user. Latch the
+                  // decision BEFORE the ensure below creates the CEO.
+                  firstRunSignalSettledThisSession = true;
+                  set({ firstRunDetected: true });
+                }
+                const createdAgent = await ensureCeoHome();
+                commitAgents(createdAgent ? [...agents, createdAgent] : agents);
+              } else {
+                // Pre-settle fetch — commit the empty list but do NOT
+                // create the CEO yet. The authoritative refetch (org
+                // subscription below, or the scope-drift check in
+                // `finally`) will handle it.
+                commitAgents(agents);
+              }
             }
           })
           .catch((err: unknown) => {
@@ -287,6 +360,28 @@ export const useAgentStore = create<AgentState>()(
           })
           .finally(() => {
             agentsFetchPromise = null;
+            // A forced refetch that raced this fetch (the org-settle
+            // subscription fires while we're in flight) was swallowed by the
+            // in-flight dedupe above and will never re-fire on its own — the
+            // org only *settles* once. If the scope drifted while we were in
+            // flight, re-run now so the authoritative list (and the
+            // first-run verdict) still lands.
+            if (isAuraCaptureSessionActive()) return;
+            if (!useAuthStore.getState().user?.user_id) return;
+            const orgStateNow = useOrgStore.getState();
+            const orgIdNow = orgStateNow.activeOrg?.org_id;
+            const authoritativeNow = isOrgScopeAuthoritative(orgStateNow, orgIdNow);
+            const scopeChanged = orgIdNow !== activeOrgId;
+            // Authority rising with the same org id only matters while the
+            // first-run question is still open or nothing was committed —
+            // skip the extra round-trip when we already painted a fleet.
+            const authorityRose =
+              authoritativeNow &&
+              !orgScopeAuthoritative &&
+              (get().agents.length === 0 || get().agentsStatus !== "ready");
+            if (scopeChanged || authorityRose) {
+              void get().fetchAgents({ force: true });
+            }
           });
 
         return agentsFetchPromise;
@@ -426,28 +521,38 @@ useAuthStore.subscribe((state) => {
   if (userId === _prevAgentUserId) return;
   _prevAgentUserId = userId;
 
+  hasEnsuredCeoHomeThisSession = false;
+  firstRunSignalSettledThisSession = false;
+
   if (!userId) {
-    hasEnsuredCeoHomeThisSession = false;
     // Drop the cached last-used agent id so it can't leak into the next
     // session: `AgentIndexRedirect` would otherwise redirect a freshly
     // logged-in (possibly different) user to the previous user's agent,
     // which isn't in their fleet — landing them on an empty, unselected
     // chat surface.
     clearLastStandaloneAgentId();
-    useAgentStore.setState({
-      agents: [],
-      agentsStatus: "idle",
-      agentsError: null,
-      history: {},
-      selectedAgentId: null,
-      pinnedAgentIds: new Set(),
-      favoriteAgentIds: new Set(),
-    });
-    return;
   }
 
-  hasEnsuredCeoHomeThisSession = false;
-  void hydratePersistedAgentState(userId);
+  // Reset per-user store state on EVERY identity change, not just logout: a
+  // direct account switch (A -> B without passing through a signed-out
+  // state) must not leak A's agents or `firstRunDetected` into B's session —
+  // and A's non-empty list would otherwise make `hydratePersistedAgentState`
+  // skip painting B's cache. On plain logout->login this is a no-op reset of
+  // an already-reset store.
+  useAgentStore.setState({
+    agents: [],
+    agentsStatus: "idle",
+    agentsError: null,
+    firstRunDetected: false,
+    history: {},
+    selectedAgentId: null,
+    pinnedAgentIds: new Set(),
+    favoriteAgentIds: new Set(),
+  });
+
+  if (userId) {
+    void hydratePersistedAgentState(userId);
+  }
 });
 
 // Hydrate immediately for an already-authenticated user. The auth subscription
@@ -466,13 +571,38 @@ if (_initialAgentUserId) {
 // The first mount fetch can run before `refreshOrgs()` lands (org id null →
 // unscoped, own-agents-only list); this picks up the full org fleet once the
 // org is known — the projects store already does the equivalent.
+//
+// Two triggers:
+//  - the active org id changed (org switch, or the roster hydrated/settled
+//    onto a different org than the fetch used);
+//  - the scope became authoritative (`refreshOrgs()` succeeded) while the
+//    committed list is still empty/unready. This covers the org id NOT
+//    changing at settle time: a cached `activeOrg` that the network then
+//    confirms, and a user with zero orgs (id stays null) whose unscoped
+//    list only becomes trustworthy — and first-run-decidable — once the
+//    roster proves there is no org scope to query.
 let _prevAgentOrgId: string | null = useOrgStore.getState().activeOrg?.org_id ?? null;
+let _prevAgentOrgAuthoritative: boolean = (() => {
+  const s = useOrgStore.getState();
+  return isOrgScopeAuthoritative(s, s.activeOrg?.org_id);
+})();
 useOrgStore.subscribe((state) => {
-  if (isAuraCaptureSessionActive()) return;
   const orgId = state.activeOrg?.org_id ?? null;
-  if (orgId === _prevAgentOrgId) return;
+  const authoritative = isOrgScopeAuthoritative(state, state.activeOrg?.org_id);
+  const orgChanged = orgId !== _prevAgentOrgId;
+  const authorityRose = authoritative && !_prevAgentOrgAuthoritative;
   _prevAgentOrgId = orgId;
+  _prevAgentOrgAuthoritative = authoritative;
+  if (isAuraCaptureSessionActive()) return;
+  if (!orgChanged && !authorityRose) return;
   if (!useAuthStore.getState().user?.user_id) return;
+  if (!orgChanged) {
+    // Authority-only edge: skip the extra round-trip when a fleet is
+    // already painted from the same org id — the first-run question is
+    // closed and the list can't change scope.
+    const agentState = useAgentStore.getState();
+    if (agentState.agents.length > 0 && agentState.agentsStatus === "ready") return;
+  }
   void useAgentStore.getState().fetchAgents({ force: true });
 });
 

@@ -9,28 +9,19 @@ import {
   type OnboardingStepId,
 } from "../agent-onboarding-store";
 import {
-  AUTOMATION_PRESETS,
   EXPERTISE_SKILL_GROUPS,
-  MESSAGING_PROVIDERS,
   ONBOARDING_AVATARS,
-  ONBOARDING_INTEGRATIONS,
   PERSONALITY_PRESETS,
 } from "../onboarding-data";
 import { OnboardingStepper, type OnboardingStepDescriptor } from "../OnboardingStepper";
 import { IdentityStep } from "../IdentityStep";
 import { ExpertiseStep } from "../ExpertiseStep";
-import { IntegrationsStep } from "../IntegrationsStep";
-import { ConnectionsStep } from "../ConnectionsStep";
-import { AutomationsStep } from "../AutomationsStep";
 import { LaunchStep, LAUNCH_FORM_ID } from "../LaunchStep";
 import styles from "./AgentOnboardingModal.module.css";
 
 const STEP_LABELS: Record<OnboardingStepId, string> = {
   identity: "Identity",
   expertise: "Skills",
-  integrations: "Integrations",
-  connections: "Messaging",
-  automations: "Automations",
   launch: "Launch",
 };
 
@@ -62,9 +53,6 @@ export function AgentOnboardingModal(): React.ReactElement | null {
   const setAvatar = useAgentOnboardingStore((s) => s.setAvatar);
   const setPersonality = useAgentOnboardingStore((s) => s.setPersonality);
   const toggleSkill = useAgentOnboardingStore((s) => s.toggleSkill);
-  const toggleIntegration = useAgentOnboardingStore((s) => s.toggleIntegration);
-  const toggleMessaging = useAgentOnboardingStore((s) => s.toggleMessaging);
-  const toggleAutomation = useAgentOnboardingStore((s) => s.toggleAutomation);
 
   // Close the wizard the moment registration succeeds (auth flips false→true
   // while open). `useApplyAgentOnboarding` in the authenticated shell then
@@ -102,30 +90,6 @@ export function AgentOnboardingModal(): React.ReactElement | null {
             groups={EXPERTISE_SKILL_GROUPS}
             selectedSkills={draft.skills}
             onToggleSkill={toggleSkill}
-          />
-        );
-      case "integrations":
-        return (
-          <IntegrationsStep
-            integrations={ONBOARDING_INTEGRATIONS}
-            selected={draft.integrations}
-            onToggle={toggleIntegration}
-          />
-        );
-      case "connections":
-        return (
-          <ConnectionsStep
-            providers={MESSAGING_PROVIDERS}
-            selected={draft.messaging}
-            onToggle={toggleMessaging}
-          />
-        );
-      case "automations":
-        return (
-          <AutomationsStep
-            automations={AUTOMATION_PRESETS}
-            selected={draft.automations}
-            onToggle={toggleAutomation}
           />
         );
       case "launch":

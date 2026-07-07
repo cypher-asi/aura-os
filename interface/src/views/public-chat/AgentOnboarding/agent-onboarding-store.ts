@@ -4,13 +4,16 @@ import { create } from "zustand";
  * Ordered list of onboarding stages. The wizard's stepper and Back/Next
  * navigation are driven entirely by this array, so reordering or renaming a
  * stage is a single-line edit here.
+ *
+ * Integrations / connections / automations were removed from the flow: they
+ * collect selections that `applyAgentOnboarding` deliberately does NOT apply
+ * (deferred, post-signup), so the wizard now stops at the three stages whose
+ * data actually configures the CEO. The step components stay on disk for
+ * reuse in the post-signup prompts.
  */
 export const ONBOARDING_STEPS = [
   "identity",
   "expertise",
-  "integrations",
-  "connections",
-  "automations",
   "launch",
 ] as const;
 

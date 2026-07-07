@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { useAppUIStore } from "../../../../stores/app-ui-store";
+import { ProjectFolderPrompt } from "../ProjectFolderPrompt";
 import styles from "./ChatAppMainPanel.module.css";
 
 const FIRST_VISIT_KEY = "aura-chat-app:visited";
@@ -42,6 +43,7 @@ export function ChatAppMainPanel({ children }: { children?: ReactNode }) {
       data-agent-surface="chat-app-chat-panel"
       data-agent-context="chat-app-product-context"
     >
+      <ProjectFolderPrompt />
       {children}
     </div>
   );
