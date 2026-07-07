@@ -12,6 +12,16 @@ interface OrgState {
   members: OrgMember[];
   integrations: OrgIntegration[];
   isLoading: boolean;
+  /**
+   * True once a *network* `refreshOrgs()` has succeeded for the current
+   * session. Distinct from `!isLoading`: the IndexedDB hydration also clears
+   * `isLoading`, but a cached roster (or a cached `activeOrg`) is not
+   * authoritative — the user's org membership may have changed on another
+   * device. Consumers that need "the org roster is settled" (e.g. the agent
+   * store's first-run detection) must key off this flag, not `isLoading`.
+   * Reset on logout and at the start of every refresh.
+   */
+  orgsResolved: boolean;
   orgsError: string | null;
   membersError: string | null;
   integrationsError: string | null;
@@ -106,6 +116,7 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
   members: [],
   integrations: [],
   isLoading: true,
+  orgsResolved: false,
   orgsError: null,
   membersError: null,
   integrationsError: null,
@@ -116,7 +127,7 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
       set({ isLoading: false, orgsError: null });
       return;
     }
-    set({ orgsError: null });
+    set({ orgsError: null, orgsResolved: false });
     try {
       const list = applyOrgAvatarOverrides(await api.orgs.list(), user.user_id);
       const savedId = localStorage.getItem(ACTIVE_ORG_KEY);
@@ -127,6 +138,7 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
         return {
           orgs: list,
           activeOrg: selected,
+          orgsResolved: true,
           members: orgChanged ? [] : state.members,
           integrations: orgChanged ? [] : state.integrations,
         };
@@ -260,6 +272,7 @@ useAuthStore.subscribe((state) => {
       members: [],
       integrations: [],
       isLoading: false,
+      orgsResolved: false,
       orgsError: null,
       membersError: null,
       integrationsError: null,
