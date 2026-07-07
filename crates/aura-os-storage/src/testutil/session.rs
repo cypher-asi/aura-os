@@ -102,6 +102,19 @@ pub(super) async fn get_session(
         .ok_or(axum::http::StatusCode::NOT_FOUND)
 }
 
+pub(super) async fn get_session_by_share_internal(
+    Path(public_share_id): Path<String>,
+    State(db): State<SharedDb>,
+) -> Result<Json<StorageSession>, axum::http::StatusCode> {
+    let db = db.lock().await;
+    db.sessions
+        .iter()
+        .find(|s| s.public_share_id.as_deref() == Some(public_share_id.as_str()))
+        .map(|s| project_event_stats(s, &db))
+        .map(Json)
+        .ok_or(axum::http::StatusCode::NOT_FOUND)
+}
+
 pub(super) async fn update_session(
     Path(session_id): Path<String>,
     State(db): State<SharedDb>,
@@ -129,6 +142,12 @@ pub(super) async fn update_session(
         }
         if let Some(ended) = req.ended_at {
             session.ended_at = Some(ended);
+        }
+        if let Some(is_public) = req.is_public {
+            session.is_public = Some(is_public);
+        }
+        if let Some(public_share_id) = req.public_share_id {
+            session.public_share_id = Some(public_share_id);
         }
         session.updated_at = Some(Utc::now().to_rfc3339());
         axum::http::StatusCode::OK

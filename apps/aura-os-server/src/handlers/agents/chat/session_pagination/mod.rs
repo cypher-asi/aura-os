@@ -25,7 +25,6 @@ use aura_os_core::{AgentId, AgentInstanceId, ProjectId, SessionId};
 use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::Deserialize;
-use tracing::warn;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::agents::sessions::reject_deleted_storage_session;
@@ -76,9 +75,9 @@ struct SessionPageScope {
 /// access model: aura-storage authorizes the `list_events` read via the
 /// caller's JWT and no additional ownership checks are layered on top.
 /// The extra `get_session` below feeds the tail-window optimisation and
-/// rejects soft-deleted sessions. Transient non-404 lookup errors still
-/// degrade to a full event fetch so a count probe failure does not brick
-/// history reads.
+/// is the authoritative deleted-session visibility check. If that lookup
+/// fails for anything other than 404, fail closed instead of falling back
+/// to an unchecked event read.
 pub(crate) async fn list_session_events_paginated(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -99,14 +98,7 @@ pub(crate) async fn list_session_events_paginated(
         Err(aura_os_storage::StorageError::Server { status: 404, .. }) => {
             return Err(ApiError::not_found("session not found"));
         }
-        Err(error) => {
-            warn!(
-                %session_id,
-                %error,
-                "paginated session events: count probe failed; degrading to full fetch"
-            );
-            None
-        }
+        Err(error) => return Err(map_storage_error(error)),
     };
     let scope = SessionPageScope {
         session_id,
