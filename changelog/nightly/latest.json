@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-07T13:05:46.779Z",
+  "generatedAt": "2026-07-07T17:45:48.574Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.743.1",
+  "version": "0.1.0-nightly.744.1",
   "date": "2026-07-07",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.743.1",
-  "lastIncludedSha": "2ffc5a45a2c5623a6c80eb816742ac6a81a2a875",
-  "previousProcessedSha": "4604c18c53cf50cbe9b969973cab9091d1e15249",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.744.1",
+  "lastIncludedSha": "9ed391fb57b368434df193573c1912218814ad5e",
+  "previousProcessedSha": "2ffc5a45a2c5623a6c80eb816742ac6a81a2a875",
   "commitShas": [
-    "2ffc5a45a2c5623a6c80eb816742ac6a81a2a875"
+    "2ffc5a45a2c5623a6c80eb816742ac6a81a2a875",
+    "9ed391fb57b368434df193573c1912218814ad5e"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "2ffc5a45a2c5623a6c80eb816742ac6a81a2a875",
@@ -56,36 +57,106 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "9ed391fb57b368434df193573c1912218814ad5e",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-07T13:20:48-04:00",
+      "subject": "Codex/delete session storage 405 (#90)",
+      "body": "* fix: handle unsupported session deletes\n\n* fix: fail closed for paginated deleted sessions",
+      "parents": [
+        "2ffc5a45a2c5623a6c80eb816742ac6a81a2a875"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route/persistence.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/discovery.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/loaders.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist/pin.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist/resolve.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/session_access.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/session_pagination/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup/persistence.rs",
+        "apps/aura-os-server/src/handlers/agents/context_contents.rs",
+        "apps/aura-os-server/src/handlers/agents/context_usage.rs",
+        "apps/aura-os-server/src/handlers/agents/control.rs",
+        "apps/aura-os-server/src/handlers/agents/self_improvement.rs",
+        "apps/aura-os-server/src/handlers/agents/sessions.rs",
+        "apps/aura-os-server/src/handlers/agents/subagents.rs",
+        "apps/aura-os-server/src/handlers/public/share.rs",
+        "apps/aura-os-server/src/handlers/shares/mod.rs",
+        "apps/aura-os-server/tests/session_delete_test.rs",
+        "apps/aura-os-server/tests/session_list_empty_filter_test.rs",
+        "crates/aura-os-core/src/enums.rs",
+        "crates/aura-os-core/tests/round_trips.rs",
+        "crates/aura-os-storage/src/client/sessions.rs",
+        "crates/aura-os-storage/src/conversions.rs",
+        "crates/aura-os-storage/src/lib.rs",
+        "crates/aura-os-storage/src/testutil/mod.rs",
+        "crates/aura-os-storage/src/testutil/session.rs",
+        "crates/aura-os-storage/src/types/mod.rs",
+        "crates/aura-os-storage/src/types/session.rs",
+        "interface/src/shared/types/enums.ts"
+      ],
+      "stats": {
+        "fileCount": 28,
+        "insertions": 452,
+        "deletions": 40
+      },
+      "committedAtMs": 1783444848000,
+      "cleanSubject": "Codex/delete session storage 405 (#90)",
+      "keywords": [
+        "codex",
+        "delete",
+        "session",
+        "storage"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-core/src",
+        "crates/aura-os-core/tests",
+        "crates/aura-os-storage/src",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.743.1",
+      "version": "0.1.0-nightly.744.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65336872
+          "sizeBytes": 65303504
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 131901944
+          "sizeBytes": 131889656
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -95,29 +166,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.743.1",
+      "version": "0.1.0-nightly.744.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.743.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.744.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61135242
+          "sizeBytes": 61157908
         },
         {
-          "name": "AURA_0.1.0-nightly.743.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.744.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60177829
+          "sizeBytes": 60207230
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -127,29 +198,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.743.1",
+      "version": "0.1.0-nightly.744.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.743.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.744.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63367502
+          "sizeBytes": 63440384
         },
         {
-          "name": "AURA_0.1.0-nightly.743.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.744.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62403010
+          "sizeBytes": 62451577
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -159,17 +230,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.743.1",
+      "version": "0.1.0-nightly.744.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48268673
+          "sizeBytes": 48335847
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.743.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.744.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -178,28 +249,59 @@
     }
   ],
   "rendered": {
-    "title": "Cleaner empty state in the chat panel",
-    "intro": "A focused nightly today: the empty chat view no longer visually collides with the centered input, so the \"What do you want to create?\" prompt reads cleanly on first open.",
+    "title": "Cleaner empty chat state and safer session deletion",
+    "intro": "Today's nightly tightens two rough edges: the empty chat panel no longer visually collides with the centered input, and the server now consistently hides and fails closed on deleted sessions across chat history, pinning, and pagination paths.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "5:42 AM",
         "started_at": "2026-07-07T12:42:20.000Z",
         "ended_at": "2026-07-07T12:42:20.000Z",
-        "title": "Empty chat state stops colliding with the centered input",
-        "summary": "The first-open chat view was stacking the empty-state copy and the input's blinking caret on top of the centered heading; both problems are now resolved.",
+        "title": "Empty chat state no longer collides with the centered input",
+        "summary": "A pair of CSS fixes clean up the first-run chat panel so the greeting, caret, and lead-in text stop stacking on top of each other.",
         "items": [
           {
-            "text": "The 'What do you want to create?' heading now paints above the textarea's caret layer, so the blinking cursor no longer bleeds through the title in the empty chat state.",
+            "text": "Lifted the 'What do you want to create?' heading above the textarea's caret layer with an explicit stacking context, so the blinking cursor no longer bleeds through the title text.",
             "commit_shas": [
               "2ffc5a45a2c5623a6c80eb816742ac6a81a2a875"
             ],
             "confidence": "high"
           },
           {
-            "text": "The empty-state icon and 'Ready for the next build.' subtitle are pushed into the upper third of the panel, reading as a lead-in above the centered input instead of overlapping it.",
+            "text": "Nudged the empty-state icon and 'Ready for the next build.' copy into the upper third of the panel so it reads as a lead-in to the centered input rather than overlapping it.",
             "commit_shas": [
               "2ffc5a45a2c5623a6c80eb816742ac6a81a2a875"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "10:20 AM",
+        "started_at": "2026-07-07T17:20:48.000Z",
+        "ended_at": "2026-07-07T17:20:48.000Z",
+        "title": "Deleted chat sessions are now filtered and fail closed server-side",
+        "summary": "The chat server was returning or acting on sessions that storage had already marked deleted, and some storage backends were rejecting deletes outright. This change routes every session read through a shared deleted-check and hardens the delete path itself.",
+        "items": [
+          {
+            "text": "Introduced a shared storage_session_is_deleted helper and applied it across discovery, history loaders, pin resolution, and session listing so deleted sessions no longer leak into chat history, pinning, or agent discovery.",
+            "commit_shas": [
+              "9ed391fb57b368434df193573c1912218814ad5e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Session deletes now handle storage backends that return 405 Unsupported cleanly instead of surfacing a raw error, closing out the original 'delete session storage 405' failure mode.",
+            "commit_shas": [
+              "9ed391fb57b368434df193573c1912218814ad5e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Paginated session listings fail closed when a page contains deleted entries, backed by expanded session_delete and empty-filter integration tests to lock the behavior in.",
+            "commit_shas": [
+              "9ed391fb57b368434df193573c1912218814ad5e"
             ],
             "confidence": "high"
           }
@@ -208,8 +310,9 @@
     ],
     "highlights": [
       "Empty chat state stops overlapping the centered input",
-      "Textarea caret no longer bleeds through the heading"
+      "Deleted sessions consistently filtered across chat, pin, and pagination paths",
+      "Server fails closed on unsupported session deletes"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }

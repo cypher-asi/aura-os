@@ -2,17 +2,18 @@
   {
     "date": "2026-07-07",
     "channel": "nightly",
-    "version": "0.1.0-nightly.743.1",
-    "title": "Cleaner empty state in the chat panel",
-    "intro": "A focused nightly today: the empty chat view no longer visually collides with the centered input, so the \"What do you want to create?\" prompt reads cleanly on first open.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.744.1",
+    "title": "Cleaner empty chat state and safer session deletion",
+    "intro": "Today's nightly tightens two rough edges: the empty chat panel no longer visually collides with the centered input, and the server now consistently hides and fails closed on deleted sessions across chat history, pinning, and pagination paths.",
+    "entryCount": 2,
     "highlights": [
       "Empty chat state stops overlapping the centered input",
-      "Textarea caret no longer bleeds through the heading"
+      "Deleted sessions consistently filtered across chat, pin, and pagination paths",
+      "Server fails closed on unsupported session deletes"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-07-07T13:05:46.779Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.743.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-07-07T17:45:48.574Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.744.1",
     "path": "history/2026-07-07.json"
   },
   {
