@@ -286,17 +286,25 @@ export const useAgentStore = create<AgentState>()(
                 }));
               }
             } else {
-              // Only treat an empty list as "first run" when the fetch
-              // was org-scoped (activeOrgId is set). The first mount can
-              // fire with activeOrgId === undefined before org state
-              // settles; that unscoped list can be empty even for
-              // existing users whose agents are only visible under
-              // their org. Wait for the authoritative org-scoped fetch.
+              // Only treat an empty list as "first run" AND only
+              // create the default CEO when the fetch was org-scoped
+              // (activeOrgId is set). The first mount can fire with
+              // activeOrgId === undefined before org state settles;
+              // that unscoped list can be empty even for existing
+              // users whose agents are only visible under their org.
+              // If we ran ensureCeoHome here, the CEO would exist by
+              // the time the org-scoped refetch arrives, masking the
+              // true first-run signal.
               if (!isAuraCaptureSessionActive() && activeOrgId) {
                 set({ firstRunDetected: true });
+                const createdAgent = await ensureCeoHome();
+                commitAgents(createdAgent ? [...agents, createdAgent] : agents);
+              } else {
+                // Unscoped / pre-org fetch — commit the empty list
+                // but do NOT create the CEO yet. The org-scoped
+                // refetch will handle it.
+                commitAgents(agents);
               }
-              const createdAgent = await ensureCeoHome();
-              commitAgents(createdAgent ? [...agents, createdAgent] : agents);
             }
           })
           .catch((err: unknown) => {
