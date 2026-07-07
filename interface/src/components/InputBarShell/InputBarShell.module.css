@@ -59,8 +59,12 @@
 /* Hero heading grouped with the centered input. Matches the input
    container's max width so the title and box read as one block, and
    only renders while the wrapper is centered (it unmounts as the bar
-   docks on first send). */
+   docks on first send). `position: relative` + `z-index: 1` keeps
+   the heading above the textarea's caret layer so the blinking
+   cursor can't visually bleed into the title text. */
 .centeredHeading {
+  position: relative;
+  z-index: 1;
   max-width: var(--chat-column-max-width);
   margin: 0 auto calc(var(--space-8) * 1.5);
   text-align: center;
