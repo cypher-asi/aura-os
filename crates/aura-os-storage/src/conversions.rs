@@ -132,6 +132,7 @@ fn parse_session_status(raw: &str) -> SessionStatus {
         "completed" => SessionStatus::Completed,
         "failed" => SessionStatus::Failed,
         "rolled_over" => SessionStatus::RolledOver,
+        "deleted" => SessionStatus::Deleted,
         _ => SessionStatus::Active,
     }
 }

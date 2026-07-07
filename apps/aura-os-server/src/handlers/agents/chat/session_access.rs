@@ -11,6 +11,7 @@ use aura_os_storage::{StorageClient, StorageSession};
 use tracing::warn;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::handlers::agents::sessions::reject_deleted_storage_session;
 
 /// A storage session proven to belong to the URL `agent_id`, plus the
 /// binding id needed to reconstruct its history.
@@ -34,6 +35,7 @@ pub(super) async fn resolve_agent_owned_session(
         .get_session(&session_id.to_string(), jwt)
         .await
         .map_err(map_session_lookup_error)?;
+    reject_deleted_storage_session(&session, "session not found")?;
 
     let project_agent_id = session
         .project_agent_id

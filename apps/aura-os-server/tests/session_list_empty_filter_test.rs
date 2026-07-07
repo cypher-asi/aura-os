@@ -28,6 +28,7 @@ use tower::ServiceExt;
 
 use aura_os_storage::{
     CreateProjectAgentRequest, CreateSessionEventRequest, CreateSessionRequest, StorageClient,
+    UpdateSessionRequest, SESSION_STATUS_DELETED,
 };
 
 use common::*;
@@ -102,6 +103,20 @@ async fn seed_user_event(storage: &StorageClient, session_id: &str) {
         .expect("create event");
 }
 
+async fn mark_session_deleted(storage: &StorageClient, session_id: &str) {
+    storage
+        .update_session(
+            session_id,
+            TEST_JWT,
+            &UpdateSessionRequest {
+                status: Some(SESSION_STATUS_DELETED.to_string()),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("mark session deleted");
+}
+
 async fn fetch_session_ids(app: &Router, uri: &str) -> Vec<String> {
     let resp = app
         .clone()
@@ -130,13 +145,20 @@ async fn list_project_sessions_filters_sessions_with_no_events() {
 
     let with_events = seed_session(&storage, &project_id, &pa.id).await;
     let empty = seed_session(&storage, &project_id, &pa.id).await;
+    let deleted_with_events = seed_session(&storage, &project_id, &pa.id).await;
     seed_user_event(&storage, &with_events.id).await;
+    seed_user_event(&storage, &deleted_with_events.id).await;
+    mark_session_deleted(&storage, &deleted_with_events.id).await;
 
     let ids = fetch_session_ids(&app, &format!("/api/projects/{project_id}/sessions")).await;
     assert!(ids.contains(&with_events.id), "session with events stays");
     assert!(
         !ids.contains(&empty.id),
         "session with no events filtered out, got {ids:?}",
+    );
+    assert!(
+        !ids.contains(&deleted_with_events.id),
+        "deleted session with events filtered out, got {ids:?}",
     );
 }
 
@@ -149,7 +171,10 @@ async fn list_sessions_filters_sessions_with_no_events() {
 
     let with_events = seed_session(&storage, &project_id, &pa.id).await;
     let empty = seed_session(&storage, &project_id, &pa.id).await;
+    let deleted_with_events = seed_session(&storage, &project_id, &pa.id).await;
     seed_user_event(&storage, &with_events.id).await;
+    seed_user_event(&storage, &deleted_with_events.id).await;
+    mark_session_deleted(&storage, &deleted_with_events.id).await;
 
     let pa_id = pa.id.clone();
     let ids = fetch_session_ids(
@@ -160,8 +185,9 @@ async fn list_sessions_filters_sessions_with_no_events() {
     assert_eq!(
         ids,
         vec![with_events.id.clone()],
-        "only the session with events remains (empty {} filtered)",
+        "only the live session with events remains (empty {} and deleted {} filtered)",
         empty.id,
+        deleted_with_events.id,
     );
 }
 
@@ -204,12 +230,16 @@ async fn list_my_sessions_returns_only_users_sessions() {
 
     let mine_with_events = seed_session(&storage, &project_id, &pa.id).await;
     let mine_empty = seed_session(&storage, &project_id, &pa.id).await;
+    let mine_deleted_with_events = seed_session(&storage, &project_id, &pa.id).await;
     let other_user_with_events = seed_session(&storage, &project_id, &pa.id).await;
     seed_user_event(&storage, &mine_with_events.id).await;
+    seed_user_event(&storage, &mine_deleted_with_events.id).await;
     seed_user_event(&storage, &other_user_with_events.id).await;
+    mark_session_deleted(&storage, &mine_deleted_with_events.id).await;
 
     stamp_session_owner(&db, &mine_with_events.id, &user_a).await;
     stamp_session_owner(&db, &mine_empty.id, &user_a).await;
+    stamp_session_owner(&db, &mine_deleted_with_events.id, &user_a).await;
     stamp_session_owner(&db, &other_user_with_events.id, &user_b).await;
 
     // The mock filters by `?user=<id>` (matching the env var the
@@ -230,7 +260,42 @@ async fn list_my_sessions_returns_only_users_sessions() {
         "user A's empty session filtered (event_count > 0 only by default), got {ids:?}",
     );
     assert!(
+        !ids.contains(&mine_deleted_with_events.id),
+        "user A's deleted session filtered, got {ids:?}",
+    );
+    assert!(
         !ids.contains(&other_user_with_events.id),
         "user B's session must not surface in user A's request, got {ids:?}",
     );
+}
+
+#[tokio::test]
+async fn deleted_session_direct_reads_return_404() {
+    let (app, _state, storage, _db) = build_test_app_with_storage().await;
+
+    let project_id = uuid::Uuid::new_v4().to_string();
+    let pa = seed_project_agent(&storage, &project_id).await;
+    let deleted = seed_session(&storage, &project_id, &pa.id).await;
+    seed_user_event(&storage, &deleted.id).await;
+    mark_session_deleted(&storage, &deleted.id).await;
+
+    let session_uri = format!(
+        "/api/projects/{project_id}/agents/{pa_id}/sessions/{session_id}",
+        pa_id = pa.id,
+        session_id = deleted.id,
+    );
+    let resp = app
+        .clone()
+        .oneshot(json_request("GET", &session_uri, None))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    let events_uri = format!("{session_uri}/events");
+    let resp = app
+        .clone()
+        .oneshot(json_request("GET", &events_uri, None))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }

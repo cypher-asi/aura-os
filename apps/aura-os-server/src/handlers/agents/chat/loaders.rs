@@ -10,6 +10,7 @@ use tracing::{info, warn};
 use crate::state::AppState;
 
 use super::super::conversions::events_to_session_history;
+use super::super::sessions::storage_session_is_deleted;
 use super::constants::SESSION_FETCH_BATCH;
 use super::discovery::{
     fetch_all_sessions, find_matching_project_agents, storage_session_sort_key,
@@ -182,9 +183,12 @@ pub(super) async fn load_project_session_history(
     let Some(ref storage) = state.storage_client else {
         return Ok(Vec::new());
     };
-    let sessions = storage
+    let sessions: Vec<_> = storage
         .list_sessions(&agent_instance_id.to_string(), jwt)
-        .await?;
+        .await?
+        .into_iter()
+        .filter(|session| !storage_session_is_deleted(session))
+        .collect();
     let sessions_total = sessions.len();
     if sessions.is_empty() {
         info!(
@@ -340,9 +344,12 @@ pub async fn load_current_session_events_for_instance(
     let Some(ref storage) = state.storage_client else {
         return Ok(Vec::new());
     };
-    let sessions = storage
+    let sessions: Vec<_> = storage
         .list_sessions(&agent_instance_id.to_string(), jwt)
-        .await?;
+        .await?
+        .into_iter()
+        .filter(|session| !storage_session_is_deleted(session))
+        .collect();
     if sessions.is_empty() {
         return Ok(Vec::new());
     }

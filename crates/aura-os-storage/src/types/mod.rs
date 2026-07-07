@@ -38,6 +38,7 @@ pub use project_artifact::{CreateProjectArtifactRequest, StorageProjectArtifact}
 pub use project_stats::ProjectStats;
 pub use session::{
     CreateSessionRequest, StorageEnrichedSession, StorageSession, UpdateSessionRequest,
+    SESSION_STATUS_DELETED,
 };
 pub use session_event::{CreateSessionEventRequest, StorageSessionEvent};
 pub use spec::{CreateSpecRequest, StorageSpec, UpdateSpecRequest};

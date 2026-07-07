@@ -160,6 +160,7 @@ pub enum SessionStatus {
     Completed,
     Failed,
     RolledOver,
+    Deleted,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

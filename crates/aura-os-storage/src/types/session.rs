@@ -2,6 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Soft-delete marker used when an aura-storage deployment does not
+/// support `DELETE /api/sessions/:id` yet. aura-os-server treats rows
+/// with this status as absent from read/list surfaces.
+pub const SESSION_STATUS_DELETED: &str = "deleted";
+
 /// Wire shape for the user-scoped session list endpoint
 /// (`/api/me/sessions`). Wraps `StorageSession` with the agent
 /// metadata aura-os-server needs to render rows in the chat-app

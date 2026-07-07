@@ -25,6 +25,7 @@ use tracing::info;
 use aura_os_core::{AgentId, AgentInstanceId, HarnessMode, ProjectId, SessionId};
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::handlers::agents::sessions::reject_deleted_storage_session;
 use crate::live_streams::{StreamKind, StreamScope};
 use crate::state::{AppState, AuthJwt, AuthSession};
 
@@ -246,6 +247,7 @@ pub(crate) async fn list_subagent_session_events(
             }
             _ => map_storage_error(e),
         })?;
+    reject_deleted_storage_session(&session, "subagent session not found")?;
     let project_agent_id = session.project_agent_id.unwrap_or_default();
     let project_id = session.project_id.unwrap_or_default();
     let events = storage
@@ -275,8 +277,20 @@ pub(crate) async fn list_session_subagents(
     )>,
 ) -> ApiResult<Json<Vec<SubagentThreadDto>>> {
     let storage = state.require_storage_client()?;
+    let session_id_str = session_id.to_string();
+    let session = storage
+        .get_session(&session_id_str, &jwt)
+        .await
+        .map_err(|e| match &e {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(e),
+        })?;
+    reject_deleted_storage_session(&session, "session not found")?;
+
     let events = storage
-        .list_events(&session_id.to_string(), &jwt, None, None)
+        .list_events(&session_id_str, &jwt, None, None)
         .await
         .map_err(map_storage_error)?;
 

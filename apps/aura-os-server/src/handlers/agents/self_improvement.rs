@@ -261,6 +261,7 @@ pub(crate) async fn run_learning_review(
     let target_sessions: Vec<_> = sessions
         .into_iter()
         .filter(|entry| entry.agent_id.as_deref() == Some(agent_id_string.as_str()))
+        .filter(|entry| !super::sessions::storage_session_is_deleted(&entry.session))
         .filter(|entry| entry.session.event_count.unwrap_or(0) > 0)
         .take(session_limit)
         .collect();

@@ -12,6 +12,7 @@ use tracing::{info, warn};
 
 use crate::state::AppState;
 
+use super::super::super::sessions::storage_session_is_deleted;
 use super::super::discovery::{
     find_matching_project_agents, invalidate_agent_discovery_cache, storage_session_sort_key,
 };
@@ -247,7 +248,11 @@ async fn select_write_binding<'a>(
         .into_iter()
         .zip(matching.iter())
         .map(|(result, pa)| match result {
-            Ok(sessions) => sessions.iter().map(storage_session_sort_key).max(),
+            Ok(sessions) => sessions
+                .iter()
+                .filter(|session| !storage_session_is_deleted(session))
+                .map(storage_session_sort_key)
+                .max(),
             Err(e) => {
                 warn!(
                     project_agent_id = %pa.id,

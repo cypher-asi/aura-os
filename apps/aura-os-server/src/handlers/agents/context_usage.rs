@@ -24,6 +24,7 @@ use crate::error::{map_storage_error, ApiResult};
 use crate::state::{AppState, AuthJwt};
 
 use super::chat::{find_matching_project_agents, storage_session_sort_key};
+use super::sessions::storage_session_is_deleted;
 
 #[derive(Serialize, Default)]
 pub(crate) struct ContextUsageResponse {
@@ -246,7 +247,11 @@ pub(crate) async fn get_agent_context_usage(
                 continue;
             }
         };
-        sessions_with_observations.extend(sessions);
+        sessions_with_observations.extend(
+            sessions
+                .into_iter()
+                .filter(|session| !storage_session_is_deleted(session)),
+        );
     }
 
     let usage = latest_context_usage_across_sessions(storage, &jwt, sessions_with_observations)
@@ -268,10 +273,13 @@ pub(crate) async fn get_instance_context_usage(
     }
 
     let storage = state.require_storage_client()?;
-    let sessions = storage
+    let sessions: Vec<_> = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await
-        .map_err(map_storage_error)?;
+        .map_err(map_storage_error)?
+        .into_iter()
+        .filter(|session| !storage_session_is_deleted(session))
+        .collect();
 
     let usage = latest_context_usage_across_sessions(storage, &jwt, sessions)
         .await

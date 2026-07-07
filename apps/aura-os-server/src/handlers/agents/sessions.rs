@@ -7,7 +7,7 @@ use aura_os_core::{
     AgentInstanceId, EnrichedSession, ProjectId, Session, SessionEvent, SessionId, Task,
 };
 use aura_os_sessions::{storage_enriched_session_to_enriched_session, storage_session_to_session};
-use aura_os_storage::StorageClient;
+use aura_os_storage::{StorageClient, StorageSession, SESSION_STATUS_DELETED};
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::agents::chat::is_subagent_session_summary;
@@ -15,6 +15,21 @@ use crate::state::{AppState, AuthJwt};
 
 use super::conversions::events_to_session_history;
 use super::session_titles::{generate_session_summary, TitleGenScope};
+
+pub(crate) fn storage_session_is_deleted(session: &StorageSession) -> bool {
+    session.status.as_deref() == Some(SESSION_STATUS_DELETED)
+}
+
+pub(crate) fn reject_deleted_storage_session(
+    session: &StorageSession,
+    not_found_message: &'static str,
+) -> ApiResult<()> {
+    if storage_session_is_deleted(session) {
+        Err(ApiError::not_found(not_found_message))
+    } else {
+        Ok(())
+    }
+}
 
 /// Project-scoped session list.
 ///
@@ -53,6 +68,7 @@ pub(crate) async fn list_project_sessions(
         Ok(storage_sessions) => {
             let sessions: Vec<Session> = storage_sessions
                 .into_iter()
+                .filter(|s| !storage_session_is_deleted(s))
                 .filter_map(|s| {
                     storage_session_to_session(s, None)
                         .map_err(|e| warn!(error = %e, "skipping malformed session"))
@@ -102,6 +118,9 @@ async fn list_project_sessions_legacy(
         match storage.list_sessions(&agent.id, jwt).await {
             Ok(agent_sessions) => {
                 for ss in agent_sessions {
+                    if storage_session_is_deleted(&ss) {
+                        continue;
+                    }
                     match storage_session_to_session(ss, None) {
                         Ok(s) => sessions.push(s),
                         Err(e) => warn!(error = %e, "skipping malformed session"),
@@ -186,6 +205,7 @@ pub(crate) async fn list_my_sessions(
         .map_err(map_storage_error)?;
     let sessions: Vec<EnrichedSession> = storage_sessions
         .into_iter()
+        .filter(|s| !storage_session_is_deleted(&s.session))
         .filter_map(|s| {
             storage_enriched_session_to_enriched_session(s, None)
                 .map_err(|e| warn!(error = %e, "skipping malformed enriched session"))
@@ -211,6 +231,7 @@ pub(crate) async fn list_sessions(
         .map_err(map_storage_error)?;
     let sessions: Vec<Session> = storage_sessions
         .into_iter()
+        .filter(|s| !storage_session_is_deleted(s))
         .filter_map(|s| {
             storage_session_to_session(s, None)
                 .map_err(|e| warn!(error = %e, "skipping malformed session"))
@@ -240,6 +261,7 @@ pub(crate) async fn get_session(
             }
             _ => map_storage_error(e),
         })?;
+    reject_deleted_storage_session(&ss, "session not found")?;
     let session = storage_session_to_session(ss, None).map_err(ApiError::internal)?;
     Ok(Json(session))
 }
@@ -305,7 +327,7 @@ pub(crate) async fn list_session_tasks(
 ) -> ApiResult<Json<Vec<Task>>> {
     let storage = state.require_storage_client()?;
 
-    storage
+    let ss = storage
         .get_session(&session_id.to_string(), &jwt)
         .await
         .map_err(|e| match &e {
@@ -314,6 +336,7 @@ pub(crate) async fn list_session_tasks(
             }
             _ => map_storage_error(e),
         })?;
+    reject_deleted_storage_session(&ss, "session not found")?;
 
     let storage_tasks = storage
         .list_tasks(&_project_id.to_string(), &jwt)
@@ -339,9 +362,21 @@ pub(crate) async fn list_session_events(
     )>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let storage = state.require_storage_client()?;
+    let session_id_str = session_id.to_string();
+
+    let ss = storage
+        .get_session(&session_id_str, &jwt)
+        .await
+        .map_err(|e| match &e {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(e),
+        })?;
+    reject_deleted_storage_session(&ss, "session not found")?;
 
     let events = storage
-        .list_events(&session_id.to_string(), &jwt, None, None)
+        .list_events(&session_id_str, &jwt, None, None)
         .await
         .map_err(map_storage_error)?;
 
@@ -369,6 +404,17 @@ pub(crate) async fn summarize_session(
     let aid = agent_instance_id.to_string();
     info!(%session_id, "Session summary generation requested");
 
+    let ss = storage
+        .get_session(&sid, &jwt)
+        .await
+        .map_err(|e| match &e {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(e),
+        })?;
+    reject_deleted_storage_session(&ss, "session not found")?;
+
     let scope = TitleGenScope {
         storage,
         http: &state.http_client,
@@ -388,6 +434,7 @@ pub(crate) async fn summarize_session(
         .get_session(&sid, &jwt)
         .await
         .map_err(map_storage_error)?;
+    reject_deleted_storage_session(&ss, "session not found")?;
     let session = storage_session_to_session(ss, None).map_err(ApiError::internal)?;
     Ok(Json(session))
 }
