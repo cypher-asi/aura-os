@@ -1,4 +1,6 @@
 use crate::error::StorageError;
+use chrono::Utc;
+
 use crate::types::*;
 
 use super::{validate_share_token, validate_url_id, StorageClient};
@@ -158,10 +160,23 @@ impl StorageClient {
 
     pub async fn delete_session(&self, session_id: &str, jwt: &str) -> Result<(), StorageError> {
         validate_url_id(session_id, "session_id")?;
-        self.delete_authed(
-            &format!("{}/api/sessions/{}", self.base_url, session_id),
-            jwt,
-        )
-        .await
+        let url = format!("{}/api/sessions/{}", self.base_url, session_id);
+        match self.delete_authed(&url, jwt).await {
+            Ok(()) => Ok(()),
+            Err(StorageError::Server { status: 405, .. }) => {
+                self.update_session(
+                    session_id,
+                    jwt,
+                    &UpdateSessionRequest {
+                        status: Some(SESSION_STATUS_DELETED.to_string()),
+                        ended_at: Some(Utc::now().to_rfc3339()),
+                        is_public: Some(false),
+                        ..Default::default()
+                    },
+                )
+                .await
+            }
+            Err(e) => Err(e),
+        }
     }
 }

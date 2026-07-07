@@ -6,6 +6,8 @@ use aura_os_core::SessionId;
 use aura_os_storage::StorageClient;
 use tracing::warn;
 
+use super::super::super::sessions::storage_session_is_deleted;
+
 /// Outcome of attempting to validate a caller-supplied
 /// `pinned_session_id` against the agent's session list. The mismatch
 /// arm carries enough detail for the handler to return a structured
@@ -48,7 +50,10 @@ pub(crate) async fn try_pin_session(
         .await
     {
         Ok(sessions) => {
-            if sessions.iter().any(|s| s.id == pinned_str) {
+            if sessions
+                .iter()
+                .any(|s| s.id == pinned_str && !storage_session_is_deleted(s))
+            {
                 PinnedSessionOutcome::Matched(*pinned)
             } else {
                 PinnedSessionOutcome::Mismatch {

@@ -7,6 +7,7 @@ use aura_os_core::{Agent, AgentId, HarnessMode};
 
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::find_matching_project_agents;
+use crate::handlers::agents::sessions::storage_session_is_deleted;
 use crate::state::{AppState, AuthJwt};
 
 #[derive(Debug, Deserialize)]
@@ -125,7 +126,11 @@ pub(crate) async fn get_agent_state_snapshot(
             find_matching_project_agents(&state, storage, &jwt, &agent_id.to_string()).await;
         for binding in &project_bindings {
             match storage.list_sessions(&binding.id, &jwt).await {
-                Ok(mut listed) => sessions.append(&mut listed),
+                Ok(listed) => sessions.extend(
+                    listed
+                        .into_iter()
+                        .filter(|session| !storage_session_is_deleted(session)),
+                ),
                 Err(e) => tracing::warn!(
                     project_agent_id = %binding.id,
                     error = %e,

@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use futures_util::future::join_all;
 use tracing::{info, warn};
 
+use crate::handlers::agents::sessions::storage_session_is_deleted;
 use crate::handlers::projects;
 use crate::state::{AppState, CachedAgentDiscovery, AGENT_DISCOVERY_TTL};
 
@@ -224,6 +225,7 @@ pub(super) async fn fetch_all_sessions(
             }
         }
         .into_iter()
+        .filter(|session| !storage_session_is_deleted(session))
         .for_each(|session| sessions.push(session));
     }
 

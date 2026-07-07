@@ -8,6 +8,7 @@ use aura_os_storage::StorageClient;
 use chrono::Utc;
 use tracing::{error, warn};
 
+use super::super::super::sessions::storage_session_is_deleted;
 use super::super::discovery::storage_session_sort_key;
 use super::context::{ChatPersistRequest, ChatSessionResolveDeps};
 use super::fork::{maybe_auto_fork_chat_session, ResolvedChatSession};
@@ -111,6 +112,7 @@ async fn existing_session_for_agent(
             // sort key so writer/reader can't diverge.
             let latest = sessions
                 .iter()
+                .filter(|session| !storage_session_is_deleted(session))
                 .max_by_key(|s| storage_session_sort_key(s))?;
             parse_storage_session_id(&latest.id, project_agent_id)
         }

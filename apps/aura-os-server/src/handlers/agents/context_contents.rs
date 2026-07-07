@@ -28,6 +28,7 @@ use crate::error::{map_storage_error, ApiResult};
 use crate::state::{AppState, AuthJwt};
 
 use super::chat::{find_matching_project_agents, storage_session_sort_key};
+use super::sessions::storage_session_is_deleted;
 
 /// Response for the `context-contents` endpoints. Wraps the latest
 /// persisted [`ContextContents`] for the session, if any. The contents
@@ -159,7 +160,11 @@ async fn sessions_across_agents(
                 continue;
             }
         };
-        all_sessions.extend(sessions);
+        all_sessions.extend(
+            sessions
+                .into_iter()
+                .filter(|session| !storage_session_is_deleted(session)),
+        );
     }
     all_sessions
 }
@@ -199,10 +204,13 @@ pub(crate) async fn get_instance_context_contents(
     }
 
     let storage = state.require_storage_client()?;
-    let sessions = storage
+    let sessions: Vec<_> = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await
-        .map_err(map_storage_error)?;
+        .map_err(map_storage_error)?
+        .into_iter()
+        .filter(|session| !storage_session_is_deleted(session))
+        .collect();
 
     let contents = latest_context_contents_across_sessions(storage, &jwt, sessions).await;
     Ok(Json(ContextContentsResponse::from(contents)))

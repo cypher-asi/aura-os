@@ -9,6 +9,7 @@ use tracing::{error, info, warn};
 
 use crate::state::AppState;
 
+use super::super::super::sessions::storage_session_is_deleted;
 use super::super::compaction::session_events_to_conversation_history;
 use super::super::constants::{
     CONVERSATION_HISTORY_WARN_BYTES, DEFAULT_AGENT_HISTORY_WINDOW_LIMIT,
@@ -149,7 +150,10 @@ async fn load_pinned_history_for_agent(
     let session_id_str = session_id.to_string();
     for binding in matching {
         let sessions = storage.list_sessions(&binding.id, jwt).await?;
-        if sessions.iter().any(|s| s.id == session_id_str) {
+        if sessions
+            .iter()
+            .any(|s| s.id == session_id_str && !storage_session_is_deleted(s))
+        {
             let project_id = binding.project_id.as_deref().unwrap_or_default();
             return load_pinned_session_events_for_agent(
                 storage,

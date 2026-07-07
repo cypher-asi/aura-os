@@ -103,6 +103,7 @@ mod session_status_serde {
     test_enum_variant!(completed, SessionStatus::Completed, "completed");
     test_enum_variant!(failed, SessionStatus::Failed, "failed");
     test_enum_variant!(rolled_over, SessionStatus::RolledOver, "rolled_over");
+    test_enum_variant!(deleted, SessionStatus::Deleted, "deleted");
 }
 
 mod agent_listing_status_serde {

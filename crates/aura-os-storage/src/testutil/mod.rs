@@ -72,6 +72,14 @@ pub fn mock_storage_router(db: SharedDb) -> Router {
             post(event::create_event).get(event::list_events),
         )
         .route(
+            "/internal/sessions/by-share/:public_share_id",
+            get(session::get_session_by_share_internal),
+        )
+        .route(
+            "/internal/sessions/:session_id/events",
+            get(event::list_events),
+        )
+        .route(
             "/api/projects/:project_id/agents",
             post(project_agent::create_project_agent).get(project_agent::list_project_agents),
         )

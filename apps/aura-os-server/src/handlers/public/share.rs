@@ -17,6 +17,7 @@ use aura_os_core::SessionEvent;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::events_to_session_history;
+use crate::handlers::agents::sessions::storage_session_is_deleted;
 use crate::state::AppState;
 
 /// How many leading characters of a share token are safe to log.
@@ -53,7 +54,7 @@ pub(crate) async fn get_public_share(
             }
         })?;
 
-    if session.is_public != Some(true) {
+    if session.is_public != Some(true) || storage_session_is_deleted(&session) {
         return Err(ApiError::not_found("share not found"));
     }
 

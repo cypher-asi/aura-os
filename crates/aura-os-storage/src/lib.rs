@@ -60,4 +60,5 @@ pub use types::{
     UpdateProjectAgentRequest,
     UpdateSessionRequest,
     UpdateTaskRequest,
+    SESSION_STATUS_DELETED,
 };

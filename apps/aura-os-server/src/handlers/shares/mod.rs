@@ -18,6 +18,7 @@ use aura_os_core::{AgentInstanceId, ProjectId, SessionId};
 use aura_os_storage::UpdateSessionRequest;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::handlers::agents::sessions::reject_deleted_storage_session;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 /// Public base URL that share tokens resolve to. The SPA serves the
@@ -76,6 +77,7 @@ pub(crate) async fn create_session_share(
             }
             _ => map_storage_error(e),
         })?;
+    reject_deleted_storage_session(&existing, "session not found")?;
 
     // Idempotent reuse: a session that is already public keeps its
     // existing token so links shared earlier keep resolving.
