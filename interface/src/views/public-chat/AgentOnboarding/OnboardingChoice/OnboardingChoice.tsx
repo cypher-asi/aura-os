@@ -17,11 +17,19 @@ import styles from "./OnboardingChoice.module.css";
  */
 const CHOICE_STORAGE_PREFIX = "aura:onboarding-choice";
 
+/**
+ * In-memory fallback for the current session: if localStorage is blocked
+ * (private mode, quota), the settle action still suppresses the modal for
+ * the remainder of this page lifecycle.
+ */
+const inMemorySettled = new Set<string>();
+
 function choiceKey(userId: string): string {
   return `${CHOICE_STORAGE_PREFIX}:${userId}`;
 }
 
 function readChoice(userId: string): string | null {
+  if (inMemorySettled.has(userId)) return "settled_in_memory";
   try {
     return localStorage.getItem(choiceKey(userId));
   } catch {
@@ -30,10 +38,12 @@ function readChoice(userId: string): string | null {
 }
 
 function writeChoice(userId: string, lane: string): void {
+  inMemorySettled.add(userId);
   try {
     localStorage.setItem(choiceKey(userId), lane);
   } catch {
-    // ignore storage failures (private mode / quota)
+    // ignore storage failures (private mode / quota) — in-memory fallback
+    // already suppresses the modal for this session
   }
 }
 

@@ -273,6 +273,12 @@ export const useAgentStore = create<AgentState>()(
             // empty there is nothing to show yet, so wait for `setup()` (it may
             // create the very first agent) before committing.
             if (agents.length > 0) {
+              // A subsequent org-scoped fetch found agents — unlatch
+              // first-run if a prior unscoped (activeOrgId == null) fetch
+              // falsely set it.
+              if (get().firstRunDetected) {
+                set({ firstRunDetected: false });
+              }
               commitAgents(agents);
               const createdAgent = await ensureCeoHome();
               if (createdAgent && !isAuraCaptureSessionActive()) {

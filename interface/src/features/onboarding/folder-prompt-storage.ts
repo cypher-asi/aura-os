@@ -9,12 +9,26 @@ import { ONBOARDING_STORAGE_PREFIX } from "./onboarding-constants";
  * settles it on either action, so the prompt appears at most once.
  * localStorage rather than a store keeps the "once" semantics across
  * reloads.
+ *
+ * Keyed per `user_id` so multi-account desktops don't bleed state.
  */
-const FOLDER_PROMPT_KEY = `${ONBOARDING_STORAGE_PREFIX}:folder-prompt`;
+
+function folderPromptKey(userId?: string): string {
+  const suffix = userId ? `:${userId}` : "";
+  return `${ONBOARDING_STORAGE_PREFIX}:folder-prompt${suffix}`;
+}
+
+/** Active user id, set by `setFolderPromptUser` before any read/write. */
+let _fpUserId: string | undefined;
+
+/** Bind the current user so subsequent reads/writes are scoped. */
+export function setFolderPromptUser(userId: string): void {
+  _fpUserId = userId;
+}
 
 export function markFolderPromptPending(): void {
   try {
-    localStorage.setItem(FOLDER_PROMPT_KEY, "pending");
+    localStorage.setItem(folderPromptKey(_fpUserId), "pending");
   } catch {
     // ignore storage failures (private mode / quota)
   }
@@ -22,7 +36,7 @@ export function markFolderPromptPending(): void {
 
 export function isFolderPromptPending(): boolean {
   try {
-    return localStorage.getItem(FOLDER_PROMPT_KEY) === "pending";
+    return localStorage.getItem(folderPromptKey(_fpUserId)) === "pending";
   } catch {
     return false;
   }
@@ -30,7 +44,7 @@ export function isFolderPromptPending(): boolean {
 
 export function settleFolderPrompt(): void {
   try {
-    localStorage.setItem(FOLDER_PROMPT_KEY, "done");
+    localStorage.setItem(folderPromptKey(_fpUserId), "done");
   } catch {
     // ignore storage failures (private mode / quota)
   }
