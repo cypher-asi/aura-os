@@ -286,7 +286,13 @@ export const useAgentStore = create<AgentState>()(
                 }));
               }
             } else {
-              if (!isAuraCaptureSessionActive()) {
+              // Only treat an empty list as "first run" when the fetch
+              // was org-scoped (activeOrgId is set). The first mount can
+              // fire with activeOrgId === undefined before org state
+              // settles; that unscoped list can be empty even for
+              // existing users whose agents are only visible under
+              // their org. Wait for the authoritative org-scoped fetch.
+              if (!isAuraCaptureSessionActive() && activeOrgId) {
                 set({ firstRunDetected: true });
               }
               const createdAgent = await ensureCeoHome();

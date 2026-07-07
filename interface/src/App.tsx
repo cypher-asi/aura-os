@@ -642,7 +642,7 @@ function AppRoutes(): React.ReactElement {
     </Routes>
     {showLoginOverlay && <LoginOverlay />}
     <AgentOnboardingModal />
-    <Suspense fallback={null}><OnboardingChoice /></Suspense>
+    {isAuthenticated && <Suspense fallback={null}><OnboardingChoice /></Suspense>}
     </>
   );
 }
