@@ -337,6 +337,13 @@
   gap: var(--space-3);
   color: var(--color-text-muted);
   text-align: center;
+  /* The centered InputBarShell wrapper ("What do you want to create?" +
+     input pill) docks at vertical center via position: absolute when no
+     messages exist. This empty-state block shares the same panel, so
+     naked `justify-content: center` would stack it right on top of the
+     heading. Push it into the upper third so the icon/subtitle reads as
+     a gentle lead-in above the input, not a collision. */
+  padding-bottom: 45%;
 }
 
 .initialRevealOverlay {
