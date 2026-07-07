@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-07-07",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.743.1",
+    "title": "Cleaner empty state in the chat panel",
+    "intro": "A focused nightly today: the empty chat view no longer visually collides with the centered input, so the \"What do you want to create?\" prompt reads cleanly on first open.",
+    "entryCount": 1,
+    "highlights": [
+      "Empty chat state stops overlapping the centered input",
+      "Textarea caret no longer bleeds through the heading"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-07T13:05:46.779Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.743.1",
+    "path": "history/2026-07-07.json"
+  },
+  {
     "date": "2026-07-06",
     "channel": "nightly",
     "version": "0.1.0-nightly.742.1",
