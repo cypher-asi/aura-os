@@ -1,6 +1,16 @@
 use crate::events::NativeNotificationPayload;
 
 #[cfg(target_os = "macos")]
+pub(crate) fn request_notification_authorization() -> Result<(), String> {
+    macos::request_notification_authorization()
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn request_notification_authorization() -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
 pub(crate) fn show_native_notification(payload: &NativeNotificationPayload) -> Result<(), String> {
     macos::show_native_notification(payload)
 }
@@ -233,6 +243,43 @@ mod macos {
     #[link(name = "UserNotifications", kind = "framework")]
     unsafe extern "C" {}
 
+    pub(super) fn request_notification_authorization() -> Result<(), String> {
+        unsafe {
+            let pool = AutoReleasePool::new();
+            let center = current_notification_center()?;
+            install_notification_delegate(center);
+
+            let authorization_completion = RcBlock::new(move |granted: i8, error: *mut c_void| {
+                let pool = AutoReleasePool::new();
+                let error = error.cast::<Object>();
+                if !error.is_null() {
+                    let description =
+                        localized_error_description(error).unwrap_or_else(|| "unknown".into());
+                    tracing::warn!(
+                        error = %description,
+                        "failed to request notification authorization"
+                    );
+                }
+
+                if granted == 0 {
+                    tracing::warn!("notification authorization was not granted");
+                } else {
+                    tracing::info!("notification authorization granted");
+                }
+                drop(pool);
+            });
+
+            let _: () = msg_send![
+                center,
+                requestAuthorizationWithOptions: NOTIFICATION_AUTHORIZATION_OPTIONS
+                completionHandler: &*authorization_completion
+            ];
+
+            drop(pool);
+            Ok(())
+        }
+    }
+
     pub(super) fn show_native_notification(
         payload: &NativeNotificationPayload,
     ) -> Result<(), String> {
@@ -241,11 +288,7 @@ mod macos {
         unsafe {
             let pool = AutoReleasePool::new();
 
-            let center: *mut Object =
-                msg_send![class!(UNUserNotificationCenter), currentNotificationCenter];
-            if center.is_null() {
-                return Err("failed to get UNUserNotificationCenter".to_string());
-            }
+            let center = current_notification_center()?;
             install_notification_delegate(center);
 
             let content: *mut Object = msg_send![class!(UNMutableNotificationContent), new];
@@ -386,6 +429,16 @@ mod macos {
                 let _: () = msg_send![dock_tile, setBadgeLabel: std::ptr::null_mut::<Object>()];
             }
             drop(pool);
+        }
+    }
+
+    unsafe fn current_notification_center() -> Result<*mut Object, String> {
+        let center: *mut Object =
+            msg_send![class!(UNUserNotificationCenter), currentNotificationCenter];
+        if center.is_null() {
+            Err("failed to get UNUserNotificationCenter".to_string())
+        } else {
+            Ok(center)
         }
     }
 

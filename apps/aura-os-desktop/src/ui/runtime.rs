@@ -24,7 +24,9 @@ use crate::frontend::routing::apply_restore_route;
 use crate::harness::sidecar::stop_managed_local_harness;
 use crate::init::env::ci_mode_enabled;
 use crate::init::init_script::{build_initialization_script, load_bootstrapped_auth_literals};
-use crate::notifications::{set_application_badge, show_native_notification};
+use crate::notifications::{
+    request_notification_authorization, set_application_badge, show_native_notification,
+};
 use crate::route_state::RouteState;
 use crate::ui::demo_session::DemoSession;
 use crate::ui::icon::IconData;
@@ -422,6 +424,10 @@ pub(crate) fn spawn_fallback_show_timer(proxy: EventLoopProxy<UserEvent>, window
 }
 
 pub(crate) fn run_event_loop(event_loop: EventLoop<UserEvent>, mut state: LoopState) {
+    if let Err(error) = request_notification_authorization() {
+        warn!(%error, "failed to request notification authorization at startup");
+    }
+
     event_loop.run(move |event, elwt, control_flow| {
         *control_flow = ControlFlow::Wait;
         match event {
