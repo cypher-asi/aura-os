@@ -91,6 +91,12 @@ mod macos {
             let _: () = msg_send![notification, release];
 
             set_application_badge(payload.badge_count);
+            tracing::info!(
+                id = %payload.id,
+                badge_count = payload.badge_count,
+                sound = payload.sound,
+                "delivered native notification"
+            );
             drop(pool);
             Ok(())
         }
