@@ -532,6 +532,7 @@ dependencies = [
  "aura-os-store",
  "axum",
  "base64",
+ "block2 0.6.2",
  "cargo-packager-updater",
  "dirs 5.0.1",
  "dotenvy",

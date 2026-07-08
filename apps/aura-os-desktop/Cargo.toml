@@ -61,6 +61,7 @@ winresource = "0.1"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
+block2 = "0.6"
 muda = "0.15"
 # Used by `updater::bundle_path` to inspect the running .app bundle's
 # filesystem flags (MNT_RDONLY) so we can detect App Translocation /
