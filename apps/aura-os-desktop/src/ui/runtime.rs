@@ -24,6 +24,7 @@ use crate::frontend::routing::apply_restore_route;
 use crate::harness::sidecar::stop_managed_local_harness;
 use crate::init::env::ci_mode_enabled;
 use crate::init::init_script::{build_initialization_script, load_bootstrapped_auth_literals};
+use crate::notifications::{set_application_badge, show_native_notification};
 use crate::route_state::RouteState;
 use crate::ui::demo_session::DemoSession;
 use crate::ui::icon::IconData;
@@ -124,6 +125,9 @@ impl LoopState {
             UserEvent::DemoWindowReady { window_id } => self.handle_demo_window_ready(window_id),
             UserEvent::DemoWindowComplete { window_id } => {
                 self.handle_demo_window_complete(window_id)
+            }
+            UserEvent::NativeNotification { window_id, payload } => {
+                self.handle_native_notification(window_id, payload);
             }
         }
     }
@@ -343,6 +347,45 @@ impl LoopState {
             }
         }
     }
+
+    fn handle_focus_changed(&mut self, window_id: WindowId, focused: bool) {
+        if focused {
+            set_application_badge(None);
+        }
+
+        let script = format!(
+            "window.dispatchEvent(new CustomEvent('aura-desktop-focus-changed', {{ detail: {{ focused: {} }} }}));",
+            if focused { "true" } else { "false" }
+        );
+
+        let result = if window_id == self.ctx.main_window_id {
+            self.main_webview.evaluate_script(&script)
+        } else if let Some((_win, webview)) = self.secondary_main_windows.get(&window_id) {
+            webview.evaluate_script(&script)
+        } else {
+            return;
+        };
+
+        if let Err(error) = result {
+            warn!(%error, "failed to forward focus change to webview");
+        }
+    }
+
+    fn handle_native_notification(
+        &mut self,
+        window_id: WindowId,
+        payload: crate::events::NativeNotificationPayload,
+    ) {
+        if window_id != self.ctx.main_window_id
+            && !self.secondary_main_windows.contains_key(&window_id)
+        {
+            warn!(?window_id, id = %payload.id, "dropping notification from unknown window");
+            return;
+        }
+        if let Err(error) = show_native_notification(&payload) {
+            warn!(%error, id = %payload.id, "failed to show native notification");
+        }
+    }
 }
 
 fn apply_secondary_window_command(win: &tao::window::Window, cmd: WinCmd) {
@@ -387,6 +430,11 @@ pub(crate) fn run_event_loop(event_loop: EventLoop<UserEvent>, mut state: LoopSt
                 window_id,
                 ..
             } => state.handle_close_requested(window_id, control_flow),
+            Event::WindowEvent {
+                event: WindowEvent::Focused(focused),
+                window_id,
+                ..
+            } => state.handle_focus_changed(window_id, focused),
             Event::Reopen {
                 has_visible_windows,
                 ..

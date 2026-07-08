@@ -8,6 +8,23 @@ use tao::window::{ResizeDirection, WindowId};
 use crate::demo::DemoOptions;
 use crate::updater::UpdateState;
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct NativeNotificationPayload {
+    pub id: String,
+    pub title: String,
+    #[serde(default)]
+    pub body: Option<String>,
+    #[serde(default = "default_notification_sound")]
+    pub sound: bool,
+    #[serde(default)]
+    pub badge_count: Option<u32>,
+}
+
+fn default_notification_sound() -> bool {
+    true
+}
+
 #[derive(Debug)]
 pub(crate) enum WinCmd {
     Minimize,
@@ -74,5 +91,11 @@ pub(crate) enum UserEvent {
     /// recording timed out). Finalizes the recording and closes the window.
     DemoWindowComplete {
         window_id: WindowId,
+    },
+    /// Show a platform-native desktop notification for the originating
+    /// webview window.
+    NativeNotification {
+        window_id: WindowId,
+        payload: NativeNotificationPayload,
     },
 }
