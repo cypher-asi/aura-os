@@ -5,11 +5,21 @@ pub(crate) fn show_native_notification(payload: &NativeNotificationPayload) -> R
     macos::show_native_notification(payload)
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+pub(crate) fn show_native_notification(payload: &NativeNotificationPayload) -> Result<(), String> {
+    windows_notifications::show_native_notification(payload)
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+pub(crate) fn show_native_notification(payload: &NativeNotificationPayload) -> Result<(), String> {
+    freedesktop::show_native_notification(payload)
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows", unix)))]
 pub(crate) fn show_native_notification(payload: &NativeNotificationPayload) -> Result<(), String> {
     tracing::warn!(
         id = %payload.id,
-        "native desktop notifications are not implemented on this platform yet"
+        "native desktop notifications are not supported on this platform"
     );
     Ok(())
 }
@@ -21,6 +31,184 @@ pub(crate) fn set_application_badge(count: Option<u32>) {
 
 #[cfg(not(target_os = "macos"))]
 pub(crate) fn set_application_badge(_count: Option<u32>) {}
+
+fn notification_title(payload: &NativeNotificationPayload) -> Result<&str, String> {
+    let title = payload.title.trim();
+    if title.is_empty() {
+        Err("notification title cannot be empty".to_string())
+    } else {
+        Ok(title)
+    }
+}
+
+fn notification_body(payload: &NativeNotificationPayload) -> Option<&str> {
+    payload
+        .body
+        .as_deref()
+        .map(str::trim)
+        .filter(|body| !body.is_empty())
+}
+
+#[cfg(any(target_os = "windows", all(unix, not(target_os = "macos")), test))]
+fn stable_notification_id(value: &str) -> u32 {
+    let mut hash = 0x811c_9dc5u32;
+    for byte in value.as_bytes() {
+        hash ^= u32::from(*byte);
+        hash = hash.wrapping_mul(0x0100_0193);
+    }
+    hash.max(1)
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn build_windows_toast_xml(title: &str, body: Option<&str>, sound: bool) -> String {
+    let body = body
+        .map(xml_escape)
+        .filter(|body| !body.is_empty())
+        .map(|body| format!("<text>{body}</text>"))
+        .unwrap_or_default();
+    let audio = if sound {
+        String::new()
+    } else {
+        "<audio silent=\"true\" />".to_string()
+    };
+
+    format!(
+        "<toast duration=\"short\"><visual><binding template=\"ToastGeneric\"><text>{}</text>{}</binding></visual>{}</toast>",
+        xml_escape(title),
+        body,
+        audio
+    )
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn xml_escape(value: &str) -> String {
+    value.chars().fold(String::new(), |mut escaped, ch| {
+        match ch {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&apos;"),
+            _ => escaped.push(ch),
+        }
+        escaped
+    })
+}
+
+#[cfg(target_os = "windows")]
+mod windows_notifications {
+    use aura_os_core::Channel;
+    use windows::core::HSTRING;
+    use windows::Data::Xml::Dom::XmlDocument;
+    use windows::UI::Notifications::{ToastNotification, ToastNotificationManager};
+
+    use crate::events::NativeNotificationPayload;
+
+    const AURA_TOAST_GROUP: &str = "aura";
+    const STABLE_APP_USER_MODEL_ID: &str = "com.aura.desktop";
+    const DEV_APP_USER_MODEL_ID: &str = "com.aura.desktop-dev";
+
+    pub(super) fn show_native_notification(
+        payload: &NativeNotificationPayload,
+    ) -> Result<(), String> {
+        let title = super::notification_title(payload)?;
+        let body = super::notification_body(payload);
+        let xml = super::build_windows_toast_xml(title, body, payload.sound);
+        let xml_document =
+            XmlDocument::new().map_err(|error| format!("failed to create toast XML: {error}"))?;
+        xml_document
+            .LoadXml(&HSTRING::from(xml))
+            .map_err(|error| format!("failed to load toast XML: {error}"))?;
+
+        let toast = ToastNotification::CreateToastNotification(&xml_document)
+            .map_err(|error| format!("failed to create Windows toast notification: {error}"))?;
+        let tag = format!("{:08x}", super::stable_notification_id(&payload.id));
+        toast
+            .SetTag(&HSTRING::from(tag))
+            .map_err(|error| format!("failed to set Windows toast tag: {error}"))?;
+        toast
+            .SetGroup(&HSTRING::from(AURA_TOAST_GROUP))
+            .map_err(|error| format!("failed to set Windows toast group: {error}"))?;
+
+        let app_user_model_id = app_user_model_id();
+        let notifier =
+            ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(
+                app_user_model_id.as_str(),
+            ))
+            .map_err(|error| {
+                format!(
+                    "failed to create Windows toast notifier for AppUserModelID {app_user_model_id}: {error}"
+                )
+            })?;
+        notifier
+            .Show(&toast)
+            .map_err(|error| format!("failed to show Windows toast notification: {error}"))?;
+
+        tracing::info!(
+            id = %payload.id,
+            app_user_model_id = %app_user_model_id,
+            sound = payload.sound,
+            "delivered native notification"
+        );
+        Ok(())
+    }
+
+    fn app_user_model_id() -> String {
+        if let Ok(value) = std::env::var("AURA_WINDOWS_AUMID") {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return trimmed.to_string();
+            }
+        }
+
+        match Channel::current() {
+            Channel::Stable => STABLE_APP_USER_MODEL_ID,
+            Channel::Dev => DEV_APP_USER_MODEL_ID,
+        }
+        .to_string()
+    }
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+mod freedesktop {
+    use notify_rust::{Notification, Timeout, Urgency};
+
+    use crate::events::NativeNotificationPayload;
+
+    pub(super) fn show_native_notification(
+        payload: &NativeNotificationPayload,
+    ) -> Result<(), String> {
+        let title = super::notification_title(payload)?;
+        let body = super::notification_body(payload).unwrap_or("");
+        let id = super::stable_notification_id(&payload.id);
+
+        let mut notification = Notification::new();
+        notification
+            .appname("AURA")
+            .summary(title)
+            .body(body)
+            .icon("aura")
+            .id(id)
+            .timeout(Timeout::Milliseconds(6000))
+            .urgency(Urgency::Normal);
+
+        if payload.sound {
+            notification.sound_name("message-new-instant");
+        }
+
+        notification
+            .show()
+            .map_err(|error| format!("failed to show Freedesktop notification: {error}"))?;
+
+        tracing::info!(
+            id = %payload.id,
+            xdg_id = id,
+            sound = payload.sound,
+            "delivered native notification"
+        );
+        Ok(())
+    }
+}
 
 #[cfg(target_os = "macos")]
 mod macos {
@@ -48,9 +236,7 @@ mod macos {
     pub(super) fn show_native_notification(
         payload: &NativeNotificationPayload,
     ) -> Result<(), String> {
-        if payload.title.trim().is_empty() {
-            return Err("notification title cannot be empty".to_string());
-        }
+        let title = super::notification_title(payload)?;
 
         unsafe {
             let pool = AutoReleasePool::new();
@@ -68,13 +254,8 @@ mod macos {
             }
 
             let identifier = ns_string(&payload.id);
-            let title = ns_string(payload.title.trim());
-            let body = payload
-                .body
-                .as_deref()
-                .map(str::trim)
-                .filter(|s| !s.is_empty())
-                .map(|body| ns_string(body));
+            let title = ns_string(title);
+            let body = super::notification_body(payload).map(|body| ns_string(body));
 
             let _: () = msg_send![content, setTitle: title.as_ptr()];
             if let Some(body) = body.as_ref() {
@@ -315,5 +496,77 @@ mod macos {
             return None;
         }
         Some(CStr::from_ptr(utf8).to_string_lossy().into_owned())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn payload(title: &str, body: Option<&str>) -> NativeNotificationPayload {
+        NativeNotificationPayload {
+            id: "task:123".to_string(),
+            title: title.to_string(),
+            body: body.map(str::to_string),
+            sound: true,
+            badge_count: Some(1),
+        }
+    }
+
+    #[test]
+    fn notification_title_trims_and_rejects_empty_values() {
+        let valid = payload("  Task complete  ", None);
+        assert_eq!(notification_title(&valid).unwrap(), "Task complete");
+
+        let blank = payload(" \n\t ", None);
+        assert_eq!(
+            notification_title(&blank).unwrap_err(),
+            "notification title cannot be empty"
+        );
+    }
+
+    #[test]
+    fn notification_body_trims_and_ignores_empty_values() {
+        let with_body = payload("Task complete", Some("  Review output  "));
+        assert_eq!(notification_body(&with_body), Some("Review output"));
+
+        let blank_body = payload("Task complete", Some("  "));
+        assert_eq!(notification_body(&blank_body), None);
+
+        let no_body = payload("Task complete", None);
+        assert_eq!(notification_body(&no_body), None);
+    }
+
+    #[test]
+    fn stable_notification_id_is_deterministic_and_nonzero() {
+        let first = stable_notification_id("task:123");
+        let second = stable_notification_id("task:123");
+        let different = stable_notification_id("task:456");
+
+        assert_eq!(first, second);
+        assert_ne!(first, 0);
+        assert_ne!(first, different);
+    }
+
+    #[test]
+    fn windows_toast_xml_escapes_text_and_can_silence_audio() {
+        let xml = build_windows_toast_xml(
+            "Task & <done> \"now\" 'ok'",
+            Some("Body & <details>"),
+            false,
+        );
+
+        assert!(xml.contains("Task &amp; &lt;done&gt; &quot;now&quot; &apos;ok&apos;"));
+        assert!(xml.contains("Body &amp; &lt;details&gt;"));
+        assert!(xml.contains("<audio silent=\"true\" />"));
+    }
+
+    #[test]
+    fn windows_toast_xml_omits_empty_optional_nodes() {
+        let xml = build_windows_toast_xml("Task complete", None, true);
+
+        assert!(xml.contains("<text>Task complete</text>"));
+        assert!(!xml.contains("<audio"));
+        assert_eq!(xml.matches("<text>").count(), 1);
     }
 }

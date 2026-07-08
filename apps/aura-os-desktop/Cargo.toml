@@ -41,7 +41,7 @@ xcap = "0.9.6"
 tempfile = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.58", features = ["Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging", "Win32_UI_HiDpi", "Win32_UI_Shell", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_Kernel", "Win32_System_Threading", "Win32_Security"] }
+windows = { version = "0.58", features = ["Data_Xml_Dom", "UI_Notifications", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging", "Win32_UI_HiDpi", "Win32_UI_Shell", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_Kernel", "Win32_System_Threading", "Win32_Security"] }
 # Windows Graphics Capture backend for the demo recorder's framed window
 # mode: captures the demo window's composited surface directly (by HWND), so
 # the recording includes GPU-rendered WebView2 content (gdigrab `title=` is
@@ -58,6 +58,13 @@ windows-capture = "2"
 # read the icon from disk, not from the runtime `with_window_icon` HICON.
 [target.'cfg(target_os = "windows")'.build-dependencies]
 winresource = "0.1"
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+# Freedesktop/XDG notifications over D-Bus for Ubuntu and other Unix desktops
+# that expose a notification daemon. Pinned below latest because notify-rust
+# 4.18 raised MSRV past the workspace rust-version; 4.12 supports Rust 1.63+
+# and still ships the same D-Bus notification surface we need.
+notify-rust = { version = "=4.12.0", default-features = false, features = ["z"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
