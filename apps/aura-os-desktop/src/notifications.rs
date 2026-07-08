@@ -24,12 +24,18 @@ pub(crate) fn set_application_badge(_count: Option<u32>) {}
 
 #[cfg(target_os = "macos")]
 mod macos {
-    use objc::runtime::Object;
+    use std::sync::atomic::{AtomicPtr, Ordering};
+    use std::sync::Once;
+
+    use objc::declare::ClassDecl;
+    use objc::runtime::{Object, Sel, BOOL, YES};
     use objc::{class, msg_send, sel, sel_impl};
 
     use crate::events::NativeNotificationPayload;
 
     const NS_UTF8_STRING_ENCODING: usize = 4;
+    static NOTIFICATION_DELEGATE_INIT: Once = Once::new();
+    static NOTIFICATION_DELEGATE: AtomicPtr<Object> = AtomicPtr::new(std::ptr::null_mut());
 
     unsafe extern "C" {
         static NSUserNotificationDefaultSoundName: *mut Object;
@@ -79,6 +85,8 @@ mod macos {
                 return Err("failed to get NSUserNotificationCenter".to_string());
             }
 
+            install_notification_delegate(center);
+
             let _: () = msg_send![center, deliverNotification: notification];
             let _: () = msg_send![notification, release];
 
@@ -107,6 +115,38 @@ mod macos {
             }
             drop(pool);
         }
+    }
+
+    unsafe fn install_notification_delegate(center: *mut Object) {
+        NOTIFICATION_DELEGATE_INIT.call_once(|| {
+            let superclass = class!(NSObject);
+            let mut decl = ClassDecl::new("AuraNotificationCenterDelegate", superclass)
+                .expect("AuraNotificationCenterDelegate class should register exactly once");
+            unsafe {
+                decl.add_method(
+                    sel!(userNotificationCenter:shouldPresentNotification:),
+                    should_present_notification
+                        as extern "C" fn(&Object, Sel, *mut Object, *mut Object) -> BOOL,
+                );
+            }
+            let delegate_class = decl.register();
+            let delegate: *mut Object = unsafe { msg_send![delegate_class, new] };
+            NOTIFICATION_DELEGATE.store(delegate, Ordering::SeqCst);
+        });
+
+        let delegate = NOTIFICATION_DELEGATE.load(Ordering::SeqCst);
+        if !delegate.is_null() {
+            let _: () = msg_send![center, setDelegate: delegate];
+        }
+    }
+
+    extern "C" fn should_present_notification(
+        _this: &Object,
+        _cmd: Sel,
+        _center: *mut Object,
+        _notification: *mut Object,
+    ) -> BOOL {
+        YES
     }
 
     struct AutoReleasePool {
