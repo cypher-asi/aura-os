@@ -2,6 +2,7 @@ mod adapter;
 mod control;
 #[allow(dead_code)]
 mod event_kinds;
+mod harness_transport;
 #[allow(dead_code)]
 pub(crate) mod health;
 mod limits;

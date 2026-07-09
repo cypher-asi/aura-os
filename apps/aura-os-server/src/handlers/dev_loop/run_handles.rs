@@ -26,10 +26,11 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
 use aura_os_core::{AgentInstanceId, ProjectId};
-use aura_os_harness::{HarnessLink, LocalHarness};
+use aura_os_harness::HarnessLink;
 
 use crate::state::AppState;
 
+use super::harness_transport::harness_for_base_url;
 use super::start::run_status_indicates_active;
 
 /// On-disk pointer to a harness run this server (or a previous
@@ -146,6 +147,7 @@ fn read_handle(path: &std::path::Path) -> Option<RunHandle> {
 pub(super) async fn find_detached_run(
     state: &AppState,
     project_id: ProjectId,
+    request_auth_token: Option<&str>,
 ) -> Option<RunHandle> {
     for handle in list_for_project(state, project_id) {
         let has_live_entry = state
@@ -156,7 +158,7 @@ pub(super) async fn find_detached_run(
         if has_live_entry {
             continue;
         }
-        let client = LocalHarness::for_configured_local_base_url(handle.harness_base_url.clone());
+        let client = harness_for_base_url(handle.harness_base_url.clone(), request_auth_token);
         match client.run_status(&handle.automaton_id, None).await {
             Ok(status) if run_status_indicates_active(&status) => {
                 info!(

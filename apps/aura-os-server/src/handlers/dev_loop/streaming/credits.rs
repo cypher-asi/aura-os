@@ -4,10 +4,12 @@
 use tracing::warn;
 
 use aura_os_core::{AgentInstanceId, ProjectId};
-use aura_os_harness::{HarnessLink, LocalHarness};
+use aura_os_harness::HarnessLink;
 
 use crate::handlers::dev_loop::signals::is_insufficient_credits_failure;
 use crate::state::AppState;
+
+use super::super::harness_transport::harness_for_base_url;
 
 pub(super) async fn stop_automaton_for_credit_exhaustion(
     state: &AppState,
@@ -15,16 +17,21 @@ pub(super) async fn stop_automaton_for_credit_exhaustion(
     agent_instance_id: AgentInstanceId,
     automaton_id: &str,
 ) {
-    let base_url = {
+    let transport = {
         let reg = state.automaton_registry.lock().await;
         reg.get(&(project_id, agent_instance_id))
             .filter(|entry| entry.automaton_id == automaton_id)
-            .map(|entry| entry.harness_base_url.clone())
+            .map(|entry| {
+                (
+                    entry.harness_base_url.clone(),
+                    entry.harness_auth_token.clone(),
+                )
+            })
     };
-    let Some(base_url) = base_url else {
+    let Some((base_url, auth_token)) = transport else {
         return;
     };
-    if let Err(error) = LocalHarness::for_configured_local_base_url(base_url)
+    if let Err(error) = harness_for_base_url(base_url, auth_token.as_deref())
         .stop_run(automaton_id, None)
         .await
     {

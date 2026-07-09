@@ -2,12 +2,13 @@ use axum::Json;
 use tracing::{error, warn};
 
 use aura_os_core::{AgentInstanceId, ProjectId};
-use aura_os_harness::{HarnessLink, LocalHarness};
+use aura_os_harness::HarnessLink;
 
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
+use super::harness_transport::harness_for_base_url;
 use super::registry::{abort_and_remove, set_paused, status_response};
 use super::streaming::emit_domain_event;
 use super::types::ControlAction;
@@ -17,6 +18,7 @@ pub(super) async fn control_loop(
     project_id: ProjectId,
     only_agent: Option<AgentInstanceId>,
     action: ControlAction,
+    request_auth_token: Option<&str>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
     let targets = {
         let reg = state.automaton_registry.lock().await;
@@ -28,6 +30,7 @@ pub(super) async fn control_loop(
                     *agent_id,
                     entry.automaton_id.clone(),
                     entry.harness_base_url.clone(),
+                    entry.harness_auth_token.clone(),
                 )
             })
             .collect::<Vec<_>>()
@@ -35,19 +38,24 @@ pub(super) async fn control_loop(
     if targets.is_empty() && !matches!(action, ControlAction::Stop) {
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
-    for (agent_id, automaton_id, base_url) in targets {
+    for (agent_id, automaton_id, base_url, harness_auth_token) in targets {
+        let auth_token = harness_auth_token
+            .as_deref()
+            .or(request_auth_token)
+            .map(str::to_string);
         control_target(ControlTargetInputs {
             state,
             project_id,
             agent_id,
             automaton_id,
             base_url,
+            auth_token,
             action: &action,
         })
         .await;
     }
     if matches!(action, ControlAction::Stop) {
-        stop_detached_runs(state, project_id, only_agent).await;
+        stop_detached_runs(state, project_id, only_agent, request_auth_token).await;
     }
     Ok(Json(status_response(state, project_id, only_agent).await))
 }
@@ -61,6 +69,7 @@ async fn stop_detached_runs(
     state: &AppState,
     project_id: ProjectId,
     only_agent: Option<AgentInstanceId>,
+    request_auth_token: Option<&str>,
 ) {
     for handle in super::run_handles::list_for_project(state, project_id) {
         if only_agent.is_some_and(|wanted| wanted != handle.agent_instance_id) {
@@ -77,7 +86,7 @@ async fn stop_detached_runs(
             continue;
         }
         if let Err(error) =
-            LocalHarness::for_configured_local_base_url(handle.harness_base_url.clone())
+            harness_for_base_url(handle.harness_base_url.clone(), request_auth_token)
                 .stop_run(&handle.automaton_id, None)
                 .await
         {
@@ -100,6 +109,7 @@ struct ControlTargetInputs<'a> {
     agent_id: AgentInstanceId,
     automaton_id: String,
     base_url: String,
+    auth_token: Option<String>,
     action: &'a ControlAction,
 }
 
@@ -123,9 +133,10 @@ async fn control_target(inputs: ControlTargetInputs<'_>) {
         agent_id,
         automaton_id,
         base_url,
+        auth_token,
         action,
     } = inputs;
-    let client = LocalHarness::for_configured_local_base_url(base_url.clone());
+    let client = harness_for_base_url(base_url.clone(), auth_token.as_deref());
     let harness_error = match dispatch_control_action(&client, &automaton_id, action).await {
         Ok(()) => None,
         Err(error) => {
@@ -143,7 +154,7 @@ async fn control_target(inputs: ControlTargetInputs<'_>) {
 /// string (used both for the structured log row and the
 /// `loop_*` event `harness_error` field).
 async fn dispatch_control_action(
-    client: &LocalHarness,
+    client: &dyn HarnessLink,
     automaton_id: &str,
     action: &ControlAction,
 ) -> anyhow::Result<()> {

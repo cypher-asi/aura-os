@@ -79,6 +79,12 @@ pub struct ActiveAutomaton {
     /// empty so the normal loop surface is unchanged.
     pub loop_engineering: Option<serde_json::Value>,
     pub harness_base_url: String,
+    /// Bearer used for hosted/remote harness lifecycle calls. Local
+    /// loopback harnesses leave this empty; remote swarm dev-loop runs
+    /// keep the caller JWT in memory so pause/resume/stop and
+    /// credit-exhaustion teardown can address the same agent-scoped
+    /// gateway URL without requiring `LOCAL_HARNESS_AUTH_TOKEN`.
+    pub harness_auth_token: Option<String>,
     pub paused: bool,
     /// Set to `true` while the `forward_automaton_events` task for this
     /// automaton is still draining the harness event stream. Cleared when

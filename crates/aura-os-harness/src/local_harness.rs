@@ -7,8 +7,8 @@ use url::Url;
 
 use crate::error::HarnessError;
 use crate::harness::{
-    HarnessLink, HarnessSession, RunHandle, SessionConfig, build_runtime_request,
-    validate_runtime_request_identity,
+    build_runtime_request, validate_runtime_request_identity, HarnessLink, HarnessSession,
+    RunHandle, SessionConfig,
 };
 use crate::harness_auth::{local_harness_transport_auth_token_from_env, preferred_transport_auth};
 use crate::harness_url::{is_hosted_harness_base_url, local_harness_base_url};
@@ -894,6 +894,19 @@ mod tests {
             .expect_err("hosted base without transport auth must fail closed");
 
         assert!(error.to_string().contains("LOCAL_HARNESS_AUTH_TOKEN"));
+    }
+
+    #[test]
+    fn hosted_base_with_transport_auth_uses_transport_token() {
+        let harness = LocalHarness::with_transport_auth_token(
+            "https://harness.example.com".to_string(),
+            Some("transport-secret".to_string()),
+        );
+
+        assert_eq!(
+            harness.transport_auth(Some("user-jwt")).unwrap(),
+            Some("transport-secret")
+        );
     }
 
     #[test]
