@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-07-08",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.745.1",
+    "title": "Native desktop task notifications land on Mac, Windows, and Linux",
+    "intro": "Today's nightly is focused on a single, substantial shipment: Aura's desktop app can now raise real OS-level notifications when tasks change state, backed by a new notification bridge in the Rust shell and matching preference and toast surfaces in the interface.",
+    "entryCount": 1,
+    "highlights": [
+      "Native task notifications on macOS, Windows, and Linux",
+      "In-app toast surface and notification preferences",
+      "Permission requested at startup, suppressed in CI"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-09T01:46:04.888Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.745.1",
+    "path": "history/2026-07-08.json"
+  },
+  {
     "date": "2026-07-07",
     "channel": "nightly",
     "version": "0.1.0-nightly.744.1",
