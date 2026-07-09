@@ -424,8 +424,10 @@ pub(crate) fn spawn_fallback_show_timer(proxy: EventLoopProxy<UserEvent>, window
 }
 
 pub(crate) fn run_event_loop(event_loop: EventLoop<UserEvent>, mut state: LoopState) {
-    if let Err(error) = request_notification_authorization() {
-        warn!(%error, "failed to request notification authorization at startup");
+    if !ci_mode_enabled() {
+        if let Err(error) = request_notification_authorization() {
+            warn!(%error, "failed to request notification authorization at startup");
+        }
     }
 
     event_loop.run(move |event, elwt, control_flow| {
