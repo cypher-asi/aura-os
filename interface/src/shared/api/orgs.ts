@@ -56,11 +56,6 @@ export const orgsApi = {
     }),
   getBilling: (orgId: string) =>
     apiFetch<OrgBilling | null>(`/api/orgs/${orgId}/billing`),
-  setBilling: (orgId: string, plan: string) =>
-    apiFetch<Org>(`/api/orgs/${orgId}/billing`, {
-      method: "PUT",
-      body: JSON.stringify({ plan }),
-    }),
   getCreditBalance: (orgId: string) =>
     apiFetch<CreditBalance>(`/api/orgs/${orgId}/credits/balance`),
   createCreditCheckout: (orgId: string, amountUsd: number) =>

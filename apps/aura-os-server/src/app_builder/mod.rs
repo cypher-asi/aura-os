@@ -456,6 +456,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         org_service: core.org_service,
         auth_service: core.auth_service,
         billing_client: core.billing_client,
+        web_search_rate_limiter: crate::tool_action_rate_limit::ToolActionRateLimiter::default(),
         project_service: domain.project_service,
         task_service: domain.task_service,
         agent_service: domain.agent_service,

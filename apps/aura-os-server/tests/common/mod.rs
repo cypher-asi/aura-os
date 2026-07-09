@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 
 use axum::body::Body;
-use axum::extract::{Path, Query};
+use axum::extract::{Path, Query, State};
 use axum::http::{Request, StatusCode};
 use axum::routing::get;
 use axum::Json;
@@ -393,6 +393,8 @@ pub fn build_test_app_from_store_with_integrations(
         org_service,
         auth_service,
         billing_client,
+        web_search_rate_limiter:
+            aura_os_server::tool_action_rate_limit::ToolActionRateLimiter::default(),
         project_service,
         task_service,
         agent_service,
@@ -460,6 +462,21 @@ pub fn build_test_app_from_store_with_integrations(
 /// (no network client) would otherwise 503 on the authZ gate.
 #[allow(dead_code)]
 pub async fn build_test_app_with_org_membership() -> (Router, AppState, tempfile::TempDir) {
+    build_test_app_with_org_membership_and_billing_plan("mortal").await
+}
+
+#[allow(dead_code)]
+pub async fn build_test_app_with_org_membership_and_billing_plan(
+    plan: &str,
+) -> (Router, AppState, tempfile::TempDir) {
+    let billing_client = start_mock_subscription_billing(plan).await;
+    build_test_app_with_org_membership_and_billing_client(billing_client).await
+}
+
+#[allow(dead_code)]
+pub async fn build_test_app_with_org_membership_and_billing_client(
+    billing_client: Arc<BillingClient>,
+) -> (Router, AppState, tempfile::TempDir) {
     let members_app = Router::new().route(
         "/api/orgs/:org_id/members",
         get(|Path(org_id): Path<String>| async move {
@@ -483,9 +500,30 @@ pub async fn build_test_app_with_org_membership() -> (Router, AppState, tempfile
         Some(Arc::new(NetworkClient::with_base_url(&net_url))),
         None,
         None,
-        None,
+        Some(billing_client),
     );
     (app, state, store_dir)
+}
+
+#[allow(dead_code)]
+pub async fn start_mock_subscription_billing(plan: &str) -> Arc<BillingClient> {
+    async fn subscription_status(State(plan): State<String>) -> Json<Value> {
+        Json(serde_json::json!({
+            "plan": plan,
+            "is_subscribed": plan != "mortal",
+            "monthly_credits": 0,
+            "current_period_end": null,
+        }))
+    }
+
+    let app = Router::new()
+        .route("/v1/subscriptions/me", get(subscription_status))
+        .with_state(plan.to_string());
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+
+    Arc::new(BillingClient::with_base_url(url))
 }
 
 /// Build a test app with BOTH an org-membership network mock (so the authZ gate
@@ -541,6 +579,7 @@ pub async fn build_test_app_with_empty_canonical_integrations(
         &integrations_url,
         "test-internal-token",
     ));
+    let billing_client = start_mock_subscription_billing("mortal").await;
 
     let store_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
@@ -550,15 +589,14 @@ pub async fn build_test_app_with_empty_canonical_integrations(
         Some(Arc::new(NetworkClient::with_base_url(&net_url))),
         None,
         None,
-        None,
+        Some(billing_client),
         false,
         Some(integrations_client),
     );
     (app, state, store_dir)
 }
 
-/// Build a test app wired to a network mock whose `/api/orgs/:org_id/members`
-
+/// Build a test app whose network mock reports no members for every org.
 #[allow(dead_code)]
 pub async fn build_test_app_without_org_membership() -> (Router, AppState, tempfile::TempDir) {
     let members_app = Router::new().route(

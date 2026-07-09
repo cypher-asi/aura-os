@@ -154,12 +154,13 @@ pub(super) fn installed_workspace_integrations(
                 crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
                     ints,
                 );
-            // Gating-only synthetic platform Brave integration (Spec 02, Gate B).
-            // Injected only when the platform key is present and no real org brave
-            // integration already covers it (soft-fallback: real org key wins).
+            // Gating-only synthetic platform Web Search integration (Spec 02,
+            // Gate B). Injected only when platform search can execute locally
+            // (cloud key) or via a cloud callback origin (desktop), and no real
+            // org brave integration already covers it (legacy soft-fallback).
             // The synthetic carries no secret; the tool's runtime_execution stays
             // None so the server-callback path (D5) resolves the platform key.
-            if aura_os_integrations::platform_brave_key_present()
+            if aura_os_integrations::platform_brave_tool_actions_available()
                 && !installed.iter().any(|i| i.provider == "brave_search")
             {
                 installed.push(synthetic_platform_brave_integration());
@@ -173,7 +174,7 @@ pub(super) fn installed_workspace_integrations(
 fn synthetic_platform_brave_integration() -> aura_os_harness::InstalledIntegration {
     aura_os_harness::InstalledIntegration {
         integration_id: crate::handlers::org_tools::PLATFORM_BRAVE_INTEGRATION_ID.to_string(),
-        name: "Brave Search".to_string(),
+        name: "Web Search".to_string(),
         provider: "brave_search".to_string(),
         kind: "workspace_integration".to_string(),
         metadata: std::collections::HashMap::new(),

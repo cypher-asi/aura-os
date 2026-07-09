@@ -48,7 +48,10 @@ impl OrgService {
         Self { store }
     }
 
-    /// Get org billing from settings (network has no billing fields).
+    /// Get legacy org billing metadata from local settings.
+    ///
+    /// This compatibility record is not an entitlement authority. Subscription
+    /// gates must read the authenticated user's status from z-billing.
     pub fn get_billing(&self, org_id: &OrgId) -> Result<Option<OrgBilling>, OrgError> {
         let key = org_billing_key(org_id);
         let bytes = match self.store.get_setting(&key) {
@@ -59,15 +62,6 @@ impl OrgService {
         let billing: OrgBilling = serde_json::from_slice(&bytes)
             .map_err(|e| OrgError::Store(aura_os_store::StoreError::Serialization(e)))?;
         Ok(Some(billing))
-    }
-
-    /// Set org billing in settings (network has no billing fields).
-    pub fn set_billing(&self, org_id: &OrgId, billing: OrgBilling) -> Result<OrgBilling, OrgError> {
-        let key = org_billing_key(org_id);
-        let bytes = serde_json::to_vec(&billing)
-            .map_err(|e| OrgError::Store(aura_os_store::StoreError::Serialization(e)))?;
-        self.store.put_setting(&key, &bytes)?;
-        Ok(billing)
     }
 
     // -- Local IntegrationConfig (obsidian / web-search settings) -----------

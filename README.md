@@ -93,6 +93,8 @@ Edit `.env` and set:
 | `AURA_STORAGE_URL` | No | aura-storage URL for execution data (e.g. `https://your-storage-host.example.com`). Omit to disable. |
 | `AURA_INTEGRATIONS_URL` | No | aura-integrations URL for encrypted integrations and Google OAuth. Required for users to connect Google. |
 | `AURA_INTEGRATIONS_INTERNAL_TOKEN` | No | Internal token matching aura-integrations `INTERNAL_SERVICE_TOKEN`; used for service-to-service secret resolution paths. |
+| `BRAVE_SEARCH_PLATFORM_KEY` | Cloud API only | Brave Search subscription key used by Aura-funded Web Search. Configure only on `aura-api`; never put it in a `VITE_*` variable, static renderer, or desktop bundle. |
+| `AURA_PLATFORM_TOOL_ACTION_BASE_URL` | Desktop builds | Public Aura API origin used by packaged desktop agents for authenticated platform-funded tool callbacks (default: `https://api.aura.ai`). This is a URL, not a secret. |
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
 | `SWARM_BASE_URL` | No | **aura-swarm gateway** URL for remote agents (confidential SEV-SNP VMs). Agents with `machine_type` other than `local` route their sessions, lifecycle, files, and VM logs through this gateway. Omit for local-only agents. See [docs/aura-swarm.md](./docs/aura-swarm.md). |
 | `LOCAL_HARNESS_URL` | No | Local aura-harness URL for `local` agents (default port `8080`; dev channel `8081`). If nothing is listening there at startup, the server auto-spawns the harness from `AURA_HARNESS_DIR` (or `../aura-harness`). |
@@ -100,6 +102,7 @@ Edit `.env` and set:
 | `AURA_HARNESS_DIR` | No | Path to a sibling `aura-harness` checkout used for harness auto-spawn and desktop packaging. |
 | `AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN` | No | Set `1`/`true` to never auto-spawn the local harness (e.g. remote-only deployments such as Render). |
 | `Z_BILLING_API_KEY` | No | Service API key for z-billing. Required when the public x402 chat endpoint settles actual token usage from z-billing quotes. |
+| `Z_BILLING_URL` | No | z-billing origin used for credit and authoritative subscription lookups (default: `https://z-billing.onrender.com`). |
 | `AURA_X402_PAY_TO` | No | Wallet address that receives x402 payments. Required to enable the paid x402 endpoints. |
 | `AURA_X402_CHAT_PRICE` | No | Maximum dollar-denominated x402 authorization for one `POST /api/public/x402/v1/chat/completions` request (default: `$0.02`). With the default `upto` scheme, Aura settles the actual z-billing usage quote up to this ceiling. |
 | `AURA_X402_CHAT_SCHEME` | No | x402 scheme for the paid chat endpoint: `upto` by default for usage-shaped LLM calls, or `exact` for fixed-price testing. |

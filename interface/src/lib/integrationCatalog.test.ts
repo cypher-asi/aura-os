@@ -34,6 +34,7 @@ describe("integrationCatalog auth labels", () => {
       "linear",
       "slack",
       "notion",
+      "brave_search",
       "freepik",
       "buffer",
       "apify",
@@ -47,6 +48,15 @@ describe("integrationCatalog auth labels", () => {
       );
       expect(appIds.has(provider)).toBe(true);
     }
+    expect(getIntegrationDefinition("brave_search")?.label).toBe(
+      "Web Search BYOK",
+    );
+    expect(getIntegrationDefinition("brave_search")?.authHint).toContain(
+      "Aura Web Search works out of the box",
+    );
+    expect(getIntegrationDefinition("brave_search")?.authHint).toContain(
+      "shown on each subscription tier",
+    );
   });
 
   it("omits model provider connections from user-facing settings", () => {

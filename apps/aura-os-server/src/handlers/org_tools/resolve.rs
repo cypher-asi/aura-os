@@ -15,7 +15,7 @@ use super::args::optional_string;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
-/// Reserved integration id for the gating-only synthetic platform Brave
+/// Reserved integration id for the gating-only synthetic platform Web Search
 /// integration (Spec 02). It carries no stored secret in canonical/shadow
 /// storage; its secret is resolved cloud-side from the
 /// `BRAVE_SEARCH_PLATFORM_KEY` environment variable as a *fallback* only.
@@ -25,12 +25,12 @@ use crate::state::AppState;
 /// truth.
 pub(crate) const PLATFORM_BRAVE_INTEGRATION_ID: &str = "platform-brave-search";
 
-/// The platform-provided Brave Search key is carried by the
+/// The platform-provided Web Search key is carried by the
 /// [`PLATFORM_BRAVE_KEY_ENV`] environment variable (re-exported from
 /// `aura-os-integrations` so every gate shares one definition). Cloud-only: it
 /// must never be written into a session payload or shipped to desktop. Used
-/// solely as a soft fallback when no real org brave integration resolves.
-
+/// solely as a soft fallback when no legacy real-key org brave integration
+/// resolves.
 pub(crate) struct ResolvedOrgIntegration {
     pub(super) metadata: OrgIntegration,
     pub(super) secret: String,
@@ -117,7 +117,7 @@ async fn pick_org_integration_metadata(
     } else {
         load_shadow_org_integration_for_provider(state, org_id, provider, user_id)
     };
-    // Gate D (Spec 02): no real org integration resolved. When the platform Brave
+    // Gate D (Spec 02): no real org integration resolved. When the platform Web Search
     // key is configured and this is the brave provider, synthesize the gating-only
     // platform integration in-memory so the platform-key branch in
     // `load_org_integration_secret` is reachable. A real `enabled && has_secret`
@@ -141,10 +141,10 @@ async fn load_org_integration_secret(
     integration: &OrgIntegration,
     fail_loud_on_service_down: bool,
 ) -> ApiResult<String> {
-    // Soft-fallback (Spec 02 §9): the reserved synthetic platform brave
+    // Soft-fallback (Spec 02 §9): the reserved synthetic platform Web Search
     // integration carries no stored credential in canonical/shadow storage.
     // Its key is resolved cloud-side from the platform env var, and only ever
-    // reached when no *real* org brave integration resolved first — a real
+    // reached when no legacy real-key org brave integration resolved first — a real
     // `enabled && has_secret` brave provider match always wins the selection
     // in `pick_org_integration_metadata`/`load_canonical_by_provider`, so this
     // branch is a fallback, never an override.
@@ -235,9 +235,9 @@ fn integrations_service_down_error() -> (axum::http::StatusCode, axum::Json<ApiE
     )
 }
 
-/// Resolve the platform-provided Brave Search key from the environment.
+/// Resolve the platform-provided Web Search key from the environment.
 ///
-/// Cloud-only soft fallback for the reserved synthetic platform brave
+/// Cloud-only soft fallback for the reserved synthetic platform Web Search
 /// integration (Spec 02). When `BRAVE_SEARCH_PLATFORM_KEY` is unset or empty
 /// the feature is effectively off, so we return a clean `ApiError` rather than
 /// panicking — behaviour elsewhere is unchanged.
@@ -245,22 +245,22 @@ fn load_platform_brave_secret() -> ApiResult<String> {
     match std::env::var(PLATFORM_BRAVE_KEY_ENV) {
         Ok(key) if !key.trim().is_empty() => Ok(key),
         _ => Err(ApiError::bad_request(
-            "platform brave search is not configured",
+            "platform web search is not configured",
         )),
     }
 }
 
-/// The gating-only synthetic platform Brave integration, materialized in-memory
+/// The gating-only synthetic platform Web Search integration, materialized in-memory
 /// at resolution time (Gate D) so the platform-key branch in
-/// [`load_org_integration_secret`] is reachable when no real org brave
-/// integration exists. Carries no stored secret (`has_secret: false`); the key is
-/// loaded from the env var. Never written to storage or the REST list.
+/// [`load_org_integration_secret`] is reachable when no legacy real-key org
+/// brave integration exists. Carries no stored secret (`has_secret: false`); the
+/// key is loaded from the env var. Never written to storage or the REST list.
 fn synthetic_platform_brave_integration(org_id: &OrgId) -> OrgIntegration {
     let now = chrono::Utc::now();
     OrgIntegration {
         integration_id: PLATFORM_BRAVE_INTEGRATION_ID.to_string(),
         org_id: *org_id,
-        name: "Brave Search".to_string(),
+        name: "Web Search".to_string(),
         provider: "brave_search".to_string(),
         kind: OrgIntegrationKind::WorkspaceIntegration,
         default_model: None,
@@ -641,7 +641,7 @@ fn matches_org_tool_provider(
 ) -> bool {
     // Soft-fallback precedence (Spec 02 §9): the gating-only synthetic platform
     // brave integration must never win provider-based first-match selection, so
-    // a real BYOK integration is always chosen when one exists. The synthetic
+    // a legacy real-key integration is always chosen when one exists. The synthetic
     // id is only resolved when selected explicitly by its reserved id, and even
     // then its key is a *fallback*, never an override of a real org key.
     integration.integration_id != PLATFORM_BRAVE_INTEGRATION_ID

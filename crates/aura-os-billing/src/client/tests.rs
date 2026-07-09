@@ -11,6 +11,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
@@ -50,6 +51,68 @@ fn with_existing_account(app: Router) -> Router {
             }))
         }),
     )
+}
+
+#[tokio::test]
+async fn test_get_subscription_status_deserializes_authoritative_plan() {
+    let app = Router::new().route(
+        "/v1/subscriptions/me",
+        get(|| async {
+            Json(serde_json::json!({
+                "plan": "crusader",
+                "is_subscribed": true,
+                "monthly_credits": 3000,
+                "current_period_end": "2026-08-01T00:00:00Z"
+            }))
+        }),
+    );
+    let (_url, client) = start_server(app).await;
+
+    let status = client.get_subscription_status("tok").await.unwrap();
+    assert_eq!(status.plan, "crusader");
+    assert!(status.is_subscribed);
+    assert_eq!(status.monthly_credits, 3000);
+    assert_eq!(
+        status.current_period_end.as_deref(),
+        Some("2026-08-01T00:00:00Z")
+    );
+}
+
+#[tokio::test]
+async fn test_subscription_status_cache_is_scoped_by_access_token() {
+    async fn subscription_status(
+        State(request_count): State<Arc<AtomicUsize>>,
+    ) -> Json<serde_json::Value> {
+        request_count.fetch_add(1, Ordering::SeqCst);
+        Json(serde_json::json!({
+            "plan": "pro",
+            "is_subscribed": true,
+            "monthly_credits": 1000,
+            "current_period_end": null
+        }))
+    }
+
+    let request_count = Arc::new(AtomicUsize::new(0));
+    let app = Router::new()
+        .route("/v1/subscriptions/me", get(subscription_status))
+        .with_state(request_count.clone());
+    let (_url, client) = start_server(app).await;
+
+    client
+        .get_subscription_status_cached("token-a")
+        .await
+        .unwrap();
+    client
+        .get_subscription_status_cached("token-a")
+        .await
+        .unwrap();
+    assert_eq!(request_count.load(Ordering::SeqCst), 1);
+
+    client
+        .get_subscription_status_cached("token-b")
+        .await
+        .unwrap();
+    assert_eq!(request_count.load(Ordering::SeqCst), 2);
 }
 
 #[tokio::test]

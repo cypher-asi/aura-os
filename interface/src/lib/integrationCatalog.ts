@@ -98,6 +98,20 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     runtimeCompatibleAdapters: [],
   },
   {
+    id: "brave_search",
+    label: "Web Search BYOK",
+    kind: "workspace_integration",
+    description:
+      "Use your own Brave Search API key for Aura Web Search without consuming Aura search quota.",
+    secretLabel: "Brave Search API Key",
+    secretPlaceholder: "Paste the Brave Search API key",
+    authHint:
+      "Aura Web Search works out of the box with burst and daily allowances shown on each subscription tier. Add a Brave Search API key when this workspace should pay Brave directly or continue searching after Aura quota is exhausted.",
+    docsUrl: "https://api-dashboard.search.brave.com/app/documentation",
+    supportsDefaultModel: false,
+    runtimeCompatibleAdapters: [],
+  },
+  {
     id: "freepik",
     label: "Freepik",
     kind: "workspace_integration",

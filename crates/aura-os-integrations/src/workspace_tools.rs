@@ -29,13 +29,22 @@ const GENERATION_TOOL_TIMEOUT_MS: u64 = 600_000;
 /// Default timeout for ordinary (non-generation) org tool callbacks.
 const DEFAULT_TOOL_TIMEOUT_MS: u64 = 30_000;
 
-/// Environment variable holding the cloud-only platform Brave Search key.
+/// Environment variable holding the cloud-only platform Web Search key.
 ///
 /// Set only in the hosted/cloud deployment; never on the desktop sidecar. When
-/// present it turns on platform-default web search (no user BYOK key required).
+/// present it turns on platform-default web search without any user key setup.
 pub const PLATFORM_BRAVE_KEY_ENV: &str = "BRAVE_SEARCH_PLATFORM_KEY";
 
-/// Whether the cloud-only platform Brave key is configured (trimmed, non-empty).
+/// Non-secret cloud aura-os-server base URL used by desktop sidecars for
+/// platform-funded tool-action callbacks.
+///
+/// Desktop must not carry [`PLATFORM_BRAVE_KEY_ENV`]. Instead, it stamps
+/// platform Web Search callback tools to this cloud origin; the hosted server
+/// receives the user's JWT, re-checks org membership/rate limits, and resolves
+/// the Brave credential from its own cloud-only environment.
+pub const PLATFORM_TOOL_ACTION_BASE_URL_ENV: &str = "AURA_PLATFORM_TOOL_ACTION_BASE_URL";
+
+/// Whether the cloud-only platform Web Search key is configured (trimmed, non-empty).
 ///
 /// Single source of truth shared by every gate in the platform-search feature:
 /// Gate A (tool emission, below), Gate B (synthetic injection in the chat
@@ -49,6 +58,26 @@ pub fn platform_brave_key_present() -> bool {
         .unwrap_or(false)
 }
 
+pub fn platform_tool_action_base_url() -> Option<String> {
+    read_trimmed_base_url_env(PLATFORM_TOOL_ACTION_BASE_URL_ENV)
+}
+
+/// Whether platform-funded Web Search tools may be advertised by this process.
+///
+/// Cloud advertises them when the platform key is configured locally. Desktop
+/// advertises them when it has a non-secret cloud callback base URL; execution
+/// then happens on the hosted server, where the key is resolved.
+pub fn platform_brave_tool_actions_available() -> bool {
+    platform_brave_key_present() || platform_tool_action_base_url().is_some()
+}
+
+fn read_trimmed_base_url_env(key: &str) -> Option<String> {
+    std::env::var(key)
+        .ok()
+        .map(|value| value.trim().trim_end_matches('/').to_string())
+        .filter(|value| !value.is_empty())
+}
+
 fn tool_timeout_ms(tool_name: &str) -> u64 {
     match tool_name {
         "generate_image" | "generate_video" | "generate_3d_model" => GENERATION_TOOL_TIMEOUT_MS,
@@ -59,21 +88,24 @@ fn tool_timeout_ms(tool_name: &str) -> u64 {
 fn available_workspace_integration_providers(integrations: &[OrgIntegration]) -> HashSet<&str> {
     let mut providers: HashSet<&str> = integrations
         .iter()
-        .filter(|integration| {
-            integration.enabled
-                && integration.has_secret
-                && matches!(integration.kind, OrgIntegrationKind::WorkspaceIntegration)
-        })
+        .filter(|integration| workspace_integration_provider_available(integration))
         .map(|integration| integration.provider.as_str())
         .collect();
-    // When the platform Brave key is configured, unconditionally surface
-    // brave_search as an available provider so that brave_search_web /
-    // brave_search_news pass the provider gate in build_installed_workspace_app_tools.
-    // The emitted tools retain runtime_execution: None (server-callback path, D5).
-    if platform_brave_key_present() {
+    // When platform Web Search can execute either locally (cloud key present) or via
+    // a cloud callback origin (desktop), surface brave_search so
+    // brave_search_web / brave_search_news pass the provider gate. Without a
+    // legacy real-key integration the emitted tools retain runtime_execution: None
+    // (server-callback path, D5).
+    if platform_brave_tool_actions_available() {
         providers.insert("brave_search");
     }
     providers
+}
+
+fn workspace_integration_provider_available(integration: &OrgIntegration) -> bool {
+    integration.enabled
+        && integration.has_secret
+        && matches!(integration.kind, OrgIntegrationKind::WorkspaceIntegration)
 }
 
 pub fn installed_workspace_app_tools(
@@ -82,6 +114,11 @@ pub fn installed_workspace_app_tools(
     bearer_token: &str,
 ) -> Vec<InstalledTool> {
     let base_url = control_plane_api_base_url();
+    let platform_base_url = platform_tool_action_base_url();
+    let has_real_brave_integration = integrations.iter().any(|integration| {
+        integration.provider == "brave_search"
+            && workspace_integration_provider_available(integration)
+    });
     let available_providers = available_workspace_integration_providers(integrations);
 
     org_integration_tool_manifest_entries()
@@ -96,7 +133,16 @@ pub fn installed_workspace_app_tools(
             name: tool.name.clone(),
             description: tool.description.clone(),
             input_schema: tool.input_schema.clone(),
-            endpoint: format!("{base_url}/api/orgs/{org_id}/tool-actions/{}", tool.name),
+            endpoint: format!(
+                "{}/api/orgs/{org_id}/tool-actions/{}",
+                tool_action_base_url_for_tool(
+                    tool.provider.as_deref(),
+                    &base_url,
+                    platform_base_url.as_deref(),
+                    has_real_brave_integration,
+                ),
+                tool.name
+            ),
             auth: ToolAuth::Bearer {
                 token: bearer_token.to_string(),
             },
@@ -111,6 +157,19 @@ pub fn installed_workspace_app_tools(
             metadata: trusted_tool_metadata(&tool.name),
         })
         .collect()
+}
+
+fn tool_action_base_url_for_tool<'a>(
+    provider: Option<&str>,
+    default_base_url: &'a str,
+    platform_base_url: Option<&'a str>,
+    has_real_brave_integration: bool,
+) -> &'a str {
+    if provider == Some("brave_search") && !has_real_brave_integration {
+        platform_base_url.unwrap_or(default_base_url)
+    } else {
+        default_base_url
+    }
 }
 
 fn trusted_tool_metadata(tool_name: &str) -> HashMap<String, serde_json::Value> {
@@ -626,12 +685,41 @@ mod tests {
         }
     }
 
+    struct EnvVarGuard {
+        key: &'static str,
+        prev: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let prev = std::env::var(key).ok();
+            std::env::set_var(key, value);
+            Self { key, prev }
+        }
+
+        fn unset(key: &'static str) -> Self {
+            let prev = std::env::var(key).ok();
+            std::env::remove_var(key);
+            Self { key, prev }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match &self.prev {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+
     #[test]
     fn platform_key_set_no_org_brave_emits_brave_tools() {
         let _lock = platform_key_env_lock()
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _env = PlatformKeyEnvGuard::set("test-platform-key");
+        let _platform_base = EnvVarGuard::unset(PLATFORM_TOOL_ACTION_BASE_URL_ENV);
         let org_id = OrgId::new();
         let integrations: Vec<OrgIntegration> = Vec::new();
         let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
@@ -652,6 +740,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _env = PlatformKeyEnvGuard::unset();
+        let _platform_base = EnvVarGuard::unset(PLATFORM_TOOL_ACTION_BASE_URL_ENV);
         let org_id = OrgId::new();
         let integrations: Vec<OrgIntegration> = Vec::new();
         let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
@@ -674,6 +763,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _env = PlatformKeyEnvGuard::set("test-platform-key");
+        let _platform_base = EnvVarGuard::unset(PLATFORM_TOOL_ACTION_BASE_URL_ENV);
         let org_id = OrgId::new();
         let integrations: Vec<OrgIntegration> = Vec::new();
         let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
@@ -685,6 +775,60 @@ mod tests {
             brave.runtime_execution.is_none(),
             "brave_search_web runtime_execution must be None (D5 server-callback path)"
         );
+    }
+
+    #[test]
+    fn platform_tool_action_base_set_no_org_brave_emits_cloud_endpoint() {
+        let _lock = platform_key_env_lock()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _env = PlatformKeyEnvGuard::unset();
+        let _platform_base = EnvVarGuard::set(
+            PLATFORM_TOOL_ACTION_BASE_URL_ENV,
+            "https://api.example.com/",
+        );
+        let org_id = OrgId::new();
+        let integrations: Vec<OrgIntegration> = Vec::new();
+        let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
+        let brave = tools
+            .iter()
+            .find(|t| t.name == "brave_search_web")
+            .expect("brave_search_web must be present with a platform callback base");
+
+        assert!(brave
+            .endpoint
+            .starts_with("https://api.example.com/api/orgs/"));
+        assert!(
+            brave.runtime_execution.is_none(),
+            "desktop platform Web Search must keep the server-callback path"
+        );
+    }
+
+    #[test]
+    fn platform_tool_action_base_does_not_override_real_byok_brave_endpoint() {
+        let _lock = platform_key_env_lock()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _env = PlatformKeyEnvGuard::unset();
+        let _platform_base = EnvVarGuard::set(
+            PLATFORM_TOOL_ACTION_BASE_URL_ENV,
+            "https://platform.example.com",
+        );
+        let org_id = OrgId::new();
+        let integrations = vec![test_integration(
+            "Brave Search",
+            "brave_search",
+            OrgIntegrationKind::WorkspaceIntegration,
+            true,
+            true,
+        )];
+        let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-test");
+        let brave = tools
+            .iter()
+            .find(|t| t.name == "brave_search_web")
+            .expect("brave_search_web must be present with a real org key");
+
+        assert!(!brave.endpoint.starts_with("https://platform.example.com/"));
     }
 
     #[test]

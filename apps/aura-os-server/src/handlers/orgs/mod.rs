@@ -33,7 +33,7 @@ pub(crate) use integrations::{
 };
 pub(crate) use invites::{accept_invite, create_invite, list_invites, revoke_invite};
 pub(crate) use members::{list_members, remove_member, update_member_role};
-pub(crate) use settings::{get_billing, get_integrations, set_billing, set_integrations};
+pub(crate) use settings::{get_billing, get_integrations, set_integrations};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct OrgResponse {

@@ -7,36 +7,19 @@ use axum::Json;
 
 use aura_os_core::{IntegrationConfig, ObsidianConfig, OrgBilling, OrgId, WebSearchConfig};
 
-use crate::dto::SetBillingRequest;
 use crate::error::ApiResult;
-use crate::state::AppState;
+use crate::handlers::permissions::require_org_role;
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 use super::map_org_err;
 
-pub(crate) async fn set_billing(
-    State(state): State<AppState>,
-    Path(org_id): Path<OrgId>,
-    Json(req): Json<SetBillingRequest>,
-) -> ApiResult<Json<OrgBilling>> {
-    let existing = state
-        .org_service
-        .get_billing(&org_id)
-        .map_err(map_org_err)?;
-    let billing = OrgBilling {
-        billing_email: existing.and_then(|b| b.billing_email),
-        plan: req.plan,
-    };
-    let billing = state
-        .org_service
-        .set_billing(&org_id, billing)
-        .map_err(map_org_err)?;
-    Ok(Json(billing))
-}
-
 pub(crate) async fn get_billing(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Option<OrgBilling>>> {
+    require_org_role(&state, &org_id.to_string(), &jwt, &session, "member").await?;
     let billing = state
         .org_service
         .get_billing(&org_id)

@@ -4,6 +4,7 @@
 //! never sees a spurious 404 from the underlying z-billing service.
 
 use reqwest::Method;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use aura_os_core::{CheckoutSessionResponse, CreditBalance, TransactionsResponse};
@@ -11,6 +12,15 @@ use aura_os_core::{CheckoutSessionResponse, CreditBalance, TransactionsResponse}
 use crate::error::BillingError;
 
 use super::BillingClient;
+
+/// Authoritative subscription entitlement returned by z-billing.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub struct SubscriptionStatus {
+    pub plan: String,
+    pub is_subscribed: bool,
+    pub monthly_credits: i64,
+    pub current_period_end: Option<String>,
+}
 
 impl BillingClient {
     async fn get_balance_once(&self, access_token: &str) -> Result<CreditBalance, BillingError> {
@@ -138,7 +148,7 @@ impl BillingClient {
     pub async fn get_subscription_status(
         &self,
         access_token: &str,
-    ) -> Result<serde_json::Value, BillingError> {
+    ) -> Result<SubscriptionStatus, BillingError> {
         let resp = self
             .send_authed_json(Method::GET, "/v1/subscriptions/me", access_token, None)
             .await?;
@@ -152,5 +162,36 @@ impl BillingClient {
                 body,
             })
         }
+    }
+
+    /// Get current subscription status with a short per-token cache.
+    ///
+    /// Search quota checks happen on every platform-funded call. Caching keeps
+    /// z-billing authoritative without adding a billing round trip to every
+    /// search. Failed lookups are never cached, so a transient outage falls
+    /// back conservatively at the caller and recovers on the next request.
+    pub async fn get_subscription_status_cached(
+        &self,
+        access_token: &str,
+    ) -> Result<SubscriptionStatus, BillingError> {
+        {
+            let mut cache = self.subscription_status_cache.lock().await;
+            cache.retain(|_, entry| {
+                entry.fetched_at.elapsed() < super::SUBSCRIPTION_STATUS_CACHE_TTL
+            });
+            if let Some(entry) = cache.get(access_token) {
+                return Ok(entry.status.clone());
+            }
+        }
+
+        let status = self.get_subscription_status(access_token).await?;
+        self.subscription_status_cache.lock().await.insert(
+            access_token.to_string(),
+            super::CachedSubscriptionStatus {
+                status: status.clone(),
+                fetched_at: std::time::Instant::now(),
+            },
+        );
+        Ok(status)
     }
 }

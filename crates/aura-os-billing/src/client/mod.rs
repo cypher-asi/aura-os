@@ -10,14 +10,29 @@ mod account;
 mod credits;
 mod usage;
 
+pub use credits::SubscriptionStatus;
 pub use usage::{LlmUsageQuote, UsageQuoteResponse};
 
-use std::{net::IpAddr, time::Duration};
+use std::{
+    collections::HashMap,
+    net::IpAddr,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use reqwest::{Client, Method, Url};
+use tokio::sync::Mutex;
 use tracing::warn;
 
 use crate::error::BillingError;
+
+const SUBSCRIPTION_STATUS_CACHE_TTL: Duration = Duration::from_secs(60);
+
+#[derive(Clone)]
+struct CachedSubscriptionStatus {
+    status: SubscriptionStatus,
+    fetched_at: Instant,
+}
 
 #[derive(Clone)]
 pub struct BillingClient {
@@ -25,6 +40,7 @@ pub struct BillingClient {
     base_url: String,
     service_api_key: Option<String>,
     service_name: String,
+    subscription_status_cache: Arc<Mutex<HashMap<String, CachedSubscriptionStatus>>>,
 }
 
 impl BillingClient {
@@ -50,6 +66,7 @@ impl BillingClient {
                 .ok()
                 .filter(|key| !key.trim().is_empty()),
             service_name: "aura-os-server".to_string(),
+            subscription_status_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 

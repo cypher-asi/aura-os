@@ -294,17 +294,17 @@ impl ApiError {
     /// [`crate::handlers::public::emit_limit_frame`] so the streaming
     /// surface lights the modal even when the request technically
     /// returned 200.
-    /// A platform-funded tool-action (`POST /api/orgs/:org_id/tool-actions/
-    /// :tool_name`) exceeded the per-`(user, org)` rate limit (A-C1b). Returns
-    /// HTTP 429 with a stable `code` (`tool_action_rate_limited`) so callers can
-    /// back off rather than retry-storm an endpoint that costs real platform
-    /// money per invocation.
+    /// A platform-funded Web Search call exceeded the per-user rate
+    /// limit (A-C1b). Returns HTTP 429 with a stable `code`
+    /// (`tool_action_rate_limited`) so callers can back off rather than
+    /// retry-storm an endpoint that costs real platform money per invocation.
     pub(crate) fn tool_action_rate_limited(
         max_calls: u32,
         window_secs: u64,
+        retry_after_secs: u64,
     ) -> (StatusCode, Json<Self>) {
         let message = format!(
-            "Tool-action rate limit exceeded ({max_calls} calls per {window_secs}s for this user and org). Please retry later."
+            "Web Search rate limit exceeded ({max_calls} calls per {window_secs}s for this user). Please retry later, upgrade your plan, or connect your own Brave Search API key."
         );
         (
             StatusCode::TOO_MANY_REQUESTS,
@@ -316,6 +316,9 @@ impl ApiError {
                     "code": "tool_action_rate_limited",
                     "max_calls": max_calls,
                     "window_seconds": window_secs,
+                    "retry_after_seconds": retry_after_secs,
+                    "upgrade_hint": "Upgrade your plan for higher Aura Web Search limits.",
+                    "byok_hint": "Connect your own Brave Search API key to use Web Search without Aura quota.",
                 })),
             }),
         )

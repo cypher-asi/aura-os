@@ -115,7 +115,7 @@ fn integration_payloads() -> [serde_json::Value; 12] {
             "api_key": "secret_test"
         }),
         serde_json::json!({
-            "name": "Brave Search",
+            "name": "Web Search BYOK",
             "provider": "brave_search",
             "kind": "workspace_integration",
             "api_key": "brave_test"

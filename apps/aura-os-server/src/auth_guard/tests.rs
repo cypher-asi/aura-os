@@ -375,6 +375,7 @@ fn mock_app_state_with_cache(cache: crate::state::ValidationCache) -> AppState {
         org_service: Arc::new(aura_os_orgs::OrgService::new(store.clone())),
         auth_service: Arc::new(aura_os_auth::AuthService::new()),
         billing_client: Arc::new(aura_os_billing::BillingClient::new()),
+        web_search_rate_limiter: crate::tool_action_rate_limit::ToolActionRateLimiter::default(),
         project_service: Arc::new(aura_os_projects::ProjectService::new(store.clone())),
         task_service: Arc::new(aura_os_tasks::TaskService::new(store.clone(), None)),
         agent_service: Arc::new(aura_os_agents::AgentService::new(store.clone(), None)),

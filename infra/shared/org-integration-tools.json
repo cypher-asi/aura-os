@@ -463,7 +463,7 @@
   {
     "name": "brave_search_web",
     "provider": "brave_search",
-    "description": "Search the web through a saved Brave Search org integration.",
+    "description": "Search the web using Aura Web Search.",
     "promptSignature": "brave_search_web(query, count?, freshness?, country?, search_lang?, integration_id?)",
     "inputSchema": {
       "type": "object",
@@ -482,7 +482,7 @@
   {
     "name": "brave_search_news",
     "provider": "brave_search",
-    "description": "Search recent news through a saved Brave Search org integration.",
+    "description": "Search recent news using Aura Web Search.",
     "promptSignature": "brave_search_news(query, count?, freshness?, country?, search_lang?, integration_id?)",
     "inputSchema": {
       "type": "object",

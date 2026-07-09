@@ -368,6 +368,14 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
 
     if (path === "/api/auth/session") return json(session);
     if (path === "/api/auth/validate") return json(session);
+    if (path === "/api/subscriptions/me") {
+      return json({
+        plan: "mortal",
+        is_subscribed: false,
+        monthly_credits: 2500,
+        current_period_end: null,
+      });
+    }
     if (path === "/api/update-status") {
       return json({ update: { status: "idle" }, channel: "stable", current_version: "0.0.0" });
     }

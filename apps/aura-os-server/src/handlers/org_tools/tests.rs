@@ -28,6 +28,44 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
+#[test]
+fn inactive_subscription_does_not_receive_paid_web_search_limits() {
+    let now = chrono::Utc::now();
+    let status = aura_os_billing::SubscriptionStatus {
+        plan: "sage".to_string(),
+        is_subscribed: false,
+        monthly_credits: 0,
+        current_period_end: None,
+    };
+
+    assert_eq!(
+        super::web_search_limits_for_subscription_at(&status, now),
+        crate::tool_action_rate_limit::DEFAULT_LIMITS
+    );
+}
+
+#[test]
+fn cancelled_subscription_keeps_paid_limits_through_period_end() {
+    let now = chrono::Utc::now();
+    let mut status = aura_os_billing::SubscriptionStatus {
+        plan: "sage".to_string(),
+        is_subscribed: false,
+        monthly_credits: 0,
+        current_period_end: Some((now + chrono::Duration::days(1)).to_rfc3339()),
+    };
+
+    assert_eq!(
+        super::web_search_limits_for_subscription_at(&status, now),
+        crate::tool_action_rate_limit::SAGE_LIMITS
+    );
+
+    status.current_period_end = Some((now - chrono::Duration::seconds(1)).to_rfc3339());
+    assert_eq!(
+        super::web_search_limits_for_subscription_at(&status, now),
+        crate::tool_action_rate_limit::DEFAULT_LIMITS
+    );
+}
+
 fn sample_integration(
     org_id: OrgId,
     integration_id: &str,
@@ -418,12 +456,12 @@ async fn resolve_google_integration_denies_blank_owner_user() {
     );
 }
 
-/// Spec 02 §9 soft-fallback: the reserved synthetic platform brave integration
+/// Spec 02 §9 soft-fallback: the reserved synthetic platform Web Search integration
 /// resolves its secret from `BRAVE_SEARCH_PLATFORM_KEY` only when selected by
 /// its reserved id, a real org brave integration always wins provider-based
 /// selection, and an unset env var yields a clean error (no panic).
 #[tokio::test]
-async fn platform_brave_key_is_soft_fallback_behind_real_byok() {
+async fn platform_web_search_key_is_soft_fallback_behind_legacy_org_key() {
     use super::resolve::PLATFORM_BRAVE_INTEGRATION_ID;
 
     // Keep this test self-contained: snapshot and restore the env var so it
@@ -444,7 +482,7 @@ async fn platform_brave_key_is_soft_fallback_behind_real_byok() {
         .upsert_integration(
             &org_id,
             Some(PLATFORM_BRAVE_INTEGRATION_ID),
-            "Platform Brave Search".to_string(),
+            "Platform Web Search".to_string(),
             "brave_search".to_string(),
             OrgIntegrationKind::WorkspaceIntegration,
             None,
@@ -465,7 +503,7 @@ async fn platform_brave_key_is_soft_fallback_behind_real_byok() {
     .await;
     assert!(
         unset.is_err(),
-        "platform brave fallback must error cleanly when the env var is unset"
+        "platform Web Search fallback must error cleanly when the env var is unset"
     );
 
     // (a) env set + no real org brave key → resolving the synthetic id returns

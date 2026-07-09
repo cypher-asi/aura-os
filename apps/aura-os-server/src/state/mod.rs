@@ -311,6 +311,7 @@ pub struct AppState {
     pub org_service: Arc<OrgService>,
     pub auth_service: Arc<AuthService>,
     pub billing_client: Arc<BillingClient>,
+    pub web_search_rate_limiter: crate::tool_action_rate_limit::ToolActionRateLimiter,
     pub project_service: Arc<ProjectService>,
     pub task_service: Arc<TaskService>,
     pub agent_service: Arc<AgentService>,
