@@ -190,6 +190,7 @@ mod tests {
             template_agent_id: template,
             loop_engineering: None,
             harness_base_url: "http://127.0.0.1:1".to_string(),
+            harness_auth_token: None,
             paused,
             alive: Arc::new(AtomicBool::new(alive)),
             forwarder: None,

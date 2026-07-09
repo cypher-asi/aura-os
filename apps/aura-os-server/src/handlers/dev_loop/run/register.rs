@@ -296,6 +296,7 @@ async fn finalize_registration(inputs: FinalizeInputs<'_>) {
                 .as_ref()
                 .and_then(|contract| serde_json::to_value(contract).ok()),
             harness_base_url: prep.start.harness_base_url.clone(),
+            harness_auth_token: prep.start.harness_auth_token.clone(),
             paused: false,
             alive: handles.alive.clone(),
             forwarder: Some(forwarder),

@@ -6,7 +6,7 @@ mod start_or_adopt;
 use std::sync::Arc;
 
 use aura_os_core::{AgentInstanceId, HarnessMode, Project, ProjectId};
-use aura_os_harness::{HarnessLink, LocalHarness};
+use aura_os_harness::HarnessLink;
 
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::projects_helpers::{
@@ -14,6 +14,7 @@ use crate::handlers::projects_helpers::{
 };
 use crate::state::AppState;
 
+use super::harness_transport::harness_for_base_url;
 use super::types::StartContext;
 
 pub(super) use params::{build_start_params, StartParamsInputs};
@@ -146,7 +147,7 @@ fn normalize_permissions(
 /// URL and bearer token to drive it.
 ///
 /// Both modes ride the canonical `POST /v1/run` + `WS /stream/:run_id`
-/// surface via [`LocalHarness`]; they differ only in base URL and
+/// surface; they differ only in base URL and
 /// auth. Local shares `state.local_harness` (identity travels in the
 /// request body, no Authorization header — matching the pre-migration
 /// no-auth `AutomatonClient`); swarm builds a per-request transport
@@ -175,7 +176,7 @@ fn automaton_client_for_mode(
                 swarm_agent_id
             );
             Ok((
-                Arc::new(LocalHarness::new(agent_base.clone())),
+                Arc::new(harness_for_base_url(agent_base.clone(), Some(jwt))),
                 agent_base,
                 Some(jwt.to_string()),
             ))

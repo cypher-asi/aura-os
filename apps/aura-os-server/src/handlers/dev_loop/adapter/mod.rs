@@ -11,7 +11,7 @@ use aura_os_core::ProjectId;
 
 use crate::dto::LoopStatusResponse;
 use crate::error::ApiResult;
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 use super::control::control_loop;
 use super::registry::status_response;
@@ -24,6 +24,7 @@ pub(crate) use start_loop::start_loop;
 
 pub(crate) async fn pause_loop(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
@@ -32,12 +33,14 @@ pub(crate) async fn pause_loop(
         project_id,
         params.agent_instance_id,
         ControlAction::Pause,
+        Some(&jwt),
     )
     .await
 }
 
 pub(crate) async fn stop_loop(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
@@ -46,12 +49,14 @@ pub(crate) async fn stop_loop(
         project_id,
         params.agent_instance_id,
         ControlAction::Stop,
+        Some(&jwt),
     )
     .await
 }
 
 pub(crate) async fn resume_loop(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
@@ -60,12 +65,14 @@ pub(crate) async fn resume_loop(
         project_id,
         params.agent_instance_id,
         ControlAction::Resume,
+        Some(&jwt),
     )
     .await
 }
 
 pub(crate) async fn get_loop_status(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
     let mut response = status_response(&state, project_id, None).await;
@@ -77,7 +84,9 @@ pub(crate) async fn get_loop_status(
     // the ordinary `POST /loop/start` conflict path and re-light the
     // AutomationBar / spinners.
     if !response.running {
-        if let Some(handle) = super::run_handles::find_detached_run(&state, project_id).await {
+        if let Some(handle) =
+            super::run_handles::find_detached_run(&state, project_id, Some(&jwt)).await
+        {
             response.running = true;
             response.loop_state = Some("detached".to_string());
             response.agent_instance_id = Some(handle.agent_instance_id);

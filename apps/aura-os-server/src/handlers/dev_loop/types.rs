@@ -23,10 +23,9 @@ pub(crate) struct LoopQueryParams {
 
 pub(super) struct StartContext {
     /// Canonical harness transport for this run's mode. Local runs share
-    /// `state.local_harness`; swarm runs get a per-request
-    /// [`aura_os_harness::LocalHarness`] pointed at the gateway's
-    /// `/v1/agents/:id` base (the same POST `/v1/run` + WS `/stream`
-    /// surface, just a different base URL).
+    /// `state.local_harness`; swarm runs get a per-request transport
+    /// pointed at the gateway's `/v1/agents/:id` base with the caller
+    /// JWT installed as transport auth.
     pub(super) client: Arc<dyn HarnessLink>,
     /// Base URL the `client` talks to. Retained separately because the
     /// `HarnessLink` trait is transport-only (no `base_url()` accessor);
