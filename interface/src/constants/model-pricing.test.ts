@@ -14,6 +14,8 @@ describe("normalizePricingKey", () => {
     expect(normalizePricingKey("aura-claude-fable-5")).toBe("claude-fable-5");
     expect(normalizePricingKey("aura-gpt-5-5")).toBe("gpt-5.5");
     expect(normalizePricingKey("aura-gpt-5-4-mini")).toBe("gpt-5.4-mini");
+    expect(normalizePricingKey("aura-grok-4-5")).toBe("grok-4.5");
+    expect(normalizePricingKey("xai/grok-4.5")).toBe("grok-4.5");
     expect(normalizePricingKey("aura-grok-4-3")).toBe("grok-4.3");
     expect(normalizePricingKey("xai/grok-4.3")).toBe("grok-4.3");
     expect(normalizePricingKey("aura-grok-build-0-1")).toBe("grok-build-0.1");
@@ -29,6 +31,13 @@ describe("normalizePricingKey", () => {
 
 describe("resolvePricing for xAI Grok", () => {
   it("resolves aura aliases and raw names to the xAI table", () => {
+    const flagship = resolvePricing("aura-grok-4-5");
+    expect(flagship.provider).toBe("xai");
+    expect(flagship.model).toBe("grok-4.5");
+    expect(flagship.input).toBe(2);
+    expect(flagship.output).toBe(6);
+    expect(flagship.cacheRead).toBe(0.5);
+
     const grok = resolvePricing("aura-grok-4-3");
     expect(grok.provider).toBe("xai");
     expect(grok.model).toBe("grok-4.3");

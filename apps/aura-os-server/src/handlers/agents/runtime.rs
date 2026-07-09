@@ -236,10 +236,10 @@ fn non_empty_string(value: &str) -> Option<String> {
 /// verbatim.
 ///
 /// Stable cache key strategy: pass `Some(cache_key)` derived from the
-/// agent / instance / session identity so OpenAI-family routing can pin
-/// the prefix on the upstream provider. `retention` defaults to the
-/// shorter in-memory TTL when `None`; pass `Some("24h")` for long-lived
-/// project agents whose context survives idle gaps.
+/// agent / instance / session identity so OpenAI-family and xAI/Grok
+/// routing can pin the prefix on the upstream provider. `retention`
+/// defaults to the shorter in-memory TTL when `None`; pass `Some("24h")`
+/// for long-lived project agents whose context survives idle gaps.
 pub(crate) fn session_model_overrides_with_cache(
     model: Option<&str>,
     cache_key: Option<String>,
@@ -251,7 +251,8 @@ pub(crate) fn session_model_overrides_with_cache(
         .map(str::to_string);
     // The key is forwarded to the harness, which owns the single
     // length-clamp chokepoint (OpenAI's 64-char `prompt_cache_key`
-    // limit) before the value reaches aura-router / OpenAI.
+    // limit) before the value reaches aura-router / provider cache
+    // controls.
     let cache_key = cache_key
         .map(|v| v.trim().to_string())
         .filter(|v| !v.is_empty());
