@@ -85,8 +85,9 @@ pub struct SessionModelOverrides {
     /// directives should be attached.
     #[serde(default)]
     pub prompt_caching_enabled: Option<bool>,
-    /// Optional stable cache key forwarded to aura-router for
-    /// OpenAI-family prompt caching.
+    /// Optional stable cache key forwarded to aura-router for provider
+    /// prompt-cache affinity, such as OpenAI `prompt_cache_key` and
+    /// xAI/Grok `x-grok-conv-id`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_cache_key: Option<String>,
     /// Optional retention hint paired with [`Self::prompt_cache_key`].

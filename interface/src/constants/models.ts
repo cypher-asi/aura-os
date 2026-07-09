@@ -158,6 +158,7 @@ const GEMINI_FLASH_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
  * The router maps Aura's `minimal` UI tier to xAI's `none` value.
  */
 const XAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
+const XAI_GROK_4_5_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
 export type ModelProviderGroup =
   | "aura"
@@ -363,6 +364,21 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
       "Open-weight 120B reasoning model with selectable effort tiers and a 128K context window.",
   },
   // ── xAI ─────────────────────────────────────────────────────
+  {
+    id: "aura-grok-4-5",
+    label: "Grok 4.5",
+    tier: "opus",
+    mode: "chat",
+    vendor: "xai",
+    creditMultiplier: 1.44,
+    contextWindow: 500_000,
+    efforts: XAI_GROK_4_5_EFFORTS,
+    defaultEffort: "high",
+    provider: "xAI",
+    description:
+      "xAI's latest flagship for coding, agentic tasks, and knowledge work, with configurable reasoning and a 500K context window.",
+    featured: true,
+  },
   {
     id: "aura-grok-4-3",
     label: "Grok 4.3",
@@ -959,6 +975,9 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "gpt-5.4": "aura-gpt-5-4",
   "gpt-5.4-mini": "aura-gpt-5-4-mini",
   "gpt-5.4-nano": "aura-gpt-5-4-nano",
+  "aura-grok-4-5": "aura-grok-4-5",
+  "grok-4.5": "aura-grok-4-5",
+  "xai/grok-4.5": "aura-grok-4-5",
   "aura-grok-4-3": "aura-grok-4-3",
   "grok-4.3": "aura-grok-4-3",
   "xai/grok-4.3": "aura-grok-4-3",

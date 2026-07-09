@@ -6,7 +6,14 @@ import {
 
 describe("model effort wire helpers", () => {
   it("keeps supported efforts for reasoning-capable models", () => {
+    expect(supportedReasoningEffort("aura-grok-4-5", "high")).toBe("high");
     expect(supportedReasoningEffort("aura-grok-4-3", "high")).toBe("high");
+  });
+
+  it("omits unsupported Grok 4.5 reasoning efforts", () => {
+    expect(supportedReasoningEffort("aura-grok-4-5", "minimal")).toBe(
+      undefined,
+    );
   });
 
   it("omits stale efforts for models without effort controls", () => {
