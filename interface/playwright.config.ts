@@ -27,6 +27,7 @@ export default defineConfig({
       name: "desktop-chromium",
       testMatch: [
         "**/layout-capability.desktop.spec.ts",
+        "**/notifications.desktop.spec.ts",
         "**/responsive-unification.spec.ts",
         "**/desktop-visual.spec.ts",
         "**/team-settings-integrations.spec.ts",

@@ -7,7 +7,7 @@ use tao::window::{Icon, ResizeDirection, Window, WindowBuilder, WindowId};
 use tracing::{debug, info, warn};
 use wry::{WebContext, WebView, WebViewBuilder};
 
-use crate::events::{UserEvent, WinCmd};
+use crate::events::{NativeNotificationPayload, UserEvent, WinCmd};
 use crate::init::env::ci_mode_enabled;
 use crate::ui::chrome::{
     disable_window_background_erase, disable_window_transitions, expand_top_resize_border,
@@ -16,6 +16,21 @@ use crate::ui::chrome::{
 use crate::ui::icon::IconData;
 
 const INITIAL_BLANK_PAGE_URL: &str = "about:blank";
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum StructuredIpcMessage {
+    NativeNotification { payload: NativeNotificationPayload },
+}
+
+fn parse_structured_ipc_message(
+    message: &str,
+) -> Option<Result<StructuredIpcMessage, serde_json::Error>> {
+    if !message.starts_with('{') {
+        return None;
+    }
+    Some(serde_json::from_str(message))
+}
 #[cfg(target_os = "macos")]
 fn initial_main_window_visible() -> bool {
     !ci_mode_enabled()
@@ -52,6 +67,18 @@ pub(crate) fn ipc_handler(
 ) -> impl Fn(wry::http::Request<String>) + 'static {
     move |req: wry::http::Request<String>| {
         let msg = req.body().trim();
+        if let Some(parsed) = parse_structured_ipc_message(msg) {
+            match parsed {
+                Ok(StructuredIpcMessage::NativeNotification { payload }) => {
+                    debug!(id = %payload.id, "IPC native notification request");
+                    let _ = proxy.send_event(UserEvent::NativeNotification { window_id, payload });
+                }
+                Err(error) => {
+                    warn!(%error, message = msg, "invalid structured IPC message");
+                }
+            }
+            return;
+        }
         if matches!(msg, "splash-ready" | "ready") {
             debug!(message = msg, "IPC window reveal signal");
             let _ = proxy.send_event(UserEvent::ShowWindow { window_id });
@@ -98,6 +125,35 @@ pub(crate) fn ipc_handler(
             debug!(command = msg, "IPC event");
             let _ = proxy.send_event(UserEvent::WindowCommand { window_id, cmd: c });
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_native_notification_ipc_message() {
+        let parsed = parse_structured_ipc_message(
+            r#"{"type":"native_notification","payload":{"id":"task:1","title":"Task complete","body":"Build finished","sound":false,"badgeCount":2}}"#,
+        )
+        .expect("structured JSON should be parsed")
+        .expect("native notification IPC should deserialize");
+
+        match parsed {
+            StructuredIpcMessage::NativeNotification { payload } => {
+                assert_eq!(payload.id, "task:1");
+                assert_eq!(payload.title, "Task complete");
+                assert_eq!(payload.body.as_deref(), Some("Build finished"));
+                assert!(!payload.sound);
+                assert_eq!(payload.badge_count, Some(2));
+            }
+        }
+    }
+
+    #[test]
+    fn ignores_plain_string_ipc_messages() {
+        assert!(parse_structured_ipc_message("ready").is_none());
     }
 }
 

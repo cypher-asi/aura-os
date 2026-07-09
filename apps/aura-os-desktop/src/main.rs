@@ -12,6 +12,7 @@ mod handlers;
 mod harness;
 mod init;
 mod net;
+mod notifications;
 mod release_version;
 mod route_state;
 mod ui;

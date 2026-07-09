@@ -28,6 +28,8 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useDesktopBackgroundStore } from "../../stores/desktop-background-store";
 import { useDesktopWindowStore } from "../../stores/desktop-window-store";
 import { useEffectiveMode } from "../../stores/use-effective-mode";
+import { useTaskNotifications } from "../../hooks/use-task-notifications";
+import { ToastViewport } from "../Toast";
 import { AuraTitlebar } from "./AuraTitlebar";
 import { AuraSidebar } from "./AuraSidebar";
 import type { LaneResizeControls } from "../Lane";
@@ -115,6 +117,7 @@ export function AuraShell(): React.ReactElement {
   // right sidekick lane, titlebar split/sidekick toggles, and the
   // host settings entry. Public mode strips all of it.
   const isStandard = mode === "standard";
+  useTaskNotifications(isStandard);
 
   // Every primary public marketing page paints the same dark-mode
   // diagonal gradient on the shell frame (see `.shell::before` in
@@ -371,6 +374,7 @@ export function AuraShell(): React.ReactElement {
           />
         </Suspense>
       ) : null}
+      {isStandard ? <ToastViewport /> : null}
     </>
   );
 }

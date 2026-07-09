@@ -1,5 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent } from "@testing-library/react";
+import { NotificationKind } from "../../../shared/types/notifications";
+import { useNotificationPreferencesStore } from "../../../stores/notification-preferences-store";
 
 vi.mock("@cypher-asi/zui", () => ({
   Panel: ({
@@ -25,12 +28,29 @@ vi.mock("./NotificationsSection.module.css", () => ({
 import { NotificationsSection } from "./NotificationsSection";
 
 describe("NotificationsSection", () => {
-  it("renders the placeholder copy", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useNotificationPreferencesStore.getState().reset();
+  });
+
+  it("renders desktop notification controls", () => {
     render(<NotificationsSection />);
 
     expect(screen.getByTestId("settings-notifications-panel")).toBeInTheDocument();
+    expect(screen.getByText(/desktop notifications/i)).toBeInTheDocument();
+    expect(screen.getByText(/browser notifications/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/coming soon/i)).toHaveLength(4);
+  });
+
+  it("updates persisted type preferences", () => {
+    render(<NotificationsSection />);
+
+    fireEvent.click(screen.getByLabelText(/task completions/i));
+
     expect(
-      screen.getByText(/notification settings will appear here/i),
-    ).toBeInTheDocument();
+      useNotificationPreferencesStore.getState().preferences.types[
+        NotificationKind.TaskCompleted
+      ],
+    ).toBe(false);
   });
 });
