@@ -2,18 +2,17 @@
   {
     "date": "2026-07-09",
     "channel": "nightly",
-    "version": "0.1.0-nightly.746.1",
-    "title": "Authenticated control for hosted dev-loop harnesses",
-    "intro": "A focused nightly that fixes authentication when the swarm dev loop talks to a hosted harness, so pause, stop, resume, and status calls now carry the caller's credentials end to end.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.747.1",
+    "title": "Hosted dev-loop auth and quieter task completion toasts",
+    "intro": "Today's nightly threads together two focused fixes: the swarm dev-loop can now authenticate against the hosted harness end-to-end, and the desktop interface stops double-firing task completion notifications when a run wraps up.",
+    "entryCount": 2,
     "highlights": [
-      "Hosted dev-loop harness now receives auth tokens",
-      "Pause, stop, resume, and status propagate the caller JWT",
-      "New harness_transport layer centralizes harness calls"
+      "Hosted harness auth token now flows through dev-loop control",
+      "Task completion toasts and OS notifications are deduplicated against terminal loop events"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-07-09T07:01:21.335Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.746.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-07-09T08:58:24.098Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.747.1",
     "path": "history/2026-07-09.json"
   },
   {
