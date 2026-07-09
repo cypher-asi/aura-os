@@ -2,17 +2,18 @@
   {
     "date": "2026-07-09",
     "channel": "nightly",
-    "version": "0.1.0-nightly.747.1",
-    "title": "Hosted dev-loop auth and quieter task completion toasts",
-    "intro": "Today's nightly threads together two focused fixes: the swarm dev-loop can now authenticate against the hosted harness end-to-end, and the desktop interface stops double-firing task completion notifications when a run wraps up.",
+    "version": "0.1.0-nightly.748.1",
+    "title": "Grok 4.5 lands, plus quieter task alerts and authenticated swarm loops",
+    "intro": "Today's nightly brings xAI's Grok 4.5 into the model catalog with full pricing and cache-key support, tightens task-completion notifications so you no longer get double-pinged when a run wraps, and hardens authentication for hosted swarm dev-loops.",
     "entryCount": 2,
     "highlights": [
-      "Hosted harness auth token now flows through dev-loop control",
-      "Task completion toasts and OS notifications are deduplicated against terminal loop events"
+      "Grok 4.5 available across the model catalog",
+      "No more duplicate task-completion toasts",
+      "Hosted swarm dev-loop control now carries auth"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-07-09T08:58:24.098Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.747.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-07-09T09:57:20.915Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.748.1",
     "path": "history/2026-07-09.json"
   },
   {
