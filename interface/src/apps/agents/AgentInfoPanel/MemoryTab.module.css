@@ -1,8 +1,156 @@
+.continuityCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 12px 4px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 42%),
+    var(--color-bg-subtle);
+}
+
+.continuityHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.continuityHeader > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.continuityHeader strong,
+.controlRow strong {
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+
+.continuityHeader span,
+.controlRow small {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+}
+
+.continuityIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.privacyIcon {
+  color: var(--color-success);
+}
+
+.controlRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+}
+
+.controlRow > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.controlRow input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-accent);
+}
+
+.selectGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.selectGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.selectGrid select {
+  min-width: 0;
+  height: 30px;
+  padding: 0 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 11px;
+}
+
+.traceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.traceRow span {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.traceRow strong {
+  color: var(--color-text-secondary);
+}
+
 .filterRow {
   display: flex;
   gap: var(--space-1, 4px);
   padding: var(--space-2, 8px) var(--space-3, 12px);
   border-bottom: 1px solid var(--color-border);
+}
+
+.pinButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.pinButton:hover,
+.pinButtonActive {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+@media (max-width: 340px) {
+  .selectGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .filterChip {
@@ -30,6 +178,16 @@
 .badge {
   font-size: 10px;
   color: var(--color-text-muted);
+}
+
+.badge[data-status="pending"] {
+  color: var(--color-warning);
+}
+
+.badge[data-status="superseded"],
+.badge[data-status="rejected"] {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
 }
 
 .errorState {

@@ -10,6 +10,9 @@ interface MockAuthenticatedAppOptions {
   skillCatalog?: Record<string, unknown>[];
   agentSkillInstallations?: Record<string, Record<string, unknown>[]>;
   remoteAgentStates?: Record<string, Record<string, unknown>>;
+  memorySnapshots?: Record<string, Record<string, unknown>>;
+  memoryConfigs?: Record<string, Record<string, unknown>>;
+  memoryTraces?: Record<string, Record<string, unknown> | null>;
   integrations?: Record<string, unknown>[];
   tasks?: Record<string, unknown>[];
   specs?: Record<string, unknown>[];
@@ -164,6 +167,24 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     contributors: 3,
     estimated_cost_usd: 7.84,
   };
+  const memorySnapshots = new Map(
+    Object.entries(options.memorySnapshots ?? {}).map(([agentId, snapshot]) => [
+      agentId,
+      structuredClone(snapshot),
+    ]),
+  );
+  const memoryConfigs = new Map(
+    Object.entries(options.memoryConfigs ?? {}).map(([agentId, config]) => [
+      agentId,
+      structuredClone(config),
+    ]),
+  );
+  const memoryTraces = new Map(
+    Object.entries(options.memoryTraces ?? {}).map(([agentId, trace]) => [
+      agentId,
+      trace ? structuredClone(trace) : null,
+    ]),
+  );
 
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
@@ -583,6 +604,66 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       return json(comments);
     }
     if (pathname.startsWith("/api/activity/") && pathname.endsWith("/comments")) return json([]);
+
+    const memoryRoot = pathname.match(/^\/api\/harness\/agents\/([^/]+)\/memory$/);
+    if (memoryRoot) {
+      const snapshot = memorySnapshots.get(memoryRoot[1]);
+      if (!snapshot) return json({ facts: [], events: [], procedures: [] });
+      return json(snapshot);
+    }
+
+    const continuityPath = pathname.match(/^\/api\/harness\/agents\/([^/]+)\/memory\/continuity$/);
+    if (continuityPath) {
+      const agentId = continuityPath[1];
+      if (method === "PUT") {
+        const next = JSON.parse(route.request().postData() || "{}");
+        memoryConfigs.set(agentId, next);
+        return json(next);
+      }
+      return json(memoryConfigs.get(agentId) ?? {
+        use_memory: true,
+        generate_memory: true,
+        write_policy: "automatic",
+        retrieval_mode: "query_aware",
+        allow_user_scope: false,
+        allow_workspace_scope: false,
+      });
+    }
+
+    const retrievalTracePath = pathname.match(/^\/api\/harness\/agents\/([^/]+)\/memory\/retrieval\/latest$/);
+    if (retrievalTracePath) {
+      return json(memoryTraces.get(retrievalTracePath[1]) ?? null);
+    }
+
+    const memoryFactPath = pathname.match(/^\/api\/harness\/agents\/([^/]+)\/memory\/facts\/([^/]+)$/);
+    if (memoryFactPath && method === "PUT") {
+      const [, agentId, factId] = memoryFactPath;
+      const snapshot = memorySnapshots.get(agentId) ?? { facts: [], events: [], procedures: [] };
+      const body = JSON.parse(route.request().postData() || "{}");
+      const facts = Array.isArray(snapshot.facts) ? snapshot.facts : [];
+      const current = facts.find((fact) => fact && typeof fact === "object" && "fact_id" in fact && fact.fact_id === factId);
+      const updated = { ...(current && typeof current === "object" ? current : {}), ...body, fact_id: factId };
+      memorySnapshots.set(agentId, {
+        ...snapshot,
+        facts: facts.map((fact) => fact && typeof fact === "object" && "fact_id" in fact && fact.fact_id === factId ? updated : fact),
+      });
+      return json(updated);
+    }
+
+    const memoryProcedurePath = pathname.match(/^\/api\/harness\/agents\/([^/]+)\/memory\/procedures\/([^/]+)$/);
+    if (memoryProcedurePath && method === "PUT") {
+      const [, agentId, procedureId] = memoryProcedurePath;
+      const snapshot = memorySnapshots.get(agentId) ?? { facts: [], events: [], procedures: [] };
+      const body = JSON.parse(route.request().postData() || "{}");
+      const procedures = Array.isArray(snapshot.procedures) ? snapshot.procedures : [];
+      const current = procedures.find((procedure) => procedure && typeof procedure === "object" && "procedure_id" in procedure && procedure.procedure_id === procedureId);
+      const updated = { ...(current && typeof current === "object" ? current : {}), ...body, procedure_id: procedureId };
+      memorySnapshots.set(agentId, {
+        ...snapshot,
+        procedures: procedures.map((procedure) => procedure && typeof procedure === "object" && "procedure_id" in procedure && procedure.procedure_id === procedureId ? updated : procedure),
+      });
+      return json(updated);
+    }
 
     const matchingAgent = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}`);
     if (matchingAgent) return json(matchingAgent);

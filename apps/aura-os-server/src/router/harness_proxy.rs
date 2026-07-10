@@ -55,6 +55,14 @@ pub(super) fn harness_proxy_routes() -> Router<AppState> {
             get(harness_proxy::get_memory_stats),
         )
         .route(
+            "/api/harness/agents/:agent_id/memory/continuity",
+            get(harness_proxy::get_continuity_config).put(harness_proxy::update_continuity_config),
+        )
+        .route(
+            "/api/harness/agents/:agent_id/memory/retrieval/latest",
+            get(harness_proxy::get_latest_retrieval_trace),
+        )
+        .route(
             "/api/harness/agents/:agent_id/memory/consolidate",
             post(harness_proxy::trigger_consolidation),
         )
