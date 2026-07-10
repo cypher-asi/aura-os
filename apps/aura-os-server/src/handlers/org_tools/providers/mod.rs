@@ -6,10 +6,12 @@
 //! the previous big match in `org_tools.rs::dispatch_app_provider_tool`.
 
 use aura_os_core::OrgId;
-use aura_os_integrations::{trusted_integration_method_by_tool, AppProviderKind};
+use aura_os_integrations::{
+    trusted_integration_method_by_tool, AppProviderKind, PLATFORM_WEB_SEARCH_INTEGRATION_ID,
+};
 use serde_json::Value;
 
-use super::resolve::resolve_org_integration_fail_loud;
+use super::resolve::resolve_trusted_org_integration;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::trusted_runtime::execute_trusted_integration_tool;
 use crate::state::AppState;
@@ -29,18 +31,20 @@ pub(super) async fn dispatch_app_provider_tool(
     kind: AppProviderKind,
     state: &AppState,
     org_id: &OrgId,
+    access_token: &str,
     user_id: &str,
     tool_name: &str,
     args: &Value,
 ) -> ApiResult<Value> {
     if let Some(method) = trusted_integration_method_by_tool(tool_name) {
-        // A-H2: trusted integration tools are cost-incurring. Resolve via the
-        // fail-loud path so a degraded canonical integrations service returns
-        // 503 instead of silently executing a paid call with a possibly-stale
-        // local-shadow secret.
         let integration =
-            resolve_org_integration_fail_loud(state, org_id, &method.provider, Some(user_id), args)
+            resolve_trusted_org_integration(state, org_id, &method.provider, Some(user_id), args)
                 .await?;
+        if kind == AppProviderKind::BraveSearch
+            && integration.metadata.integration_id == PLATFORM_WEB_SEARCH_INTEGRATION_ID
+        {
+            super::enforce_platform_web_search_quota(state, access_token, user_id).await?;
+        }
         return execute_trusted_integration_tool(
             &state.http_client,
             kind,
@@ -57,10 +61,7 @@ pub(super) async fn dispatch_app_provider_tool(
         AppProviderKind::Linear => linear::dispatch(state, org_id, tool_name, args).await,
         AppProviderKind::Slack => slack::dispatch(state, org_id, tool_name, args).await,
         AppProviderKind::Notion => notion::dispatch(state, org_id, tool_name, args).await,
-        // BraveSearch tools always match trusted_integration_method_by_tool above and
-        // return early, so this arm is unreachable in practice. Fail loud with a
-        // server error (rather than panicking) if a future change ever routes a
-        // brave tool through the app-provider match.
+        // Brave tools are defined in the trusted method catalog above.
         AppProviderKind::BraveSearch => Err(ApiError::internal(
             "brave search tools must dispatch through the trusted-integration path",
         )),

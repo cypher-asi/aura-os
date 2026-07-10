@@ -100,24 +100,6 @@ pub(super) fn resolve_effective_org_id(
     })
 }
 
-pub(super) async fn fetch_org_integrations(
-    state: &AppState,
-    org_id: Option<&OrgId>,
-    jwt: &str,
-) -> Option<Vec<aura_os_core::OrgIntegration>> {
-    match org_id {
-        Some(org_id) => Some(
-            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
-                state,
-                org_id,
-                Some(jwt),
-            )
-            .await,
-        ),
-        None => None,
-    }
-}
-
 /// Prefer the parent agent's *current* permissions bundle over the
 /// instance-time snapshot so a toggle flip on the agent template's
 /// `PermissionsTab` takes effect on the very next turn of every
@@ -142,41 +124,4 @@ pub(super) async fn normalize_instance_perms(
         .normalized_for_identity(&instance.name, Some(instance.role.as_str()))
         .with_subagent_caps()
         .with_project_self_caps(pid_str)
-}
-
-pub(super) fn installed_workspace_integrations(
-    org_id: Option<&OrgId>,
-    org_integrations: Option<&[aura_os_core::OrgIntegration]>,
-) -> Option<Vec<aura_os_harness::InstalledIntegration>> {
-    match (org_id, org_integrations) {
-        (Some(_), Some(ints)) => {
-            let mut installed =
-                crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
-                    ints,
-                );
-            // Gating-only synthetic platform Web Search integration (Spec 02,
-            // Gate B). Injected only when platform search can execute locally
-            // (cloud key) or via a cloud callback origin (desktop), and no real
-            // org brave integration already covers it (legacy soft-fallback).
-            // The synthetic carries no secret; the tool's runtime_execution stays
-            // None so the server-callback path (D5) resolves the platform key.
-            if aura_os_integrations::platform_brave_tool_actions_available()
-                && !installed.iter().any(|i| i.provider == "brave_search")
-            {
-                installed.push(synthetic_platform_brave_integration());
-            }
-            (!installed.is_empty()).then_some(installed)
-        }
-        _ => None,
-    }
-}
-
-fn synthetic_platform_brave_integration() -> aura_os_harness::InstalledIntegration {
-    aura_os_harness::InstalledIntegration {
-        integration_id: crate::handlers::org_tools::PLATFORM_BRAVE_INTEGRATION_ID.to_string(),
-        name: "Web Search".to_string(),
-        provider: "brave_search".to_string(),
-        kind: "workspace_integration".to_string(),
-        metadata: std::collections::HashMap::new(),
-    }
 }

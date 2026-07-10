@@ -8,6 +8,9 @@ use tracing::info;
 
 use crate::dto::SendChatRequest;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::workspace_tools::{
+    installed_workspace_integrations_for_session, integrations_for_optional_org_with_token,
+};
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::plan_mode::{is_plan_mode_action, session_tool_permissions};
 use crate::handlers::projects_helpers::{is_project_tool_action, project_tool_max_turns};
@@ -34,10 +37,7 @@ mod persistence;
 mod prompt;
 mod resolve;
 
-use helpers::{
-    fetch_org_integrations, installed_workspace_integrations, resolve_effective_org_id,
-    resolve_effective_project_id,
-};
+use helpers::{resolve_effective_org_id, resolve_effective_project_id};
 use persistence::{
     load_history_for_agent, load_persistence_only, log_history_size, log_persistence_status,
     LoadAgentHistoryCtx,
@@ -237,7 +237,8 @@ pub(crate) async fn send_agent_event_stream(
         .or_else(|| active_mixture.map(|_| aura_os_harness::CouncilMechanism::Synthesize));
     let council_presentation = active_mixture.map(|_| second_opinion_presentation());
 
-    let org_integrations = fetch_org_integrations(&state, effective_org_id.as_ref(), &jwt).await;
+    let org_integrations =
+        integrations_for_optional_org_with_token(&state, effective_org_id.as_ref(), &jwt).await;
     let normalized_perms = normalize_agent_perms(&agent, effective_project_id.as_deref());
     let agent_id_string = agent_id.to_string();
 
@@ -255,7 +256,7 @@ pub(crate) async fn send_agent_event_stream(
     )
     .await?;
     let installed_integrations =
-        installed_workspace_integrations(effective_org_id.as_ref(), org_integrations.as_deref());
+        installed_workspace_integrations_for_session(org_integrations.as_deref());
 
     // Mirror the cap applied in `instance_route.rs::send_event_stream`:
     // tool-driven actions like `generate_specs` get bounded so a

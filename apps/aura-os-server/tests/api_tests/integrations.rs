@@ -1,43 +1,40 @@
+use std::sync::Arc;
+
 use axum::body::Body;
+use axum::extract::{Path, State};
 use axum::http::{Request, StatusCode};
+use axum::routing::get;
+use axum::{Json, Router};
 use tower::ServiceExt;
 
+use aura_os_billing::BillingClient;
 use aura_os_core::*;
+use aura_os_integrations::PLATFORM_BRAVE_KEY_ENV;
 
 use crate::common::*;
 
 use super::integration_actions::*;
 use super::integration_setup::{create_test_integrations, ProviderEnvGuard};
 
-/// Serializes tests that mutate the process-global `BRAVE_SEARCH_PLATFORM_KEY`
-/// so they never observe one another's writes under cargo's parallel test
-/// threads. Mirrors the `env_lock` pattern in
-/// `tests/remote_harness_base_url_test.rs`.
-fn platform_key_env_lock() -> &'static std::sync::Mutex<()> {
-    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+fn platform_key_env_lock() -> &'static tokio::sync::Mutex<()> {
+    static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
     &LOCK
 }
 
-/// RAII snapshot/restore guard for `BRAVE_SEARCH_PLATFORM_KEY`. Restores the
-/// previous value (or unset state) on drop, so an assertion panic mid-test
-/// cannot leak a dirty env var into another test. Mirrors `EnvGuard` in
-/// `tests/remote_harness_base_url_test.rs`.
 struct PlatformKeyEnvGuard {
     prev: Option<String>,
 }
 
 impl PlatformKeyEnvGuard {
-    const KEY: &'static str = "BRAVE_SEARCH_PLATFORM_KEY";
-
     fn set(value: &str) -> Self {
-        let prev = std::env::var(Self::KEY).ok();
-        std::env::set_var(Self::KEY, value);
+        let prev = std::env::var(PLATFORM_BRAVE_KEY_ENV).ok();
+        std::env::set_var(PLATFORM_BRAVE_KEY_ENV, value);
         Self { prev }
     }
 
     fn unset() -> Self {
-        let prev = std::env::var(Self::KEY).ok();
-        std::env::remove_var(Self::KEY);
+        let prev = std::env::var(PLATFORM_BRAVE_KEY_ENV).ok();
+        std::env::remove_var(PLATFORM_BRAVE_KEY_ENV);
         Self { prev }
     }
 }
@@ -45,21 +42,137 @@ impl PlatformKeyEnvGuard {
 impl Drop for PlatformKeyEnvGuard {
     fn drop(&mut self) {
         match &self.prev {
-            Some(value) => std::env::set_var(Self::KEY, value),
-            None => std::env::remove_var(Self::KEY),
+            Some(value) => std::env::set_var(PLATFORM_BRAVE_KEY_ENV, value),
+            None => std::env::remove_var(PLATFORM_BRAVE_KEY_ENV),
         }
     }
 }
 
-#[allow(clippy::await_holding_lock)]
+type TestApp = (Router, aura_os_server::AppState, tempfile::TempDir);
+
+async fn start_test_server(app: Router) -> String {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+    url
+}
+
+fn build_isolated_test_app(
+    network_url: &str,
+    billing_client: Option<Arc<BillingClient>>,
+) -> TestApp {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(aura_os_store::SettingsStore::open(store_dir.path()).unwrap());
+    let (app, state) = build_test_app_from_store(
+        store,
+        store_dir.path().to_path_buf(),
+        Some(Arc::new(aura_os_network::NetworkClient::with_base_url(
+            network_url,
+        ))),
+        None,
+        None,
+        billing_client,
+    );
+    (app, state, store_dir)
+}
+
+fn owner_members_app() -> Router {
+    Router::new().route(
+        "/api/orgs/:org_id/members",
+        get(|Path(org_id): Path<String>| async move {
+            Json(vec![serde_json::json!({
+                "userId": "u1",
+                "orgId": org_id,
+                "role": "owner",
+            })])
+        }),
+    )
+}
+
+async fn start_mock_subscription_billing(plan: &str) -> Arc<BillingClient> {
+    async fn subscription_status(State(plan): State<String>) -> Json<serde_json::Value> {
+        Json(serde_json::json!({
+            "plan": plan,
+            "is_subscribed": plan != "mortal",
+            "monthly_credits": 0,
+            "current_period_end": null,
+        }))
+    }
+
+    let app = Router::new()
+        .route("/v1/subscriptions/me", get(subscription_status))
+        .with_state(plan.to_string());
+    Arc::new(BillingClient::with_base_url(start_test_server(app).await))
+}
+
+async fn build_test_app_with_org_membership() -> TestApp {
+    build_test_app_with_org_membership_and_billing_plan("mortal").await
+}
+
+async fn build_test_app_with_org_membership_and_billing_plan(plan: &str) -> TestApp {
+    let billing_client = start_mock_subscription_billing(plan).await;
+    build_test_app_with_org_membership_and_billing_client(billing_client).await
+}
+
+async fn build_test_app_with_org_membership_and_billing_client(
+    billing_client: Arc<BillingClient>,
+) -> TestApp {
+    let network_url = start_test_server(owner_members_app()).await;
+    build_isolated_test_app(&network_url, Some(billing_client))
+}
+
+async fn build_test_app_with_empty_canonical_integrations() -> TestApp {
+    let network_url = start_test_server(owner_members_app()).await;
+
+    let integrations_app = Router::new()
+        .route(
+            "/api/orgs/:org_id/integrations",
+            get(|| async { Json::<Vec<serde_json::Value>>(vec![]) }),
+        )
+        .route(
+            "/internal/orgs/:org_id/integrations",
+            get(|| async { Json::<Vec<serde_json::Value>>(vec![]) }),
+        );
+    let integrations_url = start_test_server(integrations_app).await;
+    let integrations_client = Arc::new(aura_os_integrations::IntegrationsClient::with_base_url(
+        &integrations_url,
+        "test-internal-token",
+    ));
+    let billing_client = start_mock_subscription_billing("mortal").await;
+    let (_app, mut state, store_dir) = build_isolated_test_app(&network_url, Some(billing_client));
+    state.integrations_client = Some(integrations_client);
+    let app = aura_os_server::create_router_with_interface(state.clone(), None);
+    (app, state, store_dir)
+}
+
+async fn build_test_app_without_org_membership() -> TestApp {
+    let members_app = Router::new().route(
+        "/api/orgs/:org_id/members",
+        get(|| async { Json::<Vec<serde_json::Value>>(vec![]) }),
+    );
+    let network_url = start_test_server(members_app).await;
+    build_isolated_test_app(&network_url, None)
+}
+
+async fn build_test_app_with_members_upstream_error() -> TestApp {
+    let members_app = Router::new().route(
+        "/api/orgs/:org_id/members",
+        get(|| async { StatusCode::INTERNAL_SERVER_ERROR }),
+    );
+    let network_url = start_test_server(members_app).await;
+    build_isolated_test_app(&network_url, None)
+}
+
+async fn build_test_app_with_members_transport_failure() -> TestApp {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let network_url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    build_isolated_test_app(&network_url, None)
+}
+
 #[tokio::test]
 async fn org_tool_actions_use_saved_integrations() {
-    // Serialize with the platform e2e (the other ProviderEnvGuard user) so the
-    // shared provider base-URL env vars are never torn down mid-request; keep the
-    // platform key unset so this exercises the saved-key path, not the synthesis.
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let _lock = platform_key_env_lock().lock().await;
     let _platform_off = PlatformKeyEnvGuard::unset();
     let _env = ProviderEnvGuard::set_up().await;
 
@@ -91,48 +204,13 @@ async fn org_tool_actions_use_saved_integrations() {
     assert_google_actions(&app, &org_id).await;
 }
 
-/// Spec 02 §9 soft-fallback at the HTTP dispatch layer: when the only brave
-/// integration available is the reserved synthetic platform id and
-/// `BRAVE_SEARCH_PLATFORM_KEY` is unset, the tool-action endpoint fails cleanly
-/// (clean 4xx, no panic) — the feature is effectively off. The success path
-/// (env set → platform key resolves) is proven by the unit-level precedence
-/// test in `org_tools::tests`, which avoids clobbering the process-global
-/// provider base-url env vars shared by the saved-integrations test.
-#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn platform_brave_fallback_is_off_without_platform_key() {
-    use aura_os_orgs::IntegrationSecretUpdate;
-
-    // This test deliberately does NOT use `ProviderEnvGuard`: the unset-key
-    // path fails before any provider HTTP call, so no provider mock is needed,
-    // and we must not race the shared `AURA_*_API_BASE_URL` vars. We hold the
-    // platform-key lock across `.await` so a concurrent test cannot flip
-    // `BRAVE_SEARCH_PLATFORM_KEY` while we drive the unset-key path.
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let _lock = platform_key_env_lock().lock().await;
     let _env = PlatformKeyEnvGuard::unset();
 
-    let (app, state, _db) = build_test_app_with_org_membership().await;
+    let (app, _state, _db) = build_test_app_with_org_membership().await;
     let org_id = OrgId::new();
-
-    // Seed the gating-only synthetic platform Web Search integration into the local
-    // shadow store. Its stored secret is a sentinel that must never be used —
-    // the platform branch resolves from the env var instead.
-    state
-        .org_service
-        .upsert_integration(
-            &org_id,
-            Some("platform-brave-search"),
-            "Platform Web Search".to_string(),
-            "brave_search".to_string(),
-            OrgIntegrationKind::WorkspaceIntegration,
-            None,
-            None,
-            Some(true),
-            IntegrationSecretUpdate::Set("shadow-should-not-be-used".to_string()),
-        )
-        .expect("seed synthetic platform integration");
 
     let req = json_request(
         "POST",
@@ -148,19 +226,9 @@ async fn platform_brave_fallback_is_off_without_platform_key() {
     assert_eq!(body["code"], "bad_request");
 }
 
-/// Spec 02 Gate C: the gating-only synthetic platform Web Search integration is
-/// injected solely into the agent capabilities builder, never into the
-/// storage-backed feed behind `GET /api/orgs/{id}/integrations`. So even with
-/// `BRAVE_SEARCH_PLATFORM_KEY` SET, the REST list must be unchanged: exactly
-/// the 12 saved integrations, and the reserved `platform-brave-search` id must
-/// not appear. Holds by construction; pinned here so a future regression that
-/// leaks the synthetic into the REST feed fails loudly.
-#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn platform_key_set_does_not_leak_synthetic_into_rest_list() {
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let _lock = platform_key_env_lock().lock().await;
     let _env = PlatformKeyEnvGuard::set("platform-key-123");
 
     let (app, _state, _db) = build_test_app_with_org_membership().await;
@@ -187,48 +255,19 @@ async fn platform_key_set_does_not_leak_synthetic_into_rest_list() {
         integrations
             .iter()
             .all(|i| i["integration_id"].as_str() != Some("platform-brave-search")),
-        "the gating-only synthetic platform-brave-search id must never appear in the REST list"
+        "the platform capability id must not appear in the REST list"
     );
 }
 
-/// Spec 02 end-to-end (web): with `BRAVE_SEARCH_PLATFORM_KEY` set and NO real
-/// org brave key, a brave tool-action resolves the *platform* key (not a saved
-/// secret), dispatches the outbound Brave call to the provider mock, and
-/// returns shaped results. This exercises the execution half of the feature
-/// that no single test covers: platform-key resolution in
-/// `load_org_integration_secret` (the synthetic id short-circuits before any
-/// shadow secret is read) → outbound Brave via mock → transform → 200. (Tool
-/// *emission* — GATE A — is a separate surface, proven by the unit-level
-/// `installed_workspace_app_tools` tests; the tool-action endpoint dispatches
-/// by name and does not re-run emission filtering.)
-///
-/// No org brave integration is seeded and no `integration_id` is passed — this is
-/// exactly the production path (a real agent calls `brave_search_web` with just a
-/// query). Resolution must synthesize the gating-only platform integration
-/// in-memory (Gate D) so the platform-key branch in `load_org_integration_secret`
-/// is reached; the synthetic is never written to storage. Complements (does not
-/// duplicate) the unit-level emission and soft-fallback tests.
-#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn platform_key_brave_tool_action_resolves_platform_key_end_to_end() {
-    // The tool-action dispatches an outbound Brave call, so the provider mock
-    // must back `AURA_BRAVE_SEARCH_API_BASE_URL` (same setup as
-    // `org_tool_actions_use_saved_integrations`).
-    // Hold the brave-test lock outermost (released last) so the provider mock's
-    // base-URL env vars and the platform key are never mutated/torn down by a
-    // concurrent brave test mid-request.
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let _lock = platform_key_env_lock().lock().await;
     let _env_provider = ProviderEnvGuard::set_up().await;
     let _env = PlatformKeyEnvGuard::set("platform-key-123");
 
     let (app, _state, _db) = build_test_app_with_org_membership().await;
     let org_id = OrgId::new();
 
-    // Production path: NO org brave integration in storage and NO integration_id
-    // in the call. Resolution must synthesize the platform Web Search integration and
-    // load the key from BRAVE_SEARCH_PLATFORM_KEY.
     let req = json_request(
         "POST",
         &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
@@ -237,9 +276,8 @@ async fn platform_key_brave_tool_action_resolves_platform_key_end_to_end() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let brave_web = response_json(resp).await;
-    assert_eq!(brave_web["results"][0]["title"], "Brave result");
+    assert_eq!(brave_web["results"][0]["title"], "Platform Brave result");
 
-    // News search: same platform-key path, distinct mock route.
     let req = json_request(
         "POST",
         &format!("/api/orgs/{org_id}/tool-actions/brave_search_news"),
@@ -248,51 +286,56 @@ async fn platform_key_brave_tool_action_resolves_platform_key_end_to_end() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let brave_news = response_json(resp).await;
-    assert_eq!(brave_news["results"][0]["title"], "Brave news");
+    assert_eq!(brave_news["results"][0]["title"], "Platform Brave news");
 }
 
-/// Canonical-path regression (the production-path gap): identical to the end-to-end test
-/// above, but the app is built with a canonical `IntegrationsClient` configured
-/// (`state.integrations_client = Some`) pointed at a mock aura-integrations
-/// server that reports NO integrations for the org. This is the cloud shape.
-///
-/// Before the fix, `load_canonical_by_provider` returned `Ok(Some)` only on a
-/// match and otherwise hard-errored (`ok_or_else(bad_request)?`), which
-/// short-circuited `pick_org_integration_metadata` BEFORE Gate D — so platform
-/// web search 4xx'd in production even though every shadow-path test passed.
-/// The fix returns `Ok(None)` for the brave-with-platform-key case so the
-/// fallback reaches Gate D. This test 4xx's without the fix and 200s with it.
-#[allow(clippy::await_holding_lock)]
 #[tokio::test]
-async fn platform_key_brave_resolves_on_canonical_path_when_no_org_integration() {
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+async fn canonical_empty_uses_platform_quota_despite_stale_local_byok() {
+    let _lock = platform_key_env_lock().lock().await;
     let _env_provider = ProviderEnvGuard::set_up().await;
     let _env = PlatformKeyEnvGuard::set("platform-key-123");
 
-    // Canonical client configured + canonical service healthy + org has no
-    // brave integration (mock returns an empty list). This is the exact path
-    // production takes and no other test exercises.
-    let (app, _state, _db) = build_test_app_with_empty_canonical_integrations().await;
+    let (app, state, _db) = build_test_app_with_empty_canonical_integrations().await;
     let org_id = OrgId::new();
 
-    // No org brave integration and no integration_id: resolution must fall
-    // through the canonical "no match" to Gate D, synthesize the platform Web Search
-    // integration, and load the key from BRAVE_SEARCH_PLATFORM_KEY.
-    let req = json_request(
-        "POST",
-        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
-        Some(serde_json::json!({ "query": "aura" })),
-    );
-    let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(
-        resp.status(),
-        StatusCode::OK,
-        "canonical path with platform key + no org brave must reach Gate D and 200"
-    );
-    let brave_web = response_json(resp).await;
-    assert_eq!(brave_web["results"][0]["title"], "Brave result");
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some("stale-local-brave"),
+            "Stale Brave Shadow".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            aura_os_orgs::IntegrationSecretUpdate::Set("stale-key".to_string()),
+        )
+        .unwrap();
+
+    let max = aura_os_server::tool_action_rate_limit::MORTAL_CALLS_PER_MINUTE;
+    for _ in 0..max {
+        let response = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+                Some(serde_json::json!({ "query": "aura" })),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    let response = app
+        .oneshot(json_request(
+            "POST",
+            &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+            Some(serde_json::json!({ "query": "aura" })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
 }
 
 #[tokio::test]
@@ -409,14 +452,9 @@ async fn brave_search_byok_can_be_disabled() {
 
 #[tokio::test]
 async fn non_member_cannot_invoke_tool_actions() {
-    // A-C1a: a user who is not a member of the org must be rejected by the
-    // authorization gate before any provider dispatch occurs. The provider
-    // env is intentionally NOT set up, so a successful response could only
-    // mean dispatch happened — i.e. the guard failed to short-circuit.
     let (app, _state, _db) = build_test_app_without_org_membership().await;
     let org_id = OrgId::new();
 
-    // App-provider tool path.
     let req = json_request(
         "POST",
         &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
@@ -425,7 +463,6 @@ async fn non_member_cannot_invoke_tool_actions() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-    // Special-case branch (list_org_integrations) must also be gated.
     let req = json_request(
         "POST",
         &format!("/api/orgs/{org_id}/tool-actions/list_org_integrations"),
@@ -437,9 +474,6 @@ async fn non_member_cannot_invoke_tool_actions() {
 
 #[tokio::test]
 async fn unauthenticated_tool_action_callback_is_rejected() {
-    // Desktop platform Web Search callbacks are stamped to the cloud
-    // `/tool-actions/*` endpoint. Missing/revoked bearers must die in the auth
-    // middleware before org membership, rate limiting, or provider dispatch.
     let (app, _state, _db) = build_test_app_with_org_membership().await;
     let org_id = OrgId::new();
     let req = Request::builder()
@@ -457,10 +491,6 @@ async fn unauthenticated_tool_action_callback_is_rejected() {
 
 #[tokio::test]
 async fn authz_gate_fails_closed_on_upstream_500() {
-    // A-C1a regression: the authZ gate must fail closed even when the
-    // aura-network members endpoint itself returns a 5xx error. The
-    // NetworkError::Server { status: 500 } arm of map_network_error propagates
-    // the upstream status, so the response is 500 — never 200 (no dispatch).
     let (app, _state, _db) = build_test_app_with_members_upstream_error().await;
     let org_id = OrgId::new();
 
@@ -470,15 +500,11 @@ async fn authz_gate_fails_closed_on_upstream_500() {
         Some(serde_json::json!({ "query": "aura" })),
     );
     let resp = app.oneshot(req).await.unwrap();
-    // Upstream 500 → NetworkError::Server { status: 500 } → propagated as 500.
     assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
 
 #[tokio::test]
 async fn authz_gate_fails_closed_on_transport_failure() {
-    // A-C1a regression: a transport error on the members lookup (connection
-    // refused) must produce NetworkError::Request, caught by the _ arm of
-    // map_network_error, which emits 502 Bad Gateway — never 200 (no dispatch).
     let (app, _state, _db) = build_test_app_with_members_transport_failure().await;
     let org_id = OrgId::new();
 
@@ -488,28 +514,20 @@ async fn authz_gate_fails_closed_on_transport_failure() {
         Some(serde_json::json!({ "query": "aura" })),
     );
     let resp = app.oneshot(req).await.unwrap();
-    // Connection refused → NetworkError::Request → _ arm → 502 Bad Gateway.
     assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
 }
 
-#[allow(clippy::await_holding_lock)]
 #[tokio::test]
-async fn non_search_tool_actions_do_not_consume_web_search_quota() {
-    // A-C1b: Web Search has its own cost-control bucket. Ordinary org tools
-    // must not consume that search quota, while a burst of N+1 search calls for
-    // one user still ends in 429. Switching orgs must not reset the allowance.
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+async fn web_search_quota_is_scoped_to_user_and_search_tools() {
+    let _lock = platform_key_env_lock().lock().await;
     let _env_provider = ProviderEnvGuard::set_up().await;
     let _env = PlatformKeyEnvGuard::set("platform-key-123");
 
     let (app, _state, _db) = build_test_app_with_org_membership().await;
     let org_id = OrgId::new();
 
-    let max = aura_os_server::tool_action_rate_limit::MAX_CALLS_PER_WINDOW;
+    let max = aura_os_server::tool_action_rate_limit::MORTAL_CALLS_PER_MINUTE;
 
-    // Non-search org tools do not burn Web Search quota.
     for _ in 0..=max {
         let req = json_request(
             "POST",
@@ -530,7 +548,6 @@ async fn non_search_tool_actions_do_not_consume_web_search_quota() {
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    // The search call that exceeds the window limit is rejected with 429.
     let req = json_request(
         "POST",
         &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
@@ -540,8 +557,18 @@ async fn non_search_tool_actions_do_not_consume_web_search_quota() {
     assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
     let body = response_json(resp).await;
     assert_eq!(body["code"], "tool_action_rate_limited");
+    assert_eq!(body["data"]["max_calls"], max);
+    assert_eq!(body["data"]["window_seconds"], 60);
+    assert!(body["data"]["retry_after_seconds"].as_u64().unwrap() > 0);
+    assert_eq!(
+        body["data"]["upgrade_hint"],
+        "Upgrade your plan for higher Aura Web Search limits."
+    );
+    assert_eq!(
+        body["data"]["byok_hint"],
+        "Connect your own Brave Search API key to use Web Search without Aura quota."
+    );
 
-    // A different org does not multiply the same user's subscription quota.
     let other_org_id = OrgId::new();
     let req = json_request(
         "POST",
@@ -552,19 +579,16 @@ async fn non_search_tool_actions_do_not_consume_web_search_quota() {
     assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
 }
 
-#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn paid_billing_plan_gets_higher_web_search_limit() {
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let _lock = platform_key_env_lock().lock().await;
     let _env_provider = ProviderEnvGuard::set_up().await;
     let _env = PlatformKeyEnvGuard::set("platform-key-123");
 
     let (app, _state, _db) = build_test_app_with_org_membership_and_billing_plan("pro").await;
     let org_id = OrgId::new();
 
-    let default_max = aura_os_server::tool_action_rate_limit::MAX_CALLS_PER_WINDOW;
+    let default_max = aura_os_server::tool_action_rate_limit::MORTAL_CALLS_PER_MINUTE;
     for _ in 0..=default_max {
         let req = json_request(
             "POST",
@@ -580,12 +604,9 @@ async fn paid_billing_plan_gets_higher_web_search_limit() {
     }
 }
 
-#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn unavailable_billing_falls_back_to_mortal_web_search_limit() {
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let _lock = platform_key_env_lock().lock().await;
     let _env_provider = ProviderEnvGuard::set_up().await;
     let _env = PlatformKeyEnvGuard::set("platform-key-123");
 
@@ -597,7 +618,7 @@ async fn unavailable_billing_falls_back_to_mortal_web_search_limit() {
     let (app, _state, _db) =
         build_test_app_with_org_membership_and_billing_client(billing_client).await;
     let org_id = OrgId::new();
-    let max = aura_os_server::tool_action_rate_limit::MAX_CALLS_PER_WINDOW;
+    let max = aura_os_server::tool_action_rate_limit::MORTAL_CALLS_PER_MINUTE;
 
     for _ in 0..max {
         let response = app
@@ -639,12 +660,9 @@ async fn org_billing_plan_cannot_be_changed_through_legacy_route() {
     assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
 }
 
-#[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn brave_search_byok_bypasses_aura_web_search_quota() {
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let _lock = platform_key_env_lock().lock().await;
     let _env_provider = ProviderEnvGuard::set_up().await;
     let _platform_off = PlatformKeyEnvGuard::unset();
 
@@ -664,7 +682,7 @@ async fn brave_search_byok_bypasses_aura_web_search_quota() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::CREATED);
 
-    let default_max = aura_os_server::tool_action_rate_limit::MAX_CALLS_PER_WINDOW;
+    let default_max = aura_os_server::tool_action_rate_limit::MORTAL_CALLS_PER_MINUTE;
     for _ in 0..=default_max {
         let req = json_request(
             "POST",
@@ -678,53 +696,4 @@ async fn brave_search_byok_bypasses_aura_web_search_quota() {
             "org-owned Brave key should not consume Aura Web Search quota"
         );
     }
-}
-
-#[allow(clippy::await_holding_lock)]
-#[tokio::test]
-async fn platform_web_search_rate_limit_returns_429_end_to_end() {
-    // Same production-shaped platform-funded search path as the success e2e:
-    // no saved org Brave key, platform key in env, outbound provider mock. This
-    // proves the limiter protects the cost-incurring `/tool-actions` endpoint
-    // before another provider dispatch can proceed.
-    let _lock = platform_key_env_lock()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
-    let _env_provider = ProviderEnvGuard::set_up().await;
-    let _env = PlatformKeyEnvGuard::set("platform-key-123");
-
-    let (app, _state, _db) = build_test_app_with_org_membership().await;
-    let org_id = OrgId::new();
-    let max = aura_os_server::tool_action_rate_limit::MAX_CALLS_PER_WINDOW;
-
-    for _ in 0..max {
-        let req = json_request(
-            "POST",
-            &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
-            Some(serde_json::json!({ "query": "aura" })),
-        );
-        let resp = app.clone().oneshot(req).await.unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
-    }
-
-    let req = json_request(
-        "POST",
-        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
-        Some(serde_json::json!({ "query": "aura" })),
-    );
-    let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
-    let body = response_json(resp).await;
-    assert_eq!(body["code"], "tool_action_rate_limited");
-    assert_eq!(body["data"]["max_calls"], max);
-    assert_eq!(body["data"]["window_seconds"], 60);
-    assert!(body["data"]["retry_after_seconds"].as_u64().unwrap() > 0);
-    assert_eq!(
-        body["data"]["upgrade_hint"],
-        "Upgrade your plan for higher Aura Web Search limits."
-    );
-    assert_eq!(
-        body["data"]["byok_hint"],
-        "Connect your own Brave Search API key to use Web Search without Aura quota."
-    );
 }

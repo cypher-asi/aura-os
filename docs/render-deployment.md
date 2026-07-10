@@ -59,14 +59,12 @@ directly.
 | `MIXPANEL_TOKEN` | Mixpanel project token. Enables **server-side** analytics (`session_active` True DAU backstop + share events). The server logs a loud warning at startup if unset. |
 | `VITE_MIXPANEL_TOKEN` | Same Mixpanel token, consumed by the Vite build so the **web client** SDK sends engagement events. Without it the browser SDK silently no-ops. |
 
-`X-Subscription-Token` is the HTTP header sent by `aura-api` to Brave. The
-server derives it from `BRAVE_SEARCH_PLATFORM_KEY`; it is not another Render
-environment variable.
+Aura sends `BRAVE_SEARCH_PLATFORM_KEY` to Brave as the Search API credential.
+No additional Render variable or xAI/X integration is involved.
 
-Packaged desktop builds need
-`AURA_PLATFORM_TOOL_ACTION_BASE_URL=https://api.aura.ai` as a GitHub
-environment/repository variable. This value is public and routes desktop tool
-actions to the cloud API; the Brave key remains server-side.
+Packaged desktop builds default `AURA_PLATFORM_TOOL_ACTION_BASE_URL` to
+`https://api.aura.ai`. A GitHub environment/repository variable is only needed
+to override that public callback origin; the Brave key remains server-side.
 
 `APP_VERSION` in the build command stamps a real clean version into the bundle so analytics events are not bucketed under `app_version = "0.0.0"` or a `*-dirty` git fallback. `RENDER_GIT_COMMIT` is provided automatically by Render. It is `export`ed (not set inline on `npm run build` only) so both Vite and the analytics validator see it.
 

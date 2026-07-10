@@ -16,8 +16,8 @@ pub(crate) use catalog::{
 };
 pub(crate) use integrations::{
     installed_workspace_integrations_for_org_with_token,
-    installed_workspace_integrations_with_integrations, integrations_for_org,
-    integrations_for_org_with_token,
+    installed_workspace_integrations_for_session, integrations_for_optional_org_with_token,
+    integrations_for_org,
 };
 
 #[cfg(test)]

@@ -294,10 +294,7 @@ impl ApiError {
     /// [`crate::handlers::public::emit_limit_frame`] so the streaming
     /// surface lights the modal even when the request technically
     /// returned 200.
-    /// A platform-funded Web Search call exceeded the per-user rate
-    /// limit (A-C1b). Returns HTTP 429 with a stable `code`
-    /// (`tool_action_rate_limited`) so callers can back off rather than
-    /// retry-storm an endpoint that costs real platform money per invocation.
+    /// Return a structured 429 for an exhausted Web Search quota window.
     pub(crate) fn tool_action_rate_limited(
         max_calls: u32,
         window_secs: u64,

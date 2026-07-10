@@ -46,8 +46,6 @@ const { mockOrgStore, mockApis } = vi.hoisted(() => {
         revokeInvite: vi.fn().mockResolvedValue(undefined),
         removeMember: vi.fn().mockResolvedValue(undefined),
         updateMemberRole: vi.fn().mockResolvedValue(undefined),
-        getBilling: vi.fn().mockResolvedValue(null),
-        setBilling: vi.fn().mockResolvedValue(undefined),
         getCreditBalance: vi.fn().mockResolvedValue({ balance_cents: 1000, plan: "free", balance_formatted: "$10.00" }),
         createCreditCheckout: vi.fn().mockResolvedValue({ checkout_url: "https://checkout", session_id: "sess_1" }),
         listIntegrations: vi.fn().mockResolvedValue([]),
@@ -229,7 +227,6 @@ beforeEach(() => {
   mockOrgStore.refreshIntegrations = vi.fn();
   mockOrgStore.refreshOrgs = vi.fn().mockResolvedValue(undefined);
   mockApis.orgs.listInvites.mockResolvedValue([]);
-  mockApis.orgs.getBilling.mockResolvedValue(null);
   mockApis.orgs.getCreditBalance.mockResolvedValue({ balance_cents: 1000, plan: "free", balance_formatted: "$10.00" });
   mockApis.orgs.listIntegrations.mockResolvedValue([]);
 });
@@ -384,7 +381,6 @@ describe("OrgSettingsPanel", () => {
       expect(mockOrgStore.refreshMembers).toHaveBeenCalled();
       expect(mockOrgStore.refreshIntegrations).toHaveBeenCalled();
       expect(mockApis.orgs.listInvites).toHaveBeenCalledWith("org-1");
-      expect(mockApis.orgs.getBilling).toHaveBeenCalledWith("org-1");
     });
   });
 

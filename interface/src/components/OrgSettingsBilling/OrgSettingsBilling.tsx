@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Input, Button } from "@cypher-asi/zui";
-import type { OrgBilling, CreditBalance } from "../../shared/types";
+import type { CreditBalance } from "../../shared/types";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
@@ -9,7 +9,6 @@ import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import billingStyles from "./OrgSettingsBilling.module.css";
 
 interface Props {
-  billing: OrgBilling | null;
   isAdminOrOwner: boolean;
   balance: CreditBalance | null;
   balanceLoading: boolean;
@@ -28,7 +27,6 @@ const MIN_USD = 1;
 const MAX_USD = 1000;
 
 export function OrgSettingsBilling({
-  billing,
   isAdminOrOwner,
   balance,
   balanceLoading,
@@ -58,7 +56,7 @@ export function OrgSettingsBilling({
   const isPaidPlan = subscription !== null && subscription.plan !== "mortal";
   const isActive = subscription?.is_subscribed ?? false;
   const periodEnd = subscription?.current_period_end ?? null;
-  const planLabel = subscription?.plan ?? balance?.plan ?? billing?.plan ?? "mortal";
+  const planLabel = subscription?.plan ?? balance?.plan ?? "mortal";
 
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
 

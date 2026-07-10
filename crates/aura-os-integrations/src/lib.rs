@@ -48,7 +48,8 @@ pub use trusted_methods::{
     TrustedIntegrationSuccessGuard, TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY,
 };
 pub use workspace_tools::{
-    installed_workspace_app_tools, installed_workspace_integrations, platform_brave_key_present,
-    platform_brave_tool_actions_available, platform_tool_action_base_url, PLATFORM_BRAVE_KEY_ENV,
-    PLATFORM_TOOL_ACTION_BASE_URL_ENV,
+    installed_workspace_app_tools, installed_workspace_integrations, platform_tool_action_base_url,
+    platform_web_search_available, platform_web_search_integration,
+    platform_web_search_key_present, PLATFORM_BRAVE_KEY_ENV, PLATFORM_TOOL_ACTION_BASE_URL_ENV,
+    PLATFORM_WEB_SEARCH_INTEGRATION_ID,
 };

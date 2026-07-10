@@ -8,6 +8,9 @@ use tracing::info;
 
 use crate::dto::SendChatRequest;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::workspace_tools::{
+    installed_workspace_integrations_for_session, integrations_for_optional_org_with_token,
+};
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::plan_mode::{is_plan_mode_action, session_tool_permissions};
 use crate::handlers::projects_helpers::{
@@ -38,8 +41,8 @@ use super::super::super::runtime::{
 
 use super::client_retry::header_indicates_client_retry;
 use super::helpers::{
-    fetch_org_integrations, installed_workspace_integrations, load_history_and_project_state,
-    normalize_instance_perms, pick_instance_model, resolve_effective_org_id,
+    load_history_and_project_state, normalize_instance_perms, pick_instance_model,
+    resolve_effective_org_id,
 };
 
 pub(crate) async fn send_event_stream(
@@ -233,7 +236,8 @@ pub(crate) async fn send_event_stream(
     let council_presentation = active_mixture.map(|_| second_opinion_presentation());
 
     let effective_org_id = resolve_effective_org_id(&state, instance.org_id.as_ref(), &project_id);
-    let org_integrations = fetch_org_integrations(&state, effective_org_id.as_ref(), &jwt).await;
+    let org_integrations =
+        integrations_for_optional_org_with_token(&state, effective_org_id.as_ref(), &jwt).await;
     let normalized_instance_perms = normalize_instance_perms(&state, &instance, &pid_str).await;
     let agent_instance_id_string = agent_instance_id.to_string();
     let template_agent_id_string = instance.agent_id.to_string();
@@ -252,7 +256,7 @@ pub(crate) async fn send_event_stream(
     )
     .await?;
     let installed_integrations =
-        installed_workspace_integrations(effective_org_id.as_ref(), org_integrations.as_deref());
+        installed_workspace_integrations_for_session(org_integrations.as_deref());
 
     // Cap agentic steps for non-interactive tool flows like
     // `generate_specs` so a degenerate `list_specs` ↔ `create_spec`

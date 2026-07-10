@@ -1,12 +1,10 @@
-//! Org-integration metadata + secret resolution.
-//!
-//! Extracted from the previous monolithic `org_tools.rs`. The behaviour of
-//! every helper is unchanged; the original [`resolve_org_integration`] body
-//! has been split into a few focused helpers to stay under the per-function
-//! line limit.
+//! Org-integration metadata and secret resolution.
 
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
-use aura_os_integrations::{platform_brave_key_present, IntegrationsError, PLATFORM_BRAVE_KEY_ENV};
+use aura_os_integrations::{
+    platform_web_search_integration, platform_web_search_key_present, IntegrationsError,
+    PLATFORM_BRAVE_KEY_ENV, PLATFORM_WEB_SEARCH_INTEGRATION_ID,
+};
 use aura_os_orgs::IntegrationSecretUpdate;
 use serde_json::Value;
 use tracing::warn;
@@ -15,22 +13,7 @@ use super::args::optional_string;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
-/// Reserved integration id for the gating-only synthetic platform Web Search
-/// integration (Spec 02). It carries no stored secret in canonical/shadow
-/// storage; its secret is resolved cloud-side from the
-/// `BRAVE_SEARCH_PLATFORM_KEY` environment variable as a *fallback* only.
-///
-/// Shared with Task 2.1 (synthetic injection/advertising). Kept here so the
-/// soft-fallback precedence and the synthetic injection use a single source of
-/// truth.
-pub(crate) const PLATFORM_BRAVE_INTEGRATION_ID: &str = "platform-brave-search";
-
-/// The platform-provided Web Search key is carried by the
-/// [`PLATFORM_BRAVE_KEY_ENV`] environment variable (re-exported from
-/// `aura-os-integrations` so every gate shares one definition). Cloud-only: it
-/// must never be written into a session payload or shipped to desktop. Used
-/// solely as a soft fallback when no legacy real-key org brave integration
-/// resolves.
+/// Metadata and credential selected for one tool invocation.
 pub(crate) struct ResolvedOrgIntegration {
     pub(super) metadata: OrgIntegration,
     pub(super) secret: String,
@@ -46,16 +29,10 @@ pub(super) async fn resolve_org_integration(
     resolve_org_integration_inner(state, org_id, provider, user_id, args, false).await
 }
 
-/// Resolve an org integration for a **trusted, cost-incurring** tool action.
-///
-/// A-H2: unlike [`resolve_org_integration`], this refuses to silently fall
-/// back to a possibly-stale local shadow when the canonical aura-integrations
-/// service is *configured but degraded* (transport failure / timeout / 5xx).
-/// In that case it returns a 503 so a paid call is never executed with
-/// possibly-stale credentials. A healthy "not found" (404) still yields the
-/// existing 4xx, and the deliberate no-canonical-client local/dev mode still
-/// resolves via shadow.
-pub(super) async fn resolve_org_integration_fail_loud(
+/// Trusted tools fail closed during canonical service outages instead of using
+/// possibly stale local credentials. Local development without a canonical
+/// client still resolves from the local store.
+pub(super) async fn resolve_trusted_org_integration(
     state: &AppState,
     org_id: &OrgId,
     provider: &str,
@@ -71,7 +48,7 @@ async fn resolve_org_integration_inner(
     provider: &str,
     user_id: Option<&str>,
     args: &Value,
-    fail_loud_on_service_down: bool,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<ResolvedOrgIntegration> {
     let integration_id = optional_string(args, &["integration_id", "integrationId"]);
     let integration = pick_org_integration_metadata(
@@ -80,11 +57,11 @@ async fn resolve_org_integration_inner(
         provider,
         user_id,
         integration_id,
-        fail_loud_on_service_down,
+        fail_on_canonical_outage,
     )
     .await?;
     let secret =
-        load_org_integration_secret(state, org_id, &integration, fail_loud_on_service_down).await?;
+        load_org_integration_secret(state, org_id, &integration, fail_on_canonical_outage).await?;
 
     Ok(ResolvedOrgIntegration {
         metadata: integration,
@@ -98,40 +75,40 @@ async fn pick_org_integration_metadata(
     provider: &str,
     user_id: Option<&str>,
     integration_id: Option<String>,
-    fail_loud_on_service_down: bool,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<OrgIntegration> {
-    if let Some(integration) = load_canonical_org_integration(
+    if provider == "brave_search"
+        && integration_id.as_deref() == Some(PLATFORM_WEB_SEARCH_INTEGRATION_ID)
+    {
+        return Ok(platform_web_search_integration(org_id));
+    }
+
+    let allow_platform_fallback =
+        integration_id.is_none() && provider == "brave_search" && platform_web_search_key_present();
+    let canonical_integration = load_canonical_org_integration(
         state,
         org_id,
         provider,
         user_id,
         integration_id.as_deref(),
-        fail_loud_on_service_down,
+        fail_on_canonical_outage,
     )
-    .await?
-    {
+    .await?;
+    if let Some(integration) = canonical_integration {
         return Ok(integration);
+    }
+    if allow_platform_fallback && fail_on_canonical_outage && state.integrations_client.is_some() {
+        return Ok(platform_web_search_integration(org_id));
     }
     let resolved = if let Some(integration_id) = integration_id {
         load_shadow_org_integration_by_id(state, org_id, provider, user_id, &integration_id)
     } else {
         load_shadow_org_integration_for_provider(state, org_id, provider, user_id)
     };
-    // Gate D (Spec 02): no real org integration resolved. When the platform Web Search
-    // key is configured and this is the brave provider, synthesize the gating-only
-    // platform integration in-memory so the platform-key branch in
-    // `load_org_integration_secret` is reachable. A real `enabled && has_secret`
-    // brave integration always wins above, so this is a fallback (never an
-    // override), and it is never persisted to storage or the REST list.
     match resolved {
         Ok(integration) => Ok(integration),
-        Err(not_found) => {
-            if provider == "brave_search" && platform_brave_key_present() {
-                Ok(synthetic_platform_brave_integration(org_id))
-            } else {
-                Err(not_found)
-            }
-        }
+        Err(_) if allow_platform_fallback => Ok(platform_web_search_integration(org_id)),
+        Err(error) => Err(error),
     }
 }
 
@@ -139,17 +116,10 @@ async fn load_org_integration_secret(
     state: &AppState,
     org_id: &OrgId,
     integration: &OrgIntegration,
-    fail_loud_on_service_down: bool,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<String> {
-    // Soft-fallback (Spec 02 §9): the reserved synthetic platform Web Search
-    // integration carries no stored credential in canonical/shadow storage.
-    // Its key is resolved cloud-side from the platform env var, and only ever
-    // reached when no legacy real-key org brave integration resolved first — a real
-    // `enabled && has_secret` brave provider match always wins the selection
-    // in `pick_org_integration_metadata`/`load_canonical_by_provider`, so this
-    // branch is a fallback, never an override.
-    if integration.integration_id == PLATFORM_BRAVE_INTEGRATION_ID {
-        return load_platform_brave_secret();
+    if integration.integration_id == PLATFORM_WEB_SEARCH_INTEGRATION_ID {
+        return load_platform_web_search_secret();
     }
 
     let Some(client) = &state.integrations_client else {
@@ -174,17 +144,13 @@ async fn load_org_integration_secret(
             }
         }
         Err(error) => {
-            // A-H2: a degraded canonical service must not silently fall back to
-            // a possibly-stale shadow on the trusted cost-incurring path.
-            if fail_loud_on_service_down
-                && classify_integrations_error(&error) == CanonicalFetchFailure::ServiceDown
-            {
+            if fail_on_canonical_outage && is_canonical_outage(&error) {
                 warn!(
                     %org_id,
                     integration_id = %integration.integration_id,
                     provider = %integration.provider,
                     error = %error,
-                    "canonical aura-integrations secret fetch failed for a trusted tool action; failing loud (503) instead of using a possibly-stale local shadow"
+                    "canonical aura-integrations secret fetch failed for a trusted tool action; returning 503 instead of using the local shadow"
                 );
                 return Err(integrations_service_down_error());
             }
@@ -200,77 +166,22 @@ async fn load_org_integration_secret(
     }
 }
 
-/// Classification of a canonical aura-integrations fetch failure.
-///
-/// A-H2: for cost-incurring trusted tool actions we must distinguish a
-/// degraded canonical service (transport failure / timeout / 5xx) from a
-/// genuine "not found" so we can fail loud (503) instead of silently
-/// executing a paid call with possibly-stale local-shadow credentials.
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum CanonicalFetchFailure {
-    /// 404 / not-found — a definite negative answer from a healthy service.
-    NotFound,
-    /// Transport error, timeout, or 5xx — the service itself is degraded.
-    ServiceDown,
-}
-
-fn classify_integrations_error(error: &IntegrationsError) -> CanonicalFetchFailure {
-    match error {
-        IntegrationsError::Server { status, .. } if *status == 404 => {
-            CanonicalFetchFailure::NotFound
-        }
-        // Any non-404 server status (notably 5xx) is treated as a degraded
-        // service for the fail-loud path. Other client errors (e.g. 4xx other
-        // than 404) are rare here and erring toward fail-loud is the safe
-        // choice for a cost-incurring trusted call.
-        IntegrationsError::Server { .. } => CanonicalFetchFailure::ServiceDown,
-        // Transport errors, timeouts, decode failures, etc.
-        _ => CanonicalFetchFailure::ServiceDown,
-    }
+fn is_canonical_outage(error: &IntegrationsError) -> bool {
+    !matches!(error, IntegrationsError::Server { status: 404, .. })
 }
 
 fn integrations_service_down_error() -> (axum::http::StatusCode, axum::Json<ApiError>) {
     ApiError::service_unavailable(
-        "the integrations service is unavailable; refusing to run a trusted tool action with possibly-stale credentials",
+        "the integrations service is unavailable; trusted tool execution was not attempted",
     )
 }
 
-/// Resolve the platform-provided Web Search key from the environment.
-///
-/// Cloud-only soft fallback for the reserved synthetic platform Web Search
-/// integration (Spec 02). When `BRAVE_SEARCH_PLATFORM_KEY` is unset or empty
-/// the feature is effectively off, so we return a clean `ApiError` rather than
-/// panicking — behaviour elsewhere is unchanged.
-fn load_platform_brave_secret() -> ApiResult<String> {
-    match std::env::var(PLATFORM_BRAVE_KEY_ENV) {
-        Ok(key) if !key.trim().is_empty() => Ok(key),
-        _ => Err(ApiError::bad_request(
-            "platform web search is not configured",
-        )),
-    }
-}
-
-/// The gating-only synthetic platform Web Search integration, materialized in-memory
-/// at resolution time (Gate D) so the platform-key branch in
-/// [`load_org_integration_secret`] is reachable when no legacy real-key org
-/// brave integration exists. Carries no stored secret (`has_secret: false`); the
-/// key is loaded from the env var. Never written to storage or the REST list.
-fn synthetic_platform_brave_integration(org_id: &OrgId) -> OrgIntegration {
-    let now = chrono::Utc::now();
-    OrgIntegration {
-        integration_id: PLATFORM_BRAVE_INTEGRATION_ID.to_string(),
-        org_id: *org_id,
-        name: "Web Search".to_string(),
-        provider: "brave_search".to_string(),
-        kind: OrgIntegrationKind::WorkspaceIntegration,
-        default_model: None,
-        provider_config: None,
-        has_secret: false,
-        enabled: true,
-        secret_last4: None,
-        created_at: now,
-        updated_at: now,
-    }
+fn load_platform_web_search_secret() -> ApiResult<String> {
+    std::env::var(PLATFORM_BRAVE_KEY_ENV)
+        .ok()
+        .map(|key| key.trim().to_string())
+        .filter(|key| !key.is_empty())
+        .ok_or_else(|| ApiError::bad_request("platform web search is not configured"))
 }
 
 fn load_shadow_secret(state: &AppState, integration_id: &str) -> ApiResult<String> {
@@ -288,7 +199,7 @@ async fn load_canonical_org_integration(
     provider: &str,
     user_id: Option<&str>,
     integration_id: Option<&str>,
-    fail_loud_on_service_down: bool,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<Option<OrgIntegration>> {
     let Some(client) = &state.integrations_client else {
         return Ok(None);
@@ -302,7 +213,7 @@ async fn load_canonical_org_integration(
             provider,
             user_id,
             integration_id,
-            fail_loud_on_service_down,
+            fail_on_canonical_outage,
         )
         .await;
     }
@@ -313,7 +224,7 @@ async fn load_canonical_org_integration(
         org_id,
         provider,
         user_id,
-        fail_loud_on_service_down,
+        fail_on_canonical_outage,
     )
     .await
 }
@@ -325,7 +236,7 @@ async fn load_canonical_by_id(
     provider: &str,
     user_id: Option<&str>,
     integration_id: &str,
-    fail_loud_on_service_down: bool,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<Option<OrgIntegration>> {
     match client
         .get_integration_internal(org_id, integration_id)
@@ -350,16 +261,13 @@ async fn load_canonical_by_id(
             Err(ApiError::not_found("integration not found"))
         }
         Err(error) => {
-            // A-H2: degraded canonical service → fail loud on the trusted path.
-            if fail_loud_on_service_down
-                && classify_integrations_error(&error) == CanonicalFetchFailure::ServiceDown
-            {
+            if fail_on_canonical_outage && is_canonical_outage(&error) {
                 warn!(
                     %org_id,
                     integration_id,
                     provider,
                     error = %error,
-                    "canonical aura-integrations metadata fetch failed for a trusted tool action; failing loud (503) instead of using a possibly-stale local shadow"
+                    "canonical aura-integrations metadata fetch failed for a trusted tool action; returning 503 instead of using the local shadow"
                 );
                 return Err(integrations_service_down_error());
             }
@@ -381,7 +289,7 @@ async fn load_canonical_by_provider(
     org_id: &OrgId,
     provider: &str,
     user_id: Option<&str>,
-    fail_loud_on_service_down: bool,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<Option<OrgIntegration>> {
     match client.list_integrations_internal(org_id).await {
         Ok(integrations) => {
@@ -400,34 +308,20 @@ async fn load_canonical_by_provider(
                 .find(|integration| matches_org_tool_provider(integration, provider, user_id));
             match integration {
                 Some(integration) => Ok(Some(integration)),
-                // Spec 02 (Gate D reachability): the canonical service is
-                // healthy and answered, but this org has no matching brave
-                // integration. For every provider EXCEPT platform-gated brave we
-                // preserve the historical hard error (fail closed: no key, no
-                // call). For brave with the platform key configured we instead
-                // return `Ok(None)` so `pick_org_integration_metadata` falls
-                // through to the shadow lookup and then Gate D, which synthesizes
-                // the gating-only platform integration in-memory. Without this,
-                // the `?` on this call short-circuited before Gate D whenever a
-                // canonical client was configured (the cloud config), so platform
-                // web search only worked on the shadow path exercised by tests —
-                // never in production.
-                None if provider == "brave_search" && platform_brave_key_present() => Ok(None),
+                // Aura-funded search does not require an org integration.
+                None if provider == "brave_search" && platform_web_search_key_present() => Ok(None),
                 None => Err(ApiError::bad_request(format!(
                     "no enabled `{provider}` org integration with a key is available"
                 ))),
             }
         }
         Err(error) => {
-            // A-H2: degraded canonical service → fail loud on the trusted path.
-            if fail_loud_on_service_down
-                && classify_integrations_error(&error) == CanonicalFetchFailure::ServiceDown
-            {
+            if fail_on_canonical_outage && is_canonical_outage(&error) {
                 warn!(
                     %org_id,
                     provider,
                     error = %error,
-                    "canonical aura-integrations list fetch failed for a trusted tool action; failing loud (503) instead of using a possibly-stale local shadow"
+                    "canonical aura-integrations list fetch failed for a trusted tool action; returning 503 instead of using the local shadow"
                 );
                 return Err(integrations_service_down_error());
             }
@@ -639,12 +533,8 @@ fn matches_org_tool_provider(
     provider: &str,
     user_id: Option<&str>,
 ) -> bool {
-    // Soft-fallback precedence (Spec 02 §9): the gating-only synthetic platform
-    // brave integration must never win provider-based first-match selection, so
-    // a legacy real-key integration is always chosen when one exists. The synthetic
-    // id is only resolved when selected explicitly by its reserved id, and even
-    // then its key is a *fallback*, never an override of a real org key.
-    integration.integration_id != PLATFORM_BRAVE_INTEGRATION_ID
+    // The synthetic capability is selected explicitly or as a final fallback.
+    integration.integration_id != PLATFORM_WEB_SEARCH_INTEGRATION_ID
         && integration.provider == provider
         && integration.has_secret
         && integration.enabled

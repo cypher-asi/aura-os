@@ -3,7 +3,7 @@ import { mockAuthenticatedApp } from "./helpers/mockAuthenticatedApp";
 
 test.use({ serviceWorkers: "block" });
 
-test("team settings integrations entry opens the Integrations app", async ({ page }) => {
+test("team settings integrations entry opens the Integrations app", async ({ page }, testInfo) => {
   await mockAuthenticatedApp(page, {
     integrations: [
       {
@@ -49,14 +49,18 @@ test("team settings integrations entry opens the Integrations app", async ({ pag
   await expect(page.getByRole("textbox", { name: "Search integrations" })).toBeVisible();
   await expect(page.getByRole("button", { name: "GitHub (connected)" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Google" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Web Search BYOK" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Brave Search (BYOK)" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Custom MCP Server" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Web Search BYOK" }).click();
-  await expect(page.getByRole("heading", { name: "Web Search BYOK" })).toBeVisible();
+  await page.getByRole("button", { name: "Brave Search (BYOK)" }).click();
+  await expect(page.getByRole("heading", { name: "Brave Search (BYOK)" })).toBeVisible();
   await expect(
-    page.getByText("Aura Web Search works out of the box with burst and daily allowances"),
+    page.getByText("Aura Web Search works without setup and uses your plan's quota"),
   ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("brave-search-byok.png"),
+    fullPage: true,
+  });
 
   await page.getByRole("button", { name: "GitHub (connected)" }).click();
   await expect(page.getByRole("heading", { name: "GitHub" })).toBeVisible();
@@ -65,7 +69,7 @@ test("team settings integrations entry opens the Integrations app", async ({ pag
   await expect(page.getByLabel("GitHub Token for GitHub")).toBeVisible();
 });
 
-test("billing tiers show Aura Web Search daily allowances", async ({ page }, testInfo) => {
+test("billing tiers show Aura Web Search quotas", async ({ page }, testInfo) => {
   await mockAuthenticatedApp(page);
   await page.goto("/projects");
 
@@ -100,7 +104,9 @@ test("billing tiers show Aura Web Search daily allowances", async ({ page }, tes
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
     .toBe(true);
-  await expect(tierDialog.getByText("60/min · 5,000/day", { exact: true })).toBeVisible();
+  const sageQuota = tierDialog.getByText("60/min · 5,000/day", { exact: true });
+  await sageQuota.scrollIntoViewIfNeeded();
+  await expect(sageQuota).toBeInViewport();
   await page.screenshot({
     path: testInfo.outputPath("web-search-tier-allowances-mobile.png"),
     fullPage: true,

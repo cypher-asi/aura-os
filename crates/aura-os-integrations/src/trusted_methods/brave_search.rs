@@ -1,9 +1,4 @@
-//! Trusted Web Search methods backed by Brave Search.
-//!
-//! Allow-listed verticals the trusted runtime is permitted to query
-//! through the platform search provider. The actual REST shape is owned by the
-//! [`TrustedIntegrationRuntimeSpec::BraveSearch`] dispatcher rather than spelled
-//! out per-method here.
+//! Brave Search methods shared by Aura-funded and BYOK Web Search.
 
 use serde_json::json;
 

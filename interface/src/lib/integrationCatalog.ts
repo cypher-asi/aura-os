@@ -99,14 +99,13 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
   },
   {
     id: "brave_search",
-    label: "Web Search BYOK",
+    label: "Brave Search (BYOK)",
     kind: "workspace_integration",
-    description:
-      "Use your own Brave Search API key for Aura Web Search without consuming Aura search quota.",
+    description: "Optional key for a workspace-owned Brave Search subscription.",
     secretLabel: "Brave Search API Key",
     secretPlaceholder: "Paste the Brave Search API key",
     authHint:
-      "Aura Web Search works out of the box with burst and daily allowances shown on each subscription tier. Add a Brave Search API key when this workspace should pay Brave directly or continue searching after Aura quota is exhausted.",
+      "Aura Web Search works without setup and uses your plan's quota. Connect a Brave Search API key to use your own Brave subscription instead.",
     docsUrl: "https://api-dashboard.search.brave.com/app/documentation",
     supportsDefaultModel: false,
     runtimeCompatibleAdapters: [],

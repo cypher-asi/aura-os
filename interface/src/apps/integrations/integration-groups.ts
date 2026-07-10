@@ -53,13 +53,13 @@ const PROVIDER_GROUP: Record<string, IntegrationGroupId> = {
   linear: "productivity",
   google: "productivity",
   github: "coding",
-  brave_search: "search",
   buffer: "social_media",
   metricool: "social_media",
   freepik: "image_gen",
   apify: "scraping",
   mailchimp: "email",
   resend: "email",
+  brave_search: "search",
   mcp_server: "mcp_servers",
 };
 
