@@ -133,6 +133,7 @@ function isModelEffort(value: unknown): value is ModelEffort {
     value === "low" ||
     value === "medium" ||
     value === "high" ||
+    value === "xhigh" ||
     value === "max"
   );
 }

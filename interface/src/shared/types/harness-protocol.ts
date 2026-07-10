@@ -102,7 +102,7 @@ export interface AgentPersona {
   personality: string;
 }
 
-export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "max";
+export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 export interface ModelSelection {
   id?: string | null;

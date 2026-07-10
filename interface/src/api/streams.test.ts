@@ -207,7 +207,7 @@ describe("sendAgentEventStream", () => {
       commands: ["run_tests"],
       project_id: "p1",
       new_session: true,
-      reasoning_effort: "medium",
+      reasoning_effort: "minimal",
     });
     expect(body.history).toBeUndefined();
     expect(body.messages).toBeUndefined();

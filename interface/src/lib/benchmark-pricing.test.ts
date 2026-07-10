@@ -140,6 +140,54 @@ describe("benchmark pricing", () => {
     expect(pricing.output).toBe(30);
   });
 
+  it("resolves GPT-5.6 aliases and cache-write premiums", () => {
+    expect(resolvePricing("gpt-5.6", "openai")).toMatchObject({
+      model: "gpt-5.6-sol",
+      input: 5,
+      cacheWrite: 6.25,
+      cacheRead: 0.5,
+      output: 30,
+    });
+    expect(resolvePricing("aura-gpt-5-6-terra")).toMatchObject({
+      model: "gpt-5.6-terra",
+      input: 2.5,
+      cacheWrite: 3.125,
+      output: 15,
+    });
+    expect(resolvePricing("aura-gpt-5-6-luna")).toMatchObject({
+      model: "gpt-5.6-luna",
+      input: 1,
+      cacheWrite: 1.25,
+      output: 6,
+    });
+  });
+
+  it("does not double-charge GPT-5.5 cached input", () => {
+    const { estimatedCostUsd } = calculateEstimatedCostUsd({
+      model: "aura-gpt-5-5",
+      provider: "openai",
+      inputTokens: 200_000,
+      outputTokens: 100_000,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 100_000,
+    });
+    expect(estimatedCostUsd).toBeCloseTo(3.55, 6);
+  });
+
+  it("prices GPT-5.6 cache writes at 1.25x uncached input", () => {
+    const { estimatedCostUsd } = calculateEstimatedCostUsd({
+      model: "aura-gpt-5-6-luna",
+      provider: "openai",
+      inputTokens: 200_000,
+      outputTokens: 100_000,
+      cacheCreationInputTokens: 100_000,
+      cacheReadInputTokens: 50_000,
+    });
+    // 50k new at $1/M + 100k cache write at $1.25/M +
+    // 50k cache read at $0.10/M + 100k output at $6/M.
+    expect(estimatedCostUsd).toBeCloseTo(0.78, 6);
+  });
+
   it.each([
     ["aura-grok-4-5", "grok-4.5", 2, 0.5, 6],
     ["xai/grok-4.5", "grok-4.5", 2, 0.5, 6],

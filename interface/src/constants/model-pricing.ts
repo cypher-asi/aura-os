@@ -67,6 +67,10 @@ const ANTHROPIC_PRICING: Readonly<Record<string, ModelRates>> = {
 } as const;
 
 const OPENAI_PRICING: Readonly<Record<string, ModelRates>> = {
+  // GPT-5.6 cache writes cost 1.25x uncached input; cache reads cost 0.1x.
+  "gpt-5.6-sol": { input: 5, output: 30, cacheWrite: 6.25, cacheRead: 0.5 },
+  "gpt-5.6-terra": { input: 2.5, output: 15, cacheWrite: 3.125, cacheRead: 0.25 },
+  "gpt-5.6-luna": { input: 1, output: 6, cacheWrite: 1.25, cacheRead: 0.1 },
   "gpt-5.5": { input: 5, output: 30, cacheWrite: 5, cacheRead: 0.5 },
   "gpt-5.4": { input: 2.5, output: 15, cacheWrite: 2.5, cacheRead: 0.25 },
   "gpt-5.4-mini": { input: 0.75, output: 4.5, cacheWrite: 0.75, cacheRead: 0.075 },
@@ -132,8 +136,16 @@ const ZERO_RATES: ModelRates = { input: 0, output: 0, cacheWrite: 0, cacheRead: 
  */
 export function normalizePricingKey(model: string): string {
   const key = model.trim().toLowerCase();
-  const unprefixed = key.startsWith("xai/") ? key.slice("xai/".length) : key;
+  const unprefixed = key.startsWith("openai/")
+    ? key.slice("openai/".length)
+    : key.startsWith("xai/")
+      ? key.slice("xai/".length)
+      : key;
   const directAura: Readonly<Record<string, string>> = {
+    "gpt-5.6": "gpt-5.6-sol",
+    "aura-gpt-5-6-sol": "gpt-5.6-sol",
+    "aura-gpt-5-6-terra": "gpt-5.6-terra",
+    "aura-gpt-5-6-luna": "gpt-5.6-luna",
     "aura-kimi-k2-7-code": "kimi-k2p7-code",
     "aura-kimi-k2-6": "kimi-k2p6",
     "aura-kimi-k2-5": "kimi-k2p5",
@@ -248,10 +260,14 @@ export interface SessionCostBreakdown {
 export function computeSessionCost(usage: SessionTokenUsage): SessionCostBreakdown {
   const pricing = getBilledPricing(usage.model, usage.provider);
   const cacheTokens = usage.cacheCreationTokens + usage.cacheReadTokens;
-  // DeepSeek, xAI, and Google report the cached tokens *within* the prompt token
-  // count, so subtract them to avoid charging the full input rate twice.
+  // OpenAI-compatible providers and Google report cached tokens within the
+  // prompt count. Anthropic reports only new input and separate cache buckets.
   const inputIncludesCacheTokens =
-    pricing.provider === "deepseek" || pricing.provider === "xai" || pricing.provider === "google";
+    pricing.provider === "openai" ||
+    pricing.provider === "xai" ||
+    pricing.provider === "fireworks" ||
+    pricing.provider === "deepseek" ||
+    pricing.provider === "google";
   const billedInputTokens =
     inputIncludesCacheTokens && cacheTokens > 0
       ? Math.max(0, usage.inputTokens - cacheTokens)
@@ -264,7 +280,8 @@ export function computeSessionCost(usage: SessionTokenUsage): SessionCostBreakdo
     (usage.cacheReadTokens / 1_000_000) * pricing.cacheRead;
 
   // Weighted average across the token types actually consumed.
-  const totalTokens = usage.inputTokens + usage.outputTokens + cacheTokens;
+  const totalTokens =
+    usage.inputTokens + usage.outputTokens + (inputIncludesCacheTokens ? 0 : cacheTokens);
   const avgCostPerMillionUsd = totalTokens > 0 ? (totalCostUsd / totalTokens) * 1_000_000 : 0;
 
   return {
