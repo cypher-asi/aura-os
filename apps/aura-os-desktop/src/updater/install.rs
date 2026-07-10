@@ -27,7 +27,11 @@ use std::path::{Path, PathBuf};
     target_os = "macos"
 ))]
 use std::process::Command;
-use std::time::{Duration, Instant};
+#[cfg(target_os = "macos")]
+use std::process::Stdio;
+use std::time::Duration;
+#[cfg(target_os = "windows")]
+use std::time::Instant;
 
 use std::fs;
 
@@ -36,6 +40,7 @@ use tracing::debug;
 use tracing::{info, warn};
 
 use super::bundle_path::{inspect_bundle, BundleLocation};
+#[cfg(target_os = "windows")]
 use super::diagnostics::append_updater_log;
 use super::endpoint::build_updater;
 use super::{
@@ -75,6 +80,40 @@ const HANDOFF_OUTPUT_TAIL_BYTES: u64 = 4 * 1024;
 /// `ShutdownForUpdate` signal before letting the OS reap the process.
 const SHUTDOWN_DRAIN_TIMEOUT: Duration = Duration::from_millis(2000);
 
+#[cfg(target_os = "macos")]
+// The 30-second ceiling prevents an orphaned handoff from waiting forever
+// if shutdown stalls. Normal shutdown reaches `open` after about two seconds.
+const MACOS_RELAUNCH_SCRIPT: &str = r#"attempt=0
+while kill -0 "$1" 2>/dev/null; do
+    attempt=$((attempt + 1))
+    if [ "$attempt" -ge 300 ]; then
+        exit 1
+    fi
+    sleep 0.1
+done
+exec /usr/bin/open "$2"
+"#;
+
+#[cfg(target_os = "macos")]
+fn macos_relaunch_command(parent_pid: u32, bundle_path: &Path) -> Command {
+    let mut command = Command::new("/bin/sh");
+    command
+        .arg("-c")
+        .arg(MACOS_RELAUNCH_SCRIPT)
+        .arg("aura-updater-relaunch")
+        .arg(parent_pid.to_string())
+        .arg(bundle_path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    command
+}
+
+#[cfg(target_os = "macos")]
+fn spawn_macos_relaunch_handoff(bundle_path: &Path) -> std::io::Result<std::process::Child> {
+    macos_relaunch_command(std::process::id(), bundle_path).spawn()
+}
+
 #[cfg(not(target_os = "windows"))]
 fn restart_after_install(state: &UpdateState, update: &Update) -> Result<(), String> {
     #[cfg(target_os = "macos")]
@@ -98,13 +137,13 @@ fn restart_after_install(state: &UpdateState, update: &Update) -> Result<(), Str
             Some(&format!("bundle={}", bundle_path.display())),
         );
         info!(path = %bundle_path.display(), "restarting updated macOS app");
-        match Command::new("open").arg("-n").arg(bundle_path).spawn() {
+        match spawn_macos_relaunch_handoff(bundle_path) {
             Ok(child) => {
                 record_step_only(
                     state,
                     UpdateStep::RelaunchSpawned,
                     Some(&format!(
-                        "pid={} bundle={}",
+                        "handoff_pid={} bundle={}",
                         child.id(),
                         bundle_path.display()
                     )),
@@ -935,7 +974,7 @@ fn perform_update_install(state: &UpdateState) -> Result<Option<String>, String>
 /// preflight failure (App Translocation, mounted DMG, etc.). Copies the
 /// running bundle into `/Applications`, clears `com.apple.quarantine`
 /// from the destination so the next launch is *not* re-translocated,
-/// then `open -n`s the destination and exits the current process.
+/// then schedules the destination to reopen after this process exits.
 ///
 /// Both shell-script steps run via `osascript … with administrator
 /// privileges` so the destination write succeeds even when the current
@@ -1090,24 +1129,28 @@ pub(crate) fn relocate_and_relaunch_macos(state: &UpdateState) -> Result<(), Str
         Some(&format!("dest={}", dest.display())),
     );
 
-    // Relaunch the relocated bundle. `open -n` forces a new instance
-    // even if LaunchServices thinks Aura is already running (it does —
-    // we are still alive). Failure here still tears down the current
-    // process; the user can launch from /Applications manually.
-    if let Err(error) = Command::new("open").arg("-n").arg(&dest).spawn() {
-        record_step_only(
-            state,
-            UpdateStep::RelaunchFailed,
-            Some(&format!("error={error} dest={}", dest.display())),
-        );
-        // Don't return here — the bundle is in /Applications, the user
-        // can open it from Finder. Continue to shutdown.
-    } else {
-        record_step_only(
+    // Let the handoff wait for this process to disappear before asking
+    // LaunchServices to open the relocated bundle. Failure here still
+    // tears down the current process; the user can launch it manually.
+    match spawn_macos_relaunch_handoff(&dest) {
+        Ok(child) => record_step_only(
             state,
             UpdateStep::RelaunchSpawned,
-            Some(&format!("dest={}", dest.display())),
-        );
+            Some(&format!(
+                "handoff_pid={} dest={}",
+                child.id(),
+                dest.display()
+            )),
+        ),
+        Err(error) => {
+            record_step_only(
+                state,
+                UpdateStep::RelaunchFailed,
+                Some(&format!("error={error} dest={}", dest.display())),
+            );
+            // The bundle is in /Applications, so continue shutdown and
+            // let the user open it from Finder if the handoff failed.
+        }
     }
 
     record_step_only(state, UpdateStep::ShutdownTriggered, None);
@@ -1694,6 +1737,66 @@ impl std::fmt::Debug for HandoffWaitOutcome {
             Self::SentinelDetected => f.write_str("SentinelDetected"),
             Self::ChildExitedEarly(status) => write!(f, "ChildExitedEarly({status:?})"),
             Self::HardCeilingReached => f.write_str("HardCeilingReached"),
+        }
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod macos_tests {
+    use super::{macos_relaunch_command, MACOS_RELAUNCH_SCRIPT};
+    use std::ffi::OsStr;
+    use std::path::Path;
+    use std::process::Command;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn relaunch_handoff_waits_for_parent_before_opening_bundle() {
+        assert!(MACOS_RELAUNCH_SCRIPT.contains("while kill -0 \"$1\""));
+        assert!(MACOS_RELAUNCH_SCRIPT.contains("exec /usr/bin/open \"$2\""));
+        assert!(!MACOS_RELAUNCH_SCRIPT.contains("open -n"));
+    }
+
+    #[test]
+    fn relaunch_handoff_passes_pid_and_bundle_as_separate_arguments() {
+        let bundle_path = Path::new("/Applications/AURA Test's.app");
+        let command = macos_relaunch_command(42, bundle_path);
+        let args: Vec<&OsStr> = command.get_args().collect();
+
+        assert_eq!(command.get_program(), OsStr::new("/bin/sh"));
+        assert_eq!(args[0], OsStr::new("-c"));
+        assert_eq!(args[1], OsStr::new(MACOS_RELAUNCH_SCRIPT));
+        assert_eq!(args[2], OsStr::new("aura-updater-relaunch"));
+        assert_eq!(args[3], OsStr::new("42"));
+        assert_eq!(args[4], bundle_path.as_os_str());
+    }
+
+    #[test]
+    fn relaunch_handoff_process_waits_until_parent_exits() {
+        let mut parent = Command::new("/bin/sleep")
+            .arg("10")
+            .spawn()
+            .expect("spawn temporary parent");
+        let mut handoff =
+            macos_relaunch_command(parent.id(), Path::new("/nonexistent/aura-updater-test.app"))
+                .spawn()
+                .expect("spawn relaunch handoff");
+
+        std::thread::sleep(Duration::from_millis(200));
+        let waited_for_parent = handoff.try_wait().expect("inspect handoff").is_none();
+        let _ = parent.kill();
+        let _ = parent.wait();
+        assert!(waited_for_parent, "handoff exited while parent was alive");
+
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            if handoff.try_wait().expect("inspect handoff").is_some() {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "handoff did not continue after parent exited"
+            );
+            std::thread::sleep(Duration::from_millis(25));
         }
     }
 }
