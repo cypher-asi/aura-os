@@ -13,6 +13,9 @@ describe("normalizePricingKey", () => {
     expect(normalizePricingKey("aura-claude-opus-4-8")).toBe("claude-opus-4-8");
     expect(normalizePricingKey("aura-claude-fable-5")).toBe("claude-fable-5");
     expect(normalizePricingKey("aura-gpt-5-5")).toBe("gpt-5.5");
+    expect(normalizePricingKey("gpt-5.6")).toBe("gpt-5.6-sol");
+    expect(normalizePricingKey("aura-gpt-5-6-terra")).toBe("gpt-5.6-terra");
+    expect(normalizePricingKey("openai/gpt-5.6-luna")).toBe("gpt-5.6-luna");
     expect(normalizePricingKey("aura-gpt-5-4-mini")).toBe("gpt-5.4-mini");
     expect(normalizePricingKey("aura-grok-4-5")).toBe("grok-4.5");
     expect(normalizePricingKey("xai/grok-4.5")).toBe("grok-4.5");
@@ -99,6 +102,28 @@ describe("resolvePricing for Google Gemini", () => {
 });
 
 describe("getBilledPricing", () => {
+  it("resolves the full GPT-5.6 family at published rates", () => {
+    expect(resolvePricing("gpt-5.6")).toMatchObject({
+      model: "gpt-5.6-sol",
+      input: 5,
+      output: 30,
+      cacheWrite: 6.25,
+      cacheRead: 0.5,
+    });
+    expect(resolvePricing("aura-gpt-5-6-terra")).toMatchObject({
+      input: 2.5,
+      output: 15,
+      cacheWrite: 3.125,
+      cacheRead: 0.25,
+    });
+    expect(resolvePricing("aura-gpt-5-6-luna")).toMatchObject({
+      input: 1,
+      output: 6,
+      cacheWrite: 1.25,
+      cacheRead: 0.1,
+    });
+  });
+
   it("resolves Claude Fable 5 at Anthropic's published rates", () => {
     const base = resolvePricing("aura-claude-fable-5");
     expect(base.provider).toBe("anthropic");
@@ -119,6 +144,36 @@ describe("getBilledPricing", () => {
 });
 
 describe("computeSessionCost", () => {
+  it("does not double-charge OpenAI cached input", () => {
+    const result = computeSessionCost({
+      model: "aura-gpt-5-5",
+      provider: "openai",
+      inputTokens: 200_000,
+      outputTokens: 100_000,
+      cacheReadTokens: 100_000,
+      cacheCreationTokens: 0,
+    });
+    // 100k new input at $6/M + 100k cached at $0.60/M +
+    // 100k output at $36/M after Aura's 20% markup.
+    expect(result.totalCostUsd).toBeCloseTo(4.26, 6);
+    expect(result.totalTokens).toBe(300_000);
+  });
+
+  it("prices GPT-5.6 cache writes at 1.25x input without double charging", () => {
+    const result = computeSessionCost({
+      model: "aura-gpt-5-6-luna",
+      provider: "openai",
+      inputTokens: 200_000,
+      outputTokens: 100_000,
+      cacheReadTokens: 50_000,
+      cacheCreationTokens: 100_000,
+    });
+    // 50k new at $1.20/M + 100k cache write at $1.50/M +
+    // 50k cache read at $0.12/M + 100k output at $7.20/M.
+    expect(result.totalCostUsd).toBeCloseTo(0.936, 6);
+    expect(result.totalTokens).toBe(300_000);
+  });
+
   it("computes total billed cost and weighted average per million", () => {
     const result = computeSessionCost({
       model: "aura-claude-opus-4-8",

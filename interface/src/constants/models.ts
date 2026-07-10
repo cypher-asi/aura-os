@@ -2,42 +2,46 @@ export type GenerationMode = "chat" | "image" | "3d" | "video";
 
 /**
  * Reasoning-effort tiers a model can expose in the picker's hover
- * flyout. This is the provider-accurate superset: `minimal` maps to
- * OpenAI's lowest reasoning tier, `max` to Anthropic's largest thinking
- * budget. Each model exposes only the subset it actually supports (see
+ * flyout. This is the provider-neutral superset: for current OpenAI and
+ * xAI models `minimal` maps to the native `none` tier. OpenAI exposes a
+ * distinct `xhigh` tier, while `max` is GPT-5.6's highest tier or an
+ * Anthropic model's largest thinking budget. Each model exposes only
+ * the subset it actually supports (see
  * the per-model `efforts` arrays). The wire enum carried end-to-end
  * (aura-protocol `ReasoningEffort`) mirrors these snake_case values.
  */
-export type ModelEffort = "minimal" | "low" | "medium" | "high" | "max";
+export type ModelEffort = "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 export const EFFORT_ORDER: ModelEffort[] = [
   "minimal",
   "low",
   "medium",
   "high",
+  "xhigh",
   "max",
 ];
 
 export const EFFORT_LABELS: Record<ModelEffort, string> = {
-  minimal: "Minimal",
+  minimal: "None",
   low: "Low",
   medium: "Medium",
   high: "High",
+  xhigh: "Extra High",
   max: "Max",
 };
 
 /**
  * Compact effort labels shown only on the selected model picker trigger
  * (via {@link modelLabelWithEffort}). The dropdown effort flyout keeps the
- * full {@link EFFORT_LABELS} for readability. `max` reads as "XH" (Extra
- * High) here even though the menu labels it "Max".
+ * full {@link EFFORT_LABELS} for readability.
  */
 export const EFFORT_SHORT_LABELS: Record<ModelEffort, string> = {
-  minimal: "Min",
+  minimal: "None",
   low: "L",
   medium: "M",
   high: "H",
-  max: "XH",
+  xhigh: "XH",
+  max: "Max",
 };
 
 /**
@@ -119,21 +123,21 @@ const ANTHROPIC_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
 const ANTHROPIC_LITE_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
 /**
- * OpenAI `reasoning_effort` tiers for the GPT-5.5 generation. The native
- * API accepts `minimal`/`low`/`medium`/`high` (there is no `max`).
+ * GPT-5.4/5.5 `reasoning_effort` ladder. Aura's provider-neutral
+ * `minimal` endpoint is translated by aura-router to OpenAI's native
+ * `none` value.
  */
-const OPENAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
+const OPENAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high", "xhigh"];
+
+/** GPT-5.6 adds a distinct native `max` tier above `xhigh`. */
+const GPT_5_6_EFFORTS: ModelEffort[] = [...OPENAI_EFFORTS, "max"];
 
 /**
- * GPT-5.4 family (`gpt-5.4` / `-mini` / `-nano`) `reasoning_effort`
- * tiers. Unlike GPT-5.5, the 5.4 generation dropped `minimal`: its
- * native set is `none`/`low`/`medium`/`high`/`xhigh`. We expose
- * `low`/`medium`/`high` (the router folds our `max` to OpenAI `high`,
- * and `none` is not a user-facing tier), so `minimal` must not be
- * offered or the API rejects the request with "Unsupported value:
- * 'minimal'".
+ * GPT-5.4 uses the same native `none`/`low`/`medium`/`high`/`xhigh`
+ * ladder as GPT-5.5. Keep a separate constant so future family-specific
+ * API changes remain explicit in the catalog.
  */
-const GPT_5_4_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
+const GPT_5_4_EFFORTS: ModelEffort[] = [...OPENAI_EFFORTS];
 
 /**
  * Open-weight reasoning tiers (e.g. GPT-OSS) — `reasoning_effort`
@@ -292,19 +296,61 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   },
   // ── OpenAI ──────────────────────────────────────────────────
   {
+    id: "aura-gpt-5-6-sol",
+    label: "GPT-5.6 Sol",
+    tier: "gpt",
+    mode: "chat",
+    vendor: "openai",
+    creditMultiplier: 6,
+    contextWindow: 1_050_000,
+    efforts: GPT_5_6_EFFORTS,
+    defaultEffort: "medium",
+    provider: "OpenAI",
+    description:
+      "OpenAI's GPT-5.6 frontier tier for complex professional work, with a 1.05M context window.",
+    featured: true,
+  },
+  {
+    id: "aura-gpt-5-6-terra",
+    label: "GPT-5.6 Terra",
+    tier: "gpt",
+    mode: "chat",
+    vendor: "openai",
+    creditMultiplier: 3,
+    contextWindow: 1_050_000,
+    efforts: GPT_5_6_EFFORTS,
+    defaultEffort: "medium",
+    provider: "OpenAI",
+    description:
+      "OpenAI's balanced GPT-5.6 tier for strong intelligence at lower cost, with a 1.05M context window.",
+  },
+  {
+    id: "aura-gpt-5-6-luna",
+    label: "GPT-5.6 Luna",
+    tier: "gpt",
+    mode: "chat",
+    vendor: "openai",
+    creditMultiplier: 1.2,
+    contextWindow: 1_050_000,
+    efforts: GPT_5_6_EFFORTS,
+    defaultEffort: "medium",
+    provider: "OpenAI",
+    description:
+      "OpenAI's efficient GPT-5.6 tier for cost-sensitive, high-volume workloads, with a 1.05M context window.",
+  },
+  {
     id: "aura-gpt-5-5",
     label: "GPT-5.5",
     tier: "gpt",
     mode: "chat",
     vendor: "openai",
     creditMultiplier: 6,
-    contextWindow: 400_000,
+    contextWindow: 1_050_000,
     efforts: OPENAI_EFFORTS,
     defaultEffort: "medium",
     provider: "OpenAI",
     description:
-      "OpenAI's flagship reasoning model with a 400K context window and selectable effort tiers.",
-    featured: true,
+      "OpenAI's flagship reasoning model with a 1.05M context window and selectable effort tiers.",
   },
   {
     id: "aura-gpt-5-4",
@@ -313,12 +359,12 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     mode: "chat",
     vendor: "openai",
     creditMultiplier: 3,
-    contextWindow: 400_000,
+    contextWindow: 1_050_000,
     efforts: GPT_5_4_EFFORTS,
-    defaultEffort: "medium",
+    defaultEffort: "minimal",
     provider: "OpenAI",
     description:
-      "Well-rounded GPT-5 tier for general reasoning and coding with a 400K context window.",
+      "Well-rounded GPT-5 tier for general reasoning and coding with a 1.05M context window.",
   },
   {
     id: "aura-gpt-5-4-mini",
@@ -329,7 +375,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     creditMultiplier: 0.9,
     contextWindow: 400_000,
     efforts: GPT_5_4_EFFORTS,
-    defaultEffort: "low",
+    defaultEffort: "minimal",
     provider: "OpenAI",
     description:
       "Cost-efficient GPT-5 tier tuned for fast, everyday tasks with a 400K context window.",
@@ -343,7 +389,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     creditMultiplier: 0.25,
     contextWindow: 400_000,
     efforts: GPT_5_4_EFFORTS,
-    defaultEffort: "low",
+    defaultEffort: "minimal",
     provider: "OpenAI",
     description:
       "The smallest, fastest GPT-5 tier for cheap, high-throughput workloads.",
@@ -971,6 +1017,10 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "claude-haiku-4-5-20251001": "aura-claude-haiku-4-5",
   "aura-gpt-4.1": "aura-gpt-4.1",
   "gpt-4.1": "aura-gpt-4.1",
+  "gpt-5.6": "aura-gpt-5-6-sol",
+  "gpt-5.6-sol": "aura-gpt-5-6-sol",
+  "gpt-5.6-terra": "aura-gpt-5-6-terra",
+  "gpt-5.6-luna": "aura-gpt-5-6-luna",
   "gpt-5.5": "aura-gpt-5-5",
   "gpt-5.4": "aura-gpt-5-4",
   "gpt-5.4-mini": "aura-gpt-5-4-mini",
@@ -1437,7 +1487,7 @@ export function formatContextWindow(tokens?: number | null): string | null {
   if (!tokens || tokens <= 0) return null;
   if (tokens >= 1_000_000) {
     const millions = tokens / 1_000_000;
-    const value = Number.isInteger(millions) ? millions : millions.toFixed(1);
+    const value = Number.isInteger(millions) ? millions : Number(millions.toFixed(2));
     return `${value}M context`;
   }
   return `${Math.round(tokens / 1000)}K context`;
@@ -1452,10 +1502,11 @@ export function formatContextWindow(tokens?: number | null): string | null {
  * 32k because the docs note budgets above that are rarely fully spent.
  */
 export const THINKING_BUDGET_TOKENS: Record<ModelEffort, number> = {
-  minimal: 1_024,
+  minimal: 0,
   low: 4_096,
   medium: 10_000,
   high: 24_000,
+  xhigh: 28_000,
   max: 32_000,
 };
 

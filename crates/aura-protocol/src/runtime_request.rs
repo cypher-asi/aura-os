@@ -263,13 +263,11 @@ pub struct AgentIdentity {
 /// User-selected reasoning-effort tier carried end-to-end from the chat
 /// model picker to the router.
 ///
-/// Provider-accurate **superset** — each model only exposes the subset
-/// it supports (gated in the aura-os model catalog). `Minimal` is
-/// OpenAI's lowest `reasoning_effort` tier; `Max` is Anthropic's largest
-/// thinking budget (OpenAI has no `max`, so the router clamps it to
-/// `high`). The harness maps these onto its internal Anthropic budget
-/// tiers and the router translates them into each provider's native
-/// control.
+/// Provider-neutral **superset** — each model only exposes the subset it
+/// supports (gated in the aura-os model catalog). Aura Router maps `Minimal`
+/// to `none` for current OpenAI models; GPT-5.6 also exposes distinct `XHigh`
+/// and `Max` tiers. The harness maps these onto its internal Anthropic budget
+/// tiers and the router translates them into each provider's native control.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "typescript", derive(TS), ts(export))]
 #[serde(rename_all = "snake_case")]
@@ -278,6 +276,8 @@ pub enum ReasoningEffort {
     Low,
     Medium,
     High,
+    #[serde(rename = "xhigh")]
+    XHigh,
     Max,
 }
 
@@ -286,16 +286,15 @@ impl ReasoningEffort {
     ///
     /// Returns `None` for unknown / empty input so HTTP-edge callers
     /// fall back to the harness's internal effort heuristic rather than
-    /// failing the request. `xhigh` is accepted for backward
-    /// compatibility with clients persisted before the tier rename and
-    /// folds into [`Self::High`].
+    /// failing the request.
     #[must_use]
     pub fn from_wire(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
             "minimal" => Some(Self::Minimal),
             "low" => Some(Self::Low),
             "medium" => Some(Self::Medium),
-            "high" | "xhigh" => Some(Self::High),
+            "high" => Some(Self::High),
+            "xhigh" => Some(Self::XHigh),
             "max" => Some(Self::Max),
             _ => None,
         }
@@ -309,6 +308,7 @@ impl ReasoningEffort {
             Self::Low => "low",
             Self::Medium => "medium",
             Self::High => "high",
+            Self::XHigh => "xhigh",
             Self::Max => "max",
         }
     }
@@ -437,6 +437,7 @@ mod tests {
             (ReasoningEffort::Low, "\"low\""),
             (ReasoningEffort::Medium, "\"medium\""),
             (ReasoningEffort::High, "\"high\""),
+            (ReasoningEffort::XHigh, "\"xhigh\""),
             (ReasoningEffort::Max, "\"max\""),
         ] {
             let json = serde_json::to_string(&tier).expect("serialize tier");
@@ -456,11 +457,9 @@ mod tests {
             ReasoningEffort::from_wire(" high "),
             Some(ReasoningEffort::High)
         );
-        // Legacy clients that persisted the pre-rename `xhigh` tier fold
-        // into `High` rather than dropping the selection.
         assert_eq!(
             ReasoningEffort::from_wire("xhigh"),
-            Some(ReasoningEffort::High)
+            Some(ReasoningEffort::XHigh)
         );
         assert_eq!(ReasoningEffort::from_wire("bogus"), None);
         assert_eq!(ReasoningEffort::from_wire(""), None);

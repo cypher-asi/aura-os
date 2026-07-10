@@ -116,6 +116,24 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
 };
 
 const OPENAI_MODEL_PRICING_PER_MTOK = {
+  "gpt-5.6-sol": {
+    input: 5,
+    output: 30,
+    cacheWrite: 6.25,
+    cacheRead: 0.5,
+  },
+  "gpt-5.6-terra": {
+    input: 2.5,
+    output: 15,
+    cacheWrite: 3.125,
+    cacheRead: 0.25,
+  },
+  "gpt-5.6-luna": {
+    input: 1,
+    output: 6,
+    cacheWrite: 1.25,
+    cacheRead: 0.1,
+  },
   "gpt-5.5": {
     input: 5,
     output: 30,
@@ -352,6 +370,7 @@ function normalizeModelKey(model) {
   if (fireworksModel) return fireworksModel[1];
   const fireworksRouter = unprefixed.match(/^accounts\/fireworks\/routers\/(.+)$/);
   if (fireworksRouter) return fireworksRouter[1];
+  if (unprefixed === "gpt-5.6") return "gpt-5.6-sol";
   const auraClaude = unprefixed.match(/^aura-(claude-.+)$/);
   if (auraClaude) return auraClaude[1];
   const auraFireworksModels = {
@@ -640,9 +659,14 @@ export function calculateEstimatedCostUsd(usage) {
   const pricing = resolvePricing(usage.model, usage.provider);
   const cacheInputTokens =
     usage.cacheCreationInputTokens + usage.cacheReadInputTokens;
-  // DeepSeek, xAI, and Google report cached tokens within the prompt token count.
+  // OpenAI-compatible providers and Google report cached tokens within the
+  // prompt count. Anthropic reports separate new-input and cache buckets.
   const inputIncludesCacheTokens =
-    pricing.provider === "deepseek" || pricing.provider === "xai" || pricing.provider === "google";
+    pricing.provider === "openai" ||
+    pricing.provider === "xai" ||
+    pricing.provider === "fireworks" ||
+    pricing.provider === "deepseek" ||
+    pricing.provider === "google";
   const inputTokens =
     inputIncludesCacheTokens && cacheInputTokens > 0
       ? Math.max(0, usage.inputTokens - cacheInputTokens)

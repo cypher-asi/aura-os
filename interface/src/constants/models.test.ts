@@ -116,6 +116,17 @@ describe("model persistence", () => {
     expect(loadPersistedModel("default", "gpt-5.5")).toBe("aura-gpt-5-5");
   });
 
+  it("normalizes the GPT-5.6 family to Aura-managed chat models", () => {
+    expect(loadPersistedModel("default", "gpt-5.6")).toBe("aura-gpt-5-6-sol");
+    expect(loadPersistedModel("default", "gpt-5.6-sol")).toBe("aura-gpt-5-6-sol");
+    expect(loadPersistedModel("default", "gpt-5.6-terra")).toBe(
+      "aura-gpt-5-6-terra",
+    );
+    expect(loadPersistedModel("default", "gpt-5.6-luna")).toBe(
+      "aura-gpt-5-6-luna",
+    );
+  });
+
   it("normalizes raw Grok model ids to Aura-managed chat models", () => {
     expect(loadPersistedModel("default", "grok-4.5")).toBe("aura-grok-4-5");
     expect(loadPersistedModel("default", "grok-4.3")).toBe("aura-grok-4-3");
@@ -304,7 +315,7 @@ describe("effort-scaled credits", () => {
 
     it("increases monotonically across tiers for a fixed baseline", () => {
       const factors = (
-        ["minimal", "low", "medium", "high", "max"] as const
+        ["minimal", "low", "medium", "high", "xhigh", "max"] as const
       ).map((e) => effortCreditFactor(e, "medium"));
       for (let i = 1; i < factors.length; i++) {
         expect(factors[i]).toBeGreaterThan(factors[i - 1]);
@@ -393,19 +404,59 @@ describe("reasoning-effort validity per model", () => {
     }
   });
 
-  it("does not offer 'minimal' on the GPT-5.4 family (its API rejects it)", () => {
-    // The 5.4 generation dropped `minimal` (native set is
-    // none/low/medium/high/xhigh), unlike GPT-5.5 which keeps it.
+  it("offers the GPT-5.4/5.5 effort ladder", () => {
     for (const id of ["aura-gpt-5-4", "aura-gpt-5-4-mini", "aura-gpt-5-4-nano"]) {
       const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === id);
       expect(model, `${id} should exist`).toBeDefined();
-      expect(model?.efforts ?? []).not.toContain("minimal");
+      expect(model?.efforts ?? []).toEqual(["minimal", "low", "medium", "high", "xhigh"]);
+    }
+    expect(AURA_MANAGED_CHAT_MODELS.find((m) => m.id === "aura-gpt-5-5")?.efforts).toEqual([
+      "minimal",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+    ]);
+  });
+
+  it("offers all six native GPT-5.6 reasoning efforts and correct multipliers", () => {
+    for (const [id, multiplier] of [
+      ["aura-gpt-5-6-sol", 6],
+      ["aura-gpt-5-6-terra", 3],
+      ["aura-gpt-5-6-luna", 1.2],
+    ] as const) {
+      const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === id);
+      expect(model, `${id} should exist`).toBeDefined();
+      expect(model).toMatchObject({
+        vendor: "openai",
+        creditMultiplier: multiplier,
+        contextWindow: 1_050_000,
+        defaultEffort: "medium",
+      });
+      expect(model?.efforts).toEqual([
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+      ]);
+      expect(effectiveCreditMultiplier(model!, model!.defaultEffort)).toBe(multiplier);
     }
   });
 
-  it("keeps 'minimal' available on GPT-5.5", () => {
+  it("keeps GPT-5.5 pricing metadata aligned with the API rate card", () => {
     const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === "aura-gpt-5-5");
-    expect(model?.efforts ?? []).toContain("minimal");
+    expect(model?.creditMultiplier).toBe(6);
+    expect(model?.contextWindow).toBe(1_050_000);
+    expect(model?.defaultEffort).toBe("medium");
+  });
+
+  it("uses OpenAI's native no-reasoning default for the GPT-5.4 family", () => {
+    for (const id of ["aura-gpt-5-4", "aura-gpt-5-4-mini", "aura-gpt-5-4-nano"]) {
+      const model = AURA_MANAGED_CHAT_MODELS.find((m) => m.id === id);
+      expect(model?.defaultEffort).toBe("minimal");
+    }
   });
 
   it("maps Grok 4.3 onto the xAI reasoning effort ladder", () => {

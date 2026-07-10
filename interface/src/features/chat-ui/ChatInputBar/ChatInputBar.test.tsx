@@ -60,7 +60,7 @@ vi.mock("../../../hooks/use-environment-info", () => ({
 }));
 
 let mockSelectedModel: string | null = null;
-let mockSelectedEffort: "minimal" | "low" | "medium" | "high" | "max" | null = null;
+let mockSelectedEffort: "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | null = null;
 let mockSelectedMode: "code" | "plan" | "image" | "video" | "3d" = "code";
 let mockPinnedSourceImage: {
   imageUrl: string;
