@@ -18,6 +18,7 @@ interface TierInfo {
   monthlyTopUp: string;
   dailyReward: string;
   referralReward: string;
+  webSearchQuota: string;
   features: string[];
 }
 
@@ -29,6 +30,7 @@ const TIERS: TierInfo[] = [
     monthlyTopUp: "2,500",
     dailyReward: "50",
     referralReward: "5,000",
+    webSearchQuota: "5/min · 50/day",
     features: [
       "No credit card required",
       "Pay-as-you-go top-ups",
@@ -43,6 +45,7 @@ const TIERS: TierInfo[] = [
     monthlyTopUp: "5,000",
     dailyReward: "100",
     referralReward: "5,000",
+    webSearchQuota: "15/min · 250/day",
     features: [
       "Everything in Mortal, plus:",
       "Monthly credit allowance",
@@ -56,6 +59,7 @@ const TIERS: TierInfo[] = [
     monthlyTopUp: "12,000",
     dailyReward: "200",
     referralReward: "5,000",
+    webSearchQuota: "30/min · 1,000/day",
     features: [
       "Everything in Pro, plus:",
       "3x credits for frontier models",
@@ -68,6 +72,7 @@ const TIERS: TierInfo[] = [
     monthlyTopUp: "40,000",
     dailyReward: "400",
     referralReward: "5,000",
+    webSearchQuota: "60/min · 5,000/day",
     features: [
       "Everything in Crusader, plus:",
       "20x usage on frontier models",
@@ -157,6 +162,10 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
                   <div className={styles.creditRow}>
                     <span className={styles.creditLabel}>Referral reward</span>
                     <span className={styles.creditValue}>{tier.referralReward}</span>
+                  </div>
+                  <div className={styles.creditRow}>
+                    <span className={styles.creditLabel}>Aura Web Search</span>
+                    <span className={styles.creditValue}>{tier.webSearchQuota}</span>
                   </div>
                 </div>
 

@@ -47,7 +47,6 @@ import { useBillingStore } from "../../stores/billing-store";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 
 const defaultProps = {
-  billing: { billing_email: "test@example.com", plan: "free" },
   isAdminOrOwner: true,
   balance: { balance_cents: 500, plan: "free", balance_formatted: "$5.00" },
   balanceLoading: false,

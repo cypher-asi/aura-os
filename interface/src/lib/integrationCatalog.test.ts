@@ -48,6 +48,12 @@ describe("integrationCatalog auth labels", () => {
       );
       expect(appIds.has(provider)).toBe(true);
     }
+    expect(getIntegrationDefinition("brave_search")?.label).toBe(
+      "Brave Search (BYOK)",
+    );
+    expect(getIntegrationDefinition("brave_search")?.authHint).toContain(
+      "Aura Web Search works without setup",
+    );
   });
 
   it("omits model provider connections from user-facing settings", () => {

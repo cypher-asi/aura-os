@@ -54,6 +54,10 @@ pub(crate) fn apply_desktop_runtime_defaults() {
         env!("AURA_DESKTOP_DEFAULT_ORBIT_BASE_URL"),
     );
     set_env_default(
+        "AURA_PLATFORM_TOOL_ACTION_BASE_URL",
+        env!("AURA_DESKTOP_DEFAULT_PLATFORM_TOOL_ACTION_BASE_URL"),
+    );
+    set_env_default(
         "SWARM_BASE_URL",
         env!("AURA_DESKTOP_DEFAULT_SWARM_BASE_URL"),
     );
@@ -109,6 +113,10 @@ mod tests {
         assert_eq!(
             env!("AURA_DESKTOP_DEFAULT_ORBIT_BASE_URL"),
             "https://orbit-sfvu.onrender.com"
+        );
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_PLATFORM_TOOL_ACTION_BASE_URL"),
+            "https://api.aura.ai"
         );
         assert_eq!(
             env!("AURA_DESKTOP_DEFAULT_SWARM_BASE_URL"),

@@ -117,26 +117,6 @@ describe("orgsApi", () => {
     );
   });
 
-  it("getBilling fetches billing", async () => {
-    const fetchMock = mockFetch(200, { plan: "pro" });
-    globalThis.fetch = fetchMock;
-    await orgsApi.getBilling("o1");
-    expect(fetchMock).toHaveBeenCalledWith("/api/orgs/o1/billing", expect.any(Object));
-  });
-
-  it("setBilling sends PUT with plan only (billing email is read-only)", async () => {
-    const fetchMock = mockFetch(200, { id: "o1" });
-    globalThis.fetch = fetchMock;
-    await orgsApi.setBilling("o1", "enterprise");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/orgs/o1/billing",
-      expect.objectContaining({
-        method: "PUT",
-        body: JSON.stringify({ plan: "enterprise" }),
-      }),
-    );
-  });
-
   it("getCreditBalance fetches balance", async () => {
     const fetchMock = mockFetch(200, { balance_cents: 5000, plan: "free", balance_formatted: "$50.00" });
     globalThis.fetch = fetchMock;

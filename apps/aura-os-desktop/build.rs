@@ -11,6 +11,7 @@ const DEFAULT_AURA_INTEGRATIONS_URL: &str = "https://aura-integrations.onrender.
 const DEFAULT_AURA_ROUTER_URL: &str = "https://aura-router.onrender.com";
 const DEFAULT_Z_BILLING_URL: &str = "https://z-billing.onrender.com";
 const DEFAULT_ORBIT_BASE_URL: &str = "https://orbit-sfvu.onrender.com";
+const DEFAULT_PLATFORM_TOOL_ACTION_BASE_URL: &str = "https://api.aura.ai";
 const DEFAULT_SWARM_BASE_URL: &str =
     "http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com";
 const DEFAULT_REQUIRE_ZERO_PRO: &str = "false";
@@ -305,6 +306,11 @@ fn main() {
         "ORBIT_BASE_URL",
         "AURA_DESKTOP_DEFAULT_ORBIT_BASE_URL",
         DEFAULT_ORBIT_BASE_URL,
+    );
+    emit_runtime_default(
+        "AURA_PLATFORM_TOOL_ACTION_BASE_URL",
+        "AURA_DESKTOP_DEFAULT_PLATFORM_TOOL_ACTION_BASE_URL",
+        DEFAULT_PLATFORM_TOOL_ACTION_BASE_URL,
     );
     emit_runtime_default(
         "SWARM_BASE_URL",

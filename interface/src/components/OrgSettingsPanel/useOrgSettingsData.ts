@@ -5,7 +5,7 @@ import { useAuth } from "../../stores/auth-store";
 import { useBillingStore } from "../../stores/billing-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { api, ApiClientError } from "../../api/client";
-import type { OrgBilling, OrgInvite, OrgRole } from "../../shared/types";
+import type { OrgInvite, OrgRole } from "../../shared/types";
 import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
@@ -52,8 +52,6 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const [invites, setInvites] = useState<OrgInvite[]>([]);
-  const [billing, setBilling] = useState<OrgBilling | null>(null);
-  const [billingEmail, setBillingEmail] = useState("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [integrationBusyId, setIntegrationBusyId] = useState<string | null>(null);
 
@@ -104,11 +102,6 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
     try { setInvites(await api.orgs.listInvites(orgId)); } catch { /* ignore */ }
   }, [orgId]);
 
-  const loadBilling = useCallback(async () => {
-    if (!orgId) return;
-    try { const b = await api.orgs.getBilling(orgId); setBilling(b); setBillingEmail(b?.billing_email ?? ""); } catch { /* ignore */ }
-  }, [orgId]);
-
   const loadCreditBalance = useCallback(async () => {
     if (!orgId) return;
     setBalanceError(null);
@@ -122,7 +115,6 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
       void refreshMembers();
       void refreshIntegrations();
       void loadInvites();
-      void loadBilling();
       void loadCreditBalance();
       // Pre-warm the subscription so navigating into Billing / Z Credit
       // History / Rewards is instant on cold opens (no per-section
@@ -130,7 +122,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
       void useBillingStore.getState().fetchSubscription();
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [isOpen, orgId, refreshMembers, refreshIntegrations, loadInvites, loadBilling, loadCreditBalance]);
+  }, [isOpen, orgId, refreshMembers, refreshIntegrations, loadInvites, loadCreditBalance]);
 
   const handleCreateInvite = async () => { if (orgId) { try { await api.orgs.createInvite(orgId); loadInvites(); } catch (err) { console.error("Failed to create invite", err); } } };
   const handleRevokeInvite = async (inviteId: string) => { if (orgId) { try { await api.orgs.revokeInvite(orgId, inviteId); loadInvites(); } catch (err) { console.error("Failed to revoke invite", err); } } };
@@ -234,7 +226,6 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
     integrations, integrationBusyId, createIntegration, updateIntegration, deleteIntegration,
     invites, handleCreateInvite, handleRevokeInvite,
     handleRemoveMember, handleRoleChange,
-    billing, billingEmail,
     balance, balanceLoading, balanceError,
     checkoutError, pollingStatus, handlePurchase,
     loadCreditBalance, handleRetryOrg,

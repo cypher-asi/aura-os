@@ -1,9 +1,4 @@
-//! Trusted Brave Search integration methods.
-//!
-//! Allow-listed verticals the trusted runtime is permitted to query
-//! against Brave Search on behalf of a saved org integration. The
-//! actual REST shape is owned by the [`TrustedIntegrationRuntimeSpec::BraveSearch`]
-//! dispatcher rather than spelled out per-method here.
+//! Brave Search methods shared by Aura-funded and BYOK Web Search.
 
 use serde_json::json;
 
@@ -14,8 +9,7 @@ pub(crate) fn methods() -> Vec<TrustedIntegrationMethodDefinition> {
         TrustedIntegrationMethodDefinition {
             name: "brave_search_web".to_string(),
             provider: "brave_search".to_string(),
-            description: "Search the web through a saved Brave Search org integration."
-                .to_string(),
+            description: "Search the web using Aura Web Search.".to_string(),
             prompt_signature:
                 "brave_search_web(query, count?, freshness?, country?, search_lang?, integration_id?)"
                     .to_string(),
@@ -39,8 +33,7 @@ pub(crate) fn methods() -> Vec<TrustedIntegrationMethodDefinition> {
         TrustedIntegrationMethodDefinition {
             name: "brave_search_news".to_string(),
             provider: "brave_search".to_string(),
-            description: "Search recent news through a saved Brave Search org integration."
-                .to_string(),
+            description: "Search recent news using Aura Web Search.".to_string(),
             prompt_signature:
                 "brave_search_news(query, count?, freshness?, country?, search_lang?, integration_id?)"
                     .to_string(),

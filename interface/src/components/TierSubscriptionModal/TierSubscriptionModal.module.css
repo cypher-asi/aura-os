@@ -110,3 +110,13 @@
   margin-top: var(--space-3);
   line-height: 1.5;
 }
+
+@media (max-width: 600px) {
+  .root {
+    padding-inline: 0;
+  }
+
+  .tierGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

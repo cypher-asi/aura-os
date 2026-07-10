@@ -294,6 +294,33 @@ impl ApiError {
     /// [`crate::handlers::public::emit_limit_frame`] so the streaming
     /// surface lights the modal even when the request technically
     /// returned 200.
+    /// Return a structured 429 for an exhausted Web Search quota window.
+    pub(crate) fn tool_action_rate_limited(
+        max_calls: u32,
+        window_secs: u64,
+        retry_after_secs: u64,
+    ) -> (StatusCode, Json<Self>) {
+        let message = format!(
+            "Web Search rate limit exceeded ({max_calls} calls per {window_secs}s for this user). Please retry later, upgrade your plan, or connect your own Brave Search API key."
+        );
+        (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(Self {
+                error: message.clone(),
+                code: "tool_action_rate_limited".to_string(),
+                details: Some(message),
+                data: Some(serde_json::json!({
+                    "code": "tool_action_rate_limited",
+                    "max_calls": max_calls,
+                    "window_seconds": window_secs,
+                    "retry_after_seconds": retry_after_secs,
+                    "upgrade_hint": "Upgrade your plan for higher Aura Web Search limits.",
+                    "byok_hint": "Connect your own Brave Search API key to use Web Search without Aura quota.",
+                })),
+            }),
+        )
+    }
+
     #[allow(dead_code)]
     pub(crate) fn public_limit_reached(limit: u32) -> (StatusCode, Json<Self>) {
         (

@@ -363,6 +363,8 @@ pub fn build_test_app_from_store_with_remote_only(
         org_service,
         auth_service,
         billing_client,
+        web_search_rate_limiter:
+            aura_os_server::tool_action_rate_limit::WebSearchRateLimiter::default(),
         project_service,
         task_service,
         agent_service,

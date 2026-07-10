@@ -122,7 +122,7 @@ function OrgSectionContent({
         <OrgSettingsRewards onUpgrade={onUpgrade} upgradePreparing={upgradePreparing} />
       )}
       {data.section === "billing" && (
-        <OrgSettingsBilling billing={data.billing} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} upgradePreparing={upgradePreparing} />
+        <OrgSettingsBilling isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} upgradePreparing={upgradePreparing} />
       )}
       {data.section === "credit-history" && (
         <OrgSettingsCreditHistory />

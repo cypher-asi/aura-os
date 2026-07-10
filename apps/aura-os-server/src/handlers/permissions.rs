@@ -17,17 +17,6 @@ pub(crate) fn role_level(role: &str) -> u8 {
     }
 }
 
-/// Resolve the user's network-facing ID from the session.
-/// Prefers `network_user_id` (set after sync to aura-network) and falls back
-/// to `user_id` (zOS ID) if the user has not been synced yet.
-#[allow(dead_code)]
-fn resolve_user_id(session: &ZeroAuthSession) -> String {
-    session
-        .network_user_id
-        .map(|id| id.to_string())
-        .unwrap_or_else(|| session.user_id.clone())
-}
-
 /// Check that a user has at least `min_role` given a list of org members.
 /// Returns the user's actual role string on success, or 403 Forbidden on failure.
 ///
@@ -107,8 +96,8 @@ pub(crate) fn require_sys_admin(session: &ZeroAuthSession) -> ApiResult<()> {
 /// Used for process update/delete and node/connection mutations.
 ///
 /// Creator check uses `session.user_id` (JWT id) because `created_by` in
-/// aura-storage is set from the JWT. The admin check uses `resolve_user_id`
-/// which prefers `network_user_id` — that's what appears in the org members list.
+/// aura-storage is set from the JWT. The admin check uses `require_org_role`,
+/// which resolves identity via `candidate_user_ids` (JWT id + network id).
 pub(crate) async fn require_process_edit_permission(
     state: &AppState,
     org_id: &str,
@@ -254,24 +243,6 @@ mod tests {
         let members = vec![make_member("other-id", "org1", "admin")];
         let result = check_role_in_members(&members, &["jwt-id", "network-id"], "org1", "admin");
         assert!(result.is_err());
-    }
-
-    // -----------------------------------------------------------------------
-    // resolve_user_id
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn resolve_user_id_prefers_network_id() {
-        let net_id = aura_os_core::UserId::new();
-        let mut session = make_session("zos-id");
-        session.network_user_id = Some(net_id);
-        assert_eq!(resolve_user_id(&session), net_id.to_string());
-    }
-
-    #[test]
-    fn resolve_user_id_falls_back_to_user_id() {
-        let session = make_session("zos-id");
-        assert_eq!(resolve_user_id(&session), "zos-id");
     }
 
     // -----------------------------------------------------------------------

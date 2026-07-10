@@ -6,15 +6,18 @@
 //! their contracts.
 
 use super::list::list_org_integrations;
-use super::resolve::{resolve_mcp_server_integration, resolve_org_integration};
+use super::resolve::{
+    resolve_mcp_server_integration, resolve_org_integration, resolve_trusted_org_integration,
+};
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
 use aura_os_integrations::{
     app_provider_authenticated_url, app_provider_contract_by_tool, app_provider_contracts,
     app_provider_headers, org_integration_tool_manifest_entries, AppProviderKind,
-    IntegrationsClient,
+    IntegrationsClient, PLATFORM_BRAVE_KEY_ENV, PLATFORM_WEB_SEARCH_INTEGRATION_ID,
 };
 use aura_os_orgs::IntegrationSecretUpdate;
 use axum::extract::Path;
+use axum::http::StatusCode;
 use axum::routing::get;
 use axum::Json;
 use axum::Router;
@@ -25,6 +28,66 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpListener;
+
+struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<String>,
+}
+
+impl EnvVarGuard {
+    fn unset(key: &'static str) -> Self {
+        let previous = std::env::var(key).ok();
+        unsafe { std::env::remove_var(key) };
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        match &self.previous {
+            Some(value) => unsafe { std::env::set_var(self.key, value) },
+            None => unsafe { std::env::remove_var(self.key) },
+        }
+    }
+}
+
+#[test]
+fn inactive_subscription_does_not_receive_paid_web_search_limits() {
+    let now = chrono::Utc::now();
+    let status = aura_os_billing::SubscriptionStatus {
+        plan: "sage".to_string(),
+        is_subscribed: false,
+        monthly_credits: 0,
+        current_period_end: None,
+    };
+
+    assert_eq!(
+        super::web_search_limits_for_subscription_at(&status, now),
+        crate::tool_action_rate_limit::MORTAL_LIMITS
+    );
+}
+
+#[test]
+fn cancelled_subscription_keeps_paid_limits_through_period_end() {
+    let now = chrono::Utc::now();
+    let mut status = aura_os_billing::SubscriptionStatus {
+        plan: "sage".to_string(),
+        is_subscribed: false,
+        monthly_credits: 0,
+        current_period_end: Some((now + chrono::Duration::days(1)).to_rfc3339()),
+    };
+
+    assert_eq!(
+        super::web_search_limits_for_subscription_at(&status, now),
+        crate::tool_action_rate_limit::SAGE_LIMITS
+    );
+
+    status.current_period_end = Some((now - chrono::Duration::seconds(1)).to_rfc3339());
+    assert_eq!(
+        super::web_search_limits_for_subscription_at(&status, now),
+        crate::tool_action_rate_limit::MORTAL_LIMITS
+    );
+}
 
 fn sample_integration(
     org_id: OrgId,
@@ -55,12 +118,20 @@ async fn start_mock_integrations_server(
     integration: OrgIntegration,
     secret: Option<&'static str>,
 ) -> String {
-    start_mock_integrations_server_with_secret_counter(integration, secret, None).await
+    start_mock_integrations_server_with_secret_response(integration, Ok(secret), None).await
 }
 
 async fn start_mock_integrations_server_with_secret_counter(
     integration: OrgIntegration,
     secret: Option<&'static str>,
+    secret_hits: Option<Arc<AtomicUsize>>,
+) -> String {
+    start_mock_integrations_server_with_secret_response(integration, Ok(secret), secret_hits).await
+}
+
+async fn start_mock_integrations_server_with_secret_response(
+    integration: OrgIntegration,
+    secret: Result<Option<&'static str>, StatusCode>,
     secret_hits: Option<Arc<AtomicUsize>>,
 ) -> String {
     let list_integration = integration.clone();
@@ -94,11 +165,12 @@ async fn start_mock_integrations_server_with_secret_counter(
             get(
                 move |Path((_org_id, _integration_id)): Path<(String, String)>| {
                     let secret_hit_counter = secret_hit_counter.clone();
+                    let secret = secret;
                     async move {
                         if let Some(counter) = secret_hit_counter {
                             counter.fetch_add(1, Ordering::SeqCst);
                         }
-                        Json(serde_json::json!({ "secret": secret }))
+                        secret.map(|secret| Json(serde_json::json!({ "secret": secret })))
                     }
                 },
             ),
@@ -417,6 +489,87 @@ async fn resolve_google_integration_denies_blank_owner_user() {
 }
 
 #[tokio::test]
+async fn platform_and_byok_brave_resolution_is_explicit() {
+    let _env = EnvVarGuard::unset(PLATFORM_BRAVE_KEY_ENV);
+
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    let unset = resolve_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": PLATFORM_WEB_SEARCH_INTEGRATION_ID }),
+    )
+    .await;
+    assert!(
+        unset.is_err(),
+        "platform Web Search fallback must error cleanly when the env var is unset"
+    );
+
+    unsafe { std::env::set_var(PLATFORM_BRAVE_KEY_ENV, "platform-key-123") };
+    let fallback = resolve_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": PLATFORM_WEB_SEARCH_INTEGRATION_ID }),
+    )
+    .await
+    .expect("platform fallback resolves when env var is set");
+    assert_eq!(fallback.secret, "platform-key-123");
+
+    let unknown = resolve_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": "missing-brave" }),
+    )
+    .await;
+    assert!(
+        unknown.is_err(),
+        "an explicitly selected integration must not fall back to Aura's key"
+    );
+
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some("org-brave"),
+            "Org Brave Search".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("real-org-brave-key".to_string()),
+        )
+        .expect("save real org brave integration");
+
+    let by_provider = resolve_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({}),
+    )
+    .await
+    .expect("real org brave integration resolves by provider");
+    assert_eq!(
+        by_provider.secret, "real-org-brave-key",
+        "a real org brave key must win over the platform fallback"
+    );
+    assert_ne!(
+        by_provider.metadata.integration_id, PLATFORM_WEB_SEARCH_INTEGRATION_ID,
+        "provider selection must not pick the synthetic platform integration when a real key exists"
+    );
+}
+
+#[tokio::test]
 async fn resolve_google_canonical_denies_before_secret_fetch_when_owner_mismatches() {
     let store_dir = tempfile::tempdir().unwrap();
     let store_path = store_dir.path().join("store");
@@ -596,4 +749,148 @@ async fn resolve_mcp_server_integration_uses_shadow_secret_when_canonical_secret
 
     assert_eq!(resolved.metadata, canonical);
     assert_eq!(resolved.secret, "local-mcp-secret");
+}
+
+#[tokio::test]
+async fn trusted_resolution_returns_503_when_canonical_secret_service_is_down() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let mut state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+    let integration_id = "brave-ops";
+
+    // Trusted resolution must not use this stale local credential.
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some(integration_id),
+            "Local Shadow Brave".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("stale-shadow-secret".to_string()),
+        )
+        .expect("save local shadow");
+
+    let canonical = sample_integration(
+        org_id,
+        integration_id,
+        "Canonical Brave",
+        "brave_search",
+        true,
+        true,
+    );
+    let base_url = start_mock_integrations_server_with_secret_response(
+        canonical,
+        Err(StatusCode::INTERNAL_SERVER_ERROR),
+        None,
+    )
+    .await;
+    state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+        &base_url,
+        "internal-token",
+    )));
+
+    let result = resolve_trusted_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": integration_id }),
+    )
+    .await;
+
+    let (status, _body) = match result {
+        Ok(_) => panic!("degraded canonical service must fail closed"),
+        Err(err) => err,
+    };
+    assert_eq!(
+        status,
+        axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        "a degraded canonical service must return 503, not a stale-shadow execution"
+    );
+}
+
+#[tokio::test]
+async fn trusted_resolution_preserves_canonical_not_found() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let mut state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    // Canonical server only knows about a different integration id, so a
+    // lookup by id resolves to a healthy 404.
+    let canonical = sample_integration(
+        org_id,
+        "some-other-id",
+        "Canonical Brave",
+        "brave_search",
+        true,
+        true,
+    );
+    let base_url = start_mock_integrations_server(canonical, Some("canonical-secret")).await;
+    state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+        &base_url,
+        "internal-token",
+    )));
+
+    let result = resolve_trusted_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": "missing-id" }),
+    )
+    .await;
+
+    let (status, _body) = match result {
+        Ok(_) => panic!("missing canonical integration must error"),
+        Err(err) => err,
+    };
+    assert_eq!(
+        status,
+        axum::http::StatusCode::NOT_FOUND,
+        "a healthy not-found must keep the existing 4xx semantics"
+    );
+}
+
+#[tokio::test]
+async fn trusted_resolution_uses_local_store_without_canonical_client() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let mut state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+    let integration_id = "brave-local";
+
+    state.integrations_client = None;
+
+    state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            Some(integration_id),
+            "Local Brave".to_string(),
+            "brave_search".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            None,
+            Some(true),
+            IntegrationSecretUpdate::Set("local-brave-secret".to_string()),
+        )
+        .expect("save local shadow");
+
+    let resolved = resolve_trusted_org_integration(
+        &state,
+        &org_id,
+        "brave_search",
+        None,
+        &serde_json::json!({ "integration_id": integration_id }),
+    )
+    .await
+    .expect("local/dev mode resolves via shadow");
+
+    assert_eq!(resolved.secret, "local-brave-secret");
 }

@@ -235,7 +235,7 @@ pub(crate) async fn subscription_portal(
 pub(crate) async fn subscription_status(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-) -> ApiResult<Json<serde_json::Value>> {
+) -> ApiResult<Json<aura_os_billing::SubscriptionStatus>> {
     let resp = state
         .billing_client
         .get_subscription_status(&jwt)
@@ -384,6 +384,8 @@ mod tests {
                 org_service,
                 auth_service,
                 billing_client,
+                web_search_rate_limiter:
+                    crate::tool_action_rate_limit::WebSearchRateLimiter::default(),
                 project_service,
                 task_service,
                 agent_service,

@@ -1,12 +1,10 @@
-//! Org-integration metadata + secret resolution.
-//!
-//! Extracted from the previous monolithic `org_tools.rs`. The behaviour of
-//! every helper is unchanged; the original [`resolve_org_integration`] body
-//! has been split into a few focused helpers to stay under the per-function
-//! line limit.
+//! Org-integration metadata and secret resolution.
 
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
-use aura_os_integrations::IntegrationsError;
+use aura_os_integrations::{
+    platform_web_search_integration, platform_web_search_key_present, IntegrationsError,
+    PLATFORM_BRAVE_KEY_ENV, PLATFORM_WEB_SEARCH_INTEGRATION_ID,
+};
 use aura_os_orgs::IntegrationSecretUpdate;
 use serde_json::Value;
 use tracing::warn;
@@ -15,6 +13,7 @@ use super::args::optional_string;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
+/// Metadata and credential selected for one tool invocation.
 pub(crate) struct ResolvedOrgIntegration {
     pub(super) metadata: OrgIntegration,
     pub(super) secret: String,
@@ -27,10 +26,42 @@ pub(super) async fn resolve_org_integration(
     user_id: Option<&str>,
     args: &Value,
 ) -> ApiResult<ResolvedOrgIntegration> {
+    resolve_org_integration_inner(state, org_id, provider, user_id, args, false).await
+}
+
+/// Trusted tools fail closed during canonical service outages instead of using
+/// possibly stale local credentials. Local development without a canonical
+/// client still resolves from the local store.
+pub(super) async fn resolve_trusted_org_integration(
+    state: &AppState,
+    org_id: &OrgId,
+    provider: &str,
+    user_id: Option<&str>,
+    args: &Value,
+) -> ApiResult<ResolvedOrgIntegration> {
+    resolve_org_integration_inner(state, org_id, provider, user_id, args, true).await
+}
+
+async fn resolve_org_integration_inner(
+    state: &AppState,
+    org_id: &OrgId,
+    provider: &str,
+    user_id: Option<&str>,
+    args: &Value,
+    fail_on_canonical_outage: bool,
+) -> ApiResult<ResolvedOrgIntegration> {
     let integration_id = optional_string(args, &["integration_id", "integrationId"]);
-    let integration =
-        pick_org_integration_metadata(state, org_id, provider, user_id, integration_id).await?;
-    let secret = load_org_integration_secret(state, org_id, &integration).await?;
+    let integration = pick_org_integration_metadata(
+        state,
+        org_id,
+        provider,
+        user_id,
+        integration_id,
+        fail_on_canonical_outage,
+    )
+    .await?;
+    let secret =
+        load_org_integration_secret(state, org_id, &integration, fail_on_canonical_outage).await?;
 
     Ok(ResolvedOrgIntegration {
         metadata: integration,
@@ -44,30 +75,53 @@ async fn pick_org_integration_metadata(
     provider: &str,
     user_id: Option<&str>,
     integration_id: Option<String>,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<OrgIntegration> {
-    if let Some(integration) =
-        load_canonical_org_integration(state, org_id, provider, user_id, integration_id.as_deref())
-            .await?
+    if provider == "brave_search"
+        && integration_id.as_deref() == Some(PLATFORM_WEB_SEARCH_INTEGRATION_ID)
     {
+        return Ok(platform_web_search_integration(org_id));
+    }
+
+    let allow_platform_fallback =
+        integration_id.is_none() && provider == "brave_search" && platform_web_search_key_present();
+    let canonical_integration = load_canonical_org_integration(
+        state,
+        org_id,
+        provider,
+        user_id,
+        integration_id.as_deref(),
+        fail_on_canonical_outage,
+    )
+    .await?;
+    if let Some(integration) = canonical_integration {
         return Ok(integration);
     }
-    if let Some(integration_id) = integration_id {
-        return load_shadow_org_integration_by_id(
-            state,
-            org_id,
-            provider,
-            user_id,
-            &integration_id,
-        );
+    if allow_platform_fallback && fail_on_canonical_outage && state.integrations_client.is_some() {
+        return Ok(platform_web_search_integration(org_id));
     }
-    load_shadow_org_integration_for_provider(state, org_id, provider, user_id)
+    let resolved = if let Some(integration_id) = integration_id {
+        load_shadow_org_integration_by_id(state, org_id, provider, user_id, &integration_id)
+    } else {
+        load_shadow_org_integration_for_provider(state, org_id, provider, user_id)
+    };
+    match resolved {
+        Ok(integration) => Ok(integration),
+        Err(_) if allow_platform_fallback => Ok(platform_web_search_integration(org_id)),
+        Err(error) => Err(error),
+    }
 }
 
 async fn load_org_integration_secret(
     state: &AppState,
     org_id: &OrgId,
     integration: &OrgIntegration,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<String> {
+    if integration.integration_id == PLATFORM_WEB_SEARCH_INTEGRATION_ID {
+        return load_platform_web_search_secret();
+    }
+
     let Some(client) = &state.integrations_client else {
         return load_shadow_secret(state, &integration.integration_id);
     };
@@ -90,6 +144,16 @@ async fn load_org_integration_secret(
             }
         }
         Err(error) => {
+            if fail_on_canonical_outage && is_canonical_outage(&error) {
+                warn!(
+                    %org_id,
+                    integration_id = %integration.integration_id,
+                    provider = %integration.provider,
+                    error = %error,
+                    "canonical aura-integrations secret fetch failed for a trusted tool action; returning 503 instead of using the local shadow"
+                );
+                return Err(integrations_service_down_error());
+            }
             warn!(
                 %org_id,
                 integration_id = %integration.integration_id,
@@ -100,6 +164,24 @@ async fn load_org_integration_secret(
             load_shadow_secret(state, &integration.integration_id)
         }
     }
+}
+
+fn is_canonical_outage(error: &IntegrationsError) -> bool {
+    !matches!(error, IntegrationsError::Server { status: 404, .. })
+}
+
+fn integrations_service_down_error() -> (axum::http::StatusCode, axum::Json<ApiError>) {
+    ApiError::service_unavailable(
+        "the integrations service is unavailable; trusted tool execution was not attempted",
+    )
+}
+
+fn load_platform_web_search_secret() -> ApiResult<String> {
+    std::env::var(PLATFORM_BRAVE_KEY_ENV)
+        .ok()
+        .map(|key| key.trim().to_string())
+        .filter(|key| !key.is_empty())
+        .ok_or_else(|| ApiError::bad_request("platform web search is not configured"))
 }
 
 fn load_shadow_secret(state: &AppState, integration_id: &str) -> ApiResult<String> {
@@ -117,17 +199,34 @@ async fn load_canonical_org_integration(
     provider: &str,
     user_id: Option<&str>,
     integration_id: Option<&str>,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<Option<OrgIntegration>> {
     let Some(client) = &state.integrations_client else {
         return Ok(None);
     };
 
     if let Some(integration_id) = integration_id {
-        return load_canonical_by_id(state, client, org_id, provider, user_id, integration_id)
-            .await;
+        return load_canonical_by_id(
+            state,
+            client,
+            org_id,
+            provider,
+            user_id,
+            integration_id,
+            fail_on_canonical_outage,
+        )
+        .await;
     }
 
-    load_canonical_by_provider(state, client, org_id, provider, user_id).await
+    load_canonical_by_provider(
+        state,
+        client,
+        org_id,
+        provider,
+        user_id,
+        fail_on_canonical_outage,
+    )
+    .await
 }
 
 async fn load_canonical_by_id(
@@ -137,6 +236,7 @@ async fn load_canonical_by_id(
     provider: &str,
     user_id: Option<&str>,
     integration_id: &str,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<Option<OrgIntegration>> {
     match client
         .get_integration_internal(org_id, integration_id)
@@ -161,6 +261,16 @@ async fn load_canonical_by_id(
             Err(ApiError::not_found("integration not found"))
         }
         Err(error) => {
+            if fail_on_canonical_outage && is_canonical_outage(&error) {
+                warn!(
+                    %org_id,
+                    integration_id,
+                    provider,
+                    error = %error,
+                    "canonical aura-integrations metadata fetch failed for a trusted tool action; returning 503 instead of using the local shadow"
+                );
+                return Err(integrations_service_down_error());
+            }
             warn!(
                 %org_id,
                 integration_id,
@@ -179,6 +289,7 @@ async fn load_canonical_by_provider(
     org_id: &OrgId,
     provider: &str,
     user_id: Option<&str>,
+    fail_on_canonical_outage: bool,
 ) -> ApiResult<Option<OrgIntegration>> {
     match client.list_integrations_internal(org_id).await {
         Ok(integrations) => {
@@ -194,15 +305,26 @@ async fn load_canonical_by_provider(
             }
             let integration = integrations
                 .into_iter()
-                .find(|integration| matches_org_tool_provider(integration, provider, user_id))
-                .ok_or_else(|| {
-                    ApiError::bad_request(format!(
-                        "no enabled `{provider}` org integration with a key is available"
-                    ))
-                })?;
-            Ok(Some(integration))
+                .find(|integration| matches_org_tool_provider(integration, provider, user_id));
+            match integration {
+                Some(integration) => Ok(Some(integration)),
+                // Aura-funded search does not require an org integration.
+                None if provider == "brave_search" && platform_web_search_key_present() => Ok(None),
+                None => Err(ApiError::bad_request(format!(
+                    "no enabled `{provider}` org integration with a key is available"
+                ))),
+            }
         }
         Err(error) => {
+            if fail_on_canonical_outage && is_canonical_outage(&error) {
+                warn!(
+                    %org_id,
+                    provider,
+                    error = %error,
+                    "canonical aura-integrations list fetch failed for a trusted tool action; returning 503 instead of using the local shadow"
+                );
+                return Err(integrations_service_down_error());
+            }
             warn!(
                 %org_id,
                 provider,
@@ -411,7 +533,9 @@ fn matches_org_tool_provider(
     provider: &str,
     user_id: Option<&str>,
 ) -> bool {
-    integration.provider == provider
+    // The synthetic capability is selected explicitly or as a final fallback.
+    integration.integration_id != PLATFORM_WEB_SEARCH_INTEGRATION_ID
+        && integration.provider == provider
         && integration.has_secret
         && integration.enabled
         && integration.kind == OrgIntegrationKind::WorkspaceIntegration

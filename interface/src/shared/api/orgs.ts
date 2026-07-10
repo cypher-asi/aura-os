@@ -2,7 +2,6 @@ import type {
   Org,
   OrgMember,
   OrgInvite,
-  OrgBilling,
   OrgRole,
   CreditBalance,
   CheckoutSessionResponse,
@@ -53,13 +52,6 @@ export const orgsApi = {
     apiFetch<OrgMember>(`/api/invites/${token}/accept`, {
       method: "POST",
       body: JSON.stringify({ displayName }),
-    }),
-  getBilling: (orgId: string) =>
-    apiFetch<OrgBilling | null>(`/api/orgs/${orgId}/billing`),
-  setBilling: (orgId: string, plan: string) =>
-    apiFetch<Org>(`/api/orgs/${orgId}/billing`, {
-      method: "PUT",
-      body: JSON.stringify({ plan }),
     }),
   getCreditBalance: (orgId: string) =>
     apiFetch<CreditBalance>(`/api/orgs/${orgId}/credits/balance`),

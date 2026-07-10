@@ -1,37 +1,51 @@
 # Render Deployment — aura-os
 
-Single Web Service that builds both frontend and backend. The backend serves the frontend from `interface/dist` (same as local development).
+Production is split across two Render services: `aura-api` runs the Rust API,
+and `aura-app` builds/serves the static interface. Secrets used for provider
+calls belong on `aura-api`, never on the static frontend.
 
 ## Render Service Setup
 
-| Setting | Value |
-|---------|-------|
-| **Type** | Web Service |
-| **Repository** | `cypher-asi/aura-os` |
-| **Branch** | `main` |
-| **Build Command** | `cd interface && npm ci && export APP_VERSION="$RENDER_GIT_COMMIT" APP_CHANNEL=web && npm run build && node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist --require-analytics && cd .. && cargo build --release -p aura-os-server` |
-| **Start Command** | `./target/release/aura-os-server` |
-| **Plan** | Starter ($7/mo) or higher |
+| Service | Type | Responsibility |
+|---------|------|----------------|
+| `aura-api` | Web Service | Builds and runs `aura-os-server` at `https://api.aura.ai` |
+| `aura-app` | Static Site | Builds `interface/` and publishes `interface/dist` |
+
+Both services deploy `main`. Keep the actual Render build/start commands in
+sync with the corresponding service settings; Render remains the operational
+source of truth.
 
 ## Environment Variables
 
-### Required
+### `aura-api` required
 
 | Variable | Value |
 |----------|-------|
 | `AURA_SERVER_PORT` | `10000` |
 | `AURA_SERVER_HOST` | `0.0.0.0` |
-| `VITE_API_URL` | `https://YOUR-SERVICE.onrender.com` |
+| `AURA_SERVER_BASE_URL` | `https://api.aura.ai` |
 | `AURA_ROUTER_URL` | `https://aura-router.onrender.com` |
 | `Z_BILLING_URL` | `https://z-billing.onrender.com` |
+| `BRAVE_SEARCH_PLATFORM_KEY` | Aura's Brave Search subscription key (secret) |
 
-`VITE_API_URL` is consumed twice from the same Render env: the Vite build bakes it into the frontend bundle so the UI knows where to call, and the `aura-os-server` process reads it at runtime to stamp cross-agent tool callback URLs (so remote harness agents can reach back into the service over its public URL instead of loopback). One env var, two jobs — no duplication.
+`BRAVE_SEARCH_PLATFORM_KEY` must exist only on `aura-api`. Do not add it to
+`aura-app`, any `VITE_*` variable, GitHub Actions desktop secrets, or renderer
+configuration.
+
+### `aura-app` required
+
+| Variable | Value |
+|----------|-------|
+| `VITE_API_URL` | `https://api.aura.ai` |
+
+The static frontend receives only the public API origin. It never calls Brave
+directly.
 
 ### Optional overrides
 
 | Variable | Value |
 |----------|-------|
-| `AURA_SERVER_BASE_URL` | `https://YOUR-SERVICE.onrender.com` — explicit override that wins over `VITE_API_URL`. Only needed when the frontend and backend must advertise different public URLs (e.g. a separate CDN origin). Leave unset otherwise. |
+| `VITE_API_URL` on `aura-api` | Optional fallback for `AURA_SERVER_BASE_URL`; prefer the explicit server variable in the split deployment. |
 
 ### Recommended (full functionality)
 
@@ -39,16 +53,26 @@ Single Web Service that builds both frontend and backend. The backend serves the
 |----------|-------|
 | `AURA_NETWORK_URL` | `https://aura-network.onrender.com` |
 | `AURA_STORAGE_URL` | `https://aura-storage.onrender.com` |
+| `AURA_INTEGRATIONS_URL` | `https://aura-integrations.onrender.com` |
+| `AURA_INTEGRATIONS_INTERNAL_TOKEN` | Must match `INTERNAL_SERVICE_TOKEN` on `aura-integrations` |
 | `ORBIT_BASE_URL` | `https://orbit-sfvu.onrender.com` |
-| `INTERNAL_SERVICE_TOKEN` | (same value as other services) |
 | `MIXPANEL_TOKEN` | Mixpanel project token. Enables **server-side** analytics (`session_active` True DAU backstop + share events). The server logs a loud warning at startup if unset. |
 | `VITE_MIXPANEL_TOKEN` | Same Mixpanel token, consumed by the Vite build so the **web client** SDK sends engagement events. Without it the browser SDK silently no-ops. |
+
+Aura sends `BRAVE_SEARCH_PLATFORM_KEY` to Brave as the Search API credential.
+No additional Render variable or xAI/X integration is involved.
+
+Packaged desktop builds default `AURA_PLATFORM_TOOL_ACTION_BASE_URL` to
+`https://api.aura.ai`. A GitHub environment/repository variable is only needed
+to override that public callback origin; the Brave key remains server-side.
 
 `APP_VERSION` in the build command stamps a real clean version into the bundle so analytics events are not bucketed under `app_version = "0.0.0"` or a `*-dirty` git fallback. `RENDER_GIT_COMMIT` is provided automatically by Render. It is `export`ed (not set inline on `npm run build` only) so both Vite and the analytics validator see it.
 
 Analytics-enabled Vite builds and the `desktop-frontend-assets-validate.mjs --require-analytics` step **fail the build** if `VITE_MIXPANEL_TOKEN` is missing/empty or was not actually inlined into the bundle, or if `APP_VERSION` is empty/`0.0.0`/`*-dirty`. This is the web equivalent of the desktop release guard — a config regression that would silently ship a no-op or mis-versioned web analytics SDK now breaks the deploy loudly instead of going unnoticed. `VITE_MIXPANEL_TOKEN` must be present in the Render service env (above) for it to pass.
 
-> **Apply on the Render dashboard:** this build command lives in the `aura-app` Render service settings — update it there to match the command above; this doc is the record, not the source of truth Render reads.
+> **Apply on the Render dashboard:** add `BRAVE_SEARCH_PLATFORM_KEY` to
+> `aura-api`, then redeploy that service. No `aura-app` redeploy is required for
+> the secret itself.
 
 ### Optional
 
@@ -91,29 +115,38 @@ local-agent chat/dev-loop routes before they reach the hosted local harness.
 
 ```bash
 # Health check (should return 401 — no auth)
-curl https://YOUR-SERVICE.onrender.com/api/auth/session
+curl https://api.aura.ai/api/auth/session
 
 # Login
-curl -X POST https://YOUR-SERVICE.onrender.com/api/auth/login \
+curl -X POST https://api.aura.ai/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"...","password":"..."}'
 
 # Frontend loads
-open https://YOUR-SERVICE.onrender.com
+open https://YOUR-AURA-APP-DOMAIN
 ```
+
+After signing in, start a chat and ask for current information. Verify the
+assistant invokes Web Search without a connect step. Then inspect `aura-api`
+logs for a successful Brave response and confirm the browser network request is
+to `https://api.aura.ai/api/orgs/.../tool-actions/brave_search_*`, never to
+Brave directly.
 
 ## Notes
 
 - Port 10000 is Render's default. The server reads `AURA_SERVER_PORT`.
 - Host `0.0.0.0` is required — Render rejects `127.0.0.1` bindings.
-- `VITE_API_URL` (or the explicit `AURA_SERVER_BASE_URL` override) is the server's own public URL. It's stamped into cross-agent tool endpoints (`send_to_agent`, `spawn_agent`, etc.) so the remote harness / `aura-swarm` can call back in. Without it the server falls back to `http://<AURA_SERVER_HOST>:<AURA_SERVER_PORT>`, and `0.0.0.0` is normalized to `127.0.0.1` — which is unreachable from any other host.
+- `AURA_SERVER_BASE_URL` is the API's own public URL. It is stamped into cross-agent tool endpoints (`send_to_agent`, `spawn_agent`, etc.) so the remote harness / `aura-swarm` can call back in. Without it the server falls back to `http://<AURA_SERVER_HOST>:<AURA_SERVER_PORT>`, and `0.0.0.0` is normalized to `127.0.0.1` — which is unreachable from any other host.
+- Keep `aura-api` at one instance with autoscaling disabled while Web Search quotas use the in-process limiter. Adding API instances multiplies the effective allowance, and a deploy/restart resets counters. Move counters to shared storage or z-billing before scaling horizontally or relying on the limits as a strict accounting ledger.
 - Render instances still have ephemeral local disk. Browser-owned persisted state remains in the browser, server auth uses the in-memory validation cache, and any local backend compatibility state should be treated as rebuildable.
 - The build takes ~2-3 minutes (Node frontend + Rust backend).
 - `LOCAL_HARNESS_URL` should NOT be set on Render unless a harness service is deployed alongside and protected with the matching token pair above.
 
 ## Troubleshooting
 
-- `external tool callback unreachable: http://127.0.0.1:<port>/...` — the server is handing remote harnesses a loopback URL because neither `VITE_API_URL` nor the optional `AURA_SERVER_BASE_URL` override is set. Set `VITE_API_URL` to the service's public https URL (e.g. `https://YOUR-SERVICE.onrender.com`) and redeploy; this also fixes the frontend bundle in the same build.
+- `external tool callback unreachable: http://127.0.0.1:<port>/...` — `aura-api` is handing remote harnesses a loopback URL. Set `AURA_SERVER_BASE_URL=https://api.aura.ai` on `aura-api` and redeploy.
+- `platform web search is not configured` — add `BRAVE_SEARCH_PLATFORM_KEY` to `aura-api`, not `aura-app`, and redeploy `aura-api`.
+- Desktop Web Search callback points at loopback — set the GitHub variable `AURA_PLATFORM_TOOL_ACTION_BASE_URL=https://api.aura.ai` and publish a new desktop build. No Brave key belongs in that build.
 
 ## Orbit ENOSPC runbook
 

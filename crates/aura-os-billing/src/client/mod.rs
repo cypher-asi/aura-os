@@ -10,14 +10,29 @@ mod account;
 mod credits;
 mod usage;
 
+pub use credits::SubscriptionStatus;
 pub use usage::{LlmUsageQuote, UsageQuoteResponse};
 
-use std::{net::IpAddr, time::Duration};
+use std::{
+    collections::HashMap,
+    net::IpAddr,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use reqwest::{Client, Method, Url};
+use tokio::sync::Mutex;
 use tracing::warn;
 
 use crate::error::BillingError;
+
+const SUBSCRIPTION_STATUS_CACHE_TTL: Duration = Duration::from_secs(60);
+
+#[derive(Clone)]
+struct CachedSubscriptionStatus {
+    status: SubscriptionStatus,
+    fetched_at: Instant,
+}
 
 #[derive(Clone)]
 pub struct BillingClient {
@@ -25,6 +40,7 @@ pub struct BillingClient {
     base_url: String,
     service_api_key: Option<String>,
     service_name: String,
+    subscription_status_cache: Arc<Mutex<HashMap<String, CachedSubscriptionStatus>>>,
 }
 
 impl BillingClient {
@@ -50,6 +66,7 @@ impl BillingClient {
                 .ok()
                 .filter(|key| !key.trim().is_empty()),
             service_name: "aura-os-server".to_string(),
+            subscription_status_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -67,10 +84,10 @@ impl BillingClient {
         access_token: &str,
         body: Option<serde_json::Value>,
     ) -> Result<reqwest::Response, BillingError> {
-        let url = format!("{}{}", self.base_url, path);
+        let url = self.request_url(path)?;
         let mut req = self
             .http
-            .request(method, &url)
+            .request(method, url)
             .header("authorization", format!("Bearer {access_token}"));
         if let Some(body) = body {
             req = req.json(&body);
@@ -106,7 +123,7 @@ impl BillingClient {
         let Some(api_key) = self.service_api_key.as_deref() else {
             return Err(BillingError::ServiceApiKeyNotConfigured);
         };
-        let url = self.service_url(path)?;
+        let url = self.request_url(path)?;
         self.http
             .request(method, url)
             .header("x-api-key", api_key)
@@ -117,12 +134,12 @@ impl BillingClient {
             .map_err(BillingError::from)
     }
 
-    fn service_url(&self, path: &str) -> Result<Url, BillingError> {
+    fn request_url(&self, path: &str) -> Result<Url, BillingError> {
         let mut base_url = self.base_url.trim_end_matches('/').to_string();
         base_url.push('/');
         let base = Url::parse(&base_url)
             .map_err(|error| BillingError::InvalidServiceUrl(error.to_string()))?;
-        validate_service_base_url(&base)?;
+        validate_billing_base_url(&base)?;
         base.join(path.trim_start_matches('/'))
             .map_err(|error| BillingError::InvalidServiceUrl(error.to_string()))
     }
@@ -134,7 +151,7 @@ impl Default for BillingClient {
     }
 }
 
-fn validate_service_base_url(url: &Url) -> Result<(), BillingError> {
+fn validate_billing_base_url(url: &Url) -> Result<(), BillingError> {
     if url.username() != "" || url.password().is_some() {
         return Err(BillingError::InsecureServiceUrl);
     }

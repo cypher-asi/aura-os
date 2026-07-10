@@ -100,24 +100,6 @@ pub(super) fn resolve_effective_org_id(
     })
 }
 
-pub(super) async fn fetch_org_integrations(
-    state: &AppState,
-    org_id: Option<&OrgId>,
-    jwt: &str,
-) -> Option<Vec<aura_os_core::OrgIntegration>> {
-    match org_id {
-        Some(org_id) => Some(
-            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
-                state,
-                org_id,
-                Some(jwt),
-            )
-            .await,
-        ),
-        None => None,
-    }
-}
-
 /// Prefer the parent agent's *current* permissions bundle over the
 /// instance-time snapshot so a toggle flip on the agent template's
 /// `PermissionsTab` takes effect on the very next turn of every
@@ -142,20 +124,4 @@ pub(super) async fn normalize_instance_perms(
         .normalized_for_identity(&instance.name, Some(instance.role.as_str()))
         .with_subagent_caps()
         .with_project_self_caps(pid_str)
-}
-
-pub(super) fn installed_workspace_integrations(
-    org_id: Option<&OrgId>,
-    org_integrations: Option<&[aura_os_core::OrgIntegration]>,
-) -> Option<Vec<aura_os_harness::InstalledIntegration>> {
-    match (org_id, org_integrations) {
-        (Some(_), Some(ints)) => {
-            let installed =
-                crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
-                    ints,
-                );
-            (!installed.is_empty()).then_some(installed)
-        }
-        _ => None,
-    }
 }

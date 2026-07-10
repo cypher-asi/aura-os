@@ -27,8 +27,6 @@ export function mockOrgsApi(): Record<string, ReturnType<typeof vi.fn>> {
     listInvites: stub(),
     revokeInvite: stub(),
     acceptInvite: stub(),
-    getBilling: stub(),
-    setBilling: stub(),
     getCreditBalance: stub(),
     createCreditCheckout: stub(),
     getTransactions: stub(),

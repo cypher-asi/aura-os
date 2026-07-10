@@ -1,8 +1,23 @@
-use axum::Json;
-use axum::Router;
-use axum::http::{HeaderMap, StatusCode, header::AUTHORIZATION};
+use axum::http::{header::AUTHORIZATION, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, patch, post};
+use axum::Json;
+use axum::Router;
+
+fn brave_result_title(
+    headers: &HeaderMap,
+    byok_title: &'static str,
+    platform_title: &'static str,
+) -> &'static str {
+    match headers
+        .get("x-subscription-token")
+        .and_then(|value| value.to_str().ok())
+    {
+        Some("brave_test") => byok_title,
+        Some("platform-key-123") => platform_title,
+        _ => "Unexpected Brave credential",
+    }
+}
 
 pub fn build_provider_mock() -> Router {
     Router::new()
@@ -334,11 +349,13 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/brave/res/v1/web/search",
-            get(|| async {
+            get(|headers: HeaderMap| async move {
+                let title =
+                    brave_result_title(&headers, "Brave result", "Platform Brave result");
                 Json(serde_json::json!({
                     "web": {
                         "results": [{
-                            "title": "Brave result",
+                            "title": title,
                             "url": "https://example.com",
                             "description": "Example result"
                         }]
@@ -349,11 +366,12 @@ pub fn build_provider_mock() -> Router {
         )
         .route(
             "/brave/res/v1/news/search",
-            get(|| async {
+            get(|headers: HeaderMap| async move {
+                let title = brave_result_title(&headers, "Brave news", "Platform Brave news");
                 Json(serde_json::json!({
                     "type": "news",
                     "results": [{
-                        "title": "Brave news",
+                        "title": title,
                         "url": "https://news.example.com",
                         "description": "Headline"
                     }],

@@ -14,6 +14,7 @@ use serde_json::{json, Value};
 
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::workspace_tools::installed_workspace_app_tool_catalog;
+use crate::handlers::permissions::require_org_role;
 use crate::handlers::trusted_mcp;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
@@ -44,7 +45,11 @@ pub(crate) async fn call_tool(
     Path((org_id, tool_name)): Path<(OrgId, String)>,
     Json(args): Json<Value>,
 ) -> ApiResult<Json<Value>> {
+    // All tool callbacks require at least org membership.
+    require_org_role(&state, &org_id.to_string(), &jwt, &session, "member").await?;
+
     hydrate_canonical_integration_shadow(&state, &org_id, &jwt).await;
+
     let result = if tool_name == "list_org_integrations" {
         list_org_integrations(&state, &org_id, &args).await?
     } else if tool_name == "generate_image" {
@@ -60,6 +65,7 @@ pub(crate) async fn call_tool(
             contract.kind,
             &state,
             &org_id,
+            &jwt,
             &session.user_id,
             &tool_name,
             &args,
@@ -68,6 +74,68 @@ pub(crate) async fn call_tool(
     };
 
     Ok(Json(result))
+}
+
+pub(super) async fn enforce_platform_web_search_quota(
+    state: &AppState,
+    access_token: &str,
+    user_id: &str,
+) -> ApiResult<()> {
+    let limits = web_search_limits_for_user(state, access_token).await;
+    if let Err(exceeded) = state
+        .web_search_rate_limiter
+        .check_with_limits(user_id.to_string(), limits)
+    {
+        return Err(ApiError::tool_action_rate_limited(
+            exceeded.max_calls,
+            exceeded.window.as_secs(),
+            exceeded.retry_after.as_secs().max(1),
+        ));
+    }
+    Ok(())
+}
+
+async fn web_search_limits_for_user(
+    state: &AppState,
+    access_token: &str,
+) -> crate::tool_action_rate_limit::WebSearchRateLimits {
+    match state
+        .billing_client
+        .get_subscription_status_cached(access_token)
+        .await
+    {
+        Ok(status) => web_search_limits_for_subscription(&status),
+        Err(error) => {
+            tracing::warn!(
+                %error,
+                "could not resolve z-billing subscription for Web Search; using Mortal limits"
+            );
+            crate::tool_action_rate_limit::MORTAL_LIMITS
+        }
+    }
+}
+
+fn web_search_limits_for_subscription(
+    status: &aura_os_billing::SubscriptionStatus,
+) -> crate::tool_action_rate_limit::WebSearchRateLimits {
+    web_search_limits_for_subscription_at(status, chrono::Utc::now())
+}
+
+fn web_search_limits_for_subscription_at(
+    status: &aura_os_billing::SubscriptionStatus,
+    now: chrono::DateTime<chrono::Utc>,
+) -> crate::tool_action_rate_limit::WebSearchRateLimits {
+    let paid_through_current_period = status
+        .current_period_end
+        .as_deref()
+        .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+        .is_some_and(|period_end| period_end > now);
+
+    if status.is_subscribed || paid_through_current_period {
+        crate::tool_action_rate_limit::limits_for_billing_plan(Some(&status.plan))
+    } else {
+        crate::tool_action_rate_limit::MORTAL_LIMITS
+    }
 }
 
 pub(crate) async fn list_tool_catalog(

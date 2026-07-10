@@ -57,10 +57,7 @@ pub(super) fn org_routes() -> Router<AppState> {
             post(org_tools::call_mcp_tool),
         )
         .route("/api/invites/:token/accept", post(orgs::accept_invite))
-        .route(
-            "/api/orgs/:org_id/billing",
-            put(orgs::set_billing).get(orgs::get_billing),
-        )
+        .route("/api/orgs/:org_id/billing", get(orgs::get_billing))
         .route(
             "/api/orgs/:org_id/integration-config",
             get(orgs::get_integrations).put(orgs::set_integrations),

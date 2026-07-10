@@ -10,29 +10,6 @@ use crate::state::AppState;
 
 use super::super::persist::ChatPersistCtx;
 
-/// Fetch org integrations exactly once per turn and feed both the
-/// tool catalog and the installed-integrations list from the same
-/// slice. Previously each of those helpers called
-/// `integrations_for_org_with_token` independently, doubling the
-/// upstream round-trip on every chat message.
-pub(super) async fn fetch_org_integrations(
-    state: &AppState,
-    org_id: Option<&OrgId>,
-    jwt: &str,
-) -> Option<Vec<aura_os_core::OrgIntegration>> {
-    match org_id {
-        Some(org_id) => Some(
-            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
-                state,
-                org_id,
-                Some(jwt),
-            )
-            .await,
-        ),
-        None => None,
-    }
-}
-
 /// Resolve the project binding for this turn. Prefer the explicit
 /// `body.project_id` (the interface sends it whenever the user is
 /// talking to the agent in a project context), and fall back to the
@@ -70,20 +47,4 @@ pub(super) fn resolve_effective_org_id(
             .and_then(|pid| state.project_service.get_project(&pid).ok())
             .map(|project| project.org_id)
     })
-}
-
-pub(super) fn installed_workspace_integrations(
-    org_id: Option<&OrgId>,
-    org_integrations: Option<&[aura_os_core::OrgIntegration]>,
-) -> Option<Vec<aura_os_harness::InstalledIntegration>> {
-    match (org_id, org_integrations) {
-        (Some(_), Some(ints)) => {
-            let installed =
-                crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
-                    ints,
-                );
-            (!installed.is_empty()).then_some(installed)
-        }
-        _ => None,
-    }
 }

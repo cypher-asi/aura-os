@@ -51,15 +51,13 @@ pub(crate) async fn integrations_for_org_with_token(
         .unwrap_or_default()
 }
 
-#[allow(dead_code)]
+#[cfg(test)]
 pub(crate) async fn installed_workspace_integrations_for_org(
     state: &AppState,
     org_id: &OrgId,
 ) -> Vec<InstalledIntegration> {
     let integrations = integrations_for_org(state, org_id).await;
-    let mut installed = build_installed_workspace_integrations(&integrations);
-    annotate_mcp_integrations(&mut installed);
-    installed
+    installed_workspace_integrations_with_integrations(&integrations)
 }
 
 pub(crate) async fn installed_workspace_integrations_for_org_with_token(
@@ -81,6 +79,26 @@ pub(crate) fn installed_workspace_integrations_with_integrations(
     let mut installed = build_installed_workspace_integrations(integrations);
     annotate_mcp_integrations(&mut installed);
     installed
+}
+
+pub(crate) async fn integrations_for_optional_org_with_token(
+    state: &AppState,
+    org_id: Option<&OrgId>,
+    bearer_token: &str,
+) -> Option<Vec<OrgIntegration>> {
+    match org_id {
+        Some(org_id) => {
+            Some(integrations_for_org_with_token(state, org_id, Some(bearer_token)).await)
+        }
+        None => None,
+    }
+}
+
+pub(crate) fn installed_workspace_integrations_for_session(
+    integrations: Option<&[OrgIntegration]>,
+) -> Option<Vec<InstalledIntegration>> {
+    let installed = installed_workspace_integrations_with_integrations(integrations?);
+    (!installed.is_empty()).then_some(installed)
 }
 
 fn annotate_mcp_integrations(installed: &mut [InstalledIntegration]) {
