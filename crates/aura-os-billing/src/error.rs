@@ -26,6 +26,6 @@ pub enum BillingError {
     #[error("Z_BILLING_URL is invalid: {0}")]
     InvalidServiceUrl(String),
 
-    #[error("Z_BILLING_URL must be an HTTPS public endpoint for service-authenticated calls")]
+    #[error("Z_BILLING_URL must be an HTTPS public endpoint")]
     InsecureServiceUrl,
 }

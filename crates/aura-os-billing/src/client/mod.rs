@@ -84,10 +84,10 @@ impl BillingClient {
         access_token: &str,
         body: Option<serde_json::Value>,
     ) -> Result<reqwest::Response, BillingError> {
-        let url = format!("{}{}", self.base_url, path);
+        let url = self.request_url(path)?;
         let mut req = self
             .http
-            .request(method, &url)
+            .request(method, url)
             .header("authorization", format!("Bearer {access_token}"));
         if let Some(body) = body {
             req = req.json(&body);
@@ -123,7 +123,7 @@ impl BillingClient {
         let Some(api_key) = self.service_api_key.as_deref() else {
             return Err(BillingError::ServiceApiKeyNotConfigured);
         };
-        let url = self.service_url(path)?;
+        let url = self.request_url(path)?;
         self.http
             .request(method, url)
             .header("x-api-key", api_key)
@@ -134,12 +134,12 @@ impl BillingClient {
             .map_err(BillingError::from)
     }
 
-    fn service_url(&self, path: &str) -> Result<Url, BillingError> {
+    fn request_url(&self, path: &str) -> Result<Url, BillingError> {
         let mut base_url = self.base_url.trim_end_matches('/').to_string();
         base_url.push('/');
         let base = Url::parse(&base_url)
             .map_err(|error| BillingError::InvalidServiceUrl(error.to_string()))?;
-        validate_service_base_url(&base)?;
+        validate_billing_base_url(&base)?;
         base.join(path.trim_start_matches('/'))
             .map_err(|error| BillingError::InvalidServiceUrl(error.to_string()))
     }
@@ -151,7 +151,7 @@ impl Default for BillingClient {
     }
 }
 
-fn validate_service_base_url(url: &Url) -> Result<(), BillingError> {
+fn validate_billing_base_url(url: &Url) -> Result<(), BillingError> {
     if url.username() != "" || url.password().is_some() {
         return Err(BillingError::InsecureServiceUrl);
     }

@@ -480,9 +480,9 @@ async fn test_quote_llm_usage_requires_service_api_key() {
 }
 
 #[test]
-fn test_service_url_accepts_https_public_host() {
+fn test_request_url_accepts_https_public_host() {
     let client = BillingClient::with_base_url("https://z-billing.onrender.com/base".to_string());
-    let url = client.service_url("/v1/usage/quote").unwrap();
+    let url = client.request_url("/v1/usage/quote").unwrap();
 
     assert_eq!(
         url.as_str(),
@@ -491,7 +491,7 @@ fn test_service_url_accepts_https_public_host() {
 }
 
 #[test]
-fn test_service_url_rejects_unsafe_hosts() {
+fn test_request_url_rejects_unsafe_hosts() {
     for base_url in [
         "http://z-billing.onrender.com",
         "https://127.0.0.1",
@@ -499,9 +499,21 @@ fn test_service_url_rejects_unsafe_hosts() {
         "https://user:pass@z-billing.onrender.com",
     ] {
         let client = BillingClient::with_base_url(base_url.to_string());
-        let err = client.service_url("/v1/usage/quote").unwrap_err();
+        let err = client.request_url("/v1/usage/quote").unwrap_err();
         assert!(matches!(err, BillingError::InsecureServiceUrl));
     }
+}
+
+#[tokio::test]
+async fn test_authed_request_rejects_cleartext_public_url() {
+    let client = BillingClient::with_base_url("http://z-billing.onrender.com".to_string());
+
+    let err = client
+        .send_authed_json(Method::GET, "/v1/subscriptions/me", "sensitive-token", None)
+        .await
+        .unwrap_err();
+
+    assert!(matches!(err, BillingError::InsecureServiceUrl));
 }
 
 #[test]
