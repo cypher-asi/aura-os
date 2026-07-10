@@ -400,3 +400,61 @@ pub(crate) async fn trigger_consolidation(
     )
     .await
 }
+
+pub(crate) async fn get_continuity_config(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
+    Path(agent_id): Path<AgentId>,
+) -> Result<Response, StatusCode> {
+    proxy_agent_json(
+        &state,
+        &jwt,
+        &session,
+        &agent_id,
+        Method::GET,
+        format!("api/agents/{agent_id}/memory/continuity"),
+        None,
+        None,
+    )
+    .await
+}
+
+pub(crate) async fn update_continuity_config(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
+    Path(agent_id): Path<AgentId>,
+    body: String,
+) -> Result<Response, StatusCode> {
+    proxy_agent_json(
+        &state,
+        &jwt,
+        &session,
+        &agent_id,
+        Method::PUT,
+        format!("api/agents/{agent_id}/memory/continuity"),
+        None,
+        Some(body),
+    )
+    .await
+}
+
+pub(crate) async fn get_latest_retrieval_trace(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
+    Path(agent_id): Path<AgentId>,
+) -> Result<Response, StatusCode> {
+    proxy_agent_json(
+        &state,
+        &jwt,
+        &session,
+        &agent_id,
+        Method::GET,
+        format!("api/agents/{agent_id}/memory/retrieval/latest"),
+        None,
+        None,
+    )
+    .await
+}

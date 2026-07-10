@@ -33,6 +33,7 @@ export default defineConfig({
         "**/team-settings-integrations.spec.ts",
         "**/google-integration-ui.spec.ts",
         "**/agent-runtime-config.spec.ts",
+        "**/agent-continuity.spec.ts",
       ],
       use: {
         ...devices["Desktop Chrome"],

@@ -2,7 +2,7 @@
 // Canonical inventory of client analytics events. Do NOT re-derive via
 // grep/search — dynamic-import call sites make string search unreliable; the
 // contract test enforces this set against the actual call sites instead.
-// 44 client events; session_active is server-only and deliberately absent.
+// 49 client events; session_active is server-only and deliberately absent.
 export const ANALYTICS_EVENTS = {
   // lifecycle / auth
   app_opened: {}, // main.tsx:76
@@ -26,6 +26,13 @@ export const ANALYTICS_EVENTS = {
   agent_created: {}, // useAgentEditorForm.ts:435
   agent_selected: {}, // agent-store.ts:395
   marketplace_agent_hired: {}, // HireProjectPickerModal.tsx:62
+  memory_continuity_updated: {
+    props: ["use_memory", "generate_memory", "write_policy", "retrieval_mode"],
+  },
+  memory_pinned: { props: ["kind", "pinned"] },
+  memory_corrected: { props: ["kind"] },
+  memory_deleted: { props: ["kind"] },
+  memory_retrieval_viewed: { props: ["selected_count", "query_aware"] },
   aura3d_image_generated: { props: ["model"] }, // ImageGeneration.tsx:140
   aura3d_model_generated: {}, // ModelGeneration.tsx:208
   // integrations / settings / feedback
@@ -57,7 +64,7 @@ export const ANALYTICS_EVENTS = {
   public_create_agent_clicked: { props: ["source"] },
   public_start_chat_clicked: { props: ["source"] },
 } as const satisfies Record<string, { props?: readonly string[] }>;
-// 44 entries — the complete client analytics event set.
+// 49 entries — the complete client analytics event set.
 
 export type AnalyticsEventName = keyof typeof ANALYTICS_EVENTS;
 

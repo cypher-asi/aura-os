@@ -14,8 +14,9 @@ pub(crate) use local::{
 };
 pub(crate) use memory::{
     create_event, create_fact, create_procedure, delete_event, delete_fact, delete_procedure,
-    get_fact, get_fact_by_key, get_memory_snapshot, get_memory_stats, get_procedure, list_events,
-    list_facts, list_procedures, list_procedures_by_skill, trigger_consolidation, update_fact,
+    get_continuity_config, get_fact, get_fact_by_key, get_latest_retrieval_trace,
+    get_memory_snapshot, get_memory_stats, get_procedure, list_events, list_facts, list_procedures,
+    list_procedures_by_skill, trigger_consolidation, update_continuity_config, update_fact,
     update_procedure, wipe_memory,
 };
 pub(crate) use skills::{

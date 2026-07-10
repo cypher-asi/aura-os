@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
-const { mockGetSnapshot, MockApiClientError, mockUseIsStreaming } = vi.hoisted(() => {
+const {
+  mockGetSnapshot,
+  mockGetContinuityConfig,
+  mockUpdateContinuityConfig,
+  mockGetLatestRetrievalTrace,
+  mockUpdateFact,
+  MockApiClientError,
+  mockUseIsStreaming,
+} = vi.hoisted(() => {
   class _MockApiClientError extends Error {
     status: number;
     body: { error: string; code: string; details: null };
@@ -14,6 +22,10 @@ const { mockGetSnapshot, MockApiClientError, mockUseIsStreaming } = vi.hoisted((
   }
   return {
     mockGetSnapshot: vi.fn(),
+    mockGetContinuityConfig: vi.fn(),
+    mockUpdateContinuityConfig: vi.fn(),
+    mockGetLatestRetrievalTrace: vi.fn(),
+    mockUpdateFact: vi.fn(),
     MockApiClientError: _MockApiClientError,
     mockUseIsStreaming: vi.fn(() => false),
   };
@@ -23,6 +35,10 @@ vi.mock("../../../api/client", () => ({
   api: {
     memory: {
       getSnapshot: (...args: any[]) => mockGetSnapshot(...args),
+      getContinuityConfig: (...args: any[]) => mockGetContinuityConfig(...args),
+      updateContinuityConfig: (...args: any[]) => mockUpdateContinuityConfig(...args),
+      getLatestRetrievalTrace: (...args: any[]) => mockGetLatestRetrievalTrace(...args),
+      updateFact: (...args: any[]) => mockUpdateFact(...args),
     },
   },
   ApiClientError: MockApiClientError,
@@ -63,6 +79,17 @@ const mockSnapshot = {
 describe("MemoryTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    const config = {
+      use_memory: true,
+      generate_memory: true,
+      write_policy: "automatic",
+      retrieval_mode: "query_aware",
+      allow_user_scope: false,
+      allow_workspace_scope: false,
+    };
+    mockGetContinuityConfig.mockResolvedValue(config);
+    mockUpdateContinuityConfig.mockImplementation(async (_agentId, next) => next);
+    mockGetLatestRetrievalTrace.mockResolvedValue(null);
   });
 
   it("shows loading state initially", () => {
@@ -173,6 +200,80 @@ describe("MemoryTab", () => {
 
     await waitFor(() => {
       expect(screen.getByText("new_fact")).toBeDefined();
+    });
+  });
+
+  it("shows continuity controls and privacy-safe retrieval evidence", async () => {
+    mockGetSnapshot.mockResolvedValue(mockSnapshot);
+    mockGetContinuityConfig.mockResolvedValue({
+      use_memory: true,
+      generate_memory: true,
+      write_policy: "approval",
+      retrieval_mode: "query_aware",
+      allow_user_scope: false,
+      allow_workspace_scope: false,
+    });
+    mockGetLatestRetrievalTrace.mockResolvedValue({
+      candidate_count: 14,
+      selected_count: 3,
+      estimated_tokens: 96,
+      duration_ms: 2,
+      query_aware: true,
+      selections: [],
+    });
+
+    render(<MemoryTab agent={baseAgent} />);
+
+    await waitFor(() => expect(screen.getByText("Agent Continuity")).toBeDefined());
+    expect(screen.getByDisplayValue("Require approval")).toBeDefined();
+    expect(screen.getByText("3").closest("span")?.textContent).toContain("recalled");
+    expect(screen.getByTestId("continuity-trace").textContent).toContain("Request-aware");
+  });
+
+  it("persists continuity controls per agent", async () => {
+    mockGetSnapshot.mockResolvedValue(mockSnapshot);
+    render(<MemoryTab agent={baseAgent} />);
+
+    const useMemory = await screen.findByRole("checkbox", { name: /use memory/i });
+    fireEvent.click(useMemory);
+
+    await waitFor(() => {
+      expect(mockUpdateContinuityConfig).toHaveBeenCalledWith(
+        "a1",
+        expect.objectContaining({ use_memory: false }),
+      );
+    });
+  });
+
+  it("approves a pending memory before it can be recalled", async () => {
+    const pending = {
+      ...mockSnapshot.facts[0],
+      continuity: {
+        scope: "agent",
+        status: "pending",
+        sensitivity: "normal",
+        pinned: false,
+        provenance: { session_id: "session-7", excerpt: "I prefer Rust" },
+      },
+    };
+    mockGetSnapshot.mockResolvedValue({ ...mockSnapshot, facts: [pending] });
+    mockUpdateFact.mockResolvedValue({
+      ...pending,
+      continuity: { ...pending.continuity, status: "active" },
+    });
+    render(<MemoryTab agent={baseAgent} />);
+
+    const approve = await screen.findByRole("button", { name: "Approve memory" });
+    fireEvent.click(approve);
+
+    await waitFor(() => {
+      expect(mockUpdateFact).toHaveBeenCalledWith(
+        "a1",
+        "f1",
+        expect.objectContaining({
+          continuity: expect.objectContaining({ status: "active" }),
+        }),
+      );
     });
   });
 });

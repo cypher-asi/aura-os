@@ -246,6 +246,56 @@ async fn proxy_forwards_post_with_body() {
 }
 
 #[tokio::test]
+async fn proxy_forwards_continuity_config_and_retrieval_evidence() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _handle) = start_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let agent = "00000000-0000-0000-0000-000000000001";
+    let config = json!({
+        "use_memory": true,
+        "generate_memory": true,
+        "write_policy": "approval",
+        "retrieval_mode": "query_aware",
+        "allow_user_scope": false,
+        "allow_workspace_scope": false
+    });
+    let req = json_request(
+        "PUT",
+        &format!("/api/harness/agents/{agent}/memory/continuity"),
+        Some(config.clone()),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body["echoed_method"], "PUT");
+    assert!(body["echoed_uri"]
+        .as_str()
+        .unwrap()
+        .contains(&format!("/api/agents/{agent}/memory/continuity")));
+    let echoed_config: serde_json::Value =
+        serde_json::from_str(body["echoed_body"].as_str().unwrap()).unwrap();
+    assert_eq!(echoed_config, config);
+
+    let req = json_request(
+        "GET",
+        &format!("/api/harness/agents/{agent}/memory/retrieval/latest"),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body["echoed_method"], "GET");
+    assert!(body["echoed_uri"]
+        .as_str()
+        .unwrap()
+        .contains(&format!("/api/agents/{agent}/memory/retrieval/latest")));
+}
+
+#[tokio::test]
 async fn proxy_forwards_delete() {
     let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;

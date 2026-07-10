@@ -255,4 +255,62 @@ describe("memoryApi - Aggregate", () => {
       expect.objectContaining({ method: "POST" }),
     );
   });
+
+  it("getContinuityConfig fetches per-agent continuity controls", async () => {
+    const fetchMock = mockFetch(200, {
+      use_memory: true,
+      generate_memory: true,
+      write_policy: "automatic",
+      retrieval_mode: "query_aware",
+      allow_user_scope: false,
+      allow_workspace_scope: false,
+    });
+    globalThis.fetch = fetchMock;
+
+    await memoryApi.getContinuityConfig("a1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/agents/a1/memory/continuity",
+      expect.any(Object),
+    );
+  });
+
+  it("updateContinuityConfig persists all continuity controls", async () => {
+    const config = {
+      use_memory: true,
+      generate_memory: true,
+      write_policy: "approval" as const,
+      retrieval_mode: "query_aware" as const,
+      allow_user_scope: false,
+      allow_workspace_scope: false,
+    };
+    const fetchMock = mockFetch(200, config);
+    globalThis.fetch = fetchMock;
+
+    await memoryApi.updateContinuityConfig("a1", config);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/agents/a1/memory/continuity",
+      expect.objectContaining({ method: "PUT", body: JSON.stringify(config) }),
+    );
+  });
+
+  it("getLatestRetrievalTrace fetches privacy-safe recall evidence", async () => {
+    const fetchMock = mockFetch(200, {
+      candidate_count: 8,
+      selected_count: 2,
+      estimated_tokens: 72,
+      duration_ms: 1,
+      query_aware: true,
+      selections: [],
+    });
+    globalThis.fetch = fetchMock;
+
+    await memoryApi.getLatestRetrievalTrace("a1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/agents/a1/memory/retrieval/latest",
+      expect.any(Object),
+    );
+  });
 });

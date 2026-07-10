@@ -5,6 +5,9 @@ import type {
   MemoryProcedure,
   MemorySnapshot,
   MemoryStats,
+  AgentContinuityConfig,
+  MemoryContinuity,
+  MemoryRetrievalTrace,
 } from "../types";
 import { apiFetch } from "./core";
 
@@ -19,9 +22,9 @@ export const memoryApi = {
     apiFetch<MemoryFact>(memoryPath(agentId, `/facts/${factId}`)),
   getFactByKey: (agentId: string, key: string) =>
     apiFetch<MemoryFact>(memoryPath(agentId, `/facts/by-key/${key}`)),
-  createFact: (agentId: string, data: { key: string; value: JsonValue; confidence?: number; importance?: number }) =>
+  createFact: (agentId: string, data: { key: string; value: JsonValue; confidence?: number; importance?: number; continuity?: MemoryContinuity }) =>
     apiFetch<MemoryFact>(memoryPath(agentId, "/facts"), { method: "POST", body: JSON.stringify(data) }),
-  updateFact: (agentId: string, factId: string, data: { value?: JsonValue; confidence?: number; importance?: number }) =>
+  updateFact: (agentId: string, factId: string, data: { key?: string; value?: JsonValue; confidence?: number; importance?: number; source?: MemoryFact["source"]; continuity?: MemoryContinuity }) =>
     apiFetch<MemoryFact>(memoryPath(agentId, `/facts/${factId}`), { method: "PUT", body: JSON.stringify(data) }),
   deleteFact: (agentId: string, factId: string) =>
     apiFetch<void>(memoryPath(agentId, `/facts/${factId}`), { method: "DELETE" }),
@@ -51,6 +54,7 @@ export const memoryApi = {
   createProcedure: (agentId: string, data: {
     name: string; trigger: string; steps: string[];
     context_constraints?: JsonValue; skill_name?: string; skill_relevance?: number;
+    continuity?: MemoryContinuity;
   }) =>
     apiFetch<MemoryProcedure>(memoryPath(agentId, "/procedures"), {
       method: "POST", body: JSON.stringify(data),
@@ -59,6 +63,7 @@ export const memoryApi = {
     name?: string; trigger?: string; steps?: string[];
     context_constraints?: JsonValue; skill_name?: string | null;
     skill_relevance?: number | null; success_rate?: number;
+    continuity?: MemoryContinuity;
   }) =>
     apiFetch<MemoryProcedure>(memoryPath(agentId, `/procedures/${procId}`), {
       method: "PUT", body: JSON.stringify(data),
@@ -75,4 +80,13 @@ export const memoryApi = {
     apiFetch<void>(memoryPath(agentId), { method: "DELETE" }),
   triggerConsolidation: (agentId: string) =>
     apiFetch<void>(memoryPath(agentId, "/consolidate"), { method: "POST" }),
+  getContinuityConfig: (agentId: string) =>
+    apiFetch<AgentContinuityConfig>(memoryPath(agentId, "/continuity")),
+  updateContinuityConfig: (agentId: string, config: AgentContinuityConfig) =>
+    apiFetch<AgentContinuityConfig>(memoryPath(agentId, "/continuity"), {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
+  getLatestRetrievalTrace: (agentId: string) =>
+    apiFetch<MemoryRetrievalTrace | null>(memoryPath(agentId, "/retrieval/latest")),
 };

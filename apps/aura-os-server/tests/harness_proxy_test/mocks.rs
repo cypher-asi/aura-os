@@ -70,6 +70,14 @@ pub(crate) async fn start_mock_harness() -> (String, tokio::task::JoinHandle<()>
         )
         .route("/api/agents/:agent_id/memory/stats", get(echo_handler))
         .route(
+            "/api/agents/:agent_id/memory/continuity",
+            get(echo_handler).put(echo_handler),
+        )
+        .route(
+            "/api/agents/:agent_id/memory/retrieval/latest",
+            get(echo_handler),
+        )
+        .route(
             "/api/agents/:agent_id/memory/consolidate",
             post(echo_handler),
         )
