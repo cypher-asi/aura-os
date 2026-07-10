@@ -78,7 +78,34 @@ pub(crate) async fn require_org_role(
         .await
         .map_err(map_network_error)?;
 
-    let ids = candidate_user_ids(session);
+    let mut ids = candidate_user_ids(session);
+    let has_matching_member = members.iter().any(|member| ids.contains(&member.user_id));
+
+    // Direct cloud callbacks validate the zOS JWT without first visiting the
+    // auth-session endpoint that enriches the session with its Aura Network
+    // user ID. Resolve that ID only when the JWT identity does not match an
+    // org member, then retain it in the token cache for later callbacks.
+    if !has_matching_member {
+        match client.get_current_user(jwt).await {
+            Ok(user) => {
+                if !ids.contains(&user.id) {
+                    ids.push(user.id.clone());
+                }
+                if let Some(mut cached) = state.validation_cache.get_mut(jwt) {
+                    cached.session.network_user_id = user.user_id_typed();
+                    cached.session.profile_id = user.profile_id_typed();
+                }
+            }
+            Err(error) => {
+                warn!(
+                    %error,
+                    org_id = %org_id,
+                    "could not resolve Aura Network identity during role check"
+                );
+            }
+        }
+    }
+
     let id_refs: Vec<&str> = ids.iter().map(|s| s.as_str()).collect();
     check_role_in_members(&members, &id_refs, org_id, min_role)
 }

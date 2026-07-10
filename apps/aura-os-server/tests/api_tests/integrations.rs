@@ -16,6 +16,8 @@ use crate::common::*;
 use super::integration_actions::*;
 use super::integration_setup::{create_test_integrations, ProviderEnvGuard};
 
+const NETWORK_IDENTITY_USER_ID: &str = "00000000-0000-0000-0000-000000000042";
+
 fn platform_key_env_lock() -> &'static tokio::sync::Mutex<()> {
     static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
     &LOCK
@@ -118,6 +120,33 @@ async fn build_test_app_with_org_membership_and_billing_client(
     billing_client: Arc<BillingClient>,
 ) -> TestApp {
     let network_url = start_test_server(owner_members_app()).await;
+    build_isolated_test_app(&network_url, Some(billing_client))
+}
+
+async fn build_test_app_with_network_identity_membership() -> TestApp {
+    let network_app = Router::new()
+        .route(
+            "/api/orgs/:org_id/members",
+            get(|Path(org_id): Path<String>| async move {
+                Json(vec![serde_json::json!({
+                    "userId": NETWORK_IDENTITY_USER_ID,
+                    "orgId": org_id,
+                    "role": "owner",
+                })])
+            }),
+        )
+        .route(
+            "/api/users/me",
+            get(|| async {
+                Json(serde_json::json!({
+                    "id": NETWORK_IDENTITY_USER_ID,
+                    "displayName": "Test User",
+                    "profileId": null,
+                }))
+            }),
+        );
+    let network_url = start_test_server(network_app).await;
+    let billing_client = start_mock_subscription_billing("mortal").await;
     build_isolated_test_app(&network_url, Some(billing_client))
 }
 
@@ -287,6 +316,37 @@ async fn platform_key_brave_tool_action_resolves_platform_key_end_to_end() {
     assert_eq!(resp.status(), StatusCode::OK);
     let brave_news = response_json(resp).await;
     assert_eq!(brave_news["results"][0]["title"], "Platform Brave news");
+}
+
+#[tokio::test]
+async fn platform_web_search_resolves_network_identity_for_cloud_callback() {
+    let _lock = platform_key_env_lock().lock().await;
+    let _env_provider = ProviderEnvGuard::set_up().await;
+    let _env = PlatformKeyEnvGuard::set("platform-key-123");
+
+    let (app, state, _db) = build_test_app_with_network_identity_membership().await;
+    let org_id = OrgId::new();
+
+    let response = app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+            Some(serde_json::json!({ "query": "aura" })),
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        state
+            .validation_cache
+            .get("test-token")
+            .and_then(|cached| cached.session.network_user_id)
+            .map(|id| id.to_string())
+            .as_deref(),
+        Some(NETWORK_IDENTITY_USER_ID)
+    );
 }
 
 #[tokio::test]
