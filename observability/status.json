@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-07-11T05:28:46.420Z",
+  "generatedAt": "2026-07-11T07:08:43.091Z",
   "environment": "production",
   "source": "github-actions",
   "overall": "major_outage",
@@ -38,12 +38,12 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:16.459Z",
+      "lastCheckedAt": "2026-07-11T07:01:12.401Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 127,
+      "latencyP95Ms": 113,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -56,11 +56,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:15.971Z",
-          "latencyMs": 127,
+          "checkedAt": "2026-07-11T07:01:11.818Z",
+          "latencyMs": 104,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-07-11T05:21:15.946420089+00:00"
+            "timestamp": "2026-07-11T07:01:11.778408797+00:00"
           }
         },
         {
@@ -73,8 +73,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:16.037Z",
-          "latencyMs": 66,
+          "checkedAt": "2026-07-11T07:01:11.906Z",
+          "latencyMs": 87,
           "evidence": {
             "userPresent": true,
             "keys": [
@@ -105,8 +105,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:16.459Z",
-          "latencyMs": 78,
+          "checkedAt": "2026-07-11T07:01:12.401Z",
+          "latencyMs": 113,
           "evidence": {
             "keys": [
               "os",
@@ -127,12 +127,12 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:16.716Z",
+      "lastCheckedAt": "2026-07-11T07:01:12.713Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 344,
+      "latencyP95Ms": 382,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -145,8 +145,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:16.381Z",
-          "latencyMs": 344,
+          "checkedAt": "2026-07-11T07:01:12.288Z",
+          "latencyMs": 382,
           "evidence": {
             "userIdPresent": true
           }
@@ -161,8 +161,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:16.594Z",
-          "latencyMs": 135,
+          "checkedAt": "2026-07-11T07:01:12.554Z",
+          "latencyMs": 153,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "orgCount": 1
@@ -178,8 +178,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:16.716Z",
-          "latencyMs": 122,
+          "checkedAt": "2026-07-11T07:01:12.713Z",
+          "latencyMs": 159,
           "evidence": {
             "userIdPresent": true,
             "keys": [
@@ -206,12 +206,12 @@
       "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
       "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
       "status": "degraded",
-      "lastCheckedAt": "2026-07-11T05:28:38.736Z",
+      "lastCheckedAt": "2026-07-11T07:08:38.561Z",
       "checksPassed": 6,
       "checksTotal": 7,
       "checksFailed": 1,
       "checksUnknown": 0,
-      "latencyP95Ms": 416,
+      "latencyP95Ms": 651,
       "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
       "checks": [
         {
@@ -224,8 +224,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:37.623Z",
-          "latencyMs": 66,
+          "checkedAt": "2026-07-11T07:08:36.895Z",
+          "latencyMs": 108,
           "evidence": {
             "tokenPresent": true,
             "turnCount": 0,
@@ -242,13 +242,13 @@
           "status": "fail",
           "featureStatus": "degraded",
           "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-          "checkedAt": "2026-07-11T05:28:37.994Z",
-          "latencyMs": 371,
+          "checkedAt": "2026-07-11T07:08:37.445Z",
+          "latencyMs": 550,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "public-experience:production-api:public-chat-stream:f6144505615e",
+            "id": "public-experience:production-api:public-chat-stream:a0141a0e3cdc",
             "featureId": "public-experience",
             "featureLabel": "Public Chat and APIs",
             "checkId": "public-chat-stream",
@@ -257,7 +257,7 @@
             "status": "failed",
             "checkStatus": "fail",
             "featureStatus": "degraded",
-            "generatedAt": "2026-07-11T05:28:40.505Z",
+            "generatedAt": "2026-07-11T07:08:40.395Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
@@ -277,10 +277,10 @@
             "followUpEvals": [],
             "evidenceDigest": {
               "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-              "latencyMs": 371,
+              "latencyMs": 550,
               "evidence": {}
             },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcuicynkqX2k1EtsRPqcT\"}"
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcurF54aZechN91s7v8sY\"}"
           }
         },
         {
@@ -293,8 +293,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:38.143Z",
-          "latencyMs": 149,
+          "checkedAt": "2026-07-11T07:08:37.622Z",
+          "latencyMs": 177,
           "evidence": {
             "count": 100
           }
@@ -309,8 +309,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:38.218Z",
-          "latencyMs": 75,
+          "checkedAt": "2026-07-11T07:08:37.735Z",
+          "latencyMs": 113,
           "evidence": {
             "count": 7
           }
@@ -325,8 +325,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:38.634Z",
-          "latencyMs": 416,
+          "checkedAt": "2026-07-11T07:08:38.386Z",
+          "latencyMs": 651,
           "evidence": {
             "blogCount": 7,
             "blogDetailChecked": true,
@@ -353,8 +353,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:38.685Z",
-          "latencyMs": 51,
+          "checkedAt": "2026-07-11T07:08:38.473Z",
+          "latencyMs": 87,
           "evidence": {
             "object": "list",
             "modelCount": 1
@@ -370,8 +370,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:38.736Z",
-          "latencyMs": 51,
+          "checkedAt": "2026-07-11T07:08:38.561Z",
+          "latencyMs": 88,
           "evidence": {
             "status": 402,
             "payToPresent": true,
@@ -781,12 +781,12 @@
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-07-11T05:28:37.557Z",
+      "lastCheckedAt": "2026-07-11T07:08:36.787Z",
       "checksPassed": 0,
       "checksTotal": 3,
       "checksFailed": 3,
       "checksUnknown": 0,
-      "latencyP95Ms": 154199,
+      "latencyP95Ms": 151462,
       "message": "pod stuck unscheduled for 126s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
       "checks": [
         {
@@ -799,13 +799,13 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "pod stuck unscheduled for 126s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-          "checkedAt": "2026-07-11T05:23:33.975Z",
-          "latencyMs": 128426,
+          "checkedAt": "2026-07-11T07:03:35.100Z",
+          "latencyMs": 130261,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-create:3faa98cf184d",
+            "id": "remote-agents:production-api:remote-agent-create:9deff8fd8c4f",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-create",
@@ -814,7 +814,7 @@
             "status": "failed",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-07-11T05:28:40.505Z",
+            "generatedAt": "2026-07-11T07:08:40.395Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
@@ -834,10 +834,10 @@
             "followUpEvals": [],
             "evidenceDigest": {
               "message": "pod stuck unscheduled for 126s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-              "latencyMs": 128426,
+              "latencyMs": 130261,
               "evidence": {}
             },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcuicjodbN6NjefADafAj\"}"
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcurF1yJ58Q761Z1W4LWV\"}"
           }
         },
         {
@@ -850,13 +850,13 @@
           "status": "fail",
           "featureStatus": "partial_outage",
           "message": "pod stuck unscheduled for 147s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-          "checkedAt": "2026-07-11T05:26:08.174Z",
-          "latencyMs": 154199,
+          "checkedAt": "2026-07-11T07:06:05.325Z",
+          "latencyMs": 150225,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-state:92f820d7bf4c",
+            "id": "remote-agents:production-api:remote-agent-state:5a0e2428ed6b",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-state",
@@ -865,7 +865,7 @@
             "status": "failed",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-07-11T05:28:40.505Z",
+            "generatedAt": "2026-07-11T07:08:40.395Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
@@ -885,10 +885,10 @@
             "followUpEvals": [],
             "evidenceDigest": {
               "message": "pod stuck unscheduled for 147s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-              "latencyMs": 154199,
+              "latencyMs": 150225,
               "evidence": {}
             },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcuickzKVdCRUWWEPbgJ5\"}"
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcurF3aY2f2r3U1jZqHtR\"}"
           }
         },
         {
@@ -900,14 +900,14 @@
           "required": false,
           "status": "fail",
           "featureStatus": "degraded",
-          "message": "pod stuck unscheduled for 143s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-          "checkedAt": "2026-07-11T05:28:37.557Z",
-          "latencyMs": 149383,
+          "message": "pod stuck unscheduled for 147s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+          "checkedAt": "2026-07-11T07:08:36.787Z",
+          "latencyMs": 151462,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-runtime:b3493230de91",
+            "id": "remote-agents:production-api:remote-agent-runtime:b8b79a33f516",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-runtime",
@@ -916,7 +916,7 @@
             "status": "failed",
             "checkStatus": "fail",
             "featureStatus": "degraded",
-            "generatedAt": "2026-07-11T05:28:40.505Z",
+            "generatedAt": "2026-07-11T07:08:40.395Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
@@ -935,11 +935,11 @@
             "whatWouldDisproveThis": [],
             "followUpEvals": [],
             "evidenceDigest": {
-              "message": "pod stuck unscheduled for 143s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-              "latencyMs": 149383,
+              "message": "pod stuck unscheduled for 147s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+              "latencyMs": 151462,
               "evidence": {}
             },
-            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Ccuicx9HcsMNdkJbB7rp2\"}"
+            "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcurF4LB9gcTvhJ8WFowt\"}"
           }
         }
       ]
@@ -952,12 +952,12 @@
       "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
       "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:20.925Z",
+      "lastCheckedAt": "2026-07-11T07:01:18.387Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1137,
+      "latencyP95Ms": 1719,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -970,13 +970,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:18.983Z",
-          "latencyMs": 647,
+          "checkedAt": "2026-07-11T07:01:15.510Z",
+          "latencyMs": 811,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "4756e8e4-515c-4e96-8302-e8118fe2ee38",
+            "projectId": "54164f11-dc6c-4450-b984-03837e77766c",
             "listed": true,
-            "projectName": "AURA Status Project 1783747278450"
+            "projectName": "AURA Status Project 1783753274852"
           }
         },
         {
@@ -989,13 +989,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:20.120Z",
-          "latencyMs": 1137,
+          "checkedAt": "2026-07-11T07:01:17.229Z",
+          "latencyMs": 1719,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "cc5868f5-1c7a-4365-85a1-853c01e16b92",
-            "specId": "47f09653-9a5a-4463-98f5-83ad1a6eea6d",
-            "taskId": "16e34c21-1f33-476c-951e-9f1365902ca5",
+            "projectId": "cf407887-d9e2-4ee1-af69-a5906dfb8819",
+            "specId": "2459d1ae-bc82-4926-8b1a-4054e65e429b",
+            "taskId": "0fd5f27e-556d-494f-b31f-4cc2cdf9c9f2",
             "specHashPresent": true,
             "taskCount": 1
           }
@@ -1010,10 +1010,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:20.590Z",
-          "latencyMs": 470,
+          "checkedAt": "2026-07-11T07:01:17.857Z",
+          "latencyMs": 628,
           "evidence": {
-            "projectId": "8ba147f5-340c-4945-b6a5-4e86698261ce",
+            "projectId": "0dc37b1c-884a-450c-b397-17a609d55bc8",
             "keys": [
               "total_tasks",
               "pending_tasks",
@@ -1045,10 +1045,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:20.925Z",
-          "latencyMs": 335,
+          "checkedAt": "2026-07-11T07:01:18.387Z",
+          "latencyMs": 530,
           "evidence": {
-            "projectId": "66d5654c-a6f8-4442-a5ec-34cea6295d4d",
+            "projectId": "5f58e320-39f3-413f-9c39-cc6d45740bf6",
             "status": null,
             "keys": [
               "running",
@@ -1070,12 +1070,12 @@
       "description": "Storage-backed note folder, note, transition, comment, and project tree roundtrips.",
       "publicSummary": "Project notes can be created, updated, commented on, and listed.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:22.225Z",
+      "lastCheckedAt": "2026-07-11T07:01:20.283Z",
       "checksPassed": 1,
       "checksTotal": 1,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1300,
+      "latencyP95Ms": 1896,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1088,14 +1088,14 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:22.225Z",
-          "latencyMs": 1300,
+          "checkedAt": "2026-07-11T07:01:20.283Z",
+          "latencyMs": 1896,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "edc3e124-29f9-42bd-95df-4593b1dc26a9",
-            "folderId": "9809194c-b790-4dbb-bb2c-26800f171994",
-            "noteId": "1554ee19-0436-43e6-baba-3acc8dface91",
-            "commentId": "dedc9846-7f62-4e05-8600-f52a6202753d",
+            "projectId": "90c32066-6289-4c2a-bd99-a0af8711c272",
+            "folderId": "706989ab-9653-426f-b4fd-ce181de85939",
+            "noteId": "6ce06f90-5535-4d8b-8b4c-1b085e3af2c4",
+            "commentId": "1e5e18f7-5ffc-4c26-8f98-fad05d9d758e",
             "folderLinked": true,
             "titleUpdated": true,
             "transitionStatus": "draft",
@@ -1114,7 +1114,7 @@
       "description": "Process workflow lists, process creation, default ignition node creation, desktop release trigger/run lifecycle, and cleanup.",
       "publicSummary": "Process workflows can be listed, created, and triggered in the desktop release.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:23.320Z",
+      "lastCheckedAt": "2026-07-11T07:01:21.723Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
@@ -1132,8 +1132,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:22.482Z",
-          "latencyMs": 257,
+          "checkedAt": "2026-07-11T07:01:20.633Z",
+          "latencyMs": 350,
           "evidence": {
             "processes": 0,
             "folders": 0
@@ -1149,11 +1149,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:23.320Z",
-          "latencyMs": 838,
+          "checkedAt": "2026-07-11T07:01:21.723Z",
+          "latencyMs": 1090,
           "evidence": {
-            "projectId": "435512c2-6e8a-48f0-9ed3-bb4b7e51c935",
-            "processId": "8b8ce82e-a513-426f-91b0-07bc74d2e6d8",
+            "projectId": "c4f63113-0b77-4d49-b26f-e217db3646f8",
+            "processId": "15000b80-6fda-4651-a123-c4c2d8a26333",
             "nodeCount": 1
           }
         },
@@ -1306,12 +1306,12 @@
       "description": "Marketplace agent catalog and harness bootstrap health.",
       "publicSummary": "Marketplace and bootstrap services are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:24.593Z",
+      "lastCheckedAt": "2026-07-11T07:01:23.430Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1099,
+      "latencyP95Ms": 1447,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1324,8 +1324,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:24.419Z",
-          "latencyMs": 1099,
+          "checkedAt": "2026-07-11T07:01:23.170Z",
+          "latencyMs": 1447,
           "evidence": {
             "count": 16
           }
@@ -1340,12 +1340,12 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:24.593Z",
-          "latencyMs": 174,
+          "checkedAt": "2026-07-11T07:01:23.430Z",
+          "latencyMs": 260,
           "evidence": {
             "reachable": true,
             "url": "https://aura-harness-latest.onrender.com",
-            "latencyMs": 59,
+            "latencyMs": 91,
             "status": 200
           }
         }
@@ -1359,12 +1359,12 @@
       "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
       "publicSummary": "Integrations and billing surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:18.336Z",
+      "lastCheckedAt": "2026-07-11T07:01:14.699Z",
       "checksPassed": 6,
       "checksTotal": 6,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 357,
+      "latencyP95Ms": 388,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1377,8 +1377,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:17.073Z",
-          "latencyMs": 357,
+          "checkedAt": "2026-07-11T07:01:13.077Z",
+          "latencyMs": 364,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 0
@@ -1394,8 +1394,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:17.321Z",
-          "latencyMs": 248,
+          "checkedAt": "2026-07-11T07:01:13.426Z",
+          "latencyMs": 349,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 6
@@ -1411,8 +1411,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:17.613Z",
-          "latencyMs": 292,
+          "checkedAt": "2026-07-11T07:01:13.761Z",
+          "latencyMs": 335,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "toolCount": 6,
@@ -1437,8 +1437,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:17.738Z",
-          "latencyMs": 125,
+          "checkedAt": "2026-07-11T07:01:13.930Z",
+          "latencyMs": 169,
           "evidence": {
             "keys": [
               "plan",
@@ -1460,8 +1460,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:17.989Z",
-          "latencyMs": 251,
+          "checkedAt": "2026-07-11T07:01:14.311Z",
+          "latencyMs": 381,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "keys": [
@@ -1481,8 +1481,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:18.336Z",
-          "latencyMs": 347,
+          "checkedAt": "2026-07-11T07:01:14.699Z",
+          "latencyMs": 388,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "accountKeys": [
@@ -1511,12 +1511,12 @@
       "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
       "publicSummary": "Community and feedback data surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:25.549Z",
+      "lastCheckedAt": "2026-07-11T07:01:24.839Z",
       "checksPassed": 5,
       "checksTotal": 5,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 267,
+      "latencyP95Ms": 398,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1529,8 +1529,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:24.945Z",
-          "latencyMs": 221,
+          "checkedAt": "2026-07-11T07:01:23.976Z",
+          "latencyMs": 338,
           "evidence": {
             "count": 50
           }
@@ -1545,8 +1545,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:25.006Z",
-          "latencyMs": 61,
+          "checkedAt": "2026-07-11T07:01:24.085Z",
+          "latencyMs": 109,
           "evidence": {
             "count": 0
           }
@@ -1561,8 +1561,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:25.175Z",
-          "latencyMs": 169,
+          "checkedAt": "2026-07-11T07:01:24.303Z",
+          "latencyMs": 218,
           "evidence": {
             "count": 50
           }
@@ -1577,8 +1577,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:25.443Z",
-          "latencyMs": 267,
+          "checkedAt": "2026-07-11T07:01:24.701Z",
+          "latencyMs": 398,
           "evidence": {
             "count": 50
           }
@@ -1593,8 +1593,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:25.549Z",
-          "latencyMs": 106,
+          "checkedAt": "2026-07-11T07:01:24.839Z",
+          "latencyMs": 138,
           "evidence": {
             "present": true,
             "keys": [
@@ -1691,12 +1691,12 @@
       "description": "Stream reattachment registry and debug run index.",
       "publicSummary": "Stream and debug inspection endpoints are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:21:24.724Z",
+      "lastCheckedAt": "2026-07-11T07:01:23.638Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 68,
+      "latencyP95Ms": 112,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1709,8 +1709,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:24.656Z",
-          "latencyMs": 63,
+          "checkedAt": "2026-07-11T07:01:23.542Z",
+          "latencyMs": 112,
           "evidence": {
             "count": 0
           }
@@ -1725,8 +1725,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:21:24.724Z",
-          "latencyMs": 68,
+          "checkedAt": "2026-07-11T07:01:23.638Z",
+          "latencyMs": 96,
           "evidence": {
             "keys": [
               "projects"
@@ -1743,7 +1743,7 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:28:40.370Z",
+      "lastCheckedAt": "2026-07-11T07:08:40.231Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
@@ -1761,7 +1761,7 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "3/4 eval summary artifacts found",
-          "checkedAt": "2026-07-11T05:28:40.369Z",
+          "checkedAt": "2026-07-11T07:08:40.230Z",
           "latencyMs": 1,
           "evidence": {
             "files": [
@@ -1772,19 +1772,19 @@
               {
                 "file": "infra/evals/reports/baselines/smoke-summary.json",
                 "exists": true,
-                "mtime": "2026-07-11T05:21:09.512Z",
+                "mtime": "2026-07-11T07:01:05.108Z",
                 "size": 2796
               },
               {
                 "file": "infra/evals/reports/baselines/chat-core-summary.json",
                 "exists": true,
-                "mtime": "2026-07-11T05:21:09.512Z",
+                "mtime": "2026-07-11T07:01:05.108Z",
                 "size": 11513
               },
               {
                 "file": "infra/evals/reports/baselines/workflow-summary.json",
                 "exists": true,
-                "mtime": "2026-07-11T05:21:09.512Z",
+                "mtime": "2026-07-11T07:01:05.108Z",
                 "size": 2219
               }
             ],
@@ -1802,7 +1802,7 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:40.370Z",
+          "checkedAt": "2026-07-11T07:08:40.231Z",
           "latencyMs": 1,
           "evidence": {
             "registryPresent": true,
@@ -1827,12 +1827,12 @@
       "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "AURA's public web surfaces are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-11T05:28:40.368Z",
+      "lastCheckedAt": "2026-07-11T07:08:40.229Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 924,
+      "latencyP95Ms": 1124,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1845,8 +1845,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Informational runtime check",
-          "checkedAt": "2026-07-11T05:28:39.282Z",
-          "latencyMs": 190,
+          "checkedAt": "2026-07-11T07:08:38.939Z",
+          "latencyMs": 131,
           "evidence": {
             "schemaVersion": 1,
             "overall": "major_outage",
@@ -1855,7 +1855,7 @@
             "featureCount": 19,
             "totalsFeatures": 19,
             "unknownFeatureCount": 0,
-            "snapshotAgeMinutes": 19,
+            "snapshotAgeMinutes": 100,
             "hasLiveSource": true,
             "hasNonUnknownFeatureData": true,
             "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
@@ -1872,8 +1872,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:39.092Z",
-          "latencyMs": 356,
+          "checkedAt": "2026-07-11T07:08:38.808Z",
+          "latencyMs": 247,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -1890,8 +1890,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:39.444Z",
-          "latencyMs": 162,
+          "checkedAt": "2026-07-11T07:08:39.105Z",
+          "latencyMs": 166,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -1908,8 +1908,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-11T05:28:40.368Z",
-          "latencyMs": 924,
+          "checkedAt": "2026-07-11T07:08:40.229Z",
+          "latencyMs": 1124,
           "evidence": {
             "allRoutesOk": true,
             "routeCount": 8,
@@ -1966,7 +1966,7 @@
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-create:3faa98cf184d",
+      "id": "remote-agents:production-api:remote-agent-create:9deff8fd8c4f",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-create",
@@ -1975,7 +1975,7 @@
       "status": "failed",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-07-11T05:28:40.505Z",
+      "generatedAt": "2026-07-11T07:08:40.395Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
@@ -1995,15 +1995,15 @@
       "followUpEvals": [],
       "evidenceDigest": {
         "message": "pod stuck unscheduled for 126s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-        "latencyMs": 128426,
+        "latencyMs": 130261,
         "evidence": {}
       },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcuicjodbN6NjefADafAj\"}"
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcurF1yJ58Q761Z1W4LWV\"}"
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-state:92f820d7bf4c",
+      "id": "remote-agents:production-api:remote-agent-state:5a0e2428ed6b",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-state",
@@ -2012,7 +2012,7 @@
       "status": "failed",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-07-11T05:28:40.505Z",
+      "generatedAt": "2026-07-11T07:08:40.395Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
@@ -2032,15 +2032,15 @@
       "followUpEvals": [],
       "evidenceDigest": {
         "message": "pod stuck unscheduled for 147s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-        "latencyMs": 154199,
+        "latencyMs": 150225,
         "evidence": {}
       },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcuickzKVdCRUWWEPbgJ5\"}"
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcurF3aY2f2r3U1jZqHtR\"}"
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "public-experience:production-api:public-chat-stream:f6144505615e",
+      "id": "public-experience:production-api:public-chat-stream:a0141a0e3cdc",
       "featureId": "public-experience",
       "featureLabel": "Public Chat and APIs",
       "checkId": "public-chat-stream",
@@ -2049,7 +2049,7 @@
       "status": "failed",
       "checkStatus": "fail",
       "featureStatus": "degraded",
-      "generatedAt": "2026-07-11T05:28:40.505Z",
+      "generatedAt": "2026-07-11T07:08:40.395Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
@@ -2069,15 +2069,15 @@
       "followUpEvals": [],
       "evidenceDigest": {
         "message": "POST /api/public/chat/stream failed with 502: {\"error\":\"public demo agent failed to start a session\",\"code\":\"bad_gateway\",\"details\":null}",
-        "latencyMs": 371,
+        "latencyMs": 550,
         "evidence": {}
       },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcuicynkqX2k1EtsRPqcT\"}"
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcurF54aZechN91s7v8sY\"}"
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-runtime:b3493230de91",
+      "id": "remote-agents:production-api:remote-agent-runtime:b8b79a33f516",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-runtime",
@@ -2086,7 +2086,7 @@
       "status": "failed",
       "checkStatus": "fail",
       "featureStatus": "degraded",
-      "generatedAt": "2026-07-11T05:28:40.505Z",
+      "generatedAt": "2026-07-11T07:08:40.395Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
@@ -2105,11 +2105,11 @@
       "whatWouldDisproveThis": [],
       "followUpEvals": [],
       "evidenceDigest": {
-        "message": "pod stuck unscheduled for 143s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-        "latencyMs": 149383,
+        "message": "pod stuck unscheduled for 147s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+        "latencyMs": 151462,
         "evidence": {}
       },
-      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011Ccuicx9HcsMNdkJbB7rp2\"}"
+      "error": "Anthropic investigator request failed with 400: {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"request_id\":\"req_011CcurF4LB9gcTvhJ8WFowt\"}"
     }
   ]
 }
