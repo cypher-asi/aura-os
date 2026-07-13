@@ -89,6 +89,27 @@ function formatDateInTimeZone(date, tz) {
   }).format(date);
 }
 
+function resolveChangelogDate(value, {
+  now = new Date(),
+  timeZone = "America/Los_Angeles",
+} = {}) {
+  const override = String(value ?? "").trim();
+  if (!override) {
+    return formatDateInTimeZone(now, timeZone);
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(override)) {
+    throw new Error(`Invalid changelog date "${override}"; expected YYYY-MM-DD`);
+  }
+
+  const parsed = new Date(`${override}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== override) {
+    throw new Error(`Invalid changelog date "${override}"; expected a real calendar date`);
+  }
+
+  return override;
+}
+
 function trimText(text, { maxChars = 12000, maxLines = 160 } = {}) {
   const lines = text.split("\n");
   const truncatedLines = lines.slice(0, maxLines);
@@ -1054,7 +1075,10 @@ async function main() {
   }
 
   const now = new Date();
-  const dateKey = formatDateInTimeZone(now, timeZone);
+  const dateKey = resolveChangelogDate(args.date ?? process.env.CHANGELOG_DATE, {
+    now,
+    timeZone,
+  });
   const currentSha = sanitizeText(args["current-sha"] || runGit(["rev-parse", "HEAD"]));
 
   const channelDir = path.join(pagesDir, "changelog", channel);
@@ -1267,6 +1291,7 @@ export {
   fetchAnthropicMessagesWithRetry,
   parseRetryAfterMs,
   preservePublishedEntryMedia,
+  resolveChangelogDate,
   validateRenderedEntry,
 };
 

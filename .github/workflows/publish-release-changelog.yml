@@ -13,6 +13,10 @@ on:
         description: "GitHub Actions run id for the completed desktop release to publish changelog for"
         required: true
         type: string
+      changelog_date:
+        description: "Optional YYYY-MM-DD date override for a historical changelog backfill"
+        required: false
+        type: string
 
 permissions:
   actions: write
@@ -248,6 +252,7 @@ jobs:
         if: steps.release-check.outputs.released == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CHANGELOG_DATE: ${{ inputs.changelog_date || '' }}
           CHANGELOG_TIMEZONE: America/Los_Angeles
         run: |
           node repo/infra/scripts/release/generate-daily-changelog.mjs \
