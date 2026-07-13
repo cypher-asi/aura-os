@@ -2,19 +2,19 @@
   {
     "date": "2026-07-13",
     "channel": "nightly",
-    "version": "0.1.0-nightly.757.1",
-    "title": "Web search, agent memory continuity, and a smoother Mac update handoff",
-    "intro": "Today's nightly brings two headline capabilities — built-in Aura Web Search with tiered quotas and a new Agent Continuity surface backed by memory-retrieval evidence — alongside a targeted macOS updater fix, a cloud identity resolution repair for tool callbacks, and an expanded model catalog featuring GPT-5.6.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.749.1",
+    "title": "Aura Web Search ships with platform-funded quotas and BYOK",
+    "intro": "Today's nightly centers on a single, substantial feature: Aura Web Search is now available by default to every workspace, backed by Brave through Aura-funded credentials and gated by per-user tier quotas. Optional BYOK remains for orgs that want to bring their own Brave keys, and the plumbing to keep credentials server-side has been hardened end to end.",
+    "entryCount": 1,
     "highlights": [
-      "Aura Web Search ships by default with tiered quotas and optional BYOK",
-      "Agent Continuity controls with retrieval evidence in the Memory tab",
-      "macOS relaunch now waits for full shutdown before reopening",
-      "GPT-5.6 (sol, terra, luna) added with a new XHigh reasoning tier"
+      "Brave-backed web and news search on by default",
+      "Per-user tier quotas enforced via z-billing",
+      "Optional workspace BYOK preserved",
+      "Credentials stay server-side behind HTTPS-only billing"
     ],
-    "rawCommitCount": 5,
-    "generatedAt": "2026-07-13T23:11:56.533Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.757.1",
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-13T23:09:40.304Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.749.1",
     "path": "history/2026-07-13.json"
   },
   {
