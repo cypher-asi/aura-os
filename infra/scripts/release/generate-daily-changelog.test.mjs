@@ -10,6 +10,7 @@ import {
   fetchAnthropicMessagesWithRetry,
   parseRetryAfterMs,
   preservePublishedEntryMedia,
+  resolveChangelogDate,
   validateRenderedEntry,
 } from "./generate-daily-changelog.mjs";
 
@@ -22,6 +23,37 @@ function readFixture(name) {
 function buildFixtureBatches() {
   return batchCommits(readFixture("changelog-commits.json"), "America/Los_Angeles");
 }
+
+test("resolveChangelogDate keeps normal runs on the configured timezone date", () => {
+  assert.equal(
+    resolveChangelogDate("", {
+      now: new Date("2026-07-10T06:30:00.000Z"),
+      timeZone: "America/Los_Angeles",
+    }),
+    "2026-07-09",
+  );
+});
+
+test("resolveChangelogDate accepts an explicit historical date", () => {
+  assert.equal(
+    resolveChangelogDate("2026-07-10", {
+      now: new Date("2026-07-14T00:00:00.000Z"),
+      timeZone: "America/Los_Angeles",
+    }),
+    "2026-07-10",
+  );
+});
+
+test("resolveChangelogDate rejects malformed and impossible dates", () => {
+  assert.throws(
+    () => resolveChangelogDate("2026-7-10"),
+    /expected YYYY-MM-DD/,
+  );
+  assert.throws(
+    () => resolveChangelogDate("2026-02-30"),
+    /expected a real calendar date/,
+  );
+});
 
 test("batchCommits groups the fixture history into stable Pacific-time sections", () => {
   const batches = buildFixtureBatches();
