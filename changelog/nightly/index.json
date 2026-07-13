@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-07-10",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.757.1",
+    "title": "Agent continuity, GPT-5.6 models, and a safer macOS relaunch",
+    "intro": "A feature-heavy nightly: agents gain continuity controls and retrieval evidence in the UI, the model catalog picks up the GPT-5.6 family with a new XHigh reasoning tier, macOS updates now relaunch cleanly after shutdown, and cloud tool callbacks correctly resolve org identity.",
+    "entryCount": 4,
+    "highlights": [
+      "Agent Continuity controls and retrieval evidence in the Memory tab",
+      "GPT-5.6 Sol, Terra, and Luna added with a new XHigh reasoning tier",
+      "macOS updater defers relaunch until shutdown completes",
+      "Cloud tool callbacks correctly resolve Aura Network identity"
+    ],
+    "rawCommitCount": 4,
+    "generatedAt": "2026-07-13T23:24:50.272Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.757.1",
+    "path": "history/2026-07-10.json"
+  },
+  {
     "date": "2026-07-09",
     "channel": "nightly",
     "version": "0.1.0-nightly.749.1",
