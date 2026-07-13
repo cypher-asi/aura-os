@@ -255,7 +255,7 @@ jobs:
           CHANGELOG_DATE: ${{ inputs.changelog_date || '' }}
           CHANGELOG_TIMEZONE: America/Los_Angeles
         run: |
-          node repo/infra/scripts/release/generate-daily-changelog.mjs \
+          node workflow/infra/scripts/release/generate-daily-changelog.mjs \
             --repo-dir repo \
             --pages-dir pages \
             --artifacts-dir all-artifacts \
