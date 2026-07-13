@@ -3,21 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-09T09:57:20.915Z",
+  "generatedAt": "2026-07-13T23:22:16.692Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.748.1",
+  "version": "0.1.0-nightly.749.1",
   "date": "2026-07-09",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.748.1",
-  "lastIncludedSha": "f60b119cf02bde3325d798ceed96d580b896773c",
-  "previousProcessedSha": "bbddfd9585f8d09f6f95078bf46ef91d2f8bbb6e",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.749.1",
+  "lastIncludedSha": "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d",
+  "previousProcessedSha": "f60b119cf02bde3325d798ceed96d580b896773c",
   "commitShas": [
     "103f2631ebc56b39284d42e74e3fd80642f63ab5",
     "bbddfd9585f8d09f6f95078bf46ef91d2f8bbb6e",
-    "f60b119cf02bde3325d798ceed96d580b896773c"
+    "f60b119cf02bde3325d798ceed96d580b896773c",
+    "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 3,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "103f2631ebc56b39284d42e74e3fd80642f63ab5",
@@ -160,36 +161,158 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d",
+      "author": {
+        "name": "DomW",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-07-10T00:47:33-04:00",
+      "subject": "feat(search): ship Aura Web Search with tiered quotas and BYOK (#94)",
+      "body": "Make Brave-backed web and news search available by default through Aura-funded credentials while preserving optional workspace BYOK. Enforce organization membership and per-user tier quotas from z-billing, route desktop requests through aura-api, keep credentials server-side, and require validated HTTPS billing endpoints before transmitting authentication.\n\nIncludes integration and billing cleanup plus coverage for quota enforcement, stale BYOK shadows, canonical failures, exact credential routing, desktop callbacks, and HTTPS-only billing requests.",
+      "parents": [
+        "f60b119cf02bde3325d798ceed96d580b896773c"
+      ],
+      "files": [
+        ".env.example",
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "README.md",
+        "apps/aura-os-desktop/build.rs",
+        "apps/aura-os-desktop/src/init/env.rs",
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/error/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route/helpers.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route/helpers.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route/route.rs",
+        "apps/aura-os-server/src/handlers/agents/workspace_tools/integrations.rs",
+        "apps/aura-os-server/src/handlers/agents/workspace_tools/mod.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/org_tools/mod.rs",
+        "apps/aura-os-server/src/handlers/org_tools/providers/brave.rs",
+        "apps/aura-os-server/src/handlers/org_tools/providers/mod.rs",
+        "apps/aura-os-server/src/handlers/org_tools/resolve.rs",
+        "apps/aura-os-server/src/handlers/org_tools/tests.rs",
+        "apps/aura-os-server/src/handlers/orgs/mod.rs",
+        "apps/aura-os-server/src/handlers/orgs/settings.rs",
+        "apps/aura-os-server/src/handlers/permissions.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/router/users_orgs_billing.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/src/tool_action_rate_limit.rs",
+        "apps/aura-os-server/tests/api_tests/integration_provider_mock.rs",
+        "apps/aura-os-server/tests/api_tests/integration_setup.rs",
+        "apps/aura-os-server/tests/api_tests/integrations.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "crates/aura-os-billing/src/client/credits.rs",
+        "crates/aura-os-billing/src/client/mod.rs",
+        "crates/aura-os-billing/src/client/tests.rs",
+        "crates/aura-os-billing/src/error.rs",
+        "crates/aura-os-billing/src/lib.rs",
+        "crates/aura-os-integrations/src/lib.rs",
+        "crates/aura-os-integrations/src/trusted_methods/brave_search.rs",
+        "crates/aura-os-integrations/src/workspace_tools.rs",
+        "crates/aura-os-orgs/src/lib.rs",
+        "docs/render-deployment.md",
+        "infra/shared/org-integration-tools.json",
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.test.tsx",
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.test.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+        "interface/src/components/OrgSettingsPanel/useOrgSettingsData.ts",
+        "interface/src/components/TierSubscriptionModal/TierSubscriptionModal.module.css",
+        "interface/src/components/TierSubscriptionModal/TierSubscriptionModal.tsx",
+        "interface/src/lib/integrationCatalog.test.ts",
+        "interface/src/lib/integrationCatalog.ts",
+        "interface/src/shared/api/orgs.test.ts",
+        "interface/src/shared/api/orgs.ts",
+        "interface/src/test/mocks/api.ts",
+        "interface/src/views/public-chat/AgentOnboarding/onboarding-data.ts",
+        "interface/tests/e2e/helpers/mockAuthenticatedApp.ts",
+        "interface/tests/e2e/team-settings-integrations.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 60,
+        "insertions": 2156,
+        "deletions": 477
+      },
+      "committedAtMs": 1783658853000,
+      "cleanSubject": "ship Aura Web Search with tiered quotas and BYOK (#94)",
+      "keywords": [
+        "ship",
+        "aura",
+        "search",
+        "with",
+        "tiered",
+        "quotas",
+        "byok"
+      ],
+      "fileGroups": [
+        ".env.example",
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "README.md",
+        "apps/aura-os-desktop/build.rs",
+        "apps/aura-os-desktop/src",
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-billing/src",
+        "crates/aura-os-integrations/src",
+        "crates/aura-os-orgs/src",
+        "docs/render-deployment.md",
+        "infra/shared/org-integration-tools.json",
+        "interface/src/components",
+        "interface/src/lib",
+        "interface/src/shared",
+        "interface/src/test",
+        "interface/src/views",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface",
+        "Core Rust",
+        "Release Infrastructure",
+        "Desktop",
+        "Docs"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.748.1",
+      "version": "0.1.0-nightly.749.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65569774
+          "sizeBytes": 65591490
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132131320
+          "sizeBytes": 132159992
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -199,29 +322,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.748.1",
+      "version": "0.1.0-nightly.749.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.748.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.749.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61198169
+          "sizeBytes": 61270310
         },
         {
-          "name": "AURA_0.1.0-nightly.748.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.749.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60242459
+          "sizeBytes": 60285113
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -231,29 +354,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.748.1",
+      "version": "0.1.0-nightly.749.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.748.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.749.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63445865
+          "sizeBytes": 63463880
         },
         {
-          "name": "AURA_0.1.0-nightly.748.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.749.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62448613
+          "sizeBytes": 62472863
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -263,17 +386,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.748.1",
+      "version": "0.1.0-nightly.749.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48363632
+          "sizeBytes": 48305209
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.748.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.749.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -282,26 +405,26 @@
     }
   ],
   "rendered": {
-    "title": "Grok 4.5 lands, plus quieter task alerts and authenticated swarm loops",
-    "intro": "Today's nightly brings xAI's Grok 4.5 into the model catalog with full pricing and cache-key support, tightens task-completion notifications so you no longer get double-pinged when a run wraps, and hardens authentication for hosted swarm dev-loops.",
+    "title": "Aura Web Search launches with Grok 4.5 and quieter task alerts",
+    "intro": "Today's nightly headlines a new built-in Web Search backed by Aura-funded Brave credentials, alongside a smarter task-completion notifier and a fresh Grok 4.5 entry in the model catalog. Server-side, hosted dev-loop harness calls now carry proper auth end-to-end.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "11:28 PM",
         "started_at": "2026-07-09T06:28:14.000Z",
         "ended_at": "2026-07-09T06:28:14.000Z",
-        "title": "Authenticated control for hosted swarm dev-loops",
-        "summary": "Pause, stop, resume, and status calls now propagate the caller's JWT through to the hosted harness so swarm dev-loops running against remote harnesses no longer fail auth mid-run.",
+        "title": "Hosted dev-loop harness now forwards caller auth",
+        "summary": "The dev-loop control path now threads the caller's JWT through pause, stop, resume, and status so hosted swarm harnesses accept the request.",
         "items": [
           {
-            "text": "Loop control endpoints (pause/stop/resume/status) now extract the caller's JWT and forward it through the dev-loop control path and detached-run lookup, fixing hosted harness auth for swarm dev-loops.",
+            "text": "Pause, stop, resume, and status handlers now extract the caller's JWT and pass it into control_loop and detached-run lookups, so hosted swarm harnesses receive an authenticated request instead of failing anonymously.",
             "commit_shas": [
               "103f2631ebc56b39284d42e74e3fd80642f63ab5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a dedicated harness_transport module and threaded a per-run harness_auth_token alongside the base URL so each loop target reconnects to its hosted harness with the correct credentials.",
+            "text": "Added a dedicated harness_transport module and a per-run harness_auth_token on run handles, giving the server a single place to attach credentials when talking to remote harnesses.",
             "commit_shas": [
               "103f2631ebc56b39284d42e74e3fd80642f63ab5"
             ],
@@ -314,20 +437,65 @@
         "time_label": "1:19 AM",
         "started_at": "2026-07-09T08:19:46.000Z",
         "ended_at": "2026-07-09T09:32:04.000Z",
-        "title": "Grok 4.5 in the catalog and deduplicated task-completion alerts",
-        "summary": "The interface picks up xAI's Grok 4.5 as a first-class model with pricing and cache-key plumbing, and task-completion notifications now wait briefly to collapse duplicates from terminal loop events.",
+        "title": "Quieter task completions and Grok 4.5 in the picker",
+        "summary": "The notifications hook now debounces task-completed events against the terminal loop event, and Grok 4.5 joins the model catalog with pricing and cache-key support.",
         "items": [
           {
-            "text": "Added Grok 4.5 to the model catalog with pricing ($2 in / $6 out per Mtok, $0.5 cache read), aura-grok-4-5 alias resolution, and provider cache-key affinity via xAI's x-grok-conv-id so prompt caching works end-to-end.",
+            "text": "Task completion toasts and desktop notifications are held for a short dedupe window and suppressed when the matching task-run LoopEnded event arrives, eliminating the duplicate 'task completed' popups that fired for the same run.",
+            "commit_shas": [
+              "bbddfd9585f8d09f6f95078bf46ef91d2f8bbb6e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added Grok 4.5 to the model catalog and pricing tables (input $2 / output $6 per Mtok, with cache read/write rates), including the aura-grok-4-5 alias and xai/grok-4.5 normalization.",
             "commit_shas": [
               "f60b119cf02bde3325d798ceed96d580b896773c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Task-completion toasts and OS notifications now hold for a short dedupe window and suppress the redundant alert when the terminal task-run LoopEnded event arrives, so finishing a task no longer fires twice.",
+            "text": "Extended prompt-cache affinity docs and plumbing to cover xAI/Grok alongside OpenAI, so stable cache keys now flow through aura-router for Grok conversations as well.",
             "commit_shas": [
-              "bbddfd9585f8d09f6f95078bf46ef91d2f8bbb6e"
+              "f60b119cf02bde3325d798ceed96d580b896773c"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "9:47 PM",
+        "started_at": "2026-07-10T04:47:33.000Z",
+        "ended_at": "2026-07-10T04:47:33.000Z",
+        "title": "Aura Web Search ships with tiered quotas and optional BYOK",
+        "summary": "Brave-backed web and news search is now available by default via Aura-funded credentials, with per-tier quotas, HTTPS-only billing checks, and an opt-in workspace BYOK path.",
+        "items": [
+          {
+            "text": "Web and news search are now on by default using a platform-funded Brave key held server-side, with per-user tier quotas enforced from z-billing and organization membership checks gating access.",
+            "commit_shas": [
+              "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Workspaces can still bring their own Brave key: connected org-owned credentials stay encrypted in aura-integrations and bypass the Aura-funded quota, with new test coverage for stale BYOK shadows and exact credential routing.",
+            "commit_shas": [
+              "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop builds now route tool actions through a configurable AURA_PLATFORM_TOOL_ACTION_BASE_URL (default https://api.aura.ai), wired into desktop-validate, nightly, and stable release workflows so packaged agents call the authenticated cloud endpoint.",
+            "commit_shas": [
+              "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Billing transport is hardened to require validated HTTPS endpoints before transmitting authentication, and a new tool_action_rate_limit module plus expanded org_tools tests lock in quota, canonical-failure, and HTTPS-only behavior.",
+            "commit_shas": [
+              "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
             ],
             "confidence": "high"
           }
@@ -335,10 +503,11 @@
       }
     ],
     "highlights": [
-      "Grok 4.5 available across the model catalog",
-      "No more duplicate task-completion toasts",
-      "Hosted swarm dev-loop control now carries auth"
+      "Aura Web Search ships with tiered quotas and BYOK",
+      "Grok 4.5 added to the model catalog",
+      "Task completion notifications no longer double-fire",
+      "Hosted dev-loop harness auth fixed"
     ],
-    "raw_commit_count": 3
+    "raw_commit_count": 4
   }
 }

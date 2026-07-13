@@ -2,18 +2,19 @@
   {
     "date": "2026-07-09",
     "channel": "nightly",
-    "version": "0.1.0-nightly.748.1",
-    "title": "Grok 4.5 lands, plus quieter task alerts and authenticated swarm loops",
-    "intro": "Today's nightly brings xAI's Grok 4.5 into the model catalog with full pricing and cache-key support, tightens task-completion notifications so you no longer get double-pinged when a run wraps, and hardens authentication for hosted swarm dev-loops.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.749.1",
+    "title": "Aura Web Search launches with Grok 4.5 and quieter task alerts",
+    "intro": "Today's nightly headlines a new built-in Web Search backed by Aura-funded Brave credentials, alongside a smarter task-completion notifier and a fresh Grok 4.5 entry in the model catalog. Server-side, hosted dev-loop harness calls now carry proper auth end-to-end.",
+    "entryCount": 3,
     "highlights": [
-      "Grok 4.5 available across the model catalog",
-      "No more duplicate task-completion toasts",
-      "Hosted swarm dev-loop control now carries auth"
+      "Aura Web Search ships with tiered quotas and BYOK",
+      "Grok 4.5 added to the model catalog",
+      "Task completion notifications no longer double-fire",
+      "Hosted dev-loop harness auth fixed"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-07-09T09:57:20.915Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.748.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-07-13T23:22:16.692Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.749.1",
     "path": "history/2026-07-09.json"
   },
   {
