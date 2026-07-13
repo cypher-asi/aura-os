@@ -3,19 +3,23 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-13T23:09:40.304Z",
+  "generatedAt": "2026-07-13T23:11:56.533Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.749.1",
+  "version": "0.1.0-nightly.757.1",
   "date": "2026-07-13",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.749.1",
-  "lastIncludedSha": "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d",
-  "previousProcessedSha": "f60b119cf02bde3325d798ceed96d580b896773c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.757.1",
+  "lastIncludedSha": "fb16613e500048bcf3bd7a67cc3b9470a92a1d08",
+  "previousProcessedSha": "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d",
   "commitShas": [
-    "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
+    "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d",
+    "c394e572054a7da8c0bd3deabee38c2aaad94e81",
+    "c8307f12621f285e3f31a7e0d514e620be8aec7b",
+    "f0aebe976bcedbc93a19ae5297b7d8df4519bd96",
+    "fb16613e500048bcf3bd7a67cc3b9470a92a1d08"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 5,
+  "filteredCommitCount": 5,
   "rawCommits": [
     {
       "sha": "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d",
@@ -138,36 +142,228 @@
         "Desktop",
         "Docs"
       ]
+    },
+    {
+      "sha": "c394e572054a7da8c0bd3deabee38c2aaad94e81",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-10T07:26:49-04:00",
+      "subject": "Fix cloud org identity resolution for tool callbacks (#96)",
+      "body": "",
+      "parents": [
+        "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/permissions.rs",
+        "apps/aura-os-server/tests/api_tests/integrations.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 88,
+        "deletions": 1
+      },
+      "committedAtMs": 1783682809000,
+      "cleanSubject": "Fix cloud org identity resolution for tool callbacks (#96)",
+      "keywords": [
+        "cloud",
+        "identity",
+        "resolution",
+        "tool",
+        "callbacks"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "c8307f12621f285e3f31a7e0d514e620be8aec7b",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-10T09:39:51-04:00",
+      "subject": "fix(desktop): defer macOS relaunch until shutdown (#97)",
+      "body": "",
+      "parents": [
+        "c394e572054a7da8c0bd3deabee38c2aaad94e81"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/updater/install.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 123,
+        "deletions": 20
+      },
+      "committedAtMs": 1783690791000,
+      "cleanSubject": "defer macOS relaunch until shutdown (#97)",
+      "keywords": [
+        "defer",
+        "macos",
+        "relaunch",
+        "until",
+        "shutdown"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "f0aebe976bcedbc93a19ae5297b7d8df4519bd96",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-10T10:06:46-04:00",
+      "subject": "Add GPT-5.6 models to the catalog (#98)",
+      "body": "",
+      "parents": [
+        "c8307f12621f285e3f31a7e0d514e620be8aec7b"
+      ],
+      "files": [
+        "crates/aura-protocol/bindings/ReasoningEffort.ts",
+        "crates/aura-protocol/src/runtime_request.rs",
+        "interface/scripts/lib/benchmark-pricing.mjs",
+        "interface/src/api/streams.test.ts",
+        "interface/src/constants/model-pricing.test.ts",
+        "interface/src/constants/model-pricing.ts",
+        "interface/src/constants/models.test.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/lib/benchmark-pricing.test.ts",
+        "interface/src/shared/types/harness-protocol.ts",
+        "interface/src/stores/chat-ui-store.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 313,
+        "deletions": 69
+      },
+      "committedAtMs": 1783692406000,
+      "cleanSubject": "Add GPT-5.6 models to the catalog (#98)",
+      "keywords": [
+        "models",
+        "catalog"
+      ],
+      "fileGroups": [
+        "crates/aura-protocol/bindings",
+        "crates/aura-protocol/src",
+        "interface/scripts/lib",
+        "interface/src/api",
+        "interface/src/constants",
+        "interface/src/features",
+        "interface/src/lib",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "fb16613e500048bcf3bd7a67cc3b9470a92a1d08",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-10T17:54:51-04:00",
+      "subject": "Add Agent Continuity controls and memory evidence (#100)",
+      "body": "Adds continuity configuration, approval and correction controls, retrieval evidence, analytics, proxy coverage, and browser-tested UI flows.",
+      "parents": [
+        "f0aebe976bcedbc93a19ae5297b7d8df4519bd96"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/harness_proxy/memory.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/mod.rs",
+        "apps/aura-os-server/src/router/harness_proxy.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/mocks.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/proxy_forwards.rs",
+        "interface/playwright.config.ts",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryPreview.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryTab.module.css",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryTab.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryTab.tsx",
+        "interface/src/components/Sidekick/Sidekick.module.css",
+        "interface/src/lib/analytics-registry.ts",
+        "interface/src/shared/api/memory.test.ts",
+        "interface/src/shared/api/memory.ts",
+        "interface/src/shared/types/entities/memory.ts",
+        "interface/tests/e2e/agent-continuity.spec.ts",
+        "interface/tests/e2e/helpers/mockAuthenticatedApp.ts"
+      ],
+      "stats": {
+        "fileCount": 17,
+        "insertions": 1260,
+        "deletions": 34
+      },
+      "committedAtMs": 1783720491000,
+      "cleanSubject": "Add Agent Continuity controls and memory evidence (#100)",
+      "keywords": [
+        "agent",
+        "continuity",
+        "controls",
+        "memory",
+        "evidence"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/playwright.config.ts",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/lib",
+        "interface/src/shared",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 5,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.749.1",
+      "version": "0.1.0-nightly.757.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65591490
+          "sizeBytes": 65713536
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132159992
+          "sizeBytes": 132299256
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -177,29 +373,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.749.1",
+      "version": "0.1.0-nightly.757.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.749.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.757.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61270310
+          "sizeBytes": 61359863
         },
         {
-          "name": "AURA_0.1.0-nightly.749.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.757.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60285113
+          "sizeBytes": 60358070
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -209,29 +405,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.749.1",
+      "version": "0.1.0-nightly.757.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.749.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.757.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63463880
+          "sizeBytes": 63651281
         },
         {
-          "name": "AURA_0.1.0-nightly.749.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.757.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62472863
+          "sizeBytes": 62639386
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -241,17 +437,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.749.1",
+      "version": "0.1.0-nightly.757.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48305209
+          "sizeBytes": 48380808
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.749.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.757.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -260,42 +456,159 @@
     }
   ],
   "rendered": {
-    "title": "Aura Web Search ships with platform-funded quotas and BYOK",
-    "intro": "Today's nightly centers on a single, substantial feature: Aura Web Search is now available by default to every workspace, backed by Brave through Aura-funded credentials and gated by per-user tier quotas. Optional BYOK remains for orgs that want to bring their own Brave keys, and the plumbing to keep credentials server-side has been hardened end to end.",
+    "title": "Web search, agent memory continuity, and a smoother Mac update handoff",
+    "intro": "Today's nightly brings two headline capabilities — built-in Aura Web Search with tiered quotas and a new Agent Continuity surface backed by memory-retrieval evidence — alongside a targeted macOS updater fix, a cloud identity resolution repair for tool callbacks, and an expanded model catalog featuring GPT-5.6.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:47 PM",
         "started_at": "2026-07-10T04:47:33.000Z",
         "ended_at": "2026-07-10T04:47:33.000Z",
-        "title": "Aura Web Search launches with tiered quotas and optional BYOK",
-        "summary": "Brave-powered web and news search is now available to every workspace by default, funded by Aura credentials and metered against z-billing tier quotas, with workspace-owned Brave keys still supported as an opt-in.",
+        "title": "Aura Web Search launches with platform-funded quotas and BYOK",
+        "summary": "Brave-backed web and news search is now available to every workspace by default, funded by Aura credentials and gated by per-tier quotas, while workspaces that bring their own Brave key keep full control.",
         "items": [
           {
-            "text": "Ships Brave-backed web and news search as a default capability, using platform-funded credentials so users no longer need to configure a Brave key to get started while org-owned keys continue to bypass Aura-funded quota.",
+            "text": "Enabled Brave-backed web and news search out of the box using Aura-funded credentials, with organization membership checks and per-user tier quotas enforced through z-billing.",
             "commit_shas": [
               "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Enforces organization membership and per-user tier quotas sourced from z-billing, with a new tool-action rate limiter on the server to keep usage within plan boundaries.",
+            "text": "Kept the platform Brave key strictly server-side: desktop requests are routed through aura-api via a new AURA_PLATFORM_TOOL_ACTION_BASE_URL, and billing calls are hard-gated to validated HTTPS endpoints before any credentials are transmitted.",
             "commit_shas": [
               "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Locks credentials to the server side: the platform Brave key is scoped to aura-os-server (never exposed via VITE_* or desktop bundles), desktop requests are routed through aura-api via a new AURA_PLATFORM_TOOL_ACTION_BASE_URL, and billing calls are refused unless the endpoint is validated HTTPS.",
+            "text": "Preserved optional workspace BYOK so connected org-owned Brave keys continue to live encrypted in aura-integrations and bypass the Aura-funded quota entirely.",
             "commit_shas": [
               "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wires the new platform tool-action base URL through desktop-validate, nightly, and stable release workflows so packaged Linux, macOS, and Windows builds ship pointed at the authenticated cloud endpoint.",
+            "text": "Wired the new platform tool-action base URL into desktop validate, nightly, and stable release workflows so packaged builds resolve the correct authenticated endpoint.",
             "commit_shas": [
               "66b327d4fb25227bd6f0e0ebaaf21361829ebe2d"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "4:26 AM",
+        "started_at": "2026-07-10T11:26:49.000Z",
+        "ended_at": "2026-07-10T11:26:49.000Z",
+        "title": "Cloud tool callbacks now resolve the caller's Aura Network identity",
+        "summary": "Direct cloud tool-action callbacks that skip the session-enrichment endpoint can now correctly match the caller to an org role, unblocking Web Search and other platform tools from cold JWTs.",
+        "items": [
+          {
+            "text": "When a zOS JWT identity doesn't match any org member during a role check, the server now fetches the current user from Aura Network, adds that ID to the candidate list, and caches the resolved network_user_id and profile_id on the validation cache for later callbacks.",
+            "commit_shas": [
+              "c394e572054a7da8c0bd3deabee38c2aaad94e81"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added an end-to-end integration test that drives a Brave web-search tool action through a fresh cloud callback and asserts the Aura Network identity is resolved and cached.",
+            "commit_shas": [
+              "c394e572054a7da8c0bd3deabee38c2aaad94e81"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "6:39 AM",
+        "started_at": "2026-07-10T13:39:51.000Z",
+        "ended_at": "2026-07-10T13:39:51.000Z",
+        "title": "macOS updater waits for shutdown before relaunching Aura",
+        "summary": "The macOS auto-update flow no longer races LaunchServices — a small handoff process now waits for the current Aura process to exit before opening the updated bundle.",
+        "items": [
+          {
+            "text": "Replaced the immediate `open -n` relaunch with a shell handoff that polls until the parent PID disappears (up to a 30-second ceiling) and only then execs `/usr/bin/open` on the updated bundle, preventing LaunchServices from seeing the old instance as still running.",
+            "commit_shas": [
+              "c8307f12621f285e3f31a7e0d514e620be8aec7b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Applied the same deferred handoff to the `/Applications` relocate-and-relaunch path so first-run installs out of a translocated location reopen cleanly after shutdown, with handoff PIDs recorded in updater diagnostics.",
+            "commit_shas": [
+              "c8307f12621f285e3f31a7e0d514e620be8aec7b"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "7:06 AM",
+        "started_at": "2026-07-10T14:06:46.000Z",
+        "ended_at": "2026-07-10T14:06:46.000Z",
+        "title": "GPT-5.6 family lands with a new XHigh reasoning tier",
+        "summary": "The model catalog picks up three GPT-5.6 variants and a distinct XHigh reasoning effort that sits between High and Max instead of being folded away.",
+        "items": [
+          {
+            "text": "Added gpt-5.6-sol, gpt-5.6-terra, and gpt-5.6-luna to the OpenAI catalog with per-model input/output and cache pricing wired into benchmark and pricing tables.",
+            "commit_shas": [
+              "f0aebe976bcedbc93a19ae5297b7d8df4519bd96"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Promoted `xhigh` to a first-class ReasoningEffort tier in the aura-protocol runtime request and TypeScript bindings, so GPT-5.6 exposes distinct XHigh and Max budgets instead of collapsing xhigh into high as before.",
+            "commit_shas": [
+              "f0aebe976bcedbc93a19ae5297b7d8df4519bd96"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Reframed the ReasoningEffort documentation as a provider-neutral superset, clarifying that Aura Router maps Minimal to `none` for current OpenAI models and translates each tier into the provider's native control.",
+            "commit_shas": [
+              "f0aebe976bcedbc93a19ae5297b7d8df4519bd96"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "2:54 PM",
+        "started_at": "2026-07-10T21:54:51.000Z",
+        "ended_at": "2026-07-10T21:54:51.000Z",
+        "title": "Agent Continuity controls and retrieval evidence in the Memory tab",
+        "summary": "Agents gain a dedicated continuity surface — configuration, approval and correction controls, and a look at what the retriever actually pulled — backed by a new harness proxy and browser-tested flows.",
+        "items": [
+          {
+            "text": "Introduced continuity configuration plus approval and correction controls in the Agent Info panel's Memory tab, expanding MemoryTab and MemoryPreview with a substantial new UI and analytics coverage.",
+            "commit_shas": [
+              "fb16613e500048bcf3bd7a67cc3b9470a92a1d08"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Exposed the latest retrieval trace so users can see the evidence behind an agent's recall, powered by a new GET `/memory/retrieval/latest` proxy endpoint.",
+            "commit_shas": [
+              "fb16613e500048bcf3bd7a67cc3b9470a92a1d08"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added authenticated harness proxy routes for reading and updating per-agent memory continuity configuration (`GET`/`PUT /api/harness/agents/:agent_id/memory/continuity`), with mock coverage and forwarding tests.",
+            "commit_shas": [
+              "fb16613e500048bcf3bd7a67cc3b9470a92a1d08"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Locked in the new flows with a Playwright end-to-end suite (`agent-continuity.spec.ts`) and expanded authenticated-app test helpers.",
+            "commit_shas": [
+              "fb16613e500048bcf3bd7a67cc3b9470a92a1d08"
             ],
             "confidence": "high"
           }
@@ -303,11 +616,11 @@
       }
     ],
     "highlights": [
-      "Brave-backed web and news search on by default",
-      "Per-user tier quotas enforced via z-billing",
-      "Optional workspace BYOK preserved",
-      "Credentials stay server-side behind HTTPS-only billing"
+      "Aura Web Search ships by default with tiered quotas and optional BYOK",
+      "Agent Continuity controls with retrieval evidence in the Memory tab",
+      "macOS relaunch now waits for full shutdown before reopening",
+      "GPT-5.6 (sol, terra, luna) added with a new XHigh reasoning tier"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 5
   }
 }
