@@ -250,24 +250,6 @@ jobs:
         run: |
           cat "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.md" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Plan changelog media candidates
-        if: steps.release-check.outputs.released == 'true'
-        continue-on-error: true
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        shell: bash
-        run: |
-          node repo/interface/scripts/plan-changelog-media.mjs \
-            --changelog-file "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.json" \
-            --output-dir changelog-media-plan
-
-      - name: Upload changelog media plan
-        if: steps.release-check.outputs.released == 'true' && hashFiles('changelog-media-plan/media-plan-summary.json') != ''
-        uses: actions/upload-artifact@v5
-        with:
-          name: changelog-media-plan
-          path: changelog-media-plan
-
       - name: Commit and push reconciled changelog
         if: steps.release-check.outputs.released == 'true'
         shell: bash
