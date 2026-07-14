@@ -19,7 +19,7 @@ on:
         type: string
 
 permissions:
-  actions: write
+  actions: read
   contents: write
 
 concurrency:
@@ -279,59 +279,6 @@ jobs:
         run: |
           cat "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.md" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Plan changelog media candidates
-        if: steps.release-check.outputs.released == 'true'
-        continue-on-error: true
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        shell: bash
-        run: |
-          node repo/interface/scripts/plan-changelog-media.mjs \
-            --changelog-file "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.json" \
-            --output-dir changelog-media-plan
-
-      - name: Upload changelog media plan
-        if: steps.release-check.outputs.released == 'true' && hashFiles('changelog-media-plan/media-plan-summary.json') != ''
-        uses: actions/upload-artifact@v5
-        with:
-          name: changelog-media-plan
-          path: changelog-media-plan
-
-      - name: Write changelog publish metadata
-        if: steps.release-check.outputs.released == 'true'
-        shell: bash
-        run: |
-          channel="${{ steps.metadata.outputs.channel }}"
-          version="${{ steps.metadata.outputs.version }}"
-          date="$(jq -er '.date' "pages/changelog/${channel}/latest.json")"
-          mkdir -p changelog-publish-metadata
-          jq -n \
-            --arg channel "$channel" \
-            --arg version "$version" \
-            --arg date "$date" \
-            --arg latest_json "changelog/${channel}/latest.json" \
-            --arg latest_md "changelog/${channel}/latest.md" \
-            --arg history_json "changelog/${channel}/history/${date}.json" \
-            --arg history_md "changelog/${channel}/history/${date}.md" \
-            '{
-              channel: $channel,
-              version: $version,
-              date: $date,
-              files: {
-                latestJson: $latest_json,
-                latestMd: $latest_md,
-                historyJson: $history_json,
-                historyMd: $history_md
-              }
-            }' > changelog-publish-metadata/changelog-publish-metadata.json
-
-      - name: Upload changelog publish metadata
-        if: steps.release-check.outputs.released == 'true'
-        uses: actions/upload-artifact@v5
-        with:
-          name: changelog-publish-metadata
-          path: changelog-publish-metadata/changelog-publish-metadata.json
-
       - name: Commit and push changelog
         if: steps.release-check.outputs.released == 'true'
         shell: bash
@@ -341,14 +288,3 @@ jobs:
             "Update ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}" \
             "changelog/${{ steps.metadata.outputs.channel }}" \
             "commit-stats.json"
-
-      - name: Note changelog media handoff
-        if: steps.release-check.outputs.released == 'true'
-        shell: bash
-        run: |
-          {
-            echo "## Changelog Media"
-            echo ""
-            echo "The changelog has been published first so release notes are never blocked by media generation."
-            echo "Publish Release Changelog Media will run after this workflow succeeds, skip entries that already have published media, and only publish assets that pass capture, branding, and vision gates."
-          } >> "$GITHUB_STEP_SUMMARY"
