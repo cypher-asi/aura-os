@@ -2,17 +2,18 @@
   {
     "date": "2026-07-13",
     "channel": "nightly",
-    "version": "0.1.0-nightly.759.1",
-    "title": "Historical changelog backfills for the release pipeline",
-    "intro": "A quiet day focused entirely on the release changelog workflow: operators can now replay past days with an explicit date, and those replays are guaranteed to run against the up-to-date generator.",
+    "version": "0.1.0-nightly.760.1",
+    "title": "Changelog pipeline slimmed down and gains historical backfills",
+    "intro": "Today's nightly is a release-infrastructure day focused on the changelog pipeline itself: operators can now safely replay historical dates through the current generator, and a large unused media-publishing workflow was retired to simplify the release path.",
     "entryCount": 1,
     "highlights": [
-      "Manual date override for historical changelog backfills",
-      "Backfills now always run the current generator"
+      "Manual date override unlocks historical changelog backfills",
+      "Backfills now run through the current generator, not a stale checkout",
+      "Retired ~327 lines of unused changelog media CI"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-07-13T23:45:53.429Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.759.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-07-14T00:26:34.457Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.760.1",
     "path": "history/2026-07-13.json"
   },
   {

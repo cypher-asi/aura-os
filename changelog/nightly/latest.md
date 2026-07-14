@@ -1,21 +1,23 @@
-# Historical changelog backfills for the release pipeline
+# Changelog pipeline slimmed down and gains historical backfills
 
 - Date: `2026-07-13`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.759.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.759.1
+- Version: `0.1.0-nightly.760.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.760.1
 
-A quiet day focused entirely on the release changelog workflow: operators can now replay past days with an explicit date, and those replays are guaranteed to run against the up-to-date generator.
+Today's nightly is a release-infrastructure day focused on the changelog pipeline itself: operators can now safely replay historical dates through the current generator, and a large unused media-publishing workflow was retired to simplify the release path.
 
-## 4:04 PM — Dated changelog backfills for the release workflow
+## 4:04 PM — Historical changelog backfills and media CI retirement
 
-The publish-release-changelog workflow gained a validated date override so past days can be regenerated cleanly, and a follow-up ensured those backfills always execute the latest generator code.
+The release changelog workflow gained a validated date override for replaying past days and dropped a large unused media-publishing pipeline, tightening the path from commit to published changelog.
 
-- Added an optional YYYY-MM-DD changelog_date input to the publish-release-changelog workflow, wired through a new resolveChangelogDate helper that validates the format and rejects impossible calendar dates before a historical run starts. (`be35543`)
-- Fixed historical backfills to invoke the generator from the workflow checkout (workflow/infra/...) rather than the target repo checkout, so replays of older dates use the current changelog logic instead of whatever generator existed on that day; locked in with a workflow test. (`07e3f52`)
+- Operators can now pass a validated YYYY-MM-DD override to the Publish Release Changelog workflow to replay historical days without misdating entries, with strict rejection of malformed or impossible dates like 2026-02-30. (`be35543`)
+- Backfill runs now invoke the generator from the current workflow checkout instead of the target repo checkout, so historical replays always use the latest changelog logic rather than whatever generator existed on that date. (`07e3f52`)
+- Retired the automated changelog media CI, removing 327 lines across the media publish, changelog publish, and reconcile workflows to simplify the release pipeline. (`5b11528`)
 
 ## Highlights
 
-- Manual date override for historical changelog backfills
-- Backfills now always run the current generator
+- Manual date override unlocks historical changelog backfills
+- Backfills now run through the current generator, not a stale checkout
+- Retired ~327 lines of unused changelog media CI
 
