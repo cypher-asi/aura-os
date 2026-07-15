@@ -76,6 +76,18 @@ describe("memoryApi - Facts", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/harness/agents/a1/memory/facts/by-key/name", expect.any(Object));
   });
 
+  it("getFactByKey URL-encodes the memory key", async () => {
+    const fetchMock = mockFetch(200, {});
+    globalThis.fetch = fetchMock;
+
+    await memoryApi.getFactByKey("a1", "release policy/owner");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/agents/a1/memory/facts/by-key/release%20policy%2Fowner",
+      expect.any(Object),
+    );
+  });
+
   it("createFact sends POST with data", async () => {
     const data = { key: "name", value: "Alice", confidence: 0.9 };
     const fetchMock = mockFetch(200, { id: "f1", ...data });
@@ -229,6 +241,22 @@ describe("memoryApi - Aggregate", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/harness/agents/a1/memory", expect.any(Object));
   });
 
+  it("getSnapshot carries project and legacy-review context", async () => {
+    const fetchMock = mockFetch(200, { facts: [], events: [], procedures: [] });
+    globalThis.fetch = fetchMock;
+
+    await memoryApi.getSnapshot("a1", {
+      projectId: "project-7",
+      includeLegacy: true,
+      scope: "project",
+    });
+
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("project_id=project-7");
+    expect(url).toContain("include_legacy=true");
+    expect(url).toContain("scope=project");
+  });
+
   it("getStats fetches memory stats", async () => {
     const fetchMock = mockFetch(200, { fact_count: 5, event_count: 10 });
     globalThis.fetch = fetchMock;
@@ -263,7 +291,7 @@ describe("memoryApi - Aggregate", () => {
       write_policy: "automatic",
       retrieval_mode: "query_aware",
       allow_user_scope: false,
-      allow_workspace_scope: false,
+      allow_project_scope: false,
     });
     globalThis.fetch = fetchMock;
 
@@ -282,7 +310,7 @@ describe("memoryApi - Aggregate", () => {
       write_policy: "approval" as const,
       retrieval_mode: "query_aware" as const,
       allow_user_scope: false,
-      allow_workspace_scope: false,
+      allow_project_scope: false,
     };
     const fetchMock = mockFetch(200, config);
     globalThis.fetch = fetchMock;
@@ -306,10 +334,10 @@ describe("memoryApi - Aggregate", () => {
     });
     globalThis.fetch = fetchMock;
 
-    await memoryApi.getLatestRetrievalTrace("a1");
+    await memoryApi.getLatestRetrievalTrace("a1", { projectId: "project-a" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/harness/agents/a1/memory/retrieval/latest",
+      "/api/harness/agents/a1/memory/retrieval/latest?project_id=project-a",
       expect.any(Object),
     );
   });

@@ -1,4 +1,5 @@
 use axum::extract::{Path, Query, State};
+use axum::http::Method;
 use axum::Json;
 use chrono::Utc;
 use serde::Deserialize;
@@ -18,7 +19,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::harness_proxy::{
     create_skill_from_payload, update_my_skill_from_payload, CreateSkillBody, UpdateSkillBody,
 };
-use crate::state::{AppState, AuthJwt};
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct UpdateSelfImprovementConfigRequest {
@@ -42,6 +43,12 @@ pub(crate) struct ProposeImprovementRequest {
     pub evidence: Vec<AgentImprovementEvidence>,
     #[serde(default)]
     pub payload: Value,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct ProposeImprovementQuery {
+    #[serde(default)]
+    pub project_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -180,9 +187,14 @@ pub(crate) async fn propose_improvement(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
+    Query(query): Query<ProposeImprovementQuery>,
     Json(body): Json<ProposeImprovementRequest>,
 ) -> ApiResult<Json<AgentImprovementProposal>> {
     ensure_agent_visible(&state, &jwt, &agent_id).await?;
+    let project_id = clean_optional_string(query.project_id);
+    if let Some(project_id) = project_id.as_deref() {
+        ensure_agent_project_visible(&state, &jwt, &agent_id, project_id).await?;
+    }
     let config = state
         .agent_service
         .load_agent_self_improvement_config(&agent_id)
@@ -203,6 +215,7 @@ pub(crate) async fn propose_improvement(
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
             .or_else(|| evidence.first().and_then(|item| item.session_id.clone())),
+        project_id,
         evidence,
         provenance: AgentImprovementProvenance::default(),
         dedup_key: None,
@@ -300,9 +313,13 @@ pub(crate) async fn run_learning_review(
                 })?;
             for event in events {
                 scanned_events += 1;
-                let Some(mut proposal) =
-                    proposal_from_review_event(&agent_id, &review_id, &event, config.allow_memory)
-                else {
+                let Some(mut proposal) = proposal_from_review_event(
+                    &agent_id,
+                    &review_id,
+                    &event,
+                    session.session.project_id.as_deref(),
+                    config.allow_memory,
+                ) else {
                     continue;
                 };
                 let Some(dedup_key) = proposal.dedup_key.clone() else {
@@ -368,6 +385,7 @@ pub(crate) async fn reject_improvement_proposal(
 pub(crate) async fn apply_improvement_proposal(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(auth_session): AuthSession,
     Path((agent_id, proposal_id)): Path<(AgentId, String)>,
 ) -> ApiResult<Json<AgentImprovementProposal>> {
     ensure_agent_visible(&state, &jwt, &agent_id).await?;
@@ -382,7 +400,25 @@ pub(crate) async fn apply_improvement_proposal(
         return Err(ApiError::conflict("rejected proposals cannot be applied"));
     }
 
-    match apply_proposal_payload(&state, &agent_id, &proposal).await {
+    let project_id = if proposal.kind.touches_memory() {
+        let project_id = resolve_proposal_project_id(&state, &jwt, &proposal).await?;
+        if let Some(project_id) = project_id.as_deref() {
+            ensure_agent_project_visible(&state, &jwt, &agent_id, project_id).await?;
+        }
+        project_id
+    } else {
+        None
+    };
+
+    match apply_proposal_payload(
+        &state,
+        &agent_id,
+        &proposal,
+        project_id.as_deref(),
+        &auth_session.user_id,
+    )
+    .await
+    {
         Ok(()) => {
             let now = Utc::now();
             proposal.status = AgentImprovementStatus::Applied;
@@ -423,6 +459,83 @@ async fn ensure_agent_visible(state: &AppState, jwt: &str, agent_id: &AgentId) -
         return Ok(());
     }
     Err(ApiError::not_found("agent not found"))
+}
+
+async fn ensure_agent_project_visible(
+    state: &AppState,
+    jwt: &str,
+    agent_id: &AgentId,
+    project_id: &str,
+) -> ApiResult<()> {
+    let storage = state
+        .storage_client
+        .as_deref()
+        .ok_or_else(|| ApiError::service_unavailable("aura-storage is not configured"))?;
+    let bindings = crate::handlers::agents::chat::find_matching_project_agents(
+        state,
+        storage,
+        jwt,
+        &agent_id.to_string(),
+    )
+    .await;
+    let has_binding = bindings
+        .iter()
+        .any(|binding| binding.project_id.as_deref() == Some(project_id));
+    if has_binding {
+        return Ok(());
+    }
+
+    // Session ownership is a fallback when local project discovery has not
+    // populated yet, including the first proposal in a new project chat.
+    let agent_id_string = agent_id.to_string();
+    let sessions = storage.list_my_sessions(jwt).await.map_err(|error| {
+        ApiError::service_unavailable(format!(
+            "could not verify project access from sessions: {error}"
+        ))
+    })?;
+    let has_owned_session = sessions.iter().any(|entry| {
+        entry.agent_id.as_deref() == Some(agent_id_string.as_str())
+            && entry.session.project_id.as_deref() == Some(project_id)
+    });
+    if has_owned_session {
+        Ok(())
+    } else {
+        Err(ApiError::forbidden(
+            "agent is not available in the requested project",
+        ))
+    }
+}
+
+async fn resolve_proposal_project_id(
+    state: &AppState,
+    jwt: &str,
+    proposal: &AgentImprovementProposal,
+) -> ApiResult<Option<String>> {
+    if let Some(project_id) = proposal
+        .project_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        return Ok(Some(project_id.to_string()));
+    }
+
+    let Some(source_session_id) = proposal.source_session_id.as_deref() else {
+        return Ok(None);
+    };
+    let storage = state
+        .storage_client
+        .as_deref()
+        .ok_or_else(|| ApiError::service_unavailable("aura-storage is not configured"))?;
+    let session = storage
+        .get_session(source_session_id, jwt)
+        .await
+        .map_err(|error| {
+            ApiError::service_unavailable(format!(
+                "could not resolve the proposal's source project: {error}"
+            ))
+        })?;
+    Ok(session.project_id.filter(|value| !value.trim().is_empty()))
 }
 
 fn validate_self_improvement_enabled(
@@ -490,6 +603,7 @@ fn proposal_from_review_event(
     agent_id: &AgentId,
     review_id: &str,
     event: &StorageSessionEvent,
+    project_id: Option<&str>,
     allow_memory: bool,
 ) -> Option<AgentImprovementProposal> {
     if !allow_memory || event.event_type.as_deref() != Some("user_message") {
@@ -511,7 +625,7 @@ fn proposal_from_review_event(
         ],
     ) {
         return Some(review_memory_fact_proposal(
-            agent_id, review_id, event, &text, &fact,
+            agent_id, review_id, event, project_id, &text, &fact,
         ));
     }
 
@@ -527,7 +641,7 @@ fn proposal_from_review_event(
         ],
     ) {
         return Some(review_memory_procedure_proposal(
-            agent_id, review_id, event, &text, &procedure,
+            agent_id, review_id, event, project_id, &text, &procedure,
         ));
     }
 
@@ -538,6 +652,7 @@ fn review_memory_fact_proposal(
     agent_id: &AgentId,
     review_id: &str,
     event: &StorageSessionEvent,
+    project_id: Option<&str>,
     full_text: &str,
     fact: &str,
 ) -> AgentImprovementProposal {
@@ -552,6 +667,7 @@ fn review_memory_fact_proposal(
         rationale: "Learning review found an explicit durable instruction in a recent session."
             .to_string(),
         source_session_id: event.session_id.clone(),
+        project_id: project_id.map(str::to_string),
         evidence: vec![review_evidence(event, full_text)],
         provenance: AgentImprovementProvenance {
             source: AgentImprovementSource::LearningReview,
@@ -577,6 +693,7 @@ fn review_memory_procedure_proposal(
     agent_id: &AgentId,
     review_id: &str,
     event: &StorageSessionEvent,
+    project_id: Option<&str>,
     full_text: &str,
     procedure: &str,
 ) -> AgentImprovementProposal {
@@ -591,6 +708,7 @@ fn review_memory_procedure_proposal(
         rationale: "Learning review found a future-work instruction in a recent session."
             .to_string(),
         source_session_id: event.session_id.clone(),
+        project_id: project_id.map(str::to_string),
         evidence: vec![review_evidence(event, full_text)],
         provenance: AgentImprovementProvenance {
             source: AgentImprovementSource::LearningReview,
@@ -769,13 +887,15 @@ async fn apply_proposal_payload(
     state: &AppState,
     agent_id: &AgentId,
     proposal: &AgentImprovementProposal,
+    project_id: Option<&str>,
+    user_id: &str,
 ) -> Result<(), String> {
     match proposal.kind {
         AgentImprovementKind::MemoryFact => {
-            apply_memory_fact(state, agent_id, &proposal.payload).await
+            apply_memory_fact(state, agent_id, &proposal.payload, project_id, user_id).await
         }
         AgentImprovementKind::MemoryProcedure => {
-            apply_memory_procedure(state, agent_id, &proposal.payload).await
+            apply_memory_procedure(state, agent_id, &proposal.payload, project_id, user_id).await
         }
         AgentImprovementKind::SkillCreate => {
             apply_skill_create(state, agent_id, proposal.payload.clone()).await
@@ -790,12 +910,21 @@ async fn apply_memory_fact(
     state: &AppState,
     agent_id: &AgentId,
     payload: &Value,
+    project_id: Option<&str>,
+    user_id: &str,
 ) -> Result<(), String> {
     let body = serde_json::to_string(payload).map_err(|e| e.to_string())?;
+    let query = scoped_memory_query(project_id, user_id);
     let ok = state
         .harness_http
-        .post_json_ok(&format!("api/agents/{agent_id}/memory/facts"), body)
-        .await;
+        .proxy_json(
+            Method::POST,
+            &format!("api/agents/{agent_id}/memory/facts"),
+            Some(query),
+            Some(body),
+        )
+        .await
+        .is_ok_and(|response| response.status().is_success());
     if ok {
         Ok(())
     } else {
@@ -807,17 +936,35 @@ async fn apply_memory_procedure(
     state: &AppState,
     agent_id: &AgentId,
     payload: &Value,
+    project_id: Option<&str>,
+    user_id: &str,
 ) -> Result<(), String> {
     let body = serde_json::to_string(payload).map_err(|e| e.to_string())?;
+    let query = scoped_memory_query(project_id, user_id);
     let ok = state
         .harness_http
-        .post_json_ok(&format!("api/agents/{agent_id}/memory/procedures"), body)
-        .await;
+        .proxy_json(
+            Method::POST,
+            &format!("api/agents/{agent_id}/memory/procedures"),
+            Some(query),
+            Some(body),
+        )
+        .await
+        .is_ok_and(|response| response.status().is_success());
     if ok {
         Ok(())
     } else {
         Err("failed to apply memory procedure proposal".to_string())
     }
+}
+
+fn scoped_memory_query(project_id: Option<&str>, user_id: &str) -> String {
+    let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+    if let Some(project_id) = project_id.filter(|value| !value.trim().is_empty()) {
+        serializer.append_pair("project_id", project_id);
+    }
+    serializer.append_pair("user_id", user_id);
+    serializer.finish()
 }
 
 async fn apply_skill_create(

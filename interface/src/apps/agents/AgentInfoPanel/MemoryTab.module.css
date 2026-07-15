@@ -53,6 +53,59 @@
   color: var(--color-success);
 }
 
+.brainMap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 22%, var(--color-border));
+  border-radius: 7px;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+}
+
+.brainMap span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.brainMap strong {
+  color: var(--color-text-primary);
+  font-size: 11px;
+}
+
+.brainMap small,
+.noProjectNote {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.projectPicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.projectPicker select {
+  min-width: 0;
+  max-width: 170px;
+  height: 29px;
+  padding: 0 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 11px;
+}
+
 .controlRow {
   display: flex;
   align-items: center;
@@ -125,6 +178,71 @@
   gap: var(--space-1, 4px);
   padding: var(--space-2, 8px) var(--space-3, 12px);
   border-bottom: 1px solid var(--color-border);
+}
+
+.scopeFilterRow {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  min-height: 30px;
+  box-sizing: border-box;
+  padding: 0 12px 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.scopeChip {
+  flex: 0 0 auto;
+  min-height: 21px;
+  padding: 3px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.scopeChipActive {
+  border-color: color-mix(in srgb, var(--color-accent) 42%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-accent);
+}
+
+.scopeBadge {
+  padding: 2px 5px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-muted);
+  font-size: 9px;
+}
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.scopeSelect {
+  width: 22px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0;
+  cursor: pointer;
+}
+
+.scopeSelect:hover,
+.scopeSelect:focus-visible {
+  width: auto;
+  max-width: 110px;
+  padding: 0 5px;
+  background: var(--color-overlay-subtle);
+  font-size: 9px;
 }
 
 .pinButton {

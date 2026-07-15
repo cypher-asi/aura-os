@@ -605,6 +605,19 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     }
     if (pathname.startsWith("/api/activity/") && pathname.endsWith("/comments")) return json([]);
 
+    const bindingsAgent = agents.find(
+      (agent) => pathname === `/api/agents/${agent.agent_id}/projects`,
+    );
+    if (bindingsAgent) {
+      return json(agentInstances
+        .filter((instance) => instance.agent_id === bindingsAgent.agent_id)
+        .map((instance) => ({
+          project_agent_id: instance.agent_instance_id,
+          project_id: instance.project_id,
+          project_name: allProjects.find((project) => project.project_id === instance.project_id)?.name ?? "Project",
+        })));
+    }
+
     const memoryRoot = pathname.match(/^\/api\/harness\/agents\/([^/]+)\/memory$/);
     if (memoryRoot) {
       const snapshot = memorySnapshots.get(memoryRoot[1]);
@@ -626,7 +639,7 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
         write_policy: "automatic",
         retrieval_mode: "query_aware",
         allow_user_scope: false,
-        allow_workspace_scope: false,
+        allow_project_scope: false,
       });
     }
 

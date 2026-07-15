@@ -33,6 +33,7 @@ export const ANALYTICS_EVENTS = {
   memory_corrected: { props: ["kind"] },
   memory_deleted: { props: ["kind"] },
   memory_retrieval_viewed: { props: ["selected_count", "query_aware"] },
+  memory_scope_changed: { props: ["kind", "scope"] },
   aura3d_image_generated: { props: ["model"] }, // ImageGeneration.tsx:140
   aura3d_model_generated: {}, // ModelGeneration.tsx:208
   // integrations / settings / feedback

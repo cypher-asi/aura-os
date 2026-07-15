@@ -4,7 +4,7 @@ import type { JsonValue } from "./api";
 // Memory entities (harness API)
 // ---------------------------------------------------------------------------
 
-export type MemoryScope = "agent" | "user" | "workspace";
+export type MemoryScope = "agent" | "project" | "user";
 export type MemoryStatus = "active" | "pending" | "rejected" | "superseded";
 export type MemorySensitivity = "normal" | "sensitive";
 export type MemoryWritePolicy = "automatic" | "approval" | "explicit_only";
@@ -14,6 +14,9 @@ export interface MemoryProvenance {
   session_id?: string;
   excerpt?: string;
   extractor_model?: string;
+  project_id?: string;
+  user_id?: string;
+  contributor_agent_id?: string;
 }
 
 export interface MemoryContinuity {
@@ -31,7 +34,7 @@ export interface AgentContinuityConfig {
   write_policy: MemoryWritePolicy;
   retrieval_mode: MemoryRetrievalMode;
   allow_user_scope: boolean;
-  allow_workspace_scope: boolean;
+  allow_project_scope: boolean;
 }
 
 export interface MemorySelection {
@@ -40,6 +43,13 @@ export interface MemorySelection {
   score: number;
   relevance: number;
   reason: "current_request" | "durable_salience" | string;
+  scope: MemoryScope;
+}
+
+export interface MemoryAccessOptions {
+  projectId?: string;
+  includeLegacy?: boolean;
+  scope?: MemoryScope;
 }
 
 export interface MemoryRetrievalTrace {

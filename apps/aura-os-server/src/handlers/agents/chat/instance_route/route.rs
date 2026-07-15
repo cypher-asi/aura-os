@@ -250,6 +250,7 @@ pub(crate) async fn send_event_stream(
             context: "instance_chat",
             agent_id: &agent_instance_id_string,
             template_agent_id: &template_agent_id_string,
+            project_id: Some(&pid_str),
             integrations: org_integrations.as_deref(),
         },
         &normalized_instance_perms,

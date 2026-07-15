@@ -3,9 +3,14 @@ use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;
 
-use super::HARNESS_URL_ENV_LOCK;
+#[cfg(unix)]
+use aura_os_storage::{
+    CreateProjectAgentRequest, CreateSessionEventRequest, CreateSessionRequest,
+};
+
 use super::common::*;
 use super::mocks::start_mock_harness;
+use super::HARNESS_URL_ENV_LOCK;
 
 struct EnvVarReset(&'static str);
 
@@ -43,6 +48,97 @@ async fn proxy_forwards_get_facts() {
             .unwrap()
             .contains(&format!("/api/agents/{agent}/memory/facts"))
     );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn project_memory_accepts_an_owned_session_before_project_discovery_is_warm() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _handle) = start_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+        std::env::set_var("AURA_STORAGE_TEST_USER_ID", "u1");
+    }
+    let _reset_url = EnvVarReset("LOCAL_HARNESS_URL");
+    let _reset_user = EnvVarReset("AURA_STORAGE_TEST_USER_ID");
+
+    let (app, state, storage, db, _dir) = build_test_app_with_storage_db().await;
+    let agent_id = super::mocks::persist_test_agent(&state, "Project memory agent");
+    let project_id = aura_os_core::ProjectId::new().to_string();
+    let project_agent = storage
+        .create_project_agent(
+            &project_id,
+            TEST_JWT,
+            &CreateProjectAgentRequest {
+                agent_id: agent_id.to_string(),
+                name: "Project memory agent".into(),
+                org_id: None,
+                role: None,
+                personality: None,
+                system_prompt: None,
+                skills: None,
+                icon: None,
+                harness: None,
+                instance_role: None,
+                source: Some("ui".into()),
+                permissions: None,
+                intent_classifier: None,
+            },
+        )
+        .await
+        .expect("create project agent");
+    let session = storage
+        .create_session(
+            &project_agent.id,
+            TEST_JWT,
+            &CreateSessionRequest {
+                project_id: project_id.clone(),
+                org_id: None,
+                model: None,
+                status: None,
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .expect("create project session");
+    storage
+        .create_event(
+            &session.id,
+            TEST_JWT,
+            &CreateSessionEventRequest {
+                event_type: "user_message".into(),
+                sender: Some("user".into()),
+                project_id: Some(project_id.clone()),
+                agent_id: Some(agent_id.to_string()),
+                org_id: None,
+                user_id: Some("u1".into()),
+                content: Some(json!({ "text": "Remember this project context." })),
+                session_id: Some(session.id.clone()),
+            },
+        )
+        .await
+        .expect("create project session event");
+    db.lock()
+        .await
+        .session_users
+        .insert(session.id, "u1".into());
+
+    let req = json_request(
+        "GET",
+        &format!(
+            "/api/harness/agents/{agent_id}/memory/facts?project_id={project_id}&user_id=spoofed"
+        ),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    let echoed_uri = body["echoed_uri"].as_str().unwrap();
+    assert!(echoed_uri.contains(&format!("project_id={project_id}")));
+    assert!(echoed_uri.contains("user_id=u1"));
+    assert!(!echoed_uri.contains("spoofed"));
 }
 
 #[tokio::test]
@@ -289,10 +385,9 @@ async fn proxy_forwards_continuity_config_and_retrieval_evidence() {
     assert_eq!(resp.status(), StatusCode::OK);
     let body = response_json(resp).await;
     assert_eq!(body["echoed_method"], "GET");
-    assert!(body["echoed_uri"]
-        .as_str()
-        .unwrap()
-        .contains(&format!("/api/agents/{agent}/memory/retrieval/latest")));
+    let echoed_uri = body["echoed_uri"].as_str().unwrap();
+    assert!(echoed_uri.contains(&format!("/api/agents/{agent}/memory/retrieval/latest")));
+    assert!(echoed_uri.contains("user_id=u1"));
 }
 
 #[tokio::test]

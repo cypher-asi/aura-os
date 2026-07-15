@@ -105,8 +105,9 @@ async fn self_improvement_proposal_lifecycle_applies_memory_fact() {
     let captured = calls.lock().unwrap().clone();
     let memory_call = captured
         .iter()
-        .find(|(uri, _)| *uri == format!("/api/agents/{agent_id}/memory/facts"))
+        .find(|(uri, _)| uri.starts_with(&format!("/api/agents/{agent_id}/memory/facts?")))
         .expect("expected memory fact POST");
+    assert!(memory_call.0.contains("user_id="));
     let memory_body: serde_json::Value =
         serde_json::from_str(&memory_call.1).expect("memory body is valid JSON");
     assert_eq!(memory_body["key"], "repo.package_manager");
@@ -170,7 +171,7 @@ async fn learning_review_stages_evidence_backed_proposal_from_session_history() 
             &CreateSessionEventRequest {
                 event_type: "user_message".into(),
                 sender: Some("user".into()),
-                project_id: Some(project_id),
+                project_id: Some(project_id.clone()),
                 agent_id: Some(agent_id.to_string()),
                 org_id: None,
                 user_id: Some("u1".into()),
@@ -252,8 +253,10 @@ async fn learning_review_stages_evidence_backed_proposal_from_session_history() 
     let captured = calls.lock().unwrap().clone();
     let memory_call = captured
         .iter()
-        .find(|(uri, _)| *uri == format!("/api/agents/{agent_id}/memory/facts"))
+        .find(|(uri, _)| uri.starts_with(&format!("/api/agents/{agent_id}/memory/facts?")))
         .expect("expected memory fact POST");
+    assert!(memory_call.0.contains(&format!("project_id={project_id}")));
+    assert!(memory_call.0.contains("user_id=u1"));
     let memory_body: serde_json::Value =
         serde_json::from_str(&memory_call.1).expect("memory body is valid JSON");
     assert_eq!(
