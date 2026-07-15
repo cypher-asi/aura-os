@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-07-14",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.761.1",
+    "title": "Project-scoped agent memory lands",
+    "intro": "Today's nightly introduces per-project scoping for agent memory, giving each agent a cleaner boundary between what it remembers globally and what belongs to a specific project. The change threads a project_id through the chat stack, the harness memory proxy, and the Agent Info panel's Memory tab.",
+    "entryCount": 1,
+    "highlights": [
+      "Scoped memory controls in the Agent Info panel",
+      "project_id now routes through chat, tools, and the memory proxy",
+      "Self-improvement proposals are attributed to the active project"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-15T06:57:57.118Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.761.1",
+    "path": "history/2026-07-14.json"
+  },
+  {
     "date": "2026-07-13",
     "channel": "nightly",
     "version": "0.1.0-nightly.760.1",
