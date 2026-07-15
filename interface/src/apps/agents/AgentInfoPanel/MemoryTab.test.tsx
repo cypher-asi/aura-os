@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Vitest mock forwarding preserves varied API call signatures */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
@@ -85,7 +86,7 @@ describe("MemoryTab", () => {
       write_policy: "automatic",
       retrieval_mode: "query_aware",
       allow_user_scope: false,
-      allow_workspace_scope: false,
+      allow_project_scope: false,
     };
     mockGetContinuityConfig.mockResolvedValue(config);
     mockUpdateContinuityConfig.mockImplementation(async (_agentId, next) => next);
@@ -106,7 +107,52 @@ describe("MemoryTab", () => {
       expect(screen.getByText("task_run")).toBeDefined();
       expect(screen.getByText("deploy-flow")).toBeDefined();
     });
-    expect(mockGetSnapshot).toHaveBeenCalledWith("a1");
+    expect(mockGetSnapshot).toHaveBeenCalledWith("a1", {
+      includeLegacy: true,
+      projectId: undefined,
+    });
+    expect(screen.getByRole("combobox", { name: "Memory scope for lang" })).toHaveValue("legacy");
+  });
+
+  it("loads an authorized project brain and can promote legacy memory", async () => {
+    const binding = {
+      project_agent_id: "pa-1",
+      project_id: "project-1",
+      project_name: "Launch",
+    };
+    mockGetSnapshot.mockResolvedValue(mockSnapshot);
+    mockUpdateFact.mockResolvedValue({
+      ...mockSnapshot.facts[0],
+      continuity: {
+        scope: "project",
+        status: "active",
+        sensitivity: "normal",
+        pinned: false,
+        provenance: { project_id: "project-1" },
+      },
+    });
+
+    render(<MemoryTab agent={baseAgent} projectBindings={[binding]} />);
+
+    await waitFor(() => {
+      expect(mockGetSnapshot).toHaveBeenCalledWith("a1", {
+        includeLegacy: true,
+        projectId: "project-1",
+      });
+    });
+    const scope = await screen.findByRole("combobox", { name: "Memory scope for lang" });
+    fireEvent.change(scope, { target: { value: "project" } });
+
+    await waitFor(() => {
+      expect(mockUpdateFact).toHaveBeenCalledWith(
+        "a1",
+        "f1",
+        expect.objectContaining({
+          continuity: expect.objectContaining({ scope: "project" }),
+        }),
+        { includeLegacy: true, projectId: "project-1" },
+      );
+    });
   });
 
   it("shows connection error for 502", async () => {
@@ -196,7 +242,10 @@ describe("MemoryTab", () => {
     await waitFor(() => {
       expect(mockGetSnapshot.mock.calls.length).toBeGreaterThan(initialCallCount);
     }, { timeout: 3000 });
-    expect(mockGetSnapshot).toHaveBeenLastCalledWith("a1");
+    expect(mockGetSnapshot).toHaveBeenLastCalledWith("a1", {
+      includeLegacy: true,
+      projectId: undefined,
+    });
 
     await waitFor(() => {
       expect(screen.getByText("new_fact")).toBeDefined();
@@ -211,7 +260,7 @@ describe("MemoryTab", () => {
       write_policy: "approval",
       retrieval_mode: "query_aware",
       allow_user_scope: false,
-      allow_workspace_scope: false,
+      allow_project_scope: false,
     });
     mockGetLatestRetrievalTrace.mockResolvedValue({
       candidate_count: 14,
@@ -273,6 +322,7 @@ describe("MemoryTab", () => {
         expect.objectContaining({
           continuity: expect.objectContaining({ status: "active" }),
         }),
+        { includeLegacy: true, projectId: undefined },
       );
     });
   });

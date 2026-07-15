@@ -298,7 +298,9 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
         {effectiveTab === "tasks" && <div className={styles.tabEmptyState}>No tasks yet</div>}
         {effectiveTab === "processes" && <div className={styles.tabEmptyState}>No processes yet</div>}
         {effectiveTab === "logs" && <div className={styles.tabEmptyState}>No logs yet</div>}
-        {effectiveTab === "memory" && <MemoryTab agent={a} />}
+        {effectiveTab === "memory" && (
+          <MemoryTab agent={a} projectBindings={cascade.bindings} />
+        )}
         {effectiveTab === "stats" && <div className={styles.tabEmptyState}>No stats yet</div>}
 
         {effectiveTab === "profile" && isSuperAgent(a) && (
@@ -320,7 +322,9 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
           fullLane
         >
           {previewItem.kind === "skill" && <SkillPreview skill={previewItem.skill} installation={previewItem.installation} />}
-          {previewItem.kind === "memory_fact" && <FactPreview fact={previewItem.fact} />}
+          {previewItem.kind === "memory_fact" && (
+            <FactPreview fact={previewItem.fact} agentId={a.agent_id} access={previewItem.access} />
+          )}
           {previewItem.kind === "memory_event" && <EventPreview event={previewItem.event} />}
           {previewItem.kind === "memory_procedure" && <ProcedurePreview procedure={previewItem.procedure} />}
         </PreviewOverlay>

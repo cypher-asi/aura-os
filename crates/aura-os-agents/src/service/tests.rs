@@ -683,6 +683,7 @@ fn improvement_proposals_round_trip_and_replace_by_id() {
         title: "Remember repo package manager".to_string(),
         rationale: "The user corrected this twice.".to_string(),
         source_session_id: Some("session-1".to_string()),
+        project_id: Some("project-1".to_string()),
         evidence: Vec::new(),
         provenance: Default::default(),
         dedup_key: None,

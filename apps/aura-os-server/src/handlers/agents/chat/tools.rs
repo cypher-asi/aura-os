@@ -27,6 +27,7 @@ pub(super) struct InstalledToolsCtx<'a> {
     pub(super) context: &'static str,
     pub(super) agent_id: &'a str,
     pub(super) template_agent_id: &'a str,
+    pub(super) project_id: Option<&'a str>,
     pub(super) integrations: Option<&'a [aura_os_core::OrgIntegration]>,
 }
 
@@ -73,23 +74,31 @@ fn self_improvement_tool(ctx: &InstalledToolsCtx<'_>) -> Option<InstalledTool> {
         return None;
     }
 
-    self_improvement_tool_for_config(&config, ctx.jwt, ctx.template_agent_id)
+    self_improvement_tool_for_config(&config, ctx.jwt, ctx.template_agent_id, ctx.project_id)
 }
 
 fn self_improvement_tool_for_config(
     config: &AgentSelfImprovementConfig,
     jwt: &str,
     template_agent_id: &str,
+    project_id: Option<&str>,
 ) -> Option<InstalledTool> {
     if config.mode == AgentSelfImprovementMode::Off {
         return None;
     }
 
-    let endpoint = format!(
+    let mut endpoint = format!(
         "{}/api/agents/{}/improvements/propose",
         crate::handlers::agents::workspace_tools::control_plane_api_base_url(),
         template_agent_id
     );
+    if let Some(project_id) = project_id.filter(|value| !value.trim().is_empty()) {
+        let query = url::form_urlencoded::Serializer::new(String::new())
+            .append_pair("project_id", project_id)
+            .finish();
+        endpoint.push('?');
+        endpoint.push_str(&query);
+    }
     let mut metadata = HashMap::new();
     metadata.insert(
         "aura_source_kind".to_string(),
@@ -265,7 +274,7 @@ mod tests {
             allow_skills: true,
             allow_background_review: false,
         };
-        assert!(self_improvement_tool_for_config(&off, "jwt", "agent-1").is_none());
+        assert!(self_improvement_tool_for_config(&off, "jwt", "agent-1", None).is_none());
 
         let propose = AgentSelfImprovementConfig {
             mode: AgentSelfImprovementMode::Propose,
@@ -273,14 +282,15 @@ mod tests {
             allow_skills: true,
             allow_background_review: false,
         };
-        let tool = self_improvement_tool_for_config(&propose, "jwt-token", "agent-1")
-            .expect("propose mode should install the learning proposal tool");
+        let tool =
+            self_improvement_tool_for_config(&propose, "jwt-token", "agent-1", Some("project-1"))
+                .expect("propose mode should install the learning proposal tool");
 
         assert_eq!(tool.name, "propose_agent_improvement");
         assert_eq!(tool.namespace.as_deref(), Some("aura_learning"));
         assert!(tool
             .endpoint
-            .ends_with("/api/agents/agent-1/improvements/propose"));
+            .ends_with("/api/agents/agent-1/improvements/propose?project_id=project-1"));
         assert!(matches!(tool.auth, ToolAuth::Bearer { ref token } if token == "jwt-token"));
         assert_eq!(
             tool.metadata.get("aura_self_improvement_mode"),

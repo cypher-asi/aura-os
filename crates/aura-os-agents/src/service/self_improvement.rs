@@ -145,6 +145,10 @@ pub struct AgentImprovementProposal {
     pub rationale: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_session_id: Option<String>,
+    /// Project in which the lesson was learned. Older persisted proposals do
+    /// not have this field and continue to deserialize as unscoped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence: Vec<AgentImprovementEvidence>,
     #[serde(default)]

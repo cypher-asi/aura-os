@@ -3,14 +3,22 @@ import { Button, Text } from "@cypher-asi/zui";
 import { Check, Pencil, X } from "lucide-react";
 import { api } from "../../../api/client";
 import { track } from "../../../lib/analytics";
-import type { MemoryFact, MemoryEvent, MemoryProcedure } from "../../../shared/types";
+import type { MemoryAccessOptions, MemoryFact, MemoryEvent, MemoryProcedure } from "../../../shared/types";
 import previewStyles from "../../../components/Preview/Preview.module.css";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();
 }
 
-export function FactPreview({ fact }: { fact: MemoryFact }) {
+export function FactPreview({
+  fact,
+  agentId,
+  access,
+}: {
+  fact: MemoryFact;
+  agentId: string;
+  access?: MemoryAccessOptions;
+}) {
   const [currentFact, setCurrentFact] = useState(fact);
   const [editing, setEditing] = useState(false);
   const [draftKey, setDraftKey] = useState(fact.key);
@@ -40,7 +48,7 @@ export function FactPreview({ fact }: { fact: MemoryFact }) {
       if (typeof currentFact.value !== "string") {
         value = JSON.parse(draftValue) as MemoryFact["value"];
       }
-      const updated = await api.memory.updateFact(currentFact.agent_id, currentFact.fact_id, {
+      const updated = await api.memory.updateFact(agentId, currentFact.fact_id, {
         key: draftKey.trim(),
         value,
         confidence: 1,
@@ -51,7 +59,7 @@ export function FactPreview({ fact }: { fact: MemoryFact }) {
           status: "active",
           sensitivity: "normal",
         },
-      });
+      }, access);
       setCurrentFact(updated);
       setEditing(false);
       track("memory_corrected", { kind: "fact" });
@@ -278,5 +286,3 @@ export function ProcedurePreview({ procedure }: { procedure: MemoryProcedure }) 
     </div>
   );
 }
-
-export const MemoryPreview = { FactPreview, EventPreview, ProcedurePreview };

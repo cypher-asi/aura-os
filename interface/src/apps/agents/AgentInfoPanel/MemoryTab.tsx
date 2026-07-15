@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Loader2, FileText, Clock, GitBranch, RefreshCw, Brain, Check, Pin, ShieldCheck } from "lucide-react";
+import { Loader2, FileText, Clock, GitBranch, RefreshCw, Brain, Check, Pin, ShieldCheck, Users } from "lucide-react";
 import { api, ApiClientError } from "../../../api/client";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
@@ -16,7 +16,10 @@ import type {
   MemoryProcedure,
   MemoryRetrievalTrace,
   MemorySnapshot,
+  MemoryScope,
+  MemoryAccessOptions,
 } from "../../../shared/types";
+import type { AgentProjectBinding } from "../hooks/use-cascade-delete-agent";
 import { track } from "../../../lib/analytics";
 import panelStyles from "./AgentInfoPanel.module.css";
 import styles from "./MemoryTab.module.css";
@@ -24,6 +27,7 @@ import styles from "./MemoryTab.module.css";
 type MemoryFilter = "all" | "facts" | "events" | "procedures";
 type MemoryError = "connection" | "unknown" | null;
 type MemoryKind = "fact" | "event" | "procedure";
+type ScopeControlValue = MemoryScope | "legacy";
 interface MemoryTarget {
   kind: MemoryKind;
   id: string;
@@ -42,6 +46,7 @@ function parseRowId(rowId: string): MemoryTarget | null {
 
 interface MemoryTabProps {
   agent: Agent;
+  projectBindings?: AgentProjectBinding[];
 }
 
 const DEFAULT_CONTINUITY_CONFIG: AgentContinuityConfig = {
@@ -49,8 +54,8 @@ const DEFAULT_CONTINUITY_CONFIG: AgentContinuityConfig = {
   generate_memory: true,
   write_policy: "automatic",
   retrieval_mode: "query_aware",
-  allow_user_scope: false,
-  allow_workspace_scope: false,
+  allow_user_scope: true,
+  allow_project_scope: true,
 };
 
 const DEFAULT_MEMORY_CONTINUITY: MemoryContinuity = {
@@ -62,24 +67,37 @@ const DEFAULT_MEMORY_CONTINUITY: MemoryContinuity = {
 };
 
 function normalizeSnapshot(snapshot: MemorySnapshot): MemorySnapshot {
+  const normalizeContinuity = (continuity?: MemoryContinuity): MemoryContinuity => {
+    const normalized = continuity ?? DEFAULT_MEMORY_CONTINUITY;
+    return {
+      ...normalized,
+      scope: (normalized.scope as string) === "workspace" ? "project" : normalized.scope,
+    };
+  };
   return {
     ...snapshot,
     facts: (snapshot.facts ?? []).map((fact) => ({
       ...fact,
-      continuity: fact.continuity ?? DEFAULT_MEMORY_CONTINUITY,
+      continuity: normalizeContinuity(fact.continuity),
     })),
     events: (snapshot.events ?? []).map((event) => ({
       ...event,
-      continuity: event.continuity ?? DEFAULT_MEMORY_CONTINUITY,
+      continuity: normalizeContinuity(event.continuity),
     })),
     procedures: (snapshot.procedures ?? []).map((procedure) => ({
       ...procedure,
-      continuity: procedure.continuity ?? DEFAULT_MEMORY_CONTINUITY,
+      continuity: normalizeContinuity(procedure.continuity),
     })),
   };
 }
 
-export function MemoryTab({ agent }: MemoryTabProps) {
+const SCOPE_LABELS: Record<MemoryScope, string> = {
+  agent: "This agent",
+  project: "Project agents",
+  user: "Personal",
+};
+
+export function MemoryTab({ agent, projectBindings = [] }: MemoryTabProps) {
   const [snapshot, setSnapshot] = useState<MemorySnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<MemoryError>(null);
@@ -87,7 +105,37 @@ export function MemoryTab({ agent }: MemoryTabProps) {
   const [config, setConfig] = useState<AgentContinuityConfig>(DEFAULT_CONTINUITY_CONFIG);
   const [trace, setTrace] = useState<MemoryRetrievalTrace | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState(projectBindings[0]?.project_id ?? "");
+  const [scopeFilter, setScopeFilter] = useState<"all" | MemoryScope>("all");
   const { viewMemoryFact, viewMemoryEvent, viewMemoryProcedure } = useAgentSidekickStore();
+
+  useEffect(() => {
+    if (!selectedProjectId && projectBindings[0]?.project_id) {
+      setSelectedProjectId(projectBindings[0].project_id);
+    } else if (selectedProjectId && !projectBindings.some((binding) => binding.project_id === selectedProjectId)) {
+      setSelectedProjectId(projectBindings[0]?.project_id ?? "");
+    }
+  }, [projectBindings, selectedProjectId]);
+
+  const memoryAccess = useMemo<MemoryAccessOptions>(() => ({
+    projectId: selectedProjectId || undefined,
+    includeLegacy: true,
+  }), [selectedProjectId]);
+
+  const scopeControlValue = useCallback((continuity: MemoryContinuity): ScopeControlValue => {
+    if (
+      continuity.scope === "agent"
+      && !continuity.provenance.project_id
+      && !continuity.provenance.user_id
+    ) {
+      return "legacy";
+    }
+    return continuity.scope;
+  }, []);
+
+  const matchesScopeFilter = useCallback((continuity: MemoryContinuity) => (
+    scopeFilter === "all" || scopeControlValue(continuity) === scopeFilter
+  ), [scopeControlValue, scopeFilter]);
 
   const fetchMemory = useCallback(() => {
     setLoading(true);
@@ -98,10 +146,10 @@ export function MemoryTab({ agent }: MemoryTabProps) {
       ? api.memory.getContinuityConfig(agent.agent_id).catch(() => DEFAULT_CONTINUITY_CONFIG)
       : Promise.resolve(DEFAULT_CONTINUITY_CONFIG);
     const traceRequest = typeof api.memory.getLatestRetrievalTrace === "function"
-      ? api.memory.getLatestRetrievalTrace(agent.agent_id).catch(() => null)
+      ? api.memory.getLatestRetrievalTrace(agent.agent_id, memoryAccess).catch(() => null)
       : Promise.resolve(null);
     Promise.all([
-      api.memory.getSnapshot(agent.agent_id),
+      api.memory.getSnapshot(agent.agent_id, memoryAccess),
       configRequest,
       traceRequest,
     ])
@@ -134,15 +182,15 @@ export function MemoryTab({ agent }: MemoryTabProps) {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [agent.agent_id]);
+  }, [agent.agent_id, memoryAccess]);
 
   const softRefresh = useCallback(() => {
     let cancelled = false;
     const traceRequest = typeof api.memory.getLatestRetrievalTrace === "function"
-      ? api.memory.getLatestRetrievalTrace(agent.agent_id).catch(() => null)
+      ? api.memory.getLatestRetrievalTrace(agent.agent_id, memoryAccess).catch(() => null)
       : Promise.resolve(null);
     Promise.all([
-      api.memory.getSnapshot(agent.agent_id),
+      api.memory.getSnapshot(agent.agent_id, memoryAccess),
       traceRequest,
     ])
       .then(([data, nextTrace]) => {
@@ -153,10 +201,9 @@ export function MemoryTab({ agent }: MemoryTabProps) {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [agent.agent_id]);
+  }, [agent.agent_id, memoryAccess]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load: the effect kicks off the snapshot fetch (which flips loading/snapshot), and returns its cancellation cleanup
     return fetchMemory();
   }, [fetchMemory]);
 
@@ -176,15 +223,15 @@ export function MemoryTab({ agent }: MemoryTabProps) {
     try {
       switch (target.kind) {
         case "fact":
-          await api.memory.deleteFact(agent.agent_id, target.id);
+          await api.memory.deleteFact(agent.agent_id, target.id, memoryAccess);
           setSnapshot((prev) => prev ? { ...prev, facts: prev.facts.filter((f) => f.fact_id !== target.id) } : prev);
           break;
         case "event":
-          await api.memory.deleteEvent(agent.agent_id, target.id);
+          await api.memory.deleteEvent(agent.agent_id, target.id, memoryAccess);
           setSnapshot((prev) => prev ? { ...prev, events: prev.events.filter((e) => e.event_id !== target.id) } : prev);
           break;
         case "procedure":
-          await api.memory.deleteProcedure(agent.agent_id, target.id);
+          await api.memory.deleteProcedure(agent.agent_id, target.id, memoryAccess);
           setSnapshot((prev) => prev ? { ...prev, procedures: prev.procedures.filter((p) => p.procedure_id !== target.id) } : prev);
           break;
       }
@@ -192,7 +239,7 @@ export function MemoryTab({ agent }: MemoryTabProps) {
     } catch {
       // silent — row stays if delete fails
     }
-  }, [agent.agent_id]);
+  }, [agent.agent_id, memoryAccess]);
 
   const updateContinuityConfig = useCallback(async (
     patch: Partial<AgentContinuityConfig>,
@@ -225,13 +272,13 @@ export function MemoryTab({ agent }: MemoryTabProps) {
       importance: fact.importance,
       source: fact.source,
       continuity,
-    });
+    }, memoryAccess);
     setSnapshot((current) => current ? {
       ...current,
       facts: current.facts.map((item) => item.fact_id === updated.fact_id ? updated : item),
     } : current);
     track("memory_pinned", { kind: "fact", pinned: continuity.pinned });
-  }, [agent.agent_id]);
+  }, [agent.agent_id, memoryAccess]);
 
   const toggleProcedurePin = useCallback(async (procedure: MemoryProcedure) => {
     const continuity = {
@@ -250,6 +297,7 @@ export function MemoryTab({ agent }: MemoryTabProps) {
         skill_relevance: procedure.skill_relevance,
         continuity,
       },
+      memoryAccess,
     );
     setSnapshot((current) => current ? {
       ...current,
@@ -257,7 +305,7 @@ export function MemoryTab({ agent }: MemoryTabProps) {
         item.procedure_id === updated.procedure_id ? updated : item),
     } : current);
     track("memory_pinned", { kind: "procedure", pinned: continuity.pinned });
-  }, [agent.agent_id]);
+  }, [agent.agent_id, memoryAccess]);
 
   const approveFact = useCallback(async (fact: MemoryFact) => {
     const updated = await api.memory.updateFact(agent.agent_id, fact.fact_id, {
@@ -267,13 +315,13 @@ export function MemoryTab({ agent }: MemoryTabProps) {
       importance: fact.importance,
       source: fact.source,
       continuity: { ...fact.continuity, status: "active" },
-    });
+    }, memoryAccess);
     setSnapshot((current) => current ? {
       ...current,
       facts: current.facts.map((item) => item.fact_id === updated.fact_id ? updated : item),
     } : current);
     track("memory_corrected", { kind: "fact" });
-  }, [agent.agent_id]);
+  }, [agent.agent_id, memoryAccess]);
 
   const approveProcedure = useCallback(async (procedure: MemoryProcedure) => {
     const updated = await api.memory.updateProcedure(
@@ -288,6 +336,7 @@ export function MemoryTab({ agent }: MemoryTabProps) {
         skill_relevance: procedure.skill_relevance,
         continuity: { ...procedure.continuity, status: "active" },
       },
+      memoryAccess,
     );
     setSnapshot((current) => current ? {
       ...current,
@@ -295,7 +344,30 @@ export function MemoryTab({ agent }: MemoryTabProps) {
         item.procedure_id === updated.procedure_id ? updated : item),
     } : current);
     track("memory_corrected", { kind: "procedure" });
-  }, [agent.agent_id]);
+  }, [agent.agent_id, memoryAccess]);
+
+  const moveFact = useCallback(async (fact: MemoryFact, scope: MemoryScope) => {
+    const updated = await api.memory.updateFact(agent.agent_id, fact.fact_id, {
+      continuity: { ...fact.continuity, scope },
+    }, memoryAccess);
+    setSnapshot((current) => current ? {
+      ...current,
+      facts: current.facts.map((item) => item.fact_id === updated.fact_id ? updated : item),
+    } : current);
+    track("memory_scope_changed", { kind: "fact", scope });
+  }, [agent.agent_id, memoryAccess]);
+
+  const moveProcedure = useCallback(async (procedure: MemoryProcedure, scope: MemoryScope) => {
+    const updated = await api.memory.updateProcedure(agent.agent_id, procedure.procedure_id, {
+      continuity: { ...procedure.continuity, scope },
+    }, memoryAccess);
+    setSnapshot((current) => current ? {
+      ...current,
+      procedures: current.procedures.map((item) =>
+        item.procedure_id === updated.procedure_id ? updated : item),
+    } : current);
+    track("memory_scope_changed", { kind: "procedure", scope });
+  }, [agent.agent_id, memoryAccess]);
 
   const handleMenuAction = useCallback(
     (actionId: string, rowId: string) => {
@@ -323,41 +395,56 @@ export function MemoryTab({ agent }: MemoryTabProps) {
         id: "facts",
         label: `Facts (${counts.facts})`,
         emptyLabel: "No facts yet",
-        rows: (snapshot.facts ?? []).map((fact) => ({
+        rows: (snapshot.facts ?? [])
+          .filter((fact) => matchesScopeFilter(fact.continuity))
+          .map((fact) => ({
           id: `fact:${fact.fact_id}`,
           icon: <FileText size={13} />,
           label: fact.key,
           detail: typeof fact.value === "string" ? fact.value : JSON.stringify(fact.value),
-          suffix: (
-            <span className={styles.badge} data-status={fact.continuity.status}>
-              {fact.continuity.status === "active"
-                ? `${Math.round(fact.confidence * 100)}%`
-                : fact.continuity.status}
-            </span>
-          ),
+          suffix: <span className={styles.scopeBadge}>{scopeControlValue(fact.continuity) === "legacy"
+            ? "Legacy"
+            : SCOPE_LABELS[fact.continuity.scope]}</span>,
           trailingAction: (
-            <button
-              type="button"
-              className={`${styles.pinButton}${fact.continuity.pinned ? ` ${styles.pinButtonActive}` : ""}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (fact.continuity.status === "pending") {
-                  void approveFact(fact);
-                } else {
-                  void toggleFactPin(fact);
-                }
-              }}
-              title={fact.continuity.status === "pending"
-                ? "Approve memory"
-                : fact.continuity.pinned ? "Unpin memory" : "Pin memory"}
-              aria-label={fact.continuity.status === "pending"
-                ? "Approve memory"
-                : fact.continuity.pinned ? "Unpin memory" : "Pin memory"}
-            >
-              {fact.continuity.status === "pending" ? <Check size={12} /> : <Pin size={12} />}
-            </button>
+            <div className={styles.rowActions} onClick={(event) => event.stopPropagation()}>
+              <select
+                className={styles.scopeSelect}
+                value={scopeControlValue(fact.continuity)}
+                aria-label={`Memory scope for ${fact.key}`}
+                title="Choose who can use this memory"
+                onChange={(event) => {
+                  const scope = event.currentTarget.value;
+                  if (scope !== "legacy") void moveFact(fact, scope as MemoryScope);
+                }}
+              >
+                {scopeControlValue(fact.continuity) === "legacy" && <option value="legacy">Legacy</option>}
+                <option value="agent" disabled={!selectedProjectId}>This agent</option>
+                <option value="project" disabled={!selectedProjectId}>All agents in this project</option>
+                <option value="user">Personal</option>
+              </select>
+              <button
+                type="button"
+                className={`${styles.pinButton}${fact.continuity.pinned ? ` ${styles.pinButtonActive}` : ""}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (fact.continuity.status === "pending") {
+                    void approveFact(fact);
+                  } else {
+                    void toggleFactPin(fact);
+                  }
+                }}
+                title={fact.continuity.status === "pending"
+                  ? "Approve memory"
+                  : fact.continuity.pinned ? "Unpin memory" : "Pin memory"}
+                aria-label={fact.continuity.status === "pending"
+                  ? "Approve memory"
+                  : fact.continuity.pinned ? "Unpin memory" : "Pin memory"}
+              >
+                {fact.continuity.status === "pending" ? <Check size={12} /> : <Pin size={12} />}
+              </button>
+            </div>
           ),
-          onSelect: () => viewMemoryFact(fact),
+          onSelect: () => viewMemoryFact(fact, memoryAccess),
         })),
       });
     }
@@ -366,13 +453,17 @@ export function MemoryTab({ agent }: MemoryTabProps) {
         id: "events",
         label: `Events (${counts.events})`,
         emptyLabel: "No events yet",
-        rows: (snapshot.events ?? []).map((event) => ({
+        rows: (snapshot.events ?? [])
+          .filter((event) => matchesScopeFilter(event.continuity))
+          .map((event) => ({
           id: `event:${event.event_id}`,
           icon: <Clock size={13} />,
           label: event.event_type,
           detail: event.summary,
-          suffix: <span className={styles.badge}>{new Date(event.timestamp).toLocaleDateString()}</span>,
-          onSelect: () => viewMemoryEvent(event),
+          suffix: <span className={styles.scopeBadge}>{scopeControlValue(event.continuity) === "legacy"
+            ? "Legacy"
+            : SCOPE_LABELS[event.continuity.scope]}</span>,
+          onSelect: () => viewMemoryEvent(event, memoryAccess),
         })),
       });
     }
@@ -381,35 +472,56 @@ export function MemoryTab({ agent }: MemoryTabProps) {
         id: "procedures",
         label: `Procedures (${counts.procedures})`,
         emptyLabel: "No procedures yet",
-        rows: (snapshot.procedures ?? []).map((proc) => ({
+        rows: (snapshot.procedures ?? [])
+          .filter((proc) => matchesScopeFilter(proc.continuity))
+          .map((proc) => ({
           id: `procedure:${proc.procedure_id}`,
           icon: <GitBranch size={13} />,
           label: proc.name,
           detail: `${proc.steps.length} steps${proc.skill_name ? ` · ${proc.skill_name}` : ""}`,
-          suffix: <span className={styles.badge}>{Math.round(proc.success_rate * 100)}%</span>,
+          suffix: <span className={styles.scopeBadge}>{scopeControlValue(proc.continuity) === "legacy"
+            ? "Legacy"
+            : SCOPE_LABELS[proc.continuity.scope]}</span>,
           trailingAction: (
-            <button
-              type="button"
-              className={`${styles.pinButton}${proc.continuity.pinned ? ` ${styles.pinButtonActive}` : ""}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (proc.continuity.status === "pending") {
-                  void approveProcedure(proc);
-                } else {
-                  void toggleProcedurePin(proc);
-                }
-              }}
-              title={proc.continuity.status === "pending"
-                ? "Approve procedure"
-                : proc.continuity.pinned ? "Unpin procedure" : "Pin procedure"}
-              aria-label={proc.continuity.status === "pending"
-                ? "Approve procedure"
-                : proc.continuity.pinned ? "Unpin procedure" : "Pin procedure"}
-            >
-              {proc.continuity.status === "pending" ? <Check size={12} /> : <Pin size={12} />}
-            </button>
+            <div className={styles.rowActions} onClick={(event) => event.stopPropagation()}>
+              <select
+                className={styles.scopeSelect}
+                value={scopeControlValue(proc.continuity)}
+                aria-label={`Memory scope for ${proc.name}`}
+                title="Choose who can use this procedure"
+                onChange={(event) => {
+                  const scope = event.currentTarget.value;
+                  if (scope !== "legacy") void moveProcedure(proc, scope as MemoryScope);
+                }}
+              >
+                {scopeControlValue(proc.continuity) === "legacy" && <option value="legacy">Legacy</option>}
+                <option value="agent" disabled={!selectedProjectId}>This agent</option>
+                <option value="project" disabled={!selectedProjectId}>All agents in this project</option>
+                <option value="user">Personal</option>
+              </select>
+              <button
+                type="button"
+                className={`${styles.pinButton}${proc.continuity.pinned ? ` ${styles.pinButtonActive}` : ""}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (proc.continuity.status === "pending") {
+                    void approveProcedure(proc);
+                  } else {
+                    void toggleProcedurePin(proc);
+                  }
+                }}
+                title={proc.continuity.status === "pending"
+                  ? "Approve procedure"
+                  : proc.continuity.pinned ? "Unpin procedure" : "Pin procedure"}
+                aria-label={proc.continuity.status === "pending"
+                  ? "Approve procedure"
+                  : proc.continuity.pinned ? "Unpin procedure" : "Pin procedure"}
+              >
+                {proc.continuity.status === "pending" ? <Check size={12} /> : <Pin size={12} />}
+              </button>
+            </div>
           ),
-          onSelect: () => viewMemoryProcedure(proc),
+          onSelect: () => viewMemoryProcedure(proc, memoryAccess),
         })),
       });
     }
@@ -425,6 +537,12 @@ export function MemoryTab({ agent }: MemoryTabProps) {
     toggleProcedurePin,
     approveFact,
     approveProcedure,
+    moveFact,
+    moveProcedure,
+    scopeControlValue,
+    matchesScopeFilter,
+    selectedProjectId,
+    memoryAccess,
   ]);
 
   if (loading) {
@@ -464,6 +582,26 @@ export function MemoryTab({ agent }: MemoryTabProps) {
           </div>
           <ShieldCheck size={15} className={styles.privacyIcon} aria-label="Local memory controls" />
         </div>
+        <div className={styles.brainMap} data-testid="memory-scope-map">
+          <Users size={14} />
+          <span><strong>Three memory layers</strong><small>Personal everywhere · private to this agent and project · shared with approved project agents</small></span>
+        </div>
+        {projectBindings.length > 0 ? (
+          <label className={styles.projectPicker}>
+            <span>Memory available in this project</span>
+            <select
+              value={selectedProjectId}
+              onChange={(event) => setSelectedProjectId(event.currentTarget.value)}
+              aria-label="Memory available in this project"
+            >
+              {projectBindings.map((binding) => (
+                <option key={binding.project_agent_id} value={binding.project_id}>{binding.project_name}</option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <small className={styles.noProjectNote}>This agent has no project binding. Showing personal and legacy memory.</small>
+        )}
         <label className={styles.controlRow}>
           <span><strong>Use memory</strong><small>Apply relevant context in future turns</small></span>
           <input
@@ -471,6 +609,24 @@ export function MemoryTab({ agent }: MemoryTabProps) {
             checked={config.use_memory}
             disabled={savingConfig}
             onChange={(event) => void updateContinuityConfig({ use_memory: event.currentTarget.checked })}
+          />
+        </label>
+        <label className={styles.controlRow}>
+          <span><strong>Personal memory</strong><small>Carry your preferences across projects and agents</small></span>
+          <input
+            type="checkbox"
+            checked={config.allow_user_scope}
+            disabled={savingConfig}
+            onChange={(event) => void updateContinuityConfig({ allow_user_scope: event.currentTarget.checked })}
+          />
+        </label>
+        <label className={styles.controlRow}>
+          <span><strong>Use project-wide memory</strong><small>Include approved context available to every agent in this project</small></span>
+          <input
+            type="checkbox"
+            checked={config.allow_project_scope}
+            disabled={savingConfig || !selectedProjectId}
+            onChange={(event) => void updateContinuityConfig({ allow_project_scope: event.currentTarget.checked })}
           />
         </label>
         <label className={styles.controlRow}>
@@ -533,6 +689,18 @@ export function MemoryTab({ agent }: MemoryTabProps) {
             className={`${styles.filterChip}${filter === f.id ? ` ${styles.filterChipActive}` : ""}`}
           >
             {f.label} ({f.count})
+          </button>
+        ))}
+      </div>
+      <div className={styles.scopeFilterRow} aria-label="Filter memory by scope">
+        {(["all", "agent", "project", "user"] as const).map((scope) => (
+          <button
+            key={scope}
+            type="button"
+            onClick={() => setScopeFilter(scope)}
+            className={`${styles.scopeChip}${scopeFilter === scope ? ` ${styles.scopeChipActive}` : ""}`}
+          >
+            {scope === "all" ? "Every layer" : SCOPE_LABELS[scope]}
           </button>
         ))}
       </div>

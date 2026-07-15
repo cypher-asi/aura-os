@@ -13,6 +13,8 @@ const activeContinuity = {
     session_id: "session-42",
     excerpt: "The test command is cargo nextest run.",
     extractor_model: "claude-haiku",
+    project_id: "proj-1",
+    contributor_agent_id: "agent-1",
   },
 };
 
@@ -100,7 +102,7 @@ test("controls, approves, explains, and corrects agent memory", async ({ page })
         write_policy: "approval",
         retrieval_mode: "query_aware",
         allow_user_scope: false,
-        allow_workspace_scope: false,
+        allow_project_scope: true,
       },
     },
     memoryTraces: {
@@ -117,6 +119,7 @@ test("controls, approves, explains, and corrects agent memory", async ({ page })
             score: 0.91,
             relevance: 0.85,
             reason: "current_request",
+            scope: "agent",
           },
         ],
       },
@@ -134,6 +137,10 @@ test("controls, approves, explains, and corrects agent memory", async ({ page })
   }
 
   await expect(page.getByText("Agent Continuity")).toBeVisible();
+  await expect(page.getByTestId("memory-scope-map")).toContainText("Three memory layers");
+  await expect(page.getByRole("combobox", { name: "Memory available in this project" })).toHaveValue("proj-1");
+  await expect(page.getByRole("checkbox", { name: /use project-wide memory/i })).toBeChecked();
+  await expect(page.getByRole("button", { name: "Project agents" })).toBeVisible();
   await expect(page.getByTestId("continuity-trace").getByText("Request-aware")).toBeVisible();
   await expect(page.getByText("86")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve memory" })).toBeVisible();
@@ -141,6 +148,17 @@ test("controls, approves, explains, and corrects agent memory", async ({ page })
     path: "output/playwright/agent-continuity-controls.png",
     fullPage: true,
   });
+  // Stay one pixel above the app's mobile-shell breakpoint so this exercises
+  // the compact desktop continuity panel instead of navigating to mobile IA.
+  await page.setViewportSize({ width: 901, height: 844 });
+  await expect(page.getByTestId("memory-scope-map")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Personal" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({
+    path: "output/playwright/agent-continuity-controls-narrow.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   const configRequest = page.waitForRequest((request) =>
     request.method() === "PUT" && request.url().endsWith("/memory/continuity"));
@@ -148,12 +166,22 @@ test("controls, approves, explains, and corrects agent memory", async ({ page })
   expect((await configRequest).postDataJSON()).toMatchObject({ use_memory: false });
 
   const approvalRequest = page.waitForRequest((request) =>
-    request.method() === "PUT" && request.url().endsWith("/memory/facts/fact-pending"));
+    request.method() === "PUT"
+      && new URL(request.url()).pathname.endsWith("/memory/facts/fact-pending"));
   await page.getByRole("button", { name: "Approve memory" }).click();
   expect((await approvalRequest).postDataJSON()).toMatchObject({
     continuity: { status: "active" },
   });
+  expect(new URL((await approvalRequest).url()).searchParams.get("project_id")).toBe("proj-1");
   await expect(page.getByRole("button", { name: "Pin memory" })).toHaveCount(2);
+
+  const scopeRequest = page.waitForRequest((request) =>
+    request.method() === "PUT"
+      && new URL(request.url()).pathname.endsWith("/memory/facts/fact-active"));
+  await page.getByRole("combobox", { name: "Memory scope for test_command" }).selectOption("project");
+  const promoted = await scopeRequest;
+  expect(promoted.postDataJSON()).toMatchObject({ continuity: { scope: "project" } });
+  expect(new URL(promoted.url()).searchParams.get("project_id")).toBe("proj-1");
 
   await page.getByText("test_command", { exact: true }).click();
   await expect(page.getByText("Source session")).toBeVisible();
@@ -163,7 +191,8 @@ test("controls, approves, explains, and corrects agent memory", async ({ page })
   await page.getByRole("textbox", { name: "Memory value" }).fill("cargo test --workspace");
 
   const correctionRequest = page.waitForRequest((request) =>
-    request.method() === "PUT" && request.url().endsWith("/memory/facts/fact-active"));
+    request.method() === "PUT"
+      && new URL(request.url()).pathname.endsWith("/memory/facts/fact-active"));
   await page.getByRole("button", { name: "Save correction" }).click();
   expect((await correctionRequest).postDataJSON()).toMatchObject({
     value: "cargo test --workspace",

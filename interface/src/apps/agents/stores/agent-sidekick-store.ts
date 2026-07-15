@@ -1,13 +1,13 @@
 import { create } from "zustand";
-import type { MemoryFact, MemoryEvent, MemoryProcedure, HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
+import type { MemoryAccessOptions, MemoryFact, MemoryEvent, MemoryProcedure, HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
 import { createSidekickSlice, type SidekickSliceState } from "../../../stores/shared/sidekick-slice";
 import { AGENT_SIDEKICK_ACTIVE_TAB_KEY } from "../../../constants";
 
 export type AgentPreviewItem =
   | { kind: "skill"; skill: HarnessSkill; installation?: HarnessSkillInstallation }
-  | { kind: "memory_fact"; fact: MemoryFact }
-  | { kind: "memory_event"; event: MemoryEvent }
-  | { kind: "memory_procedure"; procedure: MemoryProcedure };
+  | { kind: "memory_fact"; fact: MemoryFact; access?: MemoryAccessOptions }
+  | { kind: "memory_event"; event: MemoryEvent; access?: MemoryAccessOptions }
+  | { kind: "memory_procedure"; procedure: MemoryProcedure; access?: MemoryAccessOptions };
 
 export type AgentSidekickTab =
   | "profile"
@@ -51,9 +51,9 @@ interface AgentSidekickState extends SidekickSliceState<AgentSidekickTab, AgentP
   closeEditor: () => void;
   closeDeleteConfirm: () => void;
   viewSkill: (skill: HarnessSkill, installation?: HarnessSkillInstallation) => void;
-  viewMemoryFact: (fact: MemoryFact) => void;
-  viewMemoryEvent: (event: MemoryEvent) => void;
-  viewMemoryProcedure: (procedure: MemoryProcedure) => void;
+  viewMemoryFact: (fact: MemoryFact, access?: MemoryAccessOptions) => void;
+  viewMemoryEvent: (event: MemoryEvent, access?: MemoryAccessOptions) => void;
+  viewMemoryProcedure: (procedure: MemoryProcedure, access?: MemoryAccessOptions) => void;
   goBackPreview: () => void;
   closePreview: () => void;
 }
@@ -72,12 +72,12 @@ export const useAgentSidekickStore = create<AgentSidekickState>()((set, get) => 
   closeDeleteConfirm: () => set({ showDeleteConfirm: false }),
   viewSkill: (skill, installation) =>
     set({ previewItem: { kind: "skill", skill, installation }, previewHistory: [], canGoBack: false }),
-  viewMemoryFact: (fact) =>
-    set({ previewItem: { kind: "memory_fact", fact }, previewHistory: [], canGoBack: false }),
-  viewMemoryEvent: (event) =>
-    set({ previewItem: { kind: "memory_event", event }, previewHistory: [], canGoBack: false }),
-  viewMemoryProcedure: (procedure) =>
-    set({ previewItem: { kind: "memory_procedure", procedure }, previewHistory: [], canGoBack: false }),
+  viewMemoryFact: (fact, access) =>
+    set({ previewItem: { kind: "memory_fact", fact, access }, previewHistory: [], canGoBack: false }),
+  viewMemoryEvent: (event, access) =>
+    set({ previewItem: { kind: "memory_event", event, access }, previewHistory: [], canGoBack: false }),
+  viewMemoryProcedure: (procedure, access) =>
+    set({ previewItem: { kind: "memory_procedure", procedure, access }, previewHistory: [], canGoBack: false }),
   goBackPreview: () => get().popPreview(),
   closePreview: () => get().clearPreviews(),
 }));
