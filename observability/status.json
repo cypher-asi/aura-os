@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "title": "AURA Observability",
   "description": "Feature health backed by AURA-owned live eval probes.",
-  "generatedAt": "2026-07-16T01:03:17.798Z",
+  "generatedAt": "2026-07-16T03:36:26.551Z",
   "environment": "production",
   "source": "github-actions",
   "overall": "major_outage",
@@ -38,12 +38,12 @@
       "description": "AURA OS API reachability, authenticated session reads, and runtime environment metadata.",
       "publicSummary": "Core API routes and environment metadata are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:51:59.402Z",
+      "lastCheckedAt": "2026-07-16T03:25:19.868Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 178,
+      "latencyP95Ms": 247,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -56,11 +56,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:51:58.510Z",
-          "latencyMs": 132,
+          "checkedAt": "2026-07-16T03:25:19.104Z",
+          "latencyMs": 111,
           "evidence": {
             "status": "ok",
-            "timestamp": "2026-07-16T00:51:58.470153965+00:00"
+            "timestamp": "2026-07-16T03:25:19.064946281+00:00"
           }
         },
         {
@@ -73,8 +73,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:51:58.651Z",
-          "latencyMs": 141,
+          "checkedAt": "2026-07-16T03:25:19.352Z",
+          "latencyMs": 247,
           "evidence": {
             "userPresent": true,
             "keys": [
@@ -105,8 +105,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:51:59.402Z",
-          "latencyMs": 178,
+          "checkedAt": "2026-07-16T03:25:19.868Z",
+          "latencyMs": 113,
           "evidence": {
             "keys": [
               "os",
@@ -127,12 +127,12 @@
       "description": "Session validation, current user profile sync, and organization membership lookup.",
       "publicSummary": "Signed-in users can validate identity and resolve their organizations.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:51:59.739Z",
+      "lastCheckedAt": "2026-07-16T03:25:20.126Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 573,
+      "latencyP95Ms": 403,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -145,8 +145,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:51:59.224Z",
-          "latencyMs": 573,
+          "checkedAt": "2026-07-16T03:25:19.755Z",
+          "latencyMs": 403,
           "evidence": {
             "userIdPresent": true
           }
@@ -161,8 +161,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:51:59.570Z",
-          "latencyMs": 168,
+          "checkedAt": "2026-07-16T03:25:20.000Z",
+          "latencyMs": 132,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "orgCount": 1
@@ -178,8 +178,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:51:59.739Z",
-          "latencyMs": 169,
+          "checkedAt": "2026-07-16T03:25:20.126Z",
+          "latencyMs": 126,
           "evidence": {
             "userIdPresent": true,
             "keys": [
@@ -206,12 +206,12 @@
       "description": "Anonymous guest setup, public chat streaming, and public content APIs.",
       "publicSummary": "Logged-out visitors can access public chat and public content APIs.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:59:39.163Z",
+      "lastCheckedAt": "2026-07-16T03:33:08.538Z",
       "checksPassed": 7,
       "checksTotal": 7,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 856,
+      "latencyP95Ms": 807,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -224,8 +224,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:36.893Z",
-          "latencyMs": 103,
+          "checkedAt": "2026-07-16T03:33:06.489Z",
+          "latencyMs": 90,
           "evidence": {
             "tokenPresent": true,
             "turnCount": 0,
@@ -242,8 +242,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:37.749Z",
-          "latencyMs": 856,
+          "checkedAt": "2026-07-16T03:33:07.296Z",
+          "latencyMs": 807,
           "evidence": {
             "frameTypes": [
               "text_delta",
@@ -264,8 +264,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:38.034Z",
-          "latencyMs": 285,
+          "checkedAt": "2026-07-16T03:33:07.540Z",
+          "latencyMs": 244,
           "evidence": {
             "count": 100
           }
@@ -280,8 +280,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:38.166Z",
-          "latencyMs": 132,
+          "checkedAt": "2026-07-16T03:33:07.656Z",
+          "latencyMs": 116,
           "evidence": {
             "count": 7
           }
@@ -296,8 +296,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:38.932Z",
-          "latencyMs": 766,
+          "checkedAt": "2026-07-16T03:33:08.355Z",
+          "latencyMs": 699,
           "evidence": {
             "blogCount": 7,
             "blogDetailChecked": true,
@@ -324,8 +324,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:39.057Z",
-          "latencyMs": 124,
+          "checkedAt": "2026-07-16T03:33:08.448Z",
+          "latencyMs": 93,
           "evidence": {
             "object": "list",
             "modelCount": 1
@@ -341,8 +341,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:39.163Z",
-          "latencyMs": 106,
+          "checkedAt": "2026-07-16T03:33:08.538Z",
+          "latencyMs": 90,
           "evidence": {
             "status": 402,
             "payToPresent": true,
@@ -797,13 +797,13 @@
       "description": "Swarm-backed remote agent creation, VM readiness, lifecycle state, and chat readiness.",
       "publicSummary": "Remote agents can be provisioned and reached through their runtime.",
       "status": "major_outage",
-      "lastCheckedAt": "2026-07-16T00:59:36.790Z",
+      "lastCheckedAt": "2026-07-16T03:33:06.399Z",
       "checksPassed": 0,
       "checksTotal": 3,
       "checksFailed": 3,
       "checksUnknown": 0,
-      "latencyP95Ms": 151443,
-      "message": "pod stuck unscheduled for 138s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+      "latencyP95Ms": 155899,
+      "message": "pod stuck unscheduled for 150s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
       "checks": [
         {
           "id": "remote-agent-create",
@@ -814,14 +814,14 @@
           "required": true,
           "status": "fail",
           "featureStatus": "partial_outage",
-          "message": "pod stuck unscheduled for 138s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-          "checkedAt": "2026-07-16T00:54:34.158Z",
-          "latencyMs": 141093,
+          "message": "pod stuck unscheduled for 150s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+          "checkedAt": "2026-07-16T03:28:07.690Z",
+          "latencyMs": 155899,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-create:ffc55afc8158",
+            "id": "remote-agents:production-api:remote-agent-create:9b83a5ca7dec",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-create",
@@ -830,133 +830,132 @@
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-07-16T00:59:41.018Z",
+            "generatedAt": "2026-07-16T03:33:10.316Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in production-api at 2026-07-16T00:52–00:59Z because every pod submitted for remote agent creation was rejected by the Kubernetes scheduler: 2 of 6 nodes reported Insufficient kata.peerpods.io/vm capacity and the remaining 4 nodes did not match the pod's node affinity/selector. No preemption was possible, leaving pods unscheduled for 138–148 seconds before the eval timed out. Because the pod never scheduled, no VM was provisioned, and the eval runner never wrote any evidence (orgId, agentId, vmIdPresent, remoteState), causing a total contract gap against the expected-output contract defined in infra/evals/status/check-expectations.json.",
-            "rootCause": "The Kubernetes cluster backing the remote-agent swarm has exhausted its allocatable kata.peerpods.io/vm resource slots on the two nodes that carry that resource label. The remaining four nodes are excluded by the pod's node affinity/selector, so no node in the 6-node cluster can accept a new remote-agent pod. This is a cluster-level resource exhaustion or misconfiguration condition, not an eval infrastructure defect. The eval failure is a direct and accurate reflection of the inability to schedule any remote-agent pod in the production-api environment at the time of the run.",
+            "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in the production-api environment because every pod submitted for remote agent creation was rejected as Unschedulable: the 2 nodes carrying the kata.peerpods.io/vm resource reported insufficient capacity, and the remaining 4 nodes did not match the pod's node affinity or selector. No evidence (orgId, agentId, vmIdPresent, remoteState) was collected because the pod never left the pending state, meaning the agent VM was never provisioned.",
+            "rootCause": "The Kubernetes cluster backing the remote-agent swarm has exhausted the kata.peerpods.io/vm extended resource on the 2 nodes that carry it. With 0/6 nodes available and preemption unable to free capacity, every remote-agent pod is stuck unscheduled. This is a cluster-level resource exhaustion condition localized to the kata peer-pods VM resource pool, not a code defect in the eval runner or the API surface. The eval failure is a direct reflection of this infrastructure constraint: because no pod ever reached a running state, the runner could not collect any of the four required evidence fields, causing the expected-output contract to report all evidence as missing.",
             "proof": [
-              "failed-check.message: '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.' — the scheduler explicitly names the resource and the node count.",
-              "failed-check.timing: latencyMs=141093, status=fail — the pod was stuck unscheduled for 138s before the check ended, confirming no scheduling occurred within the eval window.",
-              "failed-check.evidence: empty object {} — no evidence keys were written, consistent with the runner never reaching the post-scheduling code path in infra/evals/status/run-status-probes.mjs (lines 1884–1885) where orgId and agent creation occur.",
-              "expected-output.missing-required-evidence: all four required fields (orgId, agentId, vmIdPresent, remoteState) are absent, confirming the agent pod never reached a state where the runner could collect VM or state evidence.",
-              "sibling.remote-agent-state: identical scheduler message ('2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector'), latencyMs=151443, empty evidenceKeys — independent pod submission for the state check hit the same exhaustion.",
-              "sibling.remote-agent-runtime: identical scheduler message, latencyMs=151189, empty evidenceKeys — a third independent pod submission also failed to schedule, ruling out a transient single-pod anomaly.",
-              "source-context.infra/evals/status/run-status-probes.mjs:1877-1885: the runner calls createAgent(args, track, 'remote', null, orgId) at line 1885; this call is the trigger for pod submission. The scheduler error precedes any evidence write, so all downstream evidence fields remain unset.",
-              "source-context.infra/evals/status/check-expectations.json:250-258: the contract at line 256 requires vmIdPresent and remoteState; both are absent because the VM was never allocated."
+              "failed-check.message: '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.' — the scheduler message explicitly names resource exhaustion on the kata.peerpods.io/vm extended resource.",
+              "sibling.remote-agent-state: identical Unschedulable root cause, latencyMs=147890, endedAt=2026-07-16T03:30:35.580Z — a second independent pod submission hit the same capacity wall.",
+              "sibling.remote-agent-runtime: identical Unschedulable root cause, latencyMs=150819, endedAt=2026-07-16T03:33:06.399Z — a third independent pod submission also failed to schedule.",
+              "failed-check.evidence: empty object {} — no evidence was written because the pod never started, so orgId, agentId, vmIdPresent, and remoteState were never populated.",
+              "expected-output.missing-required-evidence: all four required fields (orgId, agentId, vmIdPresent, remoteState) are absent, consistent with the probe aborting before createAgent could return.",
+              "failed-check.timing: latencyMs=155899 — the check ran for ~156 s before timing out, which matches the scheduler's reported 150 s unscheduled window.",
+              "source-context.infra/evals/status/run-status-probes.mjs:1884-1885: the runner calls requireOrgId then createAgent with machineType='remote'; if createAgent blocks waiting for a pod that never schedules, no evidence is written and the check fails.",
+              "source-context.infra/evals/status/features.json:183: remote-agent-create is marked required=true with outageLatencyMs=360000; the observed latency of 155899 ms is within the warning threshold but the scheduling failure itself causes the hard fail."
             ],
             "possibleCauses": [
-              "Primary — kata.peerpods.io/vm resource slots exhausted on the two eligible nodes: existing remote-agent pods are consuming all available VM slots and have not been released, leaving zero capacity for new pods. This is the most direct reading of '2 Insufficient kata.peerpods.io/vm' with no preemption victims available.",
-              "Secondary — node affinity/selector mismatch on 4 of 6 nodes: the remote-agent pod spec requires a node label or taint that only 2 nodes carry (the kata.peerpods.io/vm nodes). If those 2 nodes were recently cordoned, drained, or had their resource quota reduced, effective schedulable capacity would drop to zero even if the resource label is present.",
-              "Tertiary — kata.peerpods.io/vm resource quota or limit was reduced at the cluster or namespace level: an administrator change to ResourceQuota or the node's advertised capacity for this extended resource could reduce the allocatable count below current demand without removing existing pods.",
-              "Quaternary — leaked or zombie remote-agent pods from prior eval runs are holding kata.peerpods.io/vm slots: if the withCleanup path in infra/evals/status/run-status-probes.mjs failed to delete pods from a previous run, those pods would continue to consume slots and block new scheduling."
+              "Primary — kata.peerpods.io/vm resource pool exhausted on the 2 eligible nodes: all available VM slots are occupied by existing agents or leaked pods, leaving no capacity for new scheduling requests. This is directly stated in the scheduler message (failed-check.message).",
+              "Secondary — node affinity or selector misconfiguration: the 4 remaining nodes do not match the pod's affinity rules, meaning only 2 nodes are even eligible for remote-agent pods. If those 2 nodes lose capacity, the entire pool is unavailable. A misconfigured or overly restrictive affinity could shrink the eligible node set below what is needed.",
+              "Tertiary — leaked or zombie remote-agent pods holding kata.peerpods.io/vm slots: previously created agents that were not cleaned up may be consuming all available VM resource units, preventing new pods from scheduling.",
+              "Quaternary — cluster under-provisioning: the total kata.peerpods.io/vm capacity across the 2 eligible nodes may be too small for the concurrent load, requiring additional nodes or increased per-node VM quotas."
             ],
             "reproductionSteps": [
               {
-                "label": "Re-run only the remote-agent-create eval against production-api",
+                "label": "Re-run the failing eval in isolation against production-api",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-                "details": "Use the same environment variables as the scheduled observability workflow to confirm the scheduler error recurs."
+                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the scheduling failure."
               },
               {
-                "label": "Inspect current pod scheduling state for remote-agent pods in the cluster",
-                "command": "kubectl get pods -A -l app=remote-agent --field-selector=status.phase=Pending -o wide",
-                "details": "Identify any pods stuck in Pending state that are consuming or blocking kata.peerpods.io/vm slots."
-              },
-              {
-                "label": "Check allocatable and used kata.peerpods.io/vm capacity on all nodes",
+                "label": "Inspect current kata.peerpods.io/vm resource allocation across all cluster nodes",
                 "command": "kubectl describe nodes | grep -A5 'kata.peerpods.io/vm'",
-                "details": "Confirm how many VM slots are advertised and how many are currently allocated across the 6-node cluster."
+                "details": "Check the Allocatable and Allocated values for the kata.peerpods.io/vm extended resource on each node to confirm exhaustion."
               },
               {
-                "label": "List all running pods consuming kata.peerpods.io/vm on the two eligible nodes",
-                "command": "kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, node: .spec.nodeName, phase: .status.phase}'",
-                "details": "Identify whether leaked or long-running pods are holding all available slots."
+                "label": "List all pods currently consuming kata.peerpods.io/vm resources",
+                "command": "kubectl get pods --all-namespaces -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, phase: .status.phase}'",
+                "details": "Identify any running, pending, or zombie pods holding VM slots that should have been released."
               },
               {
-                "label": "Run all three remote-agent sibling checks together to confirm shared scheduling failure",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-                "details": "Verify that all three checks reproduce the same scheduler message simultaneously."
+                "label": "Check for unschedulable remote-agent pods still in Pending state",
+                "command": "kubectl get pods --all-namespaces --field-selector=status.phase=Pending | grep remote-agent",
+                "details": "Confirm whether the eval-submitted pods are still pending or were cleaned up by the withCleanup wrapper."
+              },
+              {
+                "label": "Review node affinity rules applied to remote-agent pods",
+                "details": "Inspect the pod spec produced by createAgent in infra/evals/status/run-status-probes.mjs to verify which node selector or affinity labels are required and whether 4 nodes are intentionally excluded."
               }
             ],
             "affectedAreas": [
               {
-                "label": "Kubernetes remote-agent pod scheduling — kata.peerpods.io/vm extended resource",
-                "reason": "The scheduler message in failed-check.message and both sibling check messages explicitly names kata.peerpods.io/vm as the exhausted resource on the 2 nodes that carry it."
+                "label": "kata.peerpods.io/vm resource pool (Kubernetes cluster)",
+                "reason": "The scheduler explicitly reports 'Insufficient kata.peerpods.io/vm' on the 2 nodes eligible for remote-agent pods, making this the direct blocking resource (failed-check.message)."
               },
               {
                 "label": "Remote Agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
                 "path": "infra/evals/status/features.json",
-                "reason": "All three checks registered under the remote-agents feature at lines 183–185 failed with the identical scheduler error, indicating the entire feature's pod-scheduling path is blocked.",
-                "details": "remote-agent-create (required=true), remote-agent-state (required=true), remote-agent-runtime (required=false) all failed."
+                "reason": "All three checks under the remote-agents feature failed with the same Unschedulable cause (sibling.remote-agent-state, sibling.remote-agent-runtime), indicating the entire remote-agent provisioning path is blocked."
               },
               {
                 "label": "Eval runner — remote-agent-create probe branch",
                 "path": "infra/evals/status/run-status-probes.mjs",
-                "reason": "The runner branch at lines 1880–1885 calls createAgent with machineType='remote', which submits the pod that the scheduler rejects. No evidence is written because execution never advances past pod scheduling.",
-                "details": "Lines 1884–1885: requireOrgId and createAgent are called but the pod never becomes schedulable."
+                "reason": "The probe at line 1880-1885 calls createAgent with machineType='remote'; because the pod never schedules, no evidence is written and the check fails the expected-output contract (source-context.infra/evals/status/run-status-probes.mjs:1880-1885)."
               },
               {
-                "label": "Expected-output contract — remote-agent-create",
+                "label": "Expected-output contract for remote-agent-create",
                 "path": "infra/evals/status/check-expectations.json",
-                "reason": "The contract at lines 254–259 requires vmIdPresent=true and remoteState in [running, idle, ready]. Both assertions fail because the VM is never allocated.",
-                "details": "All four required evidence fields (orgId, agentId, vmIdPresent, remoteState) are missing."
+                "reason": "The contract at line 254-259 requires orgId, agentId, vmIdPresent=true, and remoteState in {running, idle, ready}; all four are absent because the pod never started (expected-output.missing-required-evidence)."
+              },
+              {
+                "label": "Node affinity / selector configuration for remote-agent pods",
+                "reason": "4 of 6 nodes are excluded by the pod's node affinity or selector, reducing the eligible pool to only 2 nodes. If those 2 are saturated, no fallback exists (failed-check.message)."
               }
             ],
             "recommendedNextActions": [
-              "Immediately check kata.peerpods.io/vm allocatable vs. used capacity on the two eligible nodes (kubectl describe nodes) to determine whether slots are exhausted by running workloads or misconfigured to zero.",
-              "Audit all pods currently consuming kata.peerpods.io/vm resources in the cluster; terminate any leaked or zombie pods from prior eval runs that the withCleanup path in infra/evals/status/run-status-probes.mjs may have failed to delete.",
-              "Determine whether the 4 nodes excluded by node affinity/selector were recently added, relabeled, or had their kata.peerpods.io/vm label removed; if so, restore the label or expand the affinity selector to increase the schedulable pool.",
-              "If capacity is genuinely exhausted by legitimate workloads, evaluate scaling the kata.peerpods.io/vm node pool (adding nodes or increasing the per-node VM slot quota) to restore headroom for eval and production pods.",
-              "Re-run all three remote-agent checks after any remediation to confirm scheduling succeeds and all four required evidence fields (orgId, agentId, vmIdPresent, remoteState) are collected.",
-              "Review the withCleanup logic in infra/evals/status/run-status-probes.mjs to ensure eval-created remote-agent pods are reliably deleted even when the pod never reaches a running state, preventing future slot leakage."
+              "Immediately inspect kata.peerpods.io/vm resource allocation on the 2 eligible nodes to determine current capacity headroom and identify which pods are consuming VM slots.",
+              "Audit for leaked or zombie remote-agent pods across all namespaces that may be holding kata.peerpods.io/vm slots without serving active workloads; terminate any confirmed orphans.",
+              "Determine whether the 4-node exclusion via node affinity is intentional (only 2 nodes have kata peer-pods support) or a misconfiguration; if intentional, evaluate whether additional kata-capable nodes need to be added to the cluster.",
+              "Review the kata.peerpods.io/vm quota per node and assess whether the total pool size is sufficient for the expected concurrent remote-agent load, including eval probes running alongside production workloads.",
+              "Verify that the eval runner's withCleanup wrapper is correctly releasing kata.peerpods.io/vm resources after each probe run so that eval-created agents do not permanently consume capacity.",
+              "Once capacity is restored or expanded, re-run the three remote-agent checks to confirm all required evidence fields (orgId, agentId, vmIdPresent, remoteState) are collected and assertions pass."
             ],
             "recommendedVerifierProbes": [
               {
-                "label": "Re-run remote-agent-create eval in isolation",
+                "label": "Check kata.peerpods.io/vm allocatable vs. allocated on all nodes",
+                "command": "kubectl describe nodes | grep -A10 'kata.peerpods.io'",
+                "reason": "Directly confirms whether the VM resource pool is exhausted or misconfigured, proving or disproving the primary cause."
+              },
+              {
+                "label": "List all pods holding kata.peerpods.io/vm resource slots",
+                "command": "kubectl get pods --all-namespaces -o json | jq '.items[] | select(any(.spec.containers[]; .resources.requests[\"kata.peerpods.io/vm\"] != null)) | {name:.metadata.name, ns:.metadata.namespace, phase:.status.phase}'",
+                "reason": "Identifies whether leaked or zombie pods are consuming all available VM slots, supporting or ruling out the resource-leak sub-cause."
+              },
+              {
+                "label": "Re-run the failing eval after confirming node capacity",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-                "reason": "Confirms whether the scheduler error persists or was transient. A repeat failure with the same message proves sustained capacity exhaustion.",
-                "details": "Supplied by verifierContext.recommendedVerifierProbes and reproductionHint."
+                "reason": "Verifies whether the scheduling failure persists or resolves once capacity is understood; a pass would confirm the issue was transient."
               },
               {
-                "label": "Describe all 6 cluster nodes for kata.peerpods.io/vm capacity",
-                "command": "kubectl describe nodes | grep -A5 'kata.peerpods.io/vm'",
-                "reason": "Directly measures allocatable vs. used VM slots on each node, confirming or refuting the exhaustion hypothesis."
+                "label": "Run all three remote-agent sibling checks together to confirm shared failure mode",
+                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+                "reason": "Confirms that all three checks continue to fail with the same Unschedulable message, ruling out an isolated probe-specific defect."
               },
               {
-                "label": "List pods currently holding kata.peerpods.io/vm resources",
-                "command": "kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, node: .spec.nodeName, phase: .status.phase}'",
-                "reason": "Identifies whether leaked eval pods or long-running workloads are consuming all available slots, supporting or refuting the zombie-pod possible cause."
-              },
-              {
-                "label": "Check for Pending remote-agent pods across all namespaces",
-                "command": "kubectl get pods -A --field-selector=status.phase=Pending -o wide | grep remote-agent",
-                "reason": "Reveals whether prior eval runs left unscheduled pods that are queued and blocking capacity."
-              },
-              {
-                "label": "Inspect node affinity/selector on the remote-agent pod spec",
-                "reason": "Confirms which node label or taint the pod requires, and verifies that only 2 of 6 nodes carry that label. This would quantify the effective scheduling pool size and whether it has shrunk.",
-                "details": "Retrieve the pod spec from the API server or the agent creation code path in infra/evals/status/run-status-probes.mjs."
+                "label": "Inspect node affinity and selector on the remote-agent pod spec",
+                "reason": "Determines whether the 4-node exclusion is intentional (correct affinity for kata nodes) or a misconfiguration that is shrinking the eligible pool unnecessarily.",
+                "details": "Retrieve the pod spec generated by createAgent for machineType='remote' and verify which node labels are required, confirming why 4 of 6 nodes are ineligible."
               }
             ],
             "whatWouldDisproveThis": [
-              "If kubectl describe nodes showed kata.peerpods.io/vm slots available (allocatable > used) on the two eligible nodes at the time of the eval run, the exhaustion hypothesis would be disproved and the cause would shift to a pod spec or API error.",
-              "If the scheduler message changed on a re-run to a different error (e.g., image pull failure, API authentication error, or quota error unrelated to kata.peerpods.io/vm), the current diagnosis would not apply.",
-              "If the 4 nodes that 'didn't match Pod's node affinity/selector' were shown to actually carry the kata.peerpods.io/vm label, the affinity/selector mismatch scope would be wider than currently understood.",
-              "If no running or pending pods were found consuming kata.peerpods.io/vm slots, the exhaustion would point to a misconfigured or zero-valued resource advertisement on the nodes rather than actual consumption.",
-              "If the remote-agent-create eval passed on a subsequent run without any cluster changes, the failure would be transient (e.g., a brief spike in concurrent pod demand) rather than a sustained capacity shortfall."
+              "If kubectl describe nodes shows available (unallocated) kata.peerpods.io/vm capacity on the 2 eligible nodes, resource exhaustion is not the cause and the scheduler message would need re-examination.",
+              "If a freshly submitted remote-agent pod schedules and reaches Running state immediately after the eval failure, the exhaustion was transient (e.g., a burst of concurrent requests) rather than a sustained capacity ceiling.",
+              "If the node affinity rules on the pod spec are found to be incorrect and actually exclude all 6 nodes (not just 4), the root cause would shift to a misconfiguration in the pod template rather than resource exhaustion.",
+              "If the eval runner's withCleanup function is found to have a bug that leaves pods in a broken state before the scheduling attempt, the failure could be an eval infrastructure defect rather than a cluster capacity issue.",
+              "If no kata.peerpods.io/vm resource is registered on any node (i.e., the extended resource was removed from the cluster), the cause would be a missing resource registration rather than exhaustion of an existing pool."
             ],
             "followUpEvals": [
-              "Add a pre-flight eval that checks kata.peerpods.io/vm allocatable capacity across all nodes before attempting remote-agent creation, and emits a warning if available slots fall below a minimum threshold.",
-              "Add an eval that counts currently running and pending remote-agent pods and alerts if the count approaches the total kata.peerpods.io/vm slot limit, providing early warning before full exhaustion.",
-              "Add a cleanup-verification eval that confirms no remote-agent pods from prior eval runs remain in Running or Pending state after the withCleanup path executes, catching slot leakage proactively.",
-              "Add a node-affinity coverage eval that verifies the number of nodes matching the remote-agent pod's affinity/selector is at least a configured minimum (e.g., 2), alerting if nodes are removed from the eligible pool."
+              "Add a pre-flight eval that checks kata.peerpods.io/vm allocatable vs. allocated capacity across all nodes before attempting remote-agent creation, surfacing resource exhaustion as a distinct warning before the pod submission times out.",
+              "Add an eval that counts the number of currently running remote-agent pods and compares it against the total kata.peerpods.io/vm pool size, alerting when utilization exceeds a configurable threshold (e.g., 80%).",
+              "Add a zombie-pod detection eval that identifies remote-agent pods in Running or Pending state older than a configurable TTL and flags them for cleanup, preventing resource leaks from accumulating.",
+              "Add a node-eligibility eval that verifies at least N nodes match the remote-agent pod's node affinity selector, alerting when the eligible node count drops below a safe minimum."
             ],
             "evidenceDigest": {
-              "message": "pod stuck unscheduled for 138s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-              "latencyMs": 141093,
+              "message": "pod stuck unscheduled for 150s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+              "latencyMs": 155899,
               "evidence": {}
             }
           }
@@ -970,45 +969,43 @@
           "required": true,
           "status": "fail",
           "featureStatus": "partial_outage",
-          "message": "pod stuck unscheduled for 148s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-          "checkedAt": "2026-07-16T00:57:05.601Z",
-          "latencyMs": 151443,
+          "message": "pod stuck unscheduled for 144s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+          "checkedAt": "2026-07-16T03:30:35.580Z",
+          "latencyMs": 147890,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-state:39b56b9768db",
+            "id": "remote-agents:production-api:remote-agent-state:f97b8d31c517",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-state",
             "runtimeEnvironment": "production-api",
-            "title": "Remote Agents: Kata PeerPods VM Resource Exhaustion Blocking All Pod Scheduling (remote-agent-state, remote-agent-create, remote-agent-runtime)",
+            "title": "Remote Agent Pod Scheduling Failure: Exhausted kata.peerpods.io/vm Capacity Across All Three Remote-Agent Checks",
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "partial_outage",
-            "generatedAt": "2026-07-16T00:59:41.018Z",
+            "generatedAt": "2026-07-16T03:33:10.316Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "All three remote-agents eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in production-api at 2026-07-16T00:54–00:59Z with an identical Kubernetes scheduling error: the cluster's 6 nodes could not schedule the eval probe pod because 2 nodes reported Insufficient kata.peerpods.io/vm capacity and the remaining 4 nodes did not match the pod's node affinity/selector. Because the pod never became schedulable, the agent was never created, and the remote-agent-state eval runner could not collect any evidence (orgId, agentId, readyState, state), causing a full contract gap against the expected-output contract defined in infra/evals/status/check-expectations.json line 264.",
-            "rootCause": "The Kubernetes cluster serving the remote-agents swarm backend has exhausted its allocatable kata.peerpods.io/vm resource slots across the 2 nodes that carry that resource class. The eval probe pod requires a kata peer-pod VM slot and also carries a node affinity/selector that the other 4 nodes do not satisfy. With zero preemption victims available, the pod remained Unschedulable for ~148 s before the eval timed out. This is a Kubernetes infrastructure capacity constraint localized to the remote-agents VM node pool in the production-api environment; it is an eval-detected infrastructure failure, not a confirmed user-traffic outage (no user-traffic or incident signals are present in the supplied evidence).",
+            "summary": "All three remote-agent eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in the production-api environment with an identical Kubernetes scheduler message reporting zero available nodes: 2 nodes have insufficient kata.peerpods.io/vm resources and 4 nodes do not match the pod's node affinity/selector. Because the pod could never be scheduled, the eval runner's createAgent call never returned an agent, so no evidence (orgId, agentId, readyState, state) was written and the expected-output contract was fully violated.",
+            "rootCause": "The Kubernetes cluster backing the remote-agent swarm has exhausted its kata.peerpods.io/vm resource quota on the 2 nodes that match the pod's affinity/selector. With 0 of 6 nodes available and preemption unable to free capacity, every remote-agent pod submitted during this eval window was left in Unschedulable state for ~144–150 seconds before the eval timed out. This is an infrastructure-layer capacity constraint, not an application code defect. No evidence of a user-traffic or production incident signal is present in the packet; this is an eval-level failure observed by the observability probe.",
             "proof": [
-              "failed-check.message: 'pod stuck unscheduled for 148s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.'",
-              "failed-check.timing: status=fail latencyMs=151443 endedAt=2026-07-16T00:57:05.601Z — eval ran for ~151 s, well past the 148 s unschedulable window, confirming the pod never became ready.",
-              "failed-check.evidence: raw evidence object is empty ({}) — no orgId, agentId, readyState, or state was ever collected, consistent with the agent pod never starting.",
-              "expected-output.missing-required-evidence: all 4 required evidence keys (orgId, agentId, readyState, state) are absent, matching the contract defined at infra/evals/status/check-expectations.json line 264.",
-              "sibling.remote-agent-create: same Unschedulable / Insufficient kata.peerpods.io/vm message, latencyMs=141093, endedAt=2026-07-16T00:54:34.158Z — the create step failed first with the same scheduler error.",
-              "sibling.remote-agent-runtime: same Unschedulable / Insufficient kata.peerpods.io/vm message, latencyMs=151189, endedAt=2026-07-16T00:59:36.790Z — the runtime step also failed with the same scheduler error.",
-              "source-context.infra/evals/status/run-status-probes.mjs:1897-1905: runner calls createAgent(args, track, 'remote', null, orgId) at line 1905, which is the step that would submit the pod; the scheduler rejection prevents this from returning any agent identity.",
-              "source-context.infra/evals/status/features.json:180-188: remote-agent-state is marked required=true with outageAfterFailures=2 on the remote-agents feature; two required sibling checks (remote-agent-create, remote-agent-state) have now failed, meeting the outage threshold."
+              "failed-check.message: '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.' — the scheduler explicitly names kata.peerpods.io/vm exhaustion as the blocking condition.",
+              "failed-check.timing: latencyMs=147890, status=fail — the eval ran for ~148 s before failing, consistent with the pod being stuck unscheduled for 144 s as stated in the message.",
+              "sibling.remote-agent-create: same scheduler error, pod stuck for 150 s, latencyMs=155899 — confirms the scheduling failure is not isolated to the state-polling probe.",
+              "sibling.remote-agent-runtime: same scheduler error, pod stuck for 146 s, latencyMs=150819 — all three checks share the same root infrastructure constraint.",
+              "expected-output.missing-required-evidence: all four required evidence keys (orgId, agentId, readyState, state) are absent — consistent with createAgent never completing because the pod never started.",
+              "source-context.infra/evals/status/run-status-probes.mjs:1897-1905: runner calls createAgent(args, track, 'remote', null, orgId) immediately after requireOrgId — if the pod is never scheduled, this call blocks and eventually fails, preventing any evidence from being written.",
+              "source-context.infra/evals/status/check-expectations.json:258-266: remote-agent-state contract requires orgId, agentId, readyState, state — none were produced because agent creation never succeeded."
             ],
             "possibleCauses": [
-              "Primary — kata.peerpods.io/vm resource exhaustion on the 2 eligible nodes: all available VM slots are consumed by existing workloads, leaving no capacity for the eval probe pod. This is directly stated in the scheduler message (evidence: failed-check.message, sibling.remote-agent-create, sibling.remote-agent-runtime).",
-              "Secondary — node affinity/selector mismatch on the remaining 4 nodes: the eval probe pod's scheduling constraints restrict it to the 2 kata-capable nodes, so even if generic capacity existed elsewhere the pod could not be placed there. Both constraints must be resolved together.",
-              "Tertiary — transient spike in concurrent remote agent workloads consuming all VM slots at the time of the eval run: if other tenants or internal jobs were holding VM slots, the eval window may have coincided with peak utilization rather than a permanent capacity deficit.",
-              "Lower confidence — a misconfigured or overly restrictive node affinity/selector on the eval probe pod itself: if the selector was recently tightened it could artificially restrict scheduling to only the 2 kata nodes. No source evidence in the supplied artifacts confirms a selector change; sourceDiscovery.suspectChanges is empty."
+              "PRIMARY — kata.peerpods.io/vm resource exhaustion on the 2 affinity-matching nodes: the cluster has a fixed quota of peer-pod VM slots; concurrent workloads or a prior eval run consumed all available slots, leaving none for the probe pods. This is directly stated in the scheduler message (failed-check.message).",
+              "SECONDARY — Node affinity/selector mismatch on the remaining 4 nodes: the remote-agent pod spec requires a node label or taint that only 2 nodes satisfy, and those 2 are already at VM capacity. If the affinity rules were broadened or more matching nodes were added, scheduling could succeed even without increasing per-node VM quota.",
+              "TERTIARY — Cluster under-provisioning for concurrent eval load: if multiple eval runs or production workloads compete for the same kata.peerpods.io/vm slots simultaneously, transient exhaustion can occur without a persistent capacity deficit."
             ],
             "reproductionSteps": [
               {
@@ -1017,95 +1014,85 @@
                 "details": "Use the same environment variables as the scheduled observability workflow. Observe whether the pod scheduling error recurs or resolves."
               },
               {
-                "label": "Re-run all three remote-agents checks together to confirm shared failure scope",
+                "label": "Re-run all three remote-agent checks together to confirm shared scheduling dependency",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-                "details": "Confirms whether all three checks fail with the same Unschedulable message, establishing the shared infrastructure dependency."
+                "details": "If all three fail with the same kata.peerpods.io/vm message, the shared infrastructure constraint is confirmed."
               },
               {
-                "label": "Inspect current kata.peerpods.io/vm allocatable and used capacity on the 2 eligible nodes",
-                "details": "Use kubectl to describe the 2 nodes that carry the kata.peerpods.io/vm extended resource and compare Allocatable vs. Requests to determine whether slots are fully consumed."
+                "label": "Inspect current kata.peerpods.io/vm resource allocation on the cluster",
+                "details": "Query the Kubernetes cluster for node-level kata.peerpods.io/vm capacity and current allocations to determine whether the quota is exhausted at time of re-run."
               },
               {
-                "label": "List all pods currently consuming kata.peerpods.io/vm slots in the cluster",
-                "details": "Use kubectl to identify which workloads hold the VM slots and whether any are stale, stuck, or eligible for eviction."
-              },
-              {
-                "label": "Review the pod spec for the remote-agent eval probe to confirm node affinity/selector configuration",
-                "details": "Inspect the pod template used by createAgent(..., 'remote', ...) in infra/evals/status/run-status-probes.mjs to verify the node selector matches the 2 kata-capable nodes and has not been inadvertently narrowed."
+                "label": "Check for concurrent workloads consuming kata.peerpods.io/vm slots",
+                "details": "List all pods requesting kata.peerpods.io/vm resources in the namespace at the time of the failure window (2026-07-16T03:28–03:33Z) to identify competing consumers."
               }
             ],
             "affectedAreas": [
               {
-                "label": "Kubernetes kata.peerpods.io/vm node pool (production-api)",
-                "reason": "The scheduler explicitly reports 2 nodes with Insufficient kata.peerpods.io/vm and 0 preemption victims, indicating the VM resource class is fully consumed on the only eligible nodes (evidence: failed-check.message)."
+                "label": "Remote Agent pod scheduling — kata.peerpods.io/vm resource pool",
+                "reason": "The Kubernetes scheduler explicitly reported Insufficient kata.peerpods.io/vm on the 2 affinity-matching nodes, blocking all remote-agent pod starts (failed-check.message, sibling.remote-agent-create, sibling.remote-agent-runtime)."
               },
               {
                 "label": "Remote Agents feature — all three eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
                 "path": "infra/evals/status/features.json",
-                "reason": "All three checks under the remote-agents feature failed with the same scheduling error. remote-agent-create and remote-agent-state are required=true; with degradedAfterFailures=1 and outageAfterFailures=2, the feature has crossed the outage threshold (source-context.infra/evals/status/features.json:180-188)."
+                "reason": "All three checks registered under the remote-agents feature (features.json lines 183–185) failed with the same scheduling error, indicating the entire remote-agent provisioning path is blocked when VM capacity is exhausted."
               },
               {
-                "label": "Eval runner — createAgent remote path",
+                "label": "Eval runner — createAgent call for remote agent type",
                 "path": "infra/evals/status/run-status-probes.mjs",
-                "reason": "The runner branch at line 1905 calls createAgent(..., 'remote', ...) which submits the pod that the scheduler cannot place. No evidence (orgId, agentId, readyState, state) is ever written because the pod never starts (source-context.infra/evals/status/run-status-probes.mjs:1897-1905)."
+                "reason": "The runner branch at line 1905 calls createAgent with type 'remote'; this call cannot complete when the backing pod is unschedulable, causing all downstream evidence writes to be skipped (source-context.infra/evals/status/run-status-probes.mjs:1897-1905)."
               },
               {
-                "label": "Expected-output contract for remote-agent-state",
+                "label": "Expected-output contract — remote-agent-state",
                 "path": "infra/evals/status/check-expectations.json",
-                "reason": "The contract at line 264 requires orgId, agentId, readyState, and state; all four are missing because the upstream pod scheduling failure prevents any agent lifecycle from completing (expected-output.missing-required-evidence)."
+                "reason": "The contract at line 264 requires orgId, agentId, readyState, state; all four are missing because agent creation never succeeded (expected-output.missing-required-evidence)."
               }
             ],
             "recommendedNextActions": [
-              "Immediately inspect the 2 kata.peerpods.io/vm-capable nodes for current slot utilization using kubectl describe node; if slots are fully consumed, identify and evict any stale or leaked pods to restore scheduling capacity.",
-              "Determine whether the kata VM node pool needs horizontal scaling (adding more kata-capable nodes or increasing the vm resource limit per node) to handle concurrent eval probe and production workload demand.",
-              "Review the node affinity/selector on the remote-agent eval probe pod to confirm it is intentionally restricted to the 2 kata nodes; if the restriction is broader than necessary, evaluate whether relaxing it (while preserving the kata runtime class requirement) would allow scheduling on additional nodes.",
-              "Re-run the three remote-agents eval checks after any capacity remediation to confirm all four required evidence keys (orgId, agentId, readyState, state) are collected and the contract passes.",
-              "Investigate whether real remote-agent provisioning requests from users were also affected during the 2026-07-16T00:54–00:59Z window by checking production request logs and error rates for the remote agent creation API; the eval failure indicates infrastructure stress but user-traffic impact is not confirmed by the supplied evidence.",
-              "Review the remote-agents feature registry thresholds (degradedAfterFailures=1, outageAfterFailures=2 in infra/evals/status/features.json lines 187-188) and confirm alerting fired appropriately given that both required checks (remote-agent-create and remote-agent-state) failed."
+              "Check current kata.peerpods.io/vm capacity on the 2 affinity-matching nodes in the production cluster; if exhausted, determine whether slots can be freed by terminating idle or leaked remote-agent pods from prior runs.",
+              "Review the node affinity/selector rules on remote-agent pods to determine whether the restriction to 2 nodes is intentional; if not, consider expanding the eligible node pool to distribute VM slot demand.",
+              "Investigate whether the eval runner's withCleanup mechanism (run-status-probes.mjs) is reliably releasing kata.peerpods.io/vm slots after each probe run; leaked pods from prior eval runs could be consuming quota.",
+              "If VM slot exhaustion is confirmed as persistent, coordinate with the infrastructure team to increase the kata.peerpods.io/vm quota on existing nodes or add additional peer-pod-capable nodes to the cluster.",
+              "Once the cluster recovers, re-run all three remote-agent checks together to confirm all three pass and that evidence (orgId, agentId, readyState, state) is fully written before closing this investigation."
             ],
             "recommendedVerifierProbes": [
               {
                 "label": "Re-run remote-agent-state eval probe in isolation",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
-                "reason": "Determines whether the scheduling failure is persistent (capacity deficit) or was transient (slot contention at eval time). A pass on re-run with all four evidence keys present would indicate transient contention."
+                "reason": "Confirms whether the scheduling failure is persistent or was a transient capacity spike; a pass would indicate the cluster recovered, a fail with the same message confirms ongoing exhaustion."
               },
               {
-                "label": "Describe kata-capable nodes to inspect VM slot capacity",
-                "reason": "Directly confirms or refutes the resource exhaustion hypothesis. If Allocatable equals Requests, slots are fully consumed.",
-                "details": "Run kubectl describe node on each of the 2 nodes that carry kata.peerpods.io/vm and compare Allocatable vs. Requests for that extended resource."
+                "label": "Query kata.peerpods.io/vm node capacity and current usage",
+                "reason": "Directly measures whether VM slots are exhausted and on which nodes, confirming or refuting the capacity exhaustion hypothesis.",
+                "details": "Run kubectl describe nodes and filter for kata.peerpods.io/vm Allocatable and Requests fields on all 6 nodes in the cluster."
               },
               {
-                "label": "List pods consuming kata.peerpods.io/vm slots",
-                "reason": "Identifies whether slot holders are legitimate running workloads or leaked/stuck pods that could be evicted to restore capacity.",
-                "details": "Run kubectl get pods --all-namespaces with a field selector or resource filter for kata.peerpods.io/vm to enumerate current consumers and identify any stale or stuck pods holding slots."
+                "label": "List all pods requesting kata.peerpods.io/vm in the relevant namespace",
+                "reason": "Identifies whether concurrent workloads or a prior eval run consumed all available VM slots, explaining the exhaustion.",
+                "details": "Run kubectl get pods --all-namespaces -o json and filter for resource requests containing kata.peerpods.io/vm to identify competing consumers at the time of the failure."
               },
               {
-                "label": "Inspect the remote agent pod spec node affinity and selector",
-                "reason": "Determines whether the 4-node affinity mismatch is expected by design or is an inadvertent over-restriction that compounds the capacity problem.",
-                "details": "Examine the pod template produced by createAgent(..., 'remote', ...) in infra/evals/status/run-status-probes.mjs to confirm which node labels are required and whether they match only the 2 kata nodes."
-              },
-              {
-                "label": "Run all three remote-agents sibling checks together",
-                "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-                "reason": "Confirms the shared failure scope and whether all three checks recover together, which would be consistent with a shared infrastructure dependency (the kata VM node pool)."
+                "label": "Inspect pod affinity/selector rules for remote-agent pods",
+                "reason": "Determines whether only 2 nodes are eligible due to affinity rules and whether broadening those rules could resolve scheduling without increasing VM quota.",
+                "details": "Retrieve the pod spec for a remote-agent pod (e.g., via kubectl get pod <pod-name> -o yaml) and compare node selector and affinity rules against the labels present on all 6 cluster nodes."
               }
             ],
             "whatWouldDisproveThis": [
-              "If kubectl describe on the 2 kata-capable nodes shows available (unallocated) kata.peerpods.io/vm slots at the time of the eval run, the resource exhaustion hypothesis would be weakened and the node affinity/selector mismatch would become the primary cause.",
-              "If the eval probe pod spec does not request kata.peerpods.io/vm as a resource, the scheduler message would need a different explanation (e.g., a runtime class or admission webhook injecting the resource request).",
-              "If a re-run of the eval immediately after the failure window succeeds and collects all four required evidence keys, the failure was transient (slot contention) rather than a persistent capacity deficit.",
-              "If the node affinity/selector on the eval probe pod was recently changed to exclude the 4 non-kata nodes, and the 2 kata nodes were already at capacity for unrelated reasons, the selector change would be a contributing cause — but no source evidence of a selector change is present in the supplied artifacts.",
-              "If other non-remote-agent checks in the same run also failed with Unschedulable errors, the problem would be broader than the kata VM node pool and would implicate general cluster capacity or a cluster-wide scheduling disruption."
+              "If the kata.peerpods.io/vm resource on the 2 affinity-matching nodes shows available capacity at the time of the failure, the exhaustion hypothesis would be weakened and the cause would shift to a misconfigured resource request or quota limit on the pod spec itself.",
+              "If a re-run of the eval immediately after the failure window succeeds without any cluster changes, it would suggest transient contention rather than a persistent capacity deficit.",
+              "If the pod scheduling error message changes on re-run (e.g., a different resource type is reported as insufficient), the kata.peerpods.io/vm exhaustion diagnosis would need to be revised.",
+              "If the node affinity/selector rules on the pod spec were recently changed to restrict scheduling to fewer nodes, and those nodes were already at capacity for unrelated reasons, the affinity misconfiguration would be the primary cause rather than raw VM quota exhaustion.",
+              "If other non-remote-agent checks in the same eval run passed and also required Kubernetes pod scheduling, it would indicate the failure is specific to the kata.peerpods.io/vm resource type rather than a general cluster scheduling outage."
             ],
             "followUpEvals": [
-              "Add a pre-flight eval check that queries kata.peerpods.io/vm allocatable vs. requested capacity across all eligible nodes and warns before slots are fully exhausted, giving earlier signal than a pod-stuck-unschedulable failure.",
-              "Add a dedicated eval that verifies at least N kata.peerpods.io/vm slots are free on the node pool before attempting remote agent creation, so capacity exhaustion is surfaced as a distinct check rather than a downstream scheduling timeout.",
-              "Add a node affinity/selector validation eval that confirms the remote-agent pod spec's node selector matches at least one Ready node in the cluster, catching selector drift independently of capacity.",
-              "Consider adding a historical trend eval that tracks kata.peerpods.io/vm slot utilization over time to detect gradual capacity creep before it causes scheduling failures."
+              "Add a pre-flight eval check that queries kata.peerpods.io/vm node capacity before attempting remote-agent creation, and emits a warning or skip result with a capacity-exhausted message instead of waiting for a pod-stuck timeout.",
+              "Add a dedicated eval check for remote-agent pod scheduling health that verifies at least one kata.peerpods.io/vm slot is available on an affinity-matching node, decoupled from the full agent lifecycle checks.",
+              "Add a cleanup verification eval that confirms no orphaned remote-agent pods remain after each probe run, catching VM slot leaks before they exhaust cluster capacity.",
+              "Introduce a historical pass/fail trend eval for remote-agent-create, remote-agent-state, and remote-agent-runtime so that repeated scheduling failures across runs are surfaced as a regression signal rather than appearing as isolated first-time failures (verifierContext.history.previousRunCount is currently 0)."
             ],
             "evidenceDigest": {
-              "message": "pod stuck unscheduled for 148s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-              "latencyMs": 151443,
+              "message": "pod stuck unscheduled for 144s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+              "latencyMs": 147890,
               "evidence": {}
             }
           }
@@ -1119,14 +1106,14 @@
           "required": false,
           "status": "fail",
           "featureStatus": "degraded",
-          "message": "pod stuck unscheduled for 145s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-          "checkedAt": "2026-07-16T00:59:36.790Z",
-          "latencyMs": 151189,
+          "message": "pod stuck unscheduled for 146s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+          "checkedAt": "2026-07-16T03:33:06.399Z",
+          "latencyMs": 150819,
           "evidence": {},
           "investigation": {
             "schemaVersion": 1,
             "kind": "llm-investigation",
-            "id": "remote-agents:production-api:remote-agent-runtime:f5bed38a2b14",
+            "id": "remote-agents:production-api:remote-agent-runtime:84198f8d5ca5",
             "featureId": "remote-agents",
             "featureLabel": "Remote Agents",
             "checkId": "remote-agent-runtime",
@@ -1135,123 +1122,128 @@
             "status": "ready",
             "checkStatus": "fail",
             "featureStatus": "degraded",
-            "generatedAt": "2026-07-16T00:59:41.018Z",
+            "generatedAt": "2026-07-16T03:33:10.316Z",
             "environment": "production",
             "source": "github-actions",
             "provider": "anthropic",
             "model": "claude-sonnet-4-6",
             "confidence": "high",
-            "summary": "All three remote-agents eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in the production-api environment at 2026-07-16T00:54–00:59Z because every pod submitted to the Kubernetes cluster was rejected as Unschedulable: the two nodes carrying the kata.peerpods.io/vm resource reported insufficient capacity, and the remaining four nodes did not match the pod's node affinity or selector. No agent pod reached a running state, so the eval runner never received any response evidence and all five required contract fields (orgId, agentId, model, provider, message) are missing. This is an eval-infrastructure failure reflecting a real Kubernetes scheduling constraint; no user-traffic or incident signals are present in the supplied evidence.",
-            "rootCause": "The Kubernetes cluster serving the remote-agents swarm backend has exhausted its kata.peerpods.io/vm resource on the two nodes that carry it (scheduler message: \"2 Insufficient kata.peerpods.io/vm\"), and the remaining four nodes are excluded by the pod's node affinity or selector rules. Because no pod can be scheduled, the createAgent call inside the eval runner (infra/evals/status/run-status-probes.mjs line 1918) never completes, the agent VM never becomes ready, and the eval times out after ~145 s returning an empty evidence object. The contract requires orgId, agentId, model, provider, and message — none of which can be populated without a running agent pod.",
+            "summary": "All three remote-agents eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in the production-api environment because the Kubernetes scheduler could not place the required kata peer-pod VM: only 2 nodes carry the kata.peerpods.io/vm resource and both reported insufficient capacity, while the remaining 4 nodes did not match the pod's node affinity or selector. The eval probe never reached the agent creation step, so no evidence (orgId, agentId, model, provider, message) was collected and the expected-output contract was entirely unmet.",
+            "rootCause": "The Kubernetes cluster backing the production-api remote-agent runtime has exhausted available kata.peerpods.io/vm capacity on the 2 eligible nodes. The scheduler message \"0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector\" (evidence: failed-check.message, sibling.remote-agent-create, sibling.remote-agent-state) is identical across all three sibling checks, confirming the failure is a shared infrastructure scheduling constraint, not an application-layer or eval-runner bug. Because the pod never scheduled, the createAgent call in run-status-probes.mjs (line 1918) was never reached, leaving all required evidence fields empty and the contract validation failing with \"Missing expected evidence: orgId, agentId, model, provider, message\".",
             "proof": [
-              "failed-check.message: scheduler reports '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.'",
-              "failed-check.timing: status=fail latencyMs=151189 endedAt=2026-07-16T00:59:36.790Z — pod was stuck unscheduled for 145 s before the eval timed out",
-              "failed-check.evidence: evidence object is empty {}; all five required contract fields (orgId, agentId, model, provider, message) are missing (expected-output.missing-required-evidence)",
-              "sibling.remote-agent-create: same Unschedulable scheduler message, latencyMs=141093, endedAt=2026-07-16T00:54:34.158Z — earliest sibling failure confirms the capacity problem predates the runtime check",
-              "sibling.remote-agent-state: same Unschedulable scheduler message, latencyMs=151443, endedAt=2026-07-16T00:57:05.601Z — confirms the condition persisted across three consecutive eval runs spanning ~5 minutes",
-              "source-context.infra/evals/status/run-status-probes.mjs:1910-1918: runner calls createAgent(args, track, 'remote', null, orgId) at line 1918 — this is the call that submits the pod; failure here prevents any downstream evidence collection",
-              "source-context.infra/evals/status/check-expectations.json:262-270: contract at line 268 requires orgId, agentId, model, provider, message and asserts message containsIgnoreCase 'hello from aura' — none reachable without a scheduled pod",
-              "source.infra/evals/status/features.json:185: remote-agent-runtime is registered as required=false with outageLatencyMs=420000; the eval failed well within that window (151189 ms) due to scheduling failure, not a latency breach"
+              "failed-check.message: scheduler reports '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector' for remote-agent-runtime after 146s unscheduled.",
+              "failed-check.timing: latencyMs=150819, status=fail, endedAt=2026-07-16T03:33:06.399Z — probe timed out waiting for pod scheduling, never reached agent creation.",
+              "failed-check.evidence: evidence object is empty ({}) — no orgId, agentId, model, provider, or message was ever returned, consistent with the pod never starting.",
+              "expected-output.missing-required-evidence: all 5 required evidence fields (orgId, agentId, model, provider, message) are absent, matching the contract defined at infra/evals/status/check-expectations.json lines 266-270.",
+              "sibling.remote-agent-create: identical scheduler error ('2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector'), latencyMs=155899, endedAt=2026-07-16T03:28:07.690Z — earliest failing check, indicating the capacity problem predates the runtime check.",
+              "sibling.remote-agent-state: identical scheduler error, latencyMs=147890, endedAt=2026-07-16T03:30:35.580Z — confirms the capacity problem persisted across the full eval window.",
+              "source-context.infra/evals/status/run-status-probes.mjs:1910-1918: runner calls createAgent(args, track, 'remote', null, orgId) at line 1918, which is the step that triggers pod scheduling; this step was never reached because the pod was stuck unschedulable."
             ],
             "possibleCauses": [
-              "Primary — kata.peerpods.io/vm resource exhaustion on the two eligible nodes: concurrent agent workloads or a prior eval run's pods were not cleaned up, consuming all available VM slots and leaving none for the new eval pods.",
-              "Secondary — node affinity or selector misconfiguration: the pod spec targets only the two kata-capable nodes via affinity/selector rules, and those rules may be overly restrictive or may not tolerate the current node labels, preventing fallback to other nodes.",
-              "Tertiary — cluster under-provisioning: only 2 of 6 nodes carry the kata.peerpods.io/vm extended resource; if both are at capacity simultaneously (e.g., due to a surge in remote-agent usage or a stuck pod from a previous eval run), all new scheduling attempts fail until capacity is freed.",
-              "Lower confidence — leaked eval pods from a prior run: the withCleanup wrapper in run-status-probes.mjs (line 1916) is responsible for teardown; if a prior run's cleanup failed, orphaned pods could be holding kata.peerpods.io/vm slots, blocking new scheduling."
+              "Primary — kata.peerpods.io/vm resource exhaustion on the 2 eligible nodes: concurrent workloads or prior eval runs consumed all available VM slots, leaving no capacity for new probe pods. This is the most strongly supported cause given the identical scheduler message across all three checks.",
+              "Secondary — node affinity or selector misconfiguration: 4 of 6 nodes are permanently excluded by the pod's affinity/selector rules, artificially constraining the schedulable pool to only 2 nodes. If those 2 nodes have limited VM capacity, any concurrent demand will exhaust it.",
+              "Tertiary — cluster under-provisioning: the total kata.peerpods.io/vm quota across the 2 eligible nodes may be too small to handle simultaneous eval probe pods, especially if multiple eval runs overlap.",
+              "Lower confidence — a stuck or leaked VM from a prior eval run that was not cleaned up (withCleanup in run-status-probes.mjs line 1916 implies cleanup is attempted, but a prior crash could leave a VM allocated), reducing available capacity for subsequent runs."
             ],
             "reproductionSteps": [
               {
                 "label": "Run only the remote-agent-runtime eval probe against production-api",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-                "details": "Use the same environment variables as the scheduled observability workflow. Observe whether the pod reaches Running state or is again rejected as Unschedulable."
+                "details": "Use the same environment variables as the scheduled observability workflow to reproduce the scheduling failure."
               },
               {
-                "label": "Inspect current kata.peerpods.io/vm allocatable and used capacity on all cluster nodes",
-                "command": "kubectl describe nodes | grep -A5 'kata.peerpods.io/vm'",
-                "details": "Identify how many VM slots are allocatable per node and how many are currently consumed. Confirm whether both kata-capable nodes are at capacity."
-              },
-              {
-                "label": "List all pods currently requesting kata.peerpods.io/vm to find any stuck or orphaned pods",
-                "command": "kubectl get pods --all-namespaces -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, phase: .status.phase}'",
-                "details": "Identify whether any pods from prior eval runs are holding VM slots without being in a terminal state."
-              },
-              {
-                "label": "Check node labels and pod affinity/selector rules for remote-agent pods",
-                "details": "Review the node affinity and selector spec on the remote-agent pod template to confirm which nodes are eligible and whether the rules can be relaxed or whether additional nodes need the kata.peerpods.io/vm resource."
-              },
-              {
-                "label": "Run all three remote-agents sibling checks together to confirm shared scheduling dependency",
+                "label": "Run all three remote-agents checks together to confirm shared scheduling failure",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-                "details": "Confirm that all three checks fail with the same Unschedulable message, reinforcing the shared infrastructure dependency."
+                "details": "Confirms whether all three checks fail simultaneously due to the same kata.peerpods.io/vm exhaustion."
+              },
+              {
+                "label": "Inspect current kata.peerpods.io/vm allocatable and used capacity on the 2 eligible nodes",
+                "command": "kubectl describe nodes | grep -A5 kata.peerpods.io",
+                "details": "Identify how many VM slots are allocatable vs. currently consumed on the nodes that match the pod's affinity/selector."
+              },
+              {
+                "label": "List all pods currently consuming kata.peerpods.io/vm resources in the cluster",
+                "command": "kubectl get pods --all-namespaces -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, node: .spec.nodeName}'",
+                "details": "Determine whether prior eval runs or other workloads are holding VM slots that should have been released."
+              },
+              {
+                "label": "Check for any unscheduled or pending remote-agent pods left from prior runs",
+                "command": "kubectl get pods --all-namespaces --field-selector=status.phase=Pending | grep -i remote",
+                "details": "Identify leaked pending pods that may be holding scheduling resources."
               }
             ],
             "affectedAreas": [
               {
-                "label": "Kubernetes kata.peerpods.io/vm node resource capacity",
-                "reason": "The scheduler explicitly reports 'Insufficient kata.peerpods.io/vm' on the two nodes that carry this extended resource, directly blocking all remote-agent pod scheduling (failed-check.message, sibling.remote-agent-create, sibling.remote-agent-state)."
+                "label": "Kubernetes kata peer-pods VM scheduling layer (production-api cluster)",
+                "reason": "The scheduler explicitly reports 'Insufficient kata.peerpods.io/vm' on the 2 nodes eligible by affinity/selector, blocking all remote-agent pod creation. This is the earliest violated boundary in the failure chain (evidence: failed-check.message, sibling.remote-agent-create, sibling.remote-agent-state)."
               },
               {
-                "label": "Remote Agents eval feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+                "label": "Remote Agents feature — all three eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
                 "path": "infra/evals/status/features.json",
-                "reason": "All three checks under the remote-agents feature (lines 183–185) failed with the same Unschedulable root cause within a 5-minute window, indicating the entire remote-agent eval surface is blocked by the scheduling failure."
+                "reason": "All three checks under the remote-agents feature (lines 183-185) failed with the same scheduling error across a ~5-minute window, indicating the entire remote-agent provisioning path is blocked while VM capacity is exhausted."
               },
               {
-                "label": "Eval runner createAgent call for remote agent type",
+                "label": "Eval runner — createAgent call for remote agent type",
                 "path": "infra/evals/status/run-status-probes.mjs",
-                "reason": "The runner branch at line 1918 calls createAgent with type 'remote'; this is the earliest point of failure — the pod submission that the scheduler rejects. No downstream evidence (orgId, agentId, model, provider, message) can be collected until this call succeeds."
+                "reason": "The runner branch at lines 1913-1918 calls createAgent with type 'remote', which triggers the kata peer-pod scheduling. The pod never scheduled, so no evidence was collected and the probe returned a failure before reaching any runtime assertion."
               },
               {
-                "label": "Remote-agent-runtime expected-output contract",
+                "label": "Expected-output contract for remote-agent-runtime",
                 "path": "infra/evals/status/check-expectations.json",
-                "reason": "The contract at lines 266–270 requires five evidence fields and asserts message containsIgnoreCase 'hello from aura'. All five fields are missing because the agent pod never started, making the contract validation error a downstream symptom of the scheduling failure."
+                "reason": "The contract at lines 266-270 requires orgId, agentId, model, provider, and message. All five are missing because the agent was never created, causing a total contract validation failure."
               }
             ],
             "recommendedNextActions": [
-              "Immediately check kata.peerpods.io/vm capacity on the two eligible nodes using kubectl describe nodes; if both are at capacity, identify and terminate any orphaned or stuck pods holding VM slots to restore scheduling headroom.",
-              "Review the withCleanup teardown path in infra/evals/status/run-status-probes.mjs to confirm that eval pods are reliably deleted after each run, including on timeout or error paths, to prevent slot leakage across runs.",
-              "Assess whether the cluster needs additional nodes with the kata.peerpods.io/vm extended resource to support concurrent eval runs without exhausting capacity; the current 2-node configuration provides no scheduling redundancy.",
-              "Review the node affinity and selector rules on the remote-agent pod template to confirm they still match current node labels and are not more restrictive than intended, particularly given the 4-node affinity exclusion reported by the scheduler.",
-              "Once scheduling is restored, re-run all three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) to confirm the eval surface returns to a passing state and evidence fields are populated correctly.",
-              "Note that remote-agent-runtime is registered as required=false (infra/evals/status/features.json line 185), so this failure does not by itself constitute a declared outage; however, remote-agent-create and remote-agent-state are required=true (lines 183–184) and their simultaneous failure against degradedAfterFailures=1 and outageAfterFailures=2 warrants prompt investigation."
+              "Immediately inspect kata.peerpods.io/vm capacity on the 2 eligible nodes in the production-api cluster to determine current allocation vs. available slots.",
+              "Identify and terminate any leaked or stuck remote-agent pods from prior eval runs that may be holding VM slots without active workloads.",
+              "Review the pod node affinity/selector configuration for remote-agent pods to determine whether the 4-node exclusion is intentional or a misconfiguration that unnecessarily constrains the schedulable pool to 2 nodes.",
+              "If VM capacity is genuinely exhausted by legitimate workloads, evaluate whether additional kata.peerpods.io/vm capacity can be provisioned on existing eligible nodes or whether new eligible nodes should be added to the cluster.",
+              "Confirm that the withCleanup wrapper in infra/evals/status/run-status-probes.mjs (line 1916) is reliably releasing VM resources after each eval run, including in failure and timeout scenarios, to prevent capacity leaks across runs.",
+              "Once cluster capacity is restored, re-run all three remote-agents eval checks to confirm recovery: AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes."
             ],
             "recommendedVerifierProbes": [
               {
-                "label": "Check kata.peerpods.io/vm allocatable vs. used capacity on all nodes",
-                "command": "kubectl describe nodes | grep -A5 'kata.peerpods.io/vm'",
-                "reason": "Directly confirms whether the two kata-capable nodes are at capacity and quantifies how many VM slots are available vs. consumed, proving or disproving the resource exhaustion hypothesis."
+                "label": "Check kata.peerpods.io/vm allocatable vs. used capacity on all cluster nodes",
+                "command": "kubectl describe nodes | grep -A5 kata.peerpods.io",
+                "reason": "Directly confirms whether VM slots are exhausted on the 2 eligible nodes, proving or disproving the capacity exhaustion hypothesis."
               },
               {
-                "label": "List pods holding kata.peerpods.io/vm slots to detect orphaned eval pods",
-                "command": "kubectl get pods --all-namespaces -o wide | grep -i remote",
-                "reason": "Identifies whether stuck or orphaned pods from prior eval runs are consuming VM slots, which would explain why preemption found no victims."
+                "label": "List all pending pods in the cluster to find leaked remote-agent pods",
+                "command": "kubectl get pods --all-namespaces --field-selector=status.phase=Pending",
+                "reason": "Identifies whether prior eval runs left unscheduled pods holding VM resource reservations that were not cleaned up by withCleanup."
               },
               {
-                "label": "Re-run the remote-agent-runtime eval probe to check if the condition is sustained or transient",
+                "label": "Re-run the failed expected-output contract after confirming cluster capacity",
                 "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-                "reason": "If the eval passes immediately without cluster changes, the failure was transient. If it fails again with the same Unschedulable message, the capacity exhaustion is sustained and requires cluster-level remediation."
+                "reason": "Confirms whether the scheduling failure is persistent or transient; a pass after capacity is freed would confirm exhaustion as the cause."
               },
               {
-                "label": "Verify node affinity and selector rules on the remote-agent pod template",
-                "reason": "The scheduler reports 4 nodes excluded by affinity/selector; confirming the rules are correct and the target node labels still exist would isolate the failure to pure capacity exhaustion vs. a configuration drift.",
-                "details": "Retrieve the pod spec used by createAgent for type 'remote' and inspect nodeAffinity, nodeSelector, and resource requests to confirm which nodes are eligible and whether the rules match current node labels."
+                "label": "Inspect node affinity and selector rules on the remote-agent pod spec",
+                "reason": "Determines whether the 4-node exclusion is a misconfiguration that unnecessarily shrinks the schedulable pool.",
+                "details": "Retrieve the pod spec used by createAgent for remote type and verify which node labels are required, confirming why 4 of 6 nodes are excluded and whether that exclusion is intentional."
+              },
+              {
+                "label": "Check for running or terminating kata peer-pod VMs from prior eval runs",
+                "command": "kubectl get pods --all-namespaces -o wide | grep -i kata",
+                "reason": "Identifies whether VMs from previous probe runs are still consuming capacity due to incomplete cleanup."
               }
             ],
             "whatWouldDisproveThis": [
-              "If kubectl describe nodes shows that kata.peerpods.io/vm capacity is not exhausted (i.e., allocatable slots remain unused on both kata-capable nodes), the scheduling failure has a different cause such as a node affinity/selector misconfiguration rather than resource exhaustion.",
-              "If the pod spec for remote-agent pods does not request kata.peerpods.io/vm as a resource, the 'Insufficient kata.peerpods.io/vm' message would indicate a different scheduling constraint is the primary blocker.",
-              "If only remote-agent-runtime failed while remote-agent-create and remote-agent-state passed in the same run window, the failure would be localized to the runtime eval step rather than a shared infrastructure capacity problem.",
-              "If a re-run of the eval immediately after this failure succeeds without any cluster changes, the failure was transient (e.g., a briefly held slot was released) rather than a sustained capacity exhaustion.",
-              "If the node affinity/selector rules on the pod spec are found to be misconfigured (e.g., targeting a node label that no longer exists), the root cause would be a configuration drift rather than capacity exhaustion."
+              "If kubectl describe nodes showed ample remaining kata.peerpods.io/vm capacity on the 2 eligible nodes at the time of the eval run, the scheduling exhaustion hypothesis would be weakened and a different cause (e.g., a node affinity misconfiguration that newly excluded those nodes) would need to be investigated.",
+              "If the pod's node affinity/selector was recently changed to exclude nodes that previously had VM capacity, and the 2 remaining eligible nodes never had sufficient capacity, the root cause would shift to a configuration change rather than runtime exhaustion.",
+              "If a re-run of the eval immediately after this failure succeeded without any cluster changes, it would suggest a transient capacity spike (e.g., a concurrent workload that released VMs) rather than a persistent exhaustion condition.",
+              "If the remote-agent-create sibling check had passed while remote-agent-runtime failed, it would suggest the failure is isolated to the runtime probe rather than a shared scheduling constraint — but all three siblings failed, which supports the shared infrastructure cause.",
+              "If no kata.peerpods.io/vm resource is defined or allocatable on any node, the cause would be a missing resource registration rather than exhaustion."
             ],
             "followUpEvals": [
-              "Add a pre-flight eval check that queries kata.peerpods.io/vm allocatable vs. requested capacity across all nodes before attempting remote-agent pod creation, surfacing capacity exhaustion as a distinct 'warn' status rather than a scheduling timeout.",
-              "Add an orphaned-pod detection eval that lists all pods in the remote-agent namespace older than a configurable threshold (e.g., 10 minutes) and flags any that are still holding kata.peerpods.io/vm slots, catching cleanup failures before they block subsequent runs.",
-              "Add a node-affinity-match eval that validates the remote-agent pod's nodeAffinity and nodeSelector rules against current cluster node labels, alerting if no nodes would match before a pod is submitted.",
-              "Introduce a historical baseline for the remote-agents eval checks so that currentlyRegressedFromPass can be populated in future runs, enabling regression detection and trend analysis on scheduling failure frequency."
+              "Add a pre-flight eval check that queries kata.peerpods.io/vm allocatable vs. used capacity across all cluster nodes before attempting remote-agent creation, surfacing capacity exhaustion as a distinct 'warn' or 'fail' status rather than a scheduling timeout.",
+              "Add an eval that detects leaked or stuck pending remote-agent pods (pods in Pending state for more than a configurable threshold) and reports them as a separate infrastructure health check.",
+              "Add a post-run cleanup verification eval that confirms no kata peer-pod VMs remain allocated after the remote-agents eval suite completes, catching withCleanup failures before they affect subsequent runs.",
+              "Consider a dedicated eval for node affinity/selector correctness that verifies the expected number of nodes (currently 2) match the remote-agent pod's scheduling requirements, alerting if that count drops to zero."
             ],
             "evidenceDigest": {
-              "message": "pod stuck unscheduled for 145s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-              "latencyMs": 151189,
+              "message": "pod stuck unscheduled for 146s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+              "latencyMs": 150819,
               "evidence": {}
             }
           }
@@ -1266,12 +1258,12 @@
       "description": "Project creation, spec persistence, task persistence, project stats, and dev-loop status reads.",
       "publicSummary": "Project workspaces can persist specs and tasks and report automation status.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:52:05.937Z",
+      "lastCheckedAt": "2026-07-16T03:25:25.637Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1666,
+      "latencyP95Ms": 1541,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1284,13 +1276,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:02.968Z",
-          "latencyMs": 957,
+          "checkedAt": "2026-07-16T03:25:22.913Z",
+          "latencyMs": 828,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "06f3f248-1474-4807-a7d1-9c71f0a969e7",
+            "projectId": "9bfbe1db-cb58-4554-8dc5-3e0a707d14b9",
             "listed": true,
-            "projectName": "AURA Status Project 1784163122174"
+            "projectName": "AURA Status Project 1784172322205"
           }
         },
         {
@@ -1303,13 +1295,13 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:04.634Z",
-          "latencyMs": 1666,
+          "checkedAt": "2026-07-16T03:25:24.454Z",
+          "latencyMs": 1541,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "0529443e-9730-49ff-a6f0-17c1ba451c55",
-            "specId": "599a39ba-09aa-4469-9890-ee61854d1e21",
-            "taskId": "1365c29c-13ca-4ba6-98b5-1edf65950567",
+            "projectId": "d2001db2-4b9c-4490-b1a9-7fd7ae7f9d79",
+            "specId": "7eaee534-5a05-4ff8-9677-3cca16dde3f9",
+            "taskId": "46a4ec33-d63d-4635-a16b-687595ba607c",
             "specHashPresent": true,
             "taskCount": 1
           }
@@ -1324,10 +1316,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:05.354Z",
-          "latencyMs": 720,
+          "checkedAt": "2026-07-16T03:25:25.134Z",
+          "latencyMs": 680,
           "evidence": {
-            "projectId": "bbba4365-33d3-4424-a985-4e90b4129a14",
+            "projectId": "70e58cc5-346d-4b36-9c3a-6e94f9b1d9f5",
             "keys": [
               "total_tasks",
               "pending_tasks",
@@ -1359,10 +1351,10 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:05.937Z",
-          "latencyMs": 583,
+          "checkedAt": "2026-07-16T03:25:25.637Z",
+          "latencyMs": 503,
           "evidence": {
-            "projectId": "b12455ee-fb3e-4476-81a5-ff381bd29afd",
+            "projectId": "4a40a094-8d05-4ccf-bb6a-a000c9696a40",
             "status": null,
             "keys": [
               "running",
@@ -1384,12 +1376,12 @@
       "description": "Storage-backed note folder, note, transition, comment, and project tree roundtrips.",
       "publicSummary": "Project notes can be created, updated, commented on, and listed.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:52:08.089Z",
+      "lastCheckedAt": "2026-07-16T03:25:27.522Z",
       "checksPassed": 1,
       "checksTotal": 1,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 2152,
+      "latencyP95Ms": 1885,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1402,14 +1394,14 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:08.089Z",
-          "latencyMs": 2152,
+          "checkedAt": "2026-07-16T03:25:27.522Z",
+          "latencyMs": 1885,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
-            "projectId": "7aa52ac2-40c7-4154-b2f7-763359439dd2",
-            "folderId": "46701a09-1493-4dc3-a950-42c1c98a181e",
-            "noteId": "3f58db3f-a3a6-460e-9305-cc42dd3709e3",
-            "commentId": "5a42bf67-fc54-4d07-ba63-55db77ff637c",
+            "projectId": "bf2c158b-22bd-4b3f-b1c2-958dc5077758",
+            "folderId": "b3c05b54-ff4f-42f5-93d6-5a3c09c40ad5",
+            "noteId": "dc9345b6-2d0a-4afd-8bfa-4c0839931091",
+            "commentId": "4a83da8a-b7e6-4c6c-a641-6106a19abc9c",
             "folderLinked": true,
             "titleUpdated": true,
             "transitionStatus": "draft",
@@ -1428,7 +1420,7 @@
       "description": "Process workflow lists, process creation, default ignition node creation, desktop release trigger/run lifecycle, and cleanup.",
       "publicSummary": "Process workflows can be listed, created, and triggered in the desktop release.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:52:09.513Z",
+      "lastCheckedAt": "2026-07-16T03:25:28.787Z",
       "checksPassed": 3,
       "checksTotal": 3,
       "checksFailed": 0,
@@ -1446,8 +1438,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:08.382Z",
-          "latencyMs": 293,
+          "checkedAt": "2026-07-16T03:25:27.748Z",
+          "latencyMs": 226,
           "evidence": {
             "processes": 0,
             "folders": 0
@@ -1463,11 +1455,11 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:09.513Z",
-          "latencyMs": 1131,
+          "checkedAt": "2026-07-16T03:25:28.787Z",
+          "latencyMs": 1039,
           "evidence": {
-            "projectId": "b3ba34b1-da76-4c3f-966f-8968d47bf757",
-            "processId": "49d250db-89c5-49ba-a572-3c85f527e85c",
+            "projectId": "d60b63c2-e73e-49ff-96c7-462a62005877",
+            "processId": "08cb488e-b906-43ca-884b-6b93c03ee755",
             "nodeCount": 1
           }
         },
@@ -1623,12 +1615,12 @@
       "description": "Marketplace agent catalog and harness bootstrap health.",
       "publicSummary": "Marketplace and bootstrap services are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:52:11.640Z",
+      "lastCheckedAt": "2026-07-16T03:25:30.700Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1862,
+      "latencyP95Ms": 1705,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1641,8 +1633,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:11.376Z",
-          "latencyMs": 1862,
+          "checkedAt": "2026-07-16T03:25:30.492Z",
+          "latencyMs": 1705,
           "evidence": {
             "count": 16
           }
@@ -1657,12 +1649,12 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:11.640Z",
-          "latencyMs": 264,
+          "checkedAt": "2026-07-16T03:25:30.700Z",
+          "latencyMs": 208,
           "evidence": {
             "reachable": true,
             "url": "https://aura-harness-latest.onrender.com",
-            "latencyMs": 92,
+            "latencyMs": 62,
             "status": 200
           }
         }
@@ -1676,12 +1668,12 @@
       "description": "Org integrations, tool action catalog, subscription status, and credits balance.",
       "publicSummary": "Integrations and billing surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:52:02.011Z",
+      "lastCheckedAt": "2026-07-16T03:25:22.085Z",
       "checksPassed": 6,
       "checksTotal": 6,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 532,
+      "latencyP95Ms": 494,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1694,8 +1686,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:00.182Z",
-          "latencyMs": 443,
+          "checkedAt": "2026-07-16T03:25:20.539Z",
+          "latencyMs": 413,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 0
@@ -1711,8 +1703,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:00.555Z",
-          "latencyMs": 373,
+          "checkedAt": "2026-07-16T03:25:20.838Z",
+          "latencyMs": 299,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "count": 6
@@ -1728,8 +1720,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:00.907Z",
-          "latencyMs": 352,
+          "checkedAt": "2026-07-16T03:25:21.140Z",
+          "latencyMs": 302,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "toolCount": 6,
@@ -1754,8 +1746,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:01.088Z",
-          "latencyMs": 181,
+          "checkedAt": "2026-07-16T03:25:21.301Z",
+          "latencyMs": 160,
           "evidence": {
             "keys": [
               "plan",
@@ -1777,8 +1769,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:01.479Z",
-          "latencyMs": 391,
+          "checkedAt": "2026-07-16T03:25:21.591Z",
+          "latencyMs": 290,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "keys": [
@@ -1798,8 +1790,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:02.011Z",
-          "latencyMs": 532,
+          "checkedAt": "2026-07-16T03:25:22.085Z",
+          "latencyMs": 494,
           "evidence": {
             "orgId": "88b25bd0-9d92-401b-b9aa-0e86adcbd9df",
             "accountKeys": [
@@ -1828,12 +1820,12 @@
       "description": "Feedback board, bug report list, feed, leaderboard, and platform stats.",
       "publicSummary": "Community and feedback data surfaces are responding.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:52:13.065Z",
+      "lastCheckedAt": "2026-07-16T03:25:31.791Z",
       "checksPassed": 5,
       "checksTotal": 5,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 447,
+      "latencyP95Ms": 294,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -1846,8 +1838,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:12.126Z",
-          "latencyMs": 261,
+          "checkedAt": "2026-07-16T03:25:31.180Z",
+          "latencyMs": 294,
           "evidence": {
             "count": 50
           }
@@ -1862,8 +1854,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:12.247Z",
-          "latencyMs": 121,
+          "checkedAt": "2026-07-16T03:25:31.273Z",
+          "latencyMs": 93,
           "evidence": {
             "count": 0
           }
@@ -1878,8 +1870,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:12.463Z",
-          "latencyMs": 216,
+          "checkedAt": "2026-07-16T03:25:31.491Z",
+          "latencyMs": 218,
           "evidence": {
             "count": 50
           }
@@ -1894,8 +1886,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:12.910Z",
-          "latencyMs": 447,
+          "checkedAt": "2026-07-16T03:25:31.673Z",
+          "latencyMs": 182,
           "evidence": {
             "count": 50
           }
@@ -1910,8 +1902,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:13.065Z",
-          "latencyMs": 155,
+          "checkedAt": "2026-07-16T03:25:31.791Z",
+          "latencyMs": 118,
           "evidence": {
             "present": true,
             "keys": [
@@ -2008,12 +2000,12 @@
       "description": "Stream reattachment registry and debug run index.",
       "publicSummary": "Stream and debug inspection endpoints are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:52:11.865Z",
+      "lastCheckedAt": "2026-07-16T03:25:30.886Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 113,
+      "latencyP95Ms": 96,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -2026,8 +2018,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:11.752Z",
-          "latencyMs": 112,
+          "checkedAt": "2026-07-16T03:25:30.790Z",
+          "latencyMs": 90,
           "evidence": {
             "count": 0
           }
@@ -2042,8 +2034,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:52:11.865Z",
-          "latencyMs": 113,
+          "checkedAt": "2026-07-16T03:25:30.886Z",
+          "latencyMs": 96,
           "evidence": {
             "keys": [
               "projects"
@@ -2060,7 +2052,7 @@
       "description": "Existing Playwright and benchmark eval summaries produced by AURA's eval lanes.",
       "publicSummary": "AURA eval artifacts are being produced and retained.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:59:40.872Z",
+      "lastCheckedAt": "2026-07-16T03:33:10.128Z",
       "checksPassed": 2,
       "checksTotal": 2,
       "checksFailed": 0,
@@ -2078,8 +2070,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "3/4 eval summary artifacts found",
-          "checkedAt": "2026-07-16T00:59:40.871Z",
-          "latencyMs": 0,
+          "checkedAt": "2026-07-16T03:33:10.127Z",
+          "latencyMs": 1,
           "evidence": {
             "files": [
               {
@@ -2089,19 +2081,19 @@
               {
                 "file": "infra/evals/reports/baselines/smoke-summary.json",
                 "exists": true,
-                "mtime": "2026-07-16T00:51:51.360Z",
+                "mtime": "2026-07-16T03:25:12.525Z",
                 "size": 2796
               },
               {
                 "file": "infra/evals/reports/baselines/chat-core-summary.json",
                 "exists": true,
-                "mtime": "2026-07-16T00:51:51.360Z",
+                "mtime": "2026-07-16T03:25:12.525Z",
                 "size": 11513
               },
               {
                 "file": "infra/evals/reports/baselines/workflow-summary.json",
                 "exists": true,
-                "mtime": "2026-07-16T00:51:51.360Z",
+                "mtime": "2026-07-16T03:25:12.525Z",
                 "size": 2219
               }
             ],
@@ -2119,7 +2111,7 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:40.872Z",
+          "checkedAt": "2026-07-16T03:33:10.128Z",
           "latencyMs": 1,
           "evidence": {
             "registryPresent": true,
@@ -2144,12 +2136,12 @@
       "description": "Public AURA pages, observability snapshot JSON, and marketing routes.",
       "publicSummary": "AURA's public web surfaces are reachable.",
       "status": "operational",
-      "lastCheckedAt": "2026-07-16T00:59:40.871Z",
+      "lastCheckedAt": "2026-07-16T03:33:10.126Z",
       "checksPassed": 4,
       "checksTotal": 4,
       "checksFailed": 0,
       "checksUnknown": 0,
-      "latencyP95Ms": 1144,
+      "latencyP95Ms": 1005,
       "message": "All required checks are passing.",
       "checks": [
         {
@@ -2162,8 +2154,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Informational runtime check",
-          "checkedAt": "2026-07-16T00:59:39.553Z",
-          "latencyMs": 122,
+          "checkedAt": "2026-07-16T03:33:08.942Z",
+          "latencyMs": 70,
           "evidence": {
             "schemaVersion": 1,
             "overall": "major_outage",
@@ -2172,7 +2164,7 @@
             "featureCount": 19,
             "totalsFeatures": 19,
             "unknownFeatureCount": 0,
-            "snapshotAgeMinutes": 132,
+            "snapshotAgeMinutes": 150,
             "hasLiveSource": true,
             "hasNonUnknownFeatureData": true,
             "snapshotUrl": "https://cypher-asi.github.io/aura-os/observability/status.json",
@@ -2189,8 +2181,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:39.431Z",
-          "latencyMs": 268,
+          "checkedAt": "2026-07-16T03:33:08.872Z",
+          "latencyMs": 334,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -2207,8 +2199,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:39.727Z",
-          "latencyMs": 174,
+          "checkedAt": "2026-07-16T03:33:09.121Z",
+          "latencyMs": 179,
           "evidence": {
             "status": 200,
             "hasAppShell": true,
@@ -2225,8 +2217,8 @@
           "status": "pass",
           "featureStatus": "operational",
           "message": "Check passed",
-          "checkedAt": "2026-07-16T00:59:40.871Z",
-          "latencyMs": 1144,
+          "checkedAt": "2026-07-16T03:33:10.126Z",
+          "latencyMs": 1005,
           "evidence": {
             "allRoutesOk": true,
             "routeCount": 8,
@@ -2283,7 +2275,7 @@
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-create:ffc55afc8158",
+      "id": "remote-agents:production-api:remote-agent-create:9b83a5ca7dec",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-create",
@@ -2292,171 +2284,168 @@
       "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-07-16T00:59:41.018Z",
+      "generatedAt": "2026-07-16T03:33:10.316Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "high",
-      "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in production-api at 2026-07-16T00:52–00:59Z because every pod submitted for remote agent creation was rejected by the Kubernetes scheduler: 2 of 6 nodes reported Insufficient kata.peerpods.io/vm capacity and the remaining 4 nodes did not match the pod's node affinity/selector. No preemption was possible, leaving pods unscheduled for 138–148 seconds before the eval timed out. Because the pod never scheduled, no VM was provisioned, and the eval runner never wrote any evidence (orgId, agentId, vmIdPresent, remoteState), causing a total contract gap against the expected-output contract defined in infra/evals/status/check-expectations.json.",
-      "rootCause": "The Kubernetes cluster backing the remote-agent swarm has exhausted its allocatable kata.peerpods.io/vm resource slots on the two nodes that carry that resource label. The remaining four nodes are excluded by the pod's node affinity/selector, so no node in the 6-node cluster can accept a new remote-agent pod. This is a cluster-level resource exhaustion or misconfiguration condition, not an eval infrastructure defect. The eval failure is a direct and accurate reflection of the inability to schedule any remote-agent pod in the production-api environment at the time of the run.",
+      "summary": "All three remote-agent checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in the production-api environment because every pod submitted for remote agent creation was rejected as Unschedulable: the 2 nodes carrying the kata.peerpods.io/vm resource reported insufficient capacity, and the remaining 4 nodes did not match the pod's node affinity or selector. No evidence (orgId, agentId, vmIdPresent, remoteState) was collected because the pod never left the pending state, meaning the agent VM was never provisioned.",
+      "rootCause": "The Kubernetes cluster backing the remote-agent swarm has exhausted the kata.peerpods.io/vm extended resource on the 2 nodes that carry it. With 0/6 nodes available and preemption unable to free capacity, every remote-agent pod is stuck unscheduled. This is a cluster-level resource exhaustion condition localized to the kata peer-pods VM resource pool, not a code defect in the eval runner or the API surface. The eval failure is a direct reflection of this infrastructure constraint: because no pod ever reached a running state, the runner could not collect any of the four required evidence fields, causing the expected-output contract to report all evidence as missing.",
       "proof": [
-        "failed-check.message: '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.' — the scheduler explicitly names the resource and the node count.",
-        "failed-check.timing: latencyMs=141093, status=fail — the pod was stuck unscheduled for 138s before the check ended, confirming no scheduling occurred within the eval window.",
-        "failed-check.evidence: empty object {} — no evidence keys were written, consistent with the runner never reaching the post-scheduling code path in infra/evals/status/run-status-probes.mjs (lines 1884–1885) where orgId and agent creation occur.",
-        "expected-output.missing-required-evidence: all four required fields (orgId, agentId, vmIdPresent, remoteState) are absent, confirming the agent pod never reached a state where the runner could collect VM or state evidence.",
-        "sibling.remote-agent-state: identical scheduler message ('2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector'), latencyMs=151443, empty evidenceKeys — independent pod submission for the state check hit the same exhaustion.",
-        "sibling.remote-agent-runtime: identical scheduler message, latencyMs=151189, empty evidenceKeys — a third independent pod submission also failed to schedule, ruling out a transient single-pod anomaly.",
-        "source-context.infra/evals/status/run-status-probes.mjs:1877-1885: the runner calls createAgent(args, track, 'remote', null, orgId) at line 1885; this call is the trigger for pod submission. The scheduler error precedes any evidence write, so all downstream evidence fields remain unset.",
-        "source-context.infra/evals/status/check-expectations.json:250-258: the contract at line 256 requires vmIdPresent and remoteState; both are absent because the VM was never allocated."
+        "failed-check.message: '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.' — the scheduler message explicitly names resource exhaustion on the kata.peerpods.io/vm extended resource.",
+        "sibling.remote-agent-state: identical Unschedulable root cause, latencyMs=147890, endedAt=2026-07-16T03:30:35.580Z — a second independent pod submission hit the same capacity wall.",
+        "sibling.remote-agent-runtime: identical Unschedulable root cause, latencyMs=150819, endedAt=2026-07-16T03:33:06.399Z — a third independent pod submission also failed to schedule.",
+        "failed-check.evidence: empty object {} — no evidence was written because the pod never started, so orgId, agentId, vmIdPresent, and remoteState were never populated.",
+        "expected-output.missing-required-evidence: all four required fields (orgId, agentId, vmIdPresent, remoteState) are absent, consistent with the probe aborting before createAgent could return.",
+        "failed-check.timing: latencyMs=155899 — the check ran for ~156 s before timing out, which matches the scheduler's reported 150 s unscheduled window.",
+        "source-context.infra/evals/status/run-status-probes.mjs:1884-1885: the runner calls requireOrgId then createAgent with machineType='remote'; if createAgent blocks waiting for a pod that never schedules, no evidence is written and the check fails.",
+        "source-context.infra/evals/status/features.json:183: remote-agent-create is marked required=true with outageLatencyMs=360000; the observed latency of 155899 ms is within the warning threshold but the scheduling failure itself causes the hard fail."
       ],
       "possibleCauses": [
-        "Primary — kata.peerpods.io/vm resource slots exhausted on the two eligible nodes: existing remote-agent pods are consuming all available VM slots and have not been released, leaving zero capacity for new pods. This is the most direct reading of '2 Insufficient kata.peerpods.io/vm' with no preemption victims available.",
-        "Secondary — node affinity/selector mismatch on 4 of 6 nodes: the remote-agent pod spec requires a node label or taint that only 2 nodes carry (the kata.peerpods.io/vm nodes). If those 2 nodes were recently cordoned, drained, or had their resource quota reduced, effective schedulable capacity would drop to zero even if the resource label is present.",
-        "Tertiary — kata.peerpods.io/vm resource quota or limit was reduced at the cluster or namespace level: an administrator change to ResourceQuota or the node's advertised capacity for this extended resource could reduce the allocatable count below current demand without removing existing pods.",
-        "Quaternary — leaked or zombie remote-agent pods from prior eval runs are holding kata.peerpods.io/vm slots: if the withCleanup path in infra/evals/status/run-status-probes.mjs failed to delete pods from a previous run, those pods would continue to consume slots and block new scheduling."
+        "Primary — kata.peerpods.io/vm resource pool exhausted on the 2 eligible nodes: all available VM slots are occupied by existing agents or leaked pods, leaving no capacity for new scheduling requests. This is directly stated in the scheduler message (failed-check.message).",
+        "Secondary — node affinity or selector misconfiguration: the 4 remaining nodes do not match the pod's affinity rules, meaning only 2 nodes are even eligible for remote-agent pods. If those 2 nodes lose capacity, the entire pool is unavailable. A misconfigured or overly restrictive affinity could shrink the eligible node set below what is needed.",
+        "Tertiary — leaked or zombie remote-agent pods holding kata.peerpods.io/vm slots: previously created agents that were not cleaned up may be consuming all available VM resource units, preventing new pods from scheduling.",
+        "Quaternary — cluster under-provisioning: the total kata.peerpods.io/vm capacity across the 2 eligible nodes may be too small for the concurrent load, requiring additional nodes or increased per-node VM quotas."
       ],
       "reproductionSteps": [
         {
-          "label": "Re-run only the remote-agent-create eval against production-api",
+          "label": "Re-run the failing eval in isolation against production-api",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-          "details": "Use the same environment variables as the scheduled observability workflow to confirm the scheduler error recurs."
+          "details": "Use the same environment variables as the scheduled observability workflow to reproduce the scheduling failure."
         },
         {
-          "label": "Inspect current pod scheduling state for remote-agent pods in the cluster",
-          "command": "kubectl get pods -A -l app=remote-agent --field-selector=status.phase=Pending -o wide",
-          "details": "Identify any pods stuck in Pending state that are consuming or blocking kata.peerpods.io/vm slots."
-        },
-        {
-          "label": "Check allocatable and used kata.peerpods.io/vm capacity on all nodes",
+          "label": "Inspect current kata.peerpods.io/vm resource allocation across all cluster nodes",
           "command": "kubectl describe nodes | grep -A5 'kata.peerpods.io/vm'",
-          "details": "Confirm how many VM slots are advertised and how many are currently allocated across the 6-node cluster."
+          "details": "Check the Allocatable and Allocated values for the kata.peerpods.io/vm extended resource on each node to confirm exhaustion."
         },
         {
-          "label": "List all running pods consuming kata.peerpods.io/vm on the two eligible nodes",
-          "command": "kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, node: .spec.nodeName, phase: .status.phase}'",
-          "details": "Identify whether leaked or long-running pods are holding all available slots."
+          "label": "List all pods currently consuming kata.peerpods.io/vm resources",
+          "command": "kubectl get pods --all-namespaces -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, phase: .status.phase}'",
+          "details": "Identify any running, pending, or zombie pods holding VM slots that should have been released."
         },
         {
-          "label": "Run all three remote-agent sibling checks together to confirm shared scheduling failure",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-          "details": "Verify that all three checks reproduce the same scheduler message simultaneously."
+          "label": "Check for unschedulable remote-agent pods still in Pending state",
+          "command": "kubectl get pods --all-namespaces --field-selector=status.phase=Pending | grep remote-agent",
+          "details": "Confirm whether the eval-submitted pods are still pending or were cleaned up by the withCleanup wrapper."
+        },
+        {
+          "label": "Review node affinity rules applied to remote-agent pods",
+          "details": "Inspect the pod spec produced by createAgent in infra/evals/status/run-status-probes.mjs to verify which node selector or affinity labels are required and whether 4 nodes are intentionally excluded."
         }
       ],
       "affectedAreas": [
         {
-          "label": "Kubernetes remote-agent pod scheduling — kata.peerpods.io/vm extended resource",
-          "reason": "The scheduler message in failed-check.message and both sibling check messages explicitly names kata.peerpods.io/vm as the exhausted resource on the 2 nodes that carry it."
+          "label": "kata.peerpods.io/vm resource pool (Kubernetes cluster)",
+          "reason": "The scheduler explicitly reports 'Insufficient kata.peerpods.io/vm' on the 2 nodes eligible for remote-agent pods, making this the direct blocking resource (failed-check.message)."
         },
         {
           "label": "Remote Agents feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
           "path": "infra/evals/status/features.json",
-          "reason": "All three checks registered under the remote-agents feature at lines 183–185 failed with the identical scheduler error, indicating the entire feature's pod-scheduling path is blocked.",
-          "details": "remote-agent-create (required=true), remote-agent-state (required=true), remote-agent-runtime (required=false) all failed."
+          "reason": "All three checks under the remote-agents feature failed with the same Unschedulable cause (sibling.remote-agent-state, sibling.remote-agent-runtime), indicating the entire remote-agent provisioning path is blocked."
         },
         {
           "label": "Eval runner — remote-agent-create probe branch",
           "path": "infra/evals/status/run-status-probes.mjs",
-          "reason": "The runner branch at lines 1880–1885 calls createAgent with machineType='remote', which submits the pod that the scheduler rejects. No evidence is written because execution never advances past pod scheduling.",
-          "details": "Lines 1884–1885: requireOrgId and createAgent are called but the pod never becomes schedulable."
+          "reason": "The probe at line 1880-1885 calls createAgent with machineType='remote'; because the pod never schedules, no evidence is written and the check fails the expected-output contract (source-context.infra/evals/status/run-status-probes.mjs:1880-1885)."
         },
         {
-          "label": "Expected-output contract — remote-agent-create",
+          "label": "Expected-output contract for remote-agent-create",
           "path": "infra/evals/status/check-expectations.json",
-          "reason": "The contract at lines 254–259 requires vmIdPresent=true and remoteState in [running, idle, ready]. Both assertions fail because the VM is never allocated.",
-          "details": "All four required evidence fields (orgId, agentId, vmIdPresent, remoteState) are missing."
+          "reason": "The contract at line 254-259 requires orgId, agentId, vmIdPresent=true, and remoteState in {running, idle, ready}; all four are absent because the pod never started (expected-output.missing-required-evidence)."
+        },
+        {
+          "label": "Node affinity / selector configuration for remote-agent pods",
+          "reason": "4 of 6 nodes are excluded by the pod's node affinity or selector, reducing the eligible pool to only 2 nodes. If those 2 are saturated, no fallback exists (failed-check.message)."
         }
       ],
       "recommendedNextActions": [
-        "Immediately check kata.peerpods.io/vm allocatable vs. used capacity on the two eligible nodes (kubectl describe nodes) to determine whether slots are exhausted by running workloads or misconfigured to zero.",
-        "Audit all pods currently consuming kata.peerpods.io/vm resources in the cluster; terminate any leaked or zombie pods from prior eval runs that the withCleanup path in infra/evals/status/run-status-probes.mjs may have failed to delete.",
-        "Determine whether the 4 nodes excluded by node affinity/selector were recently added, relabeled, or had their kata.peerpods.io/vm label removed; if so, restore the label or expand the affinity selector to increase the schedulable pool.",
-        "If capacity is genuinely exhausted by legitimate workloads, evaluate scaling the kata.peerpods.io/vm node pool (adding nodes or increasing the per-node VM slot quota) to restore headroom for eval and production pods.",
-        "Re-run all three remote-agent checks after any remediation to confirm scheduling succeeds and all four required evidence fields (orgId, agentId, vmIdPresent, remoteState) are collected.",
-        "Review the withCleanup logic in infra/evals/status/run-status-probes.mjs to ensure eval-created remote-agent pods are reliably deleted even when the pod never reaches a running state, preventing future slot leakage."
+        "Immediately inspect kata.peerpods.io/vm resource allocation on the 2 eligible nodes to determine current capacity headroom and identify which pods are consuming VM slots.",
+        "Audit for leaked or zombie remote-agent pods across all namespaces that may be holding kata.peerpods.io/vm slots without serving active workloads; terminate any confirmed orphans.",
+        "Determine whether the 4-node exclusion via node affinity is intentional (only 2 nodes have kata peer-pods support) or a misconfiguration; if intentional, evaluate whether additional kata-capable nodes need to be added to the cluster.",
+        "Review the kata.peerpods.io/vm quota per node and assess whether the total pool size is sufficient for the expected concurrent remote-agent load, including eval probes running alongside production workloads.",
+        "Verify that the eval runner's withCleanup wrapper is correctly releasing kata.peerpods.io/vm resources after each probe run so that eval-created agents do not permanently consume capacity.",
+        "Once capacity is restored or expanded, re-run the three remote-agent checks to confirm all required evidence fields (orgId, agentId, vmIdPresent, remoteState) are collected and assertions pass."
       ],
       "recommendedVerifierProbes": [
         {
-          "label": "Re-run remote-agent-create eval in isolation",
+          "label": "Check kata.peerpods.io/vm allocatable vs. allocated on all nodes",
+          "command": "kubectl describe nodes | grep -A10 'kata.peerpods.io'",
+          "reason": "Directly confirms whether the VM resource pool is exhausted or misconfigured, proving or disproving the primary cause."
+        },
+        {
+          "label": "List all pods holding kata.peerpods.io/vm resource slots",
+          "command": "kubectl get pods --all-namespaces -o json | jq '.items[] | select(any(.spec.containers[]; .resources.requests[\"kata.peerpods.io/vm\"] != null)) | {name:.metadata.name, ns:.metadata.namespace, phase:.status.phase}'",
+          "reason": "Identifies whether leaked or zombie pods are consuming all available VM slots, supporting or ruling out the resource-leak sub-cause."
+        },
+        {
+          "label": "Re-run the failing eval after confirming node capacity",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create npm run status:probes",
-          "reason": "Confirms whether the scheduler error persists or was transient. A repeat failure with the same message proves sustained capacity exhaustion.",
-          "details": "Supplied by verifierContext.recommendedVerifierProbes and reproductionHint."
+          "reason": "Verifies whether the scheduling failure persists or resolves once capacity is understood; a pass would confirm the issue was transient."
         },
         {
-          "label": "Describe all 6 cluster nodes for kata.peerpods.io/vm capacity",
-          "command": "kubectl describe nodes | grep -A5 'kata.peerpods.io/vm'",
-          "reason": "Directly measures allocatable vs. used VM slots on each node, confirming or refuting the exhaustion hypothesis."
+          "label": "Run all three remote-agent sibling checks together to confirm shared failure mode",
+          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
+          "reason": "Confirms that all three checks continue to fail with the same Unschedulable message, ruling out an isolated probe-specific defect."
         },
         {
-          "label": "List pods currently holding kata.peerpods.io/vm resources",
-          "command": "kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, node: .spec.nodeName, phase: .status.phase}'",
-          "reason": "Identifies whether leaked eval pods or long-running workloads are consuming all available slots, supporting or refuting the zombie-pod possible cause."
-        },
-        {
-          "label": "Check for Pending remote-agent pods across all namespaces",
-          "command": "kubectl get pods -A --field-selector=status.phase=Pending -o wide | grep remote-agent",
-          "reason": "Reveals whether prior eval runs left unscheduled pods that are queued and blocking capacity."
-        },
-        {
-          "label": "Inspect node affinity/selector on the remote-agent pod spec",
-          "reason": "Confirms which node label or taint the pod requires, and verifies that only 2 of 6 nodes carry that label. This would quantify the effective scheduling pool size and whether it has shrunk.",
-          "details": "Retrieve the pod spec from the API server or the agent creation code path in infra/evals/status/run-status-probes.mjs."
+          "label": "Inspect node affinity and selector on the remote-agent pod spec",
+          "reason": "Determines whether the 4-node exclusion is intentional (correct affinity for kata nodes) or a misconfiguration that is shrinking the eligible pool unnecessarily.",
+          "details": "Retrieve the pod spec generated by createAgent for machineType='remote' and verify which node labels are required, confirming why 4 of 6 nodes are ineligible."
         }
       ],
       "whatWouldDisproveThis": [
-        "If kubectl describe nodes showed kata.peerpods.io/vm slots available (allocatable > used) on the two eligible nodes at the time of the eval run, the exhaustion hypothesis would be disproved and the cause would shift to a pod spec or API error.",
-        "If the scheduler message changed on a re-run to a different error (e.g., image pull failure, API authentication error, or quota error unrelated to kata.peerpods.io/vm), the current diagnosis would not apply.",
-        "If the 4 nodes that 'didn't match Pod's node affinity/selector' were shown to actually carry the kata.peerpods.io/vm label, the affinity/selector mismatch scope would be wider than currently understood.",
-        "If no running or pending pods were found consuming kata.peerpods.io/vm slots, the exhaustion would point to a misconfigured or zero-valued resource advertisement on the nodes rather than actual consumption.",
-        "If the remote-agent-create eval passed on a subsequent run without any cluster changes, the failure would be transient (e.g., a brief spike in concurrent pod demand) rather than a sustained capacity shortfall."
+        "If kubectl describe nodes shows available (unallocated) kata.peerpods.io/vm capacity on the 2 eligible nodes, resource exhaustion is not the cause and the scheduler message would need re-examination.",
+        "If a freshly submitted remote-agent pod schedules and reaches Running state immediately after the eval failure, the exhaustion was transient (e.g., a burst of concurrent requests) rather than a sustained capacity ceiling.",
+        "If the node affinity rules on the pod spec are found to be incorrect and actually exclude all 6 nodes (not just 4), the root cause would shift to a misconfiguration in the pod template rather than resource exhaustion.",
+        "If the eval runner's withCleanup function is found to have a bug that leaves pods in a broken state before the scheduling attempt, the failure could be an eval infrastructure defect rather than a cluster capacity issue.",
+        "If no kata.peerpods.io/vm resource is registered on any node (i.e., the extended resource was removed from the cluster), the cause would be a missing resource registration rather than exhaustion of an existing pool."
       ],
       "followUpEvals": [
-        "Add a pre-flight eval that checks kata.peerpods.io/vm allocatable capacity across all nodes before attempting remote-agent creation, and emits a warning if available slots fall below a minimum threshold.",
-        "Add an eval that counts currently running and pending remote-agent pods and alerts if the count approaches the total kata.peerpods.io/vm slot limit, providing early warning before full exhaustion.",
-        "Add a cleanup-verification eval that confirms no remote-agent pods from prior eval runs remain in Running or Pending state after the withCleanup path executes, catching slot leakage proactively.",
-        "Add a node-affinity coverage eval that verifies the number of nodes matching the remote-agent pod's affinity/selector is at least a configured minimum (e.g., 2), alerting if nodes are removed from the eligible pool."
+        "Add a pre-flight eval that checks kata.peerpods.io/vm allocatable vs. allocated capacity across all nodes before attempting remote-agent creation, surfacing resource exhaustion as a distinct warning before the pod submission times out.",
+        "Add an eval that counts the number of currently running remote-agent pods and compares it against the total kata.peerpods.io/vm pool size, alerting when utilization exceeds a configurable threshold (e.g., 80%).",
+        "Add a zombie-pod detection eval that identifies remote-agent pods in Running or Pending state older than a configurable TTL and flags them for cleanup, preventing resource leaks from accumulating.",
+        "Add a node-eligibility eval that verifies at least N nodes match the remote-agent pod's node affinity selector, alerting when the eligible node count drops below a safe minimum."
       ],
       "evidenceDigest": {
-        "message": "pod stuck unscheduled for 138s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-        "latencyMs": 141093,
+        "message": "pod stuck unscheduled for 150s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+        "latencyMs": 155899,
         "evidence": {}
       }
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-state:39b56b9768db",
+      "id": "remote-agents:production-api:remote-agent-state:f97b8d31c517",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-state",
       "runtimeEnvironment": "production-api",
-      "title": "Remote Agents: Kata PeerPods VM Resource Exhaustion Blocking All Pod Scheduling (remote-agent-state, remote-agent-create, remote-agent-runtime)",
+      "title": "Remote Agent Pod Scheduling Failure: Exhausted kata.peerpods.io/vm Capacity Across All Three Remote-Agent Checks",
       "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "partial_outage",
-      "generatedAt": "2026-07-16T00:59:41.018Z",
+      "generatedAt": "2026-07-16T03:33:10.316Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "high",
-      "summary": "All three remote-agents eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in production-api at 2026-07-16T00:54–00:59Z with an identical Kubernetes scheduling error: the cluster's 6 nodes could not schedule the eval probe pod because 2 nodes reported Insufficient kata.peerpods.io/vm capacity and the remaining 4 nodes did not match the pod's node affinity/selector. Because the pod never became schedulable, the agent was never created, and the remote-agent-state eval runner could not collect any evidence (orgId, agentId, readyState, state), causing a full contract gap against the expected-output contract defined in infra/evals/status/check-expectations.json line 264.",
-      "rootCause": "The Kubernetes cluster serving the remote-agents swarm backend has exhausted its allocatable kata.peerpods.io/vm resource slots across the 2 nodes that carry that resource class. The eval probe pod requires a kata peer-pod VM slot and also carries a node affinity/selector that the other 4 nodes do not satisfy. With zero preemption victims available, the pod remained Unschedulable for ~148 s before the eval timed out. This is a Kubernetes infrastructure capacity constraint localized to the remote-agents VM node pool in the production-api environment; it is an eval-detected infrastructure failure, not a confirmed user-traffic outage (no user-traffic or incident signals are present in the supplied evidence).",
+      "summary": "All three remote-agent eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in the production-api environment with an identical Kubernetes scheduler message reporting zero available nodes: 2 nodes have insufficient kata.peerpods.io/vm resources and 4 nodes do not match the pod's node affinity/selector. Because the pod could never be scheduled, the eval runner's createAgent call never returned an agent, so no evidence (orgId, agentId, readyState, state) was written and the expected-output contract was fully violated.",
+      "rootCause": "The Kubernetes cluster backing the remote-agent swarm has exhausted its kata.peerpods.io/vm resource quota on the 2 nodes that match the pod's affinity/selector. With 0 of 6 nodes available and preemption unable to free capacity, every remote-agent pod submitted during this eval window was left in Unschedulable state for ~144–150 seconds before the eval timed out. This is an infrastructure-layer capacity constraint, not an application code defect. No evidence of a user-traffic or production incident signal is present in the packet; this is an eval-level failure observed by the observability probe.",
       "proof": [
-        "failed-check.message: 'pod stuck unscheduled for 148s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.'",
-        "failed-check.timing: status=fail latencyMs=151443 endedAt=2026-07-16T00:57:05.601Z — eval ran for ~151 s, well past the 148 s unschedulable window, confirming the pod never became ready.",
-        "failed-check.evidence: raw evidence object is empty ({}) — no orgId, agentId, readyState, or state was ever collected, consistent with the agent pod never starting.",
-        "expected-output.missing-required-evidence: all 4 required evidence keys (orgId, agentId, readyState, state) are absent, matching the contract defined at infra/evals/status/check-expectations.json line 264.",
-        "sibling.remote-agent-create: same Unschedulable / Insufficient kata.peerpods.io/vm message, latencyMs=141093, endedAt=2026-07-16T00:54:34.158Z — the create step failed first with the same scheduler error.",
-        "sibling.remote-agent-runtime: same Unschedulable / Insufficient kata.peerpods.io/vm message, latencyMs=151189, endedAt=2026-07-16T00:59:36.790Z — the runtime step also failed with the same scheduler error.",
-        "source-context.infra/evals/status/run-status-probes.mjs:1897-1905: runner calls createAgent(args, track, 'remote', null, orgId) at line 1905, which is the step that would submit the pod; the scheduler rejection prevents this from returning any agent identity.",
-        "source-context.infra/evals/status/features.json:180-188: remote-agent-state is marked required=true with outageAfterFailures=2 on the remote-agents feature; two required sibling checks (remote-agent-create, remote-agent-state) have now failed, meeting the outage threshold."
+        "failed-check.message: '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.' — the scheduler explicitly names kata.peerpods.io/vm exhaustion as the blocking condition.",
+        "failed-check.timing: latencyMs=147890, status=fail — the eval ran for ~148 s before failing, consistent with the pod being stuck unscheduled for 144 s as stated in the message.",
+        "sibling.remote-agent-create: same scheduler error, pod stuck for 150 s, latencyMs=155899 — confirms the scheduling failure is not isolated to the state-polling probe.",
+        "sibling.remote-agent-runtime: same scheduler error, pod stuck for 146 s, latencyMs=150819 — all three checks share the same root infrastructure constraint.",
+        "expected-output.missing-required-evidence: all four required evidence keys (orgId, agentId, readyState, state) are absent — consistent with createAgent never completing because the pod never started.",
+        "source-context.infra/evals/status/run-status-probes.mjs:1897-1905: runner calls createAgent(args, track, 'remote', null, orgId) immediately after requireOrgId — if the pod is never scheduled, this call blocks and eventually fails, preventing any evidence from being written.",
+        "source-context.infra/evals/status/check-expectations.json:258-266: remote-agent-state contract requires orgId, agentId, readyState, state — none were produced because agent creation never succeeded."
       ],
       "possibleCauses": [
-        "Primary — kata.peerpods.io/vm resource exhaustion on the 2 eligible nodes: all available VM slots are consumed by existing workloads, leaving no capacity for the eval probe pod. This is directly stated in the scheduler message (evidence: failed-check.message, sibling.remote-agent-create, sibling.remote-agent-runtime).",
-        "Secondary — node affinity/selector mismatch on the remaining 4 nodes: the eval probe pod's scheduling constraints restrict it to the 2 kata-capable nodes, so even if generic capacity existed elsewhere the pod could not be placed there. Both constraints must be resolved together.",
-        "Tertiary — transient spike in concurrent remote agent workloads consuming all VM slots at the time of the eval run: if other tenants or internal jobs were holding VM slots, the eval window may have coincided with peak utilization rather than a permanent capacity deficit.",
-        "Lower confidence — a misconfigured or overly restrictive node affinity/selector on the eval probe pod itself: if the selector was recently tightened it could artificially restrict scheduling to only the 2 kata nodes. No source evidence in the supplied artifacts confirms a selector change; sourceDiscovery.suspectChanges is empty."
+        "PRIMARY — kata.peerpods.io/vm resource exhaustion on the 2 affinity-matching nodes: the cluster has a fixed quota of peer-pod VM slots; concurrent workloads or a prior eval run consumed all available slots, leaving none for the probe pods. This is directly stated in the scheduler message (failed-check.message).",
+        "SECONDARY — Node affinity/selector mismatch on the remaining 4 nodes: the remote-agent pod spec requires a node label or taint that only 2 nodes satisfy, and those 2 are already at VM capacity. If the affinity rules were broadened or more matching nodes were added, scheduling could succeed even without increasing per-node VM quota.",
+        "TERTIARY — Cluster under-provisioning for concurrent eval load: if multiple eval runs or production workloads compete for the same kata.peerpods.io/vm slots simultaneously, transient exhaustion can occur without a persistent capacity deficit."
       ],
       "reproductionSteps": [
         {
@@ -2465,102 +2454,92 @@
           "details": "Use the same environment variables as the scheduled observability workflow. Observe whether the pod scheduling error recurs or resolves."
         },
         {
-          "label": "Re-run all three remote-agents checks together to confirm shared failure scope",
+          "label": "Re-run all three remote-agent checks together to confirm shared scheduling dependency",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-          "details": "Confirms whether all three checks fail with the same Unschedulable message, establishing the shared infrastructure dependency."
+          "details": "If all three fail with the same kata.peerpods.io/vm message, the shared infrastructure constraint is confirmed."
         },
         {
-          "label": "Inspect current kata.peerpods.io/vm allocatable and used capacity on the 2 eligible nodes",
-          "details": "Use kubectl to describe the 2 nodes that carry the kata.peerpods.io/vm extended resource and compare Allocatable vs. Requests to determine whether slots are fully consumed."
+          "label": "Inspect current kata.peerpods.io/vm resource allocation on the cluster",
+          "details": "Query the Kubernetes cluster for node-level kata.peerpods.io/vm capacity and current allocations to determine whether the quota is exhausted at time of re-run."
         },
         {
-          "label": "List all pods currently consuming kata.peerpods.io/vm slots in the cluster",
-          "details": "Use kubectl to identify which workloads hold the VM slots and whether any are stale, stuck, or eligible for eviction."
-        },
-        {
-          "label": "Review the pod spec for the remote-agent eval probe to confirm node affinity/selector configuration",
-          "details": "Inspect the pod template used by createAgent(..., 'remote', ...) in infra/evals/status/run-status-probes.mjs to verify the node selector matches the 2 kata-capable nodes and has not been inadvertently narrowed."
+          "label": "Check for concurrent workloads consuming kata.peerpods.io/vm slots",
+          "details": "List all pods requesting kata.peerpods.io/vm resources in the namespace at the time of the failure window (2026-07-16T03:28–03:33Z) to identify competing consumers."
         }
       ],
       "affectedAreas": [
         {
-          "label": "Kubernetes kata.peerpods.io/vm node pool (production-api)",
-          "reason": "The scheduler explicitly reports 2 nodes with Insufficient kata.peerpods.io/vm and 0 preemption victims, indicating the VM resource class is fully consumed on the only eligible nodes (evidence: failed-check.message)."
+          "label": "Remote Agent pod scheduling — kata.peerpods.io/vm resource pool",
+          "reason": "The Kubernetes scheduler explicitly reported Insufficient kata.peerpods.io/vm on the 2 affinity-matching nodes, blocking all remote-agent pod starts (failed-check.message, sibling.remote-agent-create, sibling.remote-agent-runtime)."
         },
         {
           "label": "Remote Agents feature — all three eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
           "path": "infra/evals/status/features.json",
-          "reason": "All three checks under the remote-agents feature failed with the same scheduling error. remote-agent-create and remote-agent-state are required=true; with degradedAfterFailures=1 and outageAfterFailures=2, the feature has crossed the outage threshold (source-context.infra/evals/status/features.json:180-188)."
+          "reason": "All three checks registered under the remote-agents feature (features.json lines 183–185) failed with the same scheduling error, indicating the entire remote-agent provisioning path is blocked when VM capacity is exhausted."
         },
         {
-          "label": "Eval runner — createAgent remote path",
+          "label": "Eval runner — createAgent call for remote agent type",
           "path": "infra/evals/status/run-status-probes.mjs",
-          "reason": "The runner branch at line 1905 calls createAgent(..., 'remote', ...) which submits the pod that the scheduler cannot place. No evidence (orgId, agentId, readyState, state) is ever written because the pod never starts (source-context.infra/evals/status/run-status-probes.mjs:1897-1905)."
+          "reason": "The runner branch at line 1905 calls createAgent with type 'remote'; this call cannot complete when the backing pod is unschedulable, causing all downstream evidence writes to be skipped (source-context.infra/evals/status/run-status-probes.mjs:1897-1905)."
         },
         {
-          "label": "Expected-output contract for remote-agent-state",
+          "label": "Expected-output contract — remote-agent-state",
           "path": "infra/evals/status/check-expectations.json",
-          "reason": "The contract at line 264 requires orgId, agentId, readyState, and state; all four are missing because the upstream pod scheduling failure prevents any agent lifecycle from completing (expected-output.missing-required-evidence)."
+          "reason": "The contract at line 264 requires orgId, agentId, readyState, state; all four are missing because agent creation never succeeded (expected-output.missing-required-evidence)."
         }
       ],
       "recommendedNextActions": [
-        "Immediately inspect the 2 kata.peerpods.io/vm-capable nodes for current slot utilization using kubectl describe node; if slots are fully consumed, identify and evict any stale or leaked pods to restore scheduling capacity.",
-        "Determine whether the kata VM node pool needs horizontal scaling (adding more kata-capable nodes or increasing the vm resource limit per node) to handle concurrent eval probe and production workload demand.",
-        "Review the node affinity/selector on the remote-agent eval probe pod to confirm it is intentionally restricted to the 2 kata nodes; if the restriction is broader than necessary, evaluate whether relaxing it (while preserving the kata runtime class requirement) would allow scheduling on additional nodes.",
-        "Re-run the three remote-agents eval checks after any capacity remediation to confirm all four required evidence keys (orgId, agentId, readyState, state) are collected and the contract passes.",
-        "Investigate whether real remote-agent provisioning requests from users were also affected during the 2026-07-16T00:54–00:59Z window by checking production request logs and error rates for the remote agent creation API; the eval failure indicates infrastructure stress but user-traffic impact is not confirmed by the supplied evidence.",
-        "Review the remote-agents feature registry thresholds (degradedAfterFailures=1, outageAfterFailures=2 in infra/evals/status/features.json lines 187-188) and confirm alerting fired appropriately given that both required checks (remote-agent-create and remote-agent-state) failed."
+        "Check current kata.peerpods.io/vm capacity on the 2 affinity-matching nodes in the production cluster; if exhausted, determine whether slots can be freed by terminating idle or leaked remote-agent pods from prior runs.",
+        "Review the node affinity/selector rules on remote-agent pods to determine whether the restriction to 2 nodes is intentional; if not, consider expanding the eligible node pool to distribute VM slot demand.",
+        "Investigate whether the eval runner's withCleanup mechanism (run-status-probes.mjs) is reliably releasing kata.peerpods.io/vm slots after each probe run; leaked pods from prior eval runs could be consuming quota.",
+        "If VM slot exhaustion is confirmed as persistent, coordinate with the infrastructure team to increase the kata.peerpods.io/vm quota on existing nodes or add additional peer-pod-capable nodes to the cluster.",
+        "Once the cluster recovers, re-run all three remote-agent checks together to confirm all three pass and that evidence (orgId, agentId, readyState, state) is fully written before closing this investigation."
       ],
       "recommendedVerifierProbes": [
         {
           "label": "Re-run remote-agent-state eval probe in isolation",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-state npm run status:probes",
-          "reason": "Determines whether the scheduling failure is persistent (capacity deficit) or was transient (slot contention at eval time). A pass on re-run with all four evidence keys present would indicate transient contention."
+          "reason": "Confirms whether the scheduling failure is persistent or was a transient capacity spike; a pass would indicate the cluster recovered, a fail with the same message confirms ongoing exhaustion."
         },
         {
-          "label": "Describe kata-capable nodes to inspect VM slot capacity",
-          "reason": "Directly confirms or refutes the resource exhaustion hypothesis. If Allocatable equals Requests, slots are fully consumed.",
-          "details": "Run kubectl describe node on each of the 2 nodes that carry kata.peerpods.io/vm and compare Allocatable vs. Requests for that extended resource."
+          "label": "Query kata.peerpods.io/vm node capacity and current usage",
+          "reason": "Directly measures whether VM slots are exhausted and on which nodes, confirming or refuting the capacity exhaustion hypothesis.",
+          "details": "Run kubectl describe nodes and filter for kata.peerpods.io/vm Allocatable and Requests fields on all 6 nodes in the cluster."
         },
         {
-          "label": "List pods consuming kata.peerpods.io/vm slots",
-          "reason": "Identifies whether slot holders are legitimate running workloads or leaked/stuck pods that could be evicted to restore capacity.",
-          "details": "Run kubectl get pods --all-namespaces with a field selector or resource filter for kata.peerpods.io/vm to enumerate current consumers and identify any stale or stuck pods holding slots."
+          "label": "List all pods requesting kata.peerpods.io/vm in the relevant namespace",
+          "reason": "Identifies whether concurrent workloads or a prior eval run consumed all available VM slots, explaining the exhaustion.",
+          "details": "Run kubectl get pods --all-namespaces -o json and filter for resource requests containing kata.peerpods.io/vm to identify competing consumers at the time of the failure."
         },
         {
-          "label": "Inspect the remote agent pod spec node affinity and selector",
-          "reason": "Determines whether the 4-node affinity mismatch is expected by design or is an inadvertent over-restriction that compounds the capacity problem.",
-          "details": "Examine the pod template produced by createAgent(..., 'remote', ...) in infra/evals/status/run-status-probes.mjs to confirm which node labels are required and whether they match only the 2 kata nodes."
-        },
-        {
-          "label": "Run all three remote-agents sibling checks together",
-          "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-          "reason": "Confirms the shared failure scope and whether all three checks recover together, which would be consistent with a shared infrastructure dependency (the kata VM node pool)."
+          "label": "Inspect pod affinity/selector rules for remote-agent pods",
+          "reason": "Determines whether only 2 nodes are eligible due to affinity rules and whether broadening those rules could resolve scheduling without increasing VM quota.",
+          "details": "Retrieve the pod spec for a remote-agent pod (e.g., via kubectl get pod <pod-name> -o yaml) and compare node selector and affinity rules against the labels present on all 6 cluster nodes."
         }
       ],
       "whatWouldDisproveThis": [
-        "If kubectl describe on the 2 kata-capable nodes shows available (unallocated) kata.peerpods.io/vm slots at the time of the eval run, the resource exhaustion hypothesis would be weakened and the node affinity/selector mismatch would become the primary cause.",
-        "If the eval probe pod spec does not request kata.peerpods.io/vm as a resource, the scheduler message would need a different explanation (e.g., a runtime class or admission webhook injecting the resource request).",
-        "If a re-run of the eval immediately after the failure window succeeds and collects all four required evidence keys, the failure was transient (slot contention) rather than a persistent capacity deficit.",
-        "If the node affinity/selector on the eval probe pod was recently changed to exclude the 4 non-kata nodes, and the 2 kata nodes were already at capacity for unrelated reasons, the selector change would be a contributing cause — but no source evidence of a selector change is present in the supplied artifacts.",
-        "If other non-remote-agent checks in the same run also failed with Unschedulable errors, the problem would be broader than the kata VM node pool and would implicate general cluster capacity or a cluster-wide scheduling disruption."
+        "If the kata.peerpods.io/vm resource on the 2 affinity-matching nodes shows available capacity at the time of the failure, the exhaustion hypothesis would be weakened and the cause would shift to a misconfigured resource request or quota limit on the pod spec itself.",
+        "If a re-run of the eval immediately after the failure window succeeds without any cluster changes, it would suggest transient contention rather than a persistent capacity deficit.",
+        "If the pod scheduling error message changes on re-run (e.g., a different resource type is reported as insufficient), the kata.peerpods.io/vm exhaustion diagnosis would need to be revised.",
+        "If the node affinity/selector rules on the pod spec were recently changed to restrict scheduling to fewer nodes, and those nodes were already at capacity for unrelated reasons, the affinity misconfiguration would be the primary cause rather than raw VM quota exhaustion.",
+        "If other non-remote-agent checks in the same eval run passed and also required Kubernetes pod scheduling, it would indicate the failure is specific to the kata.peerpods.io/vm resource type rather than a general cluster scheduling outage."
       ],
       "followUpEvals": [
-        "Add a pre-flight eval check that queries kata.peerpods.io/vm allocatable vs. requested capacity across all eligible nodes and warns before slots are fully exhausted, giving earlier signal than a pod-stuck-unschedulable failure.",
-        "Add a dedicated eval that verifies at least N kata.peerpods.io/vm slots are free on the node pool before attempting remote agent creation, so capacity exhaustion is surfaced as a distinct check rather than a downstream scheduling timeout.",
-        "Add a node affinity/selector validation eval that confirms the remote-agent pod spec's node selector matches at least one Ready node in the cluster, catching selector drift independently of capacity.",
-        "Consider adding a historical trend eval that tracks kata.peerpods.io/vm slot utilization over time to detect gradual capacity creep before it causes scheduling failures."
+        "Add a pre-flight eval check that queries kata.peerpods.io/vm node capacity before attempting remote-agent creation, and emits a warning or skip result with a capacity-exhausted message instead of waiting for a pod-stuck timeout.",
+        "Add a dedicated eval check for remote-agent pod scheduling health that verifies at least one kata.peerpods.io/vm slot is available on an affinity-matching node, decoupled from the full agent lifecycle checks.",
+        "Add a cleanup verification eval that confirms no orphaned remote-agent pods remain after each probe run, catching VM slot leaks before they exhaust cluster capacity.",
+        "Introduce a historical pass/fail trend eval for remote-agent-create, remote-agent-state, and remote-agent-runtime so that repeated scheduling failures across runs are surfaced as a regression signal rather than appearing as isolated first-time failures (verifierContext.history.previousRunCount is currently 0)."
       ],
       "evidenceDigest": {
-        "message": "pod stuck unscheduled for 148s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-        "latencyMs": 151443,
+        "message": "pod stuck unscheduled for 144s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+        "latencyMs": 147890,
         "evidence": {}
       }
     },
     {
       "schemaVersion": 1,
       "kind": "llm-investigation",
-      "id": "remote-agents:production-api:remote-agent-runtime:f5bed38a2b14",
+      "id": "remote-agents:production-api:remote-agent-runtime:84198f8d5ca5",
       "featureId": "remote-agents",
       "featureLabel": "Remote Agents",
       "checkId": "remote-agent-runtime",
@@ -2569,123 +2548,128 @@
       "status": "ready",
       "checkStatus": "fail",
       "featureStatus": "degraded",
-      "generatedAt": "2026-07-16T00:59:41.018Z",
+      "generatedAt": "2026-07-16T03:33:10.316Z",
       "environment": "production",
       "source": "github-actions",
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
       "confidence": "high",
-      "summary": "All three remote-agents eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in the production-api environment at 2026-07-16T00:54–00:59Z because every pod submitted to the Kubernetes cluster was rejected as Unschedulable: the two nodes carrying the kata.peerpods.io/vm resource reported insufficient capacity, and the remaining four nodes did not match the pod's node affinity or selector. No agent pod reached a running state, so the eval runner never received any response evidence and all five required contract fields (orgId, agentId, model, provider, message) are missing. This is an eval-infrastructure failure reflecting a real Kubernetes scheduling constraint; no user-traffic or incident signals are present in the supplied evidence.",
-      "rootCause": "The Kubernetes cluster serving the remote-agents swarm backend has exhausted its kata.peerpods.io/vm resource on the two nodes that carry it (scheduler message: \"2 Insufficient kata.peerpods.io/vm\"), and the remaining four nodes are excluded by the pod's node affinity or selector rules. Because no pod can be scheduled, the createAgent call inside the eval runner (infra/evals/status/run-status-probes.mjs line 1918) never completes, the agent VM never becomes ready, and the eval times out after ~145 s returning an empty evidence object. The contract requires orgId, agentId, model, provider, and message — none of which can be populated without a running agent pod.",
+      "summary": "All three remote-agents eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime) failed in the production-api environment because the Kubernetes scheduler could not place the required kata peer-pod VM: only 2 nodes carry the kata.peerpods.io/vm resource and both reported insufficient capacity, while the remaining 4 nodes did not match the pod's node affinity or selector. The eval probe never reached the agent creation step, so no evidence (orgId, agentId, model, provider, message) was collected and the expected-output contract was entirely unmet.",
+      "rootCause": "The Kubernetes cluster backing the production-api remote-agent runtime has exhausted available kata.peerpods.io/vm capacity on the 2 eligible nodes. The scheduler message \"0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector\" (evidence: failed-check.message, sibling.remote-agent-create, sibling.remote-agent-state) is identical across all three sibling checks, confirming the failure is a shared infrastructure scheduling constraint, not an application-layer or eval-runner bug. Because the pod never scheduled, the createAgent call in run-status-probes.mjs (line 1918) was never reached, leaving all required evidence fields empty and the contract validation failing with \"Missing expected evidence: orgId, agentId, model, provider, message\".",
       "proof": [
-        "failed-check.message: scheduler reports '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.'",
-        "failed-check.timing: status=fail latencyMs=151189 endedAt=2026-07-16T00:59:36.790Z — pod was stuck unscheduled for 145 s before the eval timed out",
-        "failed-check.evidence: evidence object is empty {}; all five required contract fields (orgId, agentId, model, provider, message) are missing (expected-output.missing-required-evidence)",
-        "sibling.remote-agent-create: same Unschedulable scheduler message, latencyMs=141093, endedAt=2026-07-16T00:54:34.158Z — earliest sibling failure confirms the capacity problem predates the runtime check",
-        "sibling.remote-agent-state: same Unschedulable scheduler message, latencyMs=151443, endedAt=2026-07-16T00:57:05.601Z — confirms the condition persisted across three consecutive eval runs spanning ~5 minutes",
-        "source-context.infra/evals/status/run-status-probes.mjs:1910-1918: runner calls createAgent(args, track, 'remote', null, orgId) at line 1918 — this is the call that submits the pod; failure here prevents any downstream evidence collection",
-        "source-context.infra/evals/status/check-expectations.json:262-270: contract at line 268 requires orgId, agentId, model, provider, message and asserts message containsIgnoreCase 'hello from aura' — none reachable without a scheduled pod",
-        "source.infra/evals/status/features.json:185: remote-agent-runtime is registered as required=false with outageLatencyMs=420000; the eval failed well within that window (151189 ms) due to scheduling failure, not a latency breach"
+        "failed-check.message: scheduler reports '0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector' for remote-agent-runtime after 146s unscheduled.",
+        "failed-check.timing: latencyMs=150819, status=fail, endedAt=2026-07-16T03:33:06.399Z — probe timed out waiting for pod scheduling, never reached agent creation.",
+        "failed-check.evidence: evidence object is empty ({}) — no orgId, agentId, model, provider, or message was ever returned, consistent with the pod never starting.",
+        "expected-output.missing-required-evidence: all 5 required evidence fields (orgId, agentId, model, provider, message) are absent, matching the contract defined at infra/evals/status/check-expectations.json lines 266-270.",
+        "sibling.remote-agent-create: identical scheduler error ('2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector'), latencyMs=155899, endedAt=2026-07-16T03:28:07.690Z — earliest failing check, indicating the capacity problem predates the runtime check.",
+        "sibling.remote-agent-state: identical scheduler error, latencyMs=147890, endedAt=2026-07-16T03:30:35.580Z — confirms the capacity problem persisted across the full eval window.",
+        "source-context.infra/evals/status/run-status-probes.mjs:1910-1918: runner calls createAgent(args, track, 'remote', null, orgId) at line 1918, which is the step that triggers pod scheduling; this step was never reached because the pod was stuck unschedulable."
       ],
       "possibleCauses": [
-        "Primary — kata.peerpods.io/vm resource exhaustion on the two eligible nodes: concurrent agent workloads or a prior eval run's pods were not cleaned up, consuming all available VM slots and leaving none for the new eval pods.",
-        "Secondary — node affinity or selector misconfiguration: the pod spec targets only the two kata-capable nodes via affinity/selector rules, and those rules may be overly restrictive or may not tolerate the current node labels, preventing fallback to other nodes.",
-        "Tertiary — cluster under-provisioning: only 2 of 6 nodes carry the kata.peerpods.io/vm extended resource; if both are at capacity simultaneously (e.g., due to a surge in remote-agent usage or a stuck pod from a previous eval run), all new scheduling attempts fail until capacity is freed.",
-        "Lower confidence — leaked eval pods from a prior run: the withCleanup wrapper in run-status-probes.mjs (line 1916) is responsible for teardown; if a prior run's cleanup failed, orphaned pods could be holding kata.peerpods.io/vm slots, blocking new scheduling."
+        "Primary — kata.peerpods.io/vm resource exhaustion on the 2 eligible nodes: concurrent workloads or prior eval runs consumed all available VM slots, leaving no capacity for new probe pods. This is the most strongly supported cause given the identical scheduler message across all three checks.",
+        "Secondary — node affinity or selector misconfiguration: 4 of 6 nodes are permanently excluded by the pod's affinity/selector rules, artificially constraining the schedulable pool to only 2 nodes. If those 2 nodes have limited VM capacity, any concurrent demand will exhaust it.",
+        "Tertiary — cluster under-provisioning: the total kata.peerpods.io/vm quota across the 2 eligible nodes may be too small to handle simultaneous eval probe pods, especially if multiple eval runs overlap.",
+        "Lower confidence — a stuck or leaked VM from a prior eval run that was not cleaned up (withCleanup in run-status-probes.mjs line 1916 implies cleanup is attempted, but a prior crash could leave a VM allocated), reducing available capacity for subsequent runs."
       ],
       "reproductionSteps": [
         {
           "label": "Run only the remote-agent-runtime eval probe against production-api",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-          "details": "Use the same environment variables as the scheduled observability workflow. Observe whether the pod reaches Running state or is again rejected as Unschedulable."
+          "details": "Use the same environment variables as the scheduled observability workflow to reproduce the scheduling failure."
         },
         {
-          "label": "Inspect current kata.peerpods.io/vm allocatable and used capacity on all cluster nodes",
-          "command": "kubectl describe nodes | grep -A5 'kata.peerpods.io/vm'",
-          "details": "Identify how many VM slots are allocatable per node and how many are currently consumed. Confirm whether both kata-capable nodes are at capacity."
-        },
-        {
-          "label": "List all pods currently requesting kata.peerpods.io/vm to find any stuck or orphaned pods",
-          "command": "kubectl get pods --all-namespaces -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, phase: .status.phase}'",
-          "details": "Identify whether any pods from prior eval runs are holding VM slots without being in a terminal state."
-        },
-        {
-          "label": "Check node labels and pod affinity/selector rules for remote-agent pods",
-          "details": "Review the node affinity and selector spec on the remote-agent pod template to confirm which nodes are eligible and whether the rules can be relaxed or whether additional nodes need the kata.peerpods.io/vm resource."
-        },
-        {
-          "label": "Run all three remote-agents sibling checks together to confirm shared scheduling dependency",
+          "label": "Run all three remote-agents checks together to confirm shared scheduling failure",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes",
-          "details": "Confirm that all three checks fail with the same Unschedulable message, reinforcing the shared infrastructure dependency."
+          "details": "Confirms whether all three checks fail simultaneously due to the same kata.peerpods.io/vm exhaustion."
+        },
+        {
+          "label": "Inspect current kata.peerpods.io/vm allocatable and used capacity on the 2 eligible nodes",
+          "command": "kubectl describe nodes | grep -A5 kata.peerpods.io",
+          "details": "Identify how many VM slots are allocatable vs. currently consumed on the nodes that match the pod's affinity/selector."
+        },
+        {
+          "label": "List all pods currently consuming kata.peerpods.io/vm resources in the cluster",
+          "command": "kubectl get pods --all-namespaces -o json | jq '.items[] | select(.spec.containers[].resources.requests[\"kata.peerpods.io/vm\"] != null) | {name: .metadata.name, namespace: .metadata.namespace, node: .spec.nodeName}'",
+          "details": "Determine whether prior eval runs or other workloads are holding VM slots that should have been released."
+        },
+        {
+          "label": "Check for any unscheduled or pending remote-agent pods left from prior runs",
+          "command": "kubectl get pods --all-namespaces --field-selector=status.phase=Pending | grep -i remote",
+          "details": "Identify leaked pending pods that may be holding scheduling resources."
         }
       ],
       "affectedAreas": [
         {
-          "label": "Kubernetes kata.peerpods.io/vm node resource capacity",
-          "reason": "The scheduler explicitly reports 'Insufficient kata.peerpods.io/vm' on the two nodes that carry this extended resource, directly blocking all remote-agent pod scheduling (failed-check.message, sibling.remote-agent-create, sibling.remote-agent-state)."
+          "label": "Kubernetes kata peer-pods VM scheduling layer (production-api cluster)",
+          "reason": "The scheduler explicitly reports 'Insufficient kata.peerpods.io/vm' on the 2 nodes eligible by affinity/selector, blocking all remote-agent pod creation. This is the earliest violated boundary in the failure chain (evidence: failed-check.message, sibling.remote-agent-create, sibling.remote-agent-state)."
         },
         {
-          "label": "Remote Agents eval feature — all three checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
+          "label": "Remote Agents feature — all three eval checks (remote-agent-create, remote-agent-state, remote-agent-runtime)",
           "path": "infra/evals/status/features.json",
-          "reason": "All three checks under the remote-agents feature (lines 183–185) failed with the same Unschedulable root cause within a 5-minute window, indicating the entire remote-agent eval surface is blocked by the scheduling failure."
+          "reason": "All three checks under the remote-agents feature (lines 183-185) failed with the same scheduling error across a ~5-minute window, indicating the entire remote-agent provisioning path is blocked while VM capacity is exhausted."
         },
         {
-          "label": "Eval runner createAgent call for remote agent type",
+          "label": "Eval runner — createAgent call for remote agent type",
           "path": "infra/evals/status/run-status-probes.mjs",
-          "reason": "The runner branch at line 1918 calls createAgent with type 'remote'; this is the earliest point of failure — the pod submission that the scheduler rejects. No downstream evidence (orgId, agentId, model, provider, message) can be collected until this call succeeds."
+          "reason": "The runner branch at lines 1913-1918 calls createAgent with type 'remote', which triggers the kata peer-pod scheduling. The pod never scheduled, so no evidence was collected and the probe returned a failure before reaching any runtime assertion."
         },
         {
-          "label": "Remote-agent-runtime expected-output contract",
+          "label": "Expected-output contract for remote-agent-runtime",
           "path": "infra/evals/status/check-expectations.json",
-          "reason": "The contract at lines 266–270 requires five evidence fields and asserts message containsIgnoreCase 'hello from aura'. All five fields are missing because the agent pod never started, making the contract validation error a downstream symptom of the scheduling failure."
+          "reason": "The contract at lines 266-270 requires orgId, agentId, model, provider, and message. All five are missing because the agent was never created, causing a total contract validation failure."
         }
       ],
       "recommendedNextActions": [
-        "Immediately check kata.peerpods.io/vm capacity on the two eligible nodes using kubectl describe nodes; if both are at capacity, identify and terminate any orphaned or stuck pods holding VM slots to restore scheduling headroom.",
-        "Review the withCleanup teardown path in infra/evals/status/run-status-probes.mjs to confirm that eval pods are reliably deleted after each run, including on timeout or error paths, to prevent slot leakage across runs.",
-        "Assess whether the cluster needs additional nodes with the kata.peerpods.io/vm extended resource to support concurrent eval runs without exhausting capacity; the current 2-node configuration provides no scheduling redundancy.",
-        "Review the node affinity and selector rules on the remote-agent pod template to confirm they still match current node labels and are not more restrictive than intended, particularly given the 4-node affinity exclusion reported by the scheduler.",
-        "Once scheduling is restored, re-run all three remote-agents checks (remote-agent-create, remote-agent-state, remote-agent-runtime) to confirm the eval surface returns to a passing state and evidence fields are populated correctly.",
-        "Note that remote-agent-runtime is registered as required=false (infra/evals/status/features.json line 185), so this failure does not by itself constitute a declared outage; however, remote-agent-create and remote-agent-state are required=true (lines 183–184) and their simultaneous failure against degradedAfterFailures=1 and outageAfterFailures=2 warrants prompt investigation."
+        "Immediately inspect kata.peerpods.io/vm capacity on the 2 eligible nodes in the production-api cluster to determine current allocation vs. available slots.",
+        "Identify and terminate any leaked or stuck remote-agent pods from prior eval runs that may be holding VM slots without active workloads.",
+        "Review the pod node affinity/selector configuration for remote-agent pods to determine whether the 4-node exclusion is intentional or a misconfiguration that unnecessarily constrains the schedulable pool to 2 nodes.",
+        "If VM capacity is genuinely exhausted by legitimate workloads, evaluate whether additional kata.peerpods.io/vm capacity can be provisioned on existing eligible nodes or whether new eligible nodes should be added to the cluster.",
+        "Confirm that the withCleanup wrapper in infra/evals/status/run-status-probes.mjs (line 1916) is reliably releasing VM resources after each eval run, including in failure and timeout scenarios, to prevent capacity leaks across runs.",
+        "Once cluster capacity is restored, re-run all three remote-agents eval checks to confirm recovery: AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-create,remote-agent-state,remote-agent-runtime npm run status:probes."
       ],
       "recommendedVerifierProbes": [
         {
-          "label": "Check kata.peerpods.io/vm allocatable vs. used capacity on all nodes",
-          "command": "kubectl describe nodes | grep -A5 'kata.peerpods.io/vm'",
-          "reason": "Directly confirms whether the two kata-capable nodes are at capacity and quantifies how many VM slots are available vs. consumed, proving or disproving the resource exhaustion hypothesis."
+          "label": "Check kata.peerpods.io/vm allocatable vs. used capacity on all cluster nodes",
+          "command": "kubectl describe nodes | grep -A5 kata.peerpods.io",
+          "reason": "Directly confirms whether VM slots are exhausted on the 2 eligible nodes, proving or disproving the capacity exhaustion hypothesis."
         },
         {
-          "label": "List pods holding kata.peerpods.io/vm slots to detect orphaned eval pods",
-          "command": "kubectl get pods --all-namespaces -o wide | grep -i remote",
-          "reason": "Identifies whether stuck or orphaned pods from prior eval runs are consuming VM slots, which would explain why preemption found no victims."
+          "label": "List all pending pods in the cluster to find leaked remote-agent pods",
+          "command": "kubectl get pods --all-namespaces --field-selector=status.phase=Pending",
+          "reason": "Identifies whether prior eval runs left unscheduled pods holding VM resource reservations that were not cleaned up by withCleanup."
         },
         {
-          "label": "Re-run the remote-agent-runtime eval probe to check if the condition is sustained or transient",
+          "label": "Re-run the failed expected-output contract after confirming cluster capacity",
           "command": "AURA_STATUS_RUNTIME_ENVIRONMENT=production-api AURA_STATUS_CHECKS=remote-agent-runtime npm run status:probes",
-          "reason": "If the eval passes immediately without cluster changes, the failure was transient. If it fails again with the same Unschedulable message, the capacity exhaustion is sustained and requires cluster-level remediation."
+          "reason": "Confirms whether the scheduling failure is persistent or transient; a pass after capacity is freed would confirm exhaustion as the cause."
         },
         {
-          "label": "Verify node affinity and selector rules on the remote-agent pod template",
-          "reason": "The scheduler reports 4 nodes excluded by affinity/selector; confirming the rules are correct and the target node labels still exist would isolate the failure to pure capacity exhaustion vs. a configuration drift.",
-          "details": "Retrieve the pod spec used by createAgent for type 'remote' and inspect nodeAffinity, nodeSelector, and resource requests to confirm which nodes are eligible and whether the rules match current node labels."
+          "label": "Inspect node affinity and selector rules on the remote-agent pod spec",
+          "reason": "Determines whether the 4-node exclusion is a misconfiguration that unnecessarily shrinks the schedulable pool.",
+          "details": "Retrieve the pod spec used by createAgent for remote type and verify which node labels are required, confirming why 4 of 6 nodes are excluded and whether that exclusion is intentional."
+        },
+        {
+          "label": "Check for running or terminating kata peer-pod VMs from prior eval runs",
+          "command": "kubectl get pods --all-namespaces -o wide | grep -i kata",
+          "reason": "Identifies whether VMs from previous probe runs are still consuming capacity due to incomplete cleanup."
         }
       ],
       "whatWouldDisproveThis": [
-        "If kubectl describe nodes shows that kata.peerpods.io/vm capacity is not exhausted (i.e., allocatable slots remain unused on both kata-capable nodes), the scheduling failure has a different cause such as a node affinity/selector misconfiguration rather than resource exhaustion.",
-        "If the pod spec for remote-agent pods does not request kata.peerpods.io/vm as a resource, the 'Insufficient kata.peerpods.io/vm' message would indicate a different scheduling constraint is the primary blocker.",
-        "If only remote-agent-runtime failed while remote-agent-create and remote-agent-state passed in the same run window, the failure would be localized to the runtime eval step rather than a shared infrastructure capacity problem.",
-        "If a re-run of the eval immediately after this failure succeeds without any cluster changes, the failure was transient (e.g., a briefly held slot was released) rather than a sustained capacity exhaustion.",
-        "If the node affinity/selector rules on the pod spec are found to be misconfigured (e.g., targeting a node label that no longer exists), the root cause would be a configuration drift rather than capacity exhaustion."
+        "If kubectl describe nodes showed ample remaining kata.peerpods.io/vm capacity on the 2 eligible nodes at the time of the eval run, the scheduling exhaustion hypothesis would be weakened and a different cause (e.g., a node affinity misconfiguration that newly excluded those nodes) would need to be investigated.",
+        "If the pod's node affinity/selector was recently changed to exclude nodes that previously had VM capacity, and the 2 remaining eligible nodes never had sufficient capacity, the root cause would shift to a configuration change rather than runtime exhaustion.",
+        "If a re-run of the eval immediately after this failure succeeded without any cluster changes, it would suggest a transient capacity spike (e.g., a concurrent workload that released VMs) rather than a persistent exhaustion condition.",
+        "If the remote-agent-create sibling check had passed while remote-agent-runtime failed, it would suggest the failure is isolated to the runtime probe rather than a shared scheduling constraint — but all three siblings failed, which supports the shared infrastructure cause.",
+        "If no kata.peerpods.io/vm resource is defined or allocatable on any node, the cause would be a missing resource registration rather than exhaustion."
       ],
       "followUpEvals": [
-        "Add a pre-flight eval check that queries kata.peerpods.io/vm allocatable vs. requested capacity across all nodes before attempting remote-agent pod creation, surfacing capacity exhaustion as a distinct 'warn' status rather than a scheduling timeout.",
-        "Add an orphaned-pod detection eval that lists all pods in the remote-agent namespace older than a configurable threshold (e.g., 10 minutes) and flags any that are still holding kata.peerpods.io/vm slots, catching cleanup failures before they block subsequent runs.",
-        "Add a node-affinity-match eval that validates the remote-agent pod's nodeAffinity and nodeSelector rules against current cluster node labels, alerting if no nodes would match before a pod is submitted.",
-        "Introduce a historical baseline for the remote-agents eval checks so that currentlyRegressedFromPass can be populated in future runs, enabling regression detection and trend analysis on scheduling failure frequency."
+        "Add a pre-flight eval check that queries kata.peerpods.io/vm allocatable vs. used capacity across all cluster nodes before attempting remote-agent creation, surfacing capacity exhaustion as a distinct 'warn' or 'fail' status rather than a scheduling timeout.",
+        "Add an eval that detects leaked or stuck pending remote-agent pods (pods in Pending state for more than a configurable threshold) and reports them as a separate infrastructure health check.",
+        "Add a post-run cleanup verification eval that confirms no kata peer-pod VMs remain allocated after the remote-agents eval suite completes, catching withCleanup failures before they affect subsequent runs.",
+        "Consider a dedicated eval for node affinity/selector correctness that verifies the expected number of nodes (currently 2) match the remote-agent pod's scheduling requirements, alerting if that count drops to zero."
       ],
       "evidenceDigest": {
-        "message": "pod stuck unscheduled for 145s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
-        "latencyMs": 151189,
+        "message": "pod stuck unscheduled for 146s (Unschedulable): 0/6 nodes are available: 2 Insufficient kata.peerpods.io/vm, 4 node(s) didn't match Pod's node affinity/selector. preemption: 0/6 nodes are available: 2 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling.",
+        "latencyMs": 150819,
         "evidence": {}
       }
     }
