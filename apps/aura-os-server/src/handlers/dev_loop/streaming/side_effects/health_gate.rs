@@ -16,7 +16,9 @@ use super::super::super::health::{classify_delta, format_health_summary};
 use super::super::super::signals::{health_gate_enabled, snapshot_workspace_health};
 use super::super::super::types::LoopRetryState;
 use super::SideEffectCtx;
-use crate::handlers::projects_helpers::resolve_agent_instance_workspace_path;
+use crate::handlers::projects_helpers::{
+    resolve_agent_instance_workspace_path, server_can_inspect_agent_workspace,
+};
 use crate::state::AppState;
 
 /// Verdict from the workspace-health gate when it decides to demote
@@ -94,6 +96,9 @@ async fn maybe_run_health_gate(
     retry_state: &Arc<LoopRetryState>,
     task_uuid: TaskId,
 ) -> Option<HealthGateVerdict> {
+    if !server_can_inspect_agent_workspace(state, &project_id, agent_instance_id).await {
+        return None;
+    }
     let baseline_entry = retry_state.health_baseline.get(task_uuid)?;
     let workspace_path =
         resolve_agent_instance_workspace_path(state, &project_id, Some(agent_instance_id)).await?;

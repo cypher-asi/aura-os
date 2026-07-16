@@ -38,7 +38,7 @@ pub(crate) struct UpdateProjectRequest {
     pub local_workspace_path: Option<Option<String>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub(crate) struct ImportedProjectFile {
     pub relative_path: String,
     pub contents_base64: String,

@@ -10,6 +10,7 @@ use std::path::Path;
 use aura_os_core::{AgentPermissions, ProjectId};
 
 use crate::dto::SendChatRequest;
+use crate::error::ApiResult;
 use crate::handlers::projects_helpers::resolve_project_tool_workspace_path;
 use crate::state::AppState;
 use crate::workspace_index::build_workspace_index_block;
@@ -92,7 +93,7 @@ pub(super) async fn build_agent_session_fields(
     harness_mode: aura_os_core::HarnessMode,
     project_state_snapshot: Option<&str>,
     plan_mode: bool,
-) -> (TypedSessionFields, Option<String>) {
+) -> ApiResult<(TypedSessionFields, Option<String>)> {
     let project = effective_project_id.and_then(|pid| pid.parse::<ProjectId>().ok());
 
     let project_path = match project.as_ref() {
@@ -102,7 +103,7 @@ pub(super) async fn build_agent_session_fields(
             // explicit `project.local_workspace_path` and the
             // canonical `data_dir`-rooted layout for Local /
             // Swarm).
-            resolve_project_tool_workspace_path(state, project_id, harness_mode, None).await
+            resolve_project_tool_workspace_path(state, project_id, harness_mode, None).await?
         }
         None => None,
     };
@@ -131,17 +132,21 @@ pub(super) async fn build_agent_session_fields(
     // it inside the chat envelope. Loaded only when the turn is
     // project-bound (we have a resolved workspace path); otherwise the
     // bare-agent chat falls through unchanged.
-    if let Some(path) = project_path.as_deref() {
-        if let Some(block) = build_workspace_index_block(Path::new(path)) {
-            let merged = match fields.agent_system_prompt.take() {
-                Some(existing) if !existing.trim().is_empty() => {
-                    format!("{existing}\n\n{block}")
-                }
-                _ => block,
-            };
-            fields.agent_system_prompt = Some(merged);
+    let server_can_read_project_path = !(harness_mode == aura_os_core::HarnessMode::Local
+        && state.harness_http.hosted_local_runtime_available());
+    if server_can_read_project_path {
+        if let Some(path) = project_path.as_deref() {
+            if let Some(block) = build_workspace_index_block(Path::new(path)) {
+                let merged = match fields.agent_system_prompt.take() {
+                    Some(existing) if !existing.trim().is_empty() => {
+                        format!("{existing}\n\n{block}")
+                    }
+                    _ => block,
+                };
+                fields.agent_system_prompt = Some(merged);
+            }
         }
     }
 
-    (fields, project_path)
+    Ok((fields, project_path))
 }

@@ -303,7 +303,7 @@ pub(crate) async fn send_agent_event_stream(
         project_state_snapshot.as_deref(),
         is_plan_mode,
     )
-    .await;
+    .await?;
 
     let (computer_use, computer_executor_url) = computer_use_session_fields();
     let local_project_counts =

@@ -14,7 +14,7 @@ use crate::handlers::agents::workspace_tools::{
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::plan_mode::{is_plan_mode_action, session_tool_permissions};
 use crate::handlers::projects_helpers::{
-    is_project_tool_action, project_tool_max_turns, resolve_agent_instance_workspace_path,
+    is_project_tool_action, project_tool_max_turns, resolve_project_tool_workspace_path,
 };
 use crate::state::{AppState, AuthJwt};
 
@@ -195,8 +195,13 @@ pub(crate) async fn send_event_stream(
     .await?;
 
     let pid_str = project_id.to_string();
-    let project_path =
-        resolve_agent_instance_workspace_path(&state, &project_id, Some(agent_instance_id)).await;
+    let project_path = resolve_project_tool_workspace_path(
+        &state,
+        &project_id,
+        instance.harness_mode(),
+        Some(agent_instance_id),
+    )
+    .await?;
 
     let model = pick_instance_model(&body, &instance);
 

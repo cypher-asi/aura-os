@@ -220,6 +220,13 @@ pub(crate) async fn create_imported_project(
             .as_deref()
             .map(str::trim)
             .is_some_and(|path| !path.is_empty());
+    let hosted_local_runtime = state.harness_http.hosted_local_runtime_available();
+    if hosted_local_runtime && import_by_reference {
+        return Err(ApiError::bad_request(
+            "import by local folder reference is available only in Aura Desktop; upload the project files for Aura Web",
+        ));
+    }
+    let hosted_import_files = hosted_local_runtime.then(|| files.clone());
 
     let local_req = CreateProjectRequest {
         org_id,
@@ -239,6 +246,19 @@ pub(crate) async fn create_imported_project(
     if !import_by_reference {
         let workspace_root = ensure_canonical_workspace_dir(&state.data_dir, &project.project_id)?;
         write_imported_files(&workspace_root, files).await?;
+    }
+    if let Some(files) = hosted_import_files {
+        let files = serde_json::to_value(files)
+            .map_err(|error| ApiError::internal(format!("serializing hosted import: {error}")))?;
+        state
+            .harness_http
+            .import_workspace(&project.project_id.to_string(), files)
+            .await
+            .map_err(|error| {
+                ApiError::bad_gateway(format!(
+                    "copying imported files to hosted local Harness: {error}"
+                ))
+            })?;
     }
 
     Ok((status, Json(project)))
@@ -474,6 +494,20 @@ pub(crate) async fn delete_project(
         .project_service
         .delete_project(&project_id)
         .map_err(|e| ApiError::internal(format!("deleting project: {e}")))?;
+
+    if state.harness_http.hosted_local_runtime_available() {
+        if let Err(error) = state
+            .harness_http
+            .delete_workspace(&project_id.to_string())
+            .await
+        {
+            tracing::warn!(
+                %project_id,
+                %error,
+                "failed to remove hosted Harness workspace after project deletion"
+            );
+        }
+    }
 
     // Clean up local workspace directory (best-effort)
     let workspace = canonical_workspace_path(&state.data_dir, &project_id);

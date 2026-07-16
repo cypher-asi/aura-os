@@ -166,6 +166,17 @@ fn attach_workspace_path(
     project: Option<&aura_os_core::Project>,
     instance: &mut AgentInstance,
 ) {
+    // A hosted direct Harness owns a different filesystem namespace. Do not
+    // expose aura-os-server's lookalike path in instance API responses: it is
+    // unusable by the browser and previously encouraged callers to send the
+    // wrong absolute path back to the Harness. Runtime entry points resolve
+    // the authoritative hosted path asynchronously by project UUID.
+    if instance.harness_mode() == aura_os_core::HarnessMode::Local
+        && state.harness_http.hosted_local_runtime_available()
+    {
+        instance.workspace_path = None;
+        return;
+    }
     let project_local_path = project.and_then(|p| p.local_workspace_path.as_deref());
     let project_name = project.map(|p| p.name.as_str()).unwrap_or("");
     // Load the agent template shadow so we can apply its `local_workspace_path`
