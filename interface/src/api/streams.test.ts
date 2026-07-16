@@ -419,6 +419,36 @@ describe("sendEventStream", () => {
       aggregator: { id: "final-model", reasoning_effort: "medium" },
     });
   });
+
+  it("includes exact project-agent mention bindings", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    };
+
+    await sendEventStream(
+      "p1" as string,
+      "ai1",
+      "ask @Maya to review",
+      "chat",
+      undefined,
+      undefined,
+      handler,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [{ agent_id: "agent-maya", agent_instance_id: "instance-maya" }],
+    );
+
+    const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.agent_mentions).toEqual([
+      { agent_id: "agent-maya", agent_instance_id: "instance-maya" },
+    ]);
+  });
 });
 
 function makeStream(over: Partial<ActiveStreamSummary> = {}): ActiveStreamSummary {

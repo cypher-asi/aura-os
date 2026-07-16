@@ -1,6 +1,10 @@
 import { renderHook, act } from "@testing-library/react";
 import { vi } from "vitest";
-import { getTrailingTriggerQuery, useInputTriggers } from "./useInputTriggers";
+import {
+  getTrailingTriggerQuery,
+  replaceMentionQuery,
+  useInputTriggers,
+} from "./useInputTriggers";
 import type { InputBarShellHandle } from "../../../components/InputBarShell";
 
 describe("getTrailingTriggerQuery", () => {
@@ -28,6 +32,14 @@ describe("getTrailingTriggerQuery", () => {
   });
 });
 
+describe("replaceMentionQuery", () => {
+  it("preserves text after the active query", () => {
+    expect(replaceMentionQuery("ask @ma tomorrow", 4, 7, "@Maya ")).toBe(
+      "ask @Maya  tomorrow",
+    );
+  });
+});
+
 describe("useInputTriggers", () => {
   function makeShellRef(cursor: number) {
     const textarea = { selectionStart: cursor } as HTMLTextAreaElement;
@@ -48,6 +60,7 @@ describe("useInputTriggers", () => {
     const onSelectGenerationMode = vi.fn();
     const onCommandsChange = vi.fn();
     const addFileFromPath = vi.fn().mockResolvedValue(undefined);
+    const onAgentMentionSelect = vi.fn();
     const shellRef = makeShellRef(options.cursor);
     const hook = renderHook(
       ({ input }: { input: string }) =>
@@ -60,6 +73,7 @@ describe("useInputTriggers", () => {
           onCommandsChange,
           onSelectGenerationMode,
           addFileFromPath,
+          onAgentMentionSelect,
         }),
       { initialProps: { input: options.input } },
     );
@@ -69,6 +83,7 @@ describe("useInputTriggers", () => {
       onSelectGenerationMode,
       onCommandsChange,
       addFileFromPath,
+      onAgentMentionSelect,
     };
   }
 
@@ -151,6 +166,27 @@ describe("useInputTriggers", () => {
 
     expect(onInputChange).toHaveBeenLastCalledWith("read please");
     expect(addFileFromPath).toHaveBeenCalledWith("src/main.rs");
+    expect(hook.result.current.mentionMenuOpen).toBe(false);
+  });
+
+  it("inserts the selected agent and records its exact binding", () => {
+    const { hook, onInputChange, onAgentMentionSelect } = setup({
+      input: "ask @ma to review",
+      cursor: 7,
+    });
+
+    act(() => hook.result.current.handleInputChange("ask @ma to review"));
+    hook.rerender({ input: "ask @ma to review" });
+    const maya = {
+      agent_id: "agent-maya",
+      agent_instance_id: "instance-maya",
+      name: "Maya",
+      role: "Designer",
+    };
+    act(() => hook.result.current.handleAgentMentionSelect(maya));
+
+    expect(onInputChange).toHaveBeenLastCalledWith("ask @Maya to review");
+    expect(onAgentMentionSelect).toHaveBeenCalledWith(maya);
     expect(hook.result.current.mentionMenuOpen).toBe(false);
   });
 

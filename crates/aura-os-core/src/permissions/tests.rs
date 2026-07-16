@@ -138,6 +138,23 @@ fn with_subagent_caps_is_idempotent() {
 }
 
 #[test]
+fn with_project_delegation_cap_is_narrow_and_idempotent() {
+    let perms = AgentPermissions::empty()
+        .with_project_delegation_cap()
+        .with_project_delegation_cap();
+    assert_eq!(
+        perms
+            .capabilities
+            .iter()
+            .filter(|capability| matches!(capability, Capability::ControlAgent))
+            .count(),
+        1
+    );
+    assert!(!perms.capabilities.contains(&Capability::ListAgents));
+    assert!(!perms.capabilities.contains(&Capability::WriteAllProjects));
+}
+
+#[test]
 fn with_subagent_caps_preserves_existing_caps() {
     let before = AgentPermissions {
         scope: AgentScope::default(),

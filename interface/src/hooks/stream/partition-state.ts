@@ -1,4 +1,4 @@
-import type { ChatAttachment } from "../../api/streams";
+import type { AgentMentionTarget, ChatAttachment } from "../../api/streams";
 import type { GenerationMode } from "../../constants/models";
 import { registerPartitionRegistry } from "./partition-registry";
 
@@ -53,6 +53,7 @@ export interface LastSendArgs {
   projectIdOverride?: string;
   generationMode?: GenerationMode;
   sourceImageUrl?: string;
+  agentMentions?: AgentMentionTarget[];
 }
 
 /**

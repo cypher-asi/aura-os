@@ -33,6 +33,7 @@ pub(crate) async fn reset_agent_session(
     // chain depth resets to 0.
     let request = ChatPersistRequest {
         jwt: &jwt,
+        preferred_project_id: None,
         force_new: true,
         pinned_session_id: None,
         originating_agent_id: None,
@@ -95,6 +96,7 @@ pub(crate) async fn reset_instance_session(
     // a chat turn.
     let request = ChatPersistRequest {
         jwt: &jwt,
+        preferred_project_id: Some(project_id.to_string()),
         force_new: true,
         pinned_session_id: None,
         originating_agent_id: None,

@@ -188,6 +188,7 @@ mod pin_tests {
         let svc = test_session_service(storage_arc.clone());
         let request = ChatPersistRequest {
             jwt: "jwt",
+            preferred_project_id: None,
             force_new: false,
             pinned_session_id: Some(&sid),
             originating_agent_id: None,
@@ -225,6 +226,7 @@ mod pin_tests {
         let svc = test_session_service(storage_arc.clone());
         let request = ChatPersistRequest {
             jwt: "jwt",
+            preferred_project_id: None,
             force_new: true,
             pinned_session_id: Some(&sid),
             originating_agent_id: None,

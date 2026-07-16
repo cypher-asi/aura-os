@@ -8,6 +8,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
+import { X } from "lucide-react";
 import { track } from "../../../lib/analytics";
 import { ContextUsageIndicator, type ContextBucketRowId } from "./ContextUsageIndicator";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
@@ -31,7 +32,7 @@ import {
   type InputBarShellHandle,
 } from "../../../components/InputBarShell";
 import { SlashCommandMenu } from "./SlashCommandMenu";
-import { FileMentionMenu } from "./FileMentionMenu";
+import { MentionMenu } from "./MentionMenu";
 import { useProjectFiles } from "./useProjectFiles";
 import { useInputTriggers } from "./useInputTriggers";
 import { useModelSelection } from "./useModelSelection";
@@ -50,7 +51,10 @@ import { ModelControls } from "./ModelControls";
 import { ProjectPicker } from "./ProjectPicker";
 import { useChatUI } from "../../../stores/chat-ui-store";
 import type { SlashCommand } from "../../../constants/commands";
-import type { Project } from "../../../shared/types";
+import type { AgentInstance, Project } from "../../../shared/types";
+import { MAX_AGENT_MENTIONS, type AgentMentionTarget } from "../../../api/streams";
+import { isUserFacingAgentInstance } from "../../../components/ProjectList/project-list-shared";
+import { filterRuntimeVisibleAgents } from "../../../shared/lib/agent-runtime-visibility";
 import { resolveWorkspaceAccess } from "../../../shared/lib/workspace-access";
 import {
   desktopApi,
@@ -101,6 +105,7 @@ export interface ChatInputBarProps {
     action?: string,
     attachments?: AttachmentItem[],
     generationMode?: GenerationMode,
+    agentMentions?: AgentMentionTarget[],
   ) => void;
   onStop: () => void;
   streamKey: string;
@@ -171,6 +176,10 @@ export interface ChatInputBarProps {
    * routing the file explorer uses.
    */
   remoteAgentId?: string;
+  /** User-visible agents attached to this project for `@agent` delegation. */
+  projectAgents?: AgentInstance[];
+  /** Current project binding, excluded from the delegation picker. */
+  currentAgentInstanceId?: string;
   isVisible?: boolean;
   isCentered?: boolean;
   /**
@@ -239,6 +248,7 @@ export interface ChatInputBarProps {
 const EMPTY_ATTACHMENTS: AttachmentItem[] = [];
 const EMPTY_COMMANDS: SlashCommand[] = [];
 const EMPTY_PROJECTS: Project[] = [];
+const EMPTY_AGENT_INSTANCES: AgentInstance[] = [];
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
   code: "Chat",
 };
@@ -272,6 +282,8 @@ export const DesktopChatInputBar = memo(
       onProjectChange,
       workspacePath,
       remoteAgentId,
+      projectAgents = EMPTY_AGENT_INSTANCES,
+      currentAgentInstanceId,
       isVisible = true,
       isCentered = false,
       isStatic = false,
@@ -291,7 +303,7 @@ export const DesktopChatInputBar = memo(
   ) {
     const isChatStreaming = useIsStreaming(streamKey);
     const isStreaming = isChatStreaming || isExternallyBusy;
-    const { features } = useAuraCapabilities();
+    const { features, remoteOnly } = useAuraCapabilities();
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
     const selectedEffort = chatUI.selectedEffort;
@@ -400,7 +412,17 @@ export const DesktopChatInputBar = memo(
       linkedWorkspace: features.linkedWorkspace,
     });
     const mentionWorkspacePath = workspaceAccess.workspacePath;
-    const canUseMentions = Boolean(mentionWorkspacePath);
+    const mentionableAgents = useMemo(
+      () =>
+        filterRuntimeVisibleAgents(projectAgents, remoteOnly).filter(
+          (candidate) =>
+            candidate.agent_instance_id !== currentAgentInstanceId &&
+            candidate.status !== "archived" &&
+            isUserFacingAgentInstance(candidate),
+        ),
+      [currentAgentInstanceId, projectAgents, remoteOnly],
+    );
+    const canUseMentions = Boolean(mentionWorkspacePath) || mentionableAgents.length > 0;
     const infoBarWorkspacePath =
       workspaceAccess.canUseWorkspace || !workspacePath || remoteAgentId
         ? workspacePath
@@ -427,6 +449,72 @@ export const DesktopChatInputBar = memo(
       textareaRefShim as React.RefObject<HTMLTextAreaElement | null>,
       remoteAgentId,
     );
+    const [agentMentionState, setAgentMentionState] = useState<{
+      streamKey: string;
+      mentions: Array<AgentMentionTarget & { name: string; token: string }>;
+    }>(() => ({ streamKey, mentions: [] }));
+    const selectedAgentMentions = useMemo(
+      () =>
+        agentMentionState.streamKey === streamKey
+          ? agentMentionState.mentions.filter((mention) => input.includes(mention.token))
+          : [],
+      [agentMentionState, input, streamKey],
+    );
+    const selectableMentionAgents = useMemo(() => {
+      if (selectedAgentMentions.length >= MAX_AGENT_MENTIONS) return [];
+      const selectedIds = new Set(
+        selectedAgentMentions.map((mention) => mention.agent_instance_id),
+      );
+      return mentionableAgents.filter(
+        (candidate) => !selectedIds.has(candidate.agent_instance_id),
+      );
+    }, [mentionableAgents, selectedAgentMentions]);
+    const updateMentionDraft = useCallback(
+      (value: string) => {
+        setAgentMentionState((current) => ({
+          streamKey,
+          mentions:
+            current.streamKey === streamKey
+              ? current.mentions.filter((mention) => value.includes(mention.token))
+              : [],
+        }));
+        onInputChange(value);
+      },
+      [onInputChange, streamKey],
+    );
+
+    const recordAgentMention = useCallback(
+      (candidate: { agent_id: string; agent_instance_id: string; name: string }) => {
+        setAgentMentionState((current) => {
+          const mentions = current.streamKey === streamKey ? current.mentions : [];
+          if (
+            mentions.length >= MAX_AGENT_MENTIONS ||
+            mentions.some(
+              (mention) => mention.agent_instance_id === candidate.agent_instance_id,
+            )
+          ) {
+            return current;
+          }
+          return {
+            streamKey,
+            mentions: [
+              ...mentions,
+              {
+                agent_id: candidate.agent_id,
+                agent_instance_id: candidate.agent_instance_id,
+                name: candidate.name,
+                token: `@${candidate.name}`,
+              },
+            ],
+          };
+        });
+        track("project_agent_mention_selected", {
+          agent_id: candidate.agent_id,
+          agent_instance_id: candidate.agent_instance_id,
+        });
+      },
+      [streamKey],
+    );
 
     // Generation slash commands (`/image` etc.) act as a keyboard path
     // to the mode selector; the trigger hook hands us the target mode
@@ -449,16 +537,18 @@ export const DesktopChatInputBar = memo(
       handleCommandSelect,
       handleSlashClose,
       handleMentionSelect,
+      handleAgentMentionSelect,
       handleMentionClose,
     } = useInputTriggers({
       input,
-      onInputChange,
+      onInputChange: updateMentionDraft,
       shellRef,
       canUseMentions,
       selectedCommands,
       onCommandsChange,
       onSelectGenerationMode,
       addFileFromPath,
+      onAgentMentionSelect: recordAgentMention,
     });
 
     const projectFiles = useProjectFiles({
@@ -616,8 +706,37 @@ export const DesktopChatInputBar = memo(
       track("chat_message_sent", { model: selectedModel, mode: selectedMode });
       // Mode is read from the store inside `useChatPanelState.handleSend`;
       // we no longer need to thread `generationMode` through here.
+      const targets = selectedAgentMentions.map(({ agent_id, agent_instance_id }) => ({
+        agent_id,
+        agent_instance_id,
+      }));
+      if (targets.length > 0) {
+        track("project_agent_delegation_sent", { mention_count: targets.length });
+        setAgentMentionState({ streamKey, mentions: [] });
+        onSend(input, undefined, undefined, undefined, targets);
+        return;
+      }
+      setAgentMentionState({ streamKey, mentions: [] });
       onSend(input, undefined, undefined);
-    }, [input, onSend, selectedModel, selectedMode, sendDisabled]);
+    }, [input, onSend, selectedAgentMentions, selectedModel, selectedMode, sendDisabled, streamKey]);
+
+    const removeAgentMention = useCallback(
+      (instanceId: string) => {
+        const selected = selectedAgentMentions.find(
+          (mention) => mention.agent_instance_id === instanceId,
+        );
+        if (!selected) return;
+        setAgentMentionState((current) => ({
+          streamKey,
+          mentions: current.mentions.filter(
+            (mention) => mention.agent_instance_id !== instanceId,
+          ),
+        }));
+        onInputChange(input.replace(selected.token, "").replace(/ {2,}/g, " ").trimStart());
+        shellRef.current?.focus();
+      },
+      [input, onInputChange, selectedAgentMentions, streamKey],
+    );
 
     // Shared props for every `ModelControls` placement (inline /
     // bottom / mobile bar). The object literal is recreated per render,
@@ -660,13 +779,32 @@ export const DesktopChatInputBar = memo(
           />
         )}
         {mentionMenuOpen && canUseMentions && (
-          <FileMentionMenu
+          <MentionMenu
             query={mentionQuery}
+            agents={selectableMentionAgents}
             files={projectFiles}
-            onSelect={handleMentionSelect}
+            onSelectAgent={handleAgentMentionSelect}
+            onSelectFile={handleMentionSelect}
             onClose={handleMentionClose}
           />
         )}
+        {selectedAgentMentions.length > 0 ? (
+          <div className={styles.agentMentionChips} aria-label="Agents included in this message">
+            {selectedAgentMentions.map((mention) => (
+              <span className={styles.agentMentionChip} key={mention.agent_instance_id}>
+                <span aria-hidden="true">@</span>
+                <strong>{mention.name}</strong>
+                <button
+                  type="button"
+                  aria-label={`Remove ${mention.name}`}
+                  onClick={() => removeAgentMention(mention.agent_instance_id)}
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
         <AttachmentPreviews
           attachments={attachments}
           onRemove={handleRemove}

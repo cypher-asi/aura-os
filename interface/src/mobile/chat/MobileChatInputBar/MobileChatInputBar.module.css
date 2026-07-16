@@ -305,6 +305,37 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.agentMentionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 6px;
+}
+
+.agentMentionChip {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 26%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+  padding: 4px 8px;
+}
+
+.agentMentionChip strong {
+  font-weight: 600;
+}
+
+.agentMentionChip button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  padding: 0;
+}
+
 /* "Source for 3D" thumbnail rendered inline at the start of the input
    row (replacing the attach button) so the input row stays a single
    line and the pinned `ChatStreamingIndicator` ("Generating 3D

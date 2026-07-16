@@ -41,6 +41,11 @@ import { ModeSelector, ModelMenuGroup } from "../../../components/InputBarShell"
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useChatUI } from "../../../stores/chat-ui-store";
 import { track } from "../../../lib/analytics";
+import { MentionMenu } from "../../../features/chat-ui/ChatInputBar/MentionMenu";
+import { MAX_AGENT_MENTIONS, type AgentMentionTarget } from "../../../api/streams";
+import { isUserFacingAgentInstance } from "../../../components/ProjectList/project-list-shared";
+import { filterRuntimeVisibleAgents } from "../../../shared/lib/agent-runtime-visibility";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import styles from "./MobileChatInputBar.module.css";
 
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
@@ -100,6 +105,8 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       selectedCommands = [],
       onCommandsChange,
       workspacePath,
+      projectAgents = [],
+      currentAgentInstanceId,
       isVisible = true,
       isCentered = false,
       contextUsage,
@@ -111,6 +118,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
   ) {
     const isChatStreaming = useIsStreaming(streamKey);
     const isStreaming = isChatStreaming || isExternallyBusy;
+    const { remoteOnly } = useAuraCapabilities();
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
     const selectedEffort = chatUI.selectedEffort;
@@ -119,6 +127,8 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const slashStartRef = useRef<number | null>(null);
+    const mentionStartRef = useRef<number | null>(null);
+    const mentionEndRef = useRef<number | null>(null);
     const [modelSheetOpen, setModelSheetOpen] = useState(false);
     const [qualitySheetOpen, setQualitySheetOpen] = useState(false);
     // Collapsed vendor sections in the chat model sheet. Empty = all
@@ -128,6 +138,12 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     );
     const [slashMenuOpen, setSlashMenuOpen] = useState(false);
     const [slashQuery, setSlashQuery] = useState("");
+    const [mentionMenuOpen, setMentionMenuOpen] = useState(false);
+    const [mentionQuery, setMentionQuery] = useState("");
+    const [agentMentionState, setAgentMentionState] = useState<{
+      streamKey: string;
+      mentions: Array<AgentMentionTarget & { name: string; token: string }>;
+    }>(() => ({ streamKey, mentions: [] }));
     const [isDragOver, setIsDragOver] = useState(false);
     const [isTextInputFocused, setIsTextInputFocused] = useState(false);
 
@@ -141,6 +157,33 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       onRemoveAttachment,
       textareaRef,
     );
+    const mentionableAgents = useMemo(
+      () =>
+        filterRuntimeVisibleAgents(projectAgents, remoteOnly).filter(
+          (candidate) =>
+            candidate.agent_instance_id !== currentAgentInstanceId &&
+            candidate.status !== "archived" &&
+            isUserFacingAgentInstance(candidate),
+        ),
+      [currentAgentInstanceId, projectAgents, remoteOnly],
+    );
+
+    const selectedAgentMentions = useMemo(
+      () =>
+        agentMentionState.streamKey === streamKey
+          ? agentMentionState.mentions.filter((mention) => input.includes(mention.token))
+          : [],
+      [agentMentionState, input, streamKey],
+    );
+    const selectableMentionAgents = useMemo(() => {
+      if (selectedAgentMentions.length >= MAX_AGENT_MENTIONS) return [];
+      const selectedIds = new Set(
+        selectedAgentMentions.map((mention) => mention.agent_instance_id),
+      );
+      return mentionableAgents.filter(
+        (candidate) => !selectedIds.has(candidate.agent_instance_id),
+      );
+    }, [mentionableAgents, selectedAgentMentions]);
 
     const modeBehavior = AGENT_MODE_DESCRIPTORS[selectedMode].behavior;
     const generationMode: GenerationMode =
@@ -346,6 +389,13 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
 
     const handleInputChange = useCallback(
       (value: string) => {
+        setAgentMentionState((current) => ({
+          streamKey,
+          mentions:
+            current.streamKey === streamKey
+              ? current.mentions.filter((mention) => value.includes(mention.token))
+              : [],
+        }));
         onInputChange(value);
         const el = textareaRef.current;
         if (!el) return;
@@ -362,8 +412,64 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           setSlashQuery("");
           slashStartRef.current = null;
         }
+        if (mentionableAgents.length > 0) {
+          const mentionMatch = textBefore.match(/(^|\s)@(\S*)$/);
+          if (mentionMatch) {
+            mentionStartRef.current = textBefore.lastIndexOf("@");
+            mentionEndRef.current = el.selectionStart;
+            setMentionQuery(mentionMatch[2]);
+            setMentionMenuOpen(true);
+            return;
+          }
+        }
+        setMentionMenuOpen(false);
+        setMentionQuery("");
+        mentionStartRef.current = null;
+        mentionEndRef.current = null;
       },
-      [onInputChange, slashMenuOpen],
+      [mentionableAgents.length, onInputChange, slashMenuOpen, streamKey],
+    );
+
+    const handleAgentMentionSelect = useCallback(
+      (candidate: { agent_id: string; agent_instance_id: string; name: string }) => {
+        if (mentionStartRef.current !== null && mentionEndRef.current !== null) {
+          const suffix = input.slice(mentionEndRef.current);
+          const token = `@${candidate.name}`;
+          const replacement = `${token}${/^\s/.test(suffix) ? "" : " "}`;
+          onInputChange(
+            `${input.slice(0, mentionStartRef.current)}${replacement}${suffix}`,
+          );
+          setAgentMentionState((current) => {
+            const mentions = current.streamKey === streamKey ? current.mentions : [];
+            return mentions.length >= MAX_AGENT_MENTIONS || mentions.some(
+              (mention) => mention.agent_instance_id === candidate.agent_instance_id,
+            )
+              ? current
+              : {
+                  streamKey,
+                  mentions: [
+                    ...mentions,
+                    {
+                      agent_id: candidate.agent_id,
+                      agent_instance_id: candidate.agent_instance_id,
+                      name: candidate.name,
+                      token,
+                    },
+                  ],
+                };
+          });
+          track("project_agent_mention_selected", {
+            agent_id: candidate.agent_id,
+            agent_instance_id: candidate.agent_instance_id,
+          });
+        }
+        setMentionMenuOpen(false);
+        setMentionQuery("");
+        mentionStartRef.current = null;
+        mentionEndRef.current = null;
+        textareaRef.current?.focus();
+      },
+      [input, onInputChange, streamKey],
     );
 
     const submitMessage = useCallback(() => {
@@ -374,11 +480,21 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       track("chat_message_sent", { model: selectedModel, mode: selectedMode });
       // Mode lives in the per-stream store; the panel state reads it
       // when constructing the resolved send.
+      const targets = selectedAgentMentions.map(({ agent_id, agent_instance_id }) => ({
+        agent_id,
+        agent_instance_id,
+      }));
+      setAgentMentionState({ streamKey, mentions: [] });
+      if (targets.length > 0) {
+        track("project_agent_delegation_sent", { mention_count: targets.length });
+        onSend(input, undefined, undefined, undefined, targets);
+        return;
+      }
       onSend(input, undefined, undefined);
-    }, [canSend, input, onSend, selectedModel, selectedMode]);
+    }, [canSend, input, onSend, selectedAgentMentions, selectedModel, selectedMode, streamKey]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (slashMenuOpen && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
+      if ((slashMenuOpen || mentionMenuOpen) && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
         return;
       }
       if (event.key === "Enter" && !event.shiftKey) {
@@ -598,6 +714,17 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               />
             </div>
           ) : null}
+          {mentionMenuOpen ? (
+            <div className={styles.slashMenuWrap}>
+              <MentionMenu
+                query={mentionQuery}
+                agents={selectableMentionAgents}
+                files={[]}
+                onSelectAgent={handleAgentMentionSelect}
+                onClose={() => setMentionMenuOpen(false)}
+              />
+            </div>
+          ) : null}
           <input
             ref={fileInputRef}
             type="file"
@@ -643,6 +770,30 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             />
           )}
           <AttachmentPreviews attachments={attachments} onRemove={handleRemove} />
+          {selectedAgentMentions.length > 0 ? (
+            <div className={styles.agentMentionChips} aria-label="Agents included in this message">
+              {selectedAgentMentions.map((mention) => (
+                <span className={styles.agentMentionChip} key={mention.agent_instance_id}>
+                  <strong>@{mention.name}</strong>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${mention.name}`}
+                    onClick={() => {
+                      setAgentMentionState((current) => ({
+                        streamKey,
+                        mentions: current.mentions.filter(
+                          (item) => item.agent_instance_id !== mention.agent_instance_id,
+                        ),
+                      }));
+                      onInputChange(input.replace(mention.token, "").trimStart());
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
           <div className={styles.inputRow}>
             {isThreeDMode ? (

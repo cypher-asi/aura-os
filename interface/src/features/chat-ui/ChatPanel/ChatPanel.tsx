@@ -21,8 +21,8 @@ import {
   useSubAgentPane,
   useSubAgentPaneActions,
 } from "../../../stores/subagent-pane-store";
-import type { ChatAttachment } from "../../../api/streams";
-import type { Project } from "../../../shared/types";
+import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
+import type { AgentInstance, Project } from "../../../shared/types";
 import type { GenerationMode } from "../../../constants/models";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
@@ -49,6 +49,7 @@ export interface ChatPanelProps {
     projectId?: string,
     generationMode?: GenerationMode,
     sourceImageUrl?: string,
+    agentMentions?: AgentMentionTarget[],
   ) => void;
   onStop: () => void;
   /**
@@ -94,6 +95,8 @@ export interface ChatPanelProps {
    * filesystem API instead of the local desktop API.
    */
   remoteAgentId?: string;
+  projectAgents?: AgentInstance[];
+  currentAgentInstanceId?: string;
   header?: ReactNode;
   InputBarComponent?: ForwardRefExoticComponent<
     ChatInputBarProps & RefAttributes<ChatInputBarHandle>
@@ -160,6 +163,8 @@ export function ChatPanel({
   onProjectChange,
   workspacePath,
   remoteAgentId,
+  projectAgents,
+  currentAgentInstanceId,
   header,
   InputBarComponent = DesktopChatInputBar,
   initialHandoff,
@@ -269,6 +274,8 @@ export function ChatPanel({
           onProjectChange={onProjectChange}
           workspacePath={workspacePath}
           remoteAgentId={remoteAgentId}
+          projectAgents={projectAgents}
+          currentAgentInstanceId={currentAgentInstanceId}
           InputBarComponent={InputBarComponent}
           initialHandoff={initialHandoff}
           onInitialHandoffReady={onInitialHandoffReady}

@@ -395,6 +395,18 @@ impl AgentPermissions {
         }
         self
     }
+
+    /// Grant the capability a project chat agent needs to message another
+    /// agent. The project roster is supplied in the session prompt, so this
+    /// deliberately does not grant `ListAgents`. The receiving route verifies
+    /// the target against the originating project before accepting delivery.
+    #[must_use]
+    pub fn with_project_delegation_cap(mut self) -> Self {
+        if !self.capabilities.contains(&Capability::ControlAgent) {
+            self.capabilities.push(Capability::ControlAgent);
+        }
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------

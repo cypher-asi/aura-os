@@ -844,6 +844,7 @@ describe("ChatPanel", () => {
       undefined,
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -890,6 +891,7 @@ describe("ChatPanel", () => {
       undefined,
       undefined,
       "image",
+      undefined,
       undefined,
     );
   });

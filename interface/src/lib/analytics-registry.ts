@@ -2,7 +2,7 @@
 // Canonical inventory of client analytics events. Do NOT re-derive via
 // grep/search — dynamic-import call sites make string search unreliable; the
 // contract test enforces this set against the actual call sites instead.
-// 49 client events; session_active is server-only and deliberately absent.
+// 51 client events; session_active is server-only and deliberately absent.
 export const ANALYTICS_EVENTS = {
   // lifecycle / auth
   app_opened: {}, // main.tsx:76
@@ -14,6 +14,8 @@ export const ANALYTICS_EVENTS = {
   model_selected: { props: ["model_name", "effort"] }, // chat-ui-store.ts:458
   mode_selected: { props: ["mode"] }, // chat-ui-store.ts:598
   file_attached: { props: ["file_count"] }, // useFileAttachments.ts:244,334
+  project_agent_mention_selected: { props: ["agent_id", "agent_instance_id"] },
+  project_agent_delegation_sent: { props: ["mention_count"] },
   // projects / tasks / process
   project_created: { props: ["environment"] }, // use-new-project-form.ts:196
   project_opened: {}, // project-list-projects-explorer.tsx:297 (dyn)
@@ -65,7 +67,7 @@ export const ANALYTICS_EVENTS = {
   public_create_agent_clicked: { props: ["source"] },
   public_start_chat_clicked: { props: ["source"] },
 } as const satisfies Record<string, { props?: readonly string[] }>;
-// 49 entries — the complete client analytics event set.
+// 51 entries — the complete client analytics event set.
 
 export type AnalyticsEventName = keyof typeof ANALYTICS_EVENTS;
 
@@ -75,6 +77,7 @@ export type AnalyticsEventName = keyof typeof ANALYTICS_EVENTS;
 // Deliberately excludes support/meta actions like feedback_created.
 export const ENGAGED_BUNDLE = [
   "chat_message_sent",
+  "project_agent_delegation_sent",
   "task_created",
   "task_run_started",
   "project_created",

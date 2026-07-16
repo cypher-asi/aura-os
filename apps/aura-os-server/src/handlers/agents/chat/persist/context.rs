@@ -91,6 +91,10 @@ pub(crate) struct ChatPersistCtx {
 /// materialises a [`ChatPersistCtx`].
 pub(crate) struct ChatPersistRequest<'a> {
     pub(crate) jwt: &'a str,
+    /// When present, the write must use this project binding. Cross-agent
+    /// callers set it so agents reused across projects cannot fall back to
+    /// whichever conversation happened to be most recent.
+    pub(crate) preferred_project_id: Option<String>,
     pub(crate) force_new: bool,
     pub(crate) pinned_session_id: Option<&'a SessionId>,
     /// Phase 2/3 cross-agent reply chain: set by `send_to_agent` in

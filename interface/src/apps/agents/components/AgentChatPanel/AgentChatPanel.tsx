@@ -406,6 +406,8 @@ export function AgentChatPanel({
     llmProjectId: projectId,
     workspacePath: terminalTarget.workspacePath,
     remoteAgentId: terminalTarget.remoteAgentId,
+    projectAgents,
+    currentAgentInstanceId: agentInstanceId,
     contextUsage,
     onFetchContextContents: contextContentsFetcher,
     onNewChat: () => {

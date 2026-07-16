@@ -107,6 +107,7 @@ pub(super) async fn resolve_persist_ctx(
     // reply.
     let persist_request = ChatPersistRequest {
         jwt: targets.jwt,
+        preferred_project_id: targets.project_id.map(ToString::to_string),
         force_new: targets.force_new,
         pinned_session_id: parsed_pin_ref,
         originating_agent_id: None,
