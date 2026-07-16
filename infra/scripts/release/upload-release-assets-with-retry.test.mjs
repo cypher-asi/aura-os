@@ -147,6 +147,63 @@ exit 1
   assert.equal(sizes["release-summary-linux-x86_64.json"], missingSize);
 });
 
+test("retries a transient failure while resolving the release", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "aura-release-lookup-"));
+  const { sourceDir, completePath, partialPath, missingPath } = await seedSourceDir(root);
+  const completeSize = (await readFile(completePath)).length;
+  const partialSize = (await readFile(partialPath)).length;
+  const missingSize = (await readFile(missingPath)).length;
+  const stateDir = path.join(root, "state");
+
+  const { binDir } = await writeMockGh(root, `#!/usr/bin/env bash
+set -euo pipefail
+state_dir="${stateDir}"
+attempts_file="$state_dir/lookup-attempts.log"
+touch "$attempts_file"
+
+cmd="$1"
+shift
+
+if [[ "$cmd" == "api" ]]; then
+  if [[ "$1" == "repos/cypher-asi/aura-os/releases/tags/v1.2.3" ]]; then
+    printf 'lookup\\n' >> "$attempts_file"
+    attempt="$(wc -l < "$attempts_file" | tr -d ' \\t\\n')"
+    if [[ "$attempt" -eq 1 ]]; then
+      echo 'HTTP 503: No server is currently available' >&2
+      exit 1
+    fi
+    printf 'release-1\\n'
+    exit 0
+  fi
+  if [[ "$1" == "--paginate" ]]; then
+    printf 'complete.dat\\t${completeSize}\\npartial.txt\\t${partialSize}\\nrelease-summary-linux-x86_64.json\\t${missingSize}\\n'
+    exit 0
+  fi
+fi
+
+echo "unexpected gh invocation: $cmd $*" >&2
+exit 1
+`);
+
+  const result = await execFile(
+    "bash",
+    [scriptPath.pathname, "cypher-asi/aura-os", "v1.2.3", sourceDir],
+    {
+      env: {
+        ...process.env,
+        PATH: `${binDir}:${process.env.PATH}`,
+        GH_RELEASE_UPLOAD_RETRY_DELAY_SECONDS: "0",
+      },
+    },
+  );
+
+  const attempts = (await readFile(path.join(stateDir, "lookup-attempts.log"), "utf8"))
+    .split("\n")
+    .filter((line) => line.length > 0);
+  assert.equal(attempts.length, 2);
+  assert.match(result.stderr, /Transient GitHub API failure \(attempt 1\/5\)/);
+});
+
 test("exits non-zero with a clear diff when assets remain missing after max attempts", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "aura-release-upload-fail-"));
   const { sourceDir } = await seedSourceDir(root);

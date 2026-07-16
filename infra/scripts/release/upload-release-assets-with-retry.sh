@@ -2,10 +2,9 @@
 set -euo pipefail
 
 # Reconcile a GitHub release so it contains every expected artifact, retrying
-# transient upload failures (e.g. "other side closed", EPIPE, ECONNRESET) that
-# regularly cause softprops/action-gh-release to drop one stream in a parallel
-# upload batch. The script is idempotent: it only uploads files that are
-# missing or whose remote size does not match the local file, using
+# transient API and upload failures (e.g. HTTP 5xx, "other side closed", EPIPE,
+# ECONNRESET). The script is idempotent: it only uploads files that are missing
+# or whose remote size does not match the local file, using
 # `gh release upload --clobber`.
 
 dry_run=0
@@ -34,7 +33,7 @@ retry_delay="${GH_RELEASE_UPLOAD_RETRY_DELAY_SECONDS:-10}"
 is_retryable_error() {
   local output="$1"
   grep -Eqi \
-    'HTTP (5[0-9]{2})|Server Error|timed out|timeout|connection reset|ECONNRESET|EPIPE|broken pipe|other side closed|stream closed|unexpected EOF|EOF|TLS|Temporary failure|context deadline exceeded' \
+    'HTTP (5[0-9]{2})|Server Error|Unicorn!|No server is currently available|timed out|timeout|connection reset|ECONNRESET|EPIPE|broken pipe|other side closed|stream closed|unexpected EOF|EOF|TLS|Temporary failure|context deadline exceeded' \
     <<<"$output"
 }
 
@@ -62,7 +61,7 @@ gh_api_with_retry() {
       return 1
     fi
 
-    echo "Transient GitHub API failure listing release (attempt ${attempt}/${max_attempts}). Retrying in ${retry_delay}s." >&2
+    echo "Transient GitHub API failure (attempt ${attempt}/${max_attempts}). Retrying in ${retry_delay}s." >&2
     sleep "$retry_delay"
   done
 }
@@ -142,7 +141,10 @@ if (( ${#local_files[@]} == 0 )); then
   exit 0
 fi
 
-release_id="$(gh api "repos/${repo}/releases/tags/${tag}" --jq '.id' 2>/dev/null || true)"
+if ! release_id="$(gh_api_with_retry "repos/${repo}/releases/tags/${tag}" --jq '.id')"; then
+  echo "Could not resolve release for tag ${tag}." >&2
+  exit 1
+fi
 if [[ -z "$release_id" ]]; then
   echo "No release found for tag ${tag}; cannot reconcile assets." >&2
   exit 1
