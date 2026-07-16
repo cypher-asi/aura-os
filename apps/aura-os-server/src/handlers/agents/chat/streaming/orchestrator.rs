@@ -63,6 +63,10 @@ pub(in super::super) struct OpenChatStreamArgs {
     /// plan-mode steering on this turn. See
     /// `crate::handlers::plan_mode` for the contract.
     pub(in super::super) is_plan_mode: bool,
+    /// Trusted per-turn context derived from structured request fields.
+    /// Persisted chat history keeps the user's raw message; only the harness
+    /// sees this wrapper so warm sessions receive fresh delegation intent.
+    pub(in super::super) turn_context: Option<String>,
     /// Observe-only usage signal context. Route handlers populate
     /// request-time facts; this orchestrator corrects
     /// `is_new_session` after the session resolver returns the actual
@@ -85,6 +89,7 @@ pub(in super::super) async fn open_harness_chat_stream(
         commands,
         fork_info,
         is_plan_mode,
+        turn_context,
         mut usage_signal_context,
     } = args;
 
@@ -164,6 +169,18 @@ pub(in super::super) async fn open_harness_chat_stream(
     // never sent to the council parent run (see `streaming::session`),
     // so append it to the history here — otherwise the orchestrator fans
     // members out over a stale / empty query.
+    let plan_content = if is_plan_mode {
+        crate::handlers::plan_mode::wrap_user_content_for_plan_mode(&user_content)
+    } else {
+        user_content.clone()
+    };
+    let harness_content = match turn_context {
+        Some(context) if !context.trim().is_empty() => {
+            format!("{context}\n\n---\n\n{plan_content}")
+        }
+        _ => plan_content,
+    };
+
     if session_config.council.is_some() {
         let mut messages = session_config
             .conversation_messages
@@ -171,16 +188,11 @@ pub(in super::super) async fn open_harness_chat_stream(
             .unwrap_or_default();
         messages.push(aura_os_harness::ConversationMessage {
             role: "user".to_string(),
-            content: user_content.clone(),
+            content: harness_content.clone(),
         });
         session_config.conversation_messages = Some(messages);
     }
 
-    let harness_content = if is_plan_mode {
-        crate::handlers::plan_mode::wrap_user_content_for_plan_mode(&user_content)
-    } else {
-        user_content
-    };
     let turn = SessionBridgeTurn {
         content: harness_content,
         tool_hints: build_turn_tool_hints(commands.as_deref(), is_plan_mode),

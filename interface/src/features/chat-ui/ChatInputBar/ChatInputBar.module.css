@@ -682,13 +682,78 @@
   white-space: nowrap;
 }
 
-/* ── @-file mention menu ─────────────────────────────────────── */
+/* ── Project @-mention menu ──────────────────────────────────── */
 
 /* The mention menu reuses .slashMenu / .slashMenuItem chrome; these
    tweaks add the file icon and a slightly lighter grid (path and
    name share the row, so descriptions get more breathing room). */
 .mentionMenuItem {
   gap: 6px;
+}
+
+.mentionMenuSection + .mentionMenuSection {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.mentionMenuHeading {
+  padding: 5px 10px 4px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agentMentionAvatar {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
+  border-radius: 50%;
+  color: var(--color-accent);
+  display: inline-flex;
+  flex: 0 0 22px;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.agentMentionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px 7px;
+}
+
+.agentMentionChip {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 26%, transparent);
+  border-radius: 999px;
+  color: var(--color-text);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+  max-width: 190px;
+  padding: 4px 8px;
+}
+
+.agentMentionChip strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agentMentionChip button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0;
 }
 
 .mentionMenuIcon {

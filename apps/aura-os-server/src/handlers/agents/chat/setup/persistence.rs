@@ -20,6 +20,7 @@ use super::super::persist::{
     resolve_chat_session_with_pin, ChatPersistCtx, ChatPersistRequest, ChatSessionResolveDeps,
     ForkInfo,
 };
+use super::super::project_team::is_user_facing_chat_agent;
 
 pub(crate) async fn setup_project_chat_persistence(
     state: &AppState,
@@ -158,7 +159,9 @@ pub(crate) async fn setup_agent_chat_persistence_with_matched(
     // (`x-aura-chat-persisted: true`) yet the panel rendered empty. A
     // pinned/force_new write already names its session, so it keeps the
     // first-binding behavior (the pin is resolved per-binding downstream).
-    let selected = if !request.force_new && request.pinned_session_id.is_none() {
+    let selected = if let Some(project_id) = request.preferred_project_id.as_deref() {
+        find_preferred_project_binding(matching, project_id)
+    } else if !request.force_new && request.pinned_session_id.is_none() {
         select_write_binding(storage, request.jwt, matching).await
     } else {
         matching.first()
@@ -218,6 +221,25 @@ pub(crate) async fn setup_agent_chat_persistence_with_matched(
         },
         resolved.fork,
     ))
+}
+
+fn find_preferred_project_binding<'a>(
+    matching: &'a [aura_os_storage::StorageProjectAgent],
+    project_id: &str,
+) -> Option<&'a aura_os_storage::StorageProjectAgent> {
+    // A project can contain an old system-created binding and the visible
+    // chat binding for the same template. Delegation should land in the
+    // conversation the user can open; direct chats retain the legacy fallback.
+    matching
+        .iter()
+        .find(|binding| {
+            binding.project_id.as_deref() == Some(project_id) && is_user_facing_chat_agent(binding)
+        })
+        .or_else(|| {
+            matching
+                .iter()
+                .find(|binding| binding.project_id.as_deref() == Some(project_id))
+        })
 }
 
 /// Pick the project binding an unpinned write should land on: the one
@@ -308,7 +330,10 @@ mod tests {
     use chrono::{DateTime, TimeZone, Utc};
 
     use super::super::super::persist::{ChatPersistRequest, ChatSessionResolveDeps};
-    use super::{pick_newest_binding_index, setup_agent_chat_persistence_with_matched};
+    use super::{
+        find_preferred_project_binding, pick_newest_binding_index,
+        setup_agent_chat_persistence_with_matched,
+    };
 
     fn ts(secs: i64) -> Option<DateTime<Utc>> {
         Some(Utc.timestamp_opt(secs, 0).unwrap())
@@ -347,6 +372,48 @@ mod tests {
         assert_eq!(pick_newest_binding_index(&[None, None]), None);
     }
 
+    #[test]
+    fn preferred_project_binding_never_falls_back_to_another_project() {
+        let visible = StorageProjectAgent {
+            id: "pa-1".into(),
+            project_id: Some("project-1".into()),
+            org_id: None,
+            agent_id: None,
+            name: None,
+            role: None,
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+            status: None,
+            model: None,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            instance_role: None,
+            source: None,
+            permissions: None,
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        };
+        let mut hidden = visible.clone();
+        hidden.id = "pa-hidden".into();
+        hidden.source = Some("auto_home".into());
+        let hidden_only = hidden.clone();
+        assert_eq!(
+            find_preferred_project_binding(&[hidden, visible], "project-1")
+                .map(|value| value.id.as_str()),
+            Some("pa-1")
+        );
+        assert_eq!(
+            find_preferred_project_binding(&[hidden_only], "project-1")
+                .map(|value| value.id.as_str()),
+            Some("pa-hidden")
+        );
+        assert!(find_preferred_project_binding(&[], "project-2").is_none());
+    }
+
     #[tokio::test]
     async fn empty_matching_returns_none_so_chat_hot_path_must_self_heal() {
         let (url, _db) = start_mock_storage().await;
@@ -356,6 +423,7 @@ mod tests {
         let svc = test_session_service(storage.clone());
         let request = ChatPersistRequest {
             jwt: "jwt",
+            preferred_project_id: None,
             force_new: false,
             pinned_session_id: None,
             originating_agent_id: None,
@@ -411,6 +479,7 @@ mod tests {
         let svc = test_session_service(storage.clone());
         let request = ChatPersistRequest {
             jwt: "jwt",
+            preferred_project_id: None,
             force_new: false,
             pinned_session_id: None,
             originating_agent_id: None,
@@ -491,6 +560,7 @@ mod tests {
         let sender = "ceo-agent-id".to_string();
         let request = ChatPersistRequest {
             jwt: "jwt",
+            preferred_project_id: None,
             force_new: false,
             pinned_session_id: None,
             originating_agent_id: Some(sender.as_str()),
@@ -568,6 +638,7 @@ mod tests {
         let from_agent = "barret-agent-id".to_string();
         let request = ChatPersistRequest {
             jwt: "jwt",
+            preferred_project_id: None,
             force_new: false,
             pinned_session_id: None,
             originating_agent_id: None,

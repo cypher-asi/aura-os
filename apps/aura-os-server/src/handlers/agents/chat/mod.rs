@@ -21,6 +21,7 @@ mod persist;
 mod persist_task;
 mod persist_task_dispatch;
 mod public_import;
+mod project_team;
 mod request;
 mod runtime_gate;
 mod session_access;

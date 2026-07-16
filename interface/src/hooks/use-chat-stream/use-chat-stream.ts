@@ -264,6 +264,7 @@ export function useChatStream({
           commands: args.commands,
           generationMode: args.generationMode,
           sourceImageUrl: args.sourceImageUrl,
+          agentMentions: args.agentMentions,
           pendingDueToStuckStream: isStuck,
         });
         return;
@@ -295,6 +296,7 @@ export function useChatStream({
         projectIdOverride: _projectIdOverride,
         generationMode: _generationMode,
         sourceImageUrl: _sourceImageUrl,
+        agentMentions,
       } = args;
       void _projectIdOverride;
 
@@ -732,6 +734,7 @@ export function useChatStream({
           clientRetryAttempt,
           council,
           mixture,
+          agentMentions,
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -1038,6 +1041,7 @@ export function useChatStream({
       _projectIdOverride?: string,
       _generationMode?: GenerationMode,
       _sourceImageUrl?: string,
+      agentMentions?: import("../../api/streams").AgentMentionTarget[],
     ) => {
       if (!projectId || !agentInstanceId) return;
       const args: LastSendArgs = {
@@ -1049,6 +1053,7 @@ export function useChatStream({
         projectIdOverride: _projectIdOverride,
         generationMode: _generationMode,
         sourceImageUrl: _sourceImageUrl,
+        agentMentions,
       };
       const captured: CapturedPartition = {
         key: core.key,

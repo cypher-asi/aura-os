@@ -1,4 +1,4 @@
-import type { ChatAttachment } from "../../../api/streams";
+import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
 import type { GenerationMode } from "../../../constants/models";
 import {
   AGENT_MODE_DESCRIPTORS,
@@ -204,18 +204,30 @@ export type LegacyOnSend = (
   projectId: string | undefined,
   generationMode: GenerationMode | undefined,
   sourceImageUrl?: string,
+  agentMentions?: AgentMentionTarget[],
 ) => void;
 
 export function dispatch(
   send: ResolvedSend,
   onSend: LegacyOnSend,
   projectId: string | undefined,
+  agentMentions?: AgentMentionTarget[],
 ): void {
   const attachments = send.attachments.length > 0 ? send.attachments : undefined;
   const commands = send.commands.length > 0 ? send.commands : undefined;
   switch (send.kind) {
     case "chat":
-      onSend(send.content, null, send.model, attachments, commands, projectId, undefined);
+      onSend(
+        send.content,
+        null,
+        send.model,
+        attachments,
+        commands,
+        projectId,
+        undefined,
+        undefined,
+        agentMentions,
+      );
       return;
     case "chat_action":
       onSend(
@@ -226,6 +238,8 @@ export function dispatch(
         commands,
         projectId,
         undefined,
+        undefined,
+        agentMentions,
       );
       return;
     case "image":

@@ -34,7 +34,7 @@ export function getTrailingTriggerQuery(
   };
 }
 
-/** Removes the `/cmd` / `@file` token starting at `start` from `value`. */
+/** Removes the `/cmd` token starting at `start` from `value`. */
 function stripTriggerToken(value: string, start: number): string {
   const before = value.slice(0, start);
   const fromToken = value.slice(start);
@@ -43,13 +43,30 @@ function stripTriggerToken(value: string, start: number): string {
   return before + after;
 }
 
+/** Replace only the active `@query`, preserving text after the caret. */
+export function replaceMentionQuery(
+  value: string,
+  start: number,
+  end: number,
+  replacement: string,
+): string {
+  return `${value.slice(0, start)}${replacement}${value.slice(end)}`;
+}
+
+export interface MentionableAgent {
+  agent_id: string;
+  agent_instance_id: string;
+  name: string;
+  role?: string;
+}
+
 export interface UseInputTriggersOptions {
   /** Current draft text (controlled). */
   readonly input: string;
   readonly onInputChange: (value: string) => void;
   /** Shell handle, used to read the caret position and restore focus. */
   readonly shellRef: RefObject<InputBarShellHandle | null>;
-  /** Whether `@` file mentions are armed (project-scoped chats only). */
+  /** Whether the project-scoped `@` menu is armed. */
   readonly canUseMentions: boolean;
   readonly selectedCommands: readonly SlashCommand[];
   readonly onCommandsChange?: (commands: SlashCommand[]) => void;
@@ -61,6 +78,8 @@ export interface UseInputTriggersOptions {
   readonly onSelectGenerationMode: (mode: AgentMode) => void;
   /** Pushes an `@`-mentioned file into the attachment pipeline. */
   readonly addFileFromPath: (path: string) => Promise<void>;
+  /** Records an exact agent binding selected from the `@` menu. */
+  readonly onAgentMentionSelect?: (agent: MentionableAgent) => void;
 }
 
 export interface InputTriggersResult {
@@ -80,11 +99,12 @@ export interface InputTriggersResult {
   readonly handleCommandSelect: (cmd: SlashCommand) => void;
   readonly handleSlashClose: () => void;
   readonly handleMentionSelect: (file: { path: string; name: string }) => void;
+  readonly handleAgentMentionSelect: (agent: MentionableAgent) => void;
   readonly handleMentionClose: () => void;
 }
 
 /**
- * Owns the `/` slash-command and `@` file-mention trigger machinery for
+ * Owns the `/` slash-command and project-scoped `@` mention machinery for
  * the chat input: open/query state for both autocomplete menus, the
  * keystroke detection that drives them, and the token-stripping
  * selection handlers.
@@ -98,6 +118,7 @@ export function useInputTriggers({
   onCommandsChange,
   onSelectGenerationMode,
   addFileFromPath,
+  onAgentMentionSelect,
 }: UseInputTriggersOptions): InputTriggersResult {
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
@@ -106,6 +127,7 @@ export function useInputTriggers({
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionRefreshNonce, setMentionRefreshNonce] = useState(0);
   const mentionStartRef = useRef<number | null>(null);
+  const mentionEndRef = useRef<number | null>(null);
 
   const handleInputChange = useCallback(
     (value: string) => {
@@ -134,6 +156,7 @@ export function useInputTriggers({
         if (mentionMatch) {
           const wasClosed = !mentionMenuOpen;
           mentionStartRef.current = mentionMatch.start;
+          mentionEndRef.current = cursor;
           setMentionQuery(mentionMatch.query);
           setMentionMenuOpen(true);
           // Refresh the file listing the moment the menu opens so
@@ -144,6 +167,7 @@ export function useInputTriggers({
           setMentionMenuOpen(false);
           setMentionQuery("");
           mentionStartRef.current = null;
+          mentionEndRef.current = null;
         }
       }
     },
@@ -206,24 +230,52 @@ export function useInputTriggers({
 
   const handleMentionSelect = useCallback(
     (file: { path: string; name: string }) => {
-      // Strip the `@query` token from the input the same way the
-      // slash menu strips its `/cmd` token, then push the file into
-      // the attachment pipeline (S3 upload starts in the background).
-      if (mentionStartRef.current !== null) {
-        onInputChange(stripTriggerToken(input, mentionStartRef.current));
+      if (mentionStartRef.current !== null && mentionEndRef.current !== null) {
+        onInputChange(
+          replaceMentionQuery(input, mentionStartRef.current, mentionEndRef.current, "").replace(
+            / {2,}/g,
+            " ",
+          ),
+        );
       }
       setMentionMenuOpen(false);
       setMentionQuery("");
       mentionStartRef.current = null;
+      mentionEndRef.current = null;
       void addFileFromPath(file.path);
     },
     [input, onInputChange, addFileFromPath],
+  );
+
+  const handleAgentMentionSelect = useCallback(
+    (agent: MentionableAgent) => {
+      if (mentionStartRef.current !== null && mentionEndRef.current !== null) {
+        const suffix = input.slice(mentionEndRef.current);
+        const replacement = `@${agent.name}${/^\s/.test(suffix) ? "" : " "}`;
+        onInputChange(
+          replaceMentionQuery(
+            input,
+            mentionStartRef.current,
+            mentionEndRef.current,
+            replacement,
+          ),
+        );
+      }
+      onAgentMentionSelect?.(agent);
+      setMentionMenuOpen(false);
+      setMentionQuery("");
+      mentionStartRef.current = null;
+      mentionEndRef.current = null;
+      shellRef.current?.focus();
+    },
+    [input, onAgentMentionSelect, onInputChange, shellRef],
   );
 
   const handleMentionClose = useCallback(() => {
     setMentionMenuOpen(false);
     setMentionQuery("");
     mentionStartRef.current = null;
+    mentionEndRef.current = null;
   }, []);
 
   return {
@@ -237,6 +289,7 @@ export function useInputTriggers({
     handleCommandSelect,
     handleSlashClose,
     handleMentionSelect,
+    handleAgentMentionSelect,
     handleMentionClose,
   };
 }

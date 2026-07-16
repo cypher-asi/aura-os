@@ -188,6 +188,7 @@ pub(super) fn spawn_cross_agent_reply_callback(
     // the newtype into the cross-agent reply task signature.
     let session_id = ctx.session_id.to_string();
     let project_agent_id = ctx.project_agent_id.clone();
+    let project_id = ctx.project_id.clone();
     let next_depth = depth.saturating_add(1);
     // Display-side provenance: stamp Barret's *org-level* agent id
     // (the same handle A originally addressed via `send_to_agent`)
@@ -211,6 +212,7 @@ pub(super) fn spawn_cross_agent_reply_callback(
         originating_agent_id,
         sender_session_id: session_id,
         sender_project_agent_id: project_agent_id,
+        project_id,
         bearer_jwt,
         reply_body: truncated,
         next_depth,
@@ -231,6 +233,7 @@ struct CrossAgentReplyCallbackArgs {
     originating_agent_id: String,
     sender_session_id: String,
     sender_project_agent_id: String,
+    project_id: String,
     bearer_jwt: String,
     reply_body: String,
     next_depth: u32,
@@ -252,6 +255,7 @@ async fn run_cross_agent_reply_callback(
         originating_agent_id,
         sender_session_id,
         sender_project_agent_id,
+        project_id,
         bearer_jwt,
         reply_body,
         next_depth,
@@ -288,7 +292,7 @@ async fn run_cross_agent_reply_callback(
         // no server-side configured model.
         "model": model,
         "commands": null,
-        "project_id": null,
+        "project_id": project_id,
         "attachments": null,
         "new_session": false,
         "originating_agent_id": null,

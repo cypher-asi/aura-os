@@ -290,6 +290,14 @@ export interface MixtureRequest {
   aggregator: MultiModelSlot;
 }
 
+/** Exact project binding selected from the chat composer's `@` menu. */
+export interface AgentMentionTarget {
+  agent_id: string;
+  agent_instance_id: string;
+}
+
+export const MAX_AGENT_MENTIONS = 5;
+
 export function sendAgentEventStream(
   agentId: string,
   content: string,
@@ -603,6 +611,7 @@ export function sendEventStream(
   },
   /** See {@link sendAgentEventStream}. */
   mixture?: MixtureRequest,
+  agentMentions?: AgentMentionTarget[],
 ) {
   const body: Record<string, unknown> = { content, action };
   if (model) {
@@ -614,6 +623,9 @@ export function sendEventStream(
   }
   if (council) body.council = council;
   if (mixture) body.mixture = mixture;
+  if (agentMentions && agentMentions.length > 0) {
+    body.agent_mentions = agentMentions;
+  }
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }

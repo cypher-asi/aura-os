@@ -5,7 +5,7 @@ import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
 import { useMessageQueueStore, useMessageQueue } from "../../../stores/message-queue-store";
 import type { QueuedMessage } from "../../../stores/message-queue-store";
-import type { ChatAttachment } from "../../../api/streams";
+import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import { isGenerationCommand, type SlashCommand } from "../../../constants/commands";
 import {
@@ -52,6 +52,7 @@ export interface UseChatPanelStateOptions {
     projectId?: string,
     generationMode?: GenerationMode,
     sourceImageUrl?: string,
+    agentMentions?: AgentMentionTarget[],
   ) => void;
   /**
    * Cancels the in-flight turn. Required by the "Send now" affordance
@@ -313,6 +314,7 @@ export function useChatPanelState({
       // present, it overrides the store-derived mode for this single
       // send only — the store remains the persistent source of truth.
       genMode?: GenerationMode,
+      agentMentions?: AgentMentionTarget[],
     ) => {
       if (sendDisabledRef.current) {
         return;
@@ -412,6 +414,7 @@ export function useChatPanelState({
           commands: record.commands,
           generationMode: record.generationMode,
           sourceImageUrl: record.sourceImageUrl,
+          agentMentions,
         });
         scrollToBottomRef.current();
       } else {
@@ -429,12 +432,14 @@ export function useChatPanelState({
             selectedProjectIdRef.current,
             record.generationMode,
             record.sourceImageUrl,
+            agentMentions,
           );
         } else {
           dispatchResolvedSend(
             resolved,
             onSendRef.current as LegacyOnSend,
             selectedProjectIdRef.current,
+            agentMentions,
           );
         }
       }
@@ -494,6 +499,7 @@ export function useChatPanelState({
           selectedProjectIdRef.current,
           next.generationMode,
           next.sourceImageUrl,
+          next.agentMentions,
         );
         scrollToBottomRef.current();
       }
@@ -545,6 +551,7 @@ export function useChatPanelState({
         selectedProjectIdRef.current,
         item.generationMode,
         item.sourceImageUrl,
+        item.agentMentions,
       );
       scrollToBottomRef.current();
     },

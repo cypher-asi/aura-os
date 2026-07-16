@@ -123,5 +123,6 @@ pub(super) async fn normalize_instance_perms(
     effective
         .normalized_for_identity(&instance.name, Some(instance.role.as_str()))
         .with_subagent_caps()
+        .with_project_delegation_cap()
         .with_project_self_caps(pid_str)
 }

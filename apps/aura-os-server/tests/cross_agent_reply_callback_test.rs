@@ -305,6 +305,7 @@ async fn start_mock_billing() -> String {
 struct Scenario {
     app: Router,
     agent_b_id: AgentId,
+    project_id: ProjectId,
     /// Held only so the storage `_db` mock task isn't dropped and
     /// the temp dir survives the test body. Dropping these would
     /// silently 5xx subsequent storage reads.
@@ -470,6 +471,7 @@ async fn build_phase7_scenario() -> Scenario {
     Scenario {
         app,
         agent_b_id,
+        project_id: project.project_id,
         _storage: storage,
         _store_dir: store_dir,
         _fake_harness: fake,
@@ -540,6 +542,7 @@ async fn cross_agent_reply_callback_fires_on_assistant_message_end() {
         serde_json::json!({
             "content": "ping from A",
             "originating_agent_id": "agent-A",
+            "project_id": scenario.project_id.to_string(),
             // A forwards its model on the inbound leg; the reply
             // callback must carry the same model back so A's
             // reply-triggered turn never opens with an empty model.
@@ -615,6 +618,11 @@ async fn cross_agent_reply_callback_fires_on_assistant_message_end() {
         "single-hop fall-off: callback body's `originating_agent_id` must be JSON null \
          (the receiving agent has no upstream to bounce back to). got {:?}",
         capture.body["originating_agent_id"]
+    );
+    assert_eq!(
+        capture.body.get("project_id").and_then(Value::as_str),
+        Some(scenario.project_id.to_string().as_str()),
+        "the reply must return to the same project conversation"
     );
     // Display-side cross-agent provenance: the callback body MUST
     // carry `from_agent_id: <Barret's org-level agent_id>` so A's

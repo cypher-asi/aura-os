@@ -39,6 +39,7 @@ use super::super::super::runtime::{
     second_opinion_presentation, session_model_overrides_with_cache,
 };
 
+use super::super::project_team::{append_project_team_prompt, load_project_team_context};
 use super::client_retry::header_indicates_client_retry;
 use super::helpers::{
     load_history_and_project_state, normalize_instance_perms, pick_instance_model,
@@ -143,6 +144,7 @@ pub(crate) async fn send_event_stream(
     // pattern in `streaming.rs`.
     let persist_request = ChatPersistRequest {
         jwt: &jwt,
+        preferred_project_id: Some(project_id.to_string()),
         force_new,
         pinned_session_id: pinned_session_id.as_ref(),
         originating_agent_id: body.originating_agent_id.as_deref(),
@@ -204,6 +206,28 @@ pub(crate) async fn send_event_stream(
     .await?;
 
     let model = pick_instance_model(&body, &instance);
+
+    let project_team = match state.storage_client.as_ref() {
+        Some(storage) => {
+            load_project_team_context(
+                storage,
+                &jwt,
+                &project_id,
+                &agent_instance_id,
+                &body.agent_mentions,
+            )
+            .await?
+        }
+        None if body.agent_mentions.is_empty() => super::super::project_team::ProjectTeamContext {
+            roster_prompt: None,
+            turn_prompt: None,
+        },
+        None => {
+            return Err(ApiError::internal(
+                "project agent mentions are unavailable without storage",
+            ));
+        }
+    };
 
     // AURA Council: only active when the client sends >= 2 models, the
     // same gate the agent route uses. A single model (or an absent
@@ -297,7 +321,7 @@ pub(crate) async fn send_event_stream(
     let TypedSessionFields {
         agent_identity,
         agent_skills,
-        agent_system_prompt,
+        mut agent_system_prompt,
         project_info,
     } = build_typed_session_fields(
         &state,
@@ -315,6 +339,8 @@ pub(crate) async fn send_event_stream(
             }),
         },
     );
+    agent_system_prompt =
+        append_project_team_prompt(agent_system_prompt, project_team.roster_prompt);
 
     let (computer_use, computer_executor_url) = computer_use_session_fields();
     let local_project_counts =
@@ -405,6 +431,7 @@ pub(crate) async fn send_event_stream(
             commands: body.commands,
             fork_info,
             is_plan_mode,
+            turn_context: project_team.turn_prompt,
             usage_signal_context,
         },
     )

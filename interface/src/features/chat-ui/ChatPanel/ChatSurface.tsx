@@ -35,8 +35,8 @@ import { getLastSendArgs as getLastAgentChatSendArgs } from "../../../hooks/use-
 import { getPartitionSendControl } from "../../../hooks/use-chat-stream/partition-send-control";
 import { recordStreamCloseReason } from "../../../shared/observability/stream-breadcrumbs";
 import { useErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
-import type { ChatAttachment } from "../../../api/streams";
-import type { Project } from "../../../shared/types";
+import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
+import type { AgentInstance, Project } from "../../../shared/types";
 import type { GenerationMode } from "../../../constants/models";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
@@ -83,6 +83,7 @@ export interface ChatSurfaceProps {
     projectId?: string,
     generationMode?: GenerationMode,
     sourceImageUrl?: string,
+    agentMentions?: AgentMentionTarget[],
   ) => void;
   onStop: () => void;
   isExternallyBusy?: boolean;
@@ -107,6 +108,8 @@ export interface ChatSurfaceProps {
   onProjectChange?: (projectId: string) => void;
   workspacePath?: string;
   remoteAgentId?: string;
+  projectAgents?: AgentInstance[];
+  currentAgentInstanceId?: string;
   /** Title bar rendered above the chat area (project/agent bar or subagent header). */
   header?: ReactNode;
   InputBarComponent?: ForwardRefExoticComponent<
@@ -183,6 +186,8 @@ export function ChatSurface({
   onProjectChange,
   workspacePath,
   remoteAgentId,
+  projectAgents,
+  currentAgentInstanceId,
   header,
   InputBarComponent = DesktopChatInputBar,
   initialHandoff,
@@ -284,6 +289,7 @@ export function ChatSurface({
         agentArgs.projectId,
         agentArgs.generationMode,
         agentArgs.sourceImageUrl,
+        undefined,
       );
       return;
     }
@@ -301,6 +307,7 @@ export function ChatSurface({
         partitionArgs.projectIdOverride,
         partitionArgs.generationMode,
         partitionArgs.sourceImageUrl,
+        partitionArgs.agentMentions,
       );
     }
   }, [onSend, onStop, sendDisabled, streamKey]);
@@ -846,6 +853,8 @@ export function ChatSurface({
           onProjectChange={onProjectChange}
           workspacePath={workspacePath}
           remoteAgentId={remoteAgentId}
+          projectAgents={projectAgents}
+          currentAgentInstanceId={currentAgentInstanceId}
           isVisible
           isCentered={centerInputWhenEmpty && isThreadEmpty}
           contextUsage={contextUsage}

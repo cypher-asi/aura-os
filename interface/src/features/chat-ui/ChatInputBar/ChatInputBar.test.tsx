@@ -1,6 +1,7 @@
 import { act, createEvent, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import { useState } from "react";
 
 let mockIsStreaming = false;
 let mockIsMobileLayout = false;
@@ -114,6 +115,7 @@ import { ChatInputBar } from "../ChatInputBar";
 import { MobileChatInputBar } from "../../../mobile/chat/MobileChatInputBar";
 import { ENTER_SUBMIT_GRACE_MS } from "../../../components/InputBarShell/InputBarShell";
 import type { AttachmentItem } from "../ChatInputBar";
+import type { AgentInstance } from "../../../shared/types";
 
 function makeProps(overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {}) {
   return {
@@ -286,6 +288,55 @@ describe("ChatInputBar", () => {
 
     expect(onInputChange).toHaveBeenLastCalledWith("@");
     expect(screen.queryByText("No matching files")).not.toBeInTheDocument();
+  });
+
+  it("selects a project agent and sends its exact binding", async () => {
+    const onSend = vi.fn();
+    const maya = {
+      agent_id: "agent-maya",
+      agent_instance_id: "instance-maya",
+      name: "Maya",
+      role: "Product designer",
+      status: "active",
+      instance_role: "chat",
+      source: "ui",
+      machine_type: "remote",
+    } as AgentInstance;
+
+    function ControlledComposer() {
+      const [value, setValue] = useState("");
+      return (
+        <ChatInputBar
+          {...makeProps({
+            input: value,
+            onInputChange: setValue,
+            onSend,
+            projectAgents: [maya],
+            currentAgentInstanceId: "instance-current",
+          })}
+        />
+      );
+    }
+
+    render(<ControlledComposer />);
+    const textarea = screen.getByPlaceholderText("/ for commands, @ for context");
+    fireEvent.change(textarea, {
+      target: { value: "ask @ma", selectionStart: 7, selectionEnd: 7 },
+    });
+    expect(screen.getByText("Project agents")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Maya/i }));
+    expect(screen.getByLabelText("Agents included in this message")).toHaveTextContent(
+      "Maya",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(onSend).toHaveBeenCalledWith(
+      "ask @Maya ",
+      undefined,
+      undefined,
+      undefined,
+      [{ agent_id: "agent-maya", agent_instance_id: "instance-maya" }],
+    );
   });
 
   it("calls onSend on Enter key (without shift)", () => {
@@ -1024,6 +1075,51 @@ describe("ChatInputBar", () => {
       "aura-claude-sonnet-4-6",
       undefined,
       undefined,
+    );
+  });
+
+  it("sends exact project-agent bindings from the mobile composer", async () => {
+    const onSend = vi.fn();
+    const maya = {
+      agent_id: "agent-maya",
+      agent_instance_id: "instance-maya",
+      name: "Maya",
+      role: "Product designer",
+      status: "active",
+      instance_role: "chat",
+      source: "ui",
+      machine_type: "remote",
+    } as AgentInstance;
+
+    function ControlledMobileComposer() {
+      const [value, setValue] = useState("");
+      return (
+        <MobileChatInputBar
+          {...makeProps({
+            input: value,
+            onInputChange: setValue,
+            onSend,
+            projectAgents: [maya],
+            currentAgentInstanceId: "instance-current",
+          })}
+        />
+      );
+    }
+
+    render(<ControlledMobileComposer />);
+    const textarea = screen.getByPlaceholderText("Message agent");
+    fireEvent.change(textarea, {
+      target: { value: "ask @ma", selectionStart: 7, selectionEnd: 7 },
+    });
+    await userEvent.click(screen.getByRole("button", { name: /Maya/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(onSend).toHaveBeenCalledWith(
+      "ask @Maya ",
+      undefined,
+      undefined,
+      undefined,
+      [{ agent_id: "agent-maya", agent_instance_id: "instance-maya" }],
     );
   });
 

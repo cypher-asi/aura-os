@@ -20,6 +20,7 @@ use super::busy::{reject_if_partition_busy, BusyScope};
 use super::computer_use_gate::computer_use_session_fields;
 use super::cross_agent_reply::read_cross_agent_depth;
 use super::persist::{build_chat_partition, ChatPersistRequest};
+use super::project_team::ensure_project_agent_target;
 use super::runtime_gate::ensure_chat_runtime_allowed;
 use super::setup::has_live_session;
 use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
@@ -75,6 +76,24 @@ pub(crate) async fn send_agent_event_stream(
             "adapter `{}` is no longer supported; only `aura_harness` agents can be chatted with",
             agent.adapter_type
         )));
+    }
+
+    let is_cross_agent_delivery =
+        body.originating_agent_id.is_some() || body.from_agent_id.is_some();
+    let preferred_project_id = body
+        .project_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(ToString::to_string);
+    if let Some(project_id) = preferred_project_id
+        .as_deref()
+        .filter(|_| is_cross_agent_delivery)
+    {
+        let storage = state.storage_client.as_ref().ok_or_else(|| {
+            ApiError::internal("project-bound agent chat is unavailable without storage")
+        })?;
+        ensure_project_agent_target(storage, &jwt, project_id, &agent_id).await?;
     }
 
     // Phase 4: narrow the bare-agent guard. The legacy `None` branch
@@ -142,6 +161,7 @@ pub(crate) async fn send_agent_event_stream(
     // `OpenChatStreamArgs` pattern in `streaming.rs`.
     let persist_request = ChatPersistRequest {
         jwt: &jwt,
+        preferred_project_id: preferred_project_id.clone(),
         force_new,
         pinned_session_id: pinned_session_id.as_ref(),
         originating_agent_id: body.originating_agent_id.as_deref(),
@@ -406,6 +426,7 @@ pub(crate) async fn send_agent_event_stream(
             commands: body.commands,
             fork_info,
             is_plan_mode,
+            turn_context: None,
             usage_signal_context,
         },
     )

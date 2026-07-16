@@ -193,6 +193,8 @@ describe("useChatPanelState", () => {
       undefined,
       undefined,
       undefined,
+      undefined,
+      undefined,
     );
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
 
@@ -353,6 +355,58 @@ describe("useChatPanelState", () => {
       "project-1",
       "image",
       undefined,
+      undefined,
+    );
+  });
+
+  it("preserves exact agent bindings while a chat send is queued", () => {
+    mockIsStreaming = true;
+    const onSend = vi.fn();
+    const mentions = [
+      { agent_id: "agent-maya", agent_instance_id: "instance-maya" },
+    ];
+    const { result, rerender } = renderHook(() =>
+      useChatPanelState({
+        streamKey: "stream-1",
+        onSend,
+        selectedProjectId: "project-1",
+      }),
+    );
+
+    act(() =>
+      result.current.handleSend(
+        "Ask @Maya to review",
+        undefined,
+        undefined,
+        undefined,
+        mentions,
+      ),
+    );
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      "stream-1",
+      expect.objectContaining({ agentMentions: mentions }),
+    );
+
+    mockDequeue.mockReturnValueOnce({
+      id: "q-agent",
+      content: "Ask @Maya to review",
+      action: null,
+      model: "gpt-5.4",
+      agentMentions: mentions,
+    });
+    mockIsStreaming = false;
+    act(() => rerender());
+
+    expect(onSend).toHaveBeenCalledWith(
+      "Ask @Maya to review",
+      null,
+      "gpt-5.4",
+      undefined,
+      undefined,
+      "project-1",
+      undefined,
+      undefined,
+      mentions,
     );
   });
 
@@ -538,6 +592,7 @@ describe("useChatPanelState", () => {
       "project-1",
       undefined,
       undefined,
+      undefined,
     );
     // Order matters: stop has to land before the dispatch so the
     // upstream latch is cleared before `sendMessage` re-enters.
@@ -576,6 +631,7 @@ describe("useChatPanelState", () => {
       "project-1",
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -603,6 +659,7 @@ describe("useChatPanelState", () => {
       "no stop wired",
       null,
       expect.any(String),
+      undefined,
       undefined,
       undefined,
       undefined,

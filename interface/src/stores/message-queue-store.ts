@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { ChatAttachment } from "../api/streams";
+import type { AgentMentionTarget, ChatAttachment } from "../api/streams";
 import type { GenerationMode } from "../constants/models";
 
 export interface QueuedMessage {
@@ -18,6 +18,8 @@ export interface QueuedMessage {
    * since.
    */
   sourceImageUrl?: string;
+  /** Structured project-agent selections preserved across queueing. */
+  agentMentions?: AgentMentionTarget[];
   /**
    * True when this message was queued because the chat send pipeline
    * detected an in-flight stream that had passed
