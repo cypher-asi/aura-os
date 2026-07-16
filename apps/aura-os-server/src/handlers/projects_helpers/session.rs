@@ -3,9 +3,9 @@
 use std::time::Duration;
 
 use aura_os_core::{AgentInstance, AgentInstanceId, HarnessMode, ProjectId};
-use aura_os_harness::SessionConfig;
+use aura_os_harness::{HarnessLink, SessionConfig};
 
-use crate::error::ApiResult;
+use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::{
     build_typed_session_fields, TypedProjectInputs, TypedSessionFields, TypedSessionInputs,
 };
@@ -19,6 +19,48 @@ use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
 use crate::state::AppState;
+
+/// Filesystem namespace that owns an agent run's workspace.
+///
+/// `HarnessMode::Local` describes the direct transport, not filesystem
+/// locality: desktop loopback runs are server-local, while Web's deployed
+/// direct harness owns a separate filesystem. Swarm always owns its remote
+/// workspace.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ExecutionWorkspaceAuthority {
+    AuraServer,
+    HostedHarness,
+    Swarm,
+}
+
+pub(crate) fn execution_workspace_authority(
+    hosted_local_runtime: bool,
+    harness_mode: HarnessMode,
+) -> ExecutionWorkspaceAuthority {
+    match (harness_mode, hosted_local_runtime) {
+        (HarnessMode::Local, false) => ExecutionWorkspaceAuthority::AuraServer,
+        (HarnessMode::Local, true) => ExecutionWorkspaceAuthority::HostedHarness,
+        (HarnessMode::Swarm, _) => ExecutionWorkspaceAuthority::Swarm,
+    }
+}
+
+pub(crate) async fn server_can_inspect_agent_workspace(
+    state: &AppState,
+    project_id: &ProjectId,
+    agent_instance_id: AgentInstanceId,
+) -> bool {
+    let Ok(instance) = state
+        .agent_instance_service
+        .get_instance(project_id, &agent_instance_id)
+        .await
+    else {
+        return false;
+    };
+    execution_workspace_authority(
+        state.harness_http.hosted_local_runtime_available(),
+        instance.harness_mode(),
+    ) == ExecutionWorkspaceAuthority::AuraServer
+}
 
 pub(crate) fn resolve_project_workspace_path_for_machine(
     state: &AppState,
@@ -71,6 +113,95 @@ pub(crate) async fn resolve_agent_instance_workspace_path(
         }
     }
     None
+}
+
+/// Resolve a path that belongs to the aura-os-server filesystem namespace.
+///
+/// This remains separate from hosted-harness resolution because callers such
+/// as spec mirroring perform the filesystem write inside aura-os-server.
+pub(crate) async fn resolve_server_local_workspace_path(
+    state: &AppState,
+    project_id: &ProjectId,
+    agent_instance_id: Option<AgentInstanceId>,
+) -> Option<String> {
+    // An instance path is safe to reuse only when the instance is executed by
+    // the loopback harness. Hosted-local and Swarm paths belong to another
+    // filesystem namespace and must never become a server-side write target.
+    if let Some(agent_instance_id) = agent_instance_id {
+        if server_can_inspect_agent_workspace(state, project_id, agent_instance_id).await {
+            if let Ok(instance) = state
+                .agent_instance_service
+                .get_instance(project_id, &agent_instance_id)
+                .await
+            {
+                if let Some(path) = instance
+                    .workspace_path
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|path| !path.is_empty())
+                {
+                    return Some(path.to_string());
+                }
+            }
+        }
+    }
+
+    let project = state.project_service.get_project(project_id).ok()?;
+    if state.harness_http.hosted_local_runtime_available() {
+        return Some(
+            crate::handlers::projects_helpers::canonical_workspace_path(
+                &state.data_dir,
+                project_id,
+            )
+            .to_string_lossy()
+            .into_owned(),
+        );
+    }
+    resolve_project_workspace_path_for_machine(
+        state,
+        project_id,
+        Some(project.name.as_str()),
+        "local",
+    )
+}
+
+/// Resolve a project path on a separately hosted local harness.
+///
+/// A hosted harness runs in a different filesystem namespace from
+/// `aura-os-server`, so server-local paths such as
+/// `/opt/render/.local/share/aura-dev/workspaces/<project-id>` must never be
+/// forwarded to it. The harness's `/workspace/resolve` endpoint is the source
+/// of truth for the path that its kernel can create and access. The immutable
+/// project UUID is deliberately used as the resolver key: project names are
+/// mutable and slug-collidable, which could otherwise alias two tenants onto
+/// the same hosted workspace.
+pub(crate) async fn resolve_hosted_local_workspace_path(
+    state: &AppState,
+    project_id: &ProjectId,
+) -> anyhow::Result<Option<String>> {
+    resolve_hosted_workspace_path(
+        state.harness_http.hosted_local_runtime_available(),
+        state.local_harness.as_ref(),
+        &project_id.to_string(),
+    )
+    .await
+}
+
+async fn resolve_hosted_workspace_path(
+    hosted_local_runtime: bool,
+    harness: &dyn HarnessLink,
+    workspace_key: &str,
+) -> anyhow::Result<Option<String>> {
+    if !hosted_local_runtime {
+        return Ok(None);
+    }
+
+    let path = harness.resolve_workspace(workspace_key, None).await?;
+    let path = path.trim();
+    if path.is_empty() {
+        anyhow::bail!("hosted harness returned an empty workspace path");
+    }
+    Ok(Some(path.to_string()))
 }
 
 /// Default agentic-step ceiling for project-tool LLM sessions
@@ -165,24 +296,44 @@ pub(crate) async fn resolve_project_tool_workspace_path(
     project_id: &ProjectId,
     harness_mode: HarnessMode,
     agent_instance_id: Option<AgentInstanceId>,
-) -> Option<String> {
+) -> ApiResult<Option<String>> {
+    if execution_workspace_authority(
+        state.harness_http.hosted_local_runtime_available(),
+        harness_mode,
+    ) == ExecutionWorkspaceAuthority::HostedHarness
+    {
+        match resolve_hosted_local_workspace_path(state, project_id).await {
+            Ok(Some(path)) => return Ok(Some(path)),
+            Ok(None) => {}
+            Err(error) => {
+                // Do not fall back to an aura-os-server path here. A hosted
+                // harness cannot access the server's filesystem namespace.
+                return Err(ApiError::bad_gateway(format!(
+                    "resolving workspace from hosted local harness: {error}"
+                )));
+            }
+        }
+    }
+
     if let Some(path) =
         resolve_agent_instance_workspace_path(state, project_id, agent_instance_id).await
     {
-        return Some(path);
+        return Ok(Some(path));
     }
 
-    let project = state.project_service.get_project(project_id).ok()?;
+    let Ok(project) = state.project_service.get_project(project_id) else {
+        return Ok(None);
+    };
     let machine_type = match harness_mode {
         HarnessMode::Local => "local",
         HarnessMode::Swarm => "remote",
     };
-    resolve_project_workspace_path_for_machine(
+    Ok(resolve_project_workspace_path_for_machine(
         state,
         project_id,
         Some(project.name.as_str()),
         machine_type,
-    )
+    ))
 }
 
 /// Build a standard project tool session config with JWT propagation.
@@ -219,7 +370,7 @@ pub(crate) async fn project_tool_session_config(
     };
     let project_path =
         resolve_project_tool_workspace_path(state, project_id, harness_mode, agent_instance_id)
-            .await;
+            .await?;
     let installed_tools = match state.project_service.get_project(project_id).ok() {
         Some(project) => {
             let mut tools = installed_workspace_app_tools(state, &project.org_id, jwt).await;
@@ -441,14 +592,128 @@ fn first_non_empty_model(default_model: Option<&str>, model: Option<&str>) -> Op
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
 
+    use async_trait::async_trait;
+
     use super::{
-        first_non_empty_model, is_project_tool_action, parse_project_tool_deadline,
-        parse_project_tool_max_turns, stable_project_tool_session_id,
+        execution_workspace_authority, first_non_empty_model, is_project_tool_action,
+        parse_project_tool_deadline, parse_project_tool_max_turns, resolve_hosted_workspace_path,
+        stable_project_tool_session_id, ExecutionWorkspaceAuthority,
         DEFAULT_PROJECT_TOOL_DEADLINE_SECS, DEFAULT_PROJECT_TOOL_MAX_TURNS,
     };
-    use aura_os_core::{AgentInstanceId, ProjectId};
+    use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId};
+    use aura_os_harness::{HarnessLink, HarnessSession, SessionConfig};
+
+    struct WorkspaceResolvingHarness {
+        calls: AtomicUsize,
+        path: &'static str,
+        expected_key: &'static str,
+        fail: bool,
+    }
+
+    #[async_trait]
+    impl HarnessLink for WorkspaceResolvingHarness {
+        async fn open_session(&self, _config: SessionConfig) -> anyhow::Result<HarnessSession> {
+            anyhow::bail!("not used by workspace resolution tests")
+        }
+
+        async fn close_session(&self, _session_id: &str) -> anyhow::Result<()> {
+            Ok(())
+        }
+
+        async fn resolve_workspace(
+            &self,
+            project_name: &str,
+            _auth_token: Option<&str>,
+        ) -> anyhow::Result<String> {
+            assert_eq!(project_name, self.expected_key);
+            self.calls.fetch_add(1, Ordering::Relaxed);
+            if self.fail {
+                anyhow::bail!("hosted resolver unavailable");
+            }
+            Ok(self.path.to_string())
+        }
+    }
+
+    #[test]
+    fn workspace_authority_keeps_the_three_execution_lanes_isolated() {
+        assert_eq!(
+            execution_workspace_authority(false, HarnessMode::Local),
+            ExecutionWorkspaceAuthority::AuraServer,
+            "desktop/loopback local execution must stay on the Aura server filesystem",
+        );
+        assert_eq!(
+            execution_workspace_authority(true, HarnessMode::Local),
+            ExecutionWorkspaceAuthority::HostedHarness,
+            "Web local execution must use the deployed Harness filesystem",
+        );
+        assert_eq!(
+            execution_workspace_authority(false, HarnessMode::Swarm),
+            ExecutionWorkspaceAuthority::Swarm,
+        );
+        assert_eq!(
+            execution_workspace_authority(true, HarnessMode::Swarm),
+            ExecutionWorkspaceAuthority::Swarm,
+            "configuring a hosted local Harness must not reroute Swarm agents",
+        );
+    }
+
+    #[tokio::test]
+    async fn hosted_local_workspace_uses_harness_filesystem_path() {
+        let harness = WorkspaceResolvingHarness {
+            calls: AtomicUsize::new(0),
+            path: " /var/data/aura/workspaces/my-project ",
+            expected_key: "36d4494f-75df-4c02-84d5-07aef06d2569",
+            fail: false,
+        };
+
+        let resolved =
+            resolve_hosted_workspace_path(true, &harness, "36d4494f-75df-4c02-84d5-07aef06d2569")
+                .await
+                .expect("resolve hosted workspace");
+
+        assert_eq!(
+            resolved.as_deref(),
+            Some("/var/data/aura/workspaces/my-project")
+        );
+        assert_eq!(harness.calls.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn loopback_local_workspace_does_not_query_harness() {
+        let harness = WorkspaceResolvingHarness {
+            calls: AtomicUsize::new(0),
+            path: "/unused",
+            expected_key: "unused-because-loopback-does-not-query",
+            fail: false,
+        };
+
+        let resolved = resolve_hosted_workspace_path(false, &harness, "My Project")
+            .await
+            .expect("skip hosted workspace resolution");
+
+        assert_eq!(resolved, None);
+        assert_eq!(harness.calls.load(Ordering::Relaxed), 0);
+    }
+
+    #[tokio::test]
+    async fn hosted_workspace_resolution_error_is_not_masked_by_a_local_fallback() {
+        let harness = WorkspaceResolvingHarness {
+            calls: AtomicUsize::new(0),
+            path: "/must-not-be-used",
+            expected_key: "36d4494f-75df-4c02-84d5-07aef06d2569",
+            fail: true,
+        };
+
+        let error = resolve_hosted_workspace_path(true, &harness, harness.expected_key)
+            .await
+            .expect_err("hosted resolver failures must propagate");
+
+        assert!(error.to_string().contains("hosted resolver unavailable"));
+        assert_eq!(harness.calls.load(Ordering::Relaxed), 1);
+    }
 
     #[test]
     fn parse_max_turns_uses_explicit_positive_values() {

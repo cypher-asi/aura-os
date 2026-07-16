@@ -14,7 +14,7 @@ use serde::Serialize;
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, Spec};
 
-use super::projects_helpers::resolve_project_tool_workspace_path;
+use super::projects_helpers::resolve_server_local_workspace_path;
 use super::spec_disk::mirror_spec_to_disk;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -123,8 +123,7 @@ pub(super) async fn resolve_spec_workspace(
     project_id: &ProjectId,
     agent_instance_id: Option<AgentInstanceId>,
 ) -> Option<String> {
-    resolve_project_tool_workspace_path(state, project_id, HarnessMode::Local, agent_instance_id)
-        .await
+    resolve_server_local_workspace_path(state, project_id, agent_instance_id).await
 }
 
 pub(super) async fn mirror_spec_best_effort(

@@ -10,7 +10,9 @@ use aura_os_harness::HarnessLink;
 
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::projects_helpers::{
-    resolve_agent_instance_workspace_path, slugify, validate_workspace_is_initialised,
+    execution_workspace_authority, resolve_agent_instance_workspace_path,
+    resolve_hosted_local_workspace_path, slugify, validate_workspace_is_initialised,
+    ExecutionWorkspaceAuthority,
 };
 use crate::state::AppState;
 
@@ -43,7 +45,7 @@ pub(super) async fn resolve_start_context(
     })
     .await?;
     preflight_local_workspace(
-        mode,
+        execution_workspace_authority(state.harness_http.hosted_local_runtime_available(), mode),
         &workspace_root,
         params::resolve_git_repo_url(project.as_ref()).as_deref(),
     )?;
@@ -206,6 +208,19 @@ async fn resolve_workspace(inputs: ResolveWorkspaceInputs<'_>) -> ApiResult<Stri
         project,
         agent_instance_id,
     } = inputs;
+    if execution_workspace_authority(state.harness_http.hosted_local_runtime_available(), mode)
+        == ExecutionWorkspaceAuthority::HostedHarness
+    {
+        match resolve_hosted_local_workspace_path(state, &project_id).await {
+            Ok(Some(path)) => return Ok(path),
+            Ok(None) => {}
+            Err(error) => {
+                return Err(ApiError::bad_gateway(format!(
+                    "resolving workspace from hosted local harness: {error}"
+                )));
+            }
+        }
+    }
     if mode == HarnessMode::Swarm {
         let name = project.map(|p| p.name.as_str()).unwrap_or("");
         if let Ok(path) = client.resolve_workspace(name, auth_token).await {
@@ -221,11 +236,11 @@ async fn resolve_workspace(inputs: ResolveWorkspaceInputs<'_>) -> ApiResult<Stri
 }
 
 fn preflight_local_workspace(
-    mode: HarnessMode,
+    authority: ExecutionWorkspaceAuthority,
     project_path: &str,
     git_repo_url: Option<&str>,
 ) -> ApiResult<()> {
-    if mode != HarnessMode::Local {
+    if authority != ExecutionWorkspaceAuthority::AuraServer {
         return Ok(());
     }
     let path = std::path::Path::new(project_path);
@@ -250,10 +265,45 @@ fn preflight_local_workspace(
 
 #[cfg(test)]
 mod stable_session_id_tests {
-    use super::params::stable_dev_loop_session_id;
+    use super::{
+        params::stable_dev_loop_session_id, preflight_local_workspace, ExecutionWorkspaceAuthority,
+    };
 
     const PROJECT: &str = "36d4494f-75df-4c02-84d5-07aef06d2569";
     const INSTANCE: &str = "29c9ee0f-3e81-4f00-8ad0-a1ae0e29a586";
+
+    #[test]
+    fn hosted_local_workspace_skips_server_filesystem_preflight() {
+        let result = preflight_local_workspace(
+            ExecutionWorkspaceAuthority::HostedHarness,
+            "/path/that/only/exists/on/the/hosted/harness",
+            None,
+        );
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn desktop_local_workspace_still_runs_server_filesystem_preflight() {
+        let result = preflight_local_workspace(
+            ExecutionWorkspaceAuthority::AuraServer,
+            "/path/that/does/not/exist",
+            None,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn swarm_workspace_still_skips_server_filesystem_preflight() {
+        let result = preflight_local_workspace(
+            ExecutionWorkspaceAuthority::Swarm,
+            "/home/aura/project-on-the-remote-vm",
+            None,
+        );
+
+        assert!(result.is_ok());
+    }
 
     #[test]
     fn stable_across_restarts_for_same_tuple() {

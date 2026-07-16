@@ -12,10 +12,12 @@ use aura_os_core::TaskId;
 use tracing::info;
 
 use super::super::super::session::{record_task_worked, RecordTaskWorkedInputs};
-use super::super::super::signals::snapshot_workspace_health;
+use super::super::super::signals::{health_gate_enabled, snapshot_workspace_health};
 use super::common::{event_text, set_current_task};
 use super::{failure, files, git, retry, task_output, SideEffectCtx};
-use crate::handlers::projects_helpers::resolve_agent_instance_workspace_path;
+use crate::handlers::projects_helpers::{
+    resolve_agent_instance_workspace_path, server_can_inspect_agent_workspace,
+};
 
 /// Route an enriched (and possibly health-gate-demoted) engine event
 /// into the per-arm helper that owns the side-effects for that event
@@ -85,6 +87,12 @@ pub(super) async fn task_started_side_effects(ctx: &SideEffectCtx<'_>, task_id: 
 /// background so it never adds claim latency; if it doesn't finish
 /// before task_done, the gate falls back to "unknown baseline".
 async fn spawn_health_baseline_snapshot(ctx: &SideEffectCtx<'_>, task_id: &str) {
+    if !health_gate_enabled()
+        || !server_can_inspect_agent_workspace(ctx.state, &ctx.project_id, ctx.agent_instance_id)
+            .await
+    {
+        return;
+    }
     let Ok(task_uuid) = TaskId::from_str(task_id) else {
         return;
     };

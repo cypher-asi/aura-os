@@ -97,10 +97,48 @@ service instead of a loopback sidecar. Configure the two services as a pair:
 | harness image service | `AURA_NODE_REQUIRE_AUTH` | `1` |
 | harness image service | `AURA_NODE_AUTH_TOKEN` | Same shared secret value |
 | harness image service | `AURA_OS_SERVER_URL` | Public aura-os web service URL |
+| harness image service | `AURA_DATA_DIR` | A writable persistent-disk mount, for example `/data` |
 
 `LOCAL_HARNESS_AUTH_TOKEN` authenticates only the server-to-harness transport.
 The signed-in user's JWT still travels inside `RuntimeRequest.auth_jwt`, and
 must not be replaced with the harness shared secret.
+
+The two services have separate filesystems. Aura resolves every runtime
+workspace through the hosted harness and must not pass the aura-os web
+service's local `data_dir/workspaces/...` path to it. The harness service's
+`/workspace/resolve` response is authoritative for chat, project-tool, and
+dev-loop execution. Aura uses the immutable project UUID as the hosted
+workspace key; do not replace it with the project name, because normalized
+names can collide and names change over time.
+
+Attach a persistent disk to the harness service at the directory configured by
+`AURA_DATA_DIR`. The container image creates a writable `/data` directory, but
+without a persistent Render disk every deploy/restart discards hosted-local
+project files. Imported browser files are copied to the protected
+`POST /workspace/import` endpoint, and project deletion performs best-effort
+cleanup through `DELETE /workspace/:project_id`; deploy the matching Harness
+build before the aura-api build that starts calling those lifecycle endpoints.
+
+The browser file explorer and interactive terminal remain unavailable for
+hosted-local workspaces. Their existing local routes execute on aura-api's
+filesystem, while Harness's terminal currently opens a service-level home
+directory rather than a project sandbox. Do not proxy either surface as if it
+were desktop-local. Agent file and command tools do execute inside the hosted
+project workspace. The opt-in aura-api workspace health gate is also skipped
+for hosted-local and Swarm workspaces because aura-api cannot run `cargo check`
+inside another service's filesystem.
+
+Existing Git URLs are metadata today; the Harness run path forwards them but
+does not bootstrap an empty hosted workspace by cloning. Use the browser file
+import for an existing codebase, or let the agent create a new project in its
+UUID workspace. Adding authenticated Git bootstrap requires a separate,
+kernel-mediated design so repository credentials are not exposed to a shared
+service-level process.
+
+If an earlier experimental hosted-local build already created name-slug
+directories, review and migrate them manually. Automatic slug-to-UUID moves
+are intentionally unsafe on a shared Harness because a slug may already
+contain files from more than one same-named project.
 
 Do not enable `AURA_REMOTE_ONLY=1` for this mode. Remote-only deployments reject
 local-agent chat/dev-loop routes before they reach the hosted local harness.
@@ -141,10 +179,12 @@ Brave directly.
 - Render instances still have ephemeral local disk. Browser-owned persisted state remains in the browser, server auth uses the in-memory validation cache, and any local backend compatibility state should be treated as rebuildable.
 - The build takes ~2-3 minutes (Node frontend + Rust backend).
 - `LOCAL_HARNESS_URL` should NOT be set on Render unless a harness service is deployed alongside and protected with the matching token pair above.
+- Keep the hosted Harness at one instance unless its workspace disk is shared. Multiple independent instances can route consecutive turns for one project to different filesystems.
 
 ## Troubleshooting
 
 - `external tool callback unreachable: http://127.0.0.1:<port>/...` — `aura-api` is handing remote harnesses a loopback URL. Set `AURA_SERVER_BASE_URL=https://api.aura.ai` on `aura-api` and redeploy.
+- `Kernel error: create workspace: Permission denied` with an aura-api path such as `/opt/render/.local/share/aura-dev/workspaces/...` — aura-api is forwarding its own filesystem path to a separately hosted harness. Deploy a build that resolves hosted-local workspaces through `/workspace/resolve`, and verify the harness service's data directory is writable.
 - `platform web search is not configured` — add `BRAVE_SEARCH_PLATFORM_KEY` to `aura-api`, not `aura-app`, and redeploy `aura-api`.
 - Desktop Web Search callback points at loopback — set the GitHub variable `AURA_PLATFORM_TOOL_ACTION_BASE_URL=https://api.aura.ai` and publish a new desktop build. No Brave key belongs in that build.
 

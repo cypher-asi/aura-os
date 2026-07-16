@@ -6,7 +6,7 @@
 use aura_os_harness::{
     is_hosted_harness_base_url, local_harness_base_url, local_harness_transport_auth_token_from_env,
 };
-use axum::http::{Method, StatusCode, header};
+use axum::http::{header, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use url::Url;
 
@@ -111,6 +111,49 @@ impl HarnessHttpGateway {
         let body = resp.text().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
 
         Ok((status, [(header::CONTENT_TYPE, "application/json")], body).into_response())
+    }
+
+    /// Copy browser-imported project files into the filesystem owned by a
+    /// separately hosted local Harness.
+    pub(crate) async fn import_workspace(
+        &self,
+        workspace_key: &str,
+        files: serde_json::Value,
+    ) -> Result<(), String> {
+        let body = serde_json::json!({
+            "workspace_key": workspace_key,
+            "files": files,
+        })
+        .to_string();
+        let response = self
+            .proxy_json(Method::POST, "workspace/import", None, Some(body))
+            .await
+            .map_err(|status| format!("hosted Harness import proxy failed with {status}"))?;
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "hosted Harness rejected workspace import with {}",
+                response.status()
+            ))
+        }
+    }
+
+    /// Best-effort hosted workspace cleanup used after project deletion.
+    pub(crate) async fn delete_workspace(&self, workspace_key: &str) -> Result<(), String> {
+        let path = format!("workspace/{workspace_key}");
+        let response = self
+            .proxy_json(Method::DELETE, &path, None, None)
+            .await
+            .map_err(|status| format!("hosted Harness delete proxy failed with {status}"))?;
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "hosted Harness rejected workspace deletion with {}",
+                response.status()
+            ))
+        }
     }
 
     /// POST to register a skill on an agent (best-effort; used after agent harness setup).
