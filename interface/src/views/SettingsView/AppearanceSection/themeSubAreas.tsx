@@ -61,8 +61,8 @@ export const THEME_SUB_AREAS: readonly ThemeSubArea[] = [
   { id: "colors", label: "Custom colors", group: "Customization", icon: Droplets, Component: ColorsPane },
   { id: "effects", label: "Effects", group: "Customization", icon: Sparkles, Component: EffectsPane },
   { id: "motion", label: "Motion", group: "Customization", icon: Zap, Component: MotionPane },
+  { id: "logo", label: "Aura logo", group: "Customization", icon: Signature, Component: LogoPane },
   { id: "background", label: "Background", group: "Desktop", icon: Image, Component: BackgroundPane },
-  { id: "logo", label: "Aura logo", group: "Desktop", icon: Signature, Component: LogoPane },
   { id: "presets", label: "Presets", group: "Library", icon: Bookmark, Component: PresetsPane },
 ];
 
