@@ -33,7 +33,7 @@ retry_delay="${GH_RELEASE_UPLOAD_RETRY_DELAY_SECONDS:-10}"
 is_retryable_error() {
   local output="$1"
   grep -Eqi \
-    'HTTP (5[0-9]{2})|Server Error|Unicorn!|No server is currently available|timed out|timeout|connection reset|ECONNRESET|EPIPE|broken pipe|other side closed|stream closed|unexpected EOF|EOF|TLS|Temporary failure|context deadline exceeded' \
+    'HTTP (5[0-9]{2})|Server Error|Unicorn!|No server is currently available|invalid character .*looking for beginning of value|timed out|timeout|connection reset|ECONNRESET|EPIPE|broken pipe|other side closed|stream closed|unexpected EOF|EOF|TLS|Temporary failure|context deadline exceeded' \
     <<<"$output"
 }
 
