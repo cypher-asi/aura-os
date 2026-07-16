@@ -172,6 +172,10 @@ if [[ "$cmd" == "api" ]]; then
       echo 'HTTP 503: No server is currently available' >&2
       exit 1
     fi
+    if [[ "$attempt" -eq 2 ]]; then
+      echo "invalid character '<' looking for beginning of value" >&2
+      exit 1
+    fi
     printf 'release-1\\n'
     exit 0
   fi
@@ -200,8 +204,9 @@ exit 1
   const attempts = (await readFile(path.join(stateDir, "lookup-attempts.log"), "utf8"))
     .split("\n")
     .filter((line) => line.length > 0);
-  assert.equal(attempts.length, 2);
+  assert.equal(attempts.length, 3);
   assert.match(result.stderr, /Transient GitHub API failure \(attempt 1\/5\)/);
+  assert.match(result.stderr, /Transient GitHub API failure \(attempt 2\/5\)/);
 });
 
 test("exits non-zero with a clear diff when assets remain missing after max attempts", async () => {
