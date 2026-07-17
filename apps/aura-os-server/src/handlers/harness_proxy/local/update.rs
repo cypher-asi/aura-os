@@ -9,7 +9,9 @@ use serde::Deserialize;
 
 use crate::state::AppState;
 
-use super::create::render_skill_frontmatter;
+use super::create::{
+    normalize_agent_target, render_skill_frontmatter, SkillAgentTarget, SkillFrontmatterOptions,
+};
 use super::frontmatter::extract_frontmatter_field;
 use super::{create_skill_name_valid, user_skills_root, USER_CREATED_SOURCE_MARKER};
 
@@ -22,6 +24,7 @@ pub(crate) struct UpdateSkillBody {
     pub context: Option<String>,
     pub user_invocable: Option<bool>,
     pub model_invocable: Option<bool>,
+    pub agent_target: Option<SkillAgentTarget>,
 }
 
 #[derive(serde::Serialize)]
@@ -62,11 +65,12 @@ pub(crate) async fn update_my_skill(
 pub(crate) async fn update_my_skill_from_payload(
     state: &AppState,
     name: String,
-    payload: UpdateSkillBody,
+    mut payload: UpdateSkillBody,
 ) -> Result<UpdateSkillResponse, StatusCode> {
     if !create_skill_name_valid(&name) {
         return Err(StatusCode::BAD_REQUEST);
     }
+    payload.agent_target = normalize_agent_target(payload.agent_target, None)?;
 
     let skill_dir = user_skills_root()
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
@@ -84,11 +88,14 @@ pub(crate) async fn update_my_skill_from_payload(
     let frontmatter = render_skill_frontmatter(
         &name,
         &payload.description,
-        payload.allowed_tools.as_deref(),
-        payload.model.as_deref(),
-        payload.context.as_deref(),
-        payload.user_invocable.unwrap_or(true),
-        payload.model_invocable.unwrap_or(false),
+        SkillFrontmatterOptions {
+            allowed_tools: payload.allowed_tools.as_deref(),
+            model: payload.model.as_deref(),
+            context: payload.context.as_deref(),
+            user_invocable: payload.user_invocable.unwrap_or(true),
+            model_invocable: payload.model_invocable.unwrap_or(false),
+            agent_target: payload.agent_target.as_ref(),
+        },
     );
     let body_text = payload.body.clone().unwrap_or_default();
     let content = format!("{frontmatter}\n{body_text}");
@@ -115,6 +122,7 @@ pub(crate) async fn update_my_skill_from_payload(
                 "body": body_text,
                 "user_invocable": payload.user_invocable.unwrap_or(true),
                 "model_invocable": payload.model_invocable.unwrap_or(false),
+                "agent_target": payload.agent_target,
             })
             .to_string(),
         )

@@ -26,11 +26,16 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
 
     let (app, _, _db) = build_test_app_with_mocks().await;
     let agent = "00000000-0000-0000-0000-000000000001";
+    let target_agent = "00000000-0000-0000-0000-000000000002";
     let payload = json!({
         "name": "my-skill",
         "description": "A skill for tests",
         "body": "# Instructions",
         "agent_id": agent,
+        "agent_target": {
+            "agent_id": target_agent,
+            "name": "Reviewer",
+        },
     });
     let req = json_request("POST", "/api/harness/skills", Some(payload));
     let resp = app.oneshot(req).await.unwrap();
@@ -64,6 +69,14 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
     );
     assert!(content.contains("description: \"A skill for tests\""));
     assert!(content.contains("# Instructions"));
+    assert!(
+        content.contains(&format!("agent_target_id: \"{target_agent}\"")),
+        "expected stable collaborator id in frontmatter, got:\n{content}"
+    );
+    assert!(
+        content.contains("agent_target_name: \"Reviewer\""),
+        "expected collaborator display name in frontmatter, got:\n{content}"
+    );
     // The user-created marker must be present so list_my_skills can
     // distinguish this from a shop-installed skill that happens to share
     // the same on-disk layout.
@@ -90,6 +103,8 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
     assert_eq!(register_body["name"], "my-skill");
     assert_eq!(register_body["description"], "A skill for tests");
     assert_eq!(register_body["user_invocable"], true);
+    assert_eq!(register_body["agent_target"]["agent_id"], target_agent);
+    assert_eq!(register_body["agent_target"]["name"], "Reviewer");
 
     let install_call = captured
         .iter()
@@ -100,6 +115,50 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
     assert_eq!(install_body["name"], "my-skill");
     assert!(install_body["approved_paths"].is_array());
     assert!(install_body["approved_commands"].is_array());
+}
+
+#[tokio::test]
+async fn create_skill_rejects_invalid_or_self_agent_target() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let source_agent = "00000000-0000-0000-0000-000000000001";
+
+    let invalid = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "invalid-target",
+            "description": "Invalid target",
+            "agent_target": { "agent_id": "not-an-agent-id", "name": "Reviewer" },
+        })),
+    );
+    assert_eq!(
+        app.clone().oneshot(invalid).await.unwrap().status(),
+        StatusCode::BAD_REQUEST
+    );
+
+    let self_target = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "self-target",
+            "description": "Self target",
+            "agent_id": source_agent,
+            "agent_target": { "agent_id": source_agent, "name": "Self" },
+        })),
+    );
+    assert_eq!(
+        app.oneshot(self_target).await.unwrap().status(),
+        StatusCode::BAD_REQUEST
+    );
 }
 
 #[tokio::test]

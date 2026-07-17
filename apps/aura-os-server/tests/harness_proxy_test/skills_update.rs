@@ -50,6 +50,10 @@ async fn update_my_skill_rewrites_file_and_reregisters() {
             "body": "# Updated body",
             "user_invocable": false,
             "model_invocable": true,
+            "agent_target": {
+                "agent_id": "00000000-0000-0000-0000-000000000002",
+                "name": "Security Reviewer",
+            },
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();
@@ -91,6 +95,14 @@ async fn update_my_skill_rewrites_file_and_reregisters() {
     assert!(
         content.contains("model_invocable: true"),
         "expected model_invocable flag to be persisted, got:\n{content}"
+    );
+    assert!(
+        content.contains("agent_target_id: \"00000000-0000-0000-0000-000000000002\""),
+        "expected collaborator id to be persisted, got:\n{content}"
+    );
+    assert!(
+        content.contains("agent_target_name: \"Security Reviewer\""),
+        "expected collaborator name to be persisted, got:\n{content}"
     );
     assert!(
         content.contains("source: \"user-created\""),
@@ -135,6 +147,11 @@ async fn update_my_skill_rewrites_file_and_reregisters() {
     assert_eq!(reregister_body["name"], "edit-me");
     assert_eq!(reregister_body["description"], "Updated description");
     assert_eq!(reregister_body["body"], "# Updated body");
+    assert_eq!(
+        reregister_body["agent_target"]["agent_id"],
+        "00000000-0000-0000-0000-000000000002"
+    );
+    assert_eq!(reregister_body["agent_target"]["name"], "Security Reviewer");
 }
 
 /// If the harness rejects the re-register POST, the edit must fail loud
@@ -360,6 +377,10 @@ async fn get_my_skill_returns_all_fields_for_the_edit_form() {
             "context": "ctx",
             "user_invocable": false,
             "model_invocable": true,
+            "agent_target": {
+                "agent_id": "00000000-0000-0000-0000-000000000002",
+                "name": "Reviewer",
+            },
         })),
     );
     assert_eq!(
@@ -381,6 +402,13 @@ async fn get_my_skill_returns_all_fields_for_the_edit_form() {
     // And the two it preserved:
     assert_eq!(body["model"], "claude-opus-4-8");
     assert_eq!(body["context"], "ctx");
+    assert_eq!(
+        body["agent_target"],
+        json!({
+            "agent_id": "00000000-0000-0000-0000-000000000002",
+            "name": "Reviewer",
+        })
+    );
 }
 
 /// Fetching a skill that doesn't exist on disk is a 404.
@@ -465,6 +493,10 @@ async fn editing_preserves_all_settings_full_round_trip() {
             "context": "ctx",
             "user_invocable": false,
             "model_invocable": true,
+            "agent_target": {
+                "agent_id": "00000000-0000-0000-0000-000000000002",
+                "name": "Reviewer",
+            },
         })),
     );
     assert_eq!(
@@ -492,6 +524,10 @@ async fn editing_preserves_all_settings_full_round_trip() {
             "allowed_tools": ["read_file", "write_file"],
             "model": "claude-opus-4-8",
             "context": "ctx",
+            "agent_target": {
+                "agent_id": "00000000-0000-0000-0000-000000000002",
+                "name": "Reviewer",
+            },
         })),
     );
     assert_eq!(
@@ -518,4 +554,62 @@ async fn editing_preserves_all_settings_full_round_trip() {
     );
     assert_eq!(post["model"], "claude-opus-4-8");
     assert_eq!(post["context"], "ctx");
+    assert_eq!(
+        post["agent_target"],
+        json!({
+            "agent_id": "00000000-0000-0000-0000-000000000002",
+            "name": "Reviewer",
+        }),
+        "agent collaborator binding must survive an edit"
+    );
+}
+
+#[tokio::test]
+async fn update_my_skill_rejects_invalid_agent_target_without_touching_file() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
+    let (mock_url, _calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    let create = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "safe-edit",
+            "description": "Original",
+            "body": "# Original",
+        })),
+    );
+    assert_eq!(
+        app.clone().oneshot(create).await.unwrap().status(),
+        StatusCode::CREATED
+    );
+    let skill_path = home_dir
+        .path()
+        .join(aura_os_core::Channel::current().skills_home_name())
+        .join("skills")
+        .join("safe-edit")
+        .join("SKILL.md");
+    let before = std::fs::read_to_string(&skill_path).unwrap();
+
+    let update = json_request(
+        "PUT",
+        "/api/harness/skills/mine/safe-edit",
+        Some(json!({
+            "description": "Changed",
+            "body": "# Changed",
+            "agent_target": { "agent_id": "bad-id", "name": "Reviewer" },
+        })),
+    );
+    assert_eq!(
+        app.oneshot(update).await.unwrap().status(),
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(std::fs::read_to_string(&skill_path).unwrap(), before);
 }

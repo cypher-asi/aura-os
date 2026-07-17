@@ -1,12 +1,15 @@
 import { useState, useRef, useCallback } from "react";
 import { Modal, Input, Button, Text } from "@cypher-asi/zui";
 import { api } from "../../../api/client";
+import type { Agent } from "../../../shared/types";
+import { SkillAgentTargetField } from "./SkillAgentTargetField";
 
 interface CreateSkillModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
   agentId?: string;
+  availableAgents?: readonly Agent[];
 }
 
 const NAME_RE = /^[a-z0-9-]{1,64}$/;
@@ -25,13 +28,20 @@ function extractApiErrorMessage(err: unknown): string | undefined {
   return undefined;
 }
 
-export function CreateSkillModal({ isOpen, onClose, onCreated, agentId }: CreateSkillModalProps) {
+export function CreateSkillModal({
+  isOpen,
+  onClose,
+  onCreated,
+  agentId,
+  availableAgents = [],
+}: CreateSkillModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
+  const [agentTargetId, setAgentTargetId] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
 
   const reset = useCallback(() => {
@@ -41,6 +51,7 @@ export function CreateSkillModal({ isOpen, onClose, onCreated, agentId }: Create
     setSaving(false);
     setError("");
     setNameError("");
+    setAgentTargetId("");
   }, []);
 
   const handleClose = useCallback(() => {
@@ -70,10 +81,14 @@ export function CreateSkillModal({ isOpen, onClose, onCreated, agentId }: Create
 
     setSaving(true);
     try {
+      const target = availableAgents.find((candidate) => candidate.agent_id === agentTargetId);
       await api.harnessSkills.createSkill({
         name: slug,
         description: description.trim(),
         body: body.trim() || undefined,
+        ...(target
+          ? { agent_target: { agent_id: target.agent_id, name: target.name } }
+          : {}),
         agent_id: agentId,
       });
       onCreated();
@@ -83,7 +98,16 @@ export function CreateSkillModal({ isOpen, onClose, onCreated, agentId }: Create
     } finally {
       setSaving(false);
     }
-  }, [name, description, body, agentId, onCreated, handleClose]);
+  }, [
+    name,
+    description,
+    body,
+    agentTargetId,
+    availableAgents,
+    agentId,
+    onCreated,
+    handleClose,
+  ]);
 
   return (
     <Modal
@@ -147,6 +171,12 @@ export function CreateSkillModal({ isOpen, onClose, onCreated, agentId }: Create
             }}
           />
         </div>
+
+        <SkillAgentTargetField
+          value={agentTargetId}
+          onChange={setAgentTargetId}
+          agents={availableAgents}
+        />
 
         {error && (
           <Text variant="muted" size="sm" style={{ color: "var(--color-danger, #ef4444)" }}>

@@ -88,7 +88,14 @@ describe("harnessSkillsApi", () => {
   });
 
   it("createSkill sends POST with skill data", async () => {
-    const data = { name: "new-skill", description: "A skill" };
+    const data = {
+      name: "new-skill",
+      description: "A skill",
+      agent_target: {
+        agent_id: "00000000-0000-0000-0000-000000000002",
+        name: "Reviewer",
+      },
+    };
     const fetchMock = mockFetch(200, {
       name: "new-skill",
       path: "/skills/new-skill",
@@ -218,6 +225,10 @@ describe("harnessSkillsApi", () => {
       user_invocable: false,
       model_invocable: true,
       allowed_tools: ["read", "write"],
+      agent_target: {
+        agent_id: "00000000-0000-0000-0000-000000000002",
+        name: "Reviewer",
+      },
     };
     const fetchMock = mockFetch(200, {
       name: "my-skill",

@@ -153,9 +153,31 @@ pub(crate) async fn get_remote_agent_state(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<String>,
 ) -> ApiResult<Json<RemoteAgentStateResponse>> {
+    let gateway_state = fetch_remote_agent_state(&state, &jwt, &agent_id).await?;
+
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "remote_agent_state_changed",
+        "agent_id": agent_id,
+        "state": gateway_state.state,
+        "uptime_seconds": gateway_state.uptime_seconds,
+        "active_sessions": gateway_state.active_sessions,
+        "error_message": gateway_state.error_message,
+    }));
+
+    Ok(Json(gateway_state))
+}
+
+/// Resolve the live state of a remote agent without emitting a websocket
+/// event. Chat admission uses this for cross-agent deliveries so an
+/// autonomous `send_to_agent` call cannot disappear into a stopped runtime.
+pub(crate) async fn fetch_remote_agent_state(
+    state: &AppState,
+    jwt: &str,
+    agent_id: &str,
+) -> ApiResult<RemoteAgentStateResponse> {
     let network = state.require_network_client()?;
     let net_agent = network
-        .get_agent(&agent_id, &jwt)
+        .get_agent(agent_id, jwt)
         .await
         .map_err(map_network_error)?;
 
@@ -169,7 +191,7 @@ pub(crate) async fn get_remote_agent_state(
         .as_deref()
         .ok_or_else(|| ApiError::service_unavailable("swarm gateway is not configured"))?;
 
-    let url = format!("{}/v1/agents/{}/state", base_url, agent_id);
+    let url = format!("{base_url}/v1/agents/{agent_id}/state");
 
     let resp = network
         .http_client()
@@ -189,21 +211,9 @@ pub(crate) async fn get_remote_agent_state(
         });
     }
 
-    let gateway_state: RemoteAgentStateResponse = resp
-        .json()
+    resp.json()
         .await
-        .map_err(|e| ApiError::internal(format!("failed to parse gateway response: {e}")))?;
-
-    let _ = state.event_broadcast.send(serde_json::json!({
-        "type": "remote_agent_state_changed",
-        "agent_id": agent_id,
-        "state": gateway_state.state,
-        "uptime_seconds": gateway_state.uptime_seconds,
-        "active_sessions": gateway_state.active_sessions,
-        "error_message": gateway_state.error_message,
-    }));
-
-    Ok(Json(gateway_state))
+        .map_err(|e| ApiError::internal(format!("failed to parse gateway response: {e}")))
 }
 
 /// Proxy a lifecycle action (hibernate, stop, restart, wake, start) to the

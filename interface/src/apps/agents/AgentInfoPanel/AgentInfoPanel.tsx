@@ -169,6 +169,7 @@ function ProjectsTab({
 
 export function AgentInfoPanel({ variant = "default", agent: agentOverride }: AgentInfoPanelProps) {
   const { selectedAgent: storeSelectedAgent, setSelectedAgent } = useSelectedAgent();
+  const availableAgents = useAgentStore((state) => state.agents);
   const selectedAgent = agentOverride ?? storeSelectedAgent;
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -275,7 +276,9 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
         )}
 
         {effectiveTab === "chats" && <ChatsTab />}
-        {effectiveTab === "skills" && <SkillsTab agent={a} />}
+        {effectiveTab === "skills" && (
+          <SkillsTab agent={a} availableAgents={availableAgents} />
+        )}
         {effectiveTab === "permissions" && (
           <PermissionsTab agent={a} isOwnAgent={isOwnAgent} />
         )}

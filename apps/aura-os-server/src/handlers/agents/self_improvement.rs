@@ -984,6 +984,7 @@ async fn apply_skill_create(
             context: parsed.context,
             user_invocable: parsed.user_invocable,
             model_invocable: parsed.model_invocable,
+            agent_target: None,
             agent_id: Some(agent_id.to_string()),
         },
     )
@@ -1005,6 +1006,7 @@ async fn apply_skill_update(state: &AppState, payload: Value) -> Result<(), Stri
             context: parsed.context,
             user_invocable: parsed.user_invocable,
             model_invocable: parsed.model_invocable,
+            agent_target: None,
         },
     )
     .await

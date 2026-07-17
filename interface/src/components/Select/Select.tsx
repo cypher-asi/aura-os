@@ -15,9 +15,18 @@ export interface SelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  ariaLabel?: string;
 }
 
-export function Select({ value, onChange, options, placeholder, disabled, className }: SelectProps) {
+export function Select({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+  className,
+  ariaLabel,
+}: SelectProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -36,7 +45,6 @@ export function Select({ value, onChange, options, placeholder, disabled, classN
 
   useEffect(() => {
     if (!open) return;
-    reposition();
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     return () => {
@@ -63,6 +71,11 @@ export function Select({ value, onChange, options, placeholder, disabled, classN
     triggerRef.current?.focus();
   };
 
+  const handleToggle = () => {
+    if (!open) reposition();
+    setOpen((current) => !current);
+  };
+
   return (
     <>
       <button
@@ -70,9 +83,10 @@ export function Select({ value, onChange, options, placeholder, disabled, classN
         type="button"
         className={`${styles.trigger}${className ? ` ${className}` : ""}`}
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleToggle}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={ariaLabel}
       >
         <span className={`${styles.triggerLabel}${!selected ? ` ${styles.placeholder}` : ""}`}>
           {selected?.label ?? placeholder ?? "\u00A0"}
