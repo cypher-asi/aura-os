@@ -3,22 +3,23 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-17T00:52:49.529Z",
+  "generatedAt": "2026-07-17T02:01:22.505Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.765.1",
+  "version": "0.1.0-nightly.766.1",
   "date": "2026-07-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.765.1",
-  "lastIncludedSha": "8bc804734fa523d7b83f8930c0babb1644b64f46",
-  "previousProcessedSha": "972384031274810f17ce8888d05b3bf06bfaea83",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.766.1",
+  "lastIncludedSha": "0277cf624d8eed9e9032871434b755f711a86498",
+  "previousProcessedSha": "8bc804734fa523d7b83f8930c0babb1644b64f46",
   "commitShas": [
     "972384031274810f17ce8888d05b3bf06bfaea83",
     "069114689768a827b62f439574927bf3773373bf",
     "9d73d2ce6a7702f589905280b7e64c02a5c40f32",
-    "8bc804734fa523d7b83f8930c0babb1644b64f46"
+    "8bc804734fa523d7b83f8930c0babb1644b64f46",
+    "0277cf624d8eed9e9032871434b755f711a86498"
   ],
-  "rawCommitCount": 4,
-  "filteredCommitCount": 4,
+  "rawCommitCount": 5,
+  "filteredCommitCount": 5,
   "rawCommits": [
     {
       "sha": "972384031274810f17ce8888d05b3bf06bfaea83",
@@ -232,36 +233,83 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "0277cf624d8eed9e9032871434b755f711a86498",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-17T06:38:11+05:00",
+      "subject": "fix: guard unavailable remote agent chats (#109)",
+      "body": "",
+      "parents": [
+        "8bc804734fa523d7b83f8930c0babb1644b64f46"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.test.tsx",
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/MentionMenu.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/useInputTriggers.ts",
+        "interface/src/shared/lib/agent-chat-availability.test.ts",
+        "interface/src/shared/lib/agent-chat-availability.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 323,
+        "deletions": 20
+      },
+      "committedAtMs": 1784252291000,
+      "cleanSubject": "guard unavailable remote agent chats (#109)",
+      "keywords": [
+        "guard",
+        "unavailable",
+        "remote",
+        "agent",
+        "chats"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/features",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 3,
+  "batchCount": 4,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.765.1",
+      "version": "0.1.0-nightly.766.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65859630
+          "sizeBytes": 65858288
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132418040
+          "sizeBytes": 132422136
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -271,29 +319,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.765.1",
+      "version": "0.1.0-nightly.766.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.765.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.766.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61546918
+          "sizeBytes": 61550038
         },
         {
-          "name": "AURA_0.1.0-nightly.765.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.766.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60531039
+          "sizeBytes": 60530594
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -303,29 +351,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.765.1",
+      "version": "0.1.0-nightly.766.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.765.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.766.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63750110
+          "sizeBytes": 63753480
         },
         {
-          "name": "AURA_0.1.0-nightly.765.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.766.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62753566
+          "sizeBytes": 62754172
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -335,17 +383,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.765.1",
+      "version": "0.1.0-nightly.766.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48487233
+          "sizeBytes": 48488640
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.765.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.766.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -354,33 +402,33 @@
     }
   ],
   "rendered": {
-    "title": "Project agent mentions land, hosted workspaces get isolated",
-    "intro": "Today's nightly brings a new way to direct chats at specific agents inside a project, tightens how hosted local workspaces are exposed to the server, and hardens the GitHub release upload script against another class of flaky API responses.",
+    "title": "Project agent mentions land, with safer hosted workspaces and remote availability",
+    "intro": "Today's nightly centers on a new way to bring specific agents into a project chat with @-mentions, backed by server-side plumbing to keep hosted local workspaces properly isolated. The interface also learns when a remote agent is offline before you hit send, and the release upload pipeline gets more patient with flaky GitHub API responses.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "4:22 AM",
         "started_at": "2026-07-16T11:22:07.000Z",
         "ended_at": "2026-07-16T11:22:07.000Z",
-        "title": "Hosted local workspaces isolated from server filesystem",
-        "summary": "The server no longer treats hosted Harness workspaces as if they lived on its own disk, closing a source of wrong-path bugs in project-bound agent chat.",
+        "title": "Hosted local workspaces get their own filesystem boundary",
+        "summary": "The server now stops advertising its own workspace paths for hosted local runtimes, so browsers and the Harness stay on the authoritative filesystem.",
         "items": [
           {
-            "text": "Agent instance API responses now omit the server's lookalike workspace path when a hosted local Harness owns the filesystem, so browsers and callers can no longer send back an unusable absolute path.",
+            "text": "When a hosted local Harness is available, the agent instance API no longer returns a lookalike server-side workspace path that callers used to send back to the Harness by mistake.",
             "commit_shas": [
               "972384031274810f17ce8888d05b3bf06bfaea83"
             ],
             "confidence": "high"
           },
           {
-            "text": "Prompt assembly skips injecting the workspace index block when the server cannot actually read the hosted local runtime's files, preventing misleading context from being stitched into the agent system prompt.",
+            "text": "Prompt construction and workspace resolution now go through a mode-aware path so aura-os-server only reads and injects a workspace index block when it actually owns the files, avoiding cross-namespace prompt pollution in hosted local mode.",
             "commit_shas": [
               "972384031274810f17ce8888d05b3bf06bfaea83"
             ],
             "confidence": "high"
           },
           {
-            "text": "Project tool workspace resolution is now fallible end-to-end and routed through a single helper for both bare-agent and instance chat, with new Render deployment docs covering the hosted layout.",
+            "text": "Adds Render deployment notes and refactors the projects session helpers so both bare-agent and instance chat routes resolve project workspaces through one path that can fail cleanly.",
             "commit_shas": [
               "972384031274810f17ce8888d05b3bf06bfaea83"
             ],
@@ -393,29 +441,36 @@
         "time_label": "3:58 PM",
         "started_at": "2026-07-16T22:58:14.000Z",
         "ended_at": "2026-07-16T22:58:14.000Z",
-        "title": "@-mentioning project agents in chat",
-        "summary": "The project chat composer gains a first-class agent mention flow, letting users target specific teammates in a project and routing those mentions safely through the server.",
+        "title": "@-mention project agents from the chat composer",
+        "summary": "The chat input bar gains a project-team mention menu so users can direct a message at specific agents on a project, with matching validation on the server.",
         "items": [
           {
-            "text": "A new `@` menu in the chat input bar lets users pick agents from the current project, replacing the older file-only mention menu with a unified MentionMenu across desktop and mobile composers.",
+            "text": "The chat composer now offers a project agent mention menu alongside file mentions, with a new shared MentionMenu component replacing the file-only variant and reworked input trigger handling for the `@` cue.",
             "commit_shas": [
               "069114689768a827b62f439574927bf3773373bf"
             ],
             "confidence": "high"
           },
           {
-            "text": "Selected mentions are sent as structured `agent_mentions` on the chat request, and the project route validates each agent id against the project's user-facing bindings before dispatching to the harness.",
+            "text": "SendChatRequest carries structured agent mentions, and the project chat route validates each `agent_id` and `agent_instance_id` against the project's user-facing bindings before the message reaches the harness.",
             "commit_shas": [
               "069114689768a827b62f439574927bf3773373bf"
             ],
             "confidence": "high"
           },
           {
-            "text": "Cross-agent replies now carry the originating `project_id` through the callback path, so responses from mentioned teammates stay scoped to the right project team.",
+            "text": "Cross-agent replies now carry the originating project id end to end, keeping mention-driven conversations bound to the right project team and persistence context.",
             "commit_shas": [
               "069114689768a827b62f439574927bf3773373bf"
             ],
             "confidence": "high"
+          },
+          {
+            "text": "The mobile chat input bar picks up the same mention affordance so `@` works consistently across desktop and mobile.",
+            "commit_shas": [
+              "069114689768a827b62f439574927bf3773373bf"
+            ],
+            "confidence": "medium"
           }
         ]
       },
@@ -424,31 +479,63 @@
         "time_label": "4:25 PM",
         "started_at": "2026-07-16T23:25:12.000Z",
         "ended_at": "2026-07-16T23:34:40.000Z",
-        "title": "Release uploader survives flaky GitHub release lookups",
-        "summary": "The mobile and desktop release asset reconciler now retries a broader set of GitHub API failures when resolving a release by tag, reducing spurious CI failures during nightly publishing.",
+        "title": "Release uploader tolerates flaky GitHub API responses",
+        "summary": "The nightly asset uploader now retries release-lookup failures from GitHub, including 5xx pages and malformed JSON, instead of aborting the whole publish.",
         "items": [
           {
-            "text": "Release tag lookups now go through the retrying `gh_api_with_retry` wrapper and treat GitHub's \"Unicorn!\" and \"No server is currently available\" 5xx pages as transient instead of fatal.",
+            "text": "Resolving a release by tag now goes through the retry helper and recognizes transient failures like HTTP 5xx, \"No server is currently available\", and Unicorn! error pages, with a covering test that asserts the lookup is retried.",
             "commit_shas": [
               "9d73d2ce6a7702f589905280b7e64c02a5c40f32"
             ],
             "confidence": "high"
           },
           {
-            "text": "Malformed HTML-in-JSON responses that surface as `invalid character '<' looking for beginning of value` are now recognized as retryable, so a stray GitHub error page no longer aborts an otherwise-healthy upload run.",
+            "text": "Adds the \"invalid character looking for beginning of value\" signature to the retryable set so an HTML error page returned in place of JSON no longer fails the upload on the first try.",
             "commit_shas": [
               "8bc804734fa523d7b83f8930c0babb1644b64f46"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "6:38 PM",
+        "started_at": "2026-07-17T01:38:11.000Z",
+        "ended_at": "2026-07-17T01:38:11.000Z",
+        "title": "Chat blocks sending when a remote agent is offline",
+        "summary": "The agent chat panel now reflects live remote-agent status, disabling send and dimming unavailable agents in the mention menu before a message goes out.",
+        "items": [
+          {
+            "text": "AgentChatPanel subscribes to the profile status store, registers the current remote agent for live updates, and disables send with a clear \"This remote agent is offline. Start it before sending a message.\" reason when the agent is stopped.",
+            "commit_shas": [
+              "0277cf624d8eed9e9032871434b755f711a86498"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A new shared `resolveAgentChatAvailability` helper centralizes the local-vs-remote availability rules used by both the send button and the mention menu.",
+            "commit_shas": [
+              "0277cf624d8eed9e9032871434b755f711a86498"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The mention menu visually marks unavailable agents with a dimmed, not-allowed style so users can see which teammates can actually receive a message.",
+            "commit_shas": [
+              "0277cf624d8eed9e9032871434b755f711a86498"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "@-mention specific agents inside project chat",
+      "@-mention specific project agents from the chat composer",
       "Hosted local workspaces no longer leak server-side paths",
-      "Release asset uploader now retries GitHub API lookup failures"
+      "Remote-agent chat blocks sending when the agent is offline",
+      "Release uploader retries GitHub 5xx and malformed responses"
     ],
-    "raw_commit_count": 4
+    "raw_commit_count": 5
   }
 }

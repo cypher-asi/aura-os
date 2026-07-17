@@ -2,18 +2,19 @@
   {
     "date": "2026-07-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.765.1",
-    "title": "Project agent mentions land, hosted workspaces get isolated",
-    "intro": "Today's nightly brings a new way to direct chats at specific agents inside a project, tightens how hosted local workspaces are exposed to the server, and hardens the GitHub release upload script against another class of flaky API responses.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.766.1",
+    "title": "Project agent mentions land, with safer hosted workspaces and remote availability",
+    "intro": "Today's nightly centers on a new way to bring specific agents into a project chat with @-mentions, backed by server-side plumbing to keep hosted local workspaces properly isolated. The interface also learns when a remote agent is offline before you hit send, and the release upload pipeline gets more patient with flaky GitHub API responses.",
+    "entryCount": 4,
     "highlights": [
-      "@-mention specific agents inside project chat",
+      "@-mention specific project agents from the chat composer",
       "Hosted local workspaces no longer leak server-side paths",
-      "Release asset uploader now retries GitHub API lookup failures"
+      "Remote-agent chat blocks sending when the agent is offline",
+      "Release uploader retries GitHub 5xx and malformed responses"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-07-17T00:52:49.529Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.765.1",
+    "rawCommitCount": 5,
+    "generatedAt": "2026-07-17T02:01:22.505Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.766.1",
     "path": "history/2026-07-16.json"
   },
   {

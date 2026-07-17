@@ -1,38 +1,48 @@
-# Project agent mentions land, hosted workspaces get isolated
+# Project agent mentions land, with safer hosted workspaces and remote availability
 
 - Date: `2026-07-16`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.765.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.765.1
+- Version: `0.1.0-nightly.766.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.766.1
 
-Today's nightly brings a new way to direct chats at specific agents inside a project, tightens how hosted local workspaces are exposed to the server, and hardens the GitHub release upload script against another class of flaky API responses.
+Today's nightly centers on a new way to bring specific agents into a project chat with @-mentions, backed by server-side plumbing to keep hosted local workspaces properly isolated. The interface also learns when a remote agent is offline before you hit send, and the release upload pipeline gets more patient with flaky GitHub API responses.
 
-## 4:22 AM — Hosted local workspaces isolated from server filesystem
+## 4:22 AM — Hosted local workspaces get their own filesystem boundary
 
-The server no longer treats hosted Harness workspaces as if they lived on its own disk, closing a source of wrong-path bugs in project-bound agent chat.
+The server now stops advertising its own workspace paths for hosted local runtimes, so browsers and the Harness stay on the authoritative filesystem.
 
-- Agent instance API responses now omit the server's lookalike workspace path when a hosted local Harness owns the filesystem, so browsers and callers can no longer send back an unusable absolute path. (`9723840`)
-- Prompt assembly skips injecting the workspace index block when the server cannot actually read the hosted local runtime's files, preventing misleading context from being stitched into the agent system prompt. (`9723840`)
-- Project tool workspace resolution is now fallible end-to-end and routed through a single helper for both bare-agent and instance chat, with new Render deployment docs covering the hosted layout. (`9723840`)
+- When a hosted local Harness is available, the agent instance API no longer returns a lookalike server-side workspace path that callers used to send back to the Harness by mistake. (`9723840`)
+- Prompt construction and workspace resolution now go through a mode-aware path so aura-os-server only reads and injects a workspace index block when it actually owns the files, avoiding cross-namespace prompt pollution in hosted local mode. (`9723840`)
+- Adds Render deployment notes and refactors the projects session helpers so both bare-agent and instance chat routes resolve project workspaces through one path that can fail cleanly. (`9723840`)
 
-## 3:58 PM — @-mentioning project agents in chat
+## 3:58 PM — @-mention project agents from the chat composer
 
-The project chat composer gains a first-class agent mention flow, letting users target specific teammates in a project and routing those mentions safely through the server.
+The chat input bar gains a project-team mention menu so users can direct a message at specific agents on a project, with matching validation on the server.
 
-- A new `@` menu in the chat input bar lets users pick agents from the current project, replacing the older file-only mention menu with a unified MentionMenu across desktop and mobile composers. (`0691146`)
-- Selected mentions are sent as structured `agent_mentions` on the chat request, and the project route validates each agent id against the project's user-facing bindings before dispatching to the harness. (`0691146`)
-- Cross-agent replies now carry the originating `project_id` through the callback path, so responses from mentioned teammates stay scoped to the right project team. (`0691146`)
+- The chat composer now offers a project agent mention menu alongside file mentions, with a new shared MentionMenu component replacing the file-only variant and reworked input trigger handling for the `@` cue. (`0691146`)
+- SendChatRequest carries structured agent mentions, and the project chat route validates each `agent_id` and `agent_instance_id` against the project's user-facing bindings before the message reaches the harness. (`0691146`)
+- Cross-agent replies now carry the originating project id end to end, keeping mention-driven conversations bound to the right project team and persistence context. (`0691146`)
+- The mobile chat input bar picks up the same mention affordance so `@` works consistently across desktop and mobile. (`0691146`)
 
-## 4:25 PM — Release uploader survives flaky GitHub release lookups
+## 4:25 PM — Release uploader tolerates flaky GitHub API responses
 
-The mobile and desktop release asset reconciler now retries a broader set of GitHub API failures when resolving a release by tag, reducing spurious CI failures during nightly publishing.
+The nightly asset uploader now retries release-lookup failures from GitHub, including 5xx pages and malformed JSON, instead of aborting the whole publish.
 
-- Release tag lookups now go through the retrying `gh_api_with_retry` wrapper and treat GitHub's "Unicorn!" and "No server is currently available" 5xx pages as transient instead of fatal. (`9d73d2c`)
-- Malformed HTML-in-JSON responses that surface as `invalid character '<' looking for beginning of value` are now recognized as retryable, so a stray GitHub error page no longer aborts an otherwise-healthy upload run. (`8bc8047`)
+- Resolving a release by tag now goes through the retry helper and recognizes transient failures like HTTP 5xx, "No server is currently available", and Unicorn! error pages, with a covering test that asserts the lookup is retried. (`9d73d2c`)
+- Adds the "invalid character looking for beginning of value" signature to the retryable set so an HTML error page returned in place of JSON no longer fails the upload on the first try. (`8bc8047`)
+
+## 6:38 PM — Chat blocks sending when a remote agent is offline
+
+The agent chat panel now reflects live remote-agent status, disabling send and dimming unavailable agents in the mention menu before a message goes out.
+
+- AgentChatPanel subscribes to the profile status store, registers the current remote agent for live updates, and disables send with a clear "This remote agent is offline. Start it before sending a message." reason when the agent is stopped. (`0277cf6`)
+- A new shared `resolveAgentChatAvailability` helper centralizes the local-vs-remote availability rules used by both the send button and the mention menu. (`0277cf6`)
+- The mention menu visually marks unavailable agents with a dimmed, not-allowed style so users can see which teammates can actually receive a message. (`0277cf6`)
 
 ## Highlights
 
-- @-mention specific agents inside project chat
+- @-mention specific project agents from the chat composer
 - Hosted local workspaces no longer leak server-side paths
-- Release asset uploader now retries GitHub API lookup failures
+- Remote-agent chat blocks sending when the agent is offline
+- Release uploader retries GitHub 5xx and malformed responses
 
