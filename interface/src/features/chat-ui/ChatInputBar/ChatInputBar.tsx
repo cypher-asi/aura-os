@@ -5,6 +5,7 @@ import {
   forwardRef,
   memo,
   useCallback,
+  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
@@ -50,12 +51,14 @@ import {
 import { ModelControls } from "./ModelControls";
 import { ProjectPicker } from "./ProjectPicker";
 import { useChatUI } from "../../../stores/chat-ui-store";
+import { useProfileStatusStore } from "../../../stores/profile-status-store";
 import type { SlashCommand } from "../../../constants/commands";
 import type { AgentInstance, Project } from "../../../shared/types";
 import { MAX_AGENT_MENTIONS, type AgentMentionTarget } from "../../../api/streams";
 import { isUserFacingAgentInstance } from "../../../components/ProjectList/project-list-shared";
 import { filterRuntimeVisibleAgents } from "../../../shared/lib/agent-runtime-visibility";
 import { resolveWorkspaceAccess } from "../../../shared/lib/workspace-access";
+import { resolveAgentChatAvailability } from "../../../shared/lib/agent-chat-availability";
 import {
   desktopApi,
   DEFAULT_DEMO_RECORD_OPTIONS,
@@ -412,15 +415,43 @@ export const DesktopChatInputBar = memo(
       linkedWorkspace: features.linkedWorkspace,
     });
     const mentionWorkspacePath = workspaceAccess.workspacePath;
+    const remoteStatuses = useProfileStatusStore((state) => state.statuses);
+    const registerRemoteAgents = useProfileStatusStore(
+      (state) => state.registerRemoteAgents,
+    );
+    const projectRemoteAgents = useMemo(
+      () =>
+        projectAgents
+          .filter((candidate) => candidate.machine_type === "remote")
+          .map((candidate) => ({ agent_id: candidate.agent_id })),
+      [projectAgents],
+    );
+    useEffect(() => {
+      if (projectRemoteAgents.length > 0) {
+        registerRemoteAgents(projectRemoteAgents);
+      }
+    }, [projectRemoteAgents, registerRemoteAgents]);
     const mentionableAgents = useMemo(
       () =>
-        filterRuntimeVisibleAgents(projectAgents, remoteOnly).filter(
-          (candidate) =>
-            candidate.agent_instance_id !== currentAgentInstanceId &&
-            candidate.status !== "archived" &&
-            isUserFacingAgentInstance(candidate),
-        ),
-      [currentAgentInstanceId, projectAgents, remoteOnly],
+        filterRuntimeVisibleAgents(projectAgents, remoteOnly)
+          .filter(
+            (candidate) =>
+              candidate.agent_instance_id !== currentAgentInstanceId &&
+              candidate.status !== "archived" &&
+              isUserFacingAgentInstance(candidate),
+          )
+          .map((candidate) => {
+            const availability = resolveAgentChatAvailability(
+              candidate.machine_type,
+              remoteStatuses[candidate.agent_id],
+            );
+            return {
+              ...candidate,
+              chatAvailable: availability.available,
+              availabilityLabel: availability.label,
+            };
+          }),
+      [currentAgentInstanceId, projectAgents, remoteOnly, remoteStatuses],
     );
     const canUseMentions = Boolean(mentionWorkspacePath) || mentionableAgents.length > 0;
     const infoBarWorkspacePath =

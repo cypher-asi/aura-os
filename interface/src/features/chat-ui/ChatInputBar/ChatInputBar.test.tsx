@@ -6,6 +6,8 @@ import { useState } from "react";
 let mockIsStreaming = false;
 let mockIsMobileLayout = false;
 let mockLinkedWorkspace = true;
+let mockRemoteStatuses: Record<string, string> = {};
+const mockRegisterRemoteAgents = vi.fn();
 vi.mock("../../../hooks/stream/hooks", () => ({
   useIsStreaming: () => mockIsStreaming,
 }));
@@ -100,6 +102,17 @@ vi.mock("../../../stores/chat-ui-store", () => ({
     init: vi.fn(),
     syncAvailableModels: vi.fn(),
   }),
+}));
+
+vi.mock("../../../stores/profile-status-store", () => ({
+  useProfileStatusStore: (selector: (state: {
+    statuses: Record<string, string>;
+    registerRemoteAgents: typeof mockRegisterRemoteAgents;
+  }) => unknown) =>
+    selector({
+      statuses: mockRemoteStatuses,
+      registerRemoteAgents: mockRegisterRemoteAgents,
+    }),
 }));
 
 vi.mock("./useFileAttachments", () => ({
@@ -197,6 +210,8 @@ beforeEach(() => {
   mockSelectedEffort = null;
   mockSelectedMode = "code";
   mockPinnedSourceImage = null;
+  mockRemoteStatuses = {};
+  mockRegisterRemoteAgents.mockClear();
   mockSetSelectedModel.mockClear();
   mockSetSelectedMode.mockClear();
   mockSetPinnedSourceImage.mockClear();
@@ -302,6 +317,7 @@ describe("ChatInputBar", () => {
       source: "ui",
       machine_type: "remote",
     } as AgentInstance;
+    mockRemoteStatuses = { "agent-maya": "running" };
 
     function ControlledComposer() {
       const [value, setValue] = useState("");
@@ -337,6 +353,49 @@ describe("ChatInputBar", () => {
       undefined,
       [{ agent_id: "agent-maya", agent_instance_id: "instance-maya" }],
     );
+  });
+
+  it("shows an offline project agent but prevents selecting it", async () => {
+    const onSend = vi.fn();
+    const maya = {
+      agent_id: "agent-maya",
+      agent_instance_id: "instance-maya",
+      name: "Maya",
+      role: "Product designer",
+      status: "idle",
+      instance_role: "chat",
+      source: "ui",
+      machine_type: "remote",
+    } as AgentInstance;
+    mockRemoteStatuses = { "agent-maya": "stopped" };
+
+    function ControlledComposer() {
+      const [value, setValue] = useState("");
+      return (
+        <ChatInputBar
+          {...makeProps({
+            input: value,
+            onInputChange: setValue,
+            onSend,
+            projectAgents: [maya],
+            currentAgentInstanceId: "instance-current",
+          })}
+        />
+      );
+    }
+
+    render(<ControlledComposer />);
+    const textarea = screen.getByPlaceholderText("/ for commands, @ for context");
+    fireEvent.change(textarea, {
+      target: { value: "ask @ma", selectionStart: 7, selectionEnd: 7 },
+    });
+
+    const mayaOption = screen.getByRole("button", { name: /Maya/i });
+    expect(mayaOption).toBeDisabled();
+    expect(screen.getByText("Offline")).toBeInTheDocument();
+    await userEvent.click(mayaOption);
+    expect(screen.queryByLabelText("Agents included in this message")).not.toBeInTheDocument();
+    expect(onSend).not.toHaveBeenCalled();
   });
 
   it("calls onSend on Enter key (without shift)", () => {

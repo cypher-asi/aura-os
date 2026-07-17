@@ -49,7 +49,18 @@ export const MentionMenu = memo(function MentionMenu({
     [filteredAgents, filteredFiles],
   );
 
-  useEffect(() => setActiveIndex(0), [query]);
+  const isSelectable = useCallback(
+    (item: MentionItem | undefined) =>
+      Boolean(item && (item.kind === "file" || item.agent.chatAvailable !== false)),
+    [],
+  );
+  const firstSelectableIndex = useCallback(
+    () => items.findIndex(isSelectable),
+    [isSelectable, items],
+  );
+  useEffect(() => {
+    setActiveIndex(Math.max(0, firstSelectableIndex()));
+  }, [firstSelectableIndex, query]);
   useEffect(() => {
     const active = listRef.current?.querySelector(
       `.${styles.slashMenuItemActive}`,
@@ -59,11 +70,25 @@ export const MentionMenu = memo(function MentionMenu({
 
   const selectItem = useCallback(
     (item: MentionItem | undefined) => {
-      if (!item) return;
+      if (!item || !isSelectable(item)) return;
       if (item.kind === "agent") onSelectAgent(item.agent);
       else onSelectFile?.(item.file);
     },
-    [onSelectAgent, onSelectFile],
+    [isSelectable, onSelectAgent, onSelectFile],
+  );
+
+  const moveActiveIndex = useCallback(
+    (direction: 1 | -1) => {
+      if (items.length === 0) return;
+      setActiveIndex((current) => {
+        for (let offset = 1; offset <= items.length; offset += 1) {
+          const candidate = (current + direction * offset + items.length) % items.length;
+          if (isSelectable(items[candidate])) return candidate;
+        }
+        return current;
+      });
+    },
+    [isSelectable, items],
   );
 
   useEffect(() => {
@@ -80,12 +105,12 @@ export const MentionMenu = memo(function MentionMenu({
         case "ArrowDown":
           event.preventDefault();
           event.stopImmediatePropagation();
-          setActiveIndex((index) => (index + 1) % items.length);
+          moveActiveIndex(1);
           break;
         case "ArrowUp":
           event.preventDefault();
           event.stopImmediatePropagation();
-          setActiveIndex((index) => (index - 1 + items.length) % items.length);
+          moveActiveIndex(-1);
           break;
         case "Enter":
         case "Tab":
@@ -102,7 +127,7 @@ export const MentionMenu = memo(function MentionMenu({
     };
     document.addEventListener("keydown", handleKeyDown, true);
     return () => document.removeEventListener("keydown", handleKeyDown, true);
-  }, [activeIndex, items, onClose, selectItem]);
+  }, [activeIndex, items, moveActiveIndex, onClose, selectItem]);
 
   if (items.length === 0) {
     return (
@@ -126,15 +151,19 @@ export const MentionMenu = memo(function MentionMenu({
           <div className={styles.mentionMenuHeading}>Project agents</div>
           {filteredAgents.map((agent) => {
             const index = itemIndex++;
+            const unavailable = agent.chatAvailable === false;
             return (
               <button
                 key={agent.agent_instance_id}
                 type="button"
-                className={`${styles.slashMenuItem} ${styles.mentionMenuItem} ${index === activeIndex ? styles.slashMenuItemActive : ""}`}
-                onMouseEnter={() => setActiveIndex(index)}
+                className={`${styles.slashMenuItem} ${styles.mentionMenuItem} ${unavailable ? styles.mentionMenuItemUnavailable : ""} ${index === activeIndex && !unavailable ? styles.slashMenuItemActive : ""}`}
+                disabled={unavailable}
+                onMouseEnter={() => {
+                  if (!unavailable) setActiveIndex(index);
+                }}
                 onMouseDown={(event) => {
                   event.preventDefault();
-                  onSelectAgent(agent);
+                  if (!unavailable) onSelectAgent(agent);
                 }}
               >
                 <span className={styles.agentMentionAvatar} aria-hidden="true">
@@ -144,6 +173,11 @@ export const MentionMenu = memo(function MentionMenu({
                 <span className={styles.slashMenuItemDesc}>
                   {agent.role || "Project agent"}
                 </span>
+                {unavailable ? (
+                  <span className={styles.mentionMenuAvailability}>
+                    {agent.availabilityLabel ?? "Unavailable"}
+                  </span>
+                ) : null}
               </button>
             );
           })}
