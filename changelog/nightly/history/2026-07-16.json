@@ -3,19 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-16T11:49:08.959Z",
+  "generatedAt": "2026-07-17T00:52:49.529Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.762.1",
+  "version": "0.1.0-nightly.765.1",
   "date": "2026-07-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.762.1",
-  "lastIncludedSha": "972384031274810f17ce8888d05b3bf06bfaea83",
-  "previousProcessedSha": "c2e74a64fa58af5e1e6301fcd8c100a484326ec5",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.765.1",
+  "lastIncludedSha": "8bc804734fa523d7b83f8930c0babb1644b64f46",
+  "previousProcessedSha": "972384031274810f17ce8888d05b3bf06bfaea83",
   "commitShas": [
-    "972384031274810f17ce8888d05b3bf06bfaea83"
+    "972384031274810f17ce8888d05b3bf06bfaea83",
+    "069114689768a827b62f439574927bf3773373bf",
+    "9d73d2ce6a7702f589905280b7e64c02a5c40f32",
+    "8bc804734fa523d7b83f8930c0babb1644b64f46"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "972384031274810f17ce8888d05b3bf06bfaea83",
@@ -67,36 +70,198 @@
         "Other",
         "Docs"
       ]
+    },
+    {
+      "sha": "069114689768a827b62f439574927bf3773373bf",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-17T03:58:14+05:00",
+      "subject": "feat: add project agent mentions (#106)",
+      "body": "",
+      "parents": [
+        "972384031274810f17ce8888d05b3bf06bfaea83"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/cross_agent_reply.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route/helpers.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route/route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist/context.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist/pin.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/project_team.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup/persistence.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup/reset.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming/orchestrator.rs",
+        "apps/aura-os-server/src/handlers/generation/persist.rs",
+        "apps/aura-os-server/tests/cross_agent_reply_callback_test.rs",
+        "crates/aura-os-core/src/permissions.rs",
+        "crates/aura-os-core/src/permissions/tests.rs",
+        "interface/src/api/streams.test.ts",
+        "interface/src/api/streams.ts",
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/FileMentionMenu.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/MentionMenu.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/useInputTriggers.test.ts",
+        "interface/src/features/chat-ui/ChatInputBar/useInputTriggers.ts",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatSurface.tsx",
+        "interface/src/features/chat-ui/ChatPanel/resolve-send.ts",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.ts",
+        "interface/src/hooks/stream/partition-state.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/lib/analytics-registry.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/stores/message-queue-store.ts",
+        "interface/tests/e2e/desktop-visual.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 40,
+        "insertions": 1523,
+        "deletions": 146
+      },
+      "committedAtMs": 1784242694000,
+      "cleanSubject": "add project agent mentions (#106)",
+      "keywords": [
+        "project",
+        "agent",
+        "mentions"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-core/src",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/mobile",
+        "interface/src/stores",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "9d73d2ce6a7702f589905280b7e64c02a5c40f32",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-17T04:25:12+05:00",
+      "subject": "fix: retry transient mobile release lookups (#107)",
+      "body": "",
+      "parents": [
+        "069114689768a827b62f439574927bf3773373bf"
+      ],
+      "files": [
+        "infra/scripts/release/upload-release-assets-with-retry.sh",
+        "infra/scripts/release/upload-release-assets-with-retry.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 66,
+        "deletions": 7
+      },
+      "committedAtMs": 1784244312000,
+      "cleanSubject": "retry transient mobile release lookups (#107)",
+      "keywords": [
+        "retry",
+        "transient",
+        "mobile",
+        "release",
+        "lookups"
+      ],
+      "fileGroups": [
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "8bc804734fa523d7b83f8930c0babb1644b64f46",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-17T04:34:40+05:00",
+      "subject": "fix: retry malformed GitHub release responses (#108)",
+      "body": "",
+      "parents": [
+        "9d73d2ce6a7702f589905280b7e64c02a5c40f32"
+      ],
+      "files": [
+        "infra/scripts/release/upload-release-assets-with-retry.sh",
+        "infra/scripts/release/upload-release-assets-with-retry.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 7,
+        "deletions": 2
+      },
+      "committedAtMs": 1784244880000,
+      "cleanSubject": "retry malformed GitHub release responses (#108)",
+      "keywords": [
+        "retry",
+        "malformed",
+        "github",
+        "release",
+        "responses"
+      ],
+      "fileGroups": [
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.762.1",
+      "version": "0.1.0-nightly.765.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65822614
+          "sizeBytes": 65859630
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132356600
+          "sizeBytes": 132418040
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -106,29 +271,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.762.1",
+      "version": "0.1.0-nightly.765.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.762.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.765.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61467686
+          "sizeBytes": 61546918
         },
         {
-          "name": "AURA_0.1.0-nightly.762.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.765.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60477328
+          "sizeBytes": 60531039
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -138,29 +303,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.762.1",
+      "version": "0.1.0-nightly.765.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.762.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.765.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63730256
+          "sizeBytes": 63750110
         },
         {
-          "name": "AURA_0.1.0-nightly.762.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.765.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62713419
+          "sizeBytes": 62753566
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -170,17 +335,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.762.1",
+      "version": "0.1.0-nightly.765.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48514440
+          "sizeBytes": 48487233
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.762.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.765.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -189,42 +354,90 @@
     }
   ],
   "rendered": {
-    "title": "Hosted Local workspaces get their own filesystem boundary",
-    "intro": "A focused server-side fix reshapes how Aura handles workspace paths when a Local harness is running in a hosted environment, preventing the server from leaking its own lookalike paths into agent sessions and API responses. The nightly desktop builds ship across macOS, Windows, and Linux on top of this change.",
+    "title": "Project agent mentions land, hosted workspaces get isolated",
+    "intro": "Today's nightly brings a new way to direct chats at specific agents inside a project, tightens how hosted local workspaces are exposed to the server, and hardens the GitHub release upload script against another class of flaky API responses.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "4:22 AM",
         "started_at": "2026-07-16T11:22:07.000Z",
         "ended_at": "2026-07-16T11:22:07.000Z",
-        "title": "Isolation for hosted Local harness workspaces",
-        "summary": "The server now recognizes when a Local harness is running in a hosted runtime and stops exposing its own filesystem paths to agents and clients, deferring to the hosted harness as the source of truth.",
+        "title": "Hosted local workspaces isolated from server filesystem",
+        "summary": "The server no longer treats hosted Harness workspaces as if they lived on its own disk, closing a source of wrong-path bugs in project-bound agent chat.",
         "items": [
           {
-            "text": "Agent chat sessions no longer inject a workspace index block built from server-side paths when a hosted Local runtime is available, avoiding prompts that reference filesystems the agent can't actually read.",
+            "text": "Agent instance API responses now omit the server's lookalike workspace path when a hosted local Harness owns the filesystem, so browsers and callers can no longer send back an unusable absolute path.",
             "commit_shas": [
               "972384031274810f17ce8888d05b3bf06bfaea83"
             ],
             "confidence": "high"
           },
           {
-            "text": "Instance API responses now omit `workspace_path` for hosted Local harnesses, so browser callers can't accidentally echo an unusable server path back to the harness; runtime entry points resolve the authoritative path by project UUID instead.",
+            "text": "Prompt assembly skips injecting the workspace index block when the server cannot actually read the hosted local runtime's files, preventing misleading context from being stitched into the agent system prompt.",
             "commit_shas": [
               "972384031274810f17ce8888d05b3bf06bfaea83"
             ],
             "confidence": "high"
           },
           {
-            "text": "Workspace path resolution was unified around `resolve_project_tool_workspace_path` with proper error propagation through the agent and instance chat routes, replacing the older instance-specific helper.",
+            "text": "Project tool workspace resolution is now fallible end-to-end and routed through a single helper for both bare-agent and instance chat, with new Render deployment docs covering the hosted layout.",
             "commit_shas": [
               "972384031274810f17ce8888d05b3bf06bfaea83"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "3:58 PM",
+        "started_at": "2026-07-16T22:58:14.000Z",
+        "ended_at": "2026-07-16T22:58:14.000Z",
+        "title": "@-mentioning project agents in chat",
+        "summary": "The project chat composer gains a first-class agent mention flow, letting users target specific teammates in a project and routing those mentions safely through the server.",
+        "items": [
+          {
+            "text": "A new `@` menu in the chat input bar lets users pick agents from the current project, replacing the older file-only mention menu with a unified MentionMenu across desktop and mobile composers.",
+            "commit_shas": [
+              "069114689768a827b62f439574927bf3773373bf"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a Render deployment guide covering the hosted local runtime configuration this change depends on.",
+            "text": "Selected mentions are sent as structured `agent_mentions` on the chat request, and the project route validates each agent id against the project's user-facing bindings before dispatching to the harness.",
             "commit_shas": [
-              "972384031274810f17ce8888d05b3bf06bfaea83"
+              "069114689768a827b62f439574927bf3773373bf"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Cross-agent replies now carry the originating `project_id` through the callback path, so responses from mentioned teammates stay scoped to the right project team.",
+            "commit_shas": [
+              "069114689768a827b62f439574927bf3773373bf"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "4:25 PM",
+        "started_at": "2026-07-16T23:25:12.000Z",
+        "ended_at": "2026-07-16T23:34:40.000Z",
+        "title": "Release uploader survives flaky GitHub release lookups",
+        "summary": "The mobile and desktop release asset reconciler now retries a broader set of GitHub API failures when resolving a release by tag, reducing spurious CI failures during nightly publishing.",
+        "items": [
+          {
+            "text": "Release tag lookups now go through the retrying `gh_api_with_retry` wrapper and treat GitHub's \"Unicorn!\" and \"No server is currently available\" 5xx pages as transient instead of fatal.",
+            "commit_shas": [
+              "9d73d2ce6a7702f589905280b7e64c02a5c40f32"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Malformed HTML-in-JSON responses that surface as `invalid character '<' looking for beginning of value` are now recognized as retryable, so a stray GitHub error page no longer aborts an otherwise-healthy upload run.",
+            "commit_shas": [
+              "8bc804734fa523d7b83f8930c0babb1644b64f46"
             ],
             "confidence": "high"
           }
@@ -232,10 +445,10 @@
       }
     ],
     "highlights": [
-      "Hosted Local harness workspaces no longer collide with server paths",
-      "Agent prompts and instance APIs now defer to the hosted runtime for path resolution",
-      "Render deployment guidance documented for hosted local mode"
+      "@-mention specific agents inside project chat",
+      "Hosted local workspaces no longer leak server-side paths",
+      "Release asset uploader now retries GitHub API lookup failures"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 4
   }
 }

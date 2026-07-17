@@ -2,18 +2,18 @@
   {
     "date": "2026-07-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.762.1",
-    "title": "Hosted Local workspaces get their own filesystem boundary",
-    "intro": "A focused server-side fix reshapes how Aura handles workspace paths when a Local harness is running in a hosted environment, preventing the server from leaking its own lookalike paths into agent sessions and API responses. The nightly desktop builds ship across macOS, Windows, and Linux on top of this change.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.765.1",
+    "title": "Project agent mentions land, hosted workspaces get isolated",
+    "intro": "Today's nightly brings a new way to direct chats at specific agents inside a project, tightens how hosted local workspaces are exposed to the server, and hardens the GitHub release upload script against another class of flaky API responses.",
+    "entryCount": 3,
     "highlights": [
-      "Hosted Local harness workspaces no longer collide with server paths",
-      "Agent prompts and instance APIs now defer to the hosted runtime for path resolution",
-      "Render deployment guidance documented for hosted local mode"
+      "@-mention specific agents inside project chat",
+      "Hosted local workspaces no longer leak server-side paths",
+      "Release asset uploader now retries GitHub API lookup failures"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-07-16T11:49:08.959Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.762.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-07-17T00:52:49.529Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.765.1",
     "path": "history/2026-07-16.json"
   },
   {

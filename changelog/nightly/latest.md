@@ -1,24 +1,38 @@
-# Hosted Local workspaces get their own filesystem boundary
+# Project agent mentions land, hosted workspaces get isolated
 
 - Date: `2026-07-16`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.762.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.762.1
+- Version: `0.1.0-nightly.765.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.765.1
 
-A focused server-side fix reshapes how Aura handles workspace paths when a Local harness is running in a hosted environment, preventing the server from leaking its own lookalike paths into agent sessions and API responses. The nightly desktop builds ship across macOS, Windows, and Linux on top of this change.
+Today's nightly brings a new way to direct chats at specific agents inside a project, tightens how hosted local workspaces are exposed to the server, and hardens the GitHub release upload script against another class of flaky API responses.
 
-## 4:22 AM — Isolation for hosted Local harness workspaces
+## 4:22 AM — Hosted local workspaces isolated from server filesystem
 
-The server now recognizes when a Local harness is running in a hosted runtime and stops exposing its own filesystem paths to agents and clients, deferring to the hosted harness as the source of truth.
+The server no longer treats hosted Harness workspaces as if they lived on its own disk, closing a source of wrong-path bugs in project-bound agent chat.
 
-- Agent chat sessions no longer inject a workspace index block built from server-side paths when a hosted Local runtime is available, avoiding prompts that reference filesystems the agent can't actually read. (`9723840`)
-- Instance API responses now omit `workspace_path` for hosted Local harnesses, so browser callers can't accidentally echo an unusable server path back to the harness; runtime entry points resolve the authoritative path by project UUID instead. (`9723840`)
-- Workspace path resolution was unified around `resolve_project_tool_workspace_path` with proper error propagation through the agent and instance chat routes, replacing the older instance-specific helper. (`9723840`)
-- Added a Render deployment guide covering the hosted local runtime configuration this change depends on. (`9723840`)
+- Agent instance API responses now omit the server's lookalike workspace path when a hosted local Harness owns the filesystem, so browsers and callers can no longer send back an unusable absolute path. (`9723840`)
+- Prompt assembly skips injecting the workspace index block when the server cannot actually read the hosted local runtime's files, preventing misleading context from being stitched into the agent system prompt. (`9723840`)
+- Project tool workspace resolution is now fallible end-to-end and routed through a single helper for both bare-agent and instance chat, with new Render deployment docs covering the hosted layout. (`9723840`)
+
+## 3:58 PM — @-mentioning project agents in chat
+
+The project chat composer gains a first-class agent mention flow, letting users target specific teammates in a project and routing those mentions safely through the server.
+
+- A new `@` menu in the chat input bar lets users pick agents from the current project, replacing the older file-only mention menu with a unified MentionMenu across desktop and mobile composers. (`0691146`)
+- Selected mentions are sent as structured `agent_mentions` on the chat request, and the project route validates each agent id against the project's user-facing bindings before dispatching to the harness. (`0691146`)
+- Cross-agent replies now carry the originating `project_id` through the callback path, so responses from mentioned teammates stay scoped to the right project team. (`0691146`)
+
+## 4:25 PM — Release uploader survives flaky GitHub release lookups
+
+The mobile and desktop release asset reconciler now retries a broader set of GitHub API failures when resolving a release by tag, reducing spurious CI failures during nightly publishing.
+
+- Release tag lookups now go through the retrying `gh_api_with_retry` wrapper and treat GitHub's "Unicorn!" and "No server is currently available" 5xx pages as transient instead of fatal. (`9d73d2c`)
+- Malformed HTML-in-JSON responses that surface as `invalid character '<' looking for beginning of value` are now recognized as retryable, so a stray GitHub error page no longer aborts an otherwise-healthy upload run. (`8bc8047`)
 
 ## Highlights
 
-- Hosted Local harness workspaces no longer collide with server paths
-- Agent prompts and instance APIs now defer to the hosted runtime for path resolution
-- Render deployment guidance documented for hosted local mode
+- @-mention specific agents inside project chat
+- Hosted local workspaces no longer leak server-side paths
+- Release asset uploader now retries GitHub API lookup failures
 
