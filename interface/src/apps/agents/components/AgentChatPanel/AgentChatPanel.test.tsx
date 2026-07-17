@@ -7,6 +7,9 @@ import { AgentChatPanel } from "./AgentChatPanel";
 const mockUseAuraCapabilities = vi.fn();
 const mockUseTerminalTarget = vi.fn();
 const mockUseChatStream = vi.fn();
+const mockChatPanelProps = vi.fn();
+const mockRegisterRemoteAgents = vi.fn();
+let mockRemoteStatus: string | undefined = "running";
 
 vi.mock("../../../../api/client", () => ({
   api: {
@@ -80,6 +83,19 @@ vi.mock("../../../../stores/context-usage-store", () => ({
   useContextUsage: () => null,
 }));
 
+vi.mock("../../../../stores/profile-status-store", () => ({
+  useProfileStatusStore: (selector: (state: {
+    statuses: Record<string, string>;
+    registerRemoteAgents: typeof mockRegisterRemoteAgents;
+  }) => unknown) =>
+    selector({
+      statuses: mockRemoteStatus
+        ? { "template-agent-1": mockRemoteStatus }
+        : {},
+      registerRemoteAgents: mockRegisterRemoteAgents,
+    }),
+}));
+
 vi.mock("../../../../stores/chat-history-store", () => ({
   projectChatHistoryKey: (projectId: string, agentInstanceId: string) =>
     `project:${projectId}:${agentInstanceId}`,
@@ -136,7 +152,10 @@ vi.mock("../../hooks/use-new-session-url-sync", () => ({
 }));
 
 vi.mock("../../../chat/components/ChatPanel", () => ({
-  ChatPanel: () => <div data-testid="chat-panel" />,
+  ChatPanel: (props: Record<string, unknown>) => {
+    mockChatPanelProps(props);
+    return <div data-testid="chat-panel" />;
+  },
 }));
 
 vi.mock("../../../../mobile/chat/MobileChatPanel", () => ({
@@ -163,6 +182,7 @@ function renderPanel() {
 describe("AgentChatPanel workspace automation target", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRemoteStatus = "running";
     mockUseAuraCapabilities.mockReturnValue({
       features: { linkedWorkspace: false },
       isMobileLayout: false,
@@ -236,5 +256,27 @@ describe("AgentChatPanel workspace automation target", () => {
         workspaceStartAgentInstanceId: undefined,
       }),
     );
+  });
+
+  it("blocks chat immediately when the remote agent is offline", () => {
+    mockRemoteStatus = "stopped";
+
+    renderPanel();
+
+    expect(mockChatPanelProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        sendDisabled: true,
+        sendDisabledReason:
+          "This remote agent is offline. Start it before sending a message.",
+      }),
+    );
+  });
+
+  it("registers the current remote agent for live availability updates", () => {
+    renderPanel();
+
+    expect(mockRegisterRemoteAgents).toHaveBeenCalledWith([
+      { agent_id: "template-agent-1" },
+    ]);
   });
 });

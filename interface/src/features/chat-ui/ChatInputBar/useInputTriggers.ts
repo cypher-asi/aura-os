@@ -58,6 +58,10 @@ export interface MentionableAgent {
   agent_instance_id: string;
   name: string;
   role?: string;
+  /** False when the agent's remote runtime cannot currently accept a turn. */
+  chatAvailable?: boolean;
+  /** Short status shown beside an unavailable agent in the mention menu. */
+  availabilityLabel?: string;
 }
 
 export interface UseInputTriggersOptions {

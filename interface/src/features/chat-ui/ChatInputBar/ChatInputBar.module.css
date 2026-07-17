@@ -691,6 +691,23 @@
   gap: 6px;
 }
 
+.mentionMenuItemUnavailable {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.mentionMenuItemUnavailable:hover {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.mentionMenuAvailability {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  font-size: 11px;
+  margin-left: auto;
+}
+
 .mentionMenuSection + .mentionMenuSection {
   border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
   margin-top: 4px;

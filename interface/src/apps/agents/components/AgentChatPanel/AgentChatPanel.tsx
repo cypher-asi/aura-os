@@ -21,6 +21,7 @@ import { usePriorSessions } from "../../../../hooks/use-prior-sessions";
 import { buildProjectSessionHistoryFetch } from "../../../../hooks/use-load-older-messages";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { useContextUsage } from "../../../../stores/context-usage-store";
+import { useProfileStatusStore } from "../../../../stores/profile-status-store";
 import { useHydrateContextUtilization } from "../../../../hooks/use-hydrate-context-utilization";
 import type { AgentInstance, Project } from "../../../../shared/types";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
@@ -35,6 +36,7 @@ import { useOptimisticSessionRow } from "../../hooks/use-optimistic-session-row"
 import { useAutoRenameFromPrompt } from "../../hooks/use-auto-rename-from-prompt";
 import { useNewSessionUrlSync } from "../../hooks/use-new-session-url-sync";
 import { ProjectAgentSwitcher } from "../ProjectAgentSwitcher";
+import { resolveAgentChatAvailability } from "../../../../shared/lib/agent-chat-availability";
 
 const EMPTY_PROJECTS: Project[] = [];
 const EMPTY_AGENT_INSTANCES: AgentInstance[] = [];
@@ -100,10 +102,23 @@ export function AgentChatPanel({
 
   const { agentName, machineType, templateAgentId, adapterType, defaultModel } =
     useAgentChatMeta("project", { projectId, agentInstanceId });
-  const sendDisabled = remoteOnly && machineType === "local";
-  const sendDisabledReason = sendDisabled
+  const remoteStatus = useProfileStatusStore((state) =>
+    templateAgentId ? state.statuses[templateAgentId] : undefined,
+  );
+  const registerRemoteAgents = useProfileStatusStore(
+    (state) => state.registerRemoteAgents,
+  );
+  useEffect(() => {
+    if (machineType === "remote" && templateAgentId) {
+      registerRemoteAgents([{ agent_id: templateAgentId }]);
+    }
+  }, [machineType, registerRemoteAgents, templateAgentId]);
+  const chatAvailability = resolveAgentChatAvailability(machineType, remoteStatus);
+  const localUnavailable = remoteOnly && machineType === "local";
+  const sendDisabled = localUnavailable || !chatAvailability.available;
+  const sendDisabledReason = localUnavailable
     ? "This local agent is not available in this browser."
-    : undefined;
+    : chatAvailability.reason;
 
   // Resolves the project's workspace path (and remote-agent id when
   // the project's agent runs on a remote VM). Same hook the file
