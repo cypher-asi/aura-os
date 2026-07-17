@@ -21,7 +21,7 @@ use super::computer_use_gate::computer_use_session_fields;
 use super::cross_agent_reply::read_cross_agent_depth;
 use super::persist::{build_chat_partition, ChatPersistRequest};
 use super::project_team::ensure_project_agent_target;
-use super::runtime_gate::ensure_chat_runtime_allowed;
+use super::runtime_gate::{ensure_chat_runtime_allowed, ensure_cross_agent_runtime_available};
 use super::setup::has_live_session;
 use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
@@ -94,6 +94,15 @@ pub(crate) async fn send_agent_event_stream(
             ApiError::internal("project-bound agent chat is unavailable without storage")
         })?;
         ensure_project_agent_target(storage, &jwt, project_id, &agent_id).await?;
+    }
+    if is_cross_agent_delivery {
+        ensure_cross_agent_runtime_available(
+            &state,
+            &jwt,
+            &agent_id.to_string(),
+            agent.harness_mode(),
+        )
+        .await?;
     }
 
     // Phase 4: narrow the bare-agent guard. The legacy `None` branch

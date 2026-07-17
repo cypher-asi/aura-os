@@ -16,6 +16,7 @@ import styles from "./SkillsTab.module.css";
 
 interface SkillsTabProps {
   agent: Agent;
+  availableAgents?: readonly Agent[];
 }
 
 /**
@@ -201,7 +202,7 @@ function DeleteSkillConfirmModal({
   );
 }
 
-export function SkillsTab({ agent }: SkillsTabProps) {
+export function SkillsTab({ agent, availableAgents = [] }: SkillsTabProps) {
   const [catalog, setCatalog] = useState<HarnessSkill[]>([]);
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
   const [mySkills, setMySkills] = useState<MySkillEntry[]>([]);
@@ -228,6 +229,10 @@ export function SkillsTab({ agent }: SkillsTabProps) {
   );
 
   const agentId = agent.agent_id;
+  const collaboratorOptions = useMemo(
+    () => availableAgents.filter((candidate) => candidate.agent_id !== agentId),
+    [availableAgents, agentId],
+  );
 
   /**
    * Re-fetch catalog + installations + user-authored skills.
@@ -531,6 +536,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         onClose={() => setShowCreator(false)}
         onCreated={() => fetchData({ silent: true })}
         agentId={agentId}
+        availableAgents={collaboratorOptions}
       />
 
       <SkillShopModal
@@ -556,6 +562,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         skillName={editingSkill}
         onClose={() => setEditingSkill(null)}
         onSaved={() => fetchData({ silent: true })}
+        availableAgents={collaboratorOptions}
       />
     </div>
   );

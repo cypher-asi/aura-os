@@ -34,6 +34,7 @@ export default defineConfig({
         "**/google-integration-ui.spec.ts",
         "**/agent-runtime-config.spec.ts",
         "**/agent-continuity.spec.ts",
+        "**/skill-agent-binding.spec.ts",
       ],
       use: {
         ...devices["Desktop Chrome"],

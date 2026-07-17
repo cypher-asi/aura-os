@@ -7,6 +7,7 @@ use axum::response::IntoResponse;
 
 use crate::state::AppState;
 
+use super::create::SkillAgentTarget;
 use super::frontmatter::{extract_frontmatter_field, strip_frontmatter};
 use super::{create_skill_name_valid, user_skills_root, USER_CREATED_SOURCE_MARKER};
 
@@ -76,6 +77,8 @@ struct MySkillDetail {
     model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     context: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    agent_target: Option<SkillAgentTarget>,
 }
 
 /// Parse the `allowed_tools: [a, b]` frontmatter value into a list. Returns
@@ -89,6 +92,15 @@ fn parse_allowed_tools(content: &str) -> Option<Vec<String>> {
         .filter(|t| !t.is_empty())
         .collect();
     (!tools.is_empty()).then_some(tools)
+}
+
+fn parse_agent_target(content: &str) -> Option<SkillAgentTarget> {
+    let agent_id = extract_frontmatter_field(content, "agent_target_id")?;
+    let name = extract_frontmatter_field(content, "agent_target_name")?;
+    if agent_id.trim().is_empty() || name.trim().is_empty() {
+        return None;
+    }
+    Some(SkillAgentTarget { agent_id, name })
 }
 
 /// `GET /api/harness/skills/mine/{name}` — full detail for editing a
@@ -124,6 +136,7 @@ pub(crate) async fn get_my_skill(
         allowed_tools: parse_allowed_tools(&content),
         model: extract_frontmatter_field(&content, "model").filter(|s| !s.is_empty()),
         context: extract_frontmatter_field(&content, "context").filter(|s| !s.is_empty()),
+        agent_target: parse_agent_target(&content),
     };
     let body = serde_json::to_string(&detail).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((

@@ -1,6 +1,11 @@
 import type { HarnessSkill, HarnessSkillActivation, HarnessSkillInstallation } from "../types";
 import { apiFetch } from "./core";
 
+export interface SkillAgentTargetBinding {
+  agent_id: string;
+  name: string;
+}
+
 export interface MySkillEntry {
   name: string;
   description: string;
@@ -19,6 +24,7 @@ export interface MySkillDetail {
   allowed_tools?: string[];
   model?: string;
   context?: string;
+  agent_target?: SkillAgentTargetBinding;
 }
 
 /** Entry in the 409 response body from `DELETE /api/harness/skills/mine/:name`. */
@@ -72,6 +78,7 @@ export const harnessSkillsApi = {
       context?: string;
       user_invocable?: boolean;
       model_invocable?: boolean;
+      agent_target?: SkillAgentTargetBinding;
     },
   ) =>
     apiFetch<{ name: string; path: string; updated: boolean }>(`/api/harness/skills/mine/${name}`, {
@@ -89,6 +96,7 @@ export const harnessSkillsApi = {
     context?: string;
     user_invocable?: boolean;
     model_invocable?: boolean;
+    agent_target?: SkillAgentTargetBinding;
     agent_id?: string;
   }) =>
     apiFetch<{

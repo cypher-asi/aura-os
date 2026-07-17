@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Modal, Input, Textarea, Button, Spinner, Text } from "@cypher-asi/zui";
 import { api } from "../../../api/client";
+import type { Agent } from "../../../shared/types";
+import type { SkillAgentTargetBinding } from "../../../shared/api/harness-skills";
+import { SkillAgentTargetField } from "./SkillAgentTargetField";
 import styles from "../components/AgentEditorModal/AgentEditorModal.module.css";
 
 interface SkillEditorModalProps {
@@ -9,6 +12,7 @@ interface SkillEditorModalProps {
   skillName: string | null;
   onClose: () => void;
   onSaved: () => void;
+  availableAgents?: readonly Agent[];
 }
 
 /**
@@ -47,7 +51,13 @@ interface PreservedFields {
  * writes `body.unwrap_or_default()` — saving with an unloaded (empty) body
  * would clobber the user's instructions.
  */
-export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillEditorModalProps) {
+export function SkillEditorModal({
+  isOpen,
+  skillName,
+  onClose,
+  onSaved,
+  availableAgents = [],
+}: SkillEditorModalProps) {
   const [description, setDescription] = useState("");
   const [body, setBody] = useState("");
   const [userInvocable, setUserInvocable] = useState(true);
@@ -55,6 +65,9 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [agentTargetId, setAgentTargetId] = useState("");
+  const [agentTargetSnapshot, setAgentTargetSnapshot] =
+    useState<SkillAgentTargetBinding | undefined>();
   const descRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -71,6 +84,8 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
     setBody("");
     setUserInvocable(true);
     setPreserved({ model_invocable: false });
+    setAgentTargetId("");
+    setAgentTargetSnapshot(undefined);
     // Pre-fill from the user skill's marker file (getMySkill), not the generic
     // harness-backed getSkill — the latter drops user_invocable /
     // model_invocable / allowed_tools, so editing through it would silently
@@ -88,6 +103,8 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
           context: skill.context,
           model_invocable: skill.model_invocable ?? false,
         });
+        setAgentTargetId(skill.agent_target?.agent_id ?? "");
+        setAgentTargetSnapshot(skill.agent_target);
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(extractApiErrorMessage(err) ?? "Failed to load skill");
@@ -110,6 +127,15 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
 
     setSaving(true);
     try {
+      const selectedAgent = availableAgents.find(
+        (candidate) => candidate.agent_id === agentTargetId,
+      );
+      const agentTarget =
+        selectedAgent
+          ? { agent_id: selectedAgent.agent_id, name: selectedAgent.name }
+          : agentTargetSnapshot?.agent_id === agentTargetId
+            ? agentTargetSnapshot
+            : undefined;
       await api.harnessSkills.updateMySkill(skillName, {
         description: description.trim(),
         body: body.trim(),
@@ -120,6 +146,7 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
         ...(preserved.allowed_tools ? { allowed_tools: preserved.allowed_tools } : {}),
         ...(preserved.model ? { model: preserved.model } : {}),
         ...(preserved.context ? { context: preserved.context } : {}),
+        ...(agentTarget ? { agent_target: agentTarget } : {}),
       });
       onSaved();
       onClose();
@@ -128,7 +155,18 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
     } finally {
       setSaving(false);
     }
-  }, [skillName, description, body, userInvocable, preserved, onSaved, onClose]);
+  }, [
+    skillName,
+    description,
+    body,
+    userInvocable,
+    preserved,
+    agentTargetId,
+    agentTargetSnapshot,
+    availableAgents,
+    onSaved,
+    onClose,
+  ]);
 
   return (
     <Modal
@@ -183,6 +221,15 @@ export function SkillEditorModal({ isOpen, skillName, onClose, onSaved }: SkillE
                 placeholder="Markdown instructions for this skill..."
                 rows={8}
                 mono
+              />
+            </div>
+
+            <div className={styles.fieldGroup}>
+              <SkillAgentTargetField
+                value={agentTargetId}
+                onChange={setAgentTargetId}
+                agents={availableAgents}
+                selectedSnapshot={agentTargetSnapshot}
               />
             </div>
 

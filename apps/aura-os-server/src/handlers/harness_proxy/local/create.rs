@@ -24,11 +24,21 @@ pub(crate) struct CreateSkillBody {
     pub context: Option<String>,
     pub user_invocable: Option<bool>,
     pub model_invocable: Option<bool>,
+    /// Optional direct collaborator selected for this skill. The target id is
+    /// an agent template id; project membership is enforced when the skill
+    /// actually calls `send_to_agent`.
+    pub agent_target: Option<SkillAgentTarget>,
     /// Optional agent to auto-install this newly created skill on.
     /// When set, the server mirrors the Skill Shop flow: register the
     /// skill with the harness catalog AND install it for the agent so it
     /// shows up under "Installed" immediately.
     pub agent_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, serde::Serialize, PartialEq, Eq)]
+pub(crate) struct SkillAgentTarget {
+    pub agent_id: String,
+    pub name: String,
 }
 
 #[derive(serde::Serialize)]
@@ -38,6 +48,15 @@ pub(crate) struct CreateSkillResponse {
     pub(crate) created: bool,
     pub(crate) registered: bool,
     pub(crate) installed_on_agent: bool,
+}
+
+pub(super) struct SkillFrontmatterOptions<'a> {
+    pub allowed_tools: Option<&'a [String]>,
+    pub model: Option<&'a str>,
+    pub context: Option<&'a str>,
+    pub user_invocable: bool,
+    pub model_invocable: bool,
+    pub agent_target: Option<&'a SkillAgentTarget>,
 }
 
 /// Render the YAML frontmatter block for a user-authored skill.
@@ -57,28 +76,31 @@ pub(crate) struct CreateSkillResponse {
 pub(super) fn render_skill_frontmatter(
     name: &str,
     description: &str,
-    allowed_tools: Option<&[String]>,
-    model: Option<&str>,
-    context: Option<&str>,
-    user_invocable: bool,
-    model_invocable: bool,
+    options: SkillFrontmatterOptions<'_>,
 ) -> String {
     let mut frontmatter = format!(
         "---\nname: \"{}\"\ndescription: \"{}\"\n",
         yaml_escape_scalar(name),
         yaml_escape_scalar(description),
     );
-    if let Some(tools) = allowed_tools {
+    if let Some(tools) = options.allowed_tools {
         frontmatter.push_str(&format!("allowed_tools: [{}]\n", tools.join(", ")));
     }
-    if let Some(model) = model {
+    if let Some(model) = options.model {
         frontmatter.push_str(&format!("model: \"{}\"\n", yaml_escape_scalar(model)));
     }
-    if let Some(context) = context {
+    if let Some(context) = options.context {
         frontmatter.push_str(&format!("context: \"{}\"\n", yaml_escape_scalar(context)));
     }
-    frontmatter.push_str(&format!("user_invocable: {user_invocable}\n"));
-    frontmatter.push_str(&format!("model_invocable: {model_invocable}\n"));
+    if let Some(target) = options.agent_target {
+        frontmatter.push_str(&format!(
+            "agent_target_id: \"{}\"\nagent_target_name: \"{}\"\n",
+            yaml_escape_scalar(&target.agent_id),
+            yaml_escape_scalar(&target.name),
+        ));
+    }
+    frontmatter.push_str(&format!("user_invocable: {}\n", options.user_invocable));
+    frontmatter.push_str(&format!("model_invocable: {}\n", options.model_invocable));
     frontmatter.push_str(&format!("source: \"{USER_CREATED_SOURCE_MARKER}\"\n"));
     frontmatter.push_str("---\n");
     frontmatter
@@ -88,12 +110,38 @@ fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
     render_skill_frontmatter(
         &payload.name,
         &payload.description,
-        payload.allowed_tools.as_deref(),
-        payload.model.as_deref(),
-        payload.context.as_deref(),
-        payload.user_invocable.unwrap_or(true),
-        payload.model_invocable.unwrap_or(false),
+        SkillFrontmatterOptions {
+            allowed_tools: payload.allowed_tools.as_deref(),
+            model: payload.model.as_deref(),
+            context: payload.context.as_deref(),
+            user_invocable: payload.user_invocable.unwrap_or(true),
+            model_invocable: payload.model_invocable.unwrap_or(false),
+            agent_target: payload.agent_target.as_ref(),
+        },
     )
+}
+
+pub(super) fn normalize_agent_target(
+    target: Option<SkillAgentTarget>,
+    source_agent_id: Option<&str>,
+) -> Result<Option<SkillAgentTarget>, StatusCode> {
+    let Some(target) = target else {
+        return Ok(None);
+    };
+    let agent_id = target.agent_id.trim();
+    let name = target.name.trim();
+    if agent_id.is_empty()
+        || agent_id.parse::<aura_os_core::AgentId>().is_err()
+        || name.is_empty()
+        || name.chars().count() > 120
+        || source_agent_id.is_some_and(|source| source == agent_id)
+    {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    Ok(Some(SkillAgentTarget {
+        agent_id: agent_id.to_string(),
+        name: name.to_string(),
+    }))
 }
 
 async fn maybe_install_on_agent(
@@ -136,11 +184,13 @@ pub(crate) async fn create_skill(
 
 pub(crate) async fn create_skill_from_payload(
     state: &AppState,
-    payload: CreateSkillBody,
+    mut payload: CreateSkillBody,
 ) -> Result<CreateSkillResponse, StatusCode> {
     if !create_skill_name_valid(&payload.name) {
         return Err(StatusCode::BAD_REQUEST);
     }
+    payload.agent_target =
+        normalize_agent_target(payload.agent_target, payload.agent_id.as_deref())?;
 
     let skill_dir = user_skills_root()
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
@@ -173,6 +223,7 @@ pub(crate) async fn create_skill_from_payload(
                 "body": body_text,
                 "user_invocable": payload.user_invocable.unwrap_or(true),
                 "model_invocable": payload.model_invocable.unwrap_or(false),
+                "agent_target": payload.agent_target,
             })
             .to_string(),
         )
@@ -184,7 +235,7 @@ pub(crate) async fn create_skill_from_payload(
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let installed_on_agent =
-        maybe_install_on_agent(&state, &payload.name, payload.agent_id.as_deref()).await;
+        maybe_install_on_agent(state, &payload.name, payload.agent_id.as_deref()).await;
 
     Ok(CreateSkillResponse {
         name: payload.name,
