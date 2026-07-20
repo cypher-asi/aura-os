@@ -185,6 +185,9 @@ const GEMINI_FLASH_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 const XAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
 const XAI_GROK_4_5_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
+/** Kimi K3's native reasoning-effort ladder. */
+const KIMI_K3_EFFORTS: ModelEffort[] = ["low", "high", "max"];
+
 export type ModelProviderGroup = "aura" | "image" | "3d" | "other";
 
 const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
@@ -514,6 +517,21 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
       "Fast, ultra-low-cost DeepSeek variant for high-volume tasks with a 1M context window.",
   },
   // ── Moonshot AI ─────────────────────────────────────────────
+  {
+    id: "aura-kimi-k3",
+    label: "Kimi K3",
+    tier: "opus",
+    mode: "chat",
+    vendor: "moonshot",
+    creditMultiplier: 3,
+    contextWindow: 1_048_576,
+    efforts: KIMI_K3_EFFORTS,
+    defaultEffort: "max",
+    provider: "Moonshot AI",
+    description:
+      "Moonshot's latest flagship for long-horizon coding, knowledge work, and deep reasoning, with native vision and a 1M-token context window.",
+    featured: true,
+  },
   {
     id: "aura-kimi-k2-7-code",
     label: "Kimi K2.7 Code",
@@ -1069,6 +1087,9 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   o3: "aura-o3",
   "aura-o4-mini": "aura-o4-mini",
   "o4-mini": "aura-o4-mini",
+  "aura-kimi-k3": "aura-kimi-k3",
+  "kimi-k3": "aura-kimi-k3",
+  "moonshot/kimi-k3": "aura-kimi-k3",
   "aura-kimi-k2-5": "aura-kimi-k2-6",
   "aura-kimi-k2-6": "aura-kimi-k2-6",
   "aura-kimi-k2-7-code": "aura-kimi-k2-7-code",
@@ -1180,13 +1201,13 @@ function threeDModelStorageKey(agentId?: string): string {
     : `aura-selected-model:3d:default`;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function availableModelsForAdapter(
   _adapterType?: string,
 ): ModelOption[] {
   // The `_adapterType` argument is preserved on the public signature so call
   // sites do not need to change. External CLI adapters are no longer
   // supported, so every adapter resolves to the same Aura-managed list.
+  void _adapterType;
   return CHAT_MODELS;
 }
 

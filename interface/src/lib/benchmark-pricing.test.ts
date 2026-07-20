@@ -299,6 +299,29 @@ describe("benchmark pricing", () => {
     },
   );
 
+  it("resolves direct Moonshot Kimi K3 pricing and cache discounts", () => {
+    const pricing = resolvePricing("aura-kimi-k3");
+    expect(pricing).toMatchObject({
+      provider: "moonshot",
+      source: "moonshot-pricing",
+      model: "kimi-k3",
+      input: 3,
+      output: 15,
+      cacheWrite: 3,
+      cacheRead: 0.3,
+    });
+
+    const cost = calculateEstimatedCostUsd({
+      model: "moonshot/kimi-k3",
+      provider: "moonshot",
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 400_000,
+    });
+    expect(cost.estimatedCostUsd).toBe(9.42);
+  });
+
   it.each([
     ["aura-deepseek-v4-pro", "deepseek-v4-pro", 1.74, 0.145, 3.48],
     ["aura-deepseek-v4-flash", "deepseek-v4-flash", 0.14, 0.028, 0.28],

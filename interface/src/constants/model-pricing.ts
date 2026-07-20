@@ -22,6 +22,7 @@ export type PricingProvider =
   | "anthropic"
   | "openai"
   | "xai"
+  | "moonshot"
   | "fireworks"
   | "deepseek"
   | "google"
@@ -45,6 +46,7 @@ const SONNET_5_PRICING: ModelRates = {
 
 /** Resolve Sonnet 5's published rates; `at` remains for API compatibility. */
 export function sonnet5PricingAt(_at: Date = new Date()): ModelRates {
+  void _at;
   return SONNET_5_PRICING;
 }
 
@@ -127,6 +129,12 @@ const XAI_PRICING: Readonly<Record<string, ModelRates>> = {
   "grok-4.5": { input: 2, output: 6, cacheWrite: 2, cacheRead: 0.3 },
   "grok-4.3": { input: 1.25, output: 2.5, cacheWrite: 1.25, cacheRead: 0.2 },
   "grok-build-0.1": { input: 1, output: 2, cacheWrite: 1, cacheRead: 0.2 },
+} as const;
+
+// Moonshot publishes automatic prompt-cache reads separately but no
+// cache-write surcharge, so writes use the uncached-input rate.
+const MOONSHOT_PRICING: Readonly<Record<string, ModelRates>> = {
+  "kimi-k3": { input: 3, output: 15, cacheWrite: 3, cacheRead: 0.3 },
 } as const;
 
 const FIREWORKS_PRICING: Readonly<Record<string, ModelRates>> = {
@@ -225,6 +233,7 @@ const PROVIDER_TABLES: Readonly<
   anthropic: ANTHROPIC_PRICING,
   openai: OPENAI_PRICING,
   xai: XAI_PRICING,
+  moonshot: MOONSHOT_PRICING,
   fireworks: FIREWORKS_PRICING,
   deepseek: DEEPSEEK_PRICING,
   google: GOOGLE_PRICING,
@@ -248,6 +257,8 @@ export function normalizePricingKey(model: string): string {
     ? key.slice("openai/".length)
     : key.startsWith("xai/")
       ? key.slice("xai/".length)
+      : key.startsWith("moonshot/")
+        ? key.slice("moonshot/".length)
       : key;
   const fireworksModel = unprefixed.match(/^accounts\/fireworks\/(?:models|routers)\/(.+)$/);
   if (fireworksModel) return fireworksModel[1];
@@ -256,6 +267,7 @@ export function normalizePricingKey(model: string): string {
     "aura-gpt-5-6-sol": "gpt-5.6-sol",
     "aura-gpt-5-6-terra": "gpt-5.6-terra",
     "aura-gpt-5-6-luna": "gpt-5.6-luna",
+    "aura-kimi-k3": "kimi-k3",
     "aura-kimi-k2-7-code": "kimi-k2p7-code",
     "aura-kimi-k2-6": "kimi-k2p6",
     "aura-kimi-k2-5": "kimi-k2p5",
@@ -305,6 +317,7 @@ function inferProvider(model: string, provider?: string): PricingProvider {
   const explicit = provider?.trim().toLowerCase();
   if (explicit === "anthropic" || explicit === "openai") return explicit;
   if (explicit === "xai") return explicit;
+  if (explicit === "moonshot") return explicit;
   if (explicit === "fireworks" || explicit === "deepseek") return explicit;
   if (explicit === "google") return explicit;
   const key = normalizePricingKey(model);
@@ -312,6 +325,7 @@ function inferProvider(model: string, provider?: string): PricingProvider {
   if (key.startsWith("grok")) return "xai";
   if (key.startsWith("deepseek")) return "deepseek";
   if (key.startsWith("gemini")) return "google";
+  if (key === "kimi-k3") return "moonshot";
   if (
     key.startsWith("kimi") ||
     key.startsWith("gpt-oss") ||
@@ -441,6 +455,7 @@ export function computeSessionCost(
   const inputIncludesCacheTokens =
     pricing.provider === "openai" ||
     pricing.provider === "xai" ||
+    pricing.provider === "moonshot" ||
     pricing.provider === "fireworks" ||
     pricing.provider === "deepseek" ||
     pricing.provider === "google";

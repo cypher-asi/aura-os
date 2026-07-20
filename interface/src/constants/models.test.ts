@@ -176,6 +176,34 @@ describe("model persistence", () => {
     expect(opus?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
   });
 
+  it("includes Kimi K3 with Moonshot's native capabilities", () => {
+    expect(loadPersistedModel("default", "kimi-k3")).toBe("aura-kimi-k3");
+    expect(loadPersistedModel("default", "moonshot/kimi-k3")).toBe(
+      "aura-kimi-k3",
+    );
+
+    const kimi = AURA_MANAGED_CHAT_MODELS.find(
+      (model) => model.id === "aura-kimi-k3",
+    );
+    expect(kimi).toMatchObject({
+      label: "Kimi K3",
+      tier: "opus",
+      vendor: "moonshot",
+      provider: "Moonshot AI",
+      creditMultiplier: 3,
+      contextWindow: 1_048_576,
+      efforts: ["low", "high", "max"],
+      defaultEffort: "max",
+      featured: true,
+    });
+    expect(
+      AURA_MANAGED_CHAT_MODELS.some((model) => model.id === "aura-kimi-k2-5"),
+    ).toBe(false);
+    expect(loadPersistedModel("default", "kimi-k2p5")).toBe(
+      "aura-kimi-k2-6",
+    );
+  });
+
   it("includes Claude Fable 5 in the Anthropic chat model list", () => {
     const fable = availableModelsForAdapter("default").find(
       (model) => model.id === "aura-claude-fable-5",

@@ -609,6 +609,7 @@ describe("ChatInputBar", () => {
     expect(screen.queryByText("Open Source")).not.toBeInTheDocument();
 
     // Models that used to be hidden behind "Show all" are visible now.
+    expect(screen.getAllByText("Kimi K3")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Kimi K2.6")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Haiku 4.5")[0]).toBeInTheDocument();
     // GPT-OSS 120B now lives in the OpenAI section.
