@@ -57,10 +57,62 @@ pub(super) async fn build_session_installed_tools(
     if let Some(tool) = self_improvement_tool(ctx) {
         tools.push(tool);
     }
+    if let Some(tool) = set_project_workspace_tool(ctx.project_id, ctx.jwt) {
+        tools.push(tool);
+    }
 
     dedupe_and_log_installed_tools(ctx.context, ctx.agent_id, &mut tools);
 
     Ok((!tools.is_empty()).then_some(tools))
+}
+
+fn set_project_workspace_tool(project_id: Option<&str>, jwt: &str) -> Option<InstalledTool> {
+    let project_id = project_id?.trim();
+    if project_id.is_empty() {
+        return None;
+    }
+
+    let endpoint = format!(
+        "{}/api/projects/{project_id}/workspace",
+        crate::handlers::agents::workspace_tools::control_plane_api_base_url()
+    );
+    let mut metadata = HashMap::new();
+    metadata.insert(
+        "aura_source_kind".to_string(),
+        serde_json::Value::String("aura_native".to_string()),
+    );
+    metadata.insert(
+        "aura_trust_class".to_string(),
+        serde_json::Value::String("platform".to_string()),
+    );
+
+    Some(InstalledTool {
+        name: "set_project_workspace".to_string(),
+        description: "Set the current project's local workspace folder on this Aura Desktop machine. Pass an absolute OS path to attach a folder, or null to clear the custom folder and return to the project default.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "local_workspace_path": {
+                    "description": "Absolute local folder path, or null to clear the custom workspace override.",
+                    "oneOf": [
+                        { "type": "string", "minLength": 1 },
+                        { "type": "null" }
+                    ]
+                }
+            },
+            "required": ["local_workspace_path"],
+            "additionalProperties": false
+        }),
+        endpoint,
+        auth: ToolAuth::Bearer {
+            token: jwt.to_string(),
+        },
+        timeout_ms: Some(15_000),
+        namespace: Some("aura_project".to_string()),
+        required_integration: None,
+        runtime_execution: None,
+        metadata,
+    })
 }
 
 fn self_improvement_tool(ctx: &InstalledToolsCtx<'_>) -> Option<InstalledTool> {
@@ -307,5 +359,26 @@ mod tests {
             payload_schema["oneOf"][0]["properties"]["importance"]["type"],
             serde_json::Value::String("number".to_string())
         );
+    }
+
+    #[test]
+    fn project_workspace_tool_targets_the_bound_project() {
+        let tool = set_project_workspace_tool(Some("project-123"), "jwt-token")
+            .expect("project-bound sessions should expose the workspace tool");
+
+        assert_eq!(tool.name, "set_project_workspace");
+        assert!(tool
+            .endpoint
+            .ends_with("/api/projects/project-123/workspace"));
+        assert!(matches!(tool.auth, ToolAuth::Bearer { ref token } if token == "jwt-token"));
+        assert_eq!(
+            tool.input_schema["required"],
+            serde_json::json!(["local_workspace_path"])
+        );
+        assert_eq!(
+            tool.input_schema["properties"]["local_workspace_path"]["oneOf"][1]["type"],
+            serde_json::Value::String("null".to_string())
+        );
+        assert!(set_project_workspace_tool(None, "jwt-token").is_none());
     }
 }
