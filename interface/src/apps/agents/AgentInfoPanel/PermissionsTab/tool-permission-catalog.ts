@@ -8,6 +8,7 @@ import { TOOL_LABELS } from "../../../../constants/tools";
  *
  * Names must match the harness / org-tool wire names exactly:
  * - harness-native tools: `tool_dedupe.rs::HARNESS_NATIVE_TOOL_NAMES`
+ * - server-installed tools: `handlers/agents/chat/tools.rs`
  * - provider-less org tools: `infra/shared/org-integration-tools.json`
  *
  * Provider-gated integration tools (GitHub, Slack, …) are intentionally
@@ -77,6 +78,7 @@ export const TOOL_PERMISSION_GROUPS: ToolPermissionGroup[] = [
       "run_task",
       "get_project",
       "update_project",
+      "set_project_workspace",
     ],
   },
   {

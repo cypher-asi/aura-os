@@ -6,7 +6,10 @@ use aura_os_core::{Project, ProjectId};
 use aura_os_projects::UpdateProjectInput;
 
 use crate::capture_auth::{demo_org_id, demo_project, demo_project_id, is_capture_access_token};
-use crate::dto::{CreateImportedProjectRequest, CreateProjectRequest, UpdateProjectRequest};
+use crate::dto::{
+    CreateImportedProjectRequest, CreateProjectRequest, SetProjectWorkspaceRequest,
+    UpdateProjectRequest,
+};
 use crate::error::{map_network_error, ApiError, ApiResult, UpstreamErrorContext};
 use crate::state::{AppState, AuthJwt};
 
@@ -463,6 +466,55 @@ pub(crate) async fn update_project(
     }
 
     let project = normalize_project_workspace(&state, &project);
+    ensure_local_shadow(&state, &project);
+    Ok(Json(project))
+}
+
+/// Agent-tool endpoint for changing only the current machine's project folder.
+///
+/// Installed harness tools execute HTTP actions with POST, while the regular
+/// project settings API uses PUT. Keeping this narrow endpoint separate lets a
+/// project-bound agent repair a detached local workspace without exposing the
+/// unrelated Git or Orbit fields.
+pub(crate) async fn set_project_workspace(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(project_id): Path<ProjectId>,
+    Json(req): Json<SetProjectWorkspaceRequest>,
+) -> ApiResult<Json<Project>> {
+    let Some(local_workspace_path) = req.local_workspace_path else {
+        return Err(ApiError::bad_request(
+            "local_workspace_path is required".to_string(),
+        ));
+    };
+    if let Some(client) = &state.network_client {
+        client
+            .get_project(&project_id.to_string(), &jwt)
+            .await
+            .map_err(map_network_error)?;
+    }
+    let local_workspace_path = local_workspace_path.and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+    let project = state
+        .project_service
+        .update_project(
+            &project_id,
+            UpdateProjectInput {
+                local_workspace_path: Some(local_workspace_path),
+                ..UpdateProjectInput::default()
+            },
+        )
+        .map_err(|e| match &e {
+            aura_os_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
+            aura_os_projects::ProjectError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
+            _ => ApiError::internal(format!("updating project workspace: {e}")),
+        })?;
     ensure_local_shadow(&state, &project);
     Ok(Json(project))
 }

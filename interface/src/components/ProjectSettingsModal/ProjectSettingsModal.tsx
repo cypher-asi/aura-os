@@ -51,6 +51,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
   const [orbitRepoMode, setOrbitRepoMode] = useState<OrbitRepoMode>("default");
   const [orbitRepoName, setOrbitRepoName] = useState("");
   const [selectedOrbitRepo, setSelectedOrbitRepo] = useState<OrbitRepo | null>(null);
+  const [attachOrbitRepo, setAttachOrbitRepo] = useState(false);
   const workspaceRoot = useWorkspaceRoot();
   const activeOrg = useOrgStore((s) => s.activeOrg);
   const { user, isAuthenticated } = useAuth();
@@ -67,7 +68,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
   );
   const displayRepoName = orbitRepoName.trim() || proposedRepoSlug;
   const { orbitRepos, orbitReposLoading } = useOrbitRepos(
-    !!target && !hasLinkedOrbit,
+    !!target && !hasLinkedOrbit && attachOrbitRepo,
     orbitRepoMode,
     isAuthenticated,
   );
@@ -79,6 +80,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
       setOrbitRepoMode("default");
       setOrbitRepoName("");
       setSelectedOrbitRepo(null);
+      setAttachOrbitRepo(false);
       return;
     }
     setLoading(true);
@@ -86,6 +88,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
     setOrbitRepoMode("default");
     setOrbitRepoName("");
     setSelectedOrbitRepo(null);
+    setAttachOrbitRepo(false);
     api
       .getProject(target.project_id)
       .then((p) => {
@@ -127,7 +130,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
         orbit_repo?: string;
         git_repo_url?: string;
       } = {};
-      if (!hasLinkedOrbit && isAuthenticated && orbitOwner) {
+      if (attachOrbitRepo && !hasLinkedOrbit && isAuthenticated && orbitOwner) {
         if (orbitRepoMode === "existing") {
           if (!selectedOrbitRepo) {
             setError("Select an existing Orbit repo to link.");
@@ -202,6 +205,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
     onSaved,
     onClose,
     hasLinkedOrbit,
+    attachOrbitRepo,
     isAuthenticated,
     orbitOwner,
     orbitRepoMode,
@@ -253,20 +257,43 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
           {hasLinkedOrbit ? (
             <Input value={orbitUrl} readOnly disabled />
           ) : (
-            <OrbitRepoSection
-              isAuthenticated={isAuthenticated}
-              orbitOwner={orbitOwner}
-              orbitRepoMode={orbitRepoMode}
-              setOrbitRepoMode={setOrbitRepoMode}
-              orbitRepoName={orbitRepoName}
-              setOrbitRepoName={setOrbitRepoName}
-              proposedRepoSlug={proposedRepoSlug}
-              displayRepoName={displayRepoName}
-              orbitRepos={orbitRepos}
-              orbitReposLoading={orbitReposLoading}
-              selectedOrbitRepo={selectedOrbitRepo}
-              setSelectedOrbitRepo={setSelectedOrbitRepo}
-            />
+            <>
+              <label className={styles.attachOrbitToggle}>
+                <input
+                  type="checkbox"
+                  checked={attachOrbitRepo}
+                  onChange={(event) => {
+                    setAttachOrbitRepo(event.target.checked);
+                    if (!event.target.checked) {
+                      setSelectedOrbitRepo(null);
+                      setError("");
+                    }
+                  }}
+                  disabled={saving}
+                />
+                <span>Link an Orbit repo</span>
+              </label>
+              {attachOrbitRepo ? (
+                <OrbitRepoSection
+                  isAuthenticated={isAuthenticated}
+                  orbitOwner={orbitOwner}
+                  orbitRepoMode={orbitRepoMode}
+                  setOrbitRepoMode={setOrbitRepoMode}
+                  orbitRepoName={orbitRepoName}
+                  setOrbitRepoName={setOrbitRepoName}
+                  proposedRepoSlug={proposedRepoSlug}
+                  displayRepoName={displayRepoName}
+                  orbitRepos={orbitRepos}
+                  orbitReposLoading={orbitReposLoading}
+                  selectedOrbitRepo={selectedOrbitRepo}
+                  setSelectedOrbitRepo={setSelectedOrbitRepo}
+                />
+              ) : (
+                <Text variant="muted" size="sm">
+                  No Orbit repo linked. Other project settings can still be saved.
+                </Text>
+              )}
+            </>
           )}
           <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
             Local workspace

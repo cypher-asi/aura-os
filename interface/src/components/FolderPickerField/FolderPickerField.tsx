@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Text } from "@cypher-asi/zui";
+import { Button, Text } from "@cypher-asi/zui";
 import { FolderOpen, X } from "lucide-react";
 import { api } from "../../api/client";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -24,11 +24,11 @@ export interface FolderPickerFieldProps {
 }
 
 /**
- * Reusable folder-picker field rendered as a single input-style box: the
- * current path (or `defaultPath` placeholder) spans the full width, with a
- * trailing folder-icon button embedded at the right edge of the same box.
- * Clicking the icon opens the native OS folder dialog (desktop app only).
- * On the web build (no native bridge) the picker is disabled.
+ * Reusable folder-picker field with a read-only path and a visible folder
+ * action. The action follows the familiar desktop convention: "Choose
+ * folder…" when no override exists and "Change folder…" when one does.
+ * Clicking it opens the native OS folder dialog (desktop app only). On the web
+ * build (no native bridge) the picker is disabled.
  */
 export function FolderPickerField({
   value,
@@ -68,6 +68,7 @@ export function FolderPickerField({
     : defaultPath && defaultPath.length > 0
       ? defaultPath
       : "(default)";
+  const pickerLabel = hasOverride ? "Change folder…" : "Choose folder…";
 
   return (
     <div className={styles.fieldGroup}>
@@ -76,36 +77,43 @@ export function FolderPickerField({
           {label}
         </Text>
       ) : null}
-      <div className={styles.field}>
-        <Text
-          variant="muted"
-          size="sm"
-          className={`${styles.pathText} ${!hasOverride ? styles.pathTextDefault : ""}`}
-          title={displayText}
-        >
-          {displayText}
-        </Text>
-        {hasOverride ? (
-          <button
-            type="button"
-            onClick={handleClear}
-            disabled={disabled}
-            aria-label="Clear folder"
-            className={styles.iconButton}
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <Text
+            variant="muted"
+            size="sm"
+            className={`${styles.pathText} ${!hasOverride ? styles.pathTextDefault : ""}`}
+            title={displayText}
           >
-            <X size={14} />
-          </button>
-        ) : null}
+            {displayText}
+          </Text>
+          {hasOverride ? (
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={disabled}
+              aria-label="Use default folder"
+              title="Use default folder"
+              className={styles.iconButton}
+            >
+              <X size={14} />
+            </button>
+          ) : null}
+        </div>
         {hasDesktopBridge ? (
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
+            icon={<FolderOpen size={14} />}
             onClick={handlePick}
             disabled={disabled || picking}
-            aria-label="Choose folder"
-            className={styles.iconButton}
+            aria-label={pickerLabel}
+            className={styles.folderButton}
+            contentStates={[pickerLabel, "Opening…"]}
           >
-            <FolderOpen size={14} />
-          </button>
+            {picking ? "Opening…" : pickerLabel}
+          </Button>
         ) : null}
       </div>
       {!hasDesktopBridge ? (

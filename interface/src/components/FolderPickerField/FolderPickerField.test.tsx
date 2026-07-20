@@ -66,13 +66,16 @@ describe("FolderPickerField", () => {
       />,
     );
     expect(screen.getByText("/Users/me/projects/acme")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Change folder…" }),
+    ).toBeTruthy();
   });
 
   it("picks a folder via the desktop bridge when available", async () => {
     pickFolderMock.mockResolvedValueOnce("/Users/me/projects/acme");
     const onChange = vi.fn();
     render(<FolderPickerField value="" onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText("Choose folder"));
+    fireEvent.click(screen.getByRole("button", { name: "Choose folder…" }));
     await waitFor(() =>
       expect(onChange).toHaveBeenCalledWith("/Users/me/projects/acme"),
     );
@@ -82,12 +85,12 @@ describe("FolderPickerField", () => {
     pickFolderMock.mockResolvedValueOnce(null);
     const onChange = vi.fn();
     render(<FolderPickerField value="" onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText("Choose folder"));
+    fireEvent.click(screen.getByRole("button", { name: "Choose folder…" }));
     await waitFor(() => expect(pickFolderMock).toHaveBeenCalled());
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("clears the value via the trailing x button", () => {
+  it("returns to the default folder via the trailing x button", () => {
     const onChange = vi.fn();
     render(
       <FolderPickerField
@@ -95,18 +98,20 @@ describe("FolderPickerField", () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByLabelText("Clear folder"));
+    fireEvent.click(screen.getByLabelText("Use default folder"));
     expect(onChange).toHaveBeenCalledWith("");
   });
 
-  it("does not render the clear button when no override is set", () => {
+  it("does not render the default-folder button when no override is set", () => {
     render(<FolderPickerField value="" onChange={() => {}} />);
-    expect(screen.queryByLabelText("Clear folder")).toBeNull();
+    expect(screen.queryByLabelText("Use default folder")).toBeNull();
   });
 
   it("hides the folder-picker button when there is no desktop bridge", () => {
     hasDesktopBridge = false;
     render(<FolderPickerField value="" onChange={() => {}} />);
-    expect(screen.queryByLabelText("Choose folder")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Choose folder…" }),
+    ).toBeNull();
   });
 });

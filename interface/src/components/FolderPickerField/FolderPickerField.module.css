@@ -10,11 +10,20 @@
   font-weight: 500;
 }
 
+.fieldRow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+}
+
 .field {
   display: flex;
   align-items: center;
   gap: 4px;
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
   min-width: 0;
   padding: var(--space-2, 8px) var(--space-2, 8px) var(--space-2, 8px)
     var(--space-3, 12px);
@@ -22,6 +31,11 @@
   border-radius: var(--radius-md);
   background-color: var(--color-input-bg);
   border: 1px solid var(--color-input-border);
+}
+
+.folderButton {
+  flex: 0 0 auto;
+  min-height: var(--control-height-md);
 }
 
 .pathText {

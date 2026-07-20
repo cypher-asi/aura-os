@@ -23,6 +23,10 @@ pub(super) fn project_routes() -> Router<AppState> {
                 .delete(projects::delete_project),
         )
         .route(
+            "/api/projects/:project_id/workspace",
+            post(projects::set_project_workspace),
+        )
+        .route(
             "/api/projects/:project_id/archive",
             post(projects::archive_project),
         )

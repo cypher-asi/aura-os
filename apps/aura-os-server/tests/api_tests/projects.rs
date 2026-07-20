@@ -98,6 +98,52 @@ async fn project_update_preserves_local_build_and_test_commands() {
 }
 
 #[tokio::test]
+async fn project_workspace_tool_endpoint_sets_and_clears_local_path() {
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    let req = json_request(
+        "POST",
+        "/api/projects",
+        Some(serde_json::json!({
+            "org_id": OrgId::new(),
+            "name": "Local Workspace Project",
+            "description": ""
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let body = response_json(resp).await;
+    let project_id = body["project_id"].as_str().unwrap();
+    let workspace_endpoint = format!("/api/projects/{project_id}/workspace");
+
+    let req = json_request(
+        "POST",
+        &workspace_endpoint,
+        Some(serde_json::json!({
+            "local_workspace_path": "  C:\\code\\attached-project  "
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body["local_workspace_path"], "C:\\code\\attached-project");
+
+    let req = json_request(
+        "POST",
+        &workspace_endpoint,
+        Some(serde_json::json!({ "local_workspace_path": null })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert!(body["local_workspace_path"].is_null());
+
+    let req = json_request("POST", &workspace_endpoint, Some(serde_json::json!({})));
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn project_list_excludes_stale_local_shadows_when_network_is_available() {
     let (app, state, _db) = build_test_app_with_mocks().await;
 
