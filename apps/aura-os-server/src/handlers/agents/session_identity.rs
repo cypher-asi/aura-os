@@ -194,7 +194,7 @@ pub(crate) fn validate_automaton_identity(
     if requirements.require_org_id && is_missing(params.aura_org_id.as_deref()) {
         return Err(ApiError::session_identity_missing("aura_org_id", context));
     }
-    if requirements.require_session_id && is_missing(params.aura_session_id.as_deref()) {
+    if requirements.require_session_id && is_missing(Some(params.aura_session_id.as_str())) {
         return Err(ApiError::session_identity_missing(
             "aura_session_id",
             context,
@@ -284,7 +284,7 @@ fn log_automaton_shape(params: &AutomatonStartParams, context: &'static str) {
         target: "aura_os_server::session_shape",
         context = context,
         has_aura_org_id = params.aura_org_id.is_some(),
-        has_aura_session_id = params.aura_session_id.is_some(),
+        has_aura_session_id = !params.aura_session_id.trim().is_empty(),
         has_template_agent_id = params.template_agent_id.is_some(),
         has_aura_agent_id = params.aura_agent_id.is_some(),
         has_partition_agent_id = params.agent_id.is_some(),
@@ -347,7 +347,7 @@ mod tests {
             prior_failure: None,
             work_log: Vec::new(),
             aura_org_id: Some("org-1".to_string()),
-            aura_session_id: Some("session-1".to_string()),
+            aura_session_id: "session-1".to_string(),
             agent_identity: None,
             agent_skills: Vec::new(),
             agent_system_prompt: None,
@@ -515,7 +515,7 @@ mod tests {
     #[test]
     fn dev_loop_requirements_reject_missing_session_id() {
         let mut params = full_automaton_params();
-        params.aura_session_id = None;
+        params.aura_session_id.clear();
         let (status, axum::Json(api_err)) = validate_automaton_identity(
             &params,
             SessionIdentityRequirements::DEV_LOOP,
@@ -547,7 +547,7 @@ mod tests {
     fn scheduled_process_requirements_only_enforce_auth_token() {
         let mut params = full_automaton_params();
         params.aura_org_id = None;
-        params.aura_session_id = None;
+        params.aura_session_id.clear();
         params.user_id = None;
         params.template_agent_id = None;
         // Scheduled-process automatons currently only have an auth

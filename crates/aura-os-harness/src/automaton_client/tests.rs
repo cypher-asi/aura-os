@@ -1,4 +1,7 @@
-use super::{normalize_automaton_event, validate_automaton_start_identity, AutomatonStartParams};
+use super::{
+    automaton_start_params_to_runtime_request, normalize_automaton_event,
+    validate_automaton_start_identity, AutomatonStartParams,
+};
 use crate::error::HarnessError;
 use aura_protocol::{AgentPermissionsWire, AgentScopeWire, CapabilityWire};
 
@@ -29,7 +32,7 @@ fn automaton_start_params_serializes_agent_permissions() {
         prior_failure: None,
         work_log: Vec::new(),
         aura_org_id: None,
-        aura_session_id: None,
+        aura_session_id: "session-1".into(),
         agent_identity: None,
         agent_skills: Vec::new(),
         agent_system_prompt: None,
@@ -72,7 +75,7 @@ fn automaton_start_params_skips_pr_b_identity_fields_when_empty() {
         prior_failure: None,
         work_log: Vec::new(),
         aura_org_id: None,
-        aura_session_id: None,
+        aura_session_id: "session-1".into(),
         agent_identity: None,
         agent_skills: Vec::new(),
         agent_system_prompt: None,
@@ -122,7 +125,7 @@ fn automaton_start_params_serializes_pr_b_identity_fields_when_populated() {
         prior_failure: None,
         work_log: Vec::new(),
         aura_org_id: None,
-        aura_session_id: None,
+        aura_session_id: "session-1".into(),
         agent_identity: Some(aura_protocol::AgentPersona {
             name: "Aura".into(),
             role: "engineer".into(),
@@ -174,7 +177,7 @@ fn automaton_start_params_serializes_proxy_identity_context() {
         prior_failure: None,
         work_log: Vec::new(),
         aura_org_id: Some("org-1".into()),
-        aura_session_id: Some("session-1".into()),
+        aura_session_id: "session-1".into(),
         agent_identity: None,
         agent_skills: Vec::new(),
         agent_system_prompt: None,
@@ -223,7 +226,7 @@ fn full_valid_params() -> AutomatonStartParams {
         prior_failure: None,
         work_log: Vec::new(),
         aura_org_id: Some("org-1".into()),
-        aura_session_id: Some("session-1".into()),
+        aura_session_id: "session-1".into(),
         agent_identity: None,
         agent_skills: Vec::new(),
         agent_system_prompt: None,
@@ -253,7 +256,7 @@ fn validate_automaton_start_identity_rejects_missing_org_id() {
 #[test]
 fn validate_automaton_start_identity_rejects_blank_session_id() {
     let mut params = full_valid_params();
-    params.aura_session_id = Some("   ".into());
+    params.aura_session_id = "   ".into();
     let err = validate_automaton_start_identity(&params).unwrap_err();
     assert!(matches!(
         err,
@@ -262,6 +265,14 @@ fn validate_automaton_start_identity_rejects_blank_session_id() {
             ..
         }
     ));
+}
+
+#[test]
+fn automaton_runtime_request_preserves_stable_session_identity() {
+    let request = automaton_start_params_to_runtime_request(&full_valid_params());
+    let wire = serde_json::to_value(request).expect("serialize canonical runtime request");
+
+    assert_eq!(wire["project"]["aura_session_id"], "session-1");
 }
 
 #[test]

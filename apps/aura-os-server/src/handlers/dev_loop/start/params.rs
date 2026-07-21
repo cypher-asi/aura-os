@@ -43,11 +43,11 @@ pub(crate) async fn build_start_params(inputs: StartParamsInputs<'_>) -> Automat
     // Stable per-(project, agent-instance, task) session UUID so
     // Cloudflare's `(IP, X-Aura-Session-Id)` bucket score doesn't
     // reset on every dev-loop restart. See [`stable_dev_loop_session_id`].
-    let aura_session_id = Some(stable_dev_loop_session_id(
+    let aura_session_id = stable_dev_loop_session_id(
         &ctx.project_id.to_string(),
         &agent_instance_id.to_string(),
         task_id.as_deref(),
-    ));
+    );
     assemble_automaton_start_params(AssembleInputs {
         ctx,
         agent_instance_id,
@@ -74,7 +74,7 @@ struct AssembleInputs<'a> {
     installed_tools: Option<Vec<aura_os_harness::InstalledTool>>,
     installed_integrations: Option<Vec<aura_os_harness::InstalledIntegration>>,
     aura_org_id: Option<String>,
-    aura_session_id: Option<String>,
+    aura_session_id: String,
     loop_engineering: Option<&'a LoopEngineeringContract>,
 }
 
