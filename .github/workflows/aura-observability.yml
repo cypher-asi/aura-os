@@ -2,13 +2,7 @@ name: AURA Observability
 
 on:
   schedule:
-    - cron: "17 */2 * * *"
-  workflow_run:
-    workflows:
-      - Desktop Nightly Release
-      - Desktop Stable Release
-    types:
-      - completed
+    - cron: "17 */12 * * *"
   workflow_dispatch:
 
 permissions:
@@ -17,7 +11,6 @@ permissions:
 
 jobs:
   observability:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: production
 
