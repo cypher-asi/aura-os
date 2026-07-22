@@ -603,12 +603,11 @@ impl LocalHarness {
 
         let (events_tx, primed_events_rx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
 
-        // Subagent frames the harness emits before `session_ready` (AURA
-        // Council member fan-out happens at run start) would be dropped
-        // because the server-side consumers only subscribe to `events_tx`
-        // after `open_session` returns. Capture them here and hand them
-        // back so the chat orchestrator can replay them onto the
-        // broadcast once every consumer is subscribed.
+        // Frames consumed while waiting for `session_ready` would be
+        // dropped because server-side consumers only subscribe to
+        // `events_tx` after `open_session` returns. Capture the ready frame
+        // and any earlier council lifecycle frames so the chat orchestrator
+        // can replay them once every consumer is subscribed.
         let mut pending_events: Vec<OutboundMessage> = Vec::new();
 
         let session_id = if wait_for_ready {
@@ -670,20 +669,25 @@ impl LocalHarness {
 }
 
 /// Block on the `session_ready` frame, returning the harness-assigned
-/// session id. Any subagent lifecycle frames (`SubagentSpawned` /
-/// `SubagentStatus`) seen beforehand are collected into `pending_events`
-/// instead of discarded: AURA Council parent runs fan their members out
-/// at run start (around/before `session_ready`), so those frames arrive
-/// before any server-side consumer subscribes to `events_tx` and would
-/// otherwise be lost. The caller wraps this in a timeout and hands
-/// `pending_events` back so the chat orchestrator can replay them.
+/// session id. The ready frame and any subagent lifecycle frames
+/// (`SubagentSpawned` / `SubagentStatus`) seen beforehand are collected
+/// into `pending_events` instead of discarded: they arrive before any
+/// server-side consumer subscribes to `events_tx` and would otherwise be
+/// lost. The ready frame is placed first so a fresh chat adopts the parent
+/// session before any nested council member can materialize. The caller
+/// wraps this in a timeout and hands `pending_events` back so the chat
+/// orchestrator can replay them.
 async fn wait_for_session_ready_collecting(
     rx: &mut tokio::sync::broadcast::Receiver<OutboundMessage>,
     pending_events: &mut Vec<OutboundMessage>,
 ) -> anyhow::Result<String> {
     loop {
         match rx.recv().await {
-            Ok(OutboundMessage::SessionReady(ready)) => return Ok(ready.session_id),
+            Ok(OutboundMessage::SessionReady(ready)) => {
+                let session_id = ready.session_id.clone();
+                pending_events.insert(0, OutboundMessage::SessionReady(ready));
+                return Ok(session_id);
+            }
             Ok(OutboundMessage::Error(err)) => {
                 anyhow::bail!("Harness error during init ({}): {}", err.code, err.message)
             }
@@ -969,18 +973,22 @@ mod tests {
         assert_eq!(session_id, "sess-ready");
         assert_eq!(
             pending.len(),
-            3,
-            "both spawns and the status frame must be captured before session_ready"
+            4,
+            "ready and every pre-ready frame must be replayed"
         );
         assert!(matches!(
             &pending[0],
+            OutboundMessage::SessionReady(ready) if ready.session_id == "sess-ready"
+        ));
+        assert!(matches!(
+            &pending[1],
             OutboundMessage::SubagentSpawned(s) if s.child_run_id == "child-0" && s.council_index == Some(0)
         ));
         assert!(
-            matches!(&pending[1], OutboundMessage::SubagentStatus(s) if s.child_run_id == "child-0")
+            matches!(&pending[2], OutboundMessage::SubagentStatus(s) if s.child_run_id == "child-0")
         );
         assert!(matches!(
-            &pending[2],
+            &pending[3],
             OutboundMessage::SubagentSpawned(s) if s.child_run_id == "child-1" && s.council_index == Some(1)
         ));
     }

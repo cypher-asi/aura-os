@@ -154,17 +154,16 @@ pub struct HarnessSession {
     /// those variants.
     pub raw_events_tx: broadcast::Sender<serde_json::Value>,
     pub commands_tx: HarnessCommandSender,
-    /// Subagent lifecycle frames (`SubagentSpawned` / `SubagentStatus`)
-    /// observed on the WS stream BEFORE `session_ready` and therefore
-    /// before any server-side consumer subscribes to `events_tx`. tokio
-    /// `broadcast` only delivers messages sent after a receiver
-    /// subscribes, so these would otherwise be lost. AURA Council parent
-    /// runs fan their members out at run start (around/before
-    /// `session_ready`), so without capturing these the council member
-    /// columns never render. The chat orchestrator replays them onto
+    /// Initialization frames consumed before any server-side consumer
+    /// subscribes to `events_tx`. For chat runs this starts with
+    /// `SessionReady`, followed by any pre-ready `SubagentSpawned` /
+    /// `SubagentStatus` frames in their original order. tokio `broadcast`
+    /// only delivers messages sent after a receiver subscribes, so these
+    /// would otherwise be lost. The chat orchestrator replays them onto
     /// `events_tx` once every consumer (SSE, persist, watchdog, live
-    /// registry) is subscribed. Always empty for runs that emit no
-    /// subagent frames during init (the ordinary single-model path).
+    /// registry) is subscribed. Automaton runs, which do not emit
+    /// `SessionReady`, leave this empty unless they produce other captured
+    /// initialization frames.
     pub pending_events: Vec<OutboundMessage>,
     /// Receiver subscribed to `events_tx` at WS-bridge creation time,
     /// BEFORE the reader task could broadcast the harness's

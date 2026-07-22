@@ -522,8 +522,8 @@ impl SwarmHarness {
         if wait_for_ready {
             // Phase A: the gateway proxies a run that was already created
             // on the HTTP side (`POST /v1/agents/:id/run`), so the harness
-            // driver emits `session_ready` unprompted. No session-init
-            // first frame.
+            // driver emits `session_ready` unprompted. Retain that consumed
+            // frame for replay after downstream subscribers attach.
             let mut ready_rx = events_tx.subscribe();
             wait_for_session_ready(&mut ready_rx, run_id, &mut pending_events).await?;
         } else {
@@ -681,13 +681,13 @@ fn is_capacity_exhausted_response(status: StatusCode, body: &str) -> bool {
     }
 }
 
-/// Block on the proxied `session_ready` frame, collecting any subagent
-/// lifecycle frames (`SubagentSpawned` / `SubagentStatus`) the harness
-/// emits beforehand into `pending_events`. AURA Council parent runs fan
-/// their members out at run start (around/before `session_ready`), so
-/// these frames arrive before any server-side consumer subscribes to
-/// `events_tx`; capturing them lets the chat orchestrator replay them so
-/// the council member columns render.
+/// Block on the proxied `session_ready` frame, collecting the ready frame
+/// and any subagent lifecycle frames (`SubagentSpawned` /
+/// `SubagentStatus`) the harness emits beforehand into `pending_events`.
+/// These frames arrive before any server-side consumer subscribes to
+/// `events_tx`; capturing them lets the chat orchestrator replay them.
+/// The ready frame is placed first so a fresh chat adopts the parent
+/// session before any nested council member can materialize.
 async fn wait_for_session_ready(
     rx: &mut broadcast::Receiver<OutboundMessage>,
     swarm_session_id: &str,
@@ -696,7 +696,11 @@ async fn wait_for_session_ready(
     let ready = tokio::time::timeout(SESSION_READY_TIMEOUT, async {
         loop {
             match rx.recv().await {
-                Ok(OutboundMessage::SessionReady(ready)) => break Ok(ready.session_id),
+                Ok(OutboundMessage::SessionReady(ready)) => {
+                    let session_id = ready.session_id.clone();
+                    pending_events.insert(0, OutboundMessage::SessionReady(ready));
+                    break Ok(session_id);
+                }
                 Ok(OutboundMessage::Error(err)) => {
                     anyhow::bail!(
                         "harness error during swarm init ({}): {}",
@@ -924,9 +928,17 @@ mod tests {
             .await
             .expect("session ready resolves");
 
-        assert_eq!(pending.len(), 1, "pre-ready council spawn must be captured");
+        assert_eq!(
+            pending.len(),
+            2,
+            "ready and pre-ready council spawn must be captured"
+        );
         assert!(matches!(
             &pending[0],
+            OutboundMessage::SessionReady(ready) if ready.session_id == "swarm-run"
+        ));
+        assert!(matches!(
+            &pending[1],
             OutboundMessage::SubagentSpawned(s) if s.child_run_id == "child-0" && s.council_index == Some(0)
         ));
     }

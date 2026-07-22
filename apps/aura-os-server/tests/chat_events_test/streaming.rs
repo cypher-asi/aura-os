@@ -14,7 +14,7 @@ use tower::ServiceExt;
 use aura_os_core::*;
 use aura_os_harness::test_support::FakeHarness;
 use aura_os_harness::{
-    AssistantMessageEnd, FilesChanged, HarnessLink, HarnessOutbound, SessionUsage,
+    AssistantMessageEnd, FilesChanged, HarnessLink, HarnessOutbound, SessionReady, SessionUsage,
 };
 use aura_os_projects::CreateProjectInput;
 use aura_os_storage::CreateProjectAgentRequest;
@@ -295,6 +295,12 @@ async fn bare_agent_chat_route_persists_usage_signal_from_harness_end() {
     );
 
     let fake = Arc::new(FakeHarness::new());
+    fake.set_pending_events(vec![HarnessOutbound::SessionReady(SessionReady {
+        session_id: "fake-session-1".to_string(),
+        tools: Vec::new(),
+        skills: Vec::new(),
+    })])
+    .await;
     let usage = SessionUsage {
         input_tokens: 3_500,
         output_tokens: 1_200,
@@ -399,13 +405,24 @@ async fn bare_agent_chat_route_persists_usage_signal_from_harness_end() {
         .insert("x-forwarded-for", HeaderValue::from_static("203.0.113.10"));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), axum::http::StatusCode::OK);
-    let _sse = tokio::time::timeout(
+    let sse = tokio::time::timeout(
         Duration::from_secs(3),
         body::to_bytes(resp.into_body(), usize::MAX),
     )
     .await
     .expect("SSE stream should complete after assistant_message_end")
     .expect("read SSE body");
+    let sse = String::from_utf8(sse.to_vec()).expect("SSE body is UTF-8");
+    let ready_at = sse
+        .find("session_ready")
+        .expect("consumed session_ready must be replayed to the browser");
+    let end_at = sse
+        .find("assistant_message_end")
+        .expect("scripted assistant end must reach the browser");
+    assert!(
+        ready_at < end_at,
+        "session_ready must reach a fresh chat before turn events"
+    );
 
     let signal_payload = wait_for_usage_signal_payload(&db).await;
     assert_eq!(fake.session_count().await, 1);
