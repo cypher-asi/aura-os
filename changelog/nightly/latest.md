@@ -1,24 +1,24 @@
-# Dev-loop recovery and task dependency hardening
+# Dev-loop recovery and Council session routing fixes
 
 - Date: `2026-07-22`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.770.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.770.1
+- Version: `0.1.0-nightly.771.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.771.1
 
-A focused nightly today, centered on making automated dev-loop runs recover cleanly and giving tasks a real dependency graph. The change spans the Rust server's dev-loop streaming path and the interface's stream lifecycle, with new coverage around retries and task promotion.
+A tight nightly focused on two backend correctness fixes: making dev-run recovery and task dependencies behave predictably, and stopping local-web Second Opinion chats from spawning competing session rows when Council members fan out.
 
-## 2:43 AM — Dev-loop recovery and task dependency graph
+## 2:43 AM — Dev-loop recovery, task dependencies, and Second Opinion session routing
 
-Server-side dev-loop runs recover more reliably by preparing the task graph up front and promoting seeded engineering tasks from Pending to Ready, and a new dependencies module gives tasks a first-class dependency flow.
+Two backend fixes landed back-to-back: a broader repair of dev-run recovery plus task-dependency plumbing, followed by a targeted fix for local web Second Opinion session routing when Council members spawn.
 
-- Dev-loop startup now prepares the project's task graph before dispatching a run and automatically transitions a seeded loop engineering task from Pending to Ready, so recovered runs no longer stall on an un-promoted task. (`818ba0b`)
-- Introduced a dedicated task dependencies handler (~283 new lines) with accompanying CRUD updates and API tests, establishing an explicit dependency flow between tasks on the server. (`818ba0b`)
-- Streaming layer gained a provider circuit module and a generalized stop_automaton path that logs the stop reason, so credit exhaustion and other provider failures share one clearer shutdown flow. (`818ba0b`)
-- Loop retry state is now scoped to a specific automaton id, and the interface's chat stream lifecycle picked up new auto-retry handling with expanded test coverage across agent and chat streams. (`818ba0b`)
+- Dev-run recovery now prepares the task graph on resume and promotes a seeded loop-engineering task from Pending to Ready before the run starts, so recovered runs no longer stall on an unready task. (`818ba0b`)
+- Introduced a dedicated task dependencies handler (~283 lines) with matching API tests, and generalized the automaton stop path to accept an arbitrary reason instead of hard-coding credit exhaustion in the log line. (`818ba0b`)
+- Fixed local web Second Opinion routing so a fresh chat adopts its parent session before any nested Council-member frame can create a competing session row: the harness now captures `SessionReady` alongside pre-ready subagent frames and the orchestrator replays them in order to every subscriber. (`66347e4`)
+- Added an SSE-level regression test asserting that the consumed `session_ready` reaches the browser ahead of `assistant_message_end`, locking in the correct event ordering for bare agent chat routes. (`66347e4`)
 
 ## Highlights
 
-- Dev-loop runs now auto-promote pending engineering tasks to Ready
-- New task dependency graph with server-side APIs and tests
-- Stream retry state now tracks the automaton it belongs to
+- Dev-run recovery now promotes pending loop tasks to Ready
+- Task dependency handling gained a dedicated flow and API tests
+- Local web Second Opinion chats now adopt the parent session correctly
 
