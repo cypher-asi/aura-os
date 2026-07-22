@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-07-22",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.770.1",
+    "title": "Dev-loop recovery and task dependency hardening",
+    "intro": "A focused nightly today, centered on making automated dev-loop runs recover cleanly and giving tasks a real dependency graph. The change spans the Rust server's dev-loop streaming path and the interface's stream lifecycle, with new coverage around retries and task promotion.",
+    "entryCount": 1,
+    "highlights": [
+      "Dev-loop runs now auto-promote pending engineering tasks to Ready",
+      "New task dependency graph with server-side APIs and tests",
+      "Stream retry state now tracks the automaton it belongs to"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-22T10:12:30.874Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.770.1",
+    "path": "history/2026-07-22.json"
+  },
+  {
     "date": "2026-07-21",
     "channel": "nightly",
     "version": "0.1.0-nightly.769.1",
