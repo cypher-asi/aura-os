@@ -4,6 +4,7 @@ mod common;
 
 mod history;
 mod public_import;
+mod resolution;
 mod sessions;
 mod storage;
 mod streaming;

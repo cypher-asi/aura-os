@@ -140,6 +140,13 @@ function getStreamErrorCode(error: unknown): string | undefined {
   ) {
     return (error as { code: string }).code;
   }
+  if (
+    typeof error === "object"
+    && error !== null
+    && typeof (error as { body?: { code?: unknown } }).body?.code === "string"
+  ) {
+    return (error as { body: { code: string } }).body.code;
+  }
   return undefined;
 }
 
@@ -213,7 +220,13 @@ export function isStreamDroppedError(error: unknown, message?: string): boolean 
   const text = message ?? getStreamErrorMessage(error);
   if (/^SSE idle timeout/i.test(text)) return true;
   if (/^Stream lagged/i.test(text)) return true;
-  if (isTransientProviderTransportError(text)) return true;
+  // The same reqwest phrase can occur before a chat stream exists (for
+  // example while resolving the agent through aura-network). Only treat it
+  // as a provider interruption when the server identifies an LLM error, or
+  // when an unstructured legacy/plain Error carries the text.
+  if ((code === undefined || code === "llm_error") && isTransientProviderTransportError(text)) {
+    return true;
+  }
   return false;
 }
 
