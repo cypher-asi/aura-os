@@ -30,7 +30,6 @@ export function useChatAppChat(
   opts: {
     freshCanvasPending?: boolean;
     freshCanvasKey?: string | null;
-    onFreshSendStarted?: () => void;
   } = {},
 ): ChatPanelProps {
   const base = useStandaloneAgentChat(agentId, pinnedSessionId, opts);

@@ -5,11 +5,10 @@ use std::sync::{
 use std::time::Duration;
 
 use serde::Deserialize;
-use tokio::sync::broadcast;
 
 use super::health::HealthBaselineTracker;
 use aura_os_core::{AgentId, AgentInstanceId, AgentPermissions, Project, ProjectId, SessionId};
-use aura_os_harness::{HarnessLink, WsReaderHandle};
+use aura_os_harness::{AutomatonEventStream, HarnessLink, WsReaderHandle};
 use aura_os_loops::LoopHandle;
 use aura_protocol::IntentClassifierSpec;
 
@@ -86,7 +85,7 @@ pub(super) struct ForwarderContext {
     pub(super) agent_instance_id: AgentInstanceId,
     pub(super) automaton_id: String,
     pub(super) task_id: Option<String>,
-    pub(super) events_tx: broadcast::Sender<serde_json::Value>,
+    pub(super) event_stream: AutomatonEventStream,
     pub(super) ws_reader_handle: WsReaderHandle,
     pub(super) alive: Arc<AtomicBool>,
     pub(super) timeout: Duration,

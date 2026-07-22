@@ -1,6 +1,9 @@
-use super::{collect_automaton_events, RunCompletion};
+use super::{collect_automaton_events, connect_with_retries, RunCompletion};
+use async_trait::async_trait;
 use std::time::Duration;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
+
+use crate::{HarnessLink, HarnessSession, SessionConfig};
 
 #[tokio::test]
 async fn collect_automaton_events_merges_tool_snapshots() {
@@ -291,5 +294,90 @@ async fn collect_automaton_events_stream_close_after_task_failed_keeps_reason() 
         Some("explicit harness failure reason"),
         "explicit task_failed reason must win over any synthetic StreamClosed text"
     );
-    assert!(matches!(completion, RunCompletion::Failed { .. }));
+    assert!(matches!(&completion, RunCompletion::Failed { .. }));
+}
+
+#[tokio::test]
+async fn collect_automaton_events_fails_instead_of_silently_skipping_lagged_events() {
+    let (tx, rx) = broadcast::channel(1);
+    tx.send(serde_json::json!({
+        "type": "text_delta",
+        "text": "first event that will be overwritten",
+    }))
+    .unwrap();
+    tx.send(serde_json::json!({ "type": "done" })).unwrap();
+
+    let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+
+    assert!(matches!(&completion, RunCompletion::Failed { .. }));
+    assert!(
+        completion
+            .failure_message()
+            .is_some_and(|message| message.contains("1 event(s) skipped")),
+        "lagged streams must surface an explicit integrity failure"
+    );
+}
+
+struct PrimedAttachHarness;
+
+#[async_trait]
+impl HarnessLink for PrimedAttachHarness {
+    async fn open_session(&self, _config: SessionConfig) -> anyhow::Result<HarnessSession> {
+        anyhow::bail!("not used")
+    }
+
+    async fn close_session(&self, _session_id: &str) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    async fn attach_run_at_url(
+        &self,
+        run_id: &str,
+        _event_stream_url: Option<&str>,
+        _auth_token: Option<&str>,
+        _wait_for_ready: bool,
+    ) -> anyhow::Result<HarnessSession> {
+        let (events_tx, _) = broadcast::channel(8);
+        let (raw_events_tx, _) = broadcast::channel(8);
+        let raw_events_rx = vec![raw_events_tx.subscribe(), raw_events_tx.subscribe()];
+        let (commands_tx, _commands_rx) = mpsc::channel(8);
+        raw_events_tx
+            .send(serde_json::json!({
+                "type": "progress",
+                "stage": "replayed-before-return",
+            }))
+            .expect("primed receivers keep the early event alive");
+        Ok(HarnessSession {
+            session_id: run_id.to_string(),
+            run_id: run_id.to_string(),
+            events_tx,
+            raw_events_tx,
+            commands_tx,
+            pending_events: Vec::new(),
+            events_rx: None,
+            raw_events_rx,
+        })
+    }
+}
+
+#[tokio::test]
+async fn connect_with_retries_preserves_attach_time_raw_events_for_both_consumers() {
+    let (mut stream, _handle) = connect_with_retries(
+        &PrimedAttachHarness,
+        "run-1",
+        Some("/stream/run-1"),
+        None,
+        0,
+    )
+    .await
+    .expect("attach succeeds");
+
+    let live = stream.events_rx.recv().await.expect("live receiver event");
+    let persisted = stream
+        .persist_events_rx
+        .recv()
+        .await
+        .expect("persist receiver event");
+    assert_eq!(live["stage"], "replayed-before-return");
+    assert_eq!(persisted, live);
 }

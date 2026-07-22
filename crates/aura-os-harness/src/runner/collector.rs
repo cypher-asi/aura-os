@@ -22,6 +22,12 @@ pub(crate) const TIMEOUT_FAILURE_MESSAGE: &str =
 pub(crate) const STREAM_CLOSED_FAILURE_MESSAGE: &str =
     "Automaton event stream closed before producing a terminal event";
 
+/// Prefix for a hard failure caused by a broadcast receiver falling behind.
+/// Continuing would silently omit tool or terminal events and can leave the
+/// UI showing a run that never completes.
+pub(crate) const STREAM_LAGGED_FAILURE_MESSAGE: &str =
+    "Automaton event stream lost events before they could be processed";
+
 /// Output collected from an automaton event stream.
 #[derive(Debug, Clone, Default)]
 pub struct CollectedOutput {
@@ -107,7 +113,9 @@ where
                 }
             }
             Ok(Err(broadcast::error::RecvError::Closed)) => return state.stream_closed(),
-            Ok(Err(broadcast::error::RecvError::Lagged(_))) => continue,
+            Ok(Err(broadcast::error::RecvError::Lagged(skipped))) => {
+                return state.stream_lagged(skipped)
+            }
             Err(_) => return state.timeout(),
         }
     }
@@ -170,6 +178,14 @@ impl CollectorState {
     fn timeout(mut self) -> RunCompletion {
         self.flush_pending_text();
         RunCompletion::Timeout(self.out)
+    }
+
+    fn stream_lagged(mut self, skipped: u64) -> RunCompletion {
+        self.flush_pending_text();
+        RunCompletion::Failed {
+            message: format!("{STREAM_LAGGED_FAILURE_MESSAGE}: {skipped} event(s) skipped"),
+            output: self.out,
+        }
     }
 
     fn error(mut self, evt: &serde_json::Value) -> RunCompletion {

@@ -279,6 +279,7 @@ impl HarnessLink for FakeHarness {
             commands_tx,
             pending_events,
             events_rx: None,
+            raw_events_rx: Vec::new(),
         })
     }
 

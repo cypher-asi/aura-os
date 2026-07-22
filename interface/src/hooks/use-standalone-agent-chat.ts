@@ -115,7 +115,6 @@ export function useStandaloneAgentChat(
   opts: {
     freshCanvasPending?: boolean;
     freshCanvasKey?: string | null;
-    onFreshSendStarted?: () => void;
   } = {},
 ): ChatPanelProps {
   const { remoteOnly } = useAuraCapabilities();
@@ -234,10 +233,6 @@ export function useStandaloneAgentChat(
   // `/chat?fresh=...` route. The next send inserts the optimistic row;
   // `SessionReady` later swaps that placeholder id for the real one.
   const pendingOptimisticArmedRef = useRef(false);
-  const onFreshSendStartedRef = useRef(opts.onFreshSendStarted);
-  useEffect(() => {
-    onFreshSendStartedRef.current = opts.onFreshSendStarted;
-  }, [opts.onFreshSendStarted]);
   // Mirror `agentId` and the project binding via refs so the
   // `SessionReady`-side reconciliation doesn't ride along in
   // `handleSessionReady`'s deps. The chat input bar's `onSend`/internal
@@ -611,7 +606,6 @@ export function useStandaloneAgentChat(
       (...args: Parameters<typeof wrappedSendBase>) => {
         if (pendingOptimisticArmedRef.current) {
           pendingOptimisticArmedRef.current = false;
-          onFreshSendStartedRef.current?.();
           pendingOptimisticIdRef.current = insertOptimisticSessionRow();
         }
         return wrappedSendBase(...args);

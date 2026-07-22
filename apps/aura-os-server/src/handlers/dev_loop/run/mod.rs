@@ -17,12 +17,10 @@ mod request;
 mod session;
 mod stream;
 
-use axum::http::StatusCode;
-use tokio::sync::broadcast;
-
 use aura_os_core::SessionId;
 use aura_os_events::{LoopId, LoopKind};
-use aura_os_harness::WsReaderHandle;
+use aura_os_harness::{AutomatonEventStream, WsReaderHandle};
+use axum::http::StatusCode;
 
 use crate::dto::LoopStatusResponse;
 use crate::error::ApiResult;
@@ -90,7 +88,7 @@ pub(super) async fn run_automaton(req: RunRequest) -> ApiResult<RunOutcome> {
     // and runs orphan recovery + registry displacement between the
     // two; SingleTask connects first and begins the session
     // afterwards).
-    let (session_id, events_tx, ws_reader_handle) = match req.mode {
+    let (session_id, event_stream, ws_reader_handle) = match req.mode {
         RunMode::Automation => bootstrap_automation(&req, &prep, &started).await?,
         RunMode::SingleTask { .. } => bootstrap_single_task(&req, &prep, &started).await?,
     };
@@ -99,7 +97,7 @@ pub(super) async fn run_automaton(req: RunRequest) -> ApiResult<RunOutcome> {
         req: &req,
         prep: &prep,
         started: &started,
-        events_tx,
+        event_stream,
         ws_reader_handle,
         session_id,
     })
@@ -183,11 +181,7 @@ async fn bootstrap_automation(
     req: &RunRequest,
     prep: &RunContext,
     started: &StartedAutomaton,
-) -> ApiResult<(
-    Option<SessionId>,
-    broadcast::Sender<serde_json::Value>,
-    WsReaderHandle,
-)> {
+) -> ApiResult<(Option<SessionId>, AutomatonEventStream, WsReaderHandle)> {
     let session_id = materialize_run_session(req, prep, &started.automaton_id).await;
     replace_registry_entry(&req.state, req.project_id, req.agent_instance_id).await;
     // Skip the orphan sweep when adopting a run that is still alive on
@@ -209,8 +203,8 @@ async fn bootstrap_automation(
             recovered,
         );
     }
-    let (events_tx, ws_reader_handle) = connect_automaton_stream(req, prep, started).await?;
-    Ok((session_id, events_tx, ws_reader_handle))
+    let (event_stream, ws_reader_handle) = connect_automaton_stream(req, prep, started).await?;
+    Ok((session_id, event_stream, ws_reader_handle))
 }
 
 /// SingleTask post-start sequence: connect the harness event stream
@@ -220,12 +214,8 @@ async fn bootstrap_single_task(
     req: &RunRequest,
     prep: &RunContext,
     started: &StartedAutomaton,
-) -> ApiResult<(
-    Option<SessionId>,
-    broadcast::Sender<serde_json::Value>,
-    WsReaderHandle,
-)> {
-    let (events_tx, ws_reader_handle) = connect_automaton_stream(req, prep, started).await?;
+) -> ApiResult<(Option<SessionId>, AutomatonEventStream, WsReaderHandle)> {
+    let (event_stream, ws_reader_handle) = connect_automaton_stream(req, prep, started).await?;
     let session_id = materialize_run_session(req, prep, &started.automaton_id).await;
-    Ok((session_id, events_tx, ws_reader_handle))
+    Ok((session_id, event_stream, ws_reader_handle))
 }

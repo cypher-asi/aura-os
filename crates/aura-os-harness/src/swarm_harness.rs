@@ -501,7 +501,7 @@ impl SwarmHarness {
                 }));
             }
         };
-        let (events_tx, primed_events_rx, raw_events_tx, commands_tx) = if ws_reconnect_enabled() {
+        let bridge = if ws_reconnect_enabled() {
             // Capture the run's WS coordinates so the bridge can re-open
             // the gateway proxy stream after a recoverable drop without
             // tearing the warm chat session down.
@@ -518,22 +518,22 @@ impl SwarmHarness {
         } else {
             spawn_ws_bridge(ws_stream)
         };
+        let events_tx = bridge.events_tx;
+        let mut control_rx = bridge.control_rx;
         let mut pending_events: Vec<OutboundMessage> = Vec::new();
         if wait_for_ready {
             // Phase A: the gateway proxies a run that was already created
             // on the HTTP side (`POST /v1/agents/:id/run`), so the harness
             // driver emits `session_ready` unprompted. Retain that consumed
             // frame for replay after downstream subscribers attach.
-            let mut ready_rx = events_tx.subscribe();
-            wait_for_session_ready(&mut ready_rx, run_id, &mut pending_events).await?;
+            wait_for_session_ready(&mut control_rx, run_id, &mut pending_events).await?;
         } else {
             // Reattach / council child runs stream domain events directly
             // and never re-emit `session_ready`. Do a brief liveness probe
             // (mirroring `LocalHarness::attach_run_at_ws_url`): if the
             // bridge reports the WS closed/errored immediately, fail so the
             // caller can retry; otherwise proceed.
-            let mut rx = events_tx.subscribe();
-            match tokio::time::timeout(Duration::from_millis(250), rx.recv()).await {
+            match tokio::time::timeout(Duration::from_millis(250), control_rx.recv()).await {
                 Ok(Ok(OutboundMessage::Error(err)))
                     if err.code == "harness_ws_closed" || err.code == "harness_ws_read_error" =>
                 {
@@ -557,10 +557,11 @@ impl SwarmHarness {
             session_id: run_id.to_string(),
             run_id: run_id.to_string(),
             events_tx,
-            raw_events_tx,
-            commands_tx,
+            raw_events_tx: bridge.raw_events_tx,
+            commands_tx: bridge.commands_tx,
             pending_events,
-            events_rx: Some(primed_events_rx),
+            events_rx: Some(bridge.events_rx),
+            raw_events_rx: bridge.raw_events_rx,
         })
     }
 }
@@ -682,12 +683,11 @@ fn is_capacity_exhausted_response(status: StatusCode, body: &str) -> bool {
 }
 
 /// Block on the proxied `session_ready` frame, collecting the ready frame
-/// and any subagent lifecycle frames (`SubagentSpawned` /
-/// `SubagentStatus`) the harness emits beforehand into `pending_events`.
-/// These frames arrive before any server-side consumer subscribes to
-/// `events_tx`; capturing them lets the chat orchestrator replay them.
-/// The ready frame is placed first so a fresh chat adopts the parent
-/// session before any nested council member can materialize.
+/// and every typed frame the harness emits beforehand into
+/// `pending_events`. These frames arrive before any server-side consumer
+/// subscribes to `events_tx`; capturing them lets the chat orchestrator
+/// replay them. The ready frame is placed first so a fresh chat adopts the
+/// parent session before any nested or progress event can materialize.
 async fn wait_for_session_ready(
     rx: &mut broadcast::Receiver<OutboundMessage>,
     swarm_session_id: &str,
@@ -708,8 +708,7 @@ async fn wait_for_session_ready(
                         err.message
                     )
                 }
-                Ok(evt @ OutboundMessage::SubagentSpawned(_))
-                | Ok(evt @ OutboundMessage::SubagentStatus(_)) => {
+                Ok(evt) => {
                     if let OutboundMessage::SubagentSpawned(spawned) = &evt {
                         tracing::debug!(
                             target: "aura::council",
@@ -719,10 +718,12 @@ async fn wait_for_session_ready(
                         );
                     }
                     pending_events.push(evt);
-                    continue;
                 }
-                Ok(_) => continue,
-                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    anyhow::bail!(
+                        "swarm initialization stream lagged by {skipped} event(s) before session_ready"
+                    )
+                }
                 Err(broadcast::error::RecvError::Closed) => {
                     anyhow::bail!("swarm websocket closed before session_ready")
                 }
@@ -900,8 +901,8 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn wait_for_session_ready_collects_pre_ready_subagent_frames() {
-        use aura_protocol::{SessionReady, SubagentSpawned};
+    async fn wait_for_session_ready_collects_every_pre_ready_frame() {
+        use aura_protocol::{SessionReady, SubagentSpawned, TextDelta};
 
         let (tx, _rx0) = broadcast::channel::<OutboundMessage>(16);
         let mut rx = tx.subscribe();
@@ -916,6 +917,10 @@ mod tests {
             council_mechanism: Some("synthesize".into()),
         }))
         .expect("send spawn");
+        tx.send(OutboundMessage::TextDelta(TextDelta {
+            text: "early swarm output".into(),
+        }))
+        .expect("send early text");
         tx.send(OutboundMessage::SessionReady(SessionReady {
             session_id: "swarm-run".into(),
             tools: Vec::new(),
@@ -930,8 +935,8 @@ mod tests {
 
         assert_eq!(
             pending.len(),
-            2,
-            "ready and pre-ready council spawn must be captured"
+            3,
+            "ready and every pre-ready frame must be captured"
         );
         assert!(matches!(
             &pending[0],
@@ -941,6 +946,33 @@ mod tests {
             &pending[1],
             OutboundMessage::SubagentSpawned(s) if s.child_run_id == "child-0" && s.council_index == Some(0)
         ));
+        assert!(matches!(
+            &pending[2],
+            OutboundMessage::TextDelta(delta) if delta.text == "early swarm output"
+        ));
+    }
+
+    #[tokio::test]
+    async fn wait_for_session_ready_fails_explicitly_when_initialization_lags() {
+        use aura_protocol::{SessionReady, TextDelta};
+
+        let (tx, _rx0) = broadcast::channel::<OutboundMessage>(1);
+        let mut rx = tx.subscribe();
+        tx.send(OutboundMessage::TextDelta(TextDelta {
+            text: "overwritten".into(),
+        }))
+        .expect("send early text");
+        tx.send(OutboundMessage::SessionReady(SessionReady {
+            session_id: "swarm-run".into(),
+            tools: Vec::new(),
+            skills: Vec::new(),
+        }))
+        .expect("send ready");
+
+        let error = wait_for_session_ready(&mut rx, "swarm-run", &mut Vec::new())
+            .await
+            .expect_err("lagged initialization must fail closed");
+        assert!(error.to_string().contains("lagged by 1 event(s)"));
     }
 
     #[test]

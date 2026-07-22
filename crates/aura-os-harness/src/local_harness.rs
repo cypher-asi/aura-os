@@ -601,23 +601,24 @@ impl LocalHarness {
             }
         };
 
-        let (events_tx, primed_events_rx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
+        let bridge = spawn_ws_bridge(ws_stream);
+        let events_tx = bridge.events_tx;
+        let mut control_rx = bridge.control_rx;
 
         // Frames consumed while waiting for `session_ready` would be
         // dropped because server-side consumers only subscribe to
         // `events_tx` after `open_session` returns. Capture the ready frame
-        // and any earlier council lifecycle frames so the chat orchestrator
-        // can replay them once every consumer is subscribed.
+        // and every earlier typed frame so the chat orchestrator can replay
+        // them once every consumer is subscribed.
         let mut pending_events: Vec<OutboundMessage> = Vec::new();
 
         let session_id = if wait_for_ready {
             // Chat runs emit `SessionReady` unprompted once the run is
             // created on the HTTP side; block on it to learn the
             // session id.
-            let mut rx = events_tx.subscribe();
             match tokio::time::timeout(
                 std::time::Duration::from_secs(30),
-                wait_for_session_ready_collecting(&mut rx, &mut pending_events),
+                wait_for_session_ready_collecting(&mut control_rx, &mut pending_events),
             )
             .await
             {
@@ -635,8 +636,7 @@ impl LocalHarness {
             // probe: if the bridge reports the WS closed/errored right
             // away, fail so the caller can retry; otherwise proceed with
             // `run_id` as the session id.
-            let mut rx = events_tx.subscribe();
-            match tokio::time::timeout(Duration::from_millis(250), rx.recv()).await {
+            match tokio::time::timeout(Duration::from_millis(250), control_rx.recv()).await {
                 Ok(Ok(OutboundMessage::Error(err)))
                     if err.code == "harness_ws_closed" || err.code == "harness_ws_read_error" =>
                 {
@@ -660,21 +660,21 @@ impl LocalHarness {
             session_id,
             run_id: run_id.to_string(),
             events_tx,
-            raw_events_tx,
-            commands_tx,
+            raw_events_tx: bridge.raw_events_tx,
+            commands_tx: bridge.commands_tx,
             pending_events,
-            events_rx: Some(primed_events_rx),
+            events_rx: Some(bridge.events_rx),
+            raw_events_rx: bridge.raw_events_rx,
         })
     }
 }
 
 /// Block on the `session_ready` frame, returning the harness-assigned
-/// session id. The ready frame and any subagent lifecycle frames
-/// (`SubagentSpawned` / `SubagentStatus`) seen beforehand are collected
-/// into `pending_events` instead of discarded: they arrive before any
-/// server-side consumer subscribes to `events_tx` and would otherwise be
+/// session id. The ready frame and every typed frame seen beforehand are
+/// collected into `pending_events` instead of discarded: they arrive before
+/// any server-side consumer subscribes to `events_tx` and would otherwise be
 /// lost. The ready frame is placed first so a fresh chat adopts the parent
-/// session before any nested council member can materialize. The caller
+/// session before any nested or progress event can materialize. The caller
 /// wraps this in a timeout and hands `pending_events` back so the chat
 /// orchestrator can replay them.
 async fn wait_for_session_ready_collecting(
@@ -691,8 +691,7 @@ async fn wait_for_session_ready_collecting(
             Ok(OutboundMessage::Error(err)) => {
                 anyhow::bail!("Harness error during init ({}): {}", err.code, err.message)
             }
-            Ok(evt @ OutboundMessage::SubagentSpawned(_))
-            | Ok(evt @ OutboundMessage::SubagentStatus(_)) => {
+            Ok(evt) => {
                 if let OutboundMessage::SubagentSpawned(spawned) = &evt {
                     tracing::debug!(
                         target: "aura::council",
@@ -703,8 +702,11 @@ async fn wait_for_session_ready_collecting(
                 }
                 pending_events.push(evt);
             }
-            Ok(_) => continue,
-            Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                anyhow::bail!(
+                    "local harness initialization stream lagged by {skipped} event(s) before session_ready"
+                )
+            }
             Err(_) => anyhow::bail!("Connection closed before session_ready"),
         }
     }
@@ -925,8 +927,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wait_for_session_ready_collects_pre_ready_subagent_frames() {
-        use aura_protocol::{SessionReady, SubagentSpawned, SubagentStatus};
+    async fn wait_for_session_ready_collects_every_pre_ready_frame() {
+        use aura_protocol::{SessionReady, SubagentSpawned, SubagentStatus, TextDelta};
 
         let (tx, _rx0) = tokio::sync::broadcast::channel::<OutboundMessage>(16);
         let mut rx = tx.subscribe();
@@ -948,6 +950,10 @@ mod tests {
             reason: None,
         }))
         .expect("send status 0");
+        tx.send(OutboundMessage::TextDelta(TextDelta {
+            text: "early model output".into(),
+        }))
+        .expect("send early text");
         tx.send(OutboundMessage::SubagentSpawned(SubagentSpawned {
             child_run_id: "child-1".into(),
             parent_tool_use_id: Some("council-parent".into()),
@@ -973,7 +979,7 @@ mod tests {
         assert_eq!(session_id, "sess-ready");
         assert_eq!(
             pending.len(),
-            4,
+            5,
             "ready and every pre-ready frame must be replayed"
         );
         assert!(matches!(
@@ -989,8 +995,35 @@ mod tests {
         );
         assert!(matches!(
             &pending[3],
+            OutboundMessage::TextDelta(delta) if delta.text == "early model output"
+        ));
+        assert!(matches!(
+            &pending[4],
             OutboundMessage::SubagentSpawned(s) if s.child_run_id == "child-1" && s.council_index == Some(1)
         ));
+    }
+
+    #[tokio::test]
+    async fn wait_for_session_ready_fails_explicitly_when_initialization_lags() {
+        use aura_protocol::{SessionReady, TextDelta};
+
+        let (tx, _rx0) = tokio::sync::broadcast::channel::<OutboundMessage>(1);
+        let mut rx = tx.subscribe();
+        tx.send(OutboundMessage::TextDelta(TextDelta {
+            text: "overwritten".into(),
+        }))
+        .expect("send early text");
+        tx.send(OutboundMessage::SessionReady(SessionReady {
+            session_id: "sess-ready".into(),
+            tools: Vec::new(),
+            skills: Vec::new(),
+        }))
+        .expect("send ready");
+
+        let error = wait_for_session_ready_collecting(&mut rx, &mut Vec::new())
+            .await
+            .expect_err("lagged initialization must fail closed");
+        assert!(error.to_string().contains("lagged by 1 event(s)"));
     }
 
     #[test]

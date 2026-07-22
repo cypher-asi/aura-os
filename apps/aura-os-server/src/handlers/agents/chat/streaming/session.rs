@@ -65,10 +65,6 @@ pub(super) struct SessionForTurn {
     /// here; the orchestrator resubscribes to feed the persist task
     /// and the turn-slot release sentinel.
     pub(super) rx: broadcast::Receiver<HarnessOutbound>,
-    /// Sender paired with `rx`, used to broadcast synthetic terminal
-    /// errors when the remote runtime goes silent while SSE keep-alives
-    /// keep the HTTP connection open.
-    pub(super) events_tx: broadcast::Sender<HarnessOutbound>,
     /// Held for the entire lifetime of this user turn; handed to a
     /// sentinel task that watches the broadcast for the terminal
     /// event and drops the guard there.
@@ -245,7 +241,6 @@ async fn reuse_with_turn_slot(
         is_new: false,
         was_queued: acquired.queued,
         rx: reused.rx,
-        events_tx: reused.events_tx,
         slot_guard: acquired.guard,
         commands_tx: reused.commands_tx,
         // Warm reuse never cold-opens, so there are no pre-`session_ready`
@@ -261,7 +256,6 @@ async fn reuse_with_turn_slot(
 /// `await` does not block other partitions.
 struct ReusedSessionHandles {
     rx: broadcast::Receiver<HarnessOutbound>,
-    events_tx: broadcast::Sender<HarnessOutbound>,
     commands_tx: HarnessCommandSender,
     turn_slot: Arc<Mutex<()>>,
     turn_pending_count: Arc<AtomicUsize>,
@@ -296,7 +290,6 @@ async fn try_reuse_session(
     }
     let handles = ReusedSessionHandles {
         rx: entry.events_tx.subscribe(),
-        events_tx: entry.events_tx.clone(),
         commands_tx: entry.commands_tx.clone(),
         turn_slot: Arc::clone(&entry.turn_slot),
         turn_pending_count: Arc::clone(&entry.turn_pending_count),
@@ -335,7 +328,6 @@ async fn insert_delegated_chat_session(
         })?;
 
     let rx = started.events_rx;
-    let events_tx = started.session.events_tx.clone();
     let commands_tx = started.session.commands_tx.clone();
     // Move the captured harness initialization frames out of the session
     // before its remaining fields are consumed into the registry entry
@@ -363,7 +355,6 @@ async fn insert_delegated_chat_session(
         is_new: true,
         was_queued: false,
         rx,
-        events_tx,
         slot_guard: acquired.guard,
         commands_tx,
         pending_events,

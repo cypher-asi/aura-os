@@ -24,11 +24,9 @@ use std::sync::{
 };
 use std::time::Duration;
 
-use tokio::sync::broadcast;
-
 use aura_os_core::{SessionId, TaskId};
 use aura_os_events::{LoopId, LoopKind};
-use aura_os_harness::WsReaderHandle;
+use aura_os_harness::{AutomatonEventStream, WsReaderHandle};
 use aura_os_loops::LoopHandle;
 
 use crate::state::ActiveAutomaton;
@@ -51,15 +49,15 @@ struct HandleSet {
 
 /// Bundled inputs for the post-`begin_session` register helpers. The
 /// forwarder spawn + registry insert legitimately needs the full
-/// pipeline context (request, prep, started automaton, broadcast
-/// channels, ws-reader handle, session id) so we group them once at
+/// pipeline context (request, prep, started automaton, event stream,
+/// ws-reader handle, session id) so we group them once at
 /// the entry point and thread the bundle through the mode-specific
 /// branches instead of repeating six-arg signatures three times.
 pub(super) struct RegisterInputs<'a> {
     pub(super) req: &'a RunRequest,
     pub(super) prep: &'a RunContext,
     pub(super) started: &'a StartedAutomaton,
-    pub(super) events_tx: broadcast::Sender<serde_json::Value>,
+    pub(super) event_stream: AutomatonEventStream,
     pub(super) ws_reader_handle: WsReaderHandle,
     pub(super) session_id: Option<SessionId>,
 }
@@ -76,7 +74,7 @@ async fn register_automation(inputs: RegisterInputs<'_>) {
         req,
         prep,
         started,
-        events_tx,
+        event_stream,
         ws_reader_handle,
         session_id,
     } = inputs;
@@ -90,7 +88,7 @@ async fn register_automation(inputs: RegisterInputs<'_>) {
         prep,
         started,
         handles: &handles,
-        events_tx,
+        event_stream,
         ws_reader_handle,
         session_id,
         task_id: None,
@@ -138,7 +136,7 @@ async fn register_single_task(inputs: RegisterInputs<'_>, task_id: TaskId) {
         req,
         prep,
         started,
-        events_tx,
+        event_stream,
         ws_reader_handle,
         session_id,
     } = inputs;
@@ -155,7 +153,7 @@ async fn register_single_task(inputs: RegisterInputs<'_>, task_id: TaskId) {
         prep,
         started,
         handles: &handles,
-        events_tx,
+        event_stream,
         ws_reader_handle,
         session_id,
         task_id: Some(task_id_str),
@@ -250,7 +248,7 @@ struct FinalizeInputs<'a> {
     prep: &'a RunContext,
     started: &'a StartedAutomaton,
     handles: &'a HandleSet,
-    events_tx: broadcast::Sender<serde_json::Value>,
+    event_stream: AutomatonEventStream,
     ws_reader_handle: WsReaderHandle,
     session_id: Option<SessionId>,
     task_id: Option<String>,
@@ -263,7 +261,7 @@ async fn finalize_registration(inputs: FinalizeInputs<'_>) {
         prep,
         started,
         handles,
-        events_tx,
+        event_stream,
         ws_reader_handle,
         session_id,
         task_id,
@@ -275,7 +273,7 @@ async fn finalize_registration(inputs: FinalizeInputs<'_>) {
         agent_instance_id: req.agent_instance_id,
         automaton_id: started.automaton_id.clone(),
         task_id,
-        events_tx,
+        event_stream,
         ws_reader_handle: ws_reader_handle.clone(),
         alive: handles.alive.clone(),
         timeout,
