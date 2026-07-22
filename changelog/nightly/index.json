@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-07-21",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.769.1",
+    "title": "Skill delegation, project workspace rebinding, and calmer observability",
+    "intro": "Today's nightly threads together three focused changes: custom Skills can now target a specific collaborating agent with proper runtime safeguards, project workspaces can be relinked to a local folder on each Desktop machine (including via an agent tool), and the AURA observability workflow settles into a quieter twice-daily cadence.",
+    "entryCount": 3,
+    "highlights": [
+      "Custom Skills can now delegate to a specific project agent",
+      "New set_project_workspace tool and Project Settings folder relinking",
+      "Observability workflow moves from every-2h to every-12h"
+    ],
+    "rawCommitCount": 3,
+    "generatedAt": "2026-07-21T23:59:35.461Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.769.1",
+    "path": "history/2026-07-21.json"
+  },
+  {
     "date": "2026-07-16",
     "channel": "nightly",
     "version": "0.1.0-nightly.766.1",
