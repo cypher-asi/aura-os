@@ -1,31 +1,33 @@
-# Session routing gets authoritative, dev-loop recovery gets smarter
+# Chat session integrity and dev-loop recovery hardening
 
 - Date: `2026-07-22`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.772.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.772.1
+- Version: `0.1.0-nightly.773.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.773.1
 
-Today's nightly focuses on the plumbing that keeps chat sessions and dev-loop runs coherent end-to-end. The team made SessionReady the single source of truth for fresh chat routing, closed off attach-time races in streamed events, and tightened dev-loop recovery so tasks reach the runner in the right state.
+Today's nightly focuses on making chat sessions behave predictably end-to-end and keeping the dev loop resilient when tasks or upstream services misbehave. Session identity is now canonical from server to browser, initialization frames no longer race the SSE bridge, and directory outages are cleanly distinguished from dropped LLM streams.
 
-## 2:43 AM — Dev-loop recovery and Second Opinion session routing
+## 2:43 AM — Dev-loop task readiness and Second Opinion session routing
 
-Fixes to how dev-loop runs bootstrap tasks and how local Second Opinion chats adopt their parent session.
+Early-morning work fixed two related failure modes: dev runs stalling on pending tasks, and local web Second Opinion sessions losing their initial SessionReady frame.
 
-- Dev-loop starts now prepare the task graph up front and promote a seeded loop-engineering task from pending to ready before the runner attaches, so recovered runs no longer stall on an unready task. (`818ba0b`)
-- Added a dedicated task dependencies handler plus API coverage, and threaded the automaton id through loop retry state so credit-exhaustion and generic stop paths log with proper context. (`818ba0b`)
-- Fresh local web Second Opinion chats now capture and replay SessionReady first so the parent session is adopted before any nested council-member frame can spawn a competing session row. (`66347e4`)
+- Dev-loop startup now prepares the task graph and promotes the loop engineering task from pending to ready before dispatching a run, so recovered runs actually progress instead of stalling on an unready task. (`818ba0b`)
+- Added a provider circuit and generalized the automaton stop path so runs can be halted for reasons beyond credit exhaustion, with the reason surfaced in logs for easier diagnosis. (`818ba0b`)
+- Fixed Second Opinion session routing on local web by capturing SessionReady as an initialization frame at cold-open and replaying it once every consumer is subscribed, so fresh chats adopt the parent session before any nested council-member frame can spawn a competing session row. (`66347e4`)
 
-## 5:43 AM — Authoritative SessionReady and race-free event delivery
+## 5:43 AM — Canonical chat session identity and directory-outage handling
 
-A broad hardening pass makes SessionReady authoritative for fresh chat routing and closes attach-time races across harness, server, live replay, and automaton event delivery.
+Later in the day, session event delivery was made race-free and client-facing session identity was unified across SSE, persistence, URL binding, and reattachment, while aura-network outages were separated from real LLM stream drops.
 
-- The chat orchestrator now defers starting the turn-stream relay until every downstream consumer — SSE bridge, persistence, watchdog, subagent capture, and the resumable live-stream registry — is attached, so initialization frames and immediate post-SessionReady output can no longer outrun any receiver. (`af98071`)
-- Harness, WS bridge, and live-stream layers were reworked to guard against silent broadcast lag and attach-time races, with the session module and runner collector gaining explicit handling for pending events and reader handles. (`af98071`)
-- ChatAppRoute and standalone agent chat hooks on the interface side were simplified as the server now guarantees SessionReady ordering, removing client-side compensations that are no longer needed. (`af98071`)
+- Reworked the chat streaming orchestrator so the harness-to-SSE relay only starts after every downstream consumer (SSE bridge, persistence, watchdog, live-stream registry, subagent capture) is attached, eliminating attach-time races and silent lag on SessionReady and early council frames. (`af98071`)
+- Canonicalized client-facing session identity across SSE, persistence, URL binding, history, and reattachment, with new resolution tests covering the fresh-chat routing paths. (`8e9c8b2`)
+- Introduced a dedicated agent_directory_unavailable 503 response so transient aura-network outages surface as a retryable directory error instead of being mislabeled as a dropped LLM stream in the browser's auto-retry path. (`8e9c8b2`)
+- Local shadow agents are now only accepted as a fallback when their persisted owner matches the authenticated session, letting desktop survive a directory outage without opening a cross-user authorization bypass. (`8e9c8b2`)
 
 ## Highlights
 
-- Second Opinion chats now route to the correct session on local web
-- Streamed harness events survive attach-time races
-- Dev-loop seeds tasks in a runnable state before starting
+- Fresh chats reliably deliver SessionReady before any turn events
+- Dev loop auto-promotes pending tasks and recovers from provider stalls
+- Directory outages no longer masquerade as dropped model responses
+- Local shadow agents are gated by authenticated ownership
 

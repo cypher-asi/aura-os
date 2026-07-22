@@ -2,18 +2,19 @@
   {
     "date": "2026-07-22",
     "channel": "nightly",
-    "version": "0.1.0-nightly.772.1",
-    "title": "Session routing gets authoritative, dev-loop recovery gets smarter",
-    "intro": "Today's nightly focuses on the plumbing that keeps chat sessions and dev-loop runs coherent end-to-end. The team made SessionReady the single source of truth for fresh chat routing, closed off attach-time races in streamed events, and tightened dev-loop recovery so tasks reach the runner in the right state.",
+    "version": "0.1.0-nightly.773.1",
+    "title": "Chat session integrity and dev-loop recovery hardening",
+    "intro": "Today's nightly focuses on making chat sessions behave predictably end-to-end and keeping the dev loop resilient when tasks or upstream services misbehave. Session identity is now canonical from server to browser, initialization frames no longer race the SSE bridge, and directory outages are cleanly distinguished from dropped LLM streams.",
     "entryCount": 2,
     "highlights": [
-      "Second Opinion chats now route to the correct session on local web",
-      "Streamed harness events survive attach-time races",
-      "Dev-loop seeds tasks in a runnable state before starting"
+      "Fresh chats reliably deliver SessionReady before any turn events",
+      "Dev loop auto-promotes pending tasks and recovers from provider stalls",
+      "Directory outages no longer masquerade as dropped model responses",
+      "Local shadow agents are gated by authenticated ownership"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-07-22T13:09:02.013Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.772.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-07-22T14:23:48.732Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.773.1",
     "path": "history/2026-07-22.json"
   },
   {
