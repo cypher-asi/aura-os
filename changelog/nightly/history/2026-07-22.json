@@ -3,20 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-22T11:15:40.555Z",
+  "generatedAt": "2026-07-22T13:09:02.013Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.771.1",
+  "version": "0.1.0-nightly.772.1",
   "date": "2026-07-22",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.771.1",
-  "lastIncludedSha": "66347e4639190a2c1cc0b85148d4dc525bdd54e7",
-  "previousProcessedSha": "818ba0b5de0e10c37a197117b16eaadce0f4558c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.772.1",
+  "lastIncludedSha": "af980713924dd9a4680f1494e39430910fff335d",
+  "previousProcessedSha": "66347e4639190a2c1cc0b85148d4dc525bdd54e7",
   "commitShas": [
     "818ba0b5de0e10c37a197117b16eaadce0f4558c",
-    "66347e4639190a2c1cc0b85148d4dc525bdd54e7"
+    "66347e4639190a2c1cc0b85148d4dc525bdd54e7",
+    "af980713924dd9a4680f1494e39430910fff335d"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "818ba0b5de0e10c37a197117b16eaadce0f4558c",
@@ -121,36 +122,101 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "af980713924dd9a4680f1494e39430910fff335d",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-22T17:43:41+05:00",
+      "subject": "Harden session event delivery (#117)",
+      "body": "Make SessionReady authoritative across fresh chat routing and harden harness, server, live replay, and automaton event delivery against attach-time races and silent lag.",
+      "parents": [
+        "66347e4639190a2c1cc0b85148d4dc525bdd54e7"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/streaming/orchestrator.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming/session.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/run/mod.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/run/register.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/run/stream.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/forwarder.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/types.rs",
+        "apps/aura-os-server/src/live_streams.rs",
+        "apps/aura-os-server/tests/chat_events_test/streaming.rs",
+        "crates/aura-os-harness/src/harness.rs",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-os-harness/src/local_harness.rs",
+        "crates/aura-os-harness/src/runner/collector.rs",
+        "crates/aura-os-harness/src/runner/mod.rs",
+        "crates/aura-os-harness/src/runner/tests.rs",
+        "crates/aura-os-harness/src/session.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs",
+        "crates/aura-os-harness/src/test_support.rs",
+        "crates/aura-os-harness/src/ws_bridge.rs",
+        "crates/aura-os-harness/src/ws_reader_handle.rs",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.test.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.tsx",
+        "interface/src/apps/chat-app/hooks/use-chat-app-chat.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 24,
+        "insertions": 717,
+        "deletions": 370
+      },
+      "committedAtMs": 1784724221000,
+      "cleanSubject": "Harden session event delivery (#117)",
+      "keywords": [
+        "harden",
+        "session",
+        "event",
+        "delivery"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/src",
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other",
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.771.1",
+      "version": "0.1.0-nightly.772.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 65887336
+          "sizeBytes": 65988674
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132483576
+          "sizeBytes": 132536824
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -160,29 +226,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.771.1",
+      "version": "0.1.0-nightly.772.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.771.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.772.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61620983
+          "sizeBytes": 61680948
         },
         {
-          "name": "AURA_0.1.0-nightly.771.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.772.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60561759
+          "sizeBytes": 60599998
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -192,29 +258,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.771.1",
+      "version": "0.1.0-nightly.772.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.771.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.772.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 63793551
+          "sizeBytes": 63759441
         },
         {
-          "name": "AURA_0.1.0-nightly.771.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.772.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 62814415
+          "sizeBytes": 62804974
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -224,17 +290,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.771.1",
+      "version": "0.1.0-nightly.772.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48586154
+          "sizeBytes": 48556143
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.771.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.772.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -243,53 +309,77 @@
     }
   ],
   "rendered": {
-    "title": "Dev-loop recovery and Council session routing fixes",
-    "intro": "A tight nightly focused on two backend correctness fixes: making dev-run recovery and task dependencies behave predictably, and stopping local-web Second Opinion chats from spawning competing session rows when Council members fan out.",
+    "title": "Session routing gets authoritative, dev-loop recovery gets smarter",
+    "intro": "Today's nightly focuses on the plumbing that keeps chat sessions and dev-loop runs coherent end-to-end. The team made SessionReady the single source of truth for fresh chat routing, closed off attach-time races in streamed events, and tightened dev-loop recovery so tasks reach the runner in the right state.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:43 AM",
         "started_at": "2026-07-22T09:43:17.000Z",
         "ended_at": "2026-07-22T10:49:18.000Z",
-        "title": "Dev-loop recovery, task dependencies, and Second Opinion session routing",
-        "summary": "Two backend fixes landed back-to-back: a broader repair of dev-run recovery plus task-dependency plumbing, followed by a targeted fix for local web Second Opinion session routing when Council members spawn.",
+        "title": "Dev-loop recovery and Second Opinion session routing",
+        "summary": "Fixes to how dev-loop runs bootstrap tasks and how local Second Opinion chats adopt their parent session.",
         "items": [
           {
-            "text": "Dev-run recovery now prepares the task graph on resume and promotes a seeded loop-engineering task from Pending to Ready before the run starts, so recovered runs no longer stall on an unready task.",
+            "text": "Dev-loop starts now prepare the task graph up front and promote a seeded loop-engineering task from pending to ready before the runner attaches, so recovered runs no longer stall on an unready task.",
             "commit_shas": [
               "818ba0b5de0e10c37a197117b16eaadce0f4558c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a dedicated task dependencies handler (~283 lines) with matching API tests, and generalized the automaton stop path to accept an arbitrary reason instead of hard-coding credit exhaustion in the log line.",
+            "text": "Added a dedicated task dependencies handler plus API coverage, and threaded the automaton id through loop retry state so credit-exhaustion and generic stop paths log with proper context.",
             "commit_shas": [
               "818ba0b5de0e10c37a197117b16eaadce0f4558c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed local web Second Opinion routing so a fresh chat adopts its parent session before any nested Council-member frame can create a competing session row: the harness now captures `SessionReady` alongside pre-ready subagent frames and the orchestrator replays them in order to every subscriber.",
-            "commit_shas": [
-              "66347e4639190a2c1cc0b85148d4dc525bdd54e7"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Added an SSE-level regression test asserting that the consumed `session_ready` reaches the browser ahead of `assistant_message_end`, locking in the correct event ordering for bare agent chat routes.",
+            "text": "Fresh local web Second Opinion chats now capture and replay SessionReady first so the parent session is adopted before any nested council-member frame can spawn a competing session row.",
             "commit_shas": [
               "66347e4639190a2c1cc0b85148d4dc525bdd54e7"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "5:43 AM",
+        "started_at": "2026-07-22T12:43:41.000Z",
+        "ended_at": "2026-07-22T12:43:41.000Z",
+        "title": "Authoritative SessionReady and race-free event delivery",
+        "summary": "A broad hardening pass makes SessionReady authoritative for fresh chat routing and closes attach-time races across harness, server, live replay, and automaton event delivery.",
+        "items": [
+          {
+            "text": "The chat orchestrator now defers starting the turn-stream relay until every downstream consumer — SSE bridge, persistence, watchdog, subagent capture, and the resumable live-stream registry — is attached, so initialization frames and immediate post-SessionReady output can no longer outrun any receiver.",
+            "commit_shas": [
+              "af980713924dd9a4680f1494e39430910fff335d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Harness, WS bridge, and live-stream layers were reworked to guard against silent broadcast lag and attach-time races, with the session module and runner collector gaining explicit handling for pending events and reader handles.",
+            "commit_shas": [
+              "af980713924dd9a4680f1494e39430910fff335d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "ChatAppRoute and standalone agent chat hooks on the interface side were simplified as the server now guarantees SessionReady ordering, removing client-side compensations that are no longer needed.",
+            "commit_shas": [
+              "af980713924dd9a4680f1494e39430910fff335d"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Dev-run recovery now promotes pending loop tasks to Ready",
-      "Task dependency handling gained a dedicated flow and API tests",
-      "Local web Second Opinion chats now adopt the parent session correctly"
+      "Second Opinion chats now route to the correct session on local web",
+      "Streamed harness events survive attach-time races",
+      "Dev-loop seeds tasks in a runnable state before starting"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 3
   }
 }
