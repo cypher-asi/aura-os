@@ -145,6 +145,17 @@ describe("isStreamDroppedError — Phase 2 harness-WS error codes", () => {
     ).toBe(false);
   });
 
+  it("does not misclassify a structured agent-directory failure as a dropped LLM stream", () => {
+    const error = {
+      body: { code: "agent_directory_unavailable" },
+      message:
+        "resolving agent: error sending request for url (https://aura-network.onrender.com/api/agents/a1)",
+    };
+
+    expect(isStreamDroppedError(error)).toBe(false);
+    expect(normalizeStreamError(error).displayVariant).toBeUndefined();
+  });
+
   it("retries the router's structured mid-stream interruption", () => {
     expect(
       isStreamDroppedError({

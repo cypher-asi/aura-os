@@ -411,6 +411,13 @@ async fn bare_agent_chat_route_persists_usage_signal_from_harness_end() {
         .insert("x-forwarded-for", HeaderValue::from_static("203.0.113.10"));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    let persisted_session_id = resp
+        .headers()
+        .get("x-aura-chat-session-id")
+        .expect("chat response exposes the persisted session id")
+        .to_str()
+        .expect("persisted session header is valid text")
+        .to_string();
     let sse = tokio::time::timeout(
         Duration::from_secs(3),
         body::to_bytes(resp.into_body(), usize::MAX),
@@ -431,6 +438,14 @@ async fn bare_agent_chat_route_persists_usage_signal_from_harness_end() {
     assert!(
         ready_at < early_at && early_at < end_at,
         "session_ready must lead retained initialization events and live turn events"
+    );
+    assert!(
+        sse.contains(&format!("\"session_id\":\"{persisted_session_id}\"")),
+        "client-facing session_ready must use the same persisted session id as the response header: {sse}"
+    );
+    assert!(
+        !sse.contains("\"session_id\":\"fake-session-1\""),
+        "the harness runtime id must not escape as the chat URL identity: {sse}"
     );
 
     let signal_payload = wait_for_usage_signal_payload(&db).await;

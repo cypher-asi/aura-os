@@ -237,7 +237,12 @@ pub(in super::super) async fn open_harness_chat_stream(
         rx,
         events_tx,
         relay,
-    } = present_turn_stream(rx, pending_events, council_presentation);
+    } = present_turn_stream(
+        rx,
+        pending_events,
+        council_presentation,
+        ctx.session_id.to_string(),
+    );
 
     // Register this turn as a reattachable live stream so a
     // reconnecting / reloading UI can rejoin the in-flight delta stream
@@ -426,12 +431,14 @@ struct TurnStreamRelay {
     source_rx: broadcast::Receiver<HarnessOutbound>,
     pending_events: Vec<HarnessOutbound>,
     presentation: Option<CouncilPresentation>,
+    canonical_session_id: String,
 }
 
 fn present_turn_stream(
     source_rx: broadcast::Receiver<HarnessOutbound>,
     pending_events: Vec<HarnessOutbound>,
     presentation: Option<CouncilPresentation>,
+    canonical_session_id: String,
 ) -> PresentedTurnStream {
     let (presented_tx, presented_rx) =
         broadcast::channel(aura_os_harness::ws_bridge_config::read_broadcast_capacity_from_env());
@@ -443,7 +450,31 @@ fn present_turn_stream(
             source_rx,
             pending_events,
             presentation,
+            canonical_session_id,
         },
+    }
+}
+
+/// Present the storage session identity on the client-facing chat stream.
+///
+/// The harness `session_ready.session_id` identifies its ephemeral runtime
+/// run. Chat URLs, history, persistence, billing, and stream reattachment are
+/// all keyed by `ChatPersistCtx::session_id` instead. Forwarding the runtime id
+/// makes a fresh web or desktop chat navigate to a session that storage cannot
+/// load, then appear to change ids when the persisted sidebar row arrives.
+/// Keep the harness id internal and normalize the protocol event at the server
+/// boundary shared by SSE and resumable live-stream consumers.
+fn present_chat_event(
+    evt: HarnessOutbound,
+    presentation: Option<CouncilPresentation>,
+    canonical_session_id: &str,
+) -> HarnessOutbound {
+    match apply_council_presentation_to_event(evt, presentation) {
+        HarnessOutbound::SessionReady(mut ready) => {
+            ready.session_id = canonical_session_id.to_string();
+            HarnessOutbound::SessionReady(ready)
+        }
+        other => other,
     }
 }
 
@@ -457,6 +488,7 @@ fn spawn_turn_stream_relay(
             mut source_rx,
             pending_events,
             presentation,
+            canonical_session_id,
         } = relay;
 
         let had_pending_events = !pending_events.is_empty();
@@ -469,6 +501,7 @@ fn spawn_turn_stream_relay(
             );
         }
         for evt in pending_events {
+            let evt = present_chat_event(evt, presentation, &canonical_session_id);
             let terminal = is_terminal_turn_event(&evt);
             let _ = presented_tx.send(evt);
             if terminal {
@@ -485,7 +518,7 @@ fn spawn_turn_stream_relay(
         loop {
             match source_rx.recv().await {
                 Ok(evt) => {
-                    let evt = apply_council_presentation_to_event(evt, presentation);
+                    let evt = present_chat_event(evt, presentation, &canonical_session_id);
                     let terminal = is_terminal_turn_event(&evt);
                     let _ = presented_tx.send(evt);
                     if terminal {
@@ -549,7 +582,12 @@ mod tests {
             mut rx,
             events_tx: presented_tx,
             relay,
-        } = present_turn_stream(raw_rx, Vec::new(), Some(CouncilPresentation::SecondOpinion));
+        } = present_turn_stream(
+            raw_rx,
+            Vec::new(),
+            Some(CouncilPresentation::SecondOpinion),
+            "storage-session".to_string(),
+        );
 
         spawn_turn_stream_relay(relay, presented_tx, "test-session".to_string());
         raw_tx
@@ -586,13 +624,14 @@ mod tests {
             mut rx,
             events_tx,
             relay,
-        } = present_turn_stream(raw_rx, vec![ready], None);
+        } = present_turn_stream(raw_rx, vec![ready], None, "storage-session".to_string());
 
         spawn_turn_stream_relay(relay, events_tx, "test-session".to_string());
 
         assert!(matches!(
             rx.recv().await.expect("session ready"),
-            HarnessOutbound::SessionReady(_)
+            HarnessOutbound::SessionReady(ref ready)
+                if ready.session_id == "storage-session"
         ));
         assert!(matches!(
             rx.recv().await.expect("post-ready output"),
@@ -617,7 +656,7 @@ mod tests {
             mut rx,
             events_tx,
             relay,
-        } = present_turn_stream(raw_rx, Vec::new(), None);
+        } = present_turn_stream(raw_rx, Vec::new(), None, "storage-session".to_string());
 
         spawn_turn_stream_relay(relay, events_tx, "test-session".to_string());
 

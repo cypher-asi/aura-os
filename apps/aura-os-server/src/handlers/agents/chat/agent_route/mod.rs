@@ -66,7 +66,7 @@ pub(crate) async fn send_agent_event_stream(
             .inc_client_auto_retry_streamdropped();
     }
 
-    let agent = resolve_agent_for_chat(&state, &agent_id, &jwt).await?;
+    let agent = resolve_agent_for_chat(&state, &agent_id, &jwt, &auth_session).await?;
     ensure_chat_runtime_allowed(&state, agent.harness_mode())?;
     require_credits_for_auth_source(&state, &jwt, &agent.auth_source).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");

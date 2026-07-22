@@ -3,7 +3,7 @@
 //! shadow fallback), parse the wire `session_id`, and validate any
 //! caller-supplied pin against the agent's project bindings.
 
-use aura_os_core::{AgentId, SessionId};
+use aura_os_core::{Agent, AgentId, SessionId, ZeroAuthSession};
 use tracing::warn;
 
 use crate::error::{ApiError, ApiResult};
@@ -18,34 +18,61 @@ use super::super::persist::{try_pin_session, PinnedSessionOutcome};
 /// polling `remote_agent/state` for 12 agents in parallel while the
 /// CEO issues `send_to_agent`), which previously caused
 /// `get_agent_async` to query aura-network with the wrong bearer and
-/// surface spurious 404s. The local shadow is only used as a strict
-/// `NotFound` fallback; any other upstream failure bubbles up as a 5xx
-/// so we don't mask transient network issues behind "agent not found".
+/// surface spurious 404s. A local shadow is accepted only when its
+/// persisted owner matches the authenticated session. That lets desktop
+/// (and a hosted process with a warm caller-owned cache) survive a
+/// transient directory outage without turning the shadow into a
+/// cross-user authorization bypass.
 pub(super) async fn resolve_agent_for_chat(
     state: &AppState,
     agent_id: &AgentId,
     jwt: &str,
+    auth_session: &ZeroAuthSession,
 ) -> ApiResult<aura_os_core::Agent> {
     match state.agent_service.get_agent_with_jwt(jwt, agent_id).await {
         Ok(a) => Ok(a),
         Err(aura_os_agents::AgentError::NotFound) => {
-            state.agent_service.get_agent_local(agent_id).map_err(|_| {
+            caller_owned_shadow(state, agent_id, auth_session).ok_or_else(|| {
                 warn!(
                     %agent_id,
-                    "agent resolution failed: not in network or local shadow",
+                    "agent resolution failed: not in network or caller-owned local shadow",
                 );
                 ApiError::not_found(format!(
-                    "agent {agent_id} not found in network or local shadow"
+                    "agent {agent_id} not found in network or caller-owned local shadow"
                 ))
             })
         }
         Err(e) => {
-            warn!(%agent_id, error = %e, "agent resolution failed via network");
-            Err(ApiError::internal(format!(
-                "resolving agent {agent_id}: {e}"
-            )))
+            if let Some(agent) = caller_owned_shadow(state, agent_id, auth_session) {
+                warn!(
+                    %agent_id,
+                    error = %e,
+                    "agent resolution failed via network; using caller-owned local shadow"
+                );
+                return Ok(agent);
+            }
+            warn!(
+                %agent_id,
+                error = %e,
+                "agent resolution failed via network and no caller-owned local shadow is available"
+            );
+            Err(ApiError::agent_directory_unavailable())
         }
     }
+}
+
+fn caller_owned_shadow(
+    state: &AppState,
+    agent_id: &AgentId,
+    auth_session: &ZeroAuthSession,
+) -> Option<Agent> {
+    let agent = state.agent_service.get_agent_local(agent_id).ok()?;
+    let owns_agent = agent.user_id == auth_session.user_id
+        || auth_session
+            .network_user_id
+            .as_ref()
+            .is_some_and(|user_id| agent.user_id == user_id.to_string());
+    owns_agent.then_some(agent)
 }
 
 /// Validate the caller-supplied `pinned_session_id` against the

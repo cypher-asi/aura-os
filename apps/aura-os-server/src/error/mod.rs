@@ -265,6 +265,25 @@ impl ApiError {
         )
     }
 
+    /// The authenticated chat route could not resolve its target through
+    /// aura-network and had no caller-owned local shadow it could safely use.
+    /// Keep the upstream transport detail in server logs; the client only
+    /// needs a stable retryable code and must not mistake this pre-stream
+    /// failure for a dropped LLM response.
+    pub(crate) fn agent_directory_unavailable() -> (StatusCode, Json<Self>) {
+        let message =
+            "Aura's agent directory is temporarily unavailable. Please retry in a moment.";
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(Self {
+                error: message.to_string(),
+                code: "agent_directory_unavailable".to_string(),
+                details: Some(message.to_string()),
+                data: None,
+            }),
+        )
+    }
+
     pub(crate) fn bad_gateway(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::BAD_GATEWAY,
