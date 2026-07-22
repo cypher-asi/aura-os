@@ -8,9 +8,7 @@
 //! gets folded into the `bad_gateway` fallback envelope, which we
 //! pin per-mode here to match the pre-refactor wording.
 
-use tokio::sync::broadcast;
-
-use aura_os_harness::{connect_with_retries, WsReaderHandle};
+use aura_os_harness::{connect_with_retries, AutomatonEventStream, WsReaderHandle};
 
 use super::super::limits::HARNESS_CONNECT_RETRIES;
 
@@ -25,7 +23,7 @@ pub(super) async fn connect_automaton_stream(
     req: &RunRequest,
     prep: &RunContext,
     started: &StartedAutomaton,
-) -> ApiResult<(broadcast::Sender<serde_json::Value>, WsReaderHandle)> {
+) -> ApiResult<(AutomatonEventStream, WsReaderHandle)> {
     connect_with_retries(
         prep.start.client.as_ref(),
         &started.automaton_id,

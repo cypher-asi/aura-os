@@ -156,14 +156,11 @@ pub struct HarnessSession {
     pub commands_tx: HarnessCommandSender,
     /// Initialization frames consumed before any server-side consumer
     /// subscribes to `events_tx`. For chat runs this starts with
-    /// `SessionReady`, followed by any pre-ready `SubagentSpawned` /
-    /// `SubagentStatus` frames in their original order. tokio `broadcast`
-    /// only delivers messages sent after a receiver subscribes, so these
-    /// would otherwise be lost. The chat orchestrator replays them onto
-    /// `events_tx` once every consumer (SSE, persist, watchdog, live
-    /// registry) is subscribed. Automaton runs, which do not emit
-    /// `SessionReady`, leave this empty unless they produce other captured
-    /// initialization frames.
+    /// `SessionReady`, followed by every other typed pre-ready frame in
+    /// its original order. tokio `broadcast` only delivers messages sent
+    /// after a receiver subscribes, so these would otherwise be lost. The
+    /// chat orchestrator replays them onto `events_tx` once every consumer
+    /// (SSE, persist, watchdog, live registry) is subscribed.
     pub pending_events: Vec<OutboundMessage>,
     /// Receiver subscribed to `events_tx` at WS-bridge creation time,
     /// BEFORE the reader task could broadcast the harness's
@@ -176,6 +173,12 @@ pub struct HarnessSession {
     /// not prime one; the parent chat path leaves it unused (it relies on
     /// `pending_events` for its multi-consumer fan-out).
     pub events_rx: Option<broadcast::Receiver<OutboundMessage>>,
+    /// Raw receivers subscribed before the WebSocket reader starts. The
+    /// automaton pipeline takes one for its live forwarder and one for
+    /// event persistence so an attach-time replay burst cannot outrun
+    /// either downstream subscription. Transports without a primed raw
+    /// path may leave this empty; callers fall back to fresh subscribers.
+    pub raw_events_rx: Vec<broadcast::Receiver<serde_json::Value>>,
 }
 
 pub type HarnessCommandSender = mpsc::Sender<InboundMessage>;

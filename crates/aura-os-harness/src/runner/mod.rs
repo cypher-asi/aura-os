@@ -111,29 +111,30 @@ pub enum RunStartError {
     Connect { attempts: u32, message: String },
 }
 
+/// Raw automaton event fan-out with receivers subscribed before the
+/// WebSocket reader starts. The live forwarder and persistence task each
+/// own a receiver so an immediate replay-on-attach burst reaches both.
+pub struct AutomatonEventStream {
+    pub events_rx: broadcast::Receiver<serde_json::Value>,
+    pub persist_events_rx: broadcast::Receiver<serde_json::Value>,
+}
+
 /// Start an automaton and connect to its event stream with retries.
 ///
 /// `stream_retries` is the number of **additional** attempts after the first;
 /// pass `0` for a single attempt, `2` for three total attempts, etc.
 ///
-/// Returns a [`WsReaderHandle`] alongside the broadcast sender; the
-/// caller must keep the handle alive for as long as events should flow
-/// and drop / cancel it to release the harness's WS slot.
+/// Returns a [`WsReaderHandle`] alongside two primed event receivers; the
+/// caller must keep the handle alive for as long as events should flow and
+/// drop / cancel it to release the harness's WS slot.
 pub async fn start_and_connect(
     harness: &dyn HarnessLink,
     params: AutomatonStartParams,
     auth_token: Option<&str>,
     stream_retries: u32,
-) -> Result<
-    (
-        RunHandle,
-        broadcast::Sender<serde_json::Value>,
-        WsReaderHandle,
-    ),
-    RunStartError,
-> {
+) -> Result<(RunHandle, AutomatonEventStream, WsReaderHandle), RunStartError> {
     let result = submit_automaton_run(harness, params, auth_token).await?;
-    let (tx, ws_handle) = connect_with_retries(
+    let (event_stream, ws_handle) = connect_with_retries(
         harness,
         &result.run_id,
         Some(&result.event_stream_url),
@@ -145,7 +146,7 @@ pub async fn start_and_connect(
         attempts: stream_retries + 1,
         message: err.to_string(),
     })?;
-    Ok((result, tx, ws_handle))
+    Ok((result, event_stream, ws_handle))
 }
 
 /// Connect to an automaton event stream, retrying on failure.
@@ -156,9 +157,10 @@ pub async fn start_and_connect(
 /// start-time URL is no longer available (e.g. after recovering from a
 /// `Conflict` on restart).
 ///
-/// Returns a [`WsReaderHandle`] alongside the broadcast sender; the
-/// caller must keep the handle alive for as long as events should flow
-/// and drop / cancel it to release the harness's WS slot.
+/// Returns a [`WsReaderHandle`] alongside primed receivers for the live
+/// forwarder and persistence consumer; the caller must keep the handle
+/// alive for as long as events should flow and drop / cancel it to release
+/// the harness's WS slot.
 /// Repeatedly call [`AutomatonClient::connect_event_stream`] with
 /// exponential backoff. Returns an `anyhow::Error` so typed causes
 /// (notably [`crate::HarnessError::CapacityExhausted`]) survive into
@@ -175,7 +177,7 @@ pub async fn connect_with_retries(
     event_stream_url: Option<&str>,
     auth_token: Option<&str>,
     retries: u32,
-) -> anyhow::Result<(broadcast::Sender<serde_json::Value>, WsReaderHandle)> {
+) -> anyhow::Result<(AutomatonEventStream, WsReaderHandle)> {
     let total_attempts = retries + 1;
     let mut last_err: Option<anyhow::Error> = None;
     for attempt in 0..total_attempts {
@@ -197,10 +199,19 @@ pub async fn connect_with_retries(
             .attach_run_at_url(automaton_id, event_stream_url, auth_token, false)
             .await
         {
-            Ok(session) => {
+            Ok(mut session) => {
                 let raw_tx = session.raw_events_tx.clone();
+                let mut primed = std::mem::take(&mut session.raw_events_rx).into_iter();
+                let events_rx = primed.next().unwrap_or_else(|| raw_tx.subscribe());
+                let persist_events_rx = primed.next().unwrap_or_else(|| raw_tx.subscribe());
                 let handle = WsReaderHandle::from_session(session);
-                return Ok((raw_tx, handle));
+                return Ok((
+                    AutomatonEventStream {
+                        events_rx,
+                        persist_events_rx,
+                    },
+                    handle,
+                ));
             }
             Err(e) => {
                 warn!(

@@ -53,8 +53,8 @@ pub use runner::automaton_event_kinds;
 pub use runner::{
     collect_automaton_events, connect_with_retries, is_git_sync_event,
     is_process_progress_broadcast_event, is_process_stream_forward_event,
-    normalize_process_tool_type_field, start_and_connect, submit_automaton_run, CollectedOutput,
-    GitSyncMilestone, RunCompletion, RunStartError,
+    normalize_process_tool_type_field, start_and_connect, submit_automaton_run,
+    AutomatonEventStream, CollectedOutput, GitSyncMilestone, RunCompletion, RunStartError,
 };
 pub use session::{SessionBridge, SessionBridgeError, SessionBridgeStarted, SessionBridgeTurn};
 pub use signals::{synthesize_failure_reason, FailureContext, HarnessFailureKind, HarnessSignal};

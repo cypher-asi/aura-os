@@ -25,7 +25,9 @@ use std::sync::{
 use std::time::{Duration, Instant};
 
 use aura_os_core::{AgentInstanceId, ProjectId, SessionId, SessionStatus, TaskId};
-use aura_os_harness::{collect_automaton_events, RunCompletion, WsReaderHandle};
+use aura_os_harness::{
+    collect_automaton_events, AutomatonEventStream, RunCompletion, WsReaderHandle,
+};
 use aura_os_loops::LoopHandle;
 use tokio::sync::{broadcast, mpsc};
 use tracing::{debug, info, warn};
@@ -123,7 +125,7 @@ fn run_forwarder_setup(ctx: ForwarderContext) -> (ForwarderRuntimeState, EventLo
         agent_instance_id,
         automaton_id,
         task_id,
-        events_tx,
+        event_stream,
         ws_reader_handle,
         alive,
         timeout,
@@ -145,7 +147,7 @@ fn run_forwarder_setup(ctx: ForwarderContext) -> (ForwarderRuntimeState, EventLo
     let jwt = jwt.map(Arc::new);
     let pipeline = prepare_event_pipeline(EventPipelineInputs {
         state: &state,
-        events_tx: &events_tx,
+        event_stream,
         project_id,
         agent_instance_id,
         loop_handle: &loop_handle,
@@ -179,7 +181,7 @@ fn run_forwarder_setup(ctx: ForwarderContext) -> (ForwarderRuntimeState, EventLo
 /// Bundled inputs for [`prepare_event_pipeline`].
 struct EventPipelineInputs<'a> {
     state: &'a AppState,
-    events_tx: &'a broadcast::Sender<serde_json::Value>,
+    event_stream: AutomatonEventStream,
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
     loop_handle: &'a Arc<LoopHandle>,
@@ -200,14 +202,14 @@ struct EventPipeline {
     event_worker: tokio::task::JoinHandle<()>,
 }
 
-/// Spawn the dev-loop persist task, emit the startup log line, subscribe
-/// to the harness broadcast, and spawn the event worker. Carved out of
-/// [`run_forwarder_setup`] so that body fits the 50-line per-function
-/// budget; ordering of side-effects is preserved verbatim.
+/// Spawn the dev-loop persist task from its primed receiver, emit the
+/// startup log line, and spawn the event worker from the independent live
+/// receiver. Carved out of [`run_forwarder_setup`] so that body fits the
+/// 50-line per-function budget; ordering of side-effects is preserved.
 fn prepare_event_pipeline(inputs: EventPipelineInputs<'_>) -> EventPipeline {
     let EventPipelineInputs {
         state,
-        events_tx,
+        event_stream,
         project_id,
         agent_instance_id,
         loop_handle,
@@ -217,15 +219,19 @@ fn prepare_event_pipeline(inputs: EventPipelineInputs<'_>) -> EventPipeline {
         retry_state,
         last_forwarder_event_at,
     } = inputs;
+    let AutomatonEventStream {
+        events_rx,
+        persist_events_rx,
+    } = event_stream;
     let persist_handle = maybe_spawn_dev_loop_persist(DevLoopPersistInputs {
         state,
-        events_tx,
+        events_rx: persist_events_rx,
         project_id,
         agent_instance_id,
         jwt: jwt.as_deref().map(|s| s.as_str()),
         session_id,
     });
-    let rx = events_tx.subscribe();
+    let rx = events_rx;
     emit_startup_log_line(
         state,
         project_id,
@@ -1021,15 +1027,15 @@ pub(crate) fn current_millis() -> i64 {
 /// every field the [`ChatPersistCtx`] needs.
 struct DevLoopPersistInputs<'a> {
     state: &'a AppState,
-    events_tx: &'a broadcast::Sender<serde_json::Value>,
+    events_rx: broadcast::Receiver<serde_json::Value>,
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
     jwt: Option<&'a str>,
     session_id: Option<SessionId>,
 }
 
-/// Spawn the chat-pipeline persist task subscribed to the dev-loop's
-/// harness event broadcast. Returns `None` when any precondition for
+/// Spawn the chat-pipeline persist task with its pre-attached dev-loop
+/// harness receiver. Returns `None` when any precondition for
 /// chat persistence is missing (storage client unset, no JWT
 /// captured, or no `SessionId` minted) - the dev-loop runs to
 /// completion either way; we just won't write `SessionEvent` rows
@@ -1053,10 +1059,7 @@ fn maybe_spawn_dev_loop_persist(
         cross_agent_depth: 0,
         from_agent_id: None,
     };
-    Some(spawn_dev_loop_persist_task(
-        inputs.events_tx.subscribe(),
-        ctx,
-    ))
+    Some(spawn_dev_loop_persist_task(inputs.events_rx, ctx))
 }
 
 async fn maybe_emit_live_heuristics(

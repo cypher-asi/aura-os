@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageEmptyState } from "@cypher-asi/zui";
 import { ChatPanel, type ChatPanelProps } from "../../../chat/components/ChatPanel";
@@ -42,11 +42,10 @@ export function ChatAppRoute() {
   const { setSelectedAgent } = useSelectedAgent();
   const { isMobileLayout, remoteOnly } = useAuraCapabilities();
   const { agent: chatAgent, status, error } = useChatAppAgent({ remoteOnly });
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
   const searchParamString = searchParams.toString();
   const freshChatId = searchParams.get("fresh");
-  const freshRouteKey = sessionId ? null : freshChatId ?? "__chat__";
   const agentIdParam = searchParams.get("agent");
   const projectIdParam = searchParams.get("project");
   const agentInstanceIdParam = searchParams.get("instance");
@@ -158,93 +157,17 @@ export function ChatAppRoute() {
     }
   }, [effectiveAgentId, effectiveAgent, setSelectedAgent]);
 
-  const freshRouteSnapshotRef = useRef<{
-    key: string;
-    openedAtMs: number;
-    knownSessionIds: Set<string>;
-  } | null>(null);
-  const freshSendStartedRef = useRef<{
-    key: string;
-    startedAtMs: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!freshRouteKey) {
-      freshRouteSnapshotRef.current = null;
-      freshSendStartedRef.current = null;
-      return;
-    }
-    if (freshRouteSnapshotRef.current?.key === freshRouteKey) return;
-    freshRouteSnapshotRef.current = {
-      key: freshRouteKey,
-      openedAtMs: Date.now(),
-      knownSessionIds: new Set(sessions.map((session) => session.session_id)),
-    };
-    freshSendStartedRef.current = null;
-  }, [freshRouteKey, sessions]);
-
-  useEffect(() => {
-    if (!freshRouteKey) return;
-    const snapshot = freshRouteSnapshotRef.current;
-    const freshSend = freshSendStartedRef.current;
-    if (!snapshot || snapshot.key !== freshRouteKey) return;
-    if (!freshSend || freshSend.key !== freshRouteKey) return;
-    const adoptionWindowStart = freshSend.startedAtMs - 60 * 1000;
-    const adopted = sessions.find((session) => {
-      if (snapshot.knownSessionIds.has(session.session_id)) return false;
-      if (session.session_id.startsWith("optimistic:")) return false;
-      if (!session._projectId || !session._agentInstanceId) return false;
-      const startedAtMs = new Date(session.started_at).getTime();
-      if (!Number.isFinite(startedAtMs)) return false;
-      return startedAtMs >= adoptionWindowStart;
-    });
-    if (!adopted) return;
-
-    setSearchParams(
-      (prev) => {
-        const prevRouteKey = prev.get("session")
-          ? null
-          : prev.get("fresh") ?? "__chat__";
-        if (prevRouteKey !== freshRouteKey) {
-          return prev;
-        }
-        const next = new URLSearchParams(prev);
-        next.delete("fresh");
-        next.set("session", adopted.session_id);
-        next.set("project", adopted._projectId);
-        next.set("instance", adopted._agentInstanceId);
-        next.set(
-          "agent",
-          adopted._agentId ?? agentIdParam ?? effectiveAgentId ?? chatAgent?.agent_id ?? "",
-        );
-        if (!next.get("agent")) next.delete("agent");
-        return next;
-      },
-      { replace: true },
-    );
-  }, [
-    agentIdParam,
-    chatAgent?.agent_id,
-    effectiveAgentId,
-    freshRouteKey,
-    sessions,
-    setSearchParams,
-  ]);
-
+  // A fresh route is claimed only by the `SessionReady` event delivered
+  // through `useStandaloneAgentChat`. Never infer its identity from the
+  // cross-agent session list: another tab or a private council member can
+  // legitimately create a newer row while this request is in flight.
   const chatOptions = useMemo(
     () =>
       ({
         freshCanvasPending,
         ...(freshChatId != null ? { freshCanvasKey: freshChatId } : {}),
-        onFreshSendStarted: () => {
-          if (!freshRouteKey) return;
-          freshSendStartedRef.current = {
-            key: freshRouteKey,
-            startedAtMs: Date.now(),
-          };
-        },
       }),
-    [freshCanvasPending, freshChatId, freshRouteKey],
+    [freshCanvasPending, freshChatId],
   );
 
   const sharedChatProps = useChatAppChat(

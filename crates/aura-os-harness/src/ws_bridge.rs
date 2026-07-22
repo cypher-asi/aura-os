@@ -126,14 +126,23 @@ pub fn read_broadcast_capacity_from_env() -> usize {
         .unwrap_or(DEFAULT_BROADCAST_CAPACITY)
 }
 
-pub(crate) fn spawn_ws_bridge<S>(
-    ws_stream: S,
-) -> (
-    broadcast::Sender<OutboundMessage>,
-    broadcast::Receiver<OutboundMessage>,
-    broadcast::Sender<serde_json::Value>,
-    mpsc::Sender<InboundMessage>,
-)
+pub(crate) struct WsBridgeChannels {
+    pub events_tx: broadcast::Sender<OutboundMessage>,
+    /// Receiver reserved for the transport's readiness/liveness probe.
+    /// It is subscribed before the reader task starts, so the probe cannot
+    /// miss an immediate `SessionReady` or terminal bridge error.
+    pub control_rx: broadcast::Receiver<OutboundMessage>,
+    /// Independent, fully primed typed receiver for transcript consumers.
+    /// Control probes may consume their own copy without truncating this one.
+    pub events_rx: broadcast::Receiver<OutboundMessage>,
+    pub raw_events_tx: broadcast::Sender<serde_json::Value>,
+    /// Primed raw receivers for the automaton forwarder and persistence
+    /// consumer. Both must observe an attach-time replay burst in full.
+    pub raw_events_rx: Vec<broadcast::Receiver<serde_json::Value>>,
+    pub commands_tx: mpsc::Sender<InboundMessage>,
+}
+
+pub(crate) fn spawn_ws_bridge<S>(ws_stream: S) -> WsBridgeChannels
 where
     S: StreamExt<Item = Result<WsMessage, tokio_tungstenite::tungstenite::Error>>
         + SinkExt<WsMessage>
@@ -157,12 +166,7 @@ where
 pub(crate) fn spawn_ws_bridge_with_reconnect<S>(
     ws_stream: S,
     reconnect: WsReconnect<S>,
-) -> (
-    broadcast::Sender<OutboundMessage>,
-    broadcast::Receiver<OutboundMessage>,
-    broadcast::Sender<serde_json::Value>,
-    mpsc::Sender<InboundMessage>,
-)
+) -> WsBridgeChannels
 where
     S: StreamExt<Item = Result<WsMessage, tokio_tungstenite::tungstenite::Error>>
         + SinkExt<WsMessage>
@@ -174,15 +178,7 @@ where
     spawn_ws_bridge_inner(ws_stream, Some(reconnect))
 }
 
-fn spawn_ws_bridge_inner<S>(
-    ws_stream: S,
-    reconnect: Option<WsReconnect<S>>,
-) -> (
-    broadcast::Sender<OutboundMessage>,
-    broadcast::Receiver<OutboundMessage>,
-    broadcast::Sender<serde_json::Value>,
-    mpsc::Sender<InboundMessage>,
-)
+fn spawn_ws_bridge_inner<S>(ws_stream: S, reconnect: Option<WsReconnect<S>>) -> WsBridgeChannels
 where
     S: StreamExt<Item = Result<WsMessage, tokio_tungstenite::tungstenite::Error>>
         + SinkExt<WsMessage>
@@ -193,7 +189,7 @@ where
 {
     let cap = read_broadcast_capacity_from_env();
     let (outbound_tx, _) = broadcast::channel::<OutboundMessage>(cap);
-    // Subscribe a primed receiver BEFORE the supervisor is spawned. The
+    // Subscribe primed receivers BEFORE the supervisor is spawned. The
     // harness replays a run's full history as a burst the instant a WS
     // attaches (see `handle_chat_ws_attach` in aura-node), then streams
     // live. A consumer that only `events_tx.subscribe()`s AFTER this
@@ -202,8 +198,10 @@ where
     // ENTIRE transcript. A consumer that adopts this primed receiver
     // instead observes every frame from the first one. Returned on
     // `HarnessSession.events_rx`.
-    let primed_rx = outbound_tx.subscribe();
+    let control_rx = outbound_tx.subscribe();
+    let events_rx = outbound_tx.subscribe();
     let (raw_tx, _) = broadcast::channel::<serde_json::Value>(cap);
+    let raw_events_rx = vec![raw_tx.subscribe(), raw_tx.subscribe()];
     let (inbound_tx, inbound_rx) = mpsc::channel::<InboundMessage>(WS_COMMAND_BUFFER);
 
     spawn_bridge_supervisor(
@@ -214,7 +212,14 @@ where
         inbound_rx,
     );
 
-    (outbound_tx, primed_rx, raw_tx, inbound_tx)
+    WsBridgeChannels {
+        events_tx: outbound_tx,
+        control_rx,
+        events_rx,
+        raw_events_tx: raw_tx,
+        raw_events_rx,
+        commands_tx: inbound_tx,
+    }
 }
 
 /// Owns the upstream WebSocket for the life of the session. Reads frames
@@ -750,14 +755,50 @@ mod tests {
         ))
     }
 
+    #[tokio::test]
+    async fn primed_control_transcript_and_raw_receivers_observe_the_first_frame() {
+        let ready = OutboundMessage::SessionReady(aura_protocol::SessionReady {
+            session_id: "session-first".into(),
+            tools: Vec::new(),
+            skills: Vec::new(),
+        });
+        let payload = serde_json::to_string(&ready).expect("serialize session_ready");
+        let bridge = spawn_ws_bridge(mock_ws(vec![Ok(WsMessage::Text(payload.into()))]));
+        let mut control_rx = bridge.control_rx;
+        let mut events_rx = bridge.events_rx;
+        let mut raw_receivers = bridge.raw_events_rx.into_iter();
+        let mut raw_forwarder_rx = raw_receivers.next().expect("forwarder raw receiver");
+        let mut raw_persist_rx = raw_receivers.next().expect("persist raw receiver");
+
+        for rx in [&mut control_rx, &mut events_rx] {
+            let event = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+                .await
+                .expect("primed typed receiver must receive first frame")
+                .expect("typed broadcast open");
+            assert!(matches!(
+                event,
+                OutboundMessage::SessionReady(ref ready) if ready.session_id == "session-first"
+            ));
+        }
+        for rx in [&mut raw_forwarder_rx, &mut raw_persist_rx] {
+            let event = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+                .await
+                .expect("primed raw receiver must receive first frame")
+                .expect("raw broadcast open");
+            assert_eq!(event["type"], "session_ready");
+            assert_eq!(event["session_id"], "session-first");
+        }
+    }
+
     /// Without a reconnect factory, a recoverable read error surfaces the
     /// terminal `harness_ws_read_error` exactly as before (the
     /// local/swarm liveness probes match on this code), and no
     /// `reconnecting` progress is emitted.
     #[tokio::test]
     async fn no_reconnect_surfaces_terminal_read_error() {
-        let (tx, mut rx, _raw, _cmds) = spawn_ws_bridge(mock_ws(vec![Err(conn_reset())]));
-        drop(tx);
+        let bridge = spawn_ws_bridge(mock_ws(vec![Err(conn_reset())]));
+        let mut rx = bridge.control_rx;
+        drop(bridge.events_tx);
 
         let event = tokio::time::timeout(Duration::from_secs(1), rx.recv())
             .await
@@ -784,8 +825,8 @@ mod tests {
         // back a fresh connection that simply stays open (parks).
         let reconnect: WsReconnect<MockWs> =
             Box::new(|| Box::pin(async { Ok(mock_ws(Vec::new())) }));
-        let (_tx, mut rx, _raw, _cmds) =
-            spawn_ws_bridge_with_reconnect(mock_ws(vec![Err(conn_reset())]), reconnect);
+        let bridge = spawn_ws_bridge_with_reconnect(mock_ws(vec![Err(conn_reset())]), reconnect);
+        let mut rx = bridge.control_rx;
 
         let first = tokio::time::timeout(Duration::from_secs(1), rx.recv())
             .await
@@ -825,8 +866,8 @@ mod tests {
     async fn reconnect_failure_falls_back_to_terminal_error() {
         let reconnect: WsReconnect<MockWs> =
             Box::new(|| Box::pin(async { Err(anyhow::anyhow!("gateway unreachable")) }));
-        let (_tx, mut rx, _raw, _cmds) =
-            spawn_ws_bridge_with_reconnect(mock_ws(vec![Err(conn_reset())]), reconnect);
+        let bridge = spawn_ws_bridge_with_reconnect(mock_ws(vec![Err(conn_reset())]), reconnect);
+        let mut rx = bridge.control_rx;
 
         let mut saw_terminal = false;
         for _ in 0..3 {

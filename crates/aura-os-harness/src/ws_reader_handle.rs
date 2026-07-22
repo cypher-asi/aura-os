@@ -45,10 +45,9 @@ struct WsReaderInner {
 
 impl WsReaderHandle {
     /// Wrap a live [`HarnessSession`], taking ownership of its
-    /// `commands_tx` (and the typed/raw broadcast senders). Callers
-    /// that want to keep consuming events should clone
-    /// [`HarnessSession::raw_events_tx`] (or `events_tx`) *before*
-    /// handing the session to this constructor.
+    /// `commands_tx` and broadcast senders. Callers that want a complete
+    /// attach-time replay must take the relevant primed receiver from the
+    /// session before handing it to this constructor.
     #[must_use]
     pub fn from_session(session: HarnessSession) -> Self {
         Self {
@@ -124,6 +123,7 @@ mod tests {
             commands_tx,
             pending_events: Vec::new(),
             events_rx: None,
+            raw_events_rx: Vec::new(),
         };
         (session, commands_rx)
     }

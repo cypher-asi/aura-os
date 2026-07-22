@@ -90,14 +90,14 @@ impl SessionBridge {
             aura_org_id = ?config.aura_org_id,
             "opening harness session",
         );
-        let session = harness.open_session(config).await.map_err(|err| {
+        let mut session = harness.open_session(config).await.map_err(|err| {
             if HarnessError::is_capacity_exhausted(&err) {
                 SessionBridgeError::CapacityExhausted(err.to_string())
             } else {
                 SessionBridgeError::Open(err.to_string())
             }
         })?;
-        let events_rx = session.events_tx.subscribe();
+        let events_rx = take_post_init_events_rx(&mut session).await?;
         let commands_tx = session.commands_tx.clone();
         Ok(SessionBridgeStarted {
             session,
@@ -114,6 +114,28 @@ impl SessionBridge {
             .try_send(HarnessInbound::UserMessage(turn.user_message()))
             .map_err(|err| SessionBridgeError::Send(err.to_string()))
     }
+}
+
+/// Adopt the receiver that was subscribed before the WebSocket reader
+/// started, while removing the initialization frames already retained in
+/// `pending_events`. This leaves the receiver positioned immediately after
+/// `SessionReady`, so council output emitted between readiness and the
+/// server's downstream fan-out cannot disappear.
+async fn take_post_init_events_rx(
+    session: &mut HarnessSession,
+) -> Result<broadcast::Receiver<HarnessOutbound>, SessionBridgeError> {
+    let Some(mut events_rx) = session.events_rx.take() else {
+        return Ok(session.events_tx.subscribe());
+    };
+
+    for _ in 0..session.pending_events.len() {
+        events_rx.recv().await.map_err(|err| {
+            SessionBridgeError::Open(format!(
+                "primed harness event stream lost initialization frames: {err}"
+            ))
+        })?;
+    }
+    Ok(events_rx)
 }
 
 #[cfg(test)]
@@ -145,6 +167,7 @@ mod tests {
                 commands_tx,
                 pending_events: Vec::new(),
                 events_rx: None,
+                raw_events_rx: Vec::new(),
             })
         }
 
@@ -201,5 +224,60 @@ mod tests {
             Err(mpsc::error::TryRecvError::Empty) => {}
             other => panic!("expected no queued command, got: {other:?}"),
         }
+    }
+
+    struct ImmediatePostReadyHarness;
+
+    #[async_trait]
+    impl HarnessLink for ImmediatePostReadyHarness {
+        async fn open_session(&self, _config: SessionConfig) -> anyhow::Result<HarnessSession> {
+            let (events_tx, _) = broadcast::channel(8);
+            let events_rx = events_tx.subscribe();
+            let (raw_events_tx, _) = broadcast::channel(8);
+            let (commands_tx, _commands_rx) = mpsc::channel(8);
+            let ready = HarnessOutbound::SessionReady(crate::SessionReady {
+                session_id: "session-early".to_string(),
+                tools: Vec::new(),
+                skills: Vec::new(),
+            });
+            let pre_ready = HarnessOutbound::TextDelta(crate::TextDelta {
+                text: "pre-ready".to_string(),
+            });
+            events_tx.send(pre_ready.clone())?;
+            events_tx.send(ready.clone())?;
+            events_tx.send(HarnessOutbound::TextDelta(crate::TextDelta {
+                text: "immediate-post-ready".to_string(),
+            }))?;
+
+            Ok(HarnessSession {
+                session_id: "session-early".to_string(),
+                run_id: "run-early".to_string(),
+                events_tx,
+                raw_events_tx,
+                commands_tx,
+                // Readiness collection deliberately presents identity first.
+                pending_events: vec![ready, pre_ready],
+                events_rx: Some(events_rx),
+                raw_events_rx: Vec::new(),
+            })
+        }
+
+        async fn close_session(&self, _session_id: &str) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn open_retains_events_emitted_immediately_after_session_ready() {
+        let mut started = SessionBridge::open(&ImmediatePostReadyHarness, SessionConfig::default())
+            .await
+            .expect("bridge should adopt the primed receiver");
+
+        assert_eq!(started.session.pending_events.len(), 2);
+        let event = started.events_rx.recv().await.expect("post-ready event");
+        assert!(matches!(
+            event,
+            HarnessOutbound::TextDelta(ref delta) if delta.text == "immediate-post-ready"
+        ));
     }
 }

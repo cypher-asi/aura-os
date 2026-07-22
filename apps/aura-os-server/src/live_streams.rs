@@ -26,11 +26,11 @@ use dashmap::DashMap;
 use serde::Serialize;
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use aura_os_harness::{
-    HarnessCommandSender, HarnessInbound, HarnessOutbound, HarnessSession, MessageAttachment,
-    SessionBridge, SessionBridgeTurn,
+    ErrorMsg, HarnessCommandSender, HarnessInbound, HarnessOutbound, HarnessSession,
+    MessageAttachment, SessionBridge, SessionBridgeTurn,
 };
 
 use crate::event_log::EventLog;
@@ -437,10 +437,30 @@ fn spawn_forwarder(
                             break;
                         }
                     }
-                    // The forwarder is the only consumer that must
-                    // never lose frames; if it lags we cannot
-                    // recover the dropped ones, so just continue.
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    // The forwarder is the source of truth for resumable
+                    // replay. If it loses frames, record a terminal protocol
+                    // error instead of presenting a silently incomplete run.
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        warn!(
+                            target: "aura::streams",
+                            attach_id = %stream.attach_id,
+                            skipped,
+                            "live stream replay forwarder lagged; retaining terminal integrity error"
+                        );
+                        let error = HarnessOutbound::Error(ErrorMsg {
+                            code: "live_stream_replay_lagged".to_string(),
+                            message: format!(
+                                "Live stream replay lost {skipped} event(s) before they could be retained"
+                            ),
+                            recoverable: true,
+                            support_id: None,
+                        });
+                        if let Ok(value) = serde_json::to_value(error) {
+                            stream.events.append(value);
+                        }
+                        stream.mark_terminated();
+                        break;
+                    }
                     Err(broadcast::error::RecvError::Closed) => {
                         stream.mark_terminated();
                         break;
@@ -475,6 +495,7 @@ mod tests {
             commands_tx,
             pending_events: Vec::new(),
             events_rx: None,
+            raw_events_rx: Vec::new(),
         }
     }
 
@@ -612,6 +633,48 @@ mod tests {
         assert_eq!(summary.kind, StreamKind::ChatTurn);
         assert!(summary.terminated);
         assert_eq!(summary.latest_seq, 2);
+    }
+
+    #[tokio::test]
+    async fn register_receiver_surfaces_lag_as_terminal_replay_error() {
+        let registry = Arc::new(LiveStreamRegistry {
+            inner: DashMap::new(),
+            stream_capacity: 64,
+            ttl: Duration::from_secs(300),
+        });
+        let (events_tx, events_rx) = broadcast::channel::<HarnessOutbound>(1);
+        events_tx
+            .send(HarnessOutbound::TextDelta(TextDelta {
+                text: "overwritten".to_string(),
+            }))
+            .unwrap();
+        events_tx
+            .send(HarnessOutbound::TextDelta(TextDelta {
+                text: "latest".to_string(),
+            }))
+            .unwrap();
+
+        let stream = registry.register_receiver(
+            StreamKind::ChatTurn,
+            StreamScope::default(),
+            events_rx,
+            None,
+        );
+        for _ in 0..50 {
+            if stream.is_terminated() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        assert!(stream.is_terminated());
+        let crate::event_log::ReplayResult::Replay { events, .. } = stream.events.replay_since(0)
+        else {
+            panic!("terminal replay error must be retained");
+        };
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].value["type"], "error");
+        assert_eq!(events[0].value["code"], "live_stream_replay_lagged");
     }
 
     #[tokio::test]
