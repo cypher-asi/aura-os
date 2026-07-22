@@ -138,6 +138,101 @@ async fn task_routes_support_storage_backed_crud_and_state_changes() {
 }
 
 #[tokio::test]
+async fn flat_harness_completion_promotes_newly_unblocked_dependents() {
+    let (app, _state, _storage, _db) = build_test_app_with_storage().await;
+    let project_id = ProjectId::new();
+
+    let resp = app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            &format!("/api/projects/{project_id}/specs"),
+            Some(serde_json::json!({
+                "title": "Dependency Plan",
+                "markdownContents": "# Dependency Plan",
+                "orderIndex": 0
+            })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let spec_id = response_json(resp).await["spec_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let resp = app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            &format!("/api/projects/{project_id}/tasks"),
+            Some(serde_json::json!({
+                "spec_id": spec_id,
+                "title": "Root",
+                "status": "in_progress",
+                "order_index": 0
+            })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let root_id = response_json(resp).await["task_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let resp = app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            &format!("/api/projects/{project_id}/tasks"),
+            Some(serde_json::json!({
+                "spec_id": spec_id,
+                "title": "Dependent",
+                "status": "pending",
+                "order_index": 1,
+                "dependency_ids": [root_id]
+            })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let dependent = response_json(resp).await;
+    let dependent_id = dependent["task_id"].as_str().unwrap().to_string();
+    assert_eq!(dependent["status"], "pending");
+
+    // This is the exact flat route and legacy body shape used by the
+    // harness's HttpDomainApi when an autonomous task completes.
+    let resp = app
+        .clone()
+        .oneshot(json_request(
+            "POST",
+            &format!("/api/tasks/{root_id}/transition"),
+            Some(serde_json::json!({ "status": "done" })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(response_json(resp).await["status"], "done");
+
+    let resp = app
+        .clone()
+        .oneshot(json_request(
+            "GET",
+            &format!("/api/projects/{project_id}/tasks/{dependent_id}"),
+            None,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+        response_json(resp).await["status"],
+        "ready",
+        "completion must make the next dependency-eligible task claimable"
+    );
+}
+
+#[tokio::test]
 async fn create_task_without_spec_id_uses_manual_tasks_spec() {
     let (app, _state, _storage, _db) = build_test_app_with_storage().await;
     let project_id = ProjectId::new();

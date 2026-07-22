@@ -17,6 +17,7 @@
 mod activity;
 mod credits;
 mod forwarder;
+mod provider_circuit;
 mod side_effects;
 mod tool_summary;
 

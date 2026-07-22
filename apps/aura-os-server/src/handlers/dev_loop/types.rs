@@ -129,21 +129,17 @@ pub(super) struct ForwarderContext {
     pub(super) session_id: Option<SessionId>,
     /// Per-loop state owned by the forwarder.
     ///
-    /// Phase 4 collapsed the original in-memory tool-retry /
-    /// task-retry trackers in this struct onto the persisted
-    /// `tasks.attempts` column. The only surviving member is the
-    /// workspace-health baseline used by the completion gate.
+    /// Per-task retry counts live in storage; this shared state retains only
+    /// run-scoped coordination that cannot be reconstructed from a task row.
     pub(super) retry_state: Arc<LoopRetryState>,
 }
 
 /// Per-loop forwarder state.
 ///
-/// Originally held the in-memory tool-retry / task-retry trackers
-/// plus the workspace-health baseline. Phase 4 deleted the retry
-/// trackers (the persisted `tasks.attempts` column replaces them)
-/// so the struct shrank to just the health baseline; the name is
-/// kept for diff minimality.
-#[derive(Debug, Default)]
+/// Per-task attempts remain persisted on task rows. This bundle holds the
+/// workspace-health baseline and the one-shot provider circuit state shared by
+/// every event belonging to the same automaton run.
+#[derive(Debug)]
 pub(super) struct LoopRetryState {
     /// Per-task `WorkspaceHealth` baseline captured at
     /// `task_started` by the async snapshot runner in
@@ -152,11 +148,21 @@ pub(super) struct LoopRetryState {
     /// [`HealthBaselineTracker::get`]; missing entries fall through
     /// to the existing `workspace_health_unknown_baseline` path.
     pub(super) health_baseline: HealthBaselineTracker,
+    /// Stable run identity used when terminal provider failures stop the
+    /// enclosing automaton after the per-task retry budget is exhausted.
+    pub(super) automaton_id: String,
+    /// Run-level latch preventing duplicate stop requests and duplicate
+    /// operator events if terminal provider failures race during shutdown.
+    pub(super) provider_circuit_open: AtomicBool,
 }
 
 impl LoopRetryState {
     /// Construct a fresh per-loop state bundle.
-    pub(super) fn new() -> Self {
-        Self::default()
+    pub(super) fn new(automaton_id: String) -> Self {
+        Self {
+            health_baseline: HealthBaselineTracker::default(),
+            automaton_id,
+            provider_circuit_open: AtomicBool::new(false),
+        }
     }
 }

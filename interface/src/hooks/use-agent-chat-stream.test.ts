@@ -974,6 +974,7 @@ describe("useAgentChatStream", () => {
       null,
       undefined,
       undefined,
+      undefined,
     );
     expect(api.agents.sendEventStream).toHaveBeenNthCalledWith(
       2,
@@ -988,6 +989,7 @@ describe("useAgentChatStream", () => {
       undefined,
       false,
       null,
+      undefined,
       undefined,
       undefined,
     );
@@ -1186,6 +1188,7 @@ describe("useAgentChatStream", () => {
       "s-old",
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -1235,6 +1238,7 @@ describe("useAgentChatStream", () => {
       null,
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -1271,6 +1275,7 @@ describe("useAgentChatStream", () => {
       undefined,
       false,
       null,
+      undefined,
       undefined,
       undefined,
     );

@@ -282,7 +282,7 @@ async fn finalize_registration(inputs: FinalizeInputs<'_>) {
         loop_handle: handles.loop_handle.clone(),
         jwt: Some(prep.forwarder_jwt.clone()),
         session_id,
-        retry_state: Arc::new(LoopRetryState::new()),
+        retry_state: Arc::new(LoopRetryState::new(started.automaton_id.clone())),
         last_forwarder_event_at: handles.last_forwarder_event_at.clone(),
     });
     req.state.automaton_registry.lock().await.insert(

@@ -754,12 +754,13 @@ async fn run_forwarder_event_loop(
                 .is_ok()
         {
             let state = state.clone();
+            let credit_automaton_id = stop_automaton_id.clone();
             tokio::spawn(async move {
                 credits::stop_automaton_for_credit_exhaustion(
                     &state,
                     project_id,
                     agent_instance_id,
-                    &stop_automaton_id,
+                    &credit_automaton_id,
                 )
                 .await;
             });

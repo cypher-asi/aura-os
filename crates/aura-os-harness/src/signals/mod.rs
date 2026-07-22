@@ -323,9 +323,12 @@ fn is_insufficient_credits(reason: &str) -> bool {
 
 /// Substring matcher for [`HarnessFailureKind::ProviderInternal`].
 ///
-/// 5xx responses, "stream terminated", and "connection reset by peer"
-/// are all classified as transient provider internal errors. Caller
-/// must lowercase the input.
+/// 5xx responses and transport-level stream aborts are all classified
+/// as transient provider internal errors. Provider SDKs do not use one
+/// stable phrase for the latter: reqwest commonly reports "error sending
+/// request for url" while Anthropic's streaming client can surface
+/// "connection closed before message completed". Caller must lowercase
+/// the input.
 fn is_provider_internal(reason: &str) -> bool {
     reason.contains("internal server error")
         || reason.contains(" 500")
@@ -334,6 +337,9 @@ fn is_provider_internal(reason: &str) -> bool {
         || reason.contains(" 504")
         || reason.contains("stream terminated")
         || reason.contains("connection reset by peer")
+        || reason.contains("provider stream interrupted before completion")
+        || reason.contains("connection closed before message completed")
+        || reason.contains("error sending request for url")
 }
 
 /// Substring matcher for [`HarnessFailureKind::AgentStuck`].
@@ -543,6 +549,8 @@ mod tests {
             "upstream 504 gateway timeout",
             "stream terminated unexpectedly",
             "connection reset by peer",
+            "Provider stream interrupted before completion",
+            "Anthropic API request failed: error sending request for url (https://aura-router.onrender.com/v1/messages): connection closed before message completed (llm_error)",
         ];
         for reason in positives {
             assert_eq!(

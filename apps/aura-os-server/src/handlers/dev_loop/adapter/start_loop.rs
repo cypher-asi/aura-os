@@ -66,6 +66,8 @@ pub(crate) async fn start_loop(
                 ),
             }
         }
+    } else {
+        crate::handlers::tasks::prepare_task_graph_for_run(&state, &jwt, project_id).await?;
     }
     let req = RunRequest {
         loop_user_id: loop_user_id(&session),
@@ -109,8 +111,9 @@ async fn ensure_loop_engineering_task(
         &description,
         &agent_instance_id_string,
     ) {
+        let task = ensure_pending_task_ready(storage, jwt, task.clone()).await?;
         return Ok(SeededLoopEngineeringTask {
-            task: task.clone(),
+            task,
             created: false,
         });
     }
@@ -134,9 +137,30 @@ async fn ensure_loop_engineering_task(
         .await
         .map_err(|error| ApiError::internal(format!("creating loop engineering task: {error}")))?;
 
+    let task = ensure_pending_task_ready(storage, jwt, created).await?;
     Ok(SeededLoopEngineeringTask {
-        task: created,
+        task,
         created: true,
+    })
+}
+
+async fn ensure_pending_task_ready(
+    storage: &StorageClient,
+    jwt: &str,
+    task: StorageTask,
+) -> ApiResult<StorageTask> {
+    if task.status.as_deref() != Some("pending") {
+        return Ok(task);
+    }
+    aura_os_tasks::safe_transition(storage, jwt, &task.id, aura_os_core::TaskStatus::Ready)
+        .await
+        .map_err(|error| {
+            ApiError::internal(format!("promoting loop engineering task to Ready: {error}"))
+        })?;
+    storage.get_task(&task.id, jwt).await.map_err(|error| {
+        ApiError::internal(format!(
+            "reloading loop engineering task after promotion: {error}"
+        ))
     })
 }
 
