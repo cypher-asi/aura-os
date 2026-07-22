@@ -272,22 +272,23 @@ pub(in super::super) async fn open_harness_chat_stream(
     let release_rx = rx.resubscribe();
     let watchdog_rx = rx.resubscribe();
 
-    // Replay any subagent frames the harness emitted before
-    // `session_ready` (AURA Council fans its members out at run start, so
-    // their `subagent_spawned` events land before any of the consumers
-    // above could subscribe to `events_tx` and would otherwise be lost).
+    // Replay initialization frames the harness consumed before any of the
+    // consumers above could subscribe to `events_tx`. `SessionReady` is
+    // deliberately first so a fresh chat adopts the parent session before
+    // any nested council-member frame can create a competing session row.
     // Now that the SSE bridge (`rx`), the persist task (`persist_rx`), the
     // watchdog, and the live-stream registry are all subscribed, sending
     // these onto `events_tx` delivers them to every consumer: the chat UI
     // renders the council member columns live and `handle_subagent_spawned`
     // persists them so a reload rebuilds the same `CouncilPanel`. A no-op
-    // for ordinary turns (`pending_events` is empty).
+    // only for warm reuse and non-chat runs; a fresh ordinary chat still
+    // carries its consumed `SessionReady`.
     if !pending_events.is_empty() {
         debug!(
             target: "aura::council",
             count = pending_events.len(),
             session_key = %session_key,
-            "replaying pre-session_ready subagent frames onto chat broadcast"
+            "replaying captured harness initialization frames onto chat broadcast"
         );
         for evt in pending_events {
             let _ = events_tx.send(evt);
