@@ -16,7 +16,7 @@ const MANUAL_TASKS_SPEC_TITLE: &str = "Manual Tasks";
 pub(crate) async fn transition_task(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
+    Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
     Json(req): Json<TransitionTaskRequest>,
 ) -> ApiResult<Json<Task>> {
     let storage = state.require_storage_client()?;
@@ -47,20 +47,26 @@ pub(crate) async fn transition_task(
             }
             _ => ApiError::internal(format!("transitioning task: {e}")),
         })?;
+    let task_project_id = task.project_id;
     broadcast_task_updated(
         &state,
-        &project_id,
+        &task_project_id,
         &task,
         &["status"],
         prev_status.map(|from| (from, task.status)),
     );
-    clear_loop_task_pointer_if_terminal(&state, project_id, task_id, task.status);
+    clear_loop_task_pointer_if_terminal(&state, task_project_id, task_id, task.status);
     // Best-effort: a fix task created from an admin bug report carries a
     // back-link on the report record; when it lands on `Done` we mark the
     // report resolved and flip any associated feedback post to `done`.
     // Runs here so harness-driven completions (which complete via this
     // handler) trigger it too. Never unwinds the transition.
     if task.status == TaskStatus::Done {
+        if let Err(error) =
+            super::promote_unblocked_after_completion(&state, &jwt, task_project_id, task_id).await
+        {
+            tracing::warn!(%task_id, %error, "failed to promote newly-unblocked tasks");
+        }
         crate::handlers::bug_reports::resolve_linked_bug_report_on_done(
             &state,
             &jwt,
@@ -405,7 +411,7 @@ pub(crate) struct UpdateTaskBody {
 pub(crate) async fn update_task(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
+    Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
     Json(req): Json<UpdateTaskBody>,
 ) -> ApiResult<Json<Task>> {
     let storage = state.require_storage_client()?;
@@ -491,12 +497,27 @@ pub(crate) async fn update_task(
     // gets one `update_task` block (field diff) and one
     // `transition_task` block (status edge), instead of a single
     // hybrid block the renderer would have to disambiguate.
+    let task_project_id = updated_task.project_id;
     if has_direct_updates {
-        broadcast_task_updated(&state, &project_id, &updated_task, &changed, None);
+        broadcast_task_updated(&state, &task_project_id, &updated_task, &changed, None);
     }
     if let Some(edge) = status_change {
-        broadcast_task_updated(&state, &project_id, &updated_task, &["status"], Some(edge));
-        clear_loop_task_pointer_if_terminal(&state, project_id, task_id, edge.1);
+        broadcast_task_updated(
+            &state,
+            &task_project_id,
+            &updated_task,
+            &["status"],
+            Some(edge),
+        );
+        clear_loop_task_pointer_if_terminal(&state, task_project_id, task_id, edge.1);
+        if edge.1 == TaskStatus::Done {
+            if let Err(error) =
+                super::promote_unblocked_after_completion(&state, &jwt, task_project_id, task_id)
+                    .await
+            {
+                tracing::warn!(%task_id, %error, "failed to promote newly-unblocked tasks");
+            }
+        }
     }
     Ok(Json(updated_task))
 }

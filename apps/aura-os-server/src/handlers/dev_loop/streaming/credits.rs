@@ -17,6 +17,23 @@ pub(super) async fn stop_automaton_for_credit_exhaustion(
     agent_instance_id: AgentInstanceId,
     automaton_id: &str,
 ) {
+    stop_automaton(
+        state,
+        project_id,
+        agent_instance_id,
+        automaton_id,
+        "credits were exhausted",
+    )
+    .await;
+}
+
+pub(super) async fn stop_automaton(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    automaton_id: &str,
+    reason: &str,
+) {
     let transport = {
         let reg = state.automaton_registry.lock().await;
         reg.get(&(project_id, agent_instance_id))
@@ -35,7 +52,7 @@ pub(super) async fn stop_automaton_for_credit_exhaustion(
         .stop_run(automaton_id, None)
         .await
     {
-        warn!(%automaton_id, %error, "failed to stop automaton after credits were exhausted");
+        warn!(%automaton_id, %error, %reason, "failed to stop automaton");
     }
 }
 

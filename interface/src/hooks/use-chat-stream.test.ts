@@ -629,7 +629,9 @@ describe("useChatStream", () => {
       // 13th positional `council` is `undefined` — council is inactive
       // in this test (single-model send).
       undefined,
+      // 14th positional `mixture` is also inactive.
       undefined,
+      // 15th positional `agentMentions` is also inactive.
       undefined,
     );
     expect(api.sendEventStream).toHaveBeenNthCalledWith(

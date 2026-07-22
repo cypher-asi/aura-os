@@ -118,9 +118,9 @@ describe("AutomationModelPicker", () => {
   describe("fallback chain (per-project automation pick > main-LLM global pick > adapter default)", () => {
     it("falls back to the adapter default when nothing has been picked anywhere", () => {
       render(<AutomationModelPicker projectId={PROJECT} disabled={false} />);
-      // Sonnet 4.6 is the adapter default (first in AURA_MANAGED_CHAT_MODELS).
+      // Sonnet 5 is the adapter default (first in AURA_MANAGED_CHAT_MODELS).
       expect(screen.getByTestId("automation-model-trigger")).toHaveTextContent(
-        "Sonnet 4.6",
+        "Sonnet 5",
       );
     });
 
@@ -151,9 +151,9 @@ describe("AutomationModelPicker", () => {
       );
 
       render(<AutomationModelPicker projectId={PROJECT} disabled={false} />);
-      // Expect the adapter default (Sonnet 4.6), not Opus.
+      // Expect the adapter default (Sonnet 5), not Opus.
       expect(screen.getByTestId("automation-model-trigger")).toHaveTextContent(
-        "Sonnet 4.6",
+        "Sonnet 5",
       );
     });
 

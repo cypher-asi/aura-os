@@ -81,6 +81,9 @@ pub(super) async fn maybe_apply_task_level_retry(
     };
     let action = kind.retry_action(prior_attempts);
     if !attempt_budget_allows_retry(task_id, prior_attempts, kind, action) {
+        if super::super::provider_circuit::should_open(kind, prior_attempts) {
+            super::super::provider_circuit::open(ctx, &reason).await;
+        }
         return;
     }
     if !push_task_back_to_ready(storage, jwt, task_id, prior_attempts).await {
