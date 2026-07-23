@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-07-23",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.774.1",
+    "title": "Chat auto-follow keeps live reasoning in view",
+    "intro": "A focused nightly centered on how the chat surface behaves while the model is actively thinking. The streaming tail now stays glued to the newest reasoning output, without stealing scroll from you the moment you look back at earlier context.",
+    "entryCount": 1,
+    "highlights": [
+      "Chat stays pinned to live thinking output",
+      "Scrolling up now reliably holds your reading position"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-23T07:41:47.577Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.774.1",
+    "path": "history/2026-07-23.json"
+  },
+  {
     "date": "2026-07-22",
     "channel": "nightly",
     "version": "0.1.0-nightly.773.1",
