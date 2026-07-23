@@ -292,7 +292,12 @@ function ChatMessageListImpl({
                     </div>
                   </>
                 ) : (
-                  <StreamingTail streamKey={streamKey} />
+                  <StreamingTail
+                    streamKey={streamKey}
+                    scrollRef={scrollRef}
+                    isAutoFollowing={isAutoFollowing}
+                    getUserUnpinnedAt={getUserUnpinnedAt}
+                  />
                 )}
               </div>
             );
