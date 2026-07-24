@@ -161,6 +161,39 @@ function secondOpinionReferenceStorageKey(streamKey: string): string {
   return `aura-second-opinion-reference:${streamKey}`;
 }
 
+/**
+ * Move every stream-keyed preference alongside the in-memory chat UI
+ * partition when a fresh canvas receives its server session id.
+ *
+ * The destination wins when it already has persisted state, matching
+ * `migrateChatUiPartition`'s in-memory semantics. The source keys are always
+ * removed: leaving `...:fresh` behind causes the next new-chat canvas to
+ * rehydrate the previous session's Council / second-opinion configuration.
+ */
+function migratePersistedStreamState(oldKey: string, newKey: string): void {
+  const storageKeys = [
+    councilCountStorageKey,
+    councilModelsStorageKey,
+    councilMechanismStorageKey,
+    answerStrategyStorageKey,
+    secondOpinionReferenceStorageKey,
+  ];
+
+  try {
+    for (const storageKey of storageKeys) {
+      const sourceKey = storageKey(oldKey);
+      const destinationKey = storageKey(newKey);
+      const sourceValue = localStorage.getItem(sourceKey);
+      if (sourceValue !== null && localStorage.getItem(destinationKey) === null) {
+        localStorage.setItem(destinationKey, sourceValue);
+      }
+      localStorage.removeItem(sourceKey);
+    }
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
 function persistCouncilCount(streamKey: string, count: CouncilCount): void {
   try {
     localStorage.setItem(councilCountStorageKey(streamKey), String(count));
@@ -1092,6 +1125,7 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
  */
 export function migrateChatUiPartition(oldKey: string, newKey: string): void {
   if (oldKey === newKey) return;
+  migratePersistedStreamState(oldKey, newKey);
   useChatUIStore.setState((s) => {
     const nextStreams = { ...s.streams };
     const nextDrafts = { ...s.drafts };

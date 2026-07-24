@@ -28,6 +28,7 @@ import { useChatUIStore } from "../stores/chat-ui-store";
 import { useHydrateContextUtilization } from "./use-hydrate-context-utilization";
 import { usePriorSessions } from "./use-prior-sessions";
 import { useAuraCapabilities } from "./use-aura-capabilities";
+import { keyForAgentSession } from "./stream/store";
 import type { ChatPanelProps } from "../apps/chat/components/ChatPanel";
 import type { AgentInstance, Project } from "../shared/types";
 
@@ -473,6 +474,16 @@ export function useStandaloneAgentChat(
     const { resetCouncil, resetAnswerStrategy } = useChatUIStore.getState();
     resetCouncil(streamKey);
     resetAnswerStrategy(streamKey);
+    // `streamKey` still points at the historical session until the URL
+    // update below re-renders this hook onto the deterministic fresh lane.
+    // Clear that destination eagerly as well. Besides making the reset
+    // synchronous, this repairs stale `agent:<id>:fresh` preferences left
+    // by builds that predate persisted-partition migration.
+    const freshStreamKey = keyForAgentSession(agentId, null);
+    if (freshStreamKey !== streamKey) {
+      resetCouncil(freshStreamKey);
+      resetAnswerStrategy(freshStreamKey);
+    }
     const ctxStore = useContextUsageStore.getState();
     ctxStore.clearContextUtilization(streamKey);
     ctxStore.markResetPending(streamKey);

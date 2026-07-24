@@ -18,6 +18,8 @@ const storageState = new Map<string, string>();
 
 vi.mock("./stream/store", () => ({
   getIsStreaming: (key: string) => mockGetIsStreaming(key),
+  keyForAgentSession: (agentId: string, sessionId: string | null | undefined) =>
+    `${agentId}:${sessionId ?? "fresh"}`,
 }));
 
 vi.mock("./use-agent-chat-stream", () => ({
@@ -217,6 +219,7 @@ vi.mock("react-router-dom", () => ({
 }));
 
 import { useStandaloneAgentChat } from "./use-standalone-agent-chat";
+import { useChatUIStore } from "../stores/chat-ui-store";
 
 describe("useStandaloneAgentChat", () => {
   beforeEach(() => {
@@ -910,9 +913,36 @@ describe("useStandaloneAgentChat", () => {
       const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
       expect(typeof result.current.onNewChat).toBe("function");
-      result.current.onNewChat?.();
+      act(() => {
+        result.current.onNewChat?.();
+      });
 
       expect(mockMessageQueueClear).toHaveBeenCalledWith("test-stream-key");
+    });
+
+    it("handleNewChat resets stale Council state on the destination fresh lane", () => {
+      const freshStreamKey = "agent-1:fresh";
+      const chatUi = useChatUIStore.getState();
+      chatUi.setCouncilCount(freshStreamKey, 2);
+      chatUi.setCouncilMechanism(freshStreamKey, "contrast");
+      chatUi.setAnswerStrategy("test-stream-key", "second_opinion");
+
+      const { result } = renderHook(() =>
+        useStandaloneAgentChat("agent-1", "session-A"),
+      );
+
+      act(() => {
+        result.current.onNewChat?.();
+      });
+
+      const resetState = useChatUIStore.getState();
+      expect(resetState.getCouncilCount(freshStreamKey)).toBe(1);
+      expect(resetState.getCouncilModels(freshStreamKey)).toEqual([]);
+      expect(resetState.getCouncilMechanism(freshStreamKey)).toBe("synthesize");
+      expect(resetState.getAnswerStrategy("test-stream-key")).toBe("single");
+      expect(localStorage.getItem(`aura-council-count:${freshStreamKey}`)).toBeNull();
+      expect(localStorage.getItem(`aura-council-models:${freshStreamKey}`)).toBeNull();
+      expect(localStorage.getItem(`aura-council-mechanism:${freshStreamKey}`)).toBeNull();
     });
   });
 });
