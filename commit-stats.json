@@ -1,6 +1,6 @@
 {
-  "commitsThisMonth": 118,
-  "commitsAllTime": 7806,
+  "commitsThisMonth": 120,
+  "commitsAllTime": 7808,
   "perRepo": {
     "aura-os": {
       "thisMonth": 80,
@@ -11,8 +11,8 @@
       "allTime": 784
     },
     "aura-router": {
-      "thisMonth": 22,
-      "allTime": 122
+      "thisMonth": 24,
+      "allTime": 124
     },
     "aura-network": {
       "thisMonth": 0,
@@ -32,8 +32,8 @@
     }
   },
   "monthKey": "2026-07",
-  "fetchedAt": "2026-07-24T22:46:17.263Z",
+  "fetchedAt": "2026-07-24T23:10:54.098Z",
   "partial": false,
-  "releasesThisMonth": 50,
-  "releasesAllTime": 345
+  "releasesThisMonth": 51,
+  "releasesAllTime": 346
 }

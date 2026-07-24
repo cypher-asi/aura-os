@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-07-24",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.775.1",
+    "title": "New chat resets cleanly and transcripts stop double-showing prompts",
+    "intro": "A focused nightly aimed at two long-standing chat annoyances: starting a new chat now reliably clears Council settings on the destination lane, and the transcript projector no longer leaves duplicate optimistic prompts hanging around once the assistant reply has been persisted.",
+    "entryCount": 1,
+    "highlights": [
+      "New Chat clears stale Council state on the fresh lane",
+      "Transcript no longer duplicates prompts after a turn completes",
+      "Repairs preferences left behind by older builds"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-24T23:10:23.690Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.775.1",
+    "path": "history/2026-07-24.json"
+  },
+  {
     "date": "2026-07-23",
     "channel": "nightly",
     "version": "0.1.0-nightly.774.1",
