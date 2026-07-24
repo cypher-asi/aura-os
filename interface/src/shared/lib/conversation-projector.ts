@@ -14,11 +14,11 @@ import type { DisplaySessionEvent } from "../types/stream";
  *      refetch overlapping with the in-flight stream.
  *
  *   2. The user prompt is special-cased: the optimistic `temp-...`
- *      user row is dropped when the persisted history tail already
- *      contains a content-equivalent user message. This covers the
- *      "POST returns and the chat-history-store snapshots the new
- *      user row before the stream's `temp-` event has been swapped"
- *      window.
+ *      user row is dropped when persisted history contains the same
+ *      trailing prompt and the corresponding assistant row has already
+ *      landed. This covers both the user-only persistence window and a
+ *      completed-turn refetch, without hiding a genuinely new repeated
+ *      prompt.
  *
  *   3. Everything else from the stream (assistant placeholder,
  *      finalized assistant rows that haven't been persisted yet) is
@@ -62,6 +62,11 @@ export function projectConversation(
   // represents a brand-new send, not a duplicate.
   const trailingPendingUser =
     lastHistory && lastHistory.role === "user" ? lastHistory : null;
+  const supersededCompletedUser = findSupersededCompletedUser(
+    history,
+    stream,
+    historyIds,
+  );
 
   const liveOnly: DisplaySessionEvent[] = [];
   for (const message of stream) {
@@ -70,17 +75,28 @@ export function projectConversation(
       continue;
     }
     if (
-      trailingPendingUser !== null &&
       message.role === "user" &&
       isOptimisticUser(message) &&
-      messagesContentEqual(message, trailingPendingUser)
+      (
+        (
+          trailingPendingUser !== null &&
+          messagesContentEqual(message, trailingPendingUser)
+        ) ||
+        message === supersededCompletedUser?.stream
+      )
     ) {
-      recordAlias(
-        clientIdAliases,
-        trailingPendingUser.id,
-        message.clientId ?? message.id,
-      );
-      continue;
+      const persistedUser =
+        message === supersededCompletedUser?.stream
+          ? supersededCompletedUser.history
+          : trailingPendingUser;
+      if (persistedUser) {
+        recordAlias(
+          clientIdAliases,
+          persistedUser.id,
+          message.clientId ?? message.id,
+        );
+        continue;
+      }
     }
     liveOnly.push(message);
   }
@@ -92,6 +108,62 @@ export function projectConversation(
   }
 
   return [...projectedHistory, ...liveOnly];
+}
+
+/**
+ * Identify the optimistic user echo for a turn whose authoritative assistant
+ * event is already present in history.
+ *
+ * Matching the assistant by persisted id is the important guard here. Content
+ * alone is insufficient because a user can intentionally send the same prompt
+ * twice and receive the same short answer; hiding that second turn would be a
+ * worse regression than the duplicate this reconciles.
+ */
+function findSupersededCompletedUser(
+  history: readonly DisplaySessionEvent[],
+  stream: readonly DisplaySessionEvent[],
+  historyIds: ReadonlySet<string>,
+): { history: DisplaySessionEvent; stream: DisplaySessionEvent } | null {
+  if (history[history.length - 1]?.role !== "assistant") return null;
+
+  let historyUserIndex = -1;
+  for (let index = history.length - 2; index >= 0; index -= 1) {
+    if (history[index].role === "user") {
+      historyUserIndex = index;
+      break;
+    }
+  }
+  if (historyUserIndex < 0) return null;
+
+  const persistedUser = history[historyUserIndex];
+  const persistedTurnIds = new Set(
+    history.slice(historyUserIndex + 1).map((message) => message.id),
+  );
+
+  for (let userIndex = stream.length - 1; userIndex >= 0; userIndex -= 1) {
+    const optimisticUser = stream[userIndex];
+    if (
+      optimisticUser.role !== "user" ||
+      !isOptimisticUser(optimisticUser) ||
+      !messagesContentEqual(optimisticUser, persistedUser)
+    ) {
+      continue;
+    }
+
+    const hasPersistedAssistantAfter = stream
+      .slice(userIndex + 1)
+      .some(
+        (message) =>
+          message.role === "assistant" &&
+          historyIds.has(message.id) &&
+          persistedTurnIds.has(message.id),
+      );
+    if (hasPersistedAssistantAfter) {
+      return { history: persistedUser, stream: optimisticUser };
+    }
+  }
+
+  return null;
 }
 
 const EMPTY: DisplaySessionEvent[] = [];

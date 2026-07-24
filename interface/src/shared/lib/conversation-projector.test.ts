@@ -36,6 +36,44 @@ describe("projectConversation", () => {
     expect(projectConversation(history, stream)).toEqual(history);
   });
 
+  it("drops a completed turn's optimistic user after its assistant is persisted", () => {
+    const history = [
+      makeUser("evt-user", "first prompt"),
+      makeAssistant("evt-assistant", "first answer"),
+    ];
+    const stream = [
+      makeUser("temp-1", "first prompt"),
+      { ...makeAssistant("evt-assistant", "first answer"), clientId: "stream-1" },
+    ];
+
+    const result = projectConversation(history, stream);
+
+    expect(result.map((message) => message.id)).toEqual([
+      "evt-user",
+      "evt-assistant",
+    ]);
+  });
+
+  it("keeps a repeated prompt when no assistant id proves it was persisted", () => {
+    const history = [
+      makeUser("evt-user", "repeat"),
+      makeAssistant("evt-assistant", "same answer"),
+    ];
+    const stream = [
+      makeUser("temp-2", "repeat"),
+      makeAssistant("stream-2", "same answer"),
+    ];
+
+    const result = projectConversation(history, stream);
+
+    expect(result.map((message) => message.id)).toEqual([
+      "evt-user",
+      "evt-assistant",
+      "temp-2",
+      "stream-2",
+    ]);
+  });
+
   it("appends live-only stream events after history", () => {
     const history = [makeUser("u1", "hi"), makeAssistant("a1", "hello")];
     const stream = [

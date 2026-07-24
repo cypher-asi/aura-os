@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useChatUIStore } from "./chat-ui-store";
+import { migrateChatUiPartition, useChatUIStore } from "./chat-ui-store";
 
 const mockLoadPersistedModel = vi.fn(() => "claude-opus-4-6");
 const mockHasAgentScopedModel = vi.fn(() => false);
@@ -573,6 +573,34 @@ describe("chat-ui-store", () => {
         useChatUIStore.getState().streams["stream-1"]?.councilMechanism,
       ).toBe("synthesize");
     });
+
+    it("does not rehydrate a migrated Council when a new fresh canvas opens", () => {
+      const freshKey = "agent-1:fresh";
+      const sessionKey = "agent-1:session-1";
+      const store = useChatUIStore.getState();
+      store.init(freshKey);
+      store.setCouncilCount(freshKey, 3);
+      store.setCouncilMechanism(freshKey, "contrast");
+
+      migrateChatUiPartition(freshKey, sessionKey);
+
+      expect(localStorage.getItem(`aura-council-count:${freshKey}`)).toBeNull();
+      expect(localStorage.getItem(`aura-council-models:${freshKey}`)).toBeNull();
+      expect(localStorage.getItem(`aura-council-mechanism:${freshKey}`)).toBeNull();
+      expect(localStorage.getItem(`aura-council-count:${sessionKey}`)).toBe("3");
+      expect(localStorage.getItem(`aura-council-mechanism:${sessionKey}`)).toBe(
+        "contrast",
+      );
+
+      store.resetCouncil(sessionKey);
+      resetStore();
+      useChatUIStore.getState().init(freshKey);
+
+      expect(useChatUIStore.getState().streams[freshKey]?.councilCount).toBe(1);
+      expect(
+        useChatUIStore.getState().streams[freshKey]?.councilMechanism,
+      ).toBe("synthesize");
+    });
   });
 
   describe("answer strategy", () => {
@@ -663,6 +691,35 @@ describe("chat-ui-store", () => {
         useChatUIStore.getState().getSecondOpinionReference("stream-1"),
       ).toBeNull();
       expect(localStorage.getItem("aura-answer-strategy:stream-1")).toBeNull();
+    });
+
+    it("does not leak migrated second-opinion state into the next fresh canvas", () => {
+      const freshKey = "agent-1:fresh";
+      const sessionKey = "agent-1:session-1";
+      const store = useChatUIStore.getState();
+      store.init(freshKey);
+      store.setAnswerStrategy(freshKey, "second_opinion");
+
+      migrateChatUiPartition(freshKey, sessionKey);
+
+      expect(localStorage.getItem(`aura-answer-strategy:${freshKey}`)).toBeNull();
+      expect(
+        localStorage.getItem(`aura-second-opinion-reference:${freshKey}`),
+      ).toBeNull();
+      expect(localStorage.getItem(`aura-answer-strategy:${sessionKey}`)).toBe(
+        "second_opinion",
+      );
+
+      store.resetAnswerStrategy(sessionKey);
+      resetStore();
+      useChatUIStore.getState().init(freshKey);
+
+      expect(useChatUIStore.getState().streams[freshKey]?.answerStrategy).toBe(
+        "single",
+      );
+      expect(
+        useChatUIStore.getState().streams[freshKey]?.secondOpinionReference,
+      ).toBeNull();
     });
   });
 
