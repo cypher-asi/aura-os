@@ -14,7 +14,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::permissions::require_sys_admin;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
-const BUG_REPORT_MODEL: &str = "aura-claude-opus-4-8";
+const BUG_REPORT_MODEL: &str = "aura-claude-opus-5";
 const BUG_REPORT_MAX_TOKENS: u32 = 2048;
 
 /// Feedback-post shape used when a bug report is mirrored into the public
@@ -64,7 +64,7 @@ pub(crate) struct CreateBugReportResponse {
     pub feedback_post_id: Option<String>,
 }
 
-/// Generate the Opus 4.8 triage summary by calling aura-router's
+/// Generate the Opus 5 triage summary by calling aura-router's
 /// Anthropic-style `/v1/messages` endpoint, mirroring the round-trip
 /// shape used by `generate_session_summary`.
 async fn generate_bug_report_summary(

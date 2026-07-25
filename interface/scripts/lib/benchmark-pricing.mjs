@@ -5,6 +5,12 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
     cacheWrite: 12.5,
     cacheRead: 1,
   },
+  "claude-opus-5": {
+    input: 5,
+    output: 25,
+    cacheWrite: 6.25,
+    cacheRead: 0.5,
+  },
   "claude-opus-4-8": {
     input: 5,
     output: 25,

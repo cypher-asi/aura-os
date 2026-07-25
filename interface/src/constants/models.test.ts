@@ -144,6 +144,27 @@ describe("model persistence", () => {
     );
   });
 
+  it("normalizes raw Claude Opus 5 to the Aura-managed chat model", () => {
+    expect(loadPersistedModel("default", "claude-opus-5")).toBe(
+      "aura-claude-opus-5",
+    );
+  });
+
+  it("includes Claude Opus 5 with its full adaptive-thinking ladder", () => {
+    const opus = availableModelsForAdapter("default").find(
+      (model) => model.id === "aura-claude-opus-5",
+    );
+
+    expect(opus).toMatchObject({
+      label: "Opus 5",
+      vendor: "anthropic",
+      creditMultiplier: 5,
+      contextWindow: 1_000_000,
+      defaultEffort: "high",
+    });
+    expect(opus?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
+  });
+
   it("includes Claude Fable 5 in the Anthropic chat model list", () => {
     const fable = availableModelsForAdapter("default").find(
       (model) => model.id === "aura-claude-fable-5",
@@ -402,6 +423,14 @@ describe("reasoning-effort validity per model", () => {
         `${model.id} defaultEffort "${model.defaultEffort}" must be in its efforts`,
       ).toContain(model.defaultEffort);
     }
+  });
+
+  it("offers every Opus 5 effort tier and defaults to Anthropic's high tier", () => {
+    const model = AURA_MANAGED_CHAT_MODELS.find(
+      (candidate) => candidate.id === "aura-claude-opus-5",
+    );
+    expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(model?.defaultEffort).toBe("high");
   });
 
   it("offers the GPT-5.4/5.5 effort ladder", () => {
