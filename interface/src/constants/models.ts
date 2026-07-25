@@ -116,6 +116,15 @@ export interface ModelOption {
  */
 const ANTHROPIC_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
 
+/** Claude Opus 5 exposes Anthropic's full adaptive-thinking effort ladder. */
+const ANTHROPIC_OPUS_5_EFFORTS: ModelEffort[] = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+];
+
 /**
  * Lighter Anthropic tier for Haiku — capable of extended thinking but
  * not the multi-minute `max` budget the flagships expose.
@@ -205,6 +214,21 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     provider: "Anthropic",
     description:
       "Anthropic's most capable widely released model for demanding reasoning and long-running agents.",
+    featured: true,
+  },
+  {
+    id: "aura-claude-opus-5",
+    label: "Opus 5",
+    tier: "opus",
+    mode: "chat",
+    vendor: "anthropic",
+    creditMultiplier: 5,
+    contextWindow: 1_000_000,
+    efforts: ANTHROPIC_OPUS_5_EFFORTS,
+    defaultEffort: "high",
+    provider: "Anthropic",
+    description:
+      "Anthropic's latest Opus for complex agentic coding, deep reasoning, and long-horizon enterprise work.",
     featured: true,
   },
   {
@@ -1003,6 +1027,8 @@ const KNOWN_MODELS: ModelOption[] = [
 const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "claude-fable-5": "aura-claude-fable-5",
   "aura-claude-fable-5": "aura-claude-fable-5",
+  "claude-opus-5": "aura-claude-opus-5",
+  "aura-claude-opus-5": "aura-claude-opus-5",
   "aura-claude-opus-4-6": "aura-claude-opus-4-6",
   "claude-opus-4-8": "aura-claude-opus-4-8",
   "aura-claude-opus-4-8": "aura-claude-opus-4-8",

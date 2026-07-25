@@ -10,6 +10,7 @@ import {
 
 describe("normalizePricingKey", () => {
   it("maps aura-managed ids to provider pricing keys", () => {
+    expect(normalizePricingKey("aura-claude-opus-5")).toBe("claude-opus-5");
     expect(normalizePricingKey("aura-claude-opus-4-8")).toBe("claude-opus-4-8");
     expect(normalizePricingKey("aura-claude-fable-5")).toBe("claude-fable-5");
     expect(normalizePricingKey("aura-gpt-5-5")).toBe("gpt-5.5");
@@ -134,6 +135,17 @@ describe("getBilledPricing", () => {
     expect(base.cacheRead).toBe(1);
   });
 
+  it("resolves Claude Opus 5 base and prompt-cache rates", () => {
+    expect(resolvePricing("aura-claude-opus-5")).toMatchObject({
+      provider: "anthropic",
+      model: "claude-opus-5",
+      input: 5,
+      output: 25,
+      cacheWrite: 6.25,
+      cacheRead: 0.5,
+    });
+  });
+
   it("applies the 20% markup to base rates", () => {
     const base = resolvePricing("aura-claude-opus-4-8");
     const billed = getBilledPricing("aura-claude-opus-4-8");
@@ -176,7 +188,7 @@ describe("computeSessionCost", () => {
 
   it("computes total billed cost and weighted average per million", () => {
     const result = computeSessionCost({
-      model: "aura-claude-opus-4-8",
+      model: "aura-claude-opus-5",
       provider: "anthropic",
       inputTokens: 1_000_000,
       outputTokens: 1_000_000,
