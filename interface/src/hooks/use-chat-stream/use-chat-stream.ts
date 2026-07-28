@@ -91,6 +91,8 @@ interface UseChatStreamOptions {
    */
   workspaceToolsEnabled?: boolean;
   workspaceStartAgentInstanceId?: string;
+  /** Route project turns through the session's isolated Git worktree. */
+  safeWorkspace?: boolean;
 }
 
 /** Captured partition-of-record. The send and any auto-retry replay
@@ -110,6 +112,7 @@ export function useChatStream({
   onSessionReady,
   workspaceToolsEnabled = true,
   workspaceStartAgentInstanceId,
+  safeWorkspace = false,
 }: UseChatStreamOptions) {
   const sidekickRef = useRef(useSidekickStore.getState());
   const projectCtx = useProjectActions();
@@ -154,6 +157,10 @@ export function useChatStream({
   useEffect(() => {
     workspaceStartAgentInstanceIdRef.current = workspaceStartAgentInstanceId;
   }, [workspaceStartAgentInstanceId]);
+  const safeWorkspaceRef = useRef(safeWorkspace);
+  useEffect(() => {
+    safeWorkspaceRef.current = safeWorkspace;
+  }, [safeWorkspace]);
 
   // Track the partition key this hook is currently bound to so the
   // unmount cleanup can hygienically clear THIS hook's last partition's
@@ -735,6 +742,7 @@ export function useChatStream({
           council,
           mixture,
           agentMentions,
+          safeWorkspaceRef.current,
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;

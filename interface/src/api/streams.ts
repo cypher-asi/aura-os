@@ -612,6 +612,11 @@ export function sendEventStream(
   /** See {@link sendAgentEventStream}. */
   mixture?: MixtureRequest,
   agentMentions?: AgentMentionTarget[],
+  /**
+   * Opt this project session into an isolated Git worktree with an automatic
+   * filesystem checkpoint before the turn.
+   */
+  safeWorkspace?: boolean,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (model) {
@@ -626,6 +631,7 @@ export function sendEventStream(
   if (agentMentions && agentMentions.length > 0) {
     body.agent_mentions = agentMentions;
   }
+  if (safeWorkspace) body.safe_workspace = true;
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }

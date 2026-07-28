@@ -9,6 +9,7 @@ mod installed_tools;
 mod instances;
 mod marketplace_fields;
 mod runtime;
+mod safe_workspace;
 mod self_improvement;
 pub(crate) mod session_identity;
 pub(crate) mod session_titles;
@@ -42,6 +43,10 @@ pub(crate) use instances::{
     update_agent_instance,
 };
 pub(crate) use runtime::{session_model_overrides_with_cache, test_agent_runtime};
+pub(crate) use safe_workspace::{
+    apply_safe_workspace_to_project, get_safe_workspace_checkpoint_diff, get_safe_workspace_status,
+    restore_safe_workspace_checkpoint,
+};
 pub(crate) use self_improvement::{
     apply_improvement_proposal, get_self_improvement_config, list_improvement_proposals,
     propose_improvement, reject_improvement_proposal, run_learning_review,

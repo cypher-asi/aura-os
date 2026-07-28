@@ -37,6 +37,7 @@ mod types;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use super::safe_workspace::prepare_safe_turn_workspace;
 pub(crate) use agent_route::send_agent_event_stream;
 pub(crate) use dev_loop_persist::spawn_dev_loop_persist_task;
 pub(crate) use discovery::{find_matching_project_agents, storage_session_sort_key};
