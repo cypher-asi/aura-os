@@ -47,6 +47,42 @@ export interface PaginatedSessionEventsRequestOptions extends ApiRequestOptions 
   before?: string;
 }
 
+export interface SafeWorkspaceCheckpoint {
+  id: string;
+  shortId: string;
+  createdAt: string;
+  reason: string;
+}
+
+export interface SafeWorkspaceStatus {
+  enabled: boolean;
+  workspacePath: string | null;
+  sourcePath: string | null;
+  baseCommit: string | null;
+  createdAt: string | null;
+  checkpoints: SafeWorkspaceCheckpoint[];
+}
+
+export interface SafeWorkspaceDiff {
+  checkpointId: string;
+  stat: string;
+  diff: string;
+  truncated: boolean;
+}
+
+export interface SafeWorkspaceRestoreResult {
+  restoredTo: string;
+  undoCheckpointId: string;
+  workspacePath: string;
+}
+
+export interface SafeWorkspaceApplyResult {
+  applied: boolean;
+  checkpointId: string;
+  stat: string;
+  sourcePath: string;
+}
+
 function paginatedEventsQuery(options?: PaginatedSessionEventsRequestOptions): string {
   const params = new URLSearchParams();
   if (options?.limit != null) {
@@ -529,6 +565,42 @@ export const sessionsApi = {
   getSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<Session>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}`,
+    ),
+  getSafeWorkspaceStatus: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+  ) =>
+    apiFetch<SafeWorkspaceStatus>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/safe-workspace`,
+    ),
+  getSafeWorkspaceDiff: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+    checkpointId: string,
+  ) =>
+    apiFetch<SafeWorkspaceDiff>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/safe-workspace/checkpoints/${checkpointId}/diff`,
+    ),
+  restoreSafeWorkspaceCheckpoint: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+    checkpointId: string,
+  ) =>
+    apiFetch<SafeWorkspaceRestoreResult>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/safe-workspace/checkpoints/${checkpointId}/restore`,
+      { method: "POST" },
+    ),
+  applySafeWorkspaceToProject: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+  ) =>
+    apiFetch<SafeWorkspaceApplyResult>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/safe-workspace/apply`,
+      { method: "POST" },
     ),
   listSessionTasks: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<Task[]>(

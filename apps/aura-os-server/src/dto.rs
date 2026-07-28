@@ -317,6 +317,12 @@ pub(crate) struct SendChatRequest {
     /// wins and a fresh session is created.
     #[serde(default)]
     pub session_id: Option<String>,
+    /// Run this project chat inside a per-storage-session Git worktree and
+    /// capture a filesystem checkpoint before the turn. Opt-in keeps legacy
+    /// clients on the shared project path until the UI explicitly enables the
+    /// safer execution mode.
+    #[serde(default)]
+    pub safe_workspace: Option<bool>,
     /// Set by `send_to_agent` in aura-harness when agent A messages
     /// agent B. Threaded onto [`crate::handlers::agents::chat::ChatPersistCtx`]
     /// and read by `persist_task` to post B's reply back into A's

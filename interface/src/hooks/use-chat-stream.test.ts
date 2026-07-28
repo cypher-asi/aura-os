@@ -633,6 +633,8 @@ describe("useChatStream", () => {
       undefined,
       // 15th positional `agentMentions` is also inactive.
       undefined,
+      // 16th positional `safeWorkspace` remains opt-in.
+      false,
     );
     expect(api.sendEventStream).toHaveBeenNthCalledWith(
       2,
@@ -651,6 +653,7 @@ describe("useChatStream", () => {
       undefined,
       undefined,
       undefined,
+      false,
     );
   });
 
@@ -854,6 +857,7 @@ describe("useChatStream", () => {
       undefined,
       undefined,
       undefined,
+      false,
     );
   });
 
@@ -911,6 +915,7 @@ describe("useChatStream", () => {
       undefined,
       undefined,
       undefined,
+      false,
     );
   });
 

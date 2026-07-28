@@ -37,6 +37,7 @@ import { useAutoRenameFromPrompt } from "../../hooks/use-auto-rename-from-prompt
 import { useNewSessionUrlSync } from "../../hooks/use-new-session-url-sync";
 import { ProjectAgentSwitcher } from "../ProjectAgentSwitcher";
 import { resolveAgentChatAvailability } from "../../../../shared/lib/agent-chat-availability";
+import { SafeWorkspaceBar } from "./SafeWorkspaceBar";
 
 const EMPTY_PROJECTS: Project[] = [];
 const EMPTY_AGENT_INSTANCES: AgentInstance[] = [];
@@ -141,6 +142,16 @@ export function AgentChatPanel({
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId
       : undefined;
+  const [safeWorkspaceSelection, setSafeWorkspaceSelection] = useState({
+    sessionId,
+    enabled: false,
+  });
+  const safeWorkspaceEnabled =
+    safeWorkspaceSelection.sessionId === sessionId && safeWorkspaceSelection.enabled;
+  const setSafeWorkspaceEnabled = useCallback(
+    (enabled: boolean) => setSafeWorkspaceSelection({ sessionId, enabled }),
+    [sessionId],
+  );
 
   const optimisticRow = useOptimisticSessionRow({
     projectId,
@@ -153,15 +164,27 @@ export function AgentChatPanel({
     setSearchParams,
     onSessionAdopted: optimisticRow.swap,
   });
+  const handleSafeSessionReady = useCallback(
+    (nextSessionId: string) => {
+      setSafeWorkspaceSelection((current) =>
+        current.sessionId === null
+          ? { ...current, sessionId: nextSessionId }
+          : current,
+      );
+      handleSessionReady(nextSessionId);
+    },
+    [handleSessionReady],
+  );
 
   const { streamKey, sendMessage, stopStreaming, resetEvents, markNextSendAsNewSession } =
     useChatStream({
       projectId,
       agentInstanceId,
       sessionId,
-      onSessionReady: handleSessionReady,
+      onSessionReady: handleSafeSessionReady,
       workspaceToolsEnabled,
       workspaceStartAgentInstanceId,
+      safeWorkspace: safeWorkspaceEnabled,
     });
 
   const contextUsage = useContextUsage(streamKey);
@@ -411,6 +434,17 @@ export function AgentChatPanel({
     isLoadingPriorSession: prior.isLoadingPriorSession,
     sessionBoundaries: prior.sessionBoundaries,
     loadOlderPage,
+    header: (
+      <SafeWorkspaceBar
+        projectId={projectId}
+        agentInstanceId={agentInstanceId}
+        sessionId={sessionId}
+        enabled={safeWorkspaceEnabled}
+        onEnabledChange={setSafeWorkspaceEnabled}
+        isBusy={busy.isBusy}
+        isLocal={machineType === "local"}
+      />
+    ),
     projects: currentProject,
     selectedProjectId: projectId,
     // The projects-app pins the wire `project_id` to the route
@@ -426,6 +460,7 @@ export function AgentChatPanel({
     contextUsage,
     onFetchContextContents: contextContentsFetcher,
     onNewChat: () => {
+      setSafeWorkspaceSelection({ sessionId: null, enabled: false });
       optimisticRow.arm();
       fresh.newChat();
     },

@@ -244,6 +244,13 @@ mod macos {
     unsafe extern "C" {}
 
     pub(super) fn request_notification_authorization() -> Result<(), String> {
+        if !running_from_app_bundle() {
+            tracing::info!(
+                "skipping native notification authorization for an unbundled macOS process"
+            );
+            return Ok(());
+        }
+
         unsafe {
             let pool = AutoReleasePool::new();
             let center = current_notification_center()?;
@@ -284,6 +291,10 @@ mod macos {
         payload: &NativeNotificationPayload,
     ) -> Result<(), String> {
         let title = super::notification_title(payload)?;
+
+        if !running_from_app_bundle() {
+            return Err("native notifications require a macOS app bundle".to_string());
+        }
 
         unsafe {
             let pool = AutoReleasePool::new();
@@ -409,6 +420,23 @@ mod macos {
             drop(pool);
             Ok(())
         }
+    }
+
+    fn running_from_app_bundle() -> bool {
+        std::env::current_exe()
+            .ok()
+            .and_then(|executable| {
+                executable
+                    .parent()
+                    .and_then(std::path::Path::parent)
+                    .and_then(std::path::Path::parent)
+                    .map(std::path::Path::to_path_buf)
+            })
+            .is_some_and(|bundle| {
+                bundle
+                    .extension()
+                    .is_some_and(|extension| extension == "app")
+            })
     }
 
     pub(super) fn set_application_badge(count: Option<u32>) {
