@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-07-28",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.777.1",
+    "title": "Claude Opus 5 lands and safe workspaces isolate parallel agent turns",
+    "intro": "Today's nightly brings two substantial changes: Aura picks up Claude Opus 5 as its new frontier model across chat, pricing, and bug-report triage, and a new opt-in \"safe workspace\" mode gives parallel agent sessions their own Git worktree with checkpoint and apply-back semantics so concurrent editing turns no longer race on shared project files.",
+    "entryCount": 2,
+    "highlights": [
+      "Claude Opus 5 available as the new frontier model",
+      "Opt-in safe workspaces isolate concurrent agent edits",
+      "macOS notifications no longer error on unbundled builds"
+    ],
+    "rawCommitCount": 2,
+    "generatedAt": "2026-07-29T01:16:12.699Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.777.1",
+    "path": "history/2026-07-28.json"
+  },
+  {
     "date": "2026-07-24",
     "channel": "nightly",
     "version": "0.1.0-nightly.775.1",
