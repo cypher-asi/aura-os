@@ -25,6 +25,7 @@ export interface AuraCapabilities {
   remoteOnly: boolean;
   localAgentRuntimeAvailable: boolean;
   hostedLocalHarness: boolean;
+  hostedSafeWorkspace: boolean;
   serverRemoteOnly: boolean;
   isMobileClient: boolean;
   isMobileLayout: boolean;
@@ -43,6 +44,7 @@ interface ServerRuntimeCapabilities {
   remoteOnly: boolean;
   localAgentRuntimeAvailable: boolean;
   hostedLocalHarness: boolean;
+  hostedSafeWorkspace?: boolean;
 }
 
 const RUNTIME_CAPABILITIES_PATH = "/api/system/runtime-capabilities";
@@ -67,7 +69,9 @@ function isServerRuntimeCapabilities(value: unknown): value is ServerRuntimeCapa
   return (
     typeof candidate.remoteOnly === "boolean" &&
     typeof candidate.localAgentRuntimeAvailable === "boolean" &&
-    typeof candidate.hostedLocalHarness === "boolean"
+    typeof candidate.hostedLocalHarness === "boolean" &&
+    (candidate.hostedSafeWorkspace === undefined ||
+      typeof candidate.hostedSafeWorkspace === "boolean")
   );
 }
 
@@ -120,6 +124,7 @@ function readCapabilities(): AuraCapabilities {
       remoteOnly: true,
       localAgentRuntimeAvailable: false,
       hostedLocalHarness: false,
+      hostedSafeWorkspace: false,
       serverRemoteOnly: false,
       isMobileClient: false,
       isMobileLayout: false,
@@ -162,6 +167,7 @@ function readCapabilities(): AuraCapabilities {
     remoteOnly: !localRuntimeAvailable,
     localAgentRuntimeAvailable: localRuntimeAvailable,
     hostedLocalHarness: serverRuntimeCapabilities?.hostedLocalHarness === true,
+    hostedSafeWorkspace: serverRuntimeCapabilities?.hostedSafeWorkspace === true,
     serverRemoteOnly: serverRuntimeCapabilities?.remoteOnly === true,
     isMobileClient,
     isMobileLayout,
@@ -193,6 +199,7 @@ function capabilitiesEqual(a: AuraCapabilities, b: AuraCapabilities): boolean {
     a.remoteOnly === b.remoteOnly &&
     a.localAgentRuntimeAvailable === b.localAgentRuntimeAvailable &&
     a.hostedLocalHarness === b.hostedLocalHarness &&
+    a.hostedSafeWorkspace === b.hostedSafeWorkspace &&
     a.serverRemoteOnly === b.serverRemoteOnly &&
     a.isMobileClient === b.isMobileClient &&
     a.isMobileLayout === b.isMobileLayout &&

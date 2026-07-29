@@ -87,7 +87,13 @@ export function AgentChatPanel({
 }: AgentChatPanelProps) {
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
-  const { features, isMobileLayout, remoteOnly } = useAuraCapabilities();
+  const {
+    features,
+    hasDesktopBridge,
+    hostedSafeWorkspace,
+    isMobileLayout,
+    remoteOnly,
+  } = useAuraCapabilities();
   const currentProject = useProjectsListStore(useShallow(selectCurrentProject(projectId)));
   const projectName = currentProject[0]?.name ?? "";
   const projectAgents = useProjectsListStore(
@@ -148,6 +154,13 @@ export function AgentChatPanel({
   });
   const safeWorkspaceEnabled =
     safeWorkspaceSelection.sessionId === sessionId && safeWorkspaceSelection.enabled;
+  // Safe Workspace Git/worktree operations must run in the service that owns
+  // the project filesystem, so `machineType === "local"` alone is not a
+  // sufficient capability check. The desktop bridge proves that the project
+  // and embedded server share the same host filesystem. Web stays hidden until
+  // the hosted harness explicitly advertises the workspace-lifecycle API.
+  const safeWorkspaceAvailable =
+    machineType === "local" && (hasDesktopBridge || hostedSafeWorkspace);
   const setSafeWorkspaceEnabled = useCallback(
     (enabled: boolean) => setSafeWorkspaceSelection({ sessionId, enabled }),
     [sessionId],
@@ -434,7 +447,7 @@ export function AgentChatPanel({
     isLoadingPriorSession: prior.isLoadingPriorSession,
     sessionBoundaries: prior.sessionBoundaries,
     loadOlderPage,
-    header: (
+    header: safeWorkspaceAvailable ? (
       <SafeWorkspaceBar
         projectId={projectId}
         agentInstanceId={agentInstanceId}
@@ -442,9 +455,8 @@ export function AgentChatPanel({
         enabled={safeWorkspaceEnabled}
         onEnabledChange={setSafeWorkspaceEnabled}
         isBusy={busy.isBusy}
-        isLocal={machineType === "local"}
       />
-    ),
+    ) : undefined,
     projects: currentProject,
     selectedProjectId: projectId,
     // The projects-app pins the wire `project_id` to the route

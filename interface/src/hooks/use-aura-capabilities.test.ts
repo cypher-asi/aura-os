@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import {
   useAuraCapabilities,
   AURA_BREAKPOINTS,
@@ -160,6 +160,7 @@ describe("useAuraCapabilities", () => {
               remoteOnly: false,
               localAgentRuntimeAvailable: true,
               hostedLocalHarness: true,
+              hostedSafeWorkspace: true,
             }),
         }),
       ),
@@ -173,6 +174,7 @@ describe("useAuraCapabilities", () => {
       expect(result.current.remoteOnly).toBe(false);
       expect(result.current.localAgentRuntimeAvailable).toBe(true);
       expect(result.current.hostedLocalHarness).toBe(true);
+      expect(result.current.hostedSafeWorkspace).toBe(true);
     });
   });
 

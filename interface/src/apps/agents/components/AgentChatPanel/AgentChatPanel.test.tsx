@@ -10,6 +10,7 @@ const mockUseChatStream = vi.fn();
 const mockChatPanelProps = vi.fn();
 const mockRegisterRemoteAgents = vi.fn();
 let mockRemoteStatus: string | undefined = "running";
+let mockMachineType: "local" | "remote" = "remote";
 
 vi.mock("../../../../api/client", () => ({
   api: {
@@ -46,7 +47,7 @@ vi.mock("../../../../hooks/use-chat-history-sync", () => ({
 vi.mock("../../../../hooks/use-agent-chat-meta", () => ({
   useAgentChatMeta: () => ({
     agentName: "Remote Agent",
-    machineType: "remote",
+    machineType: mockMachineType,
     templateAgentId: "template-agent-1",
     adapterType: "aura",
     defaultModel: "aura-gpt-5-4",
@@ -183,8 +184,11 @@ describe("AgentChatPanel workspace automation target", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRemoteStatus = "running";
+    mockMachineType = "remote";
     mockUseAuraCapabilities.mockReturnValue({
       features: { linkedWorkspace: false },
+      hasDesktopBridge: false,
+      hostedSafeWorkspace: false,
       isMobileLayout: false,
       remoteOnly: false,
     });
@@ -235,8 +239,11 @@ describe("AgentChatPanel workspace automation target", () => {
   });
 
   it("keeps local desktop dev-loop chat bridging enabled without a remote instance id", () => {
+    mockMachineType = "local";
     mockUseAuraCapabilities.mockReturnValue({
       features: { linkedWorkspace: true },
+      hasDesktopBridge: true,
+      hostedSafeWorkspace: false,
       isMobileLayout: false,
       remoteOnly: false,
     });
@@ -255,6 +262,77 @@ describe("AgentChatPanel workspace automation target", () => {
         workspaceToolsEnabled: true,
         workspaceStartAgentInstanceId: undefined,
       }),
+    );
+  });
+
+  it("shows Safe Workspace only for a desktop-owned local workspace", () => {
+    mockMachineType = "local";
+    mockUseAuraCapabilities.mockReturnValue({
+      features: { linkedWorkspace: true },
+      hasDesktopBridge: true,
+      hostedSafeWorkspace: false,
+      isMobileLayout: false,
+      remoteOnly: false,
+    });
+
+    renderPanel();
+
+    expect(mockChatPanelProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ header: expect.anything() }),
+    );
+  });
+
+  it("hides Safe Workspace for a web local agent backed by the hosted harness", () => {
+    mockMachineType = "local";
+    mockUseAuraCapabilities.mockReturnValue({
+      features: { linkedWorkspace: false },
+      hasDesktopBridge: false,
+      hostedLocalHarness: true,
+      hostedSafeWorkspace: false,
+      isMobileLayout: false,
+      remoteOnly: false,
+    });
+
+    renderPanel();
+
+    expect(mockChatPanelProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ header: undefined }),
+    );
+  });
+
+  it("shows Safe Workspace after the hosted harness advertises support", () => {
+    mockMachineType = "local";
+    mockUseAuraCapabilities.mockReturnValue({
+      features: { linkedWorkspace: false },
+      hasDesktopBridge: false,
+      hostedLocalHarness: true,
+      hostedSafeWorkspace: true,
+      isMobileLayout: false,
+      remoteOnly: false,
+    });
+
+    renderPanel();
+
+    expect(mockChatPanelProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ header: expect.anything() }),
+    );
+  });
+
+  it("keeps Safe Workspace hidden for remote agents even when hosted support is available", () => {
+    mockMachineType = "remote";
+    mockUseAuraCapabilities.mockReturnValue({
+      features: { linkedWorkspace: false },
+      hasDesktopBridge: false,
+      hostedLocalHarness: true,
+      hostedSafeWorkspace: true,
+      isMobileLayout: false,
+      remoteOnly: false,
+    });
+
+    renderPanel();
+
+    expect(mockChatPanelProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ header: undefined }),
     );
   });
 

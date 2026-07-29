@@ -49,16 +49,19 @@ pub(crate) struct RuntimeCapabilitiesResponse {
     pub remote_only: bool,
     pub local_agent_runtime_available: bool,
     pub hosted_local_harness: bool,
+    pub hosted_safe_workspace: bool,
 }
 
 pub(crate) async fn get_runtime_capabilities(
     State(state): State<AppState>,
 ) -> Json<RuntimeCapabilitiesResponse> {
     let hosted_local_harness = state.harness_http.hosted_local_runtime_available();
+    let hosted_safe_workspace = state.harness_http.hosted_safe_workspace_available().await;
     Json(RuntimeCapabilitiesResponse {
         remote_only: state.remote_only,
         local_agent_runtime_available: !state.remote_only && hosted_local_harness,
         hosted_local_harness,
+        hosted_safe_workspace,
     })
 }
 

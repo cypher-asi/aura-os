@@ -14,7 +14,6 @@ interface SafeWorkspaceBarProps {
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   isBusy: boolean;
-  isLocal: boolean;
 }
 
 function errorMessage(error: unknown): string {
@@ -36,7 +35,6 @@ export function SafeWorkspaceBar({
   enabled,
   onEnabledChange,
   isBusy,
-  isLocal,
 }: SafeWorkspaceBarProps) {
   const [status, setStatus] = useState<SafeWorkspaceStatus | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -82,7 +80,7 @@ export function SafeWorkspaceBar({
   );
 
   const toggle = () => {
-    if (!isLocal || active || isBusy) return;
+    if (active || isBusy) return;
     setNotice(null);
     setPreview(null);
     setConfirmation(null);
@@ -164,12 +162,10 @@ export function SafeWorkspaceBar({
           type="button"
           className={`${styles.modeButton} ${enabled ? styles.modeButtonEnabled : ""}`}
           onClick={toggle}
-          disabled={!isLocal || active || isBusy}
+          disabled={active || isBusy}
           aria-pressed={enabled}
           title={
-            !isLocal
-              ? "Safe workspaces currently require a local Git project"
-              : active
+            active
                 ? "This session is permanently isolated"
                 : "Give this session its own Git worktree and automatic checkpoints"
           }

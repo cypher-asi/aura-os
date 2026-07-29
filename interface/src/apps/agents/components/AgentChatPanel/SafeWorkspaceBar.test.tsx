@@ -26,7 +26,6 @@ describe("SafeWorkspaceBar", () => {
         enabled={false}
         onEnabledChange={onEnabledChange}
         isBusy={false}
-        isLocal
       />,
     );
 
@@ -59,7 +58,6 @@ describe("SafeWorkspaceBar", () => {
         enabled
         onEnabledChange={vi.fn()}
         isBusy={false}
-        isLocal
       />,
     );
 
@@ -101,7 +99,6 @@ describe("SafeWorkspaceBar", () => {
         enabled
         onEnabledChange={vi.fn()}
         isBusy={false}
-        isLocal
       />,
     );
 
@@ -121,19 +118,4 @@ describe("SafeWorkspaceBar", () => {
     );
   });
 
-  it("disables isolation for a remote agent", () => {
-    render(
-      <SafeWorkspaceBar
-        projectId="project-1"
-        agentInstanceId="agent-1"
-        sessionId={null}
-        enabled={false}
-        onEnabledChange={vi.fn()}
-        isBusy={false}
-        isLocal={false}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "Safe workspace" })).toBeDisabled();
-  });
 });

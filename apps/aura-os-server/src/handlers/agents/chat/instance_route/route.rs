@@ -14,7 +14,8 @@ use crate::handlers::agents::workspace_tools::{
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::plan_mode::{is_plan_mode_action, session_tool_permissions};
 use crate::handlers::projects_helpers::{
-    is_project_tool_action, project_tool_max_turns, resolve_project_tool_workspace_path,
+    execution_workspace_authority, is_project_tool_action, project_tool_max_turns,
+    resolve_project_tool_workspace_path, ExecutionWorkspaceAuthority,
 };
 use crate::state::{AppState, AuthJwt};
 
@@ -25,7 +26,6 @@ use super::super::cross_agent_reply::read_cross_agent_depth;
 use super::super::persist::{
     build_chat_partition, try_pin_session, ChatPersistRequest, PinnedSessionOutcome,
 };
-use super::super::prepare_safe_turn_workspace;
 use super::super::runtime_gate::ensure_chat_runtime_allowed;
 use super::super::setup::setup_project_chat_persistence;
 use super::super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
@@ -34,6 +34,7 @@ use super::super::typed_session::{
     build_typed_session_fields, TypedProjectInputs, TypedSessionFields, TypedSessionInputs,
 };
 use super::super::types::SseResponse;
+use super::super::{prepare_hosted_safe_turn_workspace, prepare_safe_turn_workspace};
 
 use super::super::super::runtime::{
     resolve_council_mechanism, resolve_council_members, resolve_mixture_members,
@@ -75,6 +76,30 @@ pub(crate) async fn send_event_stream(
         .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
     ensure_chat_runtime_allowed(&state, instance.harness_mode())?;
     require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;
+    let safe_workspace_authority = if body.safe_workspace.unwrap_or(false) {
+        let authority = execution_workspace_authority(
+            state.harness_http.hosted_local_runtime_available(),
+            instance.harness_mode(),
+        );
+        match authority {
+            ExecutionWorkspaceAuthority::AuraServer => {}
+            ExecutionWorkspaceAuthority::HostedHarness => {
+                if !state.harness_http.hosted_safe_workspace_available().await {
+                    return Err(ApiError::bad_request(
+                        "safe workspace is not supported by the currently deployed hosted harness",
+                    ));
+                }
+            }
+            ExecutionWorkspaceAuthority::Swarm => {
+                return Err(ApiError::bad_request(
+                    "safe workspace is not yet available for remote agents",
+                ));
+            }
+        }
+        Some(authority)
+    } else {
+        None
+    };
     info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
     reject_if_partition_busy(
@@ -206,7 +231,7 @@ pub(crate) async fn send_event_stream(
     )
     .await?;
 
-    if body.safe_workspace.unwrap_or(false) {
+    if let Some(safe_workspace_authority) = safe_workspace_authority {
         let session_id = persist_ctx
             .as_ref()
             .map(|ctx| &ctx.session_id)
@@ -215,11 +240,22 @@ pub(crate) async fn send_event_stream(
                     "safe workspace requires session persistence; configure storage and retry",
                 )
             })?;
-        let source_path = project_path.as_deref().ok_or_else(|| {
-            ApiError::bad_request("safe workspace requires a linked local project directory")
-        })?;
-        project_path =
-            Some(prepare_safe_turn_workspace(&state, &project_id, session_id, source_path).await?);
+        project_path = Some(match safe_workspace_authority {
+            ExecutionWorkspaceAuthority::AuraServer => {
+                let source_path = project_path.as_deref().ok_or_else(|| {
+                    ApiError::bad_request(
+                        "safe workspace requires a linked local project directory",
+                    )
+                })?;
+                prepare_safe_turn_workspace(&state, &project_id, session_id, source_path).await?
+            }
+            ExecutionWorkspaceAuthority::HostedHarness => {
+                prepare_hosted_safe_turn_workspace(&state, &project_id, session_id).await?
+            }
+            ExecutionWorkspaceAuthority::Swarm => {
+                unreachable!("remote Safe Workspace requests are rejected before persistence setup")
+            }
+        });
         // Keep safe and legacy harness sessions in separate warm-session
         // partitions. Otherwise enabling isolation on an existing chat could
         // reuse a harness that was opened with the original shared path.
