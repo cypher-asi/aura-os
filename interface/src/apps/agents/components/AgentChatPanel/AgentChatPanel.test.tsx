@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,7 @@ const mockUseTerminalTarget = vi.fn();
 const mockUseChatStream = vi.fn();
 const mockChatPanelProps = vi.fn();
 const mockRegisterRemoteAgents = vi.fn();
+const mockGetSafeWorkspaceEligibility = vi.fn();
 let mockRemoteStatus: string | undefined = "running";
 let mockMachineType: "local" | "remote" = "remote";
 
@@ -18,6 +19,8 @@ vi.mock("../../../../api/client", () => ({
     listSessionEventsPaginated: vi.fn(),
     getContextUsage: vi.fn(),
     getContextContents: vi.fn(),
+    getSafeWorkspaceEligibility: (...args: unknown[]) =>
+      mockGetSafeWorkspaceEligibility(...args),
     stopLoop: vi.fn(),
   },
 }));
@@ -185,6 +188,7 @@ describe("AgentChatPanel workspace automation target", () => {
     vi.clearAllMocks();
     mockRemoteStatus = "running";
     mockMachineType = "remote";
+    mockGetSafeWorkspaceEligibility.mockResolvedValue({ available: true });
     mockUseAuraCapabilities.mockReturnValue({
       features: { linkedWorkspace: false },
       hasDesktopBridge: false,
@@ -265,7 +269,7 @@ describe("AgentChatPanel workspace automation target", () => {
     );
   });
 
-  it("shows Safe Workspace only for a desktop-owned local workspace", () => {
+  it("shows Safe Workspace only for an eligible desktop-owned local workspace", async () => {
     mockMachineType = "local";
     mockUseAuraCapabilities.mockReturnValue({
       features: { linkedWorkspace: true },
@@ -277,8 +281,34 @@ describe("AgentChatPanel workspace automation target", () => {
 
     renderPanel();
 
+    await waitFor(() => {
+      expect(mockChatPanelProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({ header: expect.anything() }),
+      );
+    });
+  });
+
+  it("hides Safe Workspace when the linked desktop folder is not Git-backed", async () => {
+    mockMachineType = "local";
+    mockUseAuraCapabilities.mockReturnValue({
+      features: { linkedWorkspace: true },
+      hasDesktopBridge: true,
+      hostedSafeWorkspace: false,
+      isMobileLayout: false,
+      remoteOnly: false,
+    });
+    mockGetSafeWorkspaceEligibility.mockResolvedValue({ available: false });
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(mockGetSafeWorkspaceEligibility).toHaveBeenCalledWith(
+        "project-1",
+        "agent-inst-1",
+      );
+    });
     expect(mockChatPanelProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ header: expect.anything() }),
+      expect.objectContaining({ header: undefined }),
     );
   });
 
@@ -300,7 +330,7 @@ describe("AgentChatPanel workspace automation target", () => {
     );
   });
 
-  it("shows Safe Workspace after the hosted harness advertises support", () => {
+  it("shows Safe Workspace after the hosted harness advertises support", async () => {
     mockMachineType = "local";
     mockUseAuraCapabilities.mockReturnValue({
       features: { linkedWorkspace: false },
@@ -313,9 +343,11 @@ describe("AgentChatPanel workspace automation target", () => {
 
     renderPanel();
 
-    expect(mockChatPanelProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ header: expect.anything() }),
-    );
+    await waitFor(() => {
+      expect(mockChatPanelProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({ header: expect.anything() }),
+      );
+    });
   });
 
   it("keeps Safe Workspace hidden for remote agents even when hosted support is available", () => {

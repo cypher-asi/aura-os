@@ -184,6 +184,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
             get(agents::get_safe_workspace_status),
         )
         .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/safe-workspace-eligibility",
+            get(agents::get_safe_workspace_eligibility),
+        )
+        .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/safe-workspace/apply",
             post(agents::apply_safe_workspace_to_project),
         )
