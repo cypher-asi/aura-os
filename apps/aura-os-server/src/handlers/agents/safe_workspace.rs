@@ -25,7 +25,8 @@ use thiserror::Error;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects_helpers::{
-    execution_workspace_authority, ExecutionWorkspaceAuthority,
+    execution_workspace_authority, resolve_project_tool_workspace_path,
+    ExecutionWorkspaceAuthority,
 };
 use crate::harness_gateway::HarnessJsonError;
 use crate::state::{AppState, AuthJwt, ChatSessionKey};
@@ -99,6 +100,12 @@ pub(crate) struct SafeWorkspaceStatus {
     base_commit: Option<String>,
     created_at: Option<String>,
     checkpoints: Vec<SafeWorkspaceCheckpoint>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SafeWorkspaceEligibility {
+    available: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -307,6 +314,37 @@ fn run_shadow(
 
 fn stdout_trimmed(output: Output) -> String {
     String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+/// Read-only desktop preflight. Hosted Harness workspaces are managed by Aura
+/// and can safely bootstrap Git themselves; user-linked desktop folders must
+/// already belong to a repository with a commit before we offer worktree
+/// isolation. Never initialise or mutate a user's source folder here.
+fn source_supports_safe_workspace(source_path: &Path) -> bool {
+    let Ok(source_path) = source_path.canonicalize() else {
+        return false;
+    };
+    let Ok(root_probe) = Command::new("git")
+        .current_dir(&source_path)
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+    else {
+        return false;
+    };
+    if !root_probe.status.success() {
+        return false;
+    }
+    let Ok(source_repo) = PathBuf::from(stdout_trimmed(root_probe)).canonicalize() else {
+        return false;
+    };
+    if !source_path.starts_with(&source_repo) {
+        return false;
+    }
+    Command::new("git")
+        .current_dir(source_repo)
+        .args(["rev-parse", "--verify", "HEAD"])
+        .output()
+        .is_ok_and(|output| output.status.success())
 }
 
 fn validate_relative_path(path: &Path) -> bool {
@@ -537,11 +575,14 @@ fn prepare_workspace_blocking(
     let source_path = source_path.canonicalize().map_err(|error| {
         SafeWorkspaceError::Unsupported(format!("{} ({error})", source_path.display()))
     })?;
-    let source_repo = PathBuf::from(stdout_trimmed(run_git(
-        &source_path,
-        &["rev-parse", "--show-toplevel"],
-    )?))
-    .canonicalize()?;
+    let source_repo_output =
+        run_git(&source_path, &["rev-parse", "--show-toplevel"]).map_err(|error| match error {
+            SafeWorkspaceError::Git(message) => SafeWorkspaceError::Unsupported(format!(
+                "workspace is not a Git repository ({message})"
+            )),
+            other => other,
+        })?;
+    let source_repo = PathBuf::from(stdout_trimmed(source_repo_output)).canonicalize()?;
     let source_subpath = source_path
         .strip_prefix(&source_repo)
         .map_err(|_| {
@@ -554,7 +595,14 @@ fn prepare_workspace_blocking(
         ));
     }
 
-    let base_commit = stdout_trimmed(run_git(&source_repo, &["rev-parse", "HEAD"])?);
+    let base_commit = stdout_trimmed(run_git(&source_repo, &["rev-parse", "HEAD"]).map_err(
+        |error| match error {
+            SafeWorkspaceError::Git(_) => SafeWorkspaceError::Unsupported(
+                "Git repository must have at least one commit".to_string(),
+            ),
+            other => other,
+        },
+    )?);
     let workspace_root = root.join(WORKTREE_DIR);
     clean_incomplete_workspace(&source_repo, &root, &workspace_root)?;
     let workspace_arg = workspace_root.to_string_lossy().to_string();
@@ -895,6 +943,27 @@ async fn authorize_session(
     })
 }
 
+async fn authorize_agent_instance(
+    state: &AppState,
+    jwt: &str,
+    project_id: &ProjectId,
+    agent_instance_id: &AgentInstanceId,
+) -> ApiResult<()> {
+    let project_agent = state
+        .require_storage_client()?
+        .get_project_agent(&agent_instance_id.to_string(), jwt)
+        .await
+        .map_err(map_storage_error)?;
+    let stored_project_id = project_agent
+        .project_id
+        .as_deref()
+        .and_then(|value| value.parse::<ProjectId>().ok());
+    if stored_project_id != Some(*project_id) {
+        return Err(ApiError::not_found("agent instance not found"));
+    }
+    Ok(())
+}
+
 pub(crate) async fn ensure_safe_workspace_authority(
     state: &AppState,
     project_id: &ProjectId,
@@ -1010,6 +1079,47 @@ fn acquire_session_idle_guards(
         guards.push(guard);
     }
     Ok(guards)
+}
+
+pub(crate) async fn get_safe_workspace_eligibility(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AxumPath((project_id, agent_instance_id)): AxumPath<(ProjectId, AgentInstanceId)>,
+) -> ApiResult<Json<SafeWorkspaceEligibility>> {
+    authorize_agent_instance(&state, &jwt, &project_id, &agent_instance_id).await?;
+    let instance = state
+        .agent_instance_service
+        .get_instance(&project_id, &agent_instance_id)
+        .await
+        .map_err(|error| ApiError::internal(format!("looking up agent instance: {error}")))?;
+    let authority = execution_workspace_authority(
+        state.harness_http.hosted_local_runtime_available(),
+        instance.harness_mode(),
+    );
+    let available = match authority {
+        ExecutionWorkspaceAuthority::HostedHarness => {
+            state.harness_http.hosted_safe_workspace_available().await
+        }
+        ExecutionWorkspaceAuthority::Swarm => false,
+        ExecutionWorkspaceAuthority::AuraServer => {
+            let source_path = resolve_project_tool_workspace_path(
+                &state,
+                &project_id,
+                instance.harness_mode(),
+                Some(agent_instance_id),
+            )
+            .await?;
+            match source_path {
+                Some(source_path) => tokio::task::spawn_blocking(move || {
+                    source_supports_safe_workspace(Path::new(&source_path))
+                })
+                .await
+                .unwrap_or(false),
+                None => false,
+            }
+        }
+    };
+    Ok(Json(SafeWorkspaceEligibility { available }))
 }
 
 pub(crate) async fn get_safe_workspace_status(
@@ -1244,6 +1354,43 @@ mod tests {
             prepare_workspace_blocking(data.path(), "project-id", "session-id", source.path())
                 .expect("prepare safe workspace");
         (source, data, metadata)
+    }
+
+    #[test]
+    fn eligibility_requires_a_git_commit_and_accepts_repository_subdirectories() {
+        let source = tempfile::tempdir().expect("source tempdir");
+        fs::write(source.path().join("plain.txt"), "not git\n").expect("write plain file");
+        assert!(!source_supports_safe_workspace(source.path()));
+
+        git(source.path(), &["init"]);
+        assert!(
+            !source_supports_safe_workspace(source.path()),
+            "an unborn repository cannot create a detached worktree"
+        );
+        git(source.path(), &["config", "user.name", "Aura Test"]);
+        git(
+            source.path(),
+            &["config", "user.email", "aura@test.invalid"],
+        );
+        git(source.path(), &["add", "plain.txt"]);
+        git(source.path(), &["commit", "-m", "baseline"]);
+        let nested = source.path().join("nested");
+        fs::create_dir(&nested).expect("create nested workspace");
+
+        assert!(source_supports_safe_workspace(source.path()));
+        assert!(source_supports_safe_workspace(&nested));
+    }
+
+    #[test]
+    fn prepare_reports_non_git_workspaces_as_unsupported() {
+        let source = tempfile::tempdir().expect("source tempdir");
+        let data = tempfile::tempdir().expect("data tempdir");
+
+        let error =
+            prepare_workspace_blocking(data.path(), "project-id", "session-id", source.path())
+                .expect_err("plain folders must fail before worktree creation");
+
+        assert!(matches!(error, SafeWorkspaceError::Unsupported(_)));
     }
 
     #[test]

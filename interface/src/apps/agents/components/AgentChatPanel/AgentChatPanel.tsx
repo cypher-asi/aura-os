@@ -152,15 +152,67 @@ export function AgentChatPanel({
     sessionId,
     enabled: false,
   });
-  const safeWorkspaceEnabled =
-    safeWorkspaceSelection.sessionId === sessionId && safeWorkspaceSelection.enabled;
   // Safe Workspace Git/worktree operations must run in the service that owns
   // the project filesystem, so `machineType === "local"` alone is not a
   // sufficient capability check. The desktop bridge proves that the project
   // and embedded server share the same host filesystem. Web stays hidden until
   // the hosted harness explicitly advertises the workspace-lifecycle API.
-  const safeWorkspaceAvailable =
+  const safeWorkspaceRuntimeAvailable =
     machineType === "local" && (hasDesktopBridge || hostedSafeWorkspace);
+  const desktopSafeWorkspaceNeedsEligibility =
+    machineType === "local" && hasDesktopBridge;
+  const safeWorkspaceEligibilityKey = [
+    projectId,
+    agentInstanceId,
+    terminalTarget.workspacePath ?? "",
+    terminalTarget.remoteWorkspacePath ?? "",
+    hasDesktopBridge,
+    hostedSafeWorkspace,
+  ].join(":");
+  const [safeWorkspaceEligibility, setSafeWorkspaceEligibility] = useState({
+    key: "",
+    available: false,
+  });
+  useEffect(() => {
+    if (!desktopSafeWorkspaceNeedsEligibility) return;
+    let cancelled = false;
+    void api
+      .getSafeWorkspaceEligibility(projectId, agentInstanceId)
+      .then((result) => {
+        if (!cancelled) {
+          setSafeWorkspaceEligibility({
+            key: safeWorkspaceEligibilityKey,
+            available: result.available,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSafeWorkspaceEligibility({
+            key: safeWorkspaceEligibilityKey,
+            available: false,
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    agentInstanceId,
+    projectId,
+    desktopSafeWorkspaceNeedsEligibility,
+    safeWorkspaceEligibilityKey,
+  ]);
+  const safeWorkspaceAvailable =
+    safeWorkspaceRuntimeAvailable &&
+    ((!hasDesktopBridge && hostedSafeWorkspace) ||
+      (hasDesktopBridge &&
+        safeWorkspaceEligibility.key === safeWorkspaceEligibilityKey &&
+        safeWorkspaceEligibility.available));
+  const safeWorkspaceEnabled =
+    safeWorkspaceAvailable &&
+    safeWorkspaceSelection.sessionId === sessionId &&
+    safeWorkspaceSelection.enabled;
   const setSafeWorkspaceEnabled = useCallback(
     (enabled: boolean) => setSafeWorkspaceSelection({ sessionId, enabled }),
     [sessionId],

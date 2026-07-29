@@ -63,6 +63,10 @@ export interface SafeWorkspaceStatus {
   checkpoints: SafeWorkspaceCheckpoint[];
 }
 
+export interface SafeWorkspaceEligibility {
+  available: boolean;
+}
+
 export interface SafeWorkspaceDiff {
   checkpointId: string;
   stat: string;
@@ -573,6 +577,13 @@ export const sessionsApi = {
   ) =>
     apiFetch<SafeWorkspaceStatus>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/safe-workspace`,
+    ),
+  getSafeWorkspaceEligibility: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+  ) =>
+    apiFetch<SafeWorkspaceEligibility>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/safe-workspace-eligibility`,
     ),
   getSafeWorkspaceDiff: (
     projectId: ProjectId,

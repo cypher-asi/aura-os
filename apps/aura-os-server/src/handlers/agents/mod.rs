@@ -44,8 +44,8 @@ pub(crate) use instances::{
 };
 pub(crate) use runtime::{session_model_overrides_with_cache, test_agent_runtime};
 pub(crate) use safe_workspace::{
-    apply_safe_workspace_to_project, get_safe_workspace_checkpoint_diff, get_safe_workspace_status,
-    restore_safe_workspace_checkpoint,
+    apply_safe_workspace_to_project, get_safe_workspace_checkpoint_diff,
+    get_safe_workspace_eligibility, get_safe_workspace_status, restore_safe_workspace_checkpoint,
 };
 pub(crate) use self_improvement::{
     apply_improvement_proposal, get_self_improvement_config, list_improvement_proposals,
