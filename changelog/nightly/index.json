@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-07-29",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.778.1",
+    "title": "Safe Workspace comes to hosted Harness deployments",
+    "intro": "A focused nightly that extends Aura's Safe Workspace isolation model beyond desktop projects, so hosted-local Web projects running on a capable Harness can finally opt into per-session worktrees — with a clean fallback for older deployments.",
+    "entryCount": 1,
+    "highlights": [
+      "Safe Workspace now runs on hosted Harness",
+      "Graceful fallback when the Harness is too old",
+      "Spawned child agents inherit the parent's safe worktree"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-07-29T11:00:57.258Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.778.1",
+    "path": "history/2026-07-29.json"
+  },
+  {
     "date": "2026-07-28",
     "channel": "nightly",
     "version": "0.1.0-nightly.777.1",
