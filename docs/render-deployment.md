@@ -119,12 +119,25 @@ project files. Imported browser files are copied to the protected
 cleanup through `DELETE /workspace/:project_id`; deploy the matching Harness
 build before the aura-api build that starts calling those lifecycle endpoints.
 
+Safe Workspace uses capability negotiation because its Git worktrees must be
+created by the service that owns the files. The hosted Harness advertises
+`safe_workspace: true` from `/health` and owns the protected
+`/workspace/:project_id/safe/:session_id/...` lifecycle. Aura API exposes the
+control only after that capability is present; a missing field, failed probe,
+or older Harness keeps the control hidden and rejects direct opt-in requests.
+For this feature, deploy Aura API first (it fails closed against the older
+Harness), then deploy Harness. This avoids a window where an older Aura API
+exposes a control it cannot proxy.
+
 The browser file explorer and interactive terminal remain unavailable for
 hosted-local workspaces. Their existing local routes execute on aura-api's
 filesystem, while Harness's terminal currently opens a service-level home
 directory rather than a project sandbox. Do not proxy either surface as if it
 were desktop-local. Agent file and command tools do execute inside the hosted
-project workspace. The opt-in aura-api workspace health gate is also skipped
+project workspace. When Safe Workspace is active, the parent run and all of its
+spawned child agents receive the same isolated session path; child-agent
+dispatch semantics are otherwise unchanged. The opt-in aura-api workspace
+health gate is also skipped
 for hosted-local and Swarm workspaces because aura-api cannot run `cargo check`
 inside another service's filesystem.
 

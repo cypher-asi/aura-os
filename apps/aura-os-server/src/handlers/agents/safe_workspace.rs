@@ -17,12 +17,17 @@ use std::time::{Duration, SystemTime};
 
 use aura_os_core::{AgentInstanceId, ProjectId, SessionId};
 use axum::extract::{Path as AxumPath, State};
+use axum::http::{Method, StatusCode};
 use axum::Json;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::handlers::projects_helpers::{
+    execution_workspace_authority, ExecutionWorkspaceAuthority,
+};
+use crate::harness_gateway::HarnessJsonError;
 use crate::state::{AppState, AuthJwt, ChatSessionKey};
 
 const SAFE_WORKSPACES_DIR: &str = "safe-workspaces";
@@ -76,7 +81,7 @@ struct WorkspaceMetadata {
     applied_checkpoint: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct SafeWorkspaceCheckpoint {
     id: String,
@@ -85,7 +90,7 @@ pub(crate) struct SafeWorkspaceCheckpoint {
     reason: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct SafeWorkspaceStatus {
     enabled: bool,
@@ -96,7 +101,7 @@ pub(crate) struct SafeWorkspaceStatus {
     checkpoints: Vec<SafeWorkspaceCheckpoint>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct SafeWorkspaceDiff {
     checkpoint_id: String,
@@ -105,7 +110,7 @@ pub(crate) struct SafeWorkspaceDiff {
     truncated: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct SafeWorkspaceRestoreResult {
     restored_to: String,
@@ -113,7 +118,7 @@ pub(crate) struct SafeWorkspaceRestoreResult {
     workspace_path: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct SafeWorkspaceApplyResult {
     applied: bool,
@@ -890,6 +895,82 @@ async fn authorize_session(
     })
 }
 
+pub(crate) async fn ensure_safe_workspace_authority(
+    state: &AppState,
+    project_id: &ProjectId,
+    agent_instance_id: &AgentInstanceId,
+) -> ApiResult<ExecutionWorkspaceAuthority> {
+    let instance = state
+        .agent_instance_service
+        .get_instance(project_id, agent_instance_id)
+        .await
+        .map_err(|error| ApiError::internal(format!("looking up agent instance: {error}")))?;
+    let authority = execution_workspace_authority(
+        state.harness_http.hosted_local_runtime_available(),
+        instance.harness_mode(),
+    );
+    match authority {
+        ExecutionWorkspaceAuthority::AuraServer => Ok(authority),
+        ExecutionWorkspaceAuthority::HostedHarness => {
+            if state.harness_http.hosted_safe_workspace_available().await {
+                Ok(authority)
+            } else {
+                Err(ApiError::bad_request(
+                    "safe workspace is not supported by the currently deployed hosted harness",
+                ))
+            }
+        }
+        ExecutionWorkspaceAuthority::Swarm => Err(ApiError::bad_request(
+            "safe workspace is not yet available for remote agents",
+        )),
+    }
+}
+
+fn map_harness_workspace_error(error: HarnessJsonError) -> (StatusCode, Json<ApiError>) {
+    match error.status {
+        StatusCode::BAD_REQUEST => ApiError::bad_request(error.message),
+        StatusCode::NOT_FOUND => ApiError::not_found(error.message),
+        StatusCode::CONFLICT => ApiError::conflict(error.message),
+        _ => ApiError::bad_gateway(error.message),
+    }
+}
+
+async fn hosted_workspace_request<T: serde::de::DeserializeOwned>(
+    state: &AppState,
+    method: Method,
+    project_id: &ProjectId,
+    session_id: &SessionId,
+    suffix: &str,
+) -> ApiResult<T> {
+    let path = format!("workspace/{project_id}/safe/{session_id}{suffix}");
+    let value = state
+        .harness_http
+        .hosted_safe_workspace_json(method, &path)
+        .await
+        .map_err(map_harness_workspace_error)?;
+    serde_json::from_value(value).map_err(|error| {
+        ApiError::bad_gateway(format!(
+            "hosted Safe Workspace returned an invalid response: {error}"
+        ))
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HostedPrepareResult {
+    workspace_path: String,
+}
+
+pub(crate) async fn prepare_hosted_safe_turn_workspace(
+    state: &AppState,
+    project_id: &ProjectId,
+    session_id: &SessionId,
+) -> ApiResult<String> {
+    let result: HostedPrepareResult =
+        hosted_workspace_request(state, Method::POST, project_id, session_id, "").await?;
+    Ok(result.workspace_path)
+}
+
 fn matching_session_keys(state: &AppState, session_id: &SessionId) -> Vec<ChatSessionKey> {
     let suffix = format!("::{session_id}");
     let embedded = format!("::{session_id}::");
@@ -942,6 +1023,19 @@ pub(crate) async fn get_safe_workspace_status(
 ) -> ApiResult<Json<SafeWorkspaceStatus>> {
     let authorized =
         authorize_session(&state, &jwt, &project_id, &agent_instance_id, &session_id).await?;
+    let authority =
+        ensure_safe_workspace_authority(&state, &project_id, &agent_instance_id).await?;
+    if authority == ExecutionWorkspaceAuthority::HostedHarness {
+        let status = hosted_workspace_request(
+            &state,
+            Method::GET,
+            &authorized.project_id,
+            &authorized.session_id,
+            "",
+        )
+        .await?;
+        return Ok(Json(status));
+    }
     let Some(root) = find_existing_session_root(
         &state.data_dir,
         &authorized.project_id,
@@ -994,7 +1088,21 @@ pub(crate) async fn get_safe_workspace_checkpoint_diff(
 ) -> ApiResult<Json<SafeWorkspaceDiff>> {
     let authorized =
         authorize_session(&state, &jwt, &project_id, &agent_instance_id, &session_id).await?;
+    let authority =
+        ensure_safe_workspace_authority(&state, &project_id, &agent_instance_id).await?;
     let _turn_guards = acquire_session_idle_guards(&state, &session_id, "previewing files")?;
+    if authority == ExecutionWorkspaceAuthority::HostedHarness {
+        let suffix = format!("/checkpoints/{checkpoint_id}/diff");
+        let diff = hosted_workspace_request(
+            &state,
+            Method::GET,
+            &authorized.project_id,
+            &authorized.session_id,
+            &suffix,
+        )
+        .await?;
+        return Ok(Json(diff));
+    }
     let Some(root) = find_existing_session_root(
         &state.data_dir,
         &authorized.project_id,
@@ -1027,7 +1135,24 @@ pub(crate) async fn restore_safe_workspace_checkpoint(
 ) -> ApiResult<Json<SafeWorkspaceRestoreResult>> {
     let authorized =
         authorize_session(&state, &jwt, &project_id, &agent_instance_id, &session_id).await?;
+    let authority =
+        ensure_safe_workspace_authority(&state, &project_id, &agent_instance_id).await?;
     let _turn_guards = acquire_session_idle_guards(&state, &session_id, "restoring files")?;
+    if authority == ExecutionWorkspaceAuthority::HostedHarness {
+        let suffix = format!("/checkpoints/{checkpoint_id}/restore");
+        let result = hosted_workspace_request(
+            &state,
+            Method::POST,
+            &authorized.project_id,
+            &authorized.session_id,
+            &suffix,
+        )
+        .await?;
+        for key in matching_session_keys(&state, &session_id) {
+            state.chat_sessions.remove(&key);
+        }
+        return Ok(Json(result));
+    }
     let Some(root) = find_existing_session_root(
         &state.data_dir,
         &authorized.project_id,
@@ -1060,8 +1185,21 @@ pub(crate) async fn apply_safe_workspace_to_project(
 ) -> ApiResult<Json<SafeWorkspaceApplyResult>> {
     let authorized =
         authorize_session(&state, &jwt, &project_id, &agent_instance_id, &session_id).await?;
+    let authority =
+        ensure_safe_workspace_authority(&state, &project_id, &agent_instance_id).await?;
     let _turn_guards =
         acquire_session_idle_guards(&state, &session_id, "applying changes to the project")?;
+    if authority == ExecutionWorkspaceAuthority::HostedHarness {
+        let result = hosted_workspace_request(
+            &state,
+            Method::POST,
+            &authorized.project_id,
+            &authorized.session_id,
+            "/apply",
+        )
+        .await?;
+        return Ok(Json(result));
+    }
     let Some(root) = find_existing_session_root(
         &state.data_dir,
         &authorized.project_id,

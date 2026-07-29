@@ -36,9 +36,16 @@ layer**.
 - **Terminal PTY**: the long-lived PTY attached to a project's
   visible terminal remains attached to the original project. It is not
   retargeted to the safe worktree.
-- **Eligibility**: safe workspaces currently require a persisted session
-  and a linked local Git repository. Remote agents keep the existing
-  execution model.
+- **Eligibility**: safe workspaces require a persisted session. Desktop
+  projects use the server-owned linked Git repository. Hosted-local Web
+  projects use the Harness-owned lifecycle only when the Harness advertises
+  `safe_workspace: true`; older hosted Harness deployments fail closed and the
+  renderer hides the control. Remote/Swarm agents keep the existing execution
+  model.
+- **Spawned agents**: foreground child agents inherit the parent's resolved
+  project path. A safe parent therefore keeps its children in the session
+  worktree without changing spawn or stream behavior. Sibling children still
+  share that one session worktree; per-child worktrees are a separate feature.
 
 For chat-only or read-only workloads (e.g. side conversations,
 "ask about this code" sessions running alongside a long-running
