@@ -449,6 +449,36 @@ describe("sendEventStream", () => {
       { agent_id: "agent-maya", agent_instance_id: "instance-maya" },
     ]);
   });
+
+  it("opts a project turn into the safe workspace when requested", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    };
+
+    await sendEventStream(
+      "p1" as string,
+      "ai1",
+      "edit safely",
+      "chat",
+      undefined,
+      undefined,
+      handler,
+      undefined,
+      undefined,
+      false,
+      "session-1",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+
+    const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.safe_workspace).toBe(true);
+    expect(body.session_id).toBe("session-1");
+  });
 });
 
 function makeStream(over: Partial<ActiveStreamSummary> = {}): ActiveStreamSummary {

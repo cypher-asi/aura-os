@@ -25,6 +25,7 @@ use super::super::cross_agent_reply::read_cross_agent_depth;
 use super::super::persist::{
     build_chat_partition, try_pin_session, ChatPersistRequest, PinnedSessionOutcome,
 };
+use super::super::prepare_safe_turn_workspace;
 use super::super::runtime_gate::ensure_chat_runtime_allowed;
 use super::super::setup::setup_project_chat_persistence;
 use super::super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
@@ -171,7 +172,7 @@ pub(crate) async fn send_event_stream(
         Some(&agent_instance_id),
         persist_ctx.as_ref(),
     );
-    let session_key = partition_agent_id.clone();
+    let mut session_key = partition_agent_id.clone();
 
     // Phase 3 auto-fork: with per-session keys the new fork session
     // lands on a brand-new `session_key` (the new storage session_id
@@ -197,13 +198,33 @@ pub(crate) async fn send_event_stream(
     .await?;
 
     let pid_str = project_id.to_string();
-    let project_path = resolve_project_tool_workspace_path(
+    let mut project_path = resolve_project_tool_workspace_path(
         &state,
         &project_id,
         instance.harness_mode(),
         Some(agent_instance_id),
     )
     .await?;
+
+    if body.safe_workspace.unwrap_or(false) {
+        let session_id = persist_ctx
+            .as_ref()
+            .map(|ctx| &ctx.session_id)
+            .ok_or_else(|| {
+                ApiError::bad_request(
+                    "safe workspace requires session persistence; configure storage and retry",
+                )
+            })?;
+        let source_path = project_path.as_deref().ok_or_else(|| {
+            ApiError::bad_request("safe workspace requires a linked local project directory")
+        })?;
+        project_path =
+            Some(prepare_safe_turn_workspace(&state, &project_id, session_id, source_path).await?);
+        // Keep safe and legacy harness sessions in separate warm-session
+        // partitions. Otherwise enabling isolation on an existing chat could
+        // reuse a harness that was opened with the original shared path.
+        session_key.push_str("::safe-workspace");
+    }
 
     let model = pick_instance_model(&body, &instance);
 

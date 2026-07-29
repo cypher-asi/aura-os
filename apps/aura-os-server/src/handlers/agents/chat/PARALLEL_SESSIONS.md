@@ -22,27 +22,29 @@ layer**.
   the legacy two-segment partition on a parse failure so the chat
   path keeps working without the session-level lane split.
 
-## What is **not** isolated per session today
+## Workspace isolation is opt-in
 
-- **Working directory / cwd**: a project's working directory is
-  keyed at the project level, not the session level. Two concurrent
-  destructive turns on the same instance can race on filesystem
-  state (e.g. one turn renaming a file the other turn is reading).
+- **Default behavior**: a project's working directory is keyed at the
+  project level. Two concurrent destructive turns can still race when
+  safe workspace mode is not enabled.
+- **Safe workspace behavior**: project-agent chat can send
+  `safe_workspace: true`. Aura creates a detached Git worktree for the
+  storage session, points the harness at that path, and snapshots its
+  non-ignored filesystem before turns. Checkpoint preview, exact restore,
+  and conflict-checked apply-back APIs live in
+  `handlers/agents/safe_workspace.rs`.
 - **Terminal PTY**: the long-lived PTY attached to a project's
-  terminal tool is shared across sessions of that project. Two
-  concurrent turns issuing terminal commands will interleave
-  command output on the same PTY.
-- **Destructive file / command tools**: `write_file`, `delete_file`,
-  shell-exec, and similar are not session-scoped. Concurrent
-  destructive turns can interleave in ways that are not
-  deterministic and not safely undoable.
+  visible terminal remains attached to the original project. It is not
+  retargeted to the safe worktree.
+- **Eligibility**: safe workspaces currently require a persisted session
+  and a linked local Git repository. Remote agents keep the existing
+  execution model.
 
 For chat-only or read-only workloads (e.g. side conversations,
 "ask about this code" sessions running alongside a long-running
-coding turn) the shared workspace is harmless. For two simultaneous
-*editing* turns on the same instance, callers should expect
-interleaved writes today; per-session worktree isolation is the
-planned follow-up.
+coding turn) the shared workspace remains available. Editing turns that
+need deterministic isolation should opt into safe workspace mode and use
+the explicit apply action to hand changes back to the linked project.
 
 ## Cross-feature serialization
 
@@ -68,3 +70,5 @@ storage sessions on a single instance can stream in parallel.
   registry probe / sweep both reset endpoints use.
 - [`apps/aura-os-server/src/handlers/agents/chat/CROSS_AGENT_TRACING.md`]
   — sibling tracing reference for the cross-agent reply pipeline.
+- [`apps/aura-os-server/src/handlers/agents/safe_workspace.rs`] —
+  per-session worktree, checkpoint, restore, and apply-back lifecycle.

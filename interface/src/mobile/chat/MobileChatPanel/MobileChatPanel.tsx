@@ -28,18 +28,21 @@ export function MobileChatPanel({
       {...props}
       InputBarComponent={MobileChatInputBar}
       header={
-        props.agentName ? (
-          <MobileChatHeader
-            agentName={props.agentName}
-            machineType={props.machineType}
-            action={mobileHeaderAction}
-            onSummaryClick={onMobileHeaderSummaryClick}
-            summaryTo={mobileHeaderSummaryTo}
-            summaryHint={mobileHeaderSummaryHint}
-            summaryLabel={mobileHeaderSummaryLabel}
-            summaryKind={mobileHeaderSummaryKind}
-          />
-        ) : null
+        <>
+          {props.agentName ? (
+            <MobileChatHeader
+              agentName={props.agentName}
+              machineType={props.machineType}
+              action={mobileHeaderAction}
+              onSummaryClick={onMobileHeaderSummaryClick}
+              summaryTo={mobileHeaderSummaryTo}
+              summaryHint={mobileHeaderSummaryHint}
+              summaryLabel={mobileHeaderSummaryLabel}
+              summaryKind={mobileHeaderSummaryKind}
+            />
+          ) : null}
+          {props.header}
+        </>
       }
     />
   );

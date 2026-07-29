@@ -180,6 +180,22 @@ pub(super) fn agent_routes() -> Router<AppState> {
             get(agents::get_session).delete(agents::delete_session),
         )
         .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/safe-workspace",
+            get(agents::get_safe_workspace_status),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/safe-workspace/apply",
+            post(agents::apply_safe_workspace_to_project),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/safe-workspace/checkpoints/:checkpoint_id/diff",
+            get(agents::get_safe_workspace_checkpoint_diff),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/safe-workspace/checkpoints/:checkpoint_id/restore",
+            post(agents::restore_safe_workspace_checkpoint),
+        )
+        .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/tasks",
             get(agents::list_session_tasks),
         )

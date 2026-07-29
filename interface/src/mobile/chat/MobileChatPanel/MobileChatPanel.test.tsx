@@ -63,4 +63,11 @@ describe("MobileChatPanel", () => {
     expect(screen.getByRole("link", { name: "Open details for Coca" })).toBeInTheDocument();
     expect(screen.getByText("2 agents in project")).toBeInTheDocument();
   });
+
+  it("keeps caller-provided controls below the mobile header", () => {
+    renderMobilePanel({ header: <div>Safe workspace controls</div> });
+
+    expect(screen.getByText("Coca")).toBeInTheDocument();
+    expect(screen.getByText("Safe workspace controls")).toBeInTheDocument();
+  });
 });

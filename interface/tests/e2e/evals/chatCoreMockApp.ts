@@ -405,6 +405,18 @@ export async function installChatCoreMockApp(
       `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/events`;
     const projectSessionEventsPath =
       `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions/${chatSession.session_id}/events`;
+    const safeWorkspaceStatusPath =
+      `/api/projects/${scenario.project.projectId}/agents/${scenario.agent.agentInstanceId}/sessions/${chatSession.session_id}/safe-workspace`;
+    if (pathname === safeWorkspaceStatusPath && method === "GET") {
+      return json(route, {
+        enabled: false,
+        workspacePath: null,
+        sourcePath: null,
+        baseCommit: null,
+        createdAt: null,
+        checkpoints: [],
+      });
+    }
     if (
       pathname === projectAgentEventsPath ||
       pathname === `${projectAgentEventsPath}/paginated` ||
