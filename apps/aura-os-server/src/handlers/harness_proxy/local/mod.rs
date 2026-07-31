@@ -16,15 +16,18 @@ mod discover;
 mod frontmatter;
 mod manage;
 mod migrate;
+mod sync;
 mod update;
 
 pub(crate) use create::{
-    create_skill, create_skill_from_payload, install_from_shop, CreateSkillBody,
+    create_skill, create_skill_from_payload_synced, install_from_shop, CreateSkillBody,
 };
 pub(crate) use discover::{discover_skill_paths, get_skill_content};
 pub(crate) use manage::{delete_my_skill, get_my_skill, list_my_skills};
 pub(crate) use migrate::repair_user_created_skill_names;
-pub(crate) use update::{update_my_skill, update_my_skill_from_payload, UpdateSkillBody};
+pub(crate) use sync::{adopt_installed_legacy_skill, cloud_skill_metadata_for_name};
+pub(crate) use sync::{find_cloud_skill_by_name, materialize_cloud_skill, sync_all_cloud_skills};
+pub(crate) use update::{update_my_skill, update_my_skill_from_payload_synced, UpdateSkillBody};
 
 /// Marker written into the YAML frontmatter of every skill created via the
 /// `POST /api/harness/skills` endpoint. Used by `list_my_skills` to separate
@@ -55,15 +58,47 @@ pub(crate) fn skill_exists_on_disk(name: &str) -> bool {
 }
 
 pub(super) fn create_skill_name_valid(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= 64
-        && name
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    let is_alphanumeric = |c: char| c.is_ascii_lowercase() || c.is_ascii_digit();
+
+    name.len() <= 64
+        && is_alphanumeric(first)
+        && name.chars().last().is_some_and(is_alphanumeric)
+        && chars.all(|c| is_alphanumeric(c) || c == '-')
 }
 
 pub(super) fn skills_base_dir() -> std::path::PathBuf {
     std::env::var("SKILLS_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| std::path::PathBuf::from("skills"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::create_skill_name_valid;
+
+    #[test]
+    fn skill_names_match_canonical_storage_constraints() {
+        for valid in ["a", "skill-1", "1-skill", &"a".repeat(64)] {
+            assert!(create_skill_name_valid(valid), "{valid:?} should be valid");
+        }
+
+        for invalid in [
+            "",
+            "-skill",
+            "skill-",
+            "Skill",
+            "skill_name",
+            "skill name",
+            &"a".repeat(65),
+        ] {
+            assert!(
+                !create_skill_name_valid(invalid),
+                "{invalid:?} should be invalid"
+            );
+        }
+    }
 }

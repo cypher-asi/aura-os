@@ -25,8 +25,7 @@ use thiserror::Error;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects_helpers::{
-    execution_workspace_authority, resolve_project_tool_workspace_path,
-    ExecutionWorkspaceAuthority,
+    execution_workspace_authority, resolve_project_tool_workspace_path, ExecutionWorkspaceAuthority,
 };
 use crate::harness_gateway::HarnessJsonError;
 use crate::state::{AppState, AuthJwt, ChatSessionKey};
@@ -247,8 +246,26 @@ fn command_error(output: &Output) -> String {
     }
 }
 
+/// Construct a Git child without allocating a transient console window from
+/// Aura's GUI process on Windows. Safe Workspace performs several short Git
+/// probes per turn; allowing each one to allocate a console is the visible
+/// "window flashes and disappears" regression reported by desktop users.
+#[cfg(not(target_os = "windows"))]
+fn git_command() -> Command {
+    Command::new("git")
+}
+
+#[cfg(target_os = "windows")]
+fn git_command() -> Command {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let mut command = Command::new("git");
+    command.creation_flags(CREATE_NO_WINDOW);
+    command
+}
+
 fn run_git(cwd: &Path, args: &[&str]) -> Result<Output, SafeWorkspaceError> {
-    let output = Command::new("git").current_dir(cwd).args(args).output()?;
+    let output = git_command().current_dir(cwd).args(args).output()?;
     if output.status.success() {
         Ok(output)
     } else {
@@ -261,7 +278,7 @@ fn run_git_with_input(
     args: &[&str],
     input: &[u8],
 ) -> Result<Output, SafeWorkspaceError> {
-    let mut child = Command::new("git")
+    let mut child = git_command()
         .current_dir(cwd)
         .args(args)
         .stdin(Stdio::piped())
@@ -286,7 +303,7 @@ fn shadow_command(metadata: &WorkspaceMetadata) -> Command {
         .workspace_root
         .parent()
         .expect("managed worktree always has a session root");
-    let mut command = Command::new("git");
+    let mut command = git_command();
     command
         .current_dir(&metadata.workspace_root)
         .env("GIT_DIR", root.join(CHECKPOINT_STORE_DIR))
@@ -324,7 +341,7 @@ fn source_supports_safe_workspace(source_path: &Path) -> bool {
     let Ok(source_path) = source_path.canonicalize() else {
         return false;
     };
-    let Ok(root_probe) = Command::new("git")
+    let Ok(root_probe) = git_command()
         .current_dir(&source_path)
         .args(["rev-parse", "--show-toplevel"])
         .output()
@@ -340,7 +357,7 @@ fn source_supports_safe_workspace(source_path: &Path) -> bool {
     if !source_path.starts_with(&source_repo) {
         return false;
     }
-    Command::new("git")
+    git_command()
         .current_dir(source_repo)
         .args(["rev-parse", "--verify", "HEAD"])
         .output()
@@ -396,7 +413,7 @@ fn initialize_shadow_store(metadata: &WorkspaceMetadata) -> Result<(), SafeWorks
     let store = root.join(CHECKPOINT_STORE_DIR);
     if !store.join("HEAD").exists() {
         fs::create_dir_all(&store)?;
-        let output = Command::new("git")
+        let output = git_command()
             .args(["init", "--bare", store.to_string_lossy().as_ref()])
             .output()?;
         if !output.status.success() {
@@ -536,7 +553,7 @@ fn clean_incomplete_workspace(
 ) -> Result<(), SafeWorkspaceError> {
     if workspace_root.exists() {
         let workspace_arg = workspace_root.to_string_lossy().to_string();
-        let _ = Command::new("git")
+        let _ = git_command()
             .current_dir(source_repo)
             .args(["worktree", "remove", "--force", &workspace_arg])
             .output()?;

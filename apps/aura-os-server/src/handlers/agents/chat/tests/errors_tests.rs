@@ -44,6 +44,19 @@ fn maps_local_harness_connect_errors_to_service_unavailable() {
 }
 
 #[test]
+fn maps_local_harness_run_transport_failure_to_service_unavailable() {
+    let (status, body) = map_harness_session_startup_error(
+        "harness POST /v1/run transport failure: local harness POST /v1/run failed: \
+         error sending request for url (http://127.0.0.1:19080/v1/run)",
+    );
+
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(body.0.code, "service_unavailable");
+    assert!(body.0.error.contains("managed harness"));
+    assert!(!body.0.error.contains("localhost:8080"));
+}
+
+#[test]
 fn maps_v1_run_404_to_bad_gateway_with_actionable_message() {
     // The `HarnessError::UpstreamStatus` Display string, flattened
     // through `SessionBridgeError::Open` on the chat cold-open path.

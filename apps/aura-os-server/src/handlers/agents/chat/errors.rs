@@ -293,8 +293,14 @@ pub(super) fn map_harness_session_startup_error(message: &str) -> (StatusCode, J
         return ApiError::service_unavailable(format!("local harness is unavailable: {message}"));
     }
 
-    if normalized.contains("local harness post /v1/run failed")
-        || normalized.contains("harness error during init")
+    if normalized.contains("local harness post /v1/run failed") {
+        return ApiError::service_unavailable(format!(
+            "local agent runtime is unavailable. Aura could not reach its managed harness; \
+             restart Aura to retry recovery. Details: {message}"
+        ));
+    }
+
+    if normalized.contains("harness error during init")
         || normalized.contains("connection closed before session_ready")
     {
         return ApiError::bad_gateway(format!("local harness startup failed: {message}"));

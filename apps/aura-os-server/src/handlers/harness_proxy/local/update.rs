@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use axum::Json;
 use serde::Deserialize;
 
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 use super::create::{
     normalize_agent_target, render_skill_frontmatter, SkillAgentTarget, SkillFrontmatterOptions,
@@ -15,7 +15,7 @@ use super::create::{
 use super::frontmatter::extract_frontmatter_field;
 use super::{create_skill_name_valid, user_skills_root, USER_CREATED_SOURCE_MARKER};
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct UpdateSkillBody {
     pub description: String,
     pub body: Option<String>,
@@ -49,10 +49,11 @@ pub(crate) struct UpdateSkillResponse {
 ///   shop-installed skill that happens to share the on-disk layout.
 pub(crate) async fn update_my_skill(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(name): Path<String>,
     Json(payload): Json<UpdateSkillBody>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let resp = update_my_skill_from_payload(&state, name, payload).await?;
+    let resp = update_my_skill_from_payload_synced(&state, &jwt, name, payload).await?;
     let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((
         StatusCode::OK,
@@ -60,6 +61,25 @@ pub(crate) async fn update_my_skill(
         body,
     )
         .into_response())
+}
+
+pub(crate) async fn update_my_skill_from_payload_synced(
+    state: &AppState,
+    jwt: &str,
+    name: String,
+    payload: UpdateSkillBody,
+) -> Result<UpdateSkillResponse, StatusCode> {
+    let metadata = super::sync::cloud_skill_metadata_for_name(&name);
+    let response = update_my_skill_from_payload(state, name.clone(), payload.clone()).await?;
+    if let Some(metadata) = metadata {
+        super::sync::sync_updated_skill(state, jwt, &name, metadata, &payload)
+            .await
+            .map_err(|error| match error {
+                aura_os_storage::StorageError::Server { status: 409, .. } => StatusCode::CONFLICT,
+                _ => StatusCode::BAD_GATEWAY,
+            })?;
+    }
+    Ok(response)
 }
 
 pub(crate) async fn update_my_skill_from_payload(
@@ -85,17 +105,20 @@ pub(crate) async fn update_my_skill_from_payload(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let frontmatter = render_skill_frontmatter(
-        &name,
-        &payload.description,
-        SkillFrontmatterOptions {
-            allowed_tools: payload.allowed_tools.as_deref(),
-            model: payload.model.as_deref(),
-            context: payload.context.as_deref(),
-            user_invocable: payload.user_invocable.unwrap_or(true),
-            model_invocable: payload.model_invocable.unwrap_or(false),
-            agent_target: payload.agent_target.as_ref(),
-        },
+    let frontmatter = super::sync::preserve_cloud_metadata(
+        render_skill_frontmatter(
+            &name,
+            &payload.description,
+            SkillFrontmatterOptions {
+                allowed_tools: payload.allowed_tools.as_deref(),
+                model: payload.model.as_deref(),
+                context: payload.context.as_deref(),
+                user_invocable: payload.user_invocable.unwrap_or(true),
+                model_invocable: payload.model_invocable.unwrap_or(false),
+                agent_target: payload.agent_target.as_ref(),
+            },
+        ),
+        &existing,
     );
     let body_text = payload.body.clone().unwrap_or_default();
     let content = format!("{frontmatter}\n{body_text}");

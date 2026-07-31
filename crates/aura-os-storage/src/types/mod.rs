@@ -14,6 +14,7 @@ pub mod project_artifact;
 pub mod project_stats;
 pub mod session;
 pub mod session_event;
+pub mod skill;
 pub mod spec;
 pub mod task;
 
@@ -41,6 +42,9 @@ pub use session::{
     SESSION_STATUS_DELETED,
 };
 pub use session_event::{CreateSessionEventRequest, StorageSessionEvent};
+pub use skill::{
+    CreateStorageSkillRequest, StorageAgentSkillAssignment, StorageSkill, UpdateStorageSkillRequest,
+};
 pub use spec::{CreateSpecRequest, StorageSpec, UpdateSpecRequest};
 pub use task::{
     CreateTaskRequest, StorageTask, StorageTaskFileChangeSummary, TransitionTaskRequest,

@@ -252,13 +252,13 @@ function AuthedActions({
   splitScreenActive,
   onToggleSplitScreen,
 }: AuthedActionsProps): React.ReactElement {
-  const { remoteOnly } = useAuraCapabilities();
+  const { hasDesktopBridge, remoteOnly } = useAuraCapabilities();
   return (
     <div
       className={styles.titleActions}
       onDoubleClick={(e) => e.stopPropagation()}
     >
-      {remoteOnly && (
+      {remoteOnly && !hasDesktopBridge && (
         <button
           type="button"
           className={`${styles.authPill} ${styles.authPillSecondary} ${styles.authedDownloadPill}`}

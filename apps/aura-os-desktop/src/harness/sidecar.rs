@@ -8,6 +8,7 @@ use tracing::{info, warn};
 
 use crate::harness::binary::{
     inherited_managed_harness_binary_env, resolve_managed_harness_binary,
+    restage_bundled_harness_binary,
 };
 use crate::init::env::env_string;
 use crate::net::probe::{is_local_bind_host, parse_host_port, probe_http_ok};
@@ -83,12 +84,35 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
         command.env("ORBIT_URL", orbit_url);
     }
 
-    let child = spawn_and_wait_for_health(command, &harness_url, &harness_binary);
+    let child = spawn_and_wait_for_health(command, &harness_url, &harness_binary).or_else(|| {
+        let retry_binary = restage_bundled_harness_binary(&harness_binary, data_dir)?;
+        std::env::set_var("AURA_HARNESS_BIN", &retry_binary);
+        let mut retry_command = Command::new(&retry_binary);
+        retry_command
+            .env("AURA_LISTEN_ADDR", &listen_addr)
+            .env("AURA_DATA_DIR", &harness_data_dir);
+        configure_background_child(&mut retry_command, &harness_data_dir.join("sidecar.log"));
+        if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
+            retry_command.env("ORBIT_URL", orbit_url);
+        }
+        warn!(
+            binary = %retry_binary.display(),
+            url = %harness_url,
+            "retrying managed local harness once with a fresh bundled binary"
+        );
+        spawn_and_wait_for_health(retry_command, &harness_url, &retry_binary)
+    });
     if child.is_none() {
         std::env::remove_var("AURA_HARNESS_BIN");
-        if !has_external_harness_url {
-            std::env::remove_var("LOCAL_HARNESS_URL");
-        }
+        // Keep LOCAL_HARNESS_URL pinned to the managed endpoint. Removing it
+        // makes the embedded server silently rebuild its client from the
+        // stable-channel default (localhost:8080), which can never recover
+        // this failed sidecar and turns the useful startup failure into an
+        // unrelated 502 against the wrong port.
+        warn!(
+            url = %harness_url,
+            "managed local harness is unavailable; preserving configured endpoint to prevent fallback routing"
+        );
     }
     child
 }
@@ -174,12 +198,12 @@ fn stop_stale_managed_sidecar_if_needed(
     for process in managed_sidecars_listening_on_port(port, &managed_dir, expected_binary) {
         match process.kind {
             ManagedSidecarKind::Current => {
-                info!(
+                warn!(
                     pid = process.pid,
                     binary = %expected_binary.display(),
-                    "current managed local harness sidecar already owns the port"
+                    "stopping orphaned managed local harness sidecar before launch"
                 );
-                return;
+                terminate_stale_managed_sidecar(process.pid, harness_url);
             }
             ManagedSidecarKind::Stale => {
                 warn!(

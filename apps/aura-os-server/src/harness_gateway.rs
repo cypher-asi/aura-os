@@ -80,6 +80,24 @@ impl HarnessHttpGateway {
         is_hosted_harness_base_url(&self.base_url) && !self.has_transport_auth()
     }
 
+    /// Confirm that the configured harness is actually serving requests.
+    /// Configuration alone is not availability: desktop must fail closed
+    /// when its managed sidecar did not start, and hosted deployments must
+    /// also have transport auth before they can advertise local agents.
+    pub(crate) async fn runtime_available(&self) -> bool {
+        if self.hosted_base_requires_transport_auth() {
+            return false;
+        }
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            self.fetch_json(Method::GET, "health"),
+        )
+        .await
+        .ok()
+        .flatten()
+        .is_some()
+    }
+
     /// Whether the separately deployed local harness owns the Safe Workspace
     /// lifecycle API. Missing fields and failed probes deliberately mean
     /// unsupported so mixed-version Render deployments fail closed.
@@ -87,11 +105,14 @@ impl HarnessHttpGateway {
         if !self.hosted_local_runtime_available() {
             return false;
         }
-        tokio::time::timeout(Duration::from_secs(2), self.fetch_json(Method::GET, "health"))
-            .await
-            .ok()
-            .flatten()
-            .is_some_and(|health| health_advertises_safe_workspace(&health))
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            self.fetch_json(Method::GET, "health"),
+        )
+        .await
+        .ok()
+        .flatten()
+        .is_some_and(|health| health_advertises_safe_workspace(&health))
     }
 
     /// Call a hosted Safe Workspace endpoint and preserve both the upstream
@@ -338,6 +359,7 @@ fn health_advertises_safe_workspace(health: &serde_json::Value) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{health_advertises_safe_workspace, HarnessHttpGateway};
+    use axum::{routing::get, Json, Router};
 
     #[test]
     fn harness_url_keeps_base_host_and_encodes_segments() {
@@ -392,5 +414,32 @@ mod tests {
         assert!(health_advertises_safe_workspace(&serde_json::json!({
             "safe_workspace": true
         })));
+    }
+
+    #[tokio::test]
+    async fn runtime_availability_requires_a_live_health_response() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(
+                listener,
+                Router::new().route(
+                    "/health",
+                    get(|| async { Json(serde_json::json!({ "status": "ok" })) }),
+                ),
+            )
+            .await
+            .unwrap();
+        });
+
+        let gateway = HarnessHttpGateway::new(format!("http://{address}"));
+        assert!(gateway.runtime_available().await);
+        server.abort();
+
+        let closed_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let closed_address = closed_listener.local_addr().unwrap();
+        drop(closed_listener);
+        let unavailable = HarnessHttpGateway::new(format!("http://{closed_address}"));
+        assert!(!unavailable.runtime_available().await);
     }
 }

@@ -7,14 +7,14 @@ use axum::response::IntoResponse;
 use axum::Json;
 use serde::Deserialize;
 
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 use super::frontmatter::{extract_frontmatter_field, strip_frontmatter, yaml_escape_scalar};
 use super::{
     create_skill_name_valid, skills_base_dir, user_skills_root, USER_CREATED_SOURCE_MARKER,
 };
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct CreateSkillBody {
     pub name: String,
     pub description: String,
@@ -170,9 +170,10 @@ async fn maybe_install_on_agent(
 
 pub(crate) async fn create_skill(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(payload): Json<CreateSkillBody>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let resp = create_skill_from_payload(&state, payload).await?;
+    let resp = create_skill_from_payload_synced(&state, &jwt, payload).await?;
     let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((
         StatusCode::CREATED,
@@ -180,6 +181,17 @@ pub(crate) async fn create_skill(
         body,
     )
         .into_response())
+}
+
+pub(crate) async fn create_skill_from_payload_synced(
+    state: &AppState,
+    jwt: &str,
+    payload: CreateSkillBody,
+) -> Result<CreateSkillResponse, StatusCode> {
+    let sync_payload = payload.clone();
+    let response = create_skill_from_payload(state, payload).await?;
+    super::sync::sync_created_skill(state, jwt, &sync_payload).await;
+    Ok(response)
 }
 
 pub(crate) async fn create_skill_from_payload(
