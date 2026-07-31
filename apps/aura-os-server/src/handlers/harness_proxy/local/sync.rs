@@ -108,6 +108,24 @@ async fn materialize_owned_cloud_skill(state: &AppState, skill: &StorageSkill) -
     materialize_cloud_skill_inner(state, skill, true).await
 }
 
+async fn register_cloud_skill_with_harness(state: &AppState, skill: &StorageSkill) -> bool {
+    state
+        .harness_http
+        .post_json_ok(
+            "api/skills",
+            serde_json::json!({
+                "name": skill.name,
+                "description": skill.description,
+                "body": skill.body,
+                "user_invocable": skill.user_invocable,
+                "model_invocable": skill.model_invocable,
+                "agent_target": skill.agent_target,
+            })
+            .to_string(),
+        )
+        .await
+}
+
 async fn materialize_cloud_skill_inner(
     state: &AppState,
     skill: &StorageSkill,
@@ -142,7 +160,14 @@ async fn materialize_cloud_skill_inner(
         if existing_hash == skill.content_hash
             && existing_metadata.is_some_and(|metadata| metadata.revision == skill.revision)
         {
-            return true;
+            // The hosted Harness is a separate service with its own
+            // filesystem and in-memory registry. Aura API's local marker
+            // file can therefore be current while the hosted registry was
+            // emptied by a restart or deploy. Re-register there before
+            // treating the definition as materialized. Desktop keeps the
+            // old fast path because its sidecar scans the same local file.
+            return !state.harness_http.hosted_local_runtime_available()
+                || register_cloud_skill_with_harness(state, skill).await;
         }
     }
 
@@ -151,21 +176,13 @@ async fn materialize_cloud_skill_inner(
         return false;
     }
 
-    state
-        .harness_http
-        .post_json_ignore_result(
-            "api/skills",
-            serde_json::json!({
-                "name": skill.name,
-                "description": skill.description,
-                "body": skill.body,
-                "user_invocable": skill.user_invocable,
-                "model_invocable": skill.model_invocable,
-                "agent_target": skill.agent_target,
-            })
-            .to_string(),
-        )
-        .await;
+    if !register_cloud_skill_with_harness(state, skill).await {
+        warn!(
+            skill = %skill.name,
+            "harness rejected canonical cloud skill registration; sync will retry"
+        );
+        return false;
+    }
 
     if let Err(error) = std::fs::write(&skill_path, render_cloud_skill(skill)) {
         warn!(%error, skill = %skill.name, "failed to materialize cloud skill");

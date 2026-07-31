@@ -14,4 +14,5 @@ mod self_improvement;
 mod skills_create;
 mod skills_delete;
 mod skills_list;
+mod skills_sync;
 mod skills_update;

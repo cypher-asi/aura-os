@@ -323,23 +323,37 @@ async fn reconcile_cloud_agent_skills(state: &AppState, jwt: &str, agent_id: &Ag
         }
     };
     for skill in cloud_skills {
-        materialize_cloud_skill(state, &skill).await;
+        if !materialize_cloud_skill(state, &skill).await {
+            warn!(
+                skill = %skill.name,
+                agent = %agent_id,
+                "canonical skill definition is not available in the harness; assignment sync will retry"
+            );
+            continue;
+        }
         if installed.contains(&skill.name) {
             // Existing installations retain their device-local grants.
             continue;
         }
-        state
+        let installed_ok = state
             .harness_http
-            .post_json_ignore_result(
+            .post_json_ok(
                 &format!("api/agents/{agent_id}/skills"),
                 serde_json::json!({
-                    "name": skill.name,
+                    "name": &skill.name,
                     "approved_paths": [],
                     "approved_commands": [],
                 })
                 .to_string(),
             )
             .await;
+        if !installed_ok {
+            warn!(
+                skill = %skill.name,
+                agent = %agent_id,
+                "harness rejected canonical agent-skill assignment; sync will retry"
+            );
+        }
     }
 }
 
