@@ -2,18 +2,18 @@
   {
     "date": "2026-07-31",
     "channel": "nightly",
-    "version": "0.1.0-nightly.780.1",
-    "title": "Safer Safe Workspace gating and a hardened desktop harness",
-    "intro": "Today's nightly tightens where Safe Workspace can be offered and gives the desktop harness a more resilient path to finding, staging, and syncing its sidecar binary and skills. The result is fewer confusing prompts in non-Git projects and a steadier bootstrap on packaged Mac, Windows, and Linux builds.",
+    "version": "0.1.0-nightly.781.1",
+    "title": "Safer worktree isolation and a sturdier desktop harness",
+    "intro": "Today's nightly tightens two things that quietly shape day-to-day agent work: when Safe Workspace is offered to you, and how reliably the desktop harness and its cloud skills survive real-world restarts. The result is fewer confusing prompts in non-Git folders, a harness sidecar that finds its binary from a signed bundle, and hosted skill sync that actually notices when the remote registry has drifted.",
     "entryCount": 2,
     "highlights": [
-      "Safe Workspace now hides itself outside real Git repos",
-      "Desktop harness locates its sidecar next to the signed bundle first",
-      "New skills sync pipeline in the harness proxy"
+      "Safe Workspace now hidden in non-Git folders",
+      "Desktop harness resolves its sidecar from the signed app bundle",
+      "Hosted skill sync detects and retries drift against the remote Harness"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-07-31T11:31:27.704Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.780.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-07-31T12:55:10.205Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.781.1",
     "path": "history/2026-07-31.json"
   },
   {

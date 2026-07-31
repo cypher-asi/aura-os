@@ -3,20 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-07-31T11:31:27.704Z",
+  "generatedAt": "2026-07-31T12:55:10.205Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.780.1",
+  "version": "0.1.0-nightly.781.1",
   "date": "2026-07-31",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.780.1",
-  "lastIncludedSha": "6cc5f3463ef86e9c8f009237597e399cafce2910",
-  "previousProcessedSha": "28c45cb07ca2680509358a5a8c36053867480b21",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.781.1",
+  "lastIncludedSha": "55487d1f805693cb9997dd2b4bd73f0d2043788c",
+  "previousProcessedSha": "6cc5f3463ef86e9c8f009237597e399cafce2910",
   "commitShas": [
     "399c6144989f41660a252f27b3d992fa6da4f25e",
-    "6cc5f3463ef86e9c8f009237597e399cafce2910"
+    "6cc5f3463ef86e9c8f009237597e399cafce2910",
+    "55487d1f805693cb9997dd2b4bd73f0d2043788c"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "399c6144989f41660a252f27b3d992fa6da4f25e",
@@ -133,6 +134,47 @@
         "Interface",
         "Desktop"
       ]
+    },
+    {
+      "sha": "55487d1f805693cb9997dd2b4bd73f0d2043788c",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-07-31T17:29:50+05:00",
+      "subject": "Harden hosted skill reconciliation (#127)",
+      "body": "",
+      "parents": [
+        "6cc5f3463ef86e9c8f009237597e399cafce2910"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/harness_proxy/local/sync.rs",
+        "apps/aura-os-server/src/handlers/harness_proxy/skills.rs",
+        "apps/aura-os-server/src/harness_gateway.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/main.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/skills_sync.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 295,
+        "deletions": 21
+      },
+      "committedAtMs": 1785500990000,
+      "cleanSubject": "Harden hosted skill reconciliation (#127)",
+      "keywords": [
+        "harden",
+        "hosted",
+        "skill",
+        "reconciliation"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 2,
@@ -140,29 +182,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.780.1",
+      "version": "0.1.0-nightly.781.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66244672
+          "sizeBytes": 66272294
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132745720
+          "sizeBytes": 132790776
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -172,29 +214,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.780.1",
+      "version": "0.1.0-nightly.781.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.780.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.781.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61892588
+          "sizeBytes": 61885047
         },
         {
-          "name": "AURA_0.1.0-nightly.780.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.781.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60894701
+          "sizeBytes": 60888892
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -204,29 +246,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.780.1",
+      "version": "0.1.0-nightly.781.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.780.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.781.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64164051
+          "sizeBytes": 64197758
         },
         {
-          "name": "AURA_0.1.0-nightly.780.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.781.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63140271
+          "sizeBytes": 63204367
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -236,17 +278,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.780.1",
+      "version": "0.1.0-nightly.781.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48817957
+          "sizeBytes": 48834894
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.780.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.781.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -255,8 +297,8 @@
     }
   ],
   "rendered": {
-    "title": "Safer Safe Workspace gating and a hardened desktop harness",
-    "intro": "Today's nightly tightens where Safe Workspace can be offered and gives the desktop harness a more resilient path to finding, staging, and syncing its sidecar binary and skills. The result is fewer confusing prompts in non-Git projects and a steadier bootstrap on packaged Mac, Windows, and Linux builds.",
+    "title": "Safer worktree isolation and a sturdier desktop harness",
+    "intro": "Today's nightly tightens two things that quietly shape day-to-day agent work: when Safe Workspace is offered to you, and how reliably the desktop harness and its cloud skills survive real-world restarts. The result is fewer confusing prompts in non-Git folders, a harness sidecar that finds its binary from a signed bundle, and hosted skill sync that actually notices when the remote registry has drifted.",
     "entries": [
       {
         "batch_id": "entry-1",
@@ -264,28 +306,28 @@
         "started_at": "2026-07-29T11:54:16.000Z",
         "ended_at": "2026-07-29T11:54:16.000Z",
         "title": "Safe Workspace hidden outside Git-backed projects",
-        "summary": "The agent chat panel now checks eligibility before offering Safe Workspace, so folders that aren't Git repositories no longer see an option that would immediately fail.",
+        "summary": "The Agent Chat panel now performs a read-only eligibility check before advertising Safe Workspace, so the option only surfaces where worktree isolation can actually work.",
         "items": [
           {
-            "text": "Added a read-only preflight that only advertises Safe Workspace when the linked desktop folder resolves to a Git repository with at least one commit, avoiding any attempt to initialise or mutate a user's source folder.",
+            "text": "Added a dedicated eligibility endpoint that probes whether the linked desktop folder is inside a Git repository with at least one commit, and hides the Safe Workspace affordance in the Agent Chat panel otherwise.",
             "commit_shas": [
               "399c6144989f41660a252f27b3d992fa6da4f25e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Exposed a new eligibility endpoint and wired the Agent Chat Panel to hide the Safe Workspace affordance when the backend reports it unavailable.",
+            "text": "Preflight is strictly read-only: Aura never runs git init or mutates a user's source folder, and unsupported cases now return a clear \"not a Git repository\" or \"needs at least one commit\" message instead of a generic failure.",
             "commit_shas": [
               "399c6144989f41660a252f27b3d992fa6da4f25e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Turned previously opaque Git failures during workspace prep into clearer 'not a Git repository' and 'repository must have at least one commit' unsupported errors.",
+            "text": "Agent-instance access is now re-authorized against the owning project before Safe Workspace status is returned, closing a cross-project lookup gap.",
             "commit_shas": [
               "399c6144989f41660a252f27b3d992fa6da4f25e"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -293,46 +335,47 @@
         "batch_id": "entry-2",
         "time_label": "4:03 AM",
         "started_at": "2026-07-31T11:03:35.000Z",
-        "ended_at": "2026-07-31T11:03:35.000Z",
-        "title": "Desktop harness bootstrap and skills sync overhaul",
-        "summary": "A large stabilization pass reworks how the desktop app finds and re-stages its harness sidecar, and introduces a full skills sync path through the harness proxy backed by new storage types.",
+        "ended_at": "2026-07-31T12:29:50.000Z",
+        "title": "Desktop harness sidecar and hosted skill sync hardening",
+        "summary": "A larger stabilization pass reworks how the desktop app locates its harness binary and how the server reconciles cloud skills against a hosted Harness that may have restarted underneath it.",
         "items": [
           {
-            "text": "The desktop app now prefers the harness binary shipped next to the running executable and inside the packaged bundle's Resources directory before falling back to source-tree paths, sidestepping macOS Files & Folders permission prompts on packaged builds.",
+            "text": "Desktop now prefers the harness binary shipped next to the running executable — including the macOS .app Contents/Resources layout — before falling back to source-tree paths, avoiding a macOS Files & Folders permission prompt on launch and always running the signed, bundled sidecar.",
             "commit_shas": [
               "6cc5f3463ef86e9c8f009237597e399cafce2910"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a guarded re-staging path that can replace a broken managed harness copy with the freshly bundled binary, while leaving operator-provided AURA_HARNESS_BIN overrides untouched.",
+            "text": "Added a guarded re-stage path that can replace a broken managed harness copy from the current app bundle, while explicitly refusing to touch operator-provided AURA_HARNESS_BIN overrides.",
             "commit_shas": [
               "6cc5f3463ef86e9c8f009237597e399cafce2910"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a dedicated harness_proxy skills sync module (~700 new lines) plus a new skills storage client and skill types, giving the server a first-class path to create, manage, update, and sync local harness skills.",
+            "text": "Introduced a dedicated skills storage client and a new local harness-proxy sync module (~700 lines) so cloud skill definitions have a canonical materialization path shared by desktop and hosted deployments.",
             "commit_shas": [
               "6cc5f3463ef86e9c8f009237597e399cafce2910"
             ],
             "confidence": "high"
           },
           {
-            "text": "Refined chat error handling and capability hooks in the interface, with new tests covering agent chat error paths and Aura capability detection.",
+            "text": "Hosted skill reconciliation no longer trusts the local marker file alone: when the remote Harness is available, Aura re-POSTs the canonical definition and agent-skill assignment, logs a warning if the Harness rejects it, and lets sync retry — so a Harness restart or redeploy can no longer leave agents silently missing skills.",
             "commit_shas": [
-              "6cc5f3463ef86e9c8f009237597e399cafce2910"
+              "6cc5f3463ef86e9c8f009237597e399cafce2910",
+              "55487d1f805693cb9997dd2b4bd73f0d2043788c"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Safe Workspace now hides itself outside real Git repos",
-      "Desktop harness locates its sidecar next to the signed bundle first",
-      "New skills sync pipeline in the harness proxy"
+      "Safe Workspace now hidden in non-Git folders",
+      "Desktop harness resolves its sidecar from the signed app bundle",
+      "Hosted skill sync detects and retries drift against the remote Harness"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 3
   }
 }

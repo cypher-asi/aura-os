@@ -1,32 +1,32 @@
-# Safer Safe Workspace gating and a hardened desktop harness
+# Safer worktree isolation and a sturdier desktop harness
 
 - Date: `2026-07-31`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.780.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.780.1
+- Version: `0.1.0-nightly.781.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.781.1
 
-Today's nightly tightens where Safe Workspace can be offered and gives the desktop harness a more resilient path to finding, staging, and syncing its sidecar binary and skills. The result is fewer confusing prompts in non-Git projects and a steadier bootstrap on packaged Mac, Windows, and Linux builds.
+Today's nightly tightens two things that quietly shape day-to-day agent work: when Safe Workspace is offered to you, and how reliably the desktop harness and its cloud skills survive real-world restarts. The result is fewer confusing prompts in non-Git folders, a harness sidecar that finds its binary from a signed bundle, and hosted skill sync that actually notices when the remote registry has drifted.
 
 ## 4:54 AM — Safe Workspace hidden outside Git-backed projects
 
-The agent chat panel now checks eligibility before offering Safe Workspace, so folders that aren't Git repositories no longer see an option that would immediately fail.
+The Agent Chat panel now performs a read-only eligibility check before advertising Safe Workspace, so the option only surfaces where worktree isolation can actually work.
 
-- Added a read-only preflight that only advertises Safe Workspace when the linked desktop folder resolves to a Git repository with at least one commit, avoiding any attempt to initialise or mutate a user's source folder. (`399c614`)
-- Exposed a new eligibility endpoint and wired the Agent Chat Panel to hide the Safe Workspace affordance when the backend reports it unavailable. (`399c614`)
-- Turned previously opaque Git failures during workspace prep into clearer 'not a Git repository' and 'repository must have at least one commit' unsupported errors. (`399c614`)
+- Added a dedicated eligibility endpoint that probes whether the linked desktop folder is inside a Git repository with at least one commit, and hides the Safe Workspace affordance in the Agent Chat panel otherwise. (`399c614`)
+- Preflight is strictly read-only: Aura never runs git init or mutates a user's source folder, and unsupported cases now return a clear "not a Git repository" or "needs at least one commit" message instead of a generic failure. (`399c614`)
+- Agent-instance access is now re-authorized against the owning project before Safe Workspace status is returned, closing a cross-project lookup gap. (`399c614`)
 
-## 4:03 AM — Desktop harness bootstrap and skills sync overhaul
+## 4:03 AM — Desktop harness sidecar and hosted skill sync hardening
 
-A large stabilization pass reworks how the desktop app finds and re-stages its harness sidecar, and introduces a full skills sync path through the harness proxy backed by new storage types.
+A larger stabilization pass reworks how the desktop app locates its harness binary and how the server reconciles cloud skills against a hosted Harness that may have restarted underneath it.
 
-- The desktop app now prefers the harness binary shipped next to the running executable and inside the packaged bundle's Resources directory before falling back to source-tree paths, sidestepping macOS Files & Folders permission prompts on packaged builds. (`6cc5f34`)
-- Added a guarded re-staging path that can replace a broken managed harness copy with the freshly bundled binary, while leaving operator-provided AURA_HARNESS_BIN overrides untouched. (`6cc5f34`)
-- Introduced a dedicated harness_proxy skills sync module (~700 new lines) plus a new skills storage client and skill types, giving the server a first-class path to create, manage, update, and sync local harness skills. (`6cc5f34`)
-- Refined chat error handling and capability hooks in the interface, with new tests covering agent chat error paths and Aura capability detection. (`6cc5f34`)
+- Desktop now prefers the harness binary shipped next to the running executable — including the macOS .app Contents/Resources layout — before falling back to source-tree paths, avoiding a macOS Files & Folders permission prompt on launch and always running the signed, bundled sidecar. (`6cc5f34`)
+- Added a guarded re-stage path that can replace a broken managed harness copy from the current app bundle, while explicitly refusing to touch operator-provided AURA_HARNESS_BIN overrides. (`6cc5f34`)
+- Introduced a dedicated skills storage client and a new local harness-proxy sync module (~700 lines) so cloud skill definitions have a canonical materialization path shared by desktop and hosted deployments. (`6cc5f34`)
+- Hosted skill reconciliation no longer trusts the local marker file alone: when the remote Harness is available, Aura re-POSTs the canonical definition and agent-skill assignment, logs a warning if the Harness rejects it, and lets sync retry — so a Harness restart or redeploy can no longer leave agents silently missing skills. (`6cc5f34`, `55487d1`)
 
 ## Highlights
 
-- Safe Workspace now hides itself outside real Git repos
-- Desktop harness locates its sidecar next to the signed bundle first
-- New skills sync pipeline in the harness proxy
+- Safe Workspace now hidden in non-Git folders
+- Desktop harness resolves its sidecar from the signed app bundle
+- Hosted skill sync detects and retries drift against the remote Harness
 
