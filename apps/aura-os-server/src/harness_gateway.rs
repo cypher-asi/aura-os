@@ -359,7 +359,11 @@ fn health_advertises_safe_workspace(health: &serde_json::Value) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{health_advertises_safe_workspace, HarnessHttpGateway};
-    use axum::{routing::get, Json, Router};
+    use axum::{
+        http::StatusCode,
+        routing::{get, post},
+        Json, Router,
+    };
 
     #[test]
     fn harness_url_keeps_base_host_and_encodes_segments() {
@@ -441,5 +445,32 @@ mod tests {
         drop(closed_listener);
         let unavailable = HarnessHttpGateway::new(format!("http://{closed_address}"));
         assert!(!unavailable.runtime_available().await);
+    }
+
+    #[tokio::test]
+    async fn checked_json_post_reports_rejection_and_transport_failure() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(
+                listener,
+                Router::new()
+                    .route("/accepted", post(|| async { StatusCode::CREATED }))
+                    .route("/rejected", post(|| async { StatusCode::BAD_REQUEST })),
+            )
+            .await
+            .unwrap();
+        });
+
+        let gateway = HarnessHttpGateway::new(format!("http://{address}"));
+        assert!(gateway.post_json_ok("accepted", "{}".into()).await);
+        assert!(!gateway.post_json_ok("rejected", "{}".into()).await);
+        server.abort();
+
+        let closed_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let closed_address = closed_listener.local_addr().unwrap();
+        drop(closed_listener);
+        let unavailable = HarnessHttpGateway::new(format!("http://{closed_address}"));
+        assert!(!unavailable.post_json_ok("accepted", "{}".into()).await);
     }
 }
