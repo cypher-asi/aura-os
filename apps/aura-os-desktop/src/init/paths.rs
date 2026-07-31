@@ -23,11 +23,6 @@ pub(crate) fn default_data_dir() -> PathBuf {
 }
 
 pub(crate) fn find_interface_dir() -> Option<PathBuf> {
-    let compile_time = PathBuf::from(env!("INTERFACE_DIST_DIR"));
-    if compile_time.join("index.html").exists() {
-        return Some(compile_time);
-    }
-
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()));
@@ -35,13 +30,21 @@ pub(crate) fn find_interface_dir() -> Option<PathBuf> {
     interface_dir_candidates(exe_dir.as_deref())
         .into_iter()
         .find(|p| p.join("index.html").exists())
+        .or_else(|| {
+            // Source-tree fallback for `cargo run`. Packaged builds must use
+            // their own signed resource first: a compile-time path under
+            // Documents can be blocked by macOS privacy controls and leave
+            // the visible webview stuck on `about:blank`.
+            let compile_time = PathBuf::from(env!("INTERFACE_DIST_DIR"));
+            compile_time
+                .join("index.html")
+                .exists()
+                .then_some(compile_time)
+        })
 }
 
 pub(crate) fn interface_dir_candidates(exe_dir: Option<&Path>) -> Vec<PathBuf> {
-    let mut candidates = vec![
-        PathBuf::from("interface/dist"),
-        PathBuf::from("../../interface/dist"),
-    ];
+    let mut candidates = Vec::new();
     if let Some(dir) = exe_dir {
         candidates.push(dir.join("interface/dist"));
         candidates.push(dir.join("dist"));
@@ -50,6 +53,10 @@ pub(crate) fn interface_dir_candidates(exe_dir: Option<&Path>) -> Vec<PathBuf> {
             candidates.push(contents_dir.join("Resources/interface/dist"));
         }
     }
+    candidates.extend([
+        PathBuf::from("interface/dist"),
+        PathBuf::from("../../interface/dist"),
+    ]);
 
     candidates
 }
@@ -400,6 +407,18 @@ mod tests {
         assert!(candidates.contains(&PathBuf::from(
             "/tmp/AURA.app/Contents/Resources/interface/dist"
         )));
+        assert!(
+            candidates
+                .iter()
+                .position(|candidate| {
+                    candidate == Path::new("/tmp/AURA.app/Contents/Resources/dist")
+                })
+                .unwrap()
+                < candidates
+                    .iter()
+                    .position(|candidate| candidate == Path::new("interface/dist"))
+                    .unwrap()
+        );
     }
 
     fn write(path: &Path, contents: &str) {

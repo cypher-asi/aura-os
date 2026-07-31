@@ -118,7 +118,7 @@ export function useStandaloneAgentChat(
     freshCanvasKey?: string | null;
   } = {},
 ): ChatPanelProps {
-  const { remoteOnly } = useAuraCapabilities();
+  const { hasDesktopBridge, remoteOnly } = useAuraCapabilities();
   const agentProjects = useProjectsListStore(useShallow(selectProjectsForAgent(agentId)));
   const [, setSearchParams] = useSearchParams();
 
@@ -324,7 +324,9 @@ export function useStandaloneAgentChat(
     useStandaloneAgentMeta(agentId);
   const sendDisabled = remoteOnly && machineType === "local";
   const sendDisabledReason = sendDisabled
-    ? "This local agent is not available in this browser."
+    ? hasDesktopBridge
+      ? "The local agent runtime is unavailable. Restart Aura to retry recovery."
+      : "This local agent is not available in this browser."
     : undefined;
 
   const contextUsage = useContextUsage(streamKey);

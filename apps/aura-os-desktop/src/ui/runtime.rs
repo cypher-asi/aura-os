@@ -96,6 +96,11 @@ pub(crate) struct LoopState {
 }
 
 impl LoopState {
+    fn stop_managed_children(&mut self) {
+        stop_managed_frontend_dev_server(&mut self.managed_frontend_dev_server);
+        stop_managed_local_harness(&mut self.managed_local_harness);
+    }
+
     fn handle_user_event(
         &mut self,
         user_event: UserEvent,
@@ -176,8 +181,7 @@ impl LoopState {
                 .main_window
                 .set_maximized(!self.main_window.is_maximized()),
             WinCmd::Close => {
-                stop_managed_frontend_dev_server(&mut self.managed_frontend_dev_server);
-                stop_managed_local_harness(&mut self.managed_local_harness);
+                self.stop_managed_children();
                 *control_flow = ControlFlow::Exit;
             }
             WinCmd::Drag => {
@@ -293,8 +297,7 @@ impl LoopState {
 
     fn handle_shutdown_for_update(&mut self, control_flow: &mut ControlFlow) {
         info!("updater requested shutdown; stopping sidecars and exiting event loop");
-        stop_managed_frontend_dev_server(&mut self.managed_frontend_dev_server);
-        stop_managed_local_harness(&mut self.managed_local_harness);
+        self.stop_managed_children();
         *control_flow = ControlFlow::Exit;
     }
 
@@ -336,8 +339,7 @@ impl LoopState {
 
     fn handle_close_requested(&mut self, window_id: WindowId, control_flow: &mut ControlFlow) {
         if window_id == self.ctx.main_window_id {
-            stop_managed_frontend_dev_server(&mut self.managed_frontend_dev_server);
-            stop_managed_local_harness(&mut self.managed_local_harness);
+            self.stop_managed_children();
             *control_flow = ControlFlow::Exit;
         } else {
             self.ide_windows.remove(&window_id);
@@ -448,6 +450,14 @@ pub(crate) fn run_event_loop(event_loop: EventLoop<UserEvent>, mut state: LoopSt
                 ..
             } => state.handle_reopen(has_visible_windows),
             Event::UserEvent(user_event) => state.handle_user_event(user_event, elwt, control_flow),
+            Event::LoopDestroyed => {
+                // Native macOS Quit (Cmd+Q / app menu) terminates the event
+                // loop without sending CloseRequested for the main window.
+                // Stop owned children here so the harness cannot survive as
+                // an orphan and block or confuse the next desktop launch.
+                info!("desktop event loop destroyed; stopping managed child processes");
+                state.stop_managed_children();
+            }
             _ => {}
         }
     });

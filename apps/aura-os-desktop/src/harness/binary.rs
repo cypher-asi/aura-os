@@ -20,30 +20,45 @@ pub(crate) fn harness_binary_name() -> &'static str {
 }
 
 fn harness_resource_candidates() -> Vec<PathBuf> {
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf));
+    harness_resource_candidates_for(exe_dir.as_deref())
+}
+
+fn harness_resource_candidates_for(exe_dir: Option<&Path>) -> Vec<PathBuf> {
     let binary_name = harness_binary_name();
-    let mut candidates = vec![
+    let mut candidates = Vec::new();
+
+    if let Some(exe_dir) = exe_dir {
+        // Prefer resources next to the running executable. In packaged
+        // builds the compile-time CARGO_MANIFEST_DIR may still exist on a
+        // developer machine, but macOS can block access to that source
+        // tree behind a Files & Folders permission prompt before Aura has
+        // created a window. The bundle is also the authoritative payload
+        // that was signed and shipped with this exact desktop binary.
+        candidates.push(exe_dir.join(binary_name));
+        candidates.push(exe_dir.join("sidecar").join(binary_name));
+        candidates.push(exe_dir.join("resources/sidecar").join(binary_name));
+        if let Some(contents_dir) = exe_dir.parent() {
+            candidates.push(contents_dir.join("Resources/sidecar").join(binary_name));
+            candidates.push(
+                contents_dir
+                    .join("Resources/resources/sidecar")
+                    .join(binary_name),
+            );
+        }
+    }
+
+    // Source-tree fallbacks keep `cargo run` and local development working
+    // when no packaged resource is present next to the executable.
+    candidates.extend([
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("resources/sidecar")
             .join(binary_name),
         PathBuf::from("apps/aura-os-desktop/resources/sidecar").join(binary_name),
         PathBuf::from("resources/sidecar").join(binary_name),
-    ];
-
-    if let Ok(current_exe) = std::env::current_exe() {
-        if let Some(exe_dir) = current_exe.parent() {
-            candidates.push(exe_dir.join(binary_name));
-            candidates.push(exe_dir.join("sidecar").join(binary_name));
-            candidates.push(exe_dir.join("resources/sidecar").join(binary_name));
-            if let Some(contents_dir) = exe_dir.parent() {
-                candidates.push(contents_dir.join("Resources/sidecar").join(binary_name));
-                candidates.push(
-                    contents_dir
-                        .join("Resources/resources/sidecar")
-                        .join(binary_name),
-                );
-            }
-        }
-    }
+    ]);
 
     candidates
 }
@@ -81,9 +96,12 @@ fn configured_harness_binary(data_dir: &Path) -> Option<PathBuf> {
 }
 
 fn find_bundled_harness_binary() -> Option<PathBuf> {
-    harness_resource_candidates()
-        .into_iter()
-        .find(|path| path.is_file())
+    for path in harness_resource_candidates() {
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+    None
 }
 
 fn staged_harness_binary_name(source: &Path) -> String {
@@ -207,16 +225,96 @@ pub(crate) fn resolve_managed_harness_binary(data_dir: &Path) -> Option<PathBuf>
     }
 }
 
+/// Replace the managed staged copy with a fresh copy of the binary shipped in
+/// the current app bundle.
+///
+/// This is intentionally limited to Aura's own staging directory. Explicit
+/// operator-provided `AURA_HARNESS_BIN` paths are never removed or rewritten.
+/// The caller must stop the failed child before invoking this function.
+pub(crate) fn restage_bundled_harness_binary(
+    current_binary: &Path,
+    data_dir: &Path,
+) -> Option<PathBuf> {
+    if !is_managed_staged_harness_binary(current_binary, data_dir) {
+        return None;
+    }
+
+    let bundled = find_bundled_harness_binary()?;
+    restage_bundled_harness_binary_from_source(current_binary, data_dir, &bundled)
+}
+
+fn restage_bundled_harness_binary_from_source(
+    current_binary: &Path,
+    data_dir: &Path,
+    bundled: &Path,
+) -> Option<PathBuf> {
+    if !is_managed_staged_harness_binary(current_binary, data_dir) {
+        return None;
+    }
+
+    if let Err(error) = std::fs::remove_file(current_binary) {
+        if error.kind() != std::io::ErrorKind::NotFound {
+            warn!(
+                %error,
+                path = %current_binary.display(),
+                "failed to remove unhealthy staged harness before retry"
+            );
+            return None;
+        }
+    }
+
+    match stage_bundled_harness_binary(&bundled, data_dir) {
+        Ok(staged) => {
+            info!(
+                source = %bundled.display(),
+                staged = %staged.display(),
+                "restaged bundled local harness sidecar after failed startup"
+            );
+            Some(staged)
+        }
+        Err(error) => {
+            warn!(
+                error = %error,
+                source = %bundled.display(),
+                "failed to restage bundled local harness sidecar after failed startup"
+            );
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        configured_harness_binary, harness_binary_name, is_managed_staged_harness_binary,
+        configured_harness_binary, harness_binary_name, harness_resource_candidates_for,
+        is_managed_staged_harness_binary, restage_bundled_harness_binary_from_source,
         stage_bundled_harness_binary,
     };
     use std::path::PathBuf;
     use std::sync::Mutex;
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn packaged_resource_candidates_precede_source_tree_fallbacks() {
+        let exe_dir = PathBuf::from("/Applications/AURA.app/Contents/MacOS");
+        let candidates = harness_resource_candidates_for(Some(&exe_dir));
+        let packaged =
+            PathBuf::from("/Applications/AURA.app/Contents/Resources/resources/sidecar/aura-node");
+        let source_tree = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("resources/sidecar")
+            .join(harness_binary_name());
+
+        let packaged_index = candidates
+            .iter()
+            .position(|candidate| candidate == &packaged)
+            .unwrap();
+        let source_tree_index = candidates
+            .iter()
+            .position(|candidate| candidate == &source_tree)
+            .unwrap();
+        assert!(packaged_index < source_tree_index);
+    }
 
     fn unique_test_dir(label: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
@@ -277,6 +375,33 @@ mod tests {
 
         assert!(is_managed_staged_harness_binary(&managed, &data_dir));
         assert!(!is_managed_staged_harness_binary(&external, &data_dir));
+    }
+
+    #[test]
+    fn restage_replaces_only_managed_binary() {
+        let root = unique_test_dir("restage-sidecar");
+        let source_dir = root.join("install/resources/sidecar");
+        let data_dir = root.join("data");
+        std::fs::create_dir_all(&source_dir).unwrap();
+        std::fs::create_dir_all(&data_dir).unwrap();
+
+        let source = source_dir.join(harness_binary_name());
+        std::fs::write(&source, b"fresh-sidecar-binary").unwrap();
+        let staged = stage_bundled_harness_binary(&source, &data_dir).unwrap();
+        std::fs::write(&staged, b"corrupt").unwrap();
+
+        let refreshed =
+            restage_bundled_harness_binary_from_source(&staged, &data_dir, &source).unwrap();
+        assert_eq!(refreshed, staged);
+        assert_eq!(std::fs::read(refreshed).unwrap(), b"fresh-sidecar-binary");
+        assert!(restage_bundled_harness_binary_from_source(
+            PathBuf::from("/opt/aura-node").as_path(),
+            &data_dir,
+            &source,
+        )
+        .is_none());
+
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

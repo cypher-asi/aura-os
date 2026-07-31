@@ -17,7 +17,8 @@ use aura_os_storage::StorageSessionEvent;
 use crate::capture_auth::{demo_agent_id, is_capture_access_token};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::harness_proxy::{
-    create_skill_from_payload, update_my_skill_from_payload, CreateSkillBody, UpdateSkillBody,
+    create_skill_from_payload_synced, update_my_skill_from_payload_synced, CreateSkillBody,
+    UpdateSkillBody,
 };
 use crate::state::{AppState, AuthJwt, AuthSession};
 
@@ -416,6 +417,7 @@ pub(crate) async fn apply_improvement_proposal(
         &proposal,
         project_id.as_deref(),
         &auth_session.user_id,
+        &jwt,
     )
     .await
     {
@@ -889,6 +891,7 @@ async fn apply_proposal_payload(
     proposal: &AgentImprovementProposal,
     project_id: Option<&str>,
     user_id: &str,
+    jwt: &str,
 ) -> Result<(), String> {
     match proposal.kind {
         AgentImprovementKind::MemoryFact => {
@@ -898,10 +901,10 @@ async fn apply_proposal_payload(
             apply_memory_procedure(state, agent_id, &proposal.payload, project_id, user_id).await
         }
         AgentImprovementKind::SkillCreate => {
-            apply_skill_create(state, agent_id, proposal.payload.clone()).await
+            apply_skill_create(state, agent_id, proposal.payload.clone(), jwt).await
         }
         AgentImprovementKind::SkillUpdate => {
-            apply_skill_update(state, proposal.payload.clone()).await
+            apply_skill_update(state, proposal.payload.clone(), jwt).await
         }
     }
 }
@@ -971,10 +974,12 @@ async fn apply_skill_create(
     state: &AppState,
     agent_id: &AgentId,
     payload: Value,
+    jwt: &str,
 ) -> Result<(), String> {
     let parsed: SkillCreatePayload = parse_payload_for_apply(payload)?;
-    create_skill_from_payload(
+    create_skill_from_payload_synced(
         state,
+        jwt,
         CreateSkillBody {
             name: parsed.name,
             description: parsed.description,
@@ -993,10 +998,11 @@ async fn apply_skill_create(
     .map_err(status_message)
 }
 
-async fn apply_skill_update(state: &AppState, payload: Value) -> Result<(), String> {
+async fn apply_skill_update(state: &AppState, payload: Value, jwt: &str) -> Result<(), String> {
     let parsed: SkillUpdatePayload = parse_payload_for_apply(payload)?;
-    update_my_skill_from_payload(
+    update_my_skill_from_payload_synced(
         state,
+        jwt,
         parsed.name,
         UpdateSkillBody {
             description: parsed.description,

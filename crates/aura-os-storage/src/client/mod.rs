@@ -5,6 +5,7 @@ mod processes;
 mod project_agents;
 mod project_artifacts;
 mod sessions;
+mod skills;
 mod specs;
 mod stats;
 mod tasks;

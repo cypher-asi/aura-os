@@ -124,7 +124,9 @@ export function AgentChatPanel({
   const localUnavailable = remoteOnly && machineType === "local";
   const sendDisabled = localUnavailable || !chatAvailability.available;
   const sendDisabledReason = localUnavailable
-    ? "This local agent is not available in this browser."
+    ? hasDesktopBridge
+      ? "The local agent runtime is unavailable. Restart Aura to retry recovery."
+      : "This local agent is not available in this browser."
     : chatAvailability.reason;
 
   // Resolves the project's workspace path (and remote-agent id when

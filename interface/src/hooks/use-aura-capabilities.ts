@@ -48,6 +48,7 @@ interface ServerRuntimeCapabilities {
 }
 
 const RUNTIME_CAPABILITIES_PATH = "/api/system/runtime-capabilities";
+const RUNTIME_CAPABILITIES_POLL_MS = 30_000;
 
 function buildFeatureAvailability(hasDesktopBridge: boolean): AuraFeatureAvailability {
   return {
@@ -77,7 +78,13 @@ function isServerRuntimeCapabilities(value: unknown): value is ServerRuntimeCapa
 
 function localAgentRuntimeAvailable(hasDesktopBridge: boolean): boolean {
   if (serverRuntimeCapabilities?.remoteOnly === true) return false;
-  return hasDesktopBridge || serverRuntimeCapabilities?.localAgentRuntimeAvailable === true;
+  if (serverRuntimeCapabilities) {
+    return serverRuntimeCapabilities.localAgentRuntimeAvailable;
+  }
+  // Optimistic only during the short initial capability fetch so desktop
+  // navigation does not flicker. Once the server answers, its live harness
+  // health probe is authoritative even inside the desktop shell.
+  return hasDesktopBridge;
 }
 
 function resetRuntimeCapabilities() {
@@ -86,11 +93,12 @@ function resetRuntimeCapabilities() {
   runtimeCapabilitiesRequest = null;
 }
 
-function requestRuntimeCapabilities(): Promise<void> {
+function requestRuntimeCapabilities(force = false): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (runtimeCapabilitiesStatus === "loaded" || runtimeCapabilitiesStatus === "loading") {
+  if (runtimeCapabilitiesStatus === "loading") {
     return runtimeCapabilitiesRequest ?? Promise.resolve();
   }
+  if (runtimeCapabilitiesStatus === "loaded" && !force) return Promise.resolve();
   runtimeCapabilitiesStatus = "loading";
   runtimeCapabilitiesRequest = fetch(resolveApiUrl(RUNTIME_CAPABILITIES_PATH), {
     credentials: "include",
@@ -242,6 +250,7 @@ let pointerQuery: MediaQueryList | null = null;
 let displayQuery: MediaQueryList | null = null;
 let unsubscribeHostChanges: (() => void) | null = null;
 let rafHandle: number | null = null;
+let runtimeCapabilitiesPollHandle: number | null = null;
 
 function recompute() {
   rafHandle = null;
@@ -282,6 +291,9 @@ function attachListeners() {
     scheduleRecompute();
     void requestRuntimeCapabilities();
   });
+  runtimeCapabilitiesPollHandle = window.setInterval(() => {
+    void requestRuntimeCapabilities(true);
+  }, RUNTIME_CAPABILITIES_POLL_MS);
   window.addEventListener("resize", scheduleRecompute);
 }
 
@@ -293,6 +305,10 @@ function detachListeners() {
   displayQuery?.removeEventListener("change", scheduleRecompute);
   unsubscribeHostChanges?.();
   unsubscribeHostChanges = null;
+  if (runtimeCapabilitiesPollHandle !== null) {
+    window.clearInterval(runtimeCapabilitiesPollHandle);
+    runtimeCapabilitiesPollHandle = null;
+  }
   window.removeEventListener("resize", scheduleRecompute);
   phoneQuery = null;
   tabletQuery = null;

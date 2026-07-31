@@ -5,7 +5,7 @@ use axum::extract::{Path, State};
 use axum::http::{header, Method, StatusCode};
 use axum::response::IntoResponse;
 
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 use super::create::SkillAgentTarget;
 use super::frontmatter::{extract_frontmatter_field, strip_frontmatter};
@@ -108,11 +108,14 @@ fn parse_agent_target(content: &str) -> Option<SkillAgentTarget> {
 /// round-trips. Mirrors `update_my_skill`'s preconditions: 400 on an invalid
 /// name, 404 when missing, 403 when the file isn't user-created.
 pub(crate) async fn get_my_skill(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(name): Path<String>,
 ) -> Result<axum::response::Response, StatusCode> {
     if !create_skill_name_valid(&name) {
         return Err(StatusCode::BAD_REQUEST);
     }
+    super::sync::sync_one_cloud_skill(&state, &jwt, &name).await;
     let skill_path = user_skills_root()
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
         .join(&name)
@@ -152,7 +155,11 @@ pub(crate) async fn get_my_skill(
 /// `user_skills_root`) and returns only entries whose frontmatter carries
 /// `source: "user-created"` — this reliably excludes shop-installed skills,
 /// which share the same on-disk layout but do not carry that marker.
-pub(crate) async fn list_my_skills() -> Result<axum::response::Response, StatusCode> {
+pub(crate) async fn list_my_skills(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+) -> Result<axum::response::Response, StatusCode> {
+    super::sync::sync_all_cloud_skills(&state, &jwt).await;
     let skills_root = user_skills_root().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let entries = match std::fs::read_dir(&skills_root) {
@@ -254,6 +261,7 @@ async fn agents_blocking_skill_delete(
 ///   them first.
 pub(crate) async fn delete_my_skill(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(name): Path<String>,
 ) -> Result<axum::response::Response, StatusCode> {
     if !create_skill_name_valid(&name) {
@@ -267,6 +275,7 @@ pub(crate) async fn delete_my_skill(
 
     // Existence + ownership check before touching anything else.
     let content = std::fs::read_to_string(&skill_path).map_err(|_| StatusCode::NOT_FOUND)?;
+    let cloud_metadata = super::sync::cloud_skill_metadata_for_name(&name);
     let source = extract_frontmatter_field(&content, "source").unwrap_or_default();
     if source != USER_CREATED_SOURCE_MARKER {
         // Refuse to nuke a non-user-created skill file through this
@@ -293,6 +302,13 @@ pub(crate) async fn delete_my_skill(
         )
             .into_response());
     }
+
+    // For a cloud-owned skill, confirm the canonical delete before removing
+    // the local copy. Otherwise a transient network failure would make the
+    // skill look deleted until the next sync silently restored it.
+    super::sync::sync_deleted_skill(&state, &jwt, cloud_metadata)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
 
     // Remove the whole skill directory so supporting files (if any)
     // also go away. Only the SKILL.md has been verified, so this is a

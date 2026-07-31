@@ -7,9 +7,11 @@ mod skills;
 
 pub(crate) use access::require_agent_proxy_access;
 pub(crate) use local::{
-    create_skill, create_skill_from_payload, delete_my_skill, discover_skill_paths, get_my_skill,
-    get_skill_content, install_from_shop, list_my_skills, repair_user_created_skill_names,
-    skill_exists_on_disk, update_my_skill, update_my_skill_from_payload, CreateSkillBody,
+    adopt_installed_legacy_skill, cloud_skill_metadata_for_name, create_skill,
+    create_skill_from_payload_synced, delete_my_skill, discover_skill_paths,
+    find_cloud_skill_by_name, get_my_skill, get_skill_content, install_from_shop, list_my_skills,
+    materialize_cloud_skill, repair_user_created_skill_names, skill_exists_on_disk,
+    sync_all_cloud_skills, update_my_skill, update_my_skill_from_payload_synced, CreateSkillBody,
     UpdateSkillBody,
 };
 pub(crate) use memory::{
