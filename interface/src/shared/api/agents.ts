@@ -22,6 +22,9 @@ type ApiRequestOptions = {
 };
 
 export const STANDALONE_AGENT_HISTORY_LIMIT = 80;
+// Starts before `fetch`, so it also bounds WebKit connection-pool queueing.
+// Keep slightly above the server's 12-second Recall wall-clock budget.
+const RECALL_SEARCH_TIMEOUT_MS = 15_000;
 
 interface AgentEventsRequestOptions extends ApiRequestOptions {
   limit?: number;
@@ -45,6 +48,24 @@ export interface PaginatedSessionEventsRequestOptions extends ApiRequestOptions 
   limit?: number;
   /** `event_id` cursor: return the page of messages immediately before it. */
   before?: string;
+}
+
+/** A short, source-linked excerpt from the current user's completed chats. */
+export interface RecallSearchResult {
+  eventId: string;
+  sessionId: string;
+  projectId: ProjectId;
+  agentInstanceId: AgentInstanceId;
+  agentId: AgentId;
+  occurredAt: string;
+  role: "user" | "assistant";
+  snippet: string;
+}
+
+export interface RecallSearchResponse {
+  results: RecallSearchResult[];
+  scannedSessions: number;
+  skippedSessions: number;
 }
 
 export interface SafeWorkspaceCheckpoint {
@@ -562,6 +583,20 @@ export const sessionsApi = {
    * `idx_sessions_user_recent` partial index).
    */
   listMySessions: () => apiFetch<EnrichedSession[]>(`/api/me/sessions`),
+  /**
+   * Read-only lexical recall over the caller's completed chats. Results are
+   * source-linked excerpts, not active-chat context; callers must require an
+   * explicit user action before opening a source or adding an excerpt to a
+   * draft.
+   */
+  searchMySessionHistory: (query: string, limit?: number) => {
+    const params = new URLSearchParams({ q: query });
+    if (limit != null) params.set("limit", String(limit));
+    return apiFetch<RecallSearchResponse>(
+      `/api/me/sessions/search?${params.toString()}`,
+      { timeoutMs: RECALL_SEARCH_TIMEOUT_MS },
+    );
+  },
   listSessions: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
     apiFetch<Session[]>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions`,

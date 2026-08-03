@@ -300,6 +300,35 @@ describe("sessionsApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/projects/p1/sessions", expect.any(Object));
   });
 
+  it("times out Recall transport stalls after its 15 second client budget", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        }));
+      globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+
+      const request = sessionsApi.searchMySessionHistory("desktop recall", 7);
+      const rejection = expect(request).rejects.toThrow(
+        "The request timed out. Please try again.",
+      );
+      await vi.advanceTimersByTimeAsync(15_000);
+
+      await rejection;
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/me/sessions/search?q=desktop+recall&limit=7",
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("listSessions fetches by project and agent instance", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;
