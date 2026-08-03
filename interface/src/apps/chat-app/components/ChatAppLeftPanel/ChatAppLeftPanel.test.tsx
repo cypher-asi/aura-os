@@ -27,7 +27,10 @@ const mocks = vi.hoisted(() => ({
   loadUserSessions: vi.fn().mockResolvedValue(undefined),
   loadAgentBindings: vi.fn().mockResolvedValue(undefined),
   setAction: vi.fn(),
+  setDraft: vi.fn(),
+  drafts: {} as Record<string, string>,
   remoteOnly: false,
+  agentStatus: "ready",
 }));
 
 vi.mock("react-router-dom", () => ({
@@ -69,6 +72,7 @@ vi.mock("../../../../components/SessionsList", () => ({
     </div>
   ),
   formatDeleteSessionError: (e: unknown) => String(e),
+  deriveSessionLabel: () => "Session title",
 }));
 
 vi.mock("../../../../components/EmptyState", () => ({
@@ -125,6 +129,15 @@ vi.mock("../../../../stores/chat-history-store", () => ({
   },
 }));
 
+vi.mock("../../../../stores/chat-ui-store", () => ({
+  useChatUIStore: {
+    getState: () => ({
+      getDraft: (streamKey: string) => mocks.drafts[streamKey] ?? "",
+      setDraft: (...args: [string, string]) => mocks.setDraft(...args),
+    }),
+  },
+}));
+
 vi.mock("../../../../hooks/stream/store", () => ({
   keyForAgentSession: (agentId: string, sessionId: string) =>
     `${agentId}:${sessionId}`,
@@ -163,14 +176,45 @@ vi.mock("../../../agents/stores", () => ({
 }));
 
 vi.mock("../../hooks/use-chat-app-agent", () => ({
-  useChatAppAgent: (_options?: { remoteOnly?: boolean }) => ({
+  useChatAppAgent: () => ({
     agent: mocks.chatAgent,
-    status: "ready",
+    status: mocks.agentStatus,
   }),
 }));
 
 vi.mock("../../hooks/use-chat-app-sessions", () => ({
   useChatAppSessions: () => ({ sessions: mocks.sessions, loading: false }),
+}));
+
+const recallResult = vi.hoisted(() => ({
+  eventId: "source-event",
+  sessionId: "source-session",
+  projectId: "source-project",
+  agentInstanceId: "source-instance",
+  agentId: "source-agent",
+  occurredAt: "2026-08-04T10:00:00Z",
+  role: "assistant",
+  snippet: "bounded recalled evidence",
+} as const));
+
+vi.mock("../RecallModal/RecallModal", () => ({
+  RecallModal: (props: {
+    isOpen: boolean;
+    canAddToDraft: boolean;
+    onOpenSource: (result: typeof recallResult) => void;
+    onAddToDraft: (result: typeof recallResult) => void;
+  }) => props.isOpen ? (
+    <div data-testid="recall-modal">
+      <button type="button" onClick={() => props.onOpenSource(recallResult)}>Open recall source</button>
+      <button
+        type="button"
+        disabled={!props.canAddToDraft}
+        onClick={() => props.onAddToDraft(recallResult)}
+      >
+        Add recall to draft
+      </button>
+    </div>
+  ) : null,
 }));
 
 describe("ChatAppLeftPanel", () => {
@@ -188,6 +232,12 @@ describe("ChatAppLeftPanel", () => {
     mocks.storeAgents = [];
     mocks.sessions = [];
     mocks.remoteOnly = false;
+    mocks.agentStatus = "ready";
+    mocks.drafts = {};
+    mocks.setDraft.mockReset();
+    mocks.setDraft.mockImplementation((streamKey: string, text: string) => {
+      mocks.drafts[streamKey] = text;
+    });
   });
 
   // Regression: a session owned by an agent the active org doesn't
@@ -286,5 +336,92 @@ describe("ChatAppLeftPanel", () => {
 
     expect(screen.queryByTestId("detail-s3")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Agent: Designer")).toBeInTheDocument();
+  });
+
+  it("opens a Recall source without changing the active draft", () => {
+    mocks.searchParams = new URLSearchParams("agent=active-agent&session=active-session");
+    mocks.drafts["active-agent:active-session"] = "Keep this draft";
+    render(<ChatAppLeftPanel />);
+
+    const action = mocks.setAction.mock.calls.find(
+      ([key, node]) => key === "chat" && node != null,
+    )?.[1] as React.ReactElement;
+    render(action);
+    fireEvent.click(screen.getByRole("button", { name: "Recall past chats" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open recall source" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(expect.stringContaining("session=source-session"));
+    expect(mocks.drafts["active-agent:active-session"]).toBe("Keep this draft");
+    expect(mocks.setDraft).not.toHaveBeenCalled();
+  });
+
+  it("appends evidence only to the active draft and never navigates", () => {
+    mocks.searchParams = new URLSearchParams("agent=active-agent&session=active-session");
+    mocks.drafts = {
+      "active-agent:active-session": "Keep this draft",
+      "other-agent:other-session": "Other draft",
+    };
+    render(<ChatAppLeftPanel />);
+
+    const action = mocks.setAction.mock.calls.find(
+      ([key, node]) => key === "chat" && node != null,
+    )?.[1] as React.ReactElement;
+    render(action);
+    fireEvent.click(screen.getByRole("button", { name: "Recall past chats" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add recall to draft" }));
+
+    expect(mocks.drafts["active-agent:active-session"]).toContain("Keep this draft");
+    expect(mocks.drafts["active-agent:active-session"]).toContain(recallResult.snippet);
+    expect(mocks.drafts["active-agent:active-session"]).toContain("session source-session, event source-event");
+    expect(mocks.drafts["other-agent:other-session"]).toBe("Other draft");
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("targets a legacy selected session's authoritative agent draft", () => {
+    mocks.searchParams = new URLSearchParams("session=legacy-session");
+    mocks.sessions = [{
+      session_id: "legacy-session",
+      _projectId: "legacy-project",
+      _agentInstanceId: "legacy-instance",
+      _agentId: "legacy-owner",
+    }];
+    render(<ChatAppLeftPanel />);
+
+    const action = mocks.setAction.mock.calls.find(
+      ([key, node]) => key === "chat" && node != null,
+    )?.[1] as React.ReactElement;
+    render(action);
+    fireEvent.click(screen.getByRole("button", { name: "Recall past chats" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add recall to draft" }));
+
+    expect(mocks.setDraft).toHaveBeenCalledWith(
+      "legacy-owner:legacy-session",
+      expect.stringContaining(recallResult.snippet),
+    );
+    expect(mocks.setDraft).not.toHaveBeenCalledWith(
+      "ceo:legacy-session",
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    ["loading", "Starting chat…"],
+    ["error", "Couldn't load chat history."],
+  ])("keeps Recall usable in the %s state without an active draft", (status, stateText) => {
+    mocks.chatAgent = null;
+    mocks.agentStatus = status;
+    render(<ChatAppLeftPanel />);
+
+    expect(screen.getByText(stateText)).toBeInTheDocument();
+    const action = mocks.setAction.mock.calls.find(
+      ([key, node]) => key === "chat" && node != null,
+    )?.[1] as React.ReactElement;
+    render(action);
+    fireEvent.click(screen.getByRole("button", { name: "Recall past chats" }));
+
+    expect(screen.getByTestId("recall-modal")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add recall to draft" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Open recall source" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(expect.stringContaining("session=source-session"));
   });
 });
