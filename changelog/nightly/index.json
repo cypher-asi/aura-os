@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-08-04",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.782.1",
+    "title": "Chat Recall: search your past sessions from the sidebar",
+    "intro": "Today's nightly introduces Recall, a read-only way to search across your completed chat sessions and jump back to the original message. The feature ships end-to-end across the desktop chat UI, a typed API client, and a new server-side search handler with strict safety and latency guardrails.",
+    "entryCount": 1,
+    "highlights": [
+      "New Recall modal in the chat sidebar for searching past sessions",
+      "Bounded, evidence-only server search with per-read and overall deadlines",
+      "Partial-result honesty: UI surfaces scanned and skipped session counts"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-04T08:24:34.127Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.782.1",
+    "path": "history/2026-08-04.json"
+  },
+  {
     "date": "2026-07-31",
     "channel": "nightly",
     "version": "0.1.0-nightly.781.1",
