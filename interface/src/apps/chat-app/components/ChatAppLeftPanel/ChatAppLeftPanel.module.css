@@ -31,3 +31,30 @@
 .rowAvatar {
   flex-shrink: 0;
 }
+
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.recallButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.recallButton:hover,
+.recallButton:focus-visible {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  outline: none;
+}

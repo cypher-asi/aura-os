@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { History, Loader2 } from "lucide-react";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../../../api/client";
 import { buildAgentSessionHistoryFetch } from "../../../../hooks/use-load-older-messages";
 import {
   type AnnotatedSession,
+  deriveSessionLabel,
   formatDeleteSessionError,
   SessionsList,
 } from "../../../../components/SessionsList";
@@ -18,6 +19,7 @@ import {
   useSessionsListStore,
 } from "../../../../stores/sessions-list-store";
 import { useChatHistoryStore } from "../../../../stores/chat-history-store";
+import { useChatUIStore } from "../../../../stores/chat-ui-store";
 import { keyForAgentSession } from "../../../../hooks/stream/store";
 import { useSidebarSearch } from "../../../../hooks/use-sidebar-search";
 import { useAgentStore, useAgents } from "../../../agents/stores";
@@ -25,6 +27,9 @@ import type { Agent } from "../../../../shared/types";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useChatAppAgent } from "../../hooks/use-chat-app-agent";
 import { useChatAppSessions } from "../../hooks/use-chat-app-sessions";
+import { RecallModal } from "../RecallModal/RecallModal";
+import type { RecallResultMetadata } from "../RecallModal/RecallModal";
+import type { RecallSearchResult } from "../../../../shared/api/agents";
 import styles from "./ChatAppLeftPanel.module.css";
 
 /**
@@ -73,6 +78,7 @@ export function ChatAppLeftPanel() {
   } = useSessionsListActions();
   const { query: searchQuery, setAction } = useSidebarSearch("chat");
   const { sessions, loading } = useChatAppSessions(agents);
+  const [recallOpen, setRecallOpen] = useState(false);
 
   // Single user-scoped fetch in place of the previous
   // `agents.forEach(loadAgentSessions)` fan-out. Per
@@ -216,14 +222,95 @@ export function ChatAppLeftPanel() {
   useEffect(() => {
     setAction(
       "chat",
-      <ProjectsPlusButton
-        onClick={handleNewChat}
-        title="New chat"
-        disabled={!chatAgent}
-      />,
+      <div className={styles.headerActions}>
+        <button
+          type="button"
+          className={styles.recallButton}
+          onClick={() => setRecallOpen(true)}
+          title="Recall past chats"
+          aria-label="Recall past chats"
+        >
+          <History size={12} strokeWidth={2} />
+        </button>
+        <ProjectsPlusButton
+          onClick={handleNewChat}
+          title="New chat"
+          disabled={!chatAgent}
+        />
+      </div>,
     );
     return () => setAction("chat", null);
   }, [chatAgent, handleNewChat, setAction]);
+
+  const handleOpenRecallSource = useCallback(
+    (result: RecallSearchResult) => {
+      // This is intentionally navigation only. The excerpt remains evidence
+      // in its original transcript and is never injected into the active
+      // agent context or model request.
+      const params = new URLSearchParams({
+        project: result.projectId,
+        instance: result.agentInstanceId,
+        session: result.sessionId,
+        agent: result.agentId,
+        recall_event: result.eventId,
+      });
+      ensureAgentHydrated(result.agentId);
+      setRecallOpen(false);
+      navigate(`/chat?${params.toString()}`);
+    },
+    [ensureAgentHydrated, navigate],
+  );
+
+  const activeRecallDraftKey = useMemo(() => {
+    const selectedSessionAgentId = sessions.find(
+      (candidate) => candidate.session_id === selectedSessionId,
+    )?._agentId;
+    const activeAgentId = searchParams.get("agent")
+      ?? selectedSessionAgentId
+      ?? chatAgent?.agent_id
+      ?? null;
+    if (!activeAgentId || !selectedSessionId) return null;
+    return keyForAgentSession(activeAgentId, selectedSessionId);
+  }, [chatAgent?.agent_id, searchParams, selectedSessionId, sessions]);
+
+  const handleAddRecallToDraft = useCallback(
+    (result: RecallSearchResult) => {
+      if (!activeRecallDraftKey) return;
+      const store = useChatUIStore.getState();
+      const existing = store.getDraft(activeRecallDraftKey);
+      const evidence = [
+        "Recalled evidence:",
+        `> ${result.snippet}`,
+        "",
+        `Source: Aura session ${result.sessionId}, event ${result.eventId}`,
+      ].join("\n");
+      store.setDraft(
+        activeRecallDraftKey,
+        existing ? `${existing}\n\n${evidence}` : evidence,
+      );
+      setRecallOpen(false);
+    },
+    [activeRecallDraftKey],
+  );
+
+  const resolveRecallMetadata = useCallback(
+    (result: RecallSearchResult): RecallResultMetadata => {
+      const session = sessions.find((candidate) =>
+        candidate.session_id === result.sessionId
+        && candidate._projectId === result.projectId
+        && candidate._agentInstanceId === result.agentInstanceId,
+      );
+      const agent = agentsByTemplateId.get(result.agentId);
+      return {
+        sessionTitle: session
+          ? deriveSessionLabel(session, undefined)
+          : `Session ${result.sessionId.slice(0, 8)}`,
+        projectName: session?._projectName || `Project ${result.projectId.slice(0, 8)}`,
+        agentName: agent?.name || `Agent ${result.agentId.slice(0, 8)}`,
+      };
+    },
+    [agentsByTemplateId, sessions],
+  );
 
   const handleSessionClick = useCallback(
     (target: AnnotatedSession) => {
@@ -363,20 +450,36 @@ export function ChatAppLeftPanel() {
     [resolveSessionAgent],
   );
 
+  const recallModal = (
+    <RecallModal
+      isOpen={recallOpen}
+      onClose={() => setRecallOpen(false)}
+      onOpenSource={handleOpenRecallSource}
+      onAddToDraft={handleAddRecallToDraft}
+      canAddToDraft={activeRecallDraftKey != null}
+      resolveMetadata={resolveRecallMetadata}
+    />
+  );
+
   if (!chatAgent) {
-    if (agentStatus === "loading") {
-      return (
-        <div className={styles.loadingState}>
-          <Loader2 size={16} className="animate-spin" aria-hidden />
-          <span>Starting chat…</span>
-        </div>
-      );
-    }
-    return <EmptyState>Couldn't load chat history.</EmptyState>;
+    return (
+      <div className={styles.root} data-agent-surface="chat-app-sessions-list">
+        {recallModal}
+        {agentStatus === "loading" ? (
+          <div className={styles.loadingState}>
+            <Loader2 size={16} className="animate-spin" aria-hidden />
+            <span>Starting chat…</span>
+          </div>
+        ) : (
+          <EmptyState>Couldn't load chat history.</EmptyState>
+        )}
+      </div>
+    );
   }
 
   return (
     <div className={styles.root} data-agent-surface="chat-app-sessions-list">
+      {recallModal}
       <SessionsList
         sessions={sessions}
         loading={loading}

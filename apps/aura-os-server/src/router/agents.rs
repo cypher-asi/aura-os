@@ -228,4 +228,8 @@ pub(super) fn agent_routes() -> Router<AppState> {
             get(agents::list_project_sessions),
         )
         .route("/api/me/sessions", get(agents::list_my_sessions))
+        .route(
+            "/api/me/sessions/search",
+            get(agents::search_my_session_history),
+        )
 }
