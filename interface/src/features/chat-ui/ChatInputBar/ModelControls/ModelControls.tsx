@@ -5,9 +5,6 @@ import {
   ModelMenuRow,
   ModelMenuGroup,
   ModelMenuScroll,
-  CouncilCountRow,
-  SecondOpinionRow,
-  CouncilMechanismRow,
 } from "../../../../components/InputBarShell";
 import {
   EFFORT_LABELS,
@@ -27,7 +24,6 @@ import {
 import type {
   AnswerStrategy,
   CouncilCount,
-  CouncilMechanism,
   CouncilSlot,
 } from "../../../../stores/chat-ui-store";
 import styles from "./ModelControls.module.css";
@@ -110,26 +106,14 @@ export interface ModelControlsProps {
   imageQuality: ImageQuality;
   councilCount: CouncilCount;
   councilModels: readonly CouncilSlot[];
-  councilMechanism: CouncilMechanism;
   answerStrategy: AnswerStrategy;
   secondOpinionReference: CouncilSlot | null;
   /** Store actions (referentially stable zustand actions). */
-  setCouncilCount: (streamKey: string, count: CouncilCount) => void;
   setCouncilModel: (
     streamKey: string,
     slot: number,
     modelId: string,
     effort?: ModelEffort,
-  ) => void;
-  setCouncilMechanism: (
-    streamKey: string,
-    mechanism: CouncilMechanism,
-  ) => void;
-  setAnswerStrategy: (
-    streamKey: string,
-    strategy: AnswerStrategy,
-    adapterType?: string,
-    defaultModel?: string | null,
   ) => void;
   setSecondOpinionReference: (
     streamKey: string,
@@ -163,13 +147,9 @@ export const ModelControls = memo(function ModelControls({
   imageQuality,
   councilCount,
   councilModels,
-  councilMechanism,
   answerStrategy,
   secondOpinionReference,
-  setCouncilCount,
   setCouncilModel,
-  setCouncilMechanism,
-  setAnswerStrategy,
   setSecondOpinionReference,
   sortedModelsForMode,
   vendorGroups,
@@ -218,11 +198,9 @@ export const ModelControls = memo(function ModelControls({
 
   // Parametrized model-menu renderer shared by the single model picker
   // and the per-slot council pickers. `activeModelId` / `activeEffort`
-  // drive the row highlight, `onSelect` writes the pick, and
-  // `includeCouncilRow` prepends the AURA Council count row at the very
-  // top of the menu (slot menus are single-select and must not recurse
-  // the count row into themselves... but every slot still includes it
-  // so the council control stays reachable from any selector).
+  // drive the row highlight and `onSelect` writes the pick. The orchestration
+  // controls (single / Second Opinion / AURA Council) live in the
+  // `AgentOptionsBar` below the input, not in this menu.
   const renderModelMenuList = useCallback(
     (
       close: () => void,
@@ -230,54 +208,8 @@ export const ModelControls = memo(function ModelControls({
         activeModelId: string | null;
         activeEffort: ModelEffort | null;
         onSelect: (modelId: string, effort?: ModelEffort) => void;
-        includeCouncilRow: boolean;
       },
     ) => {
-      const councilRow = cfg.includeCouncilRow ? (
-        <CouncilCountRow
-          key="__council_count__"
-          count={councilCount}
-          onSelect={(n) => setCouncilCount(streamKey, n)}
-        />
-      ) : null;
-      const secondOpinionActive =
-        generationMode === "chat" && answerStrategy === "second_opinion";
-      const referenceLabel =
-        secondOpinionReference?.id != null
-          ? modelLabelWithEffort(
-              secondOpinionReference.id,
-              secondOpinionReference.effort,
-              adapterType,
-              defaultModel,
-            )
-          : null;
-      const secondOpinionRow =
-        cfg.includeCouncilRow && generationMode === "chat" ? (
-          <SecondOpinionRow
-            key="__second_opinion__"
-            active={secondOpinionActive}
-            referenceLabel={referenceLabel}
-            onToggle={(enabled) => {
-              setAnswerStrategy(
-                streamKey,
-                enabled ? "second_opinion" : "single",
-                adapterType,
-                defaultModel,
-              );
-              close();
-            }}
-          />
-        ) : null;
-      // Combine-mechanism picker sits directly under the count row and
-      // is only relevant once the council fans out (`count > 1`).
-      const mechanismRow =
-        cfg.includeCouncilRow && councilCount > 1 ? (
-          <CouncilMechanismRow
-            key="__council_mechanism__"
-            mechanism={councilMechanism}
-            onSelect={(m) => setCouncilMechanism(streamKey, m)}
-          />
-        ) : null;
       const activeModel = cfg.activeModelId ? getModelById(cfg.activeModelId) : undefined;
       const effortRow =
         generationMode === "chat" && activeModel?.efforts?.length ? (
@@ -295,9 +227,6 @@ export const ModelControls = memo(function ModelControls({
             data-agent-surface="model-picker"
             data-agent-proof="chat-model-picker-visible"
           >
-            {secondOpinionRow}
-            {councilRow}
-            {mechanismRow}
             {effortRow}
             {vendorGroups.map((group) => (
               <ModelMenuGroup
@@ -328,9 +257,6 @@ export const ModelControls = memo(function ModelControls({
           data-agent-surface="model-picker"
           data-agent-proof="chat-model-picker-visible"
         >
-          {secondOpinionRow}
-          {councilRow}
-          {mechanismRow}
           {effortRow}
           {sortedModelsForMode.map((m) => {
             const isComingSoon = m.id.startsWith("dreamina-seedance");
@@ -358,17 +284,7 @@ export const ModelControls = memo(function ModelControls({
       collapsedVendors,
       toggleVendor,
       sortedModelsForMode,
-      councilCount,
-      setCouncilCount,
-      councilMechanism,
-      setCouncilMechanism,
-      answerStrategy,
-      secondOpinionReference,
-      setAnswerStrategy,
-      streamKey,
       generationMode,
-      adapterType,
-      defaultModel,
     ],
   );
 
@@ -378,7 +294,6 @@ export const ModelControls = memo(function ModelControls({
         activeModelId: selectedModel,
         activeEffort: selectedEffort,
         onSelect: (id, effort) => onModelChange(id, effort),
-        includeCouncilRow: true,
       }),
     [renderModelMenuList, selectedModel, selectedEffort, onModelChange],
   );
@@ -510,7 +425,6 @@ export const ModelControls = memo(function ModelControls({
               activeEffort: reference.effort,
               onSelect: (id, effort) =>
                 setSecondOpinionReference(streamKey, id, effort),
-              includeCouncilRow: false,
             })
           }
           onOpen={handleModelPickerOpen}
@@ -549,7 +463,6 @@ export const ModelControls = memo(function ModelControls({
                   activeEffort: slotEffort,
                   onSelect: (id, effort) =>
                     setCouncilModel(streamKey, slot, id, effort),
-                  includeCouncilRow: true,
                 })
               }
               onOpen={handleModelPickerOpen}

@@ -1,0 +1,85 @@
+/* Orchestration options row shown on the line below the chat input (in the
+   same pill), for chat (Code/Plan) modes: single model, Second Opinion, and
+   AURA Council, plus a combine-mechanism dropdown once council is active. */
+.bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* A single orchestration button (icon + label), pill-shaped to match the
+   chrome of the surrounding input controls. */
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.option:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-text-secondary);
+}
+
+/* Selected orchestration mode: accent-tinted fill + border. */
+.optionActive {
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+}
+
+.optionActive:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+}
+
+.optionIcon {
+  flex: 0 0 auto;
+  opacity: 0.9;
+}
+
+.optionLabel {
+  white-space: nowrap;
+}
+
+/* Member-count badge shown on the council button once it has fanned out. */
+.optionBadge {
+  margin-left: 2px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-size: 10px;
+  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  color: var(--color-text-primary);
+}
+
+/* Wrapper for the council button so its hover count flyout can anchor to it. */
+.councilWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Spacing for the combine-mechanism dropdown that sits beside the council
+   button; the trigger chrome itself comes from the shared model picker. */
+.mechanismPicker {
+  margin-left: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+}

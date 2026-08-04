@@ -49,6 +49,7 @@ import {
   type InputStatusAction,
 } from "./InputStatusHints";
 import { ModelControls } from "./ModelControls";
+import { AgentOptionsBar } from "./AgentOptionsBar";
 import { ProjectPicker } from "./ProjectPicker";
 import { useChatUI } from "../../../stores/chat-ui-store";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
@@ -783,13 +784,9 @@ export const DesktopChatInputBar = memo(
       imageQuality,
       councilCount,
       councilModels,
-      councilMechanism,
       answerStrategy,
       secondOpinionReference,
-      setCouncilCount,
       setCouncilModel,
-      setCouncilMechanism,
-      setAnswerStrategy,
       setSecondOpinionReference,
       sortedModelsForMode,
       vendorGroups,
@@ -913,17 +910,36 @@ export const DesktopChatInputBar = memo(
     const inputRowEnd = showPickerInline ? (
       <ModelControls placement="inline" {...modelControlsProps} />
     ) : null;
+    // Orchestration options (single / Second Opinion / AURA Council) sit on
+    // their own line below the input for chat (Code/Plan) modes whenever a
+    // model picker is present. Kept out of the model dropdown so the choice is
+    // glanceable and one click away.
+    const showOptionsBar =
+      generationMode === "chat" && hasModelPicker && isModelPickerInteractive;
     // Bottom region stacks the tags row above the model ("LLM") row so a
     // tag like `/Record Demo` sits on its own line with full text, one
     // line below the prompt, and the model picker keeps its own line.
     const containerBottom =
-      hasCommandChips || showPickerInBottomRow ? (
+      hasCommandChips || showPickerInBottomRow || showOptionsBar ? (
         <div className={styles.bottomStack}>
           {hasCommandChips ? (
             <CommandChips
               commands={selectedCommands}
               onRemove={handleCommandRemove}
               variant="stacked"
+            />
+          ) : null}
+          {showOptionsBar ? (
+            <AgentOptionsBar
+              streamKey={streamKey}
+              adapterType={adapterType}
+              defaultModel={defaultModel}
+              councilCount={councilCount}
+              councilMechanism={councilMechanism}
+              answerStrategy={answerStrategy}
+              setCouncilCount={setCouncilCount}
+              setCouncilMechanism={setCouncilMechanism}
+              setAnswerStrategy={setAnswerStrategy}
             />
           ) : null}
           {showPickerInBottomRow ? (
