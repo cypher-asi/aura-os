@@ -43,7 +43,10 @@ fn common_unlabelled_credential_signatures_are_excluded() {
         ["AKIA", "ABCDEFGHIJKLMNOP"].concat(),
         ["-----BEGIN ", "PRIVATE KEY-----"].concat(),
     ] {
-        assert!(looks_sensitive(&secret), "must exclude {secret}");
+        assert!(
+            looks_sensitive(&secret),
+            "must exclude credential-like token"
+        );
     }
 }
 
