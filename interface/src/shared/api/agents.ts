@@ -164,6 +164,18 @@ export interface ContextContentsResponse {
   context_contents?: WireContextContents;
 }
 
+export interface AgentCloneCopyReport {
+  copied: string[];
+  not_copied: string[];
+}
+
+export interface CloneAgentToLocalResponse {
+  agent: Agent;
+  source_agent_id: AgentId;
+  source_preserved: boolean;
+  copy_report: AgentCloneCopyReport;
+}
+
 export const agentTemplatesApi = {
   // `orgId` scopes the listing to the full org fleet (every member's
   // agents, not just the caller's). Without it aura-network filters by
@@ -234,6 +246,16 @@ export const agentTemplatesApi = {
   }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),
+  /**
+   * Create a second, local-harness identity from a remote agent's portable
+   * configuration. The source is preserved; mutable runtime state and secrets
+   * remain attached only to it (enumerated by `copy_report`).
+   */
+  cloneToLocal: (agentId: AgentId, data: { name?: string } = {}) =>
+    apiFetch<CloneAgentToLocalResponse>(`/api/agents/${agentId}/clone-to-local`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   listProjectBindings: (agentId: AgentId) =>
     apiFetch<{ project_agent_id: string; project_id: string; project_name: string }[]>(`/api/agents/${agentId}/projects`),
   removeProjectBinding: (agentId: AgentId, projectAgentId: string) =>

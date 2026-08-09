@@ -218,6 +218,36 @@ pub(crate) struct UpdateAgentRequest {
     pub intent_classifier: Option<aura_os_core::IntentClassifierSpec>,
 }
 
+/// Optional overrides for cloning a remote agent into the local harness.
+///
+/// The source agent is addressed by the route and is never mutated. Keeping
+/// this request deliberately small prevents callers from smuggling runtime
+/// changes into what should be a predictable configuration clone.
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct CloneAgentToLocalRequest {
+    /// Name for the new local agent. When omitted, the server derives a valid
+    /// `<source>-local` name from the source agent.
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+/// Explicit copy boundary returned by the clone endpoint. The UI renders this
+/// contract before cloning too, so users never mistake a configuration clone
+/// for a transfer of secrets or mutable runtime state.
+#[derive(Debug, Serialize)]
+pub(crate) struct AgentCloneCopyReport {
+    pub copied: Vec<String>,
+    pub not_copied: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct CloneAgentToLocalResponse {
+    pub agent: Agent,
+    pub source_agent_id: AgentId,
+    pub source_preserved: bool,
+    pub copy_report: AgentCloneCopyReport,
+}
+
 // -- Marketplace DTOs --
 
 #[derive(Debug, Clone, Serialize)]

@@ -19,6 +19,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
                 .delete(agents::delete_agent),
         )
         .route(
+            "/api/agents/:agent_id/clone-to-local",
+            post(agents::clone_agent_to_local),
+        )
+        .route(
             "/api/agents/:agent_id/projects",
             get(agents::list_agent_project_bindings),
         )
