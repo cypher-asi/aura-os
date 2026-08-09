@@ -107,6 +107,30 @@ describe("agentTemplatesApi", () => {
     );
   });
 
+  it("cloneToLocal posts the new name to the source agent clone endpoint", async () => {
+    const clone = {
+      agent: { agent_id: "a2", machine_type: "local" },
+      source_agent_id: "a1",
+      source_preserved: true,
+      copy_report: { copied: ["profile"], not_copied: ["secrets"] },
+    };
+    const fetchMock = mockFetch(200, clone);
+    globalThis.fetch = fetchMock;
+
+    const result = await agentTemplatesApi.cloneToLocal("a1" as string, {
+      name: "source-local",
+    });
+
+    expect(result).toEqual(clone);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents/a1/clone-to-local",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ name: "source-local" }),
+      }),
+    );
+  });
+
   it("listEvents fetches events with signal", async () => {
     const events = [{ id: "m1", content: "hello" }];
     const fetchMock = mockFetch(200, events);

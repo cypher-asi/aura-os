@@ -10,6 +10,7 @@
 //! * [`update`]     — `PUT /agents/{id}`
 //! * [`delete`]     — `DELETE /agents/{id}`, project-binding helpers
 
+mod clone;
 pub(crate) mod create;
 mod delete;
 mod list;
@@ -17,6 +18,7 @@ mod swarm;
 mod update;
 mod validation;
 
+pub(crate) use clone::clone_agent_to_local;
 pub(crate) use create::create_agent;
 pub(crate) use delete::{delete_agent, list_agent_project_bindings, remove_agent_project_binding};
 pub(crate) use list::{get_agent, list_agents};

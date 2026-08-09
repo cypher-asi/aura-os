@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   AtSign,
   Trash2,
+  Copy,
   Sparkles,
 } from "lucide-react";
 import { useAgentSidekickStore, type AgentSidekickTab } from "../stores/agent-sidekick-store";
@@ -23,6 +24,7 @@ import { useAuth } from "../../../stores/auth-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
 import type { Agent } from "../../../shared/types";
 import { isAgentOwnedByUser } from "../utils/agent-ownership";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 
 const TAB_ICONS: TabItem[] = [
   { id: "profile", icon: <User size={16} />, title: "Agent" },
@@ -49,33 +51,43 @@ interface AgentSidekickTaskbarProps {
 }
 
 export function AgentSidekickTaskbar({ agent: agentOverride }: AgentSidekickTaskbarProps = {}) {
-  const { activeTab, setActiveTab, requestEdit, requestDelete } = useAgentSidekickStore(
+  const { activeTab, setActiveTab, requestEdit, requestDelete, requestClone } = useAgentSidekickStore(
     useShallow((s) => ({
       activeTab: s.activeTab,
       setActiveTab: s.setActiveTab,
       requestEdit: s.requestEdit,
       requestDelete: s.requestDelete,
+      requestClone: s.requestClone,
     })),
   );
   const { selectedAgent: storeSelectedAgent } = useSelectedAgent();
   const selectedAgent = agentOverride ?? storeSelectedAgent;
   const { user } = useAuth();
+  const { localAgentRuntimeAvailable } = useAuraCapabilities();
 
   const isOwnAgent = isAgentOwnedByUser(selectedAgent, user);
+  const canCloneToLocal =
+    isOwnAgent &&
+    selectedAgent?.machine_type === "remote" &&
+    localAgentRuntimeAvailable;
 
   const actions = useMemo<MenuItem[]>(
     () =>
       isOwnAgent
         ? [
+            ...(canCloneToLocal
+              ? [{ id: "clone-local", label: "Clone as Local", icon: <Copy size={14} /> }]
+              : []),
             { id: "edit", label: "Edit", icon: <Pencil size={14} /> },
             { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
           ]
         : [],
-    [isOwnAgent],
+    [canCloneToLocal, isOwnAgent],
   );
 
   const handleAction = (id: string) => {
-    if (id === "edit") requestEdit();
+    if (id === "clone-local") requestClone();
+    else if (id === "edit") requestEdit();
     else if (id === "delete") requestDelete();
   };
 

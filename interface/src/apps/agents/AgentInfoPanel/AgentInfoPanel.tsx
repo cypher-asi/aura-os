@@ -30,9 +30,11 @@ import { ProfileTab } from "./ProfileTab";
 import { ChatsTab } from "./ChatsTab";
 import { PermissionsTab } from "./PermissionsTab";
 import { MessagingTab } from "./MessagingTab";
+import { CloneAgentToLocalModal } from "./CloneAgentToLocalModal";
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
 import { isAgentOwnedByUser } from "../utils/agent-ownership";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import styles from "./AgentInfoPanel.module.css";
 
 interface AgentInfoPanelProps {
@@ -175,17 +177,21 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
   const navigate = useNavigate();
   const {
     activeTab, showEditor, showDeleteConfirm,
-    closeEditor, closeDeleteConfirm, requestEdit, requestDelete,
+    showCloneConfirm, closeEditor, closeDeleteConfirm, closeCloneConfirm,
+    requestEdit, requestDelete, requestClone,
     previewItem, canGoBack, goBackPreview, closePreview, viewSkill,
   } = useAgentSidekickStore(
     useShallow((s) => ({
       activeTab: s.activeTab,
       showEditor: s.showEditor,
       showDeleteConfirm: s.showDeleteConfirm,
+      showCloneConfirm: s.showCloneConfirm,
       closeEditor: s.closeEditor,
       closeDeleteConfirm: s.closeDeleteConfirm,
+      closeCloneConfirm: s.closeCloneConfirm,
       requestEdit: s.requestEdit,
       requestDelete: s.requestDelete,
+      requestClone: s.requestClone,
       previewItem: s.previewItem,
       canGoBack: s.canGoBack,
       goBackPreview: s.goBackPreview,
@@ -195,6 +201,7 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
   );
 
   const cascade = useCascadeDeleteAgent(selectedAgent);
+  const { localAgentRuntimeAvailable } = useAuraCapabilities();
   const [bindingRemovalError, setBindingRemovalError] = useState<string | null>(null);
 
   const handleRemoveBinding = useCallback(
@@ -335,6 +342,9 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
 
       {isMobileStandalone && isOwnAgent && (
         <div className={styles.mobileActions}>
+          {a.machine_type === "remote" && localAgentRuntimeAvailable && (
+            <Button variant="ghost" size="sm" onClick={requestClone}>Clone as Local</Button>
+          )}
           <Button variant="ghost" size="sm" onClick={requestEdit}>Edit</Button>
           <Button variant="ghost" size="sm" onClick={openDeleteConfirm} disabled={deletePreparing}>Delete</Button>
         </div>
@@ -368,6 +378,25 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
         bindings={cascade.bindings}
         agentName={a.name}
       />
+
+      {isOwnAgent && a.machine_type === "remote" && localAgentRuntimeAvailable && (
+        <CloneAgentToLocalModal
+          isOpen={showCloneConfirm}
+          sourceAgent={a}
+          onClose={closeCloneConfirm}
+          onCloned={(clonedAgent) => {
+            useAgentStore.setState((state) => ({
+              agents: [
+                ...state.agents.filter((agent) => agent.agent_id !== clonedAgent.agent_id),
+                clonedAgent,
+              ],
+            }));
+            setSelectedAgent(clonedAgent.agent_id);
+            navigate(`/agents/${clonedAgent.agent_id}`);
+            void useAgentStore.getState().fetchAgents({ force: true });
+          }}
+        />
+      )}
     </div>
   );
 }

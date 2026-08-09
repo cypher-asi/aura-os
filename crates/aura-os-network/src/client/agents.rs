@@ -5,6 +5,22 @@ use crate::types::*;
 
 use super::NetworkClient;
 
+const AGENT_ROSTER_PAGE_SIZE: usize = 100;
+
+fn agent_roster_page_url(base_url: &str, org_id: Option<&str>, offset: usize) -> String {
+    let mut url = format!("{base_url}/api/agents?");
+    if let Some(org_id) = org_id {
+        url.push_str("org_id=");
+        url.push_str(org_id);
+        url.push('&');
+    }
+    url.push_str(&format!("limit={AGENT_ROSTER_PAGE_SIZE}"));
+    if offset > 0 {
+        url.push_str(&format!("&offset={offset}"));
+    }
+    url
+}
+
 /// Query parameters for the marketplace view of `GET /api/agents`.
 ///
 /// Mirrors the contract documented in
@@ -36,8 +52,7 @@ impl NetworkClient {
     }
 
     pub async fn list_agents(&self, jwt: &str) -> Result<Vec<NetworkAgent>, NetworkError> {
-        self.get_authed(&format!("{}/api/agents", self.base_url), jwt)
-            .await
+        self.list_agent_roster(jwt, None).await
     }
 
     pub async fn list_agents_by_org(
@@ -45,11 +60,28 @@ impl NetworkClient {
         org_id: &str,
         jwt: &str,
     ) -> Result<Vec<NetworkAgent>, NetworkError> {
-        self.get_authed(
-            &format!("{}/api/agents?org_id={}", self.base_url, org_id),
-            jwt,
-        )
-        .await
+        self.list_agent_roster(jwt, Some(org_id)).await
+    }
+
+    /// Fetch the complete caller/org roster instead of accepting aura-network's
+    /// default first 50 rows. The network orders non-marketplace rosters by
+    /// ascending creation time, so a newly cloned agent otherwise disappears
+    /// from Aura immediately after the post-clone refresh on larger fleets.
+    async fn list_agent_roster(
+        &self,
+        jwt: &str,
+        org_id: Option<&str>,
+    ) -> Result<Vec<NetworkAgent>, NetworkError> {
+        let mut agents = Vec::new();
+        loop {
+            let url = agent_roster_page_url(&self.base_url, org_id, agents.len());
+            let page: Vec<NetworkAgent> = self.get_authed(&url, jwt).await?;
+            let page_len = page.len();
+            agents.extend(page);
+            if page_len < AGENT_ROSTER_PAGE_SIZE {
+                return Ok(agents);
+            }
+        }
     }
 
     /// List hireable agents from the marketplace.
@@ -103,5 +135,23 @@ impl NetworkClient {
     pub async fn delete_agent(&self, agent_id: &str, jwt: &str) -> Result<(), NetworkError> {
         self.delete_authed(&format!("{}/api/agents/{}", self.base_url, agent_id), jwt)
             .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{agent_roster_page_url, AGENT_ROSTER_PAGE_SIZE};
+
+    #[test]
+    fn roster_urls_request_full_pages_and_offsets() {
+        assert_eq!(AGENT_ROSTER_PAGE_SIZE, 100);
+        assert_eq!(
+            agent_roster_page_url("https://network.test", None, 0),
+            "https://network.test/api/agents?limit=100"
+        );
+        assert_eq!(
+            agent_roster_page_url("https://network.test", Some("org-1"), 100),
+            "https://network.test/api/agents?org_id=org-1&limit=100&offset=100"
+        );
     }
 }

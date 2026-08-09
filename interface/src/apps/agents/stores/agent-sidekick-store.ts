@@ -45,11 +45,14 @@ function isAgentSidekickTab(value: string): value is AgentSidekickTab {
 interface AgentSidekickState extends SidekickSliceState<AgentSidekickTab, AgentPreviewItem> {
   showEditor: boolean;
   showDeleteConfirm: boolean;
+  showCloneConfirm: boolean;
 
   requestEdit: () => void;
   requestDelete: () => void;
+  requestClone: () => void;
   closeEditor: () => void;
   closeDeleteConfirm: () => void;
+  closeCloneConfirm: () => void;
   viewSkill: (skill: HarnessSkill, installation?: HarnessSkillInstallation) => void;
   viewMemoryFact: (fact: MemoryFact, access?: MemoryAccessOptions) => void;
   viewMemoryEvent: (event: MemoryEvent, access?: MemoryAccessOptions) => void;
@@ -65,11 +68,14 @@ export const useAgentSidekickStore = create<AgentSidekickState>()((set, get) => 
   }),
   showEditor: false,
   showDeleteConfirm: false,
+  showCloneConfirm: false,
 
   requestEdit: () => set({ showEditor: true }),
   requestDelete: () => set({ showDeleteConfirm: true }),
+  requestClone: () => set({ showCloneConfirm: true }),
   closeEditor: () => set({ showEditor: false }),
   closeDeleteConfirm: () => set({ showDeleteConfirm: false }),
+  closeCloneConfirm: () => set({ showCloneConfirm: false }),
   viewSkill: (skill, installation) =>
     set({ previewItem: { kind: "skill", skill, installation }, previewHistory: [], canGoBack: false }),
   viewMemoryFact: (fact, access) =>
