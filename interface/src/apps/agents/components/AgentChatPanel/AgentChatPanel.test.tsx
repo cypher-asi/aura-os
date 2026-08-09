@@ -1,8 +1,10 @@
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AgentChatPanel } from "./AgentChatPanel";
+import { useChatUIStore } from "../../../../stores/chat-ui-store";
+import { DESIGN_PROMPT_EVENT } from "../../../../shared/lib/design-context";
 
 const mockUseAuraCapabilities = vi.fn();
 const mockUseTerminalTarget = vi.fn();
@@ -210,6 +212,7 @@ describe("AgentChatPanel workspace automation target", () => {
       resetEvents: vi.fn(),
       markNextSendAsNewSession: vi.fn(),
     });
+    useChatUIStore.setState({ drafts: {} });
   });
 
   it("does not enable dev-loop chat bridging for browse-only remote workspaces", () => {
@@ -388,5 +391,26 @@ describe("AgentChatPanel workspace automation target", () => {
     expect(mockRegisterRemoteAgents).toHaveBeenCalledWith([
       { agent_id: "template-agent-1" },
     ]);
+  });
+
+  it("appends Preview design context to the active chat draft", () => {
+    renderPanel();
+
+    act(() => {
+      const handled = window.dispatchEvent(
+        new CustomEvent(DESIGN_PROMPT_EVENT, {
+          detail: {
+            projectId: "project-1",
+            prompt: "Update #hero\n<context />",
+          },
+          cancelable: true,
+        }),
+      );
+      expect(handled).toBe(false);
+    });
+
+    expect(useChatUIStore.getState().getDraft("stream-key")).toBe(
+      "Update #hero\n<context />",
+    );
   });
 });

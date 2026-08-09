@@ -27,6 +27,7 @@ source of truth.
 | `AURA_ROUTER_URL` | `https://aura-router.onrender.com` |
 | `Z_BILLING_URL` | `https://z-billing.onrender.com` |
 | `BRAVE_SEARCH_PLATFORM_KEY` | Aura's Brave Search subscription key (secret) |
+| `BROWSER_EXECUTABLE_PATH` | Absolute path to the installed Chrome/Chromium binary used by Preview and Design mode |
 
 `BRAVE_SEARCH_PLATFORM_KEY` must exist only on `aura-api`. Do not add it to
 `aura-app`, any `VITE_*` variable, GitHub Actions desktop secrets, or renderer
@@ -161,6 +162,11 @@ local-agent chat/dev-loop routes before they reach the hosted local harness.
 1. **Vendored ZUI** — Aura now vendors `@cypher-asi/zui` under `vendor/zui`, and `interface/package.json` resolves it from inside this repo. Render builds no longer need a sibling checkout or a separately published ZUI package.
 
 2. **Local storage model** — Aura no longer depends on the old embedded C++ database layer. Browser-owned persistence lives in IndexedDB, while the local backend uses a lightweight JSON/runtime store.
+
+3. **Preview browser** — The API image must install Chrome or Chromium. Normal
+   `dev-channel` and `stable-channel` server builds include the CDP backend; it
+   launches lazily on the first Preview tab and uses `BROWSER_EXECUTABLE_PATH`
+   when automatic executable discovery is insufficient.
 
 ## Post-Deploy Verification
 

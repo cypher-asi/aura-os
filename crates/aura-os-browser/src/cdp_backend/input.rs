@@ -30,6 +30,9 @@ pub(super) async fn apply_client_msg(page: &Page, msg: ClientMsg) -> Result<(), 
         ClientMsg::Wheel { x, y, delta_x, delta_y } => dispatch_wheel(page, x, y, delta_x, delta_y).await,
         ClientMsg::Key { event, key, code, text, modifiers, windows_virtual_key_code } =>
             dispatch_key(page, KeyInput { event, key, code, text, modifiers, windows_virtual_key_code }).await,
+        // Inspection needs to return a ServerEvent and is intercepted by
+        // the session command handler before regular input dispatch.
+        ClientMsg::Inspect { .. } => Ok(()),
     }
 }
 

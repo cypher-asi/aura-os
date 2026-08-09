@@ -20,7 +20,7 @@ import {
   MessageSquare,
   FolderClosed,
   SquareTerminal,
-  Globe,
+  MonitorPlay,
 } from "lucide-react";
 import { useSidekickStore, type SidekickTab } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";
@@ -120,7 +120,7 @@ export function SidekickTaskbar() {
             },
           ]
         : []),
-      { id: "browser", icon: <Globe size={16} />, title: "Browser" },
+      { id: "browser", icon: <MonitorPlay size={16} />, title: "Preview" },
       { id: "specs", icon: <File size={16} />, title: "Plans" },
       {
         id: "run",

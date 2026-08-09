@@ -9,8 +9,8 @@
 //!
 //! A Chromium/Chrome executable must be discoverable (in `$PATH`, the
 //! system default location, or via `BROWSER_EXECUTABLE_PATH`). The test
-//! opens `about:blank`, waits for a single screencast frame, and then
-//! shuts the session down cleanly.
+//! opens a local page, waits for a screencast frame, inspects a real DOM
+//! element, and then shuts the session down cleanly.
 
 #![cfg(feature = "cdp")]
 
@@ -18,13 +18,37 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use aura_os_browser::{
-    BrowserConfig, BrowserManager, CdpBackend, CdpBackendConfig, ServerEvent, SpawnOptions,
+    BrowserConfig, BrowserManager, CdpBackend, CdpBackendConfig, ClientMsg, InspectionKind,
+    ServerEvent, SpawnOptions,
 };
 use tempfile::tempdir;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
 
 #[tokio::test]
 #[ignore = "launches real Chromium; run locally with --ignored"]
 async fn cdp_smoke_end_to_end() {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind test page");
+    let address = listener.local_addr().expect("test page address");
+    let page_url = format!("http://{address}/");
+    let page_task = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.expect("accept page request");
+        let mut request = [0_u8; 2048];
+        let _ = stream.read(&mut request).await.expect("read page request");
+        let body = br#"<!doctype html><style>body{margin:0}#hero{position:absolute;left:40px;top:30px;width:200px;height:80px}</style><button id="hero" class="primary">Ship preview</button>"#;
+        let head = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len(),
+        );
+        stream
+            .write_all(head.as_bytes())
+            .await
+            .expect("write headers");
+        stream.write_all(body).await.expect("write page");
+    });
+
     let dir = tempdir().expect("tempdir");
     let config = BrowserConfig::default().with_settings_root(dir.path().to_path_buf());
     let backend = Arc::new(CdpBackend::with_config(CdpBackendConfig {
@@ -38,7 +62,7 @@ async fn cdp_smoke_end_to_end() {
             width: 640,
             height: 480,
             project_id: None,
-            initial_url: None,
+            initial_url: Some(page_url.parse().expect("valid local page URL")),
             frame_quality: Some(60),
         })
         .await
@@ -49,11 +73,22 @@ async fn cdp_smoke_end_to_end() {
         .expect("event channel available after spawn");
 
     let frame = tokio::time::timeout(Duration::from_secs(20), async {
+        let mut first_frame = None;
+        let mut page_loaded = false;
         loop {
             match events.recv().await {
-                Some(ServerEvent::Frame { seq, .. }) => break seq,
+                Some(ServerEvent::Frame { seq, .. }) => {
+                    manager.ack_frame(spawn.id, seq).await.expect("ack frame");
+                    first_frame.get_or_insert(seq);
+                }
+                Some(ServerEvent::Nav(state)) => {
+                    page_loaded = state.url == page_url && !state.loading;
+                }
                 Some(_) => continue,
                 None => panic!("event channel closed before first frame"),
+            }
+            if page_loaded && first_frame.is_some() {
+                break first_frame.expect("frame was set");
             }
         }
     })
@@ -61,5 +96,40 @@ async fn cdp_smoke_end_to_end() {
     .expect("at least one frame within 20s");
     assert!(frame >= 1, "frame seq must be >= 1");
 
+    manager
+        .dispatch(
+            spawn.id,
+            ClientMsg::Inspect {
+                request_id: 77,
+                kind: InspectionKind::Select,
+                x: 100.0,
+                y: 60.0,
+            },
+        )
+        .await
+        .expect("dispatch inspection");
+
+    let element = tokio::time::timeout(Duration::from_secs(20), async {
+        loop {
+            match events.recv().await {
+                Some(ServerEvent::Inspection(result)) if result.request_id == 77 => {
+                    break result.element.expect("element at inspected point");
+                }
+                Some(ServerEvent::Frame { seq, .. }) => {
+                    manager.ack_frame(spawn.id, seq).await.expect("ack frame");
+                }
+                Some(_) => continue,
+                None => panic!("event channel closed before inspection result"),
+            }
+        }
+    })
+    .await
+    .expect("inspection result within 20s");
+    assert_eq!(element.tag_name, "button");
+    assert_eq!(element.id.as_deref(), Some("hero"));
+    assert_eq!(element.selector, "#hero");
+    assert!(element.text.contains("Ship preview"));
+
     manager.kill(spawn.id).await.expect("kill");
+    page_task.await.expect("test page task");
 }

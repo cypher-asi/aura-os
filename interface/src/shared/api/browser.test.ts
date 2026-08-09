@@ -7,7 +7,12 @@ import {
   isBrowserServerTextEvent,
 } from "./browser";
 
-function makeFrameBuffer(seq: number, w: number, h: number, payload: Uint8Array): ArrayBuffer {
+function makeFrameBuffer(
+  seq: number,
+  w: number,
+  h: number,
+  payload: Uint8Array,
+): ArrayBuffer {
   const buf = new ArrayBuffer(FRAME_HEADER_LEN + payload.length);
   const view = new DataView(buf);
   view.setUint8(0, FRAME_OPCODE);
@@ -51,7 +56,13 @@ describe("isBrowserServerTextEvent", () => {
     expect(
       isBrowserServerTextEvent({
         type: "nav",
-        nav: { url: "http://localhost", title: null, can_go_back: false, can_go_forward: false, loading: false },
+        nav: {
+          url: "http://localhost",
+          title: null,
+          can_go_back: false,
+          can_go_forward: false,
+          loading: false,
+        },
       }),
     ).toBe(true);
   });
@@ -96,11 +107,30 @@ describe("isBrowserServerTextEvent", () => {
     ).toBe(true);
   });
 
+  it("accepts an element inspection event", () => {
+    expect(
+      isBrowserServerTextEvent({
+        type: "inspection",
+        inspection: {
+          request_id: 12,
+          kind: "select",
+          element: { selector: "#hero" },
+        },
+      }),
+    ).toBe(true);
+  });
+
   it("rejects garbage", () => {
     expect(isBrowserServerTextEvent(null)).toBe(false);
     expect(isBrowserServerTextEvent({ type: "other" })).toBe(false);
     expect(isBrowserServerTextEvent({ type: "nav" })).toBe(false);
     expect(isBrowserServerTextEvent({ type: "nav_error" })).toBe(false);
+    expect(
+      isBrowserServerTextEvent({
+        type: "inspection",
+        inspection: { request_id: "12", kind: "select", element: null },
+      }),
+    ).toBe(false);
     expect(
       isBrowserServerTextEvent({ type: "nav_error", error: { url: "x" } }),
     ).toBe(false);

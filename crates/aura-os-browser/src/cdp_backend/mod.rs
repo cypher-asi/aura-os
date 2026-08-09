@@ -43,6 +43,7 @@ mod command;
 mod config;
 mod handlers;
 mod input;
+mod inspect;
 mod screencast;
 mod session_loop;
 

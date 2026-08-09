@@ -183,7 +183,7 @@ describe("SidekickTaskbar", () => {
     expect(labels).toEqual([
       "Chats",
       "Terminal",
-      "Browser",
+      "Preview",
       "Plans",
       "Run",
       "Loop Engineering",

@@ -18,11 +18,14 @@ use chromiumoxide::Page;
 use tokio::sync::mpsc;
 use tracing::{debug, warn};
 
-use crate::protocol::{net_error_code, ClientMsg, NavError, NavState, ServerEvent};
+use crate::protocol::{
+    net_error_code, ClientMsg, InspectionResult, NavError, NavState, ServerEvent,
+};
 use crate::session::SessionId;
 
 use super::command::SessionCommand;
 use super::input::apply_client_msg;
+use super::inspect::inspect_element;
 use super::screencast::{decode_screencast_data, start_screencast};
 
 /// Mutable state owned by [`super::session_loop::pump_events`] and
@@ -69,6 +72,7 @@ pub(super) struct PendingMainNav {
 /// break (Stop / closed channel).
 pub(super) async fn handle_cmd(
     page: &Page,
+    events: &mpsc::Sender<ServerEvent>,
     state: &mut LoopState,
     cmd: Option<SessionCommand>,
     id: SessionId,
@@ -77,7 +81,7 @@ pub(super) async fn handle_cmd(
     match cmd {
         Some(SessionCommand::Stop) | None => false,
         Some(SessionCommand::Client(msg)) => {
-            apply_and_maybe_restart(page, state, msg, id, quality).await;
+            apply_and_maybe_restart(page, events, state, msg, id, quality).await;
             true
         }
         Some(SessionCommand::Ack(client_seq)) => {
@@ -91,11 +95,33 @@ pub(super) async fn handle_cmd(
 /// so the client receives correctly-sized frames.
 async fn apply_and_maybe_restart(
     page: &Page,
+    events: &mpsc::Sender<ServerEvent>,
     state: &mut LoopState,
     msg: ClientMsg,
     id: SessionId,
     quality: i64,
 ) {
+    if let ClientMsg::Inspect {
+        request_id,
+        kind,
+        x,
+        y,
+    } = &msg
+    {
+        match inspect_element(page, *x, *y).await {
+            Ok(element) => {
+                let _ = events
+                    .send(ServerEvent::Inspection(Box::new(InspectionResult {
+                        request_id: *request_id,
+                        kind: *kind,
+                        element,
+                    })))
+                    .await;
+            }
+            Err(err) => warn!(%id, %err, "element inspection failed"),
+        }
+        return;
+    }
     if let ClientMsg::Resize { width, height } = &msg {
         state.width = *width;
         state.height = *height;
