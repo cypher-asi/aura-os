@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-08-09",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.783.1",
+    "title": "Clone remote agents into the local harness",
+    "intro": "Today's nightly introduces a single, focused capability: you can now take a remote swarm agent and spin up a local copy of its configuration without disturbing the original. The change spans a new server endpoint, network client support, and a dedicated UI flow in the Agent Info panel.",
+    "entryCount": 1,
+    "highlights": [
+      "Clone a remote agent into a local one from the Agent Info panel",
+      "New server endpoint preserves the source and returns an explicit copy report",
+      "Available across Desktop builds for Linux, macOS, and Windows"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-09T16:45:30.273Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.783.1",
+    "path": "history/2026-08-09.json"
+  },
+  {
     "date": "2026-08-04",
     "channel": "nightly",
     "version": "0.1.0-nightly.782.1",
