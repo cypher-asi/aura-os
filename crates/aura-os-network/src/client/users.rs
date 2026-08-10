@@ -1,5 +1,6 @@
 use crate::error::NetworkError;
 use crate::types::*;
+use reqwest::Method;
 
 use super::NetworkClient;
 
@@ -63,9 +64,7 @@ impl NetworkClient {
     pub async fn grant_access(&self, jwt: &str) -> Result<(), NetworkError> {
         let url = format!("{}/api/access-codes/grant", self.base_url);
         let resp = self
-            .http
-            .post(&url)
-            .header("Authorization", format!("Bearer {jwt}"))
+            .authed_request(Method::POST, &url, jwt)?
             .send()
             .await
             .map_err(NetworkError::Request)?;

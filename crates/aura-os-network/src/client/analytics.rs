@@ -2,6 +2,7 @@ use tracing::{debug, warn};
 
 use crate::error::NetworkError;
 use crate::types::*;
+use reqwest::Method;
 
 use super::NetworkClient;
 
@@ -68,7 +69,7 @@ impl NetworkClient {
         // remote emitting `projectCount` while we expect `projectsCreated`)
         // that silently decode to 0 via `#[serde(default)]`.
         let url = format!("{}/api/stats", self.base_url);
-        let resp = self.http.get(&url).bearer_auth(jwt).send().await?;
+        let resp = self.authed_request(Method::GET, &url, jwt)?.send().await?;
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
@@ -95,9 +96,7 @@ impl NetworkClient {
     ) -> Result<(), NetworkError> {
         let url = format!("{}/api/usage", self.base_url);
         let resp = self
-            .http
-            .post(&url)
-            .bearer_auth(jwt)
+            .authed_request(Method::POST, &url, jwt)?
             .json(req)
             .send()
             .await?;
