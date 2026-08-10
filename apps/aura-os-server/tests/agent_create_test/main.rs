@@ -2,7 +2,7 @@
 #[allow(dead_code)]
 mod common;
 
-mod clone_local;
+mod clone;
 mod create_local;
 mod create_remote;
 mod delete_remote;

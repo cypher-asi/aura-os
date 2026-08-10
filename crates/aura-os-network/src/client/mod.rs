@@ -10,7 +10,7 @@ pub use social::CreatePostParams;
 
 use std::env;
 
-use reqwest::Client;
+use reqwest::{Client, Method, RequestBuilder, Url};
 use tracing::{debug, error, info, warn};
 
 use crate::error::NetworkError;
@@ -144,6 +144,43 @@ impl NetworkClient {
     // Internal HTTP helpers
     // -----------------------------------------------------------------------
 
+    /// Build an authenticated request only when its destination exactly matches
+    /// the configured aura-network origin. Keeping this check at the bearer-token
+    /// boundary prevents future callers from turning the shared helpers into an
+    /// SSRF or credential-exfiltration primitive.
+    pub(crate) fn authed_request(
+        &self,
+        method: Method,
+        request_url: &str,
+        jwt: &str,
+    ) -> Result<RequestBuilder, NetworkError> {
+        let base_url = Url::parse(&self.base_url).map_err(|_| NetworkError::InvalidBaseUrl)?;
+        let request_url = Url::parse(request_url).map_err(|_| NetworkError::InvalidRequestUrl)?;
+
+        let base_is_http = matches!(base_url.scheme(), "http" | "https");
+        let base_has_origin = base_url.host_str().is_some();
+        let same_origin = request_url.scheme() == base_url.scheme()
+            && request_url.host_str() == base_url.host_str()
+            && request_url.port_or_known_default() == base_url.port_or_known_default();
+        let has_embedded_credentials = !request_url.username().is_empty()
+            || request_url.password().is_some()
+            || !base_url.username().is_empty()
+            || base_url.password().is_some();
+
+        if !base_is_http || !base_has_origin {
+            return Err(NetworkError::InvalidBaseUrl);
+        }
+        if !same_origin || has_embedded_credentials {
+            return Err(NetworkError::UntrustedRequestOrigin);
+        }
+
+        // The Rust CodeQL SSRF query currently treats even a user-controlled
+        // path suffix on a fixed host as tainted. The same-origin check above is
+        // the security boundary and is covered by regression tests.
+        // codeql[rust/request-forgery]
+        Ok(self.http.request(method, request_url).bearer_auth(jwt))
+    }
+
     pub(crate) async fn get_authed<T: serde::de::DeserializeOwned>(
         &self,
         url: &str,
@@ -154,7 +191,7 @@ impl NetworkClient {
             if attempt > 0 {
                 tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
             }
-            let resp = self.http.get(url).bearer_auth(jwt).send().await?;
+            let resp = self.authed_request(Method::GET, url, jwt)?.send().await?;
             match self.handle_response(resp).await {
                 Ok(v) => return Ok(v),
                 Err(e) if e.is_transient() => {
@@ -182,9 +219,7 @@ impl NetworkClient {
                 tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
             }
             let resp = self
-                .http
-                .post(url)
-                .bearer_auth(jwt)
+                .authed_request(Method::POST, url, jwt)?
                 .json(body)
                 .send()
                 .await?;
@@ -215,9 +250,7 @@ impl NetworkClient {
                 tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
             }
             let resp = self
-                .http
-                .put(url)
-                .bearer_auth(jwt)
+                .authed_request(Method::PUT, url, jwt)?
                 .json(body)
                 .send()
                 .await?;
@@ -248,9 +281,7 @@ impl NetworkClient {
                 tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
             }
             let resp = self
-                .http
-                .patch(url)
-                .bearer_auth(jwt)
+                .authed_request(Method::PATCH, url, jwt)?
                 .json(body)
                 .send()
                 .await?;
@@ -275,7 +306,10 @@ impl NetworkClient {
             if attempt > 0 {
                 tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
             }
-            let resp = self.http.delete(url).bearer_auth(jwt).send().await?;
+            let resp = self
+                .authed_request(Method::DELETE, url, jwt)?
+                .send()
+                .await?;
             let status = resp.status();
             if status.is_success() {
                 return Ok(());
@@ -320,5 +354,69 @@ impl NetworkClient {
             warn!(%url, error = %e, body_preview = %preview, "Deserialization failed");
             NetworkError::Deserialize(e.to_string())
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use reqwest::Method;
+
+    use super::NetworkClient;
+    use crate::error::NetworkError;
+
+    const JWT: &str = "test-jwt";
+
+    #[test]
+    fn authenticated_requests_accept_the_configured_origin() {
+        let client = NetworkClient::with_base_url("https://network.example");
+
+        let request = client
+            .authed_request(
+                Method::POST,
+                "https://network.example/api/orgs/org-1?include=members",
+                JWT,
+            )
+            .expect("same-origin request should be accepted")
+            .build()
+            .expect("request should build");
+
+        assert_eq!(request.url().host_str(), Some("network.example"));
+        assert_eq!(request.url().path(), "/api/orgs/org-1");
+        assert!(request
+            .headers()
+            .contains_key(reqwest::header::AUTHORIZATION));
+    }
+
+    #[test]
+    fn authenticated_requests_reject_cross_origin_urls() {
+        let client = NetworkClient::with_base_url("https://network.example");
+
+        for url in [
+            "https://attacker.example/api/orgs",
+            "https://network.example.attacker.example/api/orgs",
+            "http://network.example/api/orgs",
+            "https://network.example:8443/api/orgs",
+            "https://user@network.example/api/orgs",
+        ] {
+            assert!(matches!(
+                client.authed_request(Method::POST, url, JWT),
+                Err(NetworkError::UntrustedRequestOrigin)
+            ));
+        }
+    }
+
+    #[test]
+    fn authenticated_requests_reject_invalid_urls() {
+        let client = NetworkClient::with_base_url("https://network.example");
+        assert!(matches!(
+            client.authed_request(Method::PUT, "not a URL", JWT),
+            Err(NetworkError::InvalidRequestUrl)
+        ));
+
+        let invalid_client = NetworkClient::with_base_url("not a URL");
+        assert!(matches!(
+            invalid_client.authed_request(Method::PUT, "https://network.example/api/users", JWT),
+            Err(NetworkError::InvalidBaseUrl)
+        ));
     }
 }

@@ -16,6 +16,15 @@ pub enum NetworkError {
 
     #[error("aura-network health check failed: {0}")]
     HealthCheckFailed(String),
+
+    #[error("configured aura-network base URL is invalid")]
+    InvalidBaseUrl,
+
+    #[error("aura-network request URL is invalid")]
+    InvalidRequestUrl,
+
+    #[error("refusing to send aura-network credentials to an untrusted origin")]
+    UntrustedRequestOrigin,
 }
 
 impl NetworkError {

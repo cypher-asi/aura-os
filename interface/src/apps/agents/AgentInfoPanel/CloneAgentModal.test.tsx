@@ -4,16 +4,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
 import type { Agent } from "../../../shared/types";
-import { CloneAgentToLocalModal } from "./CloneAgentToLocalModal";
+import { CloneAgentModal } from "./CloneAgentModal";
 
 const mocks = vi.hoisted(() => ({
-  cloneToLocal: vi.fn(),
+  clone: vi.fn(),
 }));
 
 vi.mock("../../../api/client", () => ({
   api: {
     agents: {
-      cloneToLocal: mocks.cloneToLocal,
+      clone: mocks.clone,
     },
   },
 }));
@@ -78,23 +78,21 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
   };
 }
 
-describe("CloneAgentToLocalModal", () => {
+describe("CloneAgentModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("explains the copy boundary and creates a separate local clone", async () => {
+  it("clones to the selected machine type and explains the copy boundary", async () => {
     const source = makeAgent();
     const clone = makeAgent({
       agent_id: "local-2",
-      name: "Remote-Planner-local",
+      name: "Remote-Planner-copy",
       machine_type: "local",
       environment: "local_host",
     });
-    mocks.cloneToLocal.mockResolvedValue({
+    mocks.clone.mockResolvedValue({
       agent: clone,
-      source_agent_id: source.agent_id,
-      source_preserved: true,
       copy_report: { copied: ["profile"], not_copied: ["secrets"] },
     });
     const onClose = vi.fn();
@@ -102,26 +100,58 @@ describe("CloneAgentToLocalModal", () => {
     const user = userEvent.setup();
 
     render(
-      <CloneAgentToLocalModal
+      <CloneAgentModal
         isOpen
         sourceAgent={source}
+        localAgentRuntimeAvailable
         onClose={onClose}
         onCloned={onCloned}
       />,
     );
 
-    expect(screen.getByText(/remote agent stays online and unchanged/i)).toBeInTheDocument();
+    expect(screen.getByText(/original agent stays unchanged/i)).toBeInTheDocument();
     expect(screen.getByText(/chats, memory, workspace files/i)).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Remote-Planner-local")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Remote-Planner-copy")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /remote/i })).toHaveAttribute("aria-checked", "true");
 
+    await user.click(screen.getByRole("radio", { name: /web local/i }));
     await user.click(screen.getByRole("button", { name: "Clone Agent" }));
 
     await waitFor(() => {
-      expect(mocks.cloneToLocal).toHaveBeenCalledWith(source.agent_id, {
-        name: "Remote-Planner-local",
+      expect(mocks.clone).toHaveBeenCalledWith(source.agent_id, {
+        name: "Remote-Planner-copy",
+        machine_type: "local",
       });
     });
     expect(onCloned).toHaveBeenCalledWith(clone);
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("clones a local source to remote when Web Local is unavailable", async () => {
+    const source = makeAgent({ machine_type: "local", environment: "local_host" });
+    const clone = makeAgent({ agent_id: "remote-2", name: "Remote-Planner-copy" });
+    mocks.clone.mockResolvedValue({ agent: clone, copy_report: { copied: [], not_copied: [] } });
+    const user = userEvent.setup();
+
+    render(
+      <CloneAgentModal
+        isOpen
+        sourceAgent={source}
+        localAgentRuntimeAvailable={false}
+        onClose={vi.fn()}
+        onCloned={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: /web local/i })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /remote/i })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("button", { name: "Clone Agent" }));
+
+    await waitFor(() => {
+      expect(mocks.clone).toHaveBeenCalledWith(source.agent_id, {
+        name: "Remote-Planner-copy",
+        machine_type: "remote",
+      });
+    });
   });
 });

@@ -2,31 +2,28 @@ use axum::extract::{Path, State};
 use axum::Json;
 
 use aura_os_core::listing_status::AgentListingStatus;
-use aura_os_core::{Agent, AgentId, HarnessMode};
+use aura_os_core::{Agent, AgentId};
 
-use crate::dto::{
-    AgentCloneCopyReport, CloneAgentToLocalRequest, CloneAgentToLocalResponse, CreateAgentRequest,
-};
-use crate::error::{ApiError, ApiResult};
+use crate::dto::{AgentCloneCopyReport, CloneAgentRequest, CloneAgentResponse, CreateAgentRequest};
+use crate::error::ApiResult;
 use crate::state::{AppState, AuthJwt};
 
 const CLONE_SOURCE_TAG_PREFIX: &str = "cloned_from_agent:";
 const LISTING_STATUS_TAG_PREFIX: &str = "listing_status:";
 const EXPERTISE_TAG_PREFIX: &str = "expertise:";
 
-/// Clone a remote agent's portable configuration into a new local agent.
+/// Clone an agent's portable configuration into a new agent identity.
 ///
 /// This is intentionally create-only: the source is fetched for authorization
-/// and projection, then the standard local creation path creates a new network
-/// identity and Home-project binding. No update, delete, or swarm lifecycle
-/// call can be reached from this handler, which makes `source_preserved` an
-/// invariant rather than a best-effort promise.
-pub(crate) async fn clone_agent_to_local(
+/// and projection, then the standard creation path handles the selected
+/// destination, network identity, runtime provisioning, and Home-project
+/// binding. The source is never passed to a mutating operation.
+pub(crate) async fn clone_agent(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
     Path(source_agent_id): Path<AgentId>,
-    Json(body): Json<CloneAgentToLocalRequest>,
-) -> ApiResult<Json<CloneAgentToLocalResponse>> {
+    Json(body): Json<CloneAgentRequest>,
+) -> ApiResult<Json<CloneAgentResponse>> {
     let source = super::list::get_agent(
         State(state.clone()),
         AuthJwt(jwt.clone()),
@@ -35,26 +32,18 @@ pub(crate) async fn clone_agent_to_local(
     .await?
     .0;
 
-    if source.harness_mode() != HarnessMode::Swarm {
-        return Err(ApiError::bad_request(
-            "only remote agents can be cloned to the local runtime",
-        ));
-    }
-
-    let create_request = local_clone_request(&source, body);
+    let create_request = clone_create_request(&source, body);
     let agent = super::create::create_agent(State(state), AuthJwt(jwt), Json(create_request))
         .await?
         .0;
 
-    Ok(Json(CloneAgentToLocalResponse {
+    Ok(Json(CloneAgentResponse {
         agent,
-        source_agent_id,
-        source_preserved: true,
         copy_report: clone_copy_report(),
     }))
 }
 
-fn local_clone_request(source: &Agent, body: CloneAgentToLocalRequest) -> CreateAgentRequest {
+fn clone_create_request(source: &Agent, body: CloneAgentRequest) -> CreateAgentRequest {
     let requested_name = body
         .name
         .as_deref()
@@ -70,9 +59,11 @@ fn local_clone_request(source: &Agent, body: CloneAgentToLocalRequest) -> Create
         system_prompt: source.system_prompt.clone(),
         skills: source.skills.clone(),
         icon: source.icon.clone(),
-        machine_type: Some("local".to_string()),
+        machine_type: Some(body.machine_type.as_str().to_string()),
         adapter_type: Some("aura_harness".to_string()),
-        environment: Some("local_host".to_string()),
+        // The canonical create path derives and validates the environment for
+        // the selected machine type.
+        environment: None,
         auth_source: Some("aura_managed".to_string()),
         integration_id: None,
         default_model: source.default_model.clone(),
@@ -121,7 +112,7 @@ fn default_clone_name(source_name: &str) -> String {
     if base.is_empty() {
         base.push_str("agent");
     }
-    format!("{base}-local")
+    format!("{base}-copy")
 }
 
 fn clone_copy_report() -> AgentCloneCopyReport {
@@ -199,30 +190,41 @@ mod tests {
     }
 
     #[test]
-    fn derives_a_supported_local_name() {
+    fn derives_a_supported_clone_name() {
         assert_eq!(
             default_clone_name("My Remote Agent!"),
-            "My-Remote-Agent-local"
+            "My-Remote-Agent-copy"
         );
-        assert_eq!(default_clone_name("!!!"), "agent-local");
+        assert_eq!(default_clone_name("!!!"), "agent-copy");
     }
 
     #[test]
-    fn clone_request_copies_only_portable_configuration() {
+    fn clone_request_copies_only_portable_configuration_to_each_destination() {
         let source = source_agent("Source");
-        let request = local_clone_request(&source, CloneAgentToLocalRequest::default());
+        for machine_type in [
+            crate::dto::CloneAgentMachineType::Local,
+            crate::dto::CloneAgentMachineType::Remote,
+        ] {
+            let request = clone_create_request(
+                &source,
+                CloneAgentRequest {
+                    name: None,
+                    machine_type,
+                },
+            );
 
-        assert_eq!(request.name, "Source-local");
-        assert_eq!(request.machine_type.as_deref(), Some("local"));
-        assert_eq!(request.environment.as_deref(), Some("local_host"));
-        assert_eq!(request.default_model, source.default_model);
-        assert_eq!(request.permissions, source.permissions);
-        assert_eq!(request.listing_status.as_deref(), Some("closed"));
-        assert_eq!(request.expertise, Some(Vec::new()));
-        let tags = request.tags.expect("clone tags");
-        assert!(tags.contains(&"custom".to_string()));
-        assert!(tags.contains(&format!("cloned_from_agent:{}", source.agent_id)));
-        assert!(!tags.iter().any(|tag| tag.starts_with("expertise:")));
-        assert!(!tags.iter().any(|tag| tag == "listing_status:hireable"));
+            assert_eq!(request.name, "Source-copy");
+            assert_eq!(request.machine_type.as_deref(), Some(machine_type.as_str()));
+            assert_eq!(request.environment, None);
+            assert_eq!(request.default_model, source.default_model);
+            assert_eq!(request.permissions, source.permissions);
+            assert_eq!(request.listing_status.as_deref(), Some("closed"));
+            assert_eq!(request.expertise, Some(Vec::new()));
+            let tags = request.tags.expect("clone tags");
+            assert!(tags.contains(&"custom".to_string()));
+            assert!(tags.contains(&format!("cloned_from_agent:{}", source.agent_id)));
+            assert!(!tags.iter().any(|tag| tag.starts_with("expertise:")));
+            assert!(!tags.iter().any(|tag| tag == "listing_status:hireable"));
+        }
     }
 }

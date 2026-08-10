@@ -169,10 +169,10 @@ export interface AgentCloneCopyReport {
   not_copied: string[];
 }
 
-export interface CloneAgentToLocalResponse {
+export type CloneAgentMachineType = "local" | "remote";
+
+export interface CloneAgentResponse {
   agent: Agent;
-  source_agent_id: AgentId;
-  source_preserved: boolean;
   copy_report: AgentCloneCopyReport;
 }
 
@@ -246,13 +246,12 @@ export const agentTemplatesApi = {
   }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),
-  /**
-   * Create a second, local-harness identity from a remote agent's portable
-   * configuration. The source is preserved; mutable runtime state and secrets
-   * remain attached only to it (enumerated by `copy_report`).
-   */
-  cloneToLocal: (agentId: AgentId, data: { name?: string } = {}) =>
-    apiFetch<CloneAgentToLocalResponse>(`/api/agents/${agentId}/clone-to-local`, {
+  /** Create a new identity from an agent's portable configuration. */
+  clone: (agentId: AgentId, data: {
+    name?: string;
+    machine_type: CloneAgentMachineType;
+  }) =>
+    apiFetch<CloneAgentResponse>(`/api/agents/${agentId}/clone`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
