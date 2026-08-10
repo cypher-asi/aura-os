@@ -42,6 +42,8 @@ export function BrowserDesignToolbar({
         <button
           type="button"
           className={styles.modeButton}
+          aria-label="Preview"
+          title="Preview"
           aria-pressed={mode === "preview"}
           onClick={() => onModeChange("preview")}
         >
@@ -51,6 +53,8 @@ export function BrowserDesignToolbar({
         <button
           type="button"
           className={styles.modeButton}
+          aria-label="Design"
+          title="Design"
           aria-pressed={mode === "design"}
           onClick={() => onModeChange("design")}
         >
