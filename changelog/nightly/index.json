@@ -2,18 +2,19 @@
   {
     "date": "2026-08-10",
     "channel": "nightly",
-    "version": "0.1.0-nightly.784.1",
+    "version": "0.1.0-nightly.785.1",
     "title": "Preview and Design modes land in the in-app browser",
-    "intro": "Today's nightly is a single, substantial change: the browser panel gains dedicated Preview and Design modes, backed by a new CDP-driven element inspector that streams inspection results end-to-end from the Rust backend into the UI. Both shipped server channels now enable the Chromium/CDP backend by default so this works in web-server builds as well as the desktop packages for Linux, macOS, and Windows.",
-    "entryCount": 1,
+    "intro": "Today's nightly introduces a dedicated Preview/Design workflow for Aura's embedded browser, backed by a new CDP inspection path on the server, and follows up with a same-day polish pass to keep the toolbar usable at narrow widths.",
+    "entryCount": 2,
     "highlights": [
-      "New Preview and Design modes in the browser panel",
-      "CDP-backed element inspector wired through server and UI",
-      "Chromium/CDP backend enabled on both dev and stable channels"
+      "New Preview and Design modes for the in-app browser",
+      "CDP-backed element inspection wired end-to-end",
+      "Preview/Design enabled on both dev and stable channels",
+      "Compact toolbar clipping fixed with accessible labels"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-08-10T10:53:25.912Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.784.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-08-10T13:25:33.454Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.785.1",
     "path": "history/2026-08-10.json"
   },
   {

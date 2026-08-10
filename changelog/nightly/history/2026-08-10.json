@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-10T10:53:25.912Z",
+  "generatedAt": "2026-08-10T13:25:33.454Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.784.1",
+  "version": "0.1.0-nightly.785.1",
   "date": "2026-08-10",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.784.1",
-  "lastIncludedSha": "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3",
-  "previousProcessedSha": "6ad975e260b849c1b274def9d6768ca40e4925fb",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.785.1",
+  "lastIncludedSha": "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a",
+  "previousProcessedSha": "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3",
   "commitShas": [
-    "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
+    "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3",
+    "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3",
@@ -100,36 +101,74 @@
         "Other",
         "Docs"
       ]
+    },
+    {
+      "sha": "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-10T17:58:17+05:00",
+      "subject": "Fix compact Preview toolbar clipping (#131)",
+      "body": "* Fix compact Preview toolbar clipping\n\n* Add accessible labels to compact toolbar controls\n\n* Add Preview toolbar regression tests",
+      "parents": [
+        "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
+      ],
+      "files": [
+        "interface/src/apps/browser/components/BrowserDesignToolbar/BrowserDesignToolbar.module.css",
+        "interface/src/apps/browser/components/BrowserDesignToolbar/BrowserDesignToolbar.test.tsx",
+        "interface/src/apps/browser/components/BrowserDesignToolbar/BrowserDesignToolbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 64,
+        "deletions": 0
+      },
+      "committedAtMs": 1786366697000,
+      "cleanSubject": "Fix compact Preview toolbar clipping (#131)",
+      "keywords": [
+        "compact",
+        "preview",
+        "toolbar",
+        "clipping"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.784.1",
+      "version": "0.1.0-nightly.785.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66276930
+          "sizeBytes": 66275344
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 132790776
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -139,29 +178,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.784.1",
+      "version": "0.1.0-nightly.785.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.784.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.785.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61878666
+          "sizeBytes": 61881162
         },
         {
-          "name": "AURA_0.1.0-nightly.784.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.785.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60913479
+          "sizeBytes": 60915534
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -171,29 +210,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.784.1",
+      "version": "0.1.0-nightly.785.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.784.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.785.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64191513
+          "sizeBytes": 64191262
         },
         {
-          "name": "AURA_0.1.0-nightly.784.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.785.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63164606
+          "sizeBytes": 63167946
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -203,17 +242,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.784.1",
+      "version": "0.1.0-nightly.785.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48861836
+          "sizeBytes": 48858126
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.784.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.785.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -223,52 +262,77 @@
   ],
   "rendered": {
     "title": "Preview and Design modes land in the in-app browser",
-    "intro": "Today's nightly is a single, substantial change: the browser panel gains dedicated Preview and Design modes, backed by a new CDP-driven element inspector that streams inspection results end-to-end from the Rust backend into the UI. Both shipped server channels now enable the Chromium/CDP backend by default so this works in web-server builds as well as the desktop packages for Linux, macOS, and Windows.",
+    "intro": "Today's nightly introduces a dedicated Preview/Design workflow for Aura's embedded browser, backed by a new CDP inspection path on the server, and follows up with a same-day polish pass to keep the toolbar usable at narrow widths.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:28 AM",
         "started_at": "2026-08-10T10:28:06.000Z",
         "ended_at": "2026-08-10T10:28:06.000Z",
-        "title": "Preview and Design modes for the in-app browser",
-        "summary": "The browser panel now offers explicit Preview and Design modes, including a design toolbar, an element inspector, and a full CDP inspection pipeline from Chromium through the server into the UI.",
+        "title": "Preview and Design modes for the embedded browser",
+        "summary": "A substantial interface and backend change adds two first-class modes to the in-app browser, with a new design toolbar, an element inspector, and Chromium/CDP-backed inspection plumbed from the Rust backend through to the UI.",
         "items": [
           {
-            "text": "Added Preview and Design modes to the browser panel, with a new BrowserDesignToolbar and BrowserDesignInspector plus shared design-mode and design-context modules driving how the viewport, tabs, and browser instance behave in each mode.",
+            "text": "Added Preview and Design modes to the browser panel, including a new BrowserDesignToolbar for switching modes and picking viewport presets (desktop, mobile, fit) and a BrowserDesignInspector surface for inspecting elements inside the page.",
             "commit_shas": [
               "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Implemented a CDP-backed element inspector: a new inspect module and Inspect client message flow inspection requests through the browser session loop and stream InspectionResult events over the WebSocket handler as 'inspection' payloads to the interface.",
+            "text": "Extended the CDP backend with an inspect module and a new Inspect client message so the server can resolve elements by coordinates and stream InspectionResult events back over the browser WebSocket to the UI.",
             "commit_shas": [
               "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Enabled the Chromium/CDP browser backend by default on both dev-channel and stable-channel server builds so Preview and Design work in web-server deployments as well as the desktop package, while feature-minimal builds can still fall back to the stub backend.",
+            "text": "Turned on the Chromium/CDP browser backend for both the dev-channel and stable-channel server builds, so Preview and Design work in web-server deployments as well as the desktop package while feature-minimal builds can still fall back to the stub backend.",
             "commit_shas": [
               "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Extended the agent chat panel, browser API client, and browser-panel store to carry design-mode context, and expanded CDP smoke tests and browser viewport tests to cover the new inspection and mode-switching behavior.",
+            "text": "Reworked the browser viewport, panel, and input hooks around a shared design-context, and taught the agent chat panel about the new modes so agent interactions stay coherent when switching between Preview and Design.",
             "commit_shas": [
               "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
             ],
             "confidence": "medium"
           }
         ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "5:58 AM",
+        "started_at": "2026-08-10T12:58:17.000Z",
+        "ended_at": "2026-08-10T12:58:17.000Z",
+        "title": "Compact Preview toolbar no longer clips its controls",
+        "summary": "A quick follow-up to the Preview/Design launch fixes layout clipping in narrow panels and makes the icon-only controls properly accessible.",
+        "items": [
+          {
+            "text": "Introduced a container query on the design toolbar so mode and viewport controls collapse to icon-only buttons under 360px and stop being clipped, with flex-shrink guards on the viewport group and divider to keep the layout stable.",
+            "commit_shas": [
+              "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added aria-label and title attributes to the Preview and Design buttons so the compact, icon-only state remains identifiable to screen readers and on hover, locked in by new regression tests for the toolbar.",
+            "commit_shas": [
+              "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a"
+            ],
+            "confidence": "high"
+          }
+        ]
       }
     ],
     "highlights": [
-      "New Preview and Design modes in the browser panel",
-      "CDP-backed element inspector wired through server and UI",
-      "Chromium/CDP backend enabled on both dev and stable channels"
+      "New Preview and Design modes for the in-app browser",
+      "CDP-backed element inspection wired end-to-end",
+      "Preview/Design enabled on both dev and stable channels",
+      "Compact toolbar clipping fixed with accessible labels"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
