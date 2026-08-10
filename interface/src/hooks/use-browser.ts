@@ -7,6 +7,7 @@ import {
   killBrowser,
   spawnBrowser,
   type BrowserClientMsg,
+  type InspectionResult,
   type NavError,
   type NavState,
   type SpawnBrowserResponse,
@@ -19,9 +20,15 @@ export interface UseBrowserOptions {
   initialUrl?: string;
   width: number;
   height: number;
-  onFrame?: (frame: { seq: number; width: number; height: number; jpeg: Uint8Array }) => void;
+  onFrame?: (frame: {
+    seq: number;
+    width: number;
+    height: number;
+    jpeg: Uint8Array;
+  }) => void;
   onNav?: (nav: NavState) => void;
   onNavError?: (error: NavError) => void;
+  onInspection?: (inspection: InspectionResult) => void;
   onExit?: (code: number) => void;
   onSpawned?: (spawn: SpawnBrowserResponse) => void;
   onError?: (err: Error) => void;
@@ -81,6 +88,8 @@ export function useBrowser(opts: UseBrowserOptions): UseBrowserReturn {
           optsRef.current.onNav?.(parsed.nav);
         } else if (parsed.type === "nav_error") {
           optsRef.current.onNavError?.(parsed.error);
+        } else if (parsed.type === "inspection") {
+          optsRef.current.onInspection?.(parsed.inspection);
         } else {
           optsRef.current.onExit?.(parsed.code);
         }
@@ -91,30 +100,33 @@ export function useBrowser(opts: UseBrowserOptions): UseBrowserReturn {
     wsRef.current = ws;
   }, []);
 
-  const spawnSession = useCallback(async (): Promise<SpawnBrowserResponse | null> => {
-    if (sessionRef.current) return null;
-    setSpawning(true);
-    try {
-      const result = await spawnBrowser({
-        width: optsRef.current.width,
-        height: optsRef.current.height,
-        projectId: optsRef.current.projectId,
-        initialUrl: optsRef.current.initialUrl,
-      });
-      sessionRef.current = result.id;
-      setSessionId(result.id);
-      setInitialUrl(result.initial_url);
-      setFocusAddressBar(result.focus_address_bar);
-      optsRef.current.onSpawned?.(result);
-      await openSocket(result.id);
-      return result;
-    } catch (err) {
-      optsRef.current.onError?.(err instanceof Error ? err : new Error(String(err)));
-      return null;
-    } finally {
-      setSpawning(false);
-    }
-  }, [openSocket]);
+  const spawnSession =
+    useCallback(async (): Promise<SpawnBrowserResponse | null> => {
+      if (sessionRef.current) return null;
+      setSpawning(true);
+      try {
+        const result = await spawnBrowser({
+          width: optsRef.current.width,
+          height: optsRef.current.height,
+          projectId: optsRef.current.projectId,
+          initialUrl: optsRef.current.initialUrl,
+        });
+        sessionRef.current = result.id;
+        setSessionId(result.id);
+        setInitialUrl(result.initial_url);
+        setFocusAddressBar(result.focus_address_bar);
+        optsRef.current.onSpawned?.(result);
+        await openSocket(result.id);
+        return result;
+      } catch (err) {
+        optsRef.current.onError?.(
+          err instanceof Error ? err : new Error(String(err)),
+        );
+        return null;
+      } finally {
+        setSpawning(false);
+      }
+    }, [openSocket]);
 
   const send = useCallback((msg: BrowserClientMsg) => {
     const ws = wsRef.current;

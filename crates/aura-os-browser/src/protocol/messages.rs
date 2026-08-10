@@ -76,6 +76,29 @@ pub enum ClientMsg {
         /// Vertical scroll delta.
         delta_y: f32,
     },
+    /// Inspect the DOM element at a viewport coordinate without forwarding
+    /// a pointer event to the page. Design mode uses hover requests for its
+    /// live outline and select requests to pin an element for agent context.
+    Inspect {
+        /// Client-generated id used to discard stale hover responses.
+        request_id: u32,
+        /// Whether this request is transient hover feedback or a selection.
+        kind: InspectionKind,
+        /// X in viewport CSS pixels.
+        x: f32,
+        /// Y in viewport CSS pixels.
+        y: f32,
+    },
+}
+
+/// Intent associated with an element-inspection request.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum InspectionKind {
+    /// Transient pointer hover used to paint an outline.
+    Hover,
+    /// User-confirmed element selection used to build agent context.
+    Select,
 }
 
 /// Which mouse button was used for a Mouse message.
@@ -146,6 +169,108 @@ pub struct NavError {
     pub http_status: Option<u16>,
 }
 
+/// Viewport-relative border box for an inspected DOM element.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ElementBounds {
+    /// Horizontal offset from the viewport's left edge, in CSS pixels.
+    pub x: f64,
+    /// Vertical offset from the viewport's top edge, in CSS pixels.
+    pub y: f64,
+    /// Border-box width in CSS pixels.
+    pub width: f64,
+    /// Border-box height in CSS pixels.
+    pub height: f64,
+}
+
+/// Small, intentionally curated computed-style snapshot. Sending the entire
+/// browser style declaration is noisy and makes design prompts much larger
+/// without improving source-edit accuracy.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ElementStyles {
+    /// Computed CSS `display` value.
+    pub display: String,
+    /// Computed CSS `position` value.
+    pub position: String,
+    /// Computed foreground color.
+    pub color: String,
+    /// Computed background color.
+    pub background_color: String,
+    /// Computed font-family stack.
+    pub font_family: String,
+    /// Computed font size.
+    pub font_size: String,
+    /// Computed font weight.
+    pub font_weight: String,
+    /// Computed line height.
+    pub line_height: String,
+    /// Computed border radius.
+    pub border_radius: String,
+    /// Computed padding shorthand.
+    pub padding: String,
+    /// Computed margin shorthand.
+    pub margin: String,
+}
+
+/// Best-effort React development source metadata discovered from the owning
+/// fiber. This is optional because DOM-only and production builds do not
+/// expose component source information.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ElementSource {
+    /// Source file path or URL reported by the framework runtime.
+    pub file: String,
+    /// One-based source line, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line: Option<u32>,
+    /// One-based source column, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub column: Option<u32>,
+    /// Owning framework component name, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub component: Option<String>,
+}
+
+/// Agent-ready description of a DOM element selected in Design mode.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DesignElement {
+    /// URL of the inspected document.
+    pub url: String,
+    /// Lowercase DOM tag name.
+    pub tag_name: String,
+    /// Element id, when present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    /// Element class names, truncated to a practical prompt-safe count.
+    #[serde(default)]
+    pub classes: Vec<String>,
+    /// Best-effort stable CSS selector for finding the element again.
+    pub selector: String,
+    /// Compact normalized text content.
+    pub text: String,
+    /// Compact outer HTML snapshot.
+    pub outer_html: String,
+    /// Current viewport-relative border box.
+    pub bounds: ElementBounds,
+    /// Curated computed-style snapshot.
+    pub styles: ElementStyles,
+    /// Best-effort framework source location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<ElementSource>,
+    /// Framework component ancestry, nearest component first.
+    #[serde(default)]
+    pub component_path: Vec<String>,
+}
+
+/// Response to a [`ClientMsg::Inspect`] request.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct InspectionResult {
+    /// Request id copied from the originating inspect command.
+    pub request_id: u32,
+    /// Whether the response belongs to hover or pinned selection state.
+    pub kind: InspectionKind,
+    /// `None` when the point does not resolve to an inspectable element.
+    pub element: Option<DesignElement>,
+}
+
 /// Events pushed from the server to the client.
 ///
 /// `Frame` events travel as binary WS messages and are modelled here only
@@ -169,6 +294,8 @@ pub enum ServerEvent {
     Nav(NavState),
     /// Main-frame navigation failed.
     NavError(NavError),
+    /// DOM inspection result for Preview Design mode.
+    Inspection(Box<InspectionResult>),
     /// Session has exited.
     Exit {
         /// Termination code (0 = clean).
@@ -272,5 +399,20 @@ mod tests {
         assert!(json.contains("\"http_status\":404"));
         let back: NavError = serde_json::from_str(&json).unwrap();
         assert_eq!(back, err);
+    }
+
+    #[test]
+    fn inspect_message_round_trips() {
+        let json = r#"{"type":"inspect","request_id":7,"kind":"select","x":42.5,"y":19.0}"#;
+        let msg: ClientMsg = serde_json::from_str(json).unwrap();
+        assert!(matches!(
+            msg,
+            ClientMsg::Inspect {
+                request_id: 7,
+                kind: InspectionKind::Select,
+                x,
+                y,
+            } if x == 42.5 && y == 19.0
+        ));
     }
 }

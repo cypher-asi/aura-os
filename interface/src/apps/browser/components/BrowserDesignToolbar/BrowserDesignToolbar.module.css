@@ -1,0 +1,89 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.modeGroup,
+.viewportGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.modeGroup {
+  padding: 2px;
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-elevated);
+}
+
+.modeButton,
+.viewportButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.modeButton {
+  padding: 0 8px;
+}
+
+.viewportButton {
+  width: 24px;
+  padding: 0;
+}
+
+.modeButton:hover,
+.viewportButton:hover {
+  color: var(--color-text-primary);
+  background: var(--color-overlay-light);
+}
+
+.modeButton[aria-pressed="true"],
+.viewportButton[aria-pressed="true"] {
+  color: var(--color-accent-text);
+  background: var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+}
+
+.dimensions {
+  margin-left: auto;
+  min-width: 74px;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .modeButton span,
+  .dimensions {
+    display: none;
+  }
+
+  .modeButton {
+    width: 26px;
+    padding: 0;
+  }
+}

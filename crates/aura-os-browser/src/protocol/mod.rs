@@ -11,5 +11,6 @@ pub use frame::{
     encode_frame_header, parse_frame_header, FrameHeader, FRAME_HEADER_LEN, FRAME_OPCODE,
 };
 pub use messages::{
-    net_error_code, ClientMsg, MouseButton, MouseEventKind, NavError, NavState, ServerEvent,
+    net_error_code, ClientMsg, DesignElement, ElementBounds, ElementSource, ElementStyles,
+    InspectionKind, InspectionResult, MouseButton, MouseEventKind, NavError, NavState, ServerEvent,
 };

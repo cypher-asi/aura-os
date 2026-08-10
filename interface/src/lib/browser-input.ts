@@ -23,9 +23,12 @@ export const CDP_MOD_META = 4;
 export const CDP_MOD_SHIFT = 8;
 
 /** Extract the CDP modifier bitmask from a DOM keyboard/mouse event. */
-export function cdpModifierMask(
-  event: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean },
-): number {
+export function cdpModifierMask(event: {
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  shiftKey: boolean;
+}): number {
   let mod = 0;
   if (event.altKey) mod |= CDP_MOD_ALT;
   if (event.ctrlKey) mod |= CDP_MOD_CTRL;
@@ -68,9 +71,18 @@ export interface ViewportCoords {
 export function toViewportCoords(
   event: { clientX: number; clientY: number },
   rect: ViewportRect,
+  targetSize?: { width: number; height: number },
 ): ViewportCoords {
-  const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
-  const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+  const localX = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+  const localY = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+  const x =
+    targetSize && rect.width > 0
+      ? localX * (targetSize.width / rect.width)
+      : localX;
+  const y =
+    targetSize && rect.height > 0
+      ? localY * (targetSize.height / rect.height)
+      : localY;
   return { x, y };
 }
 
@@ -198,7 +210,8 @@ for (let i = 0; i < 26; i++) {
   vkByCode[`Key${String.fromCharCode(0x41 + i)}`] = 0x41 + i;
 }
 
-export const VK_BY_CODE: Readonly<Record<string, number>> = Object.freeze(vkByCode);
+export const VK_BY_CODE: Readonly<Record<string, number>> =
+  Object.freeze(vkByCode);
 
 /** `true` when the key typed a printable character. */
 export function isPrintableKey(event: {

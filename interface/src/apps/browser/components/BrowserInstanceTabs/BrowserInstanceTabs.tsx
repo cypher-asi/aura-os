@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import type { BrowserInstance } from "../../../../stores/browser-panel-store";
-import { InstanceTabs, type InstanceTab } from "../../../../components/InstanceTabs";
+import {
+  InstanceTabs,
+  type InstanceTab,
+} from "../../../../components/InstanceTabs";
 
 export interface BrowserInstanceTabsProps {
   instances: BrowserInstance[];
@@ -29,7 +32,7 @@ export function BrowserInstanceTabs({
       onActivate={onActivate}
       onClose={onClose}
       onAdd={onAdd}
-      addAriaLabel="New browser tab"
+      addAriaLabel="New preview tab"
     />
   );
 }

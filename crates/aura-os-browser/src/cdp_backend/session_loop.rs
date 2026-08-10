@@ -247,7 +247,7 @@ async fn run_event_loop(
                 break;
             }
             maybe_cmd = commands.recv() => {
-                if !handle_cmd(page, state, maybe_cmd, id, quality).await {
+                if !handle_cmd(page, events, state, maybe_cmd, id, quality).await {
                     break;
                 }
             }

@@ -4,7 +4,9 @@ import {
   triggerBrowserDetect,
   updateProjectBrowserSettings,
   type BrowserClientMsg,
+  type DesignElement,
   type DetectedUrl,
+  type InspectionResult,
   type NavError,
   type NavState,
   type ProjectBrowserSettings,
@@ -12,16 +14,20 @@ import {
 import { useBrowser } from "../../../../hooks/use-browser";
 import { useBrowserPanelStore } from "../../../../stores/browser-panel-store";
 import { BrowserAddressBar } from "../BrowserAddressBar";
+import { BrowserDesignInspector } from "../BrowserDesignInspector";
 import { BrowserErrorOverlay } from "../BrowserErrorOverlay";
 import { BrowserViewport } from "../BrowserViewport";
 import type { BrowserWorkerInMsg } from "../../../../workers/browser-frame-worker";
 import styles from "./BrowserInstance.module.css";
+import type { BrowserMode } from "../../design-mode";
 
 export interface BrowserInstanceProps {
   clientId: string;
   projectId?: string;
   width: number;
   height: number;
+  mode?: BrowserMode;
+  deviceFrame?: boolean;
 }
 
 /**
@@ -64,6 +70,8 @@ export function BrowserInstance({
   projectId,
   width,
   height,
+  mode = "preview",
+  deviceFrame = false,
 }: BrowserInstanceProps) {
   const setServerId = useBrowserPanelStore((s) => s.setServerId);
   const setProjectSettings = useBrowserPanelStore((s) => s.setProjectSettings);
@@ -76,13 +84,25 @@ export function BrowserInstance({
   const [navError, setNavError] = useState<NavError | null>(null);
   const [recentDetected, setRecentDetected] = useState<DetectedUrl[]>([]);
   const [spawnError, setSpawnError] = useState<string | null>(null);
+  const [hoveredElement, setHoveredElement] = useState<DesignElement | null>(
+    null,
+  );
+  const [selectedElement, setSelectedElement] = useState<DesignElement | null>(
+    null,
+  );
+  const latestInspectionRef = useRef(0);
 
   const handleWorkerReady = useCallback((worker: Worker) => {
     workerRef.current = worker;
   }, []);
 
   const handleFrame = useCallback(
-    (frame: { seq: number; width: number; height: number; jpeg: Uint8Array }) => {
+    (frame: {
+      seq: number;
+      width: number;
+      height: number;
+      jpeg: Uint8Array;
+    }) => {
       const worker = workerRef.current;
       if (!worker) return;
       const copy = new Uint8Array(frame.jpeg.byteLength);
@@ -100,6 +120,8 @@ export function BrowserInstance({
 
   const handleNav = useCallback((state: NavState) => {
     setNav(state);
+    setHoveredElement(null);
+    setSelectedElement(null);
     // After a main-frame failure Chromium commits its own native error
     // document at a `chrome-error://...` URL and re-fires `Nav` for it;
     // clearing the overlay on that event would wipe it just as we set
@@ -117,6 +139,17 @@ export function BrowserInstance({
     setNavError(err);
   }, []);
 
+  const handleInspection = useCallback((inspection: InspectionResult) => {
+    if (inspection.request_id < latestInspectionRef.current) return;
+    latestInspectionRef.current = inspection.request_id;
+    if (inspection.kind === "select") {
+      setSelectedElement(inspection.element);
+      setHoveredElement(inspection.element);
+    } else {
+      setHoveredElement(inspection.element);
+    }
+  }, []);
+
   const browser = useBrowser({
     width,
     height,
@@ -124,6 +157,7 @@ export function BrowserInstance({
     onFrame: handleFrame,
     onNav: handleNav,
     onNavError: handleNavError,
+    onInspection: handleInspection,
     onSpawned: (resp) => {
       setServerId(clientId, resp.id);
       setSpawnError(null);
@@ -227,7 +261,12 @@ export function BrowserInstance({
     void triggerBrowserDetect(projectId)
       .then((detected) => {
         if (cancelled || detected.length === 0) return;
-        setRecentDetected((prev) => mergeDetected({ detected_urls: prev } as ProjectBrowserSettings, detected));
+        setRecentDetected((prev) =>
+          mergeDetected(
+            { detected_urls: prev } as ProjectBrowserSettings,
+            detected,
+          ),
+        );
       })
       .catch(() => {
         // Detection is advisory; ignore failures silently.
@@ -267,6 +306,10 @@ export function BrowserInstance({
         height={height}
         onWorkerReady={handleWorkerReady}
         onClientMsg={browser.send}
+        designMode={mode === "design"}
+        hoveredElement={hoveredElement}
+        selectedElement={selectedElement}
+        deviceFrame={deviceFrame}
         placeholder={
           spawnError
             ? spawnError
@@ -279,6 +322,12 @@ export function BrowserInstance({
         overlay={
           navError ? (
             <BrowserErrorOverlay error={navError} onReload={handleReload} />
+          ) : mode === "design" ? (
+            <BrowserDesignInspector
+              element={selectedElement}
+              projectId={projectId}
+              onClear={() => setSelectedElement(null)}
+            />
           ) : null
         }
       />

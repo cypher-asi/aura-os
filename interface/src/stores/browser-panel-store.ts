@@ -23,7 +23,10 @@ interface BrowserPanelState {
   setServerId: (clientId: string, serverId: string) => void;
   setActive: (clientId: string) => void;
   setInstanceTitle: (clientId: string, title: string) => void;
-  setProjectSettings: (projectId: string, settings: ProjectBrowserSettings) => void;
+  setProjectSettings: (
+    projectId: string,
+    settings: ProjectBrowserSettings,
+  ) => void;
   getProjectSettings: (projectId: string) => ProjectBrowserSettings | undefined;
   clear: () => void;
 }
@@ -32,7 +35,7 @@ function createInstance(): BrowserInstance {
   const num = nextNum++;
   return {
     clientId: `browser-${Date.now()}-${num}`,
-    title: `Browser ${num}`,
+    title: `Preview ${num}`,
     serverId: null,
   };
 }
@@ -85,7 +88,10 @@ export const useBrowserPanelStore = create<BrowserPanelState>()((set, get) => ({
 
   setProjectSettings: (projectId, settings) => {
     set((state) => ({
-      perProjectSettings: { ...state.perProjectSettings, [projectId]: settings },
+      perProjectSettings: {
+        ...state.perProjectSettings,
+        [projectId]: settings,
+      },
     }));
   },
 

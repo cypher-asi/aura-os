@@ -38,6 +38,11 @@ import { useNewSessionUrlSync } from "../../hooks/use-new-session-url-sync";
 import { ProjectAgentSwitcher } from "../ProjectAgentSwitcher";
 import { resolveAgentChatAvailability } from "../../../../shared/lib/agent-chat-availability";
 import { SafeWorkspaceBar } from "./SafeWorkspaceBar";
+import { useChatUIStore } from "../../../../stores/chat-ui-store";
+import {
+  DESIGN_PROMPT_EVENT,
+  type DesignPromptDetail,
+} from "../../../../shared/lib/design-context";
 
 const EMPTY_PROJECTS: Project[] = [];
 const EMPTY_AGENT_INSTANCES: AgentInstance[] = [];
@@ -253,6 +258,27 @@ export function AgentChatPanel({
       workspaceStartAgentInstanceId,
       safeWorkspace: safeWorkspaceEnabled,
     });
+
+  useEffect(() => {
+    const handleDesignPrompt = (event: Event) => {
+      const detail = (event as CustomEvent<DesignPromptDetail>).detail;
+      if (
+        !detail?.prompt ||
+        (detail.projectId && detail.projectId !== projectId)
+      )
+        return;
+      const store = useChatUIStore.getState();
+      const current = store.getDraft(streamKey).trim();
+      store.setDraft(
+        streamKey,
+        current ? `${current}\n\n${detail.prompt}` : detail.prompt,
+      );
+      event.preventDefault();
+    };
+    window.addEventListener(DESIGN_PROMPT_EVENT, handleDesignPrompt);
+    return () =>
+      window.removeEventListener(DESIGN_PROMPT_EVENT, handleDesignPrompt);
+  }, [projectId, streamKey]);
 
   const contextUsage = useContextUsage(streamKey);
 

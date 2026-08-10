@@ -88,11 +88,14 @@ default = ["dev-channel"]
 # `--features stable-channel`. See `crates/aura-os-core/src/channel.rs`
 # for the full invariant and `scripts/ci/verify-desktop.mjs` for the
 # end-to-end guard.
-dev-channel = ["aura-os-core/dev-channel"]
-stable-channel = ["aura-os-core/stable-channel"]
+dev-channel = ["aura-os-core/dev-channel", "browser-cdp"]
+stable-channel = ["aura-os-core/stable-channel", "browser-cdp"]
 # Enables the real Chromium/CDP-backed browser backend. Requires a local
 # Chromium/Chrome executable at runtime; Chromium is launched lazily on
-# the first browser spawn so the server boots even without it.
+# the first browser spawn so the server boots even without it. Both shipped
+# channels enable this so Preview and Design work in web-server builds as
+# well as the desktop package; feature-minimal library/test builds can still
+# omit the channel and use the stub backend.
 browser-cdp = ["aura-os-browser/cdp"]
 
 [dev-dependencies]
