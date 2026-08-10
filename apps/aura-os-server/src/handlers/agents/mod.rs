@@ -34,8 +34,8 @@ pub(crate) use crud::create::{
     create_and_provision_remote_agent, prepare_create, provision_existing_agent_as_remote,
 };
 pub(crate) use crud::{
-    clone_agent_to_local, create_agent, delete_agent, get_agent, list_agent_project_bindings,
-    list_agents, recover_remote_agent_pipeline, remove_agent_project_binding, update_agent,
+    clone_agent, create_agent, delete_agent, get_agent, list_agent_project_bindings, list_agents,
+    recover_remote_agent_pipeline, remove_agent_project_binding, update_agent,
 };
 pub(crate) use home_project::ensure_agent_home_project_and_binding;
 pub(crate) use installed_tools::get_installed_tools_diagnostic;

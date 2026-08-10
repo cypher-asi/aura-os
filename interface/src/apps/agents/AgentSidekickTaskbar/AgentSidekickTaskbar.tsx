@@ -24,7 +24,6 @@ import { useAuth } from "../../../stores/auth-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
 import type { Agent } from "../../../shared/types";
 import { isAgentOwnedByUser } from "../utils/agent-ownership";
-import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 
 const TAB_ICONS: TabItem[] = [
   { id: "profile", icon: <User size={16} />, title: "Agent" },
@@ -63,30 +62,23 @@ export function AgentSidekickTaskbar({ agent: agentOverride }: AgentSidekickTask
   const { selectedAgent: storeSelectedAgent } = useSelectedAgent();
   const selectedAgent = agentOverride ?? storeSelectedAgent;
   const { user } = useAuth();
-  const { localAgentRuntimeAvailable } = useAuraCapabilities();
 
   const isOwnAgent = isAgentOwnedByUser(selectedAgent, user);
-  const canCloneToLocal =
-    isOwnAgent &&
-    selectedAgent?.machine_type === "remote" &&
-    localAgentRuntimeAvailable;
 
   const actions = useMemo<MenuItem[]>(
     () =>
       isOwnAgent
         ? [
-            ...(canCloneToLocal
-              ? [{ id: "clone-local", label: "Clone as Local", icon: <Copy size={14} /> }]
-              : []),
+            { id: "clone", label: "Clone Agent", icon: <Copy size={14} /> },
             { id: "edit", label: "Edit", icon: <Pencil size={14} /> },
             { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
           ]
         : [],
-    [canCloneToLocal, isOwnAgent],
+    [isOwnAgent],
   );
 
   const handleAction = (id: string) => {
-    if (id === "clone-local") requestClone();
+    if (id === "clone") requestClone();
     else if (id === "edit") requestEdit();
     else if (id === "delete") requestDelete();
   };

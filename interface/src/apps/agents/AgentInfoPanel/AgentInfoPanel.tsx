@@ -30,7 +30,7 @@ import { ProfileTab } from "./ProfileTab";
 import { ChatsTab } from "./ChatsTab";
 import { PermissionsTab } from "./PermissionsTab";
 import { MessagingTab } from "./MessagingTab";
-import { CloneAgentToLocalModal } from "./CloneAgentToLocalModal";
+import { CloneAgentModal } from "./CloneAgentModal";
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
 import { isAgentOwnedByUser } from "../utils/agent-ownership";
@@ -177,7 +177,7 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
   const navigate = useNavigate();
   const {
     activeTab, showEditor, showDeleteConfirm,
-    showCloneConfirm, closeEditor, closeDeleteConfirm, closeCloneConfirm,
+    showCloneModal, closeEditor, closeDeleteConfirm, closeCloneModal,
     requestEdit, requestDelete, requestClone,
     previewItem, canGoBack, goBackPreview, closePreview, viewSkill,
   } = useAgentSidekickStore(
@@ -185,10 +185,10 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
       activeTab: s.activeTab,
       showEditor: s.showEditor,
       showDeleteConfirm: s.showDeleteConfirm,
-      showCloneConfirm: s.showCloneConfirm,
+      showCloneModal: s.showCloneModal,
       closeEditor: s.closeEditor,
       closeDeleteConfirm: s.closeDeleteConfirm,
-      closeCloneConfirm: s.closeCloneConfirm,
+      closeCloneModal: s.closeCloneModal,
       requestEdit: s.requestEdit,
       requestDelete: s.requestDelete,
       requestClone: s.requestClone,
@@ -342,9 +342,7 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
 
       {isMobileStandalone && isOwnAgent && (
         <div className={styles.mobileActions}>
-          {a.machine_type === "remote" && localAgentRuntimeAvailable && (
-            <Button variant="ghost" size="sm" onClick={requestClone}>Clone as Local</Button>
-          )}
+          <Button variant="ghost" size="sm" onClick={requestClone}>Clone Agent</Button>
           <Button variant="ghost" size="sm" onClick={requestEdit}>Edit</Button>
           <Button variant="ghost" size="sm" onClick={openDeleteConfirm} disabled={deletePreparing}>Delete</Button>
         </div>
@@ -379,11 +377,12 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
         agentName={a.name}
       />
 
-      {isOwnAgent && a.machine_type === "remote" && localAgentRuntimeAvailable && (
-        <CloneAgentToLocalModal
-          isOpen={showCloneConfirm}
+      {isOwnAgent && (
+        <CloneAgentModal
+          isOpen={showCloneModal}
           sourceAgent={a}
-          onClose={closeCloneConfirm}
+          localAgentRuntimeAvailable={localAgentRuntimeAvailable}
+          onClose={closeCloneModal}
           onCloned={(clonedAgent) => {
             useAgentStore.setState((state) => ({
               agents: [

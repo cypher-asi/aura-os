@@ -218,17 +218,33 @@ pub(crate) struct UpdateAgentRequest {
     pub intent_classifier: Option<aura_os_core::IntentClassifierSpec>,
 }
 
-/// Optional overrides for cloning a remote agent into the local harness.
-///
-/// The source agent is addressed by the route and is never mutated. Keeping
-/// this request deliberately small prevents callers from smuggling runtime
-/// changes into what should be a predictable configuration clone.
-#[derive(Debug, Default, Deserialize)]
-pub(crate) struct CloneAgentToLocalRequest {
-    /// Name for the new local agent. When omitted, the server derives a valid
-    /// `<source>-local` name from the source agent.
+/// Supported destinations for a cloned agent.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum CloneAgentMachineType {
+    Local,
+    Remote,
+}
+
+impl CloneAgentMachineType {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Local => "local",
+            Self::Remote => "remote",
+        }
+    }
+}
+
+/// The source agent is addressed by the route and is never mutated. The
+/// destination is explicit so cloning has one predictable API for every
+/// supported source/destination combination.
+#[derive(Debug, Deserialize)]
+pub(crate) struct CloneAgentRequest {
+    /// Name for the new agent. When omitted, the server derives a valid
+    /// `<source>-copy` name from the source agent.
     #[serde(default)]
     pub name: Option<String>,
+    pub machine_type: CloneAgentMachineType,
 }
 
 /// Explicit copy boundary returned by the clone endpoint. The UI renders this
@@ -241,10 +257,8 @@ pub(crate) struct AgentCloneCopyReport {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct CloneAgentToLocalResponse {
+pub(crate) struct CloneAgentResponse {
     pub agent: Agent,
-    pub source_agent_id: AgentId,
-    pub source_preserved: bool,
     pub copy_report: AgentCloneCopyReport,
 }
 
