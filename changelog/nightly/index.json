@@ -2,19 +2,19 @@
   {
     "date": "2026-08-10",
     "channel": "nightly",
-    "version": "0.1.0-nightly.785.1",
-    "title": "Preview and Design modes land in the in-app browser",
-    "intro": "Today's nightly introduces a dedicated Preview/Design workflow for Aura's embedded browser, backed by a new CDP inspection path on the server, and follows up with a same-day polish pass to keep the toolbar usable at narrow widths.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.786.1",
+    "title": "Preview/Design modes land, plus universal agent cloning",
+    "intro": "Today's nightly introduces a split Preview/Design experience for the in-app browser, backed by a new CDP inspection path on the server, and reworks agent cloning into a single flow that targets either local or remote machines. A quick follow-up also tightens the compact Preview toolbar so its controls stay legible in narrow panels.",
+    "entryCount": 3,
     "highlights": [
-      "New Preview and Design modes for the in-app browser",
-      "CDP-backed element inspection wired end-to-end",
-      "Preview/Design enabled on both dev and stable channels",
-      "Compact toolbar clipping fixed with accessible labels"
+      "Preview and Design modes for the in-app browser",
+      "Element inspection over CDP wired end-to-end",
+      "Unified agent cloning across local and remote targets",
+      "Compact Preview toolbar no longer clips in narrow layouts"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-08-10T13:25:33.454Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.785.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-08-10T19:12:35.173Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.786.1",
     "path": "history/2026-08-10.json"
   },
   {

@@ -3,20 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-10T13:25:33.454Z",
+  "generatedAt": "2026-08-10T19:12:35.173Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.785.1",
+  "version": "0.1.0-nightly.786.1",
   "date": "2026-08-10",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.785.1",
-  "lastIncludedSha": "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a",
-  "previousProcessedSha": "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.786.1",
+  "lastIncludedSha": "d0319906f6567a2815a582fe08839e42d10a026d",
+  "previousProcessedSha": "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a",
   "commitShas": [
     "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3",
-    "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a"
+    "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a",
+    "d0319906f6567a2815a582fe08839e42d10a026d"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3",
@@ -139,36 +140,101 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "d0319906f6567a2815a582fe08839e42d10a026d",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-10T23:45:39+05:00",
+      "subject": "Generalize agent cloning across machine types (#132)",
+      "body": "* Generalize agent cloning\n\n* Restrict authenticated network request origins",
+      "parents": [
+        "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/clone.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/tests/agent_create_test/clone.rs",
+        "apps/aura-os-server/tests/agent_create_test/clone_local.rs",
+        "apps/aura-os-server/tests/agent_create_test/main.rs",
+        "crates/aura-os-network/src/client/analytics.rs",
+        "crates/aura-os-network/src/client/mod.rs",
+        "crates/aura-os-network/src/client/users.rs",
+        "crates/aura-os-network/src/error.rs",
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/CloneAgentModal.module.css",
+        "interface/src/apps/agents/AgentInfoPanel/CloneAgentModal.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/CloneAgentModal.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/CloneAgentToLocalModal.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/CloneAgentToLocalModal.tsx",
+        "interface/src/apps/agents/AgentSidekickTaskbar/AgentSidekickTaskbar.tsx",
+        "interface/src/apps/agents/stores/agent-sidekick-store.ts",
+        "interface/src/shared/api/agents.test.ts",
+        "interface/src/shared/api/agents.ts"
+      ],
+      "stats": {
+        "fileCount": 22,
+        "insertions": 785,
+        "deletions": 410
+      },
+      "committedAtMs": 1786387539000,
+      "cleanSubject": "Generalize agent cloning across machine types (#132)",
+      "keywords": [
+        "generalize",
+        "agent",
+        "cloning",
+        "across",
+        "machine",
+        "types"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-network/src",
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Core Rust"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.785.1",
+      "version": "0.1.0-nightly.786.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66275344
+          "sizeBytes": 66261208
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132790776
+          "sizeBytes": 132782584
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -178,29 +244,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.785.1",
+      "version": "0.1.0-nightly.786.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.785.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.786.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61881162
+          "sizeBytes": 61930016
         },
         {
-          "name": "AURA_0.1.0-nightly.785.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.786.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60915534
+          "sizeBytes": 60949444
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -210,29 +276,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.785.1",
+      "version": "0.1.0-nightly.786.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.785.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.786.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64191262
+          "sizeBytes": 64204638
         },
         {
-          "name": "AURA_0.1.0-nightly.785.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.786.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63167946
+          "sizeBytes": 63177274
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -242,17 +308,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.785.1",
+      "version": "0.1.0-nightly.786.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48858126
+          "sizeBytes": 48843504
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.785.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.786.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -261,44 +327,37 @@
     }
   ],
   "rendered": {
-    "title": "Preview and Design modes land in the in-app browser",
-    "intro": "Today's nightly introduces a dedicated Preview/Design workflow for Aura's embedded browser, backed by a new CDP inspection path on the server, and follows up with a same-day polish pass to keep the toolbar usable at narrow widths.",
+    "title": "Preview/Design modes land, plus universal agent cloning",
+    "intro": "Today's nightly introduces a split Preview/Design experience for the in-app browser, backed by a new CDP inspection path on the server, and reworks agent cloning into a single flow that targets either local or remote machines. A quick follow-up also tightens the compact Preview toolbar so its controls stay legible in narrow panels.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:28 AM",
         "started_at": "2026-08-10T10:28:06.000Z",
         "ended_at": "2026-08-10T10:28:06.000Z",
-        "title": "Preview and Design modes for the embedded browser",
-        "summary": "A substantial interface and backend change adds two first-class modes to the in-app browser, with a new design toolbar, an element inspector, and Chromium/CDP-backed inspection plumbed from the Rust backend through to the UI.",
+        "title": "Preview and Design modes for the in-app browser",
+        "summary": "The browser panel gains a dedicated Design mode with an inspector and toolbar, powered by a new CDP-backed inspection path in the server.",
         "items": [
           {
-            "text": "Added Preview and Design modes to the browser panel, including a new BrowserDesignToolbar for switching modes and picking viewport presets (desktop, mobile, fit) and a BrowserDesignInspector surface for inspecting elements inside the page.",
+            "text": "Added Preview and Design modes to the browser panel with a new BrowserDesignToolbar and BrowserDesignInspector, plus viewport presets and mode-aware viewport rendering.",
             "commit_shas": [
               "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Extended the CDP backend with an inspect module and a new Inspect client message so the server can resolve elements by coordinates and stream InspectionResult events back over the browser WebSocket to the UI.",
+            "text": "Wired element inspection end-to-end: a new Inspect client message and InspectionResult event flow through the CDP backend and the browser WebSocket handler, so Design mode can surface inspected nodes from a running Chromium.",
             "commit_shas": [
               "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Turned on the Chromium/CDP browser backend for both the dev-channel and stable-channel server builds, so Preview and Design work in web-server deployments as well as the desktop package while feature-minimal builds can still fall back to the stub backend.",
+            "text": "Enabled the Chromium/CDP backend on both dev and stable server channels so Preview and Design work in web-server builds alongside the desktop package, while feature-minimal builds can still opt out.",
             "commit_shas": [
               "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
             ],
             "confidence": "high"
-          },
-          {
-            "text": "Reworked the browser viewport, panel, and input hooks around a shared design-context, and taught the agent chat panel about the new modes so agent interactions stay coherent when switching between Preview and Design.",
-            "commit_shas": [
-              "fe5f7b0be4b01ffe678272ec42ce74463d8e53a3"
-            ],
-            "confidence": "medium"
           }
         ]
       },
@@ -307,32 +366,63 @@
         "time_label": "5:58 AM",
         "started_at": "2026-08-10T12:58:17.000Z",
         "ended_at": "2026-08-10T12:58:17.000Z",
-        "title": "Compact Preview toolbar no longer clips its controls",
-        "summary": "A quick follow-up to the Preview/Design launch fixes layout clipping in narrow panels and makes the icon-only controls properly accessible.",
+        "title": "Compact Preview toolbar no longer clips in narrow panels",
+        "summary": "A fast follow-up on the new Design toolbar keeps its controls visible and labeled when the browser panel gets tight.",
         "items": [
           {
-            "text": "Introduced a container query on the design toolbar so mode and viewport controls collapse to icon-only buttons under 360px and stop being clipped, with flex-shrink guards on the viewport group and divider to keep the layout stable.",
+            "text": "Switched the toolbar to a container query at 360px so mode buttons collapse to icons cleanly, and marked viewport and divider groups non-shrinkable to stop clipping in compact layouts.",
             "commit_shas": [
               "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added aria-label and title attributes to the Preview and Design buttons so the compact, icon-only state remains identifiable to screen readers and on hover, locked in by new regression tests for the toolbar.",
+            "text": "Added aria-labels and titles to the Preview and Design mode buttons so the icon-only compact state stays accessible, backed by new regression tests for the toolbar.",
             "commit_shas": [
               "de66b3c2c2cb85b7ff460e020f8e9eeeac3db01a"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "11:45 AM",
+        "started_at": "2026-08-10T18:45:39.000Z",
+        "ended_at": "2026-08-10T18:45:39.000Z",
+        "title": "Unified agent cloning across local and remote machines",
+        "summary": "Cloning is no longer a local-only side path — a single API and modal now handle both local and remote destinations, with tighter guardrails on outbound network requests.",
+        "items": [
+          {
+            "text": "Replaced the local-only clone endpoint with a generalized CloneAgentRequest that takes an explicit machine_type (local or remote), collapsing the previous CloneAgentToLocal flow into one predictable create-only path.",
+            "commit_shas": [
+              "d0319906f6567a2815a582fe08839e42d10a026d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Reworked the agent info panel around a single CloneAgentModal (retiring CloneAgentToLocalModal) so users pick the destination in one place instead of navigating separate flows.",
+            "commit_shas": [
+              "d0319906f6567a2815a582fe08839e42d10a026d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Restricted authenticated network requests to expected origins in the shared network client, reducing the risk of credentials leaking to unintended hosts.",
+            "commit_shas": [
+              "d0319906f6567a2815a582fe08839e42d10a026d"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "New Preview and Design modes for the in-app browser",
-      "CDP-backed element inspection wired end-to-end",
-      "Preview/Design enabled on both dev and stable channels",
-      "Compact toolbar clipping fixed with accessible labels"
+      "Preview and Design modes for the in-app browser",
+      "Element inspection over CDP wired end-to-end",
+      "Unified agent cloning across local and remote targets",
+      "Compact Preview toolbar no longer clips in narrow layouts"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 3
   }
 }

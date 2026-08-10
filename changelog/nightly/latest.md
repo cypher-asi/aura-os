@@ -1,32 +1,39 @@
-# Preview and Design modes land in the in-app browser
+# Preview/Design modes land, plus universal agent cloning
 
 - Date: `2026-08-10`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.785.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.785.1
+- Version: `0.1.0-nightly.786.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.786.1
 
-Today's nightly introduces a dedicated Preview/Design workflow for Aura's embedded browser, backed by a new CDP inspection path on the server, and follows up with a same-day polish pass to keep the toolbar usable at narrow widths.
+Today's nightly introduces a split Preview/Design experience for the in-app browser, backed by a new CDP inspection path on the server, and reworks agent cloning into a single flow that targets either local or remote machines. A quick follow-up also tightens the compact Preview toolbar so its controls stay legible in narrow panels.
 
-## 3:28 AM — Preview and Design modes for the embedded browser
+## 3:28 AM — Preview and Design modes for the in-app browser
 
-A substantial interface and backend change adds two first-class modes to the in-app browser, with a new design toolbar, an element inspector, and Chromium/CDP-backed inspection plumbed from the Rust backend through to the UI.
+The browser panel gains a dedicated Design mode with an inspector and toolbar, powered by a new CDP-backed inspection path in the server.
 
-- Added Preview and Design modes to the browser panel, including a new BrowserDesignToolbar for switching modes and picking viewport presets (desktop, mobile, fit) and a BrowserDesignInspector surface for inspecting elements inside the page. (`fe5f7b0`)
-- Extended the CDP backend with an inspect module and a new Inspect client message so the server can resolve elements by coordinates and stream InspectionResult events back over the browser WebSocket to the UI. (`fe5f7b0`)
-- Turned on the Chromium/CDP browser backend for both the dev-channel and stable-channel server builds, so Preview and Design work in web-server deployments as well as the desktop package while feature-minimal builds can still fall back to the stub backend. (`fe5f7b0`)
-- Reworked the browser viewport, panel, and input hooks around a shared design-context, and taught the agent chat panel about the new modes so agent interactions stay coherent when switching between Preview and Design. (`fe5f7b0`)
+- Added Preview and Design modes to the browser panel with a new BrowserDesignToolbar and BrowserDesignInspector, plus viewport presets and mode-aware viewport rendering. (`fe5f7b0`)
+- Wired element inspection end-to-end: a new Inspect client message and InspectionResult event flow through the CDP backend and the browser WebSocket handler, so Design mode can surface inspected nodes from a running Chromium. (`fe5f7b0`)
+- Enabled the Chromium/CDP backend on both dev and stable server channels so Preview and Design work in web-server builds alongside the desktop package, while feature-minimal builds can still opt out. (`fe5f7b0`)
 
-## 5:58 AM — Compact Preview toolbar no longer clips its controls
+## 5:58 AM — Compact Preview toolbar no longer clips in narrow panels
 
-A quick follow-up to the Preview/Design launch fixes layout clipping in narrow panels and makes the icon-only controls properly accessible.
+A fast follow-up on the new Design toolbar keeps its controls visible and labeled when the browser panel gets tight.
 
-- Introduced a container query on the design toolbar so mode and viewport controls collapse to icon-only buttons under 360px and stop being clipped, with flex-shrink guards on the viewport group and divider to keep the layout stable. (`de66b3c`)
-- Added aria-label and title attributes to the Preview and Design buttons so the compact, icon-only state remains identifiable to screen readers and on hover, locked in by new regression tests for the toolbar. (`de66b3c`)
+- Switched the toolbar to a container query at 360px so mode buttons collapse to icons cleanly, and marked viewport and divider groups non-shrinkable to stop clipping in compact layouts. (`de66b3c`)
+- Added aria-labels and titles to the Preview and Design mode buttons so the icon-only compact state stays accessible, backed by new regression tests for the toolbar. (`de66b3c`)
+
+## 11:45 AM — Unified agent cloning across local and remote machines
+
+Cloning is no longer a local-only side path — a single API and modal now handle both local and remote destinations, with tighter guardrails on outbound network requests.
+
+- Replaced the local-only clone endpoint with a generalized CloneAgentRequest that takes an explicit machine_type (local or remote), collapsing the previous CloneAgentToLocal flow into one predictable create-only path. (`d031990`)
+- Reworked the agent info panel around a single CloneAgentModal (retiring CloneAgentToLocalModal) so users pick the destination in one place instead of navigating separate flows. (`d031990`)
+- Restricted authenticated network requests to expected origins in the shared network client, reducing the risk of credentials leaking to unintended hosts. (`d031990`)
 
 ## Highlights
 
-- New Preview and Design modes for the in-app browser
-- CDP-backed element inspection wired end-to-end
-- Preview/Design enabled on both dev and stable channels
-- Compact toolbar clipping fixed with accessible labels
+- Preview and Design modes for the in-app browser
+- Element inspection over CDP wired end-to-end
+- Unified agent cloning across local and remote targets
+- Compact Preview toolbar no longer clips in narrow layouts
 
