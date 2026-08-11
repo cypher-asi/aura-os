@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-08-11",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.787.1",
+    "title": "Microsoft Edge discovery lands for Windows browser automation",
+    "intro": "A focused nightly centered on making Aura's embedded browser work out of the box on Windows. The CDP backend now finds Microsoft Edge through the Windows registry, validates configured executables before launch, and surfaces a clear, actionable error when no supported browser can be found.",
+    "entryCount": 1,
+    "highlights": [
+      "Microsoft Edge auto-discovery on Windows via the registry",
+      "Actionable browser_launch_failed errors that name Edge, Chrome, and Chromium",
+      "Safer CDP launches with pre-flight executable validation"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-11T20:56:06.900Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.787.1",
+    "path": "history/2026-08-11.json"
+  },
+  {
     "date": "2026-08-10",
     "channel": "nightly",
     "version": "0.1.0-nightly.786.1",
