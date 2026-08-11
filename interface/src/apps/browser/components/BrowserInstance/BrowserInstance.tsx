@@ -13,6 +13,7 @@ import {
 } from "../../../../shared/api/browser";
 import { useBrowser } from "../../../../hooks/use-browser";
 import { useBrowserPanelStore } from "../../../../stores/browser-panel-store";
+import { ApiClientError } from "../../../../shared/api/core";
 import { BrowserAddressBar } from "../BrowserAddressBar";
 import { BrowserDesignInspector } from "../BrowserDesignInspector";
 import { BrowserErrorOverlay } from "../BrowserErrorOverlay";
@@ -36,13 +37,21 @@ export interface BrowserInstanceProps {
  * REST layer's JSON payload.
  */
 function friendlyBrowserError(err: Error): string {
+  if (
+    err instanceof ApiClientError &&
+    err.body.code === "browser_launch_failed"
+  ) {
+    const details = err.body.details?.trim();
+    return details ? `${err.body.error} Details: ${details}` : err.body.error;
+  }
+
   const msg = err.message.toLowerCase();
   if (
     msg.includes("chromium_launch") ||
     msg.includes("chrome") ||
     msg.includes("no such file")
   ) {
-    return "Could not start Chromium. Install Google Chrome or Chromium, or set BROWSER_EXECUTABLE_PATH.";
+    return `Could not start a supported browser. AURA supports Microsoft Edge, Google Chrome, and Chromium. If your browser is installed in a managed or custom location, set the BROWSER_EXECUTABLE_PATH environment variable before starting AURA. Details: ${err.message}`;
   }
   if (msg.includes("network") || msg.includes("websocket")) {
     return "Lost connection to the browser backend. Retrying…";

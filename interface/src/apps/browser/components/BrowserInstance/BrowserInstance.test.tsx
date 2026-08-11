@@ -11,6 +11,7 @@ import type {
   UseBrowserOptions,
   UseBrowserReturn,
 } from "../../../../hooks/use-browser";
+import { ApiClientError } from "../../../../shared/api/core";
 
 // Capture the `useBrowser` options the component registers so each test can
 // drive the navigation lifecycle (`onNav` / `onNavError`) directly. Using
@@ -68,8 +69,17 @@ vi.mock("../BrowserAddressBar", () => ({
 }));
 
 vi.mock("../BrowserViewport", () => ({
-  BrowserViewport: ({ overlay }: { overlay?: React.ReactNode }) => (
-    <div data-testid="viewport">{overlay}</div>
+  BrowserViewport: ({
+    overlay,
+    placeholder,
+  }: {
+    overlay?: React.ReactNode;
+    placeholder?: string;
+  }) => (
+    <div data-testid="viewport">
+      {placeholder}
+      {overlay}
+    </div>
   ),
 }));
 
@@ -189,5 +199,53 @@ describe("BrowserInstance navError lifecycle", () => {
     );
 
     expect(screen.getByText("Can't connect to server")).toBeInTheDocument();
+  });
+});
+
+describe("BrowserInstance launch errors", () => {
+  beforeEach(() => {
+    capturedOpts.current = null;
+    mockSend.mockClear();
+  });
+
+  it("identifies Microsoft Edge support and preserves launch details", () => {
+    const opts = setup();
+
+    act(() =>
+      opts.onError?.(
+        new ApiClientError(503, {
+          error:
+            "Could not start a supported browser. AURA supports Microsoft Edge, Google Chrome, and Chromium.",
+          code: "browser_launch_failed",
+          details: "Executable was blocked by organization policy",
+        }),
+      ),
+    );
+
+    expect(screen.getByTestId("viewport")).toHaveTextContent(
+      "AURA supports Microsoft Edge",
+    );
+    expect(screen.getByTestId("viewport")).toHaveTextContent(
+      "Executable was blocked by organization policy",
+    );
+  });
+
+  it("keeps legacy launch failures actionable during a rolling update", () => {
+    const opts = setup();
+
+    act(() =>
+      opts.onError?.(
+        new Error(
+          "browser backend error in `chromium_launch`: Could not auto detect a chrome executable",
+        ),
+      ),
+    );
+
+    expect(screen.getByTestId("viewport")).toHaveTextContent(
+      "AURA supports Microsoft Edge",
+    );
+    expect(screen.getByTestId("viewport")).toHaveTextContent(
+      "Could not auto detect a chrome executable",
+    );
   });
 });
