@@ -2,6 +2,8 @@
 //! discovery helpers.
 
 use std::env;
+#[cfg(any(windows, test))]
+use std::path::Path;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -37,7 +39,7 @@ impl CdpBackendConfig {
     /// Pull configuration from environment variables.
     ///
     /// Recognised keys:
-    /// - `BROWSER_EXECUTABLE_PATH` — path to Chromium/Chrome.
+    /// - `BROWSER_EXECUTABLE_PATH` — path to Edge, Chrome, or Chromium.
     /// - `BROWSER_USER_DATA_DIR` — persistent profile directory.
     /// - `BROWSER_PROXY_SERVER` — proxy server URL.
     /// - `BROWSER_DISABLE_SANDBOX` — `1`/`true` to pass `--no-sandbox`.
@@ -63,30 +65,102 @@ impl CdpBackendConfig {
 pub(super) fn discover_default_browser_executable() -> Option<PathBuf> {
     #[cfg(windows)]
     {
-        let roots = [
-            env::var_os("ProgramFiles").map(PathBuf::from),
-            env::var_os("ProgramFiles(x86)").map(PathBuf::from),
-            env::var_os("LocalAppData").map(PathBuf::from),
-        ];
-        let suffixes: &[&[&str]] = &[
-            &["Google", "Chrome", "Application", "chrome.exe"],
-            &["Chromium", "Application", "chrome.exe"],
-            &["Microsoft", "Edge", "Application", "msedge.exe"],
-        ];
+        discover_registered_browser_executable()
+            .or_else(|| discover_browser_in_roots(windows_browser_roots()))
+    }
+    #[cfg(not(windows))]
+    {
+        None
+    }
+}
 
-        for root in roots.into_iter().flatten() {
-            for suffix in suffixes {
-                let candidate = suffix
-                    .iter()
-                    .fold(root.clone(), |path: PathBuf, part| path.join(part));
-                if candidate.is_file() {
-                    return Some(candidate);
-                }
+/// Relative install paths used by current stable and preview Windows browser
+/// channels. Edge comes first because it is present on most managed Windows
+/// devices even when organization policy forbids installing Chrome.
+#[cfg(any(windows, test))]
+const WINDOWS_BROWSER_RELATIVE_PATHS: &[&[&str]] = &[
+    &["Microsoft", "Edge", "Application", "msedge.exe"],
+    &["Microsoft", "Edge Beta", "Application", "msedge.exe"],
+    &["Microsoft", "Edge Dev", "Application", "msedge.exe"],
+    &["Microsoft", "Edge SxS", "Application", "msedge.exe"],
+    &["Google", "Chrome", "Application", "chrome.exe"],
+    &["Chromium", "Application", "chrome.exe"],
+];
+
+#[cfg(any(windows, test))]
+fn discover_browser_in_roots(roots: impl IntoIterator<Item = PathBuf>) -> Option<PathBuf> {
+    for root in roots {
+        for suffix in WINDOWS_BROWSER_RELATIVE_PATHS {
+            let candidate = suffix
+                .iter()
+                .fold(root.clone(), |path: PathBuf, part| path.join(part));
+            if candidate.is_file() {
+                return Some(candidate);
             }
         }
     }
-
     None
+}
+
+#[cfg(windows)]
+fn windows_browser_roots() -> Vec<PathBuf> {
+    let mut roots: Vec<PathBuf> = [
+        "ProgramW6432",
+        "ProgramFiles",
+        "ProgramFiles(x86)",
+        "LocalAppData",
+    ]
+    .into_iter()
+    .filter_map(env::var_os)
+    .map(PathBuf::from)
+    .collect();
+
+    // Packaged and managed processes occasionally start without the usual
+    // ProgramFiles variables. SystemDrive still lets us cover the default
+    // system-level locations without assuming Windows is installed on C:.
+    if let Some(system_drive) = env::var_os("SystemDrive") {
+        let drive = PathBuf::from(system_drive);
+        roots.push(drive.join("Program Files"));
+        roots.push(drive.join("Program Files (x86)"));
+    }
+
+    roots.dedup();
+    roots
+}
+
+#[cfg(windows)]
+fn discover_registered_browser_executable() -> Option<PathBuf> {
+    const APP_PATHS: &[&str] = &[
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe",
+        "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe",
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe",
+        "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe",
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chromium.exe",
+        "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chromium.exe",
+    ];
+
+    for key_path in APP_PATHS {
+        let registered = windows_registry::CURRENT_USER
+            .open(key_path)
+            .and_then(|key| key.get_string(""))
+            .ok()
+            .or_else(|| {
+                windows_registry::LOCAL_MACHINE
+                    .open(key_path)
+                    .and_then(|key| key.get_string(""))
+                    .ok()
+            });
+        if let Some(path) = registered.as_deref().and_then(existing_registered_path) {
+            return Some(path);
+        }
+    }
+    None
+}
+
+#[cfg(any(windows, test))]
+fn existing_registered_path(raw: &str) -> Option<PathBuf> {
+    let path = Path::new(raw.trim().trim_matches('"'));
+    path.is_file().then(|| path.to_path_buf())
 }
 
 pub(super) fn default_profile_dir() -> PathBuf {
@@ -103,6 +177,7 @@ pub(super) fn default_profile_dir() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use std::sync::{LazyLock, Mutex};
 
     static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
@@ -142,5 +217,53 @@ mod tests {
         let cfg = CdpBackendConfig::from_env();
         assert_eq!(cfg.executable_path, Some(explicit));
         env::remove_var("BROWSER_EXECUTABLE_PATH");
+    }
+
+    #[test]
+    fn discovers_edge_in_a_managed_install_root() {
+        let root = tempfile::tempdir().expect("temp browser root");
+        let edge = root
+            .path()
+            .join("Microsoft")
+            .join("Edge")
+            .join("Application")
+            .join("msedge.exe");
+        fs::create_dir_all(edge.parent().expect("edge parent")).expect("create Edge path");
+        fs::write(&edge, []).expect("create Edge executable fixture");
+
+        assert_eq!(
+            discover_browser_in_roots([root.path().to_path_buf()]),
+            Some(edge)
+        );
+    }
+
+    #[test]
+    fn discovers_per_user_edge_channels() {
+        let root = tempfile::tempdir().expect("temp browser root");
+        let edge = root
+            .path()
+            .join("Microsoft")
+            .join("Edge Dev")
+            .join("Application")
+            .join("msedge.exe");
+        fs::create_dir_all(edge.parent().expect("edge parent")).expect("create Edge path");
+        fs::write(&edge, []).expect("create Edge executable fixture");
+
+        assert_eq!(
+            discover_browser_in_roots([root.path().to_path_buf()]),
+            Some(edge)
+        );
+    }
+
+    #[test]
+    fn accepts_quoted_registry_executable_paths() {
+        let root = tempfile::tempdir().expect("temp browser root");
+        let edge = root.path().join("msedge.exe");
+        fs::write(&edge, []).expect("create Edge executable fixture");
+
+        assert_eq!(
+            existing_registered_path(&format!("\"{}\"", edge.display())),
+            Some(edge)
+        );
     }
 }

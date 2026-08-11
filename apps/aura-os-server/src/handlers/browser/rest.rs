@@ -215,9 +215,45 @@ fn map_browser_error(err: BrowserError) -> (StatusCode, Json<ApiError>) {
                 data: None,
             }),
         ),
+        BrowserError::Backend {
+            op: "chromium_launch",
+            reason,
+        } => {
+            warn!(%reason, "browser executable launch failed");
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiError {
+                    error: "Could not start a supported browser. AURA supports Microsoft Edge, Google Chrome, and Chromium. If your browser is installed in a managed or custom location, set the BROWSER_EXECUTABLE_PATH environment variable before starting AURA.".to_string(),
+                    code: "browser_launch_failed".to_string(),
+                    details: Some(reason),
+                    data: None,
+                }),
+            )
+        }
         _ => {
             warn!(%err, "browser handler error");
             ApiError::internal(err.to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chromium_launch_errors_are_actionable_and_structured() {
+        let (status, Json(body)) = map_browser_error(BrowserError::backend(
+            "chromium_launch",
+            "Could not auto detect a chrome executable",
+        ));
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.code, "browser_launch_failed");
+        assert!(body.error.contains("Microsoft Edge"));
+        assert_eq!(
+            body.details.as_deref(),
+            Some("Could not auto detect a chrome executable")
+        );
     }
 }

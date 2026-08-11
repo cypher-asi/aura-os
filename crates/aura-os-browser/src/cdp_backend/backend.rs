@@ -126,6 +126,15 @@ impl Clone for CdpBackend {
 async fn launch_browser(cfg: &CdpBackendConfig) -> Result<Browser, Error> {
     let mut builder = ChromiumBrowserConfig::builder();
     if let Some(path) = &cfg.executable_path {
+        if !path.is_file() {
+            return Err(Error::backend(
+                "chromium_launch",
+                format!(
+                    "configured browser executable does not exist or is not a file: {}",
+                    path.display()
+                ),
+            ));
+        }
         builder = builder.chrome_executable(path);
     }
     let user_data_dir = cfg
@@ -142,9 +151,17 @@ async fn launch_browser(cfg: &CdpBackendConfig) -> Result<Browser, Error> {
     let config = builder
         .build()
         .map_err(|e| Error::backend("chromium_config", e.to_string()))?;
-    let (browser, mut handler) = Browser::launch(config)
-        .await
-        .map_err(|e| Error::backend("chromium_launch", e.to_string()))?;
+    let launch_target = cfg
+        .executable_path
+        .as_ref()
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| "automatic browser discovery".to_string());
+    let (browser, mut handler) = Browser::launch(config).await.map_err(|e| {
+        Error::backend(
+            "chromium_launch",
+            format!("{e} (launch target: {launch_target})"),
+        )
+    })?;
     tokio::spawn(async move {
         while let Some(event) = handler.next().await {
             if let Err(err) = event {
@@ -152,7 +169,11 @@ async fn launch_browser(cfg: &CdpBackendConfig) -> Result<Browser, Error> {
             }
         }
     });
-    info!(profile_dir = %user_data_dir.display(), "headless Chromium launched");
+    info!(
+        profile_dir = %user_data_dir.display(),
+        executable = %launch_target,
+        "headless Chromium launched"
+    );
     Ok(browser)
 }
 

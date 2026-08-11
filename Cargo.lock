@@ -491,6 +491,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
+ "windows-registry",
 ]
 
 [[package]]

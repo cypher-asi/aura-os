@@ -27,12 +27,20 @@ futures-util = { workspace = true, optional = true }
 base64 = { workspace = true, optional = true }
 chromiumoxide = { version = "0.9", optional = true }
 
+[target.'cfg(windows)'.dependencies]
+windows-registry = { version = "0.6", optional = true }
+
 [features]
 default = []
 # Enables the real Chromium/CDP-backed `CdpBackend` (requires a local
 # Chromium/Chrome executable at runtime). The base crate always ships the
 # `StubBackend`; downstream crates opt in when they want rendering.
-cdp = ["dep:chromiumoxide", "dep:futures-util", "dep:base64"]
+cdp = [
+  "dep:chromiumoxide",
+  "dep:futures-util",
+  "dep:base64",
+  "dep:windows-registry",
+]
 
 [dev-dependencies]
 tempfile = { workspace = true }
