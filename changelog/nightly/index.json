@@ -2,17 +2,18 @@
   {
     "date": "2026-08-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.788.1",
-    "title": "Time-aware Claude Sonnet 5 pricing",
-    "intro": "A small but meaningful correctness fix landed today: Aura now models Claude Sonnet 5's introductory-to-standard pricing transition, so live run cost estimates stay accurate through the September 1, 2026 UTC switchover.",
+    "version": "0.1.0-nightly.789.1",
+    "title": "Model pricing catalog audit and Sonnet 5 introductory rates",
+    "intro": "Today's nightly focuses on getting model cost accounting right across the board. A time-aware pricing schedule was introduced for Claude Sonnet 5, and a broader audit realigned per-token rates across OpenAI, xAI, Fireworks, and DeepSeek catalogs so cost estimates in the UI stay accurate.",
     "entryCount": 1,
     "highlights": [
-      "Sonnet 5 introductory rates honored until Sept 1, 2026 UTC",
-      "Live run cost estimates now use resolved pricing instead of hardcoded rates"
+      "Sonnet 5 introductory pricing wired into live cost estimates",
+      "Full audit of provider pricing tables across OpenAI, xAI, DeepSeek, and Fireworks",
+      "LiveRunBanner now uses resolved pricing instead of hard-coded rates"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-08-12T14:45:11.742Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.788.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-08-12T15:57:23.427Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.789.1",
     "path": "history/2026-08-12.json"
   },
   {
