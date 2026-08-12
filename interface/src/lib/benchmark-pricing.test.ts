@@ -7,7 +7,7 @@ import {
 } from "../../scripts/lib/benchmark-pricing.mjs";
 
 describe("benchmark pricing", () => {
-  it("switches Sonnet 5 pricing at the published UTC boundary", () => {
+  it("keeps Sonnet 5 at Anthropic's permanent launch pricing", () => {
     expect(sonnet5PricingAt(new Date("2026-08-31T23:59:59.999Z"))).toEqual({
       input: 2,
       output: 10,
@@ -15,10 +15,10 @@ describe("benchmark pricing", () => {
       cacheRead: 0.2,
     });
     expect(sonnet5PricingAt(new Date("2026-09-01T00:00:00.000Z"))).toEqual({
-      input: 3,
-      output: 15,
-      cacheWrite: 3.75,
-      cacheRead: 0.3,
+      input: 2,
+      output: 10,
+      cacheWrite: 2.5,
+      cacheRead: 0.2,
     });
     expect(
       resolvePricing(
@@ -85,7 +85,7 @@ describe("benchmark pricing", () => {
       cacheReadInputTokens: 1_000_000,
     });
 
-    expect(pricing.source).toBe("deepseek-pricing");
+    expect(pricing.source).toBe("fireworks-pricing");
     expect(estimatedCostUsd).toBeCloseTo(1.885, 6);
   });
 
@@ -100,8 +100,8 @@ describe("benchmark pricing", () => {
     });
 
     expect(pricing.source).toBe("google-pricing");
-    // base: 0.6M * 1.25 + 0.5M * 10 + 0.4M * 0.125 = 0.75 + 5 + 0.05 = 5.8
-    expect(estimatedCostUsd).toBeCloseTo(5.8, 6);
+    // >200K prompt tier: 0.6M * 2.50 + 0.5M * 15 + 0.4M * 0.25 = 9.1
+    expect(estimatedCostUsd).toBeCloseTo(9.1, 6);
   });
 
   it.each([
@@ -173,15 +173,15 @@ describe("benchmark pricing", () => {
     });
     expect(resolvePricing("aura-gpt-5-6-terra")).toMatchObject({
       model: "gpt-5.6-terra",
-      input: 2.5,
-      cacheWrite: 3.125,
-      output: 15,
+      input: 2,
+      cacheWrite: 2.5,
+      output: 12,
     });
     expect(resolvePricing("aura-gpt-5-6-luna")).toMatchObject({
       model: "gpt-5.6-luna",
-      input: 1,
-      cacheWrite: 1.25,
-      output: 6,
+      input: 0.2,
+      cacheWrite: 0.25,
+      output: 1.2,
     });
   });
 
@@ -206,14 +206,14 @@ describe("benchmark pricing", () => {
       cacheCreationInputTokens: 100_000,
       cacheReadInputTokens: 50_000,
     });
-    // 50k new at $1/M + 100k cache write at $1.25/M +
-    // 50k cache read at $0.10/M + 100k output at $6/M.
-    expect(estimatedCostUsd).toBeCloseTo(0.78, 6);
+    // 50k new at $0.20/M + 100k cache write at $0.25/M +
+    // 50k cache read at $0.02/M + 100k output at $1.20/M.
+    expect(estimatedCostUsd).toBeCloseTo(0.156, 6);
   });
 
   it.each([
-    ["aura-grok-4-5", "grok-4.5", 2, 0.5, 6],
-    ["xai/grok-4.5", "grok-4.5", 2, 0.5, 6],
+    ["aura-grok-4-5", "grok-4.5", 2, 0.3, 6],
+    ["xai/grok-4.5", "grok-4.5", 2, 0.3, 6],
     ["aura-grok-4-3", "grok-4.3", 1.25, 0.2, 2.5],
     ["xai/grok-4.3", "grok-4.3", 1.25, 0.2, 2.5],
     ["aura-grok-build-0-1", "grok-build-0.1", 1, 0.2, 2],
@@ -243,7 +243,7 @@ describe("benchmark pricing", () => {
     });
 
     expect(pricing.source).toBe("xai-pricing");
-    expect(estimatedCostUsd).toBeCloseTo(2.08, 6);
+    expect(estimatedCostUsd).toBeCloseTo(4.16, 6);
   });
 
   it("resolves Kimi pricing for Aura-managed Fireworks model IDs", () => {
@@ -269,7 +269,9 @@ describe("benchmark pricing", () => {
   });
 
   it("resolves Kimi pricing for Fireworks router model IDs", () => {
-    const pricing = resolvePricing("accounts/fireworks/routers/kimi-k2p6-turbo");
+    const pricing = resolvePricing(
+      "accounts/fireworks/routers/kimi-k2p6-turbo",
+    );
 
     expect(pricing.provider).toBe("fireworks");
     expect(pricing.source).toBe("fireworks-pricing");
@@ -280,11 +282,9 @@ describe("benchmark pricing", () => {
   });
 
   it.each([
-    ["aura-deepseek-v4-pro", "deepseek-v4-pro", 1.74, 0.145, 3.48],
-    ["aura-deepseek-v4-flash", "deepseek-v4-flash", 0.14, 0.028, 0.28],
-    ["deepseek-v4-pro", "deepseek-v4-pro", 1.74, 0.145, 3.48],
-    ["deepseek-v4-flash", "deepseek-v4-flash", 0.14, 0.028, 0.28],
-    ["deepseek/deepseek-v4-flash", "deepseek-v4-flash", 0.14, 0.028, 0.28],
+    ["deepseek-v4-pro", "deepseek-v4-pro", 0.435, 0.003625, 0.87],
+    ["deepseek-v4-flash", "deepseek-v4-flash", 0.14, 0.0028, 0.28],
+    ["deepseek/deepseek-v4-flash", "deepseek-v4-flash", 0.14, 0.0028, 0.28],
   ])(
     "resolves direct DeepSeek pricing for %s",
     (modelId, expectedModel, input, cacheRead, output) => {
@@ -300,17 +300,32 @@ describe("benchmark pricing", () => {
   );
 
   it.each([
+    ["aura-deepseek-v4-pro", "deepseek-v4-pro", 1.74, 0.145, 3.48],
+    ["aura-deepseek-v4-flash", "deepseek-v4-flash", 0.14, 0.028, 0.28],
+    [
+      "accounts/fireworks/models/deepseek-v4-pro",
+      "deepseek-v4-pro",
+      1.74,
+      0.145,
+      3.48,
+    ],
     ["aura-kimi-k2-5", "kimi-k2p5", 0.6, 0.1, 3],
     ["aura-kimi-k2-6", "kimi-k2p6", 0.95, 0.16, 4],
-    ["aura-oss-120b", "gpt-oss-120b", 0.15, 0.01, 0.6],
+    ["aura-oss-120b", "gpt-oss-120b", 0.15, 0.015, 0.6],
     ["accounts/fireworks/models/kimi-k2p5", "kimi-k2p5", 0.6, 0.1, 3],
     ["accounts/fireworks/models/kimi-k2p6", "kimi-k2p6", 0.95, 0.16, 4],
-    ["accounts/fireworks/models/gpt-oss-120b", "gpt-oss-120b", 0.15, 0.01, 0.6],
-    ["aura-minimax-m3", "minimax-m3", 0.4, 0.08, 1.6],
+    [
+      "accounts/fireworks/models/gpt-oss-120b",
+      "gpt-oss-120b",
+      0.15,
+      0.015,
+      0.6,
+    ],
+    ["aura-minimax-m3", "minimax-m3", 0.3, 0.06, 1.2],
     ["aura-minimax-m2-7", "minimax-m2p7", 0.3, 0.06, 1.2],
     ["aura-glm-5-1", "glm-5p1", 1.4, 0.26, 4.4],
     ["aura-qwen3-6-plus", "qwen3p6-plus", 0.5, 0.1, 3],
-    ["accounts/fireworks/models/minimax-m3", "minimax-m3", 0.4, 0.08, 1.6],
+    ["accounts/fireworks/models/minimax-m3", "minimax-m3", 0.3, 0.06, 1.2],
     ["accounts/fireworks/models/minimax-m2p7", "minimax-m2p7", 0.3, 0.06, 1.2],
     ["accounts/fireworks/models/glm-5p1", "glm-5p1", 1.4, 0.26, 4.4],
     ["accounts/fireworks/models/qwen3p6-plus", "qwen3p6-plus", 0.5, 0.1, 3],

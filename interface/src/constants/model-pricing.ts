@@ -35,28 +35,17 @@ export interface ModelRates {
   readonly cacheRead: number;
 }
 
-/** Sonnet 5's introductory rates expire at the start of September 2026 UTC. */
-export const SONNET_5_STANDARD_PRICING_START_UTC = Date.UTC(2026, 8, 1);
-
-const SONNET_5_INTRODUCTORY_PRICING: ModelRates = {
+/** Anthropic made Sonnet 5's original $2/$10 launch pricing permanent. */
+const SONNET_5_PRICING: ModelRates = {
   input: 2,
   output: 10,
   cacheWrite: 2.5,
   cacheRead: 0.2,
 };
 
-const SONNET_5_STANDARD_PRICING: ModelRates = {
-  input: 3,
-  output: 15,
-  cacheWrite: 3.75,
-  cacheRead: 0.3,
-};
-
-/** Resolve Sonnet 5's published rates at a deterministic point in time. */
-export function sonnet5PricingAt(at: Date = new Date()): ModelRates {
-  return at.getTime() < SONNET_5_STANDARD_PRICING_START_UTC
-    ? SONNET_5_INTRODUCTORY_PRICING
-    : SONNET_5_STANDARD_PRICING;
+/** Resolve Sonnet 5's published rates; `at` remains for API compatibility. */
+export function sonnet5PricingAt(_at: Date = new Date()): ModelRates {
+  return SONNET_5_PRICING;
 }
 
 /** Rates resolved for a model, including which table they came from. */
@@ -83,65 +72,155 @@ const ANTHROPIC_PRICING: Readonly<Record<string, ModelRates>> = {
   "claude-opus-4-7": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
   "claude-opus-4-6": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
   "claude-opus-4-5": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
-  "claude-opus-4-1": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
+  "claude-opus-4-1": {
+    input: 15,
+    output: 75,
+    cacheWrite: 18.75,
+    cacheRead: 1.5,
+  },
   "claude-opus-4": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
-  "claude-sonnet-4-6": { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
-  "claude-sonnet-4-5": { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
+  "claude-sonnet-4-6": {
+    input: 3,
+    output: 15,
+    cacheWrite: 3.75,
+    cacheRead: 0.3,
+  },
+  "claude-sonnet-4-5": {
+    input: 3,
+    output: 15,
+    cacheWrite: 3.75,
+    cacheRead: 0.3,
+  },
   "claude-haiku-4-5": { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
 } as const;
 
 const OPENAI_PRICING: Readonly<Record<string, ModelRates>> = {
   // GPT-5.6 cache writes cost 1.25x uncached input; cache reads cost 0.1x.
   "gpt-5.6-sol": { input: 5, output: 30, cacheWrite: 6.25, cacheRead: 0.5 },
-  "gpt-5.6-terra": { input: 2.5, output: 15, cacheWrite: 3.125, cacheRead: 0.25 },
-  "gpt-5.6-luna": { input: 1, output: 6, cacheWrite: 1.25, cacheRead: 0.1 },
+  "gpt-5.6-terra": { input: 2, output: 12, cacheWrite: 2.5, cacheRead: 0.2 },
+  "gpt-5.6-luna": {
+    input: 0.2,
+    output: 1.2,
+    cacheWrite: 0.25,
+    cacheRead: 0.02,
+  },
   "gpt-5.5": { input: 5, output: 30, cacheWrite: 5, cacheRead: 0.5 },
   "gpt-5.4": { input: 2.5, output: 15, cacheWrite: 2.5, cacheRead: 0.25 },
-  "gpt-5.4-mini": { input: 0.75, output: 4.5, cacheWrite: 0.75, cacheRead: 0.075 },
-  "gpt-5.4-nano": { input: 0.2, output: 1.25, cacheWrite: 0.2, cacheRead: 0.02 },
+  "gpt-5.4-mini": {
+    input: 0.75,
+    output: 4.5,
+    cacheWrite: 0.75,
+    cacheRead: 0.075,
+  },
+  "gpt-5.4-nano": {
+    input: 0.2,
+    output: 1.25,
+    cacheWrite: 0.2,
+    cacheRead: 0.02,
+  },
 } as const;
 
 // xAI publishes a discounted cached-input rate for Grok. It does not
 // publish a separate cache-write rate for these models, so cache writes use
 // the base input rate when a caller reports them.
 const XAI_PRICING: Readonly<Record<string, ModelRates>> = {
-  "grok-4.5": { input: 2, output: 6, cacheWrite: 2, cacheRead: 0.5 },
+  "grok-4.5": { input: 2, output: 6, cacheWrite: 2, cacheRead: 0.3 },
   "grok-4.3": { input: 1.25, output: 2.5, cacheWrite: 1.25, cacheRead: 0.2 },
   "grok-build-0.1": { input: 1, output: 2, cacheWrite: 1, cacheRead: 0.2 },
 } as const;
 
 const FIREWORKS_PRICING: Readonly<Record<string, ModelRates>> = {
-  "kimi-k2p7-code": { input: 0.95, output: 4.0, cacheWrite: 0.95, cacheRead: 0.19 },
+  "kimi-k2p7-code": {
+    input: 0.95,
+    output: 4.0,
+    cacheWrite: 0.95,
+    cacheRead: 0.19,
+  },
   "kimi-k2p6": { input: 0.95, output: 4.0, cacheWrite: 0.95, cacheRead: 0.16 },
   "kimi-k2p5": { input: 0.6, output: 3.0, cacheWrite: 0.6, cacheRead: 0.1 },
-  "gpt-oss-120b": { input: 0.15, output: 0.6, cacheWrite: 0.15, cacheRead: 0.01 },
-  "minimax-m3": { input: 0.4, output: 1.6, cacheWrite: 0.4, cacheRead: 0.08 },
+  "gpt-oss-120b": {
+    input: 0.15,
+    output: 0.6,
+    cacheWrite: 0.15,
+    cacheRead: 0.015,
+  },
+  "minimax-m3": { input: 0.3, output: 1.2, cacheWrite: 0.3, cacheRead: 0.06 },
   "minimax-m2p7": { input: 0.3, output: 1.2, cacheWrite: 0.3, cacheRead: 0.06 },
-  "glm-5p2": { input: 1.4, output: 4.4, cacheWrite: 1.4, cacheRead: 0.26 },
+  "glm-5p2": { input: 1.4, output: 4.4, cacheWrite: 1.4, cacheRead: 0.14 },
   "glm-5p1": { input: 1.4, output: 4.4, cacheWrite: 1.4, cacheRead: 0.26 },
   "qwen3p7-plus": { input: 0.4, output: 1.6, cacheWrite: 0.4, cacheRead: 0.08 },
   "qwen3p6-plus": { input: 0.5, output: 3.0, cacheWrite: 0.5, cacheRead: 0.1 },
+  "deepseek-v4-pro": { input: 1.74, output: 3.48, cacheWrite: 1.74, cacheRead: 0.145 },
+  "deepseek-v4-flash": { input: 0.14, output: 0.28, cacheWrite: 0.14, cacheRead: 0.028 },
 } as const;
 
 const DEEPSEEK_PRICING: Readonly<Record<string, ModelRates>> = {
-  "deepseek-v4-pro": { input: 1.74, output: 3.48, cacheWrite: 1.74, cacheRead: 0.145 },
-  "deepseek-v4-flash": { input: 0.14, output: 0.28, cacheWrite: 0.14, cacheRead: 0.028 },
+  "deepseek-v4-pro": {
+    input: 0.435,
+    output: 0.87,
+    cacheWrite: 0.435,
+    cacheRead: 0.003625,
+  },
+  "deepseek-v4-flash": {
+    input: 0.14,
+    output: 0.28,
+    cacheWrite: 0.14,
+    cacheRead: 0.0028,
+  },
 } as const;
 
 // Gemini chat models. Pro tiers use the flat (<=200k prompt) rate; cached
 // input is ~10% of the base input rate (no separate cache-write charge).
 const GOOGLE_PRICING: Readonly<Record<string, ModelRates>> = {
-  "gemini-3.1-pro": { input: 2.0, output: 12.0, cacheWrite: 2.0, cacheRead: 0.2 },
-  "gemini-3.5-flash": { input: 1.5, output: 9.0, cacheWrite: 1.5, cacheRead: 0.15 },
-  "gemini-3-flash": { input: 0.5, output: 3.0, cacheWrite: 0.5, cacheRead: 0.05 },
-  "gemini-3.1-flash-lite": { input: 0.25, output: 1.5, cacheWrite: 0.25, cacheRead: 0.025 },
-  "gemini-2.5-pro": { input: 1.25, output: 10.0, cacheWrite: 1.25, cacheRead: 0.125 },
-  "gemini-2.5-flash": { input: 0.3, output: 2.5, cacheWrite: 0.3, cacheRead: 0.03 },
-  "gemini-2.5-flash-lite": { input: 0.1, output: 0.4, cacheWrite: 0.1, cacheRead: 0.01 },
+  "gemini-3.1-pro": {
+    input: 2.0,
+    output: 12.0,
+    cacheWrite: 2.0,
+    cacheRead: 0.2,
+  },
+  "gemini-3.5-flash": {
+    input: 1.5,
+    output: 9.0,
+    cacheWrite: 1.5,
+    cacheRead: 0.15,
+  },
+  "gemini-3-flash": {
+    input: 0.5,
+    output: 3.0,
+    cacheWrite: 0.5,
+    cacheRead: 0.05,
+  },
+  "gemini-3.1-flash-lite": {
+    input: 0.25,
+    output: 1.5,
+    cacheWrite: 0.25,
+    cacheRead: 0.025,
+  },
+  "gemini-2.5-pro": {
+    input: 1.25,
+    output: 10.0,
+    cacheWrite: 1.25,
+    cacheRead: 0.125,
+  },
+  "gemini-2.5-flash": {
+    input: 0.3,
+    output: 2.5,
+    cacheWrite: 0.3,
+    cacheRead: 0.03,
+  },
+  "gemini-2.5-flash-lite": {
+    input: 0.1,
+    output: 0.4,
+    cacheWrite: 0.1,
+    cacheRead: 0.01,
+  },
 } as const;
 
 const PROVIDER_TABLES: Readonly<
-  Record<Exclude<PricingProvider, "unknown">, Readonly<Record<string, ModelRates>>>
+  Record<
+    Exclude<PricingProvider, "unknown">,
+    Readonly<Record<string, ModelRates>>
+  >
 > = {
   anthropic: ANTHROPIC_PRICING,
   openai: OPENAI_PRICING,
@@ -151,7 +230,12 @@ const PROVIDER_TABLES: Readonly<
   google: GOOGLE_PRICING,
 } as const;
 
-const ZERO_RATES: ModelRates = { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 };
+const ZERO_RATES: ModelRates = {
+  input: 0,
+  output: 0,
+  cacheWrite: 0,
+  cacheRead: 0,
+};
 
 /**
  * Normalize an Aura-managed model id to the provider's canonical pricing
@@ -165,6 +249,8 @@ export function normalizePricingKey(model: string): string {
     : key.startsWith("xai/")
       ? key.slice("xai/".length)
       : key;
+  const fireworksModel = unprefixed.match(/^accounts\/fireworks\/(?:models|routers)\/(.+)$/);
+  if (fireworksModel) return fireworksModel[1];
   const directAura: Readonly<Record<string, string>> = {
     "gpt-5.6": "gpt-5.6-sol",
     "aura-gpt-5-6-sol": "gpt-5.6-sol",
@@ -209,6 +295,13 @@ export function normalizePricingKey(model: string): string {
 }
 
 function inferProvider(model: string, provider?: string): PricingProvider {
+  const rawModel = model.trim().toLowerCase();
+  if (
+    rawModel.startsWith("aura-deepseek-v4-") ||
+    rawModel.startsWith("accounts/fireworks/")
+  ) {
+    return "fireworks";
+  }
   const explicit = provider?.trim().toLowerCase();
   if (explicit === "anthropic" || explicit === "openai") return explicit;
   if (explicit === "xai") return explicit;
@@ -253,10 +346,20 @@ export function resolvePricing(
   if (resolvedProvider !== "unknown") {
     const rates = PROVIDER_TABLES[resolvedProvider][key];
     if (rates) {
-      return { provider: resolvedProvider, model: key, source: resolvedProvider, ...rates };
+      return {
+        provider: resolvedProvider,
+        model: key,
+        source: resolvedProvider,
+        ...rates,
+      };
     }
   }
-  return { provider: resolvedProvider, model: key, source: "unknown-pricing", ...ZERO_RATES };
+  return {
+    provider: resolvedProvider,
+    model: key,
+    source: "unknown-pricing",
+    ...ZERO_RATES,
+  };
 }
 
 /** Billed rates = base rates x {@link LLM_MARKUP_MULTIPLIER}. */
@@ -272,6 +375,34 @@ export function getBilledPricing(
     output: base.output * LLM_MARKUP_MULTIPLIER,
     cacheWrite: base.cacheWrite * LLM_MARKUP_MULTIPLIER,
     cacheRead: base.cacheRead * LLM_MARKUP_MULTIPLIER,
+  };
+}
+
+/** Apply provider-published prompt-length tiers to a resolved rate card. */
+function applyLongContextPricing(
+  pricing: ResolvedPricing,
+  inputTokens: number,
+): ResolvedPricing {
+  const openAiLongContext =
+    pricing.provider === "openai" &&
+    inputTokens > 272_000 &&
+    (pricing.model === "gpt-5.4" ||
+      pricing.model === "gpt-5.5" ||
+      pricing.model.startsWith("gpt-5.6"));
+  const xaiLongContext = pricing.provider === "xai" && inputTokens >= 200_000;
+  const googleLongContext =
+    pricing.provider === "google" &&
+    inputTokens > 200_000 &&
+    (pricing.model === "gemini-3.1-pro" || pricing.model === "gemini-2.5-pro");
+
+  if (!openAiLongContext && !xaiLongContext && !googleLongContext)
+    return pricing;
+  return {
+    ...pricing,
+    input: pricing.input * 2,
+    cacheWrite: pricing.cacheWrite * 2,
+    cacheRead: pricing.cacheRead * 2,
+    output: pricing.output * (xaiLongContext ? 2 : 1.5),
   };
 }
 
@@ -297,8 +428,13 @@ export interface SessionCostBreakdown {
  * `calculateEstimatedCostUsd` in benchmark-pricing.mjs, including its
  * DeepSeek handling where cache tokens are already counted in input.
  */
-export function computeSessionCost(usage: SessionTokenUsage): SessionCostBreakdown {
-  const pricing = getBilledPricing(usage.model, usage.provider);
+export function computeSessionCost(
+  usage: SessionTokenUsage,
+): SessionCostBreakdown {
+  const pricing = applyLongContextPricing(
+    getBilledPricing(usage.model, usage.provider),
+    usage.inputTokens,
+  );
   const cacheTokens = usage.cacheCreationTokens + usage.cacheReadTokens;
   // OpenAI-compatible providers and Google report cached tokens within the
   // prompt count. Anthropic reports only new input and separate cache buckets.
@@ -321,8 +457,11 @@ export function computeSessionCost(usage: SessionTokenUsage): SessionCostBreakdo
 
   // Weighted average across the token types actually consumed.
   const totalTokens =
-    usage.inputTokens + usage.outputTokens + (inputIncludesCacheTokens ? 0 : cacheTokens);
-  const avgCostPerMillionUsd = totalTokens > 0 ? (totalCostUsd / totalTokens) * 1_000_000 : 0;
+    usage.inputTokens +
+    usage.outputTokens +
+    (inputIncludesCacheTokens ? 0 : cacheTokens);
+  const avgCostPerMillionUsd =
+    totalTokens > 0 ? (totalCostUsd / totalTokens) * 1_000_000 : 0;
 
   return {
     pricing,
