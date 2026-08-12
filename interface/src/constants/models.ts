@@ -12,7 +12,13 @@ export type GenerationMode = "chat" | "image" | "3d" | "video";
  * the per-model `efforts` arrays). The wire enum carried end-to-end
  * (aura-protocol `ReasoningEffort`) mirrors these snake_case values.
  */
-export type ModelEffort = "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+export type ModelEffort =
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh"
+  | "max";
 
 export const EFFORT_ORDER: ModelEffort[] = [
   "minimal",
@@ -112,14 +118,12 @@ export interface ModelOption {
 
 /**
  * Anthropic extended-thinking tiers. Claude models with explicit thinking
- * controls expose a budget mapped per tier in the router. Adaptive-only
- * models such as Fable intentionally omit `efforts` so no picker tier is
- * sent on the wire.
+ * controls expose a budget mapped per tier in the router.
  */
 const ANTHROPIC_EFFORTS: ModelEffort[] = ["low", "medium", "high", "max"];
 
-/** Claude Opus 5 exposes Anthropic's full adaptive-thinking effort ladder. */
-const ANTHROPIC_OPUS_5_EFFORTS: ModelEffort[] = [
+/** Current Claude flagships expose Anthropic's full adaptive-effort ladder. */
+const ANTHROPIC_XHIGH_EFFORTS: ModelEffort[] = [
   "low",
   "medium",
   "high",
@@ -138,7 +142,13 @@ const ANTHROPIC_LITE_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
  * `minimal` endpoint is translated by aura-router to OpenAI's native
  * `none` value.
  */
-const OPENAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high", "xhigh"];
+const OPENAI_EFFORTS: ModelEffort[] = [
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+];
 
 /** GPT-5.6 adds a distinct native `max` tier above `xhigh`. */
 const GPT_5_6_EFFORTS: ModelEffort[] = [...OPENAI_EFFORTS, "max"];
@@ -175,11 +185,7 @@ const GEMINI_FLASH_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 const XAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
 const XAI_GROK_4_5_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
-export type ModelProviderGroup =
-  | "aura"
-  | "image"
-  | "3d"
-  | "other";
+export type ModelProviderGroup = "aura" | "image" | "3d" | "other";
 
 const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
   { id: "aura-gpt-4.1", label: "GPT-4.1", tier: "gpt", mode: "chat" },
@@ -213,6 +219,8 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     vendor: "anthropic",
     creditMultiplier: 10,
     contextWindow: 1_000_000,
+    efforts: ANTHROPIC_XHIGH_EFFORTS,
+    defaultEffort: "high",
     provider: "Anthropic",
     description:
       "Anthropic's most capable widely released model for demanding reasoning and long-running agents.",
@@ -226,7 +234,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     vendor: "anthropic",
     creditMultiplier: 5,
     contextWindow: 1_000_000,
-    efforts: ANTHROPIC_OPUS_5_EFFORTS,
+    efforts: ANTHROPIC_XHIGH_EFFORTS,
     defaultEffort: "high",
     provider: "Anthropic",
     description:
@@ -241,7 +249,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     vendor: "anthropic",
     creditMultiplier: 5,
     contextWindow: 1_000_000,
-    efforts: ANTHROPIC_EFFORTS,
+    efforts: ANTHROPIC_XHIGH_EFFORTS,
     defaultEffort: "medium",
     provider: "Anthropic",
     description:
@@ -256,7 +264,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     vendor: "anthropic",
     creditMultiplier: 5,
     contextWindow: 1_000_000,
-    efforts: ANTHROPIC_EFFORTS,
+    efforts: ANTHROPIC_XHIGH_EFFORTS,
     defaultEffort: "medium",
     provider: "Anthropic",
     description:
@@ -269,12 +277,12 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     mode: "chat",
     vendor: "anthropic",
     creditMultiplier: 5,
-    contextWindow: 200_000,
+    contextWindow: 1_000_000,
     efforts: ANTHROPIC_EFFORTS,
     defaultEffort: "medium",
     provider: "Anthropic",
     description:
-      "High-capability Opus tier balancing extended thinking with a 200K context window.",
+      "High-capability Opus tier balancing extended thinking with a 1M context window.",
   },
   {
     id: "aura-claude-sonnet-5",
@@ -286,7 +294,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
       return resolvePricing("claude-sonnet-5", "anthropic").input;
     },
     contextWindow: 1_000_000,
-    efforts: ANTHROPIC_EFFORTS,
+    efforts: ANTHROPIC_XHIGH_EFFORTS,
     defaultEffort: "medium",
     provider: "Anthropic",
     description:
@@ -344,7 +352,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     tier: "gpt",
     mode: "chat",
     vendor: "openai",
-    creditMultiplier: 3,
+    creditMultiplier: 2.4,
     contextWindow: 1_050_000,
     efforts: GPT_5_6_EFFORTS,
     defaultEffort: "medium",
@@ -358,7 +366,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     tier: "gpt",
     mode: "chat",
     vendor: "openai",
-    creditMultiplier: 1.2,
+    creditMultiplier: 0.24,
     contextWindow: 1_050_000,
     efforts: GPT_5_6_EFFORTS,
     defaultEffort: "medium",
@@ -530,18 +538,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     description:
       "Open-weight mixture-of-experts model with strong agentic performance and a 256K context window.",
   },
-  {
-    id: "aura-kimi-k2-5",
-    label: "Kimi K2.5",
-    tier: "sonnet",
-    mode: "chat",
-    vendor: "moonshot",
-    creditMultiplier: 0.6,
-    contextWindow: 262_144,
-    provider: "Moonshot AI",
-    description:
-      "Previous-generation Kimi MoE model with a 256K context window at a lower price.",
-  },
   // ── MiniMax ─────────────────────────────────────────────────
   {
     id: "aura-minimax-m3",
@@ -550,10 +546,10 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     mode: "chat",
     vendor: "minimax",
     creditMultiplier: 0.2,
-    contextWindow: 262_144,
+    contextWindow: 512_000,
     provider: "MiniMax",
     description:
-      "Open-weight MiniMax model offering low-cost, high-throughput generation with a 256K context window.",
+      "Open-weight MiniMax model offering low-cost, high-throughput generation with a 512K context window.",
   },
   {
     id: "aura-minimax-m2-7",
@@ -604,18 +600,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     provider: "Alibaba Cloud",
     description:
       "Low-cost multimodal Qwen model with vision and video input and a 256K context window.",
-  },
-  {
-    id: "aura-qwen3-6-plus",
-    label: "Qwen3.6 Plus",
-    tier: "sonnet",
-    mode: "chat",
-    vendor: "qwen",
-    creditMultiplier: 0.4,
-    contextWindow: 262_144,
-    provider: "Alibaba Cloud",
-    description:
-      "Open-weight Qwen model with vision support and a 256K context window.",
   },
   // ── Google (Gemini) ─────────────────────────────────────────
   {
@@ -801,7 +785,8 @@ export const IMAGE_MODELS: ModelOption[] = [
     tier: "image",
     mode: "image",
     provider: "OpenAI",
-    description: "Previous-generation GPT image model for fast, detailed generations.",
+    description:
+      "Previous-generation GPT image model for fast, detailed generations.",
   },
   {
     id: "gemini-nano-banana",
@@ -809,11 +794,13 @@ export const IMAGE_MODELS: ModelOption[] = [
     tier: "image",
     mode: "image",
     provider: "Google",
-    description: "Google's fast image model for rapid, conversational image generation and editing.",
+    description:
+      "Google's fast image model for rapid, conversational image generation and editing.",
   },
 ];
 
-export const DEFAULT_IMAGE_MODEL_ID: string = IMAGE_MODELS[0]?.id ?? "gpt-image-2";
+export const DEFAULT_IMAGE_MODEL_ID: string =
+  IMAGE_MODELS[0]?.id ?? "gpt-image-2";
 
 /**
  * Selectable image-quality tiers for GPT Image models. `high` is the
@@ -907,7 +894,8 @@ export const MODEL_3D_MODELS: ModelOption[] = [
     tier: "3d",
     mode: "3d",
     provider: "Tripo AI",
-    description: "Image-to-3D generation that turns a single reference image into a textured mesh.",
+    description:
+      "Image-to-3D generation that turns a single reference image into a textured mesh.",
   },
 ];
 
@@ -920,7 +908,8 @@ export const VIDEO_MODELS: ModelOption[] = [
     tier: "video",
     mode: "video",
     provider: "Google",
-    description: "Sub-minute video generation from Google's Veo family for quick iterations.",
+    description:
+      "Sub-minute video generation from Google's Veo family for quick iterations.",
     featured: true,
   },
   {
@@ -929,7 +918,8 @@ export const VIDEO_MODELS: ModelOption[] = [
     tier: "video",
     mode: "video",
     provider: "Google",
-    description: "Higher-fidelity Veo generation for polished, detailed video clips.",
+    description:
+      "Higher-fidelity Veo generation for polished, detailed video clips.",
   },
   {
     id: "veo-3.1-lite-generate-preview",
@@ -945,7 +935,8 @@ export const VIDEO_MODELS: ModelOption[] = [
     tier: "video",
     mode: "video",
     provider: "ByteDance",
-    description: "ByteDance's Seedance model for expressive, motion-rich video generation.",
+    description:
+      "ByteDance's Seedance model for expressive, motion-rich video generation.",
   },
   {
     id: "dreamina-seedance-2-0-fast-260128",
@@ -953,11 +944,13 @@ export const VIDEO_MODELS: ModelOption[] = [
     tier: "video",
     mode: "video",
     provider: "ByteDance",
-    description: "Faster Seedance variant trading some fidelity for quicker turnaround.",
+    description:
+      "Faster Seedance variant trading some fidelity for quicker turnaround.",
   },
 ];
 
-export const DEFAULT_VIDEO_MODEL_ID: string = VIDEO_MODELS[0]?.id ?? "veo-3.1-fast-generate-preview";
+export const DEFAULT_VIDEO_MODEL_ID: string =
+  VIDEO_MODELS[0]?.id ?? "veo-3.1-fast-generate-preview";
 
 export const AVAILABLE_MODELS: ModelOption[] = [
   ...AURA_MANAGED_CHAT_MODELS,
@@ -966,7 +959,9 @@ export const AVAILABLE_MODELS: ModelOption[] = [
   ...VIDEO_MODELS,
 ];
 
-const CHAT_MODELS: ModelOption[] = AVAILABLE_MODELS.filter((m) => m.mode === "chat");
+const CHAT_MODELS: ModelOption[] = AVAILABLE_MODELS.filter(
+  (m) => m.mode === "chat",
+);
 
 /**
  * Modality used by the marketing `/models` page. Chat models are
@@ -1074,10 +1069,10 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   o3: "aura-o3",
   "aura-o4-mini": "aura-o4-mini",
   "o4-mini": "aura-o4-mini",
-  "aura-kimi-k2-5": "aura-kimi-k2-5",
+  "aura-kimi-k2-5": "aura-kimi-k2-6",
   "aura-kimi-k2-6": "aura-kimi-k2-6",
   "aura-kimi-k2-7-code": "aura-kimi-k2-7-code",
-  "kimi-k2p5": "aura-kimi-k2-5",
+  "kimi-k2p5": "aura-kimi-k2-6",
   "kimi-k2p6": "aura-kimi-k2-6",
   "kimi-k2p7-code": "aura-kimi-k2-7-code",
   "aura-deepseek-v4-pro": "aura-deepseek-v4-pro",
@@ -1096,8 +1091,8 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "glm-5p1": "aura-glm-5-1",
   "aura-glm-5-2": "aura-glm-5-2",
   "glm-5p2": "aura-glm-5-2",
-  "aura-qwen3-6-plus": "aura-qwen3-6-plus",
-  "qwen3p6-plus": "aura-qwen3-6-plus",
+  "aura-qwen3-6-plus": "aura-qwen3-7-plus",
+  "qwen3p6-plus": "aura-qwen3-7-plus",
   "aura-qwen3-7-plus": "aura-qwen3-7-plus",
   "qwen3p7-plus": "aura-qwen3-7-plus",
   "aura-gemini-3-1-pro": "aura-gemini-3-1-pro",
@@ -1115,7 +1110,7 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "aura-gemini-2-5-flash-lite": "aura-gemini-2-5-flash-lite",
   "gemini-2.5-flash-lite": "aura-gemini-2-5-flash-lite",
   "chatgpt-image-latest": "gpt-image-2",
-  "accounts/fireworks/models/kimi-k2p5": "aura-kimi-k2-5",
+  "accounts/fireworks/models/kimi-k2p5": "aura-kimi-k2-6",
   "accounts/fireworks/models/kimi-k2p6": "aura-kimi-k2-6",
   "accounts/fireworks/models/kimi-k2p7-code": "aura-kimi-k2-7-code",
   "accounts/fireworks/models/gpt-oss-120b": "aura-oss-120b",
@@ -1124,7 +1119,7 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "accounts/fireworks/models/minimax-m2p7": "aura-minimax-m2-7",
   "accounts/fireworks/models/glm-5p1": "aura-glm-5-1",
   "accounts/fireworks/models/glm-5p2": "aura-glm-5-2",
-  "accounts/fireworks/models/qwen3p6-plus": "aura-qwen3-6-plus",
+  "accounts/fireworks/models/qwen3p6-plus": "aura-qwen3-7-plus",
   "accounts/fireworks/models/qwen3p7-plus": "aura-qwen3-7-plus",
 };
 
@@ -1186,7 +1181,9 @@ function threeDModelStorageKey(agentId?: string): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function availableModelsForAdapter(_adapterType?: string): ModelOption[] {
+export function availableModelsForAdapter(
+  _adapterType?: string,
+): ModelOption[] {
   // The `_adapterType` argument is preserved on the public signature so call
   // sites do not need to change. External CLI adapters are no longer
   // supported, so every adapter resolves to the same Aura-managed list.
@@ -1308,7 +1305,9 @@ export function persistModel(
  */
 export function loadPersistedImageModel(agentId?: string): string {
   try {
-    const fromAgent = agentId ? localStorage.getItem(imageModelStorageKey(agentId)) : null;
+    const fromAgent = agentId
+      ? localStorage.getItem(imageModelStorageKey(agentId))
+      : null;
     if (fromAgent && IMAGE_MODELS.some((m) => m.id === fromAgent)) {
       return fromAgent;
     }
@@ -1324,7 +1323,10 @@ export function loadPersistedImageModel(agentId?: string): string {
 
 function isImageQuality(value: unknown): value is ImageQuality {
   return (
-    value === "auto" || value === "low" || value === "medium" || value === "high"
+    value === "auto" ||
+    value === "low" ||
+    value === "medium" ||
+    value === "high"
   );
 }
 
@@ -1348,7 +1350,10 @@ export function loadPersistedImageQuality(agentId?: string): ImageQuality {
 }
 
 /** Persists an Image-mode quality pick to both the agent and default slots. */
-export function persistImageQuality(quality: ImageQuality, agentId?: string): void {
+export function persistImageQuality(
+  quality: ImageQuality,
+  agentId?: string,
+): void {
   try {
     if (agentId) {
       localStorage.setItem(imageQualityStorageKey(agentId), quality);
@@ -1368,7 +1373,9 @@ export function persistImageQuality(quality: ImageQuality, agentId?: string): vo
  */
 export function loadPersistedVideoModel(agentId?: string): string {
   try {
-    const fromAgent = agentId ? localStorage.getItem(videoModelStorageKey(agentId)) : null;
+    const fromAgent = agentId
+      ? localStorage.getItem(videoModelStorageKey(agentId))
+      : null;
     if (fromAgent && VIDEO_MODELS.some((m) => m.id === fromAgent)) {
       return fromAgent;
     }
@@ -1391,7 +1398,9 @@ export function loadPersistedVideoModel(agentId?: string): string {
  */
 export function loadPersistedThreeDModel(agentId?: string): string {
   try {
-    const fromAgent = agentId ? localStorage.getItem(threeDModelStorageKey(agentId)) : null;
+    const fromAgent = agentId
+      ? localStorage.getItem(threeDModelStorageKey(agentId))
+      : null;
     if (fromAgent && MODEL_3D_MODELS.some((m) => m.id === fromAgent)) {
       return fromAgent;
     }
@@ -1433,9 +1442,10 @@ export function loadPersistedModelForMode(
 /** Chat model options formatted for <Select> dropdowns across the app. */
 export const CHAT_MODEL_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "Default" },
-  ...AVAILABLE_MODELS
-    .filter((m) => m.mode === "chat")
-    .map((m) => ({ value: m.id, label: m.label })),
+  ...AVAILABLE_MODELS.filter((m) => m.mode === "chat").map((m) => ({
+    value: m.id,
+    label: m.label,
+  })),
 ];
 
 export function modelLabel(
@@ -1517,7 +1527,9 @@ export function formatContextWindow(tokens?: number | null): string | null {
   if (!tokens || tokens <= 0) return null;
   if (tokens >= 1_000_000) {
     const millions = tokens / 1_000_000;
-    const value = Number.isInteger(millions) ? millions : Number(millions.toFixed(2));
+    const value = Number.isInteger(millions)
+      ? millions
+      : Number(millions.toFixed(2));
     return `${value}M context`;
   }
   return `${Math.round(tokens / 1000)}K context`;
@@ -1581,7 +1593,9 @@ export function effectiveCreditMultiplier(
   if (!effort || !model.efforts || model.efforts.length === 0) {
     return model.creditMultiplier;
   }
-  return model.creditMultiplier * effortCreditFactor(effort, model.defaultEffort);
+  return (
+    model.creditMultiplier * effortCreditFactor(effort, model.defaultEffort)
+  );
 }
 
 export function getModelById(modelId?: string | null): ModelOption | undefined {

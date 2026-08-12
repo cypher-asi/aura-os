@@ -28,9 +28,16 @@ describe("normalizePricingKey", () => {
     expect(normalizePricingKey("grok-code-fast-1")).toBe("grok-build-0.1");
     expect(normalizePricingKey("aura-kimi-k2-6")).toBe("kimi-k2p6");
     expect(normalizePricingKey("aura-deepseek-v4-pro")).toBe("deepseek-v4-pro");
+    expect(normalizePricingKey("accounts/fireworks/models/deepseek-v4-pro")).toBe(
+      "deepseek-v4-pro",
+    );
     expect(normalizePricingKey("aura-gemini-2-5-pro")).toBe("gemini-2.5-pro");
-    expect(normalizePricingKey("aura-gemini-3-1-flash-lite")).toBe("gemini-3.1-flash-lite");
-    expect(normalizePricingKey("gemini-3.1-pro-preview")).toBe("gemini-3.1-pro");
+    expect(normalizePricingKey("aura-gemini-3-1-flash-lite")).toBe(
+      "gemini-3.1-flash-lite",
+    );
+    expect(normalizePricingKey("gemini-3.1-pro-preview")).toBe(
+      "gemini-3.1-pro",
+    );
   });
 });
 
@@ -41,7 +48,7 @@ describe("resolvePricing for xAI Grok", () => {
     expect(flagship.model).toBe("grok-4.5");
     expect(flagship.input).toBe(2);
     expect(flagship.output).toBe(6);
-    expect(flagship.cacheRead).toBe(0.5);
+    expect(flagship.cacheRead).toBe(0.3);
 
     const grok = resolvePricing("aura-grok-4-3");
     expect(grok.provider).toBe("xai");
@@ -67,9 +74,9 @@ describe("resolvePricing for xAI Grok", () => {
       cacheReadTokens: 400_000,
       cacheCreationTokens: 0,
     });
-    // billed: 600k new input at $1.50/M, 500k output at $3/M,
-    // and 400k cached input at $0.24/M after markup.
-    expect(result.totalCostUsd).toBeCloseTo(2.496, 6);
+    // The >=200K xAI tier doubles billed rates: 600k new at $3/M,
+    // 500k output at $6/M, and 400k cached input at $0.48/M.
+    expect(result.totalCostUsd).toBeCloseTo(4.992, 6);
     expect(result.unknown).toBe(false);
   });
 });
@@ -87,8 +94,7 @@ describe("resolvePricing for Google Gemini", () => {
   });
 
   it("treats cached prompt tokens as already counted in input", () => {
-    // gemini-2.5-pro billed: input $1.5/M, output $12/M, cacheRead $0.15/M.
-    // 1M prompt incl. 400k cached -> 600k new input + 400k cache read.
+    // The >200K Pro tier bills input at $3/M, output at $18/M, and cache at $0.30/M.
     const result = computeSessionCost({
       model: "aura-gemini-2-5-pro",
       provider: "google",
@@ -97,14 +103,30 @@ describe("resolvePricing for Google Gemini", () => {
       cacheReadTokens: 400_000,
       cacheCreationTokens: 0,
     });
-    // 0.6 * 1.5 + 0.5 * 12 + 0.4 * 0.15 = 0.9 + 6 + 0.06 = 6.96
-    expect(result.totalCostUsd).toBeCloseTo(6.96, 6);
+    expect(result.totalCostUsd).toBeCloseTo(10.92, 6);
     expect(result.unknown).toBe(false);
   });
 });
 
+describe("resolvePricing for DeepSeek hosting", () => {
+  it("distinguishes Aura's Fireworks-hosted aliases from direct API models", () => {
+    expect(resolvePricing("aura-deepseek-v4-pro", "deepseek")).toMatchObject({
+      provider: "fireworks",
+      input: 1.74,
+      cacheRead: 0.145,
+      output: 3.48,
+    });
+    expect(resolvePricing("deepseek-v4-pro", "deepseek")).toMatchObject({
+      provider: "deepseek",
+      input: 0.435,
+      cacheRead: 0.003625,
+      output: 0.87,
+    });
+  });
+});
+
 describe("getBilledPricing", () => {
-  it("switches Sonnet 5 from introductory to standard pricing on September 1 UTC", () => {
+  it("keeps Sonnet 5 at Anthropic's permanent launch pricing", () => {
     expect(sonnet5PricingAt(new Date("2026-08-31T23:59:59.999Z"))).toEqual({
       input: 2,
       output: 10,
@@ -112,10 +134,10 @@ describe("getBilledPricing", () => {
       cacheRead: 0.2,
     });
     expect(sonnet5PricingAt(new Date("2026-09-01T00:00:00.000Z"))).toEqual({
-      input: 3,
-      output: 15,
-      cacheWrite: 3.75,
-      cacheRead: 0.3,
+      input: 2,
+      output: 10,
+      cacheWrite: 2.5,
+      cacheRead: 0.2,
     });
     expect(
       resolvePricing(
@@ -135,16 +157,16 @@ describe("getBilledPricing", () => {
       cacheRead: 0.5,
     });
     expect(resolvePricing("aura-gpt-5-6-terra")).toMatchObject({
-      input: 2.5,
-      output: 15,
-      cacheWrite: 3.125,
-      cacheRead: 0.25,
+      input: 2,
+      output: 12,
+      cacheWrite: 2.5,
+      cacheRead: 0.2,
     });
     expect(resolvePricing("aura-gpt-5-6-luna")).toMatchObject({
-      input: 1,
-      output: 6,
-      cacheWrite: 1.25,
-      cacheRead: 0.1,
+      input: 0.2,
+      output: 1.2,
+      cacheWrite: 0.25,
+      cacheRead: 0.02,
     });
   });
 
@@ -203,10 +225,39 @@ describe("computeSessionCost", () => {
       cacheReadTokens: 50_000,
       cacheCreationTokens: 100_000,
     });
-    // 50k new at $1.20/M + 100k cache write at $1.50/M +
-    // 50k cache read at $0.12/M + 100k output at $7.20/M.
-    expect(result.totalCostUsd).toBeCloseTo(0.936, 6);
+    // 50k new at $0.24/M + 100k cache write at $0.30/M +
+    // 50k cache read at $0.024/M + 100k output at $1.44/M.
+    expect(result.totalCostUsd).toBeCloseTo(0.1872, 6);
     expect(result.totalTokens).toBe(300_000);
+  });
+
+  it("applies OpenAI, xAI, and Gemini long-context tiers", () => {
+    const usage = {
+      outputTokens: 100_000,
+      cacheReadTokens: 0,
+      cacheCreationTokens: 0,
+    };
+    expect(
+      computeSessionCost({
+        ...usage,
+        model: "aura-gpt-5-5",
+        inputTokens: 300_000,
+      }).totalCostUsd,
+    ).toBeCloseTo(9, 6);
+    expect(
+      computeSessionCost({
+        ...usage,
+        model: "aura-grok-4-5",
+        inputTokens: 200_000,
+      }).totalCostUsd,
+    ).toBeCloseTo(2.4, 6);
+    expect(
+      computeSessionCost({
+        ...usage,
+        model: "aura-gemini-2-5-pro",
+        inputTokens: 300_000,
+      }).totalCostUsd,
+    ).toBeCloseTo(2.7, 6);
   });
 
   it("computes total billed cost and weighted average per million", () => {
