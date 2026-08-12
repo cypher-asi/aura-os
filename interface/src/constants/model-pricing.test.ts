@@ -6,6 +6,7 @@ import {
   getBilledPricing,
   normalizePricingKey,
   resolvePricing,
+  sonnet5PricingAt,
 } from "./model-pricing";
 
 describe("normalizePricingKey", () => {
@@ -103,6 +104,28 @@ describe("resolvePricing for Google Gemini", () => {
 });
 
 describe("getBilledPricing", () => {
+  it("switches Sonnet 5 from introductory to standard pricing on September 1 UTC", () => {
+    expect(sonnet5PricingAt(new Date("2026-08-31T23:59:59.999Z"))).toEqual({
+      input: 2,
+      output: 10,
+      cacheWrite: 2.5,
+      cacheRead: 0.2,
+    });
+    expect(sonnet5PricingAt(new Date("2026-09-01T00:00:00.000Z"))).toEqual({
+      input: 3,
+      output: 15,
+      cacheWrite: 3.75,
+      cacheRead: 0.3,
+    });
+    expect(
+      resolvePricing(
+        "aura-claude-sonnet-5",
+        "anthropic",
+        new Date("2026-08-31T12:00:00.000Z"),
+      ),
+    ).toMatchObject({ input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 });
+  });
+
   it("resolves the full GPT-5.6 family at published rates", () => {
     expect(resolvePricing("gpt-5.6")).toMatchObject({
       model: "gpt-5.6-sol",

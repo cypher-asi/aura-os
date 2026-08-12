@@ -1,3 +1,5 @@
+import { resolvePricing } from "./model-pricing";
+
 export type GenerationMode = "chat" | "image" | "3d" | "video";
 
 /**
@@ -280,7 +282,9 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     tier: "sonnet",
     mode: "chat",
     vendor: "anthropic",
-    creditMultiplier: 3,
+    get creditMultiplier() {
+      return resolvePricing("claude-sonnet-5", "anthropic").input;
+    },
     contextWindow: 1_000_000,
     efforts: ANTHROPIC_EFFORTS,
     defaultEffort: "medium",
