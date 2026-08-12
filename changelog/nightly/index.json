@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-08-12",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.788.1",
+    "title": "Time-aware Claude Sonnet 5 pricing",
+    "intro": "A small but meaningful correctness fix landed today: Aura now models Claude Sonnet 5's introductory-to-standard pricing transition, so live run cost estimates stay accurate through the September 1, 2026 UTC switchover.",
+    "entryCount": 1,
+    "highlights": [
+      "Sonnet 5 introductory rates honored until Sept 1, 2026 UTC",
+      "Live run cost estimates now use resolved pricing instead of hardcoded rates"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-12T14:45:11.742Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.788.1",
+    "path": "history/2026-08-12.json"
+  },
+  {
     "date": "2026-08-11",
     "channel": "nightly",
     "version": "0.1.0-nightly.787.1",
