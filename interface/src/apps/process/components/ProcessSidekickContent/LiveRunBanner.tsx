@@ -2,6 +2,7 @@ import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { useAgentStore } from "../../../agents/stores/agent-store";
 import { formatTokensCompact as formatTokens, formatCost } from "../../../../shared/utils/format";
+import { resolvePricing } from "../../../../constants/model-pricing";
 import type { ProcessEvent, ProcessRun } from "../../../../shared/types";
 import { injectKeyframes, useElapsedTime, EMPTY_NODES } from "./process-sidekick-utils";
 
@@ -35,7 +36,10 @@ export function LiveRunBanner({ run, events, totalNodes }: LiveRunBannerProps) {
     { input: 0, output: 0 },
   );
   const totalTokens = runningTokens.input + runningTokens.output;
-  const estimatedCost = runningTokens.input * 3 / 1_000_000 + runningTokens.output * 15 / 1_000_000;
+  const sonnetPricing = resolvePricing("claude-sonnet-5", "anthropic");
+  const estimatedCost =
+    runningTokens.input * sonnetPricing.input / 1_000_000
+    + runningTokens.output * sonnetPricing.output / 1_000_000;
 
   return (
     <div style={{

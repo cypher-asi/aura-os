@@ -77,12 +77,6 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
     cacheWrite: 18.75,
     cacheRead: 1.5,
   },
-  "claude-sonnet-5": {
-    input: 3,
-    output: 15,
-    cacheWrite: 3.75,
-    cacheRead: 0.3,
-  },
   "claude-sonnet-4-6": {
     input: 3,
     output: 15,
@@ -120,6 +114,14 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
     cacheRead: 0.1,
   },
 };
+
+export const SONNET_5_STANDARD_PRICING_START_UTC = Date.UTC(2026, 8, 1);
+
+export function sonnet5PricingAt(at = new Date()) {
+  return at.getTime() < SONNET_5_STANDARD_PRICING_START_UTC
+    ? { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 }
+    : { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 };
+}
 
 const OPENAI_MODEL_PRICING_PER_MTOK = {
   "gpt-5.6-sol": {
@@ -447,7 +449,16 @@ function inferProvider(model, provider) {
   return null;
 }
 
-function findAnthropicPricing(modelKey) {
+function findAnthropicPricing(modelKey, at) {
+  if (modelKey === "claude-sonnet-5" || modelKey.startsWith("claude-sonnet-5-")) {
+    return {
+      model: "claude-sonnet-5",
+      source: modelKey === "claude-sonnet-5"
+        ? "anthropic-pricing"
+        : "anthropic-pricing-family-match",
+      ...sonnet5PricingAt(at),
+    };
+  }
   const exactMatch = ANTHROPIC_MODEL_PRICING_PER_MTOK[modelKey];
   if (exactMatch) {
     return {
@@ -587,11 +598,11 @@ function findGooglePricing(modelKey) {
   };
 }
 
-export function resolvePricing(model, provider) {
+export function resolvePricing(model, provider, at = new Date()) {
   const inferredProvider = inferProvider(model, provider);
   const modelKey = normalizeModelKey(model);
   if (inferredProvider === "anthropic") {
-    const pricing = findAnthropicPricing(modelKey);
+    const pricing = findAnthropicPricing(modelKey, at);
     if (pricing) {
       return {
         provider: inferredProvider,

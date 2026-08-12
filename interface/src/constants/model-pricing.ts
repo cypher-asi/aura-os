@@ -35,6 +35,30 @@ export interface ModelRates {
   readonly cacheRead: number;
 }
 
+/** Sonnet 5's introductory rates expire at the start of September 2026 UTC. */
+export const SONNET_5_STANDARD_PRICING_START_UTC = Date.UTC(2026, 8, 1);
+
+const SONNET_5_INTRODUCTORY_PRICING: ModelRates = {
+  input: 2,
+  output: 10,
+  cacheWrite: 2.5,
+  cacheRead: 0.2,
+};
+
+const SONNET_5_STANDARD_PRICING: ModelRates = {
+  input: 3,
+  output: 15,
+  cacheWrite: 3.75,
+  cacheRead: 0.3,
+};
+
+/** Resolve Sonnet 5's published rates at a deterministic point in time. */
+export function sonnet5PricingAt(at: Date = new Date()): ModelRates {
+  return at.getTime() < SONNET_5_STANDARD_PRICING_START_UTC
+    ? SONNET_5_INTRODUCTORY_PRICING
+    : SONNET_5_STANDARD_PRICING;
+}
+
 /** Rates resolved for a model, including which table they came from. */
 export interface ResolvedPricing extends ModelRates {
   readonly provider: PricingProvider;
@@ -61,7 +85,6 @@ const ANTHROPIC_PRICING: Readonly<Record<string, ModelRates>> = {
   "claude-opus-4-5": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
   "claude-opus-4-1": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
   "claude-opus-4": { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.5 },
-  "claude-sonnet-5": { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
   "claude-sonnet-4-6": { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
   "claude-sonnet-4-5": { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
   "claude-haiku-4-5": { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
@@ -212,9 +235,21 @@ function inferProvider(model: string, provider?: string): PricingProvider {
 }
 
 /** Resolve base ($/Mtok) rates for a model + optional provider hint. */
-export function resolvePricing(model: string, provider?: string): ResolvedPricing {
+export function resolvePricing(
+  model: string,
+  provider?: string,
+  at: Date = new Date(),
+): ResolvedPricing {
   const resolvedProvider = inferProvider(model, provider);
   const key = normalizePricingKey(model);
+  if (resolvedProvider === "anthropic" && key === "claude-sonnet-5") {
+    return {
+      provider: resolvedProvider,
+      model: key,
+      source: resolvedProvider,
+      ...sonnet5PricingAt(at),
+    };
+  }
   if (resolvedProvider !== "unknown") {
     const rates = PROVIDER_TABLES[resolvedProvider][key];
     if (rates) {
@@ -225,8 +260,12 @@ export function resolvePricing(model: string, provider?: string): ResolvedPricin
 }
 
 /** Billed rates = base rates x {@link LLM_MARKUP_MULTIPLIER}. */
-export function getBilledPricing(model: string, provider?: string): ResolvedPricing {
-  const base = resolvePricing(model, provider);
+export function getBilledPricing(
+  model: string,
+  provider?: string,
+  at: Date = new Date(),
+): ResolvedPricing {
+  const base = resolvePricing(model, provider, at);
   return {
     ...base,
     input: base.input * LLM_MARKUP_MULTIPLIER,

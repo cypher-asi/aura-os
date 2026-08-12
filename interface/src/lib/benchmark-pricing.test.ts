@@ -3,9 +3,32 @@ import { describe, expect, it } from "vitest";
 import {
   calculateEstimatedCostUsd,
   resolvePricing,
+  sonnet5PricingAt,
 } from "../../scripts/lib/benchmark-pricing.mjs";
 
 describe("benchmark pricing", () => {
+  it("switches Sonnet 5 pricing at the published UTC boundary", () => {
+    expect(sonnet5PricingAt(new Date("2026-08-31T23:59:59.999Z"))).toEqual({
+      input: 2,
+      output: 10,
+      cacheWrite: 2.5,
+      cacheRead: 0.2,
+    });
+    expect(sonnet5PricingAt(new Date("2026-09-01T00:00:00.000Z"))).toEqual({
+      input: 3,
+      output: 15,
+      cacheWrite: 3.75,
+      cacheRead: 0.3,
+    });
+    expect(
+      resolvePricing(
+        "aura-claude-sonnet-5",
+        "anthropic",
+        new Date("2026-08-31T12:00:00.000Z"),
+      ),
+    ).toMatchObject({ input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 });
+  });
+
   it("matches Anthropic family variants by prefix", () => {
     const pricing = resolvePricing("claude-sonnet-4-5-20250220", "anthropic");
 
