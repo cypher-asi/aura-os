@@ -2,17 +2,17 @@
   {
     "date": "2026-08-15",
     "channel": "nightly",
-    "version": "0.1.0-nightly.790.1",
-    "title": "Jump between an agent's projects from the chat bar",
-    "intro": "A focused nightly today: agents that are installed in more than one project can now be switched between directly from the chat input, without leaving the conversation.",
+    "version": "0.1.0-nightly.791.1",
+    "title": "Cross-project agent switching and recorded desktop skills",
+    "intro": "Today's nightly focuses on making agents more portable across projects and turning short desktop demonstrations into reusable, parameterized skills. Two substantial Interface changes landed together, extending both the chat surface and the agent skills workflow.",
     "entryCount": 1,
     "highlights": [
-      "Project picker now routes agents across their installed projects",
-      "Graceful fallback when binding discovery fails"
+      "Agents can now hop between the projects they're installed in from the chat input",
+      "New Skill Recorder turns a short desktop demo into a generated SKILL.md draft"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-08-15T21:08:41.050Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.790.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-08-15T22:52:20.124Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.791.1",
     "path": "history/2026-08-15.json"
   },
   {

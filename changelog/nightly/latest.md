@@ -1,22 +1,22 @@
-# Jump between an agent's projects from the chat bar
+# Cross-project agent switching and recorded desktop skills
 
 - Date: `2026-08-15`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.790.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.790.1
+- Version: `0.1.0-nightly.791.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.791.1
 
-A focused nightly today: agents that are installed in more than one project can now be switched between directly from the chat input, without leaving the conversation.
+Today's nightly focuses on making agents more portable across projects and turning short desktop demonstrations into reusable, parameterized skills. Two substantial Interface changes landed together, extending both the chat surface and the agent skills workflow.
 
-## 1:45 PM — Agent chat gains cross-project switching
+## 1:45 PM — Agent project switching and Skill Recorder for desktop workflows
 
-The chat input's project picker now lists every project where the current agent is installed and navigates between them in place.
+The agent chat surface gained a project switcher across an agent's installed projects, and a new Skill Recorder turns a short screenshot demonstration into a reusable, parameterized skill draft.
 
-- Agents installed in multiple projects surface a live project picker in the chat input bar, and selecting a different project routes to that project's agent instance while remembering it as the last-used pairing. (`d619a7d`)
-- A new useAgentProjectBindings hook fetches an agent's project bindings on demand, dedupes to one routable binding per project, and treats discovery failures as non-fatal so the picker stays inert instead of breaking the current session. (`d619a7d`)
-- The picker is only made interactive when more than one binding exists, keeping single-project agents visually unchanged. (`d619a7d`)
+- Agents installed in multiple projects can now be switched between directly from the chat input's project picker: a new use-agent-project-bindings hook discovers every project binding for an agent, deduplicates to one routable binding per project, and wires the picker to navigate to the matching project/agent route. Discovery failures are non-fatal, so the current project stays visible even when lookup fails. (`d619a7d`)
+- A new Skill Recorder modal in the agent Skills tab lets users capture a short visual demonstration plus a stated goal and generates a SKILL.md draft (name, description, body) via a dedicated harness-proxy endpoint. The server-side analyzer prompts the model to generalize screenshots into parameterized instructions with prerequisites, verification, and privacy cautions rather than brittle coordinates. (`283ae0f`)
+- The recorded-skill router path is hardened with explicit request limits — up to 12 frames, 3 MB per frame, 20 MB total, 1,000-character goals, and 4,000-character notes — and routed through the trusted router with agent-scoped headers, so uploads can't overwhelm the analyzer. (`283ae0f`)
 
 ## Highlights
 
-- Project picker now routes agents across their installed projects
-- Graceful fallback when binding discovery fails
+- Agents can now hop between the projects they're installed in from the chat input
+- New Skill Recorder turns a short desktop demo into a generated SKILL.md draft
 
