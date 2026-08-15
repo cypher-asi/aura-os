@@ -25,4 +25,7 @@ pub enum StorageError {
 
     #[error("refusing to send aura-storage credentials to an untrusted origin")]
     UntrustedRequestOrigin,
+
+    #[error("aura-storage response exceeded the {limit}-byte safety limit")]
+    ResponseTooLarge { limit: usize },
 }

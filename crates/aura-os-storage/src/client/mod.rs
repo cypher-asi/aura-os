@@ -12,10 +12,13 @@ mod tasks;
 
 use std::env;
 
+use futures_util::StreamExt;
 use reqwest::{Client, Method, RequestBuilder, Url};
 use tracing::info;
 
 use crate::error::StorageError;
+
+const MAX_STORAGE_RESPONSE_BODY_BYTES: usize = 8 * 1024 * 1024;
 
 /// Validate that a string ID is safe to interpolate into a URL path.
 /// Accepts UUID format (hex digits and hyphens) to prevent path traversal or injection.
@@ -166,7 +169,7 @@ impl StorageClient {
         let resp = self.http.get(&url).send().await?;
         let status = resp.status();
         if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
+            let body = Self::read_limited_body(resp).await?;
             return Err(StorageError::Server {
                 status: status.as_u16(),
                 body,
@@ -271,7 +274,7 @@ impl StorageClient {
         let resp = self.http.execute(request).await?;
         let status = resp.status();
         if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
+            let body = Self::read_limited_body(resp).await?;
             return Err(StorageError::Server {
                 status: status.as_u16(),
                 body,
@@ -288,7 +291,7 @@ impl StorageClient {
         let resp = self.http.execute(request).await?;
         let status = resp.status();
         if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
+            let body = Self::read_limited_body(resp).await?;
             return Err(StorageError::Server {
                 status: status.as_u16(),
                 body,
@@ -356,22 +359,49 @@ impl StorageClient {
     ) -> Result<T, StorageError> {
         let url = resp.url().to_string();
         let status = resp.status();
+        let body = Self::read_limited_body(resp).await?;
         if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
             return Err(StorageError::Server {
                 status: status.as_u16(),
                 body,
             });
         }
-        let body = resp
-            .text()
-            .await
-            .map_err(|e| StorageError::Deserialize(e.to_string()))?;
         serde_json::from_str::<T>(&body).map_err(|e| {
             let preview: String = body.chars().take(200).collect();
             tracing::warn!(%url, error = %e, body_preview = %preview, "Deserialization failed");
             StorageError::Deserialize(e.to_string())
         })
+    }
+
+    async fn read_limited_body(resp: reqwest::Response) -> Result<String, StorageError> {
+        if resp
+            .content_length()
+            .is_some_and(|length| length > MAX_STORAGE_RESPONSE_BODY_BYTES as u64)
+        {
+            return Err(StorageError::ResponseTooLarge {
+                limit: MAX_STORAGE_RESPONSE_BODY_BYTES,
+            });
+        }
+
+        let mut bytes = Vec::new();
+        let mut stream = resp.bytes_stream();
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            Self::append_limited_chunk(&mut bytes, &chunk, MAX_STORAGE_RESPONSE_BODY_BYTES)?;
+        }
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    fn append_limited_chunk(
+        body: &mut Vec<u8>,
+        chunk: &[u8],
+        limit: usize,
+    ) -> Result<(), StorageError> {
+        if chunk.len() > limit.saturating_sub(body.len()) {
+            return Err(StorageError::ResponseTooLarge { limit });
+        }
+        body.extend_from_slice(chunk);
+        Ok(())
     }
 }
 
@@ -428,5 +458,26 @@ mod trusted_request_tests {
             invalid_client.trusted_request(Method::GET, "https://storage.example/api/sessions"),
             Err(StorageError::InvalidBaseUrl)
         ));
+    }
+}
+
+#[cfg(test)]
+mod response_body_limit_tests {
+    use super::StorageClient;
+    use crate::error::StorageError;
+
+    #[test]
+    fn accepts_chunks_within_limit() {
+        let mut body = b"ab".to_vec();
+        StorageClient::append_limited_chunk(&mut body, b"cd", 4).unwrap();
+        assert_eq!(body, b"abcd");
+    }
+
+    #[test]
+    fn rejects_chunk_that_exceeds_limit_without_growing_body() {
+        let mut body = b"ab".to_vec();
+        let error = StorageClient::append_limited_chunk(&mut body, b"cde", 4).unwrap_err();
+        assert!(matches!(error, StorageError::ResponseTooLarge { limit: 4 }));
+        assert_eq!(body, b"ab");
     }
 }
