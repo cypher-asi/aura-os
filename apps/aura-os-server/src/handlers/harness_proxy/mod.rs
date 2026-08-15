@@ -3,6 +3,7 @@
 mod access;
 mod local;
 mod memory;
+mod recorded_skill;
 mod skills;
 
 pub(crate) use access::require_agent_proxy_access;
@@ -21,6 +22,7 @@ pub(crate) use memory::{
     list_procedures_by_skill, trigger_consolidation, update_continuity_config, update_fact,
     update_procedure, wipe_memory,
 };
+pub(crate) use recorded_skill::analyze_skill_recording;
 pub(crate) use skills::{
     activate_skill, get_skill, install_agent_skill, list_agent_skills, list_skills,
     uninstall_agent_skill,

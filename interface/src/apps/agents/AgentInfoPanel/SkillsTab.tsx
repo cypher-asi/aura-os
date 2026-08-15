@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Text, Button, ButtonMore, Modal } from "@cypher-asi/zui";
-import { Zap, Loader2, Plus, Trash2, Pencil, FilePlus2, Store } from "lucide-react";
+import { Zap, Loader2, Plus, Trash2, Pencil, FilePlus2, Store, Video } from "lucide-react";
 import { api } from "../../../api/client";
 import type { MySkillEntry, SkillInstalledAgentRef } from "../../../shared/api/harness-skills";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
@@ -10,7 +10,9 @@ import {
 } from "../../../components/SidekickList";
 import { CreateSkillModal } from "./CreateSkillModal";
 import { SkillEditorModal } from "./SkillEditorModal";
+import { SkillRecorderModal } from "./SkillRecorderModal";
 import { SkillShopModal } from "../../../components/SkillShopModal";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
 import styles from "./SkillsTab.module.css";
 
@@ -209,6 +211,7 @@ export function SkillsTab({ agent, availableAgents = [] }: SkillsTabProps) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [showCreator, setShowCreator] = useState(false);
+  const [showRecorder, setShowRecorder] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   // Name of the skill the user has clicked "Delete skill" on; drives the
@@ -222,6 +225,7 @@ export function SkillsTab({ agent, availableAgents = [] }: SkillsTabProps) {
   // because the skill is still installed elsewhere. The modal renders these
   // inline so the user knows exactly which agents to clean up first.
   const [blockingAgents, setBlockingAgents] = useState<SkillInstalledAgentRef[]>([]);
+  const { hasDesktopBridge } = useAuraCapabilities();
   const viewSkill = useAgentSidekickStore((s) => s.viewSkill);
   const installationByName = useMemo(
     () => new Map(installations.map((i) => [i.skill_name, i])),
@@ -519,6 +523,16 @@ export function SkillsTab({ agent, availableAgents = [] }: SkillsTabProps) {
         >
           <FilePlus2 size={14} />
         </button>
+        {hasDesktopBridge ? (
+          <button
+            type="button"
+            className={styles.skillCreateBtn}
+            onClick={() => setShowRecorder(true)}
+            title="Record a skill"
+          >
+            <Video size={14} />
+          </button>
+        ) : null}
         <button
           type="button"
           className={styles.skillCreateBtn}
@@ -537,6 +551,13 @@ export function SkillsTab({ agent, availableAgents = [] }: SkillsTabProps) {
         onCreated={() => fetchData({ silent: true })}
         agentId={agentId}
         availableAgents={collaboratorOptions}
+      />
+
+      <SkillRecorderModal
+        isOpen={showRecorder}
+        agentId={agentId}
+        onClose={() => setShowRecorder(false)}
+        onCreated={() => fetchData({ silent: true })}
       />
 
       <SkillShopModal

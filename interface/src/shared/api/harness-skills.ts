@@ -33,7 +33,28 @@ export interface SkillInstalledAgentRef {
   name: string;
 }
 
+export interface SkillRecordingFrame {
+  media_type: "image/png" | "image/jpeg";
+  data: string;
+}
+
+export interface RecordedSkillDraft {
+  name: string;
+  description: string;
+  body: string;
+}
+
 export const harnessSkillsApi = {
+  analyzeRecording: (data: {
+    goal: string;
+    notes?: string;
+    agent_id?: string;
+    frames: SkillRecordingFrame[];
+  }) =>
+    apiFetch<RecordedSkillDraft>(`/api/harness/skills/recording/analyze`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   listSkills: () =>
     apiFetch<HarnessSkill[]>(`/api/harness/skills`),
   listMySkills: () =>
