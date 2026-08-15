@@ -88,6 +88,14 @@ export interface PersistDesktopRouteResponse {
   error?: string;
 }
 
+export interface DesktopScreenshotResponse {
+  ok: boolean;
+  image_base64?: string;
+  width?: number;
+  height?: number;
+  error?: string;
+}
+
 /**
  * Output format for a `/record_demo` clip. `x` produces the framed,
  * X/Twitter-ready H.264 MP4 (window composited onto a background); `raw`
@@ -190,6 +198,10 @@ export const desktopApi = {
     apiFetch<{ ok: boolean; error?: string }>("/api/open-path", {
       method: "POST",
       body: JSON.stringify({ path }),
+    }),
+  captureScreenshot: () =>
+    apiFetch<DesktopScreenshotResponse>("/api/computer/screenshot", {
+      method: "POST",
     }),
   openIde: (path: string, root?: string) =>
     apiFetch<{ ok: boolean }>("/api/open-ide", {

@@ -1,3 +1,4 @@
+use axum::extract::DefaultBodyLimit;
 use axum::routing::{delete, get, post};
 use axum::Router;
 
@@ -77,6 +78,11 @@ pub(super) fn harness_proxy_routes() -> Router<AppState> {
         .route(
             "/api/harness/skills/mine",
             get(harness_proxy::list_my_skills),
+        )
+        .route(
+            "/api/harness/skills/recording/analyze",
+            post(harness_proxy::analyze_skill_recording)
+                .layer(DefaultBodyLimit::max(24 * 1024 * 1024)),
         )
         .route(
             "/api/harness/skills/mine/:name",

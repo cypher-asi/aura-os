@@ -32,6 +32,7 @@ pub mod stability_metrics;
 pub(crate) mod state;
 pub(crate) mod sync_state;
 pub mod tool_action_rate_limit;
+pub(crate) mod trusted_router;
 pub(crate) mod usage_signals;
 pub(crate) mod workspace_index;
 
