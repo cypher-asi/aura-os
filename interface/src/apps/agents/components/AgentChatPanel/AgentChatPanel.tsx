@@ -479,6 +479,23 @@ export function AgentChatPanel({
     }
     stopStreaming();
   }, [loopOnlyBusy, projectId, agentInstanceId, stopStreaming]);
+  const askAside = useCallback(
+    async (question: string) => {
+      if (!sessionId) {
+        throw new Error(
+          "Start the main conversation before asking a side question.",
+        );
+      }
+      const response = await api.askSessionAside(
+        projectId,
+        agentInstanceId,
+        sessionId,
+        question,
+      );
+      return response.answer;
+    },
+    [agentInstanceId, projectId, sessionId],
+  );
 
   const deferredLoading = useDelayedLoading(isLoading);
   const panelKey = sessionId
@@ -528,6 +545,7 @@ export function AgentChatPanel({
     transcriptKey: historyKey,
     onSend: wrappedSend,
     onStop: handleCombinedStop,
+    onAside: askAside,
     isExternallyBusy: loopOnlyBusy,
     externalBusyMessage: loopOnlyBusy
       ? "This agent is running an automation task. Stop it to chat."

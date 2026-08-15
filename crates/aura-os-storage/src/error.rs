@@ -16,4 +16,16 @@ pub enum StorageError {
 
     #[error("validation error: {0}")]
     Validation(String),
+
+    #[error("configured aura-storage base URL is invalid")]
+    InvalidBaseUrl,
+
+    #[error("aura-storage request URL is invalid")]
+    InvalidRequestUrl,
+
+    #[error("refusing to send aura-storage credentials to an untrusted origin")]
+    UntrustedRequestOrigin,
+
+    #[error("aura-storage response exceeded the {limit}-byte safety limit")]
+    ResponseTooLarge { limit: usize },
 }

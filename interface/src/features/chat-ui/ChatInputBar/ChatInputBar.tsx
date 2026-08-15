@@ -111,6 +111,8 @@ export interface ChatInputBarProps {
     agentMentions?: AgentMentionTarget[],
   ) => void;
   onStop: () => void;
+  /** Ask a tool-free, ephemeral side question without mutating the main chat. */
+  onAside?: (question: string) => void;
   streamKey: string;
   /**
    * Treat the input as busy even when the chat SSE is idle. Set when
@@ -266,6 +268,7 @@ export const DesktopChatInputBar = memo(
       onInputChange,
       onSend,
       onStop,
+      onAside,
       streamKey,
       isExternallyBusy = false,
       externalBusyMessage,
@@ -684,8 +687,12 @@ export const DesktopChatInputBar = memo(
     // between keystrokes while the menu is open (a fresh Set per render
     // used to defeat it on every character).
     const excludeIds = useMemo(
-      () => new Set(selectedCommands.map((c) => c.id)),
-      [selectedCommands],
+      () => {
+        const ids = new Set(selectedCommands.map((c) => c.id));
+        if (!onAside) ids.add("btw");
+        return ids;
+      },
+      [onAside, selectedCommands],
     );
 
     const handleCommandRemove = useCallback(
@@ -738,6 +745,21 @@ export const DesktopChatInputBar = memo(
 
     const handleSubmit = useCallback(() => {
       if (sendDisabled) return;
+      const asideSelected = selectedCommands.some(
+        (command) => command.id === "btw",
+      );
+      if (asideSelected) {
+        const question = input.trim();
+        if (!question || !onAside) return;
+        track("chat_side_question_sent");
+        setAgentMentionState({ streamKey, mentions: [] });
+        onCommandsChange?.(
+          selectedCommands.filter((command) => command.id !== "btw"),
+        );
+        onInputChange("");
+        onAside(question);
+        return;
+      }
       track("chat_message_sent", { model: selectedModel, mode: selectedMode });
       // Mode is read from the store inside `useChatPanelState.handleSend`;
       // we no longer need to thread `generationMode` through here.
@@ -753,7 +775,19 @@ export const DesktopChatInputBar = memo(
       }
       setAgentMentionState({ streamKey, mentions: [] });
       onSend(input, undefined, undefined);
-    }, [input, onSend, selectedAgentMentions, selectedModel, selectedMode, sendDisabled, streamKey]);
+    }, [
+      input,
+      onAside,
+      onCommandsChange,
+      onInputChange,
+      onSend,
+      selectedAgentMentions,
+      selectedCommands,
+      selectedModel,
+      selectedMode,
+      sendDisabled,
+      streamKey,
+    ]);
 
     const removeAgentMention = useCallback(
       (instanceId: string) => {
@@ -990,13 +1024,18 @@ export const DesktopChatInputBar = memo(
     //    copy, so Send is always enabled (matches today's flow).
     // Other modes keep the historical "text or attachments or chips"
     // rule.
-    const isSendEnabled = isThreeDMode
-      ? has3DSource ||
-        input.trim().length > 0 ||
-        selectedCommands.length > 0
-      : input.trim().length > 0 ||
-        attachments.length > 0 ||
-        selectedCommands.length > 0;
+    const asideSelected = selectedCommands.some(
+      (command) => command.id === "btw",
+    );
+    const isSendEnabled = asideSelected
+      ? onAside != null && input.trim().length > 0
+      : isThreeDMode
+        ? has3DSource ||
+          input.trim().length > 0 ||
+          selectedCommands.length > 0
+        : input.trim().length > 0 ||
+          attachments.length > 0 ||
+          selectedCommands.length > 0;
     const placeholder = isThreeDMode
       ? has3DSource
         ? "Refine your 3D model (optional)"

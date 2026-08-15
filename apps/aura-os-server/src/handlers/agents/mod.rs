@@ -1,3 +1,4 @@
+mod aside;
 pub(crate) mod chat;
 pub(crate) mod context_contents;
 pub(crate) mod context_usage;
@@ -21,6 +22,7 @@ mod task_context;
 pub(crate) mod tool_dedupe;
 pub(crate) mod workspace_tools;
 
+pub(crate) use aside::{ask_agent_session_aside, ask_instance_session_aside};
 pub(crate) use chat::{
     cancel_agent_turn, cancel_instance_turn, import_public_chat_session, list_agent_events,
     list_agent_events_paginated, list_agent_session_events, list_agent_session_events_paginated,

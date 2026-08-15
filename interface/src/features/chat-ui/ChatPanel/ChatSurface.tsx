@@ -34,6 +34,7 @@ import { createSetters, ensureEntry } from "../../../hooks/stream/store";
 import { getLastSendArgs as getLastAgentChatSendArgs } from "../../../hooks/use-agent-chat-stream";
 import { getPartitionSendControl } from "../../../hooks/use-chat-stream/partition-send-control";
 import { recordStreamCloseReason } from "../../../shared/observability/stream-breadcrumbs";
+import { AsideModal } from "./AsideModal";
 import { useErrorReportAgentInfo } from "../../../hooks/use-error-report-agent-info";
 import type { AgentMentionTarget, ChatAttachment } from "../../../api/streams";
 import type { AgentInstance, Project } from "../../../shared/types";
@@ -87,6 +88,7 @@ export interface ChatSurfaceProps {
     agentMentions?: AgentMentionTarget[],
   ) => void;
   onStop: () => void;
+  onAside?: (question: string) => Promise<string>;
   isExternallyBusy?: boolean;
   externalBusyMessage?: string;
   agentName?: string;
@@ -166,6 +168,7 @@ export function ChatSurface({
   transcriptKey,
   onSend,
   onStop,
+  onAside,
   isExternallyBusy = false,
   externalBusyMessage,
   agentName,
@@ -210,6 +213,41 @@ export function ChatSurface({
   sessionBoundaries,
   loadOlderPage,
 }: ChatSurfaceProps) {
+  const [aside, setAside] = useState<{
+    question: string;
+    answer?: string;
+    error?: string;
+  } | null>(null);
+  const asideRequestRef = useRef(0);
+  const handleAside = useCallback(
+    (question: string) => {
+      if (!onAside) return;
+      const requestId = ++asideRequestRef.current;
+      setAside({ question });
+      void onAside(question)
+        .then((answer) => {
+          if (requestId === asideRequestRef.current) {
+            setAside({ question, answer });
+          }
+        })
+        .catch((cause) => {
+          if (requestId === asideRequestRef.current) {
+            setAside({
+              question,
+              error:
+                cause instanceof Error
+                  ? cause.message
+                  : "Could not answer the side question.",
+            });
+          }
+        });
+    },
+    [onAside],
+  );
+  const closeAside = useCallback(() => {
+    asideRequestRef.current += 1;
+    setAside(null);
+  }, []);
   const {
     attachments,
     setAttachments,
@@ -836,6 +874,7 @@ export function ChatSurface({
           ref={inputBarRef}
           onSend={handleSend}
           onStop={onStop}
+          onAside={onAside ? handleAside : undefined}
           streamKey={streamKey}
           isExternallyBusy={isExternallyBusy}
           externalBusyMessage={externalBusyMessage}
@@ -869,6 +908,14 @@ export function ChatSurface({
           sendDisabledReason={sendDisabledReason}
         />
       </div>
+      {aside ? (
+        <AsideModal
+          question={aside.question}
+          answer={aside.answer}
+          error={aside.error}
+          onClose={closeAside}
+        />
+      ) : null}
     </div>
   );
 }

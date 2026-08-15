@@ -7,6 +7,7 @@ export interface SlashCommand {
 
 export const SLASH_COMMANDS: SlashCommand[] = [
   // Core
+  { id: "btw", label: "BTW", description: "Ask a quick side question without changing this chat", category: "Core" },
   { id: "read_file", label: "Read File", description: "Read file contents", category: "Core" },
   { id: "write_file", label: "Write File", description: "Create or overwrite a file", category: "Core" },
   { id: "edit_file", label: "Edit File", description: "Make targeted edits to a file", category: "Core" },

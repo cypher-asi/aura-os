@@ -53,6 +53,7 @@ export interface ChatPanelProps {
     agentMentions?: AgentMentionTarget[],
   ) => void;
   onStop: () => void;
+  onAside?: (question: string) => Promise<string>;
   /**
    * Treat the chat as streaming even when our own SSE is idle. Used
    * when another subsystem (e.g. the automation loop) is holding a
@@ -143,6 +144,7 @@ export function ChatPanel({
   transcriptKey,
   onSend,
   onStop,
+  onAside,
   isExternallyBusy = false,
   externalBusyMessage,
   agentName,
@@ -255,6 +257,7 @@ export function ChatPanel({
           transcriptKey={transcriptKey}
           onSend={onSend}
           onStop={onStop}
+          onAside={onAside}
           isExternallyBusy={isExternallyBusy}
           externalBusyMessage={externalBusyMessage}
           agentName={agentName}
