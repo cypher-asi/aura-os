@@ -1,11 +1,13 @@
 use axum::extract::State;
 use axum::Json;
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tracing::warn;
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
+use crate::trusted_router;
 
 const RECORDED_SKILL_MODEL: &str = "aura-claude-sonnet-5";
 const RECORDED_SKILL_MAX_TOKENS: u32 = 3_000;
@@ -46,9 +48,7 @@ pub(crate) async fn analyze_skill_recording(
 ) -> ApiResult<Json<RecordedSkillDraft>> {
     validate_recording_request(&request)?;
     let request_body = build_router_request(&request);
-    let mut outbound = state
-        .http_client
-        .post(format!("{}/v1/messages", state.router_url))
+    let mut outbound = trusted_router::request(&state, Method::POST, "/v1/messages")?
         .bearer_auth(&jwt)
         .header("anthropic-beta", "prompt-caching-2024-07-31");
     if let Some(agent_id) = request
