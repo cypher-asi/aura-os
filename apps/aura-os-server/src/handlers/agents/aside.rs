@@ -1,5 +1,6 @@
 use axum::extract::{Path, State};
 use axum::Json;
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tracing::warn;
@@ -10,6 +11,7 @@ use aura_os_storage::{StorageClient, StorageSession};
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
+use crate::trusted_router;
 
 use super::chat::session_events_to_conversation_history;
 use super::conversions::events_to_session_history;
@@ -145,9 +147,7 @@ async fn ask_aside(
 
     // Deliberately omit x-aura-session-id. The router may mirror requests
     // carrying that header into the durable transcript; /btw must never do so.
-    let response = state
-        .http_client
-        .post(format!("{}/v1/messages", state.router_url))
+    let response = trusted_router::request(state, Method::POST, "/v1/messages")?
         .bearer_auth(jwt)
         .header("anthropic-beta", "prompt-caching-2024-07-31")
         .header("x-aura-project-id", project_id)

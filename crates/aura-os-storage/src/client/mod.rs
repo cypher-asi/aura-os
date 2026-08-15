@@ -12,7 +12,7 @@ mod tasks;
 
 use std::env;
 
-use reqwest::Client;
+use reqwest::{Client, Method, RequestBuilder, Url};
 use tracing::info;
 
 use crate::error::StorageError;
@@ -179,12 +179,51 @@ impl StorageClient {
     // Internal HTTP helpers
     // -----------------------------------------------------------------------
 
+    /// Build a credentialed request only when its destination exactly matches
+    /// the configured aura-storage origin. Keeping this check at the token
+    /// boundary prevents path parameters from becoming an SSRF or credential
+    /// exfiltration primitive if a future caller misses ID validation.
+    fn trusted_request(
+        &self,
+        method: Method,
+        request_url: &str,
+    ) -> Result<RequestBuilder, StorageError> {
+        let base_url = Url::parse(&self.base_url).map_err(|_| StorageError::InvalidBaseUrl)?;
+        let request_url = Url::parse(request_url).map_err(|_| StorageError::InvalidRequestUrl)?;
+
+        let base_is_http = matches!(base_url.scheme(), "http" | "https");
+        let base_has_origin = base_url.host_str().is_some();
+        let same_origin = request_url.scheme() == base_url.scheme()
+            && request_url.host_str() == base_url.host_str()
+            && request_url.port_or_known_default() == base_url.port_or_known_default();
+        let has_embedded_credentials = !request_url.username().is_empty()
+            || request_url.password().is_some()
+            || !base_url.username().is_empty()
+            || base_url.password().is_some();
+
+        if !base_is_http || !base_has_origin {
+            return Err(StorageError::InvalidBaseUrl);
+        }
+        if !same_origin || has_embedded_credentials {
+            return Err(StorageError::UntrustedRequestOrigin);
+        }
+
+        // The same-origin check above is the security boundary. CodeQL cannot
+        // infer that path IDs cannot redirect this request to another origin.
+        // codeql[rust/request-forgery]
+        Ok(self.http.request(method, request_url))
+    }
+
     pub(crate) async fn get_authed<T: serde::de::DeserializeOwned>(
         &self,
         url: &str,
         jwt: &str,
     ) -> Result<T, StorageError> {
-        let resp = self.http.get(url).bearer_auth(jwt).send().await?;
+        let resp = self
+            .trusted_request(Method::GET, url)?
+            .bearer_auth(jwt)
+            .send()
+            .await?;
         self.handle_response(resp).await
     }
 
@@ -195,8 +234,7 @@ impl StorageClient {
         body: &B,
     ) -> Result<T, StorageError> {
         let resp = self
-            .http
-            .post(url)
+            .trusted_request(Method::POST, url)?
             .bearer_auth(jwt)
             .json(body)
             .send()
@@ -211,8 +249,7 @@ impl StorageClient {
         body: &B,
     ) -> Result<T, StorageError> {
         let resp = self
-            .http
-            .put(url)
+            .trusted_request(Method::PUT, url)?
             .bearer_auth(jwt)
             .json(body)
             .send()
@@ -227,8 +264,7 @@ impl StorageClient {
         body: &B,
     ) -> Result<(), StorageError> {
         let resp = self
-            .http
-            .put(url)
+            .trusted_request(Method::PUT, url)?
             .bearer_auth(jwt)
             .json(body)
             .send()
@@ -245,7 +281,11 @@ impl StorageClient {
     }
 
     pub(crate) async fn delete_authed(&self, url: &str, jwt: &str) -> Result<(), StorageError> {
-        let resp = self.http.delete(url).bearer_auth(jwt).send().await?;
+        let resp = self
+            .trusted_request(Method::DELETE, url)?
+            .bearer_auth(jwt)
+            .send()
+            .await?;
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
@@ -273,8 +313,7 @@ impl StorageClient {
     ) -> Result<T, StorageError> {
         let token = self.internal_token()?;
         let resp = self
-            .http
-            .get(url)
+            .trusted_request(Method::GET, url)?
             .header("x-internal-token", token)
             .send()
             .await?;
@@ -288,8 +327,7 @@ impl StorageClient {
     ) -> Result<T, StorageError> {
         let token = self.internal_token()?;
         let resp = self
-            .http
-            .post(url)
+            .trusted_request(Method::POST, url)?
             .header("x-internal-token", token)
             .json(body)
             .send()
@@ -304,8 +342,7 @@ impl StorageClient {
     ) -> Result<T, StorageError> {
         let token = self.internal_token()?;
         let resp = self
-            .http
-            .put(url)
+            .trusted_request(Method::PUT, url)?
             .header("x-internal-token", token)
             .json(body)
             .send()
@@ -335,5 +372,61 @@ impl StorageClient {
             tracing::warn!(%url, error = %e, body_preview = %preview, "Deserialization failed");
             StorageError::Deserialize(e.to_string())
         })
+    }
+}
+
+#[cfg(test)]
+mod trusted_request_tests {
+    use super::StorageClient;
+    use crate::error::StorageError;
+    use reqwest::Method;
+
+    #[test]
+    fn credentialed_requests_accept_the_configured_origin() {
+        let client = StorageClient::with_base_url("https://storage.example");
+        let request = client
+            .trusted_request(
+                Method::GET,
+                "https://storage.example/api/sessions/session-1?limit=10",
+            )
+            .expect("same-origin request should be accepted")
+            .build()
+            .expect("request should build");
+
+        assert_eq!(request.url().host_str(), Some("storage.example"));
+        assert_eq!(request.url().path(), "/api/sessions/session-1");
+    }
+
+    #[test]
+    fn credentialed_requests_reject_cross_origin_urls() {
+        let client = StorageClient::with_base_url("https://storage.example");
+
+        for url in [
+            "https://attacker.example/api/sessions",
+            "https://storage.example.attacker.example/api/sessions",
+            "http://storage.example/api/sessions",
+            "https://storage.example:8443/api/sessions",
+            "https://user@storage.example/api/sessions",
+        ] {
+            assert!(matches!(
+                client.trusted_request(Method::GET, url),
+                Err(StorageError::UntrustedRequestOrigin)
+            ));
+        }
+    }
+
+    #[test]
+    fn credentialed_requests_reject_invalid_urls() {
+        let client = StorageClient::with_base_url("https://storage.example");
+        assert!(matches!(
+            client.trusted_request(Method::GET, "not a URL"),
+            Err(StorageError::InvalidRequestUrl)
+        ));
+
+        let invalid_client = StorageClient::with_base_url("not a URL");
+        assert!(matches!(
+            invalid_client.trusted_request(Method::GET, "https://storage.example/api/sessions"),
+            Err(StorageError::InvalidBaseUrl)
+        ));
     }
 }
