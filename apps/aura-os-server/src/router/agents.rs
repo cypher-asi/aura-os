@@ -99,6 +99,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
             get(agents::list_agent_session_events),
         )
         .route(
+            "/api/agents/:agent_id/sessions/:session_id/aside",
+            post(agents::ask_agent_session_aside),
+        )
+        .route(
             "/api/agents/:agent_id/sessions/:session_id/events/paginated",
             get(agents::list_agent_session_events_paginated),
         )
@@ -210,6 +214,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/events",
             get(agents::list_session_events),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/aside",
+            post(agents::ask_instance_session_aside),
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/events/paginated",

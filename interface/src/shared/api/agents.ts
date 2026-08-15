@@ -43,6 +43,10 @@ export interface PaginatedEventsResponse {
   next_cursor: string | null;
 }
 
+export interface SessionAsideResponse {
+  answer: string;
+}
+
 export interface PaginatedSessionEventsRequestOptions extends ApiRequestOptions {
   /** Page size (server default 100, max 400). */
   limit?: number;
@@ -299,6 +303,11 @@ export const agentTemplatesApi = {
       { signal: options?.signal },
     );
   },
+  askSessionAside: (agentId: AgentId, sessionId: string, question: string) =>
+    apiFetch<SessionAsideResponse>(
+      `/api/agents/${agentId}/sessions/${sessionId}/aside`,
+      { method: "POST", body: JSON.stringify({ question }) },
+    ),
   /**
    * Cursor-paginated single-session history for a standalone agent.
    * Without `before`, returns the trailing `limit` messages plus
@@ -676,6 +685,16 @@ export const sessionsApi = {
   listSessionEvents: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<SessionEvent[]>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/events`,
+    ),
+  askSessionAside: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+    question: string,
+  ) =>
+    apiFetch<SessionAsideResponse>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/aside`,
+      { method: "POST", body: JSON.stringify({ question }) },
     ),
   /**
    * Cursor-paginated session history. Without `before`, returns the

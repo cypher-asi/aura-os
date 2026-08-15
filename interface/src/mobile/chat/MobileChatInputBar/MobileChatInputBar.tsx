@@ -91,6 +91,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       onInputChange,
       onSend,
       onStop,
+      onAside,
       streamKey,
       isExternallyBusy = false,
       externalBusyMessage,
@@ -207,16 +208,21 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     //    generation, so Send requires text;
     //  - thumb pinned (model step): Send is enabled regardless of
     //    text (refinement is optional).
+    const asideSelected = selectedCommands.some(
+      (command) => command.id === "btw",
+    );
     const canSend =
       !isLocalAgent &&
       !isStreaming &&
-      (isThreeDMode
-        ? has3DSource ||
-          input.trim().length > 0 ||
-          selectedCommands.length > 0
-        : input.trim().length > 0 ||
-          attachments.length > 0 ||
-          selectedCommands.length > 0);
+      (asideSelected
+        ? onAside != null && input.trim().length > 0
+        : isThreeDMode
+          ? has3DSource ||
+            input.trim().length > 0 ||
+            selectedCommands.length > 0
+          : input.trim().length > 0 ||
+            attachments.length > 0 ||
+            selectedCommands.length > 0);
 
     const modelsForMode =
       generationMode === "chat"
@@ -474,6 +480,18 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
 
     const submitMessage = useCallback(() => {
       if (!canSend) return;
+      if (asideSelected) {
+        const question = input.trim();
+        if (!question || !onAside) return;
+        track("chat_side_question_sent");
+        setAgentMentionState({ streamKey, mentions: [] });
+        onCommandsChange?.(
+          selectedCommands.filter((command) => command.id !== "btw"),
+        );
+        onInputChange("");
+        onAside(question);
+        return;
+      }
       // Mirror ChatInputBar.handleSubmit: emit before onSend so the engaged
       // signal fires regardless of any downstream send/runtime failure.
       // Mobile previously omitted this, so mobile chat sends were untracked.
@@ -491,7 +509,20 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
         return;
       }
       onSend(input, undefined, undefined);
-    }, [canSend, input, onSend, selectedAgentMentions, selectedModel, selectedMode, streamKey]);
+    }, [
+      asideSelected,
+      canSend,
+      input,
+      onAside,
+      onCommandsChange,
+      onInputChange,
+      onSend,
+      selectedAgentMentions,
+      selectedCommands,
+      selectedModel,
+      selectedMode,
+      streamKey,
+    ]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if ((slashMenuOpen || mentionMenuOpen) && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
@@ -562,6 +593,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     );
 
     const excludeIds = new Set(selectedCommands.map((command) => command.id));
+    if (!onAside) excludeIds.add("btw");
     const selectedModelLabel = modelLabelWithEffort(
       selectedModel ?? "",
       selectedEffort,

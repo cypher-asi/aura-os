@@ -514,6 +514,23 @@ export function useStandaloneAgentChat(
       api.agents.getContextContents(agentId, { signal });
   }, [agentId]);
 
+  const askAside = useCallback(
+    async (question: string) => {
+      if (!agentId || !pinnedSessionId) {
+        throw new Error(
+          "Start the main conversation before asking a side question.",
+        );
+      }
+      const response = await api.agents.askSessionAside(
+        agentId,
+        pinnedSessionId,
+        question,
+      );
+      return response.answer;
+    },
+    [agentId, pinnedSessionId],
+  );
+
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
       historyKey,
@@ -638,6 +655,7 @@ export function useStandaloneAgentChat(
     transcriptKey: historyKey,
     onSend: wrappedSend,
     onStop: stopStreaming,
+    onAside: askAside,
     agentName,
     machineType,
     sendDisabled,

@@ -2,7 +2,7 @@
 // Canonical inventory of client analytics events. Do NOT re-derive via
 // grep/search — dynamic-import call sites make string search unreliable; the
 // contract test enforces this set against the actual call sites instead.
-// 51 client events; session_active is server-only and deliberately absent.
+// 52 client events; session_active is server-only and deliberately absent.
 export const ANALYTICS_EVENTS = {
   // lifecycle / auth
   app_opened: {}, // main.tsx:76
@@ -10,6 +10,7 @@ export const ANALYTICS_EVENTS = {
   user_signed_up: { props: ["has_invite_code"] }, // auth-store.ts:238
   // chat
   chat_message_sent: { props: ["model", "mode"] }, // ChatInputBar.tsx:804
+  chat_side_question_sent: {},
   chat_new_chat: {}, // use-fresh-canvas.ts:145
   model_selected: { props: ["model_name", "effort"] }, // chat-ui-store.ts:458
   mode_selected: { props: ["mode"] }, // chat-ui-store.ts:598
@@ -67,7 +68,7 @@ export const ANALYTICS_EVENTS = {
   public_create_agent_clicked: { props: ["source"] },
   public_start_chat_clicked: { props: ["source"] },
 } as const satisfies Record<string, { props?: readonly string[] }>;
-// 51 entries — the complete client analytics event set.
+// 52 entries — the complete client analytics event set.
 
 export type AnalyticsEventName = keyof typeof ANALYTICS_EVENTS;
 
