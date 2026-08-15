@@ -40,6 +40,7 @@ import type { AgentInstance, Project } from "../../../shared/types";
 import type { GenerationMode } from "../../../constants/models";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
+import type { ProjectPickerOption } from "../ChatInputBar/ProjectPicker";
 import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
 import type { LoadOlderPageFetcher } from "../../../hooks/use-load-older-messages";
 import styles from "./ChatPanel.module.css";
@@ -103,6 +104,7 @@ export interface ChatSurfaceProps {
   focusInputOnThreadReady?: boolean;
   historyMessages?: DisplaySessionEvent[];
   projects?: Project[];
+  projectPickerOptions?: readonly ProjectPickerOption[];
   selectedProjectId?: string;
   llmProjectId?: string;
   onProjectChange?: (projectId: string) => void;
@@ -181,6 +183,7 @@ export function ChatSurface({
   focusInputOnThreadReady = true,
   historyMessages,
   projects,
+  projectPickerOptions,
   selectedProjectId,
   llmProjectId,
   onProjectChange,
@@ -849,6 +852,7 @@ export function ChatSurface({
           demoRecordOptions={demoRecordOptions}
           onDemoRecordOptionsChange={setDemoRecordOptions}
           projects={projects}
+          projectPickerOptions={projectPickerOptions}
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
           workspacePath={workspacePath}

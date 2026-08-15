@@ -49,7 +49,7 @@ import {
   type InputStatusAction,
 } from "./InputStatusHints";
 import { ModelControls } from "./ModelControls";
-import { ProjectPicker } from "./ProjectPicker";
+import { ProjectPicker, type ProjectPickerOption } from "./ProjectPicker";
 import { useChatUI } from "../../../stores/chat-ui-store";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
 import type { SlashCommand } from "../../../constants/commands";
@@ -163,6 +163,8 @@ export interface ChatInputBarProps {
   demoRecordOptions?: DemoRecordOptions;
   onDemoRecordOptionsChange?: (options: DemoRecordOptions) => void;
   projects?: Project[];
+  /** Lightweight switch targets when the active agent is bound to several projects. */
+  projectPickerOptions?: readonly ProjectPickerOption[];
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
   /**
@@ -251,6 +253,7 @@ export interface ChatInputBarProps {
 const EMPTY_ATTACHMENTS: AttachmentItem[] = [];
 const EMPTY_COMMANDS: SlashCommand[] = [];
 const EMPTY_PROJECTS: Project[] = [];
+const EMPTY_PROJECT_PICKER_OPTIONS: ProjectPickerOption[] = [];
 const EMPTY_AGENT_INSTANCES: AgentInstance[] = [];
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
   code: "Chat",
@@ -281,6 +284,7 @@ export const DesktopChatInputBar = memo(
       demoRecordOptions,
       onDemoRecordOptionsChange,
       projects = EMPTY_PROJECTS,
+      projectPickerOptions = EMPTY_PROJECT_PICKER_OPTIONS,
       selectedProjectId,
       onProjectChange,
       workspacePath,
@@ -944,7 +948,9 @@ export const DesktopChatInputBar = memo(
     const infoBarEnd = (
       <>
         <ProjectPicker
-          projects={projects}
+          projects={
+            projectPickerOptions.length > 0 ? projectPickerOptions : projects
+          }
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
         />

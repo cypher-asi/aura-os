@@ -34,6 +34,7 @@ import {
 import { useFreshCanvas } from "../../hooks/use-fresh-canvas";
 import { useOptimisticSessionRow } from "../../hooks/use-optimistic-session-row";
 import { useAutoRenameFromPrompt } from "../../hooks/use-auto-rename-from-prompt";
+import { useAgentProjectBindings } from "../../hooks/use-agent-project-bindings";
 import { useNewSessionUrlSync } from "../../hooks/use-new-session-url-sync";
 import { ProjectAgentSwitcher } from "../ProjectAgentSwitcher";
 import { resolveAgentChatAvailability } from "../../../../shared/lib/agent-chat-availability";
@@ -114,6 +115,17 @@ export function AgentChatPanel({
 
   const { agentName, machineType, templateAgentId, adapterType, defaultModel } =
     useAgentChatMeta("project", { projectId, agentInstanceId });
+  const projectBindings = useAgentProjectBindings(
+    orgAgentId ?? templateAgentId ?? null,
+  );
+  const projectPickerOptions = useMemo(
+    () =>
+      projectBindings.map((binding) => ({
+        project_id: binding.project_id,
+        name: binding.project_name,
+      })),
+    [projectBindings],
+  );
   const remoteStatus = useProfileStatusStore((state) =>
     templateAgentId ? state.statuses[templateAgentId] : undefined,
   );
@@ -496,6 +508,20 @@ export function AgentChatPanel({
     },
     [navigate, projectId],
   );
+  const switchAgentProject = useCallback(
+    (nextProjectId: string) => {
+      const binding = projectBindings.find(
+        (candidate) => candidate.project_id === nextProjectId,
+      );
+      if (!binding || binding.project_id === projectId) return;
+      setLastProject(binding.project_id);
+      setLastAgent(binding.project_id, binding.project_agent_id);
+      navigate(
+        `/projects/${binding.project_id}/agents/${binding.project_agent_id}`,
+      );
+    },
+    [navigate, projectBindings, projectId],
+  );
 
   const panelProps: ChatPanelProps = {
     streamKey,
@@ -538,7 +564,10 @@ export function AgentChatPanel({
       />
     ) : undefined,
     projects: currentProject,
+    projectPickerOptions,
     selectedProjectId: projectId,
+    onProjectChange:
+      projectPickerOptions.length > 1 ? switchAgentProject : undefined,
     // The projects-app pins the wire `project_id` to the route
     // project — same value as the picker. Threaded explicitly so
     // the chat panel can't accidentally swap in a different LLM
