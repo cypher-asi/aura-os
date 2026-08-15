@@ -2,17 +2,18 @@
   {
     "date": "2026-08-15",
     "channel": "nightly",
-    "version": "0.1.0-nightly.791.1",
-    "title": "Cross-project agent switching and recorded desktop skills",
-    "intro": "Today's nightly focuses on making agents more portable across projects and turning short desktop demonstrations into reusable, parameterized skills. Two substantial Interface changes landed together, extending both the chat surface and the agent skills workflow.",
+    "version": "0.1.0-nightly.792.1",
+    "title": "Agents get side questions, recorded skills, and project hopping",
+    "intro": "Today's nightly is an agent-experience release. Agents can now be moved between projects from the chat surface, desktop workflows can be captured as reusable skills from a short screen recording, and a new ephemeral /btw command lets you ask a one-off side question without polluting the main conversation. Server-side changes tighten how credentialed storage and router requests are validated.",
     "entryCount": 1,
     "highlights": [
-      "Agents can now hop between the projects they're installed in from the chat input",
-      "New Skill Recorder turns a short desktop demo into a generated SKILL.md draft"
+      "Switch an agent's project directly from chat",
+      "Turn a screen recording into a reusable skill",
+      "Ephemeral /btw side questions in any session"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-08-15T22:52:20.124Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.791.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-08-15T23:52:05.665Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.792.1",
     "path": "history/2026-08-15.json"
   },
   {

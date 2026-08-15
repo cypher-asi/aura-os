@@ -1,22 +1,24 @@
-# Cross-project agent switching and recorded desktop skills
+# Agents get side questions, recorded skills, and project hopping
 
 - Date: `2026-08-15`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.791.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.791.1
+- Version: `0.1.0-nightly.792.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.792.1
 
-Today's nightly focuses on making agents more portable across projects and turning short desktop demonstrations into reusable, parameterized skills. Two substantial Interface changes landed together, extending both the chat surface and the agent skills workflow.
+Today's nightly is an agent-experience release. Agents can now be moved between projects from the chat surface, desktop workflows can be captured as reusable skills from a short screen recording, and a new ephemeral /btw command lets you ask a one-off side question without polluting the main conversation. Server-side changes tighten how credentialed storage and router requests are validated.
 
-## 1:45 PM — Agent project switching and Skill Recorder for desktop workflows
+## 1:45 PM — Agent project switching, recorded skills, and /btw asides
 
-The agent chat surface gained a project switcher across an agent's installed projects, and a new Skill Recorder turns a short screenshot demonstration into a reusable, parameterized skill draft.
+A focused afternoon of agent-surface features: cross-project agent navigation, a skill recorder that turns demonstrations into SKILL.md drafts, and an ephemeral side-question command backed by hardened storage and router paths.
 
-- Agents installed in multiple projects can now be switched between directly from the chat input's project picker: a new use-agent-project-bindings hook discovers every project binding for an agent, deduplicates to one routable binding per project, and wires the picker to navigate to the matching project/agent route. Discovery failures are non-fatal, so the current project stays visible even when lookup fails. (`d619a7d`)
-- A new Skill Recorder modal in the agent Skills tab lets users capture a short visual demonstration plus a stated goal and generates a SKILL.md draft (name, description, body) via a dedicated harness-proxy endpoint. The server-side analyzer prompts the model to generalize screenshots into parameterized instructions with prerequisites, verification, and privacy cautions rather than brittle coordinates. (`283ae0f`)
-- The recorded-skill router path is hardened with explicit request limits — up to 12 frames, 3 MB per frame, 20 MB total, 1,000-character goals, and 4,000-character notes — and routed through the trusted router with agent-scoped headers, so uploads can't overwhelm the analyzer. (`283ae0f`)
+- Agents installed in more than one project can now be moved between them from the chat input's project picker, powered by a new bindings hook that dedupes to one routable entry per project and fails quietly when discovery is unavailable. (`d619a7d`)
+- A new Skill Recorder in the agent info panel turns a short desktop demonstration into a reusable skill: up to 12 frames are sent through a trusted router path to an analysis model that returns a kebab-case name, description, and Markdown SKILL.md body, with bounded frame and payload sizes to keep requests safe. (`283ae0f`)
+- New /btw command opens an Aside modal from the chat input (desktop and mobile) to ask a one-off, ephemeral question against the current session's context — answers are concise, do not call tools, and are never appended to the main conversation. (`b9bb749`)
+- Storage and router plumbing behind the aside and skill-recorder endpoints was tightened: credentialed service requests are now gated behind validated inputs, storage requests execute locally against verified sessions, and response bodies are bounded to prevent oversized replies. (`b9bb749`, `283ae0f`)
 
 ## Highlights
 
-- Agents can now hop between the projects they're installed in from the chat input
-- New Skill Recorder turns a short desktop demo into a generated SKILL.md draft
+- Switch an agent's project directly from chat
+- Turn a screen recording into a reusable skill
+- Ephemeral /btw side questions in any session
 

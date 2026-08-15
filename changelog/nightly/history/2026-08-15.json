@@ -3,20 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-15T22:52:20.124Z",
+  "generatedAt": "2026-08-15T23:52:05.665Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.791.1",
+  "version": "0.1.0-nightly.792.1",
   "date": "2026-08-15",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.791.1",
-  "lastIncludedSha": "283ae0fc0f64089e7275f1120faa679e9fb8a7ca",
-  "previousProcessedSha": "d619a7d00c24cf4a2eb0e081ba261b710fc4b3d2",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.792.1",
+  "lastIncludedSha": "b9bb74957cbda73d809b9290d567188f0c241e1d",
+  "previousProcessedSha": "283ae0fc0f64089e7275f1120faa679e9fb8a7ca",
   "commitShas": [
     "d619a7d00c24cf4a2eb0e081ba261b710fc4b3d2",
-    "283ae0fc0f64089e7275f1120faa679e9fb8a7ca"
+    "283ae0fc0f64089e7275f1120faa679e9fb8a7ca",
+    "b9bb74957cbda73d809b9290d567188f0c241e1d"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "d619a7d00c24cf4a2eb0e081ba261b710fc4b3d2",
@@ -113,6 +114,71 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "b9bb74957cbda73d809b9290d567188f0c241e1d",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-16T04:26:20+05:00",
+      "subject": "Add ephemeral /btw side questions (#137)",
+      "body": "* feat: add ephemeral btw side questions\n\n* fix: constrain credentialed service requests\n\n* fix: keep storage credentials behind validated requests\n\n* fix: execute validated storage requests locally\n\n* fix: bound storage response bodies",
+      "parents": [
+        "283ae0fc0f64089e7275f1120faa679e9fb8a7ca"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-server/src/handlers/agents/aside.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "crates/aura-os-storage/Cargo.toml",
+        "crates/aura-os-storage/src/client/mod.rs",
+        "crates/aura-os-storage/src/error.rs",
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/constants/commands.ts",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatPanel/AsideModal.module.css",
+        "interface/src/features/chat-ui/ChatPanel/AsideModal.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatSurface.tsx",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/lib/analytics-registry.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/shared/api/agents.ts"
+      ],
+      "stats": {
+        "fileCount": 19,
+        "insertions": 810,
+        "deletions": 52
+      },
+      "committedAtMs": 1786836380000,
+      "cleanSubject": "Add ephemeral /btw side questions (#137)",
+      "keywords": [
+        "ephemeral",
+        "side",
+        "questions"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-server/src",
+        "crates/aura-os-storage/Cargo.toml",
+        "crates/aura-os-storage/src",
+        "interface/src/apps",
+        "interface/src/constants",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/mobile",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Core Rust"
+      ]
     }
   ],
   "batchCount": 1,
@@ -120,29 +186,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.791.1",
+      "version": "0.1.0-nightly.792.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66316038
+          "sizeBytes": 66387426
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132835832
+          "sizeBytes": 132876792
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -152,29 +218,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.791.1",
+      "version": "0.1.0-nightly.792.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.791.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.792.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 61958687
+          "sizeBytes": 62017230
         },
         {
-          "name": "AURA_0.1.0-nightly.791.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.792.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 60988293
+          "sizeBytes": 61041171
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -184,29 +250,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.791.1",
+      "version": "0.1.0-nightly.792.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.791.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.792.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64217147
+          "sizeBytes": 64256687
         },
         {
-          "name": "AURA_0.1.0-nightly.791.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.792.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63220523
+          "sizeBytes": 63270175
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -216,17 +282,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.791.1",
+      "version": "0.1.0-nightly.792.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48850394
+          "sizeBytes": 48889079
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.791.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.792.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -235,34 +301,42 @@
     }
   ],
   "rendered": {
-    "title": "Cross-project agent switching and recorded desktop skills",
-    "intro": "Today's nightly focuses on making agents more portable across projects and turning short desktop demonstrations into reusable, parameterized skills. Two substantial Interface changes landed together, extending both the chat surface and the agent skills workflow.",
+    "title": "Agents get side questions, recorded skills, and project hopping",
+    "intro": "Today's nightly is an agent-experience release. Agents can now be moved between projects from the chat surface, desktop workflows can be captured as reusable skills from a short screen recording, and a new ephemeral /btw command lets you ask a one-off side question without polluting the main conversation. Server-side changes tighten how credentialed storage and router requests are validated.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "1:45 PM",
         "started_at": "2026-08-15T20:45:32.000Z",
-        "ended_at": "2026-08-15T22:27:03.000Z",
-        "title": "Agent project switching and Skill Recorder for desktop workflows",
-        "summary": "The agent chat surface gained a project switcher across an agent's installed projects, and a new Skill Recorder turns a short screenshot demonstration into a reusable, parameterized skill draft.",
+        "ended_at": "2026-08-15T23:26:20.000Z",
+        "title": "Agent project switching, recorded skills, and /btw asides",
+        "summary": "A focused afternoon of agent-surface features: cross-project agent navigation, a skill recorder that turns demonstrations into SKILL.md drafts, and an ephemeral side-question command backed by hardened storage and router paths.",
         "items": [
           {
-            "text": "Agents installed in multiple projects can now be switched between directly from the chat input's project picker: a new use-agent-project-bindings hook discovers every project binding for an agent, deduplicates to one routable binding per project, and wires the picker to navigate to the matching project/agent route. Discovery failures are non-fatal, so the current project stays visible even when lookup fails.",
+            "text": "Agents installed in more than one project can now be moved between them from the chat input's project picker, powered by a new bindings hook that dedupes to one routable entry per project and fails quietly when discovery is unavailable.",
             "commit_shas": [
               "d619a7d00c24cf4a2eb0e081ba261b710fc4b3d2"
             ],
             "confidence": "high"
           },
           {
-            "text": "A new Skill Recorder modal in the agent Skills tab lets users capture a short visual demonstration plus a stated goal and generates a SKILL.md draft (name, description, body) via a dedicated harness-proxy endpoint. The server-side analyzer prompts the model to generalize screenshots into parameterized instructions with prerequisites, verification, and privacy cautions rather than brittle coordinates.",
+            "text": "A new Skill Recorder in the agent info panel turns a short desktop demonstration into a reusable skill: up to 12 frames are sent through a trusted router path to an analysis model that returns a kebab-case name, description, and Markdown SKILL.md body, with bounded frame and payload sizes to keep requests safe.",
             "commit_shas": [
               "283ae0fc0f64089e7275f1120faa679e9fb8a7ca"
             ],
             "confidence": "high"
           },
           {
-            "text": "The recorded-skill router path is hardened with explicit request limits — up to 12 frames, 3 MB per frame, 20 MB total, 1,000-character goals, and 4,000-character notes — and routed through the trusted router with agent-scoped headers, so uploads can't overwhelm the analyzer.",
+            "text": "New /btw command opens an Aside modal from the chat input (desktop and mobile) to ask a one-off, ephemeral question against the current session's context — answers are concise, do not call tools, and are never appended to the main conversation.",
             "commit_shas": [
+              "b9bb74957cbda73d809b9290d567188f0c241e1d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Storage and router plumbing behind the aside and skill-recorder endpoints was tightened: credentialed service requests are now gated behind validated inputs, storage requests execute locally against verified sessions, and response bodies are bounded to prevent oversized replies.",
+            "commit_shas": [
+              "b9bb74957cbda73d809b9290d567188f0c241e1d",
               "283ae0fc0f64089e7275f1120faa679e9fb8a7ca"
             ],
             "confidence": "high"
@@ -271,9 +345,10 @@
       }
     ],
     "highlights": [
-      "Agents can now hop between the projects they're installed in from the chat input",
-      "New Skill Recorder turns a short desktop demo into a generated SKILL.md draft"
+      "Switch an agent's project directly from chat",
+      "Turn a screen recording into a reusable skill",
+      "Ephemeral /btw side questions in any session"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 3
   }
 }
