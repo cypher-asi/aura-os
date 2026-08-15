@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-08-15",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.790.1",
+    "title": "Jump between an agent's projects from the chat bar",
+    "intro": "A focused nightly today: agents that are installed in more than one project can now be switched between directly from the chat input, without leaving the conversation.",
+    "entryCount": 1,
+    "highlights": [
+      "Project picker now routes agents across their installed projects",
+      "Graceful fallback when binding discovery fails"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-15T21:08:41.050Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.790.1",
+    "path": "history/2026-08-15.json"
+  },
+  {
     "date": "2026-08-12",
     "channel": "nightly",
     "version": "0.1.0-nightly.789.1",
