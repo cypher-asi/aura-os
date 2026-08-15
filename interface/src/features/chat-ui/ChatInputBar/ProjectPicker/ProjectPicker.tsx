@@ -1,10 +1,14 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { ChevronDown, FolderOpen } from "lucide-react";
-import type { Project } from "../../../../shared/types";
 import styles from "./ProjectPicker.module.css";
 
+export interface ProjectPickerOption {
+  project_id: string;
+  name: string;
+}
+
 export interface ProjectPickerProps {
-  projects: readonly Project[];
+  projects: readonly ProjectPickerOption[];
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
 }

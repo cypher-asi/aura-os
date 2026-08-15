@@ -108,6 +108,13 @@ export interface SafeWorkspaceApplyResult {
   sourcePath: string;
 }
 
+/** A project-scoped instance of one reusable agent identity. */
+export interface AgentProjectBinding {
+  project_agent_id: AgentInstanceId;
+  project_id: ProjectId;
+  project_name: string;
+}
+
 function paginatedEventsQuery(options?: PaginatedSessionEventsRequestOptions): string {
   const params = new URLSearchParams();
   if (options?.limit != null) {
@@ -256,7 +263,7 @@ export const agentTemplatesApi = {
       body: JSON.stringify(data),
     }),
   listProjectBindings: (agentId: AgentId) =>
-    apiFetch<{ project_agent_id: string; project_id: string; project_name: string }[]>(`/api/agents/${agentId}/projects`),
+    apiFetch<AgentProjectBinding[]>(`/api/agents/${agentId}/projects`),
   removeProjectBinding: (agentId: AgentId, projectAgentId: string) =>
     apiFetch<void>(`/api/agents/${agentId}/projects/${projectAgentId}`, { method: "DELETE" }),
   listEvents: (agentId: AgentId, options?: AgentEventsRequestOptions) => {
