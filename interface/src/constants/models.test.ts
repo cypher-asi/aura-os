@@ -140,6 +140,10 @@ describe("model persistence", () => {
 
   it("normalizes raw Grok model ids to Aura-managed chat models", () => {
     expect(loadPersistedModel("default", "grok-4.5")).toBe("aura-grok-4-5");
+    expect(loadPersistedModel("default", "grok-4.6")).toBe("aura-grok-4-6");
+    expect(loadPersistedModel("default", "xai/grok-4.6")).toBe(
+      "aura-grok-4-6",
+    );
     expect(loadPersistedModel("default", "grok-4.3")).toBe("aura-grok-4-3");
     expect(loadPersistedModel("default", "grok-build-0.1")).toBe(
       "aura-grok-build-0-1",
@@ -596,6 +600,16 @@ describe("reasoning-effort validity per model", () => {
     expect(model?.efforts ?? []).toEqual(["low", "medium", "high"]);
     expect(model?.defaultEffort).toBe("high");
     expect(model?.contextWindow).toBe(500_000);
+  });
+
+  it("maps Grok 4.6 onto xAI's full current reasoning effort ladder", () => {
+    const model = AURA_MANAGED_CHAT_MODELS.find(
+      (m) => m.id === "aura-grok-4-6",
+    );
+    expect(model?.efforts ?? []).toEqual(["low", "medium", "high", "xhigh"]);
+    expect(model?.defaultEffort).toBe("high");
+    expect(model?.contextWindow).toBe(500_000);
+    expect(model?.creditMultiplier).toBe(1.44);
   });
 
   it("offers Grok Build as a cheaper xAI model without effort controls", () => {

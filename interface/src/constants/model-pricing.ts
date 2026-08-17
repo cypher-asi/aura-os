@@ -126,6 +126,7 @@ const OPENAI_PRICING: Readonly<Record<string, ModelRates>> = {
 // publish a separate cache-write rate for these models, so cache writes use
 // the base input rate when a caller reports them.
 const XAI_PRICING: Readonly<Record<string, ModelRates>> = {
+  "grok-4.6": { input: 2, output: 6, cacheWrite: 2, cacheRead: 0.5 },
   "grok-4.5": { input: 2, output: 6, cacheWrite: 2, cacheRead: 0.3 },
   "grok-4.3": { input: 1.25, output: 2.5, cacheWrite: 1.25, cacheRead: 0.2 },
   "grok-build-0.1": { input: 1, output: 2, cacheWrite: 1, cacheRead: 0.2 },
@@ -274,6 +275,7 @@ export function normalizePricingKey(model: string): string {
     "aura-oss-120b": "gpt-oss-120b",
     "aura-deepseek-v4-pro": "deepseek-v4-pro",
     "aura-deepseek-v4-flash": "deepseek-v4-flash",
+    "aura-grok-4-6": "grok-4.6",
     "aura-grok-4-5": "grok-4.5",
     "aura-grok-4-3": "grok-4.3",
     "aura-grok-build-0-1": "grok-build-0.1",

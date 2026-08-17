@@ -212,6 +212,8 @@ describe("benchmark pricing", () => {
   });
 
   it.each([
+    ["aura-grok-4-6", "grok-4.6", 2, 0.5, 6],
+    ["xai/grok-4.6", "grok-4.6", 2, 0.5, 6],
     ["aura-grok-4-5", "grok-4.5", 2, 0.3, 6],
     ["xai/grok-4.5", "grok-4.5", 2, 0.3, 6],
     ["aura-grok-4-3", "grok-4.3", 1.25, 0.2, 2.5],
