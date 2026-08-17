@@ -183,6 +183,13 @@ const GEMINI_FLASH_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
  * The router maps Aura's `minimal` UI tier to xAI's `none` value.
  */
 const XAI_EFFORTS: ModelEffort[] = ["minimal", "low", "medium", "high"];
+/** Grok 4.6 adds xAI's native `xhigh` tier above the default `high`. */
+const XAI_GROK_4_6_EFFORTS: ModelEffort[] = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+];
 const XAI_GROK_4_5_EFFORTS: ModelEffort[] = ["low", "medium", "high"];
 
 /** Kimi K3's native reasoning-effort ladder. */
@@ -450,6 +457,21 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   },
   // ── xAI ─────────────────────────────────────────────────────
   {
+    id: "aura-grok-4-6",
+    label: "Grok 4.6",
+    tier: "opus",
+    mode: "chat",
+    vendor: "xai",
+    creditMultiplier: 1.44,
+    contextWindow: 500_000,
+    efforts: XAI_GROK_4_6_EFFORTS,
+    defaultEffort: "high",
+    provider: "xAI",
+    description:
+      "xAI's frontier model for coding, agentic tasks, and knowledge work, with native xHigh reasoning and a 500K context window.",
+    featured: true,
+  },
+  {
     id: "aura-grok-4-5",
     label: "Grok 4.5",
     tier: "opus",
@@ -461,7 +483,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     defaultEffort: "high",
     provider: "xAI",
     description:
-      "xAI's latest flagship for coding, agentic tasks, and knowledge work, with configurable reasoning and a 500K context window.",
+      "xAI's previous-generation coding and agentic model, with configurable reasoning and a 500K context window.",
     featured: true,
   },
   {
@@ -476,7 +498,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     defaultEffort: "low",
     provider: "xAI",
     description:
-      "xAI's current Grok flagship for fast general reasoning, agentic tool use, and long-context work.",
+      "Cost-efficient Grok model for fast general reasoning, agentic tool use, and long-context work.",
     featured: true,
   },
   {
@@ -1068,6 +1090,9 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "gpt-5.4": "aura-gpt-5-4",
   "gpt-5.4-mini": "aura-gpt-5-4-mini",
   "gpt-5.4-nano": "aura-gpt-5-4-nano",
+  "aura-grok-4-6": "aura-grok-4-6",
+  "grok-4.6": "aura-grok-4-6",
+  "xai/grok-4.6": "aura-grok-4-6",
   "aura-grok-4-5": "aura-grok-4-5",
   "grok-4.5": "aura-grok-4-5",
   "xai/grok-4.5": "aura-grok-4-5",

@@ -19,6 +19,8 @@ describe("normalizePricingKey", () => {
     expect(normalizePricingKey("aura-gpt-5-6-terra")).toBe("gpt-5.6-terra");
     expect(normalizePricingKey("openai/gpt-5.6-luna")).toBe("gpt-5.6-luna");
     expect(normalizePricingKey("aura-gpt-5-4-mini")).toBe("gpt-5.4-mini");
+    expect(normalizePricingKey("aura-grok-4-6")).toBe("grok-4.6");
+    expect(normalizePricingKey("xai/grok-4.6")).toBe("grok-4.6");
     expect(normalizePricingKey("aura-grok-4-5")).toBe("grok-4.5");
     expect(normalizePricingKey("xai/grok-4.5")).toBe("grok-4.5");
     expect(normalizePricingKey("aura-grok-4-3")).toBe("grok-4.3");
@@ -77,6 +79,13 @@ describe("resolvePricing for Moonshot Kimi K3", () => {
 
 describe("resolvePricing for xAI Grok", () => {
   it("resolves aura aliases and raw names to the xAI table", () => {
+    const current = resolvePricing("aura-grok-4-6");
+    expect(current.provider).toBe("xai");
+    expect(current.model).toBe("grok-4.6");
+    expect(current.input).toBe(2);
+    expect(current.output).toBe(6);
+    expect(current.cacheRead).toBe(0.5);
+
     const flagship = resolvePricing("aura-grok-4-5");
     expect(flagship.provider).toBe("xai");
     expect(flagship.model).toBe("grok-4.5");
@@ -112,6 +121,28 @@ describe("resolvePricing for xAI Grok", () => {
     // 500k output at $6/M, and 400k cached input at $0.48/M.
     expect(result.totalCostUsd).toBeCloseTo(4.992, 6);
     expect(result.unknown).toBe(false);
+  });
+
+  it("steps Grok 4.6 cached and output rates up at exactly 200K input tokens", () => {
+    const short = computeSessionCost({
+      model: "aura-grok-4-6",
+      provider: "xai",
+      inputTokens: 100_000,
+      outputTokens: 100_000,
+      cacheReadTokens: 100_000,
+      cacheCreationTokens: 0,
+    });
+    expect(short.totalCostUsd).toBeCloseTo(0.78, 6);
+
+    const long = computeSessionCost({
+      model: "aura-grok-4-6",
+      provider: "xai",
+      inputTokens: 200_000,
+      outputTokens: 100_000,
+      cacheReadTokens: 200_000,
+      cacheCreationTokens: 0,
+    });
+    expect(long.totalCostUsd).toBeCloseTo(1.68, 6);
   });
 });
 
@@ -281,7 +312,7 @@ describe("computeSessionCost", () => {
     expect(
       computeSessionCost({
         ...usage,
-        model: "aura-grok-4-5",
+        model: "aura-grok-4-6",
         inputTokens: 200_000,
       }).totalCostUsd,
     ).toBeCloseTo(2.4, 6);

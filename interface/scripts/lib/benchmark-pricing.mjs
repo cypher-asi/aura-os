@@ -180,6 +180,12 @@ const OPENAI_MODEL_PRICING_PER_MTOK = {
 // publish a separate cache-write rate for these models, so cache writes use
 // the base input rate when a caller reports them.
 const XAI_MODEL_PRICING_PER_MTOK = {
+  "grok-4.6": {
+    input: 2,
+    output: 6,
+    cacheWrite: 2,
+    cacheRead: 0.5,
+  },
   "grok-4.5": {
     input: 2,
     output: 6,
@@ -424,6 +430,7 @@ function normalizeModelKey(model) {
   };
   if (auraDeepSeekModels[unprefixed]) return auraDeepSeekModels[unprefixed];
   const auraXaiModels = {
+    "aura-grok-4-6": "grok-4.6",
     "aura-grok-4-5": "grok-4.5",
     "aura-grok-4-3": "grok-4.3",
     "aura-grok-build-0-1": "grok-build-0.1",
