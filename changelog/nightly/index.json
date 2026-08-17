@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-08-16",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.793.1",
+    "title": "Moonshot's Kimi K3 joins the model catalog",
+    "intro": "A focused nightly today: Aura's model catalog gains Moonshot's Kimi K3, complete with provider routing and accurate cost accounting so sessions on the new model bill correctly out of the box.",
+    "entryCount": 1,
+    "highlights": [
+      "Kimi K3 available in the model picker",
+      "Moonshot added as a first-class pricing provider",
+      "Cached prompt tokens billed at the correct discounted rate"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-17T02:38:38.773Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.793.1",
+    "path": "history/2026-08-16.json"
+  },
+  {
     "date": "2026-08-15",
     "channel": "nightly",
     "version": "0.1.0-nightly.792.1",
