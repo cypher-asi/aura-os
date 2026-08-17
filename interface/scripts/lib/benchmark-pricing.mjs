@@ -200,6 +200,15 @@ const XAI_MODEL_PRICING_PER_MTOK = {
   },
 };
 
+const MOONSHOT_MODEL_PRICING_PER_MTOK = {
+  "kimi-k3": {
+    input: 3,
+    output: 15,
+    cacheWrite: 3,
+    cacheRead: 0.3,
+  },
+};
+
 const FIREWORKS_MODEL_PRICING_PER_MTOK = {
   "kimi-k2p7-code": {
     input: 0.95,
@@ -379,9 +388,11 @@ function normalizeModelKey(model) {
     ? modelKey.slice("openai/".length)
     : modelKey.startsWith("xai/")
       ? modelKey.slice("xai/".length)
-      : modelKey.startsWith("deepseek/")
-        ? modelKey.slice("deepseek/".length)
-        : modelKey;
+      : modelKey.startsWith("moonshot/")
+        ? modelKey.slice("moonshot/".length)
+        : modelKey.startsWith("deepseek/")
+          ? modelKey.slice("deepseek/".length)
+          : modelKey;
   const fireworksModel = unprefixed.match(
     /^accounts\/fireworks\/models\/(.+)$/,
   );
@@ -393,6 +404,7 @@ function normalizeModelKey(model) {
   if (unprefixed === "gpt-5.6") return "gpt-5.6-sol";
   const auraClaude = unprefixed.match(/^aura-(claude-.+)$/);
   if (auraClaude) return auraClaude[1];
+  if (unprefixed === "aura-kimi-k3") return "kimi-k3";
   const auraFireworksModels = {
     "aura-kimi-k2-7-code": "kimi-k2p7-code",
     "aura-kimi-k2-6": "kimi-k2p6",
@@ -458,6 +470,7 @@ function inferProvider(model, provider) {
     return "deepseek";
   }
   if (modelKey.startsWith("gemini")) return "google";
+  if (modelKey === "kimi-k3") return "moonshot";
   if (
     modelKey.startsWith("kimi") ||
     modelKey.startsWith("gpt-oss") ||
@@ -586,6 +599,16 @@ function findFireworksPricing(modelKey) {
   };
 }
 
+function findMoonshotPricing(modelKey) {
+  const exactMatch = MOONSHOT_MODEL_PRICING_PER_MTOK[modelKey];
+  if (!exactMatch) return null;
+  return {
+    model: modelKey,
+    source: "moonshot-pricing",
+    ...exactMatch,
+  };
+}
+
 function findDeepSeekPricing(modelKey) {
   const exactMatch = DEEPSEEK_MODEL_PRICING_PER_MTOK[modelKey];
   if (exactMatch) {
@@ -661,6 +684,16 @@ export function resolvePricing(model, provider, at = new Date()) {
 
   if (inferredProvider === "xai") {
     const pricing = findXaiPricing(modelKey);
+    if (pricing) {
+      return {
+        provider: inferredProvider,
+        ...pricing,
+      };
+    }
+  }
+
+  if (inferredProvider === "moonshot") {
+    const pricing = findMoonshotPricing(modelKey);
     if (pricing) {
       return {
         provider: inferredProvider,
@@ -746,6 +779,7 @@ export function calculateEstimatedCostUsd(usage) {
   const inputIncludesCacheTokens =
     pricing.provider === "openai" ||
     pricing.provider === "xai" ||
+    pricing.provider === "moonshot" ||
     pricing.provider === "fireworks" ||
     pricing.provider === "deepseek" ||
     pricing.provider === "google";

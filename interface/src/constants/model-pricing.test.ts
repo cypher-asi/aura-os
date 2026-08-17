@@ -26,6 +26,8 @@ describe("normalizePricingKey", () => {
     expect(normalizePricingKey("aura-grok-build-0-1")).toBe("grok-build-0.1");
     expect(normalizePricingKey("xai/grok-build-0.1")).toBe("grok-build-0.1");
     expect(normalizePricingKey("grok-code-fast-1")).toBe("grok-build-0.1");
+    expect(normalizePricingKey("aura-kimi-k3")).toBe("kimi-k3");
+    expect(normalizePricingKey("moonshot/kimi-k3")).toBe("kimi-k3");
     expect(normalizePricingKey("aura-kimi-k2-6")).toBe("kimi-k2p6");
     expect(normalizePricingKey("aura-deepseek-v4-pro")).toBe("deepseek-v4-pro");
     expect(normalizePricingKey("accounts/fireworks/models/deepseek-v4-pro")).toBe(
@@ -38,6 +40,38 @@ describe("normalizePricingKey", () => {
     expect(normalizePricingKey("gemini-3.1-pro-preview")).toBe(
       "gemini-3.1-pro",
     );
+  });
+});
+
+describe("resolvePricing for Moonshot Kimi K3", () => {
+  it("resolves Aura and direct Moonshot ids at published rates", () => {
+    expect(resolvePricing("aura-kimi-k3")).toMatchObject({
+      provider: "moonshot",
+      model: "kimi-k3",
+      input: 3,
+      output: 15,
+      cacheWrite: 3,
+      cacheRead: 0.3,
+    });
+    expect(resolvePricing("moonshot/kimi-k3", "moonshot")).toMatchObject({
+      provider: "moonshot",
+      model: "kimi-k3",
+    });
+  });
+
+  it("does not double-charge Moonshot cached prompt tokens", () => {
+    const result = computeSessionCost({
+      model: "aura-kimi-k3",
+      provider: "moonshot",
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      cacheReadTokens: 400_000,
+      cacheCreationTokens: 0,
+    });
+    // After markup: 600k new at $3.60/M, 400k cached at $0.36/M,
+    // and 500k output at $18/M.
+    expect(result.totalCostUsd).toBeCloseTo(11.304, 6);
+    expect(result.unknown).toBe(false);
   });
 });
 
