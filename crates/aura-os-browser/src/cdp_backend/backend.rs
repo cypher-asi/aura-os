@@ -5,8 +5,9 @@
 //! [`super::session_loop`]; this module owns the pieces that survive
 //! across sessions.
 
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use chromiumoxide::{Browser, BrowserConfig as ChromiumBrowserConfig};
 use dashmap::DashMap;
@@ -16,6 +17,7 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{debug, info, warn};
 
+use crate::backend::BrowserExecutableStatus;
 use crate::error::Error;
 use crate::session::SessionId;
 
@@ -38,7 +40,7 @@ pub struct CdpBackend {
 }
 
 pub(super) struct CdpBackendInner {
-    pub(super) config: CdpBackendConfig,
+    pub(super) config: RwLock<CdpBackendConfig>,
     pub(super) launcher: Mutex<Option<Arc<Browser>>>,
     pub(super) sessions: DashMap<SessionId, SessionState>,
     /// Monotonic generation counter used to cancel stale idle-shutdown
@@ -64,7 +66,7 @@ impl CdpBackend {
     pub fn with_config(config: CdpBackendConfig) -> Self {
         Self {
             inner: Arc::new(CdpBackendInner {
-                config,
+                config: RwLock::new(config),
                 launcher: Mutex::new(None),
                 sessions: DashMap::new(),
                 shutdown_gen: AtomicU64::new(0),
@@ -79,7 +81,13 @@ impl CdpBackend {
         // Bump the generation so any pending idle-shutdown timer aborts.
         self.inner.shutdown_gen.fetch_add(1, Ordering::SeqCst);
         if guard.is_none() {
-            let browser = launch_browser(&self.inner.config).await?;
+            let config = self
+                .inner
+                .config
+                .read()
+                .map_err(|_| Error::backend("chromium_config", "configuration lock poisoned"))?
+                .clone();
+            let browser = launch_browser(&config).await?;
             *guard = Some(Arc::new(browser));
         }
         match guard.as_ref() {
@@ -95,7 +103,13 @@ impl CdpBackend {
     /// no session has appeared in the meantime, shuts the shared browser
     /// down. Called from `stop_session` after removing the session.
     pub(super) fn schedule_idle_shutdown(&self) {
-        let Some(grace) = self.inner.config.idle_shutdown else {
+        let Some(grace) = self
+            .inner
+            .config
+            .read()
+            .ok()
+            .and_then(|config| config.idle_shutdown)
+        else {
             return;
         };
         if !self.inner.sessions.is_empty() {
@@ -104,6 +118,73 @@ impl CdpBackend {
         let inner = Arc::clone(&self.inner);
         let gen = inner.shutdown_gen.fetch_add(1, Ordering::SeqCst) + 1;
         tokio::spawn(idle_shutdown_task(inner, gen, grace));
+    }
+
+    pub(super) fn executable_status(&self) -> BrowserExecutableStatus {
+        let Ok(config) = self.inner.config.read() else {
+            return BrowserExecutableStatus {
+                resolved_path: None,
+                source: crate::BrowserExecutableSource::NotFound,
+                available: false,
+            };
+        };
+        BrowserExecutableStatus {
+            resolved_path: config.executable_path.clone(),
+            source: config.executable_source,
+            available: config
+                .executable_path
+                .as_ref()
+                .is_some_and(|path| path.is_file()),
+        }
+    }
+
+    pub(super) async fn set_executable_path(
+        &self,
+        path: Option<PathBuf>,
+    ) -> Result<BrowserExecutableStatus, Error> {
+        if let Some(path) = path.as_ref() {
+            if !path.is_file() {
+                return Err(Error::invalid_input(
+                    "executable_path",
+                    format!(
+                        "browser executable does not exist or is not a file: {}",
+                        path.display()
+                    ),
+                ));
+            }
+        }
+        if !self.inner.sessions.is_empty() {
+            return Err(Error::invalid_input(
+                "executable_path",
+                "close active Preview sessions before changing the browser executable",
+            ));
+        }
+
+        let mut launcher = self.inner.launcher.lock().await;
+        if let Some(browser_arc) = launcher.take() {
+            match Arc::try_unwrap(browser_arc) {
+                Ok(mut browser) => {
+                    if let Err(error) = browser.close().await {
+                        debug!(%error, "browser.close failed while changing executable");
+                    }
+                    let _ = browser.wait().await;
+                }
+                Err(browser_arc) => {
+                    *launcher = Some(browser_arc);
+                    return Err(Error::invalid_input(
+                        "executable_path",
+                        "the current Preview browser is still shutting down; try again in a moment",
+                    ));
+                }
+            }
+        }
+        self.inner
+            .config
+            .write()
+            .map_err(|_| Error::backend("chromium_config", "configuration lock poisoned"))?
+            .set_runtime_executable(path);
+        drop(launcher);
+        Ok(self.executable_status())
     }
 }
 
@@ -136,6 +217,13 @@ async fn launch_browser(cfg: &CdpBackendConfig) -> Result<Browser, Error> {
             ));
         }
         builder = builder.chrome_executable(path);
+    }
+    #[cfg(windows)]
+    if cfg.executable_path.is_none() {
+        return Err(Error::backend(
+            "chromium_launch",
+            "No supported browser executable was found after checking AURA settings, the process and persisted user BROWSER_EXECUTABLE_PATH values, Windows App Paths, registry Program Files locations, and standard Edge/Chrome/Chromium install paths (including C:\\Program Files and C:\\Program Files (x86)).",
+        ));
     }
     let user_data_dir = cfg
         .user_data_dir
@@ -205,5 +293,41 @@ async fn idle_shutdown_task(inner: Arc<CdpBackendInner>, gen: u64, grace: std::t
             // Put it back; a session task is still holding a ref.
             *guard = Some(arc);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::BrowserExecutableSource;
+
+    #[tokio::test]
+    async fn executable_override_applies_without_restarting_backend() {
+        let root = tempfile::tempdir().expect("temp browser executable");
+        let executable = root.path().join("msedge.exe");
+        std::fs::write(&executable, []).expect("create executable fixture");
+        let backend = CdpBackend::new();
+
+        let status = backend
+            .set_executable_path(Some(executable.clone()))
+            .await
+            .expect("apply browser executable");
+
+        assert_eq!(status.resolved_path, Some(executable));
+        assert_eq!(status.source, BrowserExecutableSource::SavedSetting);
+        assert!(status.available);
+    }
+
+    #[tokio::test]
+    async fn executable_override_rejects_missing_files() {
+        let missing = std::env::temp_dir().join("aura-missing-msedge.exe");
+        let backend = CdpBackend::new();
+
+        let error = backend
+            .set_executable_path(Some(missing))
+            .await
+            .expect_err("missing executable must fail validation");
+
+        assert!(error.to_string().contains("does not exist"));
     }
 }

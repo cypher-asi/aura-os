@@ -88,6 +88,20 @@ export interface PersistDesktopRouteResponse {
   error?: string;
 }
 
+export type BrowserExecutableSource =
+  | "saved_setting"
+  | "process_environment"
+  | "user_environment"
+  | "automatic_discovery"
+  | "not_found"
+  | "unsupported";
+
+export interface BrowserExecutableStatus {
+  resolved_path: string | null;
+  source: BrowserExecutableSource;
+  available: boolean;
+}
+
 export interface DesktopScreenshotResponse {
   ok: boolean;
   image_base64?: string;
@@ -189,6 +203,13 @@ export const desktopApi = {
     apiFetch<string | null>("/api/pick-folder", { method: "POST" }),
   pickFile: () =>
     apiFetch<string | null>("/api/pick-file", { method: "POST" }),
+  getBrowserExecutable: () =>
+    apiFetch<BrowserExecutableStatus>("/api/browser-executable"),
+  setBrowserExecutable: (executablePath: string | null) =>
+    apiFetch<BrowserExecutableStatus>("/api/browser-executable", {
+      method: "PUT",
+      body: JSON.stringify({ executable_path: executablePath }),
+    }),
   persistLastRoute: (route: string) =>
     apiFetch<PersistDesktopRouteResponse>("/api/last-route", {
       method: "POST",

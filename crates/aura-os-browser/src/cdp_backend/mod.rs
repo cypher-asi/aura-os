@@ -56,7 +56,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::debug;
 use url::Url;
 
-use crate::backend::BrowserBackend;
+use crate::backend::{BrowserBackend, BrowserExecutableStatus};
 use crate::config::SpawnOptions;
 use crate::error::Error;
 use crate::protocol::{ClientMsg, ServerEvent};
@@ -74,6 +74,17 @@ const DISPATCH_CHANNEL_CAP: usize = 32;
 
 #[async_trait]
 impl BrowserBackend for CdpBackend {
+    fn browser_executable_status(&self) -> BrowserExecutableStatus {
+        self.executable_status()
+    }
+
+    async fn set_browser_executable_path(
+        &self,
+        path: Option<std::path::PathBuf>,
+    ) -> Result<BrowserExecutableStatus, Error> {
+        self.set_executable_path(path).await
+    }
+
     async fn start_session(
         &self,
         id: SessionId,

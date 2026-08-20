@@ -247,5 +247,8 @@ describe("BrowserInstance launch errors", () => {
     expect(screen.getByTestId("viewport")).toHaveTextContent(
       "Could not auto detect a chrome executable",
     );
+    expect(screen.getByTestId("viewport")).toHaveTextContent(
+      "Settings > Advanced",
+    );
   });
 });

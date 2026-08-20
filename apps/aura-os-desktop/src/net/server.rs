@@ -136,6 +136,7 @@ pub(crate) fn spawn_server(
                 }
             };
             let computer_state = computer_use::ComputerUseState::new();
+            let browser_route_state = app_state.clone();
             // Register the global abort hotkey (Ctrl+Alt+Q) so a user can stop
             // synthetic input even when AURA is unfocused. Best-effort and
             // Windows-gated; a no-op elsewhere.
@@ -143,6 +144,12 @@ pub(crate) fn spawn_server(
             let desktop_routes = Router::new()
                 .route("/api/pick-folder", axum_post(handlers::pick_folder))
                 .route("/api/pick-file", axum_post(handlers::pick_file))
+                .route(
+                    "/api/browser-executable",
+                    axum_get(handlers::get_browser_executable)
+                        .put(handlers::put_browser_executable)
+                        .with_state(browser_route_state),
+                )
                 .route(
                     "/api/last-route",
                     axum_post(handlers::post_last_route).with_state(route_state.clone()),

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::extract::{Path as AxumPath, State as AxumState};
+use axum::http::StatusCode;
 use axum::Json;
 use tao::event_loop::EventLoopProxy;
 use tracing::{debug, info, warn};
@@ -36,6 +37,49 @@ pub(crate) async fn pick_file() -> Json<serde_json::Value> {
         .await;
     let path = handle.map(|h| h.path().to_string_lossy().into_owned());
     Json(serde_json::json!(path))
+}
+
+// ---------------------------------------------------------------------------
+// Preview browser executable
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct BrowserExecutableRequest {
+    executable_path: Option<String>,
+}
+
+pub(crate) async fn get_browser_executable(
+    AxumState(state): AxumState<aura_os_server::AppState>,
+) -> Json<serde_json::Value> {
+    Json(
+        serde_json::to_value(state.browser_manager.browser_executable_status())
+            .unwrap_or_else(|error| serde_json::json!({ "error": error.to_string() })),
+    )
+}
+
+pub(crate) async fn put_browser_executable(
+    AxumState(state): AxumState<aura_os_server::AppState>,
+    Json(request): Json<BrowserExecutableRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let path = request
+        .executable_path
+        .map(|value| value.trim().trim_matches('"').to_string())
+        .filter(|value| !value.is_empty())
+        .map(std::path::PathBuf::from);
+    match state
+        .browser_manager
+        .set_browser_executable_path(path)
+        .await
+    {
+        Ok(status) => Ok(Json(serde_json::to_value(status).unwrap_or_else(
+            |error| serde_json::json!({ "error": error.to_string() }),
+        ))),
+        Err(error) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": error.to_string() })),
+        )),
+    }
 }
 
 // ---------------------------------------------------------------------------
