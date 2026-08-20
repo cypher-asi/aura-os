@@ -51,7 +51,7 @@ function friendlyBrowserError(err: Error): string {
     msg.includes("chrome") ||
     msg.includes("no such file")
   ) {
-    return `Could not start a supported browser. AURA supports Microsoft Edge, Google Chrome, and Chromium. If your browser is installed in a managed or custom location, set the BROWSER_EXECUTABLE_PATH environment variable before starting AURA. Details: ${err.message}`;
+    return `Could not start a supported browser. AURA supports Microsoft Edge, Google Chrome, and Chromium. In the desktop app, open Settings > Advanced and choose the browser executable. Server operators can also set BROWSER_EXECUTABLE_PATH before starting AURA. Details: ${err.message}`;
   }
   if (msg.includes("network") || msg.includes("websocket")) {
     return "Lost connection to the browser backend. Retrying…";

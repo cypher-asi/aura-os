@@ -27,9 +27,10 @@ pub mod config;
 pub mod error;
 pub mod manager;
 pub mod protocol;
+pub mod runtime_settings;
 pub mod session;
 
-pub use backend::{BrowserBackend, StubBackend};
+pub use backend::{BrowserBackend, BrowserExecutableSource, BrowserExecutableStatus, StubBackend};
 #[cfg(feature = "cdp")]
 pub use cdp_backend::{CdpBackend, CdpBackendConfig};
 pub use config::{BrowserConfig, ResolveOptions, SpawnOptions};
@@ -40,6 +41,7 @@ pub use protocol::{
     ElementBounds, ElementSource, ElementStyles, FrameHeader, InspectionKind, InspectionResult,
     MouseButton, MouseEventKind, NavError, NavState, ServerEvent, FRAME_HEADER_LEN, FRAME_OPCODE,
 };
+pub use runtime_settings::BrowserRuntimeSettings;
 pub use session::{
     DetectedUrl, DetectionSource, HistoryEntry, ProjectBrowserSettings, SessionHandle, SessionId,
     SettingsPatch, SettingsStore,

@@ -5,3 +5,66 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+.browserSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionHeading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sectionHeading h3 {
+  margin: 0;
+}
+
+.fieldLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pathInput {
+  min-width: 0;
+  flex: 1;
+  height: 34px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-family: var(--font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--font-size-xs);
+}
+
+.pathInput:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.message {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .pathRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

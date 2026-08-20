@@ -9,7 +9,10 @@
 //! Wire the backend into the [`crate::BrowserManager`] via
 //! [`BrowserManager::with_backend`](crate::BrowserManager::with_backend).
 
+use std::path::PathBuf;
+
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::info;
@@ -20,6 +23,46 @@ use crate::error::Error;
 use crate::protocol::{ClientMsg, ServerEvent};
 use crate::session::SessionId;
 
+/// Where the browser executable currently in use came from.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BrowserExecutableSource {
+    /// A path saved from AURA's desktop settings.
+    SavedSetting,
+    /// The process-level `BROWSER_EXECUTABLE_PATH` environment variable.
+    ProcessEnvironment,
+    /// The persisted Windows user environment, read directly from the registry.
+    UserEnvironment,
+    /// A browser found in the registry or a standard install location.
+    AutomaticDiscovery,
+    /// No supported browser executable could be found.
+    #[default]
+    NotFound,
+    /// The active backend does not launch a local browser.
+    Unsupported,
+}
+
+/// User-facing snapshot of local browser executable resolution.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BrowserExecutableStatus {
+    /// The executable path AURA will try to launch, when one is resolved.
+    pub resolved_path: Option<PathBuf>,
+    /// The source that produced `resolved_path`.
+    pub source: BrowserExecutableSource,
+    /// Whether the resolved path currently points to a file.
+    pub available: bool,
+}
+
+impl BrowserExecutableStatus {
+    fn unsupported() -> Self {
+        Self {
+            resolved_path: None,
+            source: BrowserExecutableSource::Unsupported,
+            available: false,
+        }
+    }
+}
+
 /// Low-level control surface for a browser engine.
 ///
 /// Implementations drive a headless page target, produce [`ServerEvent`]s
@@ -29,6 +72,23 @@ use crate::session::SessionId;
 /// around it.
 #[async_trait]
 pub trait BrowserBackend: Send + Sync + 'static {
+    /// Report how the backend resolved its local browser executable.
+    fn browser_executable_status(&self) -> BrowserExecutableStatus {
+        BrowserExecutableStatus::unsupported()
+    }
+
+    /// Override the browser executable used for the next session.
+    ///
+    /// Backends that do not launch a local browser leave this unsupported.
+    async fn set_browser_executable_path(
+        &self,
+        _path: Option<PathBuf>,
+    ) -> Result<BrowserExecutableStatus, Error> {
+        Err(Error::NotSupported(
+            "configuring a browser executable requires a Chromium backend",
+        ))
+    }
+
     /// Start a new session. The backend must push [`ServerEvent`]s into
     /// the returned channel and honour the cancellation token.
     async fn start_session(

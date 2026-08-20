@@ -1,21 +1,23 @@
 //! Browser session registry + façade over the backend, settings store,
 //! and resolver.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use aura_os_core::ProjectId;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 use url::Url;
 
-use crate::backend::{BrowserBackend, StubBackend};
+use crate::backend::{BrowserBackend, BrowserExecutableStatus, StubBackend};
 use crate::config::{BrowserConfig, ResolveOptions, SpawnOptions};
 use crate::error::Error;
 use crate::protocol::{ClientMsg, ServerEvent};
+use crate::runtime_settings::BrowserRuntimeSettings;
 use crate::session::resolver::{resolve_initial_url, ResolvedInitialUrl};
 use crate::session::settings::{DetectedUrl, ProjectBrowserSettings, SettingsPatch, SettingsStore};
 use crate::session::{SessionHandle, SessionId};
@@ -59,6 +61,7 @@ pub struct BrowserManager {
     settings: SettingsStore,
     sessions: DashMap<SessionId, RegistryEntry>,
     backend: Arc<dyn BrowserBackend>,
+    runtime_settings_lock: Mutex<()>,
 }
 
 impl std::fmt::Debug for BrowserManager {
@@ -80,6 +83,7 @@ impl BrowserManager {
             settings,
             sessions: DashMap::new(),
             backend: Arc::new(StubBackend),
+            runtime_settings_lock: Mutex::new(()),
         }
     }
 
@@ -91,6 +95,7 @@ impl BrowserManager {
             settings,
             sessions: DashMap::new(),
             backend,
+            runtime_settings_lock: Mutex::new(()),
         }
     }
 
@@ -102,6 +107,39 @@ impl BrowserManager {
     /// Return the active configuration.
     pub fn config(&self) -> &BrowserConfig {
         &self.config
+    }
+
+    /// Report the local executable selected by the active browser backend.
+    pub fn browser_executable_status(&self) -> BrowserExecutableStatus {
+        self.backend.browser_executable_status()
+    }
+
+    /// Save and activate a local browser executable override.
+    ///
+    /// Passing `None` clears the override and immediately re-runs environment
+    /// and platform discovery for the next Preview session.
+    pub async fn set_browser_executable_path(
+        &self,
+        path: Option<PathBuf>,
+    ) -> Result<BrowserExecutableStatus, Error> {
+        let _guard = self.runtime_settings_lock.lock().await;
+        let previous = BrowserRuntimeSettings::load(&self.config.settings_root);
+        let status = self
+            .backend
+            .set_browser_executable_path(path.clone())
+            .await?;
+        let updated = BrowserRuntimeSettings {
+            executable_path: path,
+            ..BrowserRuntimeSettings::default()
+        };
+        if let Err(error) = updated.save(&self.config.settings_root).await {
+            let _ = self
+                .backend
+                .set_browser_executable_path(previous.executable_path)
+                .await;
+            return Err(error);
+        }
+        Ok(status)
     }
 
     /// Spawn a new session.

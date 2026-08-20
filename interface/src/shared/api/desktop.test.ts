@@ -90,6 +90,40 @@ describe("desktopApi", () => {
     );
   });
 
+  it("gets the resolved Preview browser executable", async () => {
+    const status = {
+      resolved_path: "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      source: "automatic_discovery",
+      available: true,
+    };
+    const fetchMock = mockFetch(200, status);
+    globalThis.fetch = fetchMock;
+
+    await expect(desktopApi.getBrowserExecutable()).resolves.toEqual(status);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/browser-executable",
+      expect.any(Object),
+    );
+  });
+
+  it("saves a Preview browser executable override", async () => {
+    const fetchMock = mockFetch(200, {
+      resolved_path: "C:\\Managed\\msedge.exe",
+      source: "saved_setting",
+      available: true,
+    });
+    globalThis.fetch = fetchMock;
+
+    await desktopApi.setBrowserExecutable("C:\\Managed\\msedge.exe");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/browser-executable",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ executable_path: "C:\\Managed\\msedge.exe" }),
+      }),
+    );
+  });
+
   it("persistLastRoute sends POST with route", async () => {
     const fetchMock = mockFetch(200, { ok: true, route: "/projects/demo?session=abc" });
     globalThis.fetch = fetchMock;
