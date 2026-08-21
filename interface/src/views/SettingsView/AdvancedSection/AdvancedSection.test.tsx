@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiClientError } from "../../../shared/api/core";
 
 const runtime = vi.hoisted(() => ({ desktop: true }));
 const api = vi.hoisted(() => ({
@@ -72,7 +73,8 @@ vi.mock("./AdvancedSection.module.css", () => ({
 import { AdvancedSection } from "./AdvancedSection";
 
 const autoDetected = {
-  resolved_path: "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  resolved_path:
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
   source: "automatic_discovery" as const,
   available: true,
 };
@@ -111,7 +113,9 @@ describe("AdvancedSection", () => {
 
     await screen.findByText(/Detected automatically/);
     await user.click(screen.getByRole("button", { name: "Choose…" }));
-    expect(screen.getByLabelText("Browser executable path")).toHaveValue(managedPath);
+    expect(screen.getByLabelText("Browser executable path")).toHaveValue(
+      managedPath,
+    );
     await user.click(screen.getByRole("button", { name: "Save browser" }));
 
     await waitFor(() => {
@@ -122,11 +126,32 @@ describe("AdvancedSection", () => {
     );
   });
 
-  it("keeps server-side environment guidance for the web app", () => {
+  it("shows desktop controls when the local capability exists despite a missing runtime marker", async () => {
     runtime.desktop = false;
     render(<AdvancedSection />);
 
-    expect(screen.getByText(/BROWSER_EXECUTABLE_PATH/)).toBeInTheDocument();
-    expect(api.getBrowserExecutable).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Detected automatically/)).toHaveTextContent(
+      autoDetected.resolved_path,
+    );
+    expect(
+      screen.getByLabelText("Browser executable path"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps server-side environment guidance when the desktop route is absent", async () => {
+    runtime.desktop = false;
+    api.getBrowserExecutable.mockRejectedValue(
+      new ApiClientError(404, {
+        error: "Not Found",
+        code: "not_found",
+        details: null,
+      }),
+    );
+    render(<AdvancedSection />);
+
+    expect(
+      await screen.findByText(/BROWSER_EXECUTABLE_PATH/),
+    ).toBeInTheDocument();
+    expect(api.getBrowserExecutable).toHaveBeenCalledOnce();
   });
 });

@@ -1,6 +1,9 @@
 import type { ApiError } from "../types";
 import { authHeaders } from "../../shared/lib/auth-token";
-import { resolveApiUrl, resolveControlPlaneUrl } from "../../shared/lib/host-config";
+import {
+  resolveApiUrl,
+  resolveControlPlaneUrl,
+} from "../../shared/lib/host-config";
 
 export class ApiClientError extends Error {
   status: number;
@@ -41,7 +44,8 @@ export function isInsufficientCreditsError(err: unknown): boolean {
  * - `"unknown"` — `agent_busy` was reported but the server didn't
  *   include a structured reason and no recognized substring matched.
  */
-export type AgentBusyReasonCode = "queue_full" | "automation_running" | "unknown";
+export type AgentBusyReasonCode =
+  "queue_full" | "automation_running" | "unknown";
 
 export interface AgentBusyErrorInfo {
   reason: AgentBusyReasonCode;
@@ -109,9 +113,7 @@ export function isAgentBusyError(err: unknown): AgentBusyErrorInfo | null {
   if (err instanceof ApiClientError) {
     if (err.body.code === "agent_busy") {
       const data = (err.body as { data?: unknown }).data as
-        | { automaton_id?: unknown; reason?: unknown }
-        | null
-        | undefined;
+        { automaton_id?: unknown; reason?: unknown } | null | undefined;
       const automatonId =
         typeof data?.automaton_id === "string" && data.automaton_id.length > 0
           ? data.automaton_id
@@ -221,6 +223,12 @@ export function dispatchInsufficientCredits(): void {
 export interface ApiFetchOptions extends RequestInit {
   timeoutMs?: number;
   /**
+   * Keep the request on the page's current origin instead of applying the
+   * configured API host. Desktop-shell-only routes use this so a missing
+   * WebView runtime marker cannot accidentally send them to the cloud API.
+   */
+  sameOrigin?: boolean;
+  /**
    * Target the shared cloud control-plane (prod aura-os-server) instead of the
    * normally-resolved host. Used by endpoints like the Telegram channel routes
    * that must hit the single server running the bot/link store, even on desktop
@@ -233,8 +241,13 @@ export async function apiFetch<T>(
   path: string,
   options?: ApiFetchOptions,
 ): Promise<T> {
-  const { timeoutMs, useControlPlane, signal: callerSignal, ...rest } =
-    options ?? {};
+  const {
+    timeoutMs,
+    sameOrigin,
+    useControlPlane,
+    signal: callerSignal,
+    ...rest
+  } = options ?? {};
 
   let timedOut = false;
   const controller = timeoutMs != null ? new AbortController() : undefined;
@@ -259,7 +272,11 @@ export async function apiFetch<T>(
   }
   const signal = controller ? controller.signal : callerSignal;
 
-  const url = useControlPlane ? resolveControlPlaneUrl(path) : resolveApiUrl(path);
+  const url = sameOrigin
+    ? path
+    : useControlPlane
+      ? resolveControlPlaneUrl(path)
+      : resolveApiUrl(path);
 
   try {
     const res = await fetch(url, {
@@ -294,7 +311,10 @@ export async function apiFetch<T>(
   }
 }
 
-export async function apiFetchText(path: string, options?: RequestInit): Promise<string> {
+export async function apiFetchText(
+  path: string,
+  options?: RequestInit,
+): Promise<string> {
   const res = await fetch(resolveApiUrl(path), {
     headers: { ...authHeaders() },
     ...options,
