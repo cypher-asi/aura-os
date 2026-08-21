@@ -9,8 +9,15 @@ import {
   apiFetch,
 } from "./core";
 
-function mockFetch(status: number, body: unknown, headers?: Record<string, string>) {
-  const h: Record<string, string> = { "content-type": "application/json", ...headers };
+function mockFetch(
+  status: number,
+  body: unknown,
+  headers?: Record<string, string>,
+) {
+  const h: Record<string, string> = {
+    "content-type": "application/json",
+    ...headers,
+  };
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
@@ -37,12 +44,20 @@ describe("ApiClientError", () => {
 
 describe("isInsufficientCreditsError", () => {
   it("returns true for 402 ApiClientError", () => {
-    const err = new ApiClientError(402, { error: "Pay up", code: "payment", details: null });
+    const err = new ApiClientError(402, {
+      error: "Pay up",
+      code: "payment",
+      details: null,
+    });
     expect(isInsufficientCreditsError(err)).toBe(true);
   });
 
   it("returns true for insufficient_credits code", () => {
-    const err = new ApiClientError(403, { error: "No credits", code: "insufficient_credits", details: null });
+    const err = new ApiClientError(403, {
+      error: "No credits",
+      code: "insufficient_credits",
+      details: null,
+    });
     expect(isInsufficientCreditsError(err)).toBe(true);
   });
 
@@ -51,7 +66,9 @@ describe("isInsufficientCreditsError", () => {
   });
 
   it("returns true for Error with insufficient credits message", () => {
-    expect(isInsufficientCreditsError(new Error("insufficient credits left"))).toBe(true);
+    expect(
+      isInsufficientCreditsError(new Error("insufficient credits left")),
+    ).toBe(true);
   });
 
   it("returns false for unrelated values", () => {
@@ -254,7 +271,9 @@ describe("apiFetch", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
 
   it("returns parsed JSON on success", async () => {
     const data = { id: "1", name: "test" };
@@ -270,7 +289,9 @@ describe("apiFetch", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
-        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+        }),
       }),
     );
     expect(fetchMock).not.toHaveBeenCalledWith(
@@ -287,6 +308,20 @@ describe("apiFetch", () => {
       "/api/test",
       expect.objectContaining({ method: "POST", body: '{"a":1}' }),
     );
+  });
+
+  it("keeps same-origin requests local despite a configured API host", async () => {
+    const fetchMock = mockFetch(200, {});
+    globalThis.fetch = fetchMock;
+    window.localStorage.setItem("aura-host-origin", "https://api.example.test");
+
+    await apiFetch("/api/desktop-only", { sameOrigin: true });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/desktop-only",
+      expect.any(Object),
+    );
+    window.localStorage.removeItem("aura-host-origin");
   });
 
   it("returns undefined for 204 No Content", async () => {
@@ -316,7 +351,11 @@ describe("apiFetch", () => {
   });
 
   it("throws ApiClientError on non-ok response", async () => {
-    globalThis.fetch = mockFetch(404, { error: "Not Found", code: "not_found", details: null });
+    globalThis.fetch = mockFetch(404, {
+      error: "Not Found",
+      code: "not_found",
+      details: null,
+    });
     await expect(apiFetch("/api/missing")).rejects.toThrow(ApiClientError);
     try {
       await apiFetch("/api/missing");
@@ -336,6 +375,8 @@ describe("apiFetch", () => {
       json: () => Promise.reject(new Error("not json")),
     }) as unknown as typeof globalThis.fetch;
     globalThis.fetch = fetchFn;
-    await expect(apiFetch("/api/broken")).rejects.toThrow("Internal Server Error");
+    await expect(apiFetch("/api/broken")).rejects.toThrow(
+      "Internal Server Error",
+    );
   });
 });
