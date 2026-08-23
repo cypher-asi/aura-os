@@ -32,7 +32,7 @@ pub mod session;
 
 pub use backend::{BrowserBackend, BrowserExecutableSource, BrowserExecutableStatus, StubBackend};
 #[cfg(feature = "cdp")]
-pub use cdp_backend::{CdpBackend, CdpBackendConfig};
+pub use cdp_backend::{probe_browser_runtime, CdpBackend, CdpBackendConfig};
 pub use config::{BrowserConfig, ResolveOptions, SpawnOptions};
 pub use error::Error;
 pub use manager::{BrowserManager, SessionInfo};

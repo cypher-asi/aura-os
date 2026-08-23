@@ -78,6 +78,7 @@ async fn main() {
 
     let store_path = data_dir.join("store");
     migrate_legacy_db_dir(&data_dir, &store_path);
+    probe_browser_runtime_on_startup().await;
     // Recover user-created skills written before the `name:` frontmatter fix
     // so they load into the harness registry again (otherwise "skill not
     // found" on edit). Idempotent; runs before the harness picks up skills.
@@ -109,6 +110,44 @@ async fn main() {
 
     let listener = TcpListener::bind(addr).await.expect("failed to bind");
     axum::serve(listener, app).await.expect("server error");
+}
+
+/// Container deployments opt into an actual Chromium/CDP launch before the
+/// API starts accepting traffic. This turns an absent binary, missing shared
+/// library, or unusable sandbox into a failed deploy that Render can roll back,
+/// rather than a Preview error discovered by the first user.
+async fn probe_browser_runtime_on_startup() {
+    if !env_flag("AURA_BROWSER_STARTUP_PROBE") {
+        return;
+    }
+
+    #[cfg(feature = "browser-cdp")]
+    {
+        let config = aura_os_browser::CdpBackendConfig::from_env();
+        info!(
+            executable = ?config.executable_path,
+            executable_source = ?config.executable_source,
+            sandbox_disabled = config.disable_sandbox,
+            "browser: running startup Chromium/CDP probe"
+        );
+        if let Err(error) = aura_os_browser::probe_browser_runtime(&config).await {
+            panic!(
+                "AURA_BROWSER_STARTUP_PROBE is enabled but Chromium/CDP could not start: {error}"
+            );
+        }
+        info!("browser: startup Chromium/CDP probe succeeded");
+    }
+
+    #[cfg(not(feature = "browser-cdp"))]
+    panic!(
+        "AURA_BROWSER_STARTUP_PROBE is enabled but aura-os-server was built without browser-cdp"
+    );
+}
+
+fn env_flag(name: &str) -> bool {
+    std::env::var(name)
+        .map(|value| matches!(value.trim(), "1" | "true" | "TRUE" | "yes" | "on"))
+        .unwrap_or(false)
 }
 
 /// Boot-time sanity check: if the deployment looks like it'll route

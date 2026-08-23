@@ -47,7 +47,7 @@ mod inspect;
 mod screencast;
 mod session_loop;
 
-pub use backend::CdpBackend;
+pub use backend::{probe_browser_runtime, CdpBackend};
 pub use config::CdpBackendConfig;
 
 use async_trait::async_trait;

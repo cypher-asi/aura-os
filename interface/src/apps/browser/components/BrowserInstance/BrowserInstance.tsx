@@ -21,6 +21,7 @@ import { BrowserViewport } from "../BrowserViewport";
 import type { BrowserWorkerInMsg } from "../../../../workers/browser-frame-worker";
 import styles from "./BrowserInstance.module.css";
 import type { BrowserMode } from "../../design-mode";
+import { isDesktopRuntime } from "../../../../shared/lib/native-runtime";
 
 export interface BrowserInstanceProps {
   clientId: string;
@@ -37,22 +38,24 @@ export interface BrowserInstanceProps {
  * REST layer's JSON payload.
  */
 function friendlyBrowserError(err: Error): string {
-  if (
-    err instanceof ApiClientError &&
-    err.body.code === "browser_launch_failed"
-  ) {
-    const details = err.body.details?.trim();
-    return details ? `${err.body.error} Details: ${details}` : err.body.error;
+  const launchDetails =
+    err instanceof ApiClientError ? err.body.details?.trim() : err.message;
+  const launchFailure =
+    err instanceof ApiClientError
+      ? err.body.code === "browser_launch_failed"
+      : err.message.toLowerCase().includes("chromium_launch") ||
+        err.message.toLowerCase().includes("chromium_config") ||
+        err.message.toLowerCase().includes("chrome") ||
+        err.message.toLowerCase().includes("no such file");
+
+  if (launchFailure) {
+    const guidance = isDesktopRuntime()
+      ? "Could not start a supported browser. Open Settings > Advanced and choose Microsoft Edge, Google Chrome, or Chromium."
+      : "Preview is temporarily unavailable because AURA's hosted browser could not start. Please try again shortly or contact your AURA administrator.";
+    return launchDetails ? `${guidance} Details: ${launchDetails}` : guidance;
   }
 
   const msg = err.message.toLowerCase();
-  if (
-    msg.includes("chromium_launch") ||
-    msg.includes("chrome") ||
-    msg.includes("no such file")
-  ) {
-    return `Could not start a supported browser. AURA supports Microsoft Edge, Google Chrome, and Chromium. In the desktop app, open Settings > Advanced and choose the browser executable. Server operators can also set BROWSER_EXECUTABLE_PATH before starting AURA. Details: ${err.message}`;
-  }
   if (msg.includes("network") || msg.includes("websocket")) {
     return "Lost connection to the browser backend. Retrying…";
   }

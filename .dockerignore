@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+.codex*
+**/.DS_Store
+**/node_modules
+**/target
+artifacts
+interface/dist
+interface/output
+interface/test-artifacts
+output
+target

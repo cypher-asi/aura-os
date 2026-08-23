@@ -223,7 +223,7 @@ fn map_browser_error(err: BrowserError) -> (StatusCode, Json<ApiError>) {
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(ApiError {
-                    error: "Could not start a supported browser. AURA supports Microsoft Edge, Google Chrome, and Chromium. In the desktop app, open Settings > Advanced and choose the browser executable. Server operators can also set BROWSER_EXECUTABLE_PATH before starting AURA.".to_string(),
+                    error: "Preview could not start because this AURA server's browser runtime is unavailable.".to_string(),
                     code: "browser_launch_failed".to_string(),
                     details: Some(reason),
                     data: None,
@@ -250,7 +250,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(body.code, "browser_launch_failed");
-        assert!(body.error.contains("Microsoft Edge"));
+        assert!(body.error.contains("server's browser runtime"));
         assert_eq!(
             body.details.as_deref(),
             Some("Could not auto detect a chrome executable")
@@ -266,6 +266,6 @@ mod tests {
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(body.code, "browser_launch_failed");
-        assert!(body.error.contains("Settings > Advanced"));
+        assert!(body.error.contains("server's browser runtime"));
     }
 }
