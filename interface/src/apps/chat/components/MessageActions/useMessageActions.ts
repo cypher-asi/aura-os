@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
+import { sessionsApi } from "../../../../shared/api/agents";
 import { createSessionShare } from "../../../../shared/api/shares";
 import { copyToClipboard } from "../../../../shared/utils/clipboard";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
@@ -21,10 +22,16 @@ export interface MessageActionsState {
   isSharing: boolean;
   /** True when sharing is possible (a persisted session id is known). */
   canShare: boolean;
+  /** True while an independent continuation is being created. */
+  isBranching: boolean;
+  /** True when this reply belongs to a persisted session. */
+  canBranch: boolean;
   /** Create (or reuse) the share, copy its URL, and flash the toggle. */
   copyShareLink: () => Promise<void>;
   /** Re-send the prompt that produced this assistant turn. */
   regenerate: () => void;
+  /** Copy history through this reply into a new session and open it. */
+  branchConversation: () => Promise<void>;
 }
 
 const SHARED_RESET_MS = 1800;
@@ -87,6 +94,7 @@ export function useMessageActions(
 
   const [shared, setShared] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isBranching, setIsBranching] = useState(false);
   const cachedUrlRef = useRef<string | null>(null);
   const timerRef = useRef<number | null>(null);
 
@@ -99,6 +107,7 @@ export function useMessageActions(
   }, []);
 
   const canShare = Boolean(projectId && agentInstanceId && sessionId);
+  const canBranch = canShare && message.role === "assistant";
 
   const copyShareLink = useCallback(async () => {
     if (isSharing || !projectId || !agentInstanceId || !sessionId) return;
@@ -134,12 +143,35 @@ export function useMessageActions(
     getRegenerateTurn(streamKey)?.(message.id);
   }, [streamKey, message.id]);
 
+  const branchConversation = useCallback(async () => {
+    if (isBranching || !canBranch || !sessionId) return;
+    setIsBranching(true);
+    try {
+      const result = await sessionsApi.branchSession(
+        projectId,
+        agentInstanceId,
+        sessionId,
+        message.id,
+      );
+      const next = new URL(window.location.href);
+      next.searchParams.set("session", result.sessionId);
+      window.history.pushState(null, "", `${next.pathname}${next.search}${next.hash}`);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    } catch (err) {
+      console.warn("conversation branch failed", err);
+      setIsBranching(false);
+    }
+  }, [agentInstanceId, canBranch, isBranching, message.id, projectId, sessionId]);
+
   return {
     meta: { sessionId, projectName, workspacePath },
     shared,
     isSharing,
     canShare,
+    isBranching,
+    canBranch,
     copyShareLink,
     regenerate,
+    branchConversation,
   };
 }

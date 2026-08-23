@@ -16,7 +16,7 @@ use uuid::Uuid;
 /// anything else (test fixtures, hypothetical future id schemes) is
 /// folded through a deterministic 128-bit FNV-1a hash so the result is
 /// still stable and collision-resistant for practical id counts.
-pub(super) fn stable_event_id(storage_event_id: &str) -> SessionEventId {
+pub(crate) fn stable_event_id(storage_event_id: &str) -> SessionEventId {
     match storage_event_id.parse::<Uuid>() {
         Ok(parsed) => SessionEventId::from_uuid(parsed),
         Err(_) => {

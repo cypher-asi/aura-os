@@ -11,6 +11,7 @@ use aura_os_core::ZeroAuthSession;
 pub(crate) use agent::agent_from_network;
 pub(crate) use agent_resolve::{resolve_merge_agents_for_ids, resolve_single_agent};
 pub use session_history::events_to_session_history;
+pub(crate) use session_history::stable_event_id;
 pub(crate) use workspace_path::resolve_workspace_path;
 
 pub(crate) fn get_user_id(session: &ZeroAuthSession) -> String {

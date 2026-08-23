@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Link2, MoreHorizontal, RotateCcw } from "lucide-react";
+import { Check, GitBranch, Link2, MoreHorizontal, RotateCcw } from "lucide-react";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 import { CopyButton } from "../../../../components/CopyButton";
 import { MoreInfoPopover } from "../MoreInfoPopover";
@@ -19,8 +19,17 @@ export interface MessageActionsProps {
  * this component takes only `message` + `streamKey`.
  */
 export function MessageActions({ message, streamKey }: MessageActionsProps) {
-  const { meta, shared, isSharing, canShare, copyShareLink, regenerate } =
-    useMessageActions(streamKey, message);
+  const {
+    meta,
+    shared,
+    isSharing,
+    canShare,
+    isBranching,
+    canBranch,
+    copyShareLink,
+    regenerate,
+    branchConversation,
+  } = useMessageActions(streamKey, message);
   const [moreOpen, setMoreOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +85,16 @@ export function MessageActions({ message, streamKey }: MessageActionsProps) {
         aria-label="Regenerate response"
       >
         <RotateCcw size={14} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className={styles.button}
+        onClick={() => void branchConversation()}
+        disabled={!canBranch || isBranching}
+        aria-label={isBranching ? "Branching conversation" : "Branch conversation here"}
+        title="Start a new conversation from this reply"
+      >
+        <GitBranch size={14} aria-hidden="true" />
       </button>
       <span className={styles.moreAnchor}>
         <button

@@ -1,19 +1,23 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use futures_util::future::join_all;
+use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
 use aura_os_core::{
     AgentInstanceId, EnrichedSession, ProjectId, Session, SessionEvent, SessionId, Task,
 };
 use aura_os_sessions::{storage_enriched_session_to_enriched_session, storage_session_to_session};
-use aura_os_storage::{StorageClient, StorageSession, SESSION_STATUS_DELETED};
+use aura_os_storage::{
+    CreateSessionEventRequest, CreateSessionRequest, StorageClient, StorageSession,
+    StorageSessionEvent, SESSION_STATUS_DELETED,
+};
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::agents::chat::is_subagent_session_summary;
 use crate::state::{AppState, AuthJwt};
 
-use super::conversions::events_to_session_history;
+use super::conversions::{events_to_session_history, stable_event_id};
 use super::session_titles::{generate_session_summary, TitleGenScope};
 
 pub(crate) fn storage_session_is_deleted(session: &StorageSession) -> bool {
@@ -264,6 +268,158 @@ pub(crate) async fn get_session(
     reject_deleted_storage_session(&ss, "session not found")?;
     let session = storage_session_to_session(ss, None).map_err(ApiError::internal)?;
     Ok(Json(session))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct BranchSessionRequest {
+    through_event_id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct BranchSessionResponse {
+    session_id: String,
+    copied_events: usize,
+}
+
+/// Create an independent continuation from a completed assistant reply.
+///
+/// The source session is left untouched. Every persisted event through the
+/// selected `assistant_message_end` row is copied into a new active session,
+/// which means tool calls and structured content remain available when the
+/// branch is rehydrated. Events after the selected reply are deliberately not
+/// copied, so the next user turn can take the conversation in a new direction.
+pub(crate) async fn branch_session(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path((project_id, agent_instance_id, session_id)): Path<(
+        ProjectId,
+        AgentInstanceId,
+        SessionId,
+    )>,
+    Json(request): Json<BranchSessionRequest>,
+) -> ApiResult<Json<BranchSessionResponse>> {
+    let storage = state.require_storage_client()?;
+    let source_session_id = session_id.to_string();
+    let project_id = project_id.to_string();
+    let agent_instance_id = agent_instance_id.to_string();
+
+    let source = storage
+        .get_session(&source_session_id, &jwt)
+        .await
+        .map_err(|error| match &error {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(error),
+        })?;
+    reject_deleted_storage_session(&source, "session not found")?;
+
+    // aura-storage authorizes the row by JWT. These path checks additionally
+    // prevent a valid session id from being replayed through another project
+    // or agent route. Legacy rows may omit either field, so only reject an
+    // explicit mismatch.
+    if source
+        .project_id
+        .as_deref()
+        .is_some_and(|id| id != project_id)
+        || source
+            .project_agent_id
+            .as_deref()
+            .is_some_and(|id| id != agent_instance_id)
+    {
+        return Err(ApiError::not_found("session not found"));
+    }
+
+    let events = storage
+        .list_events(&source_session_id, &jwt, None, None)
+        .await
+        .map_err(map_storage_error)?;
+    let events_to_copy = branch_event_prefix(events, &request.through_event_id)?;
+
+    let title = source
+        .summary_of_previous_context
+        .as_deref()
+        .map(str::trim)
+        .filter(|title| !title.is_empty())
+        .map(|title| format!("Branch of {title}"))
+        .unwrap_or_else(|| "Branched conversation".to_string());
+    let branch = storage
+        .create_session(
+            &agent_instance_id,
+            &jwt,
+            &CreateSessionRequest {
+                project_id: project_id.clone(),
+                org_id: source.org_id.clone(),
+                model: source.model.clone(),
+                status: Some("active".to_string()),
+                context_usage_estimate: None,
+                summary_of_previous_context: Some(title),
+            },
+        )
+        .await
+        .map_err(map_storage_error)?;
+
+    for event in &events_to_copy {
+        let Some(event_type) = event.event_type.clone() else {
+            continue;
+        };
+        let create = CreateSessionEventRequest {
+            session_id: Some(branch.id.clone()),
+            user_id: event.user_id.clone(),
+            agent_id: event.agent_id.clone(),
+            sender: event.sender.clone(),
+            project_id: Some(project_id.clone()),
+            org_id: event.org_id.clone(),
+            event_type,
+            content: event.content.clone(),
+        };
+        if let Err(error) = storage.create_event(&branch.id, &jwt, &create).await {
+            // A partial branch is never useful. Best-effort cleanup keeps it
+            // out of session lists while preserving the original error.
+            if let Err(cleanup_error) = storage.delete_session(&branch.id, &jwt).await {
+                warn!(
+                    session_id = %branch.id,
+                    error = %cleanup_error,
+                    "failed to clean up partially copied conversation branch"
+                );
+            }
+            return Err(map_storage_error(error));
+        }
+    }
+
+    info!(
+        source_session_id,
+        branch_session_id = %branch.id,
+        copied_events = events_to_copy.len(),
+        "Conversation branch created"
+    );
+    Ok(Json(BranchSessionResponse {
+        session_id: branch.id,
+        copied_events: events_to_copy.len(),
+    }))
+}
+
+fn branch_event_prefix(
+    mut events: Vec<StorageSessionEvent>,
+    through_event_id: &str,
+) -> ApiResult<Vec<StorageSessionEvent>> {
+    events.sort_by(|a, b| {
+        let a_time = a.created_at.as_deref().unwrap_or("");
+        let b_time = b.created_at.as_deref().unwrap_or("");
+        a_time.cmp(b_time).then_with(|| a.id.cmp(&b.id))
+    });
+    let Some(target_index) = events.iter().position(|event| {
+        stable_event_id(&event.id).to_string() == through_event_id
+            && event.event_type.as_deref() == Some("assistant_message_end")
+    }) else {
+        return Err(ApiError::bad_request(
+            "branch point must be a completed assistant message in this session",
+        ));
+    };
+    events.truncate(target_index + 1);
+    Ok(events)
 }
 
 pub(crate) async fn delete_session(

@@ -2,6 +2,7 @@
 #[allow(dead_code)]
 mod common;
 
+mod branching;
 mod history;
 mod public_import;
 mod resolution;
