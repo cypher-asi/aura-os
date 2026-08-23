@@ -98,19 +98,20 @@ function QuickPromptForm({
     location.search,
   );
   const preferred = preferredAgentId ?? contextualAgentId;
-  const initialAgentId =
-    visibleAgents.find((agent) => agent.agent_id === preferred)?.agent_id
-    ?? visibleAgents[0]?.agent_id
-    ?? "";
-  const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId);
+  // Stay in automatic selection mode until the user explicitly chooses an
+  // agent. The active route is authoritative even when the full roster has
+  // not hydrated yet (a common cold-start state in the desktop app).
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
-  const agentId = visibleAgents.some(
+  const selectedAgentIsVisible = selectedAgentId !== null && visibleAgents.some(
     (agent) => agent.agent_id === selectedAgentId,
-  )
+  );
+  const preferredAgentIsVisible = preferred !== null && visibleAgents.some(
+    (agent) => agent.agent_id === preferred,
+  );
+  const agentId = selectedAgentIsVisible
     ? selectedAgentId
-    : visibleAgents.find((agent) => agent.agent_id === preferred)?.agent_id
-      ?? visibleAgents[0]?.agent_id
-      ?? "";
+    : preferred ?? visibleAgents[0]?.agent_id ?? "";
 
   const submit = () => {
     const trimmed = prompt.trim();
@@ -158,9 +159,12 @@ function QuickPromptForm({
           className={styles.select}
           value={agentId}
           onChange={(event) => setSelectedAgentId(event.target.value)}
-          disabled={visibleAgents.length === 0}
+          disabled={!agentId}
         >
-          {visibleAgents.length === 0 ? (
+          {preferred && !preferredAgentIsVisible ? (
+            <option value={preferred}>Current chat agent</option>
+          ) : null}
+          {!agentId ? (
             <option value="">No available agents</option>
           ) : null}
           {visibleAgents.map((agent) => (
