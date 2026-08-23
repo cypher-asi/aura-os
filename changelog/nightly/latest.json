@@ -3,24 +3,25 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-23T15:58:37.559Z",
+  "generatedAt": "2026-08-23T16:36:18.089Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.802.1",
+  "version": "0.1.0-nightly.803.1",
   "date": "2026-08-23",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.802.1",
-  "lastIncludedSha": "e142ab80afd65ad2618b1c7077d2a1beb80b6a23",
-  "previousProcessedSha": "4697c95bc3d1d7355f24b407eec4038be746f88e",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.803.1",
+  "lastIncludedSha": "4c3113cf4758817e3bc722be44cfb2210bcac221",
+  "previousProcessedSha": "e142ab80afd65ad2618b1c7077d2a1beb80b6a23",
   "commitShas": [
     "da686ae7f755c5815f7af3ac9ae26a1dd4b74776",
     "914e2478d69e8ed508260d94fd8cf2cfa79140a5",
     "e01a708903ea0e506feb429aa71ffa8ea38c1d03",
     "4697c95bc3d1d7355f24b407eec4038be746f88e",
     "d73f75c0cb635b2c55bddeb29893787491dcbcfc",
-    "e142ab80afd65ad2618b1c7077d2a1beb80b6a23"
+    "e142ab80afd65ad2618b1c7077d2a1beb80b6a23",
+    "4c3113cf4758817e3bc722be44cfb2210bcac221"
   ],
-  "rawCommitCount": 6,
-  "filteredCommitCount": 6,
+  "rawCommitCount": 7,
+  "filteredCommitCount": 7,
   "rawCommits": [
     {
       "sha": "da686ae7f755c5815f7af3ac9ae26a1dd4b74776",
@@ -309,6 +310,46 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "4c3113cf4758817e3bc722be44cfb2210bcac221",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-23T21:21:05+05:00",
+      "subject": "fix(chat): preserve quick prompt lane during cold start (#148)",
+      "body": "",
+      "parents": [
+        "e142ab80afd65ad2618b1c7077d2a1beb80b6a23"
+      ],
+      "files": [
+        "interface/src/components/QuickPromptModal/QuickPromptModal.test.tsx",
+        "interface/src/components/QuickPromptModal/QuickPromptModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 56,
+        "deletions": 16
+      },
+      "committedAtMs": 1787502065000,
+      "cleanSubject": "preserve quick prompt lane during cold start (#148)",
+      "keywords": [
+        "preserve",
+        "quick",
+        "prompt",
+        "lane",
+        "during",
+        "cold",
+        "start"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 2,
@@ -316,29 +357,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.802.1",
+      "version": "0.1.0-nightly.803.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66449402
+          "sizeBytes": 66450062
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 132938232
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -348,29 +389,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.802.1",
+      "version": "0.1.0-nightly.803.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.802.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.803.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62182994
+          "sizeBytes": 62181217
         },
         {
-          "name": "AURA_0.1.0-nightly.802.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.803.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61116507
+          "sizeBytes": 61120708
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -380,29 +421,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.802.1",
+      "version": "0.1.0-nightly.803.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.802.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.803.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64267221
+          "sizeBytes": 64270302
         },
         {
-          "name": "AURA_0.1.0-nightly.802.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.803.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63330065
+          "sizeBytes": 63322971
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -412,17 +453,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.802.1",
+      "version": "0.1.0-nightly.803.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48943467
+          "sizeBytes": 48950309
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.802.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.803.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -431,33 +472,33 @@
     }
   ],
   "rendered": {
-    "title": "Quick prompts, voice dictation, and conversation branching land in chat",
-    "intro": "A feature-heavy day for the chat surface: a global Quick Prompt palette, in-composer voice dictation, and the ability to branch a conversation from any assistant reply. An afternoon follow-up hardened those flows and shipped a containerized Chromium runtime so hosted browser previews finally have a reliable deployment target.",
+    "title": "Quick Prompt palette, voice dictation, and conversation branching",
+    "intro": "A feature-heavy nightly for the chat surface: a new global Quick Prompt palette, voice dictation in the composer, and the ability to fork any assistant reply into an independent conversation. A late-day round of fixes then hardened the branch flow and the Quick Prompt handoff, alongside a new containerized preview runtime for the hosted Chromium browser.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "4:00 AM",
         "started_at": "2026-08-23T11:00:35.000Z",
         "ended_at": "2026-08-23T11:17:21.000Z",
-        "title": "Quick prompts, voice dictation, and conversation branching",
-        "summary": "Three new chat capabilities shipped back-to-back: a global Quick Prompt palette, an in-composer voice dictation control, and a server-backed action to fork any assistant reply into a new session.",
+        "title": "Quick Prompt palette, voice dictation, and reply branching",
+        "summary": "Three sizeable chat features landed back-to-back in the morning, adding a global prompt launcher, in-composer dictation, and server-backed conversation forks.",
         "items": [
           {
-            "text": "Introduced a Quick Prompt palette wired into the Aura shell and menu bar, backed by a new quick-prompt store that stages a pending prompt per agent and hands it off into the active chat draft.",
+            "text": "Introduced a Quick Prompt palette wired into the Aura shell and menu bar: users can pop open a modal from anywhere, pick an agent, and hand a drafted prompt off to the Agent or Standalone Agent chat panel, which merges it into the active draft on mount.",
             "commit_shas": [
               "da686ae7f755c5815f7af3ac9ae26a1dd4b74776"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a voice dictation control to the chat composer with a dedicated action slot in InputBarShell, a useVoiceDictation hook, and matching layout on the mobile chat input bar.",
+            "text": "Added voice dictation to the chat composer on both desktop and mobile, including a dedicated VoiceDictationControl slot in the input bar shell with layout reservations so send/stop and dictation controls no longer collide.",
             "commit_shas": [
               "914e2478d69e8ed508260d94fd8cf2cfa79140a5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Shipped conversation branching: a new server endpoint copies events through a selected assistant reply into a fresh active session, and a Branch action in the chat message toolbar lets users continue any reply down a new path without altering the original.",
+            "text": "Shipped conversation branching from any assistant reply: a new server endpoint copies session events through a chosen assistant_message_end into a fresh active session, and the message action row exposes a Branch conversation here control that jumps to the new session.",
             "commit_shas": [
               "e01a708903ea0e506feb429aa71ffa8ea38c1d03"
             ],
@@ -469,28 +510,35 @@
         "batch_id": "entry-2",
         "time_label": "8:03 AM",
         "started_at": "2026-08-23T15:03:59.000Z",
-        "ended_at": "2026-08-23T15:38:36.000Z",
-        "title": "Hosted Chromium runtime and chat follow-up fixes",
-        "summary": "An afternoon of hardening: a container image and CI smoke test give browser previews a reliable hosted Chromium runtime, while two chat regressions from the morning's Quick Prompt and branching work were resolved.",
+        "ended_at": "2026-08-23T16:21:05.000Z",
+        "title": "Hosted Chromium container and follow-up fixes for branching and Quick Prompt",
+        "summary": "The afternoon focused on making the new features production-ready: a containerized Chromium runtime for the hosted preview, a more forgiving branch navigation flow, and two Quick Prompt fixes covering active-lane handoff and cold-start hydration.",
         "items": [
           {
-            "text": "Packaged the API server with a hosted Chromium runtime via a new Dockerfile, .dockerignore, and an aura-api-container GitHub Actions workflow that builds the image, boots it, and verifies CDP startup and API health as an unprivileged user; documented the flow in the Render deployment guide.",
+            "text": "Shipped a reliable hosted Chromium runtime for the browser preview via a new Dockerfile, .dockerignore, and an aura-api-container GitHub Actions workflow that builds the image, boots it as an unprivileged aura user, and smoke-tests /api/auth/session before publishing.",
             "commit_shas": [
               "4697c95bc3d1d7355f24b407eec4038be746f88e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Completed conversation branch navigation by routing through React Router instead of a manual history push, re-enabling the branch button after failures, and surfacing an inline \"Couldn't branch this conversation\" error when the request fails.",
+            "text": "Hardened conversation branch navigation by routing through React Router's useNavigate instead of manual history/popstate, keeping the Branch button enabled after completion and surfacing an inline \"Couldn't branch this conversation\" error when the request fails.",
             "commit_shas": [
               "d73f75c0cb635b2c55bddeb29893787491dcbcfc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed Quick Prompt handoff so prompts launched from the menu bar land in the currently open Chat app conversation instead of forcing a jump to the Agents app, preserving the active project, instance, and session lane.",
+            "text": "Fixed the Quick Prompt handoff so it now merges into the Chat app's own stream on the active project/instance/session lane, instead of navigating away to the Agents app and stranding remote agents on an unavailable standalone surface.",
             "commit_shas": [
               "e142ab80afd65ad2618b1c7077d2a1beb80b6a23"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Preserved the route's agent selection in the Quick Prompt modal during desktop cold start: the current chat agent stays selected (shown as \"Current chat agent\") and the draft is retained while the agent roster is still hydrating.",
+            "commit_shas": [
+              "4c3113cf4758817e3bc722be44cfb2210bcac221"
             ],
             "confidence": "high"
           }
@@ -498,11 +546,11 @@
       }
     ],
     "highlights": [
-      "Quick Prompt palette across the shell",
+      "Quick Prompt palette lands in the shell",
       "Voice dictation in the chat composer",
-      "Branch a conversation from any reply",
-      "Hosted Chromium runtime for previews"
+      "Branch any reply into a new conversation",
+      "Hosted Chromium now ships as a verified container image"
     ],
-    "raw_commit_count": 6
+    "raw_commit_count": 7
   }
 }
