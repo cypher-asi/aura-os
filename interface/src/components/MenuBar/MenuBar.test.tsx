@@ -15,6 +15,7 @@ const dismissChecklist = vi.fn();
 const trackMock = vi.fn();
 const windowCommandMock = vi.fn();
 const logoutMock = vi.fn();
+const openQuickPrompt = vi.fn();
 let isAuthenticatedMock = false;
 
 vi.mock("../../stores/auth-store", () => ({
@@ -78,6 +79,12 @@ vi.mock("../../stores/app-ui-store", () => ({
   ),
 }));
 
+vi.mock("../../stores/quick-prompt-store", () => ({
+  useQuickPromptStore: {
+    getState: () => ({ open: openQuickPrompt }),
+  },
+}));
+
 vi.mock("../../features/onboarding/onboarding-store", () => ({
   useOnboardingStore: Object.assign(
     () => ({}),
@@ -106,6 +113,7 @@ vi.mock("../../lib/zoom", () => ({
 }));
 
 import { MenuBar } from "./MenuBar";
+import { MenuShortcuts } from "./MenuShortcuts";
 import { __setIsMacForTesting } from "../../lib/platform";
 
 function renderMenuBar() {
@@ -182,6 +190,24 @@ describe("MenuBar", () => {
     await user.click(screen.getByRole("menuitem", { name: "File" }));
     await user.click(screen.getByRole("menuitem", { name: /Settings/ }));
     expect(openOrgSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("File > Quick Prompt opens the global prompt palette", async () => {
+    const user = userEvent.setup();
+    renderMenuBar();
+    await user.click(screen.getByRole("menuitem", { name: "File" }));
+    await user.click(screen.getByRole("menuitem", { name: /Quick Prompt/ }));
+    expect(openQuickPrompt).toHaveBeenCalledWith(null);
+  });
+
+  it("opens Quick Prompt with Ctrl+Shift+Space", () => {
+    render(
+      <MemoryRouter>
+        <MenuShortcuts />
+      </MemoryRouter>,
+    );
+    fireEvent.keyDown(document, { key: " ", ctrlKey: true, shiftKey: true });
+    expect(openQuickPrompt).toHaveBeenCalledWith(null);
   });
 
   it("File > Exit posts the close IPC", async () => {
