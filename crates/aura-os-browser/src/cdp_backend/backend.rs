@@ -188,6 +188,30 @@ impl CdpBackend {
     }
 }
 
+/// Launch Chromium, open and close a blank page over CDP, then shut the
+/// process down. Hosted deployments use this as a startup preflight so a
+/// missing or unusable runtime fails the deploy instead of surfacing only
+/// after a user opens Preview.
+pub async fn probe_browser_runtime(config: &CdpBackendConfig) -> Result<(), Error> {
+    let mut browser = launch_browser(config).await?;
+    let page = browser
+        .new_page("about:blank")
+        .await
+        .map_err(|error| Error::backend("chromium_probe", error.to_string()))?;
+    page.close()
+        .await
+        .map_err(|error| Error::backend("chromium_probe", error.to_string()))?;
+    browser
+        .close()
+        .await
+        .map_err(|error| Error::backend("chromium_probe", error.to_string()))?;
+    browser
+        .wait()
+        .await
+        .map_err(|error| Error::backend("chromium_probe", error.to_string()))?;
+    Ok(())
+}
+
 impl Default for CdpBackend {
     fn default() -> Self {
         Self::new()

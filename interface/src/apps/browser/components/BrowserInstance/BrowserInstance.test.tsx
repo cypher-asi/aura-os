@@ -206,9 +206,11 @@ describe("BrowserInstance launch errors", () => {
   beforeEach(() => {
     capturedOpts.current = null;
     mockSend.mockClear();
+    delete (window as Window & { __AURA_BOOT_AUTH__?: unknown })
+      .__AURA_BOOT_AUTH__;
   });
 
-  it("identifies Microsoft Edge support and preserves launch details", () => {
+  it("identifies hosted runtime failures without suggesting a local browser", () => {
     const opts = setup();
 
     act(() =>
@@ -223,14 +225,14 @@ describe("BrowserInstance launch errors", () => {
     );
 
     expect(screen.getByTestId("viewport")).toHaveTextContent(
-      "AURA supports Microsoft Edge",
+      "AURA's hosted browser could not start",
     );
     expect(screen.getByTestId("viewport")).toHaveTextContent(
       "Executable was blocked by organization policy",
     );
   });
 
-  it("keeps legacy launch failures actionable during a rolling update", () => {
+  it("keeps legacy launch failures actionable during a rolling web update", () => {
     const opts = setup();
 
     act(() =>
@@ -242,13 +244,36 @@ describe("BrowserInstance launch errors", () => {
     );
 
     expect(screen.getByTestId("viewport")).toHaveTextContent(
-      "AURA supports Microsoft Edge",
+      "AURA's hosted browser could not start",
     );
     expect(screen.getByTestId("viewport")).toHaveTextContent(
       "Could not auto detect a chrome executable",
     );
+    expect(screen.getByTestId("viewport")).not.toHaveTextContent(
+      "Settings > Advanced",
+    );
+  });
+
+  it("keeps the browser picker guidance in the desktop runtime", () => {
+    Object.defineProperty(window, "__AURA_BOOT_AUTH__", {
+      configurable: true,
+      value: { token: "test" },
+    });
+    const opts = setup();
+
+    act(() =>
+      opts.onError?.(
+        new Error(
+          "browser backend error in `chromium_launch`: executable is missing",
+        ),
+      ),
+    );
+
     expect(screen.getByTestId("viewport")).toHaveTextContent(
       "Settings > Advanced",
+    );
+    expect(screen.getByTestId("viewport")).toHaveTextContent(
+      "Microsoft Edge",
     );
   });
 });
