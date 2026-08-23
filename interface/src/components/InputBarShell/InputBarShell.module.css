@@ -260,6 +260,18 @@
   padding-right: min(220px, 42%);
 }
 
+.inputRowHasAction .textarea {
+  padding-right: 64px;
+}
+
+.inputContainerPill .inputRowHasAction .textarea {
+  padding-right: 88px;
+}
+
+.inputRowHasEnd.inputRowHasAction .textarea {
+  padding-right: min(260px, 52%);
+}
+
 .textarea {
   display: block;
   width: 100%;
@@ -350,6 +362,18 @@
   padding-right: min(220px, 42%);
 }
 
+.sizeMirror.sizeMirrorHasAction {
+  padding-right: 64px;
+}
+
+.inputContainerPill .sizeMirror.sizeMirrorHasAction {
+  padding-right: 88px;
+}
+
+.sizeMirror.sizeMirrorHasEnd.sizeMirrorHasAction {
+  padding-right: min(260px, 52%);
+}
+
 .textarea::placeholder {
   color: var(--color-text-muted);
 }
@@ -380,6 +404,14 @@
    tucks under the send button in pill mode. */
 .inputContainerPill .inputRowEnd {
   right: 50px;
+}
+
+.inputRowHasAction .inputRowEnd {
+  right: 68px;
+}
+
+.inputContainerPill .inputRowHasAction .inputRowEnd {
+  right: 82px;
 }
 
 /* Marketing "Always on" mock on a phone: the reused real input bar is so
@@ -490,6 +522,28 @@
   position: static;
   transform: none;
   flex-shrink: 0;
+}
+
+.inputRowAction {
+  position: absolute;
+  right: 30px;
+  bottom: 2px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inputContainerPill .inputRowAction {
+  right: 47px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+.containerBottomRow > .inputRowAction {
+  position: static;
+  transform: none;
 }
 
 .containerBottomRow .sendButton {
