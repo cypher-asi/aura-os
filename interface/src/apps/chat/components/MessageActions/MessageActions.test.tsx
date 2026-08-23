@@ -6,6 +6,11 @@ import { registerRegenerateTurn } from "./regenerate-registry";
 
 const createSessionShare = vi.fn();
 const branchSession = vi.fn();
+const navigate = vi.fn();
+
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => navigate,
+}));
 
 vi.mock("../../../../shared/api/shares", () => ({
   createSessionShare: (...args: unknown[]) => createSessionShare(...args),
@@ -40,6 +45,7 @@ describe("MessageActions", () => {
   beforeEach(() => {
     createSessionShare.mockReset();
     branchSession.mockReset();
+    navigate.mockReset();
     writeText.mockReset();
     window.history.replaceState(null, "", "/");
     Object.defineProperty(navigator, "clipboard", {
@@ -140,8 +146,25 @@ describe("MessageActions", () => {
       expect(branchSession).toHaveBeenCalledWith("p1", "ai1", "s1", "a1"),
     );
     await waitFor(() =>
-      expect(window.location.search).toContain("session=s-branch"),
+      expect(navigate).toHaveBeenCalledWith(
+        "/projects/p1/agents/ai1?session=s-branch",
+      ),
     );
+    expect(screen.getByLabelText("Branch conversation here")).toBeEnabled();
+  });
+
+  it("re-enables branching and explains a failed request", async () => {
+    window.history.replaceState(null, "", "/projects/p1/agents/ai1?session=s1");
+    branchSession.mockRejectedValue(new Error("upstream unavailable"));
+    render(<MessageActions message={message} streamKey={STREAM_KEY} />);
+
+    fireEvent.click(screen.getByLabelText("Branch conversation here"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn't branch this conversation. Try again.",
+    );
+    expect(screen.getByLabelText("Branch conversation here")).toBeEnabled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("disables branching before a persisted session exists", () => {
