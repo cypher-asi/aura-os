@@ -25,8 +25,12 @@ const mocks = vi.hoisted(() => ({
     { project_agent_id: string; project_id: string; project_name: string }[]
   >,
   sessions: [] as FakeSession[],
-  useChatAppChat: vi.fn(() => ({})),
+  useChatAppChat: vi.fn(() => ({ streamKey: "chat-stream" })),
   setLastChatRoute: vi.fn(),
+  pendingQuickPrompt: null as { agentId: string; text: string } | null,
+  takeForAgent: vi.fn(),
+  setDraft: vi.fn(),
+  drafts: {} as Record<string, string>,
 }));
 
 vi.mock("react-router-dom", () => ({
@@ -94,6 +98,27 @@ vi.mock("../../../../utils/storage", () => ({
   setLastChatRoute: (...args: unknown[]) => mocks.setLastChatRoute(...args),
 }));
 
+vi.mock("../../../../stores/quick-prompt-store", () => {
+  const useQuickPromptStore = Object.assign(
+    (selector: (state: { pendingPrompt: typeof mocks.pendingQuickPrompt }) => unknown) =>
+      selector({ pendingPrompt: mocks.pendingQuickPrompt }),
+    {
+      getState: () => ({ takeForAgent: mocks.takeForAgent }),
+    },
+  );
+  return {
+    useQuickPromptStore,
+    mergeQuickPromptDraft: (existing: string, incoming: string) =>
+      existing ? `${existing}\n\n${incoming}` : incoming,
+  };
+});
+
+vi.mock("../../../../stores/chat-ui-store", () => ({
+  useChatUIStore: {
+    getState: () => ({ drafts: mocks.drafts, setDraft: mocks.setDraft }),
+  },
+}));
+
 describe("ChatAppRoute", () => {
   beforeEach(() => {
     mocks.searchParams = new URLSearchParams();
@@ -106,7 +131,11 @@ describe("ChatAppRoute", () => {
     mocks.setSearchParams.mockReset();
     mocks.setLastChatRoute.mockReset();
     mocks.useChatAppChat.mockReset();
-    mocks.useChatAppChat.mockReturnValue({});
+    mocks.useChatAppChat.mockReturnValue({ streamKey: "chat-stream" });
+    mocks.pendingQuickPrompt = null;
+    mocks.takeForAgent.mockReset();
+    mocks.setDraft.mockReset();
+    mocks.drafts = {};
     mocks.remoteOnly = false;
   });
 
@@ -224,6 +253,26 @@ describe("ChatAppRoute", () => {
     expect(mocks.useChatAppChat).toHaveBeenCalledWith("ceo", null, {
       freshCanvasPending: true,
     });
+  });
+
+  it("places a Quick Prompt handoff into the active Chat app composer", () => {
+    mocks.searchParams = new URLSearchParams(
+      "agent=agent-2&project=p1&instance=i1&session=s1",
+    );
+    mocks.pendingQuickPrompt = {
+      agentId: "agent-2",
+      text: "Review this before sending",
+    };
+    mocks.takeForAgent.mockReturnValue("Review this before sending");
+    mocks.drafts = { "chat-stream": "Existing draft" };
+
+    render(<ChatAppRoute />);
+
+    expect(mocks.takeForAgent).toHaveBeenCalledWith("agent-2");
+    expect(mocks.setDraft).toHaveBeenCalledWith(
+      "chat-stream",
+      "Existing draft\n\nReview this before sending",
+    );
   });
 
   it("asks the chat-agent resolver for a web-safe agent on remote-only clients", () => {

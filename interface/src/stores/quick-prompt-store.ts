@@ -28,7 +28,14 @@ export const useQuickPromptStore = create<QuickPromptState>((set, get) => ({
   preferredAgentId: null,
   pendingPrompt: null,
   open: (preferredAgentId = null) =>
-    set({ isOpen: true, preferredAgentId: preferredAgentId ?? null }),
+    set({
+      isOpen: true,
+      preferredAgentId: preferredAgentId ?? null,
+      // A newly opened palette supersedes an abandoned handoff that never
+      // reached its destination. Without this, a later matching chat mount
+      // can unexpectedly resurrect an older prompt.
+      pendingPrompt: null,
+    }),
   close: () => set({ isOpen: false, preferredAgentId: null }),
   queue: (agentId, text) =>
     set({

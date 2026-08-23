@@ -116,9 +116,9 @@ import { MenuBar } from "./MenuBar";
 import { MenuShortcuts } from "./MenuShortcuts";
 import { __setIsMacForTesting } from "../../lib/platform";
 
-function renderMenuBar() {
+function renderMenuBar(initialEntry = "/") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <MenuBar />
     </MemoryRouter>,
   );
@@ -198,6 +198,16 @@ describe("MenuBar", () => {
     await user.click(screen.getByRole("menuitem", { name: "File" }));
     await user.click(screen.getByRole("menuitem", { name: /Quick Prompt/ }));
     expect(openQuickPrompt).toHaveBeenCalledWith(null);
+  });
+
+  it("passes the active Chat app agent to Quick Prompt", async () => {
+    const user = userEvent.setup();
+    renderMenuBar("/chat?agent=agent-2&project=p1&instance=i1&session=s1");
+
+    await user.click(screen.getByRole("menuitem", { name: "File" }));
+    await user.click(screen.getByRole("menuitem", { name: /Quick Prompt/ }));
+
+    expect(openQuickPrompt).toHaveBeenCalledWith("agent-2");
   });
 
   it("opens Quick Prompt with Ctrl+Shift+Space", () => {

@@ -53,7 +53,7 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
 
 function LocationProbe() {
   const location = useLocation();
-  return <output aria-label="location">{location.pathname}</output>;
+  return <output aria-label="location">{location.pathname}{location.search}</output>;
 }
 
 describe("QuickPromptModal", () => {
@@ -82,11 +82,62 @@ describe("QuickPromptModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open in chat" }));
 
     await waitFor(() =>
-      expect(screen.getByLabelText("location")).toHaveTextContent("/agents/agent-2"),
+      expect(screen.getByLabelText("location")).toHaveTextContent(
+        "/chat?agent=agent-2&fresh=",
+      ),
     );
     expect(useQuickPromptStore.getState().pendingPrompt).toMatchObject({
       agentId: "agent-2",
       text: "Compare the release options",
+    });
+  });
+
+  it("defaults to the active Chat app agent and preserves its exact conversation lane", async () => {
+    useQuickPromptStore.getState().open();
+    const currentRoute = "/chat?project=p1&instance=i2&agent=agent-2&session=s3";
+    render(
+      <MemoryRouter initialEntries={[currentRoute]}>
+        <QuickPromptModal />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByLabelText("Agent")).toHaveValue("agent-2");
+    fireEvent.change(screen.getByLabelText("What do you want to work on?"), {
+      target: { value: "Keep me in this chat" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Open in chat" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("location")).toHaveTextContent(currentRoute),
+    );
+    expect(useQuickPromptStore.getState().pendingPrompt).toMatchObject({
+      agentId: "agent-2",
+      text: "Keep me in this chat",
+    });
+  });
+
+  it("opens a fresh Chat app canvas when the user chooses a different agent", async () => {
+    useQuickPromptStore.getState().open();
+    render(
+      <MemoryRouter initialEntries={["/chat?agent=agent-1&session=old-session"]}>
+        <QuickPromptModal />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(await screen.findByLabelText("Agent"), {
+      target: { value: "agent-2" },
+    });
+    fireEvent.change(screen.getByLabelText("What do you want to work on?"), {
+      target: { value: "Start a clean handoff" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Open in chat" }));
+
+    await waitFor(() => {
+      const location = screen.getByLabelText("location").textContent ?? "";
+      expect(location).toContain("/chat?agent=agent-2&fresh=");
+      expect(location).not.toContain("old-session");
     });
   });
 });

@@ -5,6 +5,8 @@ import { SendHorizontal } from "lucide-react";
 import { useAgentStore } from "../../apps/agents/stores/agent-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { filterRuntimeVisibleAgents } from "../../shared/lib/agent-runtime-visibility";
+import type { Agent } from "../../shared/types";
+import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useQuickPromptStore } from "../../stores/quick-prompt-store";
 import styles from "./QuickPromptModal.module.css";
 
@@ -13,9 +15,35 @@ function agentIdFromPath(pathname: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function agentIdFromLocation(pathname: string, search: string): string | null {
+  if (pathname === "/chat") {
+    return new URLSearchParams(search).get("agent");
+  }
+  const standaloneId = agentIdFromPath(pathname);
+  if (standaloneId) return standaloneId;
+
+  const projectMatch = pathname.match(/^\/projects\/([^/]+)\/agents\/([^/]+)$/);
+  if (!projectMatch) return null;
+  const projectId = decodeURIComponent(projectMatch[1]);
+  const instanceId = decodeURIComponent(projectMatch[2]);
+  return useProjectsListStore
+    .getState()
+    .agentsByProject[projectId]
+    ?.find((agent) => agent.agent_instance_id === instanceId)
+    ?.agent_id ?? null;
+}
+
+function freshChatDestination(agentId: string): string {
+  const params = new URLSearchParams({
+    agent: agentId,
+    fresh:
+      globalThis.crypto?.randomUUID?.()
+      ?? `quick-prompt-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  });
+  return `/chat?${params.toString()}`;
+}
+
 export function QuickPromptModal(): React.ReactElement | null {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { remoteOnly } = useAuraCapabilities();
   const agents = useAgentStore((state) => state.agents);
   const agentsStatus = useAgentStore((state) => state.agentsStatus);
@@ -27,8 +55,6 @@ export function QuickPromptModal(): React.ReactElement | null {
     () => filterRuntimeVisibleAgents(agents, remoteOnly),
     [agents, remoteOnly],
   );
-  const [agentId, setAgentId] = useState("");
-  const [prompt, setPrompt] = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -37,23 +63,64 @@ export function QuickPromptModal(): React.ReactElement | null {
     }
   }, [agentsStatus, isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const pathAgentId = agentIdFromPath(location.pathname);
-    const preferred = preferredAgentId ?? pathAgentId;
-    const nextAgent = visibleAgents.find((agent) => agent.agent_id === preferred)
-      ?? visibleAgents[0];
-    setAgentId(nextAgent?.agent_id ?? "");
-    setPrompt("");
-  }, [isOpen, location.pathname, preferredAgentId, visibleAgents]);
-
   if (!isOpen) return null;
+
+  // Keeping the form in a child means closing the modal unmounts all draft
+  // state. Reopening starts clean without effect-driven setState calls, while
+  // a late agents fetch can still supply the preferred/fallback selection.
+  return (
+    <QuickPromptForm
+      visibleAgents={visibleAgents}
+      preferredAgentId={preferredAgentId}
+      close={close}
+      queue={queue}
+    />
+  );
+}
+
+interface QuickPromptFormProps {
+  visibleAgents: Agent[];
+  preferredAgentId: string | null;
+  close: () => void;
+  queue: (agentId: string, text: string) => void;
+}
+
+function QuickPromptForm({
+  visibleAgents,
+  preferredAgentId,
+  close,
+  queue,
+}: QuickPromptFormProps): React.ReactElement {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const contextualAgentId = agentIdFromLocation(
+    location.pathname,
+    location.search,
+  );
+  const preferred = preferredAgentId ?? contextualAgentId;
+  const initialAgentId =
+    visibleAgents.find((agent) => agent.agent_id === preferred)?.agent_id
+    ?? visibleAgents[0]?.agent_id
+    ?? "";
+  const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId);
+  const [prompt, setPrompt] = useState("");
+  const agentId = visibleAgents.some(
+    (agent) => agent.agent_id === selectedAgentId,
+  )
+    ? selectedAgentId
+    : visibleAgents.find((agent) => agent.agent_id === preferred)?.agent_id
+      ?? visibleAgents[0]?.agent_id
+      ?? "";
 
   const submit = () => {
     const trimmed = prompt.trim();
     if (!agentId || !trimmed) return;
     queue(agentId, trimmed);
-    navigate(`/agents/${encodeURIComponent(agentId)}`);
+    if (contextualAgentId === agentId) {
+      navigate(`${location.pathname}${location.search}${location.hash}`);
+      return;
+    }
+    navigate(freshChatDestination(agentId));
   };
 
   return (
@@ -90,7 +157,7 @@ export function QuickPromptModal(): React.ReactElement | null {
           id="quick-prompt-agent"
           className={styles.select}
           value={agentId}
-          onChange={(event) => setAgentId(event.target.value)}
+          onChange={(event) => setSelectedAgentId(event.target.value)}
           disabled={visibleAgents.length === 0}
         >
           {visibleAgents.length === 0 ? (

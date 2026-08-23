@@ -40,6 +40,8 @@ function execEditCommand(command: string): void {
 interface AgentRouteContext {
   /** Current location pathname; used to decide which agent list applies. */
   pathname: string;
+  /** Current query string; the Chat app carries its active agent here. */
+  search: string;
   /** `/agents/:agentId` match, if present. */
   standaloneMatch: ReturnType<typeof useMatch>;
   /** `/projects/:projectId/agents/:agentInstanceId` match, if present. */
@@ -91,7 +93,12 @@ export function useAgentNavigationContext(): AgentRouteContext {
   const location = useLocation();
   const standaloneMatch = useMatch("/agents/:agentId");
   const projectMatch = useMatch("/projects/:projectId/agents/:agentInstanceId");
-  return { pathname: location.pathname, standaloneMatch, projectMatch };
+  return {
+    pathname: location.pathname,
+    search: location.search,
+    standaloneMatch,
+    projectMatch,
+  };
 }
 
 export function isAgentCyclingAvailable(
@@ -136,6 +143,9 @@ export function useMenuActions(): {
 
   const handleQuickPrompt = useCallback(() => {
     let preferredAgentId = agentContext.standaloneMatch?.params.agentId ?? null;
+    if (!preferredAgentId && agentContext.pathname === "/chat") {
+      preferredAgentId = new URLSearchParams(agentContext.search).get("agent");
+    }
     if (!preferredAgentId && agentContext.projectMatch) {
       const projectId = agentContext.projectMatch.params.projectId;
       const instanceId = agentContext.projectMatch.params.agentInstanceId;
@@ -148,6 +158,7 @@ export function useMenuActions(): {
               )?.agent_id
           : null) ?? null;
     }
+    preferredAgentId ??= useAgentStore.getState().selectedAgentId ?? null;
     useQuickPromptStore.getState().open(preferredAgentId);
   }, [agentContext]);
 
