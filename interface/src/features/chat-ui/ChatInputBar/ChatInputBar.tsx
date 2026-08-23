@@ -44,6 +44,8 @@ import { AttachmentPreviews } from "./AttachmentPreviews";
 import { AttachControl } from "./AttachControl";
 import { AgentInfoBar } from "./AgentInfoBar";
 import { ChatModeBar } from "./ChatModeBar";
+import { VoiceDictationControl } from "./VoiceDictationControl";
+import { useVoiceDictation } from "./useVoiceDictation";
 import {
   InputStatusHints,
   type InputStatusAction,
@@ -466,6 +468,13 @@ export const DesktopChatInputBar = memo(
         ? workspacePath
         : null;
     const shellRef = useRef<InputBarShellHandle>(null);
+    const {
+      supported: voiceSupported,
+      listening: voiceListening,
+      error: voiceError,
+      start: startVoiceDictation,
+      stop: stopVoiceDictation,
+    } = useVoiceDictation(onInputChange);
     useImperativeHandle(ref, () => ({
       focus: () => shellRef.current?.focus(),
       isFocused: () => document.activeElement === shellRef.current?.getTextarea(),
@@ -588,6 +597,22 @@ export const DesktopChatInputBar = memo(
       addFileFromPath,
       onAgentMentionSelect: recordAgentMention,
     });
+
+    const handleComposerInputChange = useCallback(
+      (nextValue: string) => {
+        // Manual typing owns the draft from this point forward. Stop first so
+        // a late interim recognition result cannot overwrite the edit.
+        if (voiceListening) stopVoiceDictation();
+        handleInputChange(nextValue);
+      },
+      [handleInputChange, stopVoiceDictation, voiceListening],
+    );
+
+    useEffect(() => {
+      if (isStreaming || sendDisabled || inputReadOnly) {
+        stopVoiceDictation();
+      }
+    }, [inputReadOnly, isStreaming, sendDisabled, stopVoiceDictation]);
 
     const projectFiles = useProjectFiles({
       workspacePath: mentionWorkspacePath,
@@ -744,6 +769,7 @@ export const DesktopChatInputBar = memo(
     }, [setPinnedSourceImage, streamKey]);
 
     const handleSubmit = useCallback(() => {
+      stopVoiceDictation();
       if (sendDisabled) return;
       const asideSelected = selectedCommands.some(
         (command) => command.id === "btw",
@@ -786,6 +812,7 @@ export const DesktopChatInputBar = memo(
       selectedModel,
       selectedMode,
       sendDisabled,
+      stopVoiceDictation,
       streamKey,
     ]);
 
@@ -951,6 +978,18 @@ export const DesktopChatInputBar = memo(
     const inputRowEnd = showPickerInline ? (
       <ModelControls placement="inline" {...modelControlsProps} />
     ) : null;
+    const inputRowAction = !isStatic && voiceSupported ? (
+      <VoiceDictationControl
+        supported={voiceSupported}
+        listening={voiceListening}
+        error={voiceError}
+        disabled={isStreaming || sendDisabled || inputReadOnly}
+        onToggle={() => {
+          if (voiceListening) stopVoiceDictation();
+          else startVoiceDictation(input);
+        }}
+      />
+    ) : null;
     // Bottom region stacks the tags row above the model ("LLM") row so a
     // tag like `/Record Demo` sits on its own line with full text, one
     // line below the prompt, and the model picker keeps its own line.
@@ -1070,7 +1109,7 @@ export const DesktopChatInputBar = memo(
       <InputBarShell
         ref={shellRef}
         value={input}
-        onValueChange={handleInputChange}
+        onValueChange={handleComposerInputChange}
         onSubmit={handleSubmit}
         onStop={onStop}
         isStreaming={isStreaming}
@@ -1104,6 +1143,7 @@ export const DesktopChatInputBar = memo(
         containerBottom={containerBottom}
         inputRowStart={inputRowStart}
         inputRowEnd={inputRowEnd}
+        inputRowAction={inputRowAction}
         reserveInlineEnd={reserveInlineEnd}
         infoBarStart={infoBarStart}
         infoBarEnd={infoBarEnd}

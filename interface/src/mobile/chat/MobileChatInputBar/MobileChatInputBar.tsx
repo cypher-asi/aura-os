@@ -11,6 +11,8 @@ import { ArrowUp, ChevronDown, FileText, Plus, X } from "lucide-react";
 import { AgentEnvironment } from "../../../apps/agents/components/AgentEnvironment";
 import { CommandChips } from "../../../features/chat-ui/ChatInputBar/CommandChips";
 import { ContextUsageIndicator } from "../../../features/chat-ui/ChatInputBar/ContextUsageIndicator";
+import { VoiceDictationControl } from "../../../features/chat-ui/ChatInputBar/VoiceDictationControl";
+import { useVoiceDictation } from "../../../features/chat-ui/ChatInputBar/useVoiceDictation";
 import { SlashCommandMenu } from "../../../features/chat-ui/ChatInputBar/SlashCommandMenu";
 import { useFileAttachments } from "../../../features/chat-ui/ChatInputBar/useFileAttachments";
 import type {
@@ -126,6 +128,13 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     const selectedMode = chatUI.selectedMode;
     const imageQuality = chatUI.imageQuality;
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const {
+      supported: voiceSupported,
+      listening: voiceListening,
+      error: voiceError,
+      start: startVoiceDictation,
+      stop: stopVoiceDictation,
+    } = useVoiceDictation(onInputChange);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const slashStartRef = useRef<number | null>(null);
     const mentionStartRef = useRef<number | null>(null);
@@ -479,6 +488,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     );
 
     const submitMessage = useCallback(() => {
+      stopVoiceDictation();
       if (!canSend) return;
       if (asideSelected) {
         const question = input.trim();
@@ -521,8 +531,13 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       selectedCommands,
       selectedModel,
       selectedMode,
+      stopVoiceDictation,
       streamKey,
     ]);
+
+    useEffect(() => {
+      if (isStreaming || sendDisabled) stopVoiceDictation();
+    }, [isStreaming, sendDisabled, stopVoiceDictation]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if ((slashMenuOpen || mentionMenuOpen) && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
@@ -827,7 +842,9 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             </div>
           ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
-          <div className={styles.inputRow}>
+          <div
+            className={`${styles.inputRow}${voiceSupported ? ` ${styles.inputRowVoice}` : ""}`}
+          >
             {isThreeDMode ? (
               has3DSource && pinnedSourceImage ? (
                 <div
@@ -868,7 +885,10 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               ref={textareaRef}
               className={`${styles.textarea}${isLocalAgent ? ` ${styles.textareaAwaitingRemote}` : ""}`}
               value={input}
-              onChange={(event) => handleInputChange(event.target.value)}
+              onChange={(event) => {
+                if (voiceListening) stopVoiceDictation();
+                handleInputChange(event.target.value);
+              }}
               onFocus={() => {
                 setIsTextInputFocused(true);
                 updateKeyboardInset();
@@ -891,6 +911,17 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               }
               rows={1}
               data-agent-field="chat-input"
+            />
+            <VoiceDictationControl
+              supported={voiceSupported}
+              listening={voiceListening}
+              error={voiceError}
+              disabled={isStreaming || sendDisabled}
+              className={styles.voiceButton}
+              onToggle={() => {
+                if (voiceListening) stopVoiceDictation();
+                else startVoiceDictation(input);
+              }}
             />
             {isStreaming ? (
               <button

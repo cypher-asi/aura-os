@@ -175,6 +175,8 @@ export interface InputBarShellProps {
    * end-content into `containerBottom` (see `onMultiLineChange`).
    */
   inputRowEnd?: ReactNode;
+  /** Optional composer action rendered immediately before send/stop. */
+  inputRowAction?: ReactNode;
   /**
    * Whether the wrap measurement should reserve the inline end-slot's
    * width. The single/multi-line decision is always measured against the
@@ -241,6 +243,7 @@ function InputBarShellInner(
     containerBottom,
     inputRowStart,
     inputRowEnd,
+    inputRowAction,
     reserveInlineEnd,
     infoBarStart,
     infoBarEnd,
@@ -367,6 +370,7 @@ function InputBarShellInner(
   const inputRowClassName = [
     styles.inputRow,
     showInlineEnd ? styles.inputRowHasEnd : "",
+    inputRowAction ? styles.inputRowHasAction : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -377,6 +381,7 @@ function InputBarShellInner(
   const mirrorClassName = [
     styles.sizeMirror,
     (reserveInlineEnd ?? inputRowEnd != null) ? styles.sizeMirrorHasEnd : "",
+    inputRowAction ? styles.sizeMirrorHasAction : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -416,6 +421,7 @@ function InputBarShellInner(
         {containerBottom ? (
           <div className={styles.containerBottomSlot}>{containerBottom}</div>
         ) : null}
+        {isMultiLine ? inputRowAction : null}
         {isMultiLine ? sendStopButton : null}
       </div>
     ) : null;
@@ -485,6 +491,9 @@ function InputBarShellInner(
           {showInlineEnd ? (
             <div className={styles.inputRowEnd}>{inputRowEnd}</div>
           ) : null}
+          {isMultiLine || !inputRowAction ? null : (
+            <div className={styles.inputRowAction}>{inputRowAction}</div>
+          )}
           {isMultiLine ? null : sendStopButton}
         </div>
         {bottomRow}
