@@ -5,9 +5,16 @@ import { MessageActions } from "./MessageActions";
 import { registerRegenerateTurn } from "./regenerate-registry";
 
 const createSessionShare = vi.fn();
+const branchSession = vi.fn();
 
 vi.mock("../../../../shared/api/shares", () => ({
   createSessionShare: (...args: unknown[]) => createSessionShare(...args),
+}));
+
+vi.mock("../../../../shared/api/agents", () => ({
+  sessionsApi: {
+    branchSession: (...args: unknown[]) => branchSession(...args),
+  },
 }));
 
 vi.mock("../../../../stores/projects-list-store", () => ({
@@ -32,6 +39,7 @@ describe("MessageActions", () => {
 
   beforeEach(() => {
     createSessionShare.mockReset();
+    branchSession.mockReset();
     writeText.mockReset();
     window.history.replaceState(null, "", "/");
     Object.defineProperty(navigator, "clipboard", {
@@ -119,6 +127,26 @@ describe("MessageActions", () => {
 
     fireEvent.click(screen.getByLabelText("Regenerate response"));
     expect(regenerate).toHaveBeenCalledWith("a1");
+  });
+
+  it("branches through the selected reply and opens the new session", async () => {
+    window.history.replaceState(null, "", "/projects/p1/agents/ai1?session=s1");
+    branchSession.mockResolvedValue({ sessionId: "s-branch", copiedEvents: 4 });
+    render(<MessageActions message={message} streamKey={STREAM_KEY} />);
+
+    fireEvent.click(screen.getByLabelText("Branch conversation here"));
+
+    await waitFor(() =>
+      expect(branchSession).toHaveBeenCalledWith("p1", "ai1", "s1", "a1"),
+    );
+    await waitFor(() =>
+      expect(window.location.search).toContain("session=s-branch"),
+    );
+  });
+
+  it("disables branching before a persisted session exists", () => {
+    render(<MessageActions message={message} streamKey="p1:ai1:fresh" />);
+    expect(screen.getByLabelText("Branch conversation here")).toBeDisabled();
   });
 
   it("opens the details popover and shows the metadata", () => {

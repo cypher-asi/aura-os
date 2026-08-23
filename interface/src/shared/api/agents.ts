@@ -112,6 +112,11 @@ export interface SafeWorkspaceApplyResult {
   sourcePath: string;
 }
 
+export interface BranchSessionResult {
+  sessionId: string;
+  copiedEvents: number;
+}
+
 /** A project-scoped instance of one reusable agent identity. */
 export interface AgentProjectBinding {
   project_agent_id: AgentInstanceId;
@@ -641,6 +646,19 @@ export const sessionsApi = {
   getSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<Session>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}`,
+    ),
+  branchSession: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+    throughEventId: string,
+  ) =>
+    apiFetch<BranchSessionResult>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/branch`,
+      {
+        method: "POST",
+        body: JSON.stringify({ throughEventId }),
+      },
     ),
   getSafeWorkspaceStatus: (
     projectId: ProjectId,

@@ -8,7 +8,7 @@ use aura_os_core::{AgentInstanceId, ChatContentBlock, ChatRole, ProjectId, Sessi
 use aura_os_storage::StorageSessionEvent;
 
 use blocks::{deserialize_content_blocks, sanitize_assistant_content_blocks};
-use event_id::stable_event_id;
+pub(crate) use event_id::stable_event_id;
 use in_flight::reconstruct_in_flight_assistant_turn;
 use subagent_link::fold_subagent_session_links;
 
