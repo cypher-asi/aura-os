@@ -31,11 +31,10 @@ vi.mock("@cypher-asi/zui", () => ({
 }));
 
 const fetchAgents = vi.fn().mockResolvedValue(undefined);
+const atlasAgent = { agent_id: "agent-1", name: "Atlas", machine_type: "remote" };
+const hermesAgent = { agent_id: "agent-2", name: "Hermes", machine_type: "remote" };
 const agentState = {
-  agents: [
-    { agent_id: "agent-1", name: "Atlas", machine_type: "remote" },
-    { agent_id: "agent-2", name: "Hermes", machine_type: "remote" },
-  ],
+  agents: [atlasAgent, hermesAgent],
   agentsStatus: "ready",
   fetchAgents,
 };
@@ -58,6 +57,7 @@ function LocationProbe() {
 
 describe("QuickPromptModal", () => {
   beforeEach(() => {
+    agentState.agents = [atlasAgent, hermesAgent];
     useQuickPromptStore.setState({
       isOpen: false,
       preferredAgentId: null,
@@ -115,6 +115,42 @@ describe("QuickPromptModal", () => {
       agentId: "agent-2",
       text: "Keep me in this chat",
     });
+  });
+
+  it("keeps the route agent selected while the roster hydrates", async () => {
+    agentState.agents = [atlasAgent];
+    useQuickPromptStore.getState().open();
+    const currentRoute = "/chat?project=p1&instance=i2&agent=agent-2&session=s3";
+    const view = render(
+      <MemoryRouter initialEntries={[currentRoute]}>
+        <QuickPromptModal />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByLabelText("Agent")).toHaveValue("agent-2");
+    expect(screen.getByRole("option", { name: "Current chat agent" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("What do you want to work on?"), {
+      target: { value: "Keep this cold-start draft" },
+    });
+
+    agentState.agents = [atlasAgent, hermesAgent];
+    view.rerender(
+      <MemoryRouter initialEntries={[currentRoute]}>
+        <QuickPromptModal />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByLabelText("Agent")).toHaveValue("agent-2");
+    expect(screen.getByLabelText("What do you want to work on?")).toHaveValue(
+      "Keep this cold-start draft",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open in chat" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("location")).toHaveTextContent(currentRoute),
+    );
   });
 
   it("opens a fresh Chat app canvas when the user chooses a different agent", async () => {
