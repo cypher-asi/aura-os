@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-08-23",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.799.1",
+    "title": "Faster prompting, hands-free input, and conversation branching",
+    "intro": "A focused nightly for the chat surface: a new global quick prompt palette, voice dictation in the composer, and the ability to fork any assistant reply into a fresh conversation without disturbing the original.",
+    "entryCount": 1,
+    "highlights": [
+      "Global quick prompt palette from the menu bar",
+      "Voice dictation built into the chat composer",
+      "Branch any assistant reply into a new session"
+    ],
+    "rawCommitCount": 3,
+    "generatedAt": "2026-08-23T11:36:33.058Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.799.1",
+    "path": "history/2026-08-23.json"
+  },
+  {
     "date": "2026-08-21",
     "channel": "nightly",
     "version": "0.1.0-nightly.796.1",
