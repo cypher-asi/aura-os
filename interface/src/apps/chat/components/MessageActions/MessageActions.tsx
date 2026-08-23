@@ -26,6 +26,7 @@ export function MessageActions({ message, streamKey }: MessageActionsProps) {
     canShare,
     isBranching,
     canBranch,
+    branchError,
     copyShareLink,
     regenerate,
     branchConversation,
@@ -96,6 +97,11 @@ export function MessageActions({ message, streamKey }: MessageActionsProps) {
       >
         <GitBranch size={14} aria-hidden="true" />
       </button>
+      {branchError ? (
+        <span className={styles.branchError} role="alert">
+          {branchError}
+        </span>
+      ) : null}
       <span className={styles.moreAnchor}>
         <button
           type="button"

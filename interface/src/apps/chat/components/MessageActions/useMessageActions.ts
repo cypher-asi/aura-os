@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 import { sessionsApi } from "../../../../shared/api/agents";
 import { createSessionShare } from "../../../../shared/api/shares";
@@ -26,6 +27,8 @@ export interface MessageActionsState {
   isBranching: boolean;
   /** True when this reply belongs to a persisted session. */
   canBranch: boolean;
+  /** User-facing failure copy for a branch request that did not complete. */
+  branchError: string | null;
   /** Create (or reuse) the share, copy its URL, and flash the toggle. */
   copyShareLink: () => Promise<void>;
   /** Re-send the prompt that produced this assistant turn. */
@@ -75,6 +78,7 @@ export function useMessageActions(
   streamKey: string,
   message: DisplaySessionEvent,
 ): MessageActionsState {
+  const navigate = useNavigate();
   const parsed = parseStreamKey(streamKey);
   const routeContext = readShareContextFromLocation();
   const projectId = routeContext.projectId ?? parsed?.projectId ?? "";
@@ -95,6 +99,7 @@ export function useMessageActions(
   const [shared, setShared] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isBranching, setIsBranching] = useState(false);
+  const [branchError, setBranchError] = useState<string | null>(null);
   const cachedUrlRef = useRef<string | null>(null);
   const timerRef = useRef<number | null>(null);
 
@@ -145,6 +150,7 @@ export function useMessageActions(
 
   const branchConversation = useCallback(async () => {
     if (isBranching || !canBranch || !sessionId) return;
+    setBranchError(null);
     setIsBranching(true);
     try {
       const result = await sessionsApi.branchSession(
@@ -155,13 +161,25 @@ export function useMessageActions(
       );
       const next = new URL(window.location.href);
       next.searchParams.set("session", result.sessionId);
-      window.history.pushState(null, "", `${next.pathname}${next.search}${next.hash}`);
-      window.dispatchEvent(new PopStateEvent("popstate"));
+      navigate(`${next.pathname}${next.search}${next.hash}`);
     } catch (err) {
       console.warn("conversation branch failed", err);
+      setBranchError("Couldn't branch this conversation. Try again.");
+    } finally {
+      // The same message row can remain mounted while React Router swaps only
+      // `?session=`. Always release the action instead of relying on a route
+      // remount to discard this local state.
       setIsBranching(false);
     }
-  }, [agentInstanceId, canBranch, isBranching, message.id, projectId, sessionId]);
+  }, [
+    agentInstanceId,
+    canBranch,
+    isBranching,
+    message.id,
+    navigate,
+    projectId,
+    sessionId,
+  ]);
 
   return {
     meta: { sessionId, projectName, workspacePath },
@@ -170,6 +188,7 @@ export function useMessageActions(
     canShare,
     isBranching,
     canBranch,
+    branchError,
     copyShareLink,
     regenerate,
     branchConversation,
