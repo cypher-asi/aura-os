@@ -3,21 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-23T11:36:33.058Z",
+  "generatedAt": "2026-08-23T15:21:45.272Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.799.1",
+  "version": "0.1.0-nightly.800.1",
   "date": "2026-08-23",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.799.1",
-  "lastIncludedSha": "e01a708903ea0e506feb429aa71ffa8ea38c1d03",
-  "previousProcessedSha": "8fd84e3ffbe7caf12d76705716f36e9f2d3d31b8",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.800.1",
+  "lastIncludedSha": "4697c95bc3d1d7355f24b407eec4038be746f88e",
+  "previousProcessedSha": "e01a708903ea0e506feb429aa71ffa8ea38c1d03",
   "commitShas": [
     "da686ae7f755c5815f7af3ac9ae26a1dd4b74776",
     "914e2478d69e8ed508260d94fd8cf2cfa79140a5",
-    "e01a708903ea0e506feb429aa71ffa8ea38c1d03"
+    "e01a708903ea0e506feb429aa71ffa8ea38c1d03",
+    "4697c95bc3d1d7355f24b407eec4038be746f88e"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 3,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "da686ae7f755c5815f7af3ac9ae26a1dd4b74776",
@@ -163,36 +164,94 @@
         "Other",
         "Interface"
       ]
+    },
+    {
+      "sha": "4697c95bc3d1d7355f24b407eec4038be746f88e",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-23T20:03:59+05:00",
+      "subject": "fix(preview): ship reliable hosted Chromium runtime (#145)",
+      "body": "* fix(preview): ship hosted Chromium runtime\n\n* fix(browser): retain Windows path import",
+      "parents": [
+        "e01a708903ea0e506feb429aa71ffa8ea38c1d03"
+      ],
+      "files": [
+        ".dockerignore",
+        ".github/workflows/aura-api-container.yml",
+        "Dockerfile",
+        "apps/aura-os-server/src/handlers/browser/rest.rs",
+        "apps/aura-os-server/src/main.rs",
+        "crates/aura-os-browser/src/cdp_backend/backend.rs",
+        "crates/aura-os-browser/src/cdp_backend/config.rs",
+        "crates/aura-os-browser/src/cdp_backend/mod.rs",
+        "crates/aura-os-browser/src/lib.rs",
+        "docs/render-deployment.md",
+        "interface/src/apps/browser/components/BrowserInstance/BrowserInstance.test.tsx",
+        "interface/src/apps/browser/components/BrowserInstance/BrowserInstance.tsx"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 316,
+        "deletions": 29
+      },
+      "committedAtMs": 1787497439000,
+      "cleanSubject": "ship reliable hosted Chromium runtime (#145)",
+      "keywords": [
+        "ship",
+        "reliable",
+        "hosted",
+        "chromium",
+        "runtime"
+      ],
+      "fileGroups": [
+        ".dockerignore",
+        ".github/workflows/aura-api-container.yml",
+        "Dockerfile",
+        "apps/aura-os-server/src",
+        "crates/aura-os-browser/src",
+        "docs/render-deployment.md",
+        "interface/src/apps"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other",
+        "Interface",
+        "Docs",
+        "Release Infrastructure"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.799.1",
+      "version": "0.1.0-nightly.800.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66443176
+          "sizeBytes": 66450418
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132942328
+          "sizeBytes": 132938232
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -202,29 +261,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.799.1",
+      "version": "0.1.0-nightly.800.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.799.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.800.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62181942
+          "sizeBytes": 62185962
         },
         {
-          "name": "AURA_0.1.0-nightly.799.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.800.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61118284
+          "sizeBytes": 61118671
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -234,29 +293,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.799.1",
+      "version": "0.1.0-nightly.800.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.799.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.800.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64267312
+          "sizeBytes": 64263677
         },
         {
-          "name": "AURA_0.1.0-nightly.799.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.800.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63323074
+          "sizeBytes": 63328179
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -266,17 +325,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.799.1",
+      "version": "0.1.0-nightly.800.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48948987
+          "sizeBytes": 48949462
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.799.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.800.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -285,46 +344,78 @@
     }
   ],
   "rendered": {
-    "title": "Faster prompting, hands-free input, and conversation branching",
-    "intro": "A focused nightly for the chat surface: a new global quick prompt palette, voice dictation in the composer, and the ability to fork any assistant reply into a fresh conversation without disturbing the original.",
+    "title": "Quick prompts, voice dictation, and a hosted browser runtime",
+    "intro": "Today's nightly brings three new chat superpowers — a global quick prompt palette, in-composer voice dictation, and the ability to branch any assistant reply into a fresh conversation — followed by a substantial backend push that packages Aura's preview browser into a reproducible hosted Chromium runtime.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "4:00 AM",
         "started_at": "2026-08-23T11:00:35.000Z",
         "ended_at": "2026-08-23T11:17:21.000Z",
-        "title": "Quick prompt palette, voice dictation, and reply branching land in chat",
-        "summary": "Three composer- and shell-level features shipped together, expanding how users start, dictate, and fork conversations.",
+        "title": "New chat composer superpowers: quick prompts, voice input, and reply branching",
+        "summary": "Three back-to-back features land in the chat surface: a shell-wide quick prompt palette, voice dictation inside the composer, and the ability to fork a conversation from any assistant reply.",
         "items": [
           {
-            "text": "A new Quick Prompt palette is wired into the Aura shell and menu bar, letting users draft a prompt from anywhere and hand it off to the active agent's composer via a shared quick-prompt store that merges into the existing draft.",
+            "text": "A new Quick Prompt palette is wired into the Aura shell and menu bar, letting users draft a prompt from anywhere and have it merged into the target agent's chat draft via a dedicated quick-prompt store.",
             "commit_shas": [
               "da686ae7f755c5815f7af3ac9ae26a1dd4b74776"
             ],
             "confidence": "high"
           },
           {
-            "text": "Chat composer gains built-in voice dictation on both desktop and mobile, with a dedicated inline action slot in the input bar that reflows padding around the send/stop button so the mic never overlaps existing controls.",
+            "text": "The chat composer now supports voice dictation through a new VoiceDictationControl and useVoiceDictation hook, with layout updates in the input shell (desktop and mobile) to make room for the mic action next to send/stop.",
             "commit_shas": [
               "914e2478d69e8ed508260d94fd8cf2cfa79140a5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Any completed assistant reply can now be branched into a brand-new session: the server copies events through the selected message end into a fresh active session (leaving the original untouched) and the message actions menu exposes the new fork control.",
+            "text": "Users can now branch a conversation from any completed assistant reply: a new server-side branch_session endpoint copies events through the selected turn into a fresh active session, exposed via message actions in the chat UI.",
             "commit_shas": [
               "e01a708903ea0e506feb429aa71ffa8ea38c1d03"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "8:03 AM",
+        "started_at": "2026-08-23T15:03:59.000Z",
+        "ended_at": "2026-08-23T15:03:59.000Z",
+        "title": "Hosted Chromium runtime for the preview browser",
+        "summary": "The preview browser gets a production-grade hosted runtime: a new Dockerfile bundles Chromium with the API server, a dedicated CI workflow builds and smoke-tests the image, and the CDP backend is reworked to talk to it reliably.",
+        "items": [
+          {
+            "text": "Introduced a Dockerfile, .dockerignore, and an aura-api-container GitHub Actions workflow that builds the API image, boots it, and verifies Chromium/CDP startup plus an unprivileged runtime user before publishing.",
+            "commit_shas": [
+              "4697c95bc3d1d7355f24b407eec4038be746f88e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Reworked the CDP backend (backend, config, and module wiring) and browser REST handler so the hosted Chromium runtime is discovered and driven consistently, while preserving the Windows path import for local desktop use.",
+            "commit_shas": [
+              "4697c95bc3d1d7355f24b407eec4038be746f88e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Updated the Render deployment docs and refreshed the BrowserInstance component and tests to match the new hosted preview flow.",
+            "commit_shas": [
+              "4697c95bc3d1d7355f24b407eec4038be746f88e"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Global quick prompt palette from the menu bar",
-      "Voice dictation built into the chat composer",
-      "Branch any assistant reply into a new session"
+      "Quick prompt palette from the menu bar",
+      "Voice dictation in the chat composer",
+      "Branch any assistant reply into a new session",
+      "Dockerized Chromium runtime for hosted preview"
     ],
-    "raw_commit_count": 3
+    "raw_commit_count": 4
   }
 }
