@@ -23,6 +23,14 @@ describe("quick-prompt-store", () => {
     expect(useQuickPromptStore.getState().takeForAgent("agent-1")).toBeNull();
   });
 
+  it("drops an abandoned handoff when the palette is opened again", () => {
+    useQuickPromptStore.getState().queue("agent-1", "Stale thought");
+
+    useQuickPromptStore.getState().open("agent-2");
+
+    expect(useQuickPromptStore.getState().pendingPrompt).toBeNull();
+  });
+
   it("preserves an existing composer draft when applying a quick prompt", () => {
     expect(mergeQuickPromptDraft("Existing notes  ", "New thought")).toBe(
       "Existing notes\n\nNew thought",

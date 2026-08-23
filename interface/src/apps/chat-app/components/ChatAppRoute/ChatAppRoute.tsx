@@ -12,6 +12,11 @@ import { useChatAppAgent } from "../../hooks/use-chat-app-agent";
 import { useChatAppChat } from "../../hooks/use-chat-app-chat";
 import { useChatAppSessions } from "../../hooks/use-chat-app-sessions";
 import { useImportPublicChatsOnAuth } from "../../hooks/use-public-chat-import";
+import { useChatUIStore } from "../../../../stores/chat-ui-store";
+import {
+  mergeQuickPromptDraft,
+  useQuickPromptStore,
+} from "../../../../stores/quick-prompt-store";
 
 /**
  * Top-level Chat app route. Resolves the canonical chat agent via
@@ -175,6 +180,29 @@ export function ChatAppRoute() {
     sessionId,
     chatOptions,
   );
+
+  // Quick Prompt used to navigate into the Agents app because the Chat app
+  // did not consume the global handoff. That discarded the active
+  // project/instance/session lane and could strand remote agents on an
+  // unavailable standalone surface. Consume it on the Chat app's own stream
+  // so an active lane stays intact and a different agent can open on a fresh
+  // Chat canvas.
+  const pendingQuickPrompt = useQuickPromptStore((state) => state.pendingPrompt);
+  useEffect(() => {
+    if (!effectiveAgentId || pendingQuickPrompt?.agentId !== effectiveAgentId) return;
+    const prompt = useQuickPromptStore
+      .getState()
+      .takeForAgent(effectiveAgentId);
+    if (!prompt) return;
+    const chat = useChatUIStore.getState();
+    chat.setDraft(
+      sharedChatProps.streamKey,
+      mergeQuickPromptDraft(
+        chat.drafts[sharedChatProps.streamKey] ?? "",
+        prompt,
+      ),
+    );
+  }, [effectiveAgentId, pendingQuickPrompt, sharedChatProps.streamKey]);
 
   // Pre-resolve panel props so the chat surface can mount on the very
   // first paint, even before `useChatAppAgent()` has finished talking
