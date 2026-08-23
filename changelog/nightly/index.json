@@ -2,19 +2,19 @@
   {
     "date": "2026-08-23",
     "channel": "nightly",
-    "version": "0.1.0-nightly.800.1",
-    "title": "Quick prompts, voice dictation, and a hosted browser runtime",
-    "intro": "Today's nightly brings three new chat superpowers — a global quick prompt palette, in-composer voice dictation, and the ability to branch any assistant reply into a fresh conversation — followed by a substantial backend push that packages Aura's preview browser into a reproducible hosted Chromium runtime.",
+    "version": "0.1.0-nightly.802.1",
+    "title": "Quick prompts, voice dictation, and conversation branching land in chat",
+    "intro": "A feature-heavy day for the chat surface: a global Quick Prompt palette, in-composer voice dictation, and the ability to branch a conversation from any assistant reply. An afternoon follow-up hardened those flows and shipped a containerized Chromium runtime so hosted browser previews finally have a reliable deployment target.",
     "entryCount": 2,
     "highlights": [
-      "Quick prompt palette from the menu bar",
+      "Quick Prompt palette across the shell",
       "Voice dictation in the chat composer",
-      "Branch any assistant reply into a new session",
-      "Dockerized Chromium runtime for hosted preview"
+      "Branch a conversation from any reply",
+      "Hosted Chromium runtime for previews"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-08-23T15:21:45.272Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.800.1",
+    "rawCommitCount": 6,
+    "generatedAt": "2026-08-23T15:58:37.559Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.802.1",
     "path": "history/2026-08-23.json"
   },
   {

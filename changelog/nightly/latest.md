@@ -1,32 +1,32 @@
-# Quick prompts, voice dictation, and a hosted browser runtime
+# Quick prompts, voice dictation, and conversation branching land in chat
 
 - Date: `2026-08-23`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.800.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.800.1
+- Version: `0.1.0-nightly.802.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.802.1
 
-Today's nightly brings three new chat superpowers — a global quick prompt palette, in-composer voice dictation, and the ability to branch any assistant reply into a fresh conversation — followed by a substantial backend push that packages Aura's preview browser into a reproducible hosted Chromium runtime.
+A feature-heavy day for the chat surface: a global Quick Prompt palette, in-composer voice dictation, and the ability to branch a conversation from any assistant reply. An afternoon follow-up hardened those flows and shipped a containerized Chromium runtime so hosted browser previews finally have a reliable deployment target.
 
-## 4:00 AM — New chat composer superpowers: quick prompts, voice input, and reply branching
+## 4:00 AM — Quick prompts, voice dictation, and conversation branching
 
-Three back-to-back features land in the chat surface: a shell-wide quick prompt palette, voice dictation inside the composer, and the ability to fork a conversation from any assistant reply.
+Three new chat capabilities shipped back-to-back: a global Quick Prompt palette, an in-composer voice dictation control, and a server-backed action to fork any assistant reply into a new session.
 
-- A new Quick Prompt palette is wired into the Aura shell and menu bar, letting users draft a prompt from anywhere and have it merged into the target agent's chat draft via a dedicated quick-prompt store. (`da686ae`)
-- The chat composer now supports voice dictation through a new VoiceDictationControl and useVoiceDictation hook, with layout updates in the input shell (desktop and mobile) to make room for the mic action next to send/stop. (`914e247`)
-- Users can now branch a conversation from any completed assistant reply: a new server-side branch_session endpoint copies events through the selected turn into a fresh active session, exposed via message actions in the chat UI. (`e01a708`)
+- Introduced a Quick Prompt palette wired into the Aura shell and menu bar, backed by a new quick-prompt store that stages a pending prompt per agent and hands it off into the active chat draft. (`da686ae`)
+- Added a voice dictation control to the chat composer with a dedicated action slot in InputBarShell, a useVoiceDictation hook, and matching layout on the mobile chat input bar. (`914e247`)
+- Shipped conversation branching: a new server endpoint copies events through a selected assistant reply into a fresh active session, and a Branch action in the chat message toolbar lets users continue any reply down a new path without altering the original. (`e01a708`)
 
-## 8:03 AM — Hosted Chromium runtime for the preview browser
+## 8:03 AM — Hosted Chromium runtime and chat follow-up fixes
 
-The preview browser gets a production-grade hosted runtime: a new Dockerfile bundles Chromium with the API server, a dedicated CI workflow builds and smoke-tests the image, and the CDP backend is reworked to talk to it reliably.
+An afternoon of hardening: a container image and CI smoke test give browser previews a reliable hosted Chromium runtime, while two chat regressions from the morning's Quick Prompt and branching work were resolved.
 
-- Introduced a Dockerfile, .dockerignore, and an aura-api-container GitHub Actions workflow that builds the API image, boots it, and verifies Chromium/CDP startup plus an unprivileged runtime user before publishing. (`4697c95`)
-- Reworked the CDP backend (backend, config, and module wiring) and browser REST handler so the hosted Chromium runtime is discovered and driven consistently, while preserving the Windows path import for local desktop use. (`4697c95`)
-- Updated the Render deployment docs and refreshed the BrowserInstance component and tests to match the new hosted preview flow. (`4697c95`)
+- Packaged the API server with a hosted Chromium runtime via a new Dockerfile, .dockerignore, and an aura-api-container GitHub Actions workflow that builds the image, boots it, and verifies CDP startup and API health as an unprivileged user; documented the flow in the Render deployment guide. (`4697c95`)
+- Completed conversation branch navigation by routing through React Router instead of a manual history push, re-enabling the branch button after failures, and surfacing an inline "Couldn't branch this conversation" error when the request fails. (`d73f75c`)
+- Fixed Quick Prompt handoff so prompts launched from the menu bar land in the currently open Chat app conversation instead of forcing a jump to the Agents app, preserving the active project, instance, and session lane. (`e142ab8`)
 
 ## Highlights
 
-- Quick prompt palette from the menu bar
+- Quick Prompt palette across the shell
 - Voice dictation in the chat composer
-- Branch any assistant reply into a new session
-- Dockerized Chromium runtime for hosted preview
+- Branch a conversation from any reply
+- Hosted Chromium runtime for previews
 
