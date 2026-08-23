@@ -4,6 +4,11 @@ import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { ChatPanel, type ChatPanelProps } from "../../../chat/components/ChatPanel";
 import { MobileChatPanel } from "../../../../mobile/chat/MobileChatPanel";
 import { LAST_AGENT_ID_KEY, useAgents } from "../../stores";
+import { useChatUIStore } from "../../../../stores/chat-ui-store";
+import {
+  mergeQuickPromptDraft,
+  useQuickPromptStore,
+} from "../../../../stores/quick-prompt-store";
 
 interface StandaloneAgentChatPanelProps {
   agentId: string;
@@ -36,6 +41,21 @@ export function StandaloneAgentChatPanel({
   });
   const { isMobileLayout } = useAuraCapabilities();
   const { agents } = useAgents();
+  const pendingQuickPrompt = useQuickPromptStore((state) => state.pendingPrompt);
+
+  useEffect(() => {
+    if (pendingQuickPrompt?.agentId !== agentId) return;
+    const prompt = useQuickPromptStore.getState().takeForAgent(agentId);
+    if (!prompt) return;
+    const chat = useChatUIStore.getState();
+    chat.setDraft(
+      sharedChatProps.streamKey,
+      mergeQuickPromptDraft(
+        chat.drafts[sharedChatProps.streamKey] ?? "",
+        prompt,
+      ),
+    );
+  }, [agentId, pendingQuickPrompt, sharedChatProps.streamKey]);
 
   useEffect(() => {
     // Only remember an id that resolves to a real agent: a stale/dead id

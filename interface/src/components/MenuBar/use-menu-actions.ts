@@ -8,6 +8,7 @@ import { useOnboardingStore } from "../../features/onboarding/onboarding-store";
 import { useAuth } from "../../stores/auth-store";
 import { useLogout } from "../../stores/use-logout";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useQuickPromptStore } from "../../stores/quick-prompt-store";
 import { filterRuntimeVisibleAgents } from "../../shared/lib/agent-runtime-visibility";
 import { windowCommand } from "../../lib/windowCommand";
 import { zoomIn, zoomOut, resetZoom } from "../../lib/zoom";
@@ -133,6 +134,23 @@ export function useMenuActions(): {
     navigate("/agents");
   }, [navigate]);
 
+  const handleQuickPrompt = useCallback(() => {
+    let preferredAgentId = agentContext.standaloneMatch?.params.agentId ?? null;
+    if (!preferredAgentId && agentContext.projectMatch) {
+      const projectId = agentContext.projectMatch.params.projectId;
+      const instanceId = agentContext.projectMatch.params.agentInstanceId;
+      preferredAgentId =
+        (projectId && instanceId
+          ? useProjectsListStore
+              .getState()
+              .agentsByProject[projectId]?.find(
+                (agent) => agent.agent_instance_id === instanceId,
+              )?.agent_id
+          : null) ?? null;
+    }
+    useQuickPromptStore.getState().open(preferredAgentId);
+  }, [agentContext]);
+
   const handleNewProject = useCallback(() => {
     useProjectsListStore.getState().openNewProjectModal();
   }, []);
@@ -227,6 +245,7 @@ export function useMenuActions(): {
 
   const actions = useMemo<MenuActionMap>(
     () => ({
+      "file.quickPrompt": handleQuickPrompt,
       "file.newAgent": handleNewAgent,
       "file.newWindow": handleNewWindow,
       "file.newProject": handleNewProject,
@@ -265,6 +284,7 @@ export function useMenuActions(): {
       handleExit,
       handleGettingStarted,
       handleLogout,
+      handleQuickPrompt,
       handleNewAgent,
       handleNewProject,
       handleNewWindow,

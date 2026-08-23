@@ -51,6 +51,11 @@ const DownloadsModal = lazy(() =>
     default: module.DownloadsModal,
   })),
 );
+const QuickPromptModal = lazy(() =>
+  import("../QuickPromptModal").then((module) => ({
+    default: module.QuickPromptModal,
+  })),
+);
 
 /**
  * Public marketing routes that paint the dark-mode diagonal gradient
@@ -372,6 +377,11 @@ export function AuraShell(): React.ReactElement {
               closeDownloads();
             }}
           />
+        </Suspense>
+      ) : null}
+      {isStandard ? (
+        <Suspense fallback={null}>
+          <QuickPromptModal />
         </Suspense>
       ) : null}
       {isStandard ? <ToastViewport /> : null}

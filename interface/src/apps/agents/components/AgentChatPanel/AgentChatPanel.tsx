@@ -41,6 +41,10 @@ import { resolveAgentChatAvailability } from "../../../../shared/lib/agent-chat-
 import { SafeWorkspaceBar } from "./SafeWorkspaceBar";
 import { useChatUIStore } from "../../../../stores/chat-ui-store";
 import {
+  mergeQuickPromptDraft,
+  useQuickPromptStore,
+} from "../../../../stores/quick-prompt-store";
+import {
   DESIGN_PROMPT_EVENT,
   type DesignPromptDetail,
 } from "../../../../shared/lib/design-context";
@@ -270,6 +274,26 @@ export function AgentChatPanel({
       workspaceStartAgentInstanceId,
       safeWorkspace: safeWorkspaceEnabled,
     });
+
+  const pendingQuickPrompt = useQuickPromptStore((state) => state.pendingPrompt);
+  useEffect(() => {
+    if (!pendingQuickPrompt) return;
+    if (
+      pendingQuickPrompt.agentId !== orgAgentId &&
+      pendingQuickPrompt.agentId !== templateAgentId
+    ) {
+      return;
+    }
+    const prompt = useQuickPromptStore
+      .getState()
+      .takeForAgent(pendingQuickPrompt.agentId);
+    if (!prompt) return;
+    const chat = useChatUIStore.getState();
+    chat.setDraft(
+      streamKey,
+      mergeQuickPromptDraft(chat.drafts[streamKey] ?? "", prompt),
+    );
+  }, [orgAgentId, pendingQuickPrompt, streamKey, templateAgentId]);
 
   useEffect(() => {
     const handleDesignPrompt = (event: Event) => {

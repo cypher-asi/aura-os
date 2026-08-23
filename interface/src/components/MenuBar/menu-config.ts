@@ -1,6 +1,7 @@
 import type { ShortcutSpec } from "../../lib/platform";
 
 export type MenuActionKey =
+  | "file.quickPrompt"
   | "file.newAgent"
   | "file.newWindow"
   | "file.newProject"
@@ -53,6 +54,8 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     id: "file",
     label: "File",
     entries: [
+      { type: "item", id: "file.quickPrompt", label: "Quick Prompt…", shortcut: { key: " ", mod: true, shift: true } },
+      DIVIDER,
       { type: "item", id: "file.newWindow", label: "New Window", shortcut: { key: "n", mod: true } },
       DIVIDER,
       { type: "item", id: "file.newAgent", label: "New Agent", shortcut: { key: "n", mod: true, shift: true } },
