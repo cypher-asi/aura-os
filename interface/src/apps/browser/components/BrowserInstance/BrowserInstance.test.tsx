@@ -12,6 +12,10 @@ import type {
   UseBrowserReturn,
 } from "../../../../hooks/use-browser";
 import { ApiClientError } from "../../../../shared/api/core";
+import {
+  DESIGN_PROMPT_EVENT,
+  type DesignPromptDetail,
+} from "../../../../shared/lib/design-context";
 
 // Capture the `useBrowser` options the component registers so each test can
 // drive the navigation lifecycle (`onNav` / `onNavError`) directly. Using
@@ -102,8 +106,16 @@ function navState(url: string, loading = false): NavState {
   };
 }
 
-function setup() {
-  render(<BrowserInstance clientId="client-1" width={400} height={300} />);
+function setup(props?: { projectId?: string; remoteAgentId?: string }) {
+  render(
+    <BrowserInstance
+      clientId="client-1"
+      projectId={props?.projectId}
+      remoteAgentId={props?.remoteAgentId}
+      width={400}
+      height={300}
+    />,
+  );
   if (!capturedOpts.current) {
     throw new Error("useBrowser was not invoked during render");
   }
@@ -199,6 +211,28 @@ describe("BrowserInstance navError lifecycle", () => {
     );
 
     expect(screen.getByText("Can't connect to server")).toBeInTheDocument();
+  });
+
+  it("routes the selected remote agent into browser spawn and hands errors to chat", () => {
+    const opts = setup({
+      projectId: "project-1",
+      remoteAgentId: "agent-1",
+    });
+    expect(opts.remoteAgentId).toBe("agent-1");
+
+    let detail: DesignPromptDetail | undefined;
+    const listener = (event: Event) => {
+      detail = (event as CustomEvent<DesignPromptDetail>).detail;
+      event.preventDefault();
+    };
+    window.addEventListener(DESIGN_PROMPT_EVENT, listener);
+    act(() => opts.onNavError?.(ERROR_404));
+    fireEvent.click(screen.getByRole("button", { name: "Ask Agent" }));
+    window.removeEventListener(DESIGN_PROMPT_EVENT, listener);
+
+    expect(detail?.projectId).toBe("project-1");
+    expect(detail?.prompt).toContain("<aura_preview_error>");
+    expect(detail?.prompt).toContain("http://127.0.0.1:8080/");
   });
 });
 

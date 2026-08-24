@@ -22,10 +22,15 @@ import type { BrowserWorkerInMsg } from "../../../../workers/browser-frame-worke
 import styles from "./BrowserInstance.module.css";
 import type { BrowserMode } from "../../design-mode";
 import { isDesktopRuntime } from "../../../../shared/lib/native-runtime";
+import {
+  buildPreviewErrorPrompt,
+  dispatchDesignPrompt,
+} from "../../../../shared/lib/design-context";
 
 export interface BrowserInstanceProps {
   clientId: string;
   projectId?: string;
+  remoteAgentId?: string;
   width: number;
   height: number;
   mode?: BrowserMode;
@@ -80,6 +85,7 @@ function mergeDetected(
 export function BrowserInstance({
   clientId,
   projectId,
+  remoteAgentId,
   width,
   height,
   mode = "preview",
@@ -166,6 +172,7 @@ export function BrowserInstance({
     width,
     height,
     projectId,
+    remoteAgentId,
     onFrame: handleFrame,
     onNav: handleNav,
     onNavError: handleNavError,
@@ -233,6 +240,16 @@ export function BrowserInstance({
   const handleReload = useCallback(() => {
     browser.send({ type: "reload" });
   }, [browser]);
+
+  const handleAskAgent = useCallback(
+    (error: NavError) => {
+      dispatchDesignPrompt({
+        projectId,
+        prompt: buildPreviewErrorPrompt(error),
+      });
+    },
+    [projectId],
+  );
 
   const handleSubmit = useCallback(
     (url: string) => {
@@ -333,7 +350,11 @@ export function BrowserInstance({
         }
         overlay={
           navError ? (
-            <BrowserErrorOverlay error={navError} onReload={handleReload} />
+            <BrowserErrorOverlay
+              error={navError}
+              onAskAgent={handleAskAgent}
+              onReload={handleReload}
+            />
           ) : mode === "design" ? (
             <BrowserDesignInspector
               element={selectedElement}

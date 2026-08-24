@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use aura_os_core::ProjectId;
+use tokio_util::sync::CancellationToken;
 use url::Url;
 
 /// Runtime configuration shared by every session.
@@ -93,6 +94,15 @@ pub struct SpawnOptions {
     /// Override for the JPEG quality used by the screencast. `None` uses the
     /// manager-level default from [`BrowserConfig::frame_quality`].
     pub frame_quality: Option<u8>,
+    /// Optional per-session Chromium proxy. Hosted remote-agent previews use
+    /// this to route the selected agent's loopback traffic without changing
+    /// local/desktop sessions or the shared browser process.
+    pub proxy_server: Option<String>,
+    /// Chromium proxy bypass override paired with [`Self::proxy_server`].
+    pub proxy_bypass_list: Option<String>,
+    /// Optional resource lifetime owned by the caller. The manager cancels it
+    /// when the browser session fails to start or is killed.
+    pub cleanup_token: Option<CancellationToken>,
 }
 
 impl SpawnOptions {
@@ -104,6 +114,9 @@ impl SpawnOptions {
             initial_url: None,
             project_id: None,
             frame_quality: None,
+            proxy_server: None,
+            proxy_bypass_list: None,
+            cleanup_token: None,
         }
     }
 }

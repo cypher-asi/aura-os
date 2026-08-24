@@ -11,7 +11,7 @@ use aura_os_browser::{
     DetectedUrl, Error as BrowserError, ProjectBrowserSettings, SessionInfo, SettingsPatch,
     SpawnOptions,
 };
-use aura_os_core::ProjectId;
+use aura_os_core::{HarnessMode, ProjectId};
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt, AuthSession};
@@ -28,6 +28,8 @@ pub(crate) struct SpawnRequest {
     project_id: Option<String>,
     #[serde(default)]
     initial_url: Option<Url>,
+    #[serde(default)]
+    remote_agent_id: Option<String>,
 }
 
 fn default_width() -> u16 {
@@ -57,6 +59,40 @@ pub(crate) async fn spawn_browser(
     let mut opts = SpawnOptions::new(body.width, body.height);
     opts.project_id = project_id;
     opts.initial_url = body.initial_url;
+
+    if let Some(agent_id) = body.remote_agent_id {
+        if opts.project_id.is_none() {
+            return Err(ApiError::bad_request(
+                "remote_agent_id requires a project_id",
+            ));
+        }
+        let network = state.require_network_client()?;
+        let agent = network
+            .get_agent(&agent_id, &jwt)
+            .await
+            .map_err(crate::error::map_network_error)?;
+        let machine_type = agent.machine_type.as_deref().unwrap_or("local");
+        if HarnessMode::from_machine_type(machine_type) != HarnessMode::Swarm {
+            return Err(ApiError::bad_request(
+                "remote_agent_id does not identify a remote agent",
+            ));
+        }
+        let swarm_base_url = state.swarm_base_url.as_deref().ok_or_else(|| {
+            ApiError::service_unavailable("remote Preview gateway is not configured")
+        })?;
+        let proxy = crate::remote_preview::RemotePreviewProxy::start(swarm_base_url, agent.id, jwt)
+            .await
+            .map_err(|error| {
+                warn!(%error, "failed to start remote Preview proxy");
+                ApiError::service_unavailable("remote Preview proxy could not start")
+            })?;
+        opts.proxy_server = Some(proxy.proxy_server);
+        // Chromium implicitly bypasses proxies for localhost. This special
+        // rule removes that implicit bypass so the selected agent receives
+        // loopback traffic through its authenticated tunnel.
+        opts.proxy_bypass_list = Some("<-loopback>".to_string());
+        opts.cleanup_token = Some(proxy.cleanup_token);
+    }
 
     let handle = state
         .browser_manager
