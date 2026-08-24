@@ -41,6 +41,7 @@ export interface SpawnBrowserRequest {
   width: number;
   height: number;
   projectId?: string;
+  remoteAgentId?: string;
   initialUrl?: string;
 }
 
@@ -294,6 +295,7 @@ export async function spawnBrowser(
     height: req.height,
   };
   if (req.projectId) body.project_id = req.projectId;
+  if (req.remoteAgentId) body.remote_agent_id = req.remoteAgentId;
   if (req.initialUrl) body.initial_url = req.initialUrl;
 
   const res = await fetch(resolveApiUrl("/api/browser"), {

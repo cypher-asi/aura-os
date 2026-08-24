@@ -13,12 +13,13 @@ import styles from "./BrowserPanel.module.css";
 
 export interface BrowserPanelProps {
   projectId?: string;
+  remoteAgentId?: string;
 }
 
 const DEFAULT_WIDTH = 1280;
 const DEFAULT_HEIGHT = 800;
 
-export function BrowserPanel({ projectId }: BrowserPanelProps) {
+export function BrowserPanel({ projectId, remoteAgentId }: BrowserPanelProps) {
   const { instances, activeClientId, addInstance, removeInstance, setActive } =
     useBrowserPanelStore(
       useShallow((s) => ({
@@ -86,7 +87,7 @@ export function BrowserPanel({ projectId }: BrowserPanelProps) {
         ) : (
           instances.map((instance) => (
             <div
-              key={instance.clientId}
+              key={`${instance.clientId}:${remoteAgentId ?? "local"}`}
               className={styles.panel}
               style={{
                 visibility:
@@ -98,6 +99,7 @@ export function BrowserPanel({ projectId }: BrowserPanelProps) {
               <BrowserInstance
                 clientId={instance.clientId}
                 projectId={projectId}
+                remoteAgentId={remoteAgentId}
                 width={viewportWidth}
                 height={viewportHeight}
                 mode={mode}

@@ -30,6 +30,7 @@ struct RegistryEntry {
     owner_id: Option<String>,
     project_id: Option<ProjectId>,
     cancel: CancellationToken,
+    cleanup_token: Option<CancellationToken>,
     created_at: DateTime<Utc>,
     initial_url: Option<Url>,
     /// Event receiver owned by the manager until the WS handler takes it.
@@ -203,9 +204,16 @@ impl BrowserManager {
         let id = SessionId::new();
         let cancel = CancellationToken::new();
         let (tx, rx) = mpsc::channel(EVENT_CHANNEL_CAP);
-        self.backend
+        if let Err(error) = self
+            .backend
             .start_session(id, opts.clone(), resolved_url.clone(), tx, cancel.clone())
-            .await?;
+            .await
+        {
+            if let Some(cleanup) = opts.cleanup_token.as_ref() {
+                cleanup.cancel();
+            }
+            return Err(error);
+        }
 
         self.sessions.insert(
             id,
@@ -213,6 +221,7 @@ impl BrowserManager {
                 owner_id,
                 project_id: opts.project_id,
                 cancel,
+                cleanup_token: opts.cleanup_token,
                 created_at: Utc::now(),
                 initial_url: resolved_url.clone(),
                 events: std::sync::Mutex::new(Some(rx)),
@@ -287,6 +296,9 @@ impl BrowserManager {
             return Ok(());
         };
         entry.cancel.cancel();
+        if let Some(cleanup) = entry.cleanup_token {
+            cleanup.cancel();
+        }
         self.backend.stop_session(id).await?;
         info!(%id, "browser session killed");
         Ok(())
@@ -458,6 +470,20 @@ mod tests {
         assert_eq!(manager.list().len(), 1);
         manager.kill(id).await.unwrap();
         assert!(manager.list().is_empty());
+    }
+
+    #[tokio::test]
+    async fn kill_cancels_caller_owned_session_resources() {
+        let dir = tempdir().unwrap();
+        let manager = BrowserManager::new(test_config(&dir));
+        let cleanup = CancellationToken::new();
+        let mut options = SpawnOptions::new(1280, 800);
+        options.cleanup_token = Some(cleanup.clone());
+
+        let handle = manager.spawn(options).await.unwrap();
+        assert!(!cleanup.is_cancelled());
+        manager.kill(handle.id).await.unwrap();
+        assert!(cleanup.is_cancelled());
     }
 
     #[tokio::test]

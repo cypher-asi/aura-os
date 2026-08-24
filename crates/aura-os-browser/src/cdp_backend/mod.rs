@@ -51,6 +51,9 @@ pub use backend::{probe_browser_runtime, CdpBackend};
 pub use config::CdpBackendConfig;
 
 use async_trait::async_trait;
+use chromiumoxide::cdp::browser_protocol::target::{
+    CreateBrowserContextParams, CreateTargetParams,
+};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::debug;
@@ -95,6 +98,23 @@ impl BrowserBackend for CdpBackend {
     ) -> Result<(), Error> {
         let browser = self.browser().await?;
 
+        let browser_context_id = if let Some(proxy_server) = opts.proxy_server.as_ref() {
+            let mut context = CreateBrowserContextParams::builder()
+                .dispose_on_detach(true)
+                .proxy_server(proxy_server);
+            if let Some(bypass_list) = opts.proxy_bypass_list.as_ref() {
+                context = context.proxy_bypass_list(bypass_list);
+            }
+            Some(
+                browser
+                    .create_browser_context(context.build())
+                    .await
+                    .map_err(|e| Error::backend("create_browser_context", e.to_string()))?,
+            )
+        } else {
+            None
+        };
+
         // Always create the page on `about:blank` and defer the real
         // navigation into the session loop. `browser.new_page(url)`
         // kicks the initial navigation off synchronously, which races
@@ -106,27 +126,54 @@ impl BrowserBackend for CdpBackend {
         // ours"). `about:blank` is special-cased by Chromium and
         // produces no main-frame Network events, so missing those is
         // a no-op.
-        let page = browser
-            .new_page("about:blank")
-            .await
-            .map_err(|e| Error::backend("new_page", e.to_string()))?;
+        let target = match browser_context_id.as_ref() {
+            Some(context_id) => CreateTargetParams::builder()
+                .url("about:blank")
+                .browser_context_id(context_id.clone())
+                .build()
+                .map_err(|e| Error::backend("new_page", e))?,
+            None => CreateTargetParams::new("about:blank"),
+        };
+        let page = match browser.new_page(target).await {
+            Ok(page) => page,
+            Err(error) => {
+                if let Some(context_id) = browser_context_id {
+                    let _ = browser.dispose_browser_context(context_id).await;
+                }
+                return Err(Error::backend("new_page", error.to_string()));
+            }
+        };
 
-        set_viewport(&page, opts.width, opts.height).await?;
+        if let Err(error) = set_viewport(&page, opts.width, opts.height).await {
+            let _ = page.close().await;
+            if let Some(context_id) = browser_context_id {
+                let _ = browser.dispose_browser_context(context_id).await;
+            }
+            return Err(error);
+        }
 
         let (tx, rx) = mpsc::channel(DISPATCH_CHANNEL_CAP);
         let quality = opts.frame_quality.unwrap_or(75) as i64;
 
-        let task = tokio::spawn(run_session_loop(SessionLoopCtx {
-            id,
-            page,
-            events,
-            commands: rx,
-            cancel,
-            quality,
-            width: opts.width,
-            height: opts.height,
-            initial_url,
-        }));
+        let task = tokio::spawn(async move {
+            run_session_loop(SessionLoopCtx {
+                id,
+                page,
+                events,
+                commands: rx,
+                cancel,
+                quality,
+                width: opts.width,
+                height: opts.height,
+                initial_url,
+            })
+            .await;
+            if let Some(context_id) = browser_context_id {
+                if let Err(error) = browser.dispose_browser_context(context_id).await {
+                    debug!(%id, %error, "failed to dispose browser proxy context");
+                }
+            }
+        });
 
         self.inner.sessions.insert(id, SessionState { tx, task });
         Ok(())

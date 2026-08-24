@@ -54,12 +54,17 @@ export function SidekickContent() {
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const [searchQuery, setSearchQuery] = useState("");
-  const { features } = useAuraCapabilities();
+  const { features, remoteOnly } = useAuraCapabilities();
   const { projectId: routeProjectId, agentInstanceId } = useParams<{
     projectId: string;
     agentInstanceId: string;
   }>();
-  const { remoteAgentId, remoteWorkspacePath, workspacePath } =
+  const {
+    remoteAgentId,
+    remoteWorkspacePath,
+    workspacePath,
+    status: terminalTargetStatus,
+  } =
     useTerminalTarget({ projectId: routeProjectId, agentInstanceId });
   const navigate = useNavigate();
   const [fileRefreshKey, setFileRefreshKey] = useState(0);
@@ -146,9 +151,15 @@ export function SidekickContent() {
         <EmptyState>{terminalEmptyMessage}</EmptyState>
       )
     ) : activeTab === "browser" ? (
-      <Suspense fallback={sidekickPaneFallback}>
-        <BrowserPanel projectId={projectId} />
-      </Suspense>
+      terminalTargetStatus === "loading" ? (
+        sidekickPaneFallback
+      ) : terminalTargetStatus === "error" && remoteOnly ? (
+        <EmptyState>Could not resolve the Preview agent for this project.</EmptyState>
+      ) : (
+        <Suspense fallback={sidekickPaneFallback}>
+          <BrowserPanel projectId={projectId} remoteAgentId={remoteAgentId} />
+        </Suspense>
+      )
     ) : activeTab === "run" ? (
       <Suspense fallback={sidekickPaneFallback}>
         <RunSidekickPane searchQuery={searchQuery} />

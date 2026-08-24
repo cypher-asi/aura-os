@@ -17,6 +17,7 @@ export interface UseBrowserOptions {
   /** Whether to kick off the spawn automatically on mount. Defaults to true. */
   autoSpawn?: boolean;
   projectId?: string;
+  remoteAgentId?: string;
   initialUrl?: string;
   width: number;
   height: number;
@@ -109,6 +110,7 @@ export function useBrowser(opts: UseBrowserOptions): UseBrowserReturn {
           width: optsRef.current.width,
           height: optsRef.current.height,
           projectId: optsRef.current.projectId,
+          remoteAgentId: optsRef.current.remoteAgentId,
           initialUrl: optsRef.current.initialUrl,
         });
         sessionRef.current = result.id;
