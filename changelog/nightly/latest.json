@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-23T16:36:18.089Z",
+  "generatedAt": "2026-08-24T04:56:45.210Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.803.1",
+  "version": "0.1.0-nightly.804.1",
   "date": "2026-08-23",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.803.1",
-  "lastIncludedSha": "4c3113cf4758817e3bc722be44cfb2210bcac221",
-  "previousProcessedSha": "e142ab80afd65ad2618b1c7077d2a1beb80b6a23",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.804.1",
+  "lastIncludedSha": "6e63ec176ed4e150a950934b1cc303114c299dc7",
+  "previousProcessedSha": "4c3113cf4758817e3bc722be44cfb2210bcac221",
   "commitShas": [
     "da686ae7f755c5815f7af3ac9ae26a1dd4b74776",
     "914e2478d69e8ed508260d94fd8cf2cfa79140a5",
@@ -18,10 +18,11 @@
     "4697c95bc3d1d7355f24b407eec4038be746f88e",
     "d73f75c0cb635b2c55bddeb29893787491dcbcfc",
     "e142ab80afd65ad2618b1c7077d2a1beb80b6a23",
-    "4c3113cf4758817e3bc722be44cfb2210bcac221"
+    "4c3113cf4758817e3bc722be44cfb2210bcac221",
+    "6e63ec176ed4e150a950934b1cc303114c299dc7"
   ],
-  "rawCommitCount": 7,
-  "filteredCommitCount": 7,
+  "rawCommitCount": 8,
+  "filteredCommitCount": 8,
   "rawCommits": [
     {
       "sha": "da686ae7f755c5815f7af3ac9ae26a1dd4b74776",
@@ -350,36 +351,96 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "6e63ec176ed4e150a950934b1cc303114c299dc7",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-24T09:37:16+05:00",
+      "subject": "fix(preview): route remote localhost through agent tunnel (#149)",
+      "body": "",
+      "parents": [
+        "4c3113cf4758817e3bc722be44cfb2210bcac221"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/browser/rest.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/remote_preview.rs",
+        "crates/aura-os-browser/src/cdp_backend/mod.rs",
+        "crates/aura-os-browser/src/config.rs",
+        "crates/aura-os-browser/src/manager.rs",
+        "crates/aura-os-browser/tests/cdp_smoke.rs",
+        "interface/src/apps/browser/components/BrowserInstance/BrowserInstance.test.tsx",
+        "interface/src/apps/browser/components/BrowserInstance/BrowserInstance.tsx",
+        "interface/src/apps/browser/components/BrowserPanel/BrowserPanel.tsx",
+        "interface/src/components/SidekickContent/SidekickContent.tsx",
+        "interface/src/hooks/use-browser.ts",
+        "interface/src/shared/api/browser.test.ts",
+        "interface/src/shared/api/browser.ts",
+        "interface/src/shared/lib/design-context.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 1041,
+        "deletions": 34
+      },
+      "committedAtMs": 1787546236000,
+      "cleanSubject": "route remote localhost through agent tunnel (#149)",
+      "keywords": [
+        "route",
+        "remote",
+        "localhost",
+        "through",
+        "agent",
+        "tunnel"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-browser/src",
+        "crates/aura-os-browser/tests",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.803.1",
+      "version": "0.1.0-nightly.804.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66450062
+          "sizeBytes": 66638108
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 132938232
+          "sizeBytes": 133085688
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -389,29 +450,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.803.1",
+      "version": "0.1.0-nightly.804.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.803.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.804.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62181217
+          "sizeBytes": 62309649
         },
         {
-          "name": "AURA_0.1.0-nightly.803.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.804.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61120708
+          "sizeBytes": 61278009
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -421,29 +482,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.803.1",
+      "version": "0.1.0-nightly.804.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.803.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.804.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64270302
+          "sizeBytes": 64506095
         },
         {
-          "name": "AURA_0.1.0-nightly.803.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.804.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63322971
+          "sizeBytes": 63541825
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -453,17 +514,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.803.1",
+      "version": "0.1.0-nightly.804.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 48950309
+          "sizeBytes": 49024310
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.803.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.804.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -472,33 +533,33 @@
     }
   ],
   "rendered": {
-    "title": "Quick Prompt palette, voice dictation, and conversation branching",
-    "intro": "A feature-heavy nightly for the chat surface: a new global Quick Prompt palette, voice dictation in the composer, and the ability to fork any assistant reply into an independent conversation. A late-day round of fixes then hardened the branch flow and the Quick Prompt handoff, alongside a new containerized preview runtime for the hosted Chromium browser.",
+    "title": "Quick Prompts, conversation branching, and hosted Preview land together",
+    "intro": "A feature-heavy nightly: a new Quick Prompt palette and voice dictation reshape the chat composer, conversations can now branch from any assistant reply, and Preview gains a production-grade hosted Chromium runtime with a remote-localhost tunnel for agent dev servers.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "4:00 AM",
         "started_at": "2026-08-23T11:00:35.000Z",
         "ended_at": "2026-08-23T11:17:21.000Z",
-        "title": "Quick Prompt palette, voice dictation, and reply branching",
-        "summary": "Three sizeable chat features landed back-to-back in the morning, adding a global prompt launcher, in-composer dictation, and server-backed conversation forks.",
+        "title": "Quick Prompts, voice dictation, and conversation branching debut",
+        "summary": "Three sizable chat features shipped back-to-back: a global Quick Prompt palette, in-composer voice dictation, and the ability to fork a conversation from any assistant reply.",
         "items": [
           {
-            "text": "Introduced a Quick Prompt palette wired into the Aura shell and menu bar: users can pop open a modal from anywhere, pick an agent, and hand a drafted prompt off to the Agent or Standalone Agent chat panel, which merges it into the active draft on mount.",
+            "text": "Introduced a Quick Prompt palette wired into the Aura shell and menu bar, letting users draft a prompt in a modal and hand it off to a chosen agent's chat composer via a new quick-prompt store.",
             "commit_shas": [
               "da686ae7f755c5815f7af3ac9ae26a1dd4b74776"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added voice dictation to the chat composer on both desktop and mobile, including a dedicated VoiceDictationControl slot in the input bar shell with layout reservations so send/stop and dictation controls no longer collide.",
+            "text": "Added voice dictation to the chat composer with a dedicated control, a reusable useVoiceDictation hook, and layout support in both desktop and mobile input bars.",
             "commit_shas": [
               "914e2478d69e8ed508260d94fd8cf2cfa79140a5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Shipped conversation branching from any assistant reply: a new server endpoint copies session events through a chosen assistant_message_end into a fresh active session, and the message action row exposes a Branch conversation here control that jumps to the new session.",
+            "text": "Enabled branching a conversation from any assistant reply: a new server-side branch_session endpoint copies events through the selected turn into a fresh active session, exposed via a Branch action in the message row.",
             "commit_shas": [
               "e01a708903ea0e506feb429aa71ffa8ea38c1d03"
             ],
@@ -511,46 +572,72 @@
         "time_label": "8:03 AM",
         "started_at": "2026-08-23T15:03:59.000Z",
         "ended_at": "2026-08-23T16:21:05.000Z",
-        "title": "Hosted Chromium container and follow-up fixes for branching and Quick Prompt",
-        "summary": "The afternoon focused on making the new features production-ready: a containerized Chromium runtime for the hosted preview, a more forgiving branch navigation flow, and two Quick Prompt fixes covering active-lane handoff and cold-start hydration.",
+        "title": "Hosted Chromium runtime and Quick Prompt / branching follow-ups",
+        "summary": "Preview gained a reproducible hosted Chromium runtime with a CI-verified container, while same-day fixes stabilized the freshly shipped Quick Prompt and branching flows.",
         "items": [
           {
-            "text": "Shipped a reliable hosted Chromium runtime for the browser preview via a new Dockerfile, .dockerignore, and an aura-api-container GitHub Actions workflow that builds the image, boots it as an unprivileged aura user, and smoke-tests /api/auth/session before publishing.",
+            "text": "Shipped a production Dockerfile, .dockerignore, and an AURA API container workflow that builds the image, boots Chromium via CDP, and verifies the API becomes healthy as an unprivileged user — making hosted Preview deployable on Render and similar targets.",
             "commit_shas": [
               "4697c95bc3d1d7355f24b407eec4038be746f88e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened conversation branch navigation by routing through React Router's useNavigate instead of manual history/popstate, keeping the Branch button enabled after completion and surfacing an inline \"Couldn't branch this conversation\" error when the request fails.",
+            "text": "Completed conversation branch navigation by routing through React Router instead of manual history events, re-enabling the branch action after completion, and surfacing an inline error when the branch request fails.",
             "commit_shas": [
               "d73f75c0cb635b2c55bddeb29893787491dcbcfc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed the Quick Prompt handoff so it now merges into the Chat app's own stream on the active project/instance/session lane, instead of navigating away to the Agents app and stranding remote agents on an unavailable standalone surface.",
+            "text": "Fixed Quick Prompt handoffs so they stay in the active Chat app lane (preserving project/instance/session) instead of stranding users on the standalone Agents surface, and preserved the route's agent selection during cold start while the agent roster is still hydrating.",
             "commit_shas": [
-              "e142ab80afd65ad2618b1c7077d2a1beb80b6a23"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Preserved the route's agent selection in the Quick Prompt modal during desktop cold start: the current chat agent stays selected (shown as \"Current chat agent\") and the draft is retained while the agent roster is still hydrating.",
-            "commit_shas": [
+              "e142ab80afd65ad2618b1c7077d2a1beb80b6a23",
               "4c3113cf4758817e3bc722be44cfb2210bcac221"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "9:37 PM",
+        "started_at": "2026-08-24T04:37:16.000Z",
+        "ended_at": "2026-08-24T04:37:16.000Z",
+        "title": "Remote agent localhost tunneled into hosted Preview",
+        "summary": "Preview can now reach a dev server running inside a selected remote agent by routing Chromium's loopback traffic through an authenticated per-browser SOCKS5 proxy to the swarm gateway.",
+        "items": [
+          {
+            "text": "Added a remote_agent_id option on browser spawn that starts a per-session SOCKS5 proxy (remote_preview.rs) bridging Chromium to the agent's harness over the swarm's WebSocket gateway, while public destinations continue to connect directly from AURA OS.",
+            "commit_shas": [
+              "6e63ec176ed4e150a950934b1cc303114c299dc7"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Disabled Chromium's implicit localhost proxy bypass for these sessions so loopback URLs are carried through the authenticated tunnel to the selected agent, with cleanup tokens tying proxy lifetime to the browser instance.",
+            "commit_shas": [
+              "6e63ec176ed4e150a950934b1cc303114c299dc7"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Threaded the remote-agent selection through the BrowserPanel, BrowserInstance, Sidekick content, and the browser API/hook layer so the UI can target a specific agent's Preview from the client.",
+            "commit_shas": [
+              "6e63ec176ed4e150a950934b1cc303114c299dc7"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Quick Prompt palette lands in the shell",
+      "Quick Prompt palette across the shell",
       "Voice dictation in the chat composer",
-      "Branch any reply into a new conversation",
-      "Hosted Chromium now ships as a verified container image"
+      "Branch conversations from any reply",
+      "Hosted Chromium runtime for Preview",
+      "Remote agent localhost tunneled into Preview"
     ],
-    "raw_commit_count": 7
+    "raw_commit_count": 8
   }
 }
