@@ -327,6 +327,7 @@ pub(crate) async fn send_event_stream(
     let normalized_instance_perms = normalize_instance_perms(&state, &instance, &pid_str).await;
     let agent_instance_id_string = agent_instance_id.to_string();
     let template_agent_id_string = instance.agent_id.to_string();
+    let source_session_id = persist_ctx.as_ref().map(|ctx| ctx.session_id.to_string());
 
     let installed_tools = build_session_installed_tools(
         &InstalledToolsCtx {
@@ -337,6 +338,7 @@ pub(crate) async fn send_event_stream(
             agent_id: &agent_instance_id_string,
             template_agent_id: &template_agent_id_string,
             project_id: Some(&pid_str),
+            source_session_id: source_session_id.as_deref(),
             integrations: org_integrations.as_deref(),
         },
         &normalized_instance_perms,

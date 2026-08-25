@@ -24,7 +24,11 @@ pub(super) fn agent_routes() -> Router<AppState> {
         )
         .route(
             "/api/agents/:agent_id/projects",
-            get(agents::list_agent_project_bindings),
+            get(agents::list_agent_project_bindings).post(agents::create_project_for_agent),
+        )
+        .route(
+            "/api/agents/:agent_id/projects/access",
+            post(agents::access_project_for_agent),
         )
         .route(
             "/api/agents/:agent_id/projects/:project_agent_id",

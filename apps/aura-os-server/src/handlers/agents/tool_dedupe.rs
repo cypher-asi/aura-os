@@ -282,6 +282,7 @@ mod tests {
             tool_named("spawn_agent"),   // harness cross-agent, KEEP (capability-gated)
             tool_named("list_agents"),   // harness cross-agent, KEEP (capability-gated)
             tool_named("create_project"), // server-only, keep
+            tool_named("access_project"), // server-only, keep
             tool_named("list_projects"), // harness network, drop
         ];
 
@@ -312,6 +313,7 @@ mod tests {
                 "spawn_agent",
                 "list_agents",
                 "create_project",
+                "access_project",
             ],
             "server-only + capability-gated cross-agent names must survive the strip"
         );

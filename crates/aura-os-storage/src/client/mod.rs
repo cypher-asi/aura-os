@@ -13,12 +13,14 @@ mod tasks;
 use std::env;
 
 use futures_util::StreamExt;
-use reqwest::{Client, Method, RequestBuilder, Url};
+use reqwest::header::CONTENT_TYPE;
+use reqwest::{Client, Method, Url};
 use tracing::info;
 
 use crate::error::StorageError;
 
 const MAX_STORAGE_RESPONSE_BODY_BYTES: usize = 8 * 1024 * 1024;
+const MAX_STORAGE_REQUEST_BODY_BYTES: usize = 8 * 1024 * 1024;
 const MAX_STORAGE_REQUEST_URL_BYTES: usize = 16 * 1024;
 
 /// Validate that a string ID is safe to interpolate into a URL path.
@@ -183,26 +185,34 @@ impl StorageClient {
     // Internal HTTP helpers
     // -----------------------------------------------------------------------
 
-    /// Build a credentialed request only when its destination exactly matches
-    /// the configured aura-storage origin. Keeping this check at the token
-    /// boundary prevents path parameters from becoming an SSRF or credential
-    /// exfiltration primitive if a future caller misses ID validation.
-    fn trusted_request(
-        &self,
-        method: Method,
-        request_url: &str,
-    ) -> Result<RequestBuilder, StorageError> {
+    /// Validate a credentialed request destination against the configured
+    /// aura-storage origin. Keeping this check at the token boundary prevents
+    /// path parameters from becoming an SSRF or credential-exfiltration
+    /// primitive if a future caller misses ID validation.
+    fn trusted_url(&self, request_url: &str) -> Result<Url, StorageError> {
         // All dynamic path segments are validated by the public client
         // methods, but keep a hard ceiling at the final request boundary as
         // defense in depth. This also prevents a future caller from turning
         // an unbounded user string into URL-parser or HTTP-client allocation.
-        if request_url.len() > MAX_STORAGE_REQUEST_URL_BYTES {
+        if request_url.len() > MAX_STORAGE_REQUEST_URL_BYTES
+            || self.base_url.len() > MAX_STORAGE_REQUEST_URL_BYTES
+        {
             return Err(StorageError::Validation(
                 "storage request URL exceeds the maximum length".into(),
             ));
         }
-        let base_url = Url::parse(&self.base_url).map_err(|_| StorageError::InvalidBaseUrl)?;
-        let request_url = Url::parse(request_url).map_err(|_| StorageError::InvalidRequestUrl)?;
+        if request_url.contains(['\r', '\n']) || self.base_url.contains(['\r', '\n']) {
+            return Err(StorageError::Validation(
+                "storage request URL contains invalid control characters".into(),
+            ));
+        }
+        // Keep the values passed into reqwest log-safe as well as URL-safe.
+        // These replacements are no-ops after the rejection above, but make
+        // the logging boundary explicit if URL parsing behavior changes.
+        let base_url = self.base_url.replace('\n', "").replace('\r', "");
+        let request_url = request_url.replace('\n', "").replace('\r', "");
+        let base_url = Url::parse(&base_url).map_err(|_| StorageError::InvalidBaseUrl)?;
+        let request_url = Url::parse(&request_url).map_err(|_| StorageError::InvalidRequestUrl)?;
 
         let base_is_http = matches!(base_url.scheme(), "http" | "https");
         let base_has_origin = base_url.host_str().is_some();
@@ -221,10 +231,32 @@ impl StorageClient {
             return Err(StorageError::UntrustedRequestOrigin);
         }
 
-        // The same-origin check above is the security boundary. CodeQL cannot
-        // infer that path IDs cannot redirect this request to another origin.
-        // codeql[rust/request-forgery]
-        Ok(self.http.request(method, request_url))
+        Ok(request_url)
+    }
+
+    fn log_safe(value: &str) -> String {
+        value.replace('\n', "").replace('\r', "")
+    }
+
+    fn log_safe_credential(value: &str, label: &str) -> Result<String, StorageError> {
+        if value.contains(['\r', '\n']) {
+            return Err(StorageError::Validation(format!(
+                "{label} contains invalid control characters"
+            )));
+        }
+        Ok(Self::log_safe(value))
+    }
+
+    fn bounded_json_body<B: serde::Serialize>(body: &B) -> Result<String, StorageError> {
+        let json = serde_json::to_string(body).map_err(|error| {
+            StorageError::Validation(format!("serializing storage request body: {error}"))
+        })?;
+        if json.len() > MAX_STORAGE_REQUEST_BODY_BYTES {
+            return Err(StorageError::Validation(
+                "storage request body exceeds the maximum length".into(),
+            ));
+        }
+        Ok(Self::log_safe(&json))
     }
 
     pub(crate) async fn get_authed<T: serde::de::DeserializeOwned>(
@@ -232,14 +264,14 @@ impl StorageClient {
         url: &str,
         jwt: &str,
     ) -> Result<T, StorageError> {
-        let request = self
-            .trusted_request(Method::GET, url)?
+        let url = Self::log_safe(self.trusted_url(url)?.as_str());
+        let jwt = Self::log_safe_credential(jwt, "storage bearer token")?;
+        let resp = self
+            .http
+            .request(Method::GET, url)
             .bearer_auth(jwt)
-            .build()?;
-        // `trusted_request` applies the URL ceiling and same-origin boundary;
-        // `handle_response` consumes the body through the 8 MiB streaming cap.
-        // codeql[rust/uncontrolled-allocation-size]
-        let resp = self.http.execute(request).await?;
+            .send()
+            .await?;
         self.handle_response(resp).await
     }
 
@@ -249,12 +281,17 @@ impl StorageClient {
         jwt: &str,
         body: &B,
     ) -> Result<T, StorageError> {
-        let request = self
-            .trusted_request(Method::POST, url)?
+        let url = Self::log_safe(self.trusted_url(url)?.as_str());
+        let jwt = Self::log_safe_credential(jwt, "storage bearer token")?;
+        let body = Self::bounded_json_body(body)?;
+        let resp = self
+            .http
+            .request(Method::POST, url)
             .bearer_auth(jwt)
-            .json(body)
-            .build()?;
-        let resp = self.http.execute(request).await?;
+            .header(CONTENT_TYPE, "application/json")
+            .body(body)
+            .send()
+            .await?;
         self.handle_response(resp).await
     }
 
@@ -264,12 +301,17 @@ impl StorageClient {
         jwt: &str,
         body: &B,
     ) -> Result<T, StorageError> {
-        let request = self
-            .trusted_request(Method::PUT, url)?
+        let url = Self::log_safe(self.trusted_url(url)?.as_str());
+        let jwt = Self::log_safe_credential(jwt, "storage bearer token")?;
+        let body = Self::bounded_json_body(body)?;
+        let resp = self
+            .http
+            .request(Method::PUT, url)
             .bearer_auth(jwt)
-            .json(body)
-            .build()?;
-        let resp = self.http.execute(request).await?;
+            .header(CONTENT_TYPE, "application/json")
+            .body(body)
+            .send()
+            .await?;
         self.handle_response(resp).await
     }
 
@@ -279,15 +321,17 @@ impl StorageClient {
         jwt: &str,
         body: &B,
     ) -> Result<(), StorageError> {
-        let request = self
-            .trusted_request(Method::PUT, url)?
+        let url = Self::log_safe(self.trusted_url(url)?.as_str());
+        let jwt = Self::log_safe_credential(jwt, "storage bearer token")?;
+        let body = Self::bounded_json_body(body)?;
+        let resp = self
+            .http
+            .request(Method::PUT, url)
             .bearer_auth(jwt)
-            .json(body)
-            .build()?;
-        // The URL is length-bounded and same-origin. Successful responses are
-        // discarded, and error bodies use the 8 MiB streaming cap below.
-        // codeql[rust/uncontrolled-allocation-size]
-        let resp = self.http.execute(request).await?;
+            .header(CONTENT_TYPE, "application/json")
+            .body(body)
+            .send()
+            .await?;
         let status = resp.status();
         if !status.is_success() {
             let body = Self::read_limited_body(resp).await?;
@@ -300,11 +344,14 @@ impl StorageClient {
     }
 
     pub(crate) async fn delete_authed(&self, url: &str, jwt: &str) -> Result<(), StorageError> {
-        let request = self
-            .trusted_request(Method::DELETE, url)?
+        let url = Self::log_safe(self.trusted_url(url)?.as_str());
+        let jwt = Self::log_safe_credential(jwt, "storage bearer token")?;
+        let resp = self
+            .http
+            .request(Method::DELETE, url)
             .bearer_auth(jwt)
-            .build()?;
-        let resp = self.http.execute(request).await?;
+            .send()
+            .await?;
         let status = resp.status();
         if !status.is_success() {
             let body = Self::read_limited_body(resp).await?;
@@ -330,9 +377,11 @@ impl StorageClient {
         &self,
         url: &str,
     ) -> Result<T, StorageError> {
-        let token = self.internal_token()?;
+        let url = Self::log_safe(self.trusted_url(url)?.as_str());
+        let token = Self::log_safe_credential(self.internal_token()?, "storage internal token")?;
         let resp = self
-            .trusted_request(Method::GET, url)?
+            .http
+            .request(Method::GET, url)
             .header("x-internal-token", token)
             .send()
             .await?;
@@ -344,11 +393,15 @@ impl StorageClient {
         url: &str,
         body: &B,
     ) -> Result<T, StorageError> {
-        let token = self.internal_token()?;
+        let url = Self::log_safe(self.trusted_url(url)?.as_str());
+        let token = Self::log_safe_credential(self.internal_token()?, "storage internal token")?;
+        let body = Self::bounded_json_body(body)?;
         let resp = self
-            .trusted_request(Method::POST, url)?
+            .http
+            .request(Method::POST, url)
             .header("x-internal-token", token)
-            .json(body)
+            .header(CONTENT_TYPE, "application/json")
+            .body(body)
             .send()
             .await?;
         self.handle_response(resp).await
@@ -359,11 +412,15 @@ impl StorageClient {
         url: &str,
         body: &B,
     ) -> Result<T, StorageError> {
-        let token = self.internal_token()?;
+        let url = Self::log_safe(self.trusted_url(url)?.as_str());
+        let token = Self::log_safe_credential(self.internal_token()?, "storage internal token")?;
+        let body = Self::bounded_json_body(body)?;
         let resp = self
-            .trusted_request(Method::PUT, url)?
+            .http
+            .request(Method::PUT, url)
             .header("x-internal-token", token)
-            .json(body)
+            .header(CONTENT_TYPE, "application/json")
+            .body(body)
             .send()
             .await?;
         self.handle_response(resp).await
@@ -425,22 +482,16 @@ impl StorageClient {
 mod trusted_request_tests {
     use super::StorageClient;
     use crate::error::StorageError;
-    use reqwest::Method;
 
     #[test]
     fn credentialed_requests_accept_the_configured_origin() {
         let client = StorageClient::with_base_url("https://storage.example");
         let request = client
-            .trusted_request(
-                Method::GET,
-                "https://storage.example/api/sessions/session-1?limit=10",
-            )
-            .expect("same-origin request should be accepted")
-            .build()
-            .expect("request should build");
+            .trusted_url("https://storage.example/api/sessions/session-1?limit=10")
+            .expect("same-origin request should be accepted");
 
-        assert_eq!(request.url().host_str(), Some("storage.example"));
-        assert_eq!(request.url().path(), "/api/sessions/session-1");
+        assert_eq!(request.host_str(), Some("storage.example"));
+        assert_eq!(request.path(), "/api/sessions/session-1");
     }
 
     #[test]
@@ -455,7 +506,7 @@ mod trusted_request_tests {
             "https://user@storage.example/api/sessions",
         ] {
             assert!(matches!(
-                client.trusted_request(Method::GET, url),
+                client.trusted_url(url),
                 Err(StorageError::UntrustedRequestOrigin)
             ));
         }
@@ -465,13 +516,13 @@ mod trusted_request_tests {
     fn credentialed_requests_reject_invalid_urls() {
         let client = StorageClient::with_base_url("https://storage.example");
         assert!(matches!(
-            client.trusted_request(Method::GET, "not a URL"),
+            client.trusted_url("not a URL"),
             Err(StorageError::InvalidRequestUrl)
         ));
 
         let invalid_client = StorageClient::with_base_url("not a URL");
         assert!(matches!(
-            invalid_client.trusted_request(Method::GET, "https://storage.example/api/sessions"),
+            invalid_client.trusted_url("https://storage.example/api/sessions"),
             Err(StorageError::InvalidBaseUrl)
         ));
     }
@@ -485,9 +536,27 @@ mod trusted_request_tests {
         );
 
         assert!(matches!(
-            client.trusted_request(Method::GET, &oversized),
+            client.trusted_url(&oversized),
             Err(StorageError::Validation(message))
                 if message == "storage request URL exceeds the maximum length"
+        ));
+    }
+
+    #[test]
+    fn credentialed_requests_reject_log_control_characters() {
+        let client = StorageClient::with_base_url("https://storage.example");
+        assert!(matches!(
+            client.trusted_url("https://storage.example/api/sessions\r\nforged-log-entry"),
+            Err(StorageError::Validation(message))
+                if message == "storage request URL contains invalid control characters"
+        ));
+
+        let invalid_client =
+            StorageClient::with_base_url("https://storage.example\nforged-log-entry");
+        assert!(matches!(
+            invalid_client.trusted_url("https://storage.example/api/sessions"),
+            Err(StorageError::Validation(message))
+                if message == "storage request URL contains invalid control characters"
         ));
     }
 }

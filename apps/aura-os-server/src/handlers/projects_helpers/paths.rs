@@ -16,14 +16,50 @@ pub(crate) fn canonical_workspace_path(
     data_dir: &std::path::Path,
     project_id: &ProjectId,
 ) -> PathBuf {
-    data_dir.join("workspaces").join(project_id.to_string())
+    let component = project_id.to_string();
+    // ProjectId is backed by `uuid::Uuid`, but keep the filesystem boundary
+    // self-contained and statically auditable. A managed workspace identifier
+    // must be one relative path component and can never contain traversal or
+    // separator syntax, even if the ID representation changes later.
+    assert!(
+        !component.contains("..")
+            && !component.contains('/')
+            && !component.contains('\\')
+            && component.len() == 36
+            && component
+                .bytes()
+                .enumerate()
+                .all(|(index, byte)| match index {
+                    8 | 13 | 18 | 23 => byte == b'-',
+                    _ => byte.is_ascii_hexdigit(),
+                }),
+        "ProjectId must serialize as a canonical UUID path component"
+    );
+    data_dir.join("workspaces").join(component)
 }
 
 pub(crate) fn ensure_canonical_workspace_dir(
     data_dir: &std::path::Path,
     project_id: &ProjectId,
 ) -> ApiResult<PathBuf> {
-    let workspace_root = canonical_workspace_path(data_dir, project_id);
+    let data_dir = data_dir.to_str().ok_or_else(|| {
+        ApiError::internal("managed workspace directory must be valid UTF-8".to_string())
+    })?;
+    if data_dir.contains("..") {
+        return Err(ApiError::internal(
+            "managed workspace directory must not contain parent-directory syntax".to_string(),
+        ));
+    }
+    let component = project_id.to_string();
+    // Keep this check at the filesystem boundary. Besides defending against a
+    // future change to ProjectId's representation, the explicit guard makes
+    // it impossible for the dynamic component to escape `workspaces`.
+    if component.contains("..") || component.contains('/') || component.contains('\\') {
+        return Err(ApiError::bad_request(
+            "invalid project workspace identifier",
+        ));
+    }
+    let workspace_root = PathBuf::from(data_dir).join("workspaces").join(component);
     std::fs::create_dir_all(&workspace_root).map_err(|e| {
         ApiError::internal(format!(
             "failed to create workspace directory {}: {e}",

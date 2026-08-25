@@ -270,6 +270,7 @@ pub(crate) async fn send_agent_event_stream(
         integrations_for_optional_org_with_token(&state, effective_org_id.as_ref(), &jwt).await;
     let normalized_perms = normalize_agent_perms(&agent, effective_project_id.as_deref());
     let agent_id_string = agent_id.to_string();
+    let source_session_id = persist_ctx.as_ref().map(|ctx| ctx.session_id.to_string());
 
     let installed_tools = build_session_installed_tools(
         &InstalledToolsCtx {
@@ -280,6 +281,7 @@ pub(crate) async fn send_agent_event_stream(
             agent_id: &agent_id_string,
             template_agent_id: &agent_id_string,
             project_id: effective_project_id.as_deref(),
+            source_session_id: source_session_id.as_deref(),
             integrations: org_integrations.as_deref(),
         },
         &normalized_perms,

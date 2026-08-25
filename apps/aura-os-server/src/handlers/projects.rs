@@ -59,7 +59,7 @@ pub(crate) async fn list_all_projects_from_network(
 /// Handles the network -> local-shadow flow that both endpoints share.
 /// `network_folder` controls what goes into the network request's `folder` field
 /// (directory basename for regular projects, `None` for imported).
-async fn create_project_impl(
+pub(crate) async fn create_project_impl(
     state: &AppState,
     req: &CreateProjectRequest,
     network_folder: Option<String>,
@@ -347,22 +347,30 @@ pub(crate) async fn get_project(
     AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Project>> {
-    if is_capture_access_token(&jwt) && project_id == demo_project_id() {
-        return Ok(Json(demo_project()));
+    get_project_impl(&state, &jwt, project_id).await.map(Json)
+}
+
+pub(crate) async fn get_project_impl(
+    state: &AppState,
+    jwt: &str,
+    project_id: ProjectId,
+) -> ApiResult<Project> {
+    if is_capture_access_token(jwt) && project_id == demo_project_id() {
+        return Ok(demo_project());
     }
 
     if let Some(client) = &state.network_client {
         let net_project = client
-            .get_project(&project_id.to_string(), &jwt)
+            .get_project(&project_id.to_string(), jwt)
             .await
             .map_err(map_network_error)?;
         let local = state.project_service.get_project(&project_id).ok();
         let project = normalize_project_workspace(
-            &state,
+            state,
             &project_from_network(&net_project, local.as_ref())?,
         );
-        ensure_local_shadow(&state, &project);
-        return Ok(Json(project));
+        ensure_local_shadow(state, &project);
+        return Ok(project);
     }
 
     let project = state
@@ -372,9 +380,9 @@ pub(crate) async fn get_project(
             aura_os_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
             _ => ApiError::internal(format!("fetching project: {e}")),
         })?;
-    let project = normalize_project_workspace(&state, &project);
-    ensure_local_shadow(&state, &project);
-    Ok(Json(project))
+    let project = normalize_project_workspace(state, &project);
+    ensure_local_shadow(state, &project);
+    Ok(project)
 }
 
 pub(crate) async fn update_project(

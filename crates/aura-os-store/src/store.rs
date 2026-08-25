@@ -108,9 +108,18 @@ impl SettingsStore {
     }
 
     fn normalize_store_dir(path: &Path) -> StoreResult<PathBuf> {
-        if path.as_os_str().is_empty() {
+        let checked_path = path
+            .to_str()
+            .ok_or_else(|| Self::invalid_path("store path must be valid UTF-8"))?;
+        if checked_path.is_empty() {
             return Err(Self::invalid_path("store path must not be empty"));
         }
+        if checked_path.contains("..") {
+            return Err(Self::invalid_path(
+                "store path must not contain parent-directory syntax",
+            ));
+        }
+        let path = Path::new(checked_path);
 
         let absolute = if path.is_absolute() {
             path.to_path_buf()
@@ -209,10 +218,8 @@ impl SettingsStore {
     }
 
     fn persist_cf(dir: &Path, cf: KnownCf, map: &CfMap) -> StoreResult<()> {
-        let path = Self::cf_path(dir, cf);
-        let tmp = Self::cf_tmp_path(dir, cf);
         let json = Self::encode_cf(map)?;
-        Self::write_atomic_json(&tmp, &path, json.as_bytes())
+        Self::write_atomic_json(dir, cf, json.as_bytes())
     }
 
     fn encode_cf(map: &CfMap) -> StoreResult<String> {
@@ -229,8 +236,27 @@ impl SettingsStore {
         Ok(serde_json::to_string_pretty(&encoded)?)
     }
 
-    fn write_atomic_json(tmp: &Path, path: &Path, bytes: &[u8]) -> StoreResult<()> {
+    fn write_atomic_json(dir: &Path, cf: KnownCf, bytes: &[u8]) -> StoreResult<()> {
         use std::io::Write;
+        let checked_dir = dir
+            .to_str()
+            .ok_or_else(|| Self::invalid_path("store path must be valid UTF-8"))?;
+        if checked_dir.contains("..") {
+            return Err(Self::invalid_path(
+                "store path must not contain parent-directory syntax",
+            ));
+        }
+        let dir = PathBuf::from(checked_dir);
+        // Both leaf names come from the closed KnownCf enum. Construct them at
+        // the sink so persisted data can never influence either filesystem
+        // path, and retain the canonical store directory as their parent.
+        let tmp = Self::cf_tmp_path(&dir, cf);
+        let path = Self::cf_path(&dir, cf);
+        if tmp.parent() != Some(dir.as_path()) || path.parent() != Some(dir.as_path()) {
+            return Err(Self::invalid_path(
+                "column-family files must remain inside the store directory",
+            ));
+        }
         // Write + flush + fsync the tmp file BEFORE rename so the
         // atomic-rename promise actually holds across crashes. NTFS
         // happily renames a file whose contents the OS hasn't yet
