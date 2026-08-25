@@ -416,7 +416,6 @@ export function useChatPanelState({
           sourceImageUrl: record.sourceImageUrl,
           agentMentions,
         });
-        scrollToBottomRef.current();
       } else {
         scrollToBottomRef.current();
         if (overrideAction !== null) {

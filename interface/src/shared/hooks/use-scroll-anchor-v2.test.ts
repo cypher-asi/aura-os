@@ -269,7 +269,7 @@ describe("useScrollAnchorV2", () => {
     expect(result.current.isAutoFollowing).toBe(true);
   });
 
-  it("clears userUnpinnedAt only when the user scrolls back to the very bottom", () => {
+  it("keeps the posting session unpinned even if the user reaches the bottom", () => {
     const container = makeContainer({ scrollTop: 1000, scrollHeight: 1000, clientHeight: 400 });
     const ref = { current: container };
 
@@ -286,6 +286,13 @@ describe("useScrollAnchorV2", () => {
     act(() => {
       (container as unknown as { scrollTop: number }).scrollTop = 1000;
       result.current.handleScroll();
+    });
+
+    expect(result.current.isAutoFollowing).toBe(false);
+    expect(result.current.getUserUnpinnedAt()).toBeGreaterThan(0);
+
+    act(() => {
+      result.current.scrollToBottom();
     });
 
     expect(result.current.isAutoFollowing).toBe(true);
@@ -342,10 +349,19 @@ describe("useScrollAnchorV2", () => {
       expect(result.current.getUserUnpinnedAt()).toBeGreaterThan(0);
     }
 
-    // Finally land at the true bottom — follow re-engages.
+    // Landing at the true bottom does not re-arm follow during the same
+    // posting session.
     act(() => {
       (container as unknown as { scrollTop: number }).scrollTop = 1600;
       result.current.handleScroll();
+    });
+    expect(result.current.isAutoFollowing).toBe(false);
+    expect(result.current.getUserUnpinnedAt()).toBeGreaterThan(0);
+
+    // The next send uses this imperative path to begin a fresh posting
+    // session with auto-follow enabled again.
+    act(() => {
+      result.current.scrollToBottom();
     });
     expect(result.current.isAutoFollowing).toBe(true);
     expect(result.current.getUserUnpinnedAt()).toBe(0);

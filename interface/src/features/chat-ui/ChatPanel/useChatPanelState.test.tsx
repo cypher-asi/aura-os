@@ -206,7 +206,7 @@ describe("useChatPanelState", () => {
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps queued sends bottom-anchored while a response is already streaming", () => {
+  it("does not re-arm auto-follow when a follow-up queues during the active response", () => {
     mockIsStreaming = true;
     const onSend = vi.fn();
     const { result } = renderHook(() =>
@@ -228,7 +228,7 @@ describe("useChatPanelState", () => {
         commands: undefined,
       }),
     );
-    expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
+    expect(mockScrollToBottom).not.toHaveBeenCalled();
   });
 
   it("blocks direct, queued, and send-now paths when sending is disabled", () => {
