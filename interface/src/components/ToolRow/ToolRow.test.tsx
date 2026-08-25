@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ToolCallEntry } from "../../shared/types/stream";
 
 vi.mock("./ToolCallBlock.module.css", () => ({
@@ -497,6 +497,44 @@ describe("ToolCallBlock (Block dispatch)", () => {
       expect(jsonBoxes.length).toBeGreaterThanOrEqual(2); // Input + Result
       jsonBoxes.forEach((el) => expect(el.tagName).toBe("DIV"));
       expect(container.textContent ?? "").toContain("task is complete");
+    });
+
+    it("presents callback rate limits before the technical tool input", () => {
+      const result = "external tool callback failed: https://api.aura.ai/api/orgs/org-id/tool-actions/brave_search_web returned status 429: "
+        + JSON.stringify({
+          error: "Web Search rate limit exceeded (15 calls per 60s for this user). Please retry later.",
+          code: "tool_action_rate_limited",
+          data: {
+            byok_hint: "Connect your own Brave Search API key to use Web Search without Aura quota.",
+            max_calls: 15,
+            retry_after_seconds: 1,
+            upgrade_hint: "Upgrade your plan for higher Aura Web Search limits.",
+            window_seconds: 60,
+          },
+        });
+      const { container } = render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "brave_search_web",
+            input: { count: 6, query: "MoneyPrinterTurbo github architecture" },
+            isError: true,
+            result,
+          })}
+          defaultExpanded
+        />,
+      );
+
+      const response = screen.getByLabelText("Tool error response");
+      expect(within(response).getByText("Web Search limit reached")).toBeInTheDocument();
+      expect(within(response).getByText("This account reached the limit of 15 calls per 60 seconds.")).toBeInTheDocument();
+      expect(within(response).getByText("Try again in 1 second.")).toBeInTheDocument();
+      expect(within(response).getByText("Connect your own Brave Search API key to use Web Search without Aura quota.")).toBeInTheDocument();
+      expect(within(response).getByText("Upgrade your plan for higher Aura Web Search limits.")).toBeInTheDocument();
+      expect(within(response).getByText("HTTP 429 · tool_action_rate_limited")).toBeInTheDocument();
+
+      const text = container.textContent ?? "";
+      expect(text.indexOf("Error")).toBeLessThan(text.indexOf("Input"));
+      expect(text).not.toContain("https://api.aura.ai");
     });
   });
 

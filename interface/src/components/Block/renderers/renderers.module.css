@@ -474,6 +474,52 @@
   color: var(--color-text-muted);
 }
 
+.toolErrorResponse {
+  margin: 0 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--color-border);
+  border-left: 2px solid var(--color-error-fg);
+  color: var(--color-text-secondary);
+}
+
+.toolErrorTitle {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.toolErrorMessage {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.toolErrorRetry {
+  margin-top: 7px;
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.toolErrorGuidance {
+  margin: 7px 0 0;
+  padding-left: 16px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.toolErrorMeta {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .inlineError {
   color: var(--color-error-fg);
   font-size: 11px;
@@ -486,4 +532,3 @@
   font-size: 11px;
   padding: 4px 10px;
 }
-
