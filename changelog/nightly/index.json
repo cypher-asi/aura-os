@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-08-25",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.806.1",
+    "title": "Chat transcript stays put while you type ahead",
+    "intro": "Today's nightly focuses on two long-standing chat annoyances: the transcript scrolling out from under you mid-response, and follow-up prompts disappearing while an answer was still streaming. Both are fixed, and queued prompts now appear inline with a clear \"Queued\" state.",
+    "entryCount": 1,
+    "highlights": [
+      "Auto-scroll no longer fights you during a streaming response",
+      "Queued follow-up prompts stay visible in the transcript with a delivery status"
+    ],
+    "rawCommitCount": 2,
+    "generatedAt": "2026-08-25T20:20:21.256Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.806.1",
+    "path": "history/2026-08-25.json"
+  },
+  {
     "date": "2026-08-23",
     "channel": "nightly",
     "version": "0.1.0-nightly.804.1",
