@@ -356,6 +356,7 @@ describe("useChatPanelState", () => {
       "image",
       undefined,
       undefined,
+      "q-1",
     );
   });
 
@@ -407,6 +408,7 @@ describe("useChatPanelState", () => {
       undefined,
       undefined,
       mentions,
+      "q-agent",
     );
   });
 
@@ -593,6 +595,7 @@ describe("useChatPanelState", () => {
       undefined,
       undefined,
       undefined,
+      "q-1",
     );
     // Order matters: stop has to land before the dispatch so the
     // upstream latch is cleared before `sendMessage` re-enters.
@@ -632,6 +635,7 @@ describe("useChatPanelState", () => {
       undefined,
       undefined,
       undefined,
+      "q-2",
     );
   });
 
@@ -665,6 +669,7 @@ describe("useChatPanelState", () => {
       undefined,
       undefined,
       undefined,
+      "q-3",
     );
   });
 });

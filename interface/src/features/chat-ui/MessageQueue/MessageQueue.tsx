@@ -26,7 +26,10 @@ export const MessageQueue = memo(function MessageQueue({
 }: Props) {
   const queue = useMessageQueue(streamKey);
   const isStreaming = useIsStreaming(streamKey);
-  const [collapsed, setCollapsed] = useState(false);
+  // Queued prompts now remain visible in the main transcript. Keep this
+  // management panel collapsed by default so it does not duplicate the
+  // prompt text; users can still expand it to edit/remove/send-now.
+  const [collapsed, setCollapsed] = useState(true);
 
   if (queue.length === 0) return null;
 

@@ -205,6 +205,7 @@ export type LegacyOnSend = (
   generationMode: GenerationMode | undefined,
   sourceImageUrl?: string,
   agentMentions?: AgentMentionTarget[],
+  clientMessageId?: string,
 ) => void;
 
 export function dispatch(

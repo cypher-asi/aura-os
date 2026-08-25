@@ -304,6 +304,7 @@ export function useChatStream({
         generationMode: _generationMode,
         sourceImageUrl: _sourceImageUrl,
         agentMentions,
+        clientMessageId,
       } = args;
       void _projectIdOverride;
 
@@ -331,6 +332,7 @@ export function useChatStream({
           : is3DModelStep
             ? "Generate 3D model"
             : undefined,
+        clientMessageId,
       );
       // On an auto-retry, the user's bubble is already on screen from
       // the original send — only the assistant turn is being re-issued
@@ -1050,6 +1052,7 @@ export function useChatStream({
       _generationMode?: GenerationMode,
       _sourceImageUrl?: string,
       agentMentions?: import("../../api/streams").AgentMentionTarget[],
+      clientMessageId?: string,
     ) => {
       if (!projectId || !agentInstanceId) return;
       const args: LastSendArgs = {
@@ -1062,6 +1065,7 @@ export function useChatStream({
         generationMode: _generationMode,
         sourceImageUrl: _sourceImageUrl,
         agentMentions,
+        clientMessageId,
       };
       const captured: CapturedPartition = {
         key: core.key,

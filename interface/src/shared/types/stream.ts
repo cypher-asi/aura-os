@@ -78,6 +78,12 @@ export interface DisplaySessionEvent {
    * the same race after the fact.
    */
   clientId?: string;
+  /**
+   * Client-only delivery state for an optimistic user bubble. Queued
+   * messages live in the transcript immediately, before their turn is
+   * dispatched to the stream transport.
+   */
+  deliveryStatus?: "queued";
   role: "user" | "assistant" | "system";
   content: string;
   displayVariant?:

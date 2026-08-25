@@ -154,6 +154,8 @@ interface UseAgentChatStreamResult {
     projectId?: string,
     generationMode?: GenerationMode,
     sourceImageUrl?: string,
+    agentMentions?: import("../api/streams").AgentMentionTarget[],
+    clientMessageId?: string,
   ) => Promise<void>;
   stopStreaming: () => void;
   resetEvents: (msgs: DisplaySessionEvent[], options?: { allowWhileStreaming?: boolean }) => void;
@@ -217,6 +219,8 @@ export function useAgentChatStream({
       projectId?: string,
       _generationMode?: GenerationMode,
       _sourceImageUrl?: string,
+      _agentMentions?: import("../api/streams").AgentMentionTarget[],
+      clientMessageId?: string,
     ) => {
       if (!agentId || inFlightRef.current) return;
       const trimmed = content.trim();
@@ -241,6 +245,7 @@ export function useAgentChatStream({
         projectId,
         generationMode: _generationMode,
         sourceImageUrl: _sourceImageUrl,
+        clientMessageId,
       };
 
       // Auto-retry bookkeeping. The standalone surface reuses the
@@ -307,6 +312,7 @@ export function useAgentChatStream({
         trimmed,
         attachments,
         is3DModelStep ? "Generate 3D model" : undefined,
+        clientMessageId,
       );
 
       // On an auto-retry re-entry the user's message is already in
@@ -1237,6 +1243,8 @@ export function useAgentChatStream({
         args.projectId,
         args.generationMode,
         args.sourceImageUrl,
+        undefined,
+        args.clientMessageId,
       );
     entry.sendFn = adapted;
     return () => {

@@ -408,6 +408,21 @@ describe("MessageBubble", () => {
     expect(screen.queryByText(/^from /)).not.toBeInTheDocument();
   });
 
+  it("shows delivery state for a prompt waiting behind the active response", () => {
+    render(
+      <MessageBubble
+        message={{
+          id: "queued-1",
+          role: "user",
+          content: "Keep this prompt in the transcript",
+          deliveryStatus: "queued",
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Queued");
+  });
+
   it("does not render the badge on assistant messages even when fromAgentId is somehow present", () => {
     // Defensive pin: the field semantics restrict it to user
     // rows, but we double-gate on `role === "user"` in the

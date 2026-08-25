@@ -93,6 +93,31 @@ describe("useAgentChatStream", () => {
     expect(entry.events[0].content).toBe("hello");
   });
 
+  it("promotes a queued prompt without changing its transcript identity", async () => {
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "queued prompt",
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "q-agent-stable",
+      );
+    });
+
+    const userEvent = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    expect(userEvent.id).toBe("q-agent-stable");
+    expect(userEvent.clientId).toBe("q-agent-stable");
+  });
+
   it("renders council members immediately from live subagent events", async () => {
     vi.mocked(api.agents.sendEventStream).mockImplementation(
       async (_id, _content, _action, _model, _attachments, handler) => {

@@ -51,6 +51,7 @@ export interface ChatPanelProps {
     generationMode?: GenerationMode,
     sourceImageUrl?: string,
     agentMentions?: AgentMentionTarget[],
+    clientMessageId?: string,
   ) => void;
   onStop: () => void;
   onAside?: (question: string) => Promise<string>;
