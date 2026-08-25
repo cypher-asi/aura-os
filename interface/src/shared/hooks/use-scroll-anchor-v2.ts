@@ -128,19 +128,13 @@ export function useScrollAnchorV2(
 
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
 
-    // Once the user has shown explicit upward intent, stay unpinned until
-    // they truly return to the very bottom. The ENTER_FOLLOW_THRESHOLD_PX
-    // band exists for users who haven't shown intent — applying it here
-    // would let a sub-180px wheel-up be undone on the very next scroll
-    // event, fighting the user every time they try to read older content.
+    // Once the user has shown explicit upward intent, keep auto-follow off
+    // for the remainder of this posting session. Merely reaching the bottom
+    // again must not silently re-arm it: a late token/layout flush could do
+    // that on the user's behalf and resume fighting their reading position.
+    // The next send (or an explicit jump-to-bottom click) calls
+    // `scrollToBottom`, which starts a fresh follow session.
     if (userUnpinnedAtRef.current > 0) {
-      if (distFromBottom <= 1) {
-        userUnpinnedAtRef.current = 0;
-        if (!pinnedRef.current) {
-          pinnedRef.current = true;
-          syncFollowState();
-        }
-      }
       return;
     }
 
