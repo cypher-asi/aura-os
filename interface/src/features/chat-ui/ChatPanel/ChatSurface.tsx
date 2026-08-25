@@ -24,6 +24,7 @@ import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
 import { DraftedInputBar } from "./DraftedInputBar";
 import { useChatPanelState } from "./useChatPanelState";
 import { findLatestGeneratedImage } from "./latest-generated-image";
+import { appendQueuedDisplayMessages } from "./queued-display-message";
 import { useChatUIStore } from "../../../stores/chat-ui-store";
 import { useMessageQueueStore } from "../../../stores/message-queue-store";
 import {
@@ -86,6 +87,7 @@ export interface ChatSurfaceProps {
     generationMode?: GenerationMode,
     sourceImageUrl?: string,
     agentMentions?: AgentMentionTarget[],
+    clientMessageId?: string,
   ) => void;
   onStop: () => void;
   onAside?: (question: string) => Promise<string>;
@@ -426,6 +428,10 @@ export function ChatSurface({
 
   const hasBridgeFrame = bridgeMessages.length > 0;
   const renderedMessages = messages.length > 0 ? messages : bridgeMessages;
+  const transcriptMessages = useMemo(
+    () => appendQueuedDisplayMessages(renderedMessages, queue),
+    [queue, renderedMessages],
+  );
 
   const isStreamingRef = useRef(isStreaming);
   useEffect(() => {
@@ -813,7 +819,7 @@ export function ChatSurface({
               className={`${styles.messageContent}${shouldHideThreadForInitialReveal ? ` ${styles.messageContentHidden}` : ""}`}
             >
               <ChatMessageList
-                messages={renderedMessages}
+                messages={transcriptMessages}
                 streamKey={streamKey}
                 scrollRef={messageAreaRef}
                 emptyState={emptyState}

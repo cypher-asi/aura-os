@@ -57,8 +57,9 @@ export function buildUserChatMessage(
   trimmed: string,
   attachments: ChatAttachment[] | undefined,
   fallbackContent?: string,
+  clientMessageId?: string,
 ): DisplaySessionEvent {
-  const id = `temp-${Date.now()}`;
+  const id = clientMessageId ?? `temp-${Date.now()}`;
   return {
     id,
     // Stable React identity across the temp- -> persisted-id swap so

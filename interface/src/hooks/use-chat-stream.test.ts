@@ -191,6 +191,31 @@ describe("useChatStream", () => {
     expect(entry.events[0].content).toBe("hello");
   });
 
+  it("promotes a queued prompt without changing its transcript identity", async () => {
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "queued prompt",
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "q-project-stable",
+      );
+    });
+
+    const userEvent = useStreamStore.getState().entries[result.current.streamKey].events[0];
+    expect(userEvent.id).toBe("q-project-stable");
+    expect(userEvent.clientId).toBe("q-project-stable");
+  });
+
   it("bumps the sessions list when SessionReady includes the real id", async () => {
     vi.mocked(api.sendEventStream).mockImplementation(
       async (_projectId, _agentInstanceId, _content, _action, _model, _attachments, handler) => {

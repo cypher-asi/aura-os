@@ -159,4 +159,10 @@ describe("buildUserChatMessage", () => {
     const msg = buildUserChatMessage("real text", undefined, "fallback");
     expect(msg.content).toBe("real text");
   });
+
+  it("preserves a caller-provided optimistic message identity", () => {
+    const msg = buildUserChatMessage("queued", undefined, undefined, "q-123");
+    expect(msg.id).toBe("q-123");
+    expect(msg.clientId).toBe("q-123");
+  });
 });

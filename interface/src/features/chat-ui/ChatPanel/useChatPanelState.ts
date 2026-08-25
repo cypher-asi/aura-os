@@ -53,6 +53,7 @@ export interface UseChatPanelStateOptions {
     generationMode?: GenerationMode,
     sourceImageUrl?: string,
     agentMentions?: AgentMentionTarget[],
+    clientMessageId?: string,
   ) => void;
   /**
    * Cancels the in-flight turn. Required by the "Send now" affordance
@@ -500,6 +501,7 @@ export function useChatPanelState({
           next.generationMode,
           next.sourceImageUrl,
           next.agentMentions,
+          next.id,
         );
         scrollToBottomRef.current();
       }
@@ -552,6 +554,7 @@ export function useChatPanelState({
         item.generationMode,
         item.sourceImageUrl,
         item.agentMentions,
+        item.id,
       );
       scrollToBottomRef.current();
     },

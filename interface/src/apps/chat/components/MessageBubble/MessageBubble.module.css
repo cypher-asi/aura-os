@@ -36,6 +36,14 @@
   max-width: 100%;
 }
 
+.deliveryStatus {
+  align-self: flex-end;
+  margin-top: calc(-1 * var(--space-1));
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 /* Cross-agent provenance badge slot. The badge sits *above* the
    user bubble and inherits the message column's right-alignment so
    the "↩ from <agent>" label hugs the bubble's leading edge.

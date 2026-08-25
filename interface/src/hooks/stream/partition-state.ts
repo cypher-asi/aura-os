@@ -54,6 +54,7 @@ export interface LastSendArgs {
   generationMode?: GenerationMode;
   sourceImageUrl?: string;
   agentMentions?: AgentMentionTarget[];
+  clientMessageId?: string;
 }
 
 /**
@@ -153,6 +154,7 @@ export interface AgentChatLastSendArgs {
   projectId?: string;
   generationMode?: GenerationMode;
   sourceImageUrl?: string;
+  clientMessageId?: string;
 }
 
 /**
