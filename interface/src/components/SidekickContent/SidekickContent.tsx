@@ -16,6 +16,7 @@ import { StatsDashboard } from "../../views/StatsDashboard";
 import { SessionList } from "../../views/SessionList";
 import { SidekickLog } from "../../views/SidekickLog";
 import { FileExplorer } from "../FileExplorer";
+import { SourceControlWorkbench } from "../SourceControlWorkbench";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
@@ -123,7 +124,8 @@ export function SidekickContent() {
   const searchable =
     activeTab !== "stats" &&
     activeTab !== "terminal" &&
-    activeTab !== "browser";
+    activeTab !== "browser" &&
+    activeTab !== "source-control";
 
   const filesContent = workspaceAccess.canUseWorkspace ? (
     <FileExplorer
@@ -164,6 +166,17 @@ export function SidekickContent() {
       <Suspense fallback={sidekickPaneFallback}>
         <RunSidekickPane searchQuery={searchQuery} />
       </Suspense>
+    ) : activeTab === "source-control" ? (
+      workspaceAccess.kind === "local" ? (
+        <SourceControlWorkbench
+          projectId={project.project_id}
+          agentInstanceId={agentInstanceId}
+        />
+      ) : (
+        <EmptyState>
+          Source control is available for local desktop workspaces.
+        </EmptyState>
+      )
     ) : activeTab === "specs" ? (
       <SpecList searchQuery={searchQuery} />
     ) : activeTab === "tasks" ? (
@@ -212,12 +225,16 @@ export function SidekickContent() {
         />
       )}
       <div className={styles.sidekickContent}>
-        {(activeTab === "run" || activeTab === "terminal" || activeTab === "browser") &&
+        {(activeTab === "run" ||
+          activeTab === "terminal" ||
+          activeTab === "browser" ||
+          activeTab === "source-control") &&
           activeContent}
         {activeTab !== "log" &&
           activeTab !== "run" &&
           activeTab !== "terminal" &&
-          activeTab !== "browser" && (
+          activeTab !== "browser" &&
+          activeTab !== "source-control" && (
           <div className={styles.tabContentShell}>
             <div ref={tabContentRef} className={styles.tabContent}>
               {activeContent}

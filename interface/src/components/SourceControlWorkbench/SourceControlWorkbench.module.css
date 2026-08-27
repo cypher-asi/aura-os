@@ -1,0 +1,390 @@
+.root {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 12px;
+}
+
+.repositoryHeader {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-secondary);
+}
+
+.branchRow,
+.syncRow,
+.pullRequest,
+.groupHeader,
+.fileRow,
+.fileSelect,
+.commitButton,
+.diffHeader,
+.cleanState,
+.loading {
+  display: flex;
+  align-items: center;
+}
+
+.branchRow {
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.branchName {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.branchName span,
+.upstream,
+.pullRequestTitle,
+.filePath,
+.diffHeader > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconButton,
+.fileAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.iconButton {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.iconButton:hover:not(:disabled),
+.fileAction:hover:not(:disabled),
+.groupAction:hover:not(:disabled),
+.retryButton:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.iconButton:disabled,
+.fileAction:disabled,
+.groupAction:disabled,
+.commitButton:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+.syncRow {
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.upstream {
+  flex: 1;
+}
+
+.syncCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pullRequest {
+  gap: 5px;
+  margin-top: 6px;
+  color: var(--color-accent-text);
+  text-decoration: none;
+}
+
+.pullRequest:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pullRequestTitle {
+  flex: 1;
+  color: var(--color-text-muted);
+}
+
+.changesPane {
+  flex: 0 1 46%;
+  min-height: 140px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--color-border-subtle);
+  scrollbar-width: thin;
+}
+
+.fileGroup {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.groupHeader {
+  min-height: 28px;
+  gap: 6px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.fileCount {
+  min-width: 17px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--color-bg-hover);
+  text-align: center;
+  font-size: 9px;
+}
+
+.groupAction {
+  margin-left: auto;
+  padding: 3px 5px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  text-transform: none;
+}
+
+.emptyGroup {
+  padding: 3px var(--space-3) 8px;
+  color: var(--color-text-subtle);
+  font-size: 10px;
+}
+
+.fileRow {
+  min-height: 28px;
+  padding-right: var(--space-1);
+}
+
+.fileRow:hover,
+.fileRowSelected {
+  background: var(--color-bg-hover);
+}
+
+.fileRowSelected {
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.fileSelect {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  gap: 7px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.statusCode {
+  width: 11px;
+  flex-shrink: 0;
+  color: var(--color-accent-text);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.filePath {
+  direction: rtl;
+  flex: 1;
+  text-align: left;
+}
+
+.originalPath {
+  color: var(--color-text-subtle);
+}
+
+.fileAction {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.commitBox {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.commitInput {
+  min-width: 0;
+  min-height: 44px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font: inherit;
+  line-height: 1.35;
+}
+
+.commitInput:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.commitButton {
+  align-self: stretch;
+  justify-content: center;
+  gap: 5px;
+  min-width: 76px;
+  padding: 0 10px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.notice {
+  padding: 6px var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.diffPane {
+  display: flex;
+  flex: 1 1 54%;
+  min-height: 120px;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.diffHeader {
+  flex-shrink: 0;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.diffHeader > span:first-child {
+  flex: 1;
+}
+
+.areaBadge {
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+.diff {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  padding: var(--space-2) 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  line-height: 1.45;
+  tab-size: 2;
+}
+
+.diff code {
+  display: block;
+  min-width: max-content;
+}
+
+.diff code > span {
+  display: block;
+  min-height: 14px;
+  padding: 0 var(--space-3);
+  white-space: pre;
+}
+
+.addition {
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  color: var(--color-success);
+}
+
+.deletion {
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  color: var(--color-error);
+}
+
+.hunk {
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  color: var(--color-accent-text);
+}
+
+.diffMeta {
+  color: var(--color-text-muted);
+}
+
+.diffMessage,
+.cleanState,
+.loading {
+  flex: 1;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.retryButton {
+  display: block;
+  margin: var(--space-2) auto 0;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.spinning {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-height: 640px) {
+  .changesPane {
+    flex-basis: 52%;
+  }
+
+  .diffPane {
+    flex-basis: 48%;
+  }
+}

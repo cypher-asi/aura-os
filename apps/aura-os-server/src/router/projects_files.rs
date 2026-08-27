@@ -3,7 +3,7 @@ use axum::routing::{get, post};
 use axum::Router;
 
 use crate::handlers::project_artifacts::THUMBNAIL_MAX_BYTES;
-use crate::handlers::{files, project_artifacts, project_stats, projects};
+use crate::handlers::{files, project_artifacts, project_stats, projects, source_control};
 use crate::state::AppState;
 
 pub(super) fn project_routes() -> Router<AppState> {
@@ -33,6 +33,26 @@ pub(super) fn project_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/stats",
             get(project_stats::get_project_stats),
+        )
+        .route(
+            "/api/projects/:project_id/source-control",
+            get(source_control::get_status),
+        )
+        .route(
+            "/api/projects/:project_id/source-control/diff",
+            get(source_control::get_diff),
+        )
+        .route(
+            "/api/projects/:project_id/source-control/stage",
+            post(source_control::stage_paths),
+        )
+        .route(
+            "/api/projects/:project_id/source-control/unstage",
+            post(source_control::unstage_paths),
+        )
+        .route(
+            "/api/projects/:project_id/source-control/commit",
+            post(source_control::commit),
         )
         // Project artifacts (images, 3D models)
         .route(
