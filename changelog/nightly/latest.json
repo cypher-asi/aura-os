@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-27T14:41:29.963Z",
+  "generatedAt": "2026-08-27T17:14:00.343Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.807.1",
+  "version": "0.1.0-nightly.808.1",
   "date": "2026-08-27",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.807.1",
-  "lastIncludedSha": "3cdf448fb4426d0f7b33e576a101937897e68cf2",
-  "previousProcessedSha": "2ab8c6cc600618c798e50edd2ec5399edb63d55a",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.808.1",
+  "lastIncludedSha": "8529187b46b4986667561548497b1e68519dae51",
+  "previousProcessedSha": "3cdf448fb4426d0f7b33e576a101937897e68cf2",
   "commitShas": [
-    "3cdf448fb4426d0f7b33e576a101937897e68cf2"
+    "3cdf448fb4426d0f7b33e576a101937897e68cf2",
+    "8529187b46b4986667561548497b1e68519dae51"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "3cdf448fb4426d0f7b33e576a101937897e68cf2",
@@ -68,36 +69,75 @@
         "Interface",
         "Docs"
       ]
+    },
+    {
+      "sha": "8529187b46b4986667561548497b1e68519dae51",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-27T21:52:46+05:00",
+      "subject": "fix(preview): route hosted local harness traffic (#155)",
+      "body": "",
+      "parents": [
+        "3cdf448fb4426d0f7b33e576a101937897e68cf2"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/browser/rest.rs",
+        "apps/aura-os-server/src/harness_gateway.rs",
+        "apps/aura-os-server/src/remote_preview.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 351,
+        "deletions": 24
+      },
+      "committedAtMs": 1787849566000,
+      "cleanSubject": "route hosted local harness traffic (#155)",
+      "keywords": [
+        "route",
+        "hosted",
+        "local",
+        "harness",
+        "traffic"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.807.1",
+      "version": "0.1.0-nightly.808.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66641030
+          "sizeBytes": 66674634
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 133089784
+          "sizeBytes": 133155320
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -107,29 +147,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.807.1",
+      "version": "0.1.0-nightly.808.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.807.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.808.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62309372
+          "sizeBytes": 62322294
         },
         {
-          "name": "AURA_0.1.0-nightly.807.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.808.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61278288
+          "sizeBytes": 61326711
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -139,29 +179,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.807.1",
+      "version": "0.1.0-nightly.808.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.807.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.808.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64511764
+          "sizeBytes": 64557432
         },
         {
-          "name": "AURA_0.1.0-nightly.807.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.808.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63543379
+          "sizeBytes": 63588486
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -171,17 +211,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.807.1",
+      "version": "0.1.0-nightly.808.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49035948
+          "sizeBytes": 49056053
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.807.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.808.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -190,53 +230,77 @@
     }
   ],
   "rendered": {
-    "title": "Global command palette lands on Cmd/Ctrl+K",
-    "intro": "Today's nightly is focused on a single, meaningful addition: a global command palette for the Aura shell that makes chats, apps, projects, agents, and menu actions reachable from one keystroke. It ships alongside an internal audit documenting how Aura's discovery surface should evolve from here.",
+    "title": "Global command palette lands and hosted Preview finds its route",
+    "intro": "Today's nightly pairs a headline interface addition with a targeted server fix: Aura gains a global command palette for jumping between chats, apps, projects, agents, and menu actions, and the Preview browser now correctly tunnels loopback dev servers through separately hosted local harnesses.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:23 AM",
         "started_at": "2026-08-27T14:23:59.000Z",
         "ended_at": "2026-08-27T14:23:59.000Z",
-        "title": "Global command palette on Cmd/Ctrl+K",
-        "summary": "Aura Shell now exposes a single palette that searches recent chats, apps, projects, agents, and menu actions, with a dedicated action-only mode.",
+        "title": "Global Cmd/Ctrl+K command palette in the Aura shell",
+        "summary": "A first-class command palette lands in AuraShell, giving keyboard-driven access to recent chats, apps, projects, agents, and menu actions.",
         "items": [
           {
-            "text": "Added a global command palette to Aura Shell, opened via Cmd/Ctrl+K, that searches across cached chats, apps, projects, agents, and registered menu actions from one input.",
+            "text": "New global command palette opens on Cmd/Ctrl+K and searches across cached chats, apps, projects, agents, and menu actions, with a `>` prefix to scope to actions only and keyboard navigation that skips disabled entries.",
             "commit_shas": [
               "3cdf448fb4426d0f7b33e576a101937897e68cf2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wired the palette into the existing menu registry and UI modal store so it reuses canonical routes and action handlers instead of introducing a parallel navigation path, and skips disabled actions during keyboard navigation.",
+            "text": "Palette is wired through Aura's existing MenuBar action handlers, UI modal store, and canonical routes rather than a parallel navigation system, so results reuse the app's real registries.",
             "commit_shas": [
               "3cdf448fb4426d0f7b33e576a101937897e68cf2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a `>` prefix to scope results to actions only, making it fast to run menu commands without wading through content matches.",
-            "commit_shas": [
-              "3cdf448fb4426d0f7b33e576a101937897e68cf2"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Published a T3 code reference audit in the docs that frames this palette as the first slice of a broader discovery effort, with server-backed message and file-content search called out as the next increments.",
+            "text": "Ships alongside a new T3 code reference audit doc that frames the palette as the first P1 slice and outlines the follow-up work for server-backed message and file-content search.",
             "commit_shas": [
               "3cdf448fb4426d0f7b33e576a101937897e68cf2"
             ],
             "confidence": "medium"
           }
         ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "9:52 AM",
+        "started_at": "2026-08-27T16:52:46.000Z",
+        "ended_at": "2026-08-27T16:52:46.000Z",
+        "title": "Preview browser routes through hosted local harnesses",
+        "summary": "The remote Preview proxy learns a second tunnel target so loopback dev servers running inside a separately hosted local harness are reachable from the AURA-side Chromium.",
+        "items": [
+          {
+            "text": "`spawn_browser` now starts a hosted-harness Preview proxy when a project is selected and the harness gateway exposes a hosted target, carrying the loopback URL from AURA OS through to the harness that actually owns the dev server.",
+            "commit_shas": [
+              "8529187b46b4986667561548497b1e68519dae51"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Harness gateway gains a `hosted_preview_target` helper that only returns hosted base URLs with a configured transport bearer, and the API fails closed with a clear service-unavailable error when hosted Preview auth is missing.",
+            "commit_shas": [
+              "8529187b46b4986667561548497b1e68519dae51"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Remote preview proxy is refactored around a `PreviewTunnelTarget` enum so swarm agents and hosted harnesses share one WebSocket tunneling path, while loopback harnesses correctly opt out since Chromium already shares their network namespace.",
+            "commit_shas": [
+              "8529187b46b4986667561548497b1e68519dae51"
+            ],
+            "confidence": "high"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Global Cmd/Ctrl+K command palette across the Aura shell",
-      "Unified search over chats, apps, projects, agents, and menu actions",
-      "Published T3 code reference audit shaping upcoming discovery work"
+      "Global Cmd/Ctrl+K command palette across chats, apps, projects, agents, and actions",
+      "Preview browser now tunnels to hosted local harnesses over an authenticated transport",
+      "Ships on macOS (Intel + Apple Silicon), Windows, and Linux (deb + AppImage)"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
