@@ -92,6 +92,30 @@ pub(crate) async fn spawn_browser(
         // loopback traffic through its authenticated tunnel.
         opts.proxy_bypass_list = Some("<-loopback>".to_string());
         opts.cleanup_token = Some(proxy.cleanup_token);
+    } else if opts.project_id.is_some() {
+        if state.harness_http.hosted_base_requires_transport_auth() {
+            return Err(ApiError::service_unavailable(
+                "hosted Preview tunnel authentication is not configured",
+            ));
+        }
+        if let Some((harness_base_url, transport_auth_token)) =
+            state.harness_http.hosted_preview_target()
+        {
+            let proxy = crate::remote_preview::RemotePreviewProxy::start_hosted_harness(
+                &harness_base_url,
+                transport_auth_token,
+            )
+            .await
+            .map_err(|error| {
+                warn!(%error, "failed to start hosted local Preview proxy");
+                ApiError::service_unavailable("hosted local Preview proxy could not start")
+            })?;
+            opts.proxy_server = Some(proxy.proxy_server);
+            // Chromium bypasses proxies for localhost by default. The hosted
+            // local harness owns that loopback, not the AURA API container.
+            opts.proxy_bypass_list = Some("<-loopback>".to_string());
+            opts.cleanup_token = Some(proxy.cleanup_token);
+        }
     }
 
     let handle = state
