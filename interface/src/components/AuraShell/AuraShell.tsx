@@ -56,6 +56,11 @@ const QuickPromptModal = lazy(() =>
     default: module.QuickPromptModal,
   })),
 );
+const CommandPalette = lazy(() =>
+  import("../CommandPalette").then((module) => ({
+    default: module.CommandPalette,
+  })),
+);
 
 /**
  * Public marketing routes that paint the dark-mode diagonal gradient
@@ -155,12 +160,16 @@ export function AuraShell(): React.ReactElement {
     closeChangelog,
     downloadsModalOpen,
     closeDownloads,
+    commandPaletteOpen,
+    closeCommandPalette,
   } = useUIModalStore(
     useShallow((s) => ({
       changelogModalOpen: s.changelogModalOpen,
       closeChangelog: s.closeChangelog,
       downloadsModalOpen: s.downloadsModalOpen,
       closeDownloads: s.closeDownloads,
+      commandPaletteOpen: s.commandPaletteOpen,
+      closeCommandPalette: s.closeCommandPalette,
     })),
   );
   const backgroundHydrated = useDesktopBackgroundStore((s) => s.hydrated);
@@ -382,6 +391,11 @@ export function AuraShell(): React.ReactElement {
       {isStandard ? (
         <Suspense fallback={null}>
           <QuickPromptModal />
+        </Suspense>
+      ) : null}
+      {isStandard && commandPaletteOpen ? (
+        <Suspense fallback={null}>
+          <CommandPalette isOpen onClose={closeCommandPalette} />
         </Suspense>
       ) : null}
       {isStandard ? <ToastViewport /> : null}

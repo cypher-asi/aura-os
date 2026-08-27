@@ -201,7 +201,10 @@ beforeEach(() => {
   useAppUIStore.setState({ publicSidebarCollapsed: true });
   // Reset any modal state a previous test may have flipped open (the
   // menu-shortcut test below flips `orgSettingsOpen`).
-  useUIModalStore.setState({ orgSettingsOpen: false });
+  useUIModalStore.setState({
+    orgSettingsOpen: false,
+    commandPaletteOpen: false,
+  });
   // Pin the platform to non-mac so `Ctrl+...` shortcuts match
   // regardless of the host running the suite.
   __setIsMacForTesting(false);
