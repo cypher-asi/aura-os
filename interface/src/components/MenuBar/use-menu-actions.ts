@@ -159,6 +159,7 @@ export function useMenuActions(): {
           : null) ?? null;
     }
     preferredAgentId ??= useAgentStore.getState().selectedAgentId ?? null;
+    useUIModalStore.getState().closeCommandPalette();
     useQuickPromptStore.getState().open(preferredAgentId);
   }, [agentContext]);
 
@@ -190,6 +191,14 @@ export function useMenuActions(): {
 
   const handleToggleSidekick = useCallback(() => {
     useAppUIStore.getState().toggleSidekick();
+  }, []);
+
+  const handleToggleCommandPalette = useCallback(() => {
+    const modalStore = useUIModalStore.getState();
+    if (!modalStore.commandPaletteOpen) {
+      useQuickPromptStore.getState().close();
+    }
+    modalStore.toggleCommandPalette();
   }, []);
 
   const handlePreviousAgent = useCallback(() => {
@@ -270,6 +279,7 @@ export function useMenuActions(): {
       "edit.paste": () => execEditCommand("paste"),
       "edit.delete": () => execEditCommand("delete"),
       "edit.selectAll": () => execEditCommand("selectAll"),
+      "view.commandPalette": handleToggleCommandPalette,
       "view.toggleSidekick": handleToggleSidekick,
       "view.zoomIn": () => {
         zoomIn();
@@ -303,6 +313,7 @@ export function useMenuActions(): {
       handlePreviousAgent,
       handleSettings,
       handleStatus,
+      handleToggleCommandPalette,
       handleToggleFullscreen,
       handleToggleSidekick,
       handleVisitWebsite,

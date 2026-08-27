@@ -15,6 +15,7 @@ export type MenuActionKey =
   | "edit.paste"
   | "edit.delete"
   | "edit.selectAll"
+  | "view.commandPalette"
   | "view.toggleSidekick"
   | "view.zoomIn"
   | "view.zoomOut"
@@ -87,6 +88,8 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     id: "view",
     label: "View",
     entries: [
+      { type: "item", id: "view.commandPalette", label: "Command Palette", shortcut: { key: "k", mod: true } },
+      DIVIDER,
       { type: "item", id: "view.toggleSidekick", label: "Toggle Sidekick", shortcut: { key: "b", mod: true } },
       DIVIDER,
       { type: "item", id: "view.zoomIn", label: "Zoom In", shortcut: { key: "=", mod: true } },

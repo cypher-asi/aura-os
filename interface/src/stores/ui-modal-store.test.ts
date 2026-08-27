@@ -8,6 +8,7 @@ beforeEach(() => {
     buyCreditsOpen: false,
     hostSettingsOpen: false,
     appsModalOpen: false,
+    commandPaletteOpen: false,
   });
 });
 
@@ -18,6 +19,7 @@ describe("ui-modal-store", () => {
       expect(s.orgSettingsOpen).toBe(false);
       expect(s.buyCreditsOpen).toBe(false);
       expect(s.hostSettingsOpen).toBe(false);
+      expect(s.commandPaletteOpen).toBe(false);
     });
   });
 
@@ -109,6 +111,20 @@ describe("ui-modal-store", () => {
     });
   });
 
+  describe("toggleCommandPalette / closeCommandPalette", () => {
+    it("toggles and closes the command palette", () => {
+      useUIModalStore.getState().toggleCommandPalette();
+      expect(useUIModalStore.getState().commandPaletteOpen).toBe(true);
+
+      useUIModalStore.getState().toggleCommandPalette();
+      expect(useUIModalStore.getState().commandPaletteOpen).toBe(false);
+
+      useUIModalStore.setState({ commandPaletteOpen: true });
+      useUIModalStore.getState().closeCommandPalette();
+      expect(useUIModalStore.getState().commandPaletteOpen).toBe(false);
+    });
+  });
+
   describe("reset", () => {
     it("closes every open modal and clears initialSection", () => {
       useUIModalStore.setState({
@@ -118,6 +134,7 @@ describe("ui-modal-store", () => {
         hostSettingsOpen: true,
         appsModalOpen: true,
         inviteModalOpen: true,
+        commandPaletteOpen: true,
       });
 
       useUIModalStore.getState().reset();
@@ -129,6 +146,7 @@ describe("ui-modal-store", () => {
       expect(s.hostSettingsOpen).toBe(false);
       expect(s.appsModalOpen).toBe(false);
       expect(s.inviteModalOpen).toBe(false);
+      expect(s.commandPaletteOpen).toBe(false);
     });
   });
 });

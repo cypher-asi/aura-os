@@ -7,6 +7,8 @@ const mockNavigate = vi.fn();
 const openOrgSettings = vi.fn();
 const openDownloads = vi.fn();
 const openChangelog = vi.fn();
+const toggleCommandPalette = vi.fn();
+const closeCommandPalette = vi.fn();
 const openCreateAgentModal = vi.fn();
 const openNewProjectModal = vi.fn();
 const toggleSidekick = vi.fn();
@@ -16,6 +18,7 @@ const trackMock = vi.fn();
 const windowCommandMock = vi.fn();
 const logoutMock = vi.fn();
 const openQuickPrompt = vi.fn();
+const closeQuickPrompt = vi.fn();
 let isAuthenticatedMock = false;
 
 vi.mock("../../stores/auth-store", () => ({
@@ -41,13 +44,30 @@ vi.mock("../../stores/ui-modal-store", () => ({
         openOrgSettings: typeof openOrgSettings;
         openDownloads: typeof openDownloads;
         openChangelog: typeof openChangelog;
+        toggleCommandPalette: typeof toggleCommandPalette;
+        closeCommandPalette: typeof closeCommandPalette;
+        commandPaletteOpen: boolean;
       }) => unknown,
     ) => {
-      const state = { openOrgSettings, openDownloads, openChangelog };
+      const state = {
+        openOrgSettings,
+        openDownloads,
+        openChangelog,
+        toggleCommandPalette,
+        closeCommandPalette,
+        commandPaletteOpen: false,
+      };
       return selector ? selector(state) : state;
     },
     {
-      getState: () => ({ openOrgSettings, openDownloads, openChangelog }),
+      getState: () => ({
+        openOrgSettings,
+        openDownloads,
+        openChangelog,
+        toggleCommandPalette,
+        closeCommandPalette,
+        commandPaletteOpen: false,
+      }),
     },
   ),
 }));
@@ -81,7 +101,7 @@ vi.mock("../../stores/app-ui-store", () => ({
 
 vi.mock("../../stores/quick-prompt-store", () => ({
   useQuickPromptStore: {
-    getState: () => ({ open: openQuickPrompt }),
+    getState: () => ({ open: openQuickPrompt, close: closeQuickPrompt }),
   },
 }));
 
@@ -197,6 +217,7 @@ describe("MenuBar", () => {
     renderMenuBar();
     await user.click(screen.getByRole("menuitem", { name: "File" }));
     await user.click(screen.getByRole("menuitem", { name: /Quick Prompt/ }));
+    expect(closeCommandPalette).toHaveBeenCalledTimes(1);
     expect(openQuickPrompt).toHaveBeenCalledWith(null);
   });
 
@@ -300,6 +321,16 @@ describe("MenuBar", () => {
     await user.click(screen.getByRole("menuitem", { name: "View" }));
     await user.click(screen.getByRole("menuitem", { name: /Toggle Sidekick/ }));
     expect(toggleSidekick).toHaveBeenCalledTimes(1);
+  });
+
+  it("View > Command Palette toggles the palette and shows its shortcut", async () => {
+    const user = userEvent.setup();
+    renderMenuBar();
+    await user.click(screen.getByRole("menuitem", { name: "View" }));
+    expect(screen.getByText("Ctrl+K")).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: /Command Palette/ }));
+    expect(closeQuickPrompt).toHaveBeenCalledTimes(1);
+    expect(toggleCommandPalette).toHaveBeenCalledTimes(1);
   });
 
   it("disables Previous/Next Agent outside agent routes", async () => {

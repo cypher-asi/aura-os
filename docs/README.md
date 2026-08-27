@@ -9,6 +9,7 @@ This folder keeps the documents that are still useful for current architecture, 
 - [Capabilities and Credentials Architecture](./capabilities-and-credentials-architecture.md) - canonical reference for capability, credential, and runtime boundaries.
 - [aura-swarm Integration](./aura-swarm.md) - local harness vs swarm split, remote-agent proxying, process trigger registration, VM logs.
 - [Feedback System Requirements](./feedback-system-requirements.md) - current product and data requirements for the global Feedback app.
+- [T3 Code Reference Audit](./t3-code-reference-audit.md) - pinned upstream feature comparison, Aura gaps, and adoption order.
 
 ## Evals
 
