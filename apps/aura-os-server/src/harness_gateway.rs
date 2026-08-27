@@ -80,6 +80,18 @@ impl HarnessHttpGateway {
         is_hosted_harness_base_url(&self.base_url) && !self.has_transport_auth()
     }
 
+    /// Return the separately hosted local harness target and its transport
+    /// bearer for Preview tunneling. Loopback harnesses intentionally return
+    /// `None`: Chromium already shares their network namespace on desktop.
+    pub(crate) fn hosted_preview_target(&self) -> Option<(String, String)> {
+        if !is_hosted_harness_base_url(&self.base_url) {
+            return None;
+        }
+        self.transport_auth_token
+            .as_ref()
+            .map(|token| (self.base_url.clone(), token.clone()))
+    }
+
     /// Confirm that the configured harness is actually serving requests.
     /// Configuration alone is not availability: desktop must fail closed
     /// when its managed sidecar did not start, and hosted deployments must
@@ -401,10 +413,18 @@ mod tests {
         );
         assert!(hosted_with_auth.hosted_local_runtime_available());
         assert!(!hosted_with_auth.hosted_base_requires_transport_auth());
+        assert_eq!(
+            hosted_with_auth.hosted_preview_target(),
+            Some((
+                "https://aura-harness-latest.onrender.com".to_string(),
+                "secret".to_string()
+            ))
+        );
 
         let loopback_without_auth = HarnessHttpGateway::new("http://127.0.0.1:9999");
         assert!(!loopback_without_auth.hosted_local_runtime_available());
         assert!(!loopback_without_auth.hosted_base_requires_transport_auth());
+        assert!(loopback_without_auth.hosted_preview_target().is_none());
     }
 
     #[test]

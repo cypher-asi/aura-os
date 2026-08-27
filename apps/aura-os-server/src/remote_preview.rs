@@ -1,9 +1,10 @@
 //! Per-browser SOCKS5 proxy for hosted Preview sessions.
 //!
 //! Chromium runs beside AURA OS in hosted deployments, while the user's dev
-//! server runs inside a selected remote agent. A loopback URL must therefore
-//! be carried through AURA OS -> swarm gateway -> harness. Public destinations
-//! still connect from AURA OS so normal browsing keeps working.
+//! server can run in either a separately hosted local harness or a selected
+//! swarm agent. A loopback URL must therefore be carried to the harness that
+//! owns the development server. Public destinations still connect from AURA OS
+//! so normal browsing keeps working.
 
 use std::io;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
@@ -15,6 +16,7 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
+use url::Url;
 
 const SOCKS_VERSION: u8 = 5;
 const SOCKS_CONNECT: u8 = 1;
@@ -29,20 +31,86 @@ pub(crate) struct RemotePreviewProxy {
     pub(crate) cleanup_token: CancellationToken,
 }
 
+#[derive(Clone)]
+enum PreviewTunnelTarget {
+    Swarm {
+        ws_base: String,
+        agent_id: String,
+        bearer_token: String,
+    },
+    HostedHarness {
+        ws_base: String,
+        bearer_token: String,
+    },
+}
+
+impl PreviewTunnelTarget {
+    fn swarm(base_url: &str, agent_id: String, bearer_token: String) -> io::Result<Self> {
+        Ok(Self::Swarm {
+            ws_base: websocket_base_url(base_url)?,
+            agent_id,
+            bearer_token,
+        })
+    }
+
+    fn hosted_harness(base_url: &str, bearer_token: String) -> io::Result<Self> {
+        Ok(Self::HostedHarness {
+            ws_base: websocket_base_url(base_url)?,
+            bearer_token,
+        })
+    }
+
+    fn url(&self, port: u16) -> String {
+        match self {
+            Self::Swarm {
+                ws_base, agent_id, ..
+            } => format!("{ws_base}/v1/agents/{agent_id}/preview/tcp/{port}/ws"),
+            Self::HostedHarness { ws_base, .. } => {
+                format!("{ws_base}/ws/preview/tcp/{port}")
+            }
+        }
+    }
+
+    fn bearer_token(&self) -> &str {
+        match self {
+            Self::Swarm { bearer_token, .. } | Self::HostedHarness { bearer_token, .. } => {
+                bearer_token
+            }
+        }
+    }
+}
+
 impl RemotePreviewProxy {
+    /// Route agent-local destinations through the owner-authenticated swarm
+    /// gateway to a specific remote agent.
     pub(crate) async fn start(
         swarm_base_url: &str,
         agent_id: String,
         jwt: String,
     ) -> io::Result<Self> {
+        Self::start_for_target(PreviewTunnelTarget::swarm(swarm_base_url, agent_id, jwt)?).await
+    }
+
+    /// Route agent-local destinations directly to a separately hosted local
+    /// harness. The server-to-harness transport token is intentionally used
+    /// instead of an end-user JWT because hosted harness auth protects the
+    /// deployment hop, while run payloads carry user identity separately.
+    pub(crate) async fn start_hosted_harness(
+        harness_base_url: &str,
+        transport_auth_token: String,
+    ) -> io::Result<Self> {
+        Self::start_for_target(PreviewTunnelTarget::hosted_harness(
+            harness_base_url,
+            transport_auth_token,
+        )?)
+        .await
+    }
+
+    async fn start_for_target(target: PreviewTunnelTarget) -> io::Result<Self> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await?;
         let address = listener.local_addr()?;
         let cleanup_token = CancellationToken::new();
         let listener_lifetime = cleanup_token.clone();
-        let swarm_ws_base = swarm_base_url
-            .trim_end_matches('/')
-            .replace("https://", "wss://")
-            .replace("http://", "ws://");
 
         tokio::spawn(async move {
             loop {
@@ -58,17 +126,13 @@ impl RemotePreviewProxy {
                     }
                 };
                 let connection_lifetime = listener_lifetime.clone();
-                let connection_agent_id = agent_id.clone();
-                let connection_jwt = jwt.clone();
-                let connection_swarm_base = swarm_ws_base.clone();
+                let connection_target = target.clone();
                 tokio::spawn(async move {
                     let result = tokio::select! {
                         _ = connection_lifetime.cancelled() => Ok(()),
                         result = handle_connection(
                             stream,
-                            &connection_swarm_base,
-                            &connection_agent_id,
-                            &connection_jwt,
+                            &connection_target,
                             connection_lifetime.clone(),
                         ) => result,
                     };
@@ -84,6 +148,34 @@ impl RemotePreviewProxy {
             cleanup_token,
         })
     }
+}
+
+fn websocket_base_url(raw: &str) -> io::Result<String> {
+    let mut url = Url::parse(raw.trim()).map_err(|error| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("invalid Preview tunnel base URL: {error}"),
+        )
+    })?;
+    let ws_scheme = match url.scheme() {
+        "http" => "ws",
+        "https" => "wss",
+        _ => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Preview tunnel base URL must use http or https",
+            ))
+        }
+    };
+    url.set_scheme(ws_scheme).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "could not convert Preview tunnel base URL to WebSocket",
+        )
+    })?;
+    url.set_query(None);
+    url.set_fragment(None);
+    Ok(url.as_str().trim_end_matches('/').to_string())
 }
 
 #[derive(Debug)]
@@ -113,9 +205,7 @@ impl TargetHost {
 
 async fn handle_connection(
     mut client: TcpStream,
-    swarm_ws_base: &str,
-    agent_id: &str,
-    jwt: &str,
+    tunnel_target: &PreviewTunnelTarget,
     lifetime: CancellationToken,
 ) -> io::Result<()> {
     let (host, port) = tokio::time::timeout(HANDSHAKE_TIMEOUT, async {
@@ -130,7 +220,7 @@ async fn handle_connection(
             send_socks_reply(&mut client, SOCKS_ADDRESS_NOT_SUPPORTED).await?;
             return Ok(());
         }
-        let upstream = match connect_agent_tunnel(swarm_ws_base, agent_id, port, jwt).await {
+        let upstream = match connect_preview_tunnel(tunnel_target, port).await {
             Ok(upstream) => upstream,
             Err(error) => {
                 let _ = send_socks_reply(&mut client, SOCKS_CONNECTION_REFUSED).await;
@@ -229,21 +319,19 @@ async fn send_socks_reply(client: &mut TcpStream, status: u8) -> io::Result<()> 
         .await
 }
 
-async fn connect_agent_tunnel(
-    swarm_ws_base: &str,
-    agent_id: &str,
+async fn connect_preview_tunnel(
+    target: &PreviewTunnelTarget,
     port: u16,
-    jwt: &str,
 ) -> io::Result<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
 > {
-    let url = format!("{swarm_ws_base}/v1/agents/{agent_id}/preview/tcp/{port}/ws");
+    let url = target.url(port);
     let mut request = url
         .into_client_request()
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
     request.headers_mut().insert(
         "Authorization",
-        format!("Bearer {jwt}")
+        format!("Bearer {}", target.bearer_token())
             .parse()
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?,
     );
@@ -403,7 +491,12 @@ pub(crate) fn is_preview_port_allowed(port: u16) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_forbidden_public_address, is_preview_port_allowed, RemotePreviewProxy, TargetHost,
+        is_forbidden_public_address, is_preview_port_allowed, websocket_base_url,
+        RemotePreviewProxy, TargetHost,
+    };
+    use aura_os_browser::{
+        BrowserConfig, BrowserManager, CdpBackend, CdpBackendConfig, ClientMsg, InspectionKind,
+        ServerEvent, SpawnOptions,
     };
     use axum::extract::ws::{Message as AxumMessage, WebSocketUpgrade};
     use axum::http::HeaderMap;
@@ -412,6 +505,9 @@ mod tests {
     use axum::Router;
     use futures_util::StreamExt;
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::sync::Arc;
+    use std::time::Duration;
+    use tempfile::tempdir;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::{TcpListener, TcpStream};
 
@@ -439,6 +535,19 @@ mod tests {
             assert!(is_forbidden_public_address(ip.parse().unwrap()), "{ip}");
         }
         assert!(!is_forbidden_public_address("1.1.1.1".parse().unwrap()));
+    }
+
+    #[test]
+    fn converts_only_http_preview_bases_to_websockets() {
+        assert_eq!(
+            websocket_base_url("https://harness.example/base/?ignored=yes#fragment").unwrap(),
+            "wss://harness.example/base"
+        );
+        assert_eq!(
+            websocket_base_url("http://127.0.0.1:8080").unwrap(),
+            "ws://127.0.0.1:8080"
+        );
+        assert!(websocket_base_url("file:///tmp/harness").is_err());
     }
 
     #[tokio::test]
@@ -527,6 +636,180 @@ mod tests {
 
         proxy.cleanup_token.cancel();
         gateway.abort();
+    }
+
+    #[tokio::test]
+    async fn carries_localhost_through_authenticated_hosted_local_harness() {
+        async fn tunnel(ws: WebSocketUpgrade, headers: HeaderMap) -> impl IntoResponse {
+            assert_eq!(
+                headers
+                    .get("authorization")
+                    .and_then(|value| value.to_str().ok()),
+                Some("Bearer hosted-transport-token")
+            );
+            ws.on_upgrade(|mut socket| async move {
+                let Some(Ok(AxumMessage::Binary(request))) = socket.next().await else {
+                    return;
+                };
+                assert!(request.starts_with(b"GET / HTTP/1.1\r\n"));
+                let response = b"HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nhosted-local";
+                let _ = socket.send(AxumMessage::Binary(response.to_vec())).await;
+            })
+        }
+
+        let harness_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+        let harness_address = harness_listener.local_addr().unwrap();
+        let app = Router::new().route("/ws/preview/tcp/5173", get(tunnel));
+        let harness = tokio::spawn(async move {
+            axum::serve(harness_listener, app).await.unwrap();
+        });
+
+        let proxy = RemotePreviewProxy::start_hosted_harness(
+            &format!("http://{harness_address}"),
+            "hosted-transport-token".to_string(),
+        )
+        .await
+        .unwrap();
+        let proxy_address = proxy
+            .proxy_server
+            .strip_prefix("socks5://")
+            .unwrap()
+            .to_string();
+        let mut client = connect_test_socks(&proxy_address, 5173).await;
+
+        client
+            .write_all(b"GET / HTTP/1.1\r\nHost: localhost:5173\r\n\r\n")
+            .await
+            .unwrap();
+        let mut response = Vec::new();
+        client.read_to_end(&mut response).await.unwrap();
+        assert!(response.ends_with(b"hosted-local"));
+
+        proxy.cleanup_token.cancel();
+        harness.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "launches real Chromium; run locally for visual Preview verification"]
+    async fn visually_renders_hosted_local_preview_in_real_chromium() {
+        async fn tunnel(ws: WebSocketUpgrade, headers: HeaderMap) -> impl IntoResponse {
+            assert_eq!(
+                headers
+                    .get("authorization")
+                    .and_then(|value| value.to_str().ok()),
+                Some("Bearer hosted-visual-token")
+            );
+            ws.on_upgrade(|mut socket| async move {
+                let Some(Ok(AxumMessage::Binary(request))) = socket.next().await else {
+                    return;
+                };
+                assert!(request.starts_with(b"GET "));
+                let body = br#"<!doctype html><title>Hosted Preview</title><style>html,body{height:100%;margin:0}body{display:grid;place-items:center;background:#080b12;color:#f3f6ff;font-family:system-ui}.card{border:1px solid #6c74ff;border-radius:22px;padding:46px 60px;box-shadow:0 24px 90px #000a;background:linear-gradient(145deg,#11172a,#0a0e19)}.eyebrow{color:#8d94ff;font-size:13px;letter-spacing:.2em}h1{margin:14px 0 8px;font-size:38px}p{margin:0;color:#aeb8d2}</style><main class="card"><div class="eyebrow">HOSTED LOCAL PREVIEW</div><h1>localhost reached the harness</h1><p>AURA Web rendered this through its authenticated tunnel.</p></main>"#;
+                let head = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let mut response = head.into_bytes();
+                response.extend_from_slice(body);
+                let _ = socket.send(AxumMessage::Binary(response)).await;
+            })
+        }
+
+        let harness_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+        let harness_address = harness_listener.local_addr().unwrap();
+        let harness = tokio::spawn(async move {
+            axum::serve(
+                harness_listener,
+                Router::new().route("/ws/preview/tcp/5173", get(tunnel)),
+            )
+            .await
+            .unwrap();
+        });
+        let proxy = RemotePreviewProxy::start_hosted_harness(
+            &format!("http://{harness_address}"),
+            "hosted-visual-token".to_string(),
+        )
+        .await
+        .unwrap();
+
+        let dir = tempdir().unwrap();
+        let config = BrowserConfig::default().with_settings_root(dir.path().to_path_buf());
+        let backend = Arc::new(CdpBackend::with_config(CdpBackendConfig {
+            disable_sandbox: true,
+            ..CdpBackendConfig::default()
+        }));
+        let manager = BrowserManager::with_backend(config, backend);
+        let mut options = SpawnOptions::new(720, 480);
+        let page_url = "http://localhost:5173/";
+        options.initial_url = Some(page_url.parse().unwrap());
+        options.proxy_server = Some(proxy.proxy_server.clone());
+        options.proxy_bypass_list = Some("<-loopback>".to_string());
+        options.cleanup_token = Some(proxy.cleanup_token.clone());
+        let spawned = manager.spawn(options).await.unwrap();
+        let mut events = manager.take_events(spawned.id).unwrap();
+
+        let screenshot = tokio::time::timeout(Duration::from_secs(20), async {
+            let mut inspection_sent = false;
+            let mut inspected_page = false;
+            loop {
+                match events.recv().await {
+                    Some(ServerEvent::Nav(state))
+                        if state.url == page_url && !state.loading && !inspection_sent =>
+                    {
+                        inspection_sent = true;
+                        manager
+                            .dispatch(
+                                spawned.id,
+                                ClientMsg::Inspect {
+                                    request_id: 314,
+                                    kind: InspectionKind::Select,
+                                    x: 360.0,
+                                    y: 235.0,
+                                },
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    Some(ServerEvent::Inspection(result)) if result.request_id == 314 => {
+                        let element = result.element.expect("hosted Preview card element");
+                        assert_eq!(element.tag_name, "h1");
+                        assert!(element.text.contains("localhost reached the harness"));
+                        inspected_page = true;
+                        // Force a fresh screencast frame after DOM inspection
+                        // proves that the tunneled document, not a Chromium
+                        // error page or initial blank frame, is visible.
+                        manager
+                            .dispatch(
+                                spawned.id,
+                                ClientMsg::Resize {
+                                    width: 721,
+                                    height: 480,
+                                },
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    Some(ServerEvent::Frame { seq, jpeg, .. }) => {
+                        manager.ack_frame(spawned.id, seq).await.unwrap();
+                        if inspected_page {
+                            break jpeg;
+                        }
+                    }
+                    Some(_) => {}
+                    None => panic!("browser session closed before hosted Preview rendered"),
+                }
+            }
+        })
+        .await
+        .expect("hosted local Preview rendered within 20 seconds");
+
+        assert!(screenshot.starts_with(&[0xff, 0xd8]));
+        if let Ok(path) = std::env::var("AURA_HOSTED_PREVIEW_SCREENSHOT") {
+            tokio::fs::write(path, screenshot).await.unwrap();
+        }
+
+        manager.kill(spawned.id).await.unwrap();
+        harness.abort();
     }
 
     async fn connect_test_socks(address: &str, port: u16) -> TcpStream {
