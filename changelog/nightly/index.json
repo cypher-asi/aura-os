@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-08-27",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.807.1",
+    "title": "Global command palette lands on Cmd/Ctrl+K",
+    "intro": "Today's nightly is focused on a single, meaningful addition: a global command palette for the Aura shell that makes chats, apps, projects, agents, and menu actions reachable from one keystroke. It ships alongside an internal audit documenting how Aura's discovery surface should evolve from here.",
+    "entryCount": 1,
+    "highlights": [
+      "Global Cmd/Ctrl+K command palette across the Aura shell",
+      "Unified search over chats, apps, projects, agents, and menu actions",
+      "Published T3 code reference audit shaping upcoming discovery work"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-27T14:41:29.963Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.807.1",
+    "path": "history/2026-08-27.json"
+  },
+  {
     "date": "2026-08-25",
     "channel": "nightly",
     "version": "0.1.0-nightly.806.1",
