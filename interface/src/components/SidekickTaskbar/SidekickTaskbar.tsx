@@ -19,6 +19,7 @@ import {
   ChartNoAxesColumnIncreasing,
   MessageSquare,
   FolderClosed,
+  GitBranch,
   SquareTerminal,
   MonitorPlay,
 } from "lucide-react";
@@ -70,6 +71,8 @@ export function SidekickTaskbar() {
     linkedWorkspace: features.linkedWorkspace,
   });
   const canUseWorkspace = workspaceAccess.canUseWorkspace;
+  const canUseSourceControl =
+    workspaceAccess.canUseWorkspace && workspaceAccess.kind === "local";
   const startAgentInstanceId =
     workspaceAccess.kind === "remote"
       ? terminalTarget.remoteAgentInstanceId
@@ -92,10 +95,13 @@ export function SidekickTaskbar() {
   const runActive = !!runActivity && isLoopActivityActive(runActivity.status);
 
   useEffect(() => {
-    if (!canUseWorkspace && (activeTab === "files" || activeTab === "terminal")) {
+    if (
+      (!canUseWorkspace && (activeTab === "files" || activeTab === "terminal")) ||
+      (!canUseSourceControl && activeTab === "source-control")
+    ) {
       setActiveTab("sessions");
     }
-  }, [activeTab, canUseWorkspace, setActiveTab]);
+  }, [activeTab, canUseSourceControl, canUseWorkspace, setActiveTab]);
   useEffect(() => {
     if (automationStartAvailable || !loopEngineeringOpen) return;
     setLoopEngineeringOpen(false);
@@ -117,6 +123,15 @@ export function SidekickTaskbar() {
               id: "terminal",
               icon: <SquareTerminal size={16} />,
               title: "Terminal",
+            },
+          ]
+        : []),
+      ...(canUseSourceControl
+        ? [
+            {
+              id: "source-control",
+              icon: <GitBranch size={16} />,
+              title: "Source Control",
             },
           ]
         : []),
@@ -171,7 +186,14 @@ export function SidekickTaskbar() {
       { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
     ];
     return items;
-  }, [tasksActive, runActive, loopProjectId, canUseWorkspace, automationStartAvailable]);
+  }, [
+    tasksActive,
+    runActive,
+    loopProjectId,
+    canUseWorkspace,
+    canUseSourceControl,
+    automationStartAvailable,
+  ]);
   const visibleTabs = canUseWorkspace
     ? tabs
     : tabs.filter((tab) => tab.id !== "files" && tab.id !== "terminal");

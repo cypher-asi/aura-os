@@ -36,6 +36,14 @@ export type {
 export type { DirEntry } from "../shared/api/desktop";
 export type { LoopStatusResponse } from "../shared/api/loop";
 export type { SessionShare } from "../shared/api/shares";
+export type {
+  SourceControlArea,
+  SourceControlCommitResult,
+  SourceControlDiff,
+  SourceControlFile,
+  SourceControlPullRequest,
+  SourceControlStatus,
+} from "../shared/api/source-control";
 
 import { authApi } from "../shared/api/auth";
 import { projectsApi } from "../shared/api/projects";
@@ -58,6 +66,7 @@ import { marketplaceApi } from "./marketplace";
 import { debugApi } from "../shared/api/debug";
 import { streamsApi } from "../shared/api/streams";
 import { sharesApi } from "../shared/api/shares";
+import { sourceControlApi } from "../shared/api/source-control";
 
 export const api = {
   auth: authApi,
@@ -91,4 +100,5 @@ export const api = {
   debug: debugApi,
   streams: streamsApi,
   shares: sharesApi,
+  sourceControl: sourceControlApi,
 };

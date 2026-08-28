@@ -19,6 +19,7 @@ export type SidekickTab =
   | "stats"
   | "sessions"
   | "log"
+  | "source-control"
   | "files";
 
 const SIDEKICK_TABS = new Set<SidekickTab>([
@@ -30,6 +31,7 @@ const SIDEKICK_TABS = new Set<SidekickTab>([
   "stats",
   "sessions",
   "log",
+  "source-control",
   "files",
 ]);
 
