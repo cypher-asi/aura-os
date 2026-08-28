@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 const mockReadFile = vi.fn();
 const mockWriteFile = vi.fn();
 const mockReadRemoteFile = vi.fn();
+const mockReadHostedFile = vi.fn();
 
 vi.mock("../../api/client", () => ({
   api: {
@@ -10,6 +11,9 @@ vi.mock("../../api/client", () => ({
     writeFile: (...args: unknown[]) => mockWriteFile(...args),
     swarm: {
       readRemoteFile: (...args: unknown[]) => mockReadRemoteFile(...args),
+    },
+    hostedWorkspace: {
+      readFile: (...args: unknown[]) => mockReadHostedFile(...args),
     },
   },
 }));
@@ -22,6 +26,7 @@ describe("useIdeViewTabs", () => {
     mockReadFile.mockResolvedValue({ ok: true, content: "local content" });
     mockWriteFile.mockResolvedValue({ ok: true });
     mockReadRemoteFile.mockResolvedValue({ ok: true, content: "remote content" });
+    mockReadHostedFile.mockResolvedValue({ ok: true, content: "hosted content" });
   });
 
   it("saves local editor changes through the local file API", async () => {
@@ -72,5 +77,21 @@ describe("useIdeViewTabs", () => {
 
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result.current.saveError).toContain("read-only");
+  });
+
+  it("reads hosted files through the scoped API and keeps them read-only", async () => {
+    const target = { projectId: "project-1", agentInstanceId: "instance-1" };
+    const { result } = renderHook(() =>
+      useIdeViewTabs("index.html", undefined, target),
+    );
+
+    await waitFor(() => {
+      expect(result.current.activeTab?.content).toBe("hosted content");
+    });
+
+    expect(mockReadHostedFile).toHaveBeenCalledWith(target, "index.html");
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(result.current.readOnly).toBe(true);
+    expect(result.current.readOnlyReason).toContain("Hosted workspace");
   });
 });

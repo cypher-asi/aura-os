@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageEmptyState, Topbar } from "@cypher-asi/zui";
 import { FileExplorer } from "../../components/FileExplorer";
@@ -17,12 +17,22 @@ export function IdeView() {
   const initialFile = params.get("file") ?? "";
   const rootPath = params.get("root") ?? (initialFile ? initialFile.replace(/[\\/][^\\/]+$/, "") : "");
   const remoteAgentId = params.get("remoteAgentId") ?? undefined;
+  const hostedProjectId = params.get("projectId") ?? undefined;
+  const hostedAgentInstanceId = params.get("agentInstanceId") ?? undefined;
+  const hostedWorkspace = useMemo(
+    () =>
+      hostedProjectId && hostedAgentInstanceId
+        ? { projectId: hostedProjectId, agentInstanceId: hostedAgentInstanceId }
+        : undefined,
+    [hostedAgentInstanceId, hostedProjectId],
+  );
+  const effectiveRootPath = hostedWorkspace ? undefined : rootPath;
 
-  const ide = useIdeViewTabs(initialFile, remoteAgentId);
+  const ide = useIdeViewTabs(initialFile, remoteAgentId, hostedWorkspace);
 
   const handleFileSelect = useCallback((path: string) => ide.openTab(path), [ide.openTab]);
 
-  if (!features.ideIntegration && !remoteAgentId) {
+  if (!features.ideIntegration && !remoteAgentId && !hostedWorkspace) {
     return <PageEmptyState title="IDE stays on desktop" description="This device does not expose local file editing or IDE workflows." />;
   }
 
@@ -37,9 +47,15 @@ export function IdeView() {
       />
 
       <div className={styles.body}>
-        {rootPath && (
+        {(effectiveRootPath || hostedWorkspace) && (
           <Lane resizable resizePosition="right" defaultWidth={220} minWidth={120} maxWidth={480} storageKey="ide-sidebar-width" className={styles.sidebar}>
-            <FileExplorer rootPath={rootPath} onFileSelect={handleFileSelect} remoteAgentId={remoteAgentId} />
+            <FileExplorer
+              rootPath={effectiveRootPath}
+              rootLabel={hostedWorkspace ? "Project files" : undefined}
+              onFileSelect={handleFileSelect}
+              remoteAgentId={remoteAgentId}
+              hostedWorkspace={hostedWorkspace}
+            />
           </Lane>
         )}
 

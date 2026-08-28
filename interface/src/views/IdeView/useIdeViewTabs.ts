@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import hljs from "highlight.js/lib/common";
 import { api } from "../../api/client";
 import { langFromPath } from "../../ide/lang";
+import type { HostedWorkspaceTarget } from "../../shared/api/hosted-workspace";
 
 const MAX_HIGHLIGHT_SIZE = 100_000;
 
@@ -13,15 +14,21 @@ export interface TabState {
   error: string | null;
 }
 
-export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
+export function useIdeViewTabs(
+  initialFile: string,
+  remoteAgentId?: string,
+  hostedWorkspace?: HostedWorkspaceTarget,
+) {
   const [tabs, setTabs] = useState<TabState[]>([]);
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const readOnly = Boolean(remoteAgentId);
-  const readOnlyReason = readOnly
-    ? "Remote IDE preview is read-only. Use Aura Desktop or a remote agent task to change files."
-    : null;
+  const readOnly = Boolean(remoteAgentId || hostedWorkspace);
+  const readOnlyReason = hostedWorkspace
+    ? "Hosted workspace preview is read-only. Ask the agent to change files."
+    : remoteAgentId
+      ? "Remote IDE preview is read-only. Use Aura Desktop or a remote agent task to change files."
+      : null;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
@@ -31,9 +38,11 @@ export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
     setTabs((prev) => {
       if (prev.find((t) => t.path === path)) return prev;
       const newTab: TabState = { path, content: null, savedContent: null, loading: true, error: null };
-      const readPromise = remoteAgentId
-        ? api.swarm.readRemoteFile(remoteAgentId, path)
-        : api.readFile(path);
+      const readPromise = hostedWorkspace
+        ? api.hostedWorkspace.readFile(hostedWorkspace, path)
+        : remoteAgentId
+          ? api.swarm.readRemoteFile(remoteAgentId, path)
+          : api.readFile(path);
       readPromise
         .then((res) => {
           setTabs((prev2) => prev2.map((t) => {
@@ -49,7 +58,7 @@ export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
       return [...prev, newTab];
     });
     setActiveTabPath(path);
-  }, [remoteAgentId]);
+  }, [hostedWorkspace, remoteAgentId]);
 
   const closeTab = useCallback((path: string) => {
     setTabs((prev) => {

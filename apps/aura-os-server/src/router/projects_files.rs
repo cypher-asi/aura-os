@@ -3,7 +3,9 @@ use axum::routing::{get, post};
 use axum::Router;
 
 use crate::handlers::project_artifacts::THUMBNAIL_MAX_BYTES;
-use crate::handlers::{files, project_artifacts, project_stats, projects, source_control};
+use crate::handlers::{
+    files, hosted_workspace_files, project_artifacts, project_stats, projects, source_control,
+};
 use crate::state::AppState;
 
 pub(super) fn project_routes() -> Router<AppState> {
@@ -53,6 +55,14 @@ pub(super) fn project_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/source-control/commit",
             post(source_control::commit),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/workspace/files",
+            get(hosted_workspace_files::list_hosted_workspace_files),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/workspace/read-file",
+            get(hosted_workspace_files::read_hosted_workspace_file),
         )
         // Project artifacts (images, 3D models)
         .route(

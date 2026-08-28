@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { cn } from "@cypher-asi/zui";
@@ -55,18 +55,19 @@ export function SidekickContent() {
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const [searchQuery, setSearchQuery] = useState("");
-  const { features, remoteOnly } = useAuraCapabilities();
+  const { features, hostedLocalHarness, remoteOnly } = useAuraCapabilities();
   const { projectId: routeProjectId, agentInstanceId } = useParams<{
     projectId: string;
     agentInstanceId: string;
   }>();
   const {
     remoteAgentId,
+    localAgentInstanceId,
     remoteWorkspacePath,
     workspacePath,
     status: terminalTargetStatus,
   } =
-    useTerminalTarget({ projectId: routeProjectId, agentInstanceId });
+    useTerminalTarget({ projectId: routeProjectId ?? projectId, agentInstanceId });
   const navigate = useNavigate();
   const [fileRefreshKey, setFileRefreshKey] = useState(0);
   const tabContentRef = useRef<HTMLDivElement>(null);
@@ -80,6 +81,26 @@ export function SidekickContent() {
       }
     },
     [remoteAgentId, navigate],
+  );
+  const hostedProjectId = routeProjectId ?? projectId;
+  const hostedWorkspace = useMemo(
+    () =>
+      hostedLocalHarness && hostedProjectId && localAgentInstanceId
+        ? {
+            projectId: hostedProjectId,
+            agentInstanceId: localAgentInstanceId,
+          }
+        : undefined,
+    [hostedLocalHarness, hostedProjectId, localAgentInstanceId],
+  );
+  const handleHostedFileSelect = useCallback(
+    (filePath: string) => {
+      if (!hostedWorkspace) return;
+      navigate(
+        `/ide?file=${encodeURIComponent(filePath)}&projectId=${encodeURIComponent(hostedWorkspace.projectId)}&agentInstanceId=${encodeURIComponent(hostedWorkspace.agentInstanceId)}`,
+      );
+    },
+    [hostedWorkspace, navigate],
   );
 
   useEffect(() => {
@@ -103,7 +124,7 @@ export function SidekickContent() {
     ? "The attached remote agent has not reported a live workspace yet."
     : features.linkedWorkspace
       ? "This project does not currently expose a live local agent workspace."
-      : "File browsing stays in the desktop app for now.";
+      : "This project does not currently expose a live agent workspace.";
   const terminalEmptyMessage = remoteAgentId
     ? "The attached remote agent has not reported a live terminal workspace yet."
     : features.linkedWorkspace
@@ -127,12 +148,20 @@ export function SidekickContent() {
     activeTab !== "browser" &&
     activeTab !== "source-control";
 
-  const filesContent = workspaceAccess.canUseWorkspace ? (
+  const filesContent = workspaceAccess.canUseWorkspace || hostedWorkspace ? (
     <FileExplorer
-      rootPath={workspaceAccess.workspacePath}
+      rootPath={hostedWorkspace ? undefined : workspaceAccess.workspacePath}
+      rootLabel={hostedWorkspace ? "Project files" : undefined}
       searchQuery={searchQuery}
       remoteAgentId={remoteAgentId}
-      onFileSelect={remoteAgentId ? handleRemoteFileSelect : undefined}
+      hostedWorkspace={hostedWorkspace}
+      onFileSelect={
+        hostedWorkspace
+          ? handleHostedFileSelect
+          : remoteAgentId
+            ? handleRemoteFileSelect
+            : undefined
+      }
       refreshTrigger={fileRefreshKey}
     />
   ) : (
