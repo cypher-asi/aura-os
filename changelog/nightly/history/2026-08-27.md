@@ -1,31 +1,39 @@
-# Global command palette lands and hosted Preview finds its route
+# Command palette, source-control workbench, and hosted Preview routing
 
 - Date: `2026-08-27`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.808.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.808.1
+- Version: `0.1.0-nightly.809.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.809.1
 
-Today's nightly pairs a headline interface addition with a targeted server fix: Aura gains a global command palette for jumping between chats, apps, projects, agents, and menu actions, and the Preview browser now correctly tunnels loopback dev servers through separately hosted local harnesses.
+Today's nightly lands two sizable interface additions — a global command palette and a native source-control workbench — alongside a server fix that lets the Preview browser reach dev servers running in a separately hosted local harness.
 
-## 7:23 AM — Global Cmd/Ctrl+K command palette in the Aura shell
+## 7:23 AM — Global command palette on Cmd/Ctrl+K
 
-A first-class command palette lands in AuraShell, giving keyboard-driven access to recent chats, apps, projects, agents, and menu actions.
+A first-class launcher spanning recent chats, apps, projects, agents, and menu actions arrives in the Aura shell.
 
-- New global command palette opens on Cmd/Ctrl+K and searches across cached chats, apps, projects, agents, and menu actions, with a `>` prefix to scope to actions only and keyboard navigation that skips disabled entries. (`3cdf448`)
-- Palette is wired through Aura's existing MenuBar action handlers, UI modal store, and canonical routes rather than a parallel navigation system, so results reuse the app's real registries. (`3cdf448`)
-- Ships alongside a new T3 code reference audit doc that frames the palette as the first P1 slice and outlines the follow-up work for server-backed message and file-content search. (`3cdf448`)
+- Added a global command palette wired into AuraShell that searches recent chats, apps, projects, agents, and menu actions with keyboard navigation, disabled-action filtering, and a `>` prefix for action-only results. (`3cdf448`)
+- Extended the MenuBar registry and a new UI modal store so the palette reuses canonical Aura routes and existing action handlers rather than introducing a parallel navigation system. (`3cdf448`)
+- Published a T3 Code reference audit documenting the gaps that motivated the palette and the source-control workbench, and confirming no upstream source was copied in. (`3cdf448`)
 
-## 9:52 AM — Preview browser routes through hosted local harnesses
+## 9:52 AM — Preview browser routes to hosted local harness
 
-The remote Preview proxy learns a second tunnel target so loopback dev servers running inside a separately hosted local harness are reachable from the AURA-side Chromium.
+The remote Preview proxy now knows how to tunnel loopback dev-server URLs into a separately hosted local harness, not just a swarm agent.
 
-- `spawn_browser` now starts a hosted-harness Preview proxy when a project is selected and the harness gateway exposes a hosted target, carrying the loopback URL from AURA OS through to the harness that actually owns the dev server. (`8529187`)
-- Harness gateway gains a `hosted_preview_target` helper that only returns hosted base URLs with a configured transport bearer, and the API fails closed with a clear service-unavailable error when hosted Preview auth is missing. (`8529187`)
-- Remote preview proxy is refactored around a `PreviewTunnelTarget` enum so swarm agents and hosted harnesses share one WebSocket tunneling path, while loopback harnesses correctly opt out since Chromium already shares their network namespace. (`8529187`)
+- Taught the browser spawn path to start a hosted-harness Preview proxy when a project is selected, failing closed with a clear service-unavailable error when the hosted tunnel is missing its transport auth. (`8529187`)
+- Added a `hosted_preview_target` accessor on the harness gateway that only exposes hosted (non-loopback) bases with a transport bearer, keeping desktop loopback harnesses on their existing direct path. (`8529187`)
+- Generalized the remote preview proxy with a `PreviewTunnelTarget` abstraction so swarm agents and hosted harnesses share one SOCKS-over-WebSocket tunneling path to the machine that owns the dev server. (`8529187`)
+
+## 7:27 PM — Native source-control workbench in the Sidekick
+
+A provider-neutral Git workbench lands in the Sidekick with status, diffs, staging, commits, and best-effort PR linking.
+
+- Introduced a `source_control` server handler exposing project-scoped Git status, staged/worktree diffs, stage/unstage, and commit operations with bounded limits on file counts, diff bytes, path batches, and commit message size. (`a0cbf0d`)
+- Shipped a SourceControlWorkbench component and Sidekick taskbar entry that render branch, ahead/behind, changed files, and diffs, with an optional linked pull request surfaced as provider-tagged metadata. (`a0cbf0d`)
+- Kept the HTTP contract provider-neutral so GitHub detection is best-effort today and additional review adapters (GitLab, Bitbucket, Azure DevOps) can slot in without changing the workbench response shape. (`a0cbf0d`)
 
 ## Highlights
 
-- Global Cmd/Ctrl+K command palette across chats, apps, projects, agents, and actions
-- Preview browser now tunnels to hosted local harnesses over an authenticated transport
-- Ships on macOS (Intel + Apple Silicon), Windows, and Linux (deb + AppImage)
+- Global Cmd/Ctrl+K command palette across chats, projects, agents, and actions
+- New provider-neutral source-control workbench with status, diffs, staging, and commits
+- Preview browser now tunnels correctly to hosted local harness dev servers
 

@@ -3,20 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-27T17:14:00.343Z",
+  "generatedAt": "2026-08-28T02:44:22.468Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.808.1",
+  "version": "0.1.0-nightly.809.1",
   "date": "2026-08-27",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.808.1",
-  "lastIncludedSha": "8529187b46b4986667561548497b1e68519dae51",
-  "previousProcessedSha": "3cdf448fb4426d0f7b33e576a101937897e68cf2",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.809.1",
+  "lastIncludedSha": "a0cbf0d18203655c16395f7fe0b07421d727c893",
+  "previousProcessedSha": "8529187b46b4986667561548497b1e68519dae51",
   "commitShas": [
     "3cdf448fb4426d0f7b33e576a101937897e68cf2",
-    "8529187b46b4986667561548497b1e68519dae51"
+    "8529187b46b4986667561548497b1e68519dae51",
+    "a0cbf0d18203655c16395f7fe0b07421d727c893"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "3cdf448fb4426d0f7b33e576a101937897e68cf2",
@@ -108,36 +109,89 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "a0cbf0d18203655c16395f7fe0b07421d727c893",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-28T07:27:31+05:00",
+      "subject": "feat(source-control): add native workbench (#156)",
+      "body": "",
+      "parents": [
+        "8529187b46b4986667561548497b1e68519dae51"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/mod.rs",
+        "apps/aura-os-server/src/handlers/source_control.rs",
+        "apps/aura-os-server/src/router/projects_files.rs",
+        "interface/src/api/client.ts",
+        "interface/src/components/Sidekick/Sidekick.test.tsx",
+        "interface/src/components/SidekickContent/SidekickContent.tsx",
+        "interface/src/components/SidekickTaskbar/SidekickTaskbar.test.tsx",
+        "interface/src/components/SidekickTaskbar/SidekickTaskbar.tsx",
+        "interface/src/components/SourceControlWorkbench/SourceControlWorkbench.module.css",
+        "interface/src/components/SourceControlWorkbench/SourceControlWorkbench.test.tsx",
+        "interface/src/components/SourceControlWorkbench/SourceControlWorkbench.tsx",
+        "interface/src/components/SourceControlWorkbench/index.ts",
+        "interface/src/shared/api/source-control.test.ts",
+        "interface/src/shared/api/source-control.ts",
+        "interface/src/stores/sidekick-store.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 2138,
+        "deletions": 7
+      },
+      "committedAtMs": 1787884051000,
+      "cleanSubject": "add native workbench (#156)",
+      "keywords": [
+        "native",
+        "workbench"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/components",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.808.1",
+      "version": "0.1.0-nightly.809.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66674634
+          "sizeBytes": 66778528
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 133155320
+          "sizeBytes": 133241336
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -147,29 +201,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.808.1",
+      "version": "0.1.0-nightly.809.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.808.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.809.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62322294
+          "sizeBytes": 62341825
         },
         {
-          "name": "AURA_0.1.0-nightly.808.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.809.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61326711
+          "sizeBytes": 61397488
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -179,29 +233,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.808.1",
+      "version": "0.1.0-nightly.809.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.808.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.809.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64557432
+          "sizeBytes": 64620669
         },
         {
-          "name": "AURA_0.1.0-nightly.808.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.809.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63588486
+          "sizeBytes": 63645605
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -211,17 +265,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.808.1",
+      "version": "0.1.0-nightly.809.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49056053
+          "sizeBytes": 49105107
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.808.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.809.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -230,33 +284,33 @@
     }
   ],
   "rendered": {
-    "title": "Global command palette lands and hosted Preview finds its route",
-    "intro": "Today's nightly pairs a headline interface addition with a targeted server fix: Aura gains a global command palette for jumping between chats, apps, projects, agents, and menu actions, and the Preview browser now correctly tunnels loopback dev servers through separately hosted local harnesses.",
+    "title": "Command palette, source-control workbench, and hosted Preview routing",
+    "intro": "Today's nightly lands two sizable interface additions — a global command palette and a native source-control workbench — alongside a server fix that lets the Preview browser reach dev servers running in a separately hosted local harness.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:23 AM",
         "started_at": "2026-08-27T14:23:59.000Z",
         "ended_at": "2026-08-27T14:23:59.000Z",
-        "title": "Global Cmd/Ctrl+K command palette in the Aura shell",
-        "summary": "A first-class command palette lands in AuraShell, giving keyboard-driven access to recent chats, apps, projects, agents, and menu actions.",
+        "title": "Global command palette on Cmd/Ctrl+K",
+        "summary": "A first-class launcher spanning recent chats, apps, projects, agents, and menu actions arrives in the Aura shell.",
         "items": [
           {
-            "text": "New global command palette opens on Cmd/Ctrl+K and searches across cached chats, apps, projects, agents, and menu actions, with a `>` prefix to scope to actions only and keyboard navigation that skips disabled entries.",
+            "text": "Added a global command palette wired into AuraShell that searches recent chats, apps, projects, agents, and menu actions with keyboard navigation, disabled-action filtering, and a `>` prefix for action-only results.",
             "commit_shas": [
               "3cdf448fb4426d0f7b33e576a101937897e68cf2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Palette is wired through Aura's existing MenuBar action handlers, UI modal store, and canonical routes rather than a parallel navigation system, so results reuse the app's real registries.",
+            "text": "Extended the MenuBar registry and a new UI modal store so the palette reuses canonical Aura routes and existing action handlers rather than introducing a parallel navigation system.",
             "commit_shas": [
               "3cdf448fb4426d0f7b33e576a101937897e68cf2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Ships alongside a new T3 code reference audit doc that frames the palette as the first P1 slice and outlines the follow-up work for server-backed message and file-content search.",
+            "text": "Published a T3 Code reference audit documenting the gaps that motivated the palette and the source-control workbench, and confirming no upstream source was copied in.",
             "commit_shas": [
               "3cdf448fb4426d0f7b33e576a101937897e68cf2"
             ],
@@ -269,38 +323,69 @@
         "time_label": "9:52 AM",
         "started_at": "2026-08-27T16:52:46.000Z",
         "ended_at": "2026-08-27T16:52:46.000Z",
-        "title": "Preview browser routes through hosted local harnesses",
-        "summary": "The remote Preview proxy learns a second tunnel target so loopback dev servers running inside a separately hosted local harness are reachable from the AURA-side Chromium.",
+        "title": "Preview browser routes to hosted local harness",
+        "summary": "The remote Preview proxy now knows how to tunnel loopback dev-server URLs into a separately hosted local harness, not just a swarm agent.",
         "items": [
           {
-            "text": "`spawn_browser` now starts a hosted-harness Preview proxy when a project is selected and the harness gateway exposes a hosted target, carrying the loopback URL from AURA OS through to the harness that actually owns the dev server.",
+            "text": "Taught the browser spawn path to start a hosted-harness Preview proxy when a project is selected, failing closed with a clear service-unavailable error when the hosted tunnel is missing its transport auth.",
             "commit_shas": [
               "8529187b46b4986667561548497b1e68519dae51"
             ],
             "confidence": "high"
           },
           {
-            "text": "Harness gateway gains a `hosted_preview_target` helper that only returns hosted base URLs with a configured transport bearer, and the API fails closed with a clear service-unavailable error when hosted Preview auth is missing.",
+            "text": "Added a `hosted_preview_target` accessor on the harness gateway that only exposes hosted (non-loopback) bases with a transport bearer, keeping desktop loopback harnesses on their existing direct path.",
             "commit_shas": [
               "8529187b46b4986667561548497b1e68519dae51"
             ],
             "confidence": "high"
           },
           {
-            "text": "Remote preview proxy is refactored around a `PreviewTunnelTarget` enum so swarm agents and hosted harnesses share one WebSocket tunneling path, while loopback harnesses correctly opt out since Chromium already shares their network namespace.",
+            "text": "Generalized the remote preview proxy with a `PreviewTunnelTarget` abstraction so swarm agents and hosted harnesses share one SOCKS-over-WebSocket tunneling path to the machine that owns the dev server.",
             "commit_shas": [
               "8529187b46b4986667561548497b1e68519dae51"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "7:27 PM",
+        "started_at": "2026-08-28T02:27:31.000Z",
+        "ended_at": "2026-08-28T02:27:31.000Z",
+        "title": "Native source-control workbench in the Sidekick",
+        "summary": "A provider-neutral Git workbench lands in the Sidekick with status, diffs, staging, commits, and best-effort PR linking.",
+        "items": [
+          {
+            "text": "Introduced a `source_control` server handler exposing project-scoped Git status, staged/worktree diffs, stage/unstage, and commit operations with bounded limits on file counts, diff bytes, path batches, and commit message size.",
+            "commit_shas": [
+              "a0cbf0d18203655c16395f7fe0b07421d727c893"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Shipped a SourceControlWorkbench component and Sidekick taskbar entry that render branch, ahead/behind, changed files, and diffs, with an optional linked pull request surfaced as provider-tagged metadata.",
+            "commit_shas": [
+              "a0cbf0d18203655c16395f7fe0b07421d727c893"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Kept the HTTP contract provider-neutral so GitHub detection is best-effort today and additional review adapters (GitLab, Bitbucket, Azure DevOps) can slot in without changing the workbench response shape.",
+            "commit_shas": [
+              "a0cbf0d18203655c16395f7fe0b07421d727c893"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Global Cmd/Ctrl+K command palette across chats, apps, projects, agents, and actions",
-      "Preview browser now tunnels to hosted local harnesses over an authenticated transport",
-      "Ships on macOS (Intel + Apple Silicon), Windows, and Linux (deb + AppImage)"
+      "Global Cmd/Ctrl+K command palette across chats, projects, agents, and actions",
+      "New provider-neutral source-control workbench with status, diffs, staging, and commits",
+      "Preview browser now tunnels correctly to hosted local harness dev servers"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 3
   }
 }

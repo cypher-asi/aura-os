@@ -2,18 +2,18 @@
   {
     "date": "2026-08-27",
     "channel": "nightly",
-    "version": "0.1.0-nightly.808.1",
-    "title": "Global command palette lands and hosted Preview finds its route",
-    "intro": "Today's nightly pairs a headline interface addition with a targeted server fix: Aura gains a global command palette for jumping between chats, apps, projects, agents, and menu actions, and the Preview browser now correctly tunnels loopback dev servers through separately hosted local harnesses.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.809.1",
+    "title": "Command palette, source-control workbench, and hosted Preview routing",
+    "intro": "Today's nightly lands two sizable interface additions — a global command palette and a native source-control workbench — alongside a server fix that lets the Preview browser reach dev servers running in a separately hosted local harness.",
+    "entryCount": 3,
     "highlights": [
-      "Global Cmd/Ctrl+K command palette across chats, apps, projects, agents, and actions",
-      "Preview browser now tunnels to hosted local harnesses over an authenticated transport",
-      "Ships on macOS (Intel + Apple Silicon), Windows, and Linux (deb + AppImage)"
+      "Global Cmd/Ctrl+K command palette across chats, projects, agents, and actions",
+      "New provider-neutral source-control workbench with status, diffs, staging, and commits",
+      "Preview browser now tunnels correctly to hosted local harness dev servers"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-08-27T17:14:00.343Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.808.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-08-28T02:44:22.468Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.809.1",
     "path": "history/2026-08-27.json"
   },
   {
