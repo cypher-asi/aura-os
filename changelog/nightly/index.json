@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-08-28",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.810.1",
+    "title": "Hosted workspace files reach the IDE preview",
+    "intro": "A focused day for Aura's web preview: the IDE can now browse and read the actual files an agent is editing inside a hosted local Harness, closing a long-standing gap between the generic filesystem endpoint and the agent's real workspace.",
+    "entryCount": 1,
+    "highlights": [
+      "File Explorer now reads the live hosted Harness workspace",
+      "New server handlers safely proxy workspace-relative reads",
+      "Desktop e2e coverage for hosted workspace browsing"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-29T03:33:19.062Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.810.1",
+    "path": "history/2026-08-28.json"
+  },
+  {
     "date": "2026-08-27",
     "channel": "nightly",
     "version": "0.1.0-nightly.809.1",
