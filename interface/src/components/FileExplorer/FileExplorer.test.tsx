@@ -47,6 +47,7 @@ function baseExplorerState() {
   return {
     canBrowseWorkspace: true,
     isRemote: true,
+    isHosted: false,
     loading: false,
     entries: [],
     error: null,

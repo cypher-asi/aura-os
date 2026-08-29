@@ -5,12 +5,15 @@ import { useFileExplorerState } from "./useFileExplorerState";
 import { MobileFileList } from "../../mobile/files/MobileFileList";
 import { FileExplorerHeader } from "./FileExplorerHeader";
 import styles from "./FileExplorer.module.css";
+import type { HostedWorkspaceTarget } from "../../shared/api/hosted-workspace";
 
 interface FileExplorerProps {
   rootPath?: string;
   searchQuery?: string;
   onFileSelect?: (path: string) => void;
   remoteAgentId?: string;
+  hostedWorkspace?: HostedWorkspaceTarget;
+  rootLabel?: string;
   /** Increment externally to trigger a refresh (e.g. from a button in PanelSearch). */
   refreshTrigger?: number;
 }
@@ -20,12 +23,16 @@ export function FileExplorer({
   searchQuery,
   onFileSelect,
   remoteAgentId,
+  hostedWorkspace,
+  rootLabel,
   refreshTrigger,
 }: FileExplorerProps) {
   const s = useFileExplorerState({
     rootPath,
     searchQuery,
     remoteAgentId,
+    hostedWorkspace,
+    rootLabel,
     onFileSelect,
     refreshTrigger,
   });
@@ -52,8 +59,8 @@ export function FileExplorer({
     return (
       <PageEmptyState
         icon={<Folder size={32} />}
-        title={getFileExplorerErrorTitle(s.isRemote)}
-        description={getFileExplorerErrorDescription(s.error, s.isRemote)}
+        title={getFileExplorerErrorTitle(s.isRemote, s.isHosted)}
+        description={getFileExplorerErrorDescription(s.error, s.isRemote, s.isHosted)}
       />
     );
   }
@@ -71,7 +78,7 @@ export function FileExplorer({
   if (s.isMobileLayout) {
     return (
       <>
-        {rootPath && <FileExplorerHeader rootPath={rootPath} />}
+        {(rootLabel || rootPath) && <FileExplorerHeader rootPath={rootLabel ?? rootPath ?? ""} />}
         <MobileFileList
           nodes={s.filteredData}
           features={s.features}
@@ -85,7 +92,7 @@ export function FileExplorer({
 
   return (
     <div className={styles.explorerContainer}>
-      {rootPath && <FileExplorerHeader rootPath={rootPath} />}
+      {(rootLabel || rootPath) && <FileExplorerHeader rootPath={rootLabel ?? rootPath ?? ""} />}
       <ListTree
         nodes={s.filteredData}
         expandOnSelect
@@ -96,11 +103,14 @@ export function FileExplorer({
   );
 }
 
-export function getFileExplorerErrorTitle(isRemote: boolean): string {
-  return isRemote ? "Files are temporarily unavailable" : "Could not load files";
+export function getFileExplorerErrorTitle(isRemote: boolean, isHosted = false): string {
+  return isRemote || isHosted ? "Files are temporarily unavailable" : "Could not load files";
 }
 
-export function getFileExplorerErrorDescription(error: string, isRemote: boolean): string {
+export function getFileExplorerErrorDescription(error: string, isRemote: boolean, isHosted = false): string {
+  if (isHosted) {
+    return "Agent workspace files are temporarily unavailable. Try again in a moment.";
+  }
   if (isRemote) {
     return "Remote files are temporarily unavailable. Try again in a moment.";
   }

@@ -108,6 +108,7 @@ describe("useTerminalTarget", () => {
     expect(result.current.remoteAgentInstanceId).toBeUndefined();
     expect(result.current.remoteWorkspacePath).toBeUndefined();
     expect(result.current.workspacePath).toBe("/local/path");
+    expect(result.current.localAgentInstanceId).toBe("inst-1");
   });
 
   it("resolves from agent list for project without agentInstanceId", async () => {
@@ -215,6 +216,27 @@ describe("useTerminalTarget", () => {
     expect(result.current.remoteAgentId).toBeUndefined();
     expect(result.current.remoteAgentInstanceId).toBeUndefined();
     expect(result.current.workspacePath).toBe("/local/project");
+    expect(result.current.localAgentInstanceId).toBe("inst-local");
+  });
+
+  it("keeps the local instance identity when a hosted workspace path is intentionally hidden", async () => {
+    mockListAgentInstances.mockResolvedValue([
+      {
+        agent_instance_id: "inst-hosted",
+        agent_id: "agent-local",
+        machine_type: "local",
+        workspace_path: null,
+      },
+    ]);
+
+    const { result } = renderHook(() => useTerminalTarget({ projectId: "proj-1" }), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    expect(result.current.workspacePath).toBeUndefined();
+    expect(result.current.localAgentInstanceId).toBe("inst-hosted");
   });
 
   it("sets error when listAgentInstances fails", async () => {

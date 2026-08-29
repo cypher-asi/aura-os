@@ -35,6 +35,7 @@ export default defineConfig({
         "**/agent-runtime-config.spec.ts",
         "**/agent-continuity.spec.ts",
         "**/skill-agent-binding.spec.ts",
+        "**/hosted-workspace-files.desktop.spec.ts",
       ],
       use: {
         ...devices["Desktop Chrome"],

@@ -61,7 +61,7 @@ export function SidekickTaskbar() {
     })),
   );
   const ctx = useProjectActions();
-  const { features } = useAuraCapabilities();
+  const { features, hostedLocalHarness } = useAuraCapabilities();
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
   const terminalTarget = useTerminalTarget({ projectId, agentInstanceId });
   const workspaceAccess = resolveWorkspaceAccess({
@@ -71,6 +71,10 @@ export function SidekickTaskbar() {
     linkedWorkspace: features.linkedWorkspace,
   });
   const canUseWorkspace = workspaceAccess.canUseWorkspace;
+  const canUseHostedFiles = Boolean(
+    hostedLocalHarness && projectId && terminalTarget.localAgentInstanceId,
+  );
+  const canUseFiles = canUseWorkspace || canUseHostedFiles;
   const canUseSourceControl =
     workspaceAccess.canUseWorkspace && workspaceAccess.kind === "local";
   const startAgentInstanceId =
@@ -96,12 +100,13 @@ export function SidekickTaskbar() {
 
   useEffect(() => {
     if (
-      (!canUseWorkspace && (activeTab === "files" || activeTab === "terminal")) ||
+      (!canUseFiles && activeTab === "files") ||
+      (!canUseWorkspace && activeTab === "terminal") ||
       (!canUseSourceControl && activeTab === "source-control")
     ) {
       setActiveTab("sessions");
     }
-  }, [activeTab, canUseSourceControl, canUseWorkspace, setActiveTab]);
+  }, [activeTab, canUseFiles, canUseSourceControl, canUseWorkspace, setActiveTab]);
   useEffect(() => {
     if (automationStartAvailable || !loopEngineeringOpen) return;
     setLoopEngineeringOpen(false);
@@ -136,6 +141,9 @@ export function SidekickTaskbar() {
           ]
         : []),
       { id: "browser", icon: <MonitorPlay size={16} />, title: "Preview" },
+      ...(canUseFiles
+        ? [{ id: "files", icon: <FolderClosed size={16} />, title: "Files" }]
+        : []),
       { id: "specs", icon: <File size={16} />, title: "Plans" },
       {
         id: "run",
@@ -174,16 +182,14 @@ export function SidekickTaskbar() {
       // Stats is a primary navigation destination (asserted by the
       // core smoke + workflow evals), so it must stay in the visible
       // tab row. The sidekick lane only fits ~7 icon tabs at its
-      // default 320px width, so keeping Stats ahead of the more
-      // secondary Log/Files tabs ensures Log/Files (not Stats) are the
-      // ones that fall into the overflow "More" menu on narrow panels.
+      // default 320px width. Files is intentionally pinned beside Preview;
+      // Logs remains the secondary destination that can enter overflow.
       {
         id: "stats",
         icon: <ChartNoAxesColumnIncreasing size={16} />,
         title: "Stats",
       },
       { id: "log", icon: <ClipboardClock size={16} />, title: "Logs" },
-      { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
     ];
     return items;
   }, [
@@ -191,12 +197,11 @@ export function SidekickTaskbar() {
     runActive,
     loopProjectId,
     canUseWorkspace,
+    canUseFiles,
     canUseSourceControl,
     automationStartAvailable,
   ]);
-  const visibleTabs = canUseWorkspace
-    ? tabs
-    : tabs.filter((tab) => tab.id !== "files" && tab.id !== "terminal");
+  const visibleTabs = tabs;
 
   const actions = useMemo<MenuItem[]>(() => {
     if (!project) return [];
