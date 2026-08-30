@@ -92,6 +92,10 @@ pub struct StorageSession {
     /// public link; `None` when the session was never shared.
     #[serde(default)]
     pub public_share_id: Option<String>,
+    /// First successful pin timestamp. Missing on pre-pinning storage
+    /// deployments and `null` for ordinary conversations.
+    #[serde(default)]
+    pub pinned_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -135,6 +139,10 @@ pub struct UpdateSessionRequest {
     /// `is_public`. Omitted from the wire payload when `None`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_share_id: Option<String>,
+    /// `Some(true)` pins, `Some(false)` unpins, and `None` preserves the
+    /// current value. aura-storage owns timestamp generation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pinned: Option<bool>,
 }
 
 #[cfg(test)]
@@ -147,6 +155,7 @@ mod tests {
             "id": "11111111-1111-1111-1111-111111111111",
             "isPublic": true,
             "publicShareId": "t_6a1e3d8f6e548191948c1f0a9c68cbda",
+            "pinnedAt": "2026-08-30T12:00:00Z",
         });
         let session: StorageSession =
             serde_json::from_value(json).expect("deserialize StorageSession");
@@ -155,12 +164,17 @@ mod tests {
             session.public_share_id.as_deref(),
             Some("t_6a1e3d8f6e548191948c1f0a9c68cbda")
         );
+        assert_eq!(session.pinned_at.as_deref(), Some("2026-08-30T12:00:00Z"));
 
         let reencoded = serde_json::to_value(&session).expect("serialize StorageSession");
         assert_eq!(reencoded["isPublic"], serde_json::json!(true));
         assert_eq!(
             reencoded["publicShareId"],
             serde_json::json!("t_6a1e3d8f6e548191948c1f0a9c68cbda")
+        );
+        assert_eq!(
+            reencoded["pinnedAt"],
+            serde_json::json!("2026-08-30T12:00:00Z")
         );
     }
 
@@ -173,6 +187,7 @@ mod tests {
         .expect("deserialize legacy StorageSession");
         assert_eq!(session.is_public, None);
         assert_eq!(session.public_share_id, None);
+        assert_eq!(session.pinned_at, None);
     }
 
     #[test]
@@ -181,6 +196,7 @@ mod tests {
         let json = serde_json::to_value(&req).expect("serialize UpdateSessionRequest");
         assert!(json.get("isPublic").is_none());
         assert!(json.get("publicShareId").is_none());
+        assert!(json.get("pinned").is_none());
 
         let req = UpdateSessionRequest {
             is_public: Some(true),
@@ -193,5 +209,12 @@ mod tests {
             json["publicShareId"],
             serde_json::json!("t_6a1e3d8f6e548191948c1f0a9c68cbda")
         );
+
+        let req = UpdateSessionRequest {
+            pinned: Some(false),
+            ..Default::default()
+        };
+        let json = serde_json::to_value(&req).expect("serialize pin update");
+        assert_eq!(json["pinned"], serde_json::json!(false));
     }
 }

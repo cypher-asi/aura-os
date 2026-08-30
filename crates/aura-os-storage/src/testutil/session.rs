@@ -83,6 +83,7 @@ pub(super) async fn create_session(
         last_event_at: None,
         is_public: None,
         public_share_id: None,
+        pinned_at: None,
     };
     let mut db = db.lock().await;
     db.sessions.push(session.clone());
@@ -148,6 +149,15 @@ pub(super) async fn update_session(
         }
         if let Some(public_share_id) = req.public_share_id {
             session.public_share_id = Some(public_share_id);
+        }
+        if let Some(pinned) = req.pinned {
+            if pinned {
+                if session.pinned_at.is_none() {
+                    session.pinned_at = Some(Utc::now().to_rfc3339());
+                }
+            } else {
+                session.pinned_at = None;
+            }
         }
         session.updated_at = Some(Utc::now().to_rfc3339());
         axum::http::StatusCode::OK

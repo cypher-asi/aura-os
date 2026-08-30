@@ -13,6 +13,7 @@ import {
   type SidekickListRow,
   type SidekickListSection,
 } from "../SidekickList";
+import { Pin } from "lucide-react";
 import { isOptimisticSessionId } from "../../stores/sessions-list-store";
 import {
   type AnnotatedSession,
@@ -33,6 +34,7 @@ interface SessionsListProps {
   onArchiveSession?: (session: AnnotatedSession) => void;
   onRestoreSession?: (session: AnnotatedSession) => void;
   onRenameSession?: (session: AnnotatedSession, title: string) => void;
+  onSetSessionPinned?: (session: AnnotatedSession, pinned: boolean) => void;
   /**
    * Optional hover hook — fired on `onMouseEnter` of each row so the
    * caller can pre-warm the destination chat-history-store entry for
@@ -142,6 +144,7 @@ export function SessionsList({
   onArchiveSession,
   onRestoreSession,
   onRenameSession,
+  onSetSessionPinned,
   onSessionHover,
   searchQuery,
   deleteError,
@@ -222,7 +225,21 @@ export function SessionsList({
     () => titledRows.filter(({ session }) => session.status === "archived"),
     [titledRows],
   );
-  const buckets = useMemo(() => bucketizeByDate(activeRows), [activeRows]);
+  const pinnedRows = useMemo(
+    () =>
+      activeRows
+        .filter(({ session }) => Boolean(session.pinned_at))
+        .sort(
+          (a, b) =>
+            new Date(b.session.pinned_at ?? 0).getTime() -
+            new Date(a.session.pinned_at ?? 0).getTime(),
+        ),
+    [activeRows],
+  );
+  const buckets = useMemo(
+    () => bucketizeByDate(activeRows.filter(({ session }) => !session.pinned_at)),
+    [activeRows],
+  );
   // Check if sessions span multiple projects — only show the project
   // prefix when there's more than one to avoid noise in the common case.
   const hasMultipleProjects = useMemo(() => {
@@ -270,6 +287,8 @@ export function SessionsList({
           deriveSessionLabel(target, summaries[target.session_id]),
         );
       }
+      if (actionId === "pin") onSetSessionPinned?.(target, true);
+      if (actionId === "unpin") onSetSessionPinned?.(target, false);
       if (actionId === "archive") onArchiveSession?.(target);
       if (actionId === "restore") onRestoreSession?.(target);
       if (actionId === "delete") onDeleteSession?.(target);
@@ -277,6 +296,7 @@ export function SessionsList({
     [
       sessionById,
       summaries,
+      onSetSessionPinned,
       onArchiveSession,
       onRestoreSession,
       onDeleteSession,
@@ -296,6 +316,9 @@ export function SessionsList({
       }
       return [
         ...(onRenameSession ? (["rename"] as const) : []),
+        ...(onSetSessionPinned && !isOptimisticSessionId(target.session_id)
+          ? ([target.pinned_at ? "unpin" : "pin"] as const)
+          : []),
         ...(onArchiveSession ? (["archive"] as const) : []),
         ...(onDeleteSession ? (["delete"] as const) : []),
       ];
@@ -303,6 +326,7 @@ export function SessionsList({
     [
       sessionById,
       onRenameSession,
+      onSetSessionPinned,
       onArchiveSession,
       onRestoreSession,
       onDeleteSession,
@@ -347,6 +371,9 @@ export function SessionsList({
       return {
         id: session.session_id,
         label,
+        icon: session.pinned_at ? (
+          <Pin size={13} aria-label="Pinned" />
+        ) : undefined,
         leadingIndicator: (
           <SessionStreamingDot
             session={session}
@@ -373,6 +400,15 @@ export function SessionsList({
 
   const sections = useMemo<SidekickListSection[]>(
     () => [
+      ...(pinnedRows.length > 0
+        ? [
+            {
+              id: "pinned",
+              label: "Pinned",
+              rows: pinnedRows.map(toSidekickRow),
+            },
+          ]
+        : []),
       ...buckets.map((bucket) => ({
         id: bucket.label,
         label: bucket.label,
@@ -393,6 +429,7 @@ export function SessionsList({
     ],
     [
       buckets,
+      pinnedRows,
       archivedRows,
       selectedSessionId,
       toSidekickRow,
@@ -447,6 +484,7 @@ export function SessionsList({
         empty={<EmptyState>No sessions yet</EmptyState>}
         menuActions={
           onRenameSession ||
+          onSetSessionPinned ||
           onDeleteSession ||
           onArchiveSession ||
           onRestoreSession
@@ -455,6 +493,7 @@ export function SessionsList({
         }
         onMenuAction={
           onRenameSession ||
+          onSetSessionPinned ||
           onDeleteSession ||
           onArchiveSession ||
           onRestoreSession

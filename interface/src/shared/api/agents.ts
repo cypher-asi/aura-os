@@ -761,6 +761,16 @@ export const sessionsApi = {
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/title`,
       { method: "PUT", body: JSON.stringify({ title }) },
     ),
+  setSessionPinned: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+    pinned: boolean,
+  ) =>
+    apiFetch<void>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/pin`,
+      { method: "PUT", body: JSON.stringify({ pinned }) },
+    ),
   deleteSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<void>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}`,

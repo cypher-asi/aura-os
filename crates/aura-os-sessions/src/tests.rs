@@ -21,6 +21,7 @@ async fn should_rollover_at_threshold() {
         total_input_tokens: 0,
         total_output_tokens: 0,
         summary_of_previous_context: String::new(),
+        pinned_at: None,
         status: SessionStatus::Active,
         user_id: None,
         model: None,
