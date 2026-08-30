@@ -10,6 +10,7 @@ import {
 import type { AnnotatedSession } from "../../components/SessionsList";
 
 interface SessionListData {
+  surfaceKey: string | undefined;
   sessions: AnnotatedSession[];
   sessionById: Map<string, AnnotatedSession>;
   loading: boolean;
@@ -86,6 +87,7 @@ export function useSessionListData(): SessionListData {
   );
 
   return {
+    surfaceKey,
     sessions,
     sessionById,
     loading,

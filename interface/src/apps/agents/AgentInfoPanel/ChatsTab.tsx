@@ -5,6 +5,7 @@ import {
   type AnnotatedSession,
   formatDeleteSessionError,
   SessionsList,
+  useSessionArchiveActions,
   useSessionNavigate,
 } from "../../../components/SessionsList";
 import {
@@ -42,6 +43,8 @@ export function ChatsTab() {
   const { loadAgentSessions, removeSession, restoreSession, setDeleteError } =
     useSessionsListActions();
   const deleteError = useSessionsDeleteError(surfaceKey);
+  const { archiveSession, restoreArchivedSession } =
+    useSessionArchiveActions(surfaceKey);
   const navigateToSession = useSessionNavigate({ agentId: agentId ?? null });
   const [searchParams] = useSearchParams();
   const selectedSessionId = searchParams.get("session");
@@ -121,6 +124,8 @@ export function ChatsTab() {
       onSessionClick={handleSessionClick}
       onSessionHover={handleSessionHover}
       onDeleteSession={handleDelete}
+      onArchiveSession={archiveSession}
+      onRestoreSession={restoreArchivedSession}
       deleteError={deleteError}
       onDismissError={surfaceKey ? () => setDeleteError(surfaceKey, null) : undefined}
     />

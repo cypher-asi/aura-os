@@ -160,6 +160,7 @@ pub enum SessionStatus {
     Completed,
     Failed,
     RolledOver,
+    Archived,
     Deleted,
 }
 

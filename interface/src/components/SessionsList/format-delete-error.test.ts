@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ApiClientError } from "../../shared/api/core";
-import { formatDeleteSessionError } from "./format-delete-error";
+import {
+  formatDeleteSessionError,
+  formatSessionActionError,
+} from "./format-delete-error";
 
 describe("formatDeleteSessionError", () => {
   it("includes the upstream HTTP status and server message for ApiClientError", () => {
@@ -37,6 +40,15 @@ describe("formatDeleteSessionError", () => {
     );
     expect(formatDeleteSessionError("plain string")).toBe(
       "Couldn't delete session.",
+    );
+  });
+
+  it("formats archive and restore failures with the requested action", () => {
+    expect(formatSessionActionError("archive", new Error("offline"))).toBe(
+      "Couldn't archive session: offline",
+    );
+    expect(formatSessionActionError("restore", undefined)).toBe(
+      "Couldn't restore session.",
     );
   });
 });

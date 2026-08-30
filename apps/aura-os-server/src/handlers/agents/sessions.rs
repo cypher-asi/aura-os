@@ -10,7 +10,7 @@ use aura_os_core::{
 use aura_os_sessions::{storage_enriched_session_to_enriched_session, storage_session_to_session};
 use aura_os_storage::{
     CreateSessionEventRequest, CreateSessionRequest, StorageClient, StorageSession,
-    StorageSessionEvent, SESSION_STATUS_DELETED,
+    StorageSessionEvent, UpdateSessionRequest, SESSION_STATUS_ARCHIVED, SESSION_STATUS_DELETED,
 };
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
@@ -420,6 +420,120 @@ fn branch_event_prefix(
     };
     events.truncate(target_index + 1);
     Ok(events)
+}
+
+/// Move a session out of the active date buckets without deleting its
+/// transcript. The archived status is deliberately server-backed so the
+/// choice follows the user across Aura clients.
+pub(crate) async fn archive_session(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path((project_id, agent_instance_id, session_id)): Path<(
+        ProjectId,
+        AgentInstanceId,
+        SessionId,
+    )>,
+) -> ApiResult<axum::http::StatusCode> {
+    set_session_archived(
+        state.require_storage_client()?,
+        &jwt,
+        project_id,
+        agent_instance_id,
+        session_id,
+        true,
+    )
+    .await
+}
+
+/// Return an archived session to the normal conversation list. Archive is a
+/// presentation lifecycle rather than an execution lifecycle, so restored
+/// sessions settle as `completed` until the user sends another turn.
+pub(crate) async fn restore_archived_session(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path((project_id, agent_instance_id, session_id)): Path<(
+        ProjectId,
+        AgentInstanceId,
+        SessionId,
+    )>,
+) -> ApiResult<axum::http::StatusCode> {
+    set_session_archived(
+        state.require_storage_client()?,
+        &jwt,
+        project_id,
+        agent_instance_id,
+        session_id,
+        false,
+    )
+    .await
+}
+
+async fn set_session_archived(
+    storage: &StorageClient,
+    jwt: &str,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    session_id: SessionId,
+    archived: bool,
+) -> ApiResult<axum::http::StatusCode> {
+    let project_id = project_id.to_string();
+    let agent_instance_id = agent_instance_id.to_string();
+    let session_id = session_id.to_string();
+    let session = storage
+        .get_session(&session_id, jwt)
+        .await
+        .map_err(|error| match &error {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(error),
+        })?;
+    reject_deleted_storage_session(&session, "session not found")?;
+
+    // Storage authorizes ownership through the JWT. Also bind the session to
+    // the IDs in this route so a valid ID cannot be replayed through another
+    // project or agent path. Legacy rows may omit either binding.
+    if session
+        .project_id
+        .as_deref()
+        .is_some_and(|id| id != project_id)
+        || session
+            .project_agent_id
+            .as_deref()
+            .is_some_and(|id| id != agent_instance_id)
+    {
+        return Err(ApiError::not_found("session not found"));
+    }
+
+    let is_archived = session.status.as_deref() == Some(SESSION_STATUS_ARCHIVED);
+    if is_archived == archived {
+        return Ok(axum::http::StatusCode::NO_CONTENT);
+    }
+
+    let status = if archived {
+        SESSION_STATUS_ARCHIVED
+    } else {
+        "completed"
+    };
+    storage
+        .update_session(
+            &session_id,
+            jwt,
+            &UpdateSessionRequest {
+                status: Some(status.to_string()),
+                ..Default::default()
+            },
+        )
+        .await
+        .map_err(|error| match &error {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(error),
+        })?;
+
+    info!(%session_id, archived, "Session archive state updated");
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
 pub(crate) async fn delete_session(

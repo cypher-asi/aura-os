@@ -1,7 +1,7 @@
 export type ProjectStatus = "planning" | "active" | "paused" | "completed" | "archived";
 export type TaskStatus = "backlog" | "to_do" | "pending" | "ready" | "in_progress" | "blocked" | "done" | "failed";
 export type AgentStatus = "idle" | "working" | "blocked" | "stopped" | "error" | "archived";
-export type SessionStatus = "active" | "completed" | "failed" | "rolled_over" | "deleted";
+export type SessionStatus = "active" | "completed" | "failed" | "rolled_over" | "archived" | "deleted";
 export type OrchestrationStatus = "planning" | "executing" | "completed" | "failed";
 export type StepStatus = "pending" | "running" | "done" | "failed" | "skipped";
 export type ArtifactType = "report" | "data" | "media" | "code" | "custom";

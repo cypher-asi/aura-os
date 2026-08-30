@@ -9,6 +9,7 @@ import {
 import { EmptyState } from "../EmptyState";
 import {
   SidekickList,
+  type SidekickListRow,
   type SidekickListSection,
 } from "../SidekickList";
 import { isOptimisticSessionId } from "../../stores/sessions-list-store";
@@ -28,6 +29,8 @@ interface SessionsListProps {
   selectedSessionId: string | null;
   onSessionClick: (session: AnnotatedSession) => void;
   onDeleteSession?: (session: AnnotatedSession) => void;
+  onArchiveSession?: (session: AnnotatedSession) => void;
+  onRestoreSession?: (session: AnnotatedSession) => void;
   /**
    * Optional hover hook — fired on `onMouseEnter` of each row so the
    * caller can pre-warm the destination chat-history-store entry for
@@ -134,6 +137,8 @@ export function SessionsList({
   selectedSessionId,
   onSessionClick,
   onDeleteSession,
+  onArchiveSession,
+  onRestoreSession,
   onSessionHover,
   searchQuery,
   deleteError,
@@ -141,7 +146,10 @@ export function SessionsList({
   renderRowSuffix,
   streamKeyForSession,
 }: SessionsListProps) {
-  const safeSessions = Array.isArray(sessions) ? sessions : [];
+  const safeSessions = useMemo(
+    () => (Array.isArray(sessions) ? sessions : []),
+    [sessions],
+  );
   // Track which rows are currently scrolled into view so the lazy
   // /summarize backfill in `useSessionSummaries` only fires for rows
   // the user can actually see. Without this gate, opening the
@@ -201,7 +209,15 @@ export function SessionsList({
     return out;
   }, [safeSessions, summaries, searchQuery]);
 
-  const buckets = useMemo(() => bucketizeByDate(titledRows), [titledRows]);
+  const activeRows = useMemo(
+    () => titledRows.filter(({ session }) => session.status !== "archived"),
+    [titledRows],
+  );
+  const archivedRows = useMemo(
+    () => titledRows.filter(({ session }) => session.status === "archived"),
+    [titledRows],
+  );
+  const buckets = useMemo(() => bucketizeByDate(activeRows), [activeRows]);
   // Check if sessions span multiple projects — only show the project
   // prefix when there's more than one to avoid noise in the common case.
   const hasMultipleProjects = useMemo(() => {
@@ -232,20 +248,40 @@ export function SessionsList({
   //      newest.
   const effectiveSelectedSessionId = useMemo(() => {
     if (selectedSessionId) return selectedSessionId;
-    const optimistic = titledRows.find(({ session }) =>
+    const optimistic = activeRows.find(({ session }) =>
       isOptimisticSessionId(session.session_id),
     );
     if (optimistic) return optimistic.session.session_id;
-    return titledRows[0]?.session.session_id ?? null;
-  }, [selectedSessionId, titledRows]);
+    return activeRows[0]?.session.session_id ?? null;
+  }, [selectedSessionId, activeRows]);
 
   const handleMenuAction = useCallback(
     (actionId: string, rowId: string) => {
-      if (actionId !== "delete") return;
       const target = sessionById.get(rowId);
-      if (target) onDeleteSession?.(target);
+      if (!target) return;
+      if (actionId === "archive") onArchiveSession?.(target);
+      if (actionId === "restore") onRestoreSession?.(target);
+      if (actionId === "delete") onDeleteSession?.(target);
     },
-    [sessionById, onDeleteSession],
+    [sessionById, onArchiveSession, onRestoreSession, onDeleteSession],
+  );
+
+  const menuActionsForRow = useCallback(
+    (row: SidekickListRow) => {
+      const target = sessionById.get(row.id);
+      if (!target) return [];
+      if (target.status === "archived") {
+        return [
+          ...(onRestoreSession ? (["restore"] as const) : []),
+          ...(onDeleteSession ? (["delete"] as const) : []),
+        ];
+      }
+      return [
+        ...(onArchiveSession ? (["archive"] as const) : []),
+        ...(onDeleteSession ? (["delete"] as const) : []),
+      ];
+    },
+    [sessionById, onArchiveSession, onRestoreSession, onDeleteSession],
   );
 
   const handleRowMouseEnter = useCallback(
@@ -258,44 +294,66 @@ export function SessionsList({
     [onSessionHover],
   );
 
-  const sections = useMemo<SidekickListSection[]>(
-    () =>
-      buckets.map((bucket) => ({
-        id: bucket.label,
-        label: bucket.label,
-        rows: bucket.rows.map(({ session, label }: SessionRow) => {
-          const customSuffix = renderRowSuffix?.(session) ?? null;
-          const defaultSuffix =
-            hasMultipleProjects && session._projectName ? (
-              <span className={styles.sessionProject}>{session._projectName}</span>
-            ) : null;
-          const suffix = customSuffix !== null ? customSuffix : defaultSuffix;
-          return {
-            id: session.session_id,
-            label,
-            leadingIndicator: (
-              <SessionStreamingDot
-                session={session}
-                streamKeyForSession={streamKeyForSession}
-              />
-            ),
-            suffix,
-            onSelect: () => onSessionClick(session),
-            onMouseEnter: () => handleRowMouseEnter(session),
-            onFocus: () => handleRowMouseEnter(session),
-            onVisibilityChange: (visible: boolean) =>
-              handleVisibilityChange(session.session_id, visible),
-          };
-        }),
-      })),
+  const toSidekickRow = useCallback(
+    ({ session, label }: SessionRow): SidekickListRow => {
+      const customSuffix = renderRowSuffix?.(session) ?? null;
+      const defaultSuffix =
+        hasMultipleProjects && session._projectName ? (
+          <span className={styles.sessionProject}>{session._projectName}</span>
+        ) : null;
+      const suffix = customSuffix !== null ? customSuffix : defaultSuffix;
+      return {
+        id: session.session_id,
+        label,
+        leadingIndicator: (
+          <SessionStreamingDot
+            session={session}
+            streamKeyForSession={streamKeyForSession}
+          />
+        ),
+        suffix,
+        onSelect: () => onSessionClick(session),
+        onMouseEnter: () => handleRowMouseEnter(session),
+        onFocus: () => handleRowMouseEnter(session),
+        onVisibilityChange: (visible: boolean) =>
+          handleVisibilityChange(session.session_id, visible),
+      };
+    },
     [
-      buckets,
       renderRowSuffix,
       hasMultipleProjects,
       streamKeyForSession,
       onSessionClick,
       handleRowMouseEnter,
       handleVisibilityChange,
+    ],
+  );
+
+  const sections = useMemo<SidekickListSection[]>(
+    () => [
+      ...buckets.map((bucket) => ({
+        id: bucket.label,
+        label: bucket.label,
+        rows: bucket.rows.map(toSidekickRow),
+      })),
+      ...(archivedRows.length > 0
+        ? [
+            {
+              id: "archived",
+              label: `Archived (${archivedRows.length})`,
+              rows: archivedRows.map(toSidekickRow),
+              defaultExpanded: archivedRows.some(
+                ({ session }) => session.session_id === selectedSessionId,
+              ),
+            },
+          ]
+        : []),
+    ],
+    [
+      buckets,
+      archivedRows,
+      selectedSessionId,
+      toSidekickRow,
     ],
   );
 
@@ -324,8 +382,16 @@ export function SessionsList({
         loading={loading && safeSessions.length === 0}
         loadingLabel="Loading sessions..."
         empty={<EmptyState>No sessions yet</EmptyState>}
-        menuActions={onDeleteSession ? ["delete"] : undefined}
-        onMenuAction={onDeleteSession ? handleMenuAction : undefined}
+        menuActions={
+          onDeleteSession || onArchiveSession || onRestoreSession
+            ? menuActionsForRow
+            : undefined
+        }
+        onMenuAction={
+          onDeleteSession || onArchiveSession || onRestoreSession
+            ? handleMenuAction
+            : undefined
+        }
         className={styles.chatsList}
       />
     </>

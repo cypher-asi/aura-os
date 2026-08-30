@@ -192,6 +192,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
             post(agents::branch_session),
         )
         .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/archive",
+            post(agents::archive_session).delete(agents::restore_archived_session),
+        )
+        .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/safe-workspace",
             get(agents::get_safe_workspace_status),
         )

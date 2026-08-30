@@ -6,6 +6,7 @@ export {
 export { useSessionNavigate } from "./use-session-navigate";
 export { useSessionSummaries } from "./use-session-summaries";
 export { formatDeleteSessionError } from "./format-delete-error";
+export { useSessionArchiveActions } from "./use-session-archive-actions";
 export {
   type AnnotatedSession,
   type SessionRow,

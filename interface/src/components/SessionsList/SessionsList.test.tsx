@@ -105,6 +105,31 @@ describe("SessionsList", () => {
     expect(screen.getByText("Investigate websocket bug")).toBeInTheDocument();
   });
 
+  it("moves archived sessions into a collapsed archive section", () => {
+    const sessions = [
+      makeSession("s1", isoToday, "Active conversation"),
+      makeSession("s2", isoYesterday, "Filed conversation", {
+        status: "archived",
+      }),
+    ];
+
+    render(
+      <SessionsList
+        sessions={sessions}
+        loading={false}
+        selectedSessionId={null}
+        onSessionClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Today")).toBeInTheDocument();
+    const archivedHeader = screen
+      .getByText("Archived (1)")
+      .closest("[data-list-item]");
+    expect(archivedHeader).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Yesterday")).not.toBeInTheDocument();
+  });
+
   it("hides untitled sessions until a summary is available", () => {
     const sessions = [
       makeSession("s-titled", isoToday, "Has summary"),

@@ -20,13 +20,20 @@ import { ApiClientError } from "../../shared/api/core";
  * always informative even if the network layer returns something
  * unexpected.
  */
-export function formatDeleteSessionError(err: unknown): string {
+export function formatSessionActionError(
+  action: "archive" | "restore" | "delete",
+  err: unknown,
+): string {
   if (err instanceof ApiClientError) {
     const detail = err.body.error || err.body.code || err.message;
-    return `Couldn't delete session (${err.status}): ${detail}`;
+    return `Couldn't ${action} session (${err.status}): ${detail}`;
   }
   if (err instanceof Error && err.message) {
-    return `Couldn't delete session: ${err.message}`;
+    return `Couldn't ${action} session: ${err.message}`;
   }
-  return "Couldn't delete session.";
+  return `Couldn't ${action} session.`;
+}
+
+export function formatDeleteSessionError(err: unknown): string {
+  return formatSessionActionError("delete", err);
 }

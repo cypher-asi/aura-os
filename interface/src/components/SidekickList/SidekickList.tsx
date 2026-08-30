@@ -82,7 +82,9 @@ export interface SidekickListProps {
   /** Whole-list empty state, shown when every section is empty. */
   empty?: ReactNode;
   /** Context-menu actions enabled per row. Omit to disable the menu. */
-  menuActions?: SidekickMenuAction[];
+  menuActions?:
+    | SidekickMenuAction[]
+    | ((row: SidekickListRow) => SidekickMenuAction[]);
   /** Fired when a context-menu action is chosen for a given row id. */
   onMenuAction?: (actionId: string, rowId: string) => void;
   className?: string;
@@ -238,7 +240,15 @@ export function SidekickList({
   );
 
   const totalRows = rowsById.size;
-  const menuEnabled = !!menuActions && menuActions.length > 0 && !!onMenuAction;
+  const menuEnabled =
+    !!menuActions &&
+    (typeof menuActions === "function" || menuActions.length > 0) &&
+    !!onMenuAction;
+  const resolvedMenuActions = menu?.item
+    ? typeof menuActions === "function"
+      ? menuActions(menu.item)
+      : menuActions
+    : undefined;
 
   if (loading && totalRows === 0) {
     return <div className={styles.loading}>{loadingLabel}</div>;
@@ -272,13 +282,13 @@ export function SidekickList({
           />
         ))}
       </div>
-      {menuEnabled && menu && (
+      {menuEnabled && menu && resolvedMenuActions && resolvedMenuActions.length > 0 && (
         <SidekickItemContextMenu
           x={menu.x}
           y={menu.y}
           menuRef={menuRef}
           onAction={handleMenuAction}
-          actions={menuActions}
+          actions={resolvedMenuActions}
         />
       )}
     </>
