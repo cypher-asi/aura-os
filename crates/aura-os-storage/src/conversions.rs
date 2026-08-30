@@ -173,6 +173,11 @@ impl TryFrom<StorageSession> for Session {
                 .as_deref()
                 .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
                 .map(|dt| dt.with_timezone(&Utc)),
+            snoozed_until: val
+                .snoozed_until
+                .as_deref()
+                .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
+                .map(|dt| dt.with_timezone(&Utc)),
             status: parse_session_status(val.status.as_deref().unwrap_or("active")),
             user_id: None,
             model: val.model,

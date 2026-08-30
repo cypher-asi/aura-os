@@ -9,6 +9,7 @@ import {
   useSessionArchiveActions,
   useSessionRenameAction,
   useSessionPinAction,
+  useSessionSnoozeAction,
   useSessionNavigate,
 } from "../../components/SessionsList";
 import {
@@ -37,6 +38,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
     useSessionArchiveActions(surfaceKey);
   const renameSession = useSessionRenameAction(surfaceKey);
   const setSessionPinned = useSessionPinAction(surfaceKey);
+  const setSessionSnoozedUntil = useSessionSnoozeAction(surfaceKey);
   const handleSessionClick = useSessionNavigate({ agentId: null });
   const [searchParams] = useSearchParams();
   const selectedSessionId = searchParams.get("session");
@@ -96,6 +98,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
       onRestoreSession={restoreArchivedSession}
       onRenameSession={renameSession}
       onSetSessionPinned={setSessionPinned}
+      onSetSessionSnoozedUntil={setSessionSnoozedUntil}
       searchQuery={searchQuery}
       deleteError={deleteError}
       onDismissError={handleDismissError}

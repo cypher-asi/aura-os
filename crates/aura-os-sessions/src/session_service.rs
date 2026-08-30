@@ -136,6 +136,7 @@ impl SessionService {
             total_output_tokens: 0,
             summary_of_previous_context: summary,
             pinned_at: None,
+            snoozed_until: None,
             status: SessionStatus::Active,
             user_id,
             model,

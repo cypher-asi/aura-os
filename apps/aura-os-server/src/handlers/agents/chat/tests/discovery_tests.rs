@@ -26,6 +26,7 @@ fn storage_session(id: &str, started_at: Option<&str>, created_at: Option<&str>)
         is_public: None,
         public_share_id: None,
         pinned_at: None,
+        snoozed_until: None,
     }
 }
 
