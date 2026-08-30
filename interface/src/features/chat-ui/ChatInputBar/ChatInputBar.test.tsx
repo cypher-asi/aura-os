@@ -130,6 +130,7 @@ import { ENTER_SUBMIT_GRACE_MS } from "../../../components/InputBarShell/InputBa
 import { MAX_CHAT_PROMPT_CHARACTERS } from "./composer-length";
 import type { AttachmentItem } from "../ChatInputBar";
 import type { AgentInstance } from "../../../shared/types";
+import { usePromptStashStore } from "../../../stores/prompt-stash-store";
 
 function makeProps(overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {}) {
   return {
@@ -218,6 +219,8 @@ beforeEach(() => {
   mockSetPinnedSourceImage.mockClear();
   mockAddFiles.mockClear();
   mockHandleRemove.mockClear();
+  localStorage.clear();
+  usePromptStashStore.setState({ entries: [] });
 });
 
 describe("ChatInputBar", () => {
@@ -267,6 +270,27 @@ describe("ChatInputBar", () => {
 
     await user.type(screen.getByPlaceholderText("/ for commands, @ for context"), "H");
     expect(onInputChange).toHaveBeenCalled();
+  });
+
+  it("stashes the current desktop prompt with Cmd+S", () => {
+    const onInputChange = vi.fn();
+    render(
+      <ChatInputBar
+        {...makeProps({ input: "save this for another chat", onInputChange })}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByDisplayValue("save this for another chat"), {
+      key: "s",
+      metaKey: true,
+    });
+
+    expect(onInputChange).toHaveBeenCalledWith("");
+    expect(usePromptStashStore.getState().entries[0]?.prompt).toBe(
+      "save this for another chat",
+    );
+    expect(screen.getByRole("button", { name: "Prompt shelf, 1 saved" }))
+      .toBeInTheDocument();
   });
 
   it("opens slash commands only for the trailing token", () => {
@@ -1192,6 +1216,12 @@ describe("ChatInputBar", () => {
       undefined,
       undefined,
     );
+  });
+
+  it("opens the prompt shelf from the mobile composer", async () => {
+    render(<MobileChatInputBar {...makeProps()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Prompt shelf" }));
+    expect(screen.getByRole("dialog", { name: "Saved prompts" })).toBeInTheDocument();
   });
 
   it("sends exact project-agent bindings from the mobile composer", async () => {
