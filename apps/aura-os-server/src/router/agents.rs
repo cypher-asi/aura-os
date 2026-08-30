@@ -1,5 +1,5 @@
 use axum::extract::DefaultBodyLimit;
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, post, put};
 use axum::Router;
 
 use super::ATTACHMENT_REQUEST_MAX_BYTES;
@@ -194,6 +194,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/archive",
             post(agents::archive_session).delete(agents::restore_archived_session),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/title",
+            put(agents::rename_session),
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/safe-workspace",

@@ -393,6 +393,24 @@ describe("sessionsApi", () => {
     );
   });
 
+  it("renames a session through its title resource", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+    await sessionsApi.renameSession(
+      "p1" as string,
+      "ai1" as string,
+      "s1",
+      "A clearer title",
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/agents/ai1/sessions/s1/title",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ title: "A clearer title" }),
+      }),
+    );
+  });
+
   it("listSessionTasks fetches tasks for session", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;

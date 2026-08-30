@@ -9,6 +9,52 @@
   padding: var(--space-2) 0;
 }
 
+.renameForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-1);
+  margin: var(--space-1) var(--space-2) var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-elevated);
+}
+
+.renameForm input {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  padding: 5px 7px;
+  color: var(--color-text-primary);
+  background: var(--color-input-bg);
+  font: inherit;
+}
+
+.renameForm input:focus {
+  border-color: var(--color-accent);
+}
+
+.renameForm button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 4px 7px;
+  color: var(--color-text-secondary);
+  background: var(--color-overlay-subtle);
+  cursor: pointer;
+  font: inherit;
+}
+
+.renameForm button[type="submit"] {
+  color: var(--color-accent-contrast);
+  background: var(--color-accent);
+}
+
+.renameForm button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* Per-session streaming indicator. Mirrors the existing "agent is
    streaming" affordance but keyed off the per-session stream lane
    (Phase 3 of the parallel-session-chats plan), so each row reflects

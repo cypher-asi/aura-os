@@ -3,6 +3,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type FormEvent,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -31,6 +32,7 @@ interface SessionsListProps {
   onDeleteSession?: (session: AnnotatedSession) => void;
   onArchiveSession?: (session: AnnotatedSession) => void;
   onRestoreSession?: (session: AnnotatedSession) => void;
+  onRenameSession?: (session: AnnotatedSession, title: string) => void;
   /**
    * Optional hover hook — fired on `onMouseEnter` of each row so the
    * caller can pre-warm the destination chat-history-store entry for
@@ -139,6 +141,7 @@ export function SessionsList({
   onDeleteSession,
   onArchiveSession,
   onRestoreSession,
+  onRenameSession,
   onSessionHover,
   searchQuery,
   deleteError,
@@ -181,6 +184,8 @@ export function SessionsList({
 
   const summaries = useSessionSummaries(safeSessions, visibleSessionIds);
   const lastHoveredSessionIdRef = useRef<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<AnnotatedSession | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   // Live-update of the row label when the backend's on-send title
   // generator (apps/aura-os-server/src/handlers/agents/sessions.rs
@@ -259,11 +264,23 @@ export function SessionsList({
     (actionId: string, rowId: string) => {
       const target = sessionById.get(rowId);
       if (!target) return;
+      if (actionId === "rename") {
+        setRenameTarget(target);
+        setRenameValue(
+          deriveSessionLabel(target, summaries[target.session_id]),
+        );
+      }
       if (actionId === "archive") onArchiveSession?.(target);
       if (actionId === "restore") onRestoreSession?.(target);
       if (actionId === "delete") onDeleteSession?.(target);
     },
-    [sessionById, onArchiveSession, onRestoreSession, onDeleteSession],
+    [
+      sessionById,
+      summaries,
+      onArchiveSession,
+      onRestoreSession,
+      onDeleteSession,
+    ],
   );
 
   const menuActionsForRow = useCallback(
@@ -272,17 +289,42 @@ export function SessionsList({
       if (!target) return [];
       if (target.status === "archived") {
         return [
+          ...(onRenameSession ? (["rename"] as const) : []),
           ...(onRestoreSession ? (["restore"] as const) : []),
           ...(onDeleteSession ? (["delete"] as const) : []),
         ];
       }
       return [
+        ...(onRenameSession ? (["rename"] as const) : []),
         ...(onArchiveSession ? (["archive"] as const) : []),
         ...(onDeleteSession ? (["delete"] as const) : []),
       ];
     },
-    [sessionById, onArchiveSession, onRestoreSession, onDeleteSession],
+    [
+      sessionById,
+      onRenameSession,
+      onArchiveSession,
+      onRestoreSession,
+      onDeleteSession,
+    ],
   );
+
+  const submitRename = useCallback(
+    (event: FormEvent) => {
+      event.preventDefault();
+      const title = renameValue.trim();
+      if (!renameTarget || !title) return;
+      onRenameSession?.(renameTarget, title);
+      setRenameTarget(null);
+      setRenameValue("");
+    },
+    [onRenameSession, renameTarget, renameValue],
+  );
+
+  const cancelRename = useCallback(() => {
+    setRenameTarget(null);
+    setRenameValue("");
+  }, []);
 
   const handleRowMouseEnter = useCallback(
     (session: AnnotatedSession) => {
@@ -376,6 +418,27 @@ export function SessionsList({
   return (
     <>
       {errorBanner}
+      {renameTarget ? (
+        <form
+          className={styles.renameForm}
+          onSubmit={submitRename}
+          aria-label="Rename session"
+        >
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={(event) => setRenameValue(event.target.value)}
+            maxLength={120}
+            aria-label="Session title"
+          />
+          <button type="submit" disabled={!renameValue.trim()}>
+            Save
+          </button>
+          <button type="button" onClick={cancelRename}>
+            Cancel
+          </button>
+        </form>
+      ) : null}
       <SidekickList
         sections={sections}
         selectedId={effectiveSelectedSessionId}
@@ -383,12 +446,18 @@ export function SessionsList({
         loadingLabel="Loading sessions..."
         empty={<EmptyState>No sessions yet</EmptyState>}
         menuActions={
-          onDeleteSession || onArchiveSession || onRestoreSession
+          onRenameSession ||
+          onDeleteSession ||
+          onArchiveSession ||
+          onRestoreSession
             ? menuActionsForRow
             : undefined
         }
         onMenuAction={
-          onDeleteSession || onArchiveSession || onRestoreSession
+          onRenameSession ||
+          onDeleteSession ||
+          onArchiveSession ||
+          onRestoreSession
             ? handleMenuAction
             : undefined
         }

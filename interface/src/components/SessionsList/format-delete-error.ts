@@ -21,7 +21,7 @@ import { ApiClientError } from "../../shared/api/core";
  * unexpected.
  */
 export function formatSessionActionError(
-  action: "archive" | "restore" | "delete",
+  action: "archive" | "restore" | "delete" | "rename",
   err: unknown,
 ): string {
   if (err instanceof ApiClientError) {
