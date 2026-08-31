@@ -121,6 +121,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       contextUsage,
       onNewChat,
       sendDisabled = false,
+      sendDisabledReason,
       composerTone = "build",
     },
     ref,
@@ -142,6 +143,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       stop: stopVoiceDictation,
     } = useVoiceDictation(onInputChange);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const sendPointerSubmittedRef = useRef(false);
     const slashStartRef = useRef<number | null>(null);
     const mentionStartRef = useRef<number | null>(null);
     const mentionEndRef = useRef<number | null>(null);
@@ -559,6 +561,28 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       streamKey,
     ]);
 
+    const handleSendPointerDown = useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        if (!canSend) return;
+        event.preventDefault();
+        sendPointerSubmittedRef.current = true;
+        submitMessage();
+      },
+      [canSend, submitMessage],
+    );
+
+    const handleSendClick = useCallback(
+      (event: React.MouseEvent<HTMLButtonElement>) => {
+        if (sendPointerSubmittedRef.current || event.detail > 0) {
+          sendPointerSubmittedRef.current = false;
+          event.preventDefault();
+          return;
+        }
+        submitMessage();
+      },
+      [submitMessage],
+    );
+
     useEffect(() => {
       if (isStreaming || sendDisabled) stopVoiceDictation();
     }, [isStreaming, sendDisabled, stopVoiceDictation]);
@@ -885,6 +909,19 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             </div>
           ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
+          {isLocalAgent ? (
+            <div
+              className={styles.disabledNotice}
+              role="status"
+              aria-live="polite"
+              data-agent-surface="mobile-chat-input-disabled-hint"
+            >
+              <span className={styles.disabledNoticeTitle}>Remote agent required</span>
+              <span className={styles.disabledNoticeCopy}>
+                {sendDisabledReason ?? "Choose or create a remote agent to chat from mobile."}
+              </span>
+            </div>
+          ) : null}
           {lengthValidationMessage ? (
             <div
               className={styles.lengthValidationHint}
@@ -952,7 +989,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               disabled={sendDisabled}
               placeholder={
                 isLocalAgent
-                  ? "Remote agent required. Please switch agent"
+                  ? "Remote agent required"
                   : isThreeDMode
                     ? has3DSource
                       ? "Refine your 3D model (optional)"
@@ -995,7 +1032,8 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               <button
                 type="button"
                 className={styles.sendButton}
-                onClick={submitMessage}
+                onPointerDown={handleSendPointerDown}
+                onClick={handleSendClick}
                 disabled={!canSend}
                 aria-label="Send"
               >
@@ -1005,11 +1043,18 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           </div>
           <div className={styles.metaRow}>
             <span className={styles.environmentWrap}>
-              <AgentEnvironment
-                machineType={machineType}
-                agentId={templateAgentId ?? agentId}
-                workspacePath={workspacePath}
-              />
+              {isLocalAgent ? (
+                <span className={styles.remoteRequiredStatus} aria-label="Remote agent required">
+                  <span className={styles.remoteRequiredDot} aria-hidden="true" />
+                  Remote required
+                </span>
+              ) : (
+                <AgentEnvironment
+                  machineType={machineType}
+                  agentId={templateAgentId ?? agentId}
+                  workspacePath={workspacePath}
+                />
+              )}
             </span>
             <span className={styles.metaSpacer} />
             {contextUsage != null && contextUsage.utilization > 0 ? (
