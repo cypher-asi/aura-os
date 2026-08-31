@@ -10,6 +10,8 @@ import {
   summarizeInput,
   formatResult,
   decodeCapturedOutput,
+  formatRetryDelay,
+  parseToolError,
   summarizeError,
   formatRelativeTime,
   formatChatTime,
@@ -379,7 +381,7 @@ describe("formatResult", () => {
     const out = formatResult(payload);
     expect(out).toContain("error[E0433]");
     expect(out).toContain("cannot find crate `foo`");
-    expect(out).not.toMatch(/\x1B\[/);
+    expect(out).not.toContain("\x1B[");
     expect(out).not.toContain(btoa(colored));
   });
 
@@ -471,6 +473,63 @@ describe("summarizeError", () => {
     });
     const summary = summarizeError(payload);
     expect(summary).toBe("error: something broke");
+  });
+
+  it("summarizes a prefixed callback rate-limit response", () => {
+    const payload = "external tool callback failed: https://api.aura.ai/tool-actions/brave_search_web returned status 429: "
+      + JSON.stringify({
+        error: "Web Search rate limit exceeded (15 calls per 60s for this user). Please retry later.",
+        code: "tool_action_rate_limited",
+        data: { retry_after_seconds: 1 },
+      });
+
+    expect(summarizeError(payload)).toBe("Web Search limit reached · retry in 1s");
+  });
+});
+
+describe("parseToolError", () => {
+  it("extracts a useful rate-limit response from callback-prefixed JSON", () => {
+    const payload = "external tool callback failed: https://api.aura.ai/api/orgs/org-id/tool-actions/brave_search_web returned status 429: "
+      + JSON.stringify({
+        error: "Web Search rate limit exceeded (15 calls per 60s for this user). Please retry later, upgrade your plan, or connect your own Brave Search API key.",
+        code: "tool_action_rate_limited",
+        details: "Web Search rate limit exceeded (15 calls per 60s for this user).",
+        data: {
+          byok_hint: "Connect your own Brave Search API key to use Web Search without Aura quota.",
+          code: "tool_action_rate_limited",
+          max_calls: 15,
+          retry_after_seconds: 1,
+          upgrade_hint: "Upgrade your plan for higher Aura Web Search limits.",
+          window_seconds: 60,
+        },
+      });
+
+    expect(parseToolError(payload)).toEqual({
+      title: "Web Search limit reached",
+      message: "This account reached the limit of 15 calls per 60 seconds.",
+      retryAfterSeconds: 1,
+      code: "tool_action_rate_limited",
+      status: 429,
+      guidance: [
+        "Connect your own Brave Search API key to use Web Search without Aura quota.",
+        "Upgrade your plan for higher Aura Web Search limits.",
+      ],
+    });
+  });
+
+  it("ignores ordinary command result envelopes", () => {
+    expect(parseToolError(JSON.stringify({
+      tool: "run_command",
+      ok: false,
+      stderr: "command failed",
+    }))).toBeNull();
+  });
+});
+
+describe("formatRetryDelay", () => {
+  it("uses singular and plural seconds", () => {
+    expect(formatRetryDelay(1)).toBe("1 second");
+    expect(formatRetryDelay(1.2)).toBe("2 seconds");
   });
 });
 

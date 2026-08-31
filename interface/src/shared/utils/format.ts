@@ -314,12 +314,129 @@ function firstMeaningfulLine(text: string, max = 80): string {
   return line.length > max ? line.slice(0, max - 3) + "..." : line;
 }
 
+type JsonRecord = Record<string, unknown>;
+
+export interface ToolErrorPresentation {
+  title: string;
+  message: string;
+  retryAfterSeconds: number | null;
+  code: string | null;
+  status: number | null;
+  guidance: string[];
+}
+
+function asRecord(value: unknown): JsonRecord | null {
+  return value != null && typeof value === "object" && !Array.isArray(value)
+    ? value as JsonRecord
+    : null;
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function parseErrorEnvelope(result: string): { payload: JsonRecord; status: number | null } | null {
+  const statusMatch = result.match(/returned status\s+(\d{3})\s*:/i);
+  const status = statusMatch ? Number(statusMatch[1]) : null;
+  const trimmed = result.trim();
+
+  try {
+    const direct = asRecord(JSON.parse(trimmed));
+    if (direct) return { payload: direct, status };
+  } catch { /* not a direct JSON object */ }
+
+  // Server-contributed tools prefix the upstream response with callback and
+  // HTTP context. The useful payload is still a JSON object at the end.
+  const jsonStart = trimmed.indexOf("{");
+  if (jsonStart < 0) return null;
+  try {
+    const embedded = asRecord(JSON.parse(trimmed.slice(jsonStart)));
+    return embedded ? { payload: embedded, status } : null;
+  } catch {
+    return null;
+  }
+}
+
+function uniqueStrings(values: Array<string | null>): string[] {
+  return [...new Set(values.filter((value): value is string => value != null))];
+}
+
+/**
+ * Convert structured tool failures into a small user-facing model. In
+ * particular, server callback errors often arrive as a long plain-text prefix
+ * followed by a JSON API error. Keeping this parsing in one place lets the
+ * header and expanded block show the useful response without exposing callback
+ * URLs, org identifiers, or a wall of escaped JSON.
+ */
+export function parseToolError(result: string): ToolErrorPresentation | null {
+  const envelope = parseErrorEnvelope(result);
+  if (!envelope) return null;
+
+  const { payload } = envelope;
+  const data = asRecord(payload.data) ?? {};
+  const code = nonEmptyString(payload.code) ?? nonEmptyString(data.code);
+  const status = envelope.status ?? finiteNumber(payload.status);
+  const rawMessage = nonEmptyString(payload.error)
+    ?? nonEmptyString(payload.message)
+    ?? nonEmptyString(payload.details);
+
+  // Avoid treating ordinary command-result envelopes as API errors.
+  if (!rawMessage && !code && status == null) return null;
+
+  const retryAfterSeconds = finiteNumber(data.retry_after_seconds)
+    ?? finiteNumber(payload.retry_after_seconds);
+  const maxCalls = finiteNumber(data.max_calls);
+  const windowSeconds = finiteNumber(data.window_seconds);
+  const rateLimited = status === 429 || code?.includes("rate_limit") === true;
+
+  let title = "Tool request failed";
+  let message = rawMessage ?? "The tool returned an error.";
+
+  if (rateLimited) {
+    const service = rawMessage?.match(/^(.+?)\s+rate limit exceeded\b/i)?.[1]?.trim();
+    title = service ? `${service} limit reached` : "Rate limit reached";
+    message = maxCalls != null && windowSeconds != null
+      ? `This account reached the limit of ${maxCalls} calls per ${windowSeconds} seconds.`
+      : "This tool has received too many requests in a short period.";
+  }
+
+  return {
+    title,
+    message,
+    retryAfterSeconds,
+    code,
+    status,
+    guidance: uniqueStrings([
+      nonEmptyString(data.byok_hint),
+      nonEmptyString(data.upgrade_hint),
+    ]),
+  };
+}
+
+export function formatRetryDelay(seconds: number): string {
+  const rounded = Math.max(0, Math.ceil(seconds));
+  return `${rounded} ${rounded === 1 ? "second" : "seconds"}`;
+}
+
 /**
  * Extract a short, human-readable error summary from a tool result string.
  * Handles the common `{"tool":"...","ok":false,"stderr":"..."}` JSON pattern
  * by decoding base64 stderr and returning the first meaningful line.
  */
 export function summarizeError(result: string): string {
+  const presentation = parseToolError(result);
+  if (presentation) {
+    return presentation.retryAfterSeconds != null
+      ? `${presentation.title} · retry in ${Math.max(0, Math.ceil(presentation.retryAfterSeconds))}s`
+      : presentation.title;
+  }
+
   try {
     const parsed = JSON.parse(result);
     if (parsed && typeof parsed === "object") {

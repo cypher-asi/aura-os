@@ -1,7 +1,14 @@
 import { Wrench } from "lucide-react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
 import { TOOL_LABELS } from "../../../constants/tools";
-import { formatResult, summarizeInput, summarizeError } from "../../../shared/utils/format";
+import {
+  formatResult,
+  formatRetryDelay,
+  parseToolError,
+  summarizeInput,
+  summarizeError,
+  type ToolErrorPresentation,
+} from "../../../shared/utils/format";
 import {
   blockStatusForSeverity,
   deriveToolSeverity,
@@ -37,11 +44,41 @@ interface GenericToolBlockProps {
   defaultExpanded?: boolean;
 }
 
+function ToolErrorResponse({ error }: { error: ToolErrorPresentation }) {
+  const metadata = [
+    error.status != null ? `HTTP ${error.status}` : null,
+    error.code,
+  ].filter((value): value is string => value != null);
+
+  return (
+    <section className={styles.toolErrorResponse} aria-label="Tool error response">
+      <div className={styles.toolErrorTitle}>{error.title}</div>
+      <div className={styles.toolErrorMessage}>{error.message}</div>
+      {error.retryAfterSeconds != null ? (
+        <div className={styles.toolErrorRetry}>
+          Try again in {formatRetryDelay(error.retryAfterSeconds)}.
+        </div>
+      ) : null}
+      {error.guidance.length > 0 ? (
+        <ul className={styles.toolErrorGuidance}>
+          {error.guidance.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      ) : null}
+      {metadata.length > 0 ? (
+        <div className={styles.toolErrorMeta}>{metadata.join(" · ")}</div>
+      ) : null}
+    </section>
+  );
+}
+
 export function GenericToolBlock({ entry, defaultExpanded }: GenericToolBlockProps) {
   const label = TOOL_LABELS[entry.name] || entry.name;
   const summary = summarizeInput(entry.name, entry.input);
   const severity = deriveToolSeverity(entry);
   const status = blockStatusForSeverity(severity);
+  const errorPresentation = entry.isError && entry.result
+    ? parseToolError(entry.result)
+    : null;
 
   const headerSummary =
     entry.isError && entry.result
@@ -59,6 +96,41 @@ export function GenericToolBlock({ entry, defaultExpanded }: GenericToolBlockPro
       2,
     );
 
+  const inputSection = (
+    <div className={styles.genericSection}>
+      <div className={styles.genericLabel}>Input</div>
+      <div className={styles.genericJson}>
+        {JSON.stringify(buildInputDisplay(entry), null, 2)}
+      </div>
+    </div>
+  );
+
+  const resultSection = entry.pending ? (
+    <div className={styles.genericSection}>
+      <div className={styles.genericLabel}>Status</div>
+      <div className={styles.genericJson}>Waiting for the tool result.</div>
+    </div>
+  ) : entry.result != null ? (
+    <div className={styles.genericSection}>
+      <div className={styles.genericLabel}>{entry.isError ? "Error" : "Result"}</div>
+      {errorPresentation ? (
+        <ToolErrorResponse error={errorPresentation} />
+      ) : (
+        <div
+          className={`${styles.genericJson} ${
+            severity === "error"
+              ? styles.genericError
+              : entry.isError
+                ? styles.genericNote
+                : ""
+          }`}
+        >
+          {formatResult(entry.result)}
+        </div>
+      )}
+    </div>
+  ) : null;
+
   return (
     <Block
       icon={<Wrench size={12} />}
@@ -69,33 +141,8 @@ export function GenericToolBlock({ entry, defaultExpanded }: GenericToolBlockPro
       flushBody
       copy={{ getText: getCopyText, ariaLabel: `Copy ${label}` }}
     >
-      <div className={styles.genericSection}>
-        <div className={styles.genericLabel}>Input</div>
-        <div className={styles.genericJson}>
-          {JSON.stringify(buildInputDisplay(entry), null, 2)}
-        </div>
-      </div>
-      {entry.pending ? (
-        <div className={styles.genericSection}>
-          <div className={styles.genericLabel}>Status</div>
-          <div className={styles.genericJson}>Waiting for the tool result.</div>
-        </div>
-      ) : entry.result != null ? (
-        <div className={styles.genericSection}>
-          <div className={styles.genericLabel}>{entry.isError ? "Error" : "Result"}</div>
-          <div
-            className={`${styles.genericJson} ${
-              severity === "error"
-                ? styles.genericError
-                : entry.isError
-                  ? styles.genericNote
-                  : ""
-            }`}
-          >
-            {formatResult(entry.result)}
-          </div>
-        </div>
-      ) : null}
+      {entry.isError ? resultSection : inputSection}
+      {entry.isError ? inputSection : resultSection}
     </Block>
   );
 }
