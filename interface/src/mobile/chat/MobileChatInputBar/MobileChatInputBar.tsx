@@ -13,6 +13,11 @@ import { CommandChips } from "../../../features/chat-ui/ChatInputBar/CommandChip
 import { ContextUsageIndicator } from "../../../features/chat-ui/ChatInputBar/ContextUsageIndicator";
 import { VoiceDictationControl } from "../../../features/chat-ui/ChatInputBar/VoiceDictationControl";
 import { useVoiceDictation } from "../../../features/chat-ui/ChatInputBar/useVoiceDictation";
+import {
+  PromptStashButton,
+  PromptStashMenu,
+  usePromptStashComposer,
+} from "../../../features/chat-ui/ChatInputBar/PromptStash";
 import { SlashCommandMenu } from "../../../features/chat-ui/ChatInputBar/SlashCommandMenu";
 import { useFileAttachments } from "../../../features/chat-ui/ChatInputBar/useFileAttachments";
 import type {
@@ -157,6 +162,21 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     }>(() => ({ streamKey, mentions: [] }));
     const [isDragOver, setIsDragOver] = useState(false);
     const [isTextInputFocused, setIsTextInputFocused] = useState(false);
+
+    const clearComposerSemanticState = useCallback(() => {
+      setAgentMentionState({ streamKey, mentions: [] });
+    }, [streamKey]);
+    const focusComposer = useCallback(() => textareaRef.current?.focus(), []);
+    const promptStash = usePromptStashComposer({
+      input,
+      onInputChange,
+      attachments,
+      onAttachmentsChange,
+      commands: selectedCommands,
+      onCommandsChange,
+      onClearSemanticState: clearComposerSemanticState,
+      focus: focusComposer,
+    });
 
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
@@ -544,6 +564,16 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     }, [isStreaming, sendDisabled, stopVoiceDictation]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        event.key.toLowerCase() === "s"
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        promptStash.stashCurrent();
+        return;
+      }
       if ((slashMenuOpen || mentionMenuOpen) && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
         return;
       }
@@ -751,6 +781,15 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
+          {promptStash.open ? (
+            <PromptStashMenu
+              entries={promptStash.entries}
+              error={promptStash.error}
+              onRestore={promptStash.restoreEntry}
+              onDelete={promptStash.deleteEntry}
+              onClose={promptStash.close}
+            />
+          ) : null}
           {slashMenuOpen ? (
             <div className={styles.slashMenuWrap}>
               <SlashCommandMenu
@@ -924,6 +963,12 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               }
               rows={1}
               data-agent-field="chat-input"
+            />
+            <PromptStashButton
+              count={promptStash.entries.length}
+              open={promptStash.open}
+              onClick={promptStash.toggle}
+              className={styles.stashButton}
             />
             <VoiceDictationControl
               supported={voiceSupported}

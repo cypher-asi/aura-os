@@ -3,7 +3,7 @@ import type { AttachmentItem } from "./ChatInputBar";
 import { uploadFile } from "../../../api/upload";
 import { api } from "../../../api/client";
 
-const MAX_ATTACHMENTS = 5;
+export const MAX_ATTACHMENTS = 5;
 const MAX_IMAGE_UPLOAD_BYTES = 1_100_000;
 const MAX_IMAGE_DIMENSION = 1536;
 const IMAGE_JPEG_QUALITY = 0.82;

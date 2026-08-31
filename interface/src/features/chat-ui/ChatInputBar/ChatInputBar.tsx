@@ -48,6 +48,11 @@ import { VoiceDictationControl } from "./VoiceDictationControl";
 import { useVoiceDictation } from "./useVoiceDictation";
 import { promptLengthError } from "./composer-length";
 import {
+  PromptStashButton,
+  PromptStashMenu,
+  usePromptStashComposer,
+} from "./PromptStash";
+import {
   InputStatusHints,
   type InputStatusAction,
 } from "./InputStatusHints";
@@ -611,6 +616,39 @@ export const DesktopChatInputBar = memo(
       [handleInputChange, stopVoiceDictation, voiceListening],
     );
 
+    const clearComposerSemanticState = useCallback(() => {
+      setAgentMentionState({ streamKey, mentions: [] });
+    }, [streamKey]);
+    const focusComposer = useCallback(() => shellRef.current?.focus(), []);
+    const promptStash = usePromptStashComposer({
+      input,
+      onInputChange,
+      attachments,
+      onAttachmentsChange,
+      commands: selectedCommands,
+      onCommandsChange,
+      onClearSemanticState: clearComposerSemanticState,
+      focus: focusComposer,
+    });
+    const stashCurrentPrompt = promptStash.stashCurrent;
+    const handleComposerKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (
+          !isStatic &&
+          (event.metaKey || event.ctrlKey) &&
+          !event.altKey &&
+          event.key.toLowerCase() === "s"
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          stashCurrentPrompt();
+          return;
+        }
+        handleTextareaKeyDown(event);
+      },
+      [handleTextareaKeyDown, isStatic, stashCurrentPrompt],
+    );
+
     useEffect(() => {
       if (isStreaming || sendDisabled || inputReadOnly) {
         stopVoiceDictation();
@@ -870,6 +908,15 @@ export const DesktopChatInputBar = memo(
 
     const containerTop = (
       <>
+        {promptStash.open && !isStatic ? (
+          <PromptStashMenu
+            entries={promptStash.entries}
+            error={promptStash.error}
+            onRestore={promptStash.restoreEntry}
+            onDelete={promptStash.deleteEntry}
+            onClose={promptStash.close}
+          />
+        ) : null}
         {slashMenuOpen && (
           <SlashCommandMenu
             query={slashQuery}
@@ -983,17 +1030,26 @@ export const DesktopChatInputBar = memo(
     const inputRowEnd = showPickerInline ? (
       <ModelControls placement="inline" {...modelControlsProps} />
     ) : null;
-    const inputRowAction = !isStatic && voiceSupported ? (
-      <VoiceDictationControl
-        supported={voiceSupported}
-        listening={voiceListening}
-        error={voiceError}
-        disabled={isStreaming || sendDisabled || inputReadOnly}
-        onToggle={() => {
-          if (voiceListening) stopVoiceDictation();
-          else startVoiceDictation(input);
-        }}
-      />
+    const inputRowAction = !isStatic ? (
+      <>
+        <PromptStashButton
+          count={promptStash.entries.length}
+          open={promptStash.open}
+          onClick={promptStash.toggle}
+        />
+        {voiceSupported ? (
+          <VoiceDictationControl
+            supported={voiceSupported}
+            listening={voiceListening}
+            error={voiceError}
+            disabled={isStreaming || sendDisabled || inputReadOnly}
+            onToggle={() => {
+              if (voiceListening) stopVoiceDictation();
+              else startVoiceDictation(input);
+            }}
+          />
+        ) : null}
+      </>
     ) : null;
     // Bottom region stacks the tags row above the model ("LLM") row so a
     // tag like `/Record Demo` sits on its own line with full text, one
@@ -1108,6 +1164,7 @@ export const DesktopChatInputBar = memo(
       attachments.length > 0 ||
       isRecordDemoActive ||
       isQueued ||
+      promptStash.open ||
       sendDisabled ||
       isPromptTooLong;
 
@@ -1139,7 +1196,7 @@ export const DesktopChatInputBar = memo(
           readOnly: inputReadOnly || undefined,
           "aria-readonly": inputReadOnly ? "true" : undefined,
         }}
-        onTextareaKeyDown={handleTextareaKeyDown}
+        onTextareaKeyDown={handleComposerKeyDown}
         onTextareaPaste={handlePaste}
         onContainerDragOver={handleDragOver}
         onContainerDragLeave={handleDragLeave}

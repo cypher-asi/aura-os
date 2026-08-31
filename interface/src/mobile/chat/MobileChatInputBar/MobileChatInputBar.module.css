@@ -162,13 +162,19 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  grid-template-columns: 44px minmax(0, 1fr) 36px 44px;
   align-items: end;
   min-height: 46px;
 }
 
 .inputRowVoice {
-  grid-template-columns: 44px minmax(0, 1fr) 44px 44px;
+  grid-template-columns: 44px minmax(0, 1fr) 36px 44px 44px;
+}
+
+.stashButton {
+  width: 36px;
+  height: 44px;
+  align-self: end;
 }
 
 .voiceButton {
