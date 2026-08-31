@@ -1,26 +1,28 @@
-# Chat composer gets a memory, and conversations gain an archive
+# Conversation management gets first-class controls
 
 - Date: `2026-08-30`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.815.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.815.1
+- Version: `0.1.0-nightly.817.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.817.1
 
-Tonight's nightly is focused squarely on the chat surface. Drafts now survive restarts, oversized prompts fail gracefully instead of silently, a new prompt shelf lets you park ideas for later, and conversations you're not ready to delete can be archived and restored. A smaller preview-routing fix also keeps local sessions from being pushed onto a remote tunnel.
+Tonight's nightly rebuilds the chat sidebar around durable conversation management—archive, rename, and pin—while the composer picks up persistent drafts, an oversize-prompt guard, and a new global prompt shelf. A preview-only routing fix keeps local sessions from leaking onto the remote tunnel.
 
-## 7:06 PM — Chat composer memory, prompt shelf, and conversation archive
+## 7:06 PM — Archive, rename, and pin land in the sessions list
 
-A concentrated evening of chat interface work: durable drafts, a length guard, a global prompt shelf, conversation archiving, and a preview-routing fix for local sessions.
+The chat sidebar gains a full set of server-backed lifecycle controls so users can curate their conversation history across clients.
 
-- Unfinished chat drafts now survive app restarts — non-empty drafts are mirrored to localStorage per stream key, rehydrated on init, and migrated when a fresh canvas is bound to a real session so nothing typed gets lost on refresh or relaunch. (`6e9c37c`)
-- The composer now guards oversized prompts on both desktop and mobile: the textarea stays editable, but Send is disabled and an inline hint tells you exactly how many characters to remove before the message can go out. (`352081d`)
-- Introduced a global Prompt Shelf in the chat input bar — press Cmd/Ctrl+S to stash the current prompt (with attachments and slash commands), browse saved entries from a shelf menu on desktop or a dedicated dialog on mobile, and restore or delete them later. (`694f205`)
-- Conversations can now be archived and restored instead of only deleted: new server endpoints back an archived status in storage, the sessions list and sidekick context menu expose the action, and restored sessions rejoin the active list as completed until the next turn. (`282eab4`)
-- Preview builds no longer route local workspaces through the remote tunnel — SidekickContent now passes a preferLocalWorkspace flag to useTerminalTarget based on client capabilities, while remote-only clients keep their existing routing. (`7c0c1fd`)
+- Conversations can now be archived and restored from the sessions list, with the archived state stored server-side so the choice follows users across Aura clients; the same change also tightens authenticated storage request URLs. (`282eab4`)
+- Sessions are renameable inline—user-authored titles replace the generated summary label and are validated up to 120 characters on the server. (`0abff91`)
+- Important conversations can be pinned to the top of the list via a new pin endpoint and `pinned_at` field flowing through core, storage, and the sidebar UI. (`8cf6fb2`)
+- Composer drafts now persist to localStorage per stream key and rehydrate on init, so refreshing or reopening Aura no longer discards an unfinished prompt; a migration hook moves fresh-canvas drafts onto their assigned session key. (`6e9c37c`)
+- A new global prompt shelf lets users stash the current prompt with Cmd/Ctrl+S from the desktop composer and reopen saved prompts from a dedicated shelf on both desktop and mobile. (`694f205`)
+- Oversized prompts now show an inline "Remove N characters to send" hint and disable the send button while keeping the textarea editable on both desktop and mobile. (`352081d`)
+- Preview builds no longer force Sidekick sessions through the remote tunnel: terminal routing now prefers the local workspace unless the client is remote-only, and a stale vite preview config was dropped. (`7c0c1fd`)
 
 ## Highlights
 
-- Unfinished chat drafts persist across restarts
-- New global prompt shelf with Cmd+S to stash
-- Archive and restore for conversations
-- Oversized prompts blocked without freezing the editor
+- Archive, rename, and pin conversations from the sessions list
+- Global prompt shelf with Cmd+S to stash drafts
+- Unfinished chat drafts survive restarts
+- Oversize prompts are blocked without locking the editor
 

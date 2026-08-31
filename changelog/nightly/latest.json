@@ -3,23 +3,25 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-31T04:07:41.824Z",
+  "generatedAt": "2026-08-31T04:51:37.707Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.815.1",
+  "version": "0.1.0-nightly.817.1",
   "date": "2026-08-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.815.1",
-  "lastIncludedSha": "282eab40986b2cdc42cf69936109d5b11846dd0b",
-  "previousProcessedSha": "7c0c1fdd74b726874914a645597d63a8be95ea53",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.817.1",
+  "lastIncludedSha": "8cf6fb283db5c97c2c4cd07b1408b52e1302532f",
+  "previousProcessedSha": "282eab40986b2cdc42cf69936109d5b11846dd0b",
   "commitShas": [
     "7c0c1fdd74b726874914a645597d63a8be95ea53",
     "6e9c37ca6480c78d59af1e8d646481fbc4e109b5",
     "352081d5ddfde3fad7c220f5f6ce04c20cd98ef2",
     "694f2056d7ef98bb60d38846745fa68019a0567e",
-    "282eab40986b2cdc42cf69936109d5b11846dd0b"
+    "282eab40986b2cdc42cf69936109d5b11846dd0b",
+    "0abff91d34b884bdbddaf71f55915f39b56bff3c",
+    "8cf6fb283db5c97c2c4cd07b1408b52e1302532f"
   ],
-  "rawCommitCount": 5,
-  "filteredCommitCount": 5,
+  "rawCommitCount": 7,
+  "filteredCommitCount": 7,
   "rawCommits": [
     {
       "sha": "7c0c1fdd74b726874914a645597d63a8be95ea53",
@@ -268,6 +270,137 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "0abff91d34b884bdbddaf71f55915f39b56bff3c",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-31T00:15:39-04:00",
+      "subject": "feat(sessions): add editable titles (#163)",
+      "body": "",
+      "parents": [
+        "282eab40986b2cdc42cf69936109d5b11846dd0b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/sessions.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/tests/session_rename_test.rs",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.test.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/SessionsList/SessionsList.rename.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/components/SessionsList/format-delete-error.test.ts",
+        "interface/src/components/SessionsList/format-delete-error.ts",
+        "interface/src/components/SessionsList/index.ts",
+        "interface/src/components/SessionsList/use-session-rename-action.test.tsx",
+        "interface/src/components/SessionsList/use-session-rename-action.ts",
+        "interface/src/shared/api/agents.test.ts",
+        "interface/src/shared/api/agents.ts",
+        "interface/src/views/SessionList/SessionList.tsx"
+      ],
+      "stats": {
+        "fileCount": 18,
+        "insertions": 572,
+        "deletions": 7
+      },
+      "committedAtMs": 1788149739000,
+      "cleanSubject": "add editable titles (#163)",
+      "keywords": [
+        "editable",
+        "titles"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/shared",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "8cf6fb283db5c97c2c4cd07b1408b52e1302532f",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-31T00:35:00-04:00",
+      "subject": "feat(sessions): add pinned conversations (#164)",
+      "body": "",
+      "parents": [
+        "0abff91d34b884bdbddaf71f55915f39b56bff3c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/tests/discovery_tests.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/sessions.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/tests/session_pin_test.rs",
+        "crates/aura-os-core/src/entities/session.rs",
+        "crates/aura-os-core/src/testutil.rs",
+        "crates/aura-os-core/tests/round_trips.rs",
+        "crates/aura-os-sessions/src/session_service.rs",
+        "crates/aura-os-sessions/src/tests.rs",
+        "crates/aura-os-sessions/tests/common/mod.rs",
+        "crates/aura-os-storage/src/conversions.rs",
+        "crates/aura-os-storage/src/testutil/session.rs",
+        "crates/aura-os-storage/src/types/session.rs",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.test.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/components/SessionsList/SessionsList.pin.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/components/SessionsList/index.ts",
+        "interface/src/components/SessionsList/use-session-pin-action.test.tsx",
+        "interface/src/components/SessionsList/use-session-pin-action.ts",
+        "interface/src/components/SidekickItemContextMenu/SidekickItemContextMenu.tsx",
+        "interface/src/shared/api/agents.test.ts",
+        "interface/src/shared/api/agents.ts",
+        "interface/src/shared/types/entities/session.ts",
+        "interface/src/stores/sessions-list-store.ts",
+        "interface/src/views/SessionList/SessionList.tsx"
+      ],
+      "stats": {
+        "fileCount": 28,
+        "insertions": 570,
+        "deletions": 4
+      },
+      "committedAtMs": 1788150900000,
+      "cleanSubject": "add pinned conversations (#164)",
+      "keywords": [
+        "pinned",
+        "conversations"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-core/src",
+        "crates/aura-os-core/tests",
+        "crates/aura-os-sessions/src",
+        "crates/aura-os-sessions/tests",
+        "crates/aura-os-storage/src",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/shared",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust",
+        "Other"
+      ]
     }
   ],
   "batchCount": 1,
@@ -275,29 +408,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.815.1",
+      "version": "0.1.0-nightly.817.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66736296
+          "sizeBytes": 66816342
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 133196280
+          "sizeBytes": 133261816
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -307,29 +440,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.815.1",
+      "version": "0.1.0-nightly.817.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.815.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.817.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62454388
+          "sizeBytes": 62464793
         },
         {
-          "name": "AURA_0.1.0-nightly.815.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.817.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61428119
+          "sizeBytes": 61447342
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -339,29 +472,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.815.1",
+      "version": "0.1.0-nightly.817.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.815.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.817.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64608893
+          "sizeBytes": 64630879
         },
         {
-          "name": "AURA_0.1.0-nightly.815.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.817.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63630761
+          "sizeBytes": 63648338
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -371,17 +504,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.815.1",
+      "version": "0.1.0-nightly.817.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49118099
+          "sizeBytes": 49161665
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.815.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.817.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -390,47 +523,61 @@
     }
   ],
   "rendered": {
-    "title": "Chat composer gets a memory, and conversations gain an archive",
-    "intro": "Tonight's nightly is focused squarely on the chat surface. Drafts now survive restarts, oversized prompts fail gracefully instead of silently, a new prompt shelf lets you park ideas for later, and conversations you're not ready to delete can be archived and restored. A smaller preview-routing fix also keeps local sessions from being pushed onto a remote tunnel.",
+    "title": "Conversation management gets first-class controls",
+    "intro": "Tonight's nightly rebuilds the chat sidebar around durable conversation management—archive, rename, and pin—while the composer picks up persistent drafts, an oversize-prompt guard, and a new global prompt shelf. A preview-only routing fix keeps local sessions from leaking onto the remote tunnel.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:06 PM",
         "started_at": "2026-08-31T02:06:24.000Z",
-        "ended_at": "2026-08-31T03:50:57.000Z",
-        "title": "Chat composer memory, prompt shelf, and conversation archive",
-        "summary": "A concentrated evening of chat interface work: durable drafts, a length guard, a global prompt shelf, conversation archiving, and a preview-routing fix for local sessions.",
+        "ended_at": "2026-08-31T04:35:00.000Z",
+        "title": "Archive, rename, and pin land in the sessions list",
+        "summary": "The chat sidebar gains a full set of server-backed lifecycle controls so users can curate their conversation history across clients.",
         "items": [
           {
-            "text": "Unfinished chat drafts now survive app restarts — non-empty drafts are mirrored to localStorage per stream key, rehydrated on init, and migrated when a fresh canvas is bound to a real session so nothing typed gets lost on refresh or relaunch.",
-            "commit_shas": [
-              "6e9c37ca6480c78d59af1e8d646481fbc4e109b5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The composer now guards oversized prompts on both desktop and mobile: the textarea stays editable, but Send is disabled and an inline hint tells you exactly how many characters to remove before the message can go out.",
-            "commit_shas": [
-              "352081d5ddfde3fad7c220f5f6ce04c20cd98ef2"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Introduced a global Prompt Shelf in the chat input bar — press Cmd/Ctrl+S to stash the current prompt (with attachments and slash commands), browse saved entries from a shelf menu on desktop or a dedicated dialog on mobile, and restore or delete them later.",
-            "commit_shas": [
-              "694f2056d7ef98bb60d38846745fa68019a0567e"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Conversations can now be archived and restored instead of only deleted: new server endpoints back an archived status in storage, the sessions list and sidekick context menu expose the action, and restored sessions rejoin the active list as completed until the next turn.",
+            "text": "Conversations can now be archived and restored from the sessions list, with the archived state stored server-side so the choice follows users across Aura clients; the same change also tightens authenticated storage request URLs.",
             "commit_shas": [
               "282eab40986b2cdc42cf69936109d5b11846dd0b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Preview builds no longer route local workspaces through the remote tunnel — SidekickContent now passes a preferLocalWorkspace flag to useTerminalTarget based on client capabilities, while remote-only clients keep their existing routing.",
+            "text": "Sessions are renameable inline—user-authored titles replace the generated summary label and are validated up to 120 characters on the server.",
+            "commit_shas": [
+              "0abff91d34b884bdbddaf71f55915f39b56bff3c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Important conversations can be pinned to the top of the list via a new pin endpoint and `pinned_at` field flowing through core, storage, and the sidebar UI.",
+            "commit_shas": [
+              "8cf6fb283db5c97c2c4cd07b1408b52e1302532f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Composer drafts now persist to localStorage per stream key and rehydrate on init, so refreshing or reopening Aura no longer discards an unfinished prompt; a migration hook moves fresh-canvas drafts onto their assigned session key.",
+            "commit_shas": [
+              "6e9c37ca6480c78d59af1e8d646481fbc4e109b5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A new global prompt shelf lets users stash the current prompt with Cmd/Ctrl+S from the desktop composer and reopen saved prompts from a dedicated shelf on both desktop and mobile.",
+            "commit_shas": [
+              "694f2056d7ef98bb60d38846745fa68019a0567e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Oversized prompts now show an inline \"Remove N characters to send\" hint and disable the send button while keeping the textarea editable on both desktop and mobile.",
+            "commit_shas": [
+              "352081d5ddfde3fad7c220f5f6ce04c20cd98ef2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Preview builds no longer force Sidekick sessions through the remote tunnel: terminal routing now prefers the local workspace unless the client is remote-only, and a stale vite preview config was dropped.",
             "commit_shas": [
               "7c0c1fdd74b726874914a645597d63a8be95ea53"
             ],
@@ -440,11 +587,11 @@
       }
     ],
     "highlights": [
-      "Unfinished chat drafts persist across restarts",
-      "New global prompt shelf with Cmd+S to stash",
-      "Archive and restore for conversations",
-      "Oversized prompts blocked without freezing the editor"
+      "Archive, rename, and pin conversations from the sessions list",
+      "Global prompt shelf with Cmd+S to stash drafts",
+      "Unfinished chat drafts survive restarts",
+      "Oversize prompts are blocked without locking the editor"
     ],
-    "raw_commit_count": 5
+    "raw_commit_count": 7
   }
 }
