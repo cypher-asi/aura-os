@@ -161,6 +161,16 @@ struct GithubRefResponse {
 
 fn git_command(workspace: &FsPath) -> Command {
     let mut command = Command::new("git");
+    // Aura Desktop is a GUI process, so a plain Git child inherits Windows'
+    // default console allocation behavior. Source Control runs several short
+    // Git commands while staging and committing; suppress their transient
+    // console windows just as Safe Workspace does for its Git operations.
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
     command
         .current_dir(workspace)
         .env("GIT_TERMINAL_PROMPT", "0")
