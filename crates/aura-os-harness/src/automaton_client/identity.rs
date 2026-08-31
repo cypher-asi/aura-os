@@ -23,7 +23,7 @@ pub fn validate_automaton_start_identity(
             context: "automaton_start",
         });
     }
-    if blank(params.aura_session_id.as_deref()) {
+    if blank(Some(params.aura_session_id.as_str())) {
         return Err(HarnessError::SessionIdentityMissing {
             field: "aura_session_id",
             context: "automaton_start",

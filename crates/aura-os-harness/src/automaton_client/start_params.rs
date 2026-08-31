@@ -118,14 +118,12 @@ pub struct AutomatonStartParams {
     /// (which `#[serde(default)]` the field) still accept the payload.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub aura_org_id: Option<String>,
-    /// Storage session UUID forwarded to the harness so the outbound
-    /// Anthropic proxy request carries an `X-Aura-Session-Id` header.
-    /// Generated per-automaton-start so router / billing telemetry can
-    /// distinguish concurrent automation runs of the same agent.
-    /// Skipped on the wire when `None`; pre-existing harnesses ignore
-    /// it via `#[serde(default)]`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub aura_session_id: Option<String>,
+    /// Stable identifier for this logical automaton run. This is deliberately
+    /// non-optional: dev-loop bootstrap and continuation requests are rejected
+    /// by the model-request contract when `X-Aura-Session-Id` is absent, so a
+    /// caller must provide the identity before an automaton start can even be
+    /// represented.
+    pub aura_session_id: String,
     /// PR B (simplify-system-prompts): typed agent identity bundle.
     ///
     /// The harness's `AutomatonStartRequest` reads this back into
@@ -225,7 +223,7 @@ pub fn automaton_start_params_to_runtime_request(params: &AutomatonStartParams) 
             project_id: params.project_id.clone(),
             project_info: params.project_info.clone(),
             aura_org_id: params.aura_org_id.clone(),
-            aura_session_id: params.aura_session_id.clone(),
+            aura_session_id: Some(params.aura_session_id.clone()),
             aura_agent_id: params.aura_agent_id.clone(),
         }),
         agent_permissions: params.agent_permissions.clone(),
