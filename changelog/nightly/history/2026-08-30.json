@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-31T05:10:35.343Z",
+  "generatedAt": "2026-08-31T06:51:09.487Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.818.1",
+  "version": "0.1.0-nightly.819.1",
   "date": "2026-08-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.818.1",
-  "lastIncludedSha": "8115727bb1d09e5cf5bff4a7c559f2d9cad01d13",
-  "previousProcessedSha": "8cf6fb283db5c97c2c4cd07b1408b52e1302532f",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.819.1",
+  "lastIncludedSha": "39fd6c58fcf97fee7c57516e8c3279c7e57ddc6f",
+  "previousProcessedSha": "8115727bb1d09e5cf5bff4a7c559f2d9cad01d13",
   "commitShas": [
     "7c0c1fdd74b726874914a645597d63a8be95ea53",
     "6e9c37ca6480c78d59af1e8d646481fbc4e109b5",
@@ -19,10 +19,11 @@
     "282eab40986b2cdc42cf69936109d5b11846dd0b",
     "0abff91d34b884bdbddaf71f55915f39b56bff3c",
     "8cf6fb283db5c97c2c4cd07b1408b52e1302532f",
-    "8115727bb1d09e5cf5bff4a7c559f2d9cad01d13"
+    "8115727bb1d09e5cf5bff4a7c559f2d9cad01d13",
+    "39fd6c58fcf97fee7c57516e8c3279c7e57ddc6f"
   ],
-  "rawCommitCount": 8,
-  "filteredCommitCount": 8,
+  "rawCommitCount": 9,
+  "filteredCommitCount": 9,
   "rawCommits": [
     {
       "sha": "7c0c1fdd74b726874914a645597d63a8be95ea53",
@@ -478,36 +479,87 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "39fd6c58fcf97fee7c57516e8c3279c7e57ddc6f",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-31T02:31:36-04:00",
+      "subject": "feat(agents): add project creation and handoff tools (#152)",
+      "body": "",
+      "parents": [
+        "8115727bb1d09e5cf5bff4a7c559f2d9cad01d13"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route/route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/tools.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/project_access.rs",
+        "apps/aura-os-server/src/handlers/agents/tool_dedupe.rs",
+        "apps/aura-os-server/src/handlers/projects.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/paths.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/tests/api_tests/projects.rs",
+        "crates/aura-os-storage/src/client/mod.rs",
+        "crates/aura-os-store/src/store.rs"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 1028,
+        "deletions": 92
+      },
+      "committedAtMs": 1788157896000,
+      "cleanSubject": "add project creation and handoff tools (#152)",
+      "keywords": [
+        "project",
+        "creation",
+        "handoff",
+        "tools"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-storage/src",
+        "crates/aura-os-store/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.818.1",
+      "version": "0.1.0-nightly.819.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66801754
+          "sizeBytes": 66713502
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 133249528
+          "sizeBytes": 133192184
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -517,29 +569,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.818.1",
+      "version": "0.1.0-nightly.819.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.818.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.819.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62434060
+          "sizeBytes": 62334952
         },
         {
-          "name": "AURA_0.1.0-nightly.818.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.819.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61444121
+          "sizeBytes": 61377324
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -549,29 +601,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.818.1",
+      "version": "0.1.0-nightly.819.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.818.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.819.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64646417
+          "sizeBytes": 64588080
         },
         {
-          "name": "AURA_0.1.0-nightly.818.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.819.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63663475
+          "sizeBytes": 63610168
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -581,17 +633,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.818.1",
+      "version": "0.1.0-nightly.819.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49103619
+          "sizeBytes": 49197941
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.818.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.819.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -600,47 +652,47 @@
     }
   ],
   "rendered": {
-    "title": "Conversation management gets a major upgrade",
-    "intro": "Tonight's nightly is a heavy chat and sessions release: conversations can now be renamed, pinned, snoozed, and archived, while the composer gains draft persistence, oversized-prompt guardrails, and a reusable prompt shelf. A preview-mode routing fix also keeps local sessions from leaking onto the remote tunnel.",
+    "title": "Conversation lifecycle tools and a smarter chat composer",
+    "intro": "Today's nightly is a heavy sessions release: conversations gain archive, rename, pin, and snooze controls end-to-end, the chat composer learns to save drafts and stash prompts, and agents get first-class tools to spin up projects and hand off work. A preview routing fix also keeps local workspaces from being pushed through the remote tunnel.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:06 PM",
         "started_at": "2026-08-31T02:06:24.000Z",
         "ended_at": "2026-08-31T04:54:01.000Z",
-        "title": "Sessions list gains archive, rename, pin, and snooze",
-        "summary": "A four-part expansion of conversation management adds server-backed lifecycle actions across the sessions list, with matching API routes, storage fields, and UI affordances in both the chat left panel and the agent Chats tab.",
+        "title": "Conversation lifecycle: archive, rename, pin, and snooze",
+        "summary": "The session list gained a full lifecycle toolkit backed by server-side state, so organizing chats now follows users across Aura clients.",
         "items": [
           {
-            "text": "Conversations can now be archived and restored from the sessions list, backed by new server endpoints and a dedicated archived status so the choice syncs across Aura clients rather than being a local view toggle.",
+            "text": "Conversations can be archived and restored from the sessions list and Sidekick context menu, moving them out of the active date buckets without deleting the transcript; the status is server-backed so it syncs across clients.",
             "commit_shas": [
               "282eab40986b2cdc42cf69936109d5b11846dd0b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Session titles are now user-editable, replacing the auto-generated summary with an inline rename flow (validated up to 120 characters) that flows through a new PUT rename endpoint.",
+            "text": "Sessions now have editable titles with an inline rename flow, validated up to 120 characters and persisted through a new PUT endpoint on the agents API.",
             "commit_shas": [
               "0abff91d34b884bdbddaf71f55915f39b56bff3c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Important conversations can be pinned to the top of the list, with a persisted pinned_at field on sessions and a new pin toggle in the sessions list and sidekick context menu.",
+            "text": "Users can pin conversations to the top of the list, with pin state persisted per session and surfaced in both the chat left panel and the agent info Chats tab.",
             "commit_shas": [
               "8cf6fb283db5c97c2c4cd07b1408b52e1302532f"
             ],
             "confidence": "high"
           },
           {
-            "text": "New conversation snooze hides a session until a chosen future timestamp — or lets you wake it immediately — with server-side validation rejecting past wake times.",
+            "text": "New snooze action temporarily hides a conversation until a chosen future time (or wakes it immediately), with server-side validation rejecting past timestamps and missing wake targets.",
             "commit_shas": [
               "8115727bb1d09e5cf5bff4a7c559f2d9cad01d13"
             ],
             "confidence": "high"
           },
           {
-            "text": "Composer upgrades round out the batch: unfinished chat drafts now persist to localStorage and survive restarts, oversized prompts show an inline \"Remove N characters\" hint while keeping the draft editable, and a new global prompt shelf (Cmd+S on desktop, dialog on mobile) lets users stash and restore prompts across chats.",
+            "text": "Chat composer now persists unfinished drafts, guards oversized prompts with an inline 'Remove N characters to send' hint that keeps the textarea editable while disabling send, and adds a global prompt shelf saved via Cmd+S on desktop and a dedicated button on mobile.",
             "commit_shas": [
               "6e9c37ca6480c78d59af1e8d646481fbc4e109b5",
               "352081d5ddfde3fad7c220f5f6ce04c20cd98ef2",
@@ -649,21 +701,52 @@
             "confidence": "high"
           },
           {
-            "text": "Fixed a preview-mode routing bug so the Sidekick terminal prefers the local workspace when the client can reach it, keeping local sessions off the remote tunnel for non-remote-only clients.",
+            "text": "Preview builds now prefer local workspace routing when the client can reach it, keeping local sessions off the remote tunnel while still honoring explicitly selected remote instances for remote-only clients.",
             "commit_shas": [
               "7c0c1fdd74b726874914a645597d63a8be95ea53"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "11:31 PM",
+        "started_at": "2026-08-31T06:31:36.000Z",
+        "ended_at": "2026-08-31T06:31:36.000Z",
+        "title": "Agent tools for project creation and handoff",
+        "summary": "Agents with write-all-projects capability now expose native tools to create an Aura project from a chat and hand the conversation off into a project-scoped session.",
+        "items": [
+          {
+            "text": "Added a capability-gated create_project tool that spins up an Aura project from the current chat, binds the agent to it, and by default copies the conversation into a project-scoped session, returning project, agent instance, session, and route identifiers for the agent to continue from.",
+            "commit_shas": [
+              "39fd6c58fcf97fee7c57516e8c3279c7e57ddc6f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat streams now propagate the source session id into installed-tool context so project-lifecycle tools can trace and hand off from the originating conversation.",
+            "commit_shas": [
+              "39fd6c58fcf97fee7c57516e8c3279c7e57ddc6f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Introduced a dedicated project_access handler module and API tests covering the new agent-driven project endpoints.",
+            "commit_shas": [
+              "39fd6c58fcf97fee7c57516e8c3279c7e57ddc6f"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Archive, rename, pin, and snooze conversations",
-      "Chat drafts now survive restarts",
-      "New global prompt shelf with Cmd+S",
-      "Oversized prompts blocked without losing the draft"
+      "Archive, rename, pin, and snooze for conversations",
+      "Persistent drafts and a global prompt shelf in chat",
+      "Oversized prompts blocked without locking the editor",
+      "Agents can now create projects and hand off sessions"
     ],
-    "raw_commit_count": 8
+    "raw_commit_count": 9
   }
 }

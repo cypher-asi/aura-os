@@ -1,27 +1,35 @@
-# Conversation management gets a major upgrade
+# Conversation lifecycle tools and a smarter chat composer
 
 - Date: `2026-08-30`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.818.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.818.1
+- Version: `0.1.0-nightly.819.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.819.1
 
-Tonight's nightly is a heavy chat and sessions release: conversations can now be renamed, pinned, snoozed, and archived, while the composer gains draft persistence, oversized-prompt guardrails, and a reusable prompt shelf. A preview-mode routing fix also keeps local sessions from leaking onto the remote tunnel.
+Today's nightly is a heavy sessions release: conversations gain archive, rename, pin, and snooze controls end-to-end, the chat composer learns to save drafts and stash prompts, and agents get first-class tools to spin up projects and hand off work. A preview routing fix also keeps local workspaces from being pushed through the remote tunnel.
 
-## 7:06 PM — Sessions list gains archive, rename, pin, and snooze
+## 7:06 PM — Conversation lifecycle: archive, rename, pin, and snooze
 
-A four-part expansion of conversation management adds server-backed lifecycle actions across the sessions list, with matching API routes, storage fields, and UI affordances in both the chat left panel and the agent Chats tab.
+The session list gained a full lifecycle toolkit backed by server-side state, so organizing chats now follows users across Aura clients.
 
-- Conversations can now be archived and restored from the sessions list, backed by new server endpoints and a dedicated archived status so the choice syncs across Aura clients rather than being a local view toggle. (`282eab4`)
-- Session titles are now user-editable, replacing the auto-generated summary with an inline rename flow (validated up to 120 characters) that flows through a new PUT rename endpoint. (`0abff91`)
-- Important conversations can be pinned to the top of the list, with a persisted pinned_at field on sessions and a new pin toggle in the sessions list and sidekick context menu. (`8cf6fb2`)
-- New conversation snooze hides a session until a chosen future timestamp — or lets you wake it immediately — with server-side validation rejecting past wake times. (`8115727`)
-- Composer upgrades round out the batch: unfinished chat drafts now persist to localStorage and survive restarts, oversized prompts show an inline "Remove N characters" hint while keeping the draft editable, and a new global prompt shelf (Cmd+S on desktop, dialog on mobile) lets users stash and restore prompts across chats. (`6e9c37c`, `352081d`, `694f205`)
-- Fixed a preview-mode routing bug so the Sidekick terminal prefers the local workspace when the client can reach it, keeping local sessions off the remote tunnel for non-remote-only clients. (`7c0c1fd`)
+- Conversations can be archived and restored from the sessions list and Sidekick context menu, moving them out of the active date buckets without deleting the transcript; the status is server-backed so it syncs across clients. (`282eab4`)
+- Sessions now have editable titles with an inline rename flow, validated up to 120 characters and persisted through a new PUT endpoint on the agents API. (`0abff91`)
+- Users can pin conversations to the top of the list, with pin state persisted per session and surfaced in both the chat left panel and the agent info Chats tab. (`8cf6fb2`)
+- New snooze action temporarily hides a conversation until a chosen future time (or wakes it immediately), with server-side validation rejecting past timestamps and missing wake targets. (`8115727`)
+- Chat composer now persists unfinished drafts, guards oversized prompts with an inline 'Remove N characters to send' hint that keeps the textarea editable while disabling send, and adds a global prompt shelf saved via Cmd+S on desktop and a dedicated button on mobile. (`6e9c37c`, `352081d`, `694f205`)
+- Preview builds now prefer local workspace routing when the client can reach it, keeping local sessions off the remote tunnel while still honoring explicitly selected remote instances for remote-only clients. (`7c0c1fd`)
+
+## 11:31 PM — Agent tools for project creation and handoff
+
+Agents with write-all-projects capability now expose native tools to create an Aura project from a chat and hand the conversation off into a project-scoped session.
+
+- Added a capability-gated create_project tool that spins up an Aura project from the current chat, binds the agent to it, and by default copies the conversation into a project-scoped session, returning project, agent instance, session, and route identifiers for the agent to continue from. (`39fd6c5`)
+- Chat streams now propagate the source session id into installed-tool context so project-lifecycle tools can trace and hand off from the originating conversation. (`39fd6c5`)
+- Introduced a dedicated project_access handler module and API tests covering the new agent-driven project endpoints. (`39fd6c5`)
 
 ## Highlights
 
-- Archive, rename, pin, and snooze conversations
-- Chat drafts now survive restarts
-- New global prompt shelf with Cmd+S
-- Oversized prompts blocked without losing the draft
+- Archive, rename, pin, and snooze for conversations
+- Persistent drafts and a global prompt shelf in chat
+- Oversized prompts blocked without locking the editor
+- Agents can now create projects and hand off sessions
 

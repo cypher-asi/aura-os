@@ -2,19 +2,19 @@
   {
     "date": "2026-08-30",
     "channel": "nightly",
-    "version": "0.1.0-nightly.818.1",
-    "title": "Conversation management gets a major upgrade",
-    "intro": "Tonight's nightly is a heavy chat and sessions release: conversations can now be renamed, pinned, snoozed, and archived, while the composer gains draft persistence, oversized-prompt guardrails, and a reusable prompt shelf. A preview-mode routing fix also keeps local sessions from leaking onto the remote tunnel.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.819.1",
+    "title": "Conversation lifecycle tools and a smarter chat composer",
+    "intro": "Today's nightly is a heavy sessions release: conversations gain archive, rename, pin, and snooze controls end-to-end, the chat composer learns to save drafts and stash prompts, and agents get first-class tools to spin up projects and hand off work. A preview routing fix also keeps local workspaces from being pushed through the remote tunnel.",
+    "entryCount": 2,
     "highlights": [
-      "Archive, rename, pin, and snooze conversations",
-      "Chat drafts now survive restarts",
-      "New global prompt shelf with Cmd+S",
-      "Oversized prompts blocked without losing the draft"
+      "Archive, rename, pin, and snooze for conversations",
+      "Persistent drafts and a global prompt shelf in chat",
+      "Oversized prompts blocked without locking the editor",
+      "Agents can now create projects and hand off sessions"
     ],
-    "rawCommitCount": 8,
-    "generatedAt": "2026-08-31T05:10:35.343Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.818.1",
+    "rawCommitCount": 9,
+    "generatedAt": "2026-08-31T06:51:09.487Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.819.1",
     "path": "history/2026-08-30.json"
   },
   {
