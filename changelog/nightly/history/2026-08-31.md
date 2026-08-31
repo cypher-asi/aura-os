@@ -1,37 +1,43 @@
-# Session identity hardening and clearer chat error surfaces
+# Sharper tool errors, safer hosted auth, and a quieter Windows Git
 
 - Date: `2026-08-31`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.823.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.823.1
+- Version: `0.1.0-nightly.824.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.824.1
 
-Today's nightly focuses on backend correctness and interface clarity: dev-loop automaton runs now demand a stable session ID up front, hosted workspace file requests no longer cross-contaminate between users on Aura Web, and both desktop chat and the mobile input bar do a better job explaining what went wrong and what's required to send.
+Today's nightly focuses on trust and clarity: chat surfaces tool failures in a way people can actually act on, mobile makes it obvious when a remote agent is required, and the server side closes a cross-user auth race on Aura Web while calming Windows Desktop's flashing Git consoles. Under the hood, dev-loop sessions now require a stable identity so telemetry and rate limits stay coherent across restarts.
 
-## 12:35 AM — Dev-loop automaton runs require a stable session ID
+## 12:35 AM — Dev-loop runs get a mandatory, stable session identity
 
-The automaton start contract now treats aura_session_id as mandatory instead of optional, so router and billing telemetry can reliably distinguish concurrent dev-loop runs.
+Automaton start parameters now require a session ID up front so dev-loop restarts stay coherent with rate limiting and telemetry.
 
-- Promoted aura_session_id from Option<String> to a required String across the harness AutomatonStartParams and dev-loop start params, ensuring bootstrap and continuation requests always carry an X-Aura-Session-Id header rather than being silently rejected downstream. (`c649557`)
-- Updated server-side identity validation and shape logging to check for a non-empty session string, and refreshed harness tests to cover the new non-optional contract. (`c649557`)
+- `aura_session_id` is now a required string on `AutomatonStartParams` rather than an optional field, so dev-loop bootstrap and continuation requests can't reach the harness without one and Cloudflare's per-session rate bucket stops resetting on every restart. (`c649557`)
+- Server- and harness-side identity validation, start-params assembly, and tests were updated together so the stable dev-loop session ID flows end-to-end into the outbound `X-Aura-Session-Id` header. (`c649557`)
 
-## 7:26 AM — Hosted workspace file auth no longer leaks across concurrent web users
+## 7:26 AM — Hosted workspace files stop crossing user auth boundaries
 
-Fixed a cross-user auth race on Aura Web where hosted workspace file requests could be re-issued under another user's cached JWT and return spurious 404s.
+A concurrency bug on Aura Web that could resolve a hosted file request under another user's token has been fixed by scoping agent lookups to the incoming JWT.
 
-- Hosted workspace file handlers now resolve the parent agent using the incoming request's JWT via the network client instead of AgentInstanceService, which pulled from a process-wide SettingsStore that concurrent users were overwriting. (`10890eb`)
-- Added a dedicated hosted_workspace_auth_race integration test that exercises overlapping requests from two different user tokens to lock in the fix. (`10890eb`)
+- Hosted workspace file handlers no longer route through `AgentInstanceService::get_instance`, which shared a process-wide cached session and could re-issue a correctly authorized request under a different user's token, producing false 404s on Aura Web under concurrent load. (`10890eb`)
+- The handler now resolves the parent agent using the request's own JWT via the network client (or the local agent service as a fallback) and a new auth-race integration test locks in the behavior. (`10890eb`)
 
-## 8:21 AM — Clearer tool error panels and remote-agent guidance in chat
+## 8:21 AM — Clearer tool errors in chat and a more honest mobile composer
 
-Chat tool blocks now render structured error responses with retry timing and guidance, and the mobile input bar explains when sending requires a remote agent while making tap-to-send more reliable.
+Chat now renders structured tool error responses, and the mobile input bar makes it obvious when a remote agent is required before you can send.
 
-- Generic tool blocks parse errored results into a titled panel with message, retry-after countdown, guidance list, and HTTP/code metadata instead of dumping raw JSON, backed by new parseToolError and formatRetryDelay utilities. (`b4fcc96`)
-- MobileChatInputBar gained a disabled-state notice and a remote-required status indicator that clarifies when a remote agent is needed, plus stabilized tap-send behavior covered by a new test suite. (`f010d68`)
+- Generic tool blocks now parse error results into a dedicated response card with a title, message, HTTP status/code metadata, guidance bullets, and a formatted "Try again in…" hint when the tool returns a retry delay. (`b4fcc96`)
+- The mobile chat input bar gains a disabled-state notice and a "remote required" status pill so users understand why send is unavailable, backed by a new test suite covering tap-to-send behavior. (`f010d68`)
+
+## 10:12 AM — No more flashing Git console windows on Windows Desktop
+
+Source Control's Git invocations now run headless on Windows, matching how Safe Workspace already handles its Git operations.
+
+- Every Git child process spawned by the Source Control handler now sets `CREATE_NO_WINDOW` on Windows, so staging and committing no longer pop transient console windows out of the Aura Desktop GUI process. (`32d48cd`)
 
 ## Highlights
 
-- Dev-loop starts now require a stable X-Aura-Session-Id
-- Hosted file auth race between concurrent web users fixed
-- Tool errors in chat render as structured, actionable panels
-- Mobile chat input clearly explains when a remote agent is required
+- Structured tool error cards in chat with retry timing and guidance
+- Hosted workspace file auth no longer leaks across concurrent Web users
+- No more flashing Git console windows on Windows Desktop
+- Dev-loop session IDs are now mandatory and stable across restarts
 

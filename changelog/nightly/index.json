@@ -2,19 +2,19 @@
   {
     "date": "2026-08-31",
     "channel": "nightly",
-    "version": "0.1.0-nightly.823.1",
-    "title": "Session identity hardening and clearer chat error surfaces",
-    "intro": "Today's nightly focuses on backend correctness and interface clarity: dev-loop automaton runs now demand a stable session ID up front, hosted workspace file requests no longer cross-contaminate between users on Aura Web, and both desktop chat and the mobile input bar do a better job explaining what went wrong and what's required to send.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.824.1",
+    "title": "Sharper tool errors, safer hosted auth, and a quieter Windows Git",
+    "intro": "Today's nightly focuses on trust and clarity: chat surfaces tool failures in a way people can actually act on, mobile makes it obvious when a remote agent is required, and the server side closes a cross-user auth race on Aura Web while calming Windows Desktop's flashing Git consoles. Under the hood, dev-loop sessions now require a stable identity so telemetry and rate limits stay coherent across restarts.",
+    "entryCount": 4,
     "highlights": [
-      "Dev-loop starts now require a stable X-Aura-Session-Id",
-      "Hosted file auth race between concurrent web users fixed",
-      "Tool errors in chat render as structured, actionable panels",
-      "Mobile chat input clearly explains when a remote agent is required"
+      "Structured tool error cards in chat with retry timing and guidance",
+      "Hosted workspace file auth no longer leaks across concurrent Web users",
+      "No more flashing Git console windows on Windows Desktop",
+      "Dev-loop session IDs are now mandatory and stable across restarts"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-08-31T15:38:23.165Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.823.1",
+    "rawCommitCount": 5,
+    "generatedAt": "2026-08-31T17:30:53.634Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.824.1",
     "path": "history/2026-08-31.json"
   },
   {
