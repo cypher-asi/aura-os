@@ -7,7 +7,7 @@
 
 use std::path::{Component, Path as FsPath, PathBuf};
 
-use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId};
+use aura_os_core::{AgentId, AgentInstanceId, HarnessMode, ProjectId};
 use axum::extract::{Path, Query, State};
 use axum::http::{Method, StatusCode};
 use axum::response::Response;
@@ -111,12 +111,33 @@ async fn ensure_hosted_local_instance(
         return Err(ApiError::not_found("agent instance not found"));
     }
 
-    let instance = state
-        .agent_instance_service
-        .get_instance(project_id, agent_instance_id)
-        .await
-        .map_err(|_| ApiError::not_found("agent instance not found"))?;
-    if instance.project_id != *project_id || instance.harness_mode() != HarnessMode::Local {
+    // Do not call `AgentInstanceService::get_instance` here. That service is
+    // used by desktop/system flows and obtains its JWT from the process-wide
+    // SettingsStore. On Aura Web, concurrent requests from different users
+    // replace that shared cached session, so a correctly authorized request
+    // can be re-issued to storage under another user's token and become a
+    // false 404. Resolve the parent agent with this request's JWT instead.
+    let stored_agent_id = stored
+        .agent_id
+        .as_deref()
+        .ok_or_else(|| ApiError::not_found("agent instance not found"))?;
+    let harness_mode = if let Some(network) = &state.network_client {
+        let agent = network
+            .get_agent(stored_agent_id, jwt)
+            .await
+            .map_err(map_network_error)?;
+        HarnessMode::from_machine_type(agent.machine_type.as_deref().unwrap_or("local"))
+    } else {
+        let agent_id = stored_agent_id
+            .parse::<AgentId>()
+            .map_err(|_| ApiError::not_found("agent instance not found"))?;
+        state
+            .agent_service
+            .get_agent_local(&agent_id)
+            .map(|agent| agent.harness_mode())
+            .map_err(|_| ApiError::not_found("agent instance not found"))?
+    };
+    if harness_mode != HarnessMode::Local {
         return Err(ApiError::bad_request(
             "agent instance does not use the hosted local workspace",
         ));
