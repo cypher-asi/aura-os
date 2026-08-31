@@ -429,6 +429,38 @@ describe("sessionsApi", () => {
     );
   });
 
+  it("snoozes and wakes a session", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+    await sessionsApi.setSessionSnoozedUntil(
+      "p1" as string,
+      "ai1" as string,
+      "s1",
+      "2026-09-01T13:00:00Z",
+    );
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/projects/p1/agents/ai1/sessions/s1/snooze",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ snoozedUntil: "2026-09-01T13:00:00Z" }),
+      }),
+    );
+
+    await sessionsApi.setSessionSnoozedUntil(
+      "p1" as string,
+      "ai1" as string,
+      "s1",
+      null,
+    );
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/projects/p1/agents/ai1/sessions/s1/snooze",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ wake: true }),
+      }),
+    );
+  });
+
   it("listSessionTasks fetches tasks for session", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;

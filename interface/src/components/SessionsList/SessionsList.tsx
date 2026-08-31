@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -7,6 +8,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { AlarmClock } from "lucide-react";
 import { EmptyState } from "../EmptyState";
 import {
   SidekickList,
@@ -22,6 +24,11 @@ import {
   type SessionRow,
 } from "./session-row-utils";
 import { useSessionSummaries } from "./use-session-summaries";
+import {
+  formatSessionWakeLabel,
+  isSessionSnoozed,
+  resolveSessionSnoozePresets,
+} from "./session-snooze";
 import { useIsSessionStreaming } from "../../hooks/use-session-streaming";
 import styles from "./SessionsList.module.css";
 
@@ -35,6 +42,10 @@ interface SessionsListProps {
   onRestoreSession?: (session: AnnotatedSession) => void;
   onRenameSession?: (session: AnnotatedSession, title: string) => void;
   onSetSessionPinned?: (session: AnnotatedSession, pinned: boolean) => void;
+  onSetSessionSnoozedUntil?: (
+    session: AnnotatedSession,
+    snoozedUntil: string | null,
+  ) => void;
   /**
    * Optional hover hook — fired on `onMouseEnter` of each row so the
    * caller can pre-warm the destination chat-history-store entry for
@@ -145,6 +156,7 @@ export function SessionsList({
   onRestoreSession,
   onRenameSession,
   onSetSessionPinned,
+  onSetSessionSnoozedUntil,
   onSessionHover,
   searchQuery,
   deleteError,
@@ -189,6 +201,7 @@ export function SessionsList({
   const lastHoveredSessionIdRef = useRef<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<AnnotatedSession | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [snoozeClockMs, setSnoozeClockMs] = useState(() => Date.now());
 
   // Live-update of the row label when the backend's on-send title
   // generator (apps/aura-os-server/src/handlers/agents/sessions.rs
@@ -217,13 +230,31 @@ export function SessionsList({
     return out;
   }, [safeSessions, summaries, searchQuery]);
 
-  const activeRows = useMemo(
+  const lifecycleActiveRows = useMemo(
     () => titledRows.filter(({ session }) => session.status !== "archived"),
     [titledRows],
   );
   const archivedRows = useMemo(
     () => titledRows.filter(({ session }) => session.status === "archived"),
     [titledRows],
+  );
+  const snoozedRows = useMemo(
+    () =>
+      lifecycleActiveRows
+        .filter(({ session }) => isSessionSnoozed(session, snoozeClockMs))
+        .sort(
+          (a, b) =>
+            Date.parse(a.session.snoozed_until ?? "") -
+            Date.parse(b.session.snoozed_until ?? ""),
+        ),
+    [lifecycleActiveRows, snoozeClockMs],
+  );
+  const activeRows = useMemo(
+    () =>
+      lifecycleActiveRows.filter(
+        ({ session }) => !isSessionSnoozed(session, snoozeClockMs),
+      ),
+    [lifecycleActiveRows, snoozeClockMs],
   );
   const pinnedRows = useMemo(
     () =>
@@ -240,6 +271,25 @@ export function SessionsList({
     () => bucketizeByDate(activeRows.filter(({ session }) => !session.pinned_at)),
     [activeRows],
   );
+  const nextWakeAtMs = useMemo(() => {
+    let next: number | null = null;
+    for (const { session } of snoozedRows) {
+      const wakeMs = Date.parse(session.snoozed_until ?? "");
+      if (!Number.isFinite(wakeMs) || wakeMs <= snoozeClockMs) continue;
+      next = next == null ? wakeMs : Math.min(next, wakeMs);
+    }
+    return next;
+  }, [snoozeClockMs, snoozedRows]);
+
+  useEffect(() => {
+    if (nextWakeAtMs == null) return;
+    const delay = Math.min(
+      Math.max(nextWakeAtMs - Date.now() + 25, 25),
+      2_147_000_000,
+    );
+    const timer = window.setTimeout(() => setSnoozeClockMs(Date.now()), delay);
+    return () => window.clearTimeout(timer);
+  }, [nextWakeAtMs]);
   // Check if sessions span multiple projects — only show the project
   // prefix when there's more than one to avoid noise in the common case.
   const hasMultipleProjects = useMemo(() => {
@@ -291,12 +341,29 @@ export function SessionsList({
       if (actionId === "unpin") onSetSessionPinned?.(target, false);
       if (actionId === "archive") onArchiveSession?.(target);
       if (actionId === "restore") onRestoreSession?.(target);
-      if (actionId === "delete") onDeleteSession?.(target);
+      if (actionId === "delete") {
+        onDeleteSession?.(target);
+        return;
+      }
+      if (actionId === "wake") {
+        onSetSessionSnoozedUntil?.(target, null);
+        return;
+      }
+      if (actionId === "snooze-hour" || actionId === "snooze-tomorrow") {
+        const presetId = actionId === "snooze-hour" ? "hour" : "tomorrow";
+        const preset = resolveSessionSnoozePresets(new Date()).find(
+          (candidate) => candidate.id === presetId,
+        );
+        if (preset) {
+          onSetSessionSnoozedUntil?.(target, preset.snoozedUntil);
+        }
+      }
     },
     [
       sessionById,
       summaries,
       onSetSessionPinned,
+      onSetSessionSnoozedUntil,
       onArchiveSession,
       onRestoreSession,
       onDeleteSession,
@@ -314,10 +381,17 @@ export function SessionsList({
           ...(onDeleteSession ? (["delete"] as const) : []),
         ];
       }
+      const snoozed = isSessionSnoozed(target, snoozeClockMs);
       return [
         ...(onRenameSession ? (["rename"] as const) : []),
         ...(onSetSessionPinned && !isOptimisticSessionId(target.session_id)
           ? ([target.pinned_at ? "unpin" : "pin"] as const)
+          : []),
+        ...(onSetSessionSnoozedUntil &&
+        !isOptimisticSessionId(target.session_id)
+          ? snoozed
+            ? (["wake"] as const)
+            : (["snooze-hour", "snooze-tomorrow"] as const)
           : []),
         ...(onArchiveSession ? (["archive"] as const) : []),
         ...(onDeleteSession ? (["delete"] as const) : []),
@@ -325,8 +399,10 @@ export function SessionsList({
     },
     [
       sessionById,
+      snoozeClockMs,
       onRenameSession,
       onSetSessionPinned,
+      onSetSessionSnoozedUntil,
       onArchiveSession,
       onRestoreSession,
       onDeleteSession,
@@ -368,10 +444,19 @@ export function SessionsList({
           <span className={styles.sessionProject}>{session._projectName}</span>
         ) : null;
       const suffix = customSuffix !== null ? customSuffix : defaultSuffix;
+      const snoozed =
+        session.status !== "archived" &&
+        isSessionSnoozed(session, snoozeClockMs);
       return {
         id: session.session_id,
         label,
-        icon: session.pinned_at ? (
+        detail:
+          snoozed && session.snoozed_until
+            ? formatSessionWakeLabel(session.snoozed_until)
+            : undefined,
+        icon: snoozed ? (
+          <AlarmClock size={13} aria-label="Snoozed" />
+        ) : session.pinned_at ? (
           <Pin size={13} aria-label="Pinned" />
         ) : undefined,
         leadingIndicator: (
@@ -391,6 +476,7 @@ export function SessionsList({
     [
       renderRowSuffix,
       hasMultipleProjects,
+      snoozeClockMs,
       streamKeyForSession,
       onSessionClick,
       handleRowMouseEnter,
@@ -414,6 +500,16 @@ export function SessionsList({
         label: bucket.label,
         rows: bucket.rows.map(toSidekickRow),
       })),
+      ...(snoozedRows.length > 0
+        ? [
+            {
+              id: "snoozed",
+              label: "Snoozed",
+              rows: snoozedRows.map(toSidekickRow),
+              defaultExpanded: Boolean(searchQuery?.trim()),
+            },
+          ]
+        : []),
       ...(archivedRows.length > 0
         ? [
             {
@@ -430,7 +526,9 @@ export function SessionsList({
     [
       buckets,
       pinnedRows,
+      snoozedRows,
       archivedRows,
+      searchQuery,
       selectedSessionId,
       toSidekickRow,
     ],
@@ -485,6 +583,7 @@ export function SessionsList({
         menuActions={
           onRenameSession ||
           onSetSessionPinned ||
+          onSetSessionSnoozedUntil ||
           onDeleteSession ||
           onArchiveSession ||
           onRestoreSession
@@ -494,6 +593,7 @@ export function SessionsList({
         onMenuAction={
           onRenameSession ||
           onSetSessionPinned ||
+          onSetSessionSnoozedUntil ||
           onDeleteSession ||
           onArchiveSession ||
           onRestoreSession

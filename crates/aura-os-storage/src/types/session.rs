@@ -96,6 +96,10 @@ pub struct StorageSession {
     /// deployments and `null` for ordinary conversations.
     #[serde(default)]
     pub pinned_at: Option<String>,
+    /// Future wake timestamp, missing on storage deployments predating
+    /// conversation snoozing.
+    #[serde(default)]
+    pub snoozed_until: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,6 +147,10 @@ pub struct UpdateSessionRequest {
     /// current value. aura-storage owns timestamp generation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pinned: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub snoozed_until: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clear_snooze: Option<bool>,
 }
 
 #[cfg(test)]
@@ -156,6 +164,7 @@ mod tests {
             "isPublic": true,
             "publicShareId": "t_6a1e3d8f6e548191948c1f0a9c68cbda",
             "pinnedAt": "2026-08-30T12:00:00Z",
+            "snoozedUntil": "2026-09-01T13:00:00Z",
         });
         let session: StorageSession =
             serde_json::from_value(json).expect("deserialize StorageSession");
@@ -165,6 +174,10 @@ mod tests {
             Some("t_6a1e3d8f6e548191948c1f0a9c68cbda")
         );
         assert_eq!(session.pinned_at.as_deref(), Some("2026-08-30T12:00:00Z"));
+        assert_eq!(
+            session.snoozed_until.as_deref(),
+            Some("2026-09-01T13:00:00Z")
+        );
 
         let reencoded = serde_json::to_value(&session).expect("serialize StorageSession");
         assert_eq!(reencoded["isPublic"], serde_json::json!(true));
@@ -175,6 +188,10 @@ mod tests {
         assert_eq!(
             reencoded["pinnedAt"],
             serde_json::json!("2026-08-30T12:00:00Z")
+        );
+        assert_eq!(
+            reencoded["snoozedUntil"],
+            serde_json::json!("2026-09-01T13:00:00Z")
         );
     }
 
@@ -188,6 +205,7 @@ mod tests {
         assert_eq!(session.is_public, None);
         assert_eq!(session.public_share_id, None);
         assert_eq!(session.pinned_at, None);
+        assert_eq!(session.snoozed_until, None);
     }
 
     #[test]
@@ -197,6 +215,8 @@ mod tests {
         assert!(json.get("isPublic").is_none());
         assert!(json.get("publicShareId").is_none());
         assert!(json.get("pinned").is_none());
+        assert!(json.get("snoozedUntil").is_none());
+        assert!(json.get("clearSnooze").is_none());
 
         let req = UpdateSessionRequest {
             is_public: Some(true),
@@ -216,5 +236,22 @@ mod tests {
         };
         let json = serde_json::to_value(&req).expect("serialize pin update");
         assert_eq!(json["pinned"], serde_json::json!(false));
+
+        let req = UpdateSessionRequest {
+            snoozed_until: Some("2026-09-01T13:00:00Z".to_string()),
+            ..Default::default()
+        };
+        let json = serde_json::to_value(&req).expect("serialize snooze update");
+        assert_eq!(
+            json["snoozedUntil"],
+            serde_json::json!("2026-09-01T13:00:00Z")
+        );
+
+        let req = UpdateSessionRequest {
+            clear_snooze: Some(true),
+            ..Default::default()
+        };
+        let json = serde_json::to_value(&req).expect("serialize wake update");
+        assert_eq!(json["clearSnooze"], serde_json::json!(true));
     }
 }

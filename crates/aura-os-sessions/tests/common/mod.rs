@@ -41,6 +41,7 @@ async fn create_session_handler(
         is_public: None,
         public_share_id: None,
         pinned_at: None,
+        snoozed_until: None,
     };
     let mut db = db.lock().await;
     db.push(session.clone());

@@ -84,6 +84,7 @@ pub(super) async fn create_session(
         is_public: None,
         public_share_id: None,
         pinned_at: None,
+        snoozed_until: None,
     };
     let mut db = db.lock().await;
     db.sessions.push(session.clone());
@@ -158,6 +159,11 @@ pub(super) async fn update_session(
             } else {
                 session.pinned_at = None;
             }
+        }
+        if req.clear_snooze == Some(true) {
+            session.snoozed_until = None;
+        } else if let Some(snoozed_until) = req.snoozed_until {
+            session.snoozed_until = Some(snoozed_until);
         }
         session.updated_at = Some(Utc::now().to_rfc3339());
         axum::http::StatusCode::OK

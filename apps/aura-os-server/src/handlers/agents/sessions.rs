@@ -1,5 +1,6 @@
 use axum::extract::{Path, State};
 use axum::Json;
+use chrono::{DateTime, Utc};
 use futures_util::future::join_all;
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
@@ -436,6 +437,14 @@ pub(crate) struct SetSessionPinRequest {
     pinned: bool,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SetSessionSnoozeRequest {
+    #[serde(default)]
+    wake: bool,
+    snoozed_until: Option<String>,
+}
+
 /// Move a session out of the active date buckets without deleting its
 /// transcript. The archived status is deliberately server-backed so the
 /// choice follows the user across Aura clients.
@@ -673,6 +682,83 @@ pub(crate) async fn set_session_pin(
         .await
         .map_err(map_storage_error)?;
     info!(%session_id, pinned = request.pinned, "Session pin changed");
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+/// Temporarily hide a conversation until a future timestamp, or wake it now.
+pub(crate) async fn set_session_snooze(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path((project_id, agent_instance_id, session_id)): Path<(
+        ProjectId,
+        AgentInstanceId,
+        SessionId,
+    )>,
+    Json(request): Json<SetSessionSnoozeRequest>,
+) -> ApiResult<axum::http::StatusCode> {
+    let snoozed_until = match (request.wake, request.snoozed_until.as_deref()) {
+        (true, None) => None,
+        (false, Some(raw)) => {
+            let wake_at = DateTime::parse_from_rfc3339(raw)
+                .map_err(|_| ApiError::bad_request("invalid session snooze time"))?
+                .with_timezone(&Utc);
+            if wake_at <= Utc::now() {
+                return Err(ApiError::bad_request(
+                    "session snooze time must be in the future",
+                ));
+            }
+            Some(wake_at.to_rfc3339())
+        }
+        _ => {
+            return Err(ApiError::bad_request(
+                "provide either a future snoozedUntil or wake=true",
+            ));
+        }
+    };
+
+    let storage = state.require_storage_client()?;
+    let project_id = project_id.to_string();
+    let agent_instance_id = agent_instance_id.to_string();
+    let session_id = session_id.to_string();
+    let session = storage
+        .get_session(&session_id, &jwt)
+        .await
+        .map_err(|error| match &error {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(error),
+        })?;
+    reject_deleted_storage_session(&session, "session not found")?;
+
+    // Storage authorizes ownership through the JWT. Also bind the session to
+    // the IDs in this route so a valid ID cannot be replayed through another
+    // project or agent path. Legacy rows may omit either binding.
+    if session
+        .project_id
+        .as_deref()
+        .is_some_and(|id| id != project_id)
+        || session
+            .project_agent_id
+            .as_deref()
+            .is_some_and(|id| id != agent_instance_id)
+    {
+        return Err(ApiError::not_found("session not found"));
+    }
+
+    storage
+        .update_session(
+            &session_id,
+            &jwt,
+            &UpdateSessionRequest {
+                snoozed_until: snoozed_until.clone(),
+                clear_snooze: request.wake.then_some(true),
+                ..Default::default()
+            },
+        )
+        .await
+        .map_err(map_storage_error)?;
+    info!(%session_id, ?snoozed_until, "Session snooze changed");
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
