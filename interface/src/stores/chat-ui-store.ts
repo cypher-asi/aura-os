@@ -161,6 +161,30 @@ function secondOpinionReferenceStorageKey(streamKey: string): string {
   return `aura-second-opinion-reference:${streamKey}`;
 }
 
+function draftStorageKey(streamKey: string): string {
+  return `aura-chat-draft:${streamKey}`;
+}
+
+function persistDraft(streamKey: string, text: string): void {
+  try {
+    if (text.length === 0) {
+      localStorage.removeItem(draftStorageKey(streamKey));
+    } else {
+      localStorage.setItem(draftStorageKey(streamKey), text);
+    }
+  } catch {
+    // localStorage may be unavailable or full. The in-memory draft still works.
+  }
+}
+
+function loadPersistedDraft(streamKey: string): string {
+  try {
+    return localStorage.getItem(draftStorageKey(streamKey)) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Move every stream-keyed preference alongside the in-memory chat UI
  * partition when a fresh canvas receives its server session id.
@@ -177,6 +201,7 @@ function migratePersistedStreamState(oldKey: string, newKey: string): void {
     councilMechanismStorageKey,
     answerStrategyStorageKey,
     secondOpinionReferenceStorageKey,
+    draftStorageKey,
   ];
 
   try {
@@ -401,7 +426,8 @@ interface ChatUIState {
    * In-progress prompt drafts keyed by `streamKey`. Only chats with a
    * non-empty unsent draft live here — `setDraft(_, "")` removes the
    * entry so the map naturally bounds itself to "chats the user is
-   * mid-typing in." In-memory only; cleared on app restart.
+   * mid-typing in." Non-empty drafts are mirrored to localStorage so
+   * closing or refreshing Aura does not discard unfinished prompts.
    */
   drafts: Record<string, string>;
 }
@@ -589,6 +615,15 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
   drafts: {},
 
   init: (streamKey, adapterType, defaultModel, agentId) => {
+    // Hydrate the draft independently of the rest of the stream state.
+    // `init` can return early when the model is already ready, but a cold
+    // app boot still needs to restore the unfinished prompt first.
+    if (!(streamKey in get().drafts)) {
+      const persistedDraft = loadPersistedDraft(streamKey);
+      if (persistedDraft.length > 0) {
+        set((s) => ({ drafts: { ...s.drafts, [streamKey]: persistedDraft } }));
+      }
+    }
     const existing = get().streams[streamKey];
     const mode = loadPersistedAgentMode(agentId);
     // Derive the initial model from the persisted mode so an agent
@@ -982,6 +1017,7 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
     getStream(get(), streamKey).pinnedSourceImage,
 
   setDraft: (streamKey, text) => {
+    persistDraft(streamKey, text);
     set((s) => {
       if (text === "") {
         if (!(streamKey in s.drafts)) return s;

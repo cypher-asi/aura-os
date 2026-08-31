@@ -489,6 +489,8 @@ describe("chat-ui-store", () => {
         "stream-1": "hello",
         "stream-2": "world",
       });
+      expect(localStorage.getItem("aura-chat-draft:stream-1")).toBe("hello");
+      expect(localStorage.getItem("aura-chat-draft:stream-2")).toBe("world");
     });
 
     it("setDraft removes the entry when the value becomes empty", () => {
@@ -496,6 +498,7 @@ describe("chat-ui-store", () => {
       expect(useChatUIStore.getState().drafts).toHaveProperty("stream-1");
       useChatUIStore.getState().setDraft("stream-1", "");
       expect(useChatUIStore.getState().drafts).not.toHaveProperty("stream-1");
+      expect(localStorage.getItem("aura-chat-draft:stream-1")).toBeNull();
     });
 
     it("setDraft is a no-op when clearing a stream that has no draft", () => {
@@ -516,6 +519,34 @@ describe("chat-ui-store", () => {
       useChatUIStore.getState().setDraft("stream-2", "b");
       useChatUIStore.getState().setDraft("stream-1", "");
       expect(useChatUIStore.getState().drafts).toEqual({ "stream-2": "b" });
+    });
+
+    it("restores an unfinished draft after the in-memory store is recreated", () => {
+      useChatUIStore.getState().setDraft("stream-1", "survive a restart");
+      useChatUIStore.setState({ streams: {}, drafts: {} });
+
+      useChatUIStore.getState().init("stream-1");
+
+      expect(useChatUIStore.getState().getDraft("stream-1")).toBe(
+        "survive a restart",
+      );
+    });
+
+    it("migrates persisted fresh-canvas drafts to the assigned session key", () => {
+      const freshKey = "agent-1:fresh";
+      const sessionKey = "agent-1:session-1";
+      useChatUIStore.getState().setDraft(freshKey, "unfinished prompt");
+
+      migrateChatUiPartition(freshKey, sessionKey);
+
+      expect(localStorage.getItem(`aura-chat-draft:${freshKey}`)).toBeNull();
+      expect(localStorage.getItem(`aura-chat-draft:${sessionKey}`)).toBe(
+        "unfinished prompt",
+      );
+      expect(useChatUIStore.getState().getDraft(freshKey)).toBe("");
+      expect(useChatUIStore.getState().getDraft(sessionKey)).toBe(
+        "unfinished prompt",
+      );
     });
   });
 
