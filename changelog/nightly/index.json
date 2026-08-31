@@ -2,17 +2,19 @@
   {
     "date": "2026-08-31",
     "channel": "nightly",
-    "version": "0.1.0-nightly.821.1",
-    "title": "Session identity hardening for dev loops and hosted web files",
-    "intro": "A focused backend day for Aura: dev-loop automaton starts now demand a stable session identifier up front, and Aura Web's hosted workspace file endpoint no longer leaks across concurrent users' sessions. Both changes tighten authorization boundaries around multi-user server flows.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.823.1",
+    "title": "Session identity hardening and clearer chat error surfaces",
+    "intro": "Today's nightly focuses on backend correctness and interface clarity: dev-loop automaton runs now demand a stable session ID up front, hosted workspace file requests no longer cross-contaminate between users on Aura Web, and both desktop chat and the mobile input bar do a better job explaining what went wrong and what's required to send.",
+    "entryCount": 3,
     "highlights": [
-      "Automaton starts require a stable X-Aura-Session-Id",
-      "Fixed cross-user auth race in hosted workspace files on Aura Web"
+      "Dev-loop starts now require a stable X-Aura-Session-Id",
+      "Hosted file auth race between concurrent web users fixed",
+      "Tool errors in chat render as structured, actionable panels",
+      "Mobile chat input clearly explains when a remote agent is required"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-08-31T14:43:34.291Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.821.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-08-31T15:38:23.165Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.823.1",
     "path": "history/2026-08-31.json"
   },
   {

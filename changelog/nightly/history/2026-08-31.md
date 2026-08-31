@@ -1,28 +1,37 @@
-# Session identity hardening for dev loops and hosted web files
+# Session identity hardening and clearer chat error surfaces
 
 - Date: `2026-08-31`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.821.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.821.1
+- Version: `0.1.0-nightly.823.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.823.1
 
-A focused backend day for Aura: dev-loop automaton starts now demand a stable session identifier up front, and Aura Web's hosted workspace file endpoint no longer leaks across concurrent users' sessions. Both changes tighten authorization boundaries around multi-user server flows.
+Today's nightly focuses on backend correctness and interface clarity: dev-loop automaton runs now demand a stable session ID up front, hosted workspace file requests no longer cross-contaminate between users on Aura Web, and both desktop chat and the mobile input bar do a better job explaining what went wrong and what's required to send.
 
-## 12:35 AM — Dev-loop automaton starts require a session ID up front
+## 12:35 AM — Dev-loop automaton runs require a stable session ID
 
-The automaton start contract now treats aura_session_id as mandatory rather than optional, so dev-loop bootstraps can't reach the model-request layer without a stable identifier for Cloudflare bucketing and billing telemetry.
+The automaton start contract now treats aura_session_id as mandatory instead of optional, so router and billing telemetry can reliably distinguish concurrent dev-loop runs.
 
-- Made aura_session_id a non-optional String on AutomatonStartParams and updated the server-side validator, harness identity checks, and dev-loop start params to always assemble one via stable_dev_loop_session_id, eliminating a class of silent None paths that could bypass the X-Aura-Session-Id requirement. (`c649557`)
-- Refreshed harness and handler tests to cover the new required-field shape, including rejection paths when the session ID is blank, so regressions to the optional form are caught at build time. (`c649557`)
+- Promoted aura_session_id from Option<String> to a required String across the harness AutomatonStartParams and dev-loop start params, ensuring bootstrap and continuation requests always carry an X-Aura-Session-Id header rather than being silently rejected downstream. (`c649557`)
+- Updated server-side identity validation and shape logging to check for a non-empty session string, and refreshed harness tests to cover the new non-optional contract. (`c649557`)
 
-## 7:26 AM — Hosted workspace file requests no longer cross user sessions on Aura Web
+## 7:26 AM — Hosted workspace file auth no longer leaks across concurrent web users
 
-Fixed a cross-user auth race in the hosted workspace files handler where concurrent Aura Web requests could resolve an agent instance under another user's cached JWT and return a spurious 404.
+Fixed a cross-user auth race on Aura Web where hosted workspace file requests could be re-issued under another user's cached JWT and return spurious 404s.
 
-- Stopped calling AgentInstanceService::get_instance inside ensure_hosted_local_instance, which was reading a process-wide SettingsStore JWT that concurrent web users could overwrite. The handler now resolves the parent agent using the request's own JWT via the network client (or the local agent service when offline) before checking HarnessMode::Local. (`10890eb`)
-- Added a dedicated hosted_workspace_auth_race integration test that drives interleaved requests from two users to lock in the request-scoped auth behavior and prevent the shared-session regression from returning. (`10890eb`)
+- Hosted workspace file handlers now resolve the parent agent using the incoming request's JWT via the network client instead of AgentInstanceService, which pulled from a process-wide SettingsStore that concurrent users were overwriting. (`10890eb`)
+- Added a dedicated hosted_workspace_auth_race integration test that exercises overlapping requests from two different user tokens to lock in the fix. (`10890eb`)
+
+## 8:21 AM — Clearer tool error panels and remote-agent guidance in chat
+
+Chat tool blocks now render structured error responses with retry timing and guidance, and the mobile input bar explains when sending requires a remote agent while making tap-to-send more reliable.
+
+- Generic tool blocks parse errored results into a titled panel with message, retry-after countdown, guidance list, and HTTP/code metadata instead of dumping raw JSON, backed by new parseToolError and formatRetryDelay utilities. (`b4fcc96`)
+- MobileChatInputBar gained a disabled-state notice and a remote-required status indicator that clarifies when a remote agent is needed, plus stabilized tap-send behavior covered by a new test suite. (`f010d68`)
 
 ## Highlights
 
-- Automaton starts require a stable X-Aura-Session-Id
-- Fixed cross-user auth race in hosted workspace files on Aura Web
+- Dev-loop starts now require a stable X-Aura-Session-Id
+- Hosted file auth race between concurrent web users fixed
+- Tool errors in chat render as structured, actionable panels
+- Mobile chat input clearly explains when a remote agent is required
 

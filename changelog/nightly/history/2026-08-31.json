@@ -3,20 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-31T14:43:34.291Z",
+  "generatedAt": "2026-08-31T15:38:23.165Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.821.1",
+  "version": "0.1.0-nightly.823.1",
   "date": "2026-08-31",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.821.1",
-  "lastIncludedSha": "10890eb06aafb912f34794ce5e334cd2e07535c7",
-  "previousProcessedSha": "c649557c235b97ce6f94ced0a943e042b20fe225",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.823.1",
+  "lastIncludedSha": "f010d68bbd402146c29c6d173c4c210a41462047",
+  "previousProcessedSha": "10890eb06aafb912f34794ce5e334cd2e07535c7",
   "commitShas": [
     "c649557c235b97ce6f94ced0a943e042b20fe225",
-    "10890eb06aafb912f34794ce5e334cd2e07535c7"
+    "10890eb06aafb912f34794ce5e334cd2e07535c7",
+    "b4fcc9610712db42c6269b96816bdfae7ecb0716",
+    "f010d68bbd402146c29c6d173c4c210a41462047"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "c649557c235b97ce6f94ced0a943e042b20fe225",
@@ -99,36 +101,116 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "b4fcc9610712db42c6269b96816bdfae7ecb0716",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-31T11:21:32-04:00",
+      "subject": "fix(chat): present tool errors clearly (#167)",
+      "body": "",
+      "parents": [
+        "10890eb06aafb912f34794ce5e334cd2e07535c7"
+      ],
+      "files": [
+        "interface/src/components/Block/renderers/GenericToolBlock.tsx",
+        "interface/src/components/Block/renderers/renderers.module.css",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/shared/utils/format.test.ts",
+        "interface/src/shared/utils/format.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 337,
+        "deletions": 31
+      },
+      "committedAtMs": 1788189692000,
+      "cleanSubject": "present tool errors clearly (#167)",
+      "keywords": [
+        "present",
+        "tool",
+        "errors",
+        "clearly"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f010d68bbd402146c29c6d173c4c210a41462047",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-31T11:22:11-04:00",
+      "subject": "fix(mobile): clarify remote agents and stabilize tap send (#168)",
+      "body": "",
+      "parents": [
+        "b4fcc9610712db42c6269b96816bdfae7ecb0716"
+      ],
+      "files": [
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.test.tsx",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 267,
+        "deletions": 7
+      },
+      "committedAtMs": 1788189731000,
+      "cleanSubject": "clarify remote agents and stabilize tap send (#168)",
+      "keywords": [
+        "clarify",
+        "remote",
+        "agents",
+        "stabilize",
+        "send"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.821.1",
+      "version": "0.1.0-nightly.823.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66715002
+          "sizeBytes": 66712886
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 133626360
+          "sizeBytes": 133630456
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -138,29 +220,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.821.1",
+      "version": "0.1.0-nightly.823.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.821.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.823.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62356130
+          "sizeBytes": 62360285
         },
         {
-          "name": "AURA_0.1.0-nightly.821.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.823.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61379701
+          "sizeBytes": 61381399
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -170,29 +252,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.821.1",
+      "version": "0.1.0-nightly.823.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.821.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.823.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64606039
+          "sizeBytes": 64608626
         },
         {
-          "name": "AURA_0.1.0-nightly.821.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.823.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63616510
+          "sizeBytes": 63622696
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -202,17 +284,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.821.1",
+      "version": "0.1.0-nightly.823.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49126849
+          "sizeBytes": 49111318
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.821.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.823.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -221,26 +303,26 @@
     }
   ],
   "rendered": {
-    "title": "Session identity hardening for dev loops and hosted web files",
-    "intro": "A focused backend day for Aura: dev-loop automaton starts now demand a stable session identifier up front, and Aura Web's hosted workspace file endpoint no longer leaks across concurrent users' sessions. Both changes tighten authorization boundaries around multi-user server flows.",
+    "title": "Session identity hardening and clearer chat error surfaces",
+    "intro": "Today's nightly focuses on backend correctness and interface clarity: dev-loop automaton runs now demand a stable session ID up front, hosted workspace file requests no longer cross-contaminate between users on Aura Web, and both desktop chat and the mobile input bar do a better job explaining what went wrong and what's required to send.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "12:35 AM",
         "started_at": "2026-08-31T07:35:01.000Z",
         "ended_at": "2026-08-31T07:35:01.000Z",
-        "title": "Dev-loop automaton starts require a session ID up front",
-        "summary": "The automaton start contract now treats aura_session_id as mandatory rather than optional, so dev-loop bootstraps can't reach the model-request layer without a stable identifier for Cloudflare bucketing and billing telemetry.",
+        "title": "Dev-loop automaton runs require a stable session ID",
+        "summary": "The automaton start contract now treats aura_session_id as mandatory instead of optional, so router and billing telemetry can reliably distinguish concurrent dev-loop runs.",
         "items": [
           {
-            "text": "Made aura_session_id a non-optional String on AutomatonStartParams and updated the server-side validator, harness identity checks, and dev-loop start params to always assemble one via stable_dev_loop_session_id, eliminating a class of silent None paths that could bypass the X-Aura-Session-Id requirement.",
+            "text": "Promoted aura_session_id from Option<String> to a required String across the harness AutomatonStartParams and dev-loop start params, ensuring bootstrap and continuation requests always carry an X-Aura-Session-Id header rather than being silently rejected downstream.",
             "commit_shas": [
               "c649557c235b97ce6f94ced0a943e042b20fe225"
             ],
             "confidence": "high"
           },
           {
-            "text": "Refreshed harness and handler tests to cover the new required-field shape, including rejection paths when the session ID is blank, so regressions to the optional form are caught at build time.",
+            "text": "Updated server-side identity validation and shape logging to check for a non-empty session string, and refreshed harness tests to cover the new non-optional contract.",
             "commit_shas": [
               "c649557c235b97ce6f94ced0a943e042b20fe225"
             ],
@@ -253,20 +335,44 @@
         "time_label": "7:26 AM",
         "started_at": "2026-08-31T14:26:24.000Z",
         "ended_at": "2026-08-31T14:26:24.000Z",
-        "title": "Hosted workspace file requests no longer cross user sessions on Aura Web",
-        "summary": "Fixed a cross-user auth race in the hosted workspace files handler where concurrent Aura Web requests could resolve an agent instance under another user's cached JWT and return a spurious 404.",
+        "title": "Hosted workspace file auth no longer leaks across concurrent web users",
+        "summary": "Fixed a cross-user auth race on Aura Web where hosted workspace file requests could be re-issued under another user's cached JWT and return spurious 404s.",
         "items": [
           {
-            "text": "Stopped calling AgentInstanceService::get_instance inside ensure_hosted_local_instance, which was reading a process-wide SettingsStore JWT that concurrent web users could overwrite. The handler now resolves the parent agent using the request's own JWT via the network client (or the local agent service when offline) before checking HarnessMode::Local.",
+            "text": "Hosted workspace file handlers now resolve the parent agent using the incoming request's JWT via the network client instead of AgentInstanceService, which pulled from a process-wide SettingsStore that concurrent users were overwriting.",
             "commit_shas": [
               "10890eb06aafb912f34794ce5e334cd2e07535c7"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a dedicated hosted_workspace_auth_race integration test that drives interleaved requests from two users to lock in the request-scoped auth behavior and prevent the shared-session regression from returning.",
+            "text": "Added a dedicated hosted_workspace_auth_race integration test that exercises overlapping requests from two different user tokens to lock in the fix.",
             "commit_shas": [
               "10890eb06aafb912f34794ce5e334cd2e07535c7"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "8:21 AM",
+        "started_at": "2026-08-31T15:21:32.000Z",
+        "ended_at": "2026-08-31T15:22:11.000Z",
+        "title": "Clearer tool error panels and remote-agent guidance in chat",
+        "summary": "Chat tool blocks now render structured error responses with retry timing and guidance, and the mobile input bar explains when sending requires a remote agent while making tap-to-send more reliable.",
+        "items": [
+          {
+            "text": "Generic tool blocks parse errored results into a titled panel with message, retry-after countdown, guidance list, and HTTP/code metadata instead of dumping raw JSON, backed by new parseToolError and formatRetryDelay utilities.",
+            "commit_shas": [
+              "b4fcc9610712db42c6269b96816bdfae7ecb0716"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "MobileChatInputBar gained a disabled-state notice and a remote-required status indicator that clarifies when a remote agent is needed, plus stabilized tap-send behavior covered by a new test suite.",
+            "commit_shas": [
+              "f010d68bbd402146c29c6d173c4c210a41462047"
             ],
             "confidence": "high"
           }
@@ -274,9 +380,11 @@
       }
     ],
     "highlights": [
-      "Automaton starts require a stable X-Aura-Session-Id",
-      "Fixed cross-user auth race in hosted workspace files on Aura Web"
+      "Dev-loop starts now require a stable X-Aura-Session-Id",
+      "Hosted file auth race between concurrent web users fixed",
+      "Tool errors in chat render as structured, actionable panels",
+      "Mobile chat input clearly explains when a remote agent is required"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 4
   }
 }
