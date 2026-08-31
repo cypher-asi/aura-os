@@ -2,18 +2,19 @@
   {
     "date": "2026-08-30",
     "channel": "nightly",
-    "version": "0.1.0-nightly.811.1",
-    "title": "Sidekick keeps local sessions on the local workspace",
-    "intro": "A small but pointed fix for Sidekick's terminal routing: when a client has local workspace access, previews now stay on the local workspace instead of being forced through the remote tunnel. Remote-only clients continue to route as before.",
+    "version": "0.1.0-nightly.815.1",
+    "title": "Chat composer gets a memory, and conversations gain an archive",
+    "intro": "Tonight's nightly is focused squarely on the chat surface. Drafts now survive restarts, oversized prompts fail gracefully instead of silently, a new prompt shelf lets you park ideas for later, and conversations you're not ready to delete can be archived and restored. A smaller preview-routing fix also keeps local sessions from being pushed onto a remote tunnel.",
     "entryCount": 1,
     "highlights": [
-      "Sidekick prefers local workspace routing when available",
-      "Explicit remote agent selections are still respected",
-      "Remote-only clients unchanged"
+      "Unfinished chat drafts persist across restarts",
+      "New global prompt shelf with Cmd+S to stash",
+      "Archive and restore for conversations",
+      "Oversized prompts blocked without freezing the editor"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-08-31T02:21:32.158Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.811.1",
+    "rawCommitCount": 5,
+    "generatedAt": "2026-08-31T04:07:41.824Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.815.1",
     "path": "history/2026-08-30.json"
   },
   {

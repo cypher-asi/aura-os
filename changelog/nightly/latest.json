@@ -3,19 +3,23 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-31T02:21:32.158Z",
+  "generatedAt": "2026-08-31T04:07:41.824Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.811.1",
+  "version": "0.1.0-nightly.815.1",
   "date": "2026-08-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.811.1",
-  "lastIncludedSha": "7c0c1fdd74b726874914a645597d63a8be95ea53",
-  "previousProcessedSha": "b725c7374a085e85a463a231c41318aa60a9a17f",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.815.1",
+  "lastIncludedSha": "282eab40986b2cdc42cf69936109d5b11846dd0b",
+  "previousProcessedSha": "7c0c1fdd74b726874914a645597d63a8be95ea53",
   "commitShas": [
-    "7c0c1fdd74b726874914a645597d63a8be95ea53"
+    "7c0c1fdd74b726874914a645597d63a8be95ea53",
+    "6e9c37ca6480c78d59af1e8d646481fbc4e109b5",
+    "352081d5ddfde3fad7c220f5f6ce04c20cd98ef2",
+    "694f2056d7ef98bb60d38846745fa68019a0567e",
+    "282eab40986b2cdc42cf69936109d5b11846dd0b"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 5,
+  "filteredCommitCount": 5,
   "rawCommits": [
     {
       "sha": "7c0c1fdd74b726874914a645597d63a8be95ea53",
@@ -60,6 +64,210 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "6e9c37ca6480c78d59af1e8d646481fbc4e109b5",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-30T23:24:20-04:00",
+      "subject": "feat(chat): persist unfinished drafts (#159)",
+      "body": "",
+      "parents": [
+        "7c0c1fdd74b726874914a645597d63a8be95ea53"
+      ],
+      "files": [
+        "interface/src/stores/chat-ui-store.test.ts",
+        "interface/src/stores/chat-ui-store.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 68,
+        "deletions": 1
+      },
+      "committedAtMs": 1788146660000,
+      "cleanSubject": "persist unfinished drafts (#159)",
+      "keywords": [
+        "persist",
+        "unfinished",
+        "drafts"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "352081d5ddfde3fad7c220f5f6ce04c20cd98ef2",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-30T23:25:32-04:00",
+      "subject": "feat(chat): guard oversized prompts (#160)",
+      "body": "",
+      "parents": [
+        "6e9c37ca6480c78d59af1e8d646481fbc4e109b5"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/InputStatusHints/InputStatusHints.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/InputStatusHints/InputStatusHints.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/composer-length.test.ts",
+        "interface/src/features/chat-ui/ChatInputBar/composer-length.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 129,
+        "deletions": 3
+      },
+      "committedAtMs": 1788146732000,
+      "cleanSubject": "guard oversized prompts (#160)",
+      "keywords": [
+        "guard",
+        "oversized",
+        "prompts"
+      ],
+      "fileGroups": [
+        "interface/src/features",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "694f2056d7ef98bb60d38846745fa68019a0567e",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-30T23:33:08-04:00",
+      "subject": "feat(chat): add global prompt shelf (#162)",
+      "body": "",
+      "parents": [
+        "352081d5ddfde3fad7c220f5f6ce04c20cd98ef2"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/PromptStash/PromptStash.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/PromptStash/PromptStash.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/PromptStash/PromptStash.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/PromptStash/index.ts",
+        "interface/src/features/chat-ui/ChatInputBar/PromptStash/usePromptStashComposer.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/PromptStash/usePromptStashComposer.ts",
+        "interface/src/features/chat-ui/ChatInputBar/useFileAttachments.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/stores/prompt-stash-store.test.ts",
+        "interface/src/stores/prompt-stash-store.ts"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 1109,
+        "deletions": 15
+      },
+      "committedAtMs": 1788147188000,
+      "cleanSubject": "add global prompt shelf (#162)",
+      "keywords": [
+        "global",
+        "prompt",
+        "shelf"
+      ],
+      "fileGroups": [
+        "interface/src/features",
+        "interface/src/mobile",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "282eab40986b2cdc42cf69936109d5b11846dd0b",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-30T23:50:57-04:00",
+      "subject": "Add conversation archive and restore (#161)",
+      "body": "* feat(sessions): add archive and restore\n\n* fix(storage): bound authenticated request URLs",
+      "parents": [
+        "694f2056d7ef98bb60d38846745fa68019a0567e"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/sessions.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/tests/session_archive_test.rs",
+        "crates/aura-os-core/src/enums.rs",
+        "crates/aura-os-core/tests/round_trips.rs",
+        "crates/aura-os-storage/src/client/mod.rs",
+        "crates/aura-os-storage/src/conversions.rs",
+        "crates/aura-os-storage/src/lib.rs",
+        "crates/aura-os-storage/src/types/mod.rs",
+        "crates/aura-os-storage/src/types/session.rs",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.test.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/components/SessionsList/SessionsList.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/components/SessionsList/format-delete-error.test.ts",
+        "interface/src/components/SessionsList/format-delete-error.ts",
+        "interface/src/components/SessionsList/index.ts",
+        "interface/src/components/SessionsList/use-session-archive-actions.test.tsx",
+        "interface/src/components/SessionsList/use-session-archive-actions.ts",
+        "interface/src/components/SidekickItemContextMenu/SidekickItemContextMenu.tsx",
+        "interface/src/components/SidekickList/SidekickList.test.tsx",
+        "interface/src/components/SidekickList/SidekickList.tsx",
+        "interface/src/shared/api/agents.test.ts",
+        "interface/src/shared/api/agents.ts",
+        "interface/src/shared/types/enums.ts",
+        "interface/src/stores/sessions-list-store.test.tsx",
+        "interface/src/stores/sessions-list-store.ts",
+        "interface/src/views/SessionList/SessionList.tsx",
+        "interface/src/views/SessionList/useSessionListData.ts"
+      ],
+      "stats": {
+        "fileCount": 31,
+        "insertions": 782,
+        "deletions": 58
+      },
+      "committedAtMs": 1788148257000,
+      "cleanSubject": "Add conversation archive and restore (#161)",
+      "keywords": [
+        "conversation",
+        "archive",
+        "restore"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-core/src",
+        "crates/aura-os-core/tests",
+        "crates/aura-os-storage/src",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/shared",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust",
+        "Other"
+      ]
     }
   ],
   "batchCount": 1,
@@ -67,29 +275,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.811.1",
+      "version": "0.1.0-nightly.815.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66742344
+          "sizeBytes": 66736296
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 133208568
+          "sizeBytes": 133196280
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -99,29 +307,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.811.1",
+      "version": "0.1.0-nightly.815.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.811.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.815.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62386731
+          "sizeBytes": 62454388
         },
         {
-          "name": "AURA_0.1.0-nightly.811.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.815.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61404123
+          "sizeBytes": 61428119
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -131,29 +339,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.811.1",
+      "version": "0.1.0-nightly.815.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.811.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.815.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64589212
+          "sizeBytes": 64608893
         },
         {
-          "name": "AURA_0.1.0-nightly.811.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.815.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63582048
+          "sizeBytes": 63630761
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -163,17 +371,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.811.1",
+      "version": "0.1.0-nightly.815.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49144801
+          "sizeBytes": 49118099
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.811.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.815.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -182,33 +390,47 @@
     }
   ],
   "rendered": {
-    "title": "Sidekick keeps local sessions on the local workspace",
-    "intro": "A small but pointed fix for Sidekick's terminal routing: when a client has local workspace access, previews now stay on the local workspace instead of being forced through the remote tunnel. Remote-only clients continue to route as before.",
+    "title": "Chat composer gets a memory, and conversations gain an archive",
+    "intro": "Tonight's nightly is focused squarely on the chat surface. Drafts now survive restarts, oversized prompts fail gracefully instead of silently, a new prompt shelf lets you park ideas for later, and conversations you're not ready to delete can be archived and restored. A smaller preview-routing fix also keeps local sessions from being pushed onto a remote tunnel.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:06 PM",
         "started_at": "2026-08-31T02:06:24.000Z",
-        "ended_at": "2026-08-31T02:06:24.000Z",
-        "title": "Sidekick preview no longer tunnels local sessions remotely",
-        "summary": "SidekickContent now asks useTerminalTarget to prefer the local workspace unless the client is remote-only, keeping local preview sessions off the remote tunnel while preserving explicit remote agent selections.",
+        "ended_at": "2026-08-31T03:50:57.000Z",
+        "title": "Chat composer memory, prompt shelf, and conversation archive",
+        "summary": "A concentrated evening of chat interface work: durable drafts, a length guard, a global prompt shelf, conversation archiving, and a preview-routing fix for local sessions.",
         "items": [
           {
-            "text": "SidekickContent passes a new preferLocalWorkspace flag (derived from the client's remoteOnly capability) into useTerminalTarget, so clients with local workspace access stop being routed through the remote tunnel for preview sessions.",
+            "text": "Unfinished chat drafts now survive app restarts — non-empty drafts are mirrored to localStorage per stream key, rehydrated on init, and migrated when a fresh canvas is bound to a real session so nothing typed gets lost on refresh or relaunch.",
             "commit_shas": [
-              "7c0c1fdd74b726874914a645597d63a8be95ea53"
+              "6e9c37ca6480c78d59af1e8d646481fbc4e109b5"
             ],
             "confidence": "high"
           },
           {
-            "text": "When a user has explicitly selected a remote agent instance, useTerminalTarget still honors that choice even with local routing preferred, so intentional remote workspaces keep working as expected.",
+            "text": "The composer now guards oversized prompts on both desktop and mobile: the textarea stays editable, but Send is disabled and an inline hint tells you exactly how many characters to remove before the message can go out.",
             "commit_shas": [
-              "7c0c1fdd74b726874914a645597d63a8be95ea53"
+              "352081d5ddfde3fad7c220f5f6ce04c20cd98ef2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Remote-only clients continue to route Sidekick terminals to the remote workspace, preserving existing behavior for hosted setups.",
+            "text": "Introduced a global Prompt Shelf in the chat input bar — press Cmd/Ctrl+S to stash the current prompt (with attachments and slash commands), browse saved entries from a shelf menu on desktop or a dedicated dialog on mobile, and restore or delete them later.",
+            "commit_shas": [
+              "694f2056d7ef98bb60d38846745fa68019a0567e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Conversations can now be archived and restored instead of only deleted: new server endpoints back an archived status in storage, the sessions list and sidekick context menu expose the action, and restored sessions rejoin the active list as completed until the next turn.",
+            "commit_shas": [
+              "282eab40986b2cdc42cf69936109d5b11846dd0b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Preview builds no longer route local workspaces through the remote tunnel — SidekickContent now passes a preferLocalWorkspace flag to useTerminalTarget based on client capabilities, while remote-only clients keep their existing routing.",
             "commit_shas": [
               "7c0c1fdd74b726874914a645597d63a8be95ea53"
             ],
@@ -218,10 +440,11 @@
       }
     ],
     "highlights": [
-      "Sidekick prefers local workspace routing when available",
-      "Explicit remote agent selections are still respected",
-      "Remote-only clients unchanged"
+      "Unfinished chat drafts persist across restarts",
+      "New global prompt shelf with Cmd+S to stash",
+      "Archive and restore for conversations",
+      "Oversized prompts blocked without freezing the editor"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 5
   }
 }
