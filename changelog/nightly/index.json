@@ -2,17 +2,17 @@
   {
     "date": "2026-08-31",
     "channel": "nightly",
-    "version": "0.1.0-nightly.820.1",
-    "title": "Dev loops now demand a stable session identity",
-    "intro": "A quiet nightly with a single, focused change to the automaton contract: dev-loop starts can no longer be initiated without a session identifier, closing a gap that could let telemetry and rate-limit buckets drift across concurrent runs.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.821.1",
+    "title": "Session identity hardening for dev loops and hosted web files",
+    "intro": "A focused backend day for Aura: dev-loop automaton starts now demand a stable session identifier up front, and Aura Web's hosted workspace file endpoint no longer leaks across concurrent users' sessions. Both changes tighten authorization boundaries around multi-user server flows.",
+    "entryCount": 2,
     "highlights": [
-      "Session ID is now mandatory for dev-loop starts",
-      "Cleaner automaton start contract in the harness"
+      "Automaton starts require a stable X-Aura-Session-Id",
+      "Fixed cross-user auth race in hosted workspace files on Aura Web"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-08-31T07:52:20.947Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.820.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-08-31T14:43:34.291Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.821.1",
     "path": "history/2026-08-31.json"
   },
   {

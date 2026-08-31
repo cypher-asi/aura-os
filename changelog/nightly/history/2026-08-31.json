@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-08-31T07:52:20.947Z",
+  "generatedAt": "2026-08-31T14:43:34.291Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.820.1",
+  "version": "0.1.0-nightly.821.1",
   "date": "2026-08-31",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.820.1",
-  "lastIncludedSha": "c649557c235b97ce6f94ced0a943e042b20fe225",
-  "previousProcessedSha": "39fd6c58fcf97fee7c57516e8c3279c7e57ddc6f",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.821.1",
+  "lastIncludedSha": "10890eb06aafb912f34794ce5e334cd2e07535c7",
+  "previousProcessedSha": "c649557c235b97ce6f94ced0a943e042b20fe225",
   "commitShas": [
-    "c649557c235b97ce6f94ced0a943e042b20fe225"
+    "c649557c235b97ce6f94ced0a943e042b20fe225",
+    "10890eb06aafb912f34794ce5e334cd2e07535c7"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "c649557c235b97ce6f94ced0a943e042b20fe225",
@@ -58,36 +59,76 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "10890eb06aafb912f34794ce5e334cd2e07535c7",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-08-31T10:26:24-04:00",
+      "subject": "fix(web): keep hosted file auth request scoped (#166)",
+      "body": "",
+      "parents": [
+        "c649557c235b97ce6f94ced0a943e042b20fe225"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/hosted_workspace_files.rs",
+        "apps/aura-os-server/tests/hosted_workspace_auth_race_test.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 306,
+        "deletions": 7
+      },
+      "committedAtMs": 1788186384000,
+      "cleanSubject": "keep hosted file auth request scoped (#166)",
+      "keywords": [
+        "keep",
+        "hosted",
+        "file",
+        "auth",
+        "request",
+        "scoped"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.820.1",
+      "version": "0.1.0-nightly.821.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66711414
+          "sizeBytes": 66715002
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 133179896
+          "sizeBytes": 133626360
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -97,29 +138,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.820.1",
+      "version": "0.1.0-nightly.821.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.820.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.821.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62332884
+          "sizeBytes": 62356130
         },
         {
-          "name": "AURA_0.1.0-nightly.820.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.821.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61377725
+          "sizeBytes": 61379701
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -129,29 +170,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.820.1",
+      "version": "0.1.0-nightly.821.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.820.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.821.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64585969
+          "sizeBytes": 64606039
         },
         {
-          "name": "AURA_0.1.0-nightly.820.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.821.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63605331
+          "sizeBytes": 63616510
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -161,17 +202,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.820.1",
+      "version": "0.1.0-nightly.821.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49138187
+          "sizeBytes": 49126849
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.820.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.821.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -180,45 +221,62 @@
     }
   ],
   "rendered": {
-    "title": "Dev loops now demand a stable session identity",
-    "intro": "A quiet nightly with a single, focused change to the automaton contract: dev-loop starts can no longer be initiated without a session identifier, closing a gap that could let telemetry and rate-limit buckets drift across concurrent runs.",
+    "title": "Session identity hardening for dev loops and hosted web files",
+    "intro": "A focused backend day for Aura: dev-loop automaton starts now demand a stable session identifier up front, and Aura Web's hosted workspace file endpoint no longer leaks across concurrent users' sessions. Both changes tighten authorization boundaries around multi-user server flows.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "12:35 AM",
         "started_at": "2026-08-31T07:35:01.000Z",
         "ended_at": "2026-08-31T07:35:01.000Z",
-        "title": "Mandatory X-Aura-Session-Id on dev-loop starts",
-        "summary": "The automaton start contract now treats the session identifier as a required field rather than an optional hint, aligning the harness and server with what the model-request path already enforces.",
+        "title": "Dev-loop automaton starts require a session ID up front",
+        "summary": "The automaton start contract now treats aura_session_id as mandatory rather than optional, so dev-loop bootstraps can't reach the model-request layer without a stable identifier for Cloudflare bucketing and billing telemetry.",
         "items": [
           {
-            "text": "Promoted aura_session_id from Option<String> to a required String on AutomatonStartParams, so dev-loop bootstrap and continuation requests can no longer be constructed without a stable identifier — matching the model-request contract that rejects missing X-Aura-Session-Id headers.",
+            "text": "Made aura_session_id a non-optional String on AutomatonStartParams and updated the server-side validator, harness identity checks, and dev-loop start params to always assemble one via stable_dev_loop_session_id, eliminating a class of silent None paths that could bypass the X-Aura-Session-Id requirement.",
             "commit_shas": [
               "c649557c235b97ce6f94ced0a943e042b20fe225"
             ],
             "confidence": "high"
           },
           {
-            "text": "Updated server-side identity validation and dev-loop param assembly to derive the session ID directly from stable_dev_loop_session_id and treat blank strings (not just None) as missing, keeping Cloudflare's (IP, session) rate-limit bucket stable across dev-loop restarts.",
+            "text": "Refreshed harness and handler tests to cover the new required-field shape, including rejection paths when the session ID is blank, so regressions to the optional form are caught at build time.",
             "commit_shas": [
               "c649557c235b97ce6f94ced0a943e042b20fe225"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "7:26 AM",
+        "started_at": "2026-08-31T14:26:24.000Z",
+        "ended_at": "2026-08-31T14:26:24.000Z",
+        "title": "Hosted workspace file requests no longer cross user sessions on Aura Web",
+        "summary": "Fixed a cross-user auth race in the hosted workspace files handler where concurrent Aura Web requests could resolve an agent instance under another user's cached JWT and return a spurious 404.",
+        "items": [
+          {
+            "text": "Stopped calling AgentInstanceService::get_instance inside ensure_hosted_local_instance, which was reading a process-wide SettingsStore JWT that concurrent web users could overwrite. The handler now resolves the parent agent using the request's own JWT via the network client (or the local agent service when offline) before checking HarnessMode::Local.",
+            "commit_shas": [
+              "10890eb06aafb912f34794ce5e334cd2e07535c7"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "Refreshed harness identity checks and tests to cover the new non-optional shape, including round-trip coverage through automaton_start_params_to_runtime_request.",
+            "text": "Added a dedicated hosted_workspace_auth_race integration test that drives interleaved requests from two users to lock in the request-scoped auth behavior and prevent the shared-session regression from returning.",
             "commit_shas": [
-              "c649557c235b97ce6f94ced0a943e042b20fe225"
+              "10890eb06aafb912f34794ce5e334cd2e07535c7"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Session ID is now mandatory for dev-loop starts",
-      "Cleaner automaton start contract in the harness"
+      "Automaton starts require a stable X-Aura-Session-Id",
+      "Fixed cross-user auth race in hosted workspace files on Aura Web"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
