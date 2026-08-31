@@ -1,15 +1,16 @@
 //! Build the server-contributed `installed_tools` payload shipped to
 //! the harness `SessionConfig`.
 //!
-//! This list is intentionally limited to workspace and integration
-//! tools. Capability-gated native agent tools such as `send_to_agent`
-//! are owned by the harness catalog and become visible through
-//! `visible_tools_with_permissions` using `SessionConfig.agent_permissions`.
+//! This list is intentionally limited to server-owned workspace,
+//! integration, learning, and project-lifecycle tools. Capability-gated
+//! native agent tools such as `send_to_agent` are owned by the harness
+//! catalog and become visible through `visible_tools_with_permissions`
+//! using `SessionConfig.agent_permissions`.
 
 use std::collections::HashMap;
 
 use aura_os_agents::{AgentSelfImprovementConfig, AgentSelfImprovementMode};
-use aura_os_core::{AgentId, AgentPermissions, OrgId};
+use aura_os_core::{AgentId, AgentPermissions, Capability, OrgId};
 use aura_os_harness::{InstalledTool, ToolAuth};
 use serde_json::json;
 
@@ -28,6 +29,7 @@ pub(super) struct InstalledToolsCtx<'a> {
     pub(super) agent_id: &'a str,
     pub(super) template_agent_id: &'a str,
     pub(super) project_id: Option<&'a str>,
+    pub(super) source_session_id: Option<&'a str>,
     pub(super) integrations: Option<&'a [aura_os_core::OrgIntegration]>,
 }
 
@@ -38,7 +40,7 @@ pub(super) struct InstalledToolsCtx<'a> {
 /// uses that bundle to expose its native agent tools.
 pub(super) async fn build_session_installed_tools(
     ctx: &InstalledToolsCtx<'_>,
-    _permissions: &AgentPermissions,
+    permissions: &AgentPermissions,
 ) -> ApiResult<Option<Vec<InstalledTool>>> {
     let mut tools = if let Some(org_id) = ctx.org_id {
         match ctx.integrations {
@@ -60,10 +62,142 @@ pub(super) async fn build_session_installed_tools(
     if let Some(tool) = set_project_workspace_tool(ctx.project_id, ctx.jwt) {
         tools.push(tool);
     }
+    tools.extend(project_management_tools(
+        ctx.template_agent_id,
+        ctx.org_id,
+        ctx.source_session_id,
+        ctx.jwt,
+        permissions,
+    ));
 
     dedupe_and_log_installed_tools(ctx.context, ctx.agent_id, &mut tools);
 
     Ok((!tools.is_empty()).then_some(tools))
+}
+
+fn project_management_tools(
+    template_agent_id: &str,
+    org_id: Option<&OrgId>,
+    source_session_id: Option<&str>,
+    jwt: &str,
+    permissions: &AgentPermissions,
+) -> Vec<InstalledTool> {
+    if !permissions
+        .capabilities
+        .contains(&Capability::WriteAllProjects)
+    {
+        return Vec::new();
+    }
+
+    let base = crate::handlers::agents::workspace_tools::control_plane_api_base_url();
+    let mut create_endpoint = format!("{base}/api/agents/{template_agent_id}/projects");
+    append_project_tool_query(&mut create_endpoint, org_id, source_session_id);
+    let mut access_endpoint = format!("{base}/api/agents/{template_agent_id}/projects/access");
+    append_project_tool_query(&mut access_endpoint, org_id, source_session_id);
+
+    let mut metadata = HashMap::new();
+    metadata.insert(
+        "aura_source_kind".to_string(),
+        serde_json::Value::String("aura_native".to_string()),
+    );
+    metadata.insert(
+        "aura_trust_class".to_string(),
+        serde_json::Value::String("platform".to_string()),
+    );
+
+    vec![
+        InstalledTool {
+            name: "create_project".to_string(),
+            description: "Create an Aura project from this chat, bind this agent to it, and by default copy the current conversation into a project-scoped session. The result includes project_id, agent_instance_id, session_id, chat_route, and project_route. Continue work from the returned route/session before using project-scoped spec, task, or execution tools.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Project name."
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Concise project purpose and the agreed scope from the conversation."
+                    },
+                    "build_command": {
+                        "type": "string",
+                        "description": "Optional build command when already known."
+                    },
+                    "test_command": {
+                        "type": "string",
+                        "description": "Optional test command when already known."
+                    },
+                    "move_current_conversation": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Copy this chat into the new project's session."
+                    }
+                },
+                "required": ["name"],
+                "additionalProperties": false
+            }),
+            endpoint: create_endpoint,
+            auth: ToolAuth::Bearer {
+                token: jwt.to_string(),
+            },
+            timeout_ms: Some(60_000),
+            namespace: Some("aura_project".to_string()),
+            required_integration: None,
+            runtime_execution: None,
+            metadata: metadata.clone(),
+        },
+        InstalledTool {
+            name: "access_project".to_string(),
+            description: "Bind this agent to an existing Aura project and, by default, copy the current conversation into a project-scoped session. Use list_projects first to resolve the project_id. The result includes the canonical project/agent/session ids plus chat_route and project_route; continue there before using project-scoped spec, task, or execution tools.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "project_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Existing Aura project UUID from list_projects."
+                    },
+                    "move_current_conversation": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Copy this chat into a new session under the selected project."
+                    }
+                },
+                "required": ["project_id"],
+                "additionalProperties": false
+            }),
+            endpoint: access_endpoint,
+            auth: ToolAuth::Bearer {
+                token: jwt.to_string(),
+            },
+            timeout_ms: Some(60_000),
+            namespace: Some("aura_project".to_string()),
+            required_integration: None,
+            runtime_execution: None,
+            metadata,
+        },
+    ]
+}
+
+fn append_project_tool_query(
+    endpoint: &mut String,
+    org_id: Option<&OrgId>,
+    source_session_id: Option<&str>,
+) {
+    let mut query = url::form_urlencoded::Serializer::new(String::new());
+    if let Some(org_id) = org_id {
+        query.append_pair("org_id", &org_id.to_string());
+    }
+    if let Some(source_session_id) = source_session_id.filter(|value| !value.trim().is_empty()) {
+        query.append_pair("source_session_id", source_session_id);
+    }
+    let query = query.finish();
+    if !query.is_empty() {
+        endpoint.push('?');
+        endpoint.push_str(&query);
+    }
 }
 
 fn set_project_workspace_tool(project_id: Option<&str>, jwt: &str) -> Option<InstalledTool> {
@@ -380,5 +514,37 @@ mod tests {
             serde_json::Value::String("null".to_string())
         );
         assert!(set_project_workspace_tool(None, "jwt-token").is_none());
+    }
+
+    #[test]
+    fn project_management_tools_are_permission_gated_and_session_bound() {
+        let org_id = OrgId::new();
+        let tools = project_management_tools(
+            "agent-1",
+            Some(&org_id),
+            Some("session-1"),
+            "jwt-token",
+            &AgentPermissions::full_access(),
+        );
+
+        assert_eq!(tools.len(), 2);
+        assert_eq!(tools[0].name, "create_project");
+        assert_eq!(tools[1].name, "access_project");
+        assert!(tools[0].endpoint.contains(&format!("org_id={org_id}")));
+        assert!(tools[0].endpoint.contains("source_session_id=session-1"));
+        assert_eq!(
+            tools[0].input_schema["properties"]["move_current_conversation"]["default"],
+            serde_json::Value::Bool(true)
+        );
+        assert!(matches!(tools[1].auth, ToolAuth::Bearer { ref token } if token == "jwt-token"));
+
+        assert!(project_management_tools(
+            "agent-1",
+            Some(&org_id),
+            Some("session-1"),
+            "jwt-token",
+            &AgentPermissions::empty(),
+        )
+        .is_empty());
     }
 }

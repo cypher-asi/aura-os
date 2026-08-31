@@ -9,6 +9,7 @@ mod home_project;
 mod installed_tools;
 mod instances;
 mod marketplace_fields;
+mod project_access;
 mod recall;
 mod runtime;
 mod safe_workspace;
@@ -45,6 +46,7 @@ pub(crate) use instances::{
     create_agent_instance, delete_agent_instance, get_agent_instance, list_agent_instances,
     update_agent_instance,
 };
+pub(crate) use project_access::{access_project_for_agent, create_project_for_agent};
 pub(crate) use recall::search_my_session_history;
 pub(crate) use runtime::{session_model_overrides_with_cache, test_agent_runtime};
 pub(crate) use safe_workspace::{
