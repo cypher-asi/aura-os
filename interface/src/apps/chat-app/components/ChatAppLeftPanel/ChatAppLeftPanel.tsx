@@ -10,6 +10,7 @@ import {
   SessionsList,
   useSessionArchiveActions,
   useSessionRenameAction,
+  useSessionPinAction,
 } from "../../../../components/SessionsList";
 import { EmptyState } from "../../../../components/EmptyState";
 import { Avatar } from "../../../../components/Avatar";
@@ -427,6 +428,7 @@ export function ChatAppLeftPanel() {
   const { archiveSession, restoreArchivedSession } =
     useSessionArchiveActions(primarySurfaceKey);
   const renameSession = useSessionRenameAction(primarySurfaceKey);
+  const setSessionPinned = useSessionPinAction(primarySurfaceKey);
 
   const handleDismissError = useCallback(() => {
     if (!primarySurfaceKey) return;
@@ -495,6 +497,7 @@ export function ChatAppLeftPanel() {
         onArchiveSession={archiveSession}
         onRestoreSession={restoreArchivedSession}
         onRenameSession={renameSession}
+        onSetSessionPinned={setSessionPinned}
         searchQuery={searchQuery}
         deleteError={deleteError}
         onDismissError={handleDismissError}

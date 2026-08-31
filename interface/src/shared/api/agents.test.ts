@@ -411,6 +411,24 @@ describe("sessionsApi", () => {
     );
   });
 
+  it("sets durable session pin state", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+    await sessionsApi.setSessionPinned(
+      "p1" as string,
+      "ai1" as string,
+      "s1",
+      true,
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/agents/ai1/sessions/s1/pin",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ pinned: true }),
+      }),
+    );
+  });
+
   it("listSessionTasks fetches tasks for session", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;

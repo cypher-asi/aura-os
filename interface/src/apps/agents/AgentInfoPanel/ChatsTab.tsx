@@ -7,6 +7,7 @@ import {
   SessionsList,
   useSessionArchiveActions,
   useSessionRenameAction,
+  useSessionPinAction,
   useSessionNavigate,
 } from "../../../components/SessionsList";
 import {
@@ -47,6 +48,7 @@ export function ChatsTab() {
   const { archiveSession, restoreArchivedSession } =
     useSessionArchiveActions(surfaceKey);
   const renameSession = useSessionRenameAction(surfaceKey);
+  const setSessionPinned = useSessionPinAction(surfaceKey);
   const navigateToSession = useSessionNavigate({ agentId: agentId ?? null });
   const [searchParams] = useSearchParams();
   const selectedSessionId = searchParams.get("session");
@@ -129,6 +131,7 @@ export function ChatsTab() {
       onArchiveSession={archiveSession}
       onRestoreSession={restoreArchivedSession}
       onRenameSession={renameSession}
+      onSetSessionPinned={setSessionPinned}
       deleteError={deleteError}
       onDismissError={surfaceKey ? () => setDeleteError(surfaceKey, null) : undefined}
     />

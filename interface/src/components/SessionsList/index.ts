@@ -5,6 +5,7 @@ export {
 } from "../../hooks/use-session-streaming";
 export { useSessionNavigate } from "./use-session-navigate";
 export { useSessionSummaries } from "./use-session-summaries";
+export { useSessionPinAction } from "./use-session-pin-action";
 export { formatDeleteSessionError } from "./format-delete-error";
 export { useSessionArchiveActions } from "./use-session-archive-actions";
 export { useSessionRenameAction } from "./use-session-rename-action";

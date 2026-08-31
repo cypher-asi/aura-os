@@ -339,6 +339,8 @@ interface SessionsListStore {
    * keep their existing array reference to avoid spurious renders.
    */
   setSessionSummary: (sessionId: string, summary: string) => void;
+  /** Optimistically patch durable pin state in every loaded surface. */
+  setSessionPinnedAt: (sessionId: string, pinnedAt: string | null) => void;
   /** Surface the user-facing reason a delete failed for `surfaceKey`. */
   setDeleteError: (surfaceKey: string, message: string | null) => void;
 }
@@ -1021,6 +1023,27 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
     }));
   },
 
+  setSessionPinnedAt: (sessionId, pinnedAt) => {
+    const sessionsBySurface = get().sessionsBySurface;
+    let mutated = false;
+    const nextBySurface: Record<string, AnnotatedSession[]> = {};
+    for (const [key, listValue] of Object.entries(sessionsBySurface)) {
+      const list = ensureAnnotatedSessionArray(listValue);
+      const idx = list.findIndex((session) => session.session_id === sessionId);
+      if (idx === -1 || (list[idx].pinned_at ?? null) === pinnedAt) {
+        nextBySurface[key] = list;
+        continue;
+      }
+      const nextList = list.slice();
+      nextList[idx] = { ...list[idx], pinned_at: pinnedAt };
+      nextBySurface[key] = nextList;
+      mutated = true;
+    }
+    if (mutated) {
+      set({ sessionsBySurface: nextBySurface });
+    }
+  },
+
   setDeleteError: (surfaceKey, message) => {
     set((state) => ({
       deleteErrorBySurface: {
@@ -1151,6 +1174,7 @@ interface SessionsListActions {
     newSessionId: string,
   ) => void;
   setSessionSummary: (sessionId: string, summary: string) => void;
+  setSessionPinnedAt: (sessionId: string, pinnedAt: string | null) => void;
   setDeleteError: (surfaceKey: string, message: string | null) => void;
 }
 
@@ -1172,6 +1196,7 @@ export function useSessionsListActions(): SessionsListActions {
       addOptimisticSession: s.addOptimisticSession,
       replaceSessionId: s.replaceSessionId,
       setSessionSummary: s.setSessionSummary,
+      setSessionPinnedAt: s.setSessionPinnedAt,
       setDeleteError: s.setDeleteError,
     })),
   );

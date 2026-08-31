@@ -168,6 +168,11 @@ impl TryFrom<StorageSession> for Session {
             total_input_tokens: val.total_input_tokens.unwrap_or(0),
             total_output_tokens: val.total_output_tokens.unwrap_or(0),
             summary_of_previous_context: val.summary_of_previous_context.unwrap_or_default(),
+            pinned_at: val
+                .pinned_at
+                .as_deref()
+                .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
+                .map(|dt| dt.with_timezone(&Utc)),
             status: parse_session_status(val.status.as_deref().unwrap_or("active")),
             user_id: None,
             model: val.model,

@@ -269,6 +269,7 @@ fn sample_session(project_id: ProjectId, agent_instance_id: AgentInstanceId) -> 
         total_input_tokens: 0,
         total_output_tokens: 0,
         summary_of_previous_context: String::new(),
+        pinned_at: Some(now),
         status: SessionStatus::Active,
         user_id: None,
         model: None,

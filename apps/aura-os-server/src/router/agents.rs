@@ -200,6 +200,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
             put(agents::rename_session),
         )
         .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/pin",
+            put(agents::set_session_pin),
+        )
+        .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/safe-workspace",
             get(agents::get_safe_workspace_status),
         )
