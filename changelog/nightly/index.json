@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-08-30",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.811.1",
+    "title": "Sidekick keeps local sessions on the local workspace",
+    "intro": "A small but pointed fix for Sidekick's terminal routing: when a client has local workspace access, previews now stay on the local workspace instead of being forced through the remote tunnel. Remote-only clients continue to route as before.",
+    "entryCount": 1,
+    "highlights": [
+      "Sidekick prefers local workspace routing when available",
+      "Explicit remote agent selections are still respected",
+      "Remote-only clients unchanged"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-31T02:21:32.158Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.811.1",
+    "path": "history/2026-08-30.json"
+  },
+  {
     "date": "2026-08-28",
     "channel": "nightly",
     "version": "0.1.0-nightly.810.1",
