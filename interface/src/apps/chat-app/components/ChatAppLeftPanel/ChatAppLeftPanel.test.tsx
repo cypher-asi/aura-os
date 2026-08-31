@@ -77,6 +77,7 @@ vi.mock("../../../../components/SessionsList", () => ({
     archiveSession: vi.fn(),
     restoreArchivedSession: vi.fn(),
   }),
+  useSessionRenameAction: () => vi.fn(),
 }));
 
 vi.mock("../../../../components/EmptyState", () => ({

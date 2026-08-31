@@ -7,6 +7,7 @@ import {
   formatDeleteSessionError,
   SessionsList,
   useSessionArchiveActions,
+  useSessionRenameAction,
   useSessionNavigate,
 } from "../../components/SessionsList";
 import {
@@ -33,6 +34,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
   } = useSessionListData();
   const { archiveSession, restoreArchivedSession } =
     useSessionArchiveActions(surfaceKey);
+  const renameSession = useSessionRenameAction(surfaceKey);
   const handleSessionClick = useSessionNavigate({ agentId: null });
   const [searchParams] = useSearchParams();
   const selectedSessionId = searchParams.get("session");
@@ -90,6 +92,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
       onDeleteSession={handleDelete}
       onArchiveSession={archiveSession}
       onRestoreSession={restoreArchivedSession}
+      onRenameSession={renameSession}
       searchQuery={searchQuery}
       deleteError={deleteError}
       onDismissError={handleDismissError}

@@ -6,6 +6,7 @@ import {
   formatDeleteSessionError,
   SessionsList,
   useSessionArchiveActions,
+  useSessionRenameAction,
   useSessionNavigate,
 } from "../../../components/SessionsList";
 import {
@@ -45,6 +46,7 @@ export function ChatsTab() {
   const deleteError = useSessionsDeleteError(surfaceKey);
   const { archiveSession, restoreArchivedSession } =
     useSessionArchiveActions(surfaceKey);
+  const renameSession = useSessionRenameAction(surfaceKey);
   const navigateToSession = useSessionNavigate({ agentId: agentId ?? null });
   const [searchParams] = useSearchParams();
   const selectedSessionId = searchParams.get("session");
@@ -126,6 +128,7 @@ export function ChatsTab() {
       onDeleteSession={handleDelete}
       onArchiveSession={archiveSession}
       onRestoreSession={restoreArchivedSession}
+      onRenameSession={renameSession}
       deleteError={deleteError}
       onDismissError={surfaceKey ? () => setDeleteError(surfaceKey, null) : undefined}
     />

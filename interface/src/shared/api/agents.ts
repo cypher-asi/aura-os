@@ -751,6 +751,16 @@ export const sessionsApi = {
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/archive`,
       { method: "DELETE" },
     ),
+  renameSession: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    sessionId: string,
+    title: string,
+  ) =>
+    apiFetch<void>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/title`,
+      { method: "PUT", body: JSON.stringify({ title }) },
+    ),
   deleteSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<void>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}`,

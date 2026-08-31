@@ -51,4 +51,10 @@ describe("formatDeleteSessionError", () => {
       "Couldn't restore session.",
     );
   });
+
+  it("formats rename failures without delete-specific copy", () => {
+    expect(formatSessionActionError("rename", new Error("offline"))).toBe(
+      "Couldn't rename session: offline",
+    );
+  });
 });
