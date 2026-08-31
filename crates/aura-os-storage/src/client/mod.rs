@@ -19,6 +19,7 @@ use tracing::info;
 use crate::error::StorageError;
 
 const MAX_STORAGE_RESPONSE_BODY_BYTES: usize = 8 * 1024 * 1024;
+const MAX_STORAGE_REQUEST_URL_BYTES: usize = 16 * 1024;
 
 /// Validate that a string ID is safe to interpolate into a URL path.
 /// Accepts UUID format (hex digits and hyphens) to prevent path traversal or injection.
@@ -191,6 +192,15 @@ impl StorageClient {
         method: Method,
         request_url: &str,
     ) -> Result<RequestBuilder, StorageError> {
+        // All dynamic path segments are validated by the public client
+        // methods, but keep a hard ceiling at the final request boundary as
+        // defense in depth. This also prevents a future caller from turning
+        // an unbounded user string into URL-parser or HTTP-client allocation.
+        if request_url.len() > MAX_STORAGE_REQUEST_URL_BYTES {
+            return Err(StorageError::Validation(
+                "storage request URL exceeds the maximum length".into(),
+            ));
+        }
         let base_url = Url::parse(&self.base_url).map_err(|_| StorageError::InvalidBaseUrl)?;
         let request_url = Url::parse(request_url).map_err(|_| StorageError::InvalidRequestUrl)?;
 
@@ -226,6 +236,9 @@ impl StorageClient {
             .trusted_request(Method::GET, url)?
             .bearer_auth(jwt)
             .build()?;
+        // `trusted_request` applies the URL ceiling and same-origin boundary;
+        // `handle_response` consumes the body through the 8 MiB streaming cap.
+        // codeql[rust/uncontrolled-allocation-size]
         let resp = self.http.execute(request).await?;
         self.handle_response(resp).await
     }
@@ -271,6 +284,9 @@ impl StorageClient {
             .bearer_auth(jwt)
             .json(body)
             .build()?;
+        // The URL is length-bounded and same-origin. Successful responses are
+        // discarded, and error bodies use the 8 MiB streaming cap below.
+        // codeql[rust/uncontrolled-allocation-size]
         let resp = self.http.execute(request).await?;
         let status = resp.status();
         if !status.is_success() {
@@ -457,6 +473,21 @@ mod trusted_request_tests {
         assert!(matches!(
             invalid_client.trusted_request(Method::GET, "https://storage.example/api/sessions"),
             Err(StorageError::InvalidBaseUrl)
+        ));
+    }
+
+    #[test]
+    fn credentialed_requests_reject_oversized_urls_before_parsing() {
+        let client = StorageClient::with_base_url("https://storage.example");
+        let oversized = format!(
+            "https://storage.example/api/sessions/{}",
+            "a".repeat(super::MAX_STORAGE_REQUEST_URL_BYTES)
+        );
+
+        assert!(matches!(
+            client.trusted_request(Method::GET, &oversized),
+            Err(StorageError::Validation(message))
+                if message == "storage request URL exceeds the maximum length"
         ));
     }
 }
