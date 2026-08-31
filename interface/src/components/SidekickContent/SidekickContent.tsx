@@ -67,7 +67,11 @@ export function SidekickContent() {
     workspacePath,
     status: terminalTargetStatus,
   } =
-    useTerminalTarget({ projectId: routeProjectId ?? projectId, agentInstanceId });
+    useTerminalTarget({
+      projectId: routeProjectId ?? projectId,
+      agentInstanceId,
+      preferLocalWorkspace: !remoteOnly,
+    });
   const navigate = useNavigate();
   const [fileRefreshKey, setFileRefreshKey] = useState(0);
   const tabContentRef = useRef<HTMLDivElement>(null);

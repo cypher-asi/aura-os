@@ -201,10 +201,6 @@ export default defineConfig(({ mode, command }) => {
       // up in an infinite error loop before React mounts. Off = the normal
       // human default, so nothing changes for regular `npm run dev`.
       forwardConsole: false,
-      hmr: {
-        protocol: "ws",
-        host: "127.0.0.1",
-      },
       proxy: {
         "/api": {
           target: apiTarget,

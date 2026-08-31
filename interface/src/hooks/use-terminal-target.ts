@@ -32,10 +32,12 @@ interface UseTerminalTargetArgs {
   agentId?: string;
   selectedAgent?: SelectedAgentLike | null;
   agentsStatus?: "idle" | "loading" | "ready" | "error";
+  preferLocalWorkspace?: boolean;
 }
 
 function resolveProjectWorkspace(
   instances: AgentInstance[],
+  preferLocalWorkspace: boolean,
 ): {
   remoteAgentId?: string;
   remoteAgentInstanceId?: string;
@@ -43,6 +45,20 @@ function resolveProjectWorkspace(
   remoteWorkspacePath?: string;
   workspacePath?: string;
 } {
+  const localWithWorkspace = instances.find((i) => (
+    i.machine_type !== "remote" && Boolean(i.workspace_path?.trim())
+  ));
+  if (preferLocalWorkspace && localWithWorkspace) {
+    const workspacePath = localWithWorkspace.workspace_path ?? undefined;
+    return {
+      remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
+      localAgentInstanceId: localWithWorkspace.agent_instance_id,
+      remoteWorkspacePath: undefined,
+      workspacePath,
+    };
+  }
+
   const remoteWithWorkspace = instances.find((i) => (
     i.machine_type === "remote" && Boolean(i.workspace_path?.trim())
   ));
@@ -57,16 +73,12 @@ function resolveProjectWorkspace(
     };
   }
 
-  const local = instances.find((i) => {
-    const workspacePath = i.workspace_path?.trim();
-    return Boolean(workspacePath);
-  });
-  const workspacePath = local?.workspace_path ?? undefined;
-  if (workspacePath) {
+  if (localWithWorkspace) {
+    const workspacePath = localWithWorkspace.workspace_path ?? undefined;
     return {
       remoteAgentId: undefined,
       remoteAgentInstanceId: undefined,
-      localAgentInstanceId: local?.agent_instance_id,
+      localAgentInstanceId: localWithWorkspace.agent_instance_id,
       remoteWorkspacePath: undefined,
       workspacePath,
     };
@@ -100,6 +112,7 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
     agentId,
     selectedAgent,
     agentsStatus,
+    preferLocalWorkspace = false,
   } = args;
   const selectedAgentId = selectedAgent?.agent_id;
   const selectedAgentMachineType = selectedAgent?.machine_type;
@@ -209,7 +222,10 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
       };
     }
 
-    const resolvedWorkspace = resolveProjectWorkspace(projectAgentsQuery.data);
+    const resolvedWorkspace = resolveProjectWorkspace(
+      projectAgentsQuery.data,
+      preferLocalWorkspace,
+    );
     return {
       remoteAgentId: resolvedWorkspace.remoteAgentId,
       remoteAgentInstanceId: resolvedWorkspace.remoteAgentInstanceId,
