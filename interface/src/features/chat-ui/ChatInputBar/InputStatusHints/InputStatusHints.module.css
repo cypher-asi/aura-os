@@ -44,6 +44,11 @@
   white-space: normal;
 }
 
+.validationHint {
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  color: var(--color-danger);
+}
+
 .hintAction {
   color: var(--color-accent);
   font-weight: 600;

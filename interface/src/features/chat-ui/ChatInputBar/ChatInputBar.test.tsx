@@ -127,6 +127,7 @@ vi.mock("./useFileAttachments", () => ({
 import { ChatInputBar } from "../ChatInputBar";
 import { MobileChatInputBar } from "../../../mobile/chat/MobileChatInputBar";
 import { ENTER_SUBMIT_GRACE_MS } from "../../../components/InputBarShell/InputBarShell";
+import { MAX_CHAT_PROMPT_CHARACTERS } from "./composer-length";
 import type { AttachmentItem } from "../ChatInputBar";
 import type { AgentInstance } from "../../../shared/types";
 
@@ -220,6 +221,28 @@ beforeEach(() => {
 });
 
 describe("ChatInputBar", () => {
+  it("keeps an oversized draft editable while blocking send", () => {
+    const onSend = vi.fn();
+    render(
+      <MemoryRouter>
+        <ChatInputBar
+          {...makeProps({
+            input: "a".repeat(MAX_CHAT_PROMPT_CHARACTERS + 12),
+            onSend,
+          })}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByText("Remove 12 characters to send this message."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it("renders the textarea with placeholder", () => {
     render(<ChatInputBar {...makeProps()} />);
     expect(screen.getByPlaceholderText("/ for commands, @ for context")).toBeInTheDocument();
@@ -1263,6 +1286,22 @@ describe("ChatInputBar", () => {
     expect(send).toBeDisabled();
     await user.click(send);
     expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("blocks oversized mobile drafts without disabling editing", () => {
+    render(
+      <MobileChatInputBar
+        {...makeProps({
+          input: "a".repeat(MAX_CHAT_PROMPT_CHARACTERS + 3),
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Remove 3 characters to send this message."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
 
   it("renders attachment previews", () => {

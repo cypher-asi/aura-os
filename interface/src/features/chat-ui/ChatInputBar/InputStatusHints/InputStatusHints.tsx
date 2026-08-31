@@ -20,6 +20,7 @@ export interface InputStatusHintsProps {
   sendDisabled: boolean;
   sendDisabledReason?: string;
   sendDisabledAction?: InputStatusAction;
+  validationMessage?: string | null;
 }
 
 /** Inline status chips above the textarea: queued-send and send-disabled. */
@@ -29,6 +30,7 @@ export const InputStatusHints = memo(function InputStatusHints({
   sendDisabled,
   sendDisabledReason,
   sendDisabledAction,
+  validationMessage,
 }: InputStatusHintsProps) {
   return (
     <>
@@ -65,6 +67,15 @@ export const InputStatusHints = memo(function InputStatusHints({
               {sendDisabledAction.label}
             </Link>
           ) : null}
+        </div>
+      ) : null}
+      {validationMessage ? (
+        <div
+          className={`${styles.queuedHint} ${styles.validationHint}`}
+          role="alert"
+          data-agent-surface="chat-input-validation-hint"
+        >
+          <span className={styles.queuedHintLabel}>{validationMessage}</span>
         </div>
       ) : null}
     </>

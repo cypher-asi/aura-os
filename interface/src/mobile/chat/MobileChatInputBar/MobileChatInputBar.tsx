@@ -48,6 +48,7 @@ import { MAX_AGENT_MENTIONS, type AgentMentionTarget } from "../../../api/stream
 import { isUserFacingAgentInstance } from "../../../components/ProjectList/project-list-shared";
 import { filterRuntimeVisibleAgents } from "../../../shared/lib/agent-runtime-visibility";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
+import { promptLengthError } from "../../../features/chat-ui/ChatInputBar/composer-length";
 import styles from "./MobileChatInputBar.module.css";
 
 const CHAT_COMPOSER_MODE_LABELS: Partial<Record<AgentMode, string>> = {
@@ -205,6 +206,8 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             ? "video"
             : "chat";
     const isLocalAgent = sendDisabled;
+    const lengthValidationMessage = promptLengthError(input);
+    const isPromptTooLong = lengthValidationMessage != null;
     const isThreeDMode = generationMode === "3d";
     const pinnedSourceImage = chatUI.pinnedSourceImage;
     const has3DSource = isThreeDMode && pinnedSourceImage != null;
@@ -223,6 +226,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     const canSend =
       !isLocalAgent &&
       !isStreaming &&
+      !isPromptTooLong &&
       (asideSelected
         ? onAside != null && input.trim().length > 0
         : isThreeDMode
@@ -842,6 +846,15 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             </div>
           ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
+          {lengthValidationMessage ? (
+            <div
+              className={styles.lengthValidationHint}
+              role="alert"
+              data-agent-surface="mobile-chat-input-validation-hint"
+            >
+              {lengthValidationMessage}
+            </div>
+          ) : null}
           <div
             className={`${styles.inputRow}${voiceSupported ? ` ${styles.inputRowVoice}` : ""}`}
           >

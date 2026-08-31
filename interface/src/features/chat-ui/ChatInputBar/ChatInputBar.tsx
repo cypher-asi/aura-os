@@ -46,6 +46,7 @@ import { AgentInfoBar } from "./AgentInfoBar";
 import { ChatModeBar } from "./ChatModeBar";
 import { VoiceDictationControl } from "./VoiceDictationControl";
 import { useVoiceDictation } from "./useVoiceDictation";
+import { promptLengthError } from "./composer-length";
 import {
   InputStatusHints,
   type InputStatusAction,
@@ -325,6 +326,8 @@ export const DesktopChatInputBar = memo(
       (sendDisabled && machineType === "local"
         ? { label: "Get desktop app", to: "/download" }
         : undefined);
+    const lengthValidationMessage = promptLengthError(input);
+    const isPromptTooLong = lengthValidationMessage != null;
     const imageQuality = chatUI.imageQuality;
     const councilCount = chatUI.councilCount;
     const councilModels = chatUI.councilModels;
@@ -770,7 +773,7 @@ export const DesktopChatInputBar = memo(
 
     const handleSubmit = useCallback(() => {
       stopVoiceDictation();
-      if (sendDisabled) return;
+      if (sendDisabled || isPromptTooLong) return;
       const asideSelected = selectedCommands.some(
         (command) => command.id === "btw",
       );
@@ -811,6 +814,7 @@ export const DesktopChatInputBar = memo(
       selectedCommands,
       selectedModel,
       selectedMode,
+      isPromptTooLong,
       sendDisabled,
       stopVoiceDictation,
       streamKey,
@@ -918,6 +922,7 @@ export const DesktopChatInputBar = memo(
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}
           sendDisabledAction={effectiveSendDisabledAction}
+          validationMessage={lengthValidationMessage}
         />
         {modelsForMode.length > 0 ? (
           <ModelControls placement="mobileBar" {...modelControlsProps} />
@@ -1103,7 +1108,8 @@ export const DesktopChatInputBar = memo(
       attachments.length > 0 ||
       isRecordDemoActive ||
       isQueued ||
-      sendDisabled;
+      sendDisabled ||
+      isPromptTooLong;
 
     return (
       <InputBarShell
@@ -1114,7 +1120,7 @@ export const DesktopChatInputBar = memo(
         onStop={onStop}
         isStreaming={isStreaming}
         disabled={isUploading || sendDisabled}
-        isSendEnabled={!sendDisabled && isSendEnabled}
+        isSendEnabled={!sendDisabled && !isPromptTooLong && isSendEnabled}
         isVisible={isVisible}
         isCentered={isCentered}
         centeredHeading={
