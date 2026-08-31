@@ -57,8 +57,9 @@ pub(crate) use self_improvement::{
     update_self_improvement_config,
 };
 pub(crate) use sessions::{
-    branch_session, delete_session, get_session, list_my_sessions, list_project_sessions,
-    list_session_events, list_session_tasks, list_sessions, summarize_session,
+    archive_session, branch_session, delete_session, get_session, list_my_sessions,
+    list_project_sessions, list_session_events, list_session_tasks, list_sessions,
+    restore_archived_session, summarize_session,
 };
 pub(crate) use subagents::{
     attach_subagent_stream, list_session_subagents, list_subagent_session_events,

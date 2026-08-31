@@ -999,6 +999,36 @@ describe("sessions-list-store", () => {
         useSessionsListStore.getState().pendingSummariesById,
       ).toEqual({});
     });
+
+    it("setSessionStatus patches every loaded surface that contains the session", () => {
+      const session = {
+        ...makeSession("s1", "2026-04-16T00:00:00Z", "i1", "p1"),
+        _projectId: "p1",
+        _projectName: "P1",
+        _agentInstanceId: "i1",
+      };
+      const other = {
+        ...makeSession("s2", "2026-04-15T00:00:00Z", "i1", "p1"),
+        _projectId: "p1",
+        _projectName: "P1",
+        _agentInstanceId: "i1",
+      };
+      useSessionsListStore.setState({
+        sessionsBySurface: {
+          "project:p1": [session, other],
+          "agent:a1": [session],
+        },
+      });
+
+      act(() => {
+        useSessionsListStore.getState().setSessionStatus("s1", "archived");
+      });
+
+      const surfaces = useSessionsListStore.getState().sessionsBySurface;
+      expect(surfaces["project:p1"]?.[0].status).toBe("archived");
+      expect(surfaces["agent:a1"]?.[0].status).toBe("archived");
+      expect(surfaces["project:p1"]?.[1]).toBe(other);
+    });
   });
 
   describe("setSessionSummary / pendingSummariesById", () => {

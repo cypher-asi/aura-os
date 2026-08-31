@@ -372,6 +372,27 @@ describe("sessionsApi", () => {
     );
   });
 
+  it("archives and restores a session through the archive resource", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+
+    await sessionsApi.archiveSession("p1" as string, "ai1" as string, "s1");
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/projects/p1/agents/ai1/sessions/s1/archive",
+      expect.objectContaining({ method: "POST" }),
+    );
+
+    await sessionsApi.restoreArchivedSession(
+      "p1" as string,
+      "ai1" as string,
+      "s1",
+    );
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/projects/p1/agents/ai1/sessions/s1/archive",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
   it("listSessionTasks fetches tasks for session", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;

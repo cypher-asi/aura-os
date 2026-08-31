@@ -741,6 +741,16 @@ export const sessionsApi = {
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/summarize`,
       { method: "POST" },
     ),
+  archiveSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
+    apiFetch<void>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/archive`,
+      { method: "POST" },
+    ),
+  restoreArchivedSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
+    apiFetch<void>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/archive`,
+      { method: "DELETE" },
+    ),
   deleteSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<void>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}`,

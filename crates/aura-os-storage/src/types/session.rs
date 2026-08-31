@@ -7,6 +7,11 @@ use serde::{Deserialize, Serialize};
 /// with this status as absent from read/list surfaces.
 pub const SESSION_STATUS_DELETED: &str = "deleted";
 
+/// User-hidden session marker. Archived sessions remain readable and can be
+/// restored; unlike `deleted`, list and detail endpoints continue to return
+/// them so clients can render a dedicated archive section.
+pub const SESSION_STATUS_ARCHIVED: &str = "archived";
+
 /// Wire shape for the user-scoped session list endpoint
 /// (`/api/me/sessions`). Wraps `StorageSession` with the agent
 /// metadata aura-os-server needs to render rows in the chat-app

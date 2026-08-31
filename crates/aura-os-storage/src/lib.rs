@@ -64,5 +64,6 @@ pub use types::{
     UpdateSessionRequest,
     UpdateStorageSkillRequest,
     UpdateTaskRequest,
+    SESSION_STATUS_ARCHIVED,
     SESSION_STATUS_DELETED,
 };

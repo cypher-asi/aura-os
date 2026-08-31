@@ -15,7 +15,7 @@ import { sessionsApi } from "../shared/api/agents";
 // top-level `const useAuthStore = create(...)` is still running,
 // throwing "Cannot access 'useAuthStore' before initialization".
 import type { AnnotatedSession } from "../components/SessionsList";
-import type { Session } from "../shared/types";
+import type { Session, SessionStatus } from "../shared/types";
 
 /**
  * Server-authoritative project_agent binding for an agent template,
@@ -305,6 +305,8 @@ interface SessionsListStore {
   /** Optimistic delete; pair with `restoreSession` to undo on error. */
   removeSession: (surfaceKey: string, sessionId: string) => void;
   restoreSession: (surfaceKey: string, session: AnnotatedSession) => void;
+  /** Optimistically patch a session across every currently loaded surface. */
+  setSessionStatus: (sessionId: string, status: SessionStatus) => void;
   /**
    * Insert a placeholder row for a brand-new session immediately, before
    * the server has streamed back `SessionReady`. Caller should pair with
@@ -894,6 +896,27 @@ export const useSessionsListStore = create<SessionsListStore>((set, get) => ({
     }));
   },
 
+  setSessionStatus: (sessionId, status) => {
+    set((state) => {
+      let changed = false;
+      const sessionsBySurface = Object.fromEntries(
+        Object.entries(state.sessionsBySurface).map(([surfaceKey, sessions]) => {
+          let surfaceChanged = false;
+          const next = sessions.map((session) => {
+            if (session.session_id !== sessionId || session.status === status) {
+              return session;
+            }
+            changed = true;
+            surfaceChanged = true;
+            return { ...session, status };
+          });
+          return [surfaceKey, surfaceChanged ? next : sessions];
+        }),
+      );
+      return changed ? { sessionsBySurface } : state;
+    });
+  },
+
   addOptimisticSession: (surfaceKey, session) => {
     const current = ensureAnnotatedSessionArray(
       get().sessionsBySurface[surfaceKey],
@@ -1120,6 +1143,7 @@ interface SessionsListActions {
   loadProjectSessions: (projectId: string, projectName: string) => Promise<void>;
   removeSession: (surfaceKey: string, sessionId: string) => void;
   restoreSession: (surfaceKey: string, session: AnnotatedSession) => void;
+  setSessionStatus: (sessionId: string, status: SessionStatus) => void;
   addOptimisticSession: (surfaceKey: string, session: AnnotatedSession) => void;
   replaceSessionId: (
     surfaceKey: string,
@@ -1144,6 +1168,7 @@ export function useSessionsListActions(): SessionsListActions {
       loadProjectSessions: s.loadProjectSessions,
       removeSession: s.removeSession,
       restoreSession: s.restoreSession,
+      setSessionStatus: s.setSessionStatus,
       addOptimisticSession: s.addOptimisticSession,
       replaceSessionId: s.replaceSessionId,
       setSessionSummary: s.setSessionSummary,

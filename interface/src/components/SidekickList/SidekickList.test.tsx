@@ -108,4 +108,29 @@ describe("SidekickList", () => {
     fireEvent.click(deleteItem);
     expect(onMenuAction).toHaveBeenCalledWith("delete", "row-1");
   });
+
+  it("resolves context-menu actions per row", () => {
+    const onMenuAction = vi.fn();
+    render(
+      <SidekickList
+        sections={sections()}
+        menuActions={(row) =>
+          row.id === "row-3" ? ["restore"] : ["archive"]
+        }
+        onMenuAction={onMenuAction}
+      />,
+    );
+
+    fireEvent.contextMenu(
+      screen.getByText("First").closest("[data-list-item]") as HTMLElement,
+    );
+    fireEvent.click(screen.getByText("Archive"));
+    expect(onMenuAction).toHaveBeenCalledWith("archive", "row-1");
+
+    fireEvent.contextMenu(
+      screen.getByText("Third").closest("[data-list-item]") as HTMLElement,
+    );
+    fireEvent.click(screen.getByText("Restore"));
+    expect(onMenuAction).toHaveBeenCalledWith("restore", "row-3");
+  });
 });
