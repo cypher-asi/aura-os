@@ -1,6 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+const mockUseTerminalTarget = vi.hoisted(() => vi.fn(() => ({
+  remoteAgentId: undefined,
+  remoteAgentInstanceId: undefined,
+  localAgentInstanceId: undefined,
+  remoteWorkspacePath: undefined,
+  workspacePath: "/test/path",
+  status: "ready" as const,
+})));
+
 vi.mock("@cypher-asi/zui", () => ({
   Button: ({ children, title, disabled, onClick, icon, selected, ...rest }: Record<string, unknown>) => (
     <button
@@ -65,9 +74,12 @@ vi.mock("../../stores/terminal-panel-store", () => ({
 }));
 
 let linkedWorkspace = true;
+let remoteOnly = false;
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({
     features: { linkedWorkspace },
+    hostedLocalHarness: false,
+    remoteOnly,
   }),
 }));
 
@@ -82,13 +94,7 @@ vi.mock("react-router-dom", () => ({
 }));
 
 vi.mock("../../hooks/use-terminal-target", () => ({
-  useTerminalTarget: () => ({
-    remoteAgentId: undefined,
-    remoteAgentInstanceId: undefined,
-    remoteWorkspacePath: undefined,
-    workspacePath: "/test/path",
-    status: "ready",
-  }),
+  useTerminalTarget: mockUseTerminalTarget,
 }));
 
 vi.mock("../../shared/hooks/use-click-outside", () => ({
@@ -150,6 +156,7 @@ beforeEach(() => {
   mockSidekick.activeTab = "tasks";
   mockSidekick.showInfo = false;
   linkedWorkspace = true;
+  remoteOnly = false;
   addTerminal.mockClear();
   mockParams = { projectId: "proj-1", agentInstanceId: "agent-inst-1" };
 });
@@ -239,6 +246,29 @@ describe("SidekickTaskbar", () => {
 });
 
 describe("SidekickContent", () => {
+  it("prefers local workspace routing when the client can access it", () => {
+    mockParams = { projectId: "proj-1" };
+    render(<SidekickContent />);
+
+    expect(mockUseTerminalTarget).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      agentInstanceId: undefined,
+      preferLocalWorkspace: true,
+    });
+  });
+
+  it("keeps remote workspace routing for remote-only clients", () => {
+    remoteOnly = true;
+    mockParams = { projectId: "proj-1" };
+    render(<SidekickContent />);
+
+    expect(mockUseTerminalTarget).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      agentInstanceId: undefined,
+      preferLocalWorkspace: false,
+    });
+  });
+
   it("shows empty state when no project context and not on a project route", () => {
     projectCtx = null;
     mockParams = {};

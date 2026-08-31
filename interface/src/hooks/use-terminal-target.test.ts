@@ -111,6 +111,33 @@ describe("useTerminalTarget", () => {
     expect(result.current.localAgentInstanceId).toBe("inst-1");
   });
 
+  it("keeps an explicitly selected remote instance when local routing is preferred", async () => {
+    mockGetAgentInstance.mockResolvedValue({
+      agent_instance_id: "inst-remote",
+      agent_id: "agent-remote",
+      machine_type: "remote",
+      workspace_path: "/remote/path",
+    });
+
+    const { result } = renderHook(() =>
+      useTerminalTarget({
+        projectId: "proj-1",
+        agentInstanceId: "inst-remote",
+        preferLocalWorkspace: true,
+      }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.status).toBe("ready");
+    });
+
+    expect(result.current.remoteAgentId).toBe("agent-remote");
+    expect(result.current.remoteAgentInstanceId).toBe("inst-remote");
+    expect(result.current.localAgentInstanceId).toBeUndefined();
+    expect(result.current.workspacePath).toBe("/remote/path");
+  });
+
   it("resolves from agent list for project without agentInstanceId", async () => {
     mockListAgentInstances.mockResolvedValue([
       {
@@ -139,6 +166,38 @@ describe("useTerminalTarget", () => {
     expect(result.current.remoteAgentInstanceId).toBe("inst-remote");
     expect(result.current.workspacePath).toBe("/remote");
     expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1");
+  });
+
+  it("prefers a local workspace when local preview routing is available", async () => {
+    mockListAgentInstances.mockResolvedValue([
+      {
+        agent_instance_id: "inst-local",
+        agent_id: "agent-local",
+        machine_type: "local",
+        workspace_path: "/local",
+      },
+      {
+        agent_instance_id: "inst-remote",
+        agent_id: "agent-remote",
+        machine_type: "remote",
+        workspace_path: "/remote",
+      },
+    ]);
+
+    const { result } = renderHook(() =>
+      useTerminalTarget({ projectId: "proj-1", preferLocalWorkspace: true }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.status).toBe("ready");
+    });
+
+    expect(result.current.remoteAgentId).toBeUndefined();
+    expect(result.current.remoteAgentInstanceId).toBeUndefined();
+    expect(result.current.localAgentInstanceId).toBe("inst-local");
+    expect(result.current.remoteWorkspacePath).toBeUndefined();
+    expect(result.current.workspacePath).toBe("/local");
   });
 
   it("falls back to a local workspace when remote instances have not reported one", async () => {
