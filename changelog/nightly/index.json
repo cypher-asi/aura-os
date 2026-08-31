@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-08-31",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.820.1",
+    "title": "Dev loops now demand a stable session identity",
+    "intro": "A quiet nightly with a single, focused change to the automaton contract: dev-loop starts can no longer be initiated without a session identifier, closing a gap that could let telemetry and rate-limit buckets drift across concurrent runs.",
+    "entryCount": 1,
+    "highlights": [
+      "Session ID is now mandatory for dev-loop starts",
+      "Cleaner automaton start contract in the harness"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-08-31T07:52:20.947Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.820.1",
+    "path": "history/2026-08-31.json"
+  },
+  {
     "date": "2026-08-30",
     "channel": "nightly",
     "version": "0.1.0-nightly.819.1",
