@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-09-01",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.826.1",
+    "title": "Faster file navigation in the explorer and IDE",
+    "intro": "Today's nightly focuses on making the file browsing experience feel more at home inside Aura: the File Explorer gains bulk expand and collapse controls, and opening a file preview in the IDE now remembers where you came from so you can jump straight back.",
+    "entryCount": 1,
+    "highlights": [
+      "Expand and collapse all folders in the File Explorer",
+      "File previews now offer a return path back to their source view"
+    ],
+    "rawCommitCount": 2,
+    "generatedAt": "2026-09-01T15:16:13.796Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.826.1",
+    "path": "history/2026-09-01.json"
+  },
+  {
     "date": "2026-08-31",
     "channel": "nightly",
     "version": "0.1.0-nightly.824.1",
