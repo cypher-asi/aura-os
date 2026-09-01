@@ -1,6 +1,7 @@
 import type { ListTreeNode } from "../../components/ListTree";
 import { api } from "../../api/client";
 import type { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { ChevronRight } from "lucide-react";
 import styles from "../../components/FileExplorer/FileExplorer.module.css";
 
 function getMobilePreviewLabel(filename: string): string {
@@ -23,6 +24,8 @@ interface MobileFileListProps {
   isRemote: boolean;
   onFileSelect?: (path: string) => void;
   rootPath?: string;
+  expandedIds: ReadonlySet<string>;
+  onToggleDirectory: (nodeId: string) => void;
 }
 
 export function MobileFileList({
@@ -31,6 +34,8 @@ export function MobileFileList({
   isRemote,
   onFileSelect,
   rootPath,
+  expandedIds,
+  onToggleDirectory,
 }: MobileFileListProps) {
   return (
     <div className={styles.mobileScrollContainer}>
@@ -41,6 +46,8 @@ export function MobileFileList({
           isRemote={isRemote}
           onFileSelect={onFileSelect}
           rootPath={rootPath}
+          expandedIds={expandedIds}
+          onToggleDirectory={onToggleDirectory}
           depth={0}
         />
       </div>
@@ -54,6 +61,8 @@ function MobileNodes({
   isRemote,
   onFileSelect,
   rootPath,
+  expandedIds,
+  onToggleDirectory,
   depth,
 }: MobileFileListProps & { depth: number }) {
   return (
@@ -65,13 +74,12 @@ function MobileNodes({
         const canOpenFile =
           !isDir && (canPreviewFile || (features.ideIntegration && !isRemote));
         const depthPadding = { paddingLeft: `${12 + depth * 16}px` };
+        const isExpanded = isDir && expandedIds.has(node.id);
         const actionLabel = canPreviewFile
           ? getMobilePreviewLabel(node.label)
           : canOpenFile
             ? "Open"
-            : isDir
-              ? "Folder"
-              : "File";
+            : "File";
 
         const content = (
           <div className={styles.mobileRowMain}>
@@ -82,12 +90,17 @@ function MobileNodes({
 
         return (
           <div key={node.id} className={styles.mobileNodeGroup}>
-            {canOpenFile ? (
+            {canOpenFile || isDir ? (
               <button
                 type="button"
                 className={styles.mobileRow}
                 style={{ ...depthPadding, cursor: "pointer" }}
+                aria-expanded={isDir ? isExpanded : undefined}
                 onClick={() => {
+                  if (isDir) {
+                    onToggleDirectory(node.id);
+                    return;
+                  }
                   if (onFileSelect) {
                     onFileSelect(node.id);
                   } else {
@@ -96,7 +109,15 @@ function MobileNodes({
                 }}
               >
                 {content}
-                <span className={styles.mobileRowMeta}>{actionLabel}</span>
+                {isDir ? (
+                  <ChevronRight
+                    size={15}
+                    aria-hidden="true"
+                    className={`${styles.mobileFolderChevron}${isExpanded ? ` ${styles.mobileFolderChevronExpanded}` : ""}`}
+                  />
+                ) : (
+                  <span className={styles.mobileRowMeta}>{actionLabel}</span>
+                )}
               </button>
             ) : (
               <div className={styles.mobileRow} style={depthPadding}>
@@ -104,13 +125,15 @@ function MobileNodes({
                 <span className={styles.mobileRowMeta}>{actionLabel}</span>
               </div>
             )}
-            {node.children?.length ? (
+            {isExpanded && node.children?.length ? (
               <MobileNodes
                 nodes={node.children}
                 features={features}
                 isRemote={isRemote}
                 onFileSelect={onFileSelect}
                 rootPath={rootPath}
+                expandedIds={expandedIds}
+                onToggleDirectory={onToggleDirectory}
                 depth={depth + 1}
               />
             ) : null}
