@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { cn } from "@cypher-asi/zui";
 import { RefreshCw } from "lucide-react";
 import { EmptyState } from "../EmptyState";
@@ -20,6 +20,7 @@ import { SourceControlWorkbench } from "../SourceControlWorkbench";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
+import { buildIdeNavigationState } from "../../shared/lib/ide-navigation";
 import { InfoPanel } from "./InfoPanel";
 import styles from "../Sidekick/Sidekick.module.css";
 
@@ -73,6 +74,7 @@ export function SidekickContent() {
       preferLocalWorkspace: !remoteOnly,
     });
   const navigate = useNavigate();
+  const location = useLocation();
   const [fileRefreshKey, setFileRefreshKey] = useState(0);
   const tabContentRef = useRef<HTMLDivElement>(null);
 
@@ -81,10 +83,17 @@ export function SidekickContent() {
       if (remoteAgentId) {
         navigate(
           `/ide?file=${encodeURIComponent(filePath)}&remoteAgentId=${encodeURIComponent(remoteAgentId)}`,
+          {
+            state: buildIdeNavigationState(
+              location.pathname,
+              location.search,
+              location.hash,
+            ),
+          },
         );
       }
     },
-    [remoteAgentId, navigate],
+    [location.hash, location.pathname, location.search, remoteAgentId, navigate],
   );
   const hostedProjectId = routeProjectId ?? projectId;
   const hostedWorkspace = useMemo(
@@ -102,9 +111,16 @@ export function SidekickContent() {
       if (!hostedWorkspace) return;
       navigate(
         `/ide?file=${encodeURIComponent(filePath)}&projectId=${encodeURIComponent(hostedWorkspace.projectId)}&agentInstanceId=${encodeURIComponent(hostedWorkspace.agentInstanceId)}`,
+        {
+          state: buildIdeNavigationState(
+            location.pathname,
+            location.search,
+            location.hash,
+          ),
+        },
       );
     },
-    [hostedWorkspace, navigate],
+    [hostedWorkspace, location.hash, location.pathname, location.search, navigate],
   );
 
   useEffect(() => {
