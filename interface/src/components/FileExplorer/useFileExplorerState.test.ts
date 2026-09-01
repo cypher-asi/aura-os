@@ -66,6 +66,8 @@ describe("useFileExplorerState hosted workspaces", () => {
       "src",
     ]);
     expect(result.current.filteredData[0]?.label).toBe("Project files");
+    expect(result.current.defaultExpandedIds).toEqual(["__files_root__"]);
+    expect(result.current.folderIds).toEqual(["__files_root__", "src"]);
     unmount();
   });
 });

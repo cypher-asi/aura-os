@@ -32,10 +32,11 @@
 }
 
 .pathHeader {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 6px 62px 6px 10px;
   border-bottom: 1px solid var(--color-border-subtle);
   background: var(--color-bg-secondary, transparent);
   color: var(--color-text-muted);
@@ -47,6 +48,41 @@
   direction: rtl;
   text-align: left;
   text-overflow: ellipsis;
+}
+
+.pathActions {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  direction: ltr;
+  transform: translateY(-50%);
+}
+
+.pathActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.pathActionButton:hover:not(:disabled) {
+  color: var(--color-text-default);
+  background: var(--color-bg-hover);
+}
+
+.pathActionButton:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .pathCrumbs {
@@ -160,4 +196,14 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   flex-shrink: 0;
+}
+
+.mobileFolderChevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 120ms ease;
+}
+
+.mobileFolderChevronExpanded {
+  transform: rotate(90deg);
 }

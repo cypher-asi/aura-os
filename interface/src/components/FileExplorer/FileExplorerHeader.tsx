@@ -1,15 +1,24 @@
 import { useMemo } from "react";
+import { ChevronsDown, ChevronsUp } from "lucide-react";
 import styles from "./FileExplorer.module.css";
 
 interface FileExplorerHeaderProps {
   rootPath: string;
   /** Max number of trailing segments to show; earlier ones are elided. */
   maxSegments?: number;
+  onExpandAll?: () => void;
+  onCollapseAll?: () => void;
+  canExpandAll?: boolean;
+  canCollapseAll?: boolean;
 }
 
 export function FileExplorerHeader({
   rootPath,
   maxSegments = 4,
+  onExpandAll,
+  onCollapseAll,
+  canExpandAll = true,
+  canCollapseAll = true,
 }: FileExplorerHeaderProps) {
   const segments = useMemo(() => {
     if (!rootPath) return [] as string[];
@@ -49,6 +58,34 @@ export function FileExplorerHeader({
           );
         })}
       </span>
+      {(onExpandAll || onCollapseAll) && (
+        <span className={styles.pathActions}>
+          {onExpandAll && (
+            <button
+              type="button"
+              className={styles.pathActionButton}
+              onClick={onExpandAll}
+              disabled={!canExpandAll}
+              title="Expand all folders"
+              aria-label="Expand all folders"
+            >
+              <ChevronsDown size={13} aria-hidden="true" />
+            </button>
+          )}
+          {onCollapseAll && (
+            <button
+              type="button"
+              className={styles.pathActionButton}
+              onClick={onCollapseAll}
+              disabled={!canCollapseAll}
+              title="Collapse all folders"
+              aria-label="Collapse all folders"
+            >
+              <ChevronsUp size={13} aria-hidden="true" />
+            </button>
+          )}
+        </span>
+      )}
     </div>
   );
 }

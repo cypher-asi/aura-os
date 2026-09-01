@@ -9,6 +9,19 @@ import { EventType } from "../../shared/types/aura-events";
 import styles from "./FileExplorer.module.css";
 import type { HostedWorkspaceTarget } from "../../shared/api/hosted-workspace";
 
+export const FILE_EXPLORER_ROOT_ID = "__files_root__";
+
+function collectFolderIds(nodes: ListTreeNode[]): string[] {
+  const ids: string[] = [];
+  for (const node of nodes) {
+    if (node.children) {
+      ids.push(node.id);
+      ids.push(...collectFolderIds(node.children));
+    }
+  }
+  return ids;
+}
+
 function toExplorerNodes(entries: DirEntry[]): ListTreeNode[] {
   return entries.map((entry) => ({
     id: entry.path,
@@ -73,9 +86,9 @@ export function useFileExplorerState({
 
   useEffect(() => {
     if (refreshTrigger != null && refreshTrigger > 0) {
-      setRefreshKey((k) => k + 1);
+      triggerRefresh();
     }
-  }, [refreshTrigger]);
+  }, [refreshTrigger, triggerRefresh]);
 
   useEffect(() => {
     const unsubs = [
@@ -199,7 +212,7 @@ export function useFileExplorerState({
     const rootName = rootLabel ?? rootPath?.split(/[\\/]/).pop() ?? "Project files";
     return [
       {
-        id: "__files_root__",
+        id: FILE_EXPLORER_ROOT_ID,
         label: rootName,
         icon: createElement(FolderOpen, { size: 14 }),
         children: toExplorerNodes(entries),
@@ -225,24 +238,19 @@ export function useFileExplorerState({
     [explorerData, searchQuery],
   );
 
-  const defaultExpandedIds = useMemo(() => {
-    const ids: string[] = ["__files_root__"];
-    const collectFolderIds = (nodes: ListTreeNode[]) => {
-      for (const node of nodes) {
-        if (node.children) {
-          ids.push(node.id);
-          collectFolderIds(node.children);
-        }
-      }
-    };
-    collectFolderIds(explorerData);
-    return ids;
-  }, [explorerData]);
+  const folderIds = useMemo(() => collectFolderIds(explorerData), [explorerData]);
+  const filteredFolderIds = useMemo(
+    () => collectFolderIds(filteredData),
+    [filteredData],
+  );
+  // Keep the synthetic workspace root open so collapsing the tree still
+  // leaves the project's top-level files and folders visible.
+  const defaultExpandedIds = useMemo(() => [FILE_EXPLORER_ROOT_ID], []);
 
   const handleSelect = useCallback(
     (node: ListTreeNode) => {
       if (!features.linkedWorkspace && !isRemote && !isHosted) return;
-      if (node.id === "__files_root__" || node.children) return;
+      if (node.id === FILE_EXPLORER_ROOT_ID || node.children) return;
       if (onFileSelect) {
         onFileSelect(node.id);
       } else {
@@ -262,6 +270,8 @@ export function useFileExplorerState({
     features,
     isMobileLayout,
     filteredData,
+    folderIds,
+    filteredFolderIds,
     defaultExpandedIds,
     handleSelect,
     rootPath,
