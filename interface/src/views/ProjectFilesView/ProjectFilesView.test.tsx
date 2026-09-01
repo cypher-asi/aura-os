@@ -7,7 +7,13 @@ const mockUseProjectsListStore = vi.fn();
 const mockUseTerminalTarget = vi.fn();
 const mockReadRemoteFile = vi.fn();
 const mockSetSearchParams = vi.fn();
+const mockNavigate = vi.fn();
 let currentSearchParams = new URLSearchParams();
+let currentLocation = {
+  pathname: "/projects/proj-1/files",
+  search: "",
+  hash: "",
+};
 
 vi.mock("@cypher-asi/zui", () => ({
   Button: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
@@ -71,6 +77,8 @@ vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return {
     ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => currentLocation,
     useParams: () => ({ projectId: "proj-1" }),
     useSearchParams: () => [
       currentSearchParams,
@@ -106,6 +114,11 @@ function capabilities(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   currentSearchParams = new URLSearchParams();
+  currentLocation = {
+    pathname: "/projects/proj-1/files",
+    search: "",
+    hash: "",
+  };
   mockUseProjectContext.mockReturnValue({ project });
   mockUseProjectsListStore.mockReturnValue({ projects: [project] });
   mockUseTerminalTarget.mockReturnValue({
@@ -220,6 +233,27 @@ describe("ProjectFilesView", () => {
     expect(screen.getByTestId("panel-search")).toBeInTheDocument();
     expect(screen.getByTestId("file-explorer")).toHaveAttribute("data-root-path", "p/demo-project");
     expect(screen.queryByText(/Workspace files will appear here when this project has a live remote workspace/i)).not.toBeInTheDocument();
+  });
+
+  it("opens remote desktop files with a return route", () => {
+    currentLocation = {
+      pathname: "/projects/proj-1/files",
+      search: "?sort=name",
+      hash: "#src",
+    };
+    mockUseAuraCapabilities.mockReturnValue(capabilities());
+
+    render(<ProjectFilesView />);
+    screen.getByRole("button", { name: "Preview README" }).click();
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/ide?file=%2Fworkspace%2FREADME.md&remoteAgentId=remote-agent-1",
+      {
+        state: {
+          returnTo: "/projects/proj-1/files?sort=name#src",
+        },
+      },
+    );
   });
 
   it("does not mount the desktop file explorer for a local workspace on web", () => {

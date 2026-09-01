@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
 import { PanelSearch } from "../../components/PanelSearch";
 import { FileExplorer } from "../../components/FileExplorer";
@@ -6,9 +7,12 @@ import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { resolveWorkspaceAccess } from "../../shared/lib/workspace-access";
+import { buildIdeNavigationState } from "../../shared/lib/ide-navigation";
 import styles from "./ProjectFilesView.module.css";
 
 export function ProjectFilesView() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const { remoteAgentId, remoteWorkspacePath, workspacePath, status } = useTerminalTarget({ projectId });
@@ -29,6 +33,22 @@ export function ProjectFilesView() {
       : features.linkedWorkspace
         ? "This project does not currently expose a live local agent workspace."
         : "File browsing for local workspaces is available in Aura Desktop.";
+  const handleRemoteFileSelect = useCallback(
+    (filePath: string) => {
+      if (!remoteAgentId) return;
+      navigate(
+        `/ide?file=${encodeURIComponent(filePath)}&remoteAgentId=${encodeURIComponent(remoteAgentId)}`,
+        {
+          state: buildIdeNavigationState(
+            location.pathname,
+            location.search,
+            location.hash,
+          ),
+        },
+      );
+    },
+    [location.hash, location.pathname, location.search, navigate, remoteAgentId],
+  );
 
   if (!projectId || status === "loading") {
     return null;
@@ -41,6 +61,7 @@ export function ProjectFilesView() {
       workspaceSourceLabel={workspaceSourceLabel}
       workspaceDisplay={workspaceDisplay}
       emptyMessage={emptyMessage}
+      onFileSelect={remoteAgentId ? handleRemoteFileSelect : undefined}
     />
   );
 }
@@ -51,6 +72,7 @@ interface ProjectFilesContentProps {
   workspaceSourceLabel: string;
   workspaceDisplay: string | null;
   emptyMessage: string | null;
+  onFileSelect?: (path: string) => void;
 }
 
 function ProjectFilesContent({
@@ -59,6 +81,7 @@ function ProjectFilesContent({
   workspaceSourceLabel,
   workspaceDisplay,
   emptyMessage,
+  onFileSelect,
 }: ProjectFilesContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -92,6 +115,7 @@ function ProjectFilesContent({
             rootPath={rootPath}
             remoteAgentId={remoteAgentId}
             searchQuery={searchQuery}
+            onFileSelect={onFileSelect}
           />
         ) : (
           <div className={styles.emptyState}>

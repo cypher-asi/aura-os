@@ -1,17 +1,21 @@
 import { useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
-import { PageEmptyState, Topbar } from "@cypher-asi/zui";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Button, PageEmptyState, Topbar } from "@cypher-asi/zui";
+import { ArrowLeft, X } from "lucide-react";
 import { FileExplorer } from "../../components/FileExplorer";
 import { Lane } from "../../components/Lane";
 import { WindowControls } from "../../components/WindowControls";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { windowCommand } from "../../lib/windowCommand";
+import { resolveIdeReturnPath } from "../../shared/lib/ide-navigation";
 import { useIdeViewTabs } from "./useIdeViewTabs";
 import { EditorTabBar } from "./EditorTabBar";
 import { EditorBody } from "./EditorBody";
 import styles from "./IdeView.module.css";
 
 export function IdeView() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { features } = useAuraCapabilities();
   const [params] = useSearchParams();
   const initialFile = params.get("file") ?? "";
@@ -29,8 +33,17 @@ export function IdeView() {
   const effectiveRootPath = hostedWorkspace ? undefined : rootPath;
 
   const ide = useIdeViewTabs(initialFile, remoteAgentId, hostedWorkspace);
+  const fallbackReturnPath = hostedProjectId
+    ? `/projects/${encodeURIComponent(hostedProjectId)}/files`
+    : "/projects";
+  const returnPath = resolveIdeReturnPath(location.state, fallbackReturnPath);
+  const showReturnNavigation = ide.readOnly;
 
-  const handleFileSelect = useCallback((path: string) => ide.openTab(path), [ide.openTab]);
+  const handleFileSelect = ide.openTab;
+  const handleReturn = useCallback(
+    () => navigate(returnPath, { replace: true }),
+    [navigate, returnPath],
+  );
 
   if (!features.ideIntegration && !remoteAgentId && !hostedWorkspace) {
     return <PageEmptyState title="IDE stays on desktop" description="This device does not expose local file editing or IDE workflows." />;
@@ -41,9 +54,39 @@ export function IdeView() {
       <Topbar
         className="titlebar-drag"
         onDoubleClick={() => windowCommand("maximize")}
-        icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
+        icon={
+          <div className={styles.titlebarLeading}>
+            {showReturnNavigation && (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<ArrowLeft size={16} />}
+                aria-label="Back to files"
+                title="Back to files"
+                onClick={handleReturn}
+              />
+            )}
+            <img src="/aura-icon.png" alt="" className="titlebar-icon" />
+          </div>
+        }
         title={<span className="titlebar-center">AURA IDE</span>}
-        actions={<WindowControls />}
+        actions={
+          <div className={styles.titlebarActions}>
+            {showReturnNavigation && (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<X size={16} />}
+                aria-label="Close editor"
+                title="Close editor"
+                onClick={handleReturn}
+              />
+            )}
+            <WindowControls />
+          </div>
+        }
       />
 
       <div className={styles.body}>

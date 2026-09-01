@@ -7,6 +7,13 @@
   overflow: hidden;
 }
 
+.titlebarLeading,
+.titlebarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
 /* ---- Body layout ---- */
 
 .body {
