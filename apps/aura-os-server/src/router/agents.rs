@@ -6,6 +6,8 @@ use super::ATTACHMENT_REQUEST_MAX_BYTES;
 use crate::handlers::{agents, remote_files, shares, swarm};
 use crate::state::AppState;
 
+const WORKSPACE_WRITE_REQUEST_MAX_BYTES: usize = 1024 * 1024;
+
 pub(super) fn agent_routes() -> Router<AppState> {
     Router::new()
         .route(
@@ -81,6 +83,11 @@ pub(super) fn agent_routes() -> Router<AppState> {
         .route(
             "/api/agents/:agent_id/remote_agent/read-file",
             post(remote_files::read_remote_file),
+        )
+        .route(
+            "/api/agents/:agent_id/remote_agent/write-file",
+            put(remote_files::write_remote_file)
+                .layer(DefaultBodyLimit::max(WORKSPACE_WRITE_REQUEST_MAX_BYTES)),
         )
         .route(
             "/api/agents/:agent_id/remote_agent/recover",

@@ -144,6 +144,25 @@ describe("swarmApi", () => {
     );
   });
 
+  it("writeRemoteFile sends a revision-checked UTF-8 payload", async () => {
+    const fetchMock = mockFetch(200, { ok: true, revision: "next" });
+    globalThis.fetch = fetchMock;
+
+    await swarmApi.writeRemoteFile("a1", "src/app.ts", "hello 🌎", "revision-1");
+
+    const options = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(options.body));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents/a1/remote_agent/write-file",
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(body.path).toBe("src/app.ts");
+    expect(body.expected_revision).toBe("revision-1");
+    expect(new TextDecoder().decode(
+      Uint8Array.from(atob(body.content_base64), (char) => char.charCodeAt(0)),
+    )).toBe("hello 🌎");
+  });
+
   it("propagates ApiClientError on failure", async () => {
     globalThis.fetch = mockFetch(500, { error: "Server error", code: "internal", details: null });
     await expect(swarmApi.getRemoteAgentState("a1")).rejects.toThrow(ApiClientError);

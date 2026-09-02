@@ -1,6 +1,11 @@
 import type { ProjectId } from "../types";
 import type { DirEntry } from "./desktop";
 import { apiFetch } from "./core";
+import {
+  encodeUtf8Base64,
+  type WorkspaceFileReadResult,
+  type WorkspaceFileWriteResult,
+} from "./workspace-files";
 
 export interface HostedWorkspaceTarget {
   projectId: ProjectId;
@@ -18,7 +23,22 @@ export const hostedWorkspaceApi = {
     ),
 
   readFile: (target: HostedWorkspaceTarget, path: string) =>
-    apiFetch<{ ok: boolean; content?: string; path?: string; error?: string }>(
+    apiFetch<WorkspaceFileReadResult>(
       `${workspaceBase(target)}/read-file?path=${encodeURIComponent(path)}`,
     ),
+
+  writeFile: (
+    target: HostedWorkspaceTarget,
+    path: string,
+    content: string,
+    expectedRevision: string,
+  ) =>
+    apiFetch<WorkspaceFileWriteResult>(`${workspaceBase(target)}/write-file`, {
+      method: "PUT",
+      body: JSON.stringify({
+        path,
+        content_base64: encodeUtf8Base64(content),
+        expected_revision: expectedRevision,
+      }),
+    }),
 };

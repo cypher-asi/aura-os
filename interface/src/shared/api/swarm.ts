@@ -1,6 +1,11 @@
 import type { RemoteVmLogs, RemoteVmState } from "../types"
 import type { DirEntry } from "./desktop"
 import { apiFetch } from "./core"
+import {
+  encodeUtf8Base64,
+  type WorkspaceFileReadResult,
+  type WorkspaceFileWriteResult,
+} from "./workspace-files"
 
 export interface LifecycleActionResult {
   agent_id: string
@@ -44,8 +49,26 @@ export const swarmApi = {
     ),
 
   readRemoteFile: (agentId: string, path: string) =>
-    apiFetch<{ ok: boolean; content?: string; path?: string; error?: string }>(
+    apiFetch<WorkspaceFileReadResult>(
       `/api/agents/${agentId}/remote_agent/read-file`,
       { method: "POST", body: JSON.stringify({ path }) },
+    ),
+
+  writeRemoteFile: (
+    agentId: string,
+    path: string,
+    content: string,
+    expectedRevision: string,
+  ) =>
+    apiFetch<WorkspaceFileWriteResult>(
+      `/api/agents/${agentId}/remote_agent/write-file`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          path,
+          content_base64: encodeUtf8Base64(content),
+          expected_revision: expectedRevision,
+        }),
+      },
     ),
 }

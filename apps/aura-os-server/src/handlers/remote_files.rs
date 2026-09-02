@@ -1,4 +1,4 @@
-//! Proxy file operations (list directory, read file) to a remote agent
+//! Proxy file operations (list directory, read file, write file) to a remote agent
 //! running on the swarm gateway. Follows the same validation and proxy
 //! pattern used by `swarm.rs` and `remote_terminal.rs`.
 
@@ -14,6 +14,13 @@ use crate::state::{AppState, AuthJwt};
 #[derive(serde::Deserialize)]
 pub(crate) struct RemoteFileRequest {
     path: String,
+}
+
+#[derive(serde::Deserialize)]
+pub(crate) struct RemoteFileWriteRequest {
+    path: String,
+    content_base64: String,
+    expected_revision: String,
 }
 
 /// Validate that the agent is remote and return the swarm base URL + JWT.
@@ -47,6 +54,24 @@ fn map_gateway_status(status: u16, body: &str) -> (axum::http::StatusCode, Json<
         404 => ApiError::not_found("remote agent not found on swarm gateway"),
         401 => ApiError::unauthorized("swarm gateway rejected auth token"),
         _ => ApiError::bad_gateway(format!("swarm gateway returned {status}: {body}")),
+    }
+}
+
+fn map_write_gateway_status(status: u16, body: &str) -> (axum::http::StatusCode, Json<ApiError>) {
+    match status {
+        400 => ApiError::bad_request("remote workspace rejected the file write"),
+        403 => ApiError::forbidden("remote workspace denied access to the file"),
+        409 => ApiError::conflict("file changed since it was opened; reopen it before saving"),
+        413 => (
+            axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+            Json(ApiError {
+                error: "file is too large to edit in Aura Web".to_string(),
+                code: "payload_too_large".to_string(),
+                details: None,
+                data: None,
+            }),
+        ),
+        _ => map_gateway_status(status, body),
     }
 }
 
@@ -128,4 +153,61 @@ pub(crate) async fn read_remote_file(
         .map_err(|e| ApiError::internal(format!("failed to parse gateway response: {e}")))?;
 
     Ok(Json(body))
+}
+
+/// `PUT /api/agents/:agent_id/remote_agent/write-file`
+///
+/// Proxy a revision-checked text-file replacement to the remote agent.
+pub(crate) async fn write_remote_file(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(agent_id): Path<String>,
+    Json(req): Json<RemoteFileWriteRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let (base_url, jwt) = resolve_remote_context(&state, &agent_id, &jwt).await?;
+    let network = state.require_network_client()?;
+    let url = format!("{}/v1/agents/{}/write-file", base_url, agent_id);
+    let resp = network
+        .http_client()
+        .put(&url)
+        .json(&serde_json::json!({
+            "path": &req.path,
+            "content_base64": &req.content_base64,
+            "expected_revision": &req.expected_revision,
+        }))
+        .header("Authorization", format!("Bearer {jwt}"))
+        .send()
+        .await
+        .map_err(|error| ApiError::bad_gateway(format!("swarm gateway unreachable: {error}")))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+        warn!(agent_id = %agent_id, path = %req.path, status, "remote write_file failed");
+        return Err(map_write_gateway_status(status, &body));
+    }
+
+    let body = resp.json().await.map_err(|error| {
+        ApiError::internal(format!("failed to parse gateway response: {error}"))
+    })?;
+    Ok(Json(body))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn write_conflicts_are_preserved_for_the_web_editor() {
+        let (status, Json(error)) = map_write_gateway_status(409, "ignored");
+        assert_eq!(status, axum::http::StatusCode::CONFLICT);
+        assert_eq!(error.code, "conflict");
+    }
+
+    #[test]
+    fn ordinary_file_proxy_errors_keep_the_existing_mapping() {
+        let (status, Json(error)) = map_gateway_status(400, "pod rejected request");
+        assert_eq!(status, axum::http::StatusCode::BAD_GATEWAY);
+        assert_eq!(error.code, "bad_gateway");
+    }
 }

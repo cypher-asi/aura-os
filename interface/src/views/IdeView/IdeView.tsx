@@ -37,7 +37,7 @@ export function IdeView() {
     ? `/projects/${encodeURIComponent(hostedProjectId)}/files`
     : "/projects";
   const returnPath = resolveIdeReturnPath(location.state, fallbackReturnPath);
-  const showReturnNavigation = ide.readOnly;
+  const showReturnNavigation = Boolean(remoteAgentId || hostedWorkspace);
 
   const handleFileSelect = ide.openTab;
   const handleReturn = useCallback(
