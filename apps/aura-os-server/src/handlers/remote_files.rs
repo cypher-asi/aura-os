@@ -138,7 +138,7 @@ pub(crate) async fn list_remote_directory(
         "files",
     )?
     .json(&serde_json::json!({ "path": req.path, "depth": 20 }))
-    .header("Authorization", format!("Bearer {jwt}"))
+    .bearer_auth(&jwt)
     .send()
     .await
     // A reqwest error can retain request metadata after the Authorization
@@ -182,7 +182,7 @@ pub(crate) async fn read_remote_file(
         "read-file",
     )?
     .json(&serde_json::json!({ "path": req.path }))
-    .header("Authorization", format!("Bearer {jwt}"))
+    .bearer_auth(&jwt)
     .send()
     .await
     // A reqwest error can retain request metadata after the Authorization
@@ -228,7 +228,7 @@ pub(crate) async fn write_remote_file(
         "content_base64": &req.content_base64,
         "expected_revision": &req.expected_revision,
     }))
-    .header("Authorization", format!("Bearer {jwt}"))
+    .bearer_auth(&jwt)
     .send()
     .await
     // A reqwest error can retain request metadata after the Authorization
