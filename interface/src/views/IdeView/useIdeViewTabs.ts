@@ -3,6 +3,13 @@ import hljs from "highlight.js/lib/common";
 import { api } from "../../api/client";
 import { langFromPath } from "../../ide/lang";
 import type { HostedWorkspaceTarget } from "../../shared/api/hosted-workspace";
+import { ApiClientError } from "../../shared/api/core";
+import {
+  MAX_WEB_FILE_WRITE_BYTES,
+  utf8ByteLength,
+  type WorkspaceFileReadResult,
+  type WorkspaceFileWriteResult,
+} from "../../shared/api/workspace-files";
 
 const MAX_HIGHLIGHT_SIZE = 100_000;
 
@@ -12,6 +19,7 @@ export interface TabState {
   savedContent: string | null;
   loading: boolean;
   error: string | null;
+  revision: string | null;
 }
 
 export function useIdeViewTabs(
@@ -23,12 +31,6 @@ export function useIdeViewTabs(
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const readOnly = Boolean(remoteAgentId || hostedWorkspace);
-  const readOnlyReason = hostedWorkspace
-    ? "Hosted workspace preview is read-only. Ask the agent to change files."
-    : remoteAgentId
-      ? "Remote IDE preview is read-only. Use Aura Desktop or a remote agent task to change files."
-      : null;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
@@ -37,8 +39,15 @@ export function useIdeViewTabs(
   const openTab = useCallback((path: string) => {
     setTabs((prev) => {
       if (prev.find((t) => t.path === path)) return prev;
-      const newTab: TabState = { path, content: null, savedContent: null, loading: true, error: null };
-      const readPromise = hostedWorkspace
+      const newTab: TabState = {
+        path,
+        content: null,
+        savedContent: null,
+        loading: true,
+        error: null,
+        revision: null,
+      };
+      const readPromise: Promise<WorkspaceFileReadResult> = hostedWorkspace
         ? api.hostedWorkspace.readFile(hostedWorkspace, path)
         : remoteAgentId
           ? api.swarm.readRemoteFile(remoteAgentId, path)
@@ -48,7 +57,13 @@ export function useIdeViewTabs(
           setTabs((prev2) => prev2.map((t) => {
             if (t.path !== path) return t;
             return res.ok && res.content != null
-              ? { ...t, content: res.content, savedContent: res.content, loading: false }
+              ? {
+                  ...t,
+                  content: res.content,
+                  savedContent: res.content,
+                  loading: false,
+                  revision: res.revision ?? null,
+                }
               : { ...t, error: res.error ?? "Failed to read file", loading: false };
           }));
         })
@@ -76,8 +91,19 @@ export function useIdeViewTabs(
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeTab = tabs.find((t) => t.path === activeTabPath) ?? null;
+  const requiresWorkspaceRevision = Boolean(hostedWorkspace || remoteAgentId);
+  const readOnly = Boolean(
+    requiresWorkspaceRevision
+      && activeTab
+      && !activeTab.loading
+      && activeTab.revision === null,
+  );
+  const readOnlyReason = readOnly
+    ? "This workspace runtime must be updated before Aura Web can save files."
+    : null;
   const dirty = activeTab != null && activeTab.content !== null && activeTab.savedContent !== null && activeTab.content !== activeTab.savedContent;
-  const language = useMemo(() => (activeTab ? langFromPath(activeTab.path) ?? null : null), [activeTab?.path]);
+  const language = activeTab ? langFromPath(activeTab.path) ?? null : null;
+  const activeContent = activeTab?.content ?? null;
 
   const handleContentChange = useCallback((newContent: string) => {
     if (readOnly) return;
@@ -92,14 +118,49 @@ export function useIdeViewTabs(
     }
     const tabPath = activeTab.path;
     const tabContent = activeTab.content;
+    const isWebWorkspace = Boolean(hostedWorkspace || remoteAgentId);
+    if (isWebWorkspace && !activeTab.revision) {
+      setSaveError("This workspace runtime must be updated before Aura Web can save files.");
+      return;
+    }
+    if (isWebWorkspace && utf8ByteLength(tabContent) > MAX_WEB_FILE_WRITE_BYTES) {
+      setSaveError("Files larger than 700 KiB cannot be edited in Aura Web.");
+      return;
+    }
     setSaving(true); setSaveError(null);
     try {
-      const res = await api.writeFile(tabPath, tabContent);
-      if (res.ok) setTabs((prev) => prev.map((t) => t.path !== tabPath ? t : { ...t, savedContent: tabContent }));
+      const res: WorkspaceFileWriteResult = hostedWorkspace
+        ? await api.hostedWorkspace.writeFile(
+            hostedWorkspace,
+            tabPath,
+            tabContent,
+            activeTab.revision!,
+          )
+        : remoteAgentId
+          ? await api.swarm.writeRemoteFile(
+              remoteAgentId,
+              tabPath,
+              tabContent,
+              activeTab.revision!,
+            )
+          : await api.writeFile(tabPath, tabContent);
+      if (res.ok) setTabs((prev) => prev.map((t) => t.path !== tabPath ? t : {
+        ...t,
+        savedContent: tabContent,
+        revision: res.revision ?? t.revision,
+      }));
       else setSaveError(res.error ?? "Failed to save");
-    } catch (e) { setSaveError(String(e)); }
+    } catch (e) {
+      setSaveError(
+        e instanceof ApiClientError && e.status === 409
+          ? "File changed since you opened it. Close and reopen it before saving."
+          : e instanceof Error
+            ? e.message
+            : String(e),
+      );
+    }
     finally { setSaving(false); }
-  }, [activeTab, saving, readOnly, readOnlyReason]);
+  }, [activeTab, hostedWorkspace, remoteAgentId, saving, readOnly, readOnlyReason]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -110,8 +171,8 @@ export function useIdeViewTabs(
   }, [handleSave]);
 
   const highlightedHtml = useMemo(() => {
-    if (!activeTab || activeTab.content == null) return "";
-    const content = activeTab.content;
+    if (activeContent == null) return "";
+    const content = activeContent;
     if (content.length > MAX_HIGHLIGHT_SIZE) return content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     try {
       if (language && hljs.getLanguage(language)) return hljs.highlight(content, { language }).value;
@@ -119,9 +180,9 @@ export function useIdeViewTabs(
     } catch {
       return content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
-  }, [activeTab?.content, language]);
+  }, [activeContent, language]);
 
-  const lineCount = activeTab?.content ? activeTab.content.split("\n").length : 0;
+  const lineCount = activeContent ? activeContent.split("\n").length : 0;
 
   return {
     tabs, activeTab, activeTabPath, setActiveTabPath,

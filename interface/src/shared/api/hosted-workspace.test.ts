@@ -47,4 +47,28 @@ describe("hostedWorkspaceApi", () => {
       expect.any(Object),
     );
   });
+
+  it("writes UTF-8 content with its expected revision", async () => {
+    const fetchMock = mockJson({ ok: true, revision: "next" });
+    globalThis.fetch = fetchMock;
+
+    await hostedWorkspaceApi.writeFile(
+      { projectId: "project-1", agentInstanceId: "instance-1" },
+      "src/app.ts",
+      "hello 🌎",
+      "revision-1",
+    );
+
+    const options = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(options.body));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/project-1/agents/instance-1/workspace/write-file",
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(body.path).toBe("src/app.ts");
+    expect(body.expected_revision).toBe("revision-1");
+    expect(new TextDecoder().decode(
+      Uint8Array.from(atob(body.content_base64), (char) => char.charCodeAt(0)),
+    )).toBe("hello 🌎");
+  });
 });

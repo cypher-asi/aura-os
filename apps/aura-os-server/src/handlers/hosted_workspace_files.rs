@@ -25,6 +25,13 @@ pub(crate) struct HostedReadFileQuery {
     path: String,
 }
 
+#[derive(Debug, Deserialize, serde::Serialize)]
+pub(crate) struct HostedWriteFileRequest {
+    path: String,
+    content_base64: String,
+    expected_revision: String,
+}
+
 fn validated_relative_path(raw: &str, allow_root: bool) -> Result<PathBuf, String> {
     let mut relative = PathBuf::new();
     for component in FsPath::new(raw).components() {
@@ -195,6 +202,29 @@ pub(crate) async fn read_hosted_workspace_file(
     state
         .harness_http
         .proxy_json(Method::GET, "api/read-file", Some(query), None)
+        .await
+        .map_err(map_proxy_error)
+}
+
+pub(crate) async fn write_hosted_workspace_file(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+    axum::Json(request): axum::Json<HostedWriteFileRequest>,
+) -> ApiResult<Response> {
+    ensure_hosted_local_instance(&state, &jwt, &project_id, &agent_instance_id).await?;
+    let relative = validated_relative_path(&request.path, false).map_err(ApiError::bad_request)?;
+    let root = hosted_workspace_root(&state, &project_id).await?;
+    let absolute = absolute_workspace_path(&root, &relative).map_err(ApiError::bad_gateway)?;
+    let body = serde_json::json!({
+        "path": absolute,
+        "content_base64": request.content_base64,
+        "expected_revision": request.expected_revision,
+    })
+    .to_string();
+    state
+        .harness_http
+        .proxy_json(Method::PUT, "api/write-file", None, Some(body))
         .await
         .map_err(map_proxy_error)
 }

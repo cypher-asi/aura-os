@@ -7,7 +7,7 @@ use aura_os_storage::CreateProjectAgentRequest;
 use axum::extract::Query;
 use axum::http::{header, Request, StatusCode};
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{get, put};
 use axum::{Json, Router};
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -50,7 +50,9 @@ impl Drop for EnvReset {
     }
 }
 
-async fn start_hosted_file_harness() -> (String, Arc<Mutex<Vec<(String, Option<String>)>>>) {
+type HarnessCall = (String, Option<String>, String);
+
+async fn start_hosted_file_harness() -> (String, Arc<Mutex<Vec<HarnessCall>>>) {
     let calls = Arc::new(Mutex::new(Vec::new()));
     let calls_for_handler = calls.clone();
     let handler = move |request: Request<axum::body::Body>| {
@@ -62,7 +64,14 @@ async fn start_hosted_file_harness() -> (String, Arc<Mutex<Vec<(String, Option<S
                 .get(header::AUTHORIZATION)
                 .and_then(|value| value.to_str().ok())
                 .map(str::to_string);
-            calls.lock().expect("calls lock").push((uri.clone(), auth));
+            let body = axum::body::to_bytes(request.into_body(), 1024 * 1024)
+                .await
+                .expect("read harness request body");
+            let body = String::from_utf8(body.to_vec()).expect("UTF-8 harness request body");
+            calls
+                .lock()
+                .expect("calls lock")
+                .push((uri.clone(), auth, body.clone()));
 
             if uri.starts_with("/api/files?") {
                 return Json(json!({
@@ -85,7 +94,18 @@ async fn start_hosted_file_harness() -> (String, Arc<Mutex<Vec<(String, Option<S
                 return Json(json!({
                     "ok": true,
                     "path": "/hosted/workspace/src/app.ts",
-                    "content": "export const source = 'hosted';"
+                    "content": "export const source = 'hosted';",
+                    "revision": "revision-1"
+                }))
+                .into_response();
+            }
+            if uri == "/api/write-file" {
+                let request: serde_json::Value =
+                    serde_json::from_str(&body).expect("valid write request JSON");
+                return Json(json!({
+                    "ok": true,
+                    "path": request["path"],
+                    "revision": "revision-2"
                 }))
                 .into_response();
             }
@@ -105,7 +125,8 @@ async fn start_hosted_file_harness() -> (String, Arc<Mutex<Vec<(String, Option<S
     let app = Router::new()
         .route("/workspace/resolve", get(resolve))
         .route("/api/files", get(handler.clone()))
-        .route("/api/read-file", get(handler));
+        .route("/api/read-file", get(handler.clone()))
+        .route("/api/write-file", put(handler));
     let listener = TcpListener::bind("0.0.0.0:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
     tokio::spawn(async move {
@@ -252,6 +273,29 @@ async fn hosted_files_are_project_scoped_and_forwarded_with_transport_auth() {
     let read_body = response_json(read_response).await;
     assert_eq!(read_status, StatusCode::OK, "read response: {read_body}");
     assert_eq!(read_body["content"], "export const source = 'hosted';");
+    assert_eq!(read_body["revision"], "revision-1");
+
+    let write_uri = format!(
+        "/api/projects/{}/agents/{}/workspace/write-file",
+        project.project_id, instance.id
+    );
+    let write_response = app
+        .clone()
+        .oneshot(json_request(
+            "PUT",
+            &write_uri,
+            Some(json!({
+                "path": "src/app.ts",
+                "content_base64": "ZXhwb3J0IGNvbnN0IHNvdXJjZSA9ICdlZGl0ZWQnOw==",
+                "expected_revision": "revision-1"
+            })),
+        ))
+        .await
+        .unwrap();
+    let write_status = write_response.status();
+    let write_body = response_json(write_response).await;
+    assert_eq!(write_status, StatusCode::OK, "write response: {write_body}");
+    assert_eq!(write_body["revision"], "revision-2");
 
     let cross_project_uri = format!(
         "/api/projects/{}/agents/{}/workspace/files",
@@ -274,16 +318,28 @@ async fn hosted_files_are_project_scoped_and_forwarded_with_transport_auth() {
         .unwrap();
     assert_eq!(traversal.status(), StatusCode::BAD_REQUEST);
 
+    let project_id = project.project_id.to_string();
     let calls = calls.lock().expect("calls lock");
-    assert!(calls.iter().any(|(uri, auth)| {
+    assert!(calls.iter().any(|(uri, auth, _body)| {
         uri.contains("/api/files?")
             && uri.contains(&project.project_id.to_string())
             && uri.contains("depth=20")
             && auth.as_deref() == Some("Bearer hosted-file-secret")
     }));
-    assert!(calls.iter().any(|(uri, auth)| {
+    assert!(calls.iter().any(|(uri, auth, _body)| {
         uri.contains("/api/read-file?")
             && uri.contains("src%2Fapp.ts")
             && auth.as_deref() == Some("Bearer hosted-file-secret")
+    }));
+    assert!(calls.iter().any(|(uri, auth, body)| {
+        if uri != "/api/write-file" || auth.as_deref() != Some("Bearer hosted-file-secret") {
+            return false;
+        }
+        let body: serde_json::Value = serde_json::from_str(body).expect("valid write body");
+        body["path"]
+            .as_str()
+            .is_some_and(|path| path.ends_with("/src/app.ts") && path.contains(&project_id))
+            && body["content_base64"] == "ZXhwb3J0IGNvbnN0IHNvdXJjZSA9ICdlZGl0ZWQnOw=="
+            && body["expected_revision"] == "revision-1"
     }));
 }

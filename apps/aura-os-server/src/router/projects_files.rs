@@ -8,6 +8,8 @@ use crate::handlers::{
 };
 use crate::state::AppState;
 
+const WORKSPACE_WRITE_REQUEST_MAX_BYTES: usize = 1024 * 1024;
+
 pub(super) fn project_routes() -> Router<AppState> {
     Router::new()
         .route(
@@ -63,6 +65,11 @@ pub(super) fn project_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/workspace/read-file",
             get(hosted_workspace_files::read_hosted_workspace_file),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/workspace/write-file",
+            axum::routing::put(hosted_workspace_files::write_hosted_workspace_file)
+                .layer(DefaultBodyLimit::max(WORKSPACE_WRITE_REQUEST_MAX_BYTES)),
         )
         // Project artifacts (images, 3D models)
         .route(

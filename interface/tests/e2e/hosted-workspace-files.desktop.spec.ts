@@ -25,7 +25,7 @@ const hostedAgent = {
   updated_at: "2026-03-17T01:00:00.000Z",
 };
 
-test("hosted web shows the authoritative agent file tree beside Preview", async ({
+test("hosted web shows and edits the authoritative agent file tree beside Preview", async ({
   page,
 }, testInfo) => {
   await page.addInitScript(() => {
@@ -55,6 +55,11 @@ test("hosted web shows the authoritative agent file tree beside Preview", async 
     "src/styles.css": "body { color: white; }",
     "package.json": "{\"scripts\":{\"dev\":\"vite\"}}",
   };
+  let savedPayload: {
+    path: string;
+    content_base64: string;
+    expected_revision: string;
+  } | null = null;
   await page.route("**/api/system/runtime-capabilities", (route) =>
     route.fulfill({
       status: 200,
@@ -86,6 +91,22 @@ test("hosted web shows the authoritative agent file tree beside Preview", async 
           ok: true,
           path: filePath,
           content: workspaceFiles[filePath] ?? "",
+          revision: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/projects/proj-1/agents/agent-inst-hosted/workspace/write-file",
+    (route) => {
+      savedPayload = route.request().postDataJSON() as typeof savedPayload;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          path: savedPayload?.path,
+          revision: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         }),
       });
     },
@@ -122,9 +143,22 @@ test("hosted web shows the authoritative agent file tree beside Preview", async 
   await expect(page.locator("textarea")).toHaveValue(
     "<!doctype html><title>Authoritative hosted file</title>",
   );
-  await expect(page.getByText(/Hosted workspace preview is read-only/)).toBeVisible();
+  await page.locator("textarea").fill(
+    "<!doctype html><title>Edited from Aura Web</title>",
+  );
+  const saveButton = page.getByRole("button", { name: "Save" });
+  await expect(saveButton).toBeEnabled();
+  await saveButton.click();
+  await expect(saveButton).toBeDisabled();
+  expect(savedPayload).toMatchObject({
+    path: "index.html",
+    expected_revision: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  });
+  expect(Buffer.from(savedPayload!.content_base64, "base64").toString("utf8")).toBe(
+    "<!doctype html><title>Edited from Aura Web</title>",
+  );
   await page.screenshot({
-    path: testInfo.outputPath("hosted-workspace-file-preview.png"),
+    path: testInfo.outputPath("hosted-workspace-file-edit.png"),
     fullPage: true,
   });
 });
