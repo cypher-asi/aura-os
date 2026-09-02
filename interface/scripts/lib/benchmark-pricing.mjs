@@ -1,4 +1,16 @@
 const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
+  "claude-fable-5-1": {
+    input: 10,
+    output: 50,
+    cacheWrite: 12.5,
+    cacheRead: 0.25,
+  },
+  "claude-mythos-5-1": {
+    input: 10,
+    output: 50,
+    cacheWrite: 12.5,
+    cacheRead: 0.25,
+  },
   "claude-fable-5": {
     input: 10,
     output: 50,

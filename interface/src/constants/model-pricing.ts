@@ -68,6 +68,18 @@ export interface SessionTokenUsage {
 }
 
 const ANTHROPIC_PRICING: Readonly<Record<string, ModelRates>> = {
+  "claude-fable-5-1": {
+    input: 10,
+    output: 50,
+    cacheWrite: 12.5,
+    cacheRead: 0.25,
+  },
+  "claude-mythos-5-1": {
+    input: 10,
+    output: 50,
+    cacheWrite: 12.5,
+    cacheRead: 0.25,
+  },
   "claude-fable-5": { input: 10, output: 50, cacheWrite: 12.5, cacheRead: 1 },
   "claude-opus-5": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
   "claude-opus-4-8": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },

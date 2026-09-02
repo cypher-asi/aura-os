@@ -220,6 +220,35 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
  * default.
  */
 export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
+  {
+    id: "aura-claude-fable-5-1",
+    label: "Fable 5.1",
+    tier: "opus",
+    mode: "chat",
+    vendor: "anthropic",
+    creditMultiplier: 10,
+    contextWindow: 1_000_000,
+    efforts: ANTHROPIC_XHIGH_EFFORTS,
+    defaultEffort: "high",
+    provider: "Anthropic",
+    description:
+      "Anthropic's latest Fable for demanding reasoning and long-horizon agentic work, with a 1M-token context window.",
+    featured: true,
+  },
+  {
+    id: "aura-claude-mythos-5-1",
+    label: "Mythos 5.1",
+    tier: "opus",
+    mode: "chat",
+    vendor: "anthropic",
+    creditMultiplier: 10,
+    contextWindow: 1_000_000,
+    efforts: ANTHROPIC_XHIGH_EFFORTS,
+    defaultEffort: "high",
+    provider: "Anthropic",
+    description:
+      "Anthropic's limited-access Project Glasswing model, sharing Fable 5.1's long-horizon capabilities and 1M-token context window.",
+  },
   // ── Anthropic ───────────────────────────────────────────────
   {
     id: "aura-claude-fable-5",
@@ -1064,8 +1093,12 @@ const KNOWN_MODELS: ModelOption[] = [
 ];
 
 const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
+  "claude-fable-5-1": "aura-claude-fable-5-1",
+  "aura-claude-fable-5-1": "aura-claude-fable-5-1",
   "claude-fable-5": "aura-claude-fable-5",
   "aura-claude-fable-5": "aura-claude-fable-5",
+  "claude-mythos-5-1": "aura-claude-mythos-5-1",
+  "aura-claude-mythos-5-1": "aura-claude-mythos-5-1",
   "claude-opus-5": "aura-claude-opus-5",
   "aura-claude-opus-5": "aura-claude-opus-5",
   "aura-claude-opus-4-6": "aura-claude-opus-4-6",

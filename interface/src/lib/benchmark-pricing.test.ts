@@ -53,6 +53,18 @@ describe("benchmark pricing", () => {
     }
   });
 
+  it("uses the 5.1 cache-read exception for Fable and Mythos", () => {
+    for (const model of ["aura-claude-fable-5-1", "aura-claude-mythos-5-1"]) {
+      const pricing = resolvePricing(model);
+
+      expect(pricing.provider).toBe("anthropic");
+      expect(pricing.input).toBe(10);
+      expect(pricing.output).toBe(50);
+      expect(pricing.cacheWrite).toBe(12.5);
+      expect(pricing.cacheRead).toBe(0.25);
+    }
+  });
+
   it("marks unknown pricing explicitly instead of silently dropping it", () => {
     const pricing = resolvePricing("claude-unknown-next", "anthropic");
 

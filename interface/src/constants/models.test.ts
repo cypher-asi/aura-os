@@ -159,6 +159,40 @@ describe("model persistence", () => {
     );
   });
 
+  it("normalizes the Claude 5.1 ids to Aura-managed chat models", () => {
+    expect(loadPersistedModel("default", "claude-fable-5-1")).toBe(
+      "aura-claude-fable-5-1",
+    );
+    expect(loadPersistedModel("default", "claude-mythos-5-1")).toBe(
+      "aura-claude-mythos-5-1",
+    );
+  });
+
+  it("includes Claude Fable 5.1 and Mythos 5.1 with their native capabilities", () => {
+    for (const [id, label] of [
+      ["aura-claude-fable-5-1", "Fable 5.1"],
+      ["aura-claude-mythos-5-1", "Mythos 5.1"],
+    ] as const) {
+      const model = availableModelsForAdapter("default").find(
+        (candidate) => candidate.id === id,
+      );
+      expect(model).toMatchObject({
+        label,
+        vendor: "anthropic",
+        creditMultiplier: 10,
+        contextWindow: 1_000_000,
+        defaultEffort: "high",
+      });
+      expect(model?.efforts).toEqual([
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+      ]);
+    }
+  });
+
   it("normalizes raw Claude Opus 5 to the Aura-managed chat model", () => {
     expect(loadPersistedModel("default", "claude-opus-5")).toBe(
       "aura-claude-opus-5",
@@ -481,6 +515,8 @@ describe("reasoning-effort validity per model", () => {
 
   it("matches current Claude context windows and xhigh availability", () => {
     for (const id of [
+      "aura-claude-fable-5-1",
+      "aura-claude-mythos-5-1",
       "aura-claude-fable-5",
       "aura-claude-opus-4-8",
       "aura-claude-opus-4-7",
