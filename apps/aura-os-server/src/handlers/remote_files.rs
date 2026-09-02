@@ -148,7 +148,8 @@ pub(crate) async fn list_remote_directory(
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
         let body = resp.text().await.unwrap_or_default();
-        warn!(agent_id = %agent_id, path = %req.path, status, "remote list_directory failed");
+        // Workspace paths can contain sensitive project or user information.
+        warn!(agent_id = %agent_id, status, "remote list_directory failed");
         return Err(map_gateway_status(status, &body));
     }
 
@@ -191,7 +192,8 @@ pub(crate) async fn read_remote_file(
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
         let body = resp.text().await.unwrap_or_default();
-        warn!(agent_id = %agent_id, path = %req.path, status, "remote read_file failed");
+        // Workspace paths can contain sensitive project or user information.
+        warn!(agent_id = %agent_id, status, "remote read_file failed");
         return Err(map_gateway_status(status, &body));
     }
 
@@ -236,7 +238,8 @@ pub(crate) async fn write_remote_file(
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
         let body = resp.text().await.unwrap_or_default();
-        warn!(agent_id = %agent_id, path = %req.path, status, "remote write_file failed");
+        // Workspace paths can contain sensitive project or user information.
+        warn!(agent_id = %agent_id, status, "remote write_file failed");
         return Err(map_write_gateway_status(status, &body));
     }
 
