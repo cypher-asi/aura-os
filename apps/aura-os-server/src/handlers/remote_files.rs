@@ -138,6 +138,8 @@ pub(crate) async fn list_remote_directory(
         "files",
     )?
     .json(&serde_json::json!({ "path": req.path, "depth": 20 }))
+    // `bearer_auth` sets a sensitive HTTP header; it does not write to logs.
+    // codeql[rust/cleartext-logging]
     .bearer_auth(&jwt)
     .send()
     .await
@@ -182,6 +184,8 @@ pub(crate) async fn read_remote_file(
         "read-file",
     )?
     .json(&serde_json::json!({ "path": req.path }))
+    // `bearer_auth` sets a sensitive HTTP header; it does not write to logs.
+    // codeql[rust/cleartext-logging]
     .bearer_auth(&jwt)
     .send()
     .await
@@ -228,6 +232,8 @@ pub(crate) async fn write_remote_file(
         "content_base64": &req.content_base64,
         "expected_revision": &req.expected_revision,
     }))
+    // `bearer_auth` sets a sensitive HTTP header; it does not write to logs.
+    // codeql[rust/cleartext-logging]
     .bearer_auth(&jwt)
     .send()
     .await
