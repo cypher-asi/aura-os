@@ -11,6 +11,12 @@ import {
 
 describe("normalizePricingKey", () => {
   it("maps aura-managed ids to provider pricing keys", () => {
+    expect(normalizePricingKey("aura-claude-fable-5-1")).toBe(
+      "claude-fable-5-1",
+    );
+    expect(normalizePricingKey("aura-claude-mythos-5-1")).toBe(
+      "claude-mythos-5-1",
+    );
     expect(normalizePricingKey("aura-claude-opus-5")).toBe("claude-opus-5");
     expect(normalizePricingKey("aura-claude-opus-4-8")).toBe("claude-opus-4-8");
     expect(normalizePricingKey("aura-claude-fable-5")).toBe("claude-fable-5");
@@ -243,6 +249,18 @@ describe("getBilledPricing", () => {
     expect(base.output).toBe(50);
     expect(base.cacheWrite).toBe(12.5);
     expect(base.cacheRead).toBe(1);
+  });
+
+  it("resolves Claude Fable 5.1 and Mythos 5.1 with discounted cache reads", () => {
+    for (const model of ["aura-claude-fable-5-1", "aura-claude-mythos-5-1"]) {
+      expect(resolvePricing(model)).toMatchObject({
+        provider: "anthropic",
+        input: 10,
+        output: 50,
+        cacheWrite: 12.5,
+        cacheRead: 0.25,
+      });
+    }
   });
 
   it("resolves Claude Opus 5 base and prompt-cache rates", () => {
