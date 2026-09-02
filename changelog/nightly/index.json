@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-09-02",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.827.1",
+    "title": "Claude Fable 5.1 and Mythos 5.1 join the model lineup",
+    "intro": "A focused nightly today: Aura's model catalog picks up two new Anthropic options, wired end-to-end with pricing, capability metadata, and persistence so they behave like first-class chat models.",
+    "entryCount": 1,
+    "highlights": [
+      "Claude Fable 5.1 and Mythos 5.1 available as Aura-managed models",
+      "1M context window with reasoning efforts up to max",
+      "Cheaper cache reads at $0.25 per MTok vs. Fable 5"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-09-02T22:15:54.177Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.827.1",
+    "path": "history/2026-09-02.json"
+  },
+  {
     "date": "2026-09-01",
     "channel": "nightly",
     "version": "0.1.0-nightly.826.1",
