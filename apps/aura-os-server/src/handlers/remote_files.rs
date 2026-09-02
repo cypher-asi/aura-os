@@ -141,7 +141,9 @@ pub(crate) async fn list_remote_directory(
     .header("Authorization", format!("Bearer {jwt}"))
     .send()
     .await
-    .map_err(|e| ApiError::bad_gateway(format!("swarm gateway unreachable: {e}")))?;
+    // A reqwest error can retain request metadata after the Authorization
+    // header is attached, so do not surface or log its formatted value.
+    .map_err(|_| ApiError::bad_gateway("swarm gateway unreachable"))?;
 
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
@@ -182,7 +184,9 @@ pub(crate) async fn read_remote_file(
     .header("Authorization", format!("Bearer {jwt}"))
     .send()
     .await
-    .map_err(|e| ApiError::bad_gateway(format!("swarm gateway unreachable: {e}")))?;
+    // A reqwest error can retain request metadata after the Authorization
+    // header is attached, so do not surface or log its formatted value.
+    .map_err(|_| ApiError::bad_gateway("swarm gateway unreachable"))?;
 
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
@@ -225,7 +229,9 @@ pub(crate) async fn write_remote_file(
     .header("Authorization", format!("Bearer {jwt}"))
     .send()
     .await
-    .map_err(|error| ApiError::bad_gateway(format!("swarm gateway unreachable: {error}")))?;
+    // A reqwest error can retain request metadata after the Authorization
+    // header is attached, so do not surface or log its formatted value.
+    .map_err(|_| ApiError::bad_gateway("swarm gateway unreachable"))?;
 
     if !resp.status().is_success() {
         let status = resp.status().as_u16();
