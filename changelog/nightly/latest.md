@@ -1,23 +1,24 @@
-# Claude Fable 5.1 and Mythos 5.1 join the model lineup
+# Manual workspace editing on the web and Claude 5.1 models
 
 - Date: `2026-09-02`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.827.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.827.1
+- Version: `0.1.0-nightly.828.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.828.1
 
-A focused nightly today: Aura's model catalog picks up two new Anthropic options, wired end-to-end with pricing, capability metadata, and persistence so they behave like first-class chat models.
+Today's nightly brings two meaningful additions: Aura Web can now edit workspace files directly with hardened gateway plumbing, and the model catalog picks up Claude Fable 5.1 and Mythos 5.1 with full pricing and capability support.
 
-## 2:56 PM — Claude Fable 5.1 and Mythos 5.1 added to model catalog
+## 2:56 PM — Manual workspace file editing lands in Aura Web
 
-Two new Anthropic models are now selectable in Aura with full pricing, capability, and persistence support.
+Aura Web can now save edits to workspace files through the IDE view, backed by a new server-side write path with conflict detection and stricter gateway safety.
 
-- Added Claude Fable 5.1 and Mythos 5.1 as Aura-managed chat models, each exposing a 1M context window, reasoning efforts from low through max, and a default high effort setting. (`be09573`)
-- Wired both models into pricing at $10/$50 per MTok input/output with $12.50 cache writes and a discounted $0.25 cache-read rate — a 4× reduction versus Fable 5's $1 cache reads. (`be09573`)
-- Normalized raw provider ids (claude-fable-5-1, claude-mythos-5-1) to their aura-managed equivalents so persisted selections and benchmark pricing resolve correctly. (`be09573`)
+- Users can manually edit and save workspace files from the IDE view in Aura Web, with a new hosted write endpoint that proxies PUT api/write-file and rejects stale saves via an expected_revision check so conflicting edits surface as a reopen prompt instead of silent overwrites. (`371abc0`)
+- Remote file writes are now pinned to the configured swarm gateway origin using a trusted request builder and typed bearer authentication, closing off origin-spoofing paths through agent-supplied IDs. (`371abc0`)
+- Gateway failures are redacted before they reach clients or logs — workspace paths and agent identifiers are kept out of log lines, and oversized files return a clear "too large to edit in Aura Web" error instead of a raw 413. (`371abc0`)
+- Added Claude Fable 5.1 and Mythos 5.1 to the model picker as Aura-managed Anthropic models with a 1M context window, the full low→max effort range, and pricing wired in at $10/$50 per Mtok with a discounted $0.25 cache-read rate. (`be09573`)
 
 ## Highlights
 
-- Claude Fable 5.1 and Mythos 5.1 available as Aura-managed models
-- 1M context window with reasoning efforts up to max
-- Cheaper cache reads at $0.25 per MTok vs. Fable 5
+- Manual file editing in Aura Web with revision-safe saves
+- Claude Fable 5.1 and Mythos 5.1 available in the model picker
+- Hardened swarm gateway auth and log redaction
 

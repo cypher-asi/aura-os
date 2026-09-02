@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-09-02T22:15:54.177Z",
+  "generatedAt": "2026-09-02T23:14:21.904Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.827.1",
+  "version": "0.1.0-nightly.828.1",
   "date": "2026-09-02",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.827.1",
-  "lastIncludedSha": "be095739d7ba8fdbc2acb03006b280911afffaba",
-  "previousProcessedSha": "e397f41abb9951b06e77ef91fa43b9a7125e62f5",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.828.1",
+  "lastIncludedSha": "371abc08d16a81030f40896cb127b1b2b0cbd28a",
+  "previousProcessedSha": "be095739d7ba8fdbc2acb03006b280911afffaba",
   "commitShas": [
-    "be095739d7ba8fdbc2acb03006b280911afffaba"
+    "be095739d7ba8fdbc2acb03006b280911afffaba",
+    "371abc08d16a81030f40896cb127b1b2b0cbd28a"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "be095739d7ba8fdbc2acb03006b280911afffaba",
@@ -59,6 +60,61 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "371abc08d16a81030f40896cb127b1b2b0cbd28a",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "105677970+shahroz-wilder@users.noreply.github.com"
+      },
+      "committedAt": "2026-09-02T18:54:42-04:00",
+      "subject": "feat(web): enable manual workspace file editing (#172)",
+      "body": "* feat(web): enable manual workspace file editing\n\n* fix(web): keep remote file writes on the swarm origin\n\n* fix(web): redact authenticated gateway failures\n\n* fix(web): keep workspace paths out of logs\n\n* fix(web): keep agent identifiers out of logs\n\n* fix(web): use typed bearer authentication\n\n* fix(web): document safe bearer header flow",
+      "parents": [
+        "be095739d7ba8fdbc2acb03006b280911afffaba"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/hosted_workspace_files.rs",
+        "apps/aura-os-server/src/handlers/remote_files.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/src/router/projects_files.rs",
+        "apps/aura-os-server/tests/hosted_workspace_files_test.rs",
+        "interface/src/shared/api/hosted-workspace.test.ts",
+        "interface/src/shared/api/hosted-workspace.ts",
+        "interface/src/shared/api/swarm.test.ts",
+        "interface/src/shared/api/swarm.ts",
+        "interface/src/shared/api/workspace-files.ts",
+        "interface/src/views/IdeView/IdeView.tsx",
+        "interface/src/views/IdeView/useIdeViewTabs.test.ts",
+        "interface/src/views/IdeView/useIdeViewTabs.ts",
+        "interface/tests/e2e/hosted-workspace-files.desktop.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 611,
+        "deletions": 65
+      },
+      "committedAtMs": 1788389682000,
+      "cleanSubject": "enable manual workspace file editing (#172)",
+      "keywords": [
+        "enable",
+        "manual",
+        "workspace",
+        "file",
+        "editing"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/shared",
+        "interface/src/views",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
   "batchCount": 1,
@@ -66,29 +122,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.827.1",
+      "version": "0.1.0-nightly.828.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 66740262
+          "sizeBytes": 66766644
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 133675512
+          "sizeBytes": 133712376
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -98,29 +154,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.827.1",
+      "version": "0.1.0-nightly.828.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.827.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.828.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 62370333
+          "sizeBytes": 62349565
         },
         {
-          "name": "AURA_0.1.0-nightly.827.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.828.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 61387847
+          "sizeBytes": 61401607
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -130,29 +186,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.827.1",
+      "version": "0.1.0-nightly.828.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.827.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.828.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 64641451
+          "sizeBytes": 64640390
         },
         {
-          "name": "AURA_0.1.0-nightly.827.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.828.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 63653813
+          "sizeBytes": 63682702
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -162,17 +218,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.827.1",
+      "version": "0.1.0-nightly.828.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 49133497
+          "sizeBytes": 49193943
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.827.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.828.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -181,33 +237,40 @@
     }
   ],
   "rendered": {
-    "title": "Claude Fable 5.1 and Mythos 5.1 join the model lineup",
-    "intro": "A focused nightly today: Aura's model catalog picks up two new Anthropic options, wired end-to-end with pricing, capability metadata, and persistence so they behave like first-class chat models.",
+    "title": "Manual workspace editing on the web and Claude 5.1 models",
+    "intro": "Today's nightly brings two meaningful additions: Aura Web can now edit workspace files directly with hardened gateway plumbing, and the model catalog picks up Claude Fable 5.1 and Mythos 5.1 with full pricing and capability support.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:56 PM",
         "started_at": "2026-09-02T21:56:02.000Z",
-        "ended_at": "2026-09-02T21:56:02.000Z",
-        "title": "Claude Fable 5.1 and Mythos 5.1 added to model catalog",
-        "summary": "Two new Anthropic models are now selectable in Aura with full pricing, capability, and persistence support.",
+        "ended_at": "2026-09-02T22:54:42.000Z",
+        "title": "Manual workspace file editing lands in Aura Web",
+        "summary": "Aura Web can now save edits to workspace files through the IDE view, backed by a new server-side write path with conflict detection and stricter gateway safety.",
         "items": [
           {
-            "text": "Added Claude Fable 5.1 and Mythos 5.1 as Aura-managed chat models, each exposing a 1M context window, reasoning efforts from low through max, and a default high effort setting.",
+            "text": "Users can manually edit and save workspace files from the IDE view in Aura Web, with a new hosted write endpoint that proxies PUT api/write-file and rejects stale saves via an expected_revision check so conflicting edits surface as a reopen prompt instead of silent overwrites.",
             "commit_shas": [
-              "be095739d7ba8fdbc2acb03006b280911afffaba"
+              "371abc08d16a81030f40896cb127b1b2b0cbd28a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wired both models into pricing at $10/$50 per MTok input/output with $12.50 cache writes and a discounted $0.25 cache-read rate — a 4× reduction versus Fable 5's $1 cache reads.",
+            "text": "Remote file writes are now pinned to the configured swarm gateway origin using a trusted request builder and typed bearer authentication, closing off origin-spoofing paths through agent-supplied IDs.",
             "commit_shas": [
-              "be095739d7ba8fdbc2acb03006b280911afffaba"
+              "371abc08d16a81030f40896cb127b1b2b0cbd28a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Normalized raw provider ids (claude-fable-5-1, claude-mythos-5-1) to their aura-managed equivalents so persisted selections and benchmark pricing resolve correctly.",
+            "text": "Gateway failures are redacted before they reach clients or logs — workspace paths and agent identifiers are kept out of log lines, and oversized files return a clear \"too large to edit in Aura Web\" error instead of a raw 413.",
+            "commit_shas": [
+              "371abc08d16a81030f40896cb127b1b2b0cbd28a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added Claude Fable 5.1 and Mythos 5.1 to the model picker as Aura-managed Anthropic models with a 1M context window, the full low→max effort range, and pricing wired in at $10/$50 per Mtok with a discounted $0.25 cache-read rate.",
             "commit_shas": [
               "be095739d7ba8fdbc2acb03006b280911afffaba"
             ],
@@ -217,10 +280,10 @@
       }
     ],
     "highlights": [
-      "Claude Fable 5.1 and Mythos 5.1 available as Aura-managed models",
-      "1M context window with reasoning efforts up to max",
-      "Cheaper cache reads at $0.25 per MTok vs. Fable 5"
+      "Manual file editing in Aura Web with revision-safe saves",
+      "Claude Fable 5.1 and Mythos 5.1 available in the model picker",
+      "Hardened swarm gateway auth and log redaction"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
