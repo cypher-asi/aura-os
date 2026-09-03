@@ -447,19 +447,20 @@ export function ChatSurface({
   }, [isAutoFollowing]);
 
   // Keep the pinned cooking indicator (and the chat scroll reserve)
-  // anchored to the LIVE input bar height instead of a static ~103px
-  // estimate. Without this, activating AURA Council adds the multi-slot
-  // footer row to the input bar, but the indicator stays pinned at the
-  // 108px default and its opaque backdrop clips the top of the council
-  // model pills. Desktop only — the mobile layout pins the indicator
-  // off its own keyboard-aware variable.
+  // anchored to the LIVE input bar height instead of a static estimate.
+  // This covers both input implementations: compact web layouts render
+  // MobileChatInputBar at widths where the CSS still uses the desktop
+  // fallback values, and an open keyboard can lift the mobile bar without
+  // changing its height. Measuring the live height plus the keyboard inset
+  // handles both cases as well as desktop-only growth such as AURA Council's
+  // footer row, without sampling a centered-to-docked transition mid-flight.
   const chatAreaRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (isMobileLayout || typeof ResizeObserver === "undefined") return;
+    if (typeof ResizeObserver === "undefined") return;
     const area = chatAreaRef.current;
     if (!area) return;
     const inputBar = area.querySelector<HTMLElement>(
-      '[data-agent-surface="chat-input-bar"]',
+      '[data-agent-surface="chat-input-bar"], [data-agent-surface="mobile-chat-input-bar"]',
     );
     if (!inputBar) return;
     // Gap above the input bar (matches the 5px the static 108px tuning
@@ -468,6 +469,8 @@ export function ChatSurface({
     // 108px / 176px layout exactly.
     const GAP_PX = 5;
     const INDICATOR_PX = 68;
+    const isMobileInput =
+      inputBar.dataset.agentSurface === "mobile-chat-input-bar";
     const pill = inputBar.querySelector<HTMLElement>('[data-input-pill="true"]');
     let frame: number | null = null;
     let lastIndicatorBottom: number | null = null;
@@ -495,12 +498,22 @@ export function ChatSurface({
       // docks (data-centered flips + the dock transition ends; both are
       // observed below).
       if (inputBar.dataset.centered === "true") return;
-      const height = inputBar.getBoundingClientRect().height;
-      if (height <= 0) return;
-      const bottom = Math.round(height + GAP_PX);
+      const areaRect = area.getBoundingClientRect();
+      const inputRect = inputBar.getBoundingClientRect();
+      if (inputRect.height <= 0) return;
+      const keyboardInset = isMobileInput
+        ? Number.parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue(
+              "--aura-mobile-keyboard-inset",
+            ),
+          ) || 0
+        : 0;
+      const bottom = Math.round(inputRect.height + keyboardInset + GAP_PX);
+      if (bottom <= GAP_PX) return;
       const clearance = bottom + INDICATOR_PX;
       if (lastIndicatorBottom !== bottom) {
         area.style.setProperty("--streaming-indicator-bottom", `${bottom}px`);
+        area.style.setProperty("--streaming-indicator-bottom-mobile", `${bottom}px`);
         lastIndicatorBottom = bottom;
       }
       if (lastClearance !== clearance) {
@@ -517,7 +530,6 @@ export function ChatSurface({
       // clearance is a mid-animation artifact — skip it; the transitionend
       // listener below re-measures once the pill settles.
       if (pill) {
-        const areaRect = area.getBoundingClientRect();
         const pillRect = pill.getBoundingClientRect();
         const midFromBottom = Math.round(
           areaRect.bottom - (pillRect.top + pillRect.height / 2),
@@ -539,13 +551,22 @@ export function ChatSurface({
     scheduleApply();
     const ro = new ResizeObserver(scheduleApply);
     ro.observe(inputBar);
-    // The centered→docked dock animates `bottom`/`transform` (260ms in
-    // InputBarShell.module.css) without changing the wrapper's size, so
-    // the ResizeObserver alone would leave the pill-midline mask stale at
-    // a mid-flight value. Re-measure when the centered flag flips and
-    // again when the position transition finishes.
+    // Centering, docking, and mobile keyboard focus can animate or change
+    // `bottom`/`transform` without changing wrapper size, so ResizeObserver
+    // alone is insufficient. Re-measure when the relevant root attributes
+    // change and again when the position transition finishes.
     const mo = new MutationObserver(scheduleApply);
-    mo.observe(inputBar, { attributes: true, attributeFilter: ["data-centered"] });
+    mo.observe(inputBar, {
+      attributes: true,
+      attributeFilter: ["class", "data-centered", "style"],
+    });
+    const keyboardMo = new MutationObserver(scheduleApply);
+    if (isMobileInput) {
+      keyboardMo.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["style"],
+      });
+    }
     const onTransitionEnd = (event: TransitionEvent) => {
       if (event.target !== inputBar) return;
       if (event.propertyName === "bottom" || event.propertyName === "transform") {
@@ -559,8 +580,10 @@ export function ChatSurface({
       }
       ro.disconnect();
       mo.disconnect();
+      keyboardMo.disconnect();
       inputBar.removeEventListener("transitionend", onTransitionEnd);
       area.style.removeProperty("--streaming-indicator-bottom");
+      area.style.removeProperty("--streaming-indicator-bottom-mobile");
       area.style.removeProperty("--chat-input-clearance");
       area.style.removeProperty("--chat-input-mask-cutoff");
     };

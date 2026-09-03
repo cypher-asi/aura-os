@@ -489,9 +489,15 @@
   }
 
   .messageArea {
-    padding: 10px 8px calc(212px + var(--aura-mobile-keyboard-inset, 0px));
+    padding: 10px 8px var(
+      --chat-input-clearance,
+      calc(212px + var(--aura-mobile-keyboard-inset, 0px))
+    );
     scroll-padding-top: 10px;
-    scroll-padding-bottom: calc(212px + var(--aura-mobile-keyboard-inset, 0px));
+    scroll-padding-bottom: var(
+      --chat-input-clearance,
+      calc(212px + var(--aura-mobile-keyboard-inset, 0px))
+    );
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
