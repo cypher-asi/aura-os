@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-09-03",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.829.1",
+    "title": "Streaming chat stays clear of the mobile composer",
+    "intro": "A focused nightly today, centered on a single interface fix: the streaming chat surface now measures the live composer instead of assuming a fixed height, so replies and the cooking indicator no longer hide behind the input bar on mobile web.",
+    "entryCount": 1,
+    "highlights": [
+      "Streaming chat indicator anchored to the live composer height",
+      "Mobile web chat no longer clips under the input bar"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-09-03T18:36:12.788Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.829.1",
+    "path": "history/2026-09-03.json"
+  },
+  {
     "date": "2026-09-02",
     "channel": "nightly",
     "version": "0.1.0-nightly.828.1",
