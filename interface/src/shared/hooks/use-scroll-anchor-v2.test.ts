@@ -231,6 +231,47 @@ describe("useScrollAnchorV2", () => {
     expect(result.current.getUserUnpinnedAt()).toBeGreaterThan(0);
   });
 
+  it("keeps auto-follow when shrinking content clamps scrollTop upward", () => {
+    // Virtualized tool rows can become shorter as their state changes. When
+    // that reduces the maximum valid scrollTop, the browser clamps a pinned
+    // viewport upward and emits a scroll event even though the user did not
+    // move it. That geometry correction must not disable streaming follow.
+    const container = makeContainer({ scrollTop: 1600, scrollHeight: 2000, clientHeight: 400 });
+    const ref = { current: container };
+
+    const { result } = renderHook(() =>
+      useScrollAnchorV2(ref, { resetKey: "thread-1", scrollToBottomOnReset: false }),
+    );
+
+    act(() => {
+      (container as unknown as { scrollHeight: number }).scrollHeight = 1880;
+      (container as unknown as { scrollTop: number }).scrollTop = 1480;
+      result.current.handleScroll();
+    });
+
+    expect(result.current.isAutoFollowing).toBe(true);
+    expect(result.current.getUserUnpinnedAt()).toBe(0);
+  });
+
+  it("still unpins when a scrollbar drag exceeds a simultaneous layout clamp", () => {
+    const container = makeContainer({ scrollTop: 1600, scrollHeight: 2000, clientHeight: 400 });
+    const ref = { current: container };
+
+    const { result } = renderHook(() =>
+      useScrollAnchorV2(ref, { resetKey: "thread-1", scrollToBottomOnReset: false }),
+    );
+
+    act(() => {
+      // The new maximum is 1480, while the user has dragged another 50px up.
+      (container as unknown as { scrollHeight: number }).scrollHeight = 1880;
+      (container as unknown as { scrollTop: number }).scrollTop = 1430;
+      result.current.handleScroll();
+    });
+
+    expect(result.current.isAutoFollowing).toBe(false);
+    expect(result.current.getUserUnpinnedAt()).toBeGreaterThan(0);
+  });
+
   it("does NOT unpin on a downward scroll toward the bottom", () => {
     const container = makeContainer({ scrollTop: 1550, scrollHeight: 2000, clientHeight: 400 });
     const ref = { current: container };

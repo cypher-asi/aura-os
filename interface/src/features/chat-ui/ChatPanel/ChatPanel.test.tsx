@@ -1,7 +1,18 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { act, useLayoutEffect, type ComponentProps } from "react";
+import {
+  act,
+  forwardRef,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  type ComponentProps,
+} from "react";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
+import type {
+  ChatInputBarHandle,
+  ChatInputBarProps,
+} from "../ChatInputBar";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import { useMessageStore } from "../../../stores/message-store";
 import { useChatUIStore } from "../../../stores/chat-ui-store";
@@ -274,6 +285,74 @@ describe("ChatPanel", () => {
     renderPanel({ header: <div>Mobile-owned chat header</div> });
 
     expect(screen.getByText("Mobile-owned chat header")).toBeInTheDocument();
+  });
+
+  it("measures the compact web input bar for indicator and scroll clearance", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+
+    const CompactInputBar = forwardRef<ChatInputBarHandle, ChatInputBarProps>(
+      function CompactInputBar({ input, onInputChange, isCentered }, ref) {
+        const textareaRef = useRef<HTMLTextAreaElement>(null);
+        useImperativeHandle(ref, () => ({
+          focus: () => textareaRef.current?.focus(),
+          isFocused: () => document.activeElement === textareaRef.current,
+        }));
+        return (
+          <div
+            data-agent-surface="mobile-chat-input-bar"
+            data-centered={isCentered ? "true" : "false"}
+          >
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(event) => onInputChange(event.currentTarget.value)}
+            />
+          </div>
+        );
+      },
+    );
+
+    const makeRect = (top: number, bottom: number): DOMRect =>
+      ({
+        x: 0,
+        y: top,
+        top,
+        right: 790,
+        bottom,
+        left: 0,
+        width: 790,
+        height: bottom - top,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const getBoundingClientRectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function getBoundingClientRect() {
+        if (this.classList.contains("chatArea")) return makeRect(56, 600);
+        if (this.dataset.agentSurface === "mobile-chat-input-bar") {
+          return makeRect(445, 600);
+        }
+        return makeRect(0, 0);
+      });
+
+    const rendered = renderPanel({
+      InputBarComponent: CompactInputBar,
+      historyMessages: sampleHistoryMessages,
+      historyResolved: true,
+    });
+    const area = rendered.container.querySelector<HTMLElement>(".chatArea");
+
+    expect(area?.style.getPropertyValue("--streaming-indicator-bottom")).toBe(
+      "160px",
+    );
+    expect(
+      area?.style.getPropertyValue("--streaming-indicator-bottom-mobile"),
+    ).toBe("160px");
+    expect(area?.style.getPropertyValue("--chat-input-clearance")).toBe(
+      "228px",
+    );
+
+    rendered.unmount();
+    getBoundingClientRectSpy.mockRestore();
   });
 
   it("does not render a mobile header by default", () => {
