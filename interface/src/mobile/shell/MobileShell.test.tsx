@@ -332,6 +332,7 @@ function renderMobile(path: InitialEntry | InitialEntry[] = "/projects") {
           <Route path="/agents" element={<div>Agents</div>} />
           <Route path="/agents/:agentId" element={<div>Agent details</div>} />
           <Route path="/feed" element={<div>Feed</div>} />
+          <Route path="/chat" element={<div>Chat destination</div>} />
           <Route path="/projects" element={<div>Projects</div>} />
           <Route path="*" element={<div>Fallback</div>} />
         </Route>
@@ -544,6 +545,20 @@ describe("MobileShell", () => {
   it("hides project tabs on the attach-existing route", () => {
     renderMobile("/projects/proj-1/agents/attach");
     expect(screen.queryByRole("navigation", { name: "Project sections" })).not.toBeInTheDocument();
+  });
+
+  it("returns to Chat from a project and closes the drawer", async () => {
+    drawers.navOpen = true;
+    renderMobile("/projects/proj-1/files");
+    await userEvent.setup().click(within(screen.getByRole("navigation", { name: "Main navigation" })).getByRole("button", { name: "Chat" }));
+    expect(screen.getByText("Chat destination")).toBeInTheDocument();
+    expect(drawers.closeDrawers).toHaveBeenCalledOnce();
+  });
+
+  it("marks Chat as current without requiring a selected project", () => {
+    drawers.navOpen = true;
+    renderMobile("/chat");
+    expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-current", "page");
   });
 
   it("keeps project drawer focused on switching agents and projects", () => {

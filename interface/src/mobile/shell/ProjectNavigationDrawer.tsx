@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import { ChevronDown, ChevronRight, Loader2, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, MessageSquare, Search, X } from "lucide-react";
 import { api } from "../../api/client";
 import { PanelSearch } from "../../components/PanelSearch";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
@@ -330,6 +330,20 @@ export function ProjectNavigationDrawerContent() {
           AURA
         </div>
       </div>
+      <nav className={styles.mobileChatNavigation} aria-label="Main navigation">
+        <button
+          type="button"
+          className={`${styles.mobileProjectDrawerRow} ${location.pathname === "/chat" ? styles.mobileProjectDrawerRowActive : ""}`}
+          aria-current={location.pathname === "/chat" ? "page" : undefined}
+          onClick={() => {
+            closePreview();
+            runDrawerNavigation("/chat");
+          }}
+        >
+          <MessageSquare size={18} aria-hidden="true" />
+          <span>Chat</span>
+        </button>
+      </nav>
       <div className={styles.mobileDrawerSearch}>
         <div className={styles.mobileDrawerHeaderBar}>
           <div>
