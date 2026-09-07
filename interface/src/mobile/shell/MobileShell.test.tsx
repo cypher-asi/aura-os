@@ -426,7 +426,7 @@ describe("MobileShell", () => {
     mockActiveApp.label = "Agents";
     renderMobile("/agents");
 
-    expect(screen.getByRole("button", { name: "Create Remote Agent" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create Agent" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open workspace" })).not.toBeInTheDocument();
   });
 

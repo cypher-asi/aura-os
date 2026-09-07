@@ -1,6 +1,7 @@
 import { Input, Textarea, Text } from "@cypher-asi/zui";
 import { ImagePlus, X, Monitor, Cloud, Globe2, Lock, Info } from "lucide-react";
 import type { AgentListingStatus } from "../../../marketplace/listing-status";
+import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import styles from "./AgentEditorModal.module.css";
 
 function CompactEnvironmentPicker({
@@ -12,6 +13,8 @@ function CompactEnvironmentPicker({
   setEnvironment: (v: string) => void;
   allowLocal?: boolean;
 }) {
+  const { hostedLocalHarness, hasDesktopBridge } = useAuraCapabilities();
+  const isHosted = hostedLocalHarness && !hasDesktopBridge;
   return (
     <div className={styles.fieldGroup}>
       <label className={styles.label}>Environment</label>
@@ -31,10 +34,13 @@ function CompactEnvironmentPicker({
             onClick={() => setEnvironment("local_host")}
           >
             <Monitor size={14} />
-            Local
+            {isHosted ? "Hosted" : "Local"}
           </button>
         ) : null}
       </div>
+      {isHosted && allowLocal && environment === "local_host" ? (
+        <Text size="xs" variant="muted">Runs on AURA's server. No desktop connection required.</Text>
+      ) : null}
     </div>
   );
 }
@@ -321,6 +327,8 @@ function RunsOnFields({
   setEnvironment: (v: string) => void;
   allowLocal?: boolean;
 }) {
+  const { hostedLocalHarness, hasDesktopBridge } = useAuraCapabilities();
+  const isHosted = hostedLocalHarness && !hasDesktopBridge;
   return (
     <div className={styles.fieldGroup}>
       <label className={styles.label}>
@@ -344,8 +352,8 @@ function RunsOnFields({
           >
             <span className={styles.choiceTitle}>
               <Monitor size={14} />
-              This Machine
-              <ChoiceInfo hint="Run on the local host where Aura OS and your local tools are available." />
+              {isHosted ? "AURA Hosted" : "This Machine"}
+              <ChoiceInfo hint={isHosted ? "Run on AURA's hosted server, not on your phone." : "Run on the local host where Aura OS and your local tools are available."} />
             </span>
           </button>
         ) : null}

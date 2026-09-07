@@ -128,7 +128,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 size="sm"
                 iconOnly
                 icon={<Plus size={20} />}
-                aria-label="Create Remote Agent"
+                aria-label="Create Agent"
                 onClick={() => navigate("/agents?create=1")}
               />
             ) : null}

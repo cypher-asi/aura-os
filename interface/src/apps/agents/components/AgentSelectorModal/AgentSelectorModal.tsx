@@ -42,14 +42,13 @@ export function AgentSelectorModal({
   );
 
   // The picker hides agents that are already attached to the project so
-  // every fleet row in the list is a real, additive choice. Local
-  // agents need a desktop bridge to run, so they're dropped whenever
-  // we're remote-only (web/mobile) or on a mobile layout — they're not
-  // addable without a local launcher present.
+  // every fleet row is additive. Runtime capability, not screen size,
+  // determines whether local agents can run: a hosted server can run them
+  // for a phone without any desktop bridge.
   const visibleAgents = useMemo(() => {
-    const pool = filterRuntimeVisibleAgents(agents, remoteOnly || isMobileLayout);
+    const pool = filterRuntimeVisibleAgents(agents, remoteOnly);
     return pool.filter((agent) => !assignedAgentIds.has(agent.agent_id));
-  }, [agents, assignedAgentIds, isMobileLayout, remoteOnly]);
+  }, [agents, assignedAgentIds, remoteOnly]);
 
   const isBusy = Boolean(creating) || isTransitioning;
   const [query, setQuery] = useState("");
