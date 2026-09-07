@@ -20,6 +20,7 @@ import { useRemoteAgentState } from "../../../hooks/use-remote-agent-state";
 import { useCardTilt } from "./use-card-tilt";
 import { ProfileCard3D, type ProfileSectionLink } from "./ProfileCard3D";
 import { ProfileSpecCard } from "./ProfileSpecCard";
+import { ProfileChannelBar } from "./ProfileChannelBar";
 import { isWebGLAvailable } from "./profile-card-scene";
 import {
   formatAdapterLabel,
@@ -28,7 +29,7 @@ import {
 } from "./agent-info-utils";
 import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
-import { TelegramConnect } from "../components/TelegramConnect";
+import { TelegramConnectView, useTelegramLink } from "../components/TelegramConnect";
 import styles from "./AgentInfoPanel.module.css";
 
 export interface ProfileTabProps {
@@ -312,6 +313,20 @@ export function ProfileTab(props: ProfileTabProps) {
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
   const [connectorCount, setConnectorCount] = useState(0);
   const webglOk = useMemo(() => isWebGLAvailable(), []);
+  // One Telegram link controller shared by the channel-bar Telegram icon and
+  // the pop-over panel below it, so clicking the icon drives the connect flow
+  // and the QR/status renders in the dismissible pop-over.
+  const telegram = useTelegramLink({ agent });
+  const [telegramOpen, setTelegramOpen] = useState(false);
+
+  const handleTelegramClick = () => {
+    setTelegramOpen(true);
+    // Mirror the old Connect button: kick off a fresh link unless already
+    // connected (where the pop-over just shows the connected/disconnect state).
+    if (!telegram.isConnected) {
+      void telegram.startLink();
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -370,12 +385,25 @@ export function ProfileTab(props: ProfileTabProps) {
       {webglOk ? (
         <>
           <ProfileCard3D agent={agent} isOwnAgent={props.isOwnAgent} />
+          {telegram.isRemote && (
+            <ProfileChannelBar
+              onTelegramClick={handleTelegramClick}
+              telegramDisabled={telegram.linking}
+              telegramConnected={telegram.isConnected}
+            />
+          )}
+          {telegram.isRemote && telegramOpen && (
+            <TelegramConnectView
+              controller={telegram}
+              compact
+              onClose={() => setTelegramOpen(false)}
+            />
+          )}
           <ProfileSpecCard agent={agent} sections={sections} />
         </>
       ) : (
         <ProfileCard agent={agent} isOwnAgent={props.isOwnAgent} />
       )}
-      <TelegramConnect agent={agent} compact />
       {props.isMobileStandalone && <MobileRemoteRuntimeSection agent={agent} />}
       {props.isMobileStandalone && (
         <MobileSkillsSection

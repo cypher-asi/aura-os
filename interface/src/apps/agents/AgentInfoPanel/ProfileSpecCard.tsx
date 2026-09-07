@@ -5,7 +5,6 @@ import { useRemoteAgentState } from "../../../hooks/use-remote-agent-state";
 import { useEnvironmentInfo } from "../../../hooks/use-environment-info";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CopyButton } from "../../../components/CopyButton/CopyButton";
-import { BRAND_ICONS } from "./profile-card-texture";
 import type { ProfileSectionLink } from "./ProfileCard3D";
 import styles from "./AgentInfoPanel.module.css";
 
@@ -114,20 +113,6 @@ export function ProfileSpecCard({ agent, sections }: ProfileSpecCardProps) {
               ) : null}
             </span>
           </div>
-        ))}
-      </div>
-
-      <div className={styles.specChannels} aria-label="Messaging channels">
-        {BRAND_ICONS.map((icon) => (
-          <svg
-            key={icon.name}
-            className={styles.specChannelIcon}
-            viewBox={`0 0 ${icon.size ?? 24} ${icon.size ?? 24}`}
-            role="img"
-            aria-label={icon.name}
-          >
-            <path d={icon.path} fill="currentColor" />
-          </svg>
         ))}
       </div>
 
