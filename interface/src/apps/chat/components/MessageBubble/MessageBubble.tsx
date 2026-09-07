@@ -1,4 +1,6 @@
-import { Suspense, lazy, memo, useCallback, useMemo, useRef } from "react";
+import { Suspense, lazy, memo, useCallback, useMemo, useRef, type ReactNode } from "react";
+import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
+import { mobileErrorSummary } from "./mobile-error-summary";
 import { CornerDownLeft, FileText } from "lucide-react";
 import type {
   DisplayContentBlock,
@@ -131,6 +133,17 @@ function FileAttachmentBlock({ text }: { text: string }) {
   );
 }
 
+function ErrorDiagnostics({ compact, message, children }: { compact: boolean; message?: string; children: ReactNode }) {
+  if (!compact) return <>{children}</>;
+  return (
+    <details className={styles.errorDiagnostics}>
+      <summary>Technical details</summary>
+      {message ? <pre>{message}</pre> : null}
+      {children}
+    </details>
+  );
+}
+
 export const MessageBubble = memo(function MessageBubble({
   message,
   isStreaming = false,
@@ -141,6 +154,7 @@ export const MessageBubble = memo(function MessageBubble({
   errorAgentInfo,
   onRetry,
 }: Props) {
+  const { isMobileLayout } = useAuraCapabilities();
   const openBuyCredits = useUIModalStore((state) => state.openBuyCredits);
   const { openGallery } = useGallery();
   // Session-wide list published by `ChatMessageList`. When present we
@@ -324,7 +338,7 @@ export const MessageBubble = memo(function MessageBubble({
         {message.errorMessage && (
           <div className={styles.errorMessageLine}>
             <span className={styles.errorMessageText}>
-              {message.errorMessage}
+              {isMobileLayout ? mobileErrorSummary(message.errorMessage, message.displayVariant) : message.errorMessage}
             </span>
             <CopyButton
               getText={copyErrorText}
@@ -334,6 +348,8 @@ export const MessageBubble = memo(function MessageBubble({
             />
           </div>
         )}
+        {(message.errorMessage || errorAgentInfo) && (
+          <ErrorDiagnostics compact={isMobileLayout} message={message.errorMessage}>
         {errorAgentInfo && (
           <div className={styles.errorAgentMeta}>
             <span className={styles.errorAgentMetaItem}>
@@ -357,6 +373,8 @@ export const MessageBubble = memo(function MessageBubble({
               </span>
             )}
           </div>
+        )}
+          </ErrorDiagnostics>
         )}
         <div className={styles.errorMetaRow}>
           {onRetry && !isInsufficientCreditsError && (

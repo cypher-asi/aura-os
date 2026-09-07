@@ -10,6 +10,11 @@ import {
 } from "../../../../components/Gallery";
 
 const mockOpenGallery = vi.fn();
+const mobileCapabilities = vi.hoisted(() => ({ isMobileLayout: false }));
+vi.mock("../../../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => mobileCapabilities,
+}));
+afterEach(() => { mobileCapabilities.isMobileLayout = false; });
 
 vi.mock("../../../../components/Gallery/use-gallery", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -213,6 +218,29 @@ describe("MessageBubble", () => {
 
     expect(screen.getByText("connection lost")).toBeInTheDocument();
     expect(screen.queryByText("Agent")).not.toBeInTheDocument();
+  });
+
+  it("keeps mobile diagnostics collapsed while preserving retry and support actions", () => {
+    mobileCapabilities.isMobileLayout = true;
+    const onRetry = vi.fn();
+    const raw = 'API error 424: {"code":"provider_account_unavailable"}';
+    render(<MessageBubble
+      message={{ id: "mobile-error", role: "assistant", content: "", errorMessage: raw, supportId: "test-support" }}
+      errorAgentInfo={{ name: "CEO", machineType: "local", clientDevice: "Mobile", agentMachine: "private-host", ip: "10.0.0.1" }}
+      onRetry={onRetry}
+    />);
+    expect(screen.getByText(/This model is temporarily unavailable/)).toBeVisible();
+    const details = screen.getByText("Technical details").closest("details");
+    expect(details).not.toHaveAttribute("open");
+    expect(screen.getByText(raw)).not.toBeVisible();
+    expect(screen.getByText("private-host")).not.toBeVisible();
+    fireEvent.click(screen.getByText("Technical details"));
+    expect(details).toHaveAttribute("open");
+    expect(screen.getByText(raw)).toBeVisible();
+    expect(screen.getByText("test-support")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Copy error message" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it("renders a Retry button on error bubbles and fires onRetry when clicked", () => {
