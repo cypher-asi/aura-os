@@ -157,6 +157,34 @@ contain files from more than one same-named project.
 Do not enable `AURA_REMOTE_ONLY=1` for this mode. Remote-only deployments reject
 local-agent chat/dev-loop routes before they reach the hosted local harness.
 
+## Harness connection capacity
+
+A `harness_capacity_exhausted` response means the upstream rejected a new
+connection. Correlate the API error timestamp with the harness's
+`WS connection cap reached` log before attributing an arbitrary upstream 503
+to capacity. An idle agent can still own an open connection; the UI's agent
+status does not measure shared harness slot usage.
+
+The API expires unused warm chat connections after 60 seconds, checked every
+15 seconds, and evicts the oldest eligible idle entries to target 32 cached
+connections. Active, queued, and borrowed sessions are protected and can
+exceed that cache target. Completed replay streams release their command
+handles immediately while keeping their replay history. The harness also
+releases an automaton stream's slot when its client disconnects, without
+waiting for the automaton to produce another event.
+
+Roll out the API retention fix to every API process sharing a hosted harness,
+and roll out the disconnect fix to the harness service. The two changes do
+not require a protocol migration. Verify that idle-eviction logs appear,
+active turns continue across the sweep, completed turns remain replayable,
+and a new chat can connect after old chats become idle. A successful
+WebSocket upgrade alone verifies slot admission, not a complete model turn.
+The API's `/api/admin/health` `active_chat_sessions` value counts cached
+sessions, including idle ones; it is not a measurement of occupied harness
+WebSocket slots. Do not rely on changing the API's `AURA_HARNESS_WS_SLOTS`
+value to change a separately deployed harness's actual limit; verify support
+in the harness build first.
+
 ## Prerequisites
 
 1. **Vendored ZUI** — Aura now vendors `@cypher-asi/zui` under `vendor/zui`, and `interface/package.json` resolves it from inside this repo. Render builds no longer need a sibling checkout or a separately published ZUI package.

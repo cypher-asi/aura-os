@@ -464,7 +464,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         session_service: domain.session_service,
         local_harness: domain.local_harness,
         swarm_harness: domain.swarm_harness,
-        chat_sessions: Arc::new(dashmap::DashMap::new()),
+        chat_sessions: crate::state::chat_sessions::new_chat_session_registry(),
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         terminal_manager: Arc::new(TerminalManager::new()),
         browser_manager: build_browser_manager(browser_settings_root.clone()),
