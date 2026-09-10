@@ -113,8 +113,9 @@ pub struct LiveStream {
     /// in-flight turn in addition to firing the cancellation token.
     /// `None` for the owned-session [`LiveStreamRegistry::register`]
     /// path, where dropping the session is sufficient to tear the run
-    /// down.
-    cancel_tx: Option<HarnessCommandSender>,
+    /// down. Cleared on termination so retained replay data does not keep
+    /// the transport alive or allow cancellation of a later reused turn.
+    cancel_tx: Mutex<Option<HarnessCommandSender>>,
     started_at_ms: i64,
     terminated_at: Mutex<Option<Instant>>,
     cancel: CancellationToken,
@@ -141,6 +142,12 @@ impl LiveStream {
         // Dropping the session closes the upstream harness WS now that
         // we have all the frames buffered for replay.
         *self.session.lock().expect("live stream session poisoned") = None;
+        // Replay retention must not retain a live transport, or let an old
+        // stream cancel a later turn on the reused chat session.
+        self.cancel_tx
+            .lock()
+            .expect("live stream cancel_tx poisoned")
+            .take();
     }
 
     /// Request cancellation of the underlying run. The forwarder emits a
@@ -151,8 +158,11 @@ impl LiveStream {
     /// so the upstream harness aborts its in-flight turn — dropping the
     /// (unowned) session is not enough in that case.
     pub fn cancel(&self) {
-        self.cancel.cancel();
-        if let Some(tx) = &self.cancel_tx {
+        let guard = self
+            .cancel_tx
+            .lock()
+            .expect("live stream cancel_tx poisoned");
+        if let Some(tx) = guard.as_ref() {
             if let Err(err) = tx.try_send(HarnessInbound::Cancel) {
                 debug!(
                     target: "aura::streams",
@@ -162,6 +172,9 @@ impl LiveStream {
                 );
             }
         }
+        drop(guard);
+        // Forward the command before waking the task that clears cancel_tx.
+        self.cancel.cancel();
     }
 
     /// Send a follow-up user message into the underlying run. Only
@@ -272,7 +285,7 @@ impl LiveStreamRegistry {
             scope,
             events,
             session: Mutex::new(Some(session)),
-            cancel_tx: None,
+            cancel_tx: Mutex::new(None),
             started_at_ms: chrono::Utc::now().timestamp_millis(),
             terminated_at: Mutex::new(None),
             cancel: cancel.clone(),
@@ -313,7 +326,7 @@ impl LiveStreamRegistry {
             scope,
             events,
             session: Mutex::new(None),
-            cancel_tx,
+            cancel_tx: Mutex::new(cancel_tx),
             started_at_ms: chrono::Utc::now().timestamp_millis(),
             terminated_at: Mutex::new(None),
             cancel: cancel.clone(),
@@ -633,6 +646,76 @@ mod tests {
         assert_eq!(summary.kind, StreamKind::ChatTurn);
         assert!(summary.terminated);
         assert_eq!(summary.latest_seq, 2);
+    }
+
+    #[tokio::test]
+    async fn terminated_replay_releases_command_sender() {
+        let registry = Arc::new(LiveStreamRegistry {
+            inner: DashMap::new(),
+            stream_capacity: 64,
+            ttl: Duration::from_secs(300),
+        });
+        let (events_tx, _) = broadcast::channel::<HarnessOutbound>(16);
+        let (commands_tx, mut commands_rx) = mpsc::channel(4);
+        let stream = registry.register_receiver(
+            StreamKind::ChatTurn,
+            StreamScope::default(),
+            events_tx.subscribe(),
+            Some(commands_tx),
+        );
+        events_tx
+            .send(HarnessOutbound::Error(ErrorMsg {
+                code: "finished".into(),
+                message: "terminal".into(),
+                recoverable: false,
+                support_id: None,
+            }))
+            .unwrap();
+
+        assert!(
+            tokio::time::timeout(Duration::from_secs(1), commands_rx.recv())
+                .await
+                .expect("completed replay must release the transport sender")
+                .is_none()
+        );
+        assert!(stream.is_terminated());
+        let retained = registry
+            .get(&stream.attach_id)
+            .expect("replay is still retained");
+        let crate::event_log::ReplayResult::Replay { events, .. } = retained.events.replay_since(0)
+        else {
+            panic!("terminal event must remain replayable");
+        };
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].value["code"], "finished");
+    }
+
+    #[tokio::test]
+    async fn cancelling_terminated_replay_does_not_cancel_reused_session() {
+        let registry = Arc::new(LiveStreamRegistry {
+            inner: DashMap::new(),
+            stream_capacity: 64,
+            ttl: Duration::from_secs(300),
+        });
+        let (events_tx, _) = broadcast::channel::<HarnessOutbound>(16);
+        let (commands_tx, mut commands_rx) = mpsc::channel(4);
+        let stream = registry.register_receiver(
+            StreamKind::ChatTurn,
+            StreamScope::default(),
+            events_tx.subscribe(),
+            Some(commands_tx.clone()),
+        );
+        stream.mark_terminated();
+        stream.cancel();
+        assert!(
+            matches!(
+                commands_rx.try_recv(),
+                Err(mpsc::error::TryRecvError::Empty)
+            ),
+            "a stale replay must not send Cancel into a later turn"
+        );
+        drop(commands_tx);
+        assert!(commands_rx.recv().await.is_none());
     }
 
     #[tokio::test]

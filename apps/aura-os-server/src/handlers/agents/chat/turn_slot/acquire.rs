@@ -73,17 +73,18 @@ pub(crate) async fn acquire_turn_slot_with_cap(
         counter.fetch_sub(1, Ordering::AcqRel);
         return Err(TurnSlotQueueFull);
     }
+    // Own the counter reservation before awaiting the mutex: cancellation
+    // while queued must release it just like a completed turn does.
+    let mut guard = TurnSlotGuard {
+        inner: None,
+        counter,
+    };
     let (inner, queued) = match Arc::clone(&slot).try_lock_owned() {
         Ok(g) => (g, false),
         Err(_) => (slot.lock_owned().await, true),
     };
-    Ok(TurnSlotAcquired {
-        guard: TurnSlotGuard {
-            inner: Some(inner),
-            counter,
-        },
-        queued,
-    })
+    guard.inner = Some(inner);
+    Ok(TurnSlotAcquired { guard, queued })
 }
 
 #[cfg(test)]
@@ -149,6 +150,33 @@ mod tests {
         assert!(
             second.queued,
             "queued must be true when the slot was already held at entry"
+        );
+    }
+
+    #[tokio::test]
+    async fn cancelling_queued_acquire_releases_pending_reservation() {
+        let slot = Arc::new(Mutex::new(()));
+        let counter = Arc::new(AtomicUsize::new(0));
+        let active = acquire_turn_slot(Arc::clone(&slot), Arc::clone(&counter))
+            .await
+            .unwrap();
+        let mut queued = Box::pin(acquire_turn_slot(Arc::clone(&slot), Arc::clone(&counter)));
+        assert!(matches!(
+            futures_util::poll!(&mut queued),
+            std::task::Poll::Pending
+        ));
+        assert_eq!(counter.load(std::sync::atomic::Ordering::Acquire), 2);
+        drop(queued);
+        assert_eq!(
+            counter.load(std::sync::atomic::Ordering::Acquire),
+            1,
+            "cancelled waiter must release its queue reservation"
+        );
+        drop(active.guard);
+        assert_eq!(
+            counter.load(std::sync::atomic::Ordering::Acquire),
+            0,
+            "finished session must be eligible for idle eviction"
         );
     }
 

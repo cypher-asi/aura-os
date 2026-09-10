@@ -205,6 +205,7 @@ mod tests {
         registry.insert(
             ChatSessionKey::new(session_key, None),
             ChatSession {
+                last_used_at: std::time::Instant::now(),
                 session_id: format!("session-{session_key}"),
                 commands_tx,
                 events_tx,

@@ -42,6 +42,7 @@ use crate::sync_state::{TaskSyncCheckpoint, TaskSyncState};
 
 mod auth_extractors;
 mod caches;
+pub(crate) mod chat_sessions;
 
 #[allow(unused_imports)]
 pub(crate) use auth_extractors::AuthGuestJwt;
@@ -228,6 +229,8 @@ impl ChatSessionKey {
 
 /// Reusable chat session for agent / instance chat endpoints.
 pub struct ChatSession {
+    /// Last borrow or observation of active work, used to expire idle sockets.
+    pub last_used_at: Instant,
     #[allow(dead_code)]
     pub session_id: String,
     pub commands_tx: HarnessCommandSender,

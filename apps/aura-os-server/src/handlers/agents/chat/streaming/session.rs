@@ -124,6 +124,9 @@ pub(super) async fn get_or_create_delegated_chat_session(
         }
     }
 
+    // Make room before opening another socket; only unborrowed, idle
+    // entries are eligible, so in-flight and queued turns remain intact.
+    crate::state::chat_sessions::make_room_for_chat_session(&state.chat_sessions);
     let harness = state.harness_for(harness_mode);
     let session_agent_id = session_config.agent_id.clone();
     let session_template_agent_id = session_config.template_agent_id.clone();
@@ -279,7 +282,7 @@ async fn try_reuse_session(
     // pinned to the previous level.
     let composite_key =
         ChatSessionKey::with_effort(key, requested_model.clone(), requested_effort.clone());
-    let entry = state.chat_sessions.get(&composite_key)?;
+    let mut entry = state.chat_sessions.get_mut(&composite_key)?;
     if !entry.is_alive() {
         // Drop the `Ref` BEFORE removing the same key: DashMap shard
         // locks are non-reentrant, and remove() would deadlock if a
@@ -288,6 +291,7 @@ async fn try_reuse_session(
         state.chat_sessions.remove(&composite_key);
         return None;
     }
+    entry.last_used_at = std::time::Instant::now();
     let handles = ReusedSessionHandles {
         rx: entry.events_tx.subscribe(),
         commands_tx: entry.commands_tx.clone(),
@@ -340,6 +344,7 @@ async fn insert_delegated_chat_session(
         requested_model.clone(),
         requested_effort,
         ChatSession {
+            last_used_at: std::time::Instant::now(),
             session_id: started.session.session_id,
             commands_tx: started.session.commands_tx,
             events_tx: started.session.events_tx,
@@ -411,6 +416,7 @@ mod tests {
         let (commands_tx, _commands_rx) = tokio::sync::mpsc::channel(1);
         let (events_tx, _events_rx) = broadcast::channel(1);
         ChatSession {
+            last_used_at: std::time::Instant::now(),
             session_id: id.to_string(),
             commands_tx,
             events_tx,
