@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-09-10",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.830.1",
+    "title": "Chat session lifecycle gets a memory leak fix",
+    "intro": "A focused server-side reliability change for chat: idle harness connections and orphaned replay handles are now actively reclaimed, and cancelled turn-slot waiters properly release their reservations. Desktop artifacts for Linux, macOS, and Windows shipped alongside on the nightly channel.",
+    "entryCount": 1,
+    "highlights": [
+      "Idle chat harness connections are now reclaimed",
+      "Cancelled turn-slot waiters release their queue slots",
+      "Nightly desktop builds published for Linux, macOS, and Windows"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-09-10T16:40:03.656Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.830.1",
+    "path": "history/2026-09-10.json"
+  },
+  {
     "date": "2026-09-03",
     "channel": "nightly",
     "version": "0.1.0-nightly.829.1",
