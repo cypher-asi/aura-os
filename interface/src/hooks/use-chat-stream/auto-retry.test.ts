@@ -171,7 +171,7 @@ describe("isStreamDroppedError — Phase 2 harness-WS error codes", () => {
       message: "harness websocket closed",
     });
     expect(normalized.message).toMatch(/connection to the agent dropped/i);
-    expect(normalized.message).toMatch(/recovered from history/i);
+    expect(normalized.message).toMatch(/Refresh to check saved progress/i);
   });
 });
 

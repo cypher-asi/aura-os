@@ -17,6 +17,7 @@ export {
 } from "./tool";
 export {
   handleEventSaved,
+  resetStreamForReplay,
   handleAssistantTurnBoundary,
   handleStreamError,
   finalizeStream,

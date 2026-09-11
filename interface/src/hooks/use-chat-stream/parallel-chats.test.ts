@@ -54,6 +54,7 @@ vi.mock("../../stores/project-action-store", () => ({
 vi.mock("../../api/client", () => ({
   api: {
     sendEventStream: vi.fn().mockResolvedValue(undefined),
+    streams: { listActiveStreams: vi.fn().mockResolvedValue({ streams: [] }) },
     getAgentInstance: vi.fn().mockResolvedValue({}),
     cancelInstanceTurn: vi.fn().mockResolvedValue(undefined),
   },
@@ -67,6 +68,7 @@ vi.mock("../../api/streams", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/streams")>();
   return {
     ...actual,
+    attachToStream: vi.fn().mockResolvedValue(undefined),
     generateImageStream: vi.fn().mockResolvedValue(undefined),
     generate3dStream: vi.fn().mockResolvedValue(undefined),
     generateVideoStream: vi.fn().mockResolvedValue(undefined),
@@ -74,6 +76,7 @@ vi.mock("../../api/streams", async (importOriginal) => {
 });
 
 import { api } from "../../api/client";
+import { attachToStream } from "../../api/streams";
 
 interface CapturedSendCall {
   projectId: string;
@@ -136,6 +139,47 @@ function setupSendStreamCapture(): {
 }
 
 describe("useChatStream parallel chats", () => {
+  it("full replay replaces current tool boundaries and preserves earlier history", async () => {
+    vi.useFakeTimers();
+    const active = { attach_id: "same-turn", kind: "chat_turn" as const, scope: { session_id: "assigned-session", project_id: "p-1", agent_instance_id: "ai-A" }, latest_seq: 8, terminated: false, started_at_ms: 1 };
+    vi.mocked(api.streams.listActiveStreams).mockResolvedValue({ streams: [active] });
+    const boundary = (handler: StreamEventHandler) => {
+      handler.onEvent({ type: EventType.TextDelta, content: { text: "Read the file once" } } as AuraEvent);
+      handler.onEvent({ type: EventType.ToolCallSnapshot, content: { id: "read-1", name: "read_file", input: { path: "file.txt" } } } as AuraEvent);
+      handler.onEvent({ type: EventType.ToolResult, content: { id: "read-1", name: "read_file", result: "file contents", is_error: false } } as AuraEvent);
+      handler.onEvent({ type: EventType.AssistantMessageEnd, content: { stop_reason: "tool_use" } } as AuraEvent);
+    };
+    vi.mocked(api.sendEventStream).mockImplementation(async (_p, _a, _c, _action, _model, _attachments, handler) => {
+      handler?.onEvent({ type: EventType.SessionReady, content: { session_id: "assigned-session" } } as AuraEvent);
+      boundary(handler!);
+      handler?.onError?.(Object.assign(new Error("connection lost"), { code: "harness_ws_closed" }));
+    });
+    vi.mocked(attachToStream).mockImplementation(async (_id, seq, handler) => {
+      expect(seq).toBe(0);
+      boundary(handler);
+      handler.onEvent({ type: EventType.TextDelta, content: { text: "Finished after recovery" } } as AuraEvent);
+      handler.onEvent({ type: EventType.AssistantMessageEnd, content: { stop_reason: "end_turn" } } as AuraEvent);
+      handler.onEvent({ type: EventType.Done, content: {} } as AuraEvent);
+    });
+    const { result } = renderHook(() => useChatStream({ projectId: "p-1", agentInstanceId: "ai-A" }));
+    act(() => result.current.resetEvents([
+      { id: "old-user", role: "user", content: "Earlier question" },
+      { id: "stream-old-history", role: "assistant", content: "Earlier answer" },
+    ]));
+    await act(async () => { await result.current.sendMessage("Read and summarize"); });
+    const key = "p-1:ai-A:assigned-session";
+    expect(useStreamStore.getState().entries[key].events.filter(e => e.content === "Read the file once")).toHaveLength(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    const events = useStreamStore.getState().entries[key].events;
+    expect(api.sendEventStream).toHaveBeenCalledTimes(1);
+    expect(attachToStream).toHaveBeenCalledTimes(1);
+    expect(events.filter(e => e.content === "Read the file once")).toHaveLength(1);
+    expect(events.flatMap(e => e.toolCalls ?? []).filter(t => t.id === "read-1")).toHaveLength(1);
+    expect(events.some(e => e.id === "stream-old-history")).toBe(true);
+    expect(events.some(e => e.content === "Finished after recovery")).toBe(true);
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     streamMetaMap.clear();
     useStreamStore.setState({ entries: {} });
@@ -149,6 +193,8 @@ describe("useChatStream parallel chats", () => {
     _resetAllPartitionSendControl();
     vi.clearAllMocks();
     vi.mocked(api.sendEventStream).mockReset().mockResolvedValue(undefined);
+    vi.mocked(api.streams.listActiveStreams).mockReset().mockResolvedValue({ streams: [] });
+    vi.mocked(attachToStream).mockReset().mockResolvedValue(undefined);
   });
 
   it("Symptom 1: B's send is not blocked by A's in-flight stream after a panel swap", async () => {
@@ -317,7 +363,7 @@ describe("useChatStream parallel chats", () => {
     for (const c of capture.calls) c.resolve();
   });
 
-  it("Auto-retry replays on the originating partition even after the panel swaps", async () => {
+  it("Recovery never resubmits the prompt after the panel swaps", async () => {
     vi.useFakeTimers();
     const capture = setupSendStreamCapture();
 
@@ -362,13 +408,12 @@ describe("useChatStream parallel chats", () => {
       await vi.advanceTimersByTimeAsync(1500);
     });
 
-    // The retry POST must target the ORIGINATING partition (ai-A),
-    // not the panel's currently-mounted one (ai-B).
-    expect(capture.calls.length).toBeGreaterThanOrEqual(2);
-    const retryCall = capture.calls[1];
-    expect(retryCall.projectId).toBe("p-1");
-    expect(retryCall.agentInstanceId).toBe("ai-A");
-    expect(retryCall.content).toBe("retry me");
+    // Discovery cannot prove this turn is safe to replay. Neither partition
+    // may receive a second POST, and the error belongs to the original chat.
+    expect(capture.calls).toHaveLength(1);
+    expect(useStreamStore.getState().entries["p-1:ai-A:fresh"].events.some(
+      (event) => event.displayVariant === "streamDropped",
+    )).toBe(true);
 
     // Cleanup outstanding promises.
     for (const c of capture.calls) c.resolve();
