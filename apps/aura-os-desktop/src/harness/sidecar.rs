@@ -17,7 +17,10 @@ pub(crate) fn preferred_local_harness_port() -> u16 {
     aura_os_core::Channel::current().preferred_sidecar_port()
 }
 
-pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
+pub(crate) fn maybe_spawn_local_harness_sidecar(
+    data_dir: &Path,
+    server_url: &str,
+) -> Option<Child> {
     let explicit_harness_url =
         env_string("LOCAL_HARNESS_URL").map(|value| value.trim_end_matches('/').to_string());
     let inherited_managed_harness_env = inherited_managed_harness_binary_env(data_dir);
@@ -75,26 +78,18 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
     }
 
     let mut command = Command::new(&harness_binary);
-    command
-        .env("AURA_LISTEN_ADDR", &listen_addr)
-        .env("AURA_DATA_DIR", &harness_data_dir);
-    configure_background_child(&mut command, &harness_data_dir.join("sidecar.log"));
-
-    if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
-        command.env("ORBIT_URL", orbit_url);
-    }
+    configure_sidecar_command(&mut command, &listen_addr, &harness_data_dir, server_url);
 
     let child = spawn_and_wait_for_health(command, &harness_url, &harness_binary).or_else(|| {
         let retry_binary = restage_bundled_harness_binary(&harness_binary, data_dir)?;
         std::env::set_var("AURA_HARNESS_BIN", &retry_binary);
         let mut retry_command = Command::new(&retry_binary);
-        retry_command
-            .env("AURA_LISTEN_ADDR", &listen_addr)
-            .env("AURA_DATA_DIR", &harness_data_dir);
-        configure_background_child(&mut retry_command, &harness_data_dir.join("sidecar.log"));
-        if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
-            retry_command.env("ORBIT_URL", orbit_url);
-        }
+        configure_sidecar_command(
+            &mut retry_command,
+            &listen_addr,
+            &harness_data_dir,
+            server_url,
+        );
         warn!(
             binary = %retry_binary.display(),
             url = %harness_url,
@@ -115,6 +110,24 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
         );
     }
     child
+}
+
+fn configure_sidecar_command(
+    command: &mut Command,
+    listen_addr: &str,
+    harness_data_dir: &Path,
+    server_url: &str,
+) {
+    command
+        .env("AURA_LISTEN_ADDR", listen_addr)
+        .env("AURA_DATA_DIR", harness_data_dir);
+    // The managed child must call this desktop, even when inherited settings
+    // or its own .env file refer to a different channel or an old port.
+    command.env("AURA_OS_SERVER_URL", server_url);
+    configure_background_child(command, &harness_data_dir.join("sidecar.log"));
+    if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
+        command.env("ORBIT_URL", orbit_url);
+    }
 }
 
 fn external_harness_url_configured(
@@ -410,6 +423,93 @@ mod tests {
     };
     use std::path::Path;
     use std::time::Duration;
+
+    // Run a real child process: changing the desktop environment after spawn
+    // cannot repair the callback address the child has already inherited.
+    #[test]
+    fn managed_child_uses_bound_api_for_project_and_specs() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::process::{Command, Stdio};
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let deadline = std::time::Instant::now() + Duration::from_secs(10);
+            let mut requests = Vec::new();
+            while requests.len() < 2 && std::time::Instant::now() < deadline {
+                match listener.accept() {
+                    Ok((mut stream, _)) => {
+                        stream
+                            .set_read_timeout(Some(Duration::from_secs(2)))
+                            .unwrap();
+                        let mut buffer = [0; 2048];
+                        let n = stream.read(&mut buffer).unwrap();
+                        requests.push(String::from_utf8_lossy(&buffer[..n]).to_string());
+                        stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}").unwrap();
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(error) => panic!("{error}"),
+                }
+            }
+            requests
+        });
+        let dir = tempfile::tempdir().unwrap();
+        let mut command = Command::new(std::env::current_exe().unwrap());
+        command
+            .args([
+                "--exact",
+                "harness::sidecar::tests::project_api_child_probe",
+                "--nocapture",
+            ])
+            .env("AURA_TEST_PROJECT_API_CHILD", "1")
+            .env("AURA_OS_SERVER_URL", "http://127.0.0.1:1");
+        super::configure_sidecar_command(&mut command, "127.0.0.1:0", dir.path(), &base);
+        let output = command
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .unwrap();
+        let requests = server.join().unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(requests.len(), 2);
+        assert!(requests[0].starts_with("GET /api/projects/local-project HTTP/1.1"));
+        assert!(requests[1].starts_with("GET /api/projects/local-project/specs HTTP/1.1"));
+    }
+
+    #[test]
+    fn project_api_child_probe() {
+        if std::env::var("AURA_TEST_PROJECT_API_CHILD").as_deref() != Ok("1") {
+            return;
+        }
+        use std::io::{Read, Write};
+        let base = std::env::var("AURA_OS_SERVER_URL").unwrap();
+        let address = base.strip_prefix("http://").unwrap();
+        for path in [
+            "/api/projects/local-project",
+            "/api/projects/local-project/specs",
+        ] {
+            let mut stream = std::net::TcpStream::connect(address).unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            write!(
+                stream,
+                "GET {path} HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n"
+            )
+            .unwrap();
+            let mut response = String::new();
+            stream.read_to_string(&mut response).unwrap();
+            assert!(response.starts_with("HTTP/1.1 200 OK"));
+        }
+    }
 
     #[test]
     fn wait_for_harness_health_returns_true_when_probe_passes() {

@@ -37,7 +37,7 @@ use crate::frontend::routing::{
 };
 use crate::harness::external::enforce_external_harness_or_exit;
 use crate::harness::sidecar::maybe_spawn_local_harness_sidecar;
-use crate::init::cli::{maybe_handle_print_channel, parse_cli_args, DesktopCliArgs};
+use crate::init::cli::{maybe_handle_print_channel, parse_cli_args};
 use crate::init::crash::{install_native_crash_handler, install_panic_hook};
 use crate::init::env::apply_desktop_runtime_defaults;
 use crate::init::fatal_dialog::show_fatal_startup_failure;
@@ -53,13 +53,13 @@ use crate::ui::main_window::{create_main_webview, create_main_window};
 use crate::ui::menu::install_macos_app_menu;
 use crate::ui::runtime::{run_event_loop, spawn_fallback_show_timer, LoopContext, LoopState};
 
-/// Aggregated artefacts from the data-directory + harness phase of startup.
+/// Data-directory artefacts prepared before binding the embedded server.
 struct PreBindStartup {
     store_path: std::path::PathBuf,
     webview_data_dir: std::path::PathBuf,
     interface_dir: Option<std::path::PathBuf>,
     route_state: RouteState,
-    managed_local_harness: Option<std::process::Child>,
+    data_dir: std::path::PathBuf,
 }
 
 /// Aggregated artefacts produced once the embedded server is up and the
@@ -94,7 +94,7 @@ fn main() {
     let _single_instance = acquire_single_instance_or_exit();
 
     let cli = parse_cli_args();
-    let pre_bind = prepare_pre_bind(cli);
+    let pre_bind = prepare_pre_bind();
     let bootstrapped_auth = load_bootstrapped_auth_literals(&pre_bind.store_path);
     // Re-apply a previously chosen ffmpeg path (from the in-app "locate
     // ffmpeg" setup flow) to AURA_FFMPEG_BIN so demo recording keeps working
@@ -103,6 +103,16 @@ fn main() {
 
     let (std_listener, server_port, server_url) = bind_listener();
     self_heal_loopback_overrides(server_port);
+
+    // Child processes must receive the actual bound API address, including
+    // dev-channel and occupied-port fallback launches. Parent env repairs
+    // after spawning cannot update a running harness.
+    let managed_local_harness = if cli.external_harness {
+        enforce_external_harness_or_exit();
+        None
+    } else {
+        maybe_spawn_local_harness_sidecar(&pre_bind.data_dir, &server_url)
+    };
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
@@ -198,7 +208,7 @@ fn main() {
         main_webview,
         web_context,
         managed_frontend_dev_server: server.managed_frontend_dev_server,
-        managed_local_harness: pre_bind.managed_local_harness,
+        managed_local_harness,
         initial_frontend_base_url,
         initial_using_frontend_dev_server: server.frontend_target.using_frontend_dev_server,
         icon_data,
@@ -213,7 +223,7 @@ fn main() {
     run_event_loop(event_loop, state);
 }
 
-fn prepare_pre_bind(cli: DesktopCliArgs) -> PreBindStartup {
+fn prepare_pre_bind() -> PreBindStartup {
     let (store_path, webview_data_dir, interface_dir) = init_data_dirs();
     let data_dir = store_path
         .parent()
@@ -222,18 +232,12 @@ fn prepare_pre_bind(cli: DesktopCliArgs) -> PreBindStartup {
     let route_state = RouteState::load(&data_dir);
     install_panic_hook(&data_dir);
     install_native_crash_handler(&data_dir);
-    let managed_local_harness = if cli.external_harness {
-        enforce_external_harness_or_exit();
-        None
-    } else {
-        maybe_spawn_local_harness_sidecar(&data_dir)
-    };
     PreBindStartup {
         store_path,
         webview_data_dir,
         interface_dir,
         route_state,
-        managed_local_harness,
+        data_dir,
     }
 }
 
