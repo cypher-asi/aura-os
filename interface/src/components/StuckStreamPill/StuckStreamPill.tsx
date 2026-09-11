@@ -97,8 +97,8 @@ export function StuckStreamPill({
         <Button variant="ghost" size="sm" onClick={onStop}>
           Stop
         </Button>
-        <Button variant="ghost" size="sm" onClick={onRetry}>
-          Retry
+        <Button variant="ghost" size="sm" onClick={onRetry} title="Resend the original prompt from the start; this does not resume unfinished work.">
+          Restart turn
         </Button>
         {streamKey ? (
           <ReportBugButton

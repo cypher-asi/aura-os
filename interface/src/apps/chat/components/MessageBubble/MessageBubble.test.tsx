@@ -230,7 +230,7 @@ describe("MessageBubble", () => {
       />,
     );
 
-    const retry = screen.getByRole("button", { name: "Retry" });
+    const retry = screen.getByRole("button", { name: "Restart turn" });
     fireEvent.click(retry);
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
@@ -249,7 +249,7 @@ describe("MessageBubble", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restart turn" })).not.toBeInTheDocument();
     // The variant-specific action stays in place.
     expect(screen.getByRole("button", { name: "Buy credits" })).toBeInTheDocument();
   });
@@ -267,7 +267,7 @@ describe("MessageBubble", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restart turn" })).not.toBeInTheDocument();
   });
 
   it("preserves the partial streaming prefix in LLMOutput while routing the error to the action row", () => {

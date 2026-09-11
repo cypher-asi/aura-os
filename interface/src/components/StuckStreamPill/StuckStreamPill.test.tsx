@@ -58,7 +58,7 @@ describe("StuckStreamPill", () => {
     await user.click(screen.getByRole("button", { name: "Stop" }));
     expect(onStop).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(screen.getByRole("button", { name: "Restart turn" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole("button", { name: "Report" }));

@@ -165,7 +165,7 @@ describe("ChatStreamingIndicator", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Stop" }));
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(screen.getByRole("button", { name: "Restart turn" }));
     // Phase 5: the legacy generic "Report" button has been replaced
     // by an inline `ReportBugButton` ("Report bug") that opens
     // `NewFeedbackModal` itself; ChatStreamingIndicator no longer

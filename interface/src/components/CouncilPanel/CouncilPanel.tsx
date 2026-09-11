@@ -69,11 +69,11 @@ function isSecondOpinionEntry(entry: ToolCallEntry): boolean {
 function mechanismSubtitle(mechanism: string | undefined): string {
   switch (mechanism) {
     case "contrast":
-      return "slot 0 contrasts";
+      return "1st member compares answers";
     case "side_by_side":
-      return "slot 0 lays them side-by-side";
+      return "1st member presents the answers";
     default:
-      return "slot 0 synthesizes";
+      return "1st member combines the answers";
   }
 }
 
