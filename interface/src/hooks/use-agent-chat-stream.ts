@@ -28,6 +28,7 @@ import { useChatUIStore } from "../stores/chat-ui-store";
 import {
   useStreamCore,
   resetStreamBuffers,
+  resetStreamForReplay,
   handleThinkingDelta,
   handleTextDelta,
   handleToolCallStarted,
@@ -53,6 +54,7 @@ import { useSessionsListStore } from "../stores/sessions-list-store";
 import { useMessageQueueStore } from "../stores/message-queue-store";
 import {
   createSetters,
+  ensureEntry,
   FRESH_SESSION_PLACEHOLDER,
   getLastEventAt,
   getStreamEntry,
@@ -248,21 +250,10 @@ export function useAgentChatStream({
         clientMessageId,
       };
 
-      // Auto-retry bookkeeping. The standalone surface reuses the
-      // project-chat send-control map purely for the `(autoRetryCount,
-      // retryTimer, inAutoRetry)` triad here (it already borrows
-      // `reattaching` from the same map in `tryReattachActiveTurn`).
-      // `inAutoRetry` is a one-shot set by the retry timer below: it
-      // tells this re-entry to skip re-appending the user bubble (it's
-      // already on screen) and bypass the in-flight queue guard, and it
-      // preserves the retry budget. A genuine new user send instead
-      // resets the budget so each prompt gets a fresh set of retries.
+      // Each explicit user send starts a fresh recovery budget.
       const sendControl = getPartitionSendControl(core.key);
-      const isAutoRetry = sendControl.inAutoRetry;
       sendControl.inAutoRetry = false;
-      if (!isAutoRetry) {
-        sendControl.autoRetryCount = 0;
-      }
+      sendControl.autoRetryCount = 0;
 
       // Phase 3: mutable holder for the in-flight partition key so
       // mid-turn `SessionReady` (fresh-canvas placeholder → real
@@ -271,6 +262,8 @@ export function useAgentChatStream({
       // captured closure. The handler updates `partitionState.key`
       // after the migrate helpers have moved the underlying state.
       const partitionState = { key: core.key };
+      let turnSessionId = sessionIdRef.current;
+      const reattachTurn = tryReattachActiveTurnRef.current;
       const getPartitionKey = (): string => partitionState.key;
       const partitionSetters = createSetters(getPartitionKey);
       const partitionAbortRef: MutableRefObject<AbortController | null> = {
@@ -289,7 +282,7 @@ export function useAgentChatStream({
       // gone past `STUCK_THRESHOLD_MS` without a wire event, mark the
       // entry with `pendingDueToStuckStream` so a Phase 2 banner can
       // offer "Send anyway" — Phase 1 just preserves the message.
-      if (getIsStreaming(getPartitionKey()) && !isAutoRetry) {
+      if (getIsStreaming(getPartitionKey())) {
         const lastEventAt = getLastEventAt(getPartitionKey());
         const isStuck =
           lastEventAt != null && Date.now() - lastEventAt >= STUCK_THRESHOLD_MS;
@@ -315,13 +308,7 @@ export function useAgentChatStream({
         clientMessageId,
       );
 
-      // On an auto-retry re-entry the user's message is already in
-      // `events` from the original send, so re-appending would
-      // duplicate the bubble. The harness rehydrates the turn from
-      // session history by `aura_session_id`.
-      if (!isAutoRetry) {
-        partitionSetters.setEvents((prev) => [...prev, userMsg]);
-      }
+      partitionSetters.setEvents((prev) => [...prev, userMsg]);
       partitionSetters.setIsStreaming(true);
       resetStreamBuffers(refs, partitionSetters);
 
@@ -340,6 +327,7 @@ export function useAgentChatStream({
       // we are mid-stream.
       const migrateToSession = (newSessionId: string): void => {
         if (!agentId) return;
+        turnSessionId = newSessionId;
         const newKey = keyForAgentSession(agentId, newSessionId);
         if (newKey === partitionState.key) return;
         // The shared orchestrator handles every per-streamKey map
@@ -368,19 +356,12 @@ export function useAgentChatStream({
         sessionId: sessionIdRef.current ?? undefined,
       };
 
-      // Standalone-agent mirror of `useChatStream`'s `tryAutoRetry`.
-      // When a turn closes with a transient drop (`stream_stalled`,
-      // `turn_timeout`, harness-WS errors, SSE idle), silently recover
-      // instead of surfacing a hard error: reconnect-first (rejoin a
-      // still-live server turn), then fall back to re-issuing the last
-      // send. Bounded by `MAX_AUTO_RETRIES`. Returns `true` when it
-      // owns the recovery so the caller skips the error bubble.
+      // Rejoin the same turn after a transport drop. Never replay the POST:
+      // it writes another user message and may execute completed tools again.
       const tryAutoRetry = (error: unknown): boolean => {
         if (controller.signal.aborted) return false;
         const ctrl = getPartitionSendControl(getPartitionKey());
         if (ctrl.autoRetryCount >= MAX_AUTO_RETRIES) return false;
-        const replay = peekPartitionAgentReplay(getPartitionKey());
-        if (!replay?.lastSendArgs || !replay.sendFn) return false;
         ctrl.autoRetryCount += 1;
         const errorMessage =
           error instanceof Error
@@ -392,25 +373,15 @@ export function useAgentChatStream({
           { classified: "streamDropped", message: errorMessage, auto_retry: true },
           breadcrumbContext,
         );
-        // Drop any partial assistant state from the dead turn and swap
-        // the would-be error bubble for a transient "Reconnecting…"
-        // banner. `resetStreamBuffers` leaves `isStreaming` true so the
-        // indicator keeps showing while we back off.
-        resetStreamBuffers(refs, partitionSetters);
         partitionSetters.setProgressText("Reconnecting…");
         const delayMs = 1000 * ctrl.autoRetryCount;
         if (ctrl.retryTimer != null) clearTimeout(ctrl.retryTimer);
         ctrl.retryTimer = setTimeout(() => {
           ctrl.retryTimer = null;
           void (async () => {
-            // Reconnect-first: the harness keeps a turn alive on a
-            // passive SSE drop, so rejoin the live stream before
-            // re-POSTing. A server-side `stream_stalled` has no live
-            // turn to find, so reattach returns false and we resend.
-            const reattached = await tryReattachActiveTurnRef.current?.();
-            if (reattached) return;
-            ctrl.inAutoRetry = true;
-            await replayLastSend(getPartitionKey());
+            const reattached = await reattachTurn?.({ key: getPartitionKey(), sessionId: turnSessionId });
+            if (reattached || inFlightRef.current || ctrl.autoRetryCount === 0) return;
+            handleStreamError(refs, partitionSetters, error, breadcrumbContext);
           })();
         }, delayMs);
         return true;
@@ -969,18 +940,17 @@ export function useAgentChatStream({
    * reducers a live turn uses. Discovery omits `agent_instance_id`
    * (standalone agents have none) and matches purely on `session_id`.
    *
-   * Dedup-safe: only runs on a clean partition buffer (fresh mount, or
-   * after `resetStreamBuffers`), so a replay-from-cursor cannot
-   * double-apply already-rendered content. Returns `true` when it
-   * attached to a live stream.
+   * Once discovery succeeds, rebuild the buffer from sequence zero.
+   * Returns true when attached to a live stream.
    */
-  const tryReattachActiveTurn = useCallback(async (): Promise<boolean> => {
+  const tryReattachActiveTurn = useCallback(async (recovery?: { key: string; sessionId: string | null }): Promise<boolean> => {
     if (!agentId || inFlightRef.current) return false;
-    const currentSessionId = sessionIdRef.current;
+    const currentSessionId = recovery ? recovery.sessionId : sessionIdRef.current;
     if (!currentSessionId) return false;
     const listFn = api.streams?.listActiveStreams;
     if (!listFn) return false;
-    const key = core.key;
+    const key = recovery?.key ?? core.key;
+    const refs = ensureEntry(key).refs;
     // Reuse the project-chat send-control map purely as a per-streamKey
     // `reattaching` latch so `useChatHistorySync` can gate its
     // firehose-driven refetch the same way for both surfaces.
@@ -1026,7 +996,8 @@ export function useAgentChatStream({
       partitionState.key = newKey;
     };
 
-    resetStreamBuffers(refs, partitionSetters);
+    resetStreamForReplay(refs, partitionSetters);
+    ctrl.attachLastSeq = 0;
     partitionSetters.setIsStreaming(true);
     partitionAbortRef.current?.abort();
     const controller = new AbortController();

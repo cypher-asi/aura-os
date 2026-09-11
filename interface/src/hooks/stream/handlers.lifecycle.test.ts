@@ -170,7 +170,7 @@ describe("stream/handlers — lifecycle (error / finalize / boundary / saved)", 
 
       expect(result[0].displayVariant).toBe("streamDropped");
       expect(result[0].content).toBe("");
-      expect(result[0].errorMessage).toMatch(/recovered from history/i);
+      expect(result[0].errorMessage).toMatch(/Refresh to check saved progress/i);
     });
 
     it("classifies harness_capacity_exhausted errors as a Server is busy banner with the retry hint", () => {
@@ -219,7 +219,7 @@ describe("stream/handlers — lifecycle (error / finalize / boundary / saved)", 
 
       expect(result[0].displayVariant).toBe("streamDropped");
       expect(result[0].content).toBe("");
-      expect(result[0].errorMessage).toMatch(/recovered from history/i);
+      expect(result[0].errorMessage).toMatch(/Refresh to check saved progress/i);
     });
 
     it("classifies server-side stream_truncated errors as a streamDropped banner", () => {
@@ -243,7 +243,7 @@ describe("stream/handlers — lifecycle (error / finalize / boundary / saved)", 
 
       expect(result[0].displayVariant).toBe("streamDropped");
       expect(result[0].content).toBe("");
-      expect(result[0].errorMessage).toMatch(/recovered from history/i);
+      expect(result[0].errorMessage).toMatch(/Refresh to check saved progress/i);
     });
   });
 

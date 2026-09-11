@@ -38,6 +38,7 @@ export {
   snapshotToolCalls,
   snapshotTimeline,
   resetStreamBuffers,
+  resetStreamForReplay,
   handleThinkingDelta,
   handleTextDelta,
   handleToolCallStarted,

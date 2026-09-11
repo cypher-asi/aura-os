@@ -278,7 +278,7 @@ export function normalizeStreamError(error: unknown): {
   if (isStreamDroppedError(error, rawMessage)) {
     return {
       message:
-        "The connection to the agent dropped. Your turn is being recovered from history — refresh if it does not reappear shortly.",
+        "The connection to the agent dropped. Refresh to check saved progress. Restart turn sends your prompt again.",
       displayVariant: "streamDropped",
     };
   }
@@ -300,6 +300,24 @@ function isTextOrImage(b: ChatContentBlock): b is Extract<ChatContentBlock, { ty
 
 function isAssistantBoundaryPlaceholder(message: DisplaySessionEvent): boolean {
   return message.role === "assistant" && message.id.startsWith("stream-");
+}
+
+/** Prepare a full replay without retaining duplicate intermediate tool bubbles.
+ * Persisted events deduplicate by event_id in handleEventSaved; only transient
+ * boundaries after the latest user message belong to the turn being rebuilt.
+ */
+export function resetStreamForReplay(refs: StreamRefs, setters: StreamSetters): void {
+  resetStreamBuffers(refs, setters);
+  setters.setEvents((events) => {
+    let lastUserIndex = events.length - 1;
+    while (lastUserIndex >= 0 && events[lastUserIndex].role !== "user") {
+      lastUserIndex -= 1;
+    }
+    if (lastUserIndex < 0) return events;
+    return events.filter((event, index) =>
+      index <= lastUserIndex || !isAssistantBoundaryPlaceholder(event),
+    );
+  });
 }
 
 function chooseFinalAssistantContent(

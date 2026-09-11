@@ -15,6 +15,7 @@ import { EventType, type AuraEvent } from "../shared/types/aura-events";
 
 vi.mock("../api/client", () => ({
   api: {
+    streams: { listActiveStreams: vi.fn().mockResolvedValue({ streams: [] }) },
     agents: {
       sendEventStream: vi.fn().mockResolvedValue(undefined),
       cancelTurn: vi.fn().mockResolvedValue(undefined),
@@ -42,12 +43,64 @@ vi.mock("../api/streams", () => ({
 
 import { api } from "../api/client";
 import {
+  attachToStream,
+  selectReattachableChatStream,
   generate3dStream,
   generateImageStream,
   generateVideoStream,
 } from "../api/streams";
 
 describe("useAgentChatStream", () => {
+  it("full replay replaces intermediate boundaries after an agent switch without migrating to the new agent", async () => {
+    vi.useFakeTimers();
+    const active = { attach_id: "same-turn", kind: "chat_turn" as const, scope: { session_id: "assigned-session" }, latest_seq: 8, terminated: false, started_at_ms: 1 };
+    vi.mocked(api.streams.listActiveStreams).mockResolvedValue({ streams: [active] });
+    let originalHandler: import("../api/streams").StreamEventHandler | undefined;
+    let resolveOriginal!: () => void;
+    const boundary = (handler: import("../api/streams").StreamEventHandler) => {
+      handler.onEvent({ type: EventType.TextDelta, content: { text: "Read the file once" } } as AuraEvent);
+      handler.onEvent({ type: EventType.ToolCallSnapshot, content: { id: "read-1", name: "read_file", input: { path: "file.txt" } } } as AuraEvent);
+      handler.onEvent({ type: EventType.ToolResult, content: { id: "read-1", name: "read_file", result: "file contents", is_error: false } } as AuraEvent);
+      handler.onEvent({ type: EventType.AssistantMessageEnd, content: { stop_reason: "tool_use" } } as AuraEvent);
+    };
+    vi.mocked(api.agents.sendEventStream).mockImplementation(async (_id, _c, _action, _model, _attachments, handler) => {
+      originalHandler = handler;
+      handler?.onEvent({ type: EventType.SessionReady, content: { session_id: "assigned-session" } } as AuraEvent);
+      boundary(handler!);
+      await new Promise<void>(resolve => { resolveOriginal = resolve; });
+    });
+    vi.mocked(attachToStream).mockImplementation(async (_id, seq, handler) => {
+      expect(seq).toBe(0);
+      boundary(handler);
+      handler.onEvent({ type: EventType.Progress, content: { stage: "auto_fork", new_session_id: "forked-session" } } as AuraEvent);
+      handler.onEvent({ type: EventType.TextDelta, content: { text: "Finished after recovery" } } as AuraEvent);
+      handler.onEvent({ type: EventType.AssistantMessageEnd, content: { stop_reason: "end_turn" } } as AuraEvent);
+      handler.onEvent({ type: EventType.Done, content: {} } as AuraEvent);
+    });
+    const { result, rerender } = renderHook(({ agentId }) => useAgentChatStream({ agentId }), { initialProps: { agentId: "agent-1" } });
+    act(() => result.current.resetEvents([
+      { id: "old-user", role: "user", content: "Earlier question" },
+      { id: "stream-old-history", role: "assistant", content: "Earlier answer" },
+    ]));
+    await act(async () => { void result.current.sendMessage("Read and summarize"); await Promise.resolve(); });
+    expect(useStreamStore.getState().entries["agent-1:assigned-session"].events.filter(e => e.content === "Read the file once")).toHaveLength(1);
+    rerender({ agentId: "agent-2" });
+    await act(async () => {
+      originalHandler?.onError?.(Object.assign(new Error("connection lost"), { code: "harness_ws_closed" }));
+      resolveOriginal();
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(api.agents.sendEventStream).toHaveBeenCalledTimes(1);
+    expect(attachToStream).toHaveBeenCalledTimes(1);
+    const events = useStreamStore.getState().entries["agent-1:forked-session"].events;
+    expect(events.filter(e => e.content === "Read the file once")).toHaveLength(1);
+    expect(events.flatMap(e => e.toolCalls ?? []).filter(t => t.id === "read-1")).toHaveLength(1);
+    expect(events.some(e => e.id === "stream-old-history")).toBe(true);
+    expect(events.some(e => e.content === "Finished after recovery")).toBe(true);
+    expect(useStreamStore.getState().entries["agent-2:forked-session"]).toBeUndefined();
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     streamMetaMap.clear();
     _resetAllPartitionSendControl();
@@ -61,6 +114,9 @@ describe("useAgentChatStream", () => {
       resetPendingByStreamKey: {},
     });
     vi.mocked(api.agents.sendEventStream).mockReset().mockResolvedValue(undefined);
+    vi.mocked(api.streams.listActiveStreams).mockReset().mockResolvedValue({ streams: [] });
+    vi.mocked(attachToStream).mockReset().mockResolvedValue(undefined);
+    vi.mocked(selectReattachableChatStream).mockReset().mockImplementation((streams, sessionId) => streams.find(s => s.scope.session_id === sessionId && !s.terminated) ?? null);
     vi.mocked(generateImageStream).mockReset().mockResolvedValue(undefined);
     vi.mocked(generate3dStream).mockReset().mockResolvedValue(undefined);
     vi.mocked(generateVideoStream).mockReset().mockResolvedValue(undefined);
@@ -170,13 +226,14 @@ describe("useAgentChatStream", () => {
     expect(council?.councilMembers?.[1].status).toBe("completed");
   });
 
-  it("auto-reconnects on a stream_stalled error instead of showing a hard error bubble", async () => {
+  it("does not resubmit a user prompt when its interrupted turn cannot be reattached", async () => {
     vi.useFakeTimers();
     let calls = 0;
     vi.mocked(api.agents.sendEventStream).mockImplementation(
       async (_id, _content, _action, _model, _attachments, handler) => {
         calls += 1;
         if (calls === 1) {
+          handler?.onEvent({ type: EventType.TextDelta, content: { text: "Work already completed" } } as AuraEvent);
           // First turn: the server turn watchdog fires after 180s with
           // no harness events. The `code` is what classifies this as a
           // recoverable drop rather than a hard error.
@@ -216,17 +273,55 @@ describe("useAgentChatStream", () => {
     expect(entry.progressText).toBe("Reconnecting…");
     expect(calls).toBe(1);
 
-    // Backoff elapses -> reattach finds no live stream (no `api.streams`
-    // mock) -> the last send is replayed and now succeeds.
+    // With no active turn, recovery must preserve the failure without another POST.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1000);
     });
 
     entry = useStreamStore.getState().entries[result.current.streamKey];
-    expect(calls).toBe(2);
+    expect(calls).toBe(1);
+    expect(entry.events.some((e) => e.content.includes("Work already completed"))).toBe(true);
+    expect(entry.events.some((e) => e.displayVariant === "streamDropped")).toBe(true);
     // The retry must not duplicate the user's message bubble.
     expect(entry.events.filter((e) => e.role === "user")).toHaveLength(1);
 
+    vi.useRealTimers();
+  });
+
+  it("reattaches the server-assigned session without a second POST", async () => {
+    vi.useFakeTimers();
+    const active = { attach_id: "same-turn", kind: "chat_turn" as const, scope: { session_id: "assigned-session" }, latest_seq: 3, terminated: false, started_at_ms: 1 };
+    vi.mocked(api.streams.listActiveStreams).mockResolvedValue({ streams: [active] });
+    vi.mocked(api.agents.sendEventStream).mockImplementation(async (_id, _content, _action, _model, _attachments, handler) => {
+      handler?.onEvent({ type: EventType.SessionReady, content: { session_id: "assigned-session" } } as AuraEvent);
+      handler?.onError?.(Object.assign(new Error("connection lost"), { code: "harness_ws_closed" }));
+    });
+    vi.mocked(attachToStream).mockImplementation(async (_id, _seq, handler) => {
+      handler.onEvent({ type: EventType.TextDelta, content: { text: "Recovered from the same run" } } as AuraEvent);
+      handler.onEvent({ type: EventType.Done, content: {} } as AuraEvent);
+    });
+    const { result } = renderHook(() => useAgentChatStream({ agentId: "agent-1" }));
+    await act(async () => { await result.current.sendMessage("hello"); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(api.agents.sendEventStream).toHaveBeenCalledTimes(1);
+    expect(attachToStream).toHaveBeenCalledWith("same-turn", 0, expect.anything(), expect.anything(), expect.anything());
+    const entry = useStreamStore.getState().entries["agent-1:assigned-session"];
+    expect(entry.events.filter(e => e.role === "user")).toHaveLength(1);
+    expect(entry.events.some(e => e.content === "Recovered from the same run")).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("does not replay a persisted prompt when stream discovery fails", async () => {
+    vi.useFakeTimers();
+    vi.mocked(api.streams.listActiveStreams).mockRejectedValue(new Error("temporarily offline"));
+    vi.mocked(api.agents.sendEventStream).mockImplementation(async (_id, _content, _action, _model, _attachments, handler) => {
+      handler?.onError?.(Object.assign(new Error("connection lost"), { code: "harness_ws_closed" }));
+    });
+    const { result } = renderHook(() => useAgentChatStream({ agentId: "agent-1", sessionId: "existing" }));
+    await act(async () => { await result.current.sendMessage("hello"); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
+    expect(api.agents.sendEventStream).toHaveBeenCalledTimes(1);
+    expect(attachToStream).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 
