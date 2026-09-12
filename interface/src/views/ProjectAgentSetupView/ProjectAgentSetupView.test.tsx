@@ -343,8 +343,21 @@ describe("ProjectAgentSetupView", () => {
     expect(mockListAgents).not.toHaveBeenCalled();
   });
 
-  it("redirects desktop users back to the project root", () => {
+  it("keeps agent creation available on iPad with a desktop user agent", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: false });
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId" element={<div>Desktop project root</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+    expect(screen.queryByText("Desktop project root")).not.toBeInTheDocument();
+    expect(screen.getByTestId("agent-editor-modal")).toBeInTheDocument();
+  });
+
+  it("redirects desktop users back to the project root", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false, isMobileClient: false });
 
     render(
       <Routes>

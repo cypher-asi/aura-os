@@ -31,10 +31,11 @@ on:
         type: choice
         options:
           - internal
-          - closed
+          - alpha
+          - beta
           - production
       release_status:
-        description: "Only applies to the release lane"
+        description: "Google Play status for beta and release lanes"
         required: true
         default: draft
         type: choice
@@ -47,7 +48,8 @@ permissions:
 
 concurrency:
   group: android-mobile-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel obsolete PR checks, but never interrupt a store upload.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate-android-shell:
@@ -157,14 +159,23 @@ jobs:
       - name: Resolve Android host defaults
         shell: bash
         run: |
-          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://aura-os-t565.onrender.com}"
+          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://api.aura.ai}"
           echo "VITE_NATIVE_DEFAULT_HOST=${DEFAULT_HOST}" >> "$GITHUB_ENV"
           echo "VITE_ANDROID_DEFAULT_HOST=${VITE_ANDROID_DEFAULT_HOST:-$DEFAULT_HOST}" >> "$GITHUB_ENV"
 
       - name: Materialize Android upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        shell: bash
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
-          echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Missing ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/aura-android-upload.jks"
+          test -s "$RUNNER_TEMP/aura-android-upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/aura-android-upload.jks" >> "$GITHUB_ENV"
 
       - name: Resolve Android release plan
         id: plan

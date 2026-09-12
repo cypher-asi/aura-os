@@ -15,7 +15,7 @@ import { AppShell } from "./components/AppShell";
 import { NativeContextMenuOverride } from "./components/NativeContextMenuOverride";
 import { LoginView } from "./views/LoginView";
 import { PublicChatView } from "./views/public-chat/PublicChatView";
-import { MobilePublicChatView } from "./views/public-chat/MobilePublicChatView";
+import { MobilePublicChatView } from "./mobile/public/MobilePublicChatView";
 import { PublicMarketingPanel } from "./views/public-chat/PublicMarketingPanel";
 import { LoginOverlay } from "./views/public-chat/LoginOverlay";
 import { AgentOnboardingModal } from "./views/public-chat/AgentOnboarding/AgentOnboardingModal";

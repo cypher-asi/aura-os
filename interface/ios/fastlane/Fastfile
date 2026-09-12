@@ -117,6 +117,7 @@ def sync_signing!(api_key:, readonly:)
 end
 
 private_lane :build_store_archive do
+  sh("node #{File.join(interface_root, 'scripts/validate-native-release-host.mjs').shellescape} ios")
   team_id = developer_team_id
   profile_name = "match AppStore #{bundle_id}"
   sync_ios_web_assets
@@ -227,8 +228,10 @@ platform :ios do
     sync_signing!(api_key: api_key, readonly: is_ci)
     build_store_archive
 
-    metadata_present = File.directory?("fastlane/metadata")
-    screenshots_present = File.directory?("fastlane/screenshots")
+    metadata_path = File.join(__dir__, "metadata")
+    screenshots_path = File.join(__dir__, "screenshots")
+    metadata_present = !Dir.glob(File.join(metadata_path, "**", "*.txt")).empty?
+    screenshots_present = !Dir.glob(File.join(screenshots_path, "**", "*.{png,jpg,jpeg}")).empty?
 
     upload_to_app_store(
       api_key: api_key,
@@ -243,6 +246,8 @@ platform :ios do
       # We don't ship in-app purchases in the app, so keep precheck on for the
       # rest of the submission while skipping the unsupported IAP check.
       precheck_include_in_app_purchases: false,
+      metadata_path: metadata_path,
+      screenshots_path: screenshots_present ? screenshots_path : nil,
       skip_metadata: !metadata_present,
       skip_screenshots: !screenshots_present
     )

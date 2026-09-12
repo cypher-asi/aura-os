@@ -61,7 +61,7 @@ const openNewProjectModal = vi.fn();
 // `agent-store.ts` (deep in the shell's import graph) is being loaded —
 // i.e. before this file's top-level statements — so plain consts would
 // still be in their temporal dead zone when the factory reads them.
-const { orgFixtures, switchOrg, createOrg, mockOrgErrors, getMockOrgState } = vi.hoisted(() => {
+const { mockOrgErrors, getMockOrgState } = vi.hoisted(() => {
   const orgFixtures = [
     { org_id: "org-1", name: "Alpha Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
     { org_id: "org-2", name: "Beta Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
@@ -160,9 +160,11 @@ vi.mock("../../api/client", () => ({
   },
 }));
 
+const mockMobileClient = vi.hoisted(() => ({ value: true }));
+
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({
-    isMobileClient: true,
+    isMobileClient: mockMobileClient.value,
     isPhoneLayout: true,
     isMobileLayout: true,
     features: {
@@ -271,7 +273,7 @@ vi.mock("../../components/PanelSearch", () => ({
 vi.mock("../../components/HostSettingsModal", () => ({
   HostSettingsModal: () => null,
 }));
-vi.mock("../../components/MobileThemeToggleButton", () => ({
+vi.mock("../theme/MobileThemeToggleButton", () => ({
   MobileThemeToggleButton: () => <button aria-label="Switch theme (currently dark)" data-testid="mobile-theme-toggle" />,
 }));
 vi.mock("../../shared/lib/host-config", () => ({
@@ -417,7 +419,8 @@ describe("MobileShell", () => {
     expect(screen.getByRole("button", { name: "Back to agent library" })).toBeInTheDocument();
   });
 
-  it("shows create action on the standalone mobile agent library route", () => {
+  it("shows create action on the standalone tablet library with a desktop user agent", () => {
+    mockMobileClient.value = false;
     mockActiveApp.id = "agents";
     mockActiveApp.label = "Agents";
     renderMobile("/agents");

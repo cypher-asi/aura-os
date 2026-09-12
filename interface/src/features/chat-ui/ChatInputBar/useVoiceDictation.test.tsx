@@ -43,6 +43,16 @@ describe("useVoiceDictation", () => {
 
   afterEach(() => {
     delete window.webkitSpeechRecognition;
+    delete (window as Window & { Capacitor?: unknown }).Capacitor;
+  });
+
+  it("does not expose or start browser dictation inside a native WebView", () => {
+    Object.defineProperty(window, "Capacitor", { configurable: true, value: { isNativePlatform: () => true } });
+    const { result } = renderHook(() => useVoiceDictation(vi.fn()));
+    expect(result.current.supported).toBe(false);
+    act(() => result.current.start("draft"));
+    expect(MockSpeechRecognition.latest).toBeNull();
+    expect(result.current.listening).toBe(false);
   });
 
   it("adds interim speech to the existing draft without sending", () => {

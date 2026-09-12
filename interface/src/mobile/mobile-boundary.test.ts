@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SRC_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -18,7 +18,7 @@ describe("mobile UI boundary", () => {
   it("keeps named mobile-only modules under src/mobile", () => {
     const checkedRoots = ["components", "views", "apps"].map((root) => join(SRC_ROOT, root));
     const offenders = checkedRoots.flatMap((root) =>
-      listSourceFiles(root).filter((file) => /(^|\/)Mobile[A-Z][^/]*\.(tsx?|css)$/.test(file)),
+      listSourceFiles(root).filter((file) => /^Mobile[A-Z].*\.(tsx?|css)$/.test(basename(file))),
     );
 
     expect(offenders.map((file) => relative(SRC_ROOT, file))).toEqual([]);

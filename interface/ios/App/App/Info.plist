@@ -28,6 +28,10 @@
 	<string>AURA uses the camera so you can take a photo to use as an agent's image or to attach to a message.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>AURA accesses your photo library so you can choose a photo to use as an agent's image or to attach to a message.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>AURA uses the microphone when you choose to dictate a message.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>AURA uses speech recognition to turn your dictation into a message draft.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UILaunchStoryboardName</key>

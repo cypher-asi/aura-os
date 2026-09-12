@@ -756,6 +756,8 @@
 
   .settingsNav {
     width: auto;
+    /* Keep the selected panel usable below the independently scrolling menu. */
+    max-height: 35%;
     border-right: none;
     border-bottom: 1px solid var(--color-border);
   }

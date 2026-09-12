@@ -176,6 +176,25 @@ function MobileRemoteFilePreview({
   onBack: () => void;
 }) {
   const [refreshKey, setRefreshKey] = useState(0);
+  return (
+    <MobileRemoteFilePreviewRequest
+      key={`${remoteAgentId}:${filePath}:${refreshKey}`}
+      filePath={filePath}
+      remoteAgentId={remoteAgentId}
+      workspaceDisplay={workspaceDisplay}
+      onBack={onBack}
+      onRefresh={() => setRefreshKey((current) => current + 1)}
+    />
+  );
+}
+
+function MobileRemoteFilePreviewRequest({ filePath, remoteAgentId, workspaceDisplay, onBack, onRefresh }: {
+  filePath: string;
+  remoteAgentId: string;
+  workspaceDisplay: string | null;
+  onBack: () => void;
+  onRefresh: () => void;
+}) {
   const [state, setState] = useState<{
     loading: boolean;
     content: string | null;
@@ -190,13 +209,9 @@ function MobileRemoteFilePreview({
   const fileName = useMemo(() => filePath.split(/[\\/]/).pop() ?? filePath, [filePath]);
 
   useEffect(() => {
-    if (!previewSupported) {
-      setState({ loading: false, content: null, error: null });
-      return;
-    }
+    if (!previewSupported) return;
 
     let cancelled = false;
-    setState({ loading: true, content: null, error: null });
 
     void api.swarm.readRemoteFile(remoteAgentId, filePath)
       .then((result) => {
@@ -215,7 +230,7 @@ function MobileRemoteFilePreview({
     return () => {
       cancelled = true;
     };
-  }, [filePath, previewSupported, refreshKey, remoteAgentId]);
+  }, [filePath, previewSupported, remoteAgentId]);
 
   return (
     <div className={styles.previewRoot}>
@@ -226,7 +241,7 @@ function MobileRemoteFilePreview({
             <span>Back to files</span>
           </button>
           {previewSupported ? (
-            <Button variant="ghost" size="sm" onClick={() => setRefreshKey((current) => current + 1)}>
+            <Button variant="ghost" size="sm" onClick={onRefresh}>
               <RefreshCw size={14} />
               Refresh
             </Button>

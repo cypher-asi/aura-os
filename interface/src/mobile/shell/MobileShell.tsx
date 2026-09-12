@@ -1,3 +1,5 @@
+import { getSettingsDestinationTitle, type SettingsDestination } from "./settings-destination";
+import { MOBILE_MORE_NAV_ITEMS } from "../navigation/mobile-nav-items";
 import { Fragment, Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { useNavigate, useOutlet } from "react-router-dom";
 import { Button, Drawer, Text } from "@cypher-asi/zui";
@@ -6,7 +8,6 @@ import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { ConversationSurfaceHost } from "../../components/ConversationSurfaceHost";
 import { UpdateBanner } from "../../components/UpdateBanner";
 import {
-  MOBILE_MORE_NAV_ITEMS,
   MobileBottomNav,
   type MobileMoreNavId,
   type MobileNavId,
@@ -27,8 +28,6 @@ import { MobileTopbar } from "./MobileTopbar";
 import {
   AccountSheetContent,
   PreviewSheetContent,
-  getSettingsDestinationTitle,
-  type SettingsDestination,
 } from "./MobileDrawerContents";
 import { useShallow } from "zustand/react/shallow";
 import styles from "./MobileShell.module.css";
@@ -68,7 +67,11 @@ export function MobileShell() {
   const hostSettingsOpen = useUIModalStore((s) => s.hostSettingsOpen);
   const closeHostSettings = useUIModalStore((s) => s.closeHostSettings);
   const openHostSettings = useUIModalStore((s) => s.openHostSettings);
-  const [moreNavOpen, setMoreNavOpen] = useState(false);
+  const [moreNav, setMoreNav] = useState({ path: state.location.pathname, open: false });
+  if (moreNav.path !== state.location.pathname) {
+    setMoreNav({ path: state.location.pathname, open: false });
+  }
+  const moreNavOpen = moreNav.path === state.location.pathname && moreNav.open;
   const { orgsError, membersError, integrationsError, refreshOrgs } = useOrgStore(
     useShallow((s) => ({
       orgsError: s.orgsError,
@@ -100,32 +103,28 @@ export function MobileShell() {
   const handleMobilePrimaryNavigate = useCallback((id: MobileNavId) => {
     if (!state.mobileTargetProjectId) { navigate("/projects"); return; }
     if (id === "more") {
-      setMoreNavOpen((current) => !current);
+      setMoreNav((current) => ({ path: state.location.pathname, open: !current.open }));
       return;
     }
-    setMoreNavOpen(false);
+    setMoreNav((current) => ({ ...current, open: false }));
     if (id === "agent") { navigate(projectAgentsRoute(state.mobileTargetProjectId)); return; }
     if (id === "files") { navigate(projectFilesRoute(state.mobileTargetProjectId)); return; }
     if (id === "tasks") { navigate(projectTasksRoute(state.mobileTargetProjectId)); return; }
     navigate(projectWorkRoute(state.mobileTargetProjectId));
-  }, [state.mobileTargetProjectId, navigate]);
+  }, [state.mobileTargetProjectId, state.location.pathname, navigate]);
   const handleMobileMoreNavigate = useCallback((id: MobileMoreNavId) => {
     if (!state.mobileTargetProjectId) return;
-    setMoreNavOpen(false);
+    setMoreNav((current) => ({ ...current, open: false }));
     if (id === "process") { navigate(projectProcessRoute(state.mobileTargetProjectId)); return; }
     navigate(projectStatsRoute(state.mobileTargetProjectId));
   }, [navigate, state.mobileTargetProjectId]);
-
-  useEffect(() => {
-    setMoreNavOpen(false);
-  }, [state.location.pathname]);
 
   useEffect(() => {
     if (!navOpen && !moreNavOpen && !accountOpen && !previewOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (moreNavOpen) {
-        setMoreNavOpen(false);
+        setMoreNav((current) => ({ ...current, open: false }));
         return;
       }
       if (accountOpen) {
@@ -247,7 +246,7 @@ export function MobileShell() {
           aria-hidden={!overlayDrawerOpen}
           tabIndex={overlayDrawerOpen ? 0 : -1}
           onClick={() => {
-            setMoreNavOpen(false);
+            setMoreNav((current) => ({ ...current, open: false }));
             closeDrawers();
           }}
         />
