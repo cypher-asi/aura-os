@@ -1,9 +1,9 @@
 import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
-import { PublicChoiceCtas } from "../PublicChoiceCtas";
-import { TypewriterText } from "../TypewriterText";
-import type { Persona } from "../personas";
+import { PublicChoiceCtas } from "../../../views/public-chat/PublicChoiceCtas";
+import { TypewriterText } from "../../../views/public-chat/TypewriterText";
+import type { Persona } from "../../../views/public-chat/personas";
 import styles from "./MobileLandingHero.module.css";
 
 /**

@@ -125,6 +125,9 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
   const lastAppId = options.lastAppId ?? "projects";
 
   await page.addInitScript(({ seedSession, seedLastAppId }) => {
+    // Phone emulation on localhost must not look like a native WebView.
+    // Native tests explicitly override this after installing the fixture.
+    Object.defineProperty(window, "Capacitor", { configurable: true, value: { isNativePlatform: () => false } });
     try {
       window.localStorage.setItem("aura-jwt", seedSession.access_token);
       window.localStorage.setItem("aura-session", JSON.stringify(seedSession));
@@ -492,6 +495,8 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       (instance) => allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/events`),
     );
     if (matchingAgentInstanceEvents) return json([]);
+
+    if (allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/sessions`)) return json([]);
 
     const matchingAgentInstanceSessions = agentInstances.find(
       (instance) => allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/sessions`),

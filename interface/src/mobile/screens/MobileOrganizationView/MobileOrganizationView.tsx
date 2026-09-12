@@ -102,7 +102,10 @@ export function MobileOrganizationView() {
       : null;
     return byLastAgent ?? recentProjects[0] ?? null;
   }, [lastAgentEntry, lastProjectId, recentProjects, workspaceProjects]);
-  const resumeProjectAgents = resumeProject ? agentsByProject[resumeProject.project_id] ?? [] : [];
+  const resumeProjectAgents = useMemo(
+    () => resumeProject ? agentsByProject[resumeProject.project_id] ?? [] : [],
+    [agentsByProject, resumeProject],
+  );
   const resumeAgent = useMemo(() => {
     if (!resumeProject) {
       return null;

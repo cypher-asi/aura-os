@@ -1,3 +1,4 @@
+import { isNativeRuntime } from "../../shared/lib/native-runtime";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
@@ -97,7 +98,7 @@ function OrgSectionContent({
   upgradePreparing,
 }: {
   data: ReturnType<typeof useOrgSettingsData>;
-  onUpgrade: () => void;
+  onUpgrade?: () => void;
   upgradePreparing: boolean;
 }) {
   return (
@@ -323,7 +324,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection, initialSubAr
                 </div>
               </div>
             ) : onOrgSection ? (
-              <OrgSectionContent data={data} onUpgrade={() => setTierModalRequested(true)} upgradePreparing={tierPreparing} />
+              <OrgSectionContent data={data} onUpgrade={isNativeRuntime() ? undefined : () => setTierModalRequested(true)} upgradePreparing={tierPreparing} />
             ) : (
               <AppSectionContent section={data.section} />
             )}

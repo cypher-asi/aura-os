@@ -30,7 +30,7 @@ export function MobileProjectProcessScreen() {
   const loading = useProcessStore((s) => s.loading);
   const fetchProcesses = useProcessStore((s) => s.fetchProcesses);
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
-  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
+  const [requestedProcessId, setSelectedProcessId] = useState<string | null>(null);
 
   const projectProcesses = useMemo(
     () => (projectId ? processes.filter((process) => process.project_id === projectId) : []),
@@ -42,15 +42,9 @@ export function MobileProjectProcessScreen() {
     void fetchProcesses().catch(() => {});
   }, [fetchProcesses, projectId]);
 
-  useEffect(() => {
-    if (projectProcesses.length === 0) {
-      setSelectedProcessId(null);
-      return;
-    }
-    if (!selectedProcessId || !projectProcesses.some((process) => process.process_id === selectedProcessId)) {
-      setSelectedProcessId(projectProcesses[0]?.process_id ?? null);
-    }
-  }, [projectProcesses, selectedProcessId]);
+  const selectedProcessId = projectProcesses.some((process) => process.process_id === requestedProcessId)
+    ? requestedProcessId
+    : projectProcesses[0]?.process_id ?? null;
 
   useEffect(() => {
     if (!selectedProcessId) return;

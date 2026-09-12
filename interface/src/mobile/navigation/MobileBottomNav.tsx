@@ -1,7 +1,5 @@
 import {
-  ChartNoAxesColumnIncreasing,
   Brain,
-  Cpu,
   FolderClosed,
   ListTodo,
   MoreHorizontal,
@@ -18,15 +16,6 @@ const MOBILE_NAV_ITEMS: Array<{ id: MobileNavId; label: string; icon: typeof Bra
   { id: "tasks", label: "Tasks", icon: ListTodo },
   { id: "execution", label: "Run", icon: Play },
   { id: "more", label: "More", icon: MoreHorizontal },
-];
-
-export const MOBILE_MORE_NAV_ITEMS: Array<{
-  id: MobileMoreNavId;
-  label: string;
-  icon: typeof Brain;
-}> = [
-  { id: "process", label: "Process", icon: Cpu },
-  { id: "stats", label: "Stats", icon: ChartNoAxesColumnIncreasing },
 ];
 
 export function MobileBottomNav({

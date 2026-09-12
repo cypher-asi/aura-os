@@ -105,7 +105,9 @@ export function OrgSettingsBilling({
     <>
       <h2 className={styles.sectionTitle}>Billing</h2>
       <p className={billingStyles.billingIntro}>
-        Subscribe to a tier for monthly Z credit allowances and enhanced rewards, or purchase Z credits as you go.
+        {isNativeApp
+          ? "Your current plan and available Z credits."
+          : "Subscribe to a tier for monthly Z credit allowances and enhanced rewards, or purchase Z credits as you go."}
       </p>
 
       {/* Credit Balance — shown first */}
@@ -146,7 +148,7 @@ export function OrgSettingsBilling({
           </div>
           <div className={styles.rowControl} style={{ marginLeft: "auto" }}>
             <span className={styles.roleBadge}>{planLabel}</span>
-            {onUpgrade && (
+            {onUpgrade && !isNativeApp && (
               <Button variant="ghost" size="sm" onClick={onUpgrade} disabled={upgradePreparing} style={{ padding: 0, display: "flex", justifyContent: "flex-end" }}>
                 Change Plan
               </Button>

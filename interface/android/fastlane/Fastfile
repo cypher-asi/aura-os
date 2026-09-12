@@ -72,6 +72,7 @@ def prepare_release_versioning!
 end
 
 def build_release_apk
+  sh("node #{File.join(interface_root, 'scripts/validate-native-release-host.mjs').shellescape} android")
   sync_android_web_assets
   ensure_signing!
   prepare_release_versioning!
@@ -86,6 +87,7 @@ def build_release_apk
 end
 
 def build_release_bundle
+  sh("node #{File.join(interface_root, 'scripts/validate-native-release-host.mjs').shellescape} android")
   sync_android_web_assets
   ensure_signing!
 
@@ -104,7 +106,8 @@ end
 
 def upload_bundle(track:, release_status:)
   aab_path = build_release_bundle
-  metadata_present = File.directory?("fastlane/metadata/android")
+  metadata_path = File.join(__dir__, "metadata/android")
+  metadata_present = !Dir.glob(File.join(metadata_path, "**", "*.txt")).empty?
 
   upload_to_play_store(
     json_key_data: play_json_key_data,
@@ -112,6 +115,7 @@ def upload_bundle(track:, release_status:)
     track: track,
     release_status: release_status,
     aab: aab_path,
+    metadata_path: metadata_path,
     skip_upload_metadata: !metadata_present,
     skip_upload_images: true,
     skip_upload_screenshots: true
@@ -169,7 +173,7 @@ platform :android do
     ensure_play_store_release_requirements!
     upload_bundle(
       track: ENV["ANDROID_PLAY_TRACK"].to_s.empty? ? "internal" : ENV["ANDROID_PLAY_TRACK"],
-      release_status: "completed"
+      release_status: ENV["ANDROID_PLAY_RELEASE_STATUS"].to_s.empty? ? "draft" : ENV["ANDROID_PLAY_RELEASE_STATUS"]
     )
   end
 

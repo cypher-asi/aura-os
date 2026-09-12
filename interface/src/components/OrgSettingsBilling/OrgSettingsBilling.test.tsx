@@ -63,6 +63,7 @@ function renderBilling(overrides: Partial<typeof defaultProps> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUseAuraCapabilities.mockReturnValue({ isNativeApp: false });
   useBillingStore.getState().subscription = null;
 });
 
@@ -165,6 +166,19 @@ describe("OrgSettingsBilling", () => {
     renderBilling();
     expect(screen.getByText("Next Billing Date")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("hides plan changes on native even when a caller passes an upgrade handler", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isNativeApp: true });
+    render(<OrgSettingsBilling {...defaultProps} onUpgrade={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Change Plan" })).not.toBeInTheDocument();
+  });
+
+  it("keeps plan changes available on web", async () => {
+    const onUpgrade = vi.fn();
+    render(<OrgSettingsBilling {...defaultProps} onUpgrade={onUpgrade} />);
+    await userEvent.click(screen.getByRole("button", { name: "Change Plan" }));
+    expect(onUpgrade).toHaveBeenCalledOnce();
   });
 
   it("shows a web-only message in native apps", () => {

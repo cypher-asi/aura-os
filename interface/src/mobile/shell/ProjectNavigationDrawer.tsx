@@ -43,19 +43,6 @@ function sortProjects(projects: Project[]): Project[] {
   });
 }
 
-function areSameProjects(left: Project[] | undefined, right: Project[]): boolean {
-  if (!left || left.length !== right.length) {
-    return false;
-  }
-
-  return left.every((project, index) => {
-    const nextProject = right[index];
-    return project.project_id === nextProject.project_id
-      && project.name === nextProject.name
-      && project.updated_at === nextProject.updated_at;
-  });
-}
-
 function ProjectRow({
   project,
   isActive,
@@ -93,8 +80,7 @@ export function ProjectNavigationDrawerContent() {
   const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const mobileDestination = getMobileProjectDestination(location.pathname);
-  const [projectsByOrgId, setProjectsByOrgId] = useState<Record<string, Project[]>>({});
-  const [loadingOrgIds, setLoadingOrgIds] = useState<Record<string, boolean>>({});
+  const [fetchedProjectsByOrgId, setProjectsByOrgId] = useState<Record<string, Project[]>>({});
   const [failedOrgIds, setFailedOrgIds] = useState<Record<string, boolean>>({});
   const [collapsedOrgIds, setCollapsedOrgIds] = useState<Set<string>>(() => new Set());
   const [searchOpen, setSearchOpen] = useState(false);
@@ -121,28 +107,20 @@ export function ProjectNavigationDrawerContent() {
     });
   }, [activeOrg?.name, activeOrg?.org_id, orgs, projects]);
 
-  useEffect(() => {
-    if (projects.length === 0) return;
+  const projectsByOrgId = useMemo(() => {
     const grouped = projects.reduce<Record<string, Project[]>>((acc, project) => {
-      acc[project.org_id] = [...(acc[project.org_id] ?? []), project];
+      (acc[project.org_id] ??= []).push(project);
       return acc;
     }, {});
-
-    setProjectsByOrgId((previous) => {
-      let changed = false;
-      const next = { ...previous };
-      for (const [orgId, orgProjects] of Object.entries(grouped)) {
-        const sortedProjects = sortProjects(orgProjects);
-        if (!areSameProjects(previous[orgId], sortedProjects)) {
-          next[orgId] = sortedProjects;
-          changed = true;
-        }
-      }
-      return changed ? next : previous;
-    });
-  }, [projects]);
+    const result = { ...fetchedProjectsByOrgId };
+    for (const [orgId, orgProjects] of Object.entries(grouped)) {
+      result[orgId] = sortProjects(orgProjects);
+    }
+    return result;
+  }, [fetchedProjectsByOrgId, projects]);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };
@@ -169,7 +147,6 @@ export function ProjectNavigationDrawerContent() {
       }
 
       requestedOrgIdsRef.current.add(org.org_id);
-      setLoadingOrgIds((previous) => ({ ...previous, [org.org_id]: true }));
       void api.listProjects(org.org_id)
         .then((orgProjects) => {
           if (!mountedRef.current) return;
@@ -188,10 +165,6 @@ export function ProjectNavigationDrawerContent() {
           if (!mountedRef.current) return;
           console.error(`Failed to load projects for org ${org.org_id}`, error);
           setFailedOrgIds((previous) => ({ ...previous, [org.org_id]: true }));
-        })
-        .finally(() => {
-          if (!mountedRef.current) return;
-          setLoadingOrgIds((previous) => ({ ...previous, [org.org_id]: false }));
         });
     }
   }, [failedOrgIds, orgSummaries, projectsByOrgId]);
@@ -218,13 +191,13 @@ export function ProjectNavigationDrawerContent() {
           org,
           projects: visibleProjects,
           totalProjects: orgProjects.length,
-          isLoading: loadingOrgIds[org.org_id] === true,
+          isLoading: !projectsByOrgId[org.org_id] && !failedOrgIds[org.org_id],
           didFail: failedOrgIds[org.org_id] === true,
           shouldShow: normalizedQuery.length === 0 || orgMatches || visibleProjects.length > 0,
         };
       })
       .filter((section) => section.shouldShow);
-  }, [failedOrgIds, loadingOrgIds, normalizedQuery, orgSummaries, projectsByOrgId]);
+  }, [failedOrgIds, normalizedQuery, orgSummaries, projectsByOrgId]);
   const cypherSection = useMemo(
     () => sections.find((section) => /cypher/i.test(section.org.name)) ?? null,
     [sections],

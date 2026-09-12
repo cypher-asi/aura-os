@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isNativeRuntime } from "../../../shared/lib/native-runtime";
 
 interface SpeechRecognitionAlternativeLike {
   transcript: string;
@@ -41,6 +42,9 @@ declare global {
 
 function recognitionConstructor(): SpeechRecognitionConstructor | null {
   if (typeof window === "undefined") return null;
+  // WebView API presence does not guarantee working native dictation. Keep
+  // browser dictation off in Capacitor until the native flow is device-tested.
+  if (isNativeRuntime()) return null;
   return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
 }
 

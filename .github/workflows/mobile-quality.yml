@@ -1,0 +1,58 @@
+name: Mobile quality
+
+on:
+  pull_request:
+    paths:
+      - interface/**
+      - vendor/zui/**
+      - .github/workflows/mobile-quality.yml
+      - .github/workflows/ios-mobile.yml
+      - .github/workflows/android-mobile.yml
+      - .github/workflows/release-mobile-nightly.yml
+  push:
+    branches: [main]
+    paths:
+      - interface/**
+      - vendor/zui/**
+      - .github/workflows/mobile-quality.yml
+      - .github/workflows/ios-mobile.yml
+      - .github/workflows/android-mobile.yml
+      - .github/workflows/release-mobile-nightly.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: interface
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node
+        with:
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+      - run: npm ci
+      - run: npm run lint:mobile
+      - run: npm run test:mobile
+      - run: node --test scripts/validate-native-release-host.test.mjs
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.2"
+      - run: gem install minitest --no-document
+      - run: ruby scripts/tests/mobile-fastlane-test.rb
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:mobile:e2e
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: mobile-test-results
+          path: interface/test-results/**
+          if-no-files-found: ignore

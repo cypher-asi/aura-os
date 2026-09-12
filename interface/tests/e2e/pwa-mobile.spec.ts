@@ -194,7 +194,12 @@ async function openAccountSheet(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "Continue work" })).toBeVisible();
 }
 
-async function tapPrimaryNav(page: import("@playwright/test").Page, label: "Agents" | "Tasks" | "Execution" | "Files" | "Process" | "Stats") {
+async function tapPrimaryNav(page: import("@playwright/test").Page, label: "Agents" | "Tasks" | "Run" | "Files" | "Process" | "Stats") {
+  if (label === "Process" || label === "Stats") {
+    await page.getByRole("navigation", { name: "Project sections" }).getByRole("button", { name: "More", exact: true }).tap();
+    await page.getByRole("button", { name: label, exact: true }).tap();
+    return;
+  }
   await page
     .getByRole("navigation", { name: "Project sections" })
     .getByRole("button", { name: label })
@@ -225,7 +230,7 @@ test("mobile login page can open host settings", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Host Connection" })).toBeVisible();
 });
 
-test("mobile root uses project drawer plus the six-tab project navigation", async ({ page }) => {
+test("mobile root uses project drawer plus the five-tab project navigation and More menu", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
   await page.goto("/projects");
 
@@ -244,28 +249,31 @@ test("mobile root uses project drawer plus the six-tab project navigation", asyn
     projectTabs.getByRole("button", { name: "Tasks", exact: true }),
   ).toBeVisible();
   await expect(
-    projectTabs.getByRole("button", { name: "Execution", exact: true }),
+    projectTabs.getByRole("button", { name: "Run", exact: true }),
   ).toBeVisible();
   await expect(
     projectTabs.getByRole("button", { name: "Files", exact: true }),
   ).toBeVisible();
-  await expect(projectTabs.getByRole("button", { name: "Process", exact: true })).toHaveCount(1);
-  await expect(projectTabs.getByRole("button", { name: "Stats", exact: true })).toHaveCount(1);
+  await expect(projectTabs.getByRole("button", { name: "More", exact: true })).toBeVisible();
+  await expect(projectTabs.getByRole("button")).toHaveCount(5);
+  await expect(projectTabs.getByRole("button", { name: "Process", exact: true })).toHaveCount(0);
+  await expect(projectTabs.getByRole("button", { name: "Stats", exact: true })).toHaveCount(0);
   const tabsBox = await projectTabs.boundingBox();
   const filesBox = await projectTabs.getByRole("button", { name: "Files", exact: true }).boundingBox();
   expect(tabsBox).not.toBeNull();
   expect(filesBox).not.toBeNull();
   const visibleFilesWidth = tabsBox!.x + tabsBox!.width - filesBox!.x;
   expect(visibleFilesWidth).toBeGreaterThan(filesBox!.width * 0.5);
-  expect(filesBox!.x + filesBox!.width).toBeGreaterThan(tabsBox!.x + tabsBox!.width);
+  expect(filesBox!.x + filesBox!.width).toBeLessThanOrEqual(tabsBox!.x + tabsBox!.width);
   await expect(projectTabs.getByRole("button", { name: "Feed", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Projects", exact: true })).toHaveCount(0);
 
   await openProjectDrawer(page);
+  await page.getByRole("button", { name: "Search projects", exact: true }).click();
   await expect(page.getByPlaceholder("Search projects...")).toBeVisible();
   const projectNavigation = page.getByRole("tree", { name: "Project navigation" });
   await expect(projectNavigation.getByRole("button", { name: /Test Org/i })).toBeVisible();
-  await expect(projectNavigation.getByRole("button", { name: "Open Demo Project" })).toBeVisible();
+  await expect(projectNavigation.getByRole("button", { name: /^(Current project, )?Open Demo Project$/ })).toBeVisible();
   await expect(projectNavigation.getByRole("button", { name: /Builder Bot/i })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Attach Existing" })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Create Remote Agent" })).toHaveCount(0);
@@ -273,7 +281,7 @@ test("mobile root uses project drawer plus the six-tab project navigation", asyn
   await expect(page.getByText("Agent & skills", { exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Agents", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Tasks", exact: true })).toHaveCount(0);
-  await expect(projectNavigation.getByRole("button", { name: "Execution", exact: true })).toHaveCount(0);
+  await expect(projectNavigation.getByRole("button", { name: "Run", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Process", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Stats", exact: true })).toHaveCount(0);
 });
@@ -317,7 +325,7 @@ test("mobile project navigation opens shared agent, work, process, and stats rou
   await expect(page.getByText("What needs attention")).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("tab", { name: /Ready/i })).toBeVisible({ timeout: 10000 });
 
-  await tapPrimaryNav(page, "Execution");
+  await tapPrimaryNav(page, "Run");
   await expect(page).toHaveURL(/\/projects\/proj-1\/work$/);
   await expect(page.getByRole("button", { name: "Start remote work" })).toBeVisible({ timeout: 10000 });
   await expect(page.getByText("Plans")).toBeVisible({ timeout: 10000 });
@@ -913,7 +921,7 @@ test("mobile global surfaces use the project drawer to return to project mode", 
   await page.goto("/feed");
 
   await openProjectDrawer(page);
-  await page.getByRole("button", { name: "Open Demo Project" }).click();
+  await page.getByRole("button", { name: /^(Current project, )?Open Demo Project$/ }).click();
 
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents$/);
   await expect(page.getByRole("button", { name: "Open chat with Builder Bot" })).toBeVisible({ timeout: 10000 });
@@ -1010,14 +1018,14 @@ test("mobile drawer scales across organization project spaces", async ({ page })
   await openProjectDrawer(page, "Project Atlas");
 
   await expect(page.getByText("Agents", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("Switch project", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Search projects", exact: true })).toBeVisible();
   await expect(page.getByText("Organizations and project spaces", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("tree", { name: "Project navigation" }).getByRole("button", { name: /Test Org/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open Project Atlas" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Current project, Open Project Atlas", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Design System" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Docs Refresh" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Orbit QA" })).toBeVisible();
-  await expect(page.getByText("Current project", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Current project, Open Project Atlas", exact: true })).toHaveAttribute("aria-current", "page");
 });
 
 test("mobile agent tab shows a project empty state when no agent exists", async ({ page }) => {
@@ -1039,14 +1047,14 @@ test("mobile project title opens the drawer from the primary project tabs", asyn
   await openProjectDrawer(page, "Demo Project");
   const projectNavigation = page.getByRole("tree", { name: "Project navigation" });
   await expect(projectNavigation.getByRole("button", { name: /Test Org/i })).toBeVisible();
-  await expect(projectNavigation.getByRole("button", { name: "Open Demo Project" })).toBeVisible();
+  await expect(projectNavigation.getByRole("button", { name: /^(Current project, )?Open Demo Project$/ })).toBeVisible();
   await expect(projectNavigation.getByRole("button", { name: /Builder Bot/i })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Attach Existing" })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Create Remote Agent" })).toHaveCount(0);
   await expect(page.getByText("Agent & skills", { exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Agents", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Tasks", exact: true })).toHaveCount(0);
-  await expect(projectNavigation.getByRole("button", { name: "Execution", exact: true })).toHaveCount(0);
+  await expect(projectNavigation.getByRole("button", { name: "Run", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Process", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Files", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Stats", exact: true })).toHaveCount(0);
@@ -1093,7 +1101,7 @@ test("mobile new project modal falls back to an existing project org when org lo
 test("mobile work view keeps the spec preview path while surfacing the latest task feed entry", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
   await page.goto("/projects");
-  await tapPrimaryNav(page, "Execution");
+  await tapPrimaryNav(page, "Run");
   await expect(page).toHaveURL(/\/projects\/proj-1\/work$/);
 
   await expect(page.getByRole("button", { name: "Start remote work" })).toBeVisible({ timeout: 10000 });

@@ -3,6 +3,7 @@ import { Button } from "@cypher-asi/zui";
 import { Check, Copy } from "lucide-react";
 import { useAuth } from "../../stores/auth-store";
 import { useInviteCodeStore } from "../../stores/invite-code-store";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import rewardStyles from "./OrgSettingsRewards.module.css";
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function OrgSettingsRewards({ onUpgrade, upgradePreparing = false }: Props) {
+  const { isNativeApp } = useAuraCapabilities();
   const { user } = useAuth();
   const userId = user?.user_id ?? null;
   const inviteCode = useInviteCodeStore((s) => s.code);
@@ -96,7 +98,7 @@ export function OrgSettingsRewards({ onUpgrade, upgradePreparing = false }: Prop
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Daily Active Reward</span>
             <span className={styles.rowDescription}>
-              Earned each day you use AURA. Upgrade for more.
+              Earned each day you use AURA.{!isNativeApp && " Upgrade for more."}
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -120,24 +122,28 @@ export function OrgSettingsRewards({ onUpgrade, upgradePreparing = false }: Prop
         </div>
       </div>
 
-      <div className={styles.settingsGroupLabel}>Earn More</div>
-      <div className={styles.settingsGroup}>
-        <div className={styles.settingsRow}>
-          <div className={styles.rowInfo}>
-            <span className={styles.rowLabel}>Upgrade your plan</span>
-            <span className={styles.rowDescription}>
-              Upgrade to earn more monthly Z credits and increase your daily bonus.
-            </span>
+      {!isNativeApp && (
+        <>
+          <div className={styles.settingsGroupLabel}>Earn More</div>
+          <div className={styles.settingsGroup}>
+            <div className={styles.settingsRow}>
+              <div className={styles.rowInfo}>
+                <span className={styles.rowLabel}>Upgrade your plan</span>
+                <span className={styles.rowDescription}>
+                  Upgrade to earn more monthly Z credits and increase your daily bonus.
+                </span>
+              </div>
+              <div className={styles.rowControl}>
+                {onUpgrade && (
+                  <Button variant="primary" size="sm" onClick={onUpgrade} disabled={upgradePreparing}>
+                    Upgrade
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
-          <div className={styles.rowControl}>
-            {onUpgrade && (
-              <Button variant="primary" size="sm" onClick={onUpgrade} disabled={upgradePreparing}>
-                Upgrade
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </>
   );
 }

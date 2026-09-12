@@ -3,6 +3,7 @@ import { Modal, Button } from "@cypher-asi/zui";
 import { orgsApi } from "../../shared/api/orgs";
 import { track } from "../../lib/analytics";
 import { useBillingStore } from "../../stores/billing-store";
+import { isNativeRuntime } from "../../shared/lib/native-runtime";
 import styles from "./TierSubscriptionModal.module.css";
 
 interface Props {
@@ -82,6 +83,7 @@ const TIERS: TierInfo[] = [
 ];
 
 export function TierSubscriptionModal({ isOpen, onClose }: Props) {
+  const isNativeApp = isNativeRuntime();
   // Subscription status is owned by the billing store and prefetched by
   // the caller via useDeferredModalOpen(prepare: fetchSubscription), so
   // the modal opens with `subscription` already resolved and renders
@@ -95,11 +97,12 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isNativeApp) return;
     track("tier_modal_opened");
-  }, [isOpen]);
+  }, [isOpen, isNativeApp]);
 
   const handleSubscribe = async (planId: string) => {
+    if (isNativeRuntime()) return;
     if (planId === "mortal") return;
     // If already subscribed, open portal to change plan instead of new checkout
     if (isSubscribed || currentPlan !== "mortal") {
@@ -119,6 +122,7 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
   };
 
   const handleManage = async () => {
+    if (isNativeRuntime()) return;
     setLoading(true);
     setError(null);
     try {
@@ -130,6 +134,8 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
       setLoading(false);
     }
   };
+
+  if (isNativeApp) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="CHOOSE YOUR PLAN" size="xl">

@@ -86,7 +86,7 @@ jobs:
       - name: Resolve Android host defaults
         shell: bash
         run: |
-          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://aura-os-t565.onrender.com}"
+          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://api.aura.ai}"
           echo "VITE_NATIVE_DEFAULT_HOST=${DEFAULT_HOST}" >> "$GITHUB_ENV"
           echo "VITE_ANDROID_DEFAULT_HOST=${VITE_ANDROID_DEFAULT_HOST:-$DEFAULT_HOST}" >> "$GITHUB_ENV"
 
@@ -99,9 +99,18 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Materialize Android upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        shell: bash
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
-          echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Missing ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/aura-android-upload.jks"
+          test -s "$RUNNER_TEMP/aura-android-upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/aura-android-upload.jks" >> "$GITHUB_ENV"
 
       - name: Verify Android release secrets
         run: node scripts/ci/verify-android-release-secrets.mjs github_release
@@ -206,7 +215,7 @@ jobs:
       - name: Resolve iOS host defaults
         shell: bash
         run: |
-          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://aura-os-t565.onrender.com}"
+          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://api.aura.ai}"
           echo "VITE_NATIVE_DEFAULT_HOST=${DEFAULT_HOST}" >> "$GITHUB_ENV"
           echo "VITE_IOS_DEFAULT_HOST=${VITE_IOS_DEFAULT_HOST:-$DEFAULT_HOST}" >> "$GITHUB_ENV"
 

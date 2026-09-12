@@ -18,11 +18,40 @@ interface MobileTasksData {
   loopActive: boolean;
 }
 
+interface TaskSnapshot {
+  projectId: string;
+  fetched: Task[] | null;
+  initialRevision?: string;
+  saved: Map<string, Task>;
+  statuses: Map<string, Task["status"]>;
+}
+
+function emptySnapshot(projectId: string): TaskSnapshot {
+  return { projectId, fetched: null, saved: new Map(), statuses: new Map() };
+}
+
 export function useMobileTasks(projectId: string): MobileTasksData {
   const ctx = useProjectActions();
   const subscribe = useEventStore((s) => s.subscribe);
   const loopActive = useLoopActive(projectId);
-  const [tasks, setTasks] = useState<Task[]>(() => sortByOrder(ctx?.initialTasks ?? []));
+  const [snapshot, setSnapshot] = useState<TaskSnapshot>(() => emptySnapshot(projectId));
+  const initialTasks = ctx?.project.project_id === projectId ? ctx.initialTasks : undefined;
+  // Compare content, not array identity: reconstructed but equivalent inputs
+  // must not restart the fetch, while a real project-data refresh must win.
+  const initialRevision = useMemo(() => JSON.stringify(initialTasks ?? []), [initialTasks]);
+  // Derive the initial list instead of copying it into state in an effect.
+  // Callers may supply a fresh array on every render. Live events are kept
+  // separately so a slower initial fetch cannot overwrite newer updates.
+  const tasks = useMemo(() => {
+    const current = snapshot.projectId === projectId ? snapshot : emptySnapshot(projectId);
+    const base = current.initialRevision === initialRevision ? current.fetched : null;
+    const byId = new Map((base ?? initialTasks ?? []).map((task) => [task.task_id, task]));
+    for (const [id, task] of current.saved) byId.set(id, task);
+    return sortByOrder(Array.from(byId.values(), (task) => {
+      const status = current.statuses.get(task.task_id);
+      return status ? { ...task, status } : task;
+    }));
+  }, [initialRevision, initialTasks, projectId, snapshot]);
   // Single source of truth for "is this task live": derived from
   // `useLoopActivityStore` via `useLiveTaskIdsForProject`. The
   // previous design kept a parallel cache here that this hook
@@ -43,38 +72,45 @@ export function useMobileTasks(projectId: string): MobileTasksData {
   }, [tasks]);
 
   useEffect(() => {
-    setTasks(sortByOrder(ctx?.initialTasks ?? []));
-  }, [ctx?.initialTasks]);
-
-  useEffect(() => {
     let cancelled = false;
     void api.listTasks(projectId).then((nextTasks) => {
-      if (!cancelled) setTasks(sortByOrder(nextTasks));
+      if (!cancelled) setSnapshot((previous) => ({
+        ...(previous.projectId === projectId ? previous : emptySnapshot(projectId)),
+        fetched: nextTasks,
+        initialRevision,
+      }));
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [projectId]);
+  }, [initialRevision, projectId]);
 
   useEffect(() => {
     const setStatus = (taskId: string, status: Task["status"]) =>
-      setTasks((prev) => prev.map((t) => (t.task_id === taskId ? { ...t, status } : t)));
+      setSnapshot((previous) => {
+        const current = previous.projectId === projectId ? previous : emptySnapshot(projectId);
+        return { ...current, statuses: new Map(current.statuses).set(taskId, status) };
+      });
 
     const unsubs = [
       subscribe(EventType.TaskSaved, (e) => {
         const task = e.content.task;
         if (e.project_id !== projectId || !task) return;
-        setTasks((prev) => sortByOrder(
-          prev.some((candidate) => candidate.task_id === task.task_id)
-            ? prev.map((candidate) => candidate.task_id === task.task_id ? task : candidate)
-            : [...prev, task],
-        ));
+        setSnapshot((previous) => {
+          const current = previous.projectId === projectId ? previous : emptySnapshot(projectId);
+          const statuses = new Map(current.statuses);
+          statuses.delete(task.task_id);
+          return { ...current, saved: new Map(current.saved).set(task.task_id, task), statuses };
+        });
       }),
       subscribe(EventType.TaskStarted, (e) => {
+        if (e.project_id !== projectId) return;
         if (e.content.task_id) setStatus(e.content.task_id, "in_progress");
       }),
       subscribe(EventType.TaskCompleted, (e) => {
+        if (e.project_id !== projectId) return;
         if (e.content.task_id) setStatus(e.content.task_id, "done");
       }),
       subscribe(EventType.TaskFailed, (e) => {
+        if (e.project_id !== projectId) return;
         if (e.content.task_id) setStatus(e.content.task_id, "failed");
       }),
       // No `LoopStopped` / `LoopFinished` clear-the-cache subscribers

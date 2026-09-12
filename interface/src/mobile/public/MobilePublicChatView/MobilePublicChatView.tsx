@@ -22,12 +22,12 @@ import {
   type PublicMessage,
   type PublicSession,
 } from "../../../stores/public-chat-store";
-import { usePublicGateShown, usePublicPageViewed } from "../use-public-shell-analytics";
+import { usePublicGateShown, usePublicPageViewed } from "../../../views/public-chat/use-public-shell-analytics";
 import { track } from "../../../lib/analytics";
-import { PublicChatBubble } from "../PublicChatBubble";
+import { PublicChatBubble } from "../../../views/public-chat/PublicChatBubble";
 import { MobileLandingHero } from "../MobileLandingHero";
-import { PERSONAS } from "../personas";
-import { isPublicLimitReachedError } from "../limit-error";
+import { PERSONAS } from "../../../views/public-chat/personas";
+import { isPublicLimitReachedError } from "../../../views/public-chat/limit-error";
 import styles from "./MobilePublicChatView.module.css";
 
 /**
@@ -59,7 +59,7 @@ import styles from "./MobilePublicChatView.module.css";
  * thread goes idle.
  */
 const AgentsPageSections = lazy(
-  () => import("../../marketing/ProductView/AgentsPageSections"),
+  () => import("../../../views/marketing/ProductView/AgentsPageSections"),
 );
 
 /*
@@ -71,12 +71,12 @@ const AgentsPageSections = lazy(
  * persona's solid `siteBackgroundColor` paints while it loads.
  */
 const ScreenOrbBackground = lazy(() =>
-  import("../PublicChatView/ScreenOrbBackground").then((m) => ({
+  import("../../../views/public-chat/PublicChatView/ScreenOrbBackground").then((m) => ({
     default: m.ScreenOrbBackground,
   })),
 );
 const FlowFieldBackground = lazy(() =>
-  import("../PublicChatView/FlowFieldBackground").then((m) => ({
+  import("../../../views/public-chat/PublicChatView/FlowFieldBackground").then((m) => ({
     default: m.FlowFieldBackground,
   })),
 );

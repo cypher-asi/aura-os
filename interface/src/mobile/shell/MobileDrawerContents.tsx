@@ -1,3 +1,4 @@
+import { getSettingsDestinationTitle, type SettingsDestination } from "./settings-destination";
 import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { Button, Input, Modal, Text } from "@cypher-asi/zui";
 import {
@@ -27,17 +28,6 @@ interface AccountSheetContentProps {
   mode?: "account" | "settings";
   settingsDestination?: SettingsDestination | null;
   onSettingsDestinationChange?: (destination: SettingsDestination | null) => void;
-}
-
-export type SettingsDestination = "profile" | "feed" | "leaderboard" | "feedback" | "team" | "host";
-
-export function getSettingsDestinationTitle(destination: SettingsDestination) {
-  if (destination === "profile") return "Profile";
-  if (destination === "leaderboard") return "Leaderboard";
-  if (destination === "feedback") return "Feedback";
-  if (destination === "team") return "Team settings";
-  if (destination === "host") return "Host settings";
-  return "Feed";
 }
 
 export function AccountSheetContent({
@@ -118,7 +108,7 @@ export function AccountSheetContent({
       setFeedFilter("leaderboard");
     }
     setSettingsDestination(destination);
-  }, [setFeedFilter]);
+  }, [setFeedFilter, setSettingsDestination]);
 
   const openLeaderboard = useCallback(() => {
     openSettingsDestination("leaderboard");
