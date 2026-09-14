@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AURA_MANAGED_CHAT_MODELS,
   availableModelsForAdapter,
+  DEFAULT_CHAT_MODEL_ID,
   effectiveCreditMultiplier,
   effortCreditFactor,
   getModelsForMode,
@@ -65,6 +66,20 @@ describe("model persistence", () => {
     persistModel("aura-claude-opus-4-6", "default");
     persistModel("aura-gpt-5-4", "default", "agent-a");
     expect(loadPersistedModel("default", null, "agent-a")).toBe("aura-gpt-5-4");
+  });
+
+  it("falls back when a saved selection has been retired", () => {
+    for (const modelId of [
+      "aura-claude-mythos-5-1",
+      "aura-deepseek-v4-pro",
+      "aura-deepseek-v4-flash",
+      "aura-minimax-m2-7",
+      "aura-glm-5-1",
+      "aura-qwen3-7-plus",
+    ]) {
+      store["aura-selected-model:default"] = modelId;
+      expect(loadPersistedModel("default"), modelId).toBe(DEFAULT_CHAT_MODEL_ID);
+    }
   });
 
   it("loadPersistedModel falls back to the user's most recent pick for an untouched agent", () => {
@@ -159,38 +174,33 @@ describe("model persistence", () => {
     );
   });
 
-  it("normalizes the Claude 5.1 ids to Aura-managed chat models", () => {
+  it("keeps Fable 5.1 selectable and falls back from retired Mythos 5.1", () => {
     expect(loadPersistedModel("default", "claude-fable-5-1")).toBe(
       "aura-claude-fable-5-1",
     );
     expect(loadPersistedModel("default", "claude-mythos-5-1")).toBe(
-      "aura-claude-mythos-5-1",
+      DEFAULT_CHAT_MODEL_ID,
     );
   });
 
-  it("includes Claude Fable 5.1 and Mythos 5.1 with their native capabilities", () => {
-    for (const [id, label] of [
-      ["aura-claude-fable-5-1", "Fable 5.1"],
-      ["aura-claude-mythos-5-1", "Mythos 5.1"],
-    ] as const) {
-      const model = availableModelsForAdapter("default").find(
-        (candidate) => candidate.id === id,
-      );
-      expect(model).toMatchObject({
-        label,
-        vendor: "anthropic",
-        creditMultiplier: 10,
-        contextWindow: 1_000_000,
-        defaultEffort: "high",
-      });
-      expect(model?.efforts).toEqual([
-        "low",
-        "medium",
-        "high",
-        "xhigh",
-        "max",
-      ]);
-    }
+  it("includes Claude Fable 5.1 with its native capabilities", () => {
+    const model = availableModelsForAdapter("default").find(
+      (candidate) => candidate.id === "aura-claude-fable-5-1",
+    );
+    expect(model).toMatchObject({
+      label: "Fable 5.1",
+      vendor: "anthropic",
+      creditMultiplier: 10,
+      contextWindow: 1_000_000,
+      defaultEffort: "high",
+    });
+    expect(model?.efforts).toEqual([
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+    ]);
   });
 
   it("normalizes raw Claude Opus 5 to the Aura-managed chat model", () => {
@@ -516,7 +526,6 @@ describe("reasoning-effort validity per model", () => {
   it("matches current Claude context windows and xhigh availability", () => {
     for (const id of [
       "aura-claude-fable-5-1",
-      "aura-claude-mythos-5-1",
       "aura-claude-fable-5",
       "aura-claude-opus-4-8",
       "aura-claude-opus-4-7",
@@ -584,22 +593,37 @@ describe("reasoning-effort validity per model", () => {
     }
   });
 
-  it("hides Fireworks models that have left serverless availability", () => {
+  it("hides models that production providers report as unavailable", () => {
     const ids = AURA_MANAGED_CHAT_MODELS.map((model) => model.id);
-    expect(ids).not.toContain("aura-kimi-k2-5");
-    expect(ids).not.toContain("aura-qwen3-6-plus");
-    expect(ids).toContain("aura-kimi-k2-7-code");
-    expect(ids).toContain("aura-qwen3-7-plus");
+    for (const id of [
+      "aura-claude-mythos-5-1",
+      "aura-deepseek-v4-pro",
+      "aura-deepseek-v4-flash",
+      "aura-minimax-m2-7",
+      "aura-glm-5-1",
+      "aura-qwen3-7-plus",
+    ]) {
+      expect(ids, id).not.toContain(id);
+    }
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        "aura-claude-fable-5-1",
+        "aura-kimi-k2-7-code",
+        "aura-kimi-k2-6",
+        "aura-minimax-m3",
+        "aura-glm-5-2",
+      ]),
+    );
     expect(
       AURA_MANAGED_CHAT_MODELS.find((model) => model.id === "aura-minimax-m3")
         ?.contextWindow,
     ).toBe(512_000);
   });
 
-  it("migrates deprecated Fireworks selections to their live successors", () => {
+  it("migrates or falls back from deprecated Fireworks selections", () => {
     expect(loadPersistedModel("default", "aura-kimi-k2-5")).toBe("aura-kimi-k2-6");
     expect(loadPersistedModel("default", "aura-qwen3-6-plus")).toBe(
-      "aura-qwen3-7-plus",
+      DEFAULT_CHAT_MODEL_ID,
     );
   });
 
