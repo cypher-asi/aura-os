@@ -2,19 +2,19 @@
   {
     "date": "2026-09-14",
     "channel": "nightly",
-    "version": "0.1.0-nightly.835.1",
-    "title": "Sturdier chat recovery, cleaner model list, and hardened mobile releases",
-    "intro": "Today's nightly focuses on making chat feel trustworthy when things go sideways — clearer restart wording, smarter reattachment after dropped streams, and a pruned model picker that only shows providers we can actually serve. Under the hood, the desktop harness now points at the right API address, and the mobile release pipelines got real guardrails around signing and store uploads.",
+    "version": "0.1.0-nightly.836.1",
+    "title": "Clearer chat recovery, mobile release hardening, and a refreshed model lineup",
+    "intro": "Today's nightly tightens how Aura recovers from dropped chat streams, sharpens the language around restarting turns and council roles, and cleans up the model picker so only providers that are actually live are offered. On the platform side, the desktop harness now reliably talks back to the right local server, and the mobile release pipelines gained stronger guardrails for iOS and Android store uploads.",
     "entryCount": 5,
     "highlights": [
-      "Restart-turn wording replaces ambiguous Retry across chat",
-      "Interrupted chat streams reattach without silently resending prompts",
-      "Retired model providers hidden with automatic fallback to defaults",
-      "Mobile release workflows hardened for iOS and Android store uploads"
+      "Interrupted chat turns reattach without silently resending prompts",
+      "Retired providers hidden and DeepSeek routes restored with updated pricing",
+      "Mobile store lanes hardened across iOS and Android",
+      "Desktop sidecar now inherits the correct bound API address"
     ],
-    "rawCommitCount": 5,
-    "generatedAt": "2026-09-14T20:19:21.292Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.835.1",
+    "rawCommitCount": 6,
+    "generatedAt": "2026-09-14T21:08:38.033Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.836.1",
     "path": "history/2026-09-14.json"
   },
   {

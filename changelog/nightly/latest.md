@@ -1,54 +1,55 @@
-# Sturdier chat recovery, cleaner model list, and hardened mobile releases
+# Clearer chat recovery, mobile release hardening, and a refreshed model lineup
 
 - Date: `2026-09-14`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.835.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.835.1
+- Version: `0.1.0-nightly.836.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.836.1
 
-Today's nightly focuses on making chat feel trustworthy when things go sideways — clearer restart wording, smarter reattachment after dropped streams, and a pruned model picker that only shows providers we can actually serve. Under the hood, the desktop harness now points at the right API address, and the mobile release pipelines got real guardrails around signing and store uploads.
+Today's nightly tightens how Aura recovers from dropped chat streams, sharpens the language around restarting turns and council roles, and cleans up the model picker so only providers that are actually live are offered. On the platform side, the desktop harness now reliably talks back to the right local server, and the mobile release pipelines gained stronger guardrails for iOS and Android store uploads.
 
-## 9:38 AM — Restart-turn wording and clearer council roles
+## 9:38 AM — Restart turn button and council role labels get plain-language wording
 
-Chat now spells out what a retry actually does and rewrites the Council panel's role descriptions in plain language.
+Chat error affordances and Council Panel copy were rewritten so users understand what restarting a turn actually does and what each council slot contributes.
 
-- Renamed the ambiguous "Retry" control to "Restart turn" across message bubbles, the stuck-stream pill, and the streaming indicator, with a tooltip clarifying that it resends the original prompt from the start rather than resuming unfinished work. (`a4907e2`)
-- Replaced the Council panel's jargon ("slot 0 contrasts / synthesizes") with human-readable descriptions like "1st member compares answers" and allowed the header to wrap on narrow layouts. (`a4907e2`)
+- Renamed the inline Retry control on dropped messages and the Stuck Stream pill to "Restart turn," with a tooltip clarifying it resends the original prompt from the start rather than resuming unfinished work. (`a4907e2`)
+- Replaced the Council Panel's cryptic "slot 0" mechanism subtitles with human-readable descriptions like "1st member compares answers," and let the header wrap on narrow layouts. (`a4907e2`)
 
-## 10:45 AM — Desktop sidecar now inherits the bound API address
+## 10:45 AM — Desktop sidecar receives the real bound API address
 
-The managed harness spawned by the desktop app is explicitly told which API to call back into, so it can't drift onto a stale port or channel.
+The managed local harness spawned by the desktop app now explicitly inherits the parent's server URL, preventing it from calling a stale channel or port from its own environment.
 
-- Threaded the desktop's bound server URL into the local harness sidecar via a new AURA_OS_SERVER_URL env var, ensuring the managed child calls back to the running desktop even when inherited settings or a stray .env would point it elsewhere. (`68f6543`)
-- Consolidated sidecar spawn and retry paths behind a single configure_sidecar_command helper and added a real subprocess test that verifies the child hits the desktop's project and specs endpoints. (`68f6543`)
+- The desktop app now passes its bound server URL into the harness via a new AURA_OS_SERVER_URL environment variable, routed through a shared configure_sidecar_command helper used by both the initial spawn and the fallback retry. (`68f6543`)
+- Added an end-to-end test that runs a real child process and asserts the managed harness issues its project and specs callbacks against the parent-provided address, catching cases where inherited .env values would otherwise win. (`68f6543`)
 
 ## 2:08 PM — Interrupted chat turns reattach instead of silently resubmitting
 
-When a stream drops, the client now reattaches to the in-flight turn and cleans up stale boundaries instead of quietly resending the prompt.
+The chat stream layer was reworked so a dropped connection can reattach to an in-flight turn and rebuild its view without duplicating tool bubbles or replaying the user's prompt behind their back.
 
-- Reworked the agent chat stream to look up active streams and reattach to an interrupted turn by attach_id, avoiding a hidden prompt resubmission when the connection blips. (`acaddac`)
-- Added a resetStreamForReplay lifecycle helper that drops transient assistant-boundary placeholders after the last user message so replays don't leave duplicate tool bubbles behind. (`acaddac`)
-- Updated the dropped-stream error copy to "Refresh to check saved progress. Restart turn sends your prompt again," matching the new Restart-turn semantics. (`acaddac`)
+- Introduced a resetStreamForReplay path that clears transient assistant boundaries after the last user message while relying on event-id dedupe for persisted events, so a full replay no longer leaves duplicate intermediate tool calls in the transcript. (`acaddac`)
+- The agent chat stream now discovers reattachable active streams and resumes them in place, even across agent switches, instead of migrating the turn to a different agent. (`acaddac`)
+- Updated the dropped-stream message from "recovered from history" to "Refresh to check saved progress. Restart turn sends your prompt again," aligning the copy with the new Restart turn semantics. (`acaddac`)
 
-## 11:51 AM — Mobile task stability and guarded iOS/Android release pipelines
+## 11:51 AM — Mobile task hooks stabilized and iOS/Android release lanes hardened
 
-Mobile task hooks were stabilized and the native release workflows gained real safety rails around signing, store lanes, and build numbering.
+A broad mobile pass tightened the useMobileTasks lifecycle and added guardrails around the native release pipelines for both stores, plus a new mobile-quality workflow and readiness docs.
 
-- Hardened Android and iOS release workflows: keystore materialization now fails fast if the secret is missing and writes to RUNNER_TEMP with restrictive umask, store uploads are no longer cancelled by concurrent PR pushes, and the Android lane options were expanded to alpha/beta/production. (`ab0ea4e`)
-- Switched the native default host from the Render staging URL to api.aura.ai and derived a deterministic iOS build number from the run number, avoiding TestFlight collisions. (`ab0ea4e`)
-- Added a validate-native-release-host script plus a mobile-quality workflow, Fastlane test harness, and e2e mobile-readiness spec to keep native release configuration honest before shipping. (`ab0ea4e`)
-- Restructured mobile task updates, navigation, and the public/theme component layout, and added a dedicated MobileThemeToggleButton so shell surfaces stay stable across drawer and top-bar changes. (`ab0ea4e`)
+- Reworked useMobileTasks with expanded test coverage to stabilize task update behavior, and reorganized the mobile shell with a new settings destination helper, extracted public landing/chat views, and a relocated theme toggle. (`ab0ea4e`)
+- Android and iOS workflows now default to the production api.aura.ai host, only cancel in-progress runs for pull requests so store uploads are never interrupted, and validate the Android upload keystore secret before decoding it into the runner temp dir. (`ab0ea4e`)
+- Expanded Android release track options to include alpha and beta alongside internal and production, and moved iOS build numbering to a deterministic run-number-derived value. (`ab0ea4e`)
+- Added a native-release-host validator script, a new mobile-quality workflow, Fastlane test coverage, and a mobile engineering readiness doc to codify the release checklist. (`ab0ea4e`)
 
-## 1:02 PM — Retired model providers hidden from the picker
+## 1:02 PM — Model picker cleanup: retire dead providers and restore DeepSeek routing
 
-The chat model list now reflects what providers can actually serve, and stale saved selections gracefully fall back to the default.
+The chat model catalog was pruned to remove providers that production reports as unavailable, then DeepSeek and Kimi K3 routing was fixed and repriced against their live Fireworks hosting.
 
-- Removed models that production providers report as unavailable — including Claude Mythos 5.1, DeepSeek V4 Pro/Flash, MiniMax M2.7, GLM 5.1, and Qwen3 7 Plus — so the chat input bar only offers models we can route to. (`3164381`)
-- Persisted selections pointing at retired model IDs now fall back to the default chat model instead of silently failing on send. (`3164381`)
+- Hid Claude Mythos 5.1, DeepSeek v4 Pro/Flash, MiniMax M2.7, GLM 5.1, and Qwen3 7 Plus from the model picker, and made saved selections for any of those retired IDs fall back to the default chat model on load. (`3164381`)
+- Restored DeepSeek v4 Pro and Flash as live routes with dated variants (deepseek-v4-pro-0813, deepseek-v4-flash-0731) and updated per-million-token pricing to the current Fireworks rates. (`98fe6c1`)
+- Aura-managed Kimi K3 now resolves to Fireworks pricing while direct moonshot/kimi-k3 requests keep Moonshot rates, avoiding double-charged cached prompt tokens. (`98fe6c1`)
 
 ## Highlights
 
-- Restart-turn wording replaces ambiguous Retry across chat
-- Interrupted chat streams reattach without silently resending prompts
-- Retired model providers hidden with automatic fallback to defaults
-- Mobile release workflows hardened for iOS and Android store uploads
+- Interrupted chat turns reattach without silently resending prompts
+- Retired providers hidden and DeepSeek routes restored with updated pricing
+- Mobile store lanes hardened across iOS and Android
+- Desktop sidecar now inherits the correct bound API address
 
