@@ -51,10 +51,10 @@ describe("normalizePricingKey", () => {
   });
 });
 
-describe("resolvePricing for Moonshot Kimi K3", () => {
-  it("resolves Aura and direct Moonshot ids at published rates", () => {
+describe("resolvePricing for Kimi K3", () => {
+  it("routes Aura-managed pricing through Fireworks and keeps direct Moonshot pricing", () => {
     expect(resolvePricing("aura-kimi-k3")).toMatchObject({
-      provider: "moonshot",
+      provider: "fireworks",
       model: "kimi-k3",
       input: 3,
       output: 15,
@@ -67,7 +67,7 @@ describe("resolvePricing for Moonshot Kimi K3", () => {
     });
   });
 
-  it("does not double-charge Moonshot cached prompt tokens", () => {
+  it("does not double-charge cached prompt tokens", () => {
     const result = computeSessionCost({
       model: "aura-kimi-k3",
       provider: "moonshot",
@@ -79,6 +79,7 @@ describe("resolvePricing for Moonshot Kimi K3", () => {
     // After markup: 600k new at $3.60/M, 400k cached at $0.36/M,
     // and 500k output at $18/M.
     expect(result.totalCostUsd).toBeCloseTo(11.304, 6);
+    expect(result.pricing.provider).toBe("fireworks");
     expect(result.unknown).toBe(false);
   });
 });
@@ -183,15 +184,27 @@ describe("resolvePricing for DeepSeek hosting", () => {
   it("distinguishes Aura's Fireworks-hosted aliases from direct API models", () => {
     expect(resolvePricing("aura-deepseek-v4-pro", "deepseek")).toMatchObject({
       provider: "fireworks",
-      input: 1.74,
-      cacheRead: 0.145,
-      output: 3.48,
+      input: 1.32,
+      cacheRead: 0.044,
+      output: 3.96,
     });
     expect(resolvePricing("deepseek-v4-pro", "deepseek")).toMatchObject({
       provider: "deepseek",
       input: 0.435,
       cacheRead: 0.003625,
       output: 0.87,
+    });
+  });
+
+  it("uses Fireworks pricing for Aura-managed Kimi K3", () => {
+    expect(resolvePricing("aura-kimi-k3", "moonshot")).toMatchObject({
+      provider: "fireworks",
+      input: 3,
+      cacheRead: 0.3,
+      output: 15,
+    });
+    expect(resolvePricing("moonshot/kimi-k3", "moonshot")).toMatchObject({
+      provider: "moonshot",
     });
   });
 });

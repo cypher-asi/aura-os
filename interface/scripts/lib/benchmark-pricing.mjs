@@ -228,6 +228,12 @@ const MOONSHOT_MODEL_PRICING_PER_MTOK = {
 };
 
 const FIREWORKS_MODEL_PRICING_PER_MTOK = {
+  "kimi-k3": {
+    input: 3,
+    output: 15,
+    cacheWrite: 3,
+    cacheRead: 0.3,
+  },
   "kimi-k2p7-code": {
     input: 0.95,
     output: 4.0,
@@ -313,16 +319,28 @@ const FIREWORKS_MODEL_PRICING_PER_MTOK = {
     cacheRead: 0.1,
   },
   "deepseek-v4-pro": {
-    input: 1.74,
-    output: 3.48,
-    cacheWrite: 1.74,
-    cacheRead: 0.145,
+    input: 1.32,
+    output: 3.96,
+    cacheWrite: 1.32,
+    cacheRead: 0.044,
+  },
+  "deepseek-v4-pro-0813": {
+    input: 1.32,
+    output: 3.96,
+    cacheWrite: 1.32,
+    cacheRead: 0.044,
   },
   "deepseek-v4-flash": {
-    input: 0.14,
-    output: 0.28,
-    cacheWrite: 0.14,
-    cacheRead: 0.028,
+    input: 0.22,
+    output: 0.66,
+    cacheWrite: 0.22,
+    cacheRead: 0.007,
+  },
+  "deepseek-v4-flash-0731": {
+    input: 0.22,
+    output: 0.66,
+    cacheWrite: 0.22,
+    cacheRead: 0.007,
   },
 };
 
@@ -471,7 +489,8 @@ function normalizeModelKey(model) {
 function inferProvider(model, provider) {
   if (
     typeof model === "string" &&
-    (model.trim().toLowerCase().startsWith("aura-deepseek-v4-") ||
+    (model.trim().toLowerCase() === "aura-kimi-k3" ||
+      model.trim().toLowerCase().startsWith("aura-deepseek-v4-") ||
       model.trim().toLowerCase().startsWith("accounts/fireworks/"))
   ) {
     return "fireworks";

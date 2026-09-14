@@ -71,8 +71,6 @@ describe("model persistence", () => {
   it("falls back when a saved selection has been retired", () => {
     for (const modelId of [
       "aura-claude-mythos-5-1",
-      "aura-deepseek-v4-pro",
-      "aura-deepseek-v4-flash",
       "aura-minimax-m2-7",
       "aura-glm-5-1",
       "aura-qwen3-7-plus",
@@ -597,8 +595,6 @@ describe("reasoning-effort validity per model", () => {
     const ids = AURA_MANAGED_CHAT_MODELS.map((model) => model.id);
     for (const id of [
       "aura-claude-mythos-5-1",
-      "aura-deepseek-v4-pro",
-      "aura-deepseek-v4-flash",
       "aura-minimax-m2-7",
       "aura-glm-5-1",
       "aura-qwen3-7-plus",
@@ -608,6 +604,8 @@ describe("reasoning-effort validity per model", () => {
     expect(ids).toEqual(
       expect.arrayContaining([
         "aura-claude-fable-5-1",
+        "aura-deepseek-v4-pro",
+        "aura-deepseek-v4-flash",
         "aura-kimi-k2-7-code",
         "aura-kimi-k2-6",
         "aura-minimax-m3",

@@ -151,6 +151,7 @@ const MOONSHOT_PRICING: Readonly<Record<string, ModelRates>> = {
 } as const;
 
 const FIREWORKS_PRICING: Readonly<Record<string, ModelRates>> = {
+  "kimi-k3": { input: 3, output: 15, cacheWrite: 3, cacheRead: 0.3 },
   "kimi-k2p7-code": {
     input: 0.95,
     output: 4.0,
@@ -171,8 +172,10 @@ const FIREWORKS_PRICING: Readonly<Record<string, ModelRates>> = {
   "glm-5p1": { input: 1.4, output: 4.4, cacheWrite: 1.4, cacheRead: 0.26 },
   "qwen3p7-plus": { input: 0.4, output: 1.6, cacheWrite: 0.4, cacheRead: 0.08 },
   "qwen3p6-plus": { input: 0.5, output: 3.0, cacheWrite: 0.5, cacheRead: 0.1 },
-  "deepseek-v4-pro": { input: 1.74, output: 3.48, cacheWrite: 1.74, cacheRead: 0.145 },
-  "deepseek-v4-flash": { input: 0.14, output: 0.28, cacheWrite: 0.14, cacheRead: 0.028 },
+  "deepseek-v4-pro": { input: 1.32, output: 3.96, cacheWrite: 1.32, cacheRead: 0.044 },
+  "deepseek-v4-pro-0813": { input: 1.32, output: 3.96, cacheWrite: 1.32, cacheRead: 0.044 },
+  "deepseek-v4-flash": { input: 0.22, output: 0.66, cacheWrite: 0.22, cacheRead: 0.007 },
+  "deepseek-v4-flash-0731": { input: 0.22, output: 0.66, cacheWrite: 0.22, cacheRead: 0.007 },
 } as const;
 
 const DEEPSEEK_PRICING: Readonly<Record<string, ModelRates>> = {
@@ -323,6 +326,7 @@ export function normalizePricingKey(model: string): string {
 function inferProvider(model: string, provider?: string): PricingProvider {
   const rawModel = model.trim().toLowerCase();
   if (
+    rawModel === "aura-kimi-k3" ||
     rawModel.startsWith("aura-deepseek-v4-") ||
     rawModel.startsWith("accounts/fireworks/")
   ) {
