@@ -646,12 +646,12 @@ describe("ChatInputBar", () => {
     // Provider headers render immediately (no "Show all models" step).
     expect(screen.getAllByText("Anthropic")[0]).toBeInTheDocument();
     expect(screen.getAllByText("OpenAI")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("DeepSeek AI")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Moonshot AI")[0]).toBeInTheDocument();
     expect(screen.getAllByText("MiniMax")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Z.ai")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("Alibaba Cloud")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Google")[0]).toBeInTheDocument();
+    expect(screen.queryByText("DeepSeek AI")).not.toBeInTheDocument();
+    expect(screen.queryByText("Alibaba Cloud")).not.toBeInTheDocument();
     // The single "Open Source" header is now split per provider.
     expect(screen.queryByText("Open Source")).not.toBeInTheDocument();
 
@@ -661,7 +661,11 @@ describe("ChatInputBar", () => {
     expect(screen.getAllByText("Haiku 4.5")[0]).toBeInTheDocument();
     // GPT-OSS 120B now lives in the OpenAI section.
     expect(screen.getAllByText("GPT-OSS 120B")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("GLM 5.1")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("GLM 5.2")[0]).toBeInTheDocument();
+    expect(screen.queryByText("Mythos 5.1")).not.toBeInTheDocument();
+    expect(screen.queryByText("MiniMax M2.7")).not.toBeInTheDocument();
+    expect(screen.queryByText("GLM 5.1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Qwen3.7 Plus")).not.toBeInTheDocument();
   });
 
   it("collapses and expands a provider section when its header is clicked", async () => {

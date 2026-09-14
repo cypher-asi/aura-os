@@ -210,9 +210,9 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
 ];
 
 /**
- * Chat models, grouped by vendor (Anthropic, OpenAI, xAI, DeepSeek AI,
- * Moonshot AI, MiniMax, Z.ai, Alibaba Cloud, Google) and newest-first within each
- * vendor. The picker's section order is controlled separately by
+ * Chat models, grouped by vendor (Anthropic, OpenAI, xAI, Moonshot AI,
+ * MiniMax, Z.ai, and Google) and newest-first within each vendor. The picker's
+ * section order is controlled separately by
  * {@link MODEL_VENDOR_ORDER} (which surfaces Google ahead of DeepSeek), so
  * this array's grouping need not match the on-screen order. The default
  * chat model is pinned via {@link DEFAULT_CHAT_MODEL_ID} rather than this
@@ -234,20 +234,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     description:
       "Anthropic's latest Fable for demanding reasoning and long-horizon agentic work, with a 1M-token context window.",
     featured: true,
-  },
-  {
-    id: "aura-claude-mythos-5-1",
-    label: "Mythos 5.1",
-    tier: "opus",
-    mode: "chat",
-    vendor: "anthropic",
-    creditMultiplier: 10,
-    contextWindow: 1_000_000,
-    efforts: ANTHROPIC_XHIGH_EFFORTS,
-    defaultEffort: "high",
-    provider: "Anthropic",
-    description:
-      "Anthropic's limited-access Project Glasswing model, sharing Fable 5.1's long-horizon capabilities and 1M-token context window.",
   },
   // ── Anthropic ───────────────────────────────────────────────
   {
@@ -542,31 +528,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     description:
       "xAI's lower-cost coding-focused Grok model for software-building workflows.",
   },
-  // ── DeepSeek ────────────────────────────────────────────────
-  {
-    id: "aura-deepseek-v4-pro",
-    label: "DeepSeek V4 Pro",
-    tier: "opus",
-    mode: "chat",
-    vendor: "deepseek",
-    creditMultiplier: 0.7,
-    contextWindow: 1_048_576,
-    provider: "DeepSeek AI",
-    description:
-      "Open-weight reasoning model tuned for code and math with a 1M context window.",
-  },
-  {
-    id: "aura-deepseek-v4-flash",
-    label: "DeepSeek V4 Flash",
-    tier: "sonnet",
-    mode: "chat",
-    vendor: "deepseek",
-    creditMultiplier: 0.06,
-    contextWindow: 1_048_576,
-    provider: "DeepSeek AI",
-    description:
-      "Fast, ultra-low-cost DeepSeek variant for high-volume tasks with a 1M context window.",
-  },
   // ── Moonshot AI ─────────────────────────────────────────────
   {
     id: "aura-kimi-k3",
@@ -620,18 +581,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     description:
       "Open-weight MiniMax model offering low-cost, high-throughput generation with a 512K context window.",
   },
-  {
-    id: "aura-minimax-m2-7",
-    label: "MiniMax M2.7",
-    tier: "haiku",
-    mode: "chat",
-    vendor: "minimax",
-    creditMultiplier: 0.15,
-    contextWindow: 196_608,
-    provider: "MiniMax",
-    description:
-      "Open-weight MiniMax model offering low-cost, high-throughput generation with a 196K context window.",
-  },
   // ── z.ai ────────────────────────────────────────────────────
   {
     id: "aura-glm-5-2",
@@ -644,31 +593,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     provider: "Z.ai",
     description:
       "Open-weight GLM model built for long-horizon agentic coding and engineering, with a 1M-token context window.",
-  },
-  {
-    id: "aura-glm-5-1",
-    label: "GLM 5.1",
-    tier: "sonnet",
-    mode: "chat",
-    vendor: "zai",
-    creditMultiplier: 0.7,
-    contextWindow: 202_752,
-    provider: "Z.ai",
-    description:
-      "Open-weight GLM reasoning model with strong agentic and tool-use performance and a 202K context window.",
-  },
-  // ── Qwen ────────────────────────────────────────────────────
-  {
-    id: "aura-qwen3-7-plus",
-    label: "Qwen3.7 Plus",
-    tier: "sonnet",
-    mode: "chat",
-    vendor: "qwen",
-    creditMultiplier: 0.3,
-    contextWindow: 262_144,
-    provider: "Alibaba Cloud",
-    description:
-      "Low-cost multimodal Qwen model with vision and video input and a 256K context window.",
   },
   // ── Google (Gemini) ─────────────────────────────────────────
   {
@@ -1033,6 +957,50 @@ const CHAT_MODELS: ModelOption[] = AVAILABLE_MODELS.filter(
 );
 
 /**
+ * Models removed from selection after production probes returned definitive
+ * upstream 404s. Keep their labels for existing conversation history without
+ * exposing them in pickers, defaults, or the marketing catalog.
+ */
+const RETIRED_CHAT_MODELS: ModelOption[] = [
+  {
+    id: "aura-claude-mythos-5-1",
+    label: "Mythos 5.1",
+    tier: "opus",
+    mode: "chat",
+  },
+  {
+    id: "aura-deepseek-v4-pro",
+    label: "DeepSeek V4 Pro",
+    tier: "opus",
+    mode: "chat",
+  },
+  {
+    id: "aura-deepseek-v4-flash",
+    label: "DeepSeek V4 Flash",
+    tier: "sonnet",
+    mode: "chat",
+  },
+  {
+    id: "aura-minimax-m2-7",
+    label: "MiniMax M2.7",
+    tier: "haiku",
+    mode: "chat",
+  },
+  {
+    id: "aura-glm-5-1",
+    label: "GLM 5.1",
+    tier: "sonnet",
+    mode: "chat",
+  },
+  {
+    id: "aura-qwen3-7-plus",
+    label: "Qwen3.7 Plus",
+    tier: "sonnet",
+    mode: "chat",
+  },
+];
+
+/**
  * Modality used by the marketing `/models` page. Chat models are
  * surfaced as `"text"` there (the page has no `"chat"` tab); the other
  * three modes map 1:1.
@@ -1090,6 +1058,7 @@ export function buildMarketingModelEntries(): MarketingModelEntry[] {
 const KNOWN_MODELS: ModelOption[] = [
   ...AVAILABLE_MODELS,
   ...LEGACY_HIDDEN_CHAT_MODELS,
+  ...RETIRED_CHAT_MODELS,
 ];
 
 const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
@@ -1274,10 +1243,11 @@ export function defaultModelForAdapter(
   explicitDefault?: string | null,
 ): string {
   const models = availableModelsForAdapter(adapterType);
+  const selectableModels = [...models, ...LEGACY_HIDDEN_CHAT_MODELS];
   const normalizedExplicit = normalizeManagedModelId(explicitDefault?.trim());
   if (
     normalizedExplicit &&
-    KNOWN_MODELS.some((m) => m.id === normalizedExplicit)
+    selectableModels.some((m) => m.id === normalizedExplicit)
   ) {
     return normalizedExplicit;
   }
