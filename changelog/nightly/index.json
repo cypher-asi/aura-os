@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-09-14",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.835.1",
+    "title": "Sturdier chat recovery, cleaner model list, and hardened mobile releases",
+    "intro": "Today's nightly focuses on making chat feel trustworthy when things go sideways — clearer restart wording, smarter reattachment after dropped streams, and a pruned model picker that only shows providers we can actually serve. Under the hood, the desktop harness now points at the right API address, and the mobile release pipelines got real guardrails around signing and store uploads.",
+    "entryCount": 5,
+    "highlights": [
+      "Restart-turn wording replaces ambiguous Retry across chat",
+      "Interrupted chat streams reattach without silently resending prompts",
+      "Retired model providers hidden with automatic fallback to defaults",
+      "Mobile release workflows hardened for iOS and Android store uploads"
+    ],
+    "rawCommitCount": 5,
+    "generatedAt": "2026-09-14T20:19:21.292Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.835.1",
+    "path": "history/2026-09-14.json"
+  },
+  {
     "date": "2026-09-10",
     "channel": "nightly",
     "version": "0.1.0-nightly.830.1",
