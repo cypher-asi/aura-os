@@ -210,9 +210,9 @@ const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
 ];
 
 /**
- * Chat models, grouped by vendor (Anthropic, OpenAI, xAI, Moonshot AI,
- * MiniMax, Z.ai, and Google) and newest-first within each vendor. The picker's
- * section order is controlled separately by
+ * Chat models, grouped by vendor (Anthropic, OpenAI, xAI, DeepSeek AI,
+ * Moonshot AI, MiniMax, Z.ai, and Google) and newest-first within each vendor.
+ * The picker's section order is controlled separately by
  * {@link MODEL_VENDOR_ORDER} (which surfaces Google ahead of DeepSeek), so
  * this array's grouping need not match the on-screen order. The default
  * chat model is pinned via {@link DEFAULT_CHAT_MODEL_ID} rather than this
@@ -527,6 +527,31 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     provider: "xAI",
     description:
       "xAI's lower-cost coding-focused Grok model for software-building workflows.",
+  },
+  // ── DeepSeek ────────────────────────────────────────────────
+  {
+    id: "aura-deepseek-v4-pro",
+    label: "DeepSeek V4 Pro",
+    tier: "opus",
+    mode: "chat",
+    vendor: "deepseek",
+    creditMultiplier: 0.7,
+    contextWindow: 1_048_576,
+    provider: "DeepSeek AI",
+    description:
+      "Open-weight reasoning model tuned for code and math with a 1M context window.",
+  },
+  {
+    id: "aura-deepseek-v4-flash",
+    label: "DeepSeek V4 Flash",
+    tier: "sonnet",
+    mode: "chat",
+    vendor: "deepseek",
+    creditMultiplier: 0.06,
+    contextWindow: 1_048_576,
+    provider: "DeepSeek AI",
+    description:
+      "Fast, low-cost DeepSeek variant for high-volume tasks with a 1M context window.",
   },
   // ── Moonshot AI ─────────────────────────────────────────────
   {
@@ -966,18 +991,6 @@ const RETIRED_CHAT_MODELS: ModelOption[] = [
     id: "aura-claude-mythos-5-1",
     label: "Mythos 5.1",
     tier: "opus",
-    mode: "chat",
-  },
-  {
-    id: "aura-deepseek-v4-pro",
-    label: "DeepSeek V4 Pro",
-    tier: "opus",
-    mode: "chat",
-  },
-  {
-    id: "aura-deepseek-v4-flash",
-    label: "DeepSeek V4 Flash",
-    tier: "sonnet",
     mode: "chat",
   },
   {
