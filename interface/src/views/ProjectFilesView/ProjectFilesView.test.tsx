@@ -6,6 +6,7 @@ const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectsListStore = vi.fn();
 const mockUseTerminalTarget = vi.fn();
 const mockReadRemoteFile = vi.fn();
+const mockReadHostedFile = vi.fn();
 const mockSetSearchParams = vi.fn();
 const mockNavigate = vi.fn();
 let currentSearchParams = new URLSearchParams();
@@ -27,6 +28,9 @@ vi.mock("../../api/client", () => ({
   api: {
     swarm: {
       readRemoteFile: (...args: unknown[]) => mockReadRemoteFile(...args),
+    },
+    hostedWorkspace: {
+      readFile: (...args: unknown[]) => mockReadHostedFile(...args),
     },
   },
 }));
@@ -57,13 +61,20 @@ vi.mock("../../components/FileExplorer", () => ({
     rootPath,
     searchQuery,
     onFileSelect,
+    hostedWorkspace,
   }: {
     rootPath?: string;
     searchQuery?: string;
     onFileSelect?: (path: string) => void;
+    hostedWorkspace?: { projectId: string; agentInstanceId: string };
   }) => (
     <div>
-      <div data-testid="file-explorer" data-root-path={rootPath ?? ""} data-search-query={searchQuery ?? ""} />
+      <div
+        data-testid="file-explorer"
+        data-root-path={rootPath ?? ""}
+        data-search-query={searchQuery ?? ""}
+        data-hosted-agent={hostedWorkspace?.agentInstanceId ?? ""}
+      />
       {onFileSelect ? (
         <button type="button" onClick={() => onFileSelect("/workspace/README.md")}>
           Preview README
@@ -129,6 +140,7 @@ beforeEach(() => {
     status: "ready",
   });
   mockReadRemoteFile.mockResolvedValue({ ok: true, content: "# Hello remote" });
+  mockReadHostedFile.mockResolvedValue({ ok: true, content: "# Hello hosted" });
 });
 
 describe("ProjectFilesView", () => {
@@ -178,7 +190,7 @@ describe("ProjectFilesView", () => {
 
     render(<MobileProjectFilesScreen />);
 
-    expect(screen.getByText(/Workspace files will appear here when this project has a live remote workspace/i)).toBeInTheDocument();
+    expect(screen.getByText(/Workspace files will appear here when the connected Aura host exposes a live workspace/i)).toBeInTheDocument();
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
   });
 
@@ -194,7 +206,7 @@ describe("ProjectFilesView", () => {
 
     render(<MobileProjectFilesScreen />);
 
-    expect(screen.getByText(/Remote workspace is still loading/i)).toBeInTheDocument();
+    expect(screen.getByText(/Workspace is still loading/i)).toBeInTheDocument();
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
   });
 
@@ -210,8 +222,39 @@ describe("ProjectFilesView", () => {
 
     render(<MobileProjectFilesScreen />);
 
-    expect(screen.getByText(/Remote workspace data could not load/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Workspace files will appear here when this project has a live remote workspace/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Workspace data could not load/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Workspace files will appear here when the connected Aura host exposes a live workspace/i)).not.toBeInTheDocument();
+  });
+
+  it("browses and previews a hosted local agent workspace on mobile", async () => {
+    mockUseAuraCapabilities.mockReturnValue(capabilities({
+      isMobileLayout: true,
+      isMobileClient: true,
+      hostedLocalHarness: true,
+    }));
+    mockUseTerminalTarget.mockReturnValue({
+      remoteAgentId: undefined,
+      remoteAgentInstanceId: undefined,
+      localAgentInstanceId: "local-inst-1",
+      remoteWorkspacePath: undefined,
+      workspacePath: "/workspace/proj-1",
+      status: "ready",
+    });
+
+    const view = render(<MobileProjectFilesScreen />);
+
+    expect(screen.getByText("Project workspace")).toBeInTheDocument();
+    expect(screen.getByTestId("file-explorer")).toHaveAttribute("data-hosted-agent", "local-inst-1");
+    screen.getByRole("button", { name: "Preview README" }).click();
+    view.rerender(<MobileProjectFilesScreen />);
+
+    await waitFor(() => {
+      expect(mockReadHostedFile).toHaveBeenCalledWith(
+        { projectId: "proj-1", agentInstanceId: "local-inst-1" },
+        "/workspace/README.md",
+      );
+      expect(screen.getByText("# Hello hosted")).toBeInTheDocument();
+    });
   });
 
   it("keeps the desktop explorer even in a narrow responsive layout when the client is not mobile", () => {
@@ -221,7 +264,7 @@ describe("ProjectFilesView", () => {
 
     expect(screen.getByText("Files")).toBeInTheDocument();
     expect(screen.getByTestId("file-explorer")).toHaveAttribute("data-root-path", "p/demo-project");
-    expect(screen.queryByText(/Remote workspace is still loading/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Workspace is still loading/i)).not.toBeInTheDocument();
   });
 
   it("keeps the desktop explorer behavior unchanged", () => {
@@ -232,7 +275,7 @@ describe("ProjectFilesView", () => {
     expect(screen.getByText("Files")).toBeInTheDocument();
     expect(screen.getByTestId("panel-search")).toBeInTheDocument();
     expect(screen.getByTestId("file-explorer")).toHaveAttribute("data-root-path", "p/demo-project");
-    expect(screen.queryByText(/Workspace files will appear here when this project has a live remote workspace/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Workspace files will appear here when the connected Aura host exposes a live workspace/i)).not.toBeInTheDocument();
   });
 
   it("opens remote desktop files with a return route", () => {

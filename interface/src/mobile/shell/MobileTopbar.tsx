@@ -20,9 +20,11 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
   const showStandaloneAgentLibraryCreate = state.isStandaloneAgentLibraryRoot;
 
   return (
-      <Topbar
-        className={styles.mobileTopbar}
-        icon={
+    <Topbar
+      className={`${styles.mobileTopbar} ${
+        showStandaloneAgentLibraryCreate ? styles.mobileTopbarWithCreateAction : ""
+      }`}
+      icon={
           <div className={styles.mobileTopbarSlot}>
             {state.isProjectAgentChatRoute && state.currentProjectId ? (
               <Button
@@ -93,8 +95,8 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               </button>
             )}
           </div>
-        }
-        title={
+      }
+      title={
           <span className={styles.mobileTopbarTitle}>
             {state.showProjectTitle ? (
               <button
@@ -119,8 +121,8 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               </span>
             )}
           </span>
-        }
-        actions={
+      }
+      actions={
           <div className={styles.mobileTopbarActions}>
             {showStandaloneAgentLibraryCreate ? (
               <Button
@@ -128,7 +130,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 size="sm"
                 iconOnly
                 icon={<Plus size={20} />}
-                aria-label="Create Remote Agent"
+                aria-label="Create Agent"
                 onClick={() => navigate("/agents?create=1")}
               />
             ) : null}
@@ -155,7 +157,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               }}
             />
           </div>
-        }
-      />
+      }
+    />
   );
 }

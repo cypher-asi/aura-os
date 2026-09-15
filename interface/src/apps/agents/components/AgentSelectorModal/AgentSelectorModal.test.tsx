@@ -140,8 +140,8 @@ describe("AgentSelectorModal", () => {
     expect(options[2]).toHaveTextContent("Remote Agent");
   });
 
-  it("shows only remote agents on mobile and uses the mobile drawer title", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+  it("includes hosted local agents on mobile when the backend supports them", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, remoteOnly: false });
 
     render(
       <AgentSelectorModal
@@ -153,15 +153,13 @@ describe("AgentSelectorModal", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Add agent" })).toBeInTheDocument();
-    expect(screen.queryByText("Local Agent")).not.toBeInTheDocument();
-    // The Avatar mock and the row both render the agent name, so use
-    // option count instead — Standard + Remote = 2.
-    expect(screen.getAllByRole("option")).toHaveLength(2);
+    expect(screen.getAllByText("Local Agent").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("option")).toHaveLength(3);
     expect(screen.getAllByText("Remote Agent").length).toBeGreaterThan(0);
   });
 
-  it("hides local agents when remote-only (web/mobile, no desktop bridge)", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false, remoteOnly: true });
+  it.each([false, true])("hides local agents when remote-only (mobile layout: %s)", (isMobileLayout) => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout, remoteOnly: true });
 
     render(
       <AgentSelectorModal

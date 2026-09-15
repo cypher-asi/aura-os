@@ -8,6 +8,19 @@ import { projectChatHistoryKey } from "../stores/chat-history-store";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
 import { getLastAgent } from "../utils/storage";
 import type { ProjectId } from "../shared/types";
+import { ApiClientError } from "../shared/api/core";
+import { getApiErrorMessage } from "../shared/utils/api-errors";
+
+function getLoopControlErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiClientError) {
+    const diagnostic = `${error.body.code ?? ""} ${error.body.error}`;
+    if (error.status === 401 || /unauthorized|invalid token/i.test(diagnostic)) {
+      return "Your session is no longer authorized. Sign in again and retry.";
+    }
+  }
+  const message = getApiErrorMessage(error);
+  return message === "An unexpected error occurred" ? fallback : message;
+}
 
 interface LoopControlResult {
   loopRunning: boolean;
@@ -133,7 +146,7 @@ export function useLoopControl(
       try {
         await api.resumeLoop(projectId, boundLoopId ?? undefined);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to resume loop");
+        setError(getLoopControlErrorMessage(err, "Failed to resume loop"));
       }
       return;
     }
@@ -154,7 +167,7 @@ export function useLoopControl(
       setLoopRunning(true);
       setLoopPaused(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start loop");
+      setError(getLoopControlErrorMessage(err, "Failed to start loop"));
     }
   }, [
     projectId,
@@ -170,7 +183,7 @@ export function useLoopControl(
     try {
       await api.pauseLoop(projectId, boundLoopId ?? undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to pause loop");
+      setError(getLoopControlErrorMessage(err, "Failed to pause loop"));
     }
   }, [projectId, boundLoopId]);
 
@@ -179,7 +192,7 @@ export function useLoopControl(
     try {
       await api.stopLoop(projectId, boundLoopId ?? undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to stop loop");
+      setError(getLoopControlErrorMessage(err, "Failed to stop loop"));
     }
   }, [projectId, boundLoopId]);
 

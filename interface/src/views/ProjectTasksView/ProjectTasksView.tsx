@@ -6,6 +6,7 @@ import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
+import { AddTaskForm } from "../../apps/tasks/components/AddTaskForm";
 import { useMobileTasks } from "../../mobile/hooks/useMobileTasks";
 import { getTaskDisplayStatus } from "../../shared/utils/task-display-status";
 import type { Task } from "../../shared/types";
@@ -46,6 +47,7 @@ export function ProjectTasksView() {
   const { tasks, liveTaskIds, loopActive } = useMobileTasks(projectId ?? "");
   const [selectedSegment, setSelectedSegment] = useState<TaskSegmentId>("ready");
   const [hasUserSelectedSegment, setHasUserSelectedSegment] = useState(false);
+  const [addingToLane, setAddingToLane] = useState<"backlog" | "to_do" | null>(null);
 
   const agentNameById = useMemo(
     () => new Map(projectAgents.map((agent) => [agent.agent_instance_id, agent.name])),
@@ -80,6 +82,7 @@ export function ProjectTasksView() {
   useEffect(() => {
     setSelectedSegment("ready");
     setHasUserSelectedSegment(false);
+    setAddingToLane(null);
   }, [projectId]);
 
   useEffect(() => {
@@ -102,6 +105,14 @@ export function ProjectTasksView() {
     <div className={styles.root}>
       <header className={styles.header}>
         <Text size="lg" weight="medium">What needs attention</Text>
+        <button
+          type="button"
+          className={styles.addTaskButton}
+          aria-label="Add task"
+          onClick={() => setAddingToLane("to_do")}
+        >
+          Add task
+        </button>
       </header>
 
       <div className={styles.segmentBar} role="tablist" aria-label="Task status segments">
@@ -173,6 +184,14 @@ export function ProjectTasksView() {
           </div>
         )}
       </section>
+
+      <AddTaskForm
+        isOpen={addingToLane !== null}
+        projectId={projectId}
+        status={addingToLane ?? "to_do"}
+        onDone={() => setAddingToLane(null)}
+        onStatusChange={setAddingToLane}
+      />
     </div>
   );
 }

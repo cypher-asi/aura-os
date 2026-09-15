@@ -66,7 +66,7 @@
 }
 
 .agentRowRemembered {
-  background: color-mix(in srgb, #111213 82%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, var(--color-primary) 8%);
 }
 
 .avatar {

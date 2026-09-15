@@ -591,3 +591,27 @@
     animation: none;
   }
 }
+.errorDiagnostics {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+}
+
+.errorDiagnostics summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+}
+
+.errorDiagnostics summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.errorDiagnostics pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  max-height: 240px;
+  overflow: auto;
+}

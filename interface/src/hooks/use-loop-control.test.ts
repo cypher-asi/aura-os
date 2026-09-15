@@ -49,6 +49,7 @@ vi.mock("../api/client", () => ({
 
 import { useLoopControl } from "./use-loop-control";
 import { useAutomationLoopStore } from "../stores/automation-loop-store";
+import { ApiClientError } from "../shared/api/core";
 
 describe("useLoopControl", () => {
   beforeEach(() => {
@@ -151,6 +152,25 @@ describe("useLoopControl", () => {
     });
 
     expect(result.current.error).toBe("server down");
+  });
+
+  it("hides nested authorization protocol details when loop start fails", async () => {
+    mockStartLoop.mockRejectedValue(new ApiClientError(500, {
+      error: 'listing tasks failed: {"error":{"code":"UNAUTHORIZED","message":"Invalid token header"}}',
+      code: "internal_error",
+      details: null,
+    }));
+
+    const { result } = renderHook(() => useLoopControl("proj-1"));
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
+
+    await act(async () => {
+      await result.current.handleStart();
+    });
+
+    expect(result.current.error).toBe(
+      "Your session is no longer authorized. Sign in again and retry.",
+    );
   });
 
   it("handlePause targets the bound Loop instance, not the URL chat agent", async () => {

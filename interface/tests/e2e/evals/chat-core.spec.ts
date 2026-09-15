@@ -251,8 +251,9 @@ test("Create remote project agent and chat @chat-core", async ({ page }, testInf
   await timed("open_create_remote_agent", async () => {
     await expect(page.getByText("No agents attached yet", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Add Agent", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Add project agent" })).toBeVisible();
-    await page.getByRole("button", { name: /Create Remote Agent/ }).click();
+    const addAgentDialog = page.getByRole("dialog", { name: "Add project agent" });
+    await expect(addAgentDialog).toBeVisible();
+    await addAgentDialog.getByRole("button", { name: /^Create (?:Remote )?Agent/ }).click();
   });
 
   await timed("create_and_attach_agent", async () => {

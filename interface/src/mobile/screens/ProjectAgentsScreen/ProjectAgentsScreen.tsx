@@ -117,7 +117,7 @@ export function MobileProjectAgentsScreen() {
           <div className={styles.emptyState}>
             <Text size="sm" weight="medium">No agents attached yet</Text>
             <Text size="sm" variant="muted">
-              Add a remote agent to start chatting, running tasks, and browsing project files.
+              Add an agent to start chatting and running tasks for this project.
             </Text>
             <Button variant="primary" icon={<Plus size={16} />} onClick={() => setActionSheetOpen(true)}>
               Add Agent
@@ -150,7 +150,7 @@ export function MobileProjectAgentsScreen() {
                       <span className={styles.agentTime}>{formatChatTime(agent.updated_at)}</span>
                     </span>
                     <span className={styles.agentMetaLine}>
-                      <span>{agent.role?.trim() || "Remote AURA agent"}</span>
+                      <span>{agent.role?.trim() || "AURA agent"}</span>
                       <span className={styles.statusDotText}>{formatAgentStatus(agent.status)}</span>
                     </span>
                   </span>
@@ -174,7 +174,7 @@ export function MobileProjectAgentsScreen() {
             <div className={styles.actionSheetHeader}>
               <div>
                 <div className={styles.actionSheetTitle}>Add project agent</div>
-                <div className={styles.actionSheetSubtitle}>Create a new remote agent or attach one your team already uses.</div>
+                <div className={styles.actionSheetSubtitle}>Create an agent or attach one your team already uses.</div>
               </div>
               <button
                 type="button"
@@ -189,7 +189,7 @@ export function MobileProjectAgentsScreen() {
               <button type="button" className={styles.actionChoice} onClick={openCreate}>
                 <span className={styles.actionIcon}><Sparkles size={18} /></span>
                 <span className={styles.actionCopy}>
-                  <span className={styles.actionTitle}>Create Remote Agent</span>
+                  <span className={styles.actionTitle}>Create Agent</span>
                   <span className={styles.actionMeta}>Start a fresh AURA-managed agent for this project.</span>
                 </span>
               </button>

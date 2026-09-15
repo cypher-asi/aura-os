@@ -1,5 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { useNewProjectForm } from "./use-new-project-form";
+import { ApiClientError } from "../shared/api/core";
 
 const mockUseAuraCapabilities = vi.fn();
 
@@ -154,6 +155,31 @@ describe("useNewProjectForm", () => {
 
     expect(result.current.nameError).toBe("Project name is required");
     expect(api.createProject).not.toHaveBeenCalled();
+  });
+
+  it("replaces nested unauthorized API details with an actionable session message", async () => {
+    vi.mocked(api.createProject).mockRejectedValueOnce(new ApiClientError(401, {
+      error: JSON.stringify({
+        error: {
+          code: "UNAUTHORIZED",
+          message: "Unauthorized: Invalid token header: InvalidToken",
+        },
+      }),
+      code: "network_error",
+      details: null,
+    }));
+    const { result } = renderHook(() =>
+      useNewProjectForm(true, mockOnClose, mockOnCreated),
+    );
+
+    act(() => result.current.setName("Android Emulator QA"));
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(result.current.error).toBe(
+      "Your session is no longer authorized. Sign in again and retry.",
+    );
   });
 
   it("handleClose resets form and calls onClose", () => {
