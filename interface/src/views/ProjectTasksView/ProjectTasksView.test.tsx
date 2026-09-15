@@ -36,6 +36,14 @@ vi.mock("../../components/TaskStatusIcon", () => ({
   TaskStatusIcon: ({ status }: { status: string }) => <span data-testid={`task-status-${status}`} />,
 }));
 
+vi.mock("../../apps/tasks/components/AddTaskForm", () => ({
+  AddTaskForm: ({ isOpen, onDone }: { isOpen: boolean; onDone: () => void }) => isOpen ? (
+    <div role="dialog" aria-label="New Task">
+      <button type="button" onClick={onDone}>Close task form</button>
+    </div>
+  ) : null,
+}));
+
 vi.mock("./ProjectTasksView.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
@@ -110,6 +118,21 @@ describe("ProjectTasksView", () => {
 
     expect(screen.getByRole("tab", { name: /Blocked/i })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Nothing here right now")).toBeInTheDocument();
+  });
+
+  it("opens task creation from the mobile task view", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/tasks" element={<ProjectTasksView />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/tasks"] } },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add task" }));
+
+    expect(screen.getByRole("dialog", { name: "New Task" })).toBeInTheDocument();
   });
 
   it("redirects to the desktop tasks route outside mobile layouts", () => {
