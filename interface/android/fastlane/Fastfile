@@ -193,6 +193,13 @@ platform :android do
     UI.success("Android Play release configuration looks complete.")
   end
 
+  desc "Build a signed Android App Bundle for manual Google Play upload"
+  lane :signed_bundle do
+    aab_path = build_release_bundle
+    UI.success("Signed Android App Bundle ready at #{aab_path}")
+    aab_path
+  end
+
   desc "Build a signed release APK for GitHub distribution without Play upload"
   lane :github_release do
     apk_path = build_release_apk

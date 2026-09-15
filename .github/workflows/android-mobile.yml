@@ -23,6 +23,7 @@ on:
           - preflight
           - beta
           - release
+          - signed_bundle
           - github_release
       track:
         description: "Google Play track"
@@ -194,6 +195,7 @@ jobs:
             release) channel="stable" ;;
             beta) channel="beta" ;;
             preflight) channel="preflight" ;;
+            signed_bundle) channel="bundle" ;;
             github_release) channel="github" ;;
           esac
 
