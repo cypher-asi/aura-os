@@ -34,7 +34,7 @@ test.describe("tablet reporting a desktop user agent", () => {
     await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/agents\/create$/);
     await page.goto("/agents");
-    await page.getByRole("button", { name: "Create Remote Agent", exact: true }).click();
+    await page.getByRole("button", { name: "Create Agent", exact: true }).click();
     await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
   });
 });

@@ -206,7 +206,7 @@ describe("ProjectAgentSetupView", () => {
 
   it("creates and attaches hosted agents without remote provisioning", async () => {
     savedMachineType = "local";
-    mockUseAuraCapabilities.mockReturnValue({ isMobileClient: true, remoteOnly: false, hostedLocalHarness: true, hasDesktopBridge: false });
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isNativeApp: false, remoteOnly: false, hostedLocalHarness: true, hasDesktopBridge: false });
     render(
       <Routes>
         <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
@@ -223,7 +223,7 @@ describe("ProjectAgentSetupView", () => {
   });
 
   it("attaches hosted agents while excluding other teams and already-attached agents", async () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileClient: true, remoteOnly: false });
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isNativeApp: false, remoteOnly: false });
     mockProjectsState.agentsByProject["proj-1"] = [{ agent_id: "already" }];
     mockListAgents.mockResolvedValue([
       { agent_id: "agent-9", org_id: "org-1", machine_type: "local", name: "Hosted helper" },

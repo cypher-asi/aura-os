@@ -74,6 +74,11 @@ jobs:
 
       - name: Install Android SDK tools
         uses: android-actions/setup-android@v4
+        with:
+          # Command-line tools v20 no longer publishes the legacy `tools`
+          # package that this action installs by default. Install the exact
+          # SDK packages below instead.
+          packages: ""
 
       - name: Install Android SDK packages
         run: |
@@ -134,6 +139,8 @@ jobs:
 
       - name: Install Android SDK tools
         uses: android-actions/setup-android@v4
+        with:
+          packages: ""
 
       - name: Install Android SDK packages
         run: |

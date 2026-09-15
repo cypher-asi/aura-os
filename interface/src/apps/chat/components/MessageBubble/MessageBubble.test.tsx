@@ -239,7 +239,7 @@ describe("MessageBubble", () => {
     expect(screen.getByText(raw)).toBeVisible();
     expect(screen.getByText("test-support")).toBeVisible();
     expect(screen.getByRole("button", { name: "Copy error message" })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restart turn" }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
