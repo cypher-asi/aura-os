@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-09-15",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.837.1",
+    "title": "Android mobile hits release readiness",
+    "intro": "Today's nightly is a focused mobile push: a single large change rounds out the Android build so it can ship. It brings SPA-aware back navigation, cleaner project and chat flows on small screens, and CI adjustments to keep the Android release pipeline green.",
+    "entryCount": 1,
+    "highlights": [
+      "Android in-app back button now follows SPA history",
+      "Persistent Chat entry point and project task creation on mobile",
+      "Capability-aware hosted agent setup on mobile",
+      "Android SDK setup fixed for command-line tools v20"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-09-15T20:30:27.599Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.837.1",
+    "path": "history/2026-09-15.json"
+  },
+  {
     "date": "2026-09-14",
     "channel": "nightly",
     "version": "0.1.0-nightly.836.1",
