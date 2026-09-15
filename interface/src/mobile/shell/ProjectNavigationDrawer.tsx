@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import { ChevronDown, ChevronRight, Loader2, MessageSquare, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, MessageSquare, Plus, Search, X } from "lucide-react";
 import { api } from "../../api/client";
 import { PanelSearch } from "../../components/PanelSearch";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
@@ -70,6 +70,7 @@ function ProjectRow({
 export function ProjectNavigationDrawerContent() {
   const { query, setQuery } = useSidebarSearch("projects");
   const projects = useProjectsListStore((state) => state.projects);
+  const openNewProjectModal = useProjectsListStore((state) => state.openNewProjectModal);
   const orgs = useOrgStore((state) => state.orgs);
   const activeOrg = useOrgStore((state) => state.activeOrg);
   const switchOrg = useOrgStore((state) => state.switchOrg);
@@ -212,6 +213,13 @@ export function ProjectNavigationDrawerContent() {
     closeDrawers();
   }, [closeDrawers, navigate]);
 
+  const openProjectCreator = useCallback(() => {
+    closePreview();
+    openNewProjectModal();
+    navigate("/projects");
+    closeDrawers();
+  }, [closeDrawers, closePreview, navigate, openNewProjectModal]);
+
   const destinationPathForProject = useCallback((projectId: string) => {
     if (mobileDestination === "tasks") {
       return projectTasksRoute(projectId);
@@ -351,14 +359,25 @@ export function ProjectNavigationDrawerContent() {
               {currentProject?.name ?? "Projects"}
             </div>
           </div>
-          <button
-            type="button"
-            className={styles.mobileDrawerIconButton}
-            aria-label={searchOpen ? "Close project search" : "Search projects"}
-            onClick={searchOpen ? closeSearch : () => setSearchOpen(true)}
-          >
-            {searchOpen ? <X size={18} /> : <Search size={18} />}
-          </button>
+          <div className={styles.mobileDrawerHeaderActions}>
+            <button
+              type="button"
+              className={styles.mobileDrawerIconButton}
+              aria-label="New Project"
+              title="New Project"
+              onClick={openProjectCreator}
+            >
+              <Plus size={18} />
+            </button>
+            <button
+              type="button"
+              className={styles.mobileDrawerIconButton}
+              aria-label={searchOpen ? "Close project search" : "Search projects"}
+              onClick={searchOpen ? closeSearch : () => setSearchOpen(true)}
+            >
+              {searchOpen ? <X size={18} /> : <Search size={18} />}
+            </button>
+          </div>
         </div>
         {searchOpen ? (
           <PanelSearch

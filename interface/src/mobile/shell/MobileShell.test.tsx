@@ -561,6 +561,17 @@ describe("MobileShell", () => {
     expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("opens project creation directly from the project drawer", async () => {
+    drawers.navOpen = true;
+    renderMobile("/chat");
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "New Project" }));
+
+    expect(openNewProjectModal).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("main-panel")).toHaveTextContent("Projects");
+    expect(drawers.closeDrawers).toHaveBeenCalledOnce();
+  });
+
   it("keeps project drawer focused on switching agents and projects", () => {
     drawers.navOpen = true;
     renderMobile("/projects/proj-1/work");
